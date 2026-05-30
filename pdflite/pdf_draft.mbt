@@ -76,7 +76,7 @@ fn pdf_draft_flate_decode() -> PdfName {
 }
 
 ///|
-fn pdf_draft_substitute_ops(boxes : Bool) -> Array[PdfContentOp] {
+fn pdf_draft_substitute_ops(boxes : Bool) -> Array[@content.PdfContentOp] {
   if boxes {
     [
       Op_q,
@@ -136,11 +136,11 @@ fn PdfDocument::pdf_draft_xobject_is_image(
 fn PdfDocument::pdf_draft_rewrite_ops(
   self : PdfDocument,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   only_remove : PdfName?,
   boxes : Bool,
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   let substitute = pdf_draft_substitute_ops(boxes)
   for op in ops {
     match op {

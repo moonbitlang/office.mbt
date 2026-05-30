@@ -51,7 +51,7 @@ fn draw_fresh_structure_document_for_test() -> @pdflite.PdfDocument {
 fn draw_page_ops_for_test(
   document : @pdflite.PdfDocument,
   page_number : Int,
-) -> Array[@pdflite.PdfContentOp] raise Error {
+) -> Array[@content.PdfContentOp] raise Error {
   let pages = try! document.pages_of_pagetree()
   let page = pages[page_number - 1]
   document.parse_content_ops_with_resources(page.resources, page.content)
@@ -117,7 +117,7 @@ test "pdf draw core ops convert to PDF content ops" {
     PdfDrawClip,
     PdfDrawClipEvenOdd,
   ]
-  let expected : Array[@pdflite.PdfContentOp] = [
+  let expected : Array[@content.PdfContentOp] = [
     Op_w(2.0),
     Op_J(1),
     Op_j(2),
@@ -188,7 +188,7 @@ test "pdf draw grouped ops emit q and Q" {
       PdfDrawLine(4.0, 5.0),
     ]),
   ]
-  let expected : Array[@pdflite.PdfContentOp] = [
+  let expected : Array[@content.PdfContentOp] = [
     Op_q,
     Op_RG(1.0, 0.0, 0.0),
     Op_l(4.0, 5.0),
@@ -211,7 +211,7 @@ test "pdf draw text section and text state ops convert to PDF content ops" {
       PdfDrawQq([PdfDrawMatrix(@pdflite.transform_translate(1.0, 2.0))]),
     ]),
   ]
-  let expected : Array[@pdflite.PdfContentOp] = [
+  let expected : Array[@content.PdfContentOp] = [
     Op_BT,
     Op_TL(14.0),
     Op_Tc(1.25),
@@ -505,7 +505,7 @@ test "pdf draw manual artifacts use cpdf back-channel markers" {
     PdfDrawEndArtifact,
   ])
   @test.assert_eq(raw, [Op_BMC(begin_artifact), Op_BMC(end_artifact)])
-  @test.assert_eq(@pdflite.pdf_content_add_artifacts(raw), [
+  @test.assert_eq(@content.pdf_content_add_artifacts(raw), [
     Op_BMC(artifact),
     Op_EMC,
   ])
@@ -527,7 +527,7 @@ test "pdf draw structure metadata ops are content-empty" {
 ///|
 test "pdf draw font selection reports missing fontpack" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
+  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
     state,
     PdfDrawFont("Missing", 12.0),
   )
@@ -540,7 +540,7 @@ test "pdf draw font selection reports missing fontpack" {
 ///|
 test "pdf draw text reports missing selected fontpack" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
+  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
     state,
     PdfDrawText("hello"),
   )
@@ -553,7 +553,7 @@ test "pdf draw text reports missing selected fontpack" {
 ///|
 test "pdf draw special text requires replacement context" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
+  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
     state,
     PdfDrawSpecialText("%Page"),
   )
@@ -666,7 +666,7 @@ test "pdf draw image XObject replacement follows latest source mapping" {
 ///|
 test "pdf draw image use reports missing image name" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
+  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
     state,
     PdfDrawImage("missing"),
   )
@@ -782,7 +782,7 @@ test "pdf draw form XObjects carry nested image resources" {
 ///|
 test "pdf draw form use reports missing form name" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
+  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
     state,
     PdfDrawUse("missing"),
   )
@@ -1221,7 +1221,7 @@ test "PdfDocument draw structure-tree mode without placeholder artifacts content
 
 ///|
 test "pdf draw unsupported content op returns cpdf-style soft error" {
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops(
+  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops(
     PdfDrawText("hello"),
   )
   guard result is Err(@pdflite.PdfError::SoftError(message)) else {

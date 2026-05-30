@@ -29,7 +29,7 @@ pub fn PdfDocument::content_json_of_ops(
   self : PdfDocument,
   mediabox : PdfRectangle,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Json raise PdfError {
   pdf_content_json_entries_content_json(
     self.content_entries_of_ops_recursive(mediabox, resources, ops),
@@ -42,7 +42,7 @@ pub fn pdf_content_json_of_ops(
   document : PdfDocument,
   mediabox : PdfRectangle,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Json raise PdfError {
   document.content_json_of_ops(mediabox, resources, ops)
 }
@@ -53,7 +53,7 @@ pub fn pdf_content_to_json(
   document : PdfDocument,
   mediabox : PdfRectangle,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Json raise PdfError {
   document.content_json_of_ops(mediabox, resources, ops)
 }
@@ -64,9 +64,9 @@ pub fn PdfDocument::content_filter(
   self : PdfDocument,
   mediabox : PdfRectangle,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   predicate : (PdfContentJsonEntry) -> Bool,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   let entries = self.content_entries_of_ops_recursive(mediabox, resources, ops)
   for entry in entries {
     ignore(predicate(entry))
@@ -83,8 +83,8 @@ pub fn pdf_content_filter(
   predicate : (PdfContentJsonEntry) -> Bool,
   mediabox : PdfRectangle,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] raise PdfError {
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] raise PdfError {
   document.content_filter(mediabox, resources, ops, predicate)
 }
 

@@ -29,14 +29,14 @@ fn rotate_rect_for_test(
 
 ///|
 fn rotate_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn rotate_content_page_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   rest? : @pdflite.PdfObject = PdfDictionary([]),
   resources? : @pdflite.PdfObject = PdfDictionary([]),
 ) -> @page.PdfPage {
@@ -53,7 +53,7 @@ fn rotate_content_page_for_test(
 fn rotate_content_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 

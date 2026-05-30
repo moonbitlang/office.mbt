@@ -78,7 +78,7 @@ fn addtext_matrix_for_test(
 fn addtext_content_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 
@@ -255,7 +255,7 @@ test "pdf_addtext_rectangle_ops builds filled rectangle stamps" {
       None,
     ),
     [
-      @pdflite.pdf_content_begin_artifact(),
+      @content.pdf_content_begin_artifact(),
       Op_q,
       Op_BMC(addtext_name_for_test("/CPDFSTAMP")),
       Op_rg(1.0, 0.0, 0.0),
@@ -264,7 +264,7 @@ test "pdf_addtext_rectangle_ops builds filled rectangle stamps" {
       Op_f,
       Op_EMC,
       Op_Q,
-      @pdflite.pdf_content_end_artifact(),
+      @content.pdf_content_end_artifact(),
     ],
   )
 }
@@ -284,7 +284,7 @@ test "pdf_addtext_rectangle_ops builds outlined rectangle stamps" {
       Some(gs),
     ),
     [
-      @pdflite.pdf_content_begin_artifact(),
+      @content.pdf_content_begin_artifact(),
       Op_q,
       Op_BMC(addtext_name_for_test("/CPDFSTAMP")),
       Op_g(0.5),
@@ -295,7 +295,7 @@ test "pdf_addtext_rectangle_ops builds outlined rectangle stamps" {
       Op_s,
       Op_EMC,
       Op_Q,
-      @pdflite.pdf_content_end_artifact(),
+      @content.pdf_content_end_artifact(),
     ],
   )
 }
@@ -327,7 +327,7 @@ test "pdf_addtext_text_ops builds simple font text stamps" {
       3.0,
     ),
     [
-      @pdflite.pdf_content_begin_artifact(),
+      @content.pdf_content_begin_artifact(),
       Op_q,
       Op_BMC(addtext_name_for_test("/CPDFSTAMP")),
       Op_cm(
@@ -344,7 +344,7 @@ test "pdf_addtext_text_ops builds simple font text stamps" {
       Op_ET,
       Op_EMC,
       Op_Q,
-      @pdflite.pdf_content_end_artifact(),
+      @content.pdf_content_end_artifact(),
     ],
   )
 }
@@ -387,7 +387,7 @@ test "pdf_addtext_text_ops switches fontpack runs" {
       0.0,
     ),
     [
-      @pdflite.pdf_content_begin_artifact(),
+      @content.pdf_content_begin_artifact(),
       Op_q,
       Op_BMC(addtext_name_for_test("/CPDFSTAMP")),
       Op_cm(addtext_matrix_for_test(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)),
@@ -404,7 +404,7 @@ test "pdf_addtext_text_ops switches fontpack runs" {
       Op_ET,
       Op_EMC,
       Op_Q,
-      @pdflite.pdf_content_end_artifact(),
+      @content.pdf_content_end_artifact(),
     ],
   )
 }

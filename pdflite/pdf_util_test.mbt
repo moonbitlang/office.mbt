@@ -901,7 +901,7 @@ test "pdf_object_of_json decodes parsed content-stream operation arrays" {
       ],
     ],
   }
-  let expected_ops : Array[@pdflite.PdfContentOp] = [
+  let expected_ops : Array[@content.PdfContentOp] = [
     Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
@@ -1235,7 +1235,7 @@ test "PdfDocument json_of_document parses content streams into operation arrays"
     fail("expected ET operator JSON")
   }
 
-  let expected_ops : Array[@pdflite.PdfContentOp] = [
+  let expected_ops : Array[@content.PdfContentOp] = [
     Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),

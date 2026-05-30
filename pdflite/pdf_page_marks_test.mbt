@@ -15,14 +15,14 @@ fn page_marks_rect_for_test(
 
 ///|
 fn page_marks_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn page_marks_page_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   rest? : @pdflite.PdfObject = PdfDictionary([]),
 ) -> @page.PdfPage {
   {
@@ -47,16 +47,16 @@ fn page_marks_document_for_test(
 fn page_marks_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 
 ///|
 fn page_marks_concat_for_test(
-  left : ArrayView[@pdflite.PdfContentOp],
-  right : ArrayView[@pdflite.PdfContentOp],
-) -> Array[@pdflite.PdfContentOp] {
-  let output : Array[@pdflite.PdfContentOp] = []
+  left : ArrayView[@content.PdfContentOp],
+  right : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in left {
     output.push(op)
   }
@@ -76,7 +76,7 @@ fn page_marks_box_ops_for_test(
   y : Double,
   width : Double,
   height : Double,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   [
     Op_q,
     Op_RG(r, g, b),
@@ -89,9 +89,9 @@ fn page_marks_box_ops_for_test(
 }
 
 ///|
-fn page_marks_show_boxes_expected_for_test() -> Array[@pdflite.PdfContentOp] {
-  let ops : Array[@pdflite.PdfContentOp] = [
-    @pdflite.pdf_content_begin_artifact(),
+fn page_marks_show_boxes_expected_for_test() -> Array[@content.PdfContentOp] {
+  let ops : Array[@content.PdfContentOp] = [
+    @content.pdf_content_begin_artifact(),
   ]
   for
     op in page_marks_box_ops_for_test(1.0, 0.0, 0.0, [], 0.0, 0.0, 100.0, 100.0) {
@@ -149,13 +149,13 @@ fn page_marks_show_boxes_expected_for_test() -> Array[@pdflite.PdfContentOp] {
     ) {
     ops.push(op)
   }
-  ops.push(@pdflite.pdf_content_end_artifact())
+  ops.push(@content.pdf_content_end_artifact())
   ops
 }
 
 ///|
 fn page_marks_line_for_test(
-  ops : Array[@pdflite.PdfContentOp],
+  ops : Array[@content.PdfContentOp],
   x0 : Double,
   y0 : Double,
   x1 : Double,
@@ -167,12 +167,12 @@ fn page_marks_line_for_test(
 }
 
 ///|
-fn page_marks_trim_expected_for_test() -> Array[@pdflite.PdfContentOp] {
-  let ops : Array[@pdflite.PdfContentOp] = [
+fn page_marks_trim_expected_for_test() -> Array[@content.PdfContentOp] {
+  let ops : Array[@content.PdfContentOp] = [
     Op_q,
     Op_K(1.0, 1.0, 1.0, 1.0),
     Op_w(1.0),
-    @pdflite.pdf_content_begin_artifact(),
+    @content.pdf_content_begin_artifact(),
   ]
   page_marks_line_for_test(ops, 0.0, 80.0, 1.0, 80.0)
   page_marks_line_for_test(ops, 10.0, 89.0, 10.0, 100.0)
@@ -182,7 +182,7 @@ fn page_marks_trim_expected_for_test() -> Array[@pdflite.PdfContentOp] {
   page_marks_line_for_test(ops, 90.0, 11.0, 90.0, 0.0)
   page_marks_line_for_test(ops, 1.0, 20.0, 0.0, 20.0)
   page_marks_line_for_test(ops, 10.0, 11.0, 10.0, 0.0)
-  ops.push(@pdflite.pdf_content_end_artifact())
+  ops.push(@content.pdf_content_end_artifact())
   ops.push(Op_Q)
   ops
 }

@@ -90,8 +90,8 @@ pub fn pdf_apply_type(
 fn pdf_redact_annotation_box_ops(
   rectangle : PdfRectangle,
   light : Bool,
-) -> Array[PdfContentOp] {
-  let stroke_colour : PdfContentOp = if light {
+) -> Array[@content.PdfContentOp] {
+  let stroke_colour : @content.PdfContentOp = if light {
     Op_RG(1.0, 1.0, 0.5)
   } else {
     Op_RG(1.0, 1.0, 0.0)
@@ -113,8 +113,8 @@ fn pdf_redact_annotation_box_ops(
 fn pdf_redact_annotation_page_box_ops(
   annotations : ArrayView[@annotation.PdfAnnotation],
   light : Bool,
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for annotation in annotations {
     for op in pdf_redact_annotation_box_ops(annotation.rectangle, light) {
       output.push(op)
@@ -127,7 +127,7 @@ fn pdf_redact_annotation_page_box_ops(
 fn pdf_redact_content_box_colour_ops(
   object : PdfContentObject,
   light : Bool,
-) -> Array[PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   match object {
     PdfContentGlyphObject(_, _, _) => [Op_G(if light { 1.0 } else { 0.0 })]
     PdfContentInlineImageObject =>
@@ -143,7 +143,7 @@ fn pdf_redact_content_box_colour_ops(
 
 ///|
 fn pdf_redact_push_content_box_ops(
-  output : Array[PdfContentOp],
+  output : Array[@content.PdfContentOp],
   entry : PdfContentJsonEntry,
   light : Bool,
 ) -> Unit {
@@ -231,8 +231,8 @@ fn PdfDocument::pdf_redact_page_content_box_ops(
   page : @page.PdfPage,
   shape : PdfRectangle?,
   light : Bool,
-) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = []
+) -> Array[@content.PdfContentOp] raise PdfError {
+  let output : Array[@content.PdfContentOp] = []
   for entry in self.content_entries_of_page(page) {
     if pdf_redact_content_box_selected(shape, entry) {
       pdf_redact_push_content_box_ops(output, entry, light)
@@ -255,7 +255,7 @@ pub fn PdfDocument::show_annotation_bounding_boxes(
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let op_lists : Array[Array[PdfContentOp]] = Array::new(
+  let op_lists : Array[Array[@content.PdfContentOp]] = Array::new(
     capacity=pages.length(),
   )
   for index in 0..<pages.length() {
@@ -301,7 +301,7 @@ pub fn PdfDocument::show_bounding_boxes(
   )
   let pages = document.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
-  let op_lists : Array[Array[PdfContentOp]] = Array::new(
+  let op_lists : Array[Array[@content.PdfContentOp]] = Array::new(
     capacity=pages.length(),
   )
   for index in 0..<pages.length() {

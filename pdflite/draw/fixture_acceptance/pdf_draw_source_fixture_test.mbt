@@ -401,8 +401,8 @@ fn draw_fixture_lookup_for_test(
 
 ///|
 fn draw_fixture_count_op_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
-  expected : @pdflite.PdfContentOp,
+  ops : ArrayView[@content.PdfContentOp],
+  expected : @content.PdfContentOp,
 ) -> Int {
   let mut count = 0
   for op in ops {
@@ -415,7 +415,7 @@ fn draw_fixture_count_op_for_test(
 
 ///|
 fn draw_fixture_content_stroke_count_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Int {
   let mut count = 0
   for op in ops {
@@ -429,7 +429,7 @@ fn draw_fixture_content_stroke_count_for_test(
 
 ///|
 fn draw_fixture_content_save_count_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Int {
   let mut count = 0
   for op in ops {
@@ -444,7 +444,7 @@ fn draw_fixture_content_save_count_for_test(
 ///|
 fn draw_fixture_assert_no_unknown_ops_for_test(
   path : String,
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Unit raise {
   for op in ops {
     match op {
@@ -457,7 +457,7 @@ fn draw_fixture_assert_no_unknown_ops_for_test(
 ///|
 fn draw_fixture_page_ops_for_test(
   document : @pdflite.PdfDocument,
-) -> Array[@pdflite.PdfContentOp] raise {
+) -> Array[@content.PdfContentOp] raise {
   @test.assert_eq(document.endpage(), 1)
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)

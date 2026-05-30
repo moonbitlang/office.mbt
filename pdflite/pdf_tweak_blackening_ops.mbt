@@ -1,5 +1,5 @@
 ///|
-fn pdf_tweak_black_text_text_op(op : PdfContentOp) -> Bool {
+fn pdf_tweak_black_text_text_op(op : @content.PdfContentOp) -> Bool {
   match op {
     Op_Tj(_)
     | Op_TJ(_)
@@ -21,7 +21,7 @@ fn pdf_tweak_black_text_text_op(op : PdfContentOp) -> Bool {
 }
 
 ///|
-fn pdf_tweak_black_text_colour_op(op : PdfContentOp) -> Bool {
+fn pdf_tweak_black_text_colour_op(op : @content.PdfContentOp) -> Bool {
   match op {
     Op_G(_)
     | Op_g(_)
@@ -44,7 +44,7 @@ fn pdf_tweak_black_text_colour_op(op : PdfContentOp) -> Bool {
 }
 
 ///|
-fn pdf_tweak_black_stroke_op(op : PdfContentOp) -> Bool {
+fn pdf_tweak_black_stroke_op(op : @content.PdfContentOp) -> Bool {
   match op {
     Op_SC(_)
     | Op_SCN(_)
@@ -57,7 +57,7 @@ fn pdf_tweak_black_stroke_op(op : PdfContentOp) -> Bool {
 }
 
 ///|
-fn pdf_tweak_black_fill_op(op : PdfContentOp) -> Bool {
+fn pdf_tweak_black_fill_op(op : @content.PdfContentOp) -> Bool {
   match op {
     Op_sc(_)
     | Op_scn(_)
@@ -77,10 +77,10 @@ fn pdf_tweak_black_fill_op(op : PdfContentOp) -> Bool {
 /// copied after `ET`, matching `cpdftweak.ml`'s `blacktext_ops`.
 pub fn pdf_black_text_ops(
   colour : @colour.PdfContentColour,
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
-  let removed : Array[PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
+  let removed : Array[@content.PdfContentOp] = []
   let mut text_level = 0
   for op in ops {
     match op {
@@ -115,9 +115,9 @@ pub fn pdf_black_text_ops(
 /// Rewrite stroke colour operators to `colour`.
 pub fn pdf_black_lines_ops(
   colour : @colour.PdfContentColour,
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in ops {
     match op {
       Op_CS(_) => output.push(Op_CS(pdf_tweak_device_rgb_key()))
@@ -133,9 +133,9 @@ pub fn pdf_black_lines_ops(
 /// Rewrite fill colour operators to `colour`.
 pub fn pdf_black_fills_ops(
   colour : @colour.PdfContentColour,
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in ops {
     match op {
       Op_cs(_) => output.push(Op_cs(pdf_tweak_device_rgb_key()))

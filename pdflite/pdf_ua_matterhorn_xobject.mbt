@@ -17,7 +17,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_30_001(self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_ops_contain_mcid(
   self : PdfDocument,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Bool {
   for op in ops {
     match op {

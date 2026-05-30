@@ -2,7 +2,7 @@
 fn PdfDrawRenderState::text_ops(
   self : PdfDrawRenderState,
   text : String,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   let width_cache = pdf_draw_font_width_cache_new(self.font_size)
   let (ops, _) = self.text_ops_and_width_with_cache(text, width_cache)
   ops
@@ -40,7 +40,7 @@ fn PdfDrawRenderState::text_ops_and_width_with_cache(
   self : PdfDrawRenderState,
   text : String,
   width_cache : PdfDrawFontWidthCache,
-) -> (Array[PdfContentOp], Double) raise PdfError {
+) -> (Array[@content.PdfContentOp], Double) raise PdfError {
   if self.current_fontpack_identifier == "" {
     raise SoftError("FontPack not selected")
   }
@@ -62,7 +62,9 @@ fn PdfDrawRenderState::text_ops_and_width_with_cache(
       None => ()
     }
   }
-  let output : Array[PdfContentOp] = Array::new(capacity=triples.length() * 2)
+  let output : Array[@content.PdfContentOp] = Array::new(
+    capacity=triples.length() * 2,
+  )
   for run in pdf_fontpack_collate_runs(triples) {
     guard run.length() > 0 else { continue }
     let font_index = run[0].1
@@ -110,9 +112,9 @@ fn pdf_draw_split_on_space(text : String) -> Array[String] {
 
 ///|
 fn pdf_draw_remove_duplicate_tfs(
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   let mut previous : PdfName? = None
   for op in ops {
     match op {
@@ -132,9 +134,9 @@ fn pdf_draw_remove_duplicate_tfs(
 
 ///|
 fn pdf_draw_merge_adjacent_tjs(
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   let mut index = 0
   while index < ops.length() {
     match ops[index] {
@@ -175,22 +177,24 @@ fn pdf_draw_merge_adjacent_tjs(
 
 ///|
 fn pdf_draw_clean_up_text_ops(
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
   pdf_draw_merge_adjacent_tjs(pdf_draw_remove_duplicate_tfs(ops))
 }
 
 ///|
 fn PdfDrawRenderState::justify_paragraph_line(
   self : PdfDrawRenderState,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   first_line : Bool,
   indent : Double,
   justification : PdfDrawJustification,
   remaining : Double,
-) -> Array[PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   ignore(self)
-  let output : Array[PdfContentOp] = Array::new(capacity=ops.length() + 2)
+  let output : Array[@content.PdfContentOp] = Array::new(
+    capacity=ops.length() + 2,
+  )
   match justification {
     PdfDrawLeft => {
       if first_line {
@@ -222,10 +226,10 @@ fn PdfDrawRenderState::format_paragraph(
   justification : PdfDrawJustification,
   width : Double,
   text : String,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   let width_cache = pdf_draw_font_width_cache_new(self.font_size)
   let split_words = pdf_draw_split_on_space(text)
-  let words : Array[(Array[PdfContentOp], Double)] = Array::new(
+  let words : Array[(Array[@content.PdfContentOp], Double)] = Array::new(
     capacity=split_words.length(),
   )
   for word in split_words {
@@ -234,8 +238,10 @@ fn PdfDrawRenderState::format_paragraph(
   let (space_ops, space_width) = self.text_ops_and_width_with_cache(
     " ", width_cache,
   )
-  let output : Array[PdfContentOp] = Array::new(capacity=words.length() * 2)
-  let mut line_ops : Array[PdfContentOp] = Array::new(
+  let output : Array[@content.PdfContentOp] = Array::new(
+    capacity=words.length() * 2,
+  )
+  let mut line_ops : Array[@content.PdfContentOp] = Array::new(
     capacity=words.length() * 2,
   )
   let mut remaining = width
@@ -285,8 +291,10 @@ fn PdfDrawRenderState::paragraph_ops(
   justification : PdfDrawJustification,
   width : Double,
   paragraphs : ArrayView[String],
-) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = Array::new(capacity=paragraphs.length())
+) -> Array[@content.PdfContentOp] raise PdfError {
+  let output : Array[@content.PdfContentOp] = Array::new(
+    capacity=paragraphs.length(),
+  )
   let mut first = true
   for paragraph in paragraphs {
     if !first {

@@ -532,7 +532,7 @@ test "cpdfcontent operator state collects nonrecursive content entries" {
     max_x: 100.0,
     max_y: 200.0,
   }
-  let ops : Array[@pdflite.PdfContentOp] = [
+  let ops : Array[@content.PdfContentOp] = [
     Op_Tf(f1_key, 10.0),
     Op_Tj(b"A"),
     Op_m(0.0, 0.0),
@@ -614,7 +614,7 @@ test "cpdfcontent operator state recursively collects Form XObject entries" {
     max_x: 100.0,
     max_y: 200.0,
   }
-  let ops : Array[@pdflite.PdfContentOp] = [
+  let ops : Array[@content.PdfContentOp] = [
     Op_Tf(fpage_key, 9.0),
     Op_Do(form_name),
     Op_Tj(b"B"),
@@ -669,7 +669,7 @@ test "cpdfcontent operator state recursively collects image XObject entries" {
     max_x: 100.0,
     max_y: 200.0,
   }
-  let ops : Array[@pdflite.PdfContentOp] = [
+  let ops : Array[@content.PdfContentOp] = [
     Op_cm(@pdflite.transform_translate(5.0, 6.0)),
     Op_Do(image_name),
   ]
@@ -1299,7 +1299,7 @@ test "cpdfcontent operator state parses Form XObject ops with merged resources" 
       ]),
     ),
   ])
-  let result : Result[Array[@pdflite.PdfContentOp]?, Error] = try? doc.content_form_xobject_ops(
+  let result : Result[Array[@content.PdfContentOp]?, Error] = try? doc.content_form_xobject_ops(
     page_resources, form_name,
   )
   guard result is Ok(Some(ops)) else {
@@ -1318,14 +1318,14 @@ test "cpdfcontent operator state parses Form XObject ops with merged resources" 
     ),
     Op_Q,
   ])
-  let wrapper_result : Result[Array[@pdflite.PdfContentOp]?, Error] = try? @pdflite.pdf_content_form_xobject_ops(
+  let wrapper_result : Result[Array[@content.PdfContentOp]?, Error] = try? @pdflite.pdf_content_form_xobject_ops(
     doc, page_resources, form_name,
   )
   guard wrapper_result is Ok(Some(wrapper_ops)) else {
     fail("expected wrapper parsed Form XObject operators")
   }
   @test.assert_eq(wrapper_ops, ops)
-  let image_result : Result[Array[@pdflite.PdfContentOp]?, Error] = try? doc.content_form_xobject_ops(
+  let image_result : Result[Array[@content.PdfContentOp]?, Error] = try? doc.content_form_xobject_ops(
     page_resources, image_name,
   )
   guard image_result is Ok(None) else {

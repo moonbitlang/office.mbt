@@ -107,7 +107,7 @@ fn pdf_content_inline_image_bytes(
 }
 
 ///|
-fn pdf_content_op_bytes(op : PdfContentOp) -> PdfBytes raise PdfError {
+fn pdf_content_op_bytes(op : @content.PdfContentOp) -> PdfBytes raise PdfError {
   match op {
     Op_InlineImage(dictionary, decode_parms, data) =>
       pdf_content_inline_image_bytes(dictionary, decode_parms, data)

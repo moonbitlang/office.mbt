@@ -379,7 +379,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_018(
       for stream in self.pdf_ua_matterhorn_normal_appearance_streams(entry.2) {
         let resources = self.pdf_ua_matterhorn_stream_resources(stream)
         let ops = self.parse_content_ops_with_resources(resources, [stream])
-        if pdf_content_add_artifacts(ops) != ops {
+        if @content.pdf_content_add_artifacts(ops) != ops {
           return Some(Json::null())
         }
       }

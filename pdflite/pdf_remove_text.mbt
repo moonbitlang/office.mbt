@@ -12,7 +12,7 @@ fn pdf_remove_text_stamp() -> PdfName {
 }
 
 ///|
-fn pdf_remove_text_is_stamp_bmc(op : PdfContentOp) -> Bool {
+fn pdf_remove_text_is_stamp_bmc(op : @content.PdfContentOp) -> Bool {
   match op {
     Op_BMC(tag) => tag == pdf_remove_text_stamp()
     _ => false
@@ -21,7 +21,7 @@ fn pdf_remove_text_is_stamp_bmc(op : PdfContentOp) -> Bool {
 
 ///|
 fn pdf_remove_text_after_stamp(
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   start : Int,
 ) -> Int {
   let mut index = start
@@ -55,9 +55,9 @@ fn pdf_remove_text_after_stamp(
 /// is unterminated, all following operators are dropped, matching the OCaml
 /// recursive removal behavior.
 pub fn pdf_remove_added_text_ops(
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   let mut index = 0
   while index < ops.length() {
     let op = ops[index]
@@ -72,7 +72,7 @@ pub fn pdf_remove_added_text_ops(
 }
 
 ///|
-fn pdf_remove_text_is_text_showing_op(op : PdfContentOp) -> Bool {
+fn pdf_remove_text_is_text_showing_op(op : @content.PdfContentOp) -> Bool {
   match op {
     Op_Tj(_) | Op_TJ(_) | Op_quote(_) | Op_double_quote(_, _, _) => true
     _ => false
@@ -82,9 +82,9 @@ fn pdf_remove_text_is_text_showing_op(op : PdfContentOp) -> Bool {
 ///|
 /// Remove text-showing operators while preserving text positioning/state ops.
 pub fn pdf_remove_all_text_ops(
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in ops {
     if !pdf_remove_text_is_text_showing_op(op) {
       output.push(op)
@@ -97,7 +97,7 @@ pub fn pdf_remove_all_text_ops(
 fn PdfDocument::pdf_remove_text_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  transform : (ArrayView[PdfContentOp]) -> Array[PdfContentOp],
+  transform : (ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp],
 ) -> @page.PdfPage raise PdfError {
   let ops = self.pdf_page_parse_content_ops(page.resources, page.content)
   { ..page, content: [pdf_content_stream_of_ops(transform(ops))] }

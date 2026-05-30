@@ -2,7 +2,7 @@
 /// Apply cpdfcontent Type 3 glyph metric operators `d0` and `d1`.
 pub fn PdfContentOperatorState::content_apply_type3_metrics_op(
   self : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   match op {
     Op_d0(width_x, width_y) => { ..self, type3_d0: Some({ width_x, width_y }) }
@@ -16,7 +16,7 @@ pub fn PdfContentOperatorState::content_apply_type3_metrics_op(
 /// Compatibility wrapper for `PdfContentOperatorState::content_apply_type3_metrics_op`.
 pub fn pdf_content_apply_type3_metrics_op(
   state : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_type3_metrics_op(op)
 }
@@ -75,7 +75,7 @@ pub fn pdf_content_text_glyph_entry(
 pub fn PdfContentOperatorState::content_apply_text_show_op(
   self : PdfContentOperatorState,
   font : PdfFont,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorTextResult raise PdfError {
   let text_result = self.text_state.content_apply_text_op(font, self.ctm, op)
   let state = { ..self, text_state: text_result.text_state }
@@ -93,7 +93,7 @@ pub fn PdfContentOperatorState::content_apply_text_show_op(
 pub fn pdf_content_apply_text_show_op(
   state : PdfContentOperatorState,
   font : PdfFont,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorTextResult raise PdfError {
   state.content_apply_text_show_op(font, op)
 }
@@ -104,7 +104,7 @@ pub fn PdfDocument::content_apply_text_resource_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
   resources : PdfObject,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorTextResult raise PdfError {
   match op {
     Op_Tf(font_name, font_size) =>
@@ -133,7 +133,7 @@ pub fn pdf_content_apply_text_resource_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
   resources : PdfObject,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorTextResult raise PdfError {
   document.content_apply_text_resource_op(state, resources, op)
 }

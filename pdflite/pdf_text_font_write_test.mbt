@@ -45,7 +45,7 @@ fn text_font_write_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
 
 ///|
 fn text_font_write_type3_charproc_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject raise {
   let data = @pdflite.pdf_content_bytes_of_ops(ops)
   @pdflite.pdf_stream(

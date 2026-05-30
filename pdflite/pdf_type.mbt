@@ -34,7 +34,7 @@ priv struct PdfTypeTypesetState {
   mut font_size : Double
   mut dest : (@destination.PdfDestination, String?)?
   mut mcid : Int
-  mut ops : Array[PdfContentOp]
+  mut ops : Array[@content.PdfContentOp]
   fonts : Array[(String, Int)]
   mut page_font_numbers : Array[Int]
   mut page_annotations : Array[PdfObject]

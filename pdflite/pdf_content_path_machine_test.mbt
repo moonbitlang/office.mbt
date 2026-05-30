@@ -1,6 +1,6 @@
 ///|
 fn content_path_apply_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @path.PdfContentPathOpResult {
   let mut result : @path.PdfContentPathOpResult = {
     partial_path: PdfContentNoPartialPath,

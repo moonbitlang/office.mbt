@@ -511,7 +511,7 @@ fn image_external_assert_contains_for_test(
 
 ///|
 fn image_external_draft_substitute_ops_for_test() -> Array[
-  @pdflite.PdfContentOp,
+  @content.PdfContentOp,
 ] {
   [
     Op_q,
@@ -529,8 +529,8 @@ fn image_external_draft_substitute_ops_for_test() -> Array[
 
 ///|
 fn image_external_content_ops_contain_sequence_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
-  expected : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
+  expected : ArrayView[@content.PdfContentOp],
 ) -> Bool {
   if expected.length() == 0 {
     true
@@ -555,7 +555,7 @@ fn image_external_content_ops_contain_sequence_for_test(
 
 ///|
 fn image_external_content_ops_contain_do_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   name : @pdflite.PdfName,
 ) -> Bool {
   for op in ops {
@@ -714,7 +714,7 @@ fn image_external_cpdf_source_hello_with_inline_image_for_test(
 ) -> @pdflite.PdfDocument raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
-  let image_ops : Array[@pdflite.PdfContentOp] = [
+  let image_ops : Array[@content.PdfContentOp] = [
     Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 0.0, f: 0.0 }),
     Op_InlineImage(
       image_external_cpdf_source_inline_image_dictionary_for_test(),

@@ -6,7 +6,7 @@ fn text_fixture_name_for_test(text : String) -> @pdflite.PdfName {
 ///|
 fn text_fixture_hello_ops_for_test(
   document : @pdflite.PdfDocument,
-) -> Array[@pdflite.PdfContentOp] raise {
+) -> Array[@content.PdfContentOp] raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   document.parse_content_ops_with_resources(
@@ -17,8 +17,8 @@ fn text_fixture_hello_ops_for_test(
 
 ///|
 fn text_fixture_assert_op_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
-  expected : @pdflite.PdfContentOp,
+  ops : ArrayView[@content.PdfContentOp],
+  expected : @content.PdfContentOp,
 ) -> Unit raise {
   for op in ops {
     if op == expected {

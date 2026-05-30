@@ -24,7 +24,7 @@ fn xobject_page_doc_for_test(
 
 ///|
 fn xobject_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }

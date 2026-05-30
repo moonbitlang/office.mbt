@@ -37,7 +37,7 @@ pub fn PdfContentTextState::content_text_layout(
 /// Apply cpdfcontent text-state operators that do not require font resources.
 pub fn PdfContentTextState::content_apply_text_state_op(
   self : PdfContentTextState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentTextState {
   match op {
     Op_BT =>
@@ -76,7 +76,7 @@ pub fn PdfContentTextState::content_apply_text_state_op(
 /// Compatibility wrapper for `PdfContentTextState::content_apply_text_state_op`.
 pub fn pdf_content_apply_text_state_op(
   state : PdfContentTextState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentTextState {
   state.content_apply_text_state_op(op)
 }
@@ -105,7 +105,7 @@ pub fn PdfContentTextState::content_apply_text_op(
   self : PdfContentTextState,
   font : PdfFont,
   ctm : TransformMatrix,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentTextOpResult {
   match op {
     Op_Tj(text) =>
@@ -143,7 +143,7 @@ pub fn pdf_content_apply_text_op(
   state : PdfContentTextState,
   font : PdfFont,
   ctm : TransformMatrix,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentTextOpResult {
   state.content_apply_text_op(font, ctm, op)
 }

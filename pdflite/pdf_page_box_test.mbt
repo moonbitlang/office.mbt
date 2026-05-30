@@ -15,7 +15,7 @@ fn page_box_rect_for_test(
 
 ///|
 fn page_box_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
@@ -53,7 +53,7 @@ fn page_box_document_for_test() -> @pdflite.PdfDocument {
 fn page_box_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 

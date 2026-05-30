@@ -1,7 +1,7 @@
 ///|
 fn pdf_draw_content_unsupported(
   op : PdfDrawOp,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   raise SoftError("Cpdfdraw: unsupported draw operation " + op.debug_name())
 }
 
@@ -9,7 +9,7 @@ fn pdf_draw_content_unsupported(
 fn pdf_draw_form_xobject_stream(
   bbox : (Double, Double, Double, Double),
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> PdfObject raise PdfError {
   let data = pdf_content_bytes_of_ops(ops)
   let (a, b, c, d) = bbox
@@ -31,7 +31,7 @@ fn pdf_draw_form_xobject_stream(
 fn PdfDrawRenderState::tag_ops(
   self : PdfDrawRenderState,
   tag : String,
-) -> Array[PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   let mcid = self.fresh_mcid()
   if self.structure_tree_enabled {
     self.structure_data.push(
@@ -50,13 +50,13 @@ fn PdfDrawRenderState::tag_ops(
 fn PdfDrawRenderState::structure_tagged_ops(
   self : PdfDrawRenderState,
   tag : String,
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
   let mcid = self.fresh_mcid()
   self.structure_data.push(
     PdfDrawStructureMCID(tag, self.structure_page_number, mcid),
   )
-  let output : Array[PdfContentOp] = [
+  let output : Array[@content.PdfContentOp] = [
     Op_BDC(
       pdf_draw_name(tag),
       PdfDictionary([(pdf_draw_mcid_key(), PdfInteger(mcid))]),

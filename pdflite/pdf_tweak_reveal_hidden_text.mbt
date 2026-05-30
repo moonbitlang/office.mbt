@@ -1,9 +1,9 @@
 ///|
 /// Remove text rendering-mode operators so hidden text is rendered normally.
 pub fn pdf_reveal_hidden_text_ops(
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in ops {
     match op {
       Op_Tr(_) => ()

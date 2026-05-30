@@ -498,7 +498,7 @@ test "private content helpers cover malformed operand fallbacks" {
   guard bad_dct_end is Err(PdfError::ParseEndStreamExpected) else {
     fail("expected PdfError::ParseEndStreamExpected")
   }
-  let bad_inline : Result[PdfContentOp, Error] = try? pdf_content_read_inline_image(
+  let bad_inline : Result[@content.PdfContentOp, Error] = try? pdf_content_read_inline_image(
     byte_cursor_of_bytes(@ascii.encode("1 ID data EI")),
     pdf_content_parse_context(None),
   )

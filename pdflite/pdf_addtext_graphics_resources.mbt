@@ -53,13 +53,17 @@ pub fn pdf_addtext_opacity_resources(
 
 ///|
 /// Build the cpdf add-text fill colour operator.
-pub fn pdf_addtext_colour_op(colour : @colour.PdfContentColour) -> PdfContentOp {
+pub fn pdf_addtext_colour_op(
+  colour : @colour.PdfContentColour,
+) -> @content.PdfContentOp {
   colour.pdf_tweak_fill_op()
 }
 
 ///|
 /// Source-spelled compatibility wrapper for cpdfaddtext's `colour_op`.
-pub fn pdf_colour_op(colour : @colour.PdfContentColour) -> PdfContentOp {
+pub fn pdf_colour_op(
+  colour : @colour.PdfContentColour,
+) -> @content.PdfContentOp {
   pdf_addtext_colour_op(colour)
 }
 
@@ -67,12 +71,14 @@ pub fn pdf_colour_op(colour : @colour.PdfContentColour) -> PdfContentOp {
 /// Build the cpdf add-text stroke colour operator.
 pub fn pdf_addtext_colour_op_stroke(
   colour : @colour.PdfContentColour,
-) -> PdfContentOp {
+) -> @content.PdfContentOp {
   colour.pdf_tweak_stroke_op()
 }
 
 ///|
 /// Source-spelled compatibility wrapper for cpdfaddtext's `colour_op_stroke`.
-pub fn pdf_colour_op_stroke(colour : @colour.PdfContentColour) -> PdfContentOp {
+pub fn pdf_colour_op_stroke(
+  colour : @colour.PdfContentColour,
+) -> @content.PdfContentOp {
   pdf_addtext_colour_op_stroke(colour)
 }

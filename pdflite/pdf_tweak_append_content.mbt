@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_tweak_append_page_content_ops_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   before : Bool,
   fast : Bool,
 ) -> @page.PdfPage raise PdfError {
@@ -100,7 +100,7 @@ pub fn pdf_append_page_content_cpdf_order(
 pub fn PdfDocument::append_page_content_ops(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   before? : Bool = false,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -127,7 +127,7 @@ pub fn PdfDocument::append_page_content_ops(
 pub fn pdf_append_page_content_ops(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   before? : Bool = false,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -189,7 +189,7 @@ pub fn pdf_append_page_content_multiple_cpdf_order(
 /// Append or prepend one content operator list per page.
 pub fn PdfDocument::append_page_content_multiple_ops(
   self : PdfDocument,
-  op_lists : ArrayView[Array[PdfContentOp]],
+  op_lists : ArrayView[Array[@content.PdfContentOp]],
   before? : Bool = false,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -214,7 +214,7 @@ pub fn PdfDocument::append_page_content_multiple_ops(
 /// Compatibility wrapper for `PdfDocument::append_page_content_multiple_ops`.
 pub fn pdf_append_page_content_multiple_ops(
   document : PdfDocument,
-  op_lists : ArrayView[Array[PdfContentOp]],
+  op_lists : ArrayView[Array[@content.PdfContentOp]],
   before? : Bool = false,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -225,7 +225,7 @@ pub fn pdf_append_page_content_multiple_ops(
 /// Compatibility wrapper matching cpdftweak's `append_page_content_multiple_ops`
 /// argument order.
 pub fn pdf_append_page_content_multiple_ops_cpdf_order(
-  op_lists : ArrayView[Array[PdfContentOp]],
+  op_lists : ArrayView[Array[@content.PdfContentOp]],
   before : Bool,
   fast : Bool,
   document : PdfDocument,

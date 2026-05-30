@@ -44,13 +44,13 @@ fn pdf_tweak_extgstate_line_width(
 pub fn pdf_thin_lines_ops(
   document : PdfDocument,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   width : Double,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   let limit = if width < 0.0 { -width } else { width }
   let is_minimum = width >= 0.0
   let ctm_stack : Array[TransformMatrix] = [transform_identity_matrix]
-  let output : Array[PdfContentOp] = []
+  let output : Array[@content.PdfContentOp] = []
   for op in ops {
     match op {
       Op_w(line_width) => {

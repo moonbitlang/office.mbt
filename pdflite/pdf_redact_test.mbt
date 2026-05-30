@@ -37,7 +37,7 @@ fn redact_annotation_object_for_test(
 fn redact_content_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 
@@ -48,8 +48,8 @@ fn redact_expected_annotation_box_for_test(
   max_x : Double,
   max_y : Double,
   light : Bool,
-) -> Array[@pdflite.PdfContentOp] {
-  let stroke : @pdflite.PdfContentOp = if light {
+) -> Array[@content.PdfContentOp] {
+  let stroke : @content.PdfContentOp = if light {
     Op_RG(1.0, 1.0, 0.5)
   } else {
     Op_RG(1.0, 1.0, 0.0)
@@ -78,8 +78,8 @@ fn redact_expected_path_content_box_for_test(
   x3 : Double,
   y3 : Double,
   light : Bool,
-) -> Array[@pdflite.PdfContentOp] {
-  let stroke : @pdflite.PdfContentOp = if light {
+) -> Array[@content.PdfContentOp] {
+  let stroke : @content.PdfContentOp = if light {
     Op_RG(0.5, 0.5, 1.0)
   } else {
     Op_RG(0.0, 0.0, 1.0)
@@ -100,10 +100,10 @@ fn redact_expected_path_content_box_for_test(
 
 ///|
 fn redact_concat_ops_for_test(
-  first : ArrayView[@pdflite.PdfContentOp],
-  second : ArrayView[@pdflite.PdfContentOp],
-) -> Array[@pdflite.PdfContentOp] {
-  let output : Array[@pdflite.PdfContentOp] = []
+  first : ArrayView[@content.PdfContentOp],
+  second : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in first {
     output.push(op)
   }
@@ -242,7 +242,7 @@ test "pdf_show_annotation_bounding_boxes supports light fast overlay" {
 test "PdfDocument show_bounding_boxes draws page content rectangles" {
   let base = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let pages = try! base.pages_of_pagetree()
-  let source_ops : Array[@pdflite.PdfContentOp] = [
+  let source_ops : Array[@content.PdfContentOp] = [
     Op_m(10.0, 20.0),
     Op_l(30.0, 20.0),
     Op_S,

@@ -4,9 +4,9 @@
 /// This ports `cpdftweak.ml`'s `remove_clipping_ops`: only the exact `W n`
 /// sequence is rewritten, becoming just `n`.
 pub fn pdf_remove_clipping_ops(
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   let mut index = 0
   while index < ops.length() {
     if index + 1 < ops.length() && ops[index] == Op_W && ops[index + 1] == Op_n {

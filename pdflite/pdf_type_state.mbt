@@ -37,7 +37,7 @@ fn PdfTypeTypesetState::write_page(
   paper : PaperSize,
 ) -> Unit raise PdfError {
   let ops = if process_struct_tree {
-    pdf_content_add_artifacts(self.ops)
+    @content.pdf_content_add_artifacts(self.ops)
   } else {
     [
       for op in self.ops => op

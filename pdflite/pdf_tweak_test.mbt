@@ -10,7 +10,7 @@ fn tweak_bytes_for_test(text : String) -> Bytes {
 
 ///|
 fn tweak_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
@@ -19,7 +19,7 @@ fn tweak_stream_for_test(
 fn tweak_content_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 
@@ -351,7 +351,7 @@ test "PdfDocument black_fills rewrites selected pages and form xobjects" {
 
 ///|
 test "pdf_reveal_hidden_text_ops removes rendering mode operators" {
-  let ops : Array[@pdflite.PdfContentOp] = [
+  let ops : Array[@content.PdfContentOp] = [
     Op_BT,
     Op_Tr(3),
     Op_Tj(tweak_bytes_for_test("hidden")),
@@ -1185,7 +1185,7 @@ test "pdf_thin_lines_ops rejects CTM operations after unbalanced restore" {
     e: 0.0,
     f: 0.0,
   }
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
+  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
     document,
     PdfDictionary([]),
     [Op_Q, Op_cm(scale_two)],
@@ -1194,7 +1194,7 @@ test "pdf_thin_lines_ops rejects CTM operations after unbalanced restore" {
   guard result is Err(@pdflite.PdfError::MatrixMalformed) else {
     fail("expected MatrixMalformed for CTM update after unbalanced Q")
   }
-  let double_restore : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
+  let double_restore : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
     document,
     PdfDictionary([]),
     [Op_Q, Op_Q],
@@ -1203,7 +1203,7 @@ test "pdf_thin_lines_ops rejects CTM operations after unbalanced restore" {
   guard double_restore is Err(@pdflite.PdfError::MatrixMalformed) else {
     fail("expected MatrixMalformed for double unbalanced Q")
   }
-  let restore_then_save : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
+  let restore_then_save : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_thin_lines_ops(
     document,
     PdfDictionary([]),
     [Op_Q, Op_q],

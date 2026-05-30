@@ -8,7 +8,7 @@
 /// page-level rendering.
 pub fn PdfDrawOp::to_content_ops(
   self : PdfDrawOp,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   self.to_content_ops_internal(None, None, None)
 }
 
@@ -17,7 +17,7 @@ pub fn PdfDrawOp::to_content_ops(
 pub fn PdfDrawOp::to_content_ops_with_state(
   self : PdfDrawOp,
   state : PdfDrawRenderState,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   self.to_content_ops_internal(Some(state), None, None)
 }
 
@@ -27,7 +27,7 @@ pub fn PdfDrawOp::to_content_ops_with_context(
   self : PdfDrawOp,
   state : PdfDrawRenderState,
   context : PdfDrawSpecialTextContext,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   self.to_content_ops_internal(Some(state), None, Some(context))
 }
 
@@ -38,7 +38,7 @@ pub fn PdfDrawOp::to_content_ops_with_document(
   self : PdfDrawOp,
   state : PdfDrawRenderState,
   document : PdfDocument,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   self.to_content_ops_internal(Some(state), Some(document), None)
 }
 
@@ -49,6 +49,6 @@ pub fn PdfDrawOp::to_content_ops_with_document_context(
   state : PdfDrawRenderState,
   document : PdfDocument,
   context : PdfDrawSpecialTextContext,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   self.to_content_ops_internal(Some(state), Some(document), Some(context))
 }

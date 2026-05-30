@@ -25,7 +25,7 @@ fn PdfDocument::pdf_page_stamp_protect_content(
     }
   }
   let begin_number = self.add_object(pdf_content_stream_of_ops([Op_q]))
-  let end_ops : Array[PdfContentOp] = []
+  let end_ops : Array[@content.PdfContentOp] = []
   for _ in 0..<deficit {
     end_ops.push(Op_Q)
   }

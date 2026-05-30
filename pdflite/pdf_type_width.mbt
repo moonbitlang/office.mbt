@@ -60,7 +60,7 @@ pub fn pdf_type_width_of_string(
 ///|
 /// Source-spelled compatibility alias for cpdftype's `add_artifacts`.
 pub fn pdf_type_add_artifacts(
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  pdf_content_add_artifacts(ops)
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  @content.pdf_content_add_artifacts(ops)
 }

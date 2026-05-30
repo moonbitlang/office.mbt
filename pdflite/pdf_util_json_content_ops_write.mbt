@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_util_json_of_content_op(
   self : PdfDocument,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
   utf8 : Bool,
 ) -> Json raise PdfError {
   match op {

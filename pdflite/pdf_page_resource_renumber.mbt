@@ -33,8 +33,8 @@ fn PdfDocument::pdf_page_renumber_content_op(
   self : PdfDocument,
   changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
   page_number : Int,
-  op : PdfContentOp,
-) -> PdfContentOp raise PdfError {
+  op : @content.PdfContentOp,
+) -> @content.PdfContentOp raise PdfError {
   match op {
     Op_Tf(font, size) =>
       Op_Tf(
@@ -133,9 +133,9 @@ fn PdfDocument::pdf_page_renumber_content_ops(
   self : PdfDocument,
   changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
   page_number : Int,
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] raise PdfError {
+  let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     output.push(self.pdf_page_renumber_content_op(changes, page_number, op))
   }

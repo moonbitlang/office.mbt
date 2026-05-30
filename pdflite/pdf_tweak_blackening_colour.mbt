@@ -1,7 +1,7 @@
 ///|
 fn @colour.PdfContentColour::pdf_tweak_fill_op(
   self : @colour.PdfContentColour,
-) -> PdfContentOp {
+) -> @content.PdfContentOp {
   match self {
     PdfContentGrey(grey) => Op_g(grey)
     PdfContentRGB(red, green, blue) => Op_rg(red, green, blue)
@@ -13,7 +13,7 @@ fn @colour.PdfContentColour::pdf_tweak_fill_op(
 ///|
 fn @colour.PdfContentColour::pdf_tweak_stroke_op(
   self : @colour.PdfContentColour,
-) -> PdfContentOp {
+) -> @content.PdfContentOp {
   match self {
     PdfContentGrey(grey) => Op_G(grey)
     PdfContentRGB(red, green, blue) => Op_RG(red, green, blue)

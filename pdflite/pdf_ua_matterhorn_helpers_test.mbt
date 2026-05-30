@@ -691,7 +691,7 @@ fn ua_matterhorn_serialized_object_extra_for_test(
 
 ///|
 fn ua_matterhorn_document_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   resources? : @pdflite.PdfObject = PdfDictionary([]),
   root_extras? : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)] = [],
   rest? : @pdflite.PdfObject = PdfDictionary([]),
@@ -961,7 +961,7 @@ fn ua_matterhorn_xfa_config_root_for_test(
 
 ///|
 fn ua_matterhorn_form_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   resources? : @pdflite.PdfObject = PdfDictionary([]),
 ) -> @pdflite.PdfObject {
   let stream = try! @pdflite.pdf_content_stream_of_ops(ops)

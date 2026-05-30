@@ -27,7 +27,7 @@ fn PdfDocument::pdf_page_show_box_ops(
   dash_on : Double,
   dash_off : Double,
   box_name : PdfName,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   match self.pdf_page_marks_rectangle(page, box_name) {
     Some(bounds) => {
       let dash = if dash_on == 0.0 && dash_off == 0.0 {
@@ -58,8 +58,10 @@ fn PdfDocument::pdf_page_show_box_ops(
 fn PdfDocument::pdf_page_show_boxes_ops(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> Array[PdfContentOp] raise PdfError {
-  let ops : Array[PdfContentOp] = [pdf_content_begin_artifact()]
+) -> Array[@content.PdfContentOp] raise PdfError {
+  let ops : Array[@content.PdfContentOp] = [
+    @content.pdf_content_begin_artifact(),
+  ]
   for
     op in self.pdf_page_show_box_ops(
       page,
@@ -110,13 +112,13 @@ fn PdfDocument::pdf_page_show_boxes_ops(
     ) {
     ops.push(op)
   }
-  ops.push(pdf_content_end_artifact())
+  ops.push(@content.pdf_content_end_artifact())
   ops
 }
 
 ///|
 fn pdf_page_trim_marks_push_line(
-  ops : Array[PdfContentOp],
+  ops : Array[@content.PdfContentOp],
   x0 : Double,
   y0 : Double,
   x1 : Double,
@@ -131,12 +133,12 @@ fn pdf_page_trim_marks_push_line(
 fn pdf_page_trim_marks_ops(
   trim : PdfRectangle,
   media : PdfRectangle,
-) -> Array[PdfContentOp] {
-  let ops : Array[PdfContentOp] = [
+) -> Array[@content.PdfContentOp] {
+  let ops : Array[@content.PdfContentOp] = [
     Op_q,
     Op_K(1.0, 1.0, 1.0, 1.0),
     Op_w(1.0),
-    pdf_content_begin_artifact(),
+    @content.pdf_content_begin_artifact(),
   ]
   pdf_page_trim_marks_push_line(
     ops,
@@ -194,7 +196,7 @@ fn pdf_page_trim_marks_ops(
     trim.min_x,
     media.min_y,
   )
-  ops.push(pdf_content_end_artifact())
+  ops.push(@content.pdf_content_end_artifact())
   ops.push(Op_Q)
   ops
 }

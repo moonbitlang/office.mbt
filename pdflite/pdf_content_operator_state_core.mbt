@@ -14,7 +14,7 @@ fn PdfContentOperatorState::content_with_clipping_path(
 ///|
 fn PdfContentOperatorState::content_apply_path_machine_op(
   self : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   let result = self.partial_path.content_apply_path_op(op)
   match result.drawn_path {
@@ -26,7 +26,7 @@ fn PdfContentOperatorState::content_apply_path_machine_op(
 ///|
 fn PdfContentOperatorState::content_apply_clipping_state_op(
   self : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   let result = self.partial_path.content_apply_clipping_op(
     self.clipping_path,
@@ -47,7 +47,7 @@ fn PdfContentOperatorState::content_apply_clipping_state_op(
 /// dictionaries remain separate resource-backed slices.
 pub fn PdfContentOperatorState::content_apply_core_op(
   self : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   match op {
     Op_q | Op_Q | Op_cm(_) => self.content_apply_graphics_state_op(op)
@@ -71,13 +71,13 @@ pub fn PdfContentOperatorState::content_apply_core_op(
 /// Compatibility wrapper for `PdfContentOperatorState::content_apply_core_op`.
 pub fn pdf_content_apply_core_op(
   state : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_core_op(op)
 }
 
 ///|
-fn pdf_content_path_paint_stroking(op : PdfContentOp) -> Bool? {
+fn pdf_content_path_paint_stroking(op : @content.PdfContentOp) -> Bool? {
   match op {
     Op_S | Op_s | Op_B | Op_Bstar | Op_b | Op_bstar => Some(true)
     Op_f | Op_F | Op_fstar => Some(false)
@@ -101,7 +101,7 @@ pub fn PdfDocument::content_apply_resource_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
   resources : PdfObject,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorResourceResult raise PdfError {
   match op {
     Op_BT
@@ -163,7 +163,7 @@ pub fn pdf_content_apply_resource_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
   resources : PdfObject,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorResourceResult raise PdfError {
   document.content_apply_resource_op(state, resources, op)
 }

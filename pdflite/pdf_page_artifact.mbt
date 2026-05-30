@@ -5,11 +5,13 @@ fn PdfDocument::pdf_page_mark_all_as_artifact_streams(
   content : ArrayView[PdfObject],
 ) -> Array[PdfObject] raise PdfError {
   let ops = self.pdf_page_parse_content_ops(resources, content)
-  let marked : Array[PdfContentOp] = [pdf_content_begin_artifact()]
+  let marked : Array[@content.PdfContentOp] = [
+    @content.pdf_content_begin_artifact(),
+  ]
   for op in ops {
     marked.push(op)
   }
-  marked.push(pdf_content_end_artifact())
+  marked.push(@content.pdf_content_end_artifact())
   [pdf_content_stream_of_ops(marked)]
 }
 
@@ -30,7 +32,7 @@ fn pdf_page_struct_parents_key() -> PdfName {
 }
 
 ///|
-fn pdf_page_remove_struct_tree_op(op : PdfContentOp) -> Bool {
+fn pdf_page_remove_struct_tree_op(op : @content.PdfContentOp) -> Bool {
   match op {
     Op_MP(_) | Op_DP(_, _) | Op_BMC(_) | Op_BDC(_, _) | Op_EMC => true
     _ => false
@@ -44,7 +46,7 @@ fn PdfDocument::pdf_page_remove_struct_tree_streams(
   content : ArrayView[PdfObject],
 ) -> Array[PdfObject] raise PdfError {
   let ops = self.pdf_page_parse_content_ops(resources, content)
-  let output : Array[PdfContentOp] = []
+  let output : Array[@content.PdfContentOp] = []
   for op in ops {
     if !pdf_page_remove_struct_tree_op(op) {
       output.push(op)

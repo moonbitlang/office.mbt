@@ -22,7 +22,7 @@ fn content_concat_for_test(
 }
 
 ///|
-fn hello_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn hello_content_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_cm(@pdflite.transform_translate(50.0, 770.0)),
     Op_BT,
@@ -33,7 +33,7 @@ fn hello_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
-fn extended_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn extended_content_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_d([3.0, 2.0], 1.0),
     Op_ri(content_name_for_test("/RelativeColorimetric")),
@@ -60,7 +60,7 @@ fn extended_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
-fn comprehensive_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn comprehensive_content_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_w(2.0),
     Op_J(1),
@@ -101,7 +101,7 @@ fn comprehensive_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
-fn marked_text_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn marked_text_content_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_quote(content_bytes_for_test("Next")),
     Op_double_quote(3.0, 4.0, content_bytes_for_test("Spacing")),
@@ -296,9 +296,9 @@ test "pdf_parse_content_ops_from_bytes parses marked content and text quote oper
 ///|
 test "pdf_content artifact helpers mirror CamlPDF artifact markers" {
   let ops = [
-    @pdflite.pdf_content_begin_artifact(),
+    @content.pdf_content_begin_artifact(),
     Op_Tj(content_bytes_for_test("artifact")),
-    @pdflite.pdf_content_end_artifact(),
+    @content.pdf_content_end_artifact(),
   ]
   let data = content_bytes_for_test("/Artifact BMC (artifact) Tj EMC")
   @test.assert_eq(try! @pdflite.pdf_content_bytes_of_ops(ops), data)
@@ -306,32 +306,32 @@ test "pdf_content artifact helpers mirror CamlPDF artifact markers" {
 }
 
 ///|
-test "pdf_content_add_artifacts wraps unmarked operator runs" {
+test "@content.pdf_content_add_artifacts wraps unmarked operator runs" {
   @test.assert_eq(
-    @pdflite.pdf_content_add_artifacts([
+    @content.pdf_content_add_artifacts([
       Op_q,
       Op_Tj(content_bytes_for_test("artifact")),
       Op_Q,
     ]),
     [
-      @pdflite.pdf_content_begin_artifact(),
+      @content.pdf_content_begin_artifact(),
       Op_q,
       Op_Tj(content_bytes_for_test("artifact")),
       Op_Q,
-      @pdflite.pdf_content_end_artifact(),
+      @content.pdf_content_end_artifact(),
     ],
   )
-  @test.assert_eq(@pdflite.pdf_content_add_artifacts([]), [])
+  @test.assert_eq(@content.pdf_content_add_artifacts([]), [])
 }
 
 ///|
-test "pdf_content_add_artifacts preserves real marked content" {
+test "@content.pdf_content_add_artifacts preserves real marked content" {
   let span = content_name_for_test("/Span")
   let properties = @pdflite.pdf_dictionary([
     (content_name_for_test("/MCID"), PdfInteger(7)),
   ])
   @test.assert_eq(
-    @pdflite.pdf_content_add_artifacts([
+    @content.pdf_content_add_artifacts([
       Op_Tj(content_bytes_for_test("artifact")),
       Op_BDC(span, properties),
       Op_Tj(content_bytes_for_test("content")),
@@ -339,31 +339,31 @@ test "pdf_content_add_artifacts preserves real marked content" {
       Op_Tj(content_bytes_for_test("tail")),
     ]),
     [
-      @pdflite.pdf_content_begin_artifact(),
+      @content.pdf_content_begin_artifact(),
       Op_Tj(content_bytes_for_test("artifact")),
-      @pdflite.pdf_content_end_artifact(),
+      @content.pdf_content_end_artifact(),
       Op_BDC(span, properties),
       Op_Tj(content_bytes_for_test("content")),
       Op_EMC,
-      @pdflite.pdf_content_begin_artifact(),
+      @content.pdf_content_begin_artifact(),
       Op_Tj(content_bytes_for_test("tail")),
-      @pdflite.pdf_content_end_artifact(),
+      @content.pdf_content_end_artifact(),
     ],
   )
 }
 
 ///|
-test "pdf_content_add_artifacts converts cpdftype back-channel artifact markers" {
+test "@content.pdf_content_add_artifacts converts cpdftype back-channel artifact markers" {
   @test.assert_eq(
-    @pdflite.pdf_content_add_artifacts([
+    @content.pdf_content_add_artifacts([
       Op_BMC(content_name_for_test("/BeginArtifact")),
       Op_Tj(content_bytes_for_test("backchannel")),
       Op_BMC(content_name_for_test("/EndArtifact")),
     ]),
     [
-      @pdflite.pdf_content_begin_artifact(),
+      @content.pdf_content_begin_artifact(),
       Op_Tj(content_bytes_for_test("backchannel")),
-      @pdflite.pdf_content_end_artifact(),
+      @content.pdf_content_end_artifact(),
     ],
   )
 }
@@ -639,7 +639,7 @@ test "PdfDocument parse_content_ops_with_resources reports missing inline image 
       Op_Q,
     ],
   )
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? doc.parse_content_ops_with_resources(
+  let result : Result[Array[@content.PdfContentOp], Error] = try? doc.parse_content_ops_with_resources(
     @pdflite.pdf_dictionary([]),
     [content_stream_for_test("BI /W 1 /H 1 /BPC 8 /CS /Missing ID abc EI")],
   )
@@ -725,7 +725,7 @@ test "pdf_string_of_content_op exposes CamlPDF byte-oriented debug strings" {
 test "PdfDocument parse_content_ops reports non-stream content objects" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(10, PdfInteger(42))
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? doc.parse_content_ops([
+  let result : Result[Array[@content.PdfContentOp], Error] = try? doc.parse_content_ops([
       PdfIndirect(10),
     ],
   )
@@ -825,7 +825,7 @@ test "pdf_parse_content_ops_from_bytes uses CamlPDF malformed color fallback" {
 
 ///|
 test "pdf_parse_content_ops_from_bytes reports trailing operands" {
-  let result : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("1 2"),
   )
   guard result is Err(@pdflite.PdfError::ContentOperatorExpected) else {
@@ -835,19 +835,19 @@ test "pdf_parse_content_ops_from_bytes reports trailing operands" {
 
 ///|
 test "pdf content parser reports malformed complex and inline-image operands" {
-  let malformed_dash : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+  let malformed_dash : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("[/Bad] 0 d"),
   )
   guard malformed_dash is Err(@pdflite.PdfError::NumberExpected) else {
     fail("expected @pdflite.PdfError::NumberExpected")
   }
-  let malformed_array : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+  let malformed_array : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("[(A) 1 TJ"),
   )
   guard malformed_array is Err(@pdflite.PdfError::ParseObjectExpected) else {
     fail("expected @pdflite.PdfError::ParseObjectExpected")
   }
-  let malformed_inline_image : Result[Array[@pdflite.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
+  let malformed_inline_image : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
     content_bytes_for_test("BI /W ID abc EI"),
   )
   guard malformed_inline_image is Err(@pdflite.PdfError::ContentOperandExpected) else {

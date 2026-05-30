@@ -76,8 +76,8 @@ fn PdfDocument::pdf_page_prefix_inline_image_dictionary(
 fn PdfDocument::pdf_page_prefix_content_op(
   self : PdfDocument,
   prefix : String,
-  op : PdfContentOp,
-) -> PdfContentOp raise PdfError {
+  op : @content.PdfContentOp,
+) -> @content.PdfContentOp raise PdfError {
   match op {
     Op_Tf(font, size) => Op_Tf(pdf_page_prefixed_name(prefix, font), size)
     Op_gs(name) => Op_gs(pdf_page_prefixed_name(prefix, name))
@@ -117,9 +117,9 @@ fn PdfDocument::pdf_page_prefix_content_op(
 fn PdfDocument::pdf_page_prefix_content_ops(
   self : PdfDocument,
   prefix : String,
-  ops : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] raise PdfError {
+  let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     output.push(self.pdf_page_prefix_content_op(prefix, op))
   }

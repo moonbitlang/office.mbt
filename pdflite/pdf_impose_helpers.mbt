@@ -60,10 +60,10 @@ fn PdfDocument::pdf_impose_preprocess(
 
 ///|
 fn pdf_impose_concat_ops(
-  first : ArrayView[PdfContentOp],
-  second : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  first : ArrayView[@content.PdfContentOp],
+  second : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in first {
     output.push(op)
   }

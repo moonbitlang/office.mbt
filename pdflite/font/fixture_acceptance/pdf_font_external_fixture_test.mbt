@@ -21,7 +21,7 @@ fn font_external_inline_image_op_for_test(
   width : Int,
   height : Int,
   data_length : Int,
-) -> @pdflite.PdfContentOp {
+) -> @content.PdfContentOp {
   Op_InlineImage(
     @pdflite.pdf_dictionary([
       (font_external_name_for_test("/W"), PdfInteger(width)),

@@ -146,7 +146,7 @@ fn PdfContentOperatorState::content_pop_state(
 /// Apply cpdfcontent graphics-state stack and CTM operators.
 pub fn PdfContentOperatorState::content_apply_graphics_state_op(
   self : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   match op {
     Op_q => self.content_push_state()
@@ -160,7 +160,7 @@ pub fn PdfContentOperatorState::content_apply_graphics_state_op(
 /// Compatibility wrapper for `PdfContentOperatorState::content_apply_graphics_state_op`.
 pub fn pdf_content_apply_graphics_state_op(
   state : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_graphics_state_op(op)
 }
@@ -169,7 +169,7 @@ pub fn pdf_content_apply_graphics_state_op(
 /// Apply cpdfcontent direct graphics-parameter operators.
 pub fn PdfContentOperatorState::content_apply_graphics_parameter_op(
   self : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   match op {
     Op_M(limit) => { ..self, miter_limit: limit }
@@ -182,7 +182,7 @@ pub fn PdfContentOperatorState::content_apply_graphics_parameter_op(
 /// Compatibility wrapper for `PdfContentOperatorState::content_apply_graphics_parameter_op`.
 pub fn pdf_content_apply_graphics_parameter_op(
   state : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_graphics_parameter_op(op)
 }
@@ -191,7 +191,7 @@ pub fn pdf_content_apply_graphics_parameter_op(
 /// Apply cpdfcontent marked-content state operators.
 pub fn PdfContentOperatorState::content_apply_marked_content_op(
   self : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   match op {
     Op_MP(tag) =>
@@ -239,7 +239,7 @@ pub fn PdfContentOperatorState::content_apply_marked_content_op(
 /// Compatibility wrapper for `PdfContentOperatorState::content_apply_marked_content_op`.
 pub fn pdf_content_apply_marked_content_op(
   state : PdfContentOperatorState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentOperatorState {
   state.content_apply_marked_content_op(op)
 }

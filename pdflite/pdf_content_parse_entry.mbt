@@ -8,7 +8,7 @@
 pub fn PdfDocument::parse_content_ops(
   self : PdfDocument,
   streams : ArrayView[PdfObject],
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
   pdf_parse_content_ops_from_view(pdf_content_concat_streams(raw_streams))
 }
@@ -22,7 +22,7 @@ pub fn PdfDocument::parse_content_ops_with_resources(
   self : PdfDocument,
   resources : PdfObject,
   streams : ArrayView[PdfObject],
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
   pdf_parse_content_ops_from_view_with_context(
     pdf_content_concat_streams(raw_streams),
@@ -42,7 +42,7 @@ pub fn PdfDocument::parse_content_bytes_with_resources(
   self : PdfDocument,
   resources : PdfObject,
   data : PdfBytes,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   self.parse_content_view_with_resources(resources, data)
 }
 
@@ -55,7 +55,7 @@ pub fn PdfDocument::parse_content_view_with_resources(
   self : PdfDocument,
   resources : PdfObject,
   data : BytesView,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   pdf_parse_content_ops_from_view_with_context(
     data,
     pdf_content_parse_context(

@@ -5,14 +5,14 @@ fn page_redact_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn page_redact_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn page_redact_page_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   rest? : @pdflite.PdfObject = PdfDictionary([]),
   resources? : @pdflite.PdfObject = PdfDictionary([]),
   rotate? : @page.PdfPageRotation = Rotate0,
@@ -44,7 +44,7 @@ fn page_redact_document_for_test(
 fn page_redact_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 

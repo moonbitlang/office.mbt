@@ -4,7 +4,7 @@ fn draft_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn draft_substitute_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn draft_substitute_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_q,
     Op_w(0.0),
@@ -20,7 +20,7 @@ fn draft_substitute_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 }
 
 ///|
-fn draft_inline_image_for_test() -> @pdflite.PdfContentOp {
+fn draft_inline_image_for_test() -> @content.PdfContentOp {
   Op_InlineImage(
     PdfDictionary([
       (draft_name_for_test("/W"), PdfInteger(1)),
@@ -70,7 +70,7 @@ fn draft_resources_for_test(
 
 ///|
 fn draft_form_object_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   resources : @pdflite.PdfObject,
 ) -> @pdflite.PdfObject {
   let stream = try! @pdflite.pdf_content_stream_of_ops(ops)

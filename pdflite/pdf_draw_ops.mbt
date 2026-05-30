@@ -3,7 +3,7 @@
 ///
 /// This mirrors the operation shape from `cpdfdraw.ml`. The first rendering
 /// slice converts path, graphics-state, colour, matrix, and paint operations to
-/// `PdfContentOp`; structure and page-level operations are represented here
+/// `@content.PdfContentOp`; structure and page-level operations are represented here
 /// and will be rendered by later cpdfdraw slices.
 pub(all) enum PdfDrawOp {
   PdfDrawRect(Double, Double, Double, Double)

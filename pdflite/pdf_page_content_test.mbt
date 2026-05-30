@@ -73,7 +73,7 @@ fn page_content_prefix_full_resources_for_test(
 ///|
 fn page_content_prefix_content_ops_for_test(
   prefix? : String = "",
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   [
     Op_Tf(page_content_name_for_test("/" + prefix + "F0"), 12.0),
     Op_gs(page_content_name_for_test("/" + prefix + "GS1")),
@@ -106,7 +106,7 @@ fn page_content_prefix_content_ops_for_test(
 }
 
 ///|
-fn page_content_renumber_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn page_content_renumber_content_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_Tf(page_content_name_for_test("/r1"), 12.0),
     Op_gs(page_content_name_for_test("/r2")),

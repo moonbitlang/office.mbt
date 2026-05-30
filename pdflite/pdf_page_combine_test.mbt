@@ -15,7 +15,7 @@ fn combine_rect_for_test(
 
 ///|
 fn combine_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
@@ -32,7 +32,7 @@ fn combine_font_resources_for_test(name : String) -> @pdflite.PdfObject {
 
 ///|
 fn combine_page_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   resources? : @pdflite.PdfObject = PdfDictionary([]),
   width? : Double = 100.0,
   height? : Double = 100.0,
@@ -59,7 +59,7 @@ fn combine_document_for_test(
 fn combine_content_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 

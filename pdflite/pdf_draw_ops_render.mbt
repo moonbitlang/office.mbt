@@ -4,10 +4,10 @@ fn PdfDrawOp::to_content_ops_internal(
   state : PdfDrawRenderState?,
   document : PdfDocument?,
   special_text_context : PdfDrawSpecialTextContext?,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   match self {
     PdfDrawQq(ops) => {
-      let output : Array[PdfContentOp] = [Op_q]
+      let output : Array[@content.PdfContentOp] = [Op_q]
       for op in ops {
         for
           content_op in op.to_content_ops_internal(
@@ -20,7 +20,7 @@ fn PdfDrawOp::to_content_ops_internal(
       output
     }
     PdfDrawTextSection(ops) => {
-      let output : Array[PdfContentOp] = [Op_BT]
+      let output : Array[@content.PdfContentOp] = [Op_BT]
       for op in ops {
         for
           content_op in op.to_content_ops_internal(

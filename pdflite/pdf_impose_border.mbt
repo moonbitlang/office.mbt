@@ -8,9 +8,9 @@ fn pdf_impose_border_ops(
   width : Double,
   height : Double,
   line_width : Double,
-) -> Array[PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   [
-    pdf_content_begin_artifact(),
+    @content.pdf_content_begin_artifact(),
     Op_q,
     Op_BMC(pdf_impose_cpdf_stamp_name),
     Op_rg(0.0, 0.0, 0.0),
@@ -20,7 +20,7 @@ fn pdf_impose_border_ops(
     Op_s,
     Op_EMC,
     Op_Q,
-    pdf_content_end_artifact(),
+    @content.pdf_content_end_artifact(),
   ]
 }
 

@@ -18,7 +18,9 @@ fn pdf_util_json_op_matrix(
 }
 
 ///|
-fn pdf_util_content_op_of_json(json : Json) -> PdfContentOp raise PdfError {
+fn pdf_util_content_op_of_json(
+  json : Json,
+) -> @content.PdfContentOp raise PdfError {
   match json {
     Array(items) =>
       match items {

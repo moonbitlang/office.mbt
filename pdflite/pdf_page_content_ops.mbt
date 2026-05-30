@@ -1,9 +1,9 @@
 ///|
 fn pdf_page_concat_ops(
-  first : ArrayView[PdfContentOp],
-  second : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
-  let output : Array[PdfContentOp] = []
+  first : ArrayView[@content.PdfContentOp],
+  second : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in first {
     output.push(op)
   }
@@ -15,10 +15,10 @@ fn pdf_page_concat_ops(
 
 ///|
 fn pdf_page_concat3_ops(
-  first : ArrayView[PdfContentOp],
-  second : ArrayView[PdfContentOp],
-  third : ArrayView[PdfContentOp],
-) -> Array[PdfContentOp] {
+  first : ArrayView[@content.PdfContentOp],
+  second : ArrayView[@content.PdfContentOp],
+  third : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
   pdf_page_concat_ops(pdf_page_concat_ops(first, second), third)
 }
 
@@ -27,7 +27,9 @@ fn pdf_page_concat3_ops(
 ///
 /// If the list contains more `q` saves than `Q` restores, matching restores are
 /// returned. Otherwise the result is empty.
-pub fn pdf_page_protect(ops : ArrayView[PdfContentOp]) -> Array[PdfContentOp] {
+pub fn pdf_page_protect(
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
   let mut saves = 0
   let mut restores = 0
   for op in ops {
@@ -37,7 +39,7 @@ pub fn pdf_page_protect(ops : ArrayView[PdfContentOp]) -> Array[PdfContentOp] {
       _ => ()
     }
   }
-  let output : Array[PdfContentOp] = []
+  let output : Array[@content.PdfContentOp] = []
   if saves > restores {
     for _ in 0..<(saves - restores) {
       output.push(Op_Q)
@@ -51,7 +53,7 @@ fn PdfDocument::pdf_page_parse_content_ops(
   self : PdfDocument,
   resources : PdfObject,
   content : ArrayView[PdfObject],
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   self.parse_content_ops_with_resources(resources, content) catch {
     DictionaryKeyNotFound(_) | ColourSpaceExpected =>
       self.parse_content_ops(content)
@@ -68,7 +70,7 @@ fn PdfDocument::pdf_page_parse_content_ops(
 pub fn PdfDocument::prepend_operators(
   self : PdfDocument,
   page : @page.PdfPage,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   fast? : Bool = false,
 ) -> @page.PdfPage raise PdfError {
   if fast {
@@ -86,7 +88,7 @@ pub fn PdfDocument::prepend_operators(
 /// Compatibility wrapper for `PdfDocument::prepend_operators`.
 pub fn pdf_prepend_operators(
   document : PdfDocument,
-  operators : ArrayView[PdfContentOp],
+  operators : ArrayView[@content.PdfContentOp],
   page : @page.PdfPage,
   fast? : Bool = false,
 ) -> @page.PdfPage raise PdfError {
@@ -102,7 +104,7 @@ pub fn pdf_prepend_operators(
 pub fn PdfDocument::postpend_operators(
   self : PdfDocument,
   page : @page.PdfPage,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   fast? : Bool = false,
 ) -> @page.PdfPage raise PdfError {
   if fast {
@@ -121,7 +123,7 @@ pub fn PdfDocument::postpend_operators(
     if existing_ops.length() == 0 {
       { ..page, content: [pdf_content_stream_of_ops(ops)] }
     } else {
-      let before_ops : Array[PdfContentOp] = [Op_q]
+      let before_ops : Array[@content.PdfContentOp] = [Op_q]
       let after_ops = pdf_page_concat3_ops(
         pdf_page_protect(existing_ops),
         [Op_Q],
@@ -143,7 +145,7 @@ pub fn PdfDocument::postpend_operators(
 /// Compatibility wrapper for `PdfDocument::postpend_operators`.
 pub fn pdf_postpend_operators(
   document : PdfDocument,
-  operators : ArrayView[PdfContentOp],
+  operators : ArrayView[@content.PdfContentOp],
   page : @page.PdfPage,
   fast? : Bool = false,
 ) -> @page.PdfPage raise PdfError {

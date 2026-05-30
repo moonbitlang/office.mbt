@@ -2,7 +2,7 @@
 /// Apply the cpdfcontent path-state operators that do not require resources.
 pub fn PdfContentPathState::content_apply_path_state_op(
   self : PdfContentPathState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentPathState {
   match op {
     Op_w(width) => { ..self, line_width: width }
@@ -109,7 +109,7 @@ pub fn PdfContentPathState::content_apply_path_state_op(
 /// Compatibility wrapper for `PdfContentPathState::content_apply_path_state_op`.
 pub fn pdf_content_apply_path_state_op(
   state : PdfContentPathState,
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
 ) -> PdfContentPathState {
   state.content_apply_path_state_op(op)
 }

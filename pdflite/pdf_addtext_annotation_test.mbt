@@ -31,7 +31,7 @@ fn addtext_annot_bounds_for_test() -> @pdflite.PdfRectangle {
 fn addtext_annot_content_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 

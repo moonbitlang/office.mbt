@@ -2,7 +2,7 @@
 fn pdf_content_read_inline_image(
   cursor : ByteCursor,
   context : PdfContentParseContext,
-) -> PdfContentOp raise PdfError {
+) -> @content.PdfContentOp raise PdfError {
   let entries : Array[(PdfName, PdfObject)] = []
   let mut decode_parms : PdfObject? = None
   let mut done = false

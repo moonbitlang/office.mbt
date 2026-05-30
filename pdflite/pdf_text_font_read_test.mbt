@@ -18,7 +18,7 @@ fn text_font_read_standard_font_data_for_test(
 
 ///|
 fn text_font_read_type3_charproc_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject raise {
   let data = @pdflite.pdf_content_bytes_of_ops(ops)
   @pdflite.pdf_stream(

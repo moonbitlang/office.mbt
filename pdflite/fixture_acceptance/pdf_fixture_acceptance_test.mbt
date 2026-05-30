@@ -2046,7 +2046,7 @@ fn fixture_acceptance_assert_cpdf_h1_struct_tree_for_test(
 
 ///|
 fn fixture_acceptance_assert_no_structure_marking_ops_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Unit raise {
   for op in ops {
     match op {
@@ -2105,14 +2105,14 @@ fn fixture_acceptance_assert_cpdf_h1_artifact_marked_for_test(
   @test.assert_eq(
     fixture_acceptance_content_op_count_for_test(
       ops,
-      @pdflite.pdf_content_begin_artifact(),
+      @content.pdf_content_begin_artifact(),
     ),
     1,
   )
   @test.assert_eq(
     fixture_acceptance_content_op_count_for_test(
       ops,
-      @pdflite.pdf_content_end_artifact(),
+      @content.pdf_content_end_artifact(),
     ),
     1,
   )
@@ -2224,11 +2224,11 @@ fn fixture_acceptance_assert_cpdf_source_show_page_boxes_for_test(
   let ops = fixture_acceptance_page_content_ops_for_test(marked)
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    @pdflite.pdf_content_begin_artifact(),
+    @content.pdf_content_begin_artifact(),
   )
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    @pdflite.pdf_content_end_artifact(),
+    @content.pdf_content_end_artifact(),
   )
   fixture_acceptance_assert_content_op_for_test(ops, Op_RG(1.0, 0.0, 0.0))
   fixture_acceptance_assert_content_op_for_test(
@@ -2266,11 +2266,11 @@ fn fixture_acceptance_assert_cpdf_source_trim_marks_for_test(
   fixture_acceptance_assert_content_op_for_test(ops, Op_w(1.0))
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    @pdflite.pdf_content_begin_artifact(),
+    @content.pdf_content_begin_artifact(),
   )
   fixture_acceptance_assert_content_op_for_test(
     ops,
-    @pdflite.pdf_content_end_artifact(),
+    @content.pdf_content_end_artifact(),
   )
   fixture_acceptance_assert_content_op_for_test(ops, Op_m(0.0, 56.693))
   fixture_acceptance_assert_content_op_for_test(ops, Op_l(-9.0, 56.693))
@@ -2556,7 +2556,7 @@ fn fixture_acceptance_assert_cpdf_source_combine_for_test(
 
 ///|
 fn fixture_acceptance_content_ops_contain_gs_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   name : @pdflite.PdfName,
 ) -> Bool {
   for op in ops {
@@ -2572,7 +2572,7 @@ fn fixture_acceptance_content_ops_contain_gs_for_test(
 ///|
 fn fixture_acceptance_page_content_ops_for_test(
   document : @pdflite.PdfDocument,
-) -> Array[@pdflite.PdfContentOp] raise {
+) -> Array[@content.PdfContentOp] raise {
   @test.assert_eq(document.endpage(), 1)
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
@@ -2584,8 +2584,8 @@ fn fixture_acceptance_page_content_ops_for_test(
 
 ///|
 fn fixture_acceptance_content_ops_contain_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
-  expected : @pdflite.PdfContentOp,
+  ops : ArrayView[@content.PdfContentOp],
+  expected : @content.PdfContentOp,
 ) -> Bool {
   for op in ops {
     if op == expected {
@@ -2598,8 +2598,8 @@ fn fixture_acceptance_content_ops_contain_for_test(
 
 ///|
 fn fixture_acceptance_content_op_count_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
-  expected : @pdflite.PdfContentOp,
+  ops : ArrayView[@content.PdfContentOp],
+  expected : @content.PdfContentOp,
 ) -> Int {
   let mut count = 0
   for op in ops {
@@ -2625,7 +2625,7 @@ fn fixture_acceptance_double_close_for_test(
 
 ///|
 fn fixture_acceptance_content_ops_contain_translation_cm_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   x : Double,
   y : Double,
 ) -> Bool {
@@ -2649,7 +2649,7 @@ fn fixture_acceptance_content_ops_contain_translation_cm_for_test(
 
 ///|
 fn fixture_acceptance_content_ops_contain_scaled_cm_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Bool {
   for op in ops {
     match op {
@@ -2669,7 +2669,7 @@ fn fixture_acceptance_content_ops_contain_scaled_cm_for_test(
 
 ///|
 fn fixture_acceptance_content_stroke_count_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Int {
   let mut count = 0
   for op in ops {
@@ -2683,7 +2683,7 @@ fn fixture_acceptance_content_stroke_count_for_test(
 
 ///|
 fn fixture_acceptance_content_save_count_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Int {
   let mut count = 0
   for op in ops {
@@ -2697,7 +2697,7 @@ fn fixture_acceptance_content_save_count_for_test(
 
 ///|
 fn fixture_acceptance_content_clip_op_count_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Int {
   let mut count = 0
   for op in ops {
@@ -2711,7 +2711,7 @@ fn fixture_acceptance_content_clip_op_count_for_test(
 
 ///|
 fn fixture_acceptance_content_clip_setup_count_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Int {
   let mut count = 0
   if ops.length() >= 2 {
@@ -2726,7 +2726,7 @@ fn fixture_acceptance_content_clip_setup_count_for_test(
 
 ///|
 fn fixture_acceptance_content_text_rendering_mode_count_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Int {
   let mut count = 0
   for op in ops {
@@ -2774,8 +2774,8 @@ fn fixture_acceptance_filtered_stream_count_for_test(
 
 ///|
 fn fixture_acceptance_assert_content_op_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
-  expected : @pdflite.PdfContentOp,
+  ops : ArrayView[@content.PdfContentOp],
+  expected : @content.PdfContentOp,
 ) -> Unit raise {
   if !fixture_acceptance_content_ops_contain_for_test(ops, expected) {
     fail("missing expected content op: " + expected.to_json().stringify())
@@ -2784,8 +2784,8 @@ fn fixture_acceptance_assert_content_op_for_test(
 
 ///|
 fn fixture_acceptance_assert_no_content_op_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
-  unexpected : @pdflite.PdfContentOp,
+  ops : ArrayView[@content.PdfContentOp],
+  unexpected : @content.PdfContentOp,
 ) -> Unit raise {
   if fixture_acceptance_content_ops_contain_for_test(ops, unexpected) {
     fail("unexpected content op: " + unexpected.to_json().stringify())
@@ -3758,7 +3758,7 @@ fn fixture_acceptance_assert_cpdf_source_chop_for_test(
 
 ///|
 fn fixture_acceptance_has_text_showing_op_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Bool {
   for op in ops {
     match op {
@@ -3773,7 +3773,7 @@ fn fixture_acceptance_has_text_showing_op_for_test(
 ///|
 fn fixture_acceptance_cpdf_source_hello_ops_for_test(
   document : @pdflite.PdfDocument,
-) -> Array[@pdflite.PdfContentOp] raise {
+) -> Array[@content.PdfContentOp] raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   document.parse_content_ops_with_resources(
@@ -4227,7 +4227,7 @@ fn fixture_acceptance_cpdf_source_redact_path_for_test() -> Array[
 ///|
 fn fixture_acceptance_assert_cpdf_source_redact_stub_for_test(
   document : @pdflite.PdfDocument,
-  expected_ops : Array[@pdflite.PdfContentOp],
+  expected_ops : Array[@content.PdfContentOp],
 ) -> Unit raise {
   fixture_acceptance_assert_cpdf_source_hello_text_for_test(document)
   @test.assert_eq(
@@ -5243,7 +5243,7 @@ fn fixture_acceptance_cpdf_manual_stamped_for_test(
 
 ///|
 fn fixture_acceptance_content_ops_contain_tj_fragment_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   fragment : String,
 ) -> Bool {
   for op in ops {
@@ -5269,7 +5269,7 @@ fn fixture_acceptance_content_ops_contain_tj_fragment_for_test(
 
 ///|
 fn fixture_acceptance_tj_fragment_count_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   fragment : String,
 ) -> Int {
   let mut count = 0
@@ -5963,7 +5963,7 @@ fn fixture_acceptance_cpdf_source_hello_with_inline_image_for_test(
 ) -> @pdflite.PdfDocument raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
-  let image_ops : Array[@pdflite.PdfContentOp] = [
+  let image_ops : Array[@content.PdfContentOp] = [
     Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 0.0, f: 0.0 }),
     Op_InlineImage(
       fixture_acceptance_cpdf_source_inline_image_dictionary_for_test(),
@@ -6374,7 +6374,7 @@ fn fixture_acceptance_cpdf_source_type3_inline_data_for_test() -> @pdflite.PdfBy
 
 ///|
 fn fixture_acceptance_cpdf_source_type3_resource_ops_for_test() -> Array[
-  @pdflite.PdfContentOp,
+  @content.PdfContentOp,
 ] raise {
   [
     Op_d0(550.0, 0.0),
@@ -7870,7 +7870,7 @@ fn fixture_acceptance_cpdf_source_hello_with_unijis_unicode_cmaps_for_test(
     font_resources,
   )
   let page = { ..pages[0], resources, }
-  let ops : Array[@pdflite.PdfContentOp] = [Op_BT]
+  let ops : Array[@content.PdfContentOp] = [Op_BT]
   for case in cases {
     if case.7 {
       ops.push(Op_Tf(fixture_acceptance_pdf_name_for_test(case.0), 12.0))
@@ -9232,7 +9232,7 @@ fn fixture_acceptance_cpdf_source_hello_with_rare_japan1_cmaps_for_test(
     output,
     pages[0].resources,
   )
-  let ops : Array[@pdflite.PdfContentOp] = [Op_BT]
+  let ops : Array[@content.PdfContentOp] = [Op_BT]
   for case in cases {
     let descendant = output.add_object(
       fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
@@ -9569,7 +9569,7 @@ fn fixture_acceptance_cpdf_source_hello_with_supplemental_japan1_cmaps_for_test(
     output,
     pages[0].resources,
   )
-  let ops : Array[@pdflite.PdfContentOp] = [Op_BT]
+  let ops : Array[@content.PdfContentOp] = [Op_BT]
   for case in cases {
     let descendant = output.add_object(
       fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
@@ -10992,7 +10992,7 @@ fn fixture_acceptance_assert_cpdf_source_matterhorn_cmap_typo_for_test(
 
 ///|
 fn fixture_acceptance_draft_substitute_ops_for_test() -> Array[
-  @pdflite.PdfContentOp,
+  @content.PdfContentOp,
 ] {
   [
     Op_q,
@@ -11010,8 +11010,8 @@ fn fixture_acceptance_draft_substitute_ops_for_test() -> Array[
 
 ///|
 fn fixture_acceptance_content_ops_contain_sequence_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
-  expected : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
+  expected : ArrayView[@content.PdfContentOp],
 ) -> Bool {
   if expected.length() == 0 {
     true
@@ -11036,7 +11036,7 @@ fn fixture_acceptance_content_ops_contain_sequence_for_test(
 
 ///|
 fn fixture_acceptance_content_ops_contain_do_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   name : @pdflite.PdfName,
 ) -> Bool {
   for op in ops {

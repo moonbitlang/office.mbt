@@ -4,8 +4,8 @@ fn pdf_drawops_to_content_ops_internal(
   document : PdfDocument?,
   context : PdfDrawSpecialTextContext?,
   ops : ArrayView[PdfDrawOp],
-) -> Array[PdfContentOp] raise PdfError {
-  let output : Array[PdfContentOp] = Array::new(capacity=ops.length())
+) -> Array[@content.PdfContentOp] raise PdfError {
+  let output : Array[@content.PdfContentOp] = Array::new(capacity=ops.length())
   for op in ops {
     for content_op in op.to_content_ops_internal(state, document, context) {
       output.push(content_op)
@@ -18,7 +18,7 @@ fn pdf_drawops_to_content_ops_internal(
 /// Convert a sequence of cpdf draw operations to flat PDF content operators.
 pub fn pdf_drawops_to_content_ops(
   ops : ArrayView[PdfDrawOp],
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   pdf_drawops_to_content_ops_internal(None, None, None, ops)
 }
 
@@ -26,7 +26,7 @@ pub fn pdf_drawops_to_content_ops(
 /// Compatibility wrapper for `PdfDrawOp::to_content_ops`.
 pub fn pdf_drawop_to_content_ops(
   op : PdfDrawOp,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   op.to_content_ops()
 }
 
@@ -35,7 +35,7 @@ pub fn pdf_drawop_to_content_ops(
 pub fn pdf_drawops_to_content_ops_with_state(
   state : PdfDrawRenderState,
   ops : ArrayView[PdfDrawOp],
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   pdf_drawops_to_content_ops_internal(Some(state), None, None, ops)
 }
 
@@ -45,7 +45,7 @@ pub fn pdf_drawops_to_content_ops_with_context(
   state : PdfDrawRenderState,
   context : PdfDrawSpecialTextContext,
   ops : ArrayView[PdfDrawOp],
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   pdf_drawops_to_content_ops_internal(Some(state), None, Some(context), ops)
 }
 
@@ -54,7 +54,7 @@ pub fn pdf_drawops_to_content_ops_with_context(
 pub fn pdf_drawop_to_content_ops_with_state(
   state : PdfDrawRenderState,
   op : PdfDrawOp,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   op.to_content_ops_with_state(state)
 }
 
@@ -64,7 +64,7 @@ pub fn pdf_drawop_to_content_ops_with_context(
   state : PdfDrawRenderState,
   context : PdfDrawSpecialTextContext,
   op : PdfDrawOp,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   op.to_content_ops_with_context(state, context)
 }
 
@@ -75,7 +75,7 @@ pub fn pdf_drawops_to_content_ops_with_document(
   state : PdfDrawRenderState,
   document : PdfDocument,
   ops : ArrayView[PdfDrawOp],
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   pdf_drawops_to_content_ops_internal(Some(state), Some(document), None, ops)
 }
 
@@ -87,7 +87,7 @@ pub fn pdf_drawops_to_content_ops_with_document_context(
   document : PdfDocument,
   context : PdfDrawSpecialTextContext,
   ops : ArrayView[PdfDrawOp],
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   pdf_drawops_to_content_ops_internal(
     Some(state),
     Some(document),
@@ -102,7 +102,7 @@ pub fn pdf_drawop_to_content_ops_with_document(
   state : PdfDrawRenderState,
   document : PdfDocument,
   op : PdfDrawOp,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   op.to_content_ops_with_document(state, document)
 }
 
@@ -113,6 +113,6 @@ pub fn pdf_drawop_to_content_ops_with_document_context(
   document : PdfDocument,
   context : PdfDrawSpecialTextContext,
   op : PdfDrawOp,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   op.to_content_ops_with_document_context(state, document, context)
 }

@@ -10,7 +10,7 @@ fn remove_text_bytes_for_test(text : String) -> Bytes {
 
 ///|
 fn remove_text_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
@@ -19,14 +19,14 @@ fn remove_text_stream_for_test(
 fn remove_text_content_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 
 ///|
 test "pdf_remove_added_text_ops skips nested CPDFSTAMP blocks" {
   let stamp = remove_text_name_for_test("/CPDFSTAMP")
-  let ops : Array[@pdflite.PdfContentOp] = [
+  let ops : Array[@content.PdfContentOp] = [
     Op_q,
     Op_BMC(stamp),
     Op_Tj(remove_text_bytes_for_test("drop outer")),
@@ -59,7 +59,7 @@ test "pdf_remove_added_text_ops drops unterminated stamp tail" {
 ///|
 test "pdf_remove_all_text_ops removes only text showing operators" {
   let text = remove_text_bytes_for_test("text")
-  let ops : Array[@pdflite.PdfContentOp] = [
+  let ops : Array[@content.PdfContentOp] = [
     Op_BT,
     Op_Tf(remove_text_name_for_test("/F1"), 12.0),
     Op_Tj(text),

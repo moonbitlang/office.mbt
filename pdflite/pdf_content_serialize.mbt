@@ -6,7 +6,7 @@
 /// inline `/F /Fl` and `/L` metadata; inline images with existing filters keep
 /// their supplied encoded data and decode parameters.
 pub fn pdf_content_bytes_of_ops(
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> PdfBytes raise PdfError {
   let rendered : Array[(PdfBytes, Bool)] = Array::new(capacity=ops.length())
   let mut length = 0
@@ -33,7 +33,9 @@ pub fn pdf_content_bytes_of_ops(
 
 ///|
 /// Serialize one content operator to PDF content-stream bytes.
-pub fn pdf_content_bytes_of_op(op : PdfContentOp) -> PdfBytes raise PdfError {
+pub fn pdf_content_bytes_of_op(
+  op : @content.PdfContentOp,
+) -> PdfBytes raise PdfError {
   pdf_content_bytes_of_ops([op])
 }
 
@@ -43,7 +45,7 @@ pub fn pdf_content_bytes_of_op(op : PdfContentOp) -> PdfBytes raise PdfError {
 /// The name follows CamlPDF, where strings were byte sequences; this function
 /// returns `PdfBytes`.
 pub fn pdf_string_of_content_ops(
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> PdfBytes raise PdfError {
   pdf_content_bytes_of_ops(ops)
 }
@@ -53,7 +55,9 @@ pub fn pdf_string_of_content_ops(
 ///
 /// The name follows CamlPDF, where strings were byte sequences; this function
 /// returns `PdfBytes`.
-pub fn pdf_string_of_content_op(op : PdfContentOp) -> PdfBytes raise PdfError {
+pub fn pdf_string_of_content_op(
+  op : @content.PdfContentOp,
+) -> PdfBytes raise PdfError {
   pdf_content_bytes_of_op(op)
 }
 
@@ -63,7 +67,7 @@ pub fn pdf_string_of_content_op(op : PdfContentOp) -> PdfBytes raise PdfError {
 /// The returned stream dictionary contains `/Length` for the serialized byte
 /// length and no outer stream filter.
 pub fn pdf_content_stream_of_ops(
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> PdfObject raise PdfError {
   let data = pdf_content_bytes_of_ops(ops)
   pdf_stream(

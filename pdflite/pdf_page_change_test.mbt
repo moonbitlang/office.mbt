@@ -17,7 +17,7 @@ fn page_change_assert_indirect_object_for_test(
 }
 
 ///|
-fn page_change_hello_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn page_change_hello_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_cm(@pdflite.transform_translate(50.0, 770.0)),
     Op_BT,
@@ -74,7 +74,7 @@ fn page_change_xobject_resources_for_test(
 }
 
 ///|
-fn page_change_draft_substitute_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn page_change_draft_substitute_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_q,
     Op_w(0.0),
@@ -152,9 +152,9 @@ fn page_change_draft_remove_image_xobjects_for_test(
 fn page_change_draft_ops_for_test(
   doc : @pdflite.PdfDocument,
   resources : @pdflite.PdfObject,
-  ops : ArrayView[@pdflite.PdfContentOp],
-) -> Array[@pdflite.PdfContentOp] {
-  let output : Array[@pdflite.PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in ops {
     match op {
       Op_Do(name) if page_change_draft_xobject_is_image_for_test(
@@ -267,7 +267,7 @@ test "PdfDocument change_pages writes modified content into a replacement page t
     page_change_hello_ops_for_test(),
   )
   let changed_pages = try! changed.pages_of_pagetree()
-  let expected_ops : Array[@pdflite.PdfContentOp] = [
+  let expected_ops : Array[@content.PdfContentOp] = [
     Op_q,
     ..page_change_hello_ops_for_test(),
     Op_Q,

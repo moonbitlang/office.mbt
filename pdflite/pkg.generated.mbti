@@ -456,8 +456,6 @@ pub fn pdf_composition(PdfDocument, Int) -> Array[@composition.PdfCompositionEnt
 
 pub fn pdf_contains_javascript(PdfDocument) -> Bool
 
-pub fn pdf_content_add_artifacts(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
-
 pub fn pdf_content_apply_core_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
 
 pub fn pdf_content_apply_extgstate_alpha_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
@@ -504,8 +502,6 @@ pub fn pdf_content_apply_text_state_op(PdfContentTextState, @content.PdfContentO
 
 pub fn pdf_content_apply_type3_metrics_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
 
-pub fn pdf_content_begin_artifact() -> @content.PdfContentOp
-
 pub fn pdf_content_bounding_box_content_json(PdfContentBoundingBox) -> Json
 
 pub fn pdf_content_bytes_of_charcode(PdfFont, Int) -> Bytes raise @core.PdfError
@@ -527,8 +523,6 @@ pub fn pdf_content_concat_stream_views(ArrayView[BytesView]) -> Bytes
 pub fn pdf_content_concat_streams(ArrayView[Bytes]) -> Bytes
 
 pub fn pdf_content_dash_pattern_content_json(PdfContentDashPattern) -> Json
-
-pub fn pdf_content_end_artifact() -> @content.PdfContentOp
 
 pub fn pdf_content_entries_of_ops(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
 
@@ -3460,8 +3454,6 @@ pub using @geometry {type PaperSize}
 pub type PdfBytes = Bytes
 
 pub using @geometry {type PdfCalculatedPosition}
-
-pub using @content {type PdfContentOp}
 
 pub using @geometry {type PdfCoordRectangle}
 

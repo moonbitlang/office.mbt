@@ -24,8 +24,8 @@ fn PdfDocument::pdf_ua_matterhorn_stream_resources(
 fn PdfDocument::pdf_ua_matterhorn_all_ops(
   self : PdfDocument,
   xobjects? : Bool = true,
-) -> Array[Array[PdfContentOp]] raise PdfError {
-  let output : Array[Array[PdfContentOp]] = []
+) -> Array[Array[@content.PdfContentOp]] raise PdfError {
+  let output : Array[Array[@content.PdfContentOp]] = []
   if xobjects {
     for entry in self.stream_object_entries() {
       let stream = @syntax.PdfStreamObject(entry.2)
@@ -45,7 +45,7 @@ fn PdfDocument::pdf_ua_matterhorn_all_ops(
 
 ///|
 fn pdf_ua_matterhorn_artifact_in_content_ops(
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Bool {
   let mut in_content = false
   let mut in_artifact = false
@@ -74,7 +74,7 @@ fn pdf_ua_matterhorn_artifact_in_content_ops(
 
 ///|
 fn pdf_ua_matterhorn_content_in_artifact_ops(
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Bool {
   let mut in_content = false
   let mut in_artifact = false
@@ -97,7 +97,7 @@ fn pdf_ua_matterhorn_content_in_artifact_ops(
 }
 
 ///|
-fn pdf_ua_matterhorn_real_op(op : PdfContentOp) -> Bool {
+fn pdf_ua_matterhorn_real_op(op : @content.PdfContentOp) -> Bool {
   match op {
     Op_m(_, _)
     | Op_l(_, _)
@@ -129,7 +129,7 @@ fn pdf_ua_matterhorn_real_op(op : PdfContentOp) -> Bool {
 }
 
 ///|
-fn pdf_ua_matterhorn_path_construction_op(op : PdfContentOp) -> Bool {
+fn pdf_ua_matterhorn_path_construction_op(op : @content.PdfContentOp) -> Bool {
   match op {
     Op_m(_, _)
     | Op_l(_, _)
@@ -185,9 +185,9 @@ fn pdf_ua_matterhorn_stack_has_marking(
 
 ///|
 fn pdf_ua_matterhorn_naked_ops(
-  ops : ArrayView[PdfContentOp],
-) -> (Array[PdfContentOp], Json?) {
-  let naked : Array[PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> (Array[@content.PdfContentOp], Json?) {
+  let naked : Array[@content.PdfContentOp] = []
   let stack : Array[PdfUAMatterhornContext] = []
   for op in ops {
     match op {
@@ -212,7 +212,7 @@ fn pdf_ua_matterhorn_naked_ops(
 
 ///|
 fn pdf_ua_matterhorn_unfiltered_real_op(
-  naked : ArrayView[PdfContentOp],
+  naked : ArrayView[@content.PdfContentOp],
 ) -> Bool {
   let reversed = naked.rev()
   let mut index = 0

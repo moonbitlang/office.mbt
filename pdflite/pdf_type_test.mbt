@@ -25,7 +25,7 @@ fn type_lookup_for_test(
 ///|
 fn type_page_ops_for_test(
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] raise {
+) -> Array[@content.PdfContentOp] raise {
   guard page.content.length() == 1 else {
     fail("expected exactly one content stream")
   }
@@ -150,7 +150,7 @@ test "pdf_string_of_type keeps CamlPDF leading newline format" {
   @test.assert_eq(@pdflite.pdf_string_of_type([]), @ascii.encode(""))
   @test.assert_eq(
     @pdflite.pdf_type_add_artifacts([Op_Tj(@ascii.encode("artifact"))]),
-    @pdflite.pdf_content_add_artifacts([Op_Tj(@ascii.encode("artifact"))]),
+    @content.pdf_content_add_artifacts([Op_Tj(@ascii.encode("artifact"))]),
   )
 }
 

@@ -59,7 +59,7 @@ fn page_tree_document_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
-fn page_hello_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn page_hello_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_cm(@pdflite.transform_translate(50.0, 770.0)),
     Op_BT,

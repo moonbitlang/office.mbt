@@ -52,7 +52,7 @@ fn impose_assert_box_close_for_test(
 
 ///|
 fn impose_assert_cm_close_for_test(
-  op : PdfContentOp,
+  op : @content.PdfContentOp,
   expected : TransformMatrix,
 ) -> Unit raise {
   guard op is Op_cm(matrix) else { fail("expected cm operator") }
@@ -96,7 +96,7 @@ fn impose_transforms_for_test(
 
 ///|
 fn impose_content_stream_for_test(
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> PdfObject raise PdfError {
   pdf_content_stream_of_ops(ops)
 }
@@ -105,13 +105,13 @@ fn impose_content_stream_for_test(
 fn impose_content_ops_for_test(
   document : PdfDocument,
   content : ArrayView[PdfObject],
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   document.parse_content_ops_with_resources(PdfDictionary([]), content)
 }
 
 ///|
 fn impose_page_for_test(
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   resources? : PdfObject = PdfDictionary([]),
   rest? : PdfObject = PdfDictionary([]),
   rotate? : @page.PdfPageRotation = Rotate0,
@@ -138,7 +138,7 @@ fn impose_document_for_test(
 fn impose_page_content_ops_for_test(
   document : PdfDocument,
   page : @page.PdfPage,
-) -> Array[PdfContentOp] raise PdfError {
+) -> Array[@content.PdfContentOp] raise PdfError {
   document.parse_content_ops_with_resources(page.resources, page.content)
 }
 
@@ -201,8 +201,8 @@ test "pdf_impose_add_border appends cpdf stamp rectangle" {
   ])
   let bordered = try! document.pdf_impose_add_border(2.0, false)
   let pages = try! bordered.pages_of_pagetree()
-  let border_ops : ReadOnlyArray[PdfContentOp] = [
-    pdf_content_begin_artifact(),
+  let border_ops : ReadOnlyArray[@content.PdfContentOp] = [
+    @content.pdf_content_begin_artifact(),
     Op_q,
     Op_BMC(impose_name_for_test("/CPDFSTAMP")),
     Op_rg(0.0, 0.0, 0.0),
@@ -212,7 +212,7 @@ test "pdf_impose_add_border appends cpdf stamp rectangle" {
     Op_s,
     Op_EMC,
     Op_Q,
-    pdf_content_end_artifact(),
+    @content.pdf_content_end_artifact(),
   ]
   @test.assert_eq(
     try! impose_page_content_ops_for_test(bordered, pages[0]),
@@ -448,9 +448,9 @@ test "PdfDocument impose marks source content as artifact for structure trees" {
     Op_re(0.0, 0.0, 100.0, 100.0),
     Op_W,
     Op_n,
-    pdf_content_begin_artifact(),
+    @content.pdf_content_begin_artifact(),
     Op_S,
-    pdf_content_end_artifact(),
+    @content.pdf_content_end_artifact(),
     Op_Q,
   ])
 }
@@ -477,7 +477,7 @@ test "PdfDocument twoup_stack imposes and uprights two-page sheets" {
     ops[1],
     transform_rotate(point2(100.0, 50.0), @math.PI / 2.0),
   )
-  let actual_tail : Array[PdfContentOp] = []
+  let actual_tail : Array[@content.PdfContentOp] = []
   for op in ops[2:] {
     actual_tail.push(op)
   }

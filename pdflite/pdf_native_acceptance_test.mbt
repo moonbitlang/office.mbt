@@ -387,7 +387,7 @@ fn acceptance_push_indirect_object_for_test(
 }
 
 ///|
-fn acceptance_one_page_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn acceptance_one_page_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_cm(@pdflite.transform_translate(50.0, 770.0)),
     Op_BT,
@@ -400,7 +400,7 @@ fn acceptance_one_page_ops_for_test() -> Array[@pdflite.PdfContentOp] {
 ///|
 fn acceptance_text_page_ops_for_test(
   text : String,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   [
     Op_BT,
     Op_Tf(acceptance_name_for_test("/F0"), 12.0),
@@ -1147,7 +1147,7 @@ fn acceptance_type3_tounicode_stream_for_test() -> @pdflite.PdfObject {
 
 ///|
 fn acceptance_type3_charproc_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject raise {
   let data = @pdflite.pdf_content_bytes_of_ops(ops)
   @pdflite.pdf_stream(
@@ -1178,7 +1178,7 @@ fn acceptance_type3_glyph_inline_data_for_test() -> @pdflite.PdfBytes raise {
 
 ///|
 fn acceptance_type3_resource_charproc_ops_for_test() -> Array[
-  @pdflite.PdfContentOp,
+  @content.PdfContentOp,
 ] raise {
   [
     Op_d0(550.0, 0.0),
@@ -1463,12 +1463,12 @@ fn acceptance_assert_type3_text_for_test(
 }
 
 ///|
-fn acceptance_type3_form_charproc_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn acceptance_type3_form_charproc_ops_for_test() -> Array[@content.PdfContentOp] {
   [Op_d0(500.0, 0.0), Op_Do(acceptance_name_for_test("/GlyphForm"))]
 }
 
 ///|
-fn acceptance_type3_form_xobject_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn acceptance_type3_form_xobject_ops_for_test() -> Array[@content.PdfContentOp] {
   [Op_Do(acceptance_name_for_test("/NestedImage"))]
 }
 
@@ -1875,7 +1875,7 @@ fn acceptance_type3_fixture_inline_data_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_type3_fixture_t_ops_for_test() -> Array[@pdflite.PdfContentOp] raise {
+fn acceptance_type3_fixture_t_ops_for_test() -> Array[@content.PdfContentOp] raise {
   [
     Op_q,
     Op_cm({ a: 6.0, b: 0.0, c: 0.0, d: 12.0, e: 1.0, f: 2.0 }),
@@ -6071,7 +6071,7 @@ fn acceptance_inline_jpeg_dictionary_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] raise {
+fn acceptance_image_content_ops_for_test() -> Array[@content.PdfContentOp] raise {
   [
     Op_Do(acceptance_name_for_test("/ImRaw")),
     Op_Do(acceptance_name_for_test("/ImCcitt")),
@@ -6278,7 +6278,7 @@ fn acceptance_encoded_image_alias_jbig2_xobject_for_test() -> @pdflite.PdfObject
 
 ///|
 fn acceptance_encoded_image_alias_content_ops_for_test() -> Array[
-  @pdflite.PdfContentOp,
+  @content.PdfContentOp,
 ] {
   [
     Op_Do(acceptance_name_for_test("/ImAliasJpeg")),
@@ -6496,7 +6496,7 @@ fn acceptance_named_image_indexed_xobject_for_test() -> @pdflite.PdfObject raise
 }
 
 ///|
-fn acceptance_named_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn acceptance_named_image_content_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_Do(acceptance_name_for_test("/ImNamedRGB")),
     Op_Do(acceptance_name_for_test("/ImNamedGray")),
@@ -6701,7 +6701,7 @@ fn acceptance_indexed_cmyk_image_xobject_for_test() -> @pdflite.PdfObject raise 
 }
 
 ///|
-fn acceptance_cmyk_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn acceptance_cmyk_image_content_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_Do(acceptance_name_for_test("/ImRawCMYK")),
     Op_Do(acceptance_name_for_test("/ImDecodeCMYK")),
@@ -6940,7 +6940,7 @@ fn acceptance_alt_image_lab_xobject_for_test() -> @pdflite.PdfObject raise {
 }
 
 ///|
-fn acceptance_alt_image_content_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn acceptance_alt_image_content_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_Do(acceptance_name_for_test("/ImICCGray")),
     Op_Do(acceptance_name_for_test("/ImSpot")),
@@ -9755,7 +9755,7 @@ fn acceptance_assert_resource_form_for_test(
 fn acceptance_resource_lifecycle_ops_for_test(
   font_name : @pdflite.PdfName,
   form_name : @pdflite.PdfName,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   [
     Op_BT,
     Op_Tf(font_name, 12.0),
@@ -9889,7 +9889,7 @@ fn acceptance_change_pages_form_for_test() -> @pdflite.PdfObject {
 ///|
 fn acceptance_change_pages_resource_ops_for_test(
   text : String,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   [
     Op_BT,
     Op_Tf(acceptance_name_for_test("/F0"), 12.0),
@@ -10537,7 +10537,7 @@ fn acceptance_assert_catalog_merge_lifecycle_for_test(
 }
 
 ///|
-fn acceptance_draft_substitute_ops_for_test() -> Array[@pdflite.PdfContentOp] {
+fn acceptance_draft_substitute_ops_for_test() -> Array[@content.PdfContentOp] {
   [
     Op_q,
     Op_w(0.0),
@@ -10615,9 +10615,9 @@ fn acceptance_draft_remove_image_xobjects_for_test(
 fn acceptance_draft_ops_for_test(
   doc : @pdflite.PdfDocument,
   resources : @pdflite.PdfObject,
-  ops : ArrayView[@pdflite.PdfContentOp],
-) -> Array[@pdflite.PdfContentOp] {
-  let output : Array[@pdflite.PdfContentOp] = []
+  ops : ArrayView[@content.PdfContentOp],
+) -> Array[@content.PdfContentOp] {
+  let output : Array[@content.PdfContentOp] = []
   for op in ops {
     match op {
       Op_Do(name) if acceptance_draft_xobject_is_image_for_test(

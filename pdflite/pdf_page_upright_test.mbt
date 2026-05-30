@@ -15,14 +15,14 @@ fn page_upright_rect_for_test(
 
 ///|
 fn page_upright_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn page_upright_page_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   mediabox : @pdflite.PdfObject,
   rotate? : @page.PdfPageRotation = Rotate0,
   rest? : @pdflite.PdfObject = PdfDictionary([]),
@@ -49,7 +49,7 @@ fn page_upright_document_for_test(
 fn page_upright_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] {
+) -> Array[@content.PdfContentOp] {
   try! document.parse_content_ops_with_resources(page.resources, page.content)
 }
 

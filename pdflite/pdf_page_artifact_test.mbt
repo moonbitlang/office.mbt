@@ -5,7 +5,7 @@ fn artifact_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn artifact_stream_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> @pdflite.PdfObject raise @pdflite.PdfError {
   @pdflite.pdf_content_stream_of_ops(ops)
 }
@@ -25,7 +25,7 @@ fn artifact_resources_for_test(
 
 ///|
 fn artifact_page_for_test(
-  ops : ArrayView[@pdflite.PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
   resources? : @pdflite.PdfObject = @pdflite.pdf_dictionary([]),
   rest? : @pdflite.PdfObject = @pdflite.pdf_dictionary([]),
 ) -> @page.PdfPage raise @pdflite.PdfError {
@@ -48,7 +48,7 @@ fn artifact_document_for_test(
 fn artifact_page_ops_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
-) -> Array[@pdflite.PdfContentOp] raise @pdflite.PdfError {
+) -> Array[@content.PdfContentOp] raise @pdflite.PdfError {
   document.parse_content_ops_with_resources(page.resources, page.content)
 }
 
@@ -164,11 +164,11 @@ test "PdfDocument mark_all_as_artifact wraps page content" {
   let wrapped = try! @pdflite.pdf_mark_all_as_artifact(document)
   let pages = try! marked.pages_of_pagetree()
   let wrapped_pages = try! wrapped.pages_of_pagetree()
-  let expected : Array[@pdflite.PdfContentOp] = [
-    @pdflite.pdf_content_begin_artifact(),
+  let expected : Array[@content.PdfContentOp] = [
+    @content.pdf_content_begin_artifact(),
     Op_BT,
     Op_ET,
-    @pdflite.pdf_content_end_artifact(),
+    @content.pdf_content_end_artifact(),
   ]
   @test.assert_eq(try! artifact_page_ops_for_test(marked, pages[0]), expected)
   @test.assert_eq(
@@ -196,17 +196,17 @@ test "PdfDocument mark_all_as_artifact rewrites referenced form xobjects" {
   let marked = try! source.mark_all_as_artifact()
   let pages = try! marked.pages_of_pagetree()
   @test.assert_eq(try! artifact_page_ops_for_test(marked, pages[0]), [
-    @pdflite.pdf_content_begin_artifact(),
+    @content.pdf_content_begin_artifact(),
     Op_Do(xobject_name),
-    @pdflite.pdf_content_end_artifact(),
+    @content.pdf_content_end_artifact(),
   ])
   guard marked.lookup_object_or_null(20) is PdfStreamObject(stream) else {
     fail("expected marked form stream")
   }
   @test.assert_eq(try! marked.parse_content_ops([PdfStreamObject(stream)]), [
-    @pdflite.pdf_content_begin_artifact(),
+    @content.pdf_content_begin_artifact(),
     Op_BT,
     Op_ET,
-    @pdflite.pdf_content_end_artifact(),
+    @content.pdf_content_end_artifact(),
   ])
 }

@@ -4,7 +4,7 @@ pub fn PdfDocument::content_entries_of_ops(
   self : PdfDocument,
   mediabox : PdfRectangle,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   let mut state = pdf_content_initial_operator_state(
     mediabox.min_x,
@@ -27,7 +27,7 @@ pub fn pdf_content_entries_of_ops(
   document : PdfDocument,
   mediabox : PdfRectangle,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   document.content_entries_of_ops(mediabox, resources, ops)
 }
@@ -73,7 +73,7 @@ fn PdfDocument::content_entries_of_ops_recursive_from_state(
   self : PdfDocument,
   initial : PdfContentOperatorState,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> PdfContentOperatorResourceResult raise PdfError {
   let mut state = initial
   let entries : Array[PdfContentJsonEntry] = Array::new(capacity=ops.length())
@@ -99,7 +99,7 @@ pub fn PdfDocument::content_entries_of_ops_recursive(
   self : PdfDocument,
   mediabox : PdfRectangle,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   let state = pdf_content_initial_operator_state(
     mediabox.min_x,
@@ -116,7 +116,7 @@ pub fn pdf_content_entries_of_ops_recursive(
   document : PdfDocument,
   mediabox : PdfRectangle,
   resources : PdfObject,
-  ops : ArrayView[PdfContentOp],
+  ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   document.content_entries_of_ops_recursive(mediabox, resources, ops)
 }
