@@ -12,7 +12,7 @@ pub fn PdfDocument::toc_type_elements(
   dotleader : Bool,
   process_struct_tree : Bool,
   labels : ArrayView[PdfPageLabel],
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   page_width : Double,
   margin : Double,
 ) -> Array[PdfTypeElement] raise PdfError {
@@ -48,7 +48,7 @@ pub fn pdf_toc_type_elements(
   dotleader : Bool,
   process_struct_tree : Bool,
   labels : ArrayView[PdfPageLabel],
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   page_width : Double,
   margin : Double,
 ) -> Array[PdfTypeElement] raise PdfError {
@@ -73,7 +73,7 @@ pub fn PdfDocument::toc_typeset_pages(
   dotleader : Bool,
   process_struct_tree : Bool,
   labels : ArrayView[PdfPageLabel],
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
 ) -> PdfTypeTypesetResult raise PdfError {
   let source_pages = self.pages_of_pagetree()
   guard source_pages.length() > 0 else {
@@ -129,7 +129,7 @@ pub fn pdf_toc_typeset_pages(
   dotleader : Bool,
   process_struct_tree : Bool,
   labels : ArrayView[PdfPageLabel],
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
 ) -> PdfTypeTypesetResult raise PdfError {
   document.toc_typeset_pages(
     fontpack, font_size, title, dotleader, process_struct_tree, labels, bookmarks,

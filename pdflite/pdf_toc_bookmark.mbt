@@ -22,13 +22,13 @@ pub fn PdfDocument::toc_add_bookmark(
     raise SoftError("toc_add_bookmark: no pages")
   }
   let bookmarks = self.read_bookmarks(preserve_actions=true)
-  let output : Array[PdfBookmark] = [
+  let output : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: pdf_toc_bookmark_text(title),
       target: DestXYZ(TargetPageObject(page_refs[0]), None, None, None),
       is_open: false,
-      colour: pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]

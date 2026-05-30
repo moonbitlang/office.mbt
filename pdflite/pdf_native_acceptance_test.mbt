@@ -8920,7 +8920,7 @@ fn acceptance_labelled_bookmarked_document_for_test(
       text: acceptance_ascii_for_test(bookmark_text),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: true,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -9161,7 +9161,7 @@ fn acceptance_count_change_document_for_test() -> @pdflite.PdfDocument raise {
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -9304,7 +9304,7 @@ fn acceptance_assert_count_changed_document_for_test(
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -10051,7 +10051,7 @@ fn acceptance_resource_heavy_change_pages_document_for_test() -> @pdflite.PdfDoc
       text: acceptance_ascii_for_test("Chapter"),
       target: DestString(string_destination),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -10158,7 +10158,7 @@ fn acceptance_assert_resource_heavy_change_pages_for_test(
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -10321,7 +10321,7 @@ fn acceptance_inherited_change_pages_document_for_test() -> @pdflite.PdfDocument
       text: acceptance_ascii_for_test("Inherited"),
       target: DestString(string_destination),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -10435,7 +10435,7 @@ fn acceptance_assert_inherited_change_pages_for_test(
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])

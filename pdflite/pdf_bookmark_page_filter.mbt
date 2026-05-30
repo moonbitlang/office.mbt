@@ -8,7 +8,7 @@ fn PdfDocument::pdf_bookmark_has_outlines(
 
 ///|
 fn pdf_bookmark_mark_ancestors(
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   keep : Array[Bool],
   index : Int,
 ) -> Unit {
@@ -27,7 +27,7 @@ fn pdf_bookmark_mark_ancestors(
 fn PdfDocument::pdf_bookmarks_for_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-) -> Array[PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise PdfError {
   let bookmarks = self.read_bookmarks(preserve_actions=true)
   let page_reference_numbers = self.page_reference_numbers()
   let page_number_lookup = pdf_page_number_lookup(page_reference_numbers)
@@ -43,7 +43,9 @@ fn PdfDocument::pdf_bookmarks_for_pages(
       pdf_bookmark_mark_ancestors(bookmarks, keep, index)
     }
   }
-  let output : Array[PdfBookmark] = Array::new(capacity=bookmarks.length())
+  let output : Array[@bookmark.PdfBookmark] = Array::new(
+    capacity=bookmarks.length(),
+  )
   for index in 0..<bookmarks.length() {
     if keep[index] {
       output.push(bookmarks[index])

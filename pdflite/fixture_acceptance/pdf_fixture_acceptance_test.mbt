@@ -5661,7 +5661,7 @@ fn fixture_acceptance_assert_cpdf_manual_title_bookmark_for_test(
   )
   @test.assert_eq(document.page_number_of_target(bookmarks[0].target), 1)
   @test.assert_eq(bookmarks[0].is_open, false)
-  @test.assert_eq(bookmarks[0].colour, @pdflite.pdf_bookmark_black)
+  @test.assert_eq(bookmarks[0].colour, @bookmark.pdf_bookmark_black)
   @test.assert_eq(bookmarks[0].flags, 0)
   @test.assert_eq(bookmarks[1].level, 1)
   @test.assert_eq(
@@ -5748,7 +5748,7 @@ fn fixture_acceptance_assert_cpdf_manual_toc_for_test(
   @test.assert_eq(original_bookmarks.length(), 163)
   let title = @ascii.encode("Contents\\nGenerated")
   let pack = fixture_acceptance_cpdf_toc_fontpack_for_test()
-  let toc_bookmarks : ReadOnlyArray[@pdflite.PdfBookmark] = [
+  let toc_bookmarks : ReadOnlyArray[@bookmark.PdfBookmark] = [
     original_bookmarks[0],
     original_bookmarks[21],
     original_bookmarks[25],

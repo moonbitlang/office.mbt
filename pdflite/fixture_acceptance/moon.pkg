@@ -1,5 +1,6 @@
 import {
   "bobzhang/pdflite",
+  "bobzhang/pdflite/bookmark",
   "bobzhang/pdflite/composition",
   "bobzhang/pdflite/content",
   "bobzhang/pdflite/date",

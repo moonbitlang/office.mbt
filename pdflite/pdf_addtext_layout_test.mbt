@@ -54,7 +54,7 @@ fn addtext_layout_bookmark_for_test(
   level : Int,
   text : String,
   page_object : Int,
-) -> @pdflite.PdfBookmark {
+) -> @bookmark.PdfBookmark {
   {
     level,
     text: addtext_layout_pdfdoc_text_for_test(text),
@@ -1118,7 +1118,7 @@ test "PdfDocument addtext_page_label decodes PDFDocString prefixes" {
 test "PdfDocument addtext_bookmark_for_page picks current branch bookmarks" {
   let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 5)
   let page_refs = try! document.page_reference_numbers()
-  let bookmarks : Array[@pdflite.PdfBookmark] = [
+  let bookmarks : Array[@bookmark.PdfBookmark] = [
     addtext_layout_bookmark_for_test(0, "Chapter 1", page_refs[0]),
     addtext_layout_bookmark_for_test(1, "Section 1.1", page_refs[1]),
     addtext_layout_bookmark_for_test(1, "Section 1.2", page_refs[2]),
@@ -1144,7 +1144,7 @@ test "PdfDocument addtext_bookmark_for_page picks current branch bookmarks" {
 test "pdf_addtext_bookmark_for_page wrapper preserves lookup behavior" {
   let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 2)
   let page_refs = try! document.page_reference_numbers()
-  let bookmarks : Array[@pdflite.PdfBookmark] = [
+  let bookmarks : Array[@bookmark.PdfBookmark] = [
     addtext_layout_bookmark_for_test(0, "Intro ☃", page_refs[0]),
   ]
   @test.assert_eq(
@@ -1165,7 +1165,7 @@ test "PdfDocument addtext_replacement_values derives labels and bookmarks" {
     },
   ])
   let page_refs = try! labelled.page_reference_numbers()
-  let bookmarks : Array[@pdflite.PdfBookmark] = [
+  let bookmarks : Array[@bookmark.PdfBookmark] = [
     addtext_layout_bookmark_for_test(0, "Chapter 1", page_refs[0]),
     addtext_layout_bookmark_for_test(1, "Section 1.1", page_refs[1]),
     addtext_layout_bookmark_for_test(1, "Section 1.2", page_refs[2]),

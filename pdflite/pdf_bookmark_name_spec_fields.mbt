@@ -109,7 +109,7 @@ fn pdf_bookmark_name_spec_process_at_fields_length(
 ///|
 fn PdfDocument::pdf_bookmark_name_spec_process_at_fields(
   self : PdfDocument,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   split_level : Int,
   spec : String,
   sequence : Int,

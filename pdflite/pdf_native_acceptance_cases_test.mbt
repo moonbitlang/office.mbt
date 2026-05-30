@@ -1146,7 +1146,7 @@ test "native acceptance suite changes pages after compressed reader boundary" {
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -1175,7 +1175,7 @@ test "native acceptance suite changes pages after compressed reader boundary" {
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])

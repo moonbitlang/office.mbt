@@ -24,7 +24,9 @@ fn pdf_bookmark_json_string(value : Json?) -> String raise PdfError {
 }
 
 ///|
-fn pdf_bookmark_json_colour(value : Json?) -> PdfBookmarkColour raise PdfError {
+fn pdf_bookmark_json_colour(
+  value : Json?,
+) -> @bookmark.PdfBookmarkColour raise PdfError {
   match value {
     Some(
       Array([Number(red, repr=_), Number(green, repr=_), Number(blue, repr=_)])
@@ -37,7 +39,7 @@ fn pdf_bookmark_json_colour(value : Json?) -> PdfBookmarkColour raise PdfError {
 fn PdfDocument::pdf_bookmark_import_json_mark(
   self : PdfDocument,
   json : Json,
-) -> PdfBookmark raise PdfError {
+) -> @bookmark.PdfBookmark raise PdfError {
   match json {
     Object(entries) if entries.length() == 8 => {
       let level = pdf_util_json_truncated_number(
@@ -77,12 +79,12 @@ pub fn PdfDocument::parse_bookmark_json(
   self : PdfDocument,
   json : Json,
   verify? : Bool = true,
-) -> Array[PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise PdfError {
   let items = match json {
     Array(items) => items
     _ => raise SoftError("top level of JSON boomark file not a list")
   }
-  let bookmarks : Array[PdfBookmark] = []
+  let bookmarks : Array[@bookmark.PdfBookmark] = []
   for item in items {
     bookmarks.push(self.pdf_bookmark_import_json_mark(item))
   }
@@ -110,7 +112,7 @@ pub fn pdf_parse_bookmark_json(
   verify : Bool,
   json : Json,
   document : PdfDocument,
-) -> Array[PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise PdfError {
   document.parse_bookmark_json(json, verify~)
 }
 

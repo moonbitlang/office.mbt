@@ -10,7 +10,7 @@ fn pdf_bookmark_json_text(text : BytesView) -> String raise PdfError {
 ///|
 fn PdfDocument::pdf_bookmark_json_mark(
   self : PdfDocument,
-  bookmark : PdfBookmark,
+  bookmark : @bookmark.PdfBookmark,
 ) -> Json raise PdfError {
   let page_number = self.page_number_of_target(bookmark.target)
   Json::object(
@@ -42,7 +42,7 @@ fn PdfDocument::pdf_bookmark_json_mark(
 ///|
 fn PdfDocument::pdf_bookmark_listing_json(
   self : PdfDocument,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
 ) -> Json raise PdfError {
   let output : Array[Json] = Array::new(capacity=bookmarks.length())
   for bookmark in bookmarks {

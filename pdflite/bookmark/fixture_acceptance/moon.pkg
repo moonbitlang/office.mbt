@@ -1,5 +1,6 @@
 import {
   "bobzhang/pdflite",
+  "bobzhang/pdflite/bookmark",
   "bobzhang/pdflite/metadata",
   "moonbitlang/async",
   "moonbitlang/async/fs",

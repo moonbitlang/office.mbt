@@ -135,7 +135,7 @@ fn bookmark_fixture_assert_contains_for_test(
 
 ///|
 fn bookmark_fixture_title_for_test(
-  bookmark : @pdflite.PdfBookmark,
+  bookmark : @bookmark.PdfBookmark,
 ) -> String raise {
   @utf8.decode_lossy(@pdflite.pdf_utf8_of_pdfdocstring(bookmark.text))
 }
@@ -143,7 +143,7 @@ fn bookmark_fixture_title_for_test(
 ///|
 fn bookmark_fixture_assert_page_for_test(
   document : @pdflite.PdfDocument,
-  bookmark : @pdflite.PdfBookmark,
+  bookmark : @bookmark.PdfBookmark,
   page_number : Int,
 ) -> Unit raise {
   @test.assert_eq(document.page_number_of_target(bookmark.target), page_number)
@@ -271,7 +271,7 @@ fn bookmark_fixture_assert_cpdf_manual_title_bookmark_for_test(
   )
   bookmark_fixture_assert_page_for_test(document, bookmarks[0], 1)
   @test.assert_eq(bookmarks[0].is_open, false)
-  @test.assert_eq(bookmarks[0].colour, @pdflite.pdf_bookmark_black)
+  @test.assert_eq(bookmarks[0].colour, @bookmark.pdf_bookmark_black)
   @test.assert_eq(bookmarks[0].flags, 0)
   @test.assert_eq(bookmarks[1].level, 1)
   @test.assert_eq(

@@ -520,7 +520,7 @@ test "PdfDocument change_pages transforms bookmark destinations with matrices" {
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -541,7 +541,7 @@ test "PdfDocument change_pages transforms bookmark destinations with matrices" {
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -1192,7 +1192,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
       text: @ascii.encode("Named"),
       target: DestNamed(named_destination),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -1200,7 +1200,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
       text: @ascii.encode("String"),
       target: DestString(string_destination),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -1238,7 +1238,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
       text: @ascii.encode("Named"),
       target: DestFitH(TargetPageObject(new_numbers[0]), Some(25.0)),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -1251,7 +1251,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -1394,7 +1394,7 @@ test "PdfDocument change_pages skips bookmark matrices when page count changes" 
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -1417,7 +1417,7 @@ test "PdfDocument change_pages skips bookmark matrices when page count changes" 
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])

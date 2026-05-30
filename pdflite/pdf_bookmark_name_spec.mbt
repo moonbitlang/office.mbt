@@ -6,7 +6,7 @@
 pub fn PdfDocument::bookmark_name_of_spec(
   self : PdfDocument,
   encoding : PdfMetadataEncoding,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   split_level : Int,
   spec : String,
   sequence : Int,
@@ -30,7 +30,7 @@ pub fn PdfDocument::bookmark_name_of_spec(
 /// Compatibility wrapper for `PdfDocument::bookmark_name_of_spec`.
 pub fn pdf_bookmark_name_of_spec(
   encoding : PdfMetadataEncoding,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   document : PdfDocument,
   split_level : Int,
   spec : String,
@@ -48,7 +48,7 @@ pub fn pdf_bookmark_name_of_spec(
 /// Source-spelled compatibility wrapper for cpdfbookmarks' `name_of_spec`.
 pub fn pdf_name_of_spec(
   encoding : PdfMetadataEncoding,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   document : PdfDocument,
   split_level : Int,
   spec : String,

@@ -352,8 +352,6 @@ pub fn pdf_blank_document(Double, Double, Int) -> PdfDocument raise @core.PdfErr
 
 pub fn pdf_blank_document_paper(@geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
 
-pub let pdf_bookmark_black : @bookmark.PdfBookmarkColour
-
 pub fn pdf_bookmark_name_of_spec(@metadata.PdfMetadataEncoding, ArrayView[@bookmark.PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
 
 pub fn pdf_bookmarks_open_to_level(Int, PdfDocument) -> PdfDocument raise @core.PdfError
@@ -3696,10 +3694,6 @@ pub using @annotation {type PdfAnnotationColour}
 pub using @annotation {type PdfAnnotationStyle}
 
 pub using @annotation {type PdfAnnotationSubtype}
-
-pub using @bookmark {type PdfBookmark}
-
-pub using @bookmark {type PdfBookmarkColour}
 
 pub type PdfBytes = Bytes
 

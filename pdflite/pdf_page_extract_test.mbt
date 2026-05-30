@@ -336,7 +336,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
       text: @ascii.encode("Parent"),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: true,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -344,7 +344,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
       text: @ascii.encode("Dropped"),
       target: DestFit(TargetPageObject(page_refs[1])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -352,7 +352,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
       text: @ascii.encode("Kept"),
       target: DestFit(TargetPageObject(page_refs[2])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -364,7 +364,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
       text: @ascii.encode("Parent"),
       target: DestNull,
       is_open: true,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -372,7 +372,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
       text: @ascii.encode("Kept"),
       target: DestFit(TargetPageObject(extracted_page_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -419,7 +419,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
       text: @ascii.encode("String"),
       target: DestString(string_name),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -427,7 +427,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
       text: @ascii.encode("Named"),
       target: DestNamed(catalog_name),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -439,7 +439,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
       text: @ascii.encode("String"),
       target: DestString(string_name),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -447,7 +447,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
       text: @ascii.encode("Named"),
       target: DestNamed(catalog_name),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -457,7 +457,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
       text: @ascii.encode("String"),
       target: DestFit(TargetPageObject(extracted_page_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -465,7 +465,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
       text: @ascii.encode("Named"),
       target: DestFit(TargetPageObject(extracted_page_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])

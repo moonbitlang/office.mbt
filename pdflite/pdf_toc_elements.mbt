@@ -128,7 +128,7 @@ fn PdfDocument::pdf_toc_bookmark_label_runs(
   fontpack : PdfFontPack,
   font_size : Double,
   labels : ArrayView[PdfPageLabel],
-  bookmark : PdfBookmark,
+  bookmark : @bookmark.PdfBookmark,
 ) -> Array[PdfTypeElement] raise PdfError {
   if bookmark.target == DestNull {
     []
@@ -152,7 +152,7 @@ fn PdfDocument::pdf_toc_bookmark_elements(
   margin : Double,
   dotleader : Bool,
   process_struct_tree : Bool,
-  bookmark : PdfBookmark,
+  bookmark : @bookmark.PdfBookmark,
 ) -> Array[PdfTypeElement] raise PdfError {
   let indent = bookmark.level.to_double() * font_size * 2.0
   let textruns = pdf_toc_of_pdfdocencoding(fontpack, font_size, bookmark.text)

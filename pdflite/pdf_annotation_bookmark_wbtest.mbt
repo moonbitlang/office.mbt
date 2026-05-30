@@ -14,7 +14,7 @@ test "private annotation and bookmark guards report malformed roots" {
   guard outlines is Err(PdfError::RootExpected) else {
     fail("expected PdfError::RootExpected")
   }
-  let output : Array[PdfBookmark] = []
+  let output : Array[@bookmark.PdfBookmark] = []
   let recursion : Result[Unit, Error] = try? doc.pdf_bookmark_traverse_siblings(
     0,
     PdfNull,

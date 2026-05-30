@@ -49,13 +49,13 @@ pub fn PdfDocument::add_bookmark_title(
     None => raise SoftError("add_bookmark_title: page not found")
   }
   let bookmarks = self.read_bookmarks(preserve_actions=true)
-  let indented : Array[PdfBookmark] = [
+  let indented : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: pdf_pdfdocstring_of_utf8(@utf8.encode(title)),
       target: DestXYZ(TargetPageObject(page_object), None, None, None),
       is_open: false,
-      colour: pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]
@@ -82,7 +82,7 @@ pub fn PdfDocument::bookmarks_open_to_level(
   level : Int,
 ) -> PdfDocument raise PdfError {
   let bookmarks = self.read_bookmarks(preserve_actions=true)
-  let updated : Array[PdfBookmark] = []
+  let updated : Array[@bookmark.PdfBookmark] = []
   for bookmark in bookmarks {
     updated.push({ ..bookmark, is_open: bookmark.level < level })
   }
@@ -184,8 +184,8 @@ fn pdf_bookmark_change_destination(
 /// without a matching page-object number are preserved.
 pub fn pdf_change_bookmark(
   changes : ArrayView[(Int, Int)],
-  bookmark : PdfBookmark,
-) -> PdfBookmark {
+  bookmark : @bookmark.PdfBookmark,
+) -> @bookmark.PdfBookmark {
   match pdf_bookmark_change_destination(changes, bookmark.target) {
     Some(target) => { ..bookmark, target, }
     None => bookmark
@@ -200,8 +200,8 @@ pub fn pdf_change_bookmark(
 pub fn PdfDocument::transform_bookmark(
   self : PdfDocument,
   matrix : TransformMatrix,
-  bookmark : PdfBookmark,
-) -> PdfBookmark raise PdfError {
+  bookmark : @bookmark.PdfBookmark,
+) -> @bookmark.PdfBookmark raise PdfError {
   { ..bookmark, target: self.transform_destination(matrix, bookmark.target) }
 }
 
@@ -210,7 +210,7 @@ pub fn PdfDocument::transform_bookmark(
 pub fn pdf_transform_bookmark(
   document : PdfDocument,
   matrix : TransformMatrix,
-  bookmark : PdfBookmark,
-) -> PdfBookmark raise PdfError {
+  bookmark : @bookmark.PdfBookmark,
+) -> @bookmark.PdfBookmark raise PdfError {
   document.transform_bookmark(matrix, bookmark)
 }

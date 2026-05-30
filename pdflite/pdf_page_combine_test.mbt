@@ -221,7 +221,7 @@ test "PdfDocument combine_pages retargets under and overlay bookmarks" {
       text: @ascii.encode("under second"),
       target: DestFit(TargetPageObject(under_refs[1])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -236,7 +236,7 @@ test "PdfDocument combine_pages retargets under and overlay bookmarks" {
       text: @ascii.encode("overlay first"),
       target: DestFit(TargetPageObject(overlay_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -249,7 +249,7 @@ test "PdfDocument combine_pages retargets under and overlay bookmarks" {
       text: @ascii.encode("under second"),
       target: DestFit(TargetPageObject(final_refs[1])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -257,7 +257,7 @@ test "PdfDocument combine_pages retargets under and overlay bookmarks" {
       text: @ascii.encode("overlay first"),
       target: DestFit(TargetPageObject(final_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])

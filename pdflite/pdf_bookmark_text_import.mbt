@@ -8,8 +8,8 @@ pub fn PdfDocument::parse_bookmark_text(
   self : PdfDocument,
   data : BytesView,
   verify? : Bool = true,
-) -> Array[PdfBookmark] raise PdfError {
-  let bookmarks : Array[PdfBookmark] = []
+) -> Array[@bookmark.PdfBookmark] raise PdfError {
+  let bookmarks : Array[@bookmark.PdfBookmark] = []
   let cursor = byte_cursor_of_view(data)
   for line_number, line in cursor.read_line_views() {
     match self.pdf_bookmark_import_parse_line(line, line_number + 1) {
@@ -41,7 +41,7 @@ pub fn pdf_parse_bookmark_text(
   verify : Bool,
   data : BytesView,
   document : PdfDocument,
-) -> Array[PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise PdfError {
   document.parse_bookmark_text(data, verify~)
 }
 
@@ -51,7 +51,7 @@ pub fn pdf_parse_bookmark_file(
   verify : Bool,
   document : PdfDocument,
   data : BytesView,
-) -> Array[PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise PdfError {
   document.parse_bookmark_text(data, verify~)
 }
 

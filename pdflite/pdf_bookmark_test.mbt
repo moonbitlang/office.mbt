@@ -48,7 +48,7 @@ fn bookmark_colour_for_test(
   red : Double,
   green : Double,
   blue : Double,
-) -> @pdflite.PdfBookmarkColour {
+) -> @bookmark.PdfBookmarkColour {
   { red, green, blue }
 }
 
@@ -133,7 +133,7 @@ fn bookmark_document_for_test() -> @pdflite.PdfDocument {
 fn bookmark_listing_document_for_test() -> @pdflite.PdfDocument raise {
   let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let page_refs = try! document.page_reference_numbers()
-  let bookmarks : Array[@pdflite.PdfBookmark] = [
+  let bookmarks : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: bookmark_bytes_for_test("Top\nQuote\""),
@@ -152,7 +152,7 @@ fn bookmark_listing_document_for_test() -> @pdflite.PdfDocument raise {
         None,
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 1,
     },
     {
@@ -160,7 +160,7 @@ fn bookmark_listing_document_for_test() -> @pdflite.PdfDocument raise {
       text: bookmark_bytes_for_test("Named"),
       target: DestString(bookmark_bytes_for_test("named")),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]
@@ -193,12 +193,12 @@ fn bookmark_single_outline_doc_for_test(
 
 ///|
 test "pdf_string_of_bookmark renders CamlPDF debug line as bytes" {
-  let bookmark : @pdflite.PdfBookmark = {
+  let bookmark : @bookmark.PdfBookmark = {
     level: 1,
     text: bookmark_bytes_from_ints_for_test([65, 0xFF]),
     target: DestFit(TargetPageObject(7)),
     is_open: true,
-    colour: @pdflite.pdf_bookmark_black,
+    colour: @bookmark.pdf_bookmark_black,
     flags: 0,
   }
   @test.assert_eq(
@@ -255,7 +255,7 @@ test "PdfDocument list_bookmarks escapes cpdf backslash titles" {
       text: bookmark_bytes_for_test("Slash\\Marker"),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -295,7 +295,7 @@ test "PdfDocument list_bookmarks strips non-ASCII bookmark title bytes" {
       text,
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -484,13 +484,13 @@ test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
     "1 \"Child\\q\" 2 \"[1 /XYZ 10 null 2]\"\n" +
     "0 \"Named\" 0 \"(chapter)\"\n\n",
   )
-  let expected : Array[@pdflite.PdfBookmark] = [
+  let expected : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: bookmark_bytes_for_test("Top\nQuote\"Slash\\"),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: true,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -503,7 +503,7 @@ test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
         Some(2.0),
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -511,7 +511,7 @@ test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
       text: bookmark_bytes_for_test("Named"),
       target: DestString(bookmark_bytes_for_test("chapter")),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]
@@ -533,25 +533,25 @@ test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
 ///|
 test "PdfDocument parse_bookmark_text validates plain text structure" {
   let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
-  let bad_first_level : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_text(
+  let bad_first_level : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_text(
     @ascii.encode("1 \"Bad\" 1\n"),
   )
   guard bad_first_level is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected @pdflite.PdfError::SoftError for first level")
   }
-  let bad_jump : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_text(
+  let bad_jump : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_text(
     @ascii.encode("0 \"Top\" 1\n2 \"Bad\" 1\n"),
   )
   guard bad_jump is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected @pdflite.PdfError::SoftError for level jump")
   }
-  let malformed : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_text(
+  let malformed : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_text(
     @ascii.encode("0 not-a-string 1\n"),
   )
   guard malformed is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected @pdflite.PdfError::SoftError for malformed line")
   }
-  let unterminated : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_text(
+  let unterminated : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_text(
     @ascii.encode("0 \"Missing end 1\n"),
   )
   guard unterminated is Err(@pdflite.PdfError::SoftError(_)) else {
@@ -632,7 +632,7 @@ test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
       ]),
     ),
   ])
-  let expected : Array[@pdflite.PdfBookmark] = [
+  let expected : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: bookmark_bytes_for_test("Top"),
@@ -651,7 +651,7 @@ test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
         Some(2.0),
       ),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 2,
     },
     {
@@ -659,7 +659,7 @@ test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
       text: bookmark_bytes_for_test("Named"),
       target: DestString(bookmark_bytes_for_test("chapter")),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]
@@ -675,13 +675,13 @@ test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
 ///|
 test "PdfDocument parse_bookmark_json rejects malformed rows" {
   let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
-  let top_level : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_json(
+  let top_level : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_json(
     Json::object(Map([])),
   )
   guard top_level is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected @pdflite.PdfError::SoftError for top-level object")
   }
-  let malformed_row : Result[Array[@pdflite.PdfBookmark], Error] = try? document.parse_bookmark_json(
+  let malformed_row : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_json(
     Json::array([Json::object(Map([("level", bookmark_json_int_for_test(0))]))]),
   )
   guard malformed_row is Err(@pdflite.PdfError::SoftError(_)) else {
@@ -692,7 +692,7 @@ test "PdfDocument parse_bookmark_json rejects malformed rows" {
 ///|
 test "PdfDocument read_bookmarks traverses outline trees" {
   let doc = bookmark_document_for_test()
-  let expected : Array[@pdflite.PdfBookmark] = [
+  let expected : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: bookmark_bytes_for_test("Top"),
@@ -706,7 +706,7 @@ test "PdfDocument read_bookmarks traverses outline trees" {
       text: bookmark_bytes_for_test("Child"),
       target: DestXYZ(TargetPageObject(11), Some(1.0), Some(2.0), None),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -714,7 +714,7 @@ test "PdfDocument read_bookmarks traverses outline trees" {
       text: bookmark_bytes_for_test("Sibling"),
       target: DestString(bookmark_bytes_for_test("named")),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]
@@ -746,7 +746,7 @@ test "PdfDocument read_bookmarks handles preserved destinations and fallback fie
   let bookmark = (try! doc.read_bookmarks(preserve_actions=true))[0]
   @test.assert_eq(bookmark.text, bookmark_bytes_for_test(""))
   @test.assert_eq(bookmark.target, DestString(bookmark_bytes_for_test("named")))
-  @test.assert_eq(bookmark.colour, @pdflite.pdf_bookmark_black)
+  @test.assert_eq(bookmark.colour, @bookmark.pdf_bookmark_black)
   let action_with_dest : @pdflite.PdfObject = PdfDictionary([
     (
       key_d,
@@ -857,7 +857,7 @@ test "PdfDocument read_bookmarks prefers trailer root over document root" {
 ///|
 test "PdfDocument read_bookmarks requires a root catalog" {
   let doc = @pdflite.pdf_document_empty()
-  let result : Result[Array[@pdflite.PdfBookmark], Error] = try? doc.read_bookmarks()
+  let result : Result[Array[@bookmark.PdfBookmark], Error] = try? doc.read_bookmarks()
   guard result is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected")
   }
@@ -875,7 +875,7 @@ test "PdfDocument read_bookmarks rejects unresolved trailer root" {
     1,
     PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
   )
-  let result : Result[Array[@pdflite.PdfBookmark], Error] = try? doc.read_bookmarks()
+  let result : Result[Array[@bookmark.PdfBookmark], Error] = try? doc.read_bookmarks()
   guard result is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected")
   }
@@ -987,7 +987,7 @@ test "PdfDocument add_bookmarks builds linked outline objects" {
   let action : @pdflite.PdfObject = PdfDictionary([
     (key_s, PdfNameObject(bookmark_name_for_test("/URI"))),
   ])
-  let bookmarks : Array[@pdflite.PdfBookmark] = [
+  let bookmarks : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: bookmark_bytes_for_test("Top"),
@@ -1001,7 +1001,7 @@ test "PdfDocument add_bookmarks builds linked outline objects" {
       text: bookmark_bytes_for_test("Child"),
       target: DestXYZ(TargetPageObject(11), Some(1.0), Some(2.0), None),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -1009,7 +1009,7 @@ test "PdfDocument add_bookmarks builds linked outline objects" {
       text: bookmark_bytes_for_test("Closed"),
       target: DestNull,
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -1017,7 +1017,7 @@ test "PdfDocument add_bookmarks builds linked outline objects" {
       text: bookmark_bytes_for_test("Hidden"),
       target: DestAction(action),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]
@@ -1085,13 +1085,13 @@ test "PdfDocument add_bookmarks preserves trailer-root catalog entries" {
       (key_page_mode, PdfNameObject(page_mode_use_none)),
     ]),
   )
-  let bookmarks : Array[@pdflite.PdfBookmark] = [
+  let bookmarks : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: bookmark_bytes_for_test("Top"),
       target: DestNull,
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]
@@ -1118,13 +1118,13 @@ test "PdfDocument add_bookmarks with an empty list removes outlines" {
 ///|
 test "PdfDocument add_bookmarks requires a root catalog" {
   let doc = @pdflite.pdf_document_empty()
-  let bookmarks : Array[@pdflite.PdfBookmark] = [
+  let bookmarks : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: bookmark_bytes_for_test("Top"),
       target: DestNull,
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]
@@ -1146,7 +1146,7 @@ test "PdfDocument add_bookmark_title indents existing bookmarks" {
       text: bookmark_bytes_for_test("Top"),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: true,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -1160,7 +1160,7 @@ test "PdfDocument add_bookmark_title indents existing bookmarks" {
       text: bookmark_bytes_for_test("report.pdf"),
       target: DestXYZ(TargetPageObject(page_refs[0]), None, None, None),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -1168,7 +1168,7 @@ test "PdfDocument add_bookmark_title indents existing bookmarks" {
       text: bookmark_bytes_for_test("Top"),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -1184,7 +1184,7 @@ test "PdfDocument bookmarks_open_to_level rewrites open state" {
       text: bookmark_bytes_for_test("Top"),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -1192,20 +1192,20 @@ test "PdfDocument bookmarks_open_to_level rewrites open state" {
       text: bookmark_bytes_for_test("Child"),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: true,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
 
   let opened = try! bookmarked.bookmarks_open_to_level(1)
   let wrapper = try! @pdflite.pdf_bookmarks_open_to_level(1, bookmarked)
-  let expected : Array[@pdflite.PdfBookmark] = [
+  let expected : Array[@bookmark.PdfBookmark] = [
     {
       level: 0,
       text: bookmark_bytes_for_test("Top"),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: true,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -1213,7 +1213,7 @@ test "PdfDocument bookmarks_open_to_level rewrites open state" {
       text: bookmark_bytes_for_test("Child"),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ]
@@ -1223,12 +1223,12 @@ test "PdfDocument bookmarks_open_to_level rewrites open state" {
 
 ///|
 test "pdf_change_bookmark rewrites page-object destinations" {
-  let bookmark : @pdflite.PdfBookmark = {
+  let bookmark : @bookmark.PdfBookmark = {
     level: 0,
     text: bookmark_bytes_for_test("Top"),
     target: DestFitR(TargetPageObject(10), 1.0, 2.0, 3.0, 4.0),
     is_open: false,
-    colour: @pdflite.pdf_bookmark_black,
+    colour: @bookmark.pdf_bookmark_black,
     flags: 0,
   }
   @test.assert_eq(
@@ -1255,12 +1255,12 @@ test "pdf_change_bookmark rewrites page-object destinations" {
 ///|
 test "PdfDocument transform_bookmark transforms bookmark target" {
   let doc = @pdflite.pdf_document_empty()
-  let bookmark : @pdflite.PdfBookmark = {
+  let bookmark : @bookmark.PdfBookmark = {
     level: 0,
     text: bookmark_bytes_for_test("Top"),
     target: DestFitH(TargetPageObject(7), Some(5.0)),
     is_open: false,
-    colour: @pdflite.pdf_bookmark_black,
+    colour: @bookmark.pdf_bookmark_black,
     flags: 0,
   }
   @test.assert_eq(

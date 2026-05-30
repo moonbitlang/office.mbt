@@ -163,7 +163,7 @@ fn toc_fixture_type_dest_contains_for_test(
 ///|
 fn toc_fixture_assert_page_for_test(
   document : @pdflite.PdfDocument,
-  bookmark : @pdflite.PdfBookmark,
+  bookmark : @bookmark.PdfBookmark,
   page_number : Int,
 ) -> Unit raise {
   @test.assert_eq(document.page_number_of_target(bookmark.target), page_number)
@@ -210,7 +210,7 @@ fn toc_fixture_assert_cpdf_manual_toc_elements_for_test(
   @test.assert_eq(original_bookmarks.length(), 163)
   let title = @ascii.encode("Contents\\nGenerated")
   let pack = toc_fixture_fontpack_for_test()
-  let toc_bookmarks : ReadOnlyArray[@pdflite.PdfBookmark] = [
+  let toc_bookmarks : ReadOnlyArray[@bookmark.PdfBookmark] = [
     original_bookmarks[0],
     original_bookmarks[21],
     original_bookmarks[25],

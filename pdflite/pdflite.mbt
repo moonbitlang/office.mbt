@@ -309,13 +309,6 @@ pub using @path {
 }
 
 ///|
-pub using @bookmark {
-  type PdfBookmark,
-  type PdfBookmarkColour,
-  pdf_bookmark_black,
-}
-
-///|
 pub using @metadata {
   pdf_adobe,
   pdf_dc,

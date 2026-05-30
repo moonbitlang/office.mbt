@@ -18,7 +18,7 @@ fn merge_bookmarked_doc_for_test(label : String) -> @pdflite.PdfDocument {
       text: @ascii.encode(label),
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -142,7 +142,7 @@ fn merge_nametree_dest_callsite_doc_for_test(
       text: @ascii.encode(label),
       target: DestString(@ascii.encode(name)),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -180,7 +180,7 @@ fn merge_oldstyle_dest_callsite_doc_for_test(
       text: @ascii.encode(label),
       target: DestNamed(destination_name),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -781,7 +781,7 @@ test "pdf_merge_documents renames colliding string destinations" {
       text: @ascii.encode("First"),
       target: DestString(first_name),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -789,7 +789,7 @@ test "pdf_merge_documents renames colliding string destinations" {
       text: @ascii.encode("Second"),
       target: DestString(second_name),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -834,7 +834,7 @@ test "pdf_merge_documents renames colliding catalog destinations" {
       text: @ascii.encode("First"),
       target: DestNamed(first_name),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
     {
@@ -842,7 +842,7 @@ test "pdf_merge_documents renames colliding catalog destinations" {
       text: @ascii.encode("Second"),
       target: DestNamed(second_name),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])

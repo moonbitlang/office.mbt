@@ -64,10 +64,10 @@ fn pdf_page_combine_output_changes(count : Int) -> Array[(Int, Int)] {
 
 ///|
 fn pdf_page_combine_retained_bookmarks(
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   old_page_numbers : ArrayView[Int],
   final_page_numbers : ArrayView[Int],
-) -> Array[PdfBookmark] {
+) -> Array[@bookmark.PdfBookmark] {
   let changes : Array[(Int, Int)] = []
   let count = if old_page_numbers.length() < final_page_numbers.length() {
     old_page_numbers.length()
@@ -87,10 +87,10 @@ fn pdf_page_combine_retained_bookmarks(
 
 ///|
 fn pdf_page_combine_append_bookmarks(
-  first : ArrayView[PdfBookmark],
-  second : ArrayView[PdfBookmark],
-) -> Array[PdfBookmark] {
-  let output : Array[PdfBookmark] = []
+  first : ArrayView[@bookmark.PdfBookmark],
+  second : ArrayView[@bookmark.PdfBookmark],
+) -> Array[@bookmark.PdfBookmark] {
+  let output : Array[@bookmark.PdfBookmark] = []
   for bookmark in first {
     output.push(bookmark)
   }

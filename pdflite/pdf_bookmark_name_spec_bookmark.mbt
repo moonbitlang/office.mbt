@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_bookmark_name_for_page(
   self : PdfDocument,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   split_level : Int,
   page_number : Int,
 ) -> String raise PdfError {

@@ -1,10 +1,10 @@
 ///|
-fn pdf_bookmark_colour_is_black(colour : PdfBookmarkColour) -> Bool {
+fn pdf_bookmark_colour_is_black(colour : @bookmark.PdfBookmarkColour) -> Bool {
   colour.red == 0.0 && colour.green == 0.0 && colour.blue == 0.0
 }
 
 ///|
-fn pdf_bookmark_node_object(bookmark : PdfBookmark) -> PdfObject {
+fn pdf_bookmark_node_object(bookmark : @bookmark.PdfBookmark) -> PdfObject {
   let entries : Array[(PdfName, PdfObject)] = [
     (pdf_bookmark_title_key(), PdfString(bookmark.text)),
   ]
@@ -35,7 +35,7 @@ fn pdf_bookmark_node_object(bookmark : PdfBookmark) -> PdfObject {
 
 ///|
 fn pdf_bookmark_child_stop(
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   start : Int,
   stop : Int,
   level : Int,
@@ -49,7 +49,7 @@ fn pdf_bookmark_child_stop(
 
 ///|
 fn pdf_bookmark_make_nodes(
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   start : Int,
   stop : Int,
   base_object_number : Int,
@@ -229,7 +229,7 @@ pub fn pdf_remove_bookmarks(
 /// current maximum object number.
 pub fn PdfDocument::add_bookmarks(
   self : PdfDocument,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
 ) -> PdfDocument raise PdfError {
   if bookmarks.length() == 0 {
     self.remove_bookmarks()
@@ -276,7 +276,7 @@ pub fn PdfDocument::add_bookmarks(
 ///|
 /// Compatibility wrapper for `PdfDocument::add_bookmarks`.
 pub fn pdf_add_bookmarks(
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   document.add_bookmarks(bookmarks)

@@ -145,7 +145,7 @@ test "PdfDocument stamp_as_xobject preserves bookmarks and trailer ID" {
       text: @ascii.encode("Second"),
       target: DestFit(TargetPageObject(page_numbers[1])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])
@@ -166,7 +166,7 @@ test "PdfDocument stamp_as_xobject preserves bookmarks and trailer ID" {
       text: @ascii.encode("Second"),
       target: DestFit(TargetPageObject(new_page_numbers[1])),
       is_open: false,
-      colour: @pdflite.pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])

@@ -43,13 +43,13 @@ fn PdfDocument::pdf_bookmark_import_bookmark(
   page_number : Int,
   is_open : Bool,
   destination : PdfBytes?,
-) -> PdfBookmark raise PdfError {
+) -> @bookmark.PdfBookmark raise PdfError {
   {
     level,
     text: pdf_pdfdocstring_of_utf8(pdf_bookmark_import_fixup_text(title)),
     target: self.pdf_bookmark_import_target(page_number, destination),
     is_open,
-    colour: pdf_bookmark_black,
+    colour: @bookmark.pdf_bookmark_black,
     flags: 0,
   }
 }

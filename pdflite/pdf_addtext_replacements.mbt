@@ -131,7 +131,9 @@ pub fn pdf_addtext_page_label(
 }
 
 ///|
-fn pdf_addtext_bookmark_text(bookmark : PdfBookmark) -> String raise PdfError {
+fn pdf_addtext_bookmark_text(
+  bookmark : @bookmark.PdfBookmark,
+) -> String raise PdfError {
   pdf_addtext_pdfdocstring_to_string(bookmark.text)
 }
 
@@ -142,11 +144,13 @@ fn pdf_addtext_bookmark_text(bookmark : PdfBookmark) -> String raise PdfError {
 /// bookmarks from a previous chapter do not leak into a later chapter.
 pub fn PdfDocument::addtext_bookmark_for_page(
   self : PdfDocument,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   level : Int,
   page_number : Int,
 ) -> String raise PdfError {
-  let before : Array[PdfBookmark] = Array::new(capacity=bookmarks.length())
+  let before : Array[@bookmark.PdfBookmark] = Array::new(
+    capacity=bookmarks.length(),
+  )
   for bookmark in bookmarks {
     if self.page_number_of_target(bookmark.target) <= page_number {
       before.push(bookmark)
@@ -154,7 +158,9 @@ pub fn PdfDocument::addtext_bookmark_for_page(
       break
     }
   }
-  let branch : Array[PdfBookmark] = Array::new(capacity=before.length())
+  let branch : Array[@bookmark.PdfBookmark] = Array::new(
+    capacity=before.length(),
+  )
   let mut before_index = before.length()
   while before_index > 0 {
     before_index -= 1
@@ -165,7 +171,9 @@ pub fn PdfDocument::addtext_bookmark_for_page(
       break
     }
   }
-  let pickfrom : Array[PdfBookmark] = Array::new(capacity=branch.length())
+  let pickfrom : Array[@bookmark.PdfBookmark] = Array::new(
+    capacity=branch.length(),
+  )
   let mut branch_index = branch.length()
   while branch_index > 0 {
     branch_index -= 1
@@ -174,7 +182,7 @@ pub fn PdfDocument::addtext_bookmark_for_page(
       pickfrom.push(bookmark)
     }
   }
-  let mut fallback : PdfBookmark? = None
+  let mut fallback : @bookmark.PdfBookmark? = None
   for bookmark in pickfrom {
     if self.page_number_of_target(bookmark.target) == page_number {
       return pdf_addtext_bookmark_text(bookmark)
@@ -191,7 +199,7 @@ pub fn PdfDocument::addtext_bookmark_for_page(
 /// Compatibility wrapper for `PdfDocument::addtext_bookmark_for_page`.
 pub fn pdf_addtext_bookmark_for_page(
   document : PdfDocument,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   level : Int,
   page_number : Int,
 ) -> String raise PdfError {
@@ -202,7 +210,7 @@ pub fn pdf_addtext_bookmark_for_page(
 /// Build cpdf add-text replacement values from document-local state.
 pub fn PdfDocument::addtext_replacement_values(
   self : PdfDocument,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   page_number : Int,
   end_page : Int,
   filename : String,
@@ -231,7 +239,7 @@ pub fn PdfDocument::addtext_replacement_values(
 /// Compatibility wrapper for `PdfDocument::addtext_replacement_values`.
 pub fn pdf_addtext_replacement_values(
   document : PdfDocument,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   page_number : Int,
   end_page : Int,
   filename : String,
@@ -249,7 +257,7 @@ pub fn pdf_addtext_replacement_values(
 /// The OCaml API receives precomputed page-reference lookup state and the page
 /// record; this wrapper derives the same page-local values from `document`.
 pub fn pdf_replace_pairs(
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   document : PdfDocument,
   end_page : Int,
   filename : String,

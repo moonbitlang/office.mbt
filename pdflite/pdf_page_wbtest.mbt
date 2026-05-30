@@ -477,7 +477,7 @@ test "private page destination transforms cover unchanged branches" {
       text: page_wb_text("Top"),
       target: DestFit(TargetPageObject(page_numbers[0])),
       is_open: false,
-      colour: pdf_bookmark_black,
+      colour: @bookmark.pdf_bookmark_black,
       flags: 0,
     },
   ])

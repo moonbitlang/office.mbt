@@ -53,9 +53,9 @@ fn pdf_merge_renumber_destination_with_map(
 
 ///|
 fn pdf_merge_renumber_bookmark_with_map(
-  bookmark : PdfBookmark,
+  bookmark : @bookmark.PdfBookmark,
   changes : PdfPageReferenceMap,
-) -> PdfBookmark {
+) -> @bookmark.PdfBookmark {
   {
     ..bookmark,
     target: pdf_merge_renumber_destination_with_map(bookmark.target, changes),

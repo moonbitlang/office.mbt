@@ -88,7 +88,7 @@ pub fn PdfDocument::toc_used_codepoints(
   self : PdfDocument,
   labels : ArrayView[PdfPageLabel],
   title : BytesView,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
 ) -> Array[Int] raise PdfError {
   let used : Array[Int] = [46]
   pdf_toc_append_utf8_codepoints(used, title)
@@ -109,7 +109,7 @@ pub fn pdf_toc_used_codepoints(
   document : PdfDocument,
   labels : ArrayView[PdfPageLabel],
   title : BytesView,
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
 ) -> Array[Int] raise PdfError {
   document.toc_used_codepoints(labels, title, bookmarks)
 }

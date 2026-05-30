@@ -184,10 +184,10 @@ fn PdfDocument::pdf_xobject_copy_trailer_id_from(
 
 ///|
 fn pdf_xobject_retained_bookmarks(
-  bookmarks : ArrayView[PdfBookmark],
+  bookmarks : ArrayView[@bookmark.PdfBookmark],
   old_page_numbers : ArrayView[Int],
   new_page_numbers : ArrayView[Int],
-) -> Array[PdfBookmark] raise PdfError {
+) -> Array[@bookmark.PdfBookmark] raise PdfError {
   let change_map = pdf_page_reference_map(
     pdf_page_reference_changes(old_page_numbers, new_page_numbers),
   )

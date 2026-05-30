@@ -32,7 +32,9 @@ fn PdfDocument::pdf_page_transform_bookmarks_for_matrices(
 ) -> PdfDocument raise PdfError {
   let bookmarks = self.read_bookmarks(preserve_actions=true)
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
-  let output : Array[PdfBookmark] = Array::new(capacity=bookmarks.length())
+  let output : Array[@bookmark.PdfBookmark] = Array::new(
+    capacity=bookmarks.length(),
+  )
   let mut changed = false
   for bookmark in bookmarks {
     let target = match

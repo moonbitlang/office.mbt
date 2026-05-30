@@ -167,7 +167,7 @@ fn PdfBookmarkListingTextLine::write_to(
 ///|
 fn PdfDocument::pdf_bookmark_listing_text_line(
   self : PdfDocument,
-  bookmark : PdfBookmark,
+  bookmark : @bookmark.PdfBookmark,
   encoding : PdfMetadataEncoding,
 ) -> PdfBookmarkListingTextLine raise PdfError {
   let page_number = self.page_number_of_target(bookmark.target)
