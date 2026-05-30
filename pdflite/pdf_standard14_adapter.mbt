@@ -1,6 +1,6 @@
 ///|
 /// Returns the Adobe Font Metrics data for this standard font.
-pub fn PdfStandardFont::afm_data(self : PdfStandardFont) -> PdfAfmData {
+pub fn PdfStandardFont::afm_data(self : PdfStandardFont) -> @afm.PdfAfmData {
   @standard14.pdf_standard14_afm_data(self.to_standard14_data_font())
 }
 
@@ -50,7 +50,7 @@ fn pdf_standard_font_from_standard14_data_font(
 
 ///|
 /// Returns the Adobe Font Metrics data for a standard font.
-pub fn pdf_standard14_afm_data(font : PdfStandardFont) -> PdfAfmData {
+pub fn pdf_standard14_afm_data(font : PdfStandardFont) -> @afm.PdfAfmData {
   font.afm_data()
 }
 

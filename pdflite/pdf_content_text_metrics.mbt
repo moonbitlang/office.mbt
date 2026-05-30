@@ -14,7 +14,10 @@ fn pdf_content_descriptor_extra_metrics(
 }
 
 ///|
-fn pdf_content_afm_header_value(data : PdfAfmData, key : String) -> BytesView? {
+fn pdf_content_afm_header_value(
+  data : @afm.PdfAfmData,
+  key : String,
+) -> BytesView? {
   let key_bytes = @ascii.encode(key)
   for entry in data.headers {
     if @afm.pdf_afm_view_equals(entry.0, key_bytes) {
@@ -35,7 +38,10 @@ fn pdf_content_afm_parse_int(value : BytesView) -> Int? {
 }
 
 ///|
-fn pdf_content_afm_header_number(data : PdfAfmData, key : String) -> Double {
+fn pdf_content_afm_header_number(
+  data : @afm.PdfAfmData,
+  key : String,
+) -> Double {
   match pdf_content_afm_header_value(data, key) {
     Some(value) => {
       let tokens = pdf_split_whitespace_tokens(value)
@@ -57,7 +63,7 @@ fn pdf_content_afm_header_number(data : PdfAfmData, key : String) -> Double {
 
 ///|
 fn pdf_content_standard_font_bbox_metrics(
-  data : PdfAfmData,
+  data : @afm.PdfAfmData,
 ) -> (Double, Double) {
   match pdf_content_afm_header_value(data, "FontBBox") {
     Some(value) => {

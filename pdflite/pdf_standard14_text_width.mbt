@@ -1,6 +1,6 @@
 ///|
 fn pdf_standard14_width_of_code(
-  data : PdfAfmData,
+  data : @afm.PdfAfmData,
   encoding : PdfEncoding,
   code : Int,
 ) -> Int {

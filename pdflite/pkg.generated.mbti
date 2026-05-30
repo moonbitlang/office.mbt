@@ -1498,8 +1498,6 @@ pub fn pdf_push(PdfDrawControl) -> Unit
 
 pub let pdf_rdf : String
 
-pub fn pdf_read_afm(BytesView) -> @afm.PdfAfmData raise @core.PdfError
-
 pub fn pdf_read_bookmarks(PdfDocument, preserve_actions? : Bool) -> Array[@bookmark.PdfBookmark] raise @core.PdfError
 
 pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise @core.PdfError
@@ -3708,8 +3706,6 @@ pub using @reader {type ObjectStreamReference}
 pub using @geometry {type PaperSize}
 
 pub using @crypt_core {type PdfAesV3RandomField}
-
-pub using @afm {type PdfAfmData}
 
 pub using @annotation {type PdfAnnotation}
 

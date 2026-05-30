@@ -1,5 +1,8 @@
 ///|
-fn pdf_addtext_afm_header_value(data : PdfAfmData, key : String) -> String? {
+fn pdf_addtext_afm_header_value(
+  data : @afm.PdfAfmData,
+  key : String,
+) -> String? {
   let key_bytes = @ascii.encode(key)
   for entry in data.headers {
     if @afm.pdf_afm_view_equals(entry.0, key_bytes) {
