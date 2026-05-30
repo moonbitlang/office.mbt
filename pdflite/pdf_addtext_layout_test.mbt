@@ -1,8 +1,8 @@
 ///|
 fn addtext_layout_offset_for_test(
-  rotation : @pdflite.PdfAddTextRotation,
+  rotation : @addtext.PdfAddTextRotation,
   position : @pdflite.PdfPosition,
-  justification : @pdflite.PdfAddTextJustification,
+  justification : @addtext.PdfAddTextJustification,
 ) -> Double {
   @addtext.pdf_addtext_justification_offset(
     rotation, 100.0, 60.0, position, justification,
@@ -373,7 +373,7 @@ test "pdf_addtext_line_widths wrapper handles fontpacks" {
 test "PdfDocument addtext_line_widths reports empty expanded lines" {
   let document = @pdflite.pdf_document_empty()
   let page = @pdflite.pdf_page_blank(@pdflite.paper_a4)
-  let result : Result[@pdflite.PdfAddTextLineWidths, Error] = try? document.addtext_line_widths(
+  let result : Result[@addtext.PdfAddTextLineWidths, Error] = try? document.addtext_line_widths(
     page,
     Some(addtext_layout_standard_font_for_test()),
     None,
@@ -811,14 +811,14 @@ test "pdf_addtext_get_urls_line uses byte offsets for UTF-8 text" {
 
 ///|
 test "pdf_addtext_get_urls_line reports malformed URL markers" {
-  let missing_pipe : Result[@pdflite.PdfAddTextUrlLine, Error] = try? @addtext.pdf_addtext_get_urls_line(
+  let missing_pipe : Result[@addtext.PdfAddTextUrlLine, Error] = try? @addtext.pdf_addtext_get_urls_line(
     "%URL[text]",
   )
   guard missing_pipe
     is Err(@pdflite.PdfError::SoftError("bad URL syntax in text")) else {
     fail("expected SoftError for URL marker without pipe")
   }
-  let missing_close : Result[@pdflite.PdfAddTextUrlLine, Error] = try? @addtext.pdf_addtext_get_urls_line(
+  let missing_close : Result[@addtext.PdfAddTextUrlLine, Error] = try? @addtext.pdf_addtext_get_urls_line(
     "%URL[text|https://example.test",
   )
   guard missing_close
@@ -1059,7 +1059,7 @@ test "pdf_addtext_bates_number formats optional zero padding" {
 
 ///|
 test "pdf_addtext_replacement_pairs builds cpdf addtext fields" {
-  let values : @pdflite.PdfAddTextReplacementValues = {
+  let values : @addtext.PdfAddTextReplacementValues = {
     page_number: 5,
     end_page: 12,
     filename: "input.pdf",

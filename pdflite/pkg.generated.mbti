@@ -3709,26 +3709,6 @@ pub using @reader {type ObjectStreamReference}
 
 pub using @geometry {type PaperSize}
 
-pub using @addtext {type PdfAddTextJustification}
-
-pub using @addtext {type PdfAddTextLinePlacement}
-
-pub using @addtext {type PdfAddTextLineWidths}
-
-pub using @addtext {type PdfAddTextPreparedLine}
-
-pub using @addtext {type PdfAddTextReplacementValues}
-
-pub using @addtext {type PdfAddTextResourceSetup}
-
-pub using @addtext {type PdfAddTextRotation}
-
-pub using @addtext {type PdfAddTextUrl}
-
-pub using @addtext {type PdfAddTextUrlAnnotationGeometry}
-
-pub using @addtext {type PdfAddTextUrlLine}
-
 pub using @crypt_core {type PdfAesV3RandomField}
 
 pub using @afm {type PdfAfmData}

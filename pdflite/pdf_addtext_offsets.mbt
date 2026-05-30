@@ -1,6 +1,6 @@
 ///|
 fn pdf_addtext_rotation_adjustment_offsets(
-  rotation : PdfAddTextRotation,
+  rotation : @addtext.PdfAddTextRotation,
   adjustment : Double,
 ) -> (Double, Double) {
   match rotation {
@@ -18,7 +18,7 @@ pub fn pdf_addtext_baseline_offsets(
   font : PdfFont?,
   font_size : Double,
   position : PdfPosition,
-  rotation : PdfAddTextRotation,
+  rotation : @addtext.PdfAddTextRotation,
   midline : Bool,
   topline : Bool,
 ) -> (Double, Double) {

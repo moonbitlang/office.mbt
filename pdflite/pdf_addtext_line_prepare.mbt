@@ -66,10 +66,10 @@ pub fn PdfDocument::addtext_prepare_line(
   relative_to_box? : PdfName = pdf_page_mediabox_key(),
   horizontal_offset? : Double = 0.0,
   vertical_offset? : Double = 0.0,
-  justification? : PdfAddTextJustification = PdfAddTextLeftJustify,
-  rotation? : PdfAddTextRotation = PdfAddTextRot0,
+  justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
+  rotation? : @addtext.PdfAddTextRotation = PdfAddTextRot0,
   raw? : Bool = false,
-) -> PdfAddTextPreparedLine raise PdfError {
+) -> @addtext.PdfAddTextPreparedLine raise PdfError {
   let processed = pdf_addtext_process_text_with_time(time, text, replacements)
   let parsed = @addtext.pdf_addtext_get_urls_line(processed)
   let expanded_lines = pdf_addtext_expand_lines_with_time(
@@ -135,10 +135,10 @@ pub fn pdf_addtext_prepare_line(
   relative_to_box? : PdfName = pdf_page_mediabox_key(),
   horizontal_offset? : Double = 0.0,
   vertical_offset? : Double = 0.0,
-  justification? : PdfAddTextJustification = PdfAddTextLeftJustify,
-  rotation? : PdfAddTextRotation = PdfAddTextRot0,
+  justification? : @addtext.PdfAddTextJustification = PdfAddTextLeftJustify,
+  rotation? : @addtext.PdfAddTextRotation = PdfAddTextRot0,
   raw? : Bool = false,
-) -> PdfAddTextPreparedLine raise PdfError {
+) -> @addtext.PdfAddTextPreparedLine raise PdfError {
   document.addtext_prepare_line(
     page,
     time,

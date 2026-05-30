@@ -210,20 +210,6 @@ pub using @spec {
 }
 
 ///|
-pub using @addtext {
-  type PdfAddTextJustification,
-  type PdfAddTextLinePlacement,
-  type PdfAddTextLineWidths,
-  type PdfAddTextPreparedLine,
-  type PdfAddTextReplacementValues,
-  type PdfAddTextResourceSetup,
-  type PdfAddTextRotation,
-  type PdfAddTextUrl,
-  type PdfAddTextUrlAnnotationGeometry,
-  type PdfAddTextUrlLine,
-}
-
-///|
 pub using @annotation {
   type PdfAnnotation,
   type PdfAnnotationBorder,

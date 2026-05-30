@@ -35,7 +35,7 @@ pub fn pdf_addtext_bates_number(
 
 ///|
 fn pdf_addtext_bookmark_replacement(
-  values : PdfAddTextReplacementValues,
+  values : @addtext.PdfAddTextReplacementValues,
   level : Int,
 ) -> String {
   if level >= 0 && level < values.bookmarks.length() {
@@ -51,7 +51,7 @@ fn pdf_addtext_bookmark_replacement(
 /// Page labels and bookmark strings are supplied by the caller; this helper
 /// preserves cpdf's marker names and Bates/roman/page-number formatting.
 pub fn pdf_addtext_replacement_pairs(
-  values : PdfAddTextReplacementValues,
+  values : @addtext.PdfAddTextReplacementValues,
 ) -> Array[(String, () -> String)] {
   [
     ("%PageDiv2", fn() { ((values.page_number + 1) / 2).to_string() }),
@@ -208,7 +208,7 @@ pub fn PdfDocument::addtext_replacement_values(
   filename : String,
   bates : Int,
   bates_pad : Int?,
-) -> PdfAddTextReplacementValues raise PdfError {
+) -> @addtext.PdfAddTextReplacementValues raise PdfError {
   let bookmark_values : Array[String] = Array::new(capacity=5)
   for level in 0..<5 {
     bookmark_values.push(
@@ -237,7 +237,7 @@ pub fn pdf_addtext_replacement_values(
   filename : String,
   bates : Int,
   bates_pad : Int?,
-) -> PdfAddTextReplacementValues raise PdfError {
+) -> @addtext.PdfAddTextReplacementValues raise PdfError {
   document.addtext_replacement_values(
     bookmarks, page_number, end_page, filename, bates, bates_pad,
   )

@@ -20,7 +20,7 @@ fn addtext_assert_pair_close_for_test(
 ///|
 fn addtext_assert_rotation_offset_for_test(
   position : @pdflite.PdfPosition,
-  rotation : @pdflite.PdfAddTextRotation,
+  rotation : @addtext.PdfAddTextRotation,
   expected : (Double, Double),
 ) -> Unit raise {
   addtext_assert_pair_close_for_test(
@@ -432,7 +432,7 @@ test "pdf_addtext_rotation_radians mirrors cpdf addtext rotation mapping" {
 ///|
 test "pdf_addtext_rotation_offsets follows cpdf position table" {
   let cases : Array[
-    (@pdflite.PdfPosition, @pdflite.PdfAddTextRotation, (Double, Double)),
+    (@pdflite.PdfPosition, @addtext.PdfAddTextRotation, (Double, Double)),
   ] = [
     (PdfPositionTopLeft(0.0, 0.0), PdfAddTextRot0, (0.0, 0.0)),
     (PdfPositionTopLeft(0.0, 0.0), PdfAddTextRot90, (0.0, 0.0)),

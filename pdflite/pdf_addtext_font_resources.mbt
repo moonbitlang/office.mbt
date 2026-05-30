@@ -152,7 +152,7 @@ pub fn PdfDocument::addtext_resource_setup(
   font_object : PdfObject?,
   fontpack_font_objects : ArrayView[Int],
   opacity : Double,
-) -> PdfAddTextResourceSetup raise PdfError {
+) -> @addtext.PdfAddTextResourceSetup raise PdfError {
   let fontdict = self.addtext_page_font_dictionary(page)
   match (font, fontpack) {
     (None, None) =>
@@ -215,7 +215,7 @@ pub fn pdf_addtext_resource_setup(
   font_object : PdfObject?,
   fontpack_font_objects : ArrayView[Int],
   opacity : Double,
-) -> PdfAddTextResourceSetup raise PdfError {
+) -> @addtext.PdfAddTextResourceSetup raise PdfError {
   document.addtext_resource_setup(
     page, font, fontpack, fontname, font_object, fontpack_font_objects, opacity,
   )

@@ -170,7 +170,7 @@ pub fn PdfDocument::addtext_line_widths(
   font_size : Double,
   text : BytesView,
   expanded_lines : ArrayView[Bytes],
-) -> PdfAddTextLineWidths raise PdfError {
+) -> @addtext.PdfAddTextLineWidths raise PdfError {
   let text_width = self.addtext_calc_textwidth(
     page, font, fontpack, fontname, font_size, text,
   )
@@ -196,7 +196,7 @@ pub fn pdf_addtext_line_widths(
   font_size : Double,
   text : BytesView,
   expanded_lines : ArrayView[Bytes],
-) -> PdfAddTextLineWidths raise PdfError {
+) -> @addtext.PdfAddTextLineWidths raise PdfError {
   document.addtext_line_widths(
     page, font, fontpack, fontname, font_size, text, expanded_lines,
   )

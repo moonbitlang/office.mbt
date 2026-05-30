@@ -244,7 +244,7 @@ pub fn pdf_addtext_unescape_string(text : String) -> String raise PdfError {
 /// Split and unescape add-text lines, reversing them for upside-down rotations.
 pub fn pdf_addtext_lines_for_rotation(
   text : String,
-  rotation : PdfAddTextRotation,
+  rotation : @addtext.PdfAddTextRotation,
 ) -> Array[String] raise PdfError {
   let lines = pdf_addtext_split_at_newline(text).map(line => {
     pdf_addtext_unescape_string(line)

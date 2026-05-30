@@ -53,7 +53,7 @@ pub(all) enum PdfDrawStructureData {
 /// Page-local context used to render `PdfDrawSpecialText`.
 pub(all) struct PdfDrawSpecialTextContext {
   time : PdfStrftimeTime
-  replacement_values : PdfAddTextReplacementValues
+  replacement_values : @addtext.PdfAddTextReplacementValues
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -106,7 +106,7 @@ pub fn pdf_draw_render_state_new() -> PdfDrawRenderState {
 /// Build a special-text context from explicit replacement values.
 pub fn pdf_draw_special_text_context(
   time : PdfStrftimeTime,
-  replacement_values : PdfAddTextReplacementValues,
+  replacement_values : @addtext.PdfAddTextReplacementValues,
 ) -> PdfDrawSpecialTextContext {
   { time, replacement_values }
 }

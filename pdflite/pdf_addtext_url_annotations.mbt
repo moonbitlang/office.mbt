@@ -91,7 +91,7 @@ pub fn pdf_addtext_url_annotation_geometry(
   start_width : Double,
   end_width : Double,
   height : Double,
-) -> PdfAddTextUrlAnnotationGeometry {
+) -> @addtext.PdfAddTextUrlAnnotationGeometry {
   let base_x = origin.x - horizontal_offset - justification_offset
   let base_y = origin.y - vertical_offset
   let min_x = base_x + start_width
@@ -126,7 +126,7 @@ fn pdf_addtext_url_annotation_prefix(
 ///|
 fn pdf_addtext_url_annotation_widths_with_measure(
   text : String,
-  url : PdfAddTextUrl,
+  url : @addtext.PdfAddTextUrl,
   measure : (String) -> Double raise PdfError,
 ) -> (Double, Double) raise PdfError {
   (
@@ -139,7 +139,7 @@ fn pdf_addtext_url_annotation_widths_with_measure(
 /// Measure cpdf's start and end prefix widths for an add-text URL span.
 pub fn pdf_addtext_url_annotation_widths(
   text : String,
-  url : PdfAddTextUrl,
+  url : @addtext.PdfAddTextUrl,
   measure : (String) -> Double,
 ) -> (Double, Double) raise PdfError {
   pdf_addtext_url_annotation_widths_with_measure(text, url, fn(prefix) {
@@ -156,7 +156,7 @@ pub fn pdf_addtext_url_annotation_widths(
 pub fn PdfDocument::addtext_url_annotation_references(
   self : PdfDocument,
   text : String,
-  urls : ArrayView[PdfAddTextUrl],
+  urls : ArrayView[@addtext.PdfAddTextUrl],
   measure : (String) -> Double raise PdfError,
   origin : Point2,
   horizontal_offset : Double,
@@ -201,7 +201,7 @@ pub fn PdfDocument::addtext_url_annotation_references(
 pub fn pdf_addtext_url_annotation_references(
   document : PdfDocument,
   text : String,
-  urls : ArrayView[PdfAddTextUrl],
+  urls : ArrayView[@addtext.PdfAddTextUrl],
   measure : (String) -> Double raise PdfError,
   origin : Point2,
   horizontal_offset : Double,
