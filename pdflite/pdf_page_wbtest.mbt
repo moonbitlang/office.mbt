@@ -85,7 +85,7 @@ fn page_wb_name_tree_entries_from_catalog(
 ///|
 test "page-label private helpers preserve non-uppercase bytes and root guards" {
   @test.assert_eq(
-    pdf_page_label_lowercase(@ascii.encode("A1Z!")),
+    @label.pdf_page_label_lowercase(@ascii.encode("A1Z!")),
     @ascii.encode("a1z!"),
   )
   let doc = pdf_document_empty()

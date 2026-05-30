@@ -19,6 +19,7 @@ import {
   "bobzhang/pdflite/metadata",
   "bobzhang/pdflite/ocg",
   "bobzhang/pdflite/page",
+  "bobzhang/pdflite/page/label",
   "bobzhang/pdflite/portfolio",
   "bobzhang/pdflite/reader",
   "bobzhang/pdflite/shape",

@@ -85,7 +85,11 @@ fn pdf_page_label_roman_upper_length(number : Int) -> Int {
 }
 
 ///|
-fn pdf_page_label_roman_upper(number : Int) -> PdfBytes {
+/// Format a positive integer as uppercase Roman numeral bytes.
+///
+/// Values less than or equal to zero produce an empty byte string, matching
+/// cpdf's page-label formatter behavior.
+pub fn pdf_page_label_roman_upper(number : Int) -> PdfBytes {
   let output = Array::make(pdf_page_label_roman_upper_length(number), b'\x00')
   let mut position = 0
   let mut remaining = number
@@ -112,7 +116,8 @@ fn pdf_page_label_roman_upper(number : Int) -> PdfBytes {
 }
 
 ///|
-fn pdf_page_label_lowercase(bytes : PdfBytes) -> PdfBytes {
+/// Lowercase ASCII A-Z bytes and preserve all other bytes unchanged.
+pub fn pdf_page_label_lowercase(bytes : PdfBytes) -> PdfBytes {
   let output = Array::make(bytes.length(), b'\x00')
   for i in 0..<bytes.length() {
     let byte = bytes[i]
@@ -140,7 +145,10 @@ fn pdf_page_label_letters(number : Int, lowercase : Bool) -> PdfBytes {
 }
 
 ///|
-fn pdf_page_label_number_bytes(
+/// Format the numeric suffix for a page label style.
+///
+/// Prefix-only labels return an empty byte string.
+pub fn pdf_page_label_number_bytes(
   number : Int,
   style : PdfPageLabelStyle,
 ) -> PdfBytes {

@@ -1,12 +1,12 @@
 ///|
 fn pdf_addtext_roman_upper(number : Int) -> String {
-  @ascii.decode_lossy(pdf_page_label_roman_upper(number))
+  @ascii.decode_lossy(@label.pdf_page_label_roman_upper(number))
 }
 
 ///|
 fn pdf_addtext_roman_lower(number : Int) -> String {
   @ascii.decode_lossy(
-    pdf_page_label_lowercase(pdf_page_label_roman_upper(number)),
+    @label.pdf_page_label_lowercase(@label.pdf_page_label_roman_upper(number)),
   )
 }
 
@@ -100,7 +100,7 @@ fn pdf_addtext_page_label_prefix(label : PdfPageLabel) -> String raise PdfError 
 ///|
 fn pdf_addtext_page_label_number(label : PdfPageLabel) -> String {
   @ascii.decode_lossy(
-    pdf_page_label_number_bytes(label.start_value, label.label_style),
+    @label.pdf_page_label_number_bytes(label.start_value, label.label_style),
   )
 }
 

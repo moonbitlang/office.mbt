@@ -19,6 +19,7 @@ import {
   "bobzhang/pdflite/metadata",
   "bobzhang/pdflite/ocg",
   "bobzhang/pdflite/page",
+  "bobzhang/pdflite/page/label",
   "bobzhang/pdflite/portfolio",
   "bobzhang/pdflite/reader",
   "bobzhang/pdflite/shape",
@@ -87,7 +88,7 @@ pub fn pdf_add_bookmarks_from_text(Bool, BytesView, PdfDocument) -> PdfDocument 
 
 pub fn pdf_add_default_fontpack(PdfDrawControl, String) -> Unit raise @core.PdfError
 
-pub fn pdf_add_page_labels(PdfDocument, Bool, PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+pub fn pdf_add_page_labels(PdfDocument, Bool, @label.PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_add_page_labels_json(PdfDocument, Json) -> PdfDocument raise @core.PdfError
 
@@ -1311,25 +1312,25 @@ pub fn pdf_page_info_json(PdfDocument, ArrayView[Int], unit? : @geometry.PdfUnit
 
 pub fn pdf_page_int_of_rotation(@page.PdfPageRotation) -> Int
 
-pub fn pdf_page_label_add_label(Int, ArrayView[PdfPageLabel], PdfPageLabel, Int) -> Array[PdfPageLabel]
+pub fn pdf_page_label_add_label(Int, ArrayView[@label.PdfPageLabel], @label.PdfPageLabel, Int) -> Array[@label.PdfPageLabel]
 
-pub let pdf_page_label_basic : PdfPageLabel
+pub let pdf_page_label_basic : @label.PdfPageLabel
 
-pub fn pdf_page_label_coalesce(ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
+pub fn pdf_page_label_coalesce(ArrayView[@label.PdfPageLabel]) -> Array[@label.PdfPageLabel]
 
-pub fn pdf_page_label_complete(ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
+pub fn pdf_page_label_complete(ArrayView[@label.PdfPageLabel]) -> Array[@label.PdfPageLabel]
 
-pub fn pdf_page_label_merge(ArrayView[PdfDocument], ArrayView[Array[Int]]) -> Array[PdfPageLabel] raise @core.PdfError
+pub fn pdf_page_label_merge(ArrayView[PdfDocument], ArrayView[Array[Int]]) -> Array[@label.PdfPageLabel] raise @core.PdfError
 
-pub fn pdf_page_label_of_page_number(Int, ArrayView[PdfPageLabel]) -> PdfPageLabel?
+pub fn pdf_page_label_of_page_number(Int, ArrayView[@label.PdfPageLabel]) -> @label.PdfPageLabel?
 
-pub fn pdf_page_label_of_single(Int, PdfPageLabel) -> PdfPageLabel
+pub fn pdf_page_label_of_single(Int, @label.PdfPageLabel) -> @label.PdfPageLabel
 
-pub fn pdf_page_label_style_of_string(String) -> PdfPageLabelStyle raise @core.PdfError
+pub fn pdf_page_label_style_of_string(String) -> @label.PdfPageLabelStyle raise @core.PdfError
 
-pub fn pdf_page_label_text_of_page_number(Int, ArrayView[PdfPageLabel]) -> Bytes?
+pub fn pdf_page_label_text_of_page_number(Int, ArrayView[@label.PdfPageLabel]) -> Bytes?
 
-pub fn pdf_page_label_text_of_single(Int, PdfPageLabel) -> Bytes
+pub fn pdf_page_label_text_of_single(Int, @label.PdfPageLabel) -> Bytes
 
 pub fn pdf_page_object_number(PdfDocument, Int) -> Int? raise @core.PdfError
 
@@ -1561,7 +1562,7 @@ pub fn pdf_read_number_tree(PdfDocument, @syntax.PdfObject) -> Array[(Bytes, @sy
 
 pub fn pdf_read_ocg(PdfDocument) -> @ocg.PdfOptionalContent? raise @core.PdfError
 
-pub fn pdf_read_page_labels(PdfDocument) -> Array[PdfPageLabel] raise @core.PdfError
+pub fn pdf_read_page_labels(PdfDocument) -> Array[@label.PdfPageLabel] raise @core.PdfError
 
 pub fn pdf_read_png(Bytes) -> PdfPNG raise @core.PdfError
 
@@ -1905,7 +1906,7 @@ pub fn pdf_string_of_lexeme(@syntax.PdfLexeme) -> String
 
 pub fn pdf_string_of_lexemes(ArrayView[@syntax.PdfLexeme]) -> String
 
-pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
+pub fn pdf_string_of_page_label(@label.PdfPageLabel) -> Bytes
 
 pub fn pdf_string_of_pagespec(PdfDocument, ArrayView[Int]) -> String raise @core.PdfError
 
@@ -1961,7 +1962,7 @@ pub fn pdf_toc_add_bookmark(PdfDocument, BytesView) -> PdfDocument raise @core.P
 
 pub fn pdf_toc_bookmark_text(BytesView) -> Bytes raise @core.PdfError
 
-pub fn pdf_toc_insert_pages(PdfDocument, ArrayView[@page.PdfPage], ArrayView[PdfPageLabel]) -> PdfDocument raise @core.PdfError
+pub fn pdf_toc_insert_pages(PdfDocument, ArrayView[@page.PdfPage], ArrayView[@label.PdfPageLabel]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_toc_make_dots(Double, PdfFontPack, Double) -> Array[PdfTypeElement] raise @core.PdfError
 
@@ -1969,7 +1970,7 @@ pub fn pdf_toc_of_pdfdocencoding(PdfFontPack, Double, BytesView) -> Array[PdfTyp
 
 pub fn pdf_toc_of_utf8(PdfFontPack, Double, BytesView) -> Array[PdfTypeElement] raise @core.PdfError
 
-pub fn pdf_toc_shift_page_labels(Int, ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
+pub fn pdf_toc_shift_page_labels(Int, ArrayView[@label.PdfPageLabel]) -> Array[@label.PdfPageLabel]
 
 pub fn pdf_toc_shorten_text(PdfFontPack, Double, Double, ArrayView[PdfTypeElement]) -> Array[PdfTypeElement] raise @core.PdfError
 
@@ -1977,11 +1978,11 @@ pub fn pdf_toc_split_title(BytesView) -> Array[Bytes]
 
 pub fn pdf_toc_title_real_newlines(BytesView) -> Bytes
 
-pub fn pdf_toc_type_elements(PdfDocument, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[@bookmark.PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
+pub fn pdf_toc_type_elements(PdfDocument, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[@label.PdfPageLabel], ArrayView[@bookmark.PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
 
-pub fn pdf_toc_typeset_pages(PdfDocument, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[@bookmark.PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
+pub fn pdf_toc_typeset_pages(PdfDocument, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[@label.PdfPageLabel], ArrayView[@bookmark.PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
 
-pub fn pdf_toc_used_codepoints(PdfDocument, ArrayView[PdfPageLabel], BytesView, ArrayView[@bookmark.PdfBookmark]) -> Array[Int] raise @core.PdfError
+pub fn pdf_toc_used_codepoints(PdfDocument, ArrayView[@label.PdfPageLabel], BytesView, ArrayView[@bookmark.PdfBookmark]) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_toc_width_of_runs(ArrayView[PdfTypeElement]) -> Double raise @core.PdfError
 
@@ -2167,7 +2168,7 @@ pub fn pdf_write_object(@syntax.PdfObject) -> Bytes raise @core.PdfError
 
 pub fn pdf_write_ocg(PdfDocument, @ocg.PdfOptionalContent) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_write_page_labels(PdfDocument, ArrayView[PdfPageLabel]) -> PdfDocument raise @core.PdfError
+pub fn pdf_write_page_labels(PdfDocument, ArrayView[@label.PdfPageLabel]) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_write_real(Double) -> Bytes raise @core.PdfError
 
@@ -2736,7 +2737,7 @@ pub fn PdfDocument::add_bookmarks_from_json(Self, Json, verify? : Bool) -> Self 
 pub fn PdfDocument::add_bookmarks_from_text(Self, BytesView, verify? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::add_object(Self, @syntax.PdfObject, generation? : Int) -> Int
 pub fn PdfDocument::add_object_given_number(Self, Int, @syntax.PdfObject, generation? : Int) -> Unit
-pub fn PdfDocument::add_page_labels(Self, Bool, PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::add_page_labels(Self, Bool, @label.PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> Self raise @core.PdfError
 pub fn PdfDocument::add_page_labels_json(Self, Json) -> Self raise @core.PdfError
 pub fn PdfDocument::add_pagetree(Self, ArrayView[@page.PdfPage]) -> Int raise @core.PdfError
 pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
@@ -3027,7 +3028,7 @@ pub fn PdfDocument::read_font_metrics(Self, @syntax.PdfObject) -> Array[Double]?
 pub fn PdfDocument::read_name_tree(Self, @syntax.PdfObject) -> Array[(Bytes, @syntax.PdfObject)]
 pub fn PdfDocument::read_number_tree(Self, @syntax.PdfObject) -> Array[(Int, @syntax.PdfObject)]
 pub fn PdfDocument::read_optional_content_groups(Self) -> @ocg.PdfOptionalContent? raise @core.PdfError
-pub fn PdfDocument::read_page_labels(Self) -> Array[PdfPageLabel] raise @core.PdfError
+pub fn PdfDocument::read_page_labels(Self) -> Array[@label.PdfPageLabel] raise @core.PdfError
 pub fn PdfDocument::read_simple_font(Self, @syntax.PdfObject) -> PdfSimpleFont raise @core.PdfError
 pub fn PdfDocument::read_standard14_font(Self, @syntax.PdfObject) -> PdfStandardFontData raise @core.PdfError
 pub fn PdfDocument::recompress(Self) -> Self raise @core.PdfError
@@ -3140,10 +3141,10 @@ pub fn PdfDocument::test_matterhorn_text(Self, String) -> Bytes raise @core.PdfE
 pub fn PdfDocument::text_extractor_of_font(Self, @syntax.PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::thin_lines(Self, ArrayView[Int], Double) -> Self raise @core.PdfError
 pub fn PdfDocument::toc_add_bookmark(Self, BytesView) -> Self raise @core.PdfError
-pub fn PdfDocument::toc_insert_pages(Self, ArrayView[@page.PdfPage], ArrayView[PdfPageLabel]) -> Self raise @core.PdfError
-pub fn PdfDocument::toc_type_elements(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[@bookmark.PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
-pub fn PdfDocument::toc_typeset_pages(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[PdfPageLabel], ArrayView[@bookmark.PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
-pub fn PdfDocument::toc_used_codepoints(Self, ArrayView[PdfPageLabel], BytesView, ArrayView[@bookmark.PdfBookmark]) -> Array[Int] raise @core.PdfError
+pub fn PdfDocument::toc_insert_pages(Self, ArrayView[@page.PdfPage], ArrayView[@label.PdfPageLabel]) -> Self raise @core.PdfError
+pub fn PdfDocument::toc_type_elements(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[@label.PdfPageLabel], ArrayView[@bookmark.PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
+pub fn PdfDocument::toc_typeset_pages(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[@label.PdfPageLabel], ArrayView[@bookmark.PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
+pub fn PdfDocument::toc_used_codepoints(Self, ArrayView[@label.PdfPageLabel], BytesView, ArrayView[@bookmark.PdfBookmark]) -> Array[Int] raise @core.PdfError
 pub fn PdfDocument::toc_with_fontpack(Self, PdfFontPack, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::toc_with_source(Self, PdfTocFontSource, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::trailer_dict(Self) -> @syntax.PdfObject
@@ -3169,7 +3170,7 @@ pub fn PdfDocument::write_colour_space(Self, PdfColourSpace) -> @syntax.PdfObjec
 pub fn PdfDocument::write_encoding(Self, PdfEncoding) -> Int raise @core.PdfError
 pub fn PdfDocument::write_font(Self, PdfFont, objnum? : Int?) -> Int raise @core.PdfError
 pub fn PdfDocument::write_optional_content_groups(Self, @ocg.PdfOptionalContent) -> Self raise @core.PdfError
-pub fn PdfDocument::write_page_labels(Self, ArrayView[PdfPageLabel]) -> Self raise @core.PdfError
+pub fn PdfDocument::write_page_labels(Self, ArrayView[@label.PdfPageLabel]) -> Self raise @core.PdfError
 pub fn PdfDocument::xmp_info(Self, @core.PdfName) -> String
 pub fn PdfDocument::xmp_info_blob(Self) -> Bytes raise @core.PdfError
 pub fn PdfDocument::xmp_info_json(Self) -> Json raise @core.PdfError
@@ -3579,23 +3580,6 @@ pub(all) struct PdfPNG {
   idat : Bytes
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfPageLabel {
-  label_style : PdfPageLabelStyle
-  label_prefix : Bytes?
-  start_page : Int
-  start_value : Int
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) enum PdfPageLabelStyle {
-  PageLabelDecimalArabic
-  PageLabelUppercaseRoman
-  PageLabelLowercaseRoman
-  PageLabelUppercaseLetters
-  PageLabelLowercaseLetters
-  PageLabelNoLabelPrefixOnly
-} derive(Eq, ToJson, @debug.Debug)
-pub fn PdfPageLabelStyle::debug_name(Self) -> String
-
 pub(all) struct PdfParsedCMap {
   map : Array[(Int, Bytes)]
   cid_map : Array[(Int, Int)]
@@ -3884,6 +3868,10 @@ pub using @ocg {type PdfOcgUsage}
 pub using @ocg {type PdfOptionalContent}
 
 pub using @page {type PdfPage}
+
+pub using @label {type PdfPageLabel}
+
+pub using @label {type PdfPageLabelStyle}
 
 pub using @page {type PdfPageRotation}
 
