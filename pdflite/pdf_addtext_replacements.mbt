@@ -90,7 +90,9 @@ fn pdf_addtext_pdfdocstring_to_string(
 }
 
 ///|
-fn pdf_addtext_page_label_prefix(label : PdfPageLabel) -> String raise PdfError {
+fn pdf_addtext_page_label_prefix(
+  label : @label.PdfPageLabel,
+) -> String raise PdfError {
   match label.label_prefix {
     Some(prefix) => pdf_addtext_pdfdocstring_to_string(prefix)
     None => ""
@@ -98,7 +100,7 @@ fn pdf_addtext_page_label_prefix(label : PdfPageLabel) -> String raise PdfError 
 }
 
 ///|
-fn pdf_addtext_page_label_number(label : PdfPageLabel) -> String {
+fn pdf_addtext_page_label_number(label : @label.PdfPageLabel) -> String {
   @ascii.decode_lossy(
     @label.pdf_page_label_number_bytes(label.start_value, label.label_style),
   )
@@ -112,8 +114,8 @@ pub fn PdfDocument::addtext_page_label(
   self : PdfDocument,
   page_number : Int,
 ) -> String raise PdfError {
-  let labels = pdf_page_label_complete(self.read_page_labels())
-  match pdf_page_label_of_page_number(page_number, labels) {
+  let labels = @label.pdf_page_label_complete(self.read_page_labels())
+  match @label.pdf_page_label_of_page_number(page_number, labels) {
     Some(label) =>
       pdf_addtext_page_label_prefix(label) +
       pdf_addtext_page_label_number(label)

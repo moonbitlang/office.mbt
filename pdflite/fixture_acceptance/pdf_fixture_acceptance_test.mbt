@@ -5006,7 +5006,7 @@ fn fixture_acceptance_assert_cpdf_manual_page_labels_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  let expected_labels : Array[@pdflite.PdfPageLabel] = [
+  let expected_labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelLowercaseRoman,
       label_prefix: None,
@@ -5100,7 +5100,7 @@ fn fixture_acceptance_assert_cpdf_manual_pdf_of_pages_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 4)
-  let expected_labels : Array[@pdflite.PdfPageLabel] = [
+  let expected_labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: None,
@@ -5128,19 +5128,19 @@ fn fixture_acceptance_assert_cpdf_manual_pdf_of_pages_for_test(
   ]
   @test.assert_eq(document.read_page_labels(), expected_labels)
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(1, expected_labels),
+    @label.pdf_page_label_text_of_page_number(1, expected_labels),
     Some(@ascii.encode("15")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(2, expected_labels),
+    @label.pdf_page_label_text_of_page_number(2, expected_labels),
     Some(@ascii.encode("1")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(3, expected_labels),
+    @label.pdf_page_label_text_of_page_number(3, expected_labels),
     Some(@ascii.encode("i")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(4, expected_labels),
+    @label.pdf_page_label_text_of_page_number(4, expected_labels),
     Some(@ascii.encode("157")),
   )
   let page_info_json = document.page_info_json([1, 2, 3, 4]).stringify()

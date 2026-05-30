@@ -68,13 +68,13 @@ fn PdfDocumentPageSpecContext::read_page_label_reference(
 fn PdfDocumentPageSpecContext::page_number_bytes_for_label(
   self : PdfDocumentPageSpecContext,
   label : BytesView,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
 ) -> Bytes raise PdfError {
   let mut found = false
   let mut output = Bytes::new(0)
   for page_number in 1..<=self.end_page {
     let page_label = match
-      pdf_page_label_text_of_page_number(page_number, labels) {
+      @label.pdf_page_label_text_of_page_number(page_number, labels) {
       Some(value) => value
       None => Bytes::new(0)
     }
@@ -95,7 +95,7 @@ fn PdfDocumentPageSpecContext::page_number_bytes_for_label(
 fn PdfDocumentPageSpecContext::resolved_page_labels_length(
   self : PdfDocumentPageSpecContext,
   spec : BytesView,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
 ) -> Int raise PdfError {
   let mut length = 0
   let mut index = 0

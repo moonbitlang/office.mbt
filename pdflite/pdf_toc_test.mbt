@@ -200,7 +200,7 @@ test "pdf_toc_make_dots creates cpdf dot leader with remainder glue" {
 test "PdfDocument toc_used_codepoints scans title bookmarks and labels" {
   let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let page_refs = try! document.page_reference_numbers()
-  let labels : Array[@pdflite.PdfPageLabel] = [
+  let labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: None,
@@ -504,7 +504,7 @@ test "PdfDocument toc_insert_pages prepends pages and shifts labels" {
     flags: 0,
   }
   let document = try! base.add_bookmarks([bookmark])
-  let labels : Array[@pdflite.PdfPageLabel] = [
+  let labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: Some(toc_pdfdoc_for_test("P-")),
@@ -515,7 +515,7 @@ test "PdfDocument toc_insert_pages prepends pages and shifts labels" {
   let toc_page = @pdflite.pdf_page_blank(
     @pdflite.paper_size_make(PdfPoint, 50.0, 50.0),
   )
-  let expected_labels : Array[@pdflite.PdfPageLabel] = [
+  let expected_labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelNoLabelPrefixOnly,
       label_prefix: None,
@@ -589,7 +589,7 @@ test "PdfDocument toc_with_fontpack composes non-structured TOC" {
     colour: @bookmark.pdf_bookmark_black,
     flags: 0,
   }
-  let labels : Array[@pdflite.PdfPageLabel] = [
+  let labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: Some(toc_pdfdoc_for_test("P-")),

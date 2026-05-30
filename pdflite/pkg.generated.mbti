@@ -1280,23 +1280,9 @@ pub fn pdf_page_int_of_rotation(@page.PdfPageRotation) -> Int
 
 pub fn pdf_page_label_add_label(Int, ArrayView[@label.PdfPageLabel], @label.PdfPageLabel, Int) -> Array[@label.PdfPageLabel]
 
-pub let pdf_page_label_basic : @label.PdfPageLabel
-
 pub fn pdf_page_label_coalesce(ArrayView[@label.PdfPageLabel]) -> Array[@label.PdfPageLabel]
 
-pub fn pdf_page_label_complete(ArrayView[@label.PdfPageLabel]) -> Array[@label.PdfPageLabel]
-
 pub fn pdf_page_label_merge(ArrayView[PdfDocument], ArrayView[Array[Int]]) -> Array[@label.PdfPageLabel] raise @core.PdfError
-
-pub fn pdf_page_label_of_page_number(Int, ArrayView[@label.PdfPageLabel]) -> @label.PdfPageLabel?
-
-pub fn pdf_page_label_of_single(Int, @label.PdfPageLabel) -> @label.PdfPageLabel
-
-pub fn pdf_page_label_style_of_string(String) -> @label.PdfPageLabelStyle raise @core.PdfError
-
-pub fn pdf_page_label_text_of_page_number(Int, ArrayView[@label.PdfPageLabel]) -> Bytes?
-
-pub fn pdf_page_label_text_of_single(Int, @label.PdfPageLabel) -> Bytes
 
 pub fn pdf_page_object_number(PdfDocument, Int) -> Int? raise @core.PdfError
 
@@ -1857,8 +1843,6 @@ pub fn pdf_string_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise @core.
 pub fn pdf_string_of_lexeme(@syntax.PdfLexeme) -> String
 
 pub fn pdf_string_of_lexemes(ArrayView[@syntax.PdfLexeme]) -> String
-
-pub fn pdf_string_of_page_label(@label.PdfPageLabel) -> Bytes
 
 pub fn pdf_string_of_pagespec(PdfDocument, ArrayView[Int]) -> String raise @core.PdfError
 
@@ -3736,10 +3720,6 @@ pub using @core {type PdfName}
 pub using @syntax {type PdfObject}
 
 pub using @page {type PdfPage}
-
-pub using @label {type PdfPageLabel}
-
-pub using @label {type PdfPageLabelStyle}
 
 pub using @page {type PdfPageRotation}
 

@@ -187,20 +187,6 @@ pub using @page {
 }
 
 ///|
-pub using @label {
-  type PdfPageLabel,
-  type PdfPageLabelStyle,
-  pdf_page_label_basic,
-  pdf_page_label_complete,
-  pdf_page_label_of_page_number,
-  pdf_page_label_of_single,
-  pdf_page_label_style_of_string,
-  pdf_page_label_text_of_page_number,
-  pdf_page_label_text_of_single,
-  pdf_string_of_page_label,
-}
-
-///|
 pub using @annotation {
   type PdfAnnotation,
   type PdfAnnotationBorder,

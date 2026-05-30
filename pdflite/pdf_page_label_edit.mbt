@@ -1,8 +1,8 @@
 ///|
 fn pdf_page_label_continuation(
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
   start_page : Int,
-) -> PdfPageLabel? {
+) -> @label.PdfPageLabel? {
   if labels.length() == 0 {
     None
   } else {
@@ -22,14 +22,14 @@ fn pdf_page_label_continuation(
 /// range is inserted when needed so later labels keep their previous numbering.
 pub fn pdf_page_label_add_label(
   end_page : Int,
-  labels : ArrayView[PdfPageLabel],
-  label : PdfPageLabel,
+  labels : ArrayView[@label.PdfPageLabel],
+  label : @label.PdfPageLabel,
   range_end_page : Int,
-) -> Array[PdfPageLabel] {
-  let before_or_during_or_equal : Array[PdfPageLabel] = Array::new(
+) -> Array[@label.PdfPageLabel] {
+  let before_or_during_or_equal : Array[@label.PdfPageLabel] = Array::new(
     capacity=labels.length(),
   )
-  let after : Array[PdfPageLabel] = Array::new(capacity=labels.length())
+  let after : Array[@label.PdfPageLabel] = Array::new(capacity=labels.length())
   for existing in labels {
     if existing.start_page <= range_end_page {
       before_or_during_or_equal.push(existing)
@@ -37,7 +37,7 @@ pub fn pdf_page_label_add_label(
       after.push(existing)
     }
   }
-  let before_or_during : Array[PdfPageLabel] = Array::new(
+  let before_or_during : Array[@label.PdfPageLabel] = Array::new(
     capacity=before_or_during_or_equal.length(),
   )
   for existing in before_or_during_or_equal {
@@ -45,7 +45,7 @@ pub fn pdf_page_label_add_label(
       before_or_during.push(existing)
     }
   }
-  let before : Array[PdfPageLabel] = Array::new(
+  let before : Array[@label.PdfPageLabel] = Array::new(
     capacity=before_or_during.length() + 1,
   )
   for existing in before_or_during {
@@ -94,7 +94,7 @@ fn pdf_page_label_range_extents(
 }
 
 ///|
-fn pdf_page_label_has_page_one(labels : ArrayView[PdfPageLabel]) -> Bool {
+fn pdf_page_label_has_page_one(labels : ArrayView[@label.PdfPageLabel]) -> Bool {
   for label in labels {
     if label.start_page == 1 {
       break true
@@ -118,11 +118,13 @@ fn pdf_page_label_start_additions(ranges : ArrayView[(Int, Int)]) -> Array[Int] 
 
 ///|
 fn pdf_page_label_with_basic_if_needed(
-  labels : ArrayView[PdfPageLabel],
-) -> Array[PdfPageLabel] {
-  let output : Array[PdfPageLabel] = Array::new(capacity=labels.length() + 1)
+  labels : ArrayView[@label.PdfPageLabel],
+) -> Array[@label.PdfPageLabel] {
+  let output : Array[@label.PdfPageLabel] = Array::new(
+    capacity=labels.length() + 1,
+  )
   if !pdf_page_label_has_page_one(labels) {
-    output.push(pdf_page_label_basic)
+    output.push(@label.pdf_page_label_basic)
   }
   for label in labels {
     output.push(label)
@@ -139,7 +141,7 @@ fn pdf_page_label_with_basic_if_needed(
 pub fn PdfDocument::add_page_labels(
   self : PdfDocument,
   progress : Bool,
-  style : PdfPageLabelStyle,
+  style : @label.PdfPageLabelStyle,
   prefix : PdfBytes?,
   start_value : Int,
   page_numbers : ArrayView[Int],
@@ -174,7 +176,7 @@ pub fn PdfDocument::add_page_labels(
 pub fn pdf_add_page_labels(
   document : PdfDocument,
   progress : Bool,
-  style : PdfPageLabelStyle,
+  style : @label.PdfPageLabelStyle,
   prefix : PdfBytes?,
   start_value : Int,
   page_numbers : ArrayView[Int],

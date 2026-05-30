@@ -32,9 +32,9 @@ fn pdf_toc_prepend_pages(
 /// existing labels by moving their start pages forward by the TOC page count.
 pub fn pdf_toc_shift_page_labels(
   toc_page_count : Int,
-  labels : ArrayView[PdfPageLabel],
-) -> Array[PdfPageLabel] {
-  let output : Array[PdfPageLabel] = [
+  labels : ArrayView[@label.PdfPageLabel],
+) -> Array[@label.PdfPageLabel] {
+  let output : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelNoLabelPrefixOnly,
       label_prefix: None,
@@ -57,7 +57,7 @@ pub fn pdf_toc_shift_page_labels(
 pub fn PdfDocument::toc_insert_pages(
   self : PdfDocument,
   toc_pages : ArrayView[PdfPage],
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
 ) -> PdfDocument raise PdfError {
   let original_pages = self.pages_of_pagetree()
   let toc_page_count = toc_pages.length()
@@ -78,7 +78,7 @@ pub fn PdfDocument::toc_insert_pages(
 pub fn pdf_toc_insert_pages(
   document : PdfDocument,
   toc_pages : ArrayView[PdfPage],
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
 ) -> PdfDocument raise PdfError {
   document.toc_insert_pages(toc_pages, labels)
 }

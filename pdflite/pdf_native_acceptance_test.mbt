@@ -8902,7 +8902,7 @@ fn acceptance_assert_pdftest_rewrite_for_test(
 fn acceptance_labelled_bookmarked_document_for_test(
   prefix : String,
   bookmark_text : String,
-  style : @pdflite.PdfPageLabelStyle,
+  style : @label.PdfPageLabelStyle,
   start_value : Int,
 ) -> @pdflite.PdfDocument raise {
   let labelled = acceptance_one_page_document_for_test().write_page_labels([

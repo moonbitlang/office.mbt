@@ -127,7 +127,7 @@ fn PdfDocument::pdf_toc_bookmark_label_runs(
   self : PdfDocument,
   fontpack : PdfFontPack,
   font_size : Double,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
   bookmark : @bookmark.PdfBookmark,
 ) -> Array[PdfTypeElement] raise PdfError {
   if bookmark.target == DestNull {
@@ -147,7 +147,7 @@ fn PdfDocument::pdf_toc_bookmark_elements(
   self : PdfDocument,
   fontpack : PdfFontPack,
   font_size : Double,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
   page_width : Double,
   margin : Double,
   dotleader : Bool,

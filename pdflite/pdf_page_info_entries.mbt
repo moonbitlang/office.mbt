@@ -59,9 +59,9 @@ fn PdfDocument::pdf_page_info_annotation_count(
 ///|
 fn pdf_page_info_label_text(
   page_number : Int,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
 ) -> String raise PdfError {
-  match pdf_page_label_text_of_page_number(page_number, labels) {
+  match @label.pdf_page_label_text_of_page_number(page_number, labels) {
     Some(bytes) => pdf_util_string_from_utf8(pdf_utf8_of_pdfdocstring(bytes))
     None => ""
   }
@@ -72,7 +72,7 @@ fn PdfDocument::pdf_page_info_entry(
   self : PdfDocument,
   page_number : Int,
   page : PdfPage,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
   unit : PdfUnit,
 ) -> PdfPageInfoEntry raise PdfError {
   {

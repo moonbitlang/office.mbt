@@ -312,7 +312,7 @@ test "PdfDocument pdf_of_pages handles page labels" {
     },
   ])
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(
+    @label.pdf_page_label_text_of_page_number(
       2,
       try! retained.read_page_labels(),
     ),

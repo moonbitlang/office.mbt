@@ -1,5 +1,7 @@
 ///|
-fn pdf_page_label_style_of_object(object : PdfObject?) -> PdfPageLabelStyle {
+fn pdf_page_label_style_of_object(
+  object : PdfObject?,
+) -> @label.PdfPageLabelStyle {
   match object {
     Some(PdfNameObject(name)) if name == pdf_page_label_style_decimal_name() =>
       PageLabelDecimalArabic
@@ -16,7 +18,7 @@ fn pdf_page_label_style_of_object(object : PdfObject?) -> PdfPageLabelStyle {
 }
 
 ///|
-fn pdf_page_label_style_object(style : PdfPageLabelStyle) -> PdfObject? {
+fn pdf_page_label_style_object(style : @label.PdfPageLabelStyle) -> PdfObject? {
   match style {
     PageLabelDecimalArabic =>
       Some(PdfNameObject(pdf_page_label_style_decimal_name()))
@@ -77,7 +79,7 @@ fn PdfDocument::pdf_page_label_of_range(
   self : PdfDocument,
   start_page_object : PdfObject,
   object : PdfObject,
-) -> PdfPageLabel {
+) -> @label.PdfPageLabel {
   {
     label_style: pdf_page_label_style_of_object(
       self.lookup_direct(pdf_page_label_style_key(), object),
@@ -100,7 +102,7 @@ fn PdfDocument::pdf_page_label_of_range(
 }
 
 ///|
-fn pdf_page_label_object(label : PdfPageLabel) -> PdfObject {
+fn pdf_page_label_object(label : @label.PdfPageLabel) -> PdfObject {
   let entries : Array[(PdfName, PdfObject)] = Array::new(capacity=3)
   match pdf_page_label_style_object(label.label_style) {
     Some(style) => entries.push((pdf_page_label_style_key(), style))
@@ -134,12 +136,12 @@ fn PdfDocument::pdf_page_label_catalog(
 /// without page labels return an empty array.
 pub fn PdfDocument::read_page_labels(
   self : PdfDocument,
-) -> Array[PdfPageLabel] raise PdfError {
+) -> Array[@label.PdfPageLabel] raise PdfError {
   let root = self.pdf_page_label_catalog()
   match self.lookup_direct(pdf_page_label_page_labels_key(), root) {
     Some(label_tree) => {
       let raw_entries = self.pdf_page_label_raw_entries(label_tree)
-      let output : Array[PdfPageLabel] = Array::new(
+      let output : Array[@label.PdfPageLabel] = Array::new(
         capacity=raw_entries.length(),
       )
       for entry in raw_entries {
@@ -155,7 +157,7 @@ pub fn PdfDocument::read_page_labels(
 /// Compatibility wrapper for `PdfDocument::read_page_labels`.
 pub fn pdf_read_page_labels(
   document : PdfDocument,
-) -> Array[PdfPageLabel] raise PdfError {
+) -> Array[@label.PdfPageLabel] raise PdfError {
   document.read_page_labels()
 }
 
@@ -205,7 +207,7 @@ pub fn pdf_remove_page_labels(
 /// Passing an empty label list removes any existing page-label tree.
 pub fn PdfDocument::write_page_labels(
   self : PdfDocument,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
 ) -> PdfDocument raise PdfError {
   if labels.length() == 0 {
     self.remove_page_labels()
@@ -236,7 +238,7 @@ pub fn PdfDocument::write_page_labels(
 /// Compatibility wrapper for `PdfDocument::write_page_labels`.
 pub fn pdf_write_page_labels(
   document : PdfDocument,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
 ) -> PdfDocument raise PdfError {
   document.write_page_labels(labels)
 }

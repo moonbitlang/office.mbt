@@ -31,10 +31,10 @@ fn pdf_page_label_json_prefix(value : Json?) -> PdfBytes? raise PdfError {
 }
 
 ///|
-fn pdf_page_label_of_json(json : Json) -> PdfPageLabel raise PdfError {
+fn pdf_page_label_of_json(json : Json) -> @label.PdfPageLabel raise PdfError {
   match json {
     Object(entries) => {
-      let style = pdf_page_label_style_of_string(
+      let style = @label.pdf_page_label_style_of_string(
         pdf_page_label_json_string(entries.get("labelstyle")),
       )
       {
@@ -60,7 +60,7 @@ pub fn PdfDocument::add_page_labels_json(
 ) -> PdfDocument raise PdfError {
   match json {
     Array(items) => {
-      let labels : Array[PdfPageLabel] = []
+      let labels : Array[@label.PdfPageLabel] = []
       for item in items {
         labels.push(pdf_page_label_of_json(item))
       }

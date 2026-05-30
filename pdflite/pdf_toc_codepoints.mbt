@@ -66,12 +66,12 @@ fn pdf_toc_append_pdfdocstring_codepoints(
 ///|
 fn pdf_toc_page_label_text(
   page_number : Int,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
 ) -> PdfBytes {
   if page_number < 1 {
     pdf_toc_ascii(page_number.to_string())
   } else {
-    match pdf_page_label_text_of_page_number(page_number, labels) {
+    match @label.pdf_page_label_text_of_page_number(page_number, labels) {
       Some(label) => label
       None => pdf_toc_ascii(page_number.to_string())
     }
@@ -86,7 +86,7 @@ fn pdf_toc_page_label_text(
 /// returned order is first occurrence for deterministic callers and tests.
 pub fn PdfDocument::toc_used_codepoints(
   self : PdfDocument,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
   title : BytesView,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
 ) -> Array[Int] raise PdfError {
@@ -107,7 +107,7 @@ pub fn PdfDocument::toc_used_codepoints(
 /// Compatibility wrapper for `PdfDocument::toc_used_codepoints`.
 pub fn pdf_toc_used_codepoints(
   document : PdfDocument,
-  labels : ArrayView[PdfPageLabel],
+  labels : ArrayView[@label.PdfPageLabel],
   title : BytesView,
   bookmarks : ArrayView[@bookmark.PdfBookmark],
 ) -> Array[Int] raise PdfError {

@@ -31,8 +31,8 @@ fn page_label_catalog_document_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
-test "PdfPageLabelStyle converts to and from CamlPDF names" {
-  let styles : Array[(@pdflite.PdfPageLabelStyle, String)] = [
+test "@label.PdfPageLabelStyle converts to and from CamlPDF names" {
+  let styles : Array[(@label.PdfPageLabelStyle, String)] = [
     (PageLabelDecimalArabic, "DecimalArabic"),
     (PageLabelUppercaseRoman, "UppercaseRoman"),
     (PageLabelLowercaseRoman, "LowercaseRoman"),
@@ -43,11 +43,11 @@ test "PdfPageLabelStyle converts to and from CamlPDF names" {
   for entry in styles {
     @test.assert_eq(entry.0.debug_name(), entry.1)
     @test.assert_eq(
-      try! @pdflite.pdf_page_label_style_of_string(entry.1),
+      try! @label.pdf_page_label_style_of_string(entry.1),
       entry.0,
     )
   }
-  let result : Result[@pdflite.PdfPageLabelStyle, Error] = try? @pdflite.pdf_page_label_style_of_string(
+  let result : Result[@label.PdfPageLabelStyle, Error] = try? @label.pdf_page_label_style_of_string(
     "Missing",
   )
   guard result is Err(@pdflite.PdfError::PageLabelStyleExpected("Missing")) else {
@@ -56,15 +56,15 @@ test "PdfPageLabelStyle converts to and from CamlPDF names" {
 }
 
 ///|
-test "pdf_string_of_page_label renders CamlPDF debug bytes" {
-  let no_prefix : @pdflite.PdfPageLabel = {
+test "@label.pdf_string_of_page_label renders CamlPDF debug bytes" {
+  let no_prefix : @label.PdfPageLabel = {
     label_style: PageLabelDecimalArabic,
     label_prefix: None,
     start_page: 1,
     start_value: 1,
   }
   @test.assert_eq(
-    @pdflite.pdf_string_of_page_label(no_prefix),
+    @label.pdf_string_of_page_label(no_prefix),
     page_label_bytes_for_test(
       "labelstyle: DecimalArabic\n" +
       "labelprefix: None\n" +
@@ -73,14 +73,14 @@ test "pdf_string_of_page_label renders CamlPDF debug bytes" {
     ),
   )
   let prefix = page_label_bytes_from_ints_for_test([65, 0xFF])
-  let label : @pdflite.PdfPageLabel = {
+  let label : @label.PdfPageLabel = {
     label_style: PageLabelLowercaseRoman,
     label_prefix: Some(prefix),
     start_page: 3,
     start_value: 7,
   }
   @test.assert_eq(
-    @pdflite.pdf_string_of_page_label(label),
+    @label.pdf_string_of_page_label(label),
     page_label_bytes_from_ints_for_test([
       108, 97, 98, 101, 108, 115, 116, 121, 108, 101, 58, 32, 76, 111, 119, 101,
       114, 99, 97, 115, 101, 82, 111, 109, 97, 110, 10, 108, 97, 98, 101, 108, 112,
@@ -99,7 +99,7 @@ test "PdfDocument write_page_labels builds a readable page label tree" {
   let key_prefix = page_label_name_for_test("/P")
   let key_start_value = page_label_name_for_test("/St")
   let doc = page_label_catalog_document_for_test()
-  let labels : Array[@pdflite.PdfPageLabel] = [
+  let labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelLowercaseRoman,
       label_prefix: Some(page_label_bytes_for_test("intro-")),
@@ -224,32 +224,32 @@ test "PdfDocument read_page_labels decodes all label styles" {
   )
   @test.assert_eq(try! doc.read_page_labels(), [
     {
-      ..@pdflite.pdf_page_label_basic,
+      ..@label.pdf_page_label_basic,
       label_style: PageLabelDecimalArabic,
       start_page: 1,
     },
     {
-      ..@pdflite.pdf_page_label_basic,
+      ..@label.pdf_page_label_basic,
       label_style: PageLabelUppercaseRoman,
       start_page: 2,
     },
     {
-      ..@pdflite.pdf_page_label_basic,
+      ..@label.pdf_page_label_basic,
       label_style: PageLabelLowercaseRoman,
       start_page: 3,
     },
     {
-      ..@pdflite.pdf_page_label_basic,
+      ..@label.pdf_page_label_basic,
       label_style: PageLabelUppercaseLetters,
       start_page: 4,
     },
     {
-      ..@pdflite.pdf_page_label_basic,
+      ..@label.pdf_page_label_basic,
       label_style: PageLabelLowercaseLetters,
       start_page: 5,
     },
     {
-      ..@pdflite.pdf_page_label_basic,
+      ..@label.pdf_page_label_basic,
       label_style: PageLabelNoLabelPrefixOnly,
       start_page: 6,
     },
@@ -295,7 +295,7 @@ test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
       start_value: 1,
     },
     {
-      ..@pdflite.pdf_page_label_basic,
+      ..@label.pdf_page_label_basic,
       label_style: PageLabelDecimalArabic,
       start_page: 3,
     },
@@ -328,7 +328,7 @@ test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
   )
   @test.assert_eq(try! kids_doc.read_page_labels(), [
     {
-      ..@pdflite.pdf_page_label_basic,
+      ..@label.pdf_page_label_basic,
       label_style: PageLabelUppercaseLetters,
       start_page: 1,
     },
@@ -341,7 +341,7 @@ test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
     .lookup_object_or_null(1)
     .add_dict_entry(key_page_labels, PdfDictionary([])),
   )
-  let empty_result : Result[Array[@pdflite.PdfPageLabel], Error] = try? empty_doc.read_page_labels()
+  let empty_result : Result[Array[@label.PdfPageLabel], Error] = try? empty_doc.read_page_labels()
   guard empty_result is Err(@pdflite.PdfError::PageTreeExpected) else {
     fail("expected @pdflite.PdfError::PageTreeExpected")
   }
@@ -349,7 +349,7 @@ test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
 
 ///|
 test "PdfDocument remove_page_labels and empty write drop labels" {
-  let labels : Array[@pdflite.PdfPageLabel] = [
+  let labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: None,
@@ -372,7 +372,7 @@ test "PdfDocument remove_page_labels and empty write drop labels" {
 test "PdfDocument page labels use trailer root catalog" {
   let key_root = page_label_name_for_test("/Root")
   let key_lang = page_label_name_for_test("/Lang")
-  let labels : Array[@pdflite.PdfPageLabel] = [
+  let labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: Some(page_label_bytes_for_test("active-")),
@@ -380,7 +380,7 @@ test "PdfDocument page labels use trailer root catalog" {
       start_value: 1,
     },
   ]
-  let replacement : Array[@pdflite.PdfPageLabel] = [
+  let replacement : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelUppercaseLetters,
       label_prefix: Some(page_label_bytes_for_test("new-")),
@@ -438,8 +438,8 @@ test "PdfDocument page labels use trailer root catalog" {
 ///|
 test "PdfDocument page label APIs require a root catalog" {
   let doc = @pdflite.pdf_document_empty()
-  let labels : Array[@pdflite.PdfPageLabel] = [@pdflite.pdf_page_label_basic]
-  let read_result : Result[Array[@pdflite.PdfPageLabel], Error] = try? doc.read_page_labels()
+  let labels : Array[@label.PdfPageLabel] = [@label.pdf_page_label_basic]
+  let read_result : Result[Array[@label.PdfPageLabel], Error] = try? doc.read_page_labels()
   guard read_result is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected from read_page_labels")
   }
@@ -457,7 +457,7 @@ test "PdfDocument page label APIs require a root catalog" {
   let key_root = page_label_name_for_test("/Root")
   let unresolved = page_label_catalog_document_for_test()
   unresolved.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
-  let unresolved_read : Result[Array[@pdflite.PdfPageLabel], Error] = try? unresolved.read_page_labels()
+  let unresolved_read : Result[Array[@label.PdfPageLabel], Error] = try? unresolved.read_page_labels()
   guard unresolved_read is Err(@pdflite.PdfError::RootExpected) else {
     fail(
       "expected @pdflite.PdfError::RootExpected from unresolved trailer root",
@@ -466,35 +466,35 @@ test "PdfDocument page label APIs require a root catalog" {
 }
 
 ///|
-test "pdf_page_label_complete supplies a basic first range" {
-  let later : @pdflite.PdfPageLabel = {
+test "@label.pdf_page_label_complete supplies a basic first range" {
+  let later : @label.PdfPageLabel = {
     label_style: PageLabelUppercaseRoman,
     label_prefix: None,
     start_page: 3,
     start_value: 1,
   }
-  @test.assert_eq(@pdflite.pdf_page_label_complete([]), [
-    @pdflite.pdf_page_label_basic,
+  @test.assert_eq(@label.pdf_page_label_complete([]), [
+    @label.pdf_page_label_basic,
   ])
-  @test.assert_eq(@pdflite.pdf_page_label_complete([later]), [
-    @pdflite.pdf_page_label_basic, later,
+  @test.assert_eq(@label.pdf_page_label_complete([later]), [
+    @label.pdf_page_label_basic, later,
   ])
   @test.assert_eq(
-    @pdflite.pdf_page_label_complete([@pdflite.pdf_page_label_basic, later]),
-    [@pdflite.pdf_page_label_basic, later],
+    @label.pdf_page_label_complete([@label.pdf_page_label_basic, later]),
+    [@label.pdf_page_label_basic, later],
   )
 }
 
 ///|
 test "pdf_page_label_add_label inserts a bounded label range" {
-  let basic = @pdflite.pdf_page_label_basic
-  let appendix : @pdflite.PdfPageLabel = {
+  let basic = @label.pdf_page_label_basic
+  let appendix : @label.PdfPageLabel = {
     label_style: PageLabelUppercaseLetters,
     label_prefix: Some(page_label_bytes_for_test("A-")),
     start_page: 10,
     start_value: 1,
   }
-  let inserted : @pdflite.PdfPageLabel = {
+  let inserted : @label.PdfPageLabel = {
     label_style: PageLabelLowercaseRoman,
     label_prefix: Some(page_label_bytes_for_test("intro-")),
     start_page: 3,
@@ -508,14 +508,14 @@ test "pdf_page_label_add_label inserts a bounded label range" {
 
 ///|
 test "pdf_page_label_add_label avoids redundant continuation labels" {
-  let basic = @pdflite.pdf_page_label_basic
-  let next : @pdflite.PdfPageLabel = {
+  let basic = @label.pdf_page_label_basic
+  let next : @label.PdfPageLabel = {
     label_style: PageLabelDecimalArabic,
     label_prefix: Some(page_label_bytes_for_test("p.")),
     start_page: 6,
     start_value: 1,
   }
-  let inserted : @pdflite.PdfPageLabel = {
+  let inserted : @label.PdfPageLabel = {
     label_style: PageLabelNoLabelPrefixOnly,
     label_prefix: Some(page_label_bytes_for_test("cover")),
     start_page: 3,
@@ -535,20 +535,20 @@ test "pdf_page_label_add_label avoids redundant continuation labels" {
 
 ///|
 test "pdf_page_label_add_label removes overlapped ranges" {
-  let basic = @pdflite.pdf_page_label_basic
-  let old_inner : @pdflite.PdfPageLabel = {
+  let basic = @label.pdf_page_label_basic
+  let old_inner : @label.PdfPageLabel = {
     label_style: PageLabelLowercaseRoman,
     label_prefix: None,
     start_page: 4,
     start_value: 1,
   }
-  let after : @pdflite.PdfPageLabel = {
+  let after : @label.PdfPageLabel = {
     label_style: PageLabelUppercaseLetters,
     label_prefix: None,
     start_page: 8,
     start_value: 1,
   }
-  let inserted : @pdflite.PdfPageLabel = {
+  let inserted : @label.PdfPageLabel = {
     label_style: PageLabelDecimalArabic,
     label_prefix: Some(page_label_bytes_for_test("new-")),
     start_page: 3,
@@ -567,14 +567,14 @@ test "pdf_page_label_add_label removes overlapped ranges" {
 
 ///|
 test "pdf_page_label_add_label replaces an existing same-start label" {
-  let basic = @pdflite.pdf_page_label_basic
-  let old : @pdflite.PdfPageLabel = {
+  let basic = @label.pdf_page_label_basic
+  let old : @label.PdfPageLabel = {
     label_style: PageLabelLowercaseRoman,
     label_prefix: None,
     start_page: 4,
     start_value: 1,
   }
-  let inserted : @pdflite.PdfPageLabel = {
+  let inserted : @label.PdfPageLabel = {
     label_style: PageLabelUppercaseRoman,
     label_prefix: None,
     start_page: 4,
@@ -587,8 +587,8 @@ test "pdf_page_label_add_label replaces an existing same-start label" {
 }
 
 ///|
-test "pdf_page_label_text_of_page_number renders label bytes" {
-  let labels : Array[@pdflite.PdfPageLabel] = [
+test "@label.pdf_page_label_text_of_page_number renders label bytes" {
+  let labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelLowercaseRoman,
       label_prefix: Some(page_label_bytes_for_test("intro-")),
@@ -633,39 +633,39 @@ test "pdf_page_label_text_of_page_number renders label bytes" {
     },
   ]
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(4, labels),
+    @label.pdf_page_label_text_of_page_number(4, labels),
     Some(page_label_bytes_for_test("intro-iv")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(7, labels),
+    @label.pdf_page_label_text_of_page_number(7, labels),
     Some(page_label_bytes_for_test("2")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(10, labels),
+    @label.pdf_page_label_text_of_page_number(10, labels),
     Some(page_label_bytes_for_test("A-AA")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(12, labels),
+    @label.pdf_page_label_text_of_page_number(12, labels),
     Some(page_label_bytes_for_test("cover")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(13, labels),
+    @label.pdf_page_label_text_of_page_number(13, labels),
     Some(page_label_bytes_for_test("M")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(14, labels),
+    @label.pdf_page_label_text_of_page_number(14, labels),
     Some(page_label_bytes_for_test("aa")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(15, labels),
+    @label.pdf_page_label_text_of_page_number(15, labels),
     Some(page_label_bytes_for_test("roman-CMXLIV")),
   )
-  @test.assert_eq(@pdflite.pdf_page_label_text_of_page_number(1, []), None)
+  @test.assert_eq(@label.pdf_page_label_text_of_page_number(1, []), None)
 }
 
 ///|
-test "pdf_page_label_of_page_number returns a single-page label" {
-  let labels : Array[@pdflite.PdfPageLabel] = [
+test "@label.pdf_page_label_of_page_number returns a single-page label" {
+  let labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelLowercaseRoman,
       label_prefix: None,
@@ -680,7 +680,7 @@ test "pdf_page_label_of_page_number returns a single-page label" {
     },
   ]
   @test.assert_eq(
-    @pdflite.pdf_page_label_of_page_number(7, labels),
+    @label.pdf_page_label_of_page_number(7, labels),
     Some({
       label_style: PageLabelDecimalArabic,
       label_prefix: Some(page_label_bytes_for_test("p.")),
@@ -688,28 +688,28 @@ test "pdf_page_label_of_page_number returns a single-page label" {
       start_value: 2,
     }),
   )
-  @test.assert_eq(@pdflite.pdf_page_label_of_page_number(1, []), None)
+  @test.assert_eq(@label.pdf_page_label_of_page_number(1, []), None)
 }
 
 ///|
 test "pdf_page_label_coalesce removes redundant adjacent ranges" {
-  let first : @pdflite.PdfPageLabel = {
+  let first : @label.PdfPageLabel = {
     label_style: PageLabelDecimalArabic,
     label_prefix: None,
     start_page: 1,
     start_value: 1,
   }
-  let redundant : @pdflite.PdfPageLabel = {
+  let redundant : @label.PdfPageLabel = {
     ..first,
     start_page: 3,
     start_value: 3,
   }
-  let kept_offset : @pdflite.PdfPageLabel = {
+  let kept_offset : @label.PdfPageLabel = {
     ..first,
     start_page: 6,
     start_value: 1,
   }
-  let kept_prefix : @pdflite.PdfPageLabel = {
+  let kept_prefix : @label.PdfPageLabel = {
     ..kept_offset,
     label_prefix: Some(page_label_bytes_for_test("A")),
   }
@@ -724,7 +724,7 @@ test "pdf_page_label_coalesce removes redundant adjacent ranges" {
 ///|
 test "pdf_page_label_merge retargets selected page labels" {
   let first_doc = page_label_catalog_document_for_test()
-  let first_labels : Array[@pdflite.PdfPageLabel] = [
+  let first_labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelLowercaseRoman,
       label_prefix: Some(page_label_bytes_for_test("intro-")),
@@ -740,7 +740,7 @@ test "pdf_page_label_merge retargets selected page labels" {
   ]
   let first_doc = try! first_doc.write_page_labels(first_labels)
   let second_doc = page_label_catalog_document_for_test()
-  let second_labels : Array[@pdflite.PdfPageLabel] = [
+  let second_labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: Some(page_label_bytes_for_test("sec-")),
@@ -774,15 +774,15 @@ test "pdf_page_label_merge retargets selected page labels" {
     },
   ])
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(1, merged),
+    @label.pdf_page_label_text_of_page_number(1, merged),
     Some(page_label_bytes_for_test("intro-ii")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(2, merged),
+    @label.pdf_page_label_text_of_page_number(2, merged),
     Some(page_label_bytes_for_test("1")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(4, merged),
+    @label.pdf_page_label_text_of_page_number(4, merged),
     Some(page_label_bytes_for_test("sec-11")),
   )
 }
@@ -792,10 +792,10 @@ test "pdf_page_label_merge uses basic labels for unlabeled source PDFs" {
   let doc = page_label_catalog_document_for_test()
   let merged = try! @pdflite.pdf_page_label_merge([doc], [[2, 3]])
   @test.assert_eq(merged, [
-    { ..@pdflite.pdf_page_label_basic, start_page: 1, start_value: 2 },
+    { ..@label.pdf_page_label_basic, start_page: 1, start_value: 2 },
   ])
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(2, merged),
+    @label.pdf_page_label_text_of_page_number(2, merged),
     Some(page_label_bytes_for_test("3")),
   )
 }
@@ -803,7 +803,7 @@ test "pdf_page_label_merge uses basic labels for unlabeled source PDFs" {
 ///|
 test "pdf_page_label_merge rejects mismatched inputs" {
   let doc = page_label_catalog_document_for_test()
-  let result : Result[Array[@pdflite.PdfPageLabel], Error] = try? @pdflite.pdf_page_label_merge(
+  let result : Result[Array[@label.PdfPageLabel], Error] = try? @pdflite.pdf_page_label_merge(
     [doc],
     [],
   )
@@ -824,14 +824,14 @@ test "PdfDocument add_page_labels splits ranges and progresses numbering" {
   )
   let labels = try! updated.read_page_labels()
   @test.assert_eq(labels, [
-    @pdflite.pdf_page_label_basic,
+    @label.pdf_page_label_basic,
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: Some(page_label_bytes_for_test("A-")),
       start_page: 2,
       start_value: 10,
     },
-    { ..@pdflite.pdf_page_label_basic, start_page: 4, start_value: 4 },
+    { ..@label.pdf_page_label_basic, start_page: 4, start_value: 4 },
     {
       label_style: PageLabelDecimalArabic,
       label_prefix: Some(page_label_bytes_for_test("A-")),
@@ -840,11 +840,11 @@ test "PdfDocument add_page_labels splits ranges and progresses numbering" {
     },
   ])
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(3, labels),
+    @label.pdf_page_label_text_of_page_number(3, labels),
     Some(page_label_bytes_for_test("A-11")),
   )
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(5, labels),
+    @label.pdf_page_label_text_of_page_number(5, labels),
     Some(page_label_bytes_for_test("A-12")),
   )
 }
@@ -868,7 +868,7 @@ test "pdf_add_page_labels can reuse start value for each range" {
     start_value: 10,
   })
   @test.assert_eq(
-    @pdflite.pdf_page_label_text_of_page_number(5, labels),
+    @label.pdf_page_label_text_of_page_number(5, labels),
     Some(page_label_bytes_for_test("A-10")),
   )
 }
@@ -891,7 +891,7 @@ test "PdfDocument add_page_labels_json writes cpdf JSON label array" {
       "startvalue": 1.0,
     },
   ]
-  let expected : Array[@pdflite.PdfPageLabel] = [
+  let expected : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelLowercaseRoman,
       label_prefix: Some(prefix),
@@ -956,7 +956,7 @@ test "PdfDocument add_page_labels_json rejects malformed JSON" {
 ///|
 test "PdfDocument add_page_labels preserves an existing page one label" {
   let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 5)
-  let original : @pdflite.PdfPageLabel = {
+  let original : @label.PdfPageLabel = {
     label_style: PageLabelLowercaseRoman,
     label_prefix: Some(page_label_bytes_for_test("pre-")),
     start_page: 1,

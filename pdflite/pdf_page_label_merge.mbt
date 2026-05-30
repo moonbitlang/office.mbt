@@ -5,9 +5,9 @@
 /// start_value` offset are identical, so visible labels for every page remain
 /// unchanged.
 pub fn pdf_page_label_coalesce(
-  labels : ArrayView[PdfPageLabel],
-) -> Array[PdfPageLabel] {
-  let output : Array[PdfPageLabel] = Array::new(capacity=labels.length())
+  labels : ArrayView[@label.PdfPageLabel],
+) -> Array[@label.PdfPageLabel] {
+  let output : Array[@label.PdfPageLabel] = Array::new(capacity=labels.length())
   let mut index = 0
   while index < labels.length() {
     let label = labels[index]
@@ -36,7 +36,7 @@ pub fn pdf_page_label_coalesce(
 pub fn pdf_page_label_merge(
   pdfs : ArrayView[PdfDocument],
   ranges : ArrayView[Array[Int]],
-) -> Array[PdfPageLabel] raise PdfError {
+) -> Array[@label.PdfPageLabel] raise PdfError {
   if pdfs.length() != ranges.length() {
     raise PageTreeExpected
   }
@@ -44,12 +44,16 @@ pub fn pdf_page_label_merge(
   for range in ranges {
     total_pages += range.length()
   }
-  let labels : Array[PdfPageLabel] = Array::new(capacity=total_pages)
+  let labels : Array[@label.PdfPageLabel] = Array::new(capacity=total_pages)
   let mut merged_page = 1
   for index in 0..<pdfs.length() {
-    let source_labels = pdf_page_label_complete(pdfs[index].read_page_labels())
+    let source_labels = @label.pdf_page_label_complete(
+      pdfs[index].read_page_labels(),
+    )
     for page_number in ranges[index] {
-      let label = pdf_page_label_of_page_number(page_number, source_labels).unwrap()
+      let label = @label.pdf_page_label_of_page_number(
+        page_number, source_labels,
+      ).unwrap()
       labels.push({ ..label, start_page: merged_page })
       merged_page += 1
     }

@@ -168,7 +168,7 @@ fn page_fixture_assert_cpdf_manual_page_labels_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  let expected_labels : Array[@pdflite.PdfPageLabel] = [
+  let expected_labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelLowercaseRoman,
       label_prefix: None,
