@@ -15,6 +15,12 @@ pub fn pdf_date_of_string(String) -> PdfDate raise @core.PdfError
 
 pub fn pdf_date_of_view(BytesView) -> PdfDate raise @core.PdfError
 
+pub let pdf_dummy : PdfStrftimeTime
+
+pub fn pdf_strftime_dummy_time() -> PdfStrftimeTime
+
+pub fn pdf_strftime_with_time(PdfStrftimeTime, String) -> String
+
 pub fn pdf_string_of_date(PdfDate) -> String raise @core.PdfError
 
 // Errors
@@ -31,7 +37,18 @@ pub(all) struct PdfDate {
   minute_offset : Int
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfStrftimeTime {
+  tm_sec : Int
+  tm_min : Int
+  tm_hour : Int
+  tm_mday : Int
+  tm_mon : Int
+  tm_year : Int
+  tm_wday : Int
+  tm_yday : Int
+  tm_isdst : Bool
+} derive(Eq, ToJson, @debug.Debug)
+
 // Type aliases
 
 // Traits
-

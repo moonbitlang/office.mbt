@@ -223,11 +223,15 @@ pub using @crypt_core {
 ///|
 pub using @date {
   type PdfDate,
+  type PdfStrftimeTime,
+  pdf_dummy,
   pdf_string_of_date,
   pdf_date_of_view,
   pdf_date_of_bytes,
   pdf_date_of_string,
   pdf_bytes_of_date,
+  pdf_strftime_dummy_time,
+  pdf_strftime_with_time,
 }
 
 ///|
