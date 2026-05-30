@@ -288,7 +288,7 @@ test "standalone page lifecycle helpers delegate to document methods" {
     try! @pdflite.pdf_page_object_number(doc, 2),
     try! doc.page_object_number(2),
   )
-  let destination : @pdflite.PdfDestination = DestFit(TargetPageObject(5))
+  let destination : @destination.PdfDestination = DestFit(TargetPageObject(5))
   @test.assert_eq(
     try! @pdflite.pdf_pagenumber_of_target(doc, destination),
     try! doc.page_number_of_target(destination),

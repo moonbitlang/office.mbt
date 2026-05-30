@@ -33,7 +33,7 @@ fn PdfPageMatrixLookup::matrix_for_page_number(
 ///|
 fn PdfPageMatrixLookup::page_number_of_target(
   self : PdfPageMatrixLookup,
-  target : PdfTargetPage,
+  target : @destination.PdfTargetPage,
 ) -> Int {
   match target {
     TargetPageObject(object_number) =>
@@ -45,7 +45,7 @@ fn PdfPageMatrixLookup::page_number_of_target(
 ///|
 fn PdfDocument::pdf_page_matrix_for_destination_with_lookup(
   self : PdfDocument,
-  destination : PdfDestination,
+  destination : @destination.PdfDestination,
   lookup : PdfPageMatrixLookup,
 ) -> TransformMatrix? raise PdfError {
   let page_number = self.pdf_page_matrix_page_number_for_destination_with_lookup(
@@ -61,7 +61,7 @@ fn PdfDocument::pdf_page_matrix_for_destination_with_lookup(
 ///|
 fn PdfDocument::pdf_page_matrix_page_number_for_destination_with_lookup(
   self : PdfDocument,
-  destination : PdfDestination,
+  destination : @destination.PdfDestination,
   lookup : PdfPageMatrixLookup,
 ) -> Int raise PdfError {
   match destination {

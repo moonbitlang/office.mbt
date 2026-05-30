@@ -148,7 +148,7 @@ pub fn pdf_page_object_number(
 /// Resolve a destination target to a 1-based page number.
 pub fn PdfDocument::page_number_of_target(
   self : PdfDocument,
-  destination : PdfDestination,
+  destination : @destination.PdfDestination,
 ) -> Int raise PdfError {
   self.pdf_destination_page_number(destination, self.page_reference_numbers())
 }
@@ -157,7 +157,7 @@ pub fn PdfDocument::page_number_of_target(
 /// Compatibility wrapper for `PdfDocument::page_number_of_target`.
 pub fn pdf_pagenumber_of_target(
   document : PdfDocument,
-  destination : PdfDestination,
+  destination : @destination.PdfDestination,
 ) -> Int raise PdfError {
   document.page_number_of_target(destination)
 }
@@ -169,7 +169,7 @@ pub fn pdf_pagenumber_of_target(
 pub fn PdfDocument::target_of_page_number(
   self : PdfDocument,
   page_number : Int,
-) -> PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise PdfError {
   match self.page_object_number(page_number) {
     Some(object_number) => DestFit(TargetPageObject(object_number))
     None => DestNull
@@ -181,7 +181,7 @@ pub fn PdfDocument::target_of_page_number(
 pub fn pdf_target_of_pagenumber(
   document : PdfDocument,
   page_number : Int,
-) -> PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise PdfError {
   document.target_of_page_number(page_number)
 }
 

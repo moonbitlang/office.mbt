@@ -65,7 +65,7 @@ fn pdf_merge_info_dictionary(documents : ArrayView[PdfDocument]) -> PdfObject? {
 fn PdfDocument::pdf_merge_open_action_destination(
   self : PdfDocument,
   open_action : PdfObject,
-) -> PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise PdfError {
   match self.direct(open_action) {
     PdfArray(_) as destination =>
       self.read_destination(destination, shallow=true)
@@ -78,7 +78,7 @@ fn PdfDocument::pdf_merge_open_action_destination(
 fn PdfDocument::pdf_merge_open_action_target(
   self : PdfDocument,
   open_action : PdfObject,
-) -> PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise PdfError {
   match self.direct(open_action) {
     PdfArray(_) as destination =>
       self.read_destination(destination, shallow=true)
@@ -89,7 +89,7 @@ fn PdfDocument::pdf_merge_open_action_target(
 
 ///|
 fn pdf_merge_destination_needs_named_retention(
-  destination : PdfDestination,
+  destination : @destination.PdfDestination,
 ) -> Bool {
   match destination {
     DestNamed(_) | DestString(_) => true

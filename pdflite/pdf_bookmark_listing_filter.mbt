@@ -18,7 +18,7 @@ fn pdf_bookmark_listing_is_all_pages(
 
 ///|
 fn pdf_bookmark_listing_target_object(
-  target : PdfDestination,
+  target : @destination.PdfDestination,
   page_number : Int,
 ) -> PdfObject {
   let object = pdf_object_of_destination(target)

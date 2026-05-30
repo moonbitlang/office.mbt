@@ -309,9 +309,6 @@ pub using @path {
 }
 
 ///|
-pub using @destination {type PdfDestination, type PdfTargetPage}
-
-///|
 pub using @bookmark {
   type PdfBookmark,
   type PdfBookmarkColour,

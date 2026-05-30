@@ -31,7 +31,7 @@ fn PdfPageNumberLookup::page_number(
 ///|
 fn pdf_destination_page_number_of_target(
   page_numbers : PdfPageNumberLookup,
-  target : PdfTargetPage,
+  target : @destination.PdfTargetPage,
 ) -> Int {
   match target {
     TargetOtherDocPageNumber(number) => number + 1
@@ -42,7 +42,7 @@ fn pdf_destination_page_number_of_target(
 ///|
 fn PdfDocument::pdf_destination_page_number_with_lookup(
   self : PdfDocument,
-  destination : PdfDestination,
+  destination : @destination.PdfDestination,
   page_numbers : PdfPageNumberLookup,
 ) -> Int raise PdfError {
   match destination {
@@ -86,7 +86,7 @@ fn PdfDocument::pdf_destination_page_number_with_lookup(
 ///|
 fn PdfDocument::pdf_destination_page_number(
   self : PdfDocument,
-  destination : PdfDestination,
+  destination : @destination.PdfDestination,
   page_reference_numbers : ArrayView[Int],
 ) -> Int raise PdfError {
   self.pdf_destination_page_number_with_lookup(

@@ -3725,8 +3725,6 @@ pub using @geometry {type PdfCoordRectangle}
 
 pub using @core {type PdfCryptType}
 
-pub using @destination {type PdfDestination}
-
 pub using @colour {type PdfDrawColour}
 
 pub using @shape {type PdfDrawnPath}
@@ -3786,8 +3784,6 @@ pub using @syntax {type PdfStream}
 pub using @syntax {type PdfStreamData}
 
 pub using @syntax {type PdfStreamDataCrypt}
-
-pub using @destination {type PdfTargetPage}
 
 pub using @geometry {type PdfUnit}
 

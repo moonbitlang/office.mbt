@@ -39,7 +39,7 @@ fn pdf_type_make_resources(font_numbers : ArrayView[Int]) -> PdfObject {
 
 ///|
 fn pdf_type_annotation_object(
-  destination : PdfDestination,
+  destination : @destination.PdfDestination,
   contents : String?,
   rectangle : (Double, Double, Double, Double),
 ) -> PdfObject {

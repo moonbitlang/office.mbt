@@ -115,8 +115,8 @@ fn pdf_bookmark_replacement_number(
 ///|
 fn pdf_bookmark_change_target_page(
   changes : ArrayView[(Int, Int)],
-  target : PdfTargetPage,
-) -> PdfTargetPage? {
+  target : @destination.PdfTargetPage,
+) -> @destination.PdfTargetPage? {
   match target {
     TargetPageObject(number) =>
       match pdf_bookmark_replacement_number(changes, number) {
@@ -130,8 +130,8 @@ fn pdf_bookmark_change_target_page(
 ///|
 fn pdf_bookmark_change_destination(
   changes : ArrayView[(Int, Int)],
-  destination : PdfDestination,
-) -> PdfDestination? {
+  destination : @destination.PdfDestination,
+) -> @destination.PdfDestination? {
   match destination {
     DestXYZ(target, left, top, zoom) =>
       match pdf_bookmark_change_target_page(changes, target) {

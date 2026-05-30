@@ -10,7 +10,7 @@ pub(all) enum PdfTypeElement {
   PdfTypeNewLine
   PdfTypeNewPage
   PdfTypeFont(String, PdfFont, Double)
-  PdfTypeBeginDest(PdfDestination, String?)
+  PdfTypeBeginDest(@destination.PdfDestination, String?)
   PdfTypeEndDest
   PdfTypeBeginDocument
   PdfTypeTag(String, Int)
@@ -32,7 +32,7 @@ priv struct PdfTypeTypesetState {
   mut font : PdfFont?
   mut font_id : String?
   mut font_size : Double
-  mut dest : (PdfDestination, String?)?
+  mut dest : (@destination.PdfDestination, String?)?
   mut mcid : Int
   mut ops : Array[PdfContentOp]
   fonts : Array[(String, Int)]

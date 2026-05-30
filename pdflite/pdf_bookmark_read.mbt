@@ -14,7 +14,7 @@ fn PdfDocument::pdf_bookmark_target(
   self : PdfDocument,
   outline : PdfObject,
   preserve_actions : Bool,
-) -> PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise PdfError {
   match self.lookup_direct(pdf_bookmark_dest_key(), outline) {
     Some(PdfString(key)) if preserve_actions => DestString(key)
     Some(destination) =>

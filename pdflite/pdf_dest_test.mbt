@@ -132,7 +132,7 @@ test "standalone destination helpers delegate to document methods" {
     try! doc.read_destination(destination_object, shallow=true),
   )
   let matrix = @pdflite.transform_translate(10.0, 20.0)
-  let destination : @pdflite.PdfDestination = DestXYZ(
+  let destination : @destination.PdfDestination = DestXYZ(
     TargetPageObject(7),
     Some(1.0),
     Some(2.0),
@@ -370,7 +370,7 @@ test "PdfDocument read_destination resolves named catalog destinations" {
     DestNamed(dest_name_for_test("/Missing")),
   )
   let no_root = @pdflite.pdf_document_empty()
-  let result : Result[@pdflite.PdfDestination, Error] = try? no_root.read_destination(
+  let result : Result[@destination.PdfDestination, Error] = try? no_root.read_destination(
     PdfNameObject(name_chapter),
   )
   guard result is Err(@pdflite.PdfError::RootExpected) else {
@@ -478,7 +478,7 @@ test "PdfDocument read_destination rejects unresolved trailer root for named des
     ]),
   )
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
-  let result : Result[@pdflite.PdfDestination, Error] = try? doc.read_destination(
+  let result : Result[@destination.PdfDestination, Error] = try? doc.read_destination(
     PdfNameObject(name_chapter),
   )
   guard result is Err(@pdflite.PdfError::RootExpected) else {
@@ -603,7 +603,7 @@ test "PdfDocument read_destination rejects unresolved trailer root for string de
     ]),
   )
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
-  let result : Result[@pdflite.PdfDestination, Error] = try? doc.read_destination(
+  let result : Result[@destination.PdfDestination, Error] = try? doc.read_destination(
     PdfString(dest_bytes_for_test("intro")),
   )
   guard result is Err(@pdflite.PdfError::RootExpected) else {

@@ -258,7 +258,9 @@ test "PdfDocument toc_type_elements builds untagged TOC runs" {
   let page_refs = try! document.page_reference_numbers()
   let font = toc_standard_font_for_test()
   let pack = toc_standard_pack_for_test()
-  let target : @pdflite.PdfDestination = DestFit(TargetPageObject(page_refs[0]))
+  let target : @destination.PdfDestination = DestFit(
+    TargetPageObject(page_refs[0]),
+  )
   let bookmark : @pdflite.PdfBookmark = {
     level: 0,
     text: toc_pdfdoc_for_test("Chapter"),
@@ -338,7 +340,9 @@ test "PdfDocument toc_type_elements adds structure tags and dot leaders" {
   let page_refs = try! document.page_reference_numbers()
   let font = toc_standard_font_for_test()
   let pack = toc_standard_pack_for_test()
-  let target : @pdflite.PdfDestination = DestFit(TargetPageObject(page_refs[0]))
+  let target : @destination.PdfDestination = DestFit(
+    TargetPageObject(page_refs[0]),
+  )
   let bookmark : @pdflite.PdfBookmark = {
     level: 1,
     text: toc_pdfdoc_for_test("A"),
@@ -417,7 +421,9 @@ test "PdfDocument toc_typeset_pages uses first-page cropbox geometry" {
   let document = try! base.change_pages([source_page])
   let page_refs = try! document.page_reference_numbers()
   let pack = toc_standard_pack_for_test()
-  let target : @pdflite.PdfDestination = DestFit(TargetPageObject(page_refs[0]))
+  let target : @destination.PdfDestination = DestFit(
+    TargetPageObject(page_refs[0]),
+  )
   let bookmark : @pdflite.PdfBookmark = {
     level: 0,
     text: toc_pdfdoc_for_test("Chapter"),

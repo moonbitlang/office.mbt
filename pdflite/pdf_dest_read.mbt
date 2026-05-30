@@ -1,5 +1,5 @@
 ///|
-fn pdf_dest_read_target_page(object : PdfObject) -> PdfTargetPage? {
+fn pdf_dest_read_target_page(object : PdfObject) -> @destination.PdfTargetPage? {
   match object {
     PdfIndirect(number) => Some(TargetPageObject(number))
     PdfInteger(number) => Some(TargetOtherDocPageNumber(number))
@@ -74,7 +74,7 @@ pub fn PdfDocument::read_destination(
   self : PdfDocument,
   object : PdfObject,
   shallow? : Bool = false,
-) -> PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise PdfError {
   match self.direct(object) {
     PdfDictionary(_) as dictionary =>
       match self.lookup_direct(pdf_dest_d_key(), dictionary) {
@@ -189,6 +189,6 @@ pub fn pdf_read_destination(
   document : PdfDocument,
   object : PdfObject,
   shallow? : Bool = false,
-) -> PdfDestination raise PdfError {
+) -> @destination.PdfDestination raise PdfError {
   document.read_destination(object, shallow~)
 }

@@ -1,8 +1,8 @@
 ///|
 fn pdf_merge_renumber_target_page_with_map(
-  target : PdfTargetPage,
+  target : @destination.PdfTargetPage,
   changes : PdfPageReferenceMap,
-) -> PdfTargetPage {
+) -> @destination.PdfTargetPage {
   match target {
     TargetPageObject(number) =>
       TargetPageObject(changes.changed_reference(number))
@@ -12,9 +12,9 @@ fn pdf_merge_renumber_target_page_with_map(
 
 ///|
 fn pdf_merge_renumber_destination_with_map(
-  destination : PdfDestination,
+  destination : @destination.PdfDestination,
   changes : PdfPageReferenceMap,
-) -> PdfDestination {
+) -> @destination.PdfDestination {
   match destination {
     DestAction(action) =>
       DestAction(pdf_page_renumber_object_with_map(action, changes))

@@ -1,5 +1,5 @@
 ///|
-fn pdf_object_of_target_page(target : PdfTargetPage) -> PdfObject {
+fn pdf_object_of_target_page(target : @destination.PdfTargetPage) -> PdfObject {
   match target {
     TargetPageObject(number) => PdfIndirect(number)
     TargetOtherDocPageNumber(number) => PdfInteger(number)
@@ -16,7 +16,9 @@ fn pdf_dest_optional_object(value : Double?) -> PdfObject {
 
 ///|
 /// Converts a normalized destination back to a PDF object.
-pub fn pdf_object_of_destination(destination : PdfDestination) -> PdfObject {
+pub fn pdf_object_of_destination(
+  destination : @destination.PdfDestination,
+) -> PdfObject {
   match destination {
     DestAction(action) => action
     DestNull => PdfNull

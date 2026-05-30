@@ -28,8 +28,8 @@ fn pdf_dest_transform_point(
 pub fn PdfDocument::transform_destination(
   self : PdfDocument,
   matrix : TransformMatrix,
-  destination : PdfDestination,
-) -> PdfDestination raise PdfError {
+  destination : @destination.PdfDestination,
+) -> @destination.PdfDestination raise PdfError {
   match destination {
     DestFitH(TargetPageObject(_) as target, Some(top)) => {
       let point = pdf_dest_transform_point(matrix, 0.0, top)
@@ -96,7 +96,7 @@ pub fn PdfDocument::transform_destination(
 pub fn pdf_transform_destination(
   document : PdfDocument,
   matrix : TransformMatrix,
-  destination : PdfDestination,
-) -> PdfDestination raise PdfError {
+  destination : @destination.PdfDestination,
+) -> @destination.PdfDestination raise PdfError {
   document.transform_destination(matrix, destination)
 }
