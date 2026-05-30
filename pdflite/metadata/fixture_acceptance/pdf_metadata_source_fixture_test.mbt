@@ -494,7 +494,7 @@ fn metadata_fixture_assert_cpdf_manual_catalog_actions_for_test(
 
 ///|
 async test "cpdf source manual fixture reports info page details and composition" {
-  match metadata_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match metadata_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -515,7 +515,7 @@ async test "cpdf source manual fixture reports info page details and composition
 
 ///|
 async test "cpdf source manual fixture mutates catalog view and open action" {
-  match metadata_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match metadata_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -563,7 +563,7 @@ async test "cpdf source manual fixture mutates catalog view and open action" {
 
 ///|
 async test "cpdf source manual fixture mutates metadata" {
-  match metadata_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match metadata_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)

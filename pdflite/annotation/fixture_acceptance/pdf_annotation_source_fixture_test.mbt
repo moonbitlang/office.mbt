@@ -195,7 +195,8 @@ fn annotation_fixture_assert_cpdf_manual_annotation_import_for_test(
 
 ///|
 async test "cpdf source manual fixture exports annotation JSON" {
-  match annotation_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match
+    annotation_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -224,7 +225,8 @@ async test "cpdf source manual fixture exports annotation JSON" {
 
 ///|
 async test "cpdf source manual fixture imports annotation JSON" {
-  match annotation_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match
+    annotation_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)

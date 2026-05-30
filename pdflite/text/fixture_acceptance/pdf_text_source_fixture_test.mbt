@@ -198,7 +198,7 @@ fn text_fixture_assert_cpdf_manual_text_extraction_for_test(
 
 ///|
 async test "cpdf source manual fixture extracts selected text" {
-  match text_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match text_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)

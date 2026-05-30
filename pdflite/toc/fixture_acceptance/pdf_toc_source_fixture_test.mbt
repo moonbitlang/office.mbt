@@ -282,7 +282,7 @@ fn toc_fixture_assert_cpdf_manual_toc_elements_for_test(
 
 ///|
 async test "cpdf source manual fixture builds table of contents" {
-  match toc_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match toc_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)

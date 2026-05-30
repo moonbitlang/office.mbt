@@ -246,7 +246,7 @@ async test "checked-in Pandoc CJK fixture reconstructs object-stream bad startxr
 ///|
 async test "optional cpdf source hello fixture reads and rewrites" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_reads_and_rewrites_for_test(bytes, 1)
@@ -256,7 +256,7 @@ async test "optional cpdf source hello fixture reads and rewrites" {
 ///|
 async test "optional cpdf source hello fixture reconstructs bad startxref" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => fixture_acceptance_assert_reconstructs_for_test(bytes, 1)
   }
@@ -265,7 +265,7 @@ async test "optional cpdf source hello fixture reconstructs bad startxref" {
 ///|
 async test "optional cpdf source hello fixture reconstructs malformed classic xref table variants" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_classic_xref_table_variants_reconstruct_for_test(
@@ -277,7 +277,7 @@ async test "optional cpdf source hello fixture reconstructs malformed classic xr
 ///|
 async test "optional cpdf source hello fixture roundtrips CPDFJSON document output" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -297,7 +297,7 @@ async test "optional cpdf source hello fixture roundtrips CPDFJSON document outp
 ///|
 async test "optional cpdf source logo fixture reconstructs malformed classic xref table variants" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/logo.pdf") {
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_classic_xref_table_variants_reconstruct_for_test(
@@ -366,7 +366,7 @@ async test "optional cpdf source top-level classic fixtures reconstruct damaged 
 ///|
 async test "optional cpdf source logo fixture reports catalog view metadata" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/logo.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -386,7 +386,7 @@ async test "optional cpdf source logo fixture reports catalog view metadata" {
 ///|
 async test "optional cpdf source transparency fixtures preserve resources" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/logo.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -405,7 +405,7 @@ async test "optional cpdf source transparency fixtures preserve resources" {
   }
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/trans.pdf",
+      "fixtures/cpdf-source/manualimages/trans.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -426,7 +426,7 @@ async test "optional cpdf source transparency fixtures preserve resources" {
 ///|
 async test "optional cpdf source logo fixture draws page marks" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/logo.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -479,8 +479,12 @@ async test "optional cpdf source logo fixture draws page marks" {
 async test "optional cpdf source fixtures stamp and combine pages" {
   match
     (
-      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf"),
-      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf"),
+      fixture_acceptance_optional_bytes_for_test(
+        "fixtures/cpdf-source/hello.pdf",
+      ),
+      fixture_acceptance_optional_bytes_for_test(
+        "fixtures/cpdf-source/logo.pdf",
+      ),
     ) {
     (Some(hello_bytes), Some(logo_bytes)) => {
       let hello = @pdflite.pdf_read_document_from_bytes(hello_bytes)
@@ -533,7 +537,7 @@ async test "optional cpdf source fixtures stamp and combine pages" {
 ///|
 async test "optional cpdf source hello fixture imposes two-up sheets" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let hello = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -599,8 +603,12 @@ async test "optional cpdf source hello fixture imposes two-up sheets" {
 async test "optional cpdf source fixtures stamp logo as Form XObject" {
   match
     (
-      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf"),
-      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/logo.pdf"),
+      fixture_acceptance_optional_bytes_for_test(
+        "fixtures/cpdf-source/hello.pdf",
+      ),
+      fixture_acceptance_optional_bytes_for_test(
+        "fixtures/cpdf-source/logo.pdf",
+      ),
     ) {
     (Some(hello_bytes), Some(logo_bytes)) => {
       let hello = @pdflite.pdf_read_document_from_bytes(hello_bytes)
@@ -685,13 +693,13 @@ async test "optional cpdf source drawing fixtures preserve operator parameters" 
 async test "optional cpdf source tweak fixtures remove clipping and reveal text" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/clip.pdf",
+      "fixtures/cpdf-source/manualimages/clip.pdf",
     ) {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
       fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
-        ".repos/cpdf-source/manualimages/clip.pdf", document,
+        "fixtures/cpdf-source/manualimages/clip.pdf", document,
       )
       let unclipped = @pdflite.pdf_remove_clipping(document, [1])
       fixture_acceptance_assert_cpdf_source_remove_clipping_for_test(
@@ -714,13 +722,13 @@ async test "optional cpdf source tweak fixtures remove clipping and reveal text"
   }
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/textclip.pdf",
+      "fixtures/cpdf-source/manualimages/textclip.pdf",
     ) {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
       fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
-        ".repos/cpdf-source/manualimages/textclip.pdf", document,
+        "fixtures/cpdf-source/manualimages/textclip.pdf", document,
       )
       let revealed = document.reveal_hidden_text([1])
       fixture_acceptance_assert_cpdf_source_reveal_hidden_text_for_test(
@@ -747,13 +755,13 @@ async test "optional cpdf source tweak fixtures remove clipping and reveal text"
 async test "optional cpdf source tweak fixtures recolor thin and append content" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/colfill.pdf",
+      "fixtures/cpdf-source/manualimages/colfill.pdf",
     ) {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
       fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
-        ".repos/cpdf-source/manualimages/colfill.pdf", document,
+        "fixtures/cpdf-source/manualimages/colfill.pdf", document,
       )
       let black_lines = @pdflite.pdf_black_lines(
         document,
@@ -788,13 +796,13 @@ async test "optional cpdf source tweak fixtures recolor thin and append content"
   }
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/fontparams.pdf",
+      "fixtures/cpdf-source/manualimages/fontparams.pdf",
     ) {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
       fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
-        ".repos/cpdf-source/manualimages/fontparams.pdf", document,
+        "fixtures/cpdf-source/manualimages/fontparams.pdf", document,
       )
       let rewritten = @pdflite.pdf_black_text(
         document,
@@ -821,13 +829,13 @@ async test "optional cpdf source tweak fixtures recolor thin and append content"
   }
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/capjoins.pdf",
+      "fixtures/cpdf-source/manualimages/capjoins.pdf",
     ) {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
       fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
-        ".repos/cpdf-source/manualimages/capjoins.pdf", document,
+        "fixtures/cpdf-source/manualimages/capjoins.pdf", document,
       )
       let rewritten = document.thin_lines([1], -30.0)
       fixture_acceptance_assert_cpdf_source_thin_lines_for_test(
@@ -849,7 +857,7 @@ async test "optional cpdf source tweak fixtures recolor thin and append content"
     }
   }
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -884,23 +892,27 @@ async test "optional cpdf source tweak fixtures recolor thin and append content"
 async test "optional cpdf source attachments preserve real source payloads" {
   match
     (
-      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf"),
-      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/README.md"),
       fixture_acceptance_optional_bytes_for_test(
-        ".repos/cpdf-source/Changes.txt",
+        "fixtures/cpdf-source/hello.pdf",
+      ),
+      fixture_acceptance_optional_bytes_for_test(
+        "fixtures/cpdf-source/README.md",
+      ),
+      fixture_acceptance_optional_bytes_for_test(
+        "fixtures/cpdf-source/Changes.txt",
       ),
     ) {
     (Some(pdf_bytes), Some(readme_payload), Some(changes_payload)) => {
       let document = @pdflite.pdf_read_document_from_bytes(pdf_bytes)
       let attached = document
         .attach_file(
-          ".repos/cpdf-source/README.md",
+          "fixtures/cpdf-source/README.md",
           readme_payload,
           relationship=Some("Source"),
           description=Some("cpdf source README"),
         )
         .attach_file(
-          ".repos/cpdf-source/Changes.txt",
+          "fixtures/cpdf-source/Changes.txt",
           changes_payload,
           page_number=Some(1),
           relationship=Some("/Supplement"),
@@ -951,7 +963,7 @@ fn fixture_acceptance_assert_unicode_data_row_matches_for_test(
 async test "optional cpdf source UnicodeData table matches embedded table" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/compressor/UnicodeData.txt",
+      "fixtures/cpdf-source/compressor/UnicodeData.txt",
     ) {
     None => ()
     Some(source) => {
@@ -986,7 +998,7 @@ async test "optional cpdf source UnicodeData table matches embedded table" {
 ///|
 async test "optional cpdf source README typesets tagged text PDF" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/README.md") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/README.md") {
     None => ()
     Some(readme_payload) => {
       let document = try! @pdflite.pdf_texttopdf_typeset(
@@ -1016,7 +1028,7 @@ async test "optional cpdf source README typesets tagged text PDF" {
 ///|
 async test "optional cpdf source README typesets PDF UA2 text PDF" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/README.md") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/README.md") {
     None => ()
     Some(readme_payload) => {
       let title = "cpdf source README PDF/UA-2"
@@ -1051,7 +1063,9 @@ async test "optional cpdf source README typesets PDF UA2 text PDF" {
 ///|
 async test "optional cpdf source Changes typesets PDF UA1 text PDF" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/Changes.txt") {
+    fixture_acceptance_optional_bytes_for_test(
+      "fixtures/cpdf-source/Changes.txt",
+    ) {
     None => ()
     Some(changes_payload) => {
       let title = "cpdf source Changes PDF/UA-1"
@@ -1086,7 +1100,7 @@ async test "optional cpdf source Changes typesets PDF UA1 text PDF" {
 ///|
 async test "optional cpdf source hello fixture chops CropBox-backed page" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1110,7 +1124,7 @@ async test "optional cpdf source hello fixture chops CropBox-backed page" {
 ///|
 async test "optional cpdf source hello fixture applies page geometry transforms" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1136,7 +1150,7 @@ async test "optional cpdf source hello fixture applies page geometry transforms"
 ///|
 async test "optional cpdf source hello fixture pads blank page after source" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1160,7 +1174,7 @@ async test "optional cpdf source hello fixture pads blank page after source" {
 ///|
 async test "optional cpdf source hello fixture preserves path redaction stub" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1202,7 +1216,7 @@ async test "optional cpdf source hello fixture preserves path redaction stub" {
 async test "optional cpdf source clip fixture runs native polygon operations" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/clip.pdf",
+      "fixtures/cpdf-source/manualimages/clip.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -1226,7 +1240,7 @@ async test "optional cpdf source clip fixture runs native polygon operations" {
 ///|
 async test "optional cpdf source hello fixture removes all text" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1254,10 +1268,14 @@ async test "optional cpdf source hello fixture removes all text" {
 async test "optional cpdf source hello fixture builds portfolio from real payloads" {
   match
     (
-      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf"),
-      fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/README.md"),
       fixture_acceptance_optional_bytes_for_test(
-        ".repos/cpdf-source/Changes.txt",
+        "fixtures/cpdf-source/hello.pdf",
+      ),
+      fixture_acceptance_optional_bytes_for_test(
+        "fixtures/cpdf-source/README.md",
+      ),
+      fixture_acceptance_optional_bytes_for_test(
+        "fixtures/cpdf-source/Changes.txt",
       ),
     ) {
     (Some(pdf_bytes), Some(readme_payload), Some(changes_payload)) => {
@@ -1266,13 +1284,13 @@ async test "optional cpdf source hello fixture builds portfolio from real payloa
       let portfolio = document.portfolio(
         [
           @portfolio.pdf_portfolio_entry(
-            ".repos/cpdf-source/README.md",
+            "fixtures/cpdf-source/README.md",
             readme_payload,
             relationship=Some("Source"),
             description=Some("cpdf source README"),
           ),
           @portfolio.pdf_portfolio_entry(
-            ".repos/cpdf-source/Changes.txt", changes_payload,
+            "fixtures/cpdf-source/Changes.txt", changes_payload,
           ),
         ],
         mod_date=Some(mod_date),
@@ -1305,7 +1323,7 @@ async test "optional cpdf source hello fixture builds portfolio from real payloa
 ///|
 async test "optional cpdf source hello fixture removes JavaScript markers" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1347,7 +1365,7 @@ async test "optional cpdf source hello fixture removes JavaScript markers" {
 ///|
 async test "optional cpdf source hello fixture lists injected spot colours" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1375,7 +1393,7 @@ async test "optional cpdf source hello fixture lists injected spot colours" {
 ///|
 async test "optional cpdf source hello fixture roundtrips optional content groups" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1448,7 +1466,7 @@ async test "optional cpdf source hello fixture roundtrips optional content group
 ///|
 async test "optional cpdf source hello fixture preserves presentation transitions" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1544,7 +1562,7 @@ async test "optional cpdf source manual image fixtures reconstruct malformed cla
 async test "optional cpdf source PNG image fixture reports and extracts image" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/png.pdf",
+      "fixtures/cpdf-source/manualimages/png.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -1560,7 +1578,7 @@ async test "optional cpdf source PNG image fixture reports and extracts image" {
 ///|
 async test "optional cpdf source hello fixture reports inline images" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1588,7 +1606,7 @@ async test "optional cpdf source hello fixture reports inline images" {
 ///|
 async test "optional cpdf source hello fixture reports nested form images" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1617,7 +1635,7 @@ async test "optional cpdf source hello fixture reports nested form images" {
 ///|
 async test "optional cpdf source hello fixture reads injected Type3 glyph programs" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1644,7 +1662,7 @@ async test "optional cpdf source hello fixture reads injected Type3 glyph progra
 ///|
 async test "optional cpdf source hello fixture extracts ToUnicode variation text" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1673,7 +1691,7 @@ async test "optional cpdf source hello fixture extracts ToUnicode variation text
 ///|
 async test "optional cpdf source hello fixture extracts ToUnicode parser corners" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1702,7 +1720,7 @@ async test "optional cpdf source hello fixture extracts ToUnicode parser corners
 ///|
 async test "optional cpdf source hello fixture composes ToUnicode UseCMap streams" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1731,7 +1749,7 @@ async test "optional cpdf source hello fixture composes ToUnicode UseCMap stream
 ///|
 async test "optional cpdf source hello fixture composes ToUnicode UseCMap variation streams" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1760,7 +1778,7 @@ async test "optional cpdf source hello fixture composes ToUnicode UseCMap variat
 ///|
 async test "optional cpdf source hello fixture extracts Identity predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1787,7 +1805,7 @@ async test "optional cpdf source hello fixture extracts Identity predefined CMap
 ///|
 async test "optional cpdf source hello fixture extracts UniJIS Unicode predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1816,7 +1834,7 @@ async test "optional cpdf source hello fixture extracts UniJIS Unicode predefine
 ///|
 async test "optional cpdf source hello fixture pins UniJIS cpdfcontent Unicode boundary" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1868,7 +1886,7 @@ async test "optional cpdf source hello fixture pins UniJIS cpdfcontent Unicode b
 ///|
 async test "optional cpdf source hello fixture extracts UniAKR predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1897,7 +1915,7 @@ async test "optional cpdf source hello fixture extracts UniAKR predefined CMaps"
 ///|
 async test "optional cpdf source hello fixture extracts UniKS predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1926,7 +1944,7 @@ async test "optional cpdf source hello fixture extracts UniKS predefined CMaps" 
 ///|
 async test "optional cpdf source hello fixture extracts Korea1 horizontal CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1955,7 +1973,7 @@ async test "optional cpdf source hello fixture extracts Korea1 horizontal CMaps"
 ///|
 async test "optional cpdf source hello fixture extracts Korea1 vertical CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1984,7 +2002,7 @@ async test "optional cpdf source hello fixture extracts Korea1 vertical CMaps" {
 ///|
 async test "optional cpdf source hello fixture extracts Japan1 predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2013,7 +2031,7 @@ async test "optional cpdf source hello fixture extracts Japan1 predefined CMaps"
 ///|
 async test "optional cpdf source hello fixture extracts Japan1 base predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2042,7 +2060,7 @@ async test "optional cpdf source hello fixture extracts Japan1 base predefined C
 ///|
 async test "optional cpdf source hello fixture extracts rare Japan1 predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2071,7 +2089,7 @@ async test "optional cpdf source hello fixture extracts rare Japan1 predefined C
 ///|
 async test "optional cpdf source hello fixture extracts supplemental Japan1 predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2100,7 +2118,7 @@ async test "optional cpdf source hello fixture extracts supplemental Japan1 pred
 ///|
 async test "optional cpdf source hello fixture extracts GB CNS predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2129,7 +2147,7 @@ async test "optional cpdf source hello fixture extracts GB CNS predefined CMaps"
 ///|
 async test "optional cpdf source hello fixture pins Korea GB direct Unicode cpdfcontent boundaries" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2216,7 +2234,7 @@ async test "optional cpdf source hello fixture pins Korea GB direct Unicode cpdf
 ///|
 async test "optional cpdf source hello fixture extracts GB1 legacy predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2245,7 +2263,7 @@ async test "optional cpdf source hello fixture extracts GB1 legacy predefined CM
 ///|
 async test "optional cpdf source hello fixture extracts CNS1 legacy predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2274,7 +2292,7 @@ async test "optional cpdf source hello fixture extracts CNS1 legacy predefined C
 ///|
 async test "optional cpdf source hello fixture extracts vertical GB CNS predefined CMaps" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2301,7 +2319,7 @@ async test "optional cpdf source hello fixture extracts vertical GB CNS predefin
 ///|
 async test "optional cpdf source hello fixture preserves Matterhorn CMap typo" {
   match
-    fixture_acceptance_optional_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    fixture_acceptance_optional_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -2331,7 +2349,7 @@ async test "optional cpdf source hello fixture preserves Matterhorn CMap typo" {
 async test "optional cpdf source PNG image fixture drafts replacement boxes" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/png.pdf",
+      "fixtures/cpdf-source/manualimages/png.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2358,7 +2376,7 @@ async test "optional cpdf source PNG image fixture drafts replacement boxes" {
 async test "optional cpdf source raw sheet PNG creates image document" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/sheet.png",
+      "fixtures/cpdf-source/manualimages/sheet.png",
     ) {
     None => ()
     Some(bytes) => {
@@ -2378,7 +2396,7 @@ async test "optional cpdf source raw sheet PNG creates image document" {
 async test "optional cpdf source manual font fixture reports font tables" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/fonts.pdf",
+      "fixtures/cpdf-source/manualimages/fonts.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2395,7 +2413,7 @@ async test "optional cpdf source manual font fixture reports font tables" {
 async test "optional cpdf source manual fixture reports embedded fonts" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2417,13 +2435,13 @@ async test "optional cpdf source manual fixture reports embedded fonts" {
 async test "optional cpdf source font mutations remove and copy embedded fonts" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(manual_bytes) =>
       match
         fixture_acceptance_optional_bytes_for_test(
-          ".repos/cpdf-source/hello.pdf",
+          "fixtures/cpdf-source/hello.pdf",
         ) {
         None => ()
         Some(hello_bytes) => {
@@ -2496,7 +2514,7 @@ async test "optional cpdf source font mutations remove and copy embedded fonts" 
 async test "optional cpdf source manual content fixtures export content JSON" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/text.pdf",
+      "fixtures/cpdf-source/manualimages/text.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2509,7 +2527,7 @@ async test "optional cpdf source manual content fixtures export content JSON" {
   }
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/xobj.pdf",
+      "fixtures/cpdf-source/manualimages/xobj.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2526,7 +2544,7 @@ async test "optional cpdf source manual content fixtures export content JSON" {
 async test "optional cpdf source squeeze fixtures transcode streams" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/text.pdf",
+      "fixtures/cpdf-source/manualimages/text.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2563,7 +2581,7 @@ async test "optional cpdf source squeeze fixtures transcode streams" {
   }
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/xobj.pdf",
+      "fixtures/cpdf-source/manualimages/xobj.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2604,7 +2622,7 @@ async test "optional cpdf source squeeze fixtures transcode streams" {
 async test "optional cpdf source manual fixtures show bounding box overlays" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/text.pdf",
+      "fixtures/cpdf-source/manualimages/text.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2634,7 +2652,7 @@ async test "optional cpdf source manual fixtures show bounding box overlays" {
   }
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/xobj.pdf",
+      "fixtures/cpdf-source/manualimages/xobj.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2673,7 +2691,7 @@ async test "optional cpdf source manual fixtures show bounding box overlays" {
 async test "optional cpdf source h1 fixture reports structure tree" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/h1.pdf",
+      "fixtures/cpdf-source/manualimages/h1.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2695,7 +2713,7 @@ async test "optional cpdf source h1 fixture reports structure tree" {
 async test "optional cpdf source h1 fixture removes structure tree and marks artifacts" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/manualimages/h1.pdf",
+      "fixtures/cpdf-source/manualimages/h1.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2814,7 +2832,7 @@ async test "optional cpdf source manual image text fixtures extract exact text" 
 async test "optional cpdf source manual fixture reads and rewrites" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -2826,7 +2844,7 @@ async test "optional cpdf source manual fixture reads and rewrites" {
 async test "optional cpdf source manual fixture parses page specifications" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2843,7 +2861,7 @@ async test "optional cpdf source manual fixture parses page specifications" {
 async test "optional cpdf source manual fixture reports info page details and composition" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2867,7 +2885,7 @@ async test "optional cpdf source manual fixture reports info page details and co
 async test "optional cpdf source manual fixture dumps debug objects" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2899,7 +2917,7 @@ async test "optional cpdf source manual fixture dumps debug objects" {
 async test "optional cpdf source manual fixture mutates metadata" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2951,7 +2969,7 @@ async test "optional cpdf source manual fixture mutates metadata" {
 async test "optional cpdf source manual fixture reports page label fallbacks" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -2974,7 +2992,7 @@ async test "optional cpdf source manual fixture extracts retained pages" {
   let selected_pages : ReadOnlyArray[Int] = [33, 19, 1, 175]
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3022,7 +3040,7 @@ async test "optional cpdf source manual fixture extracts retained pages" {
 async test "optional cpdf source manual fixture stamps addtext replacements" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3055,7 +3073,7 @@ async test "optional cpdf source manual fixture stamps addtext replacements" {
 async test "optional cpdf source manual fixture removes stamped addtext" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3097,7 +3115,7 @@ async test "optional cpdf source manual fixture removes stamped addtext" {
 async test "optional cpdf source manual fixture extracts selected text" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3119,7 +3137,7 @@ async test "optional cpdf source manual fixture extracts selected text" {
 async test "optional cpdf source manual fixture reports embedded images" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3136,7 +3154,7 @@ async test "optional cpdf source manual fixture reports embedded images" {
 async test "optional cpdf source manual fixture exports annotation JSON" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3153,7 +3171,7 @@ async test "optional cpdf source manual fixture exports annotation JSON" {
 async test "optional cpdf source manual fixture lists bookmarks" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3177,7 +3195,7 @@ async test "optional cpdf source manual fixture lists bookmarks" {
 async test "optional cpdf source manual fixture mutates bookmark open state and title" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3232,7 +3250,7 @@ async test "optional cpdf source manual fixture mutates bookmark open state and 
 async test "optional cpdf source manual fixture builds table of contents" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3258,7 +3276,7 @@ async test "optional cpdf source manual fixture builds table of contents" {
 async test "optional cpdf source manual fixture reconstructs bad startxref" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => fixture_acceptance_assert_reconstructs_for_test(bytes, 175)
@@ -3269,7 +3287,7 @@ async test "optional cpdf source manual fixture reconstructs bad startxref" {
 async test "optional cpdf source manual fixture reconstructs malformed xref stream widths" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3283,7 +3301,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
 async test "optional cpdf source manual fixture reconstructs malformed xref stream index" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3299,7 +3317,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
 async test "optional cpdf source manual fixture tolerates malformed indexed xref stream size" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3315,7 +3333,7 @@ async test "optional cpdf source manual fixture tolerates malformed indexed xref
 async test "optional cpdf source manual fixture reconstructs malformed xref stream index and size" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3332,7 +3350,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
 async test "optional cpdf source manual fixture reconstructs malformed xref stream type" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3346,7 +3364,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
 async test "optional cpdf source manual fixture reconstructs malformed xref stream marker" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3360,7 +3378,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
 async test "optional cpdf source manual fixture reconstructs malformed xref stream terminators" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -3378,7 +3396,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
 async test "optional cpdf source manual fixture reconstructs malformed xref stream root" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3394,7 +3412,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
 async test "optional cpdf source manual fixture repairs malformed xref stream length" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3410,7 +3428,7 @@ async test "optional cpdf source manual fixture repairs malformed xref stream le
 async test "optional cpdf source manual fixture reconstructs malformed xref stream DecodeParms" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3428,7 +3446,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
 async test "optional cpdf source manual fixture reconstructs unsupported xref stream DecodeParms predictor" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3446,7 +3464,7 @@ async test "optional cpdf source manual fixture reconstructs unsupported xref st
 async test "optional cpdf source manual fixture reconstructs malformed object stream count" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3460,7 +3478,7 @@ async test "optional cpdf source manual fixture reconstructs malformed object st
 async test "optional cpdf source manual fixture reconstructs malformed object stream first" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3474,7 +3492,7 @@ async test "optional cpdf source manual fixture reconstructs malformed object st
 async test "optional cpdf source manual fixture repairs malformed object stream length" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3488,7 +3506,7 @@ async test "optional cpdf source manual fixture repairs malformed object stream 
 async test "optional cpdf source manual fixture reconstructs malformed object stream filter" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3502,7 +3520,7 @@ async test "optional cpdf source manual fixture reconstructs malformed object st
 async test "optional cpdf source manual fixture reconstructs malformed object stream DecodeParms" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3516,7 +3534,7 @@ async test "optional cpdf source manual fixture reconstructs malformed object st
 async test "optional cpdf source manual fixture reconstructs unsupported object stream DecodeParms predictor" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3530,7 +3548,7 @@ async test "optional cpdf source manual fixture reconstructs unsupported object 
 async test "optional cpdf source manual fixture reconstructs malformed object stream marker" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3544,7 +3562,7 @@ async test "optional cpdf source manual fixture reconstructs malformed object st
 async test "optional cpdf source manual fixture repairs malformed object stream endstream" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3558,7 +3576,7 @@ async test "optional cpdf source manual fixture repairs malformed object stream 
 async test "optional cpdf source manual fixture reconstructs malformed object stream endobj" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>
@@ -3572,7 +3590,7 @@ async test "optional cpdf source manual fixture reconstructs malformed object st
 async test "optional cpdf source manual fixture reconstructs malformed xref stream filter" {
   match
     fixture_acceptance_optional_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) =>

@@ -644,13 +644,13 @@ fn pdf_async_io_assert_cpdf_source_portfolio_for_test(
 ///|
 async test "async file wrappers attach and portfolio cpdf source files" {
   let hello_path = pdf_async_io_repo_path_for_test(
-    ".repos/cpdf-source/hello.pdf",
+    "fixtures/cpdf-source/hello.pdf",
   )
   let readme_path = pdf_async_io_repo_path_for_test(
-    ".repos/cpdf-source/README.md",
+    "fixtures/cpdf-source/README.md",
   )
   let changes_path = pdf_async_io_repo_path_for_test(
-    ".repos/cpdf-source/Changes.txt",
+    "fixtures/cpdf-source/Changes.txt",
   )
   if @fs.exists(hello_path) &&
     @fs.exists(readme_path) &&

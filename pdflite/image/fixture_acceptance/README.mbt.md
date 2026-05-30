@@ -3,15 +3,14 @@
 `bobzhang/pdflite/image/fixture_acceptance` is a native-only acceptance package
 for image-heavy external PDFs. It checks JPEG, CCITT, indexed color, compressed
 rewrite, and xref reconstruction behavior when optional downloaded fixtures are
-available. During porting it also probes optional `.repos/cpdf-source`
-manual-image PDFs, the manual-image PDF corpus, and the full cpdf manual when
-that ignored source checkout is present.
+available. It also probes the checked-in `fixtures/cpdf-source` manual-image
+PDFs, the manual-image PDF corpus, and the full cpdf manual.
 
 ```mermaid
 flowchart LR
   Manifest[external fixture manifest] --> Download[download.py]
   Download --> PDFs[downloaded PDFs]
-  Source[optional .repos/cpdf-source PDFs] --> PDFs
+  Source[fixtures/cpdf-source PDFs] --> PDFs
   PDFs --> Reader["@pdflite reader"]
   Reader --> Images[get_image_24bpp]
   Reader --> Content[parse_content_ops]
@@ -42,9 +41,8 @@ async test "image fixture manifest documents optional downloads" {
 - The package is native-only because it reads fixture files from disk.
 - Optional external downloads let acceptance tests cover larger real-world
   images without bloating the repository.
-- Optional `.repos/cpdf-source` fixtures are skipped when absent because that
-  source checkout is ignored in fresh clones. When present, the corpus gate reads
-  every `manualimages/*.pdf`, parses the page content, checks compressed rewrite
+- The tracked `fixtures/cpdf-source` corpus gate reads every
+  `manualimages/*.pdf`, parses the page content, checks compressed rewrite
   stability, and verifies public-reader reconstruction after a bad `startxref`.
 - Library image APIs remain in the root package; this package is only for
   fixture-backed verification.
@@ -53,9 +51,8 @@ async test "image fixture manifest documents optional downloads" {
 
 - This package owns external image acceptance coverage only. Image decoding,
   color conversion, and PDF object parsing remain in the root package.
-- Downloaded image PDFs and ignored `.repos/cpdf-source` source PDFs are
-  optional. Checked README examples must not require network access,
-  pre-downloaded binaries, or the ignored source checkout.
+- Downloaded image PDFs are optional. Checked README examples must not require
+  network access or pre-downloaded binaries.
 - Assertions should distinguish encoded image extraction from decoded RGB
   output, compressed rewrites, and xref reconstruction behavior.
 - Do not add production helpers here; keep reusable image APIs in the root

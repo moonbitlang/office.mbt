@@ -881,23 +881,23 @@ fn markdown_fixture_unique_cjk_unified_count_for_test(text : String) -> Int {
 
 ///|
 fn markdown_cpdf_source_top_level_classic_pdf_paths_for_test() -> Array[String] {
-  [".repos/cpdf-source/hello.pdf", ".repos/cpdf-source/logo.pdf"]
+  ["fixtures/cpdf-source/hello.pdf", "fixtures/cpdf-source/logo.pdf"]
 }
 
 ///|
 fn markdown_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
   [
-    ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
-    ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
-    ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
-    ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
-    ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
-    ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
-    ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
-    ".repos/cpdf-source/manualimages/png.pdf", ".repos/cpdf-source/manualimages/pop.pdf",
-    ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
-    ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/trans.pdf",
-    ".repos/cpdf-source/manualimages/xobj.pdf",
+    "fixtures/cpdf-source/manualimages/bez.pdf", "fixtures/cpdf-source/manualimages/capjoins.pdf",
+    "fixtures/cpdf-source/manualimages/clip.pdf", "fixtures/cpdf-source/manualimages/colfill.pdf",
+    "fixtures/cpdf-source/manualimages/dash.pdf", "fixtures/cpdf-source/manualimages/fill.pdf",
+    "fixtures/cpdf-source/manualimages/fontparams.pdf", "fixtures/cpdf-source/manualimages/fonts.pdf",
+    "fixtures/cpdf-source/manualimages/h1.pdf", "fixtures/cpdf-source/manualimages/line.pdf",
+    "fixtures/cpdf-source/manualimages/lines.pdf", "fixtures/cpdf-source/manualimages/matrix.pdf",
+    "fixtures/cpdf-source/manualimages/para.pdf", "fixtures/cpdf-source/manualimages/paras.pdf",
+    "fixtures/cpdf-source/manualimages/png.pdf", "fixtures/cpdf-source/manualimages/pop.pdf",
+    "fixtures/cpdf-source/manualimages/stext.pdf", "fixtures/cpdf-source/manualimages/text.pdf",
+    "fixtures/cpdf-source/manualimages/textclip.pdf", "fixtures/cpdf-source/manualimages/trans.pdf",
+    "fixtures/cpdf-source/manualimages/xobj.pdf",
   ]
 }
 
@@ -907,28 +907,31 @@ fn markdown_cpdf_source_manual_image_text_expectations_for_test() -> Array[
 ] {
   [
     (
-      ".repos/cpdf-source/manualimages/fontparams.pdf",
+      "fixtures/cpdf-source/manualimages/fontparams.pdf",
       ["Different fonts and sizes"],
     ),
-    (".repos/cpdf-source/manualimages/fonts.pdf", ["Different fonts and sizes"]),
     (
-      ".repos/cpdf-source/manualimages/h1.pdf",
+      "fixtures/cpdf-source/manualimages/fonts.pdf",
+      ["Different fonts and sizes"],
+    ),
+    (
+      "fixtures/cpdf-source/manualimages/h1.pdf",
       ["This is the heading", "This is the first", "Here is the second"],
     ),
-    (".repos/cpdf-source/manualimages/lines.pdf", ["This is", "multiple"]),
+    ("fixtures/cpdf-source/manualimages/lines.pdf", ["This is", "multiple"]),
     (
-      ".repos/cpdf-source/manualimages/para.pdf",
+      "fixtures/cpdf-source/manualimages/para.pdf",
       ["This is a paragraph", "width 200pt", "containing"],
     ),
     (
-      ".repos/cpdf-source/manualimages/paras.pdf",
+      "fixtures/cpdf-source/manualimages/paras.pdf",
       [
         "This is the first paragraph", "And here is the second", "Here is a little one",
       ],
     ),
-    (".repos/cpdf-source/manualimages/stext.pdf", ["Page 1"]),
-    (".repos/cpdf-source/manualimages/text.pdf", ["Hello"]),
-    (".repos/cpdf-source/manualimages/textclip.pdf", ["This is", "multiple"]),
+    ("fixtures/cpdf-source/manualimages/stext.pdf", ["Page 1"]),
+    ("fixtures/cpdf-source/manualimages/text.pdf", ["Hello"]),
+    ("fixtures/cpdf-source/manualimages/textclip.pdf", ["This is", "multiple"]),
   ]
 }
 
@@ -939,9 +942,9 @@ fn markdown_fixture_assert_cpdf_top_level_classic_markdown_for_test(
 ) -> Unit raise {
   markdown_fixture_assert_contains_for_test(markdown, "# Page 1")
   match path {
-    ".repos/cpdf-source/hello.pdf" =>
+    "fixtures/cpdf-source/hello.pdf" =>
       markdown_fixture_assert_contains_for_test(markdown, "Hello, World!")
-    ".repos/cpdf-source/logo.pdf" =>
+    "fixtures/cpdf-source/logo.pdf" =>
       @test.assert_eq(markdown, "# Page 1\n\n\n", msg=path)
     _ => fail("unexpected cpdf top-level classic PDF path: " + path)
   }
@@ -1062,7 +1065,9 @@ async test "pdf_bytes_to_markdown tolerates checked-in CamlPDF logo fixture" {
 ///|
 async test "pdf_bytes_to_markdown extracts optional cpdf source hello fixture" {
   match
-    markdown_optional_fixture_markdown_for_test(".repos/cpdf-source/hello.pdf") {
+    markdown_optional_fixture_markdown_for_test(
+      "fixtures/cpdf-source/hello.pdf",
+    ) {
     None => ()
     Some(markdown) => {
       markdown_fixture_assert_contains_for_test(markdown, "# Page 1")
@@ -1076,7 +1081,7 @@ async test "pdf_bytes_to_markdown extracts optional cpdf source hello fixture" {
 ///|
 async test "pdf_bytes_to_markdown reconstructs optional cpdf source hello fixture with bad startxref" {
   match
-    markdown_optional_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+    markdown_optional_fixture_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let markdown = @markdown.pdf_bytes_to_markdown(
@@ -1366,7 +1371,7 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual image
 async test "pdf_bytes_to_markdown extracts optional cpdf source manual fixture" {
   match
     markdown_optional_fixture_markdown_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(markdown) => {
@@ -1392,7 +1397,7 @@ async test "pdf_bytes_to_markdown extracts optional cpdf source manual fixture" 
 async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixture with bad startxref" {
   match
     markdown_optional_fixture_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -1417,7 +1422,7 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
 async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixture with malformed xref stream metadata" {
   match
     markdown_optional_fixture_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -1470,7 +1475,7 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
 async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixture with malformed xref stream terminators" {
   match
     markdown_optional_fixture_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -1525,7 +1530,7 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
 async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixture with malformed xref stream dictionary entries" {
   match
     markdown_optional_fixture_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -1590,7 +1595,7 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
 async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixture with malformed object stream entries" {
   match
     markdown_optional_fixture_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {
@@ -1671,7 +1676,7 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
 async test "pdf_bytes_to_markdown repairs optional cpdf source manual fixture with malformed stream length entries" {
   match
     markdown_optional_fixture_bytes_for_test(
-      ".repos/cpdf-source/cpdfmanual.pdf",
+      "fixtures/cpdf-source/cpdfmanual.pdf",
     ) {
     None => ()
     Some(bytes) => {

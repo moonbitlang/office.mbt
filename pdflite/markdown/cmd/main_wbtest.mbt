@@ -967,23 +967,23 @@ fn markdown_cmd_unique_cjk_unified_count_for_test(text : String) -> Int {
 fn markdown_cmd_cpdf_source_top_level_classic_pdf_paths_for_test() -> Array[
   String,
 ] {
-  [".repos/cpdf-source/hello.pdf", ".repos/cpdf-source/logo.pdf"]
+  ["fixtures/cpdf-source/hello.pdf", "fixtures/cpdf-source/logo.pdf"]
 }
 
 ///|
 fn markdown_cmd_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
   [
-    ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
-    ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
-    ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
-    ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
-    ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
-    ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
-    ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
-    ".repos/cpdf-source/manualimages/png.pdf", ".repos/cpdf-source/manualimages/pop.pdf",
-    ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
-    ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/trans.pdf",
-    ".repos/cpdf-source/manualimages/xobj.pdf",
+    "fixtures/cpdf-source/manualimages/bez.pdf", "fixtures/cpdf-source/manualimages/capjoins.pdf",
+    "fixtures/cpdf-source/manualimages/clip.pdf", "fixtures/cpdf-source/manualimages/colfill.pdf",
+    "fixtures/cpdf-source/manualimages/dash.pdf", "fixtures/cpdf-source/manualimages/fill.pdf",
+    "fixtures/cpdf-source/manualimages/fontparams.pdf", "fixtures/cpdf-source/manualimages/fonts.pdf",
+    "fixtures/cpdf-source/manualimages/h1.pdf", "fixtures/cpdf-source/manualimages/line.pdf",
+    "fixtures/cpdf-source/manualimages/lines.pdf", "fixtures/cpdf-source/manualimages/matrix.pdf",
+    "fixtures/cpdf-source/manualimages/para.pdf", "fixtures/cpdf-source/manualimages/paras.pdf",
+    "fixtures/cpdf-source/manualimages/png.pdf", "fixtures/cpdf-source/manualimages/pop.pdf",
+    "fixtures/cpdf-source/manualimages/stext.pdf", "fixtures/cpdf-source/manualimages/text.pdf",
+    "fixtures/cpdf-source/manualimages/textclip.pdf", "fixtures/cpdf-source/manualimages/trans.pdf",
+    "fixtures/cpdf-source/manualimages/xobj.pdf",
   ]
 }
 
@@ -994,9 +994,9 @@ fn markdown_cmd_assert_cpdf_top_level_classic_markdown_for_test(
 ) -> Unit raise {
   markdown_cmd_assert_contains_for_test(markdown, "# Page 1")
   match path {
-    ".repos/cpdf-source/hello.pdf" =>
+    "fixtures/cpdf-source/hello.pdf" =>
       markdown_cmd_assert_contains_for_test(markdown, "Hello, World!")
-    ".repos/cpdf-source/logo.pdf" =>
+    "fixtures/cpdf-source/logo.pdf" =>
       @test.assert_eq(markdown, "# Page 1\n\n\n", msg=path)
     _ => fail("unexpected cpdf top-level classic PDF path: " + path)
   }
@@ -1069,7 +1069,7 @@ async test "markdown command converts checked-in CamlPDF introduction fixture" {
 ///|
 async test "markdown command converts optional cpdf source manual fixture" {
   let input_path = markdown_cmd_repo_path_for_test(
-    ".repos/cpdf-source/cpdfmanual.pdf",
+    "fixtures/cpdf-source/cpdfmanual.pdf",
   )
   if @fs.exists(input_path) {
     let output_path = markdown_cmd_output_path_for_test("cpdf_source_manual")
@@ -1089,7 +1089,7 @@ async test "markdown command converts optional cpdf source manual fixture" {
 ///|
 async test "markdown command reconstructs optional cpdf source manual fixture with bad startxref" {
   let input_path = markdown_cmd_repo_path_for_test(
-    ".repos/cpdf-source/cpdfmanual.pdf",
+    "fixtures/cpdf-source/cpdfmanual.pdf",
   )
   if @fs.exists(input_path) {
     let clean_output_path = markdown_cmd_output_path_for_test(
@@ -1138,7 +1138,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
 ///|
 async test "markdown command reconstructs optional cpdf source manual fixture with malformed xref stream metadata" {
   let input_path = markdown_cmd_repo_path_for_test(
-    ".repos/cpdf-source/cpdfmanual.pdf",
+    "fixtures/cpdf-source/cpdfmanual.pdf",
   )
   if @fs.exists(input_path) {
     let clean_output_path = markdown_cmd_output_path_for_test(
@@ -1195,7 +1195,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
 ///|
 async test "markdown command reconstructs optional cpdf source manual fixture with malformed xref stream terminators" {
   let input_path = markdown_cmd_repo_path_for_test(
-    ".repos/cpdf-source/cpdfmanual.pdf",
+    "fixtures/cpdf-source/cpdfmanual.pdf",
   )
   if @fs.exists(input_path) {
     let clean_output_path = markdown_cmd_output_path_for_test(
@@ -1254,7 +1254,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
 ///|
 async test "markdown command reconstructs optional cpdf source manual fixture with malformed xref stream dictionary entries" {
   let input_path = markdown_cmd_repo_path_for_test(
-    ".repos/cpdf-source/cpdfmanual.pdf",
+    "fixtures/cpdf-source/cpdfmanual.pdf",
   )
   if @fs.exists(input_path) {
     let clean_output_path = markdown_cmd_output_path_for_test(
@@ -1323,7 +1323,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
 ///|
 async test "markdown command reconstructs optional cpdf source manual fixture with malformed object stream entries" {
   let input_path = markdown_cmd_repo_path_for_test(
-    ".repos/cpdf-source/cpdfmanual.pdf",
+    "fixtures/cpdf-source/cpdfmanual.pdf",
   )
   if @fs.exists(input_path) {
     let clean_output_path = markdown_cmd_output_path_for_test(
@@ -1384,7 +1384,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
 ///|
 async test "markdown command repairs optional cpdf source manual fixture with malformed stream length entries" {
   let input_path = markdown_cmd_repo_path_for_test(
-    ".repos/cpdf-source/cpdfmanual.pdf",
+    "fixtures/cpdf-source/cpdfmanual.pdf",
   )
   if @fs.exists(input_path) {
     let clean_output_path = markdown_cmd_output_path_for_test(

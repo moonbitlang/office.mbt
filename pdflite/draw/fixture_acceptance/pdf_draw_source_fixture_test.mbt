@@ -748,28 +748,28 @@ fn draw_fixture_assert_cpdf_h1_struct_tree_for_test(
 ///|
 fn draw_fixture_cpdf_source_manual_image_pdf_paths_for_test() -> Array[String] {
   [
-    ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
-    ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
-    ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
-    ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
-    ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
-    ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
-    ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
-    ".repos/cpdf-source/manualimages/png.pdf", ".repos/cpdf-source/manualimages/pop.pdf",
-    ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
-    ".repos/cpdf-source/manualimages/textclip.pdf", ".repos/cpdf-source/manualimages/trans.pdf",
-    ".repos/cpdf-source/manualimages/xobj.pdf",
+    "fixtures/cpdf-source/manualimages/bez.pdf", "fixtures/cpdf-source/manualimages/capjoins.pdf",
+    "fixtures/cpdf-source/manualimages/clip.pdf", "fixtures/cpdf-source/manualimages/colfill.pdf",
+    "fixtures/cpdf-source/manualimages/dash.pdf", "fixtures/cpdf-source/manualimages/fill.pdf",
+    "fixtures/cpdf-source/manualimages/fontparams.pdf", "fixtures/cpdf-source/manualimages/fonts.pdf",
+    "fixtures/cpdf-source/manualimages/h1.pdf", "fixtures/cpdf-source/manualimages/line.pdf",
+    "fixtures/cpdf-source/manualimages/lines.pdf", "fixtures/cpdf-source/manualimages/matrix.pdf",
+    "fixtures/cpdf-source/manualimages/para.pdf", "fixtures/cpdf-source/manualimages/paras.pdf",
+    "fixtures/cpdf-source/manualimages/png.pdf", "fixtures/cpdf-source/manualimages/pop.pdf",
+    "fixtures/cpdf-source/manualimages/stext.pdf", "fixtures/cpdf-source/manualimages/text.pdf",
+    "fixtures/cpdf-source/manualimages/textclip.pdf", "fixtures/cpdf-source/manualimages/trans.pdf",
+    "fixtures/cpdf-source/manualimages/xobj.pdf",
   ]
 }
 
 ///|
 fn draw_fixture_cpdf_source_manual_text_pdf_paths_for_test() -> Array[String] {
   [
-    ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
-    ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/lines.pdf",
-    ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
-    ".repos/cpdf-source/manualimages/stext.pdf", ".repos/cpdf-source/manualimages/text.pdf",
-    ".repos/cpdf-source/manualimages/textclip.pdf",
+    "fixtures/cpdf-source/manualimages/fontparams.pdf", "fixtures/cpdf-source/manualimages/fonts.pdf",
+    "fixtures/cpdf-source/manualimages/h1.pdf", "fixtures/cpdf-source/manualimages/lines.pdf",
+    "fixtures/cpdf-source/manualimages/para.pdf", "fixtures/cpdf-source/manualimages/paras.pdf",
+    "fixtures/cpdf-source/manualimages/stext.pdf", "fixtures/cpdf-source/manualimages/text.pdf",
+    "fixtures/cpdf-source/manualimages/textclip.pdf",
   ]
 }
 
@@ -778,27 +778,27 @@ fn draw_fixture_expected_manual_content_counts_for_test(
   path : String,
 ) -> (Int, Int, Int) raise {
   match path {
-    ".repos/cpdf-source/manualimages/bez.pdf" => (0, 0, 1)
-    ".repos/cpdf-source/manualimages/capjoins.pdf" => (0, 0, 1)
-    ".repos/cpdf-source/manualimages/clip.pdf" => (0, 0, 1)
-    ".repos/cpdf-source/manualimages/colfill.pdf" => (0, 0, 1)
-    ".repos/cpdf-source/manualimages/dash.pdf" => (0, 0, 1)
-    ".repos/cpdf-source/manualimages/fill.pdf" => (0, 0, 1)
-    ".repos/cpdf-source/manualimages/fontparams.pdf" => (25, 0, 0)
-    ".repos/cpdf-source/manualimages/fonts.pdf" => (25, 0, 0)
-    ".repos/cpdf-source/manualimages/h1.pdf" => (132, 0, 0)
-    ".repos/cpdf-source/manualimages/line.pdf" => (0, 0, 1)
-    ".repos/cpdf-source/manualimages/lines.pdf" => (23, 0, 0)
-    ".repos/cpdf-source/manualimages/matrix.pdf" => (0, 0, 3)
-    ".repos/cpdf-source/manualimages/para.pdf" => (81, 0, 0)
-    ".repos/cpdf-source/manualimages/paras.pdf" => (156, 0, 0)
-    ".repos/cpdf-source/manualimages/png.pdf" => (0, 1, 0)
-    ".repos/cpdf-source/manualimages/pop.pdf" => (0, 0, 3)
-    ".repos/cpdf-source/manualimages/stext.pdf" => (6, 0, 0)
-    ".repos/cpdf-source/manualimages/text.pdf" => (5, 0, 0)
-    ".repos/cpdf-source/manualimages/textclip.pdf" => (23, 0, 1)
-    ".repos/cpdf-source/manualimages/trans.pdf" => (0, 0, 2)
-    ".repos/cpdf-source/manualimages/xobj.pdf" => (0, 0, 2)
+    "fixtures/cpdf-source/manualimages/bez.pdf" => (0, 0, 1)
+    "fixtures/cpdf-source/manualimages/capjoins.pdf" => (0, 0, 1)
+    "fixtures/cpdf-source/manualimages/clip.pdf" => (0, 0, 1)
+    "fixtures/cpdf-source/manualimages/colfill.pdf" => (0, 0, 1)
+    "fixtures/cpdf-source/manualimages/dash.pdf" => (0, 0, 1)
+    "fixtures/cpdf-source/manualimages/fill.pdf" => (0, 0, 1)
+    "fixtures/cpdf-source/manualimages/fontparams.pdf" => (25, 0, 0)
+    "fixtures/cpdf-source/manualimages/fonts.pdf" => (25, 0, 0)
+    "fixtures/cpdf-source/manualimages/h1.pdf" => (132, 0, 0)
+    "fixtures/cpdf-source/manualimages/line.pdf" => (0, 0, 1)
+    "fixtures/cpdf-source/manualimages/lines.pdf" => (23, 0, 0)
+    "fixtures/cpdf-source/manualimages/matrix.pdf" => (0, 0, 3)
+    "fixtures/cpdf-source/manualimages/para.pdf" => (81, 0, 0)
+    "fixtures/cpdf-source/manualimages/paras.pdf" => (156, 0, 0)
+    "fixtures/cpdf-source/manualimages/png.pdf" => (0, 1, 0)
+    "fixtures/cpdf-source/manualimages/pop.pdf" => (0, 0, 3)
+    "fixtures/cpdf-source/manualimages/stext.pdf" => (6, 0, 0)
+    "fixtures/cpdf-source/manualimages/text.pdf" => (5, 0, 0)
+    "fixtures/cpdf-source/manualimages/textclip.pdf" => (23, 0, 1)
+    "fixtures/cpdf-source/manualimages/trans.pdf" => (0, 0, 2)
+    "fixtures/cpdf-source/manualimages/xobj.pdf" => (0, 0, 2)
     _ => fail("unexpected cpdf manual image path: " + path)
   }
 }
@@ -806,19 +806,20 @@ fn draw_fixture_expected_manual_content_counts_for_test(
 ///|
 fn draw_fixture_expected_manual_text_for_test(path : String) -> String raise {
   match path {
-    ".repos/cpdf-source/manualimages/fontparams.pdf" =>
+    "fixtures/cpdf-source/manualimages/fontparams.pdf" =>
       "\nDifferent fonts and sizes"
-    ".repos/cpdf-source/manualimages/fonts.pdf" => "\nDifferent fonts and sizes"
-    ".repos/cpdf-source/manualimages/h1.pdf" =>
+    "fixtures/cpdf-source/manualimages/fonts.pdf" =>
+      "\nDifferent fonts and sizes"
+    "fixtures/cpdf-source/manualimages/h1.pdf" =>
       "\nThis is the headingThis is the firstparagraph, whichspreads over more thanone lineHere is the second,which also has multiplelines..."
-    ".repos/cpdf-source/manualimages/lines.pdf" => "\nThis ison multiplelines"
-    ".repos/cpdf-source/manualimages/para.pdf" =>
+    "fixtures/cpdf-source/manualimages/lines.pdf" => "\nThis ison multiplelines"
+    "fixtures/cpdf-source/manualimages/para.pdf" =>
       "\nThis is a paragraph ofwidth 200pt,left-justified, containingmore than one line..."
-    ".repos/cpdf-source/manualimages/paras.pdf" =>
+    "fixtures/cpdf-source/manualimages/paras.pdf" =>
       "\nThis is the first paragraph, which isspread over multiple lines at thiswidth... And here is the second, alsotaking more than one line. Here is a little one."
-    ".repos/cpdf-source/manualimages/stext.pdf" => "\nPage 1"
-    ".repos/cpdf-source/manualimages/text.pdf" => "\nHello"
-    ".repos/cpdf-source/manualimages/textclip.pdf" =>
+    "fixtures/cpdf-source/manualimages/stext.pdf" => "\nPage 1"
+    "fixtures/cpdf-source/manualimages/text.pdf" => "\nHello"
+    "fixtures/cpdf-source/manualimages/textclip.pdf" =>
       "\nThis ison multiplelines"
     _ => fail("unexpected cpdf manual image text path: " + path)
   }
@@ -995,16 +996,16 @@ async test "cpdf source manual image text fixtures extract exact text" {
 async test "cpdf source non-image manual fixtures parse without unknown operators" {
   for
     path in [
-      ".repos/cpdf-source/manualimages/bez.pdf", ".repos/cpdf-source/manualimages/capjoins.pdf",
-      ".repos/cpdf-source/manualimages/clip.pdf", ".repos/cpdf-source/manualimages/colfill.pdf",
-      ".repos/cpdf-source/manualimages/dash.pdf", ".repos/cpdf-source/manualimages/fill.pdf",
-      ".repos/cpdf-source/manualimages/fontparams.pdf", ".repos/cpdf-source/manualimages/fonts.pdf",
-      ".repos/cpdf-source/manualimages/h1.pdf", ".repos/cpdf-source/manualimages/line.pdf",
-      ".repos/cpdf-source/manualimages/lines.pdf", ".repos/cpdf-source/manualimages/matrix.pdf",
-      ".repos/cpdf-source/manualimages/para.pdf", ".repos/cpdf-source/manualimages/paras.pdf",
-      ".repos/cpdf-source/manualimages/pop.pdf", ".repos/cpdf-source/manualimages/stext.pdf",
-      ".repos/cpdf-source/manualimages/text.pdf", ".repos/cpdf-source/manualimages/textclip.pdf",
-      ".repos/cpdf-source/manualimages/trans.pdf", ".repos/cpdf-source/manualimages/xobj.pdf",
+      "fixtures/cpdf-source/manualimages/bez.pdf", "fixtures/cpdf-source/manualimages/capjoins.pdf",
+      "fixtures/cpdf-source/manualimages/clip.pdf", "fixtures/cpdf-source/manualimages/colfill.pdf",
+      "fixtures/cpdf-source/manualimages/dash.pdf", "fixtures/cpdf-source/manualimages/fill.pdf",
+      "fixtures/cpdf-source/manualimages/fontparams.pdf", "fixtures/cpdf-source/manualimages/fonts.pdf",
+      "fixtures/cpdf-source/manualimages/h1.pdf", "fixtures/cpdf-source/manualimages/line.pdf",
+      "fixtures/cpdf-source/manualimages/lines.pdf", "fixtures/cpdf-source/manualimages/matrix.pdf",
+      "fixtures/cpdf-source/manualimages/para.pdf", "fixtures/cpdf-source/manualimages/paras.pdf",
+      "fixtures/cpdf-source/manualimages/pop.pdf", "fixtures/cpdf-source/manualimages/stext.pdf",
+      "fixtures/cpdf-source/manualimages/text.pdf", "fixtures/cpdf-source/manualimages/textclip.pdf",
+      "fixtures/cpdf-source/manualimages/trans.pdf", "fixtures/cpdf-source/manualimages/xobj.pdf",
     ] {
     match draw_fixture_document_for_test(path) {
       None => ()
@@ -1067,7 +1068,7 @@ async test "cpdf source manual image PDF corpus reconstructs malformed xref data
 ///|
 async test "cpdf source manual content fixtures export content JSON" {
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/text.pdf") {
+    draw_fixture_document_for_test("fixtures/cpdf-source/manualimages/text.pdf") {
     None => ()
     Some(document) => {
       draw_fixture_assert_cpdf_text_content_for_test(document)
@@ -1077,7 +1078,7 @@ async test "cpdf source manual content fixtures export content JSON" {
     }
   }
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/xobj.pdf") {
+    draw_fixture_document_for_test("fixtures/cpdf-source/manualimages/xobj.pdf") {
     None => ()
     Some(document) => {
       draw_fixture_assert_cpdf_xobject_content_for_test(document)
@@ -1091,7 +1092,7 @@ async test "cpdf source manual content fixtures export content JSON" {
 ///|
 async test "cpdf source squeeze fixtures transcode streams" {
   match
-    draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/text.pdf") {
+    draw_fixture_bytes_for_test("fixtures/cpdf-source/manualimages/text.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1120,7 +1121,7 @@ async test "cpdf source squeeze fixtures transcode streams" {
     }
   }
   match
-    draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/xobj.pdf") {
+    draw_fixture_bytes_for_test("fixtures/cpdf-source/manualimages/xobj.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1153,7 +1154,7 @@ async test "cpdf source squeeze fixtures transcode streams" {
 ///|
 async test "cpdf source manual fixtures show bounding box overlays" {
   match
-    draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/text.pdf") {
+    draw_fixture_bytes_for_test("fixtures/cpdf-source/manualimages/text.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1175,7 +1176,7 @@ async test "cpdf source manual fixtures show bounding box overlays" {
     }
   }
   match
-    draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/xobj.pdf") {
+    draw_fixture_bytes_for_test("fixtures/cpdf-source/manualimages/xobj.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1205,7 +1206,8 @@ async test "cpdf source manual fixtures show bounding box overlays" {
 
 ///|
 async test "cpdf source h1 fixture reports structure tree" {
-  match draw_fixture_bytes_for_test(".repos/cpdf-source/manualimages/h1.pdf") {
+  match
+    draw_fixture_bytes_for_test("fixtures/cpdf-source/manualimages/h1.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -1226,7 +1228,7 @@ async test "cpdf source h1 fixture reports structure tree" {
 async test "cpdf source capjoins manual fixture parses line cap join operators" {
   match
     draw_fixture_document_for_test(
-      ".repos/cpdf-source/manualimages/capjoins.pdf",
+      "fixtures/cpdf-source/manualimages/capjoins.pdf",
     ) {
     None => ()
     Some(document) =>
@@ -1246,7 +1248,7 @@ async test "cpdf source capjoins manual fixture parses line cap join operators" 
 ///|
 async test "cpdf source bezier and paint manual fixtures parse path operators" {
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/bez.pdf") {
+    draw_fixture_document_for_test("fixtures/cpdf-source/manualimages/bez.pdf") {
     None => ()
     Some(document) =>
       @test.assert_eq(draw_fixture_page_ops_for_test(document), [
@@ -1256,7 +1258,7 @@ async test "cpdf source bezier and paint manual fixtures parse path operators" {
       ])
   }
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/line.pdf") {
+    draw_fixture_document_for_test("fixtures/cpdf-source/manualimages/line.pdf") {
     None => ()
     Some(document) =>
       @test.assert_eq(draw_fixture_page_ops_for_test(document), [
@@ -1268,7 +1270,7 @@ async test "cpdf source bezier and paint manual fixtures parse path operators" {
       ])
   }
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/fill.pdf") {
+    draw_fixture_document_for_test("fixtures/cpdf-source/manualimages/fill.pdf") {
     None => ()
     Some(document) =>
       @test.assert_eq(draw_fixture_page_ops_for_test(document), [
@@ -1284,7 +1286,7 @@ async test "cpdf source bezier and paint manual fixtures parse path operators" {
 ///|
 async test "cpdf source xobject manual fixture parses form resource reuse" {
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/xobj.pdf") {
+    draw_fixture_document_for_test("fixtures/cpdf-source/manualimages/xobj.pdf") {
     None => ()
     Some(document) => {
       let pages = document.pages_of_pagetree()
@@ -1346,7 +1348,7 @@ async test "cpdf source xobject manual fixture parses form resource reuse" {
 ///|
 async test "cpdf source clipping and colour manual fixtures parse graphics operators" {
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/clip.pdf") {
+    draw_fixture_document_for_test("fixtures/cpdf-source/manualimages/clip.pdf") {
     None => ()
     Some(document) => {
       let ops = draw_fixture_page_ops_for_test(document)
@@ -1359,7 +1361,7 @@ async test "cpdf source clipping and colour manual fixtures parse graphics opera
   }
   match
     draw_fixture_document_for_test(
-      ".repos/cpdf-source/manualimages/colfill.pdf",
+      "fixtures/cpdf-source/manualimages/colfill.pdf",
     ) {
     None => ()
     Some(document) => {
@@ -1376,7 +1378,9 @@ async test "cpdf source clipping and colour manual fixtures parse graphics opera
 ///|
 async test "cpdf source matrix manual fixture parses save restore transforms" {
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/matrix.pdf") {
+    draw_fixture_document_for_test(
+      "fixtures/cpdf-source/manualimages/matrix.pdf",
+    ) {
     None => ()
     Some(document) => {
       let ops = draw_fixture_page_ops_for_test(document)
@@ -1406,7 +1410,7 @@ async test "cpdf source matrix manual fixture parses save restore transforms" {
 async test "cpdf source textclip manual fixture parses clipping text mode" {
   match
     draw_fixture_document_for_test(
-      ".repos/cpdf-source/manualimages/textclip.pdf",
+      "fixtures/cpdf-source/manualimages/textclip.pdf",
     ) {
     None => ()
     Some(document) => {
@@ -1427,7 +1431,9 @@ async test "cpdf source textclip manual fixture parses clipping text mode" {
 ///|
 async test "cpdf source transparency manual fixture exposes extgstate and fill ops" {
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/trans.pdf") {
+    draw_fixture_document_for_test(
+      "fixtures/cpdf-source/manualimages/trans.pdf",
+    ) {
     None => ()
     Some(document) => {
       let pages = document.pages_of_pagetree()
@@ -1461,7 +1467,7 @@ async test "cpdf source transparency manual fixture exposes extgstate and fill o
 async test "cpdf source fontparams manual fixture parses text-state operators" {
   match
     draw_fixture_document_for_test(
-      ".repos/cpdf-source/manualimages/fontparams.pdf",
+      "fixtures/cpdf-source/manualimages/fontparams.pdf",
     ) {
     None => ()
     Some(document) =>
@@ -1486,7 +1492,7 @@ async test "cpdf source fontparams manual fixture parses text-state operators" {
 ///|
 async test "cpdf source dash manual fixture parses dash operators" {
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/dash.pdf") {
+    draw_fixture_document_for_test("fixtures/cpdf-source/manualimages/dash.pdf") {
     None => ()
     Some(document) =>
       @test.assert_eq(draw_fixture_page_ops_for_test(document), [
@@ -1502,7 +1508,7 @@ async test "cpdf source dash manual fixture parses dash operators" {
 ///|
 async test "cpdf source text manual fixture parses text section operators" {
   match
-    draw_fixture_document_for_test(".repos/cpdf-source/manualimages/text.pdf") {
+    draw_fixture_document_for_test("fixtures/cpdf-source/manualimages/text.pdf") {
     None => ()
     Some(document) =>
       @test.assert_eq(draw_fixture_page_ops_for_test(document), [

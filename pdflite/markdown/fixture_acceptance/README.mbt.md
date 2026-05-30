@@ -1,14 +1,14 @@
 # pdflite/markdown/fixture_acceptance
 
 `bobzhang/pdflite/markdown/fixture_acceptance` is a native-only test package for
-Markdown extraction fixtures. It covers checked-in local PDFs, optional local
-source-corpus PDFs under `.repos/cpdf-source`, and optional downloaded external
+Markdown extraction fixtures. It covers checked-in local PDFs, the tracked
+source-corpus subset under `fixtures/cpdf-source`, and optional downloaded external
 PDFs listed under `markdown/external_fixtures`.
 
 ```mermaid
 flowchart LR
   Local[checked-in PDFs] --> Tests[acceptance tests]
-  Source[optional .repos/cpdf-source PDFs] --> Tests
+  Source[fixtures/cpdf-source PDFs] --> Tests
   External[optional downloads] --> Tests
   Tests --> Extract["@markdown.pdf_bytes_to_markdown"]
   Extract --> Assertions[text and control-character checks]
@@ -35,10 +35,10 @@ async test "checked-in markdown fixture extracts expected text" {
 ## Package Notes
 
 - Local fixture tests should be deterministic and always run in CI.
-- `.repos/cpdf-source` fixture tests are optional because that source corpus is
-  ignored in fresh checkouts but present during porting work. When present, the
-  manual-image PDF corpus is checked for clean Markdown extraction and matching
-  output after public-reader bad-`startxref` reconstruction.
+- The `fixtures/cpdf-source` corpus is checked in so fresh clones exercise the
+  source-corpus Markdown paths. The manual-image PDF corpus is checked for clean
+  Markdown extraction and matching output after public-reader bad-`startxref`
+  reconstruction.
 - External fixture tests are optional because downloaded PDFs may not be present
   in a fresh checkout.
 - The package is native-only because fixture IO uses `moonbitlang/async/fs`.
@@ -46,8 +46,8 @@ async test "checked-in markdown fixture extracts expected text" {
 ## Pedantic Boundaries
 
 - This package owns acceptance tests, not the Markdown extraction library.
-- Checked-in fixtures are mandatory test inputs. Ignored source-corpus and
-  downloaded fixtures are optional and must be skipped or tolerated when absent.
+- Checked-in fixtures are mandatory test inputs. Downloaded fixtures are
+  optional and must be skipped or tolerated when absent.
 - Assertions should check stable semantic markers, absence of raw control
   characters, and expected replacement-character counts where known.
 - Do not make this package a dependency of library packages; the direction is

@@ -869,11 +869,11 @@ fn font_external_assert_cpdf_source_fonts_fixture_for_test(
 ///|
 async test "cpdf source font mutations remove and copy embedded fonts" {
   match
-    font_external_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+    font_external_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(manual_bytes) =>
       match
-        font_external_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+        font_external_fixture_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
         None => ()
         Some(hello_bytes) => {
           let manual = @pdflite.pdf_read_document_from_bytes(manual_bytes)
@@ -944,7 +944,7 @@ async test "cpdf source font mutations remove and copy embedded fonts" {
 ///|
 async test "cpdf source manual fixture reports embedded fonts" {
   match
-    font_external_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+    font_external_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -973,7 +973,7 @@ async test "cpdf source manual fixture reports embedded fonts" {
 async test "cpdf source manual font fixture reports font tables" {
   match
     font_external_fixture_document_for_test(
-      ".repos/cpdf-source/manualimages/fonts.pdf",
+      "fixtures/cpdf-source/manualimages/fonts.pdf",
     ) {
     None => ()
     Some(document) => {
@@ -989,7 +989,7 @@ async test "cpdf source manual font fixture reports font tables" {
 async test "cpdf source manual font fixture reconstructs malformed classic xref data" {
   match
     font_external_fixture_bytes_for_test(
-      ".repos/cpdf-source/manualimages/fonts.pdf",
+      "fixtures/cpdf-source/manualimages/fonts.pdf",
     ) {
     None => ()
     Some(bytes) =>

@@ -3,8 +3,8 @@
 `bobzhang/pdflite/fixture_acceptance` is a native-only package for checked-in
 PDF fixtures that are too concrete for unit tests but too important to leave out
 of acceptance coverage. It focuses on reader and writer boundaries for real PDF
-files committed under `fixtures/`, plus optional local source-corpus PDFs when
-the ignored upstream checkout is present.
+files committed under `fixtures/`, including the tracked cpdf source-corpus
+subset under `fixtures/cpdf-source`.
 
 ```mermaid
 flowchart LR
@@ -45,10 +45,10 @@ async test "checked-in PDF fixtures are present" {
 ## Package Notes
 
 - The package is native-only because it reads committed fixture files from disk.
-- Tests here should cover stable local PDFs and optional already-local source
-  corpora, not downloads or network setup. When `.repos/cpdf-source` is
-  present, the top-level PDF corpus is checked through read, compressed rewrite,
-  and bad-`startxref` reconstruction boundaries.
+- Tests here should cover stable local PDFs and checked-in source corpora, not
+  downloads or network setup. The tracked `fixtures/cpdf-source` corpus is
+  checked through read, compressed rewrite, and bad-`startxref` reconstruction
+  boundaries.
 - Library APIs remain in the root package; this package owns fixture-backed
   acceptance coverage only.
 
@@ -57,8 +57,8 @@ async test "checked-in PDF fixtures are present" {
 - Add a fixture test here when the shape of a real checked-in PDF matters:
   linearization, xref streams, object streams, trailer chains, page-tree shape,
   or compressed rewrite boundaries.
-- Optional source-corpus tests must pass when their local files are present and
-  skip cleanly when the ignored checkout is absent.
+- Source-corpus tests must use tracked files under `fixtures/cpdf-source` rather
+  than the local reference checkout under `.repos`.
 - Keep synthetic parser edge cases in root `*_test.mbt` files where the bytes
   can be built inline and reviewed precisely.
 - Do not add production helpers here. If a helper becomes generally useful,

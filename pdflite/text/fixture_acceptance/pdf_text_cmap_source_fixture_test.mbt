@@ -305,7 +305,7 @@ fn text_fixture_assert_usecmap_tounicode_for_test(
 
 ///|
 async test "cpdf source hello fixture composes ToUnicode UseCMap chain" {
-  match text_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+  match text_fixture_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -549,7 +549,7 @@ fn text_fixture_assert_usecmap_variation_tounicode_for_test(
 
 ///|
 async test "cpdf source hello fixture composes ToUnicode UseCMap variation chain" {
-  match text_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+  match text_fixture_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -786,7 +786,7 @@ fn text_fixture_assert_parser_corner_tounicode_for_test(
 
 ///|
 async test "cpdf source hello fixture extracts ToUnicode parser corners" {
-  match text_fixture_bytes_for_test(".repos/cpdf-source/hello.pdf") {
+  match text_fixture_bytes_for_test("fixtures/cpdf-source/hello.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)

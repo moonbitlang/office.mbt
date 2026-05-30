@@ -247,7 +247,7 @@ fn page_fixture_assert_cpdf_manual_page_labels_for_test(
 
 ///|
 async test "cpdf source manual fixture parses page specifications" {
-  match page_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match page_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -261,7 +261,7 @@ async test "cpdf source manual fixture parses page specifications" {
 
 ///|
 async test "cpdf source manual fixture reports page label fallbacks" {
-  match page_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match page_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)

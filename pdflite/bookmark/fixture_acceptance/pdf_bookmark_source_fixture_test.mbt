@@ -306,7 +306,7 @@ fn bookmark_fixture_assert_cpdf_manual_title_bookmark_for_test(
 
 ///|
 async test "cpdf source manual fixture lists and rebuilds bookmarks" {
-  match bookmark_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match bookmark_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
@@ -328,7 +328,7 @@ async test "cpdf source manual fixture lists and rebuilds bookmarks" {
 
 ///|
 async test "cpdf source manual fixture mutates bookmark open state and title" {
-  match bookmark_fixture_bytes_for_test(".repos/cpdf-source/cpdfmanual.pdf") {
+  match bookmark_fixture_bytes_for_test("fixtures/cpdf-source/cpdfmanual.pdf") {
     None => ()
     Some(bytes) => {
       let document = @pdflite.pdf_read_document_from_bytes(bytes)
