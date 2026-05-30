@@ -70,12 +70,11 @@ fn pdf_composition_text_length(entries : ArrayView[PdfCompositionEntry]) -> Int 
 }
 
 ///|
-/// Return the text that cpdf's `show_composition` prints when `json=false`.
-pub fn PdfDocument::composition_text(
-  self : PdfDocument,
-  file_size : Int,
-) -> PdfBytes raise PdfError {
-  let entries = self.composition(file_size)
+/// Format composition rows as the text cpdf's `show_composition` prints when
+/// `json=false`.
+pub fn pdf_composition_text_of_entries(
+  entries : ArrayView[PdfCompositionEntry],
+) -> Bytes {
   let output = Array::make(pdf_composition_text_length(entries), b'\x00')
   let mut position = 0
   for entry in entries {
@@ -85,7 +84,8 @@ pub fn PdfDocument::composition_text(
 }
 
 ///|
-fn pdf_composition_bytes_with_newline(bytes : BytesView) -> PdfBytes {
+/// Return bytes with one trailing newline, matching cpdf's printed JSON output.
+pub fn pdf_composition_bytes_with_newline(bytes : BytesView) -> Bytes {
   let output = Array::make(bytes.length() + 1, b'\n')
   for i in 0..<bytes.length() {
     output[i] = bytes[i]

@@ -1,13 +1,4 @@
 ///|
-fn pdf_composition_entry(
-  label : String,
-  bytes : Int,
-  file_size : Int,
-) -> PdfCompositionEntry {
-  { label, bytes, percent: bytes.to_double() / file_size.to_double() * 100.0 }
-}
-
-///|
 /// Return cpdf-style composition buckets for a document.
 ///
 /// The result order is stable: images, fonts, content streams, structure info,
@@ -41,26 +32,25 @@ pub fn PdfDocument::composition(
     xref_table +
     piece_info
   [
-    pdf_composition_entry("Images", images, file_size),
-    pdf_composition_entry("Fonts", fonts, file_size),
-    pdf_composition_entry("Content streams", content_streams, file_size),
-    pdf_composition_entry("Structure Info", structure_info, file_size),
-    pdf_composition_entry("Attached Files", attached_files, file_size),
-    pdf_composition_entry("XRef Table", xref_table, file_size),
-    pdf_composition_entry("Piece Info", piece_info, file_size),
-    pdf_composition_entry("Unclassified", file_size - classified, file_size),
+    @composition.pdf_composition_entry("Images", images, file_size),
+    @composition.pdf_composition_entry("Fonts", fonts, file_size),
+    @composition.pdf_composition_entry(
+      "Content streams", content_streams, file_size,
+    ),
+    @composition.pdf_composition_entry(
+      "Structure Info", structure_info, file_size,
+    ),
+    @composition.pdf_composition_entry(
+      "Attached Files", attached_files, file_size,
+    ),
+    @composition.pdf_composition_entry("XRef Table", xref_table, file_size),
+    @composition.pdf_composition_entry("Piece Info", piece_info, file_size),
+    @composition.pdf_composition_entry(
+      "Unclassified",
+      file_size - classified,
+      file_size,
+    ),
   ]
-}
-
-///|
-/// Convert a composition entry to the cpdf JSON row shape:
-/// `[label, byte_count, percent]`.
-pub fn PdfCompositionEntry::to_json(self : PdfCompositionEntry) -> Json {
-  Json::array([
-    Json::string(self.label),
-    pdf_util_json_number(self.bytes),
-    Json::number(self.percent),
-  ])
 }
 
 ///|
@@ -84,6 +74,15 @@ pub fn PdfDocument::composition_json_blob(
   file_size : Int,
 ) -> PdfBytes raise PdfError {
   @utf8.encode(self.composition_json(file_size).stringify())
+}
+
+///|
+/// Return the text that cpdf's `show_composition` prints when `json=false`.
+pub fn PdfDocument::composition_text(
+  self : PdfDocument,
+  file_size : Int,
+) -> PdfBytes raise PdfError {
+  @composition.pdf_composition_text_of_entries(self.composition(file_size))
 }
 
 ///|
@@ -112,7 +111,7 @@ pub fn pdf_show_composition(
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
   if json {
-    pdf_composition_bytes_with_newline(
+    @composition.pdf_composition_bytes_with_newline(
       document.composition_json_blob(file_size),
     )
   } else {

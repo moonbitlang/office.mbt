@@ -348,6 +348,9 @@ pub using @bookmark {
 }
 
 ///|
+pub using @composition {type PdfCompositionEntry}
+
+///|
 pub using @portfolio {type PdfPortfolioEntry, pdf_portfolio_entry}
 
 ///|

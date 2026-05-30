@@ -6,6 +6,7 @@ import {
   "bobzhang/pdflite/annotation",
   "bobzhang/pdflite/attachment",
   "bobzhang/pdflite/bookmark",
+  "bobzhang/pdflite/composition",
   "bobzhang/pdflite/content",
   "bobzhang/pdflite/content/colour",
   "bobzhang/pdflite/content/path",
@@ -505,7 +506,7 @@ pub fn pdf_combine_pages(PdfDocument, PdfDocument, fast? : Bool, scale_to_fit? :
 
 pub fn pdf_combine_pages_cpdf_order(Bool, Bool, PdfDocument, PdfDocument, Bool, Bool) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_composition(PdfDocument, Int) -> Array[PdfCompositionEntry] raise @core.PdfError
+pub fn pdf_composition(PdfDocument, Int) -> Array[@composition.PdfCompositionEntry] raise @core.PdfError
 
 pub fn pdf_contains_javascript(PdfDocument) -> Bool
 
@@ -2409,13 +2410,6 @@ pub(all) struct PdfCompositeCIDFont {
   cid_default_width2 : Array[Double]
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfCompositionEntry {
-  label : String
-  bytes : Int
-  percent : Double
-} derive(Eq, ToJson, @debug.Debug)
-pub fn PdfCompositionEntry::to_json(Self) -> Json
-
 pub(all) struct PdfContentAxialShading {
   axialshading_coords : (Double, Double, Double, Double)
   axialshading_domain : (Double, Double)
@@ -2794,7 +2788,7 @@ pub fn PdfDocument::colspace(Self, @syntax.PdfObject, @syntax.PdfObject) -> PdfC
 pub fn PdfDocument::combine_pages(Self, Self, fast? : Bool, scale_to_fit? : Bool, overlay_is_under? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::combine_pdf_resources(Self, @syntax.PdfObject, @syntax.PdfObject) -> @syntax.PdfObject
 pub fn PdfDocument::combine_pdf_rests(Self, @syntax.PdfObject, @syntax.PdfObject) -> @syntax.PdfObject
-pub fn PdfDocument::composition(Self, Int) -> Array[PdfCompositionEntry] raise @core.PdfError
+pub fn PdfDocument::composition(Self, Int) -> Array[@composition.PdfCompositionEntry] raise @core.PdfError
 pub fn PdfDocument::composition_json(Self, Int) -> Json raise @core.PdfError
 pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::composition_text(Self, Int) -> Bytes raise @core.PdfError
@@ -3789,6 +3783,8 @@ pub using @geometry {type PdfCalculatedPosition}
 pub using @reader {type PdfClassicXRefEntry}
 
 pub using @reader {type PdfClassicXRefIndex}
+
+pub using @composition {type PdfCompositionEntry}
 
 pub using @path {type PdfContentClippingOpResult}
 
