@@ -799,7 +799,7 @@ async test "optional cpdf source tweak fixtures recolor thin and append content"
       let rewritten = @pdflite.pdf_black_text(
         document,
         [1],
-        @pdflite.pdf_content_black,
+        @colour.pdf_content_black,
       )
       fixture_acceptance_assert_cpdf_source_black_text_for_test(
         document, rewritten,

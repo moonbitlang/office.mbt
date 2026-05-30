@@ -13,8 +13,8 @@ pub(all) enum PdfDrawOp {
   PdfDrawTo(Double, Double)
   PdfDrawLine(Double, Double)
   PdfDrawClosePath
-  PdfDrawSetFill(PdfDrawColour)
-  PdfDrawSetStroke(PdfDrawColour)
+  PdfDrawSetFill(@colour.PdfDrawColour)
+  PdfDrawSetStroke(@colour.PdfDrawColour)
   PdfDrawSetLineThickness(Double)
   PdfDrawSetLineCap(Int)
   PdfDrawSetLineJoin(Int)

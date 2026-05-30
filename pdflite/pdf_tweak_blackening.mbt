@@ -3,7 +3,7 @@
 pub fn PdfDocument::black_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
@@ -33,7 +33,7 @@ pub fn PdfDocument::black_text(
 pub fn pdf_black_text(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
 ) -> PdfDocument raise PdfError {
   document.black_text(page_numbers, colour)
 }
@@ -41,7 +41,7 @@ pub fn pdf_black_text(
 ///|
 /// Compatibility wrapper matching cpdftweak's `blacktext` name and order.
 pub fn pdf_blacktext(
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
@@ -53,7 +53,7 @@ pub fn pdf_blacktext(
 pub fn PdfDocument::black_lines(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
@@ -83,7 +83,7 @@ pub fn PdfDocument::black_lines(
 pub fn pdf_black_lines(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
 ) -> PdfDocument raise PdfError {
   document.black_lines(page_numbers, colour)
 }
@@ -91,7 +91,7 @@ pub fn pdf_black_lines(
 ///|
 /// Compatibility wrapper matching cpdftweak's `blacklines` name and order.
 pub fn pdf_blacklines(
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
@@ -103,7 +103,7 @@ pub fn pdf_blacklines(
 pub fn PdfDocument::black_fills(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
 ) -> PdfDocument raise PdfError {
   let document = self.copy()
   let pages = document.pages_of_pagetree()
@@ -133,7 +133,7 @@ pub fn PdfDocument::black_fills(
 pub fn pdf_black_fills(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
 ) -> PdfDocument raise PdfError {
   document.black_fills(page_numbers, colour)
 }
@@ -141,7 +141,7 @@ pub fn pdf_black_fills(
 ///|
 /// Compatibility wrapper matching cpdftweak's `blackfills` name and order.
 pub fn pdf_blackfills(
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {

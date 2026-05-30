@@ -452,8 +452,6 @@ pub fn pdf_colour_space_of_device_name(@core.PdfName) -> PdfColourSpace?
 
 pub fn pdf_colour_space_of_object(@syntax.PdfObject) -> PdfColourSpace?
 
-pub fn pdf_colours() -> Array[(String, Int)]
-
 pub fn pdf_combine_pages(PdfDocument, PdfDocument, fast? : Bool, scale_to_fit? : Bool, overlay_is_under? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_combine_pages_cpdf_order(Bool, Bool, PdfDocument, PdfDocument, Bool, Bool) -> PdfDocument raise @core.PdfError
@@ -511,8 +509,6 @@ pub fn pdf_content_apply_text_state_op(PdfContentTextState, @content.PdfContentO
 pub fn pdf_content_apply_type3_metrics_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
 
 pub fn pdf_content_begin_artifact() -> @content.PdfContentOp
-
-pub let pdf_content_black : @colour.PdfContentColour
 
 pub fn pdf_content_bounding_box_content_json(PdfContentBoundingBox) -> Json
 
@@ -636,10 +632,6 @@ pub fn pdf_crop_pdf(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Doub
 
 pub fn pdf_crop_pdf_string(ArrayView[(Double, Double, Double, Double)], PdfDocument, ArrayView[Int], box_name? : String) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_css_colour_value(String) -> Int?
-
-pub fn pdf_css_colours() -> Array[(String, Int)]
-
 pub fn pdf_cursor_drop_whitespace(@core.ByteCursor) -> Unit
 
 pub fn pdf_cursor_lex_bool(@core.ByteCursor) -> @syntax.PdfLexeme
@@ -711,8 +703,6 @@ pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocume
 pub fn pdf_draft_string(String?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_draw(PdfDocument, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : @date.PdfStrftimeTime?, add_artifacts? : Bool, role_map? : String) -> PdfDocument raise @core.PdfError
-
-pub fn pdf_draw_colour_of_string(String) -> @colour.PdfDrawColour
 
 pub fn pdf_draw_control() -> PdfDrawControl
 
@@ -1244,10 +1234,6 @@ pub fn pdf_parse_cmap(PdfDocument, @syntax.PdfObject) -> PdfParsedCMap raise @co
 
 pub fn pdf_parse_cmap_data(BytesView) -> PdfParsedCMap
 
-pub fn pdf_parse_colour(String) -> @colour.PdfContentColour raise @core.PdfError
-
-pub fn pdf_parse_content_colour(String) -> @colour.PdfContentColour raise @core.PdfError
-
 pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[@content.PdfContentOp] raise @core.PdfError
 
 pub fn pdf_parse_content_ops_from_view(BytesView) -> Array[@content.PdfContentOp] raise @core.PdfError
@@ -1263,8 +1249,6 @@ pub fn pdf_parse_coordinate_tuple(PdfDocument, String) -> (Double, Double) raise
 pub fn pdf_parse_coordinates(PdfDocument, String) -> Array[@geometry.Point2] raise @core.PdfError
 
 pub fn pdf_parse_coordinates_tuple(PdfDocument, String) -> Array[(Double, Double)] raise @core.PdfError
-
-pub fn pdf_parse_draw_colour(String) -> @colour.PdfDrawColour raise @core.PdfError
 
 pub fn pdf_parse_flate_unicode_data(BytesView) -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError
 
@@ -3575,15 +3559,11 @@ pub type PdfBytes = Bytes
 
 pub using @geometry {type PdfCalculatedPosition}
 
-pub using @colour {type PdfContentColour}
-
 pub using @content {type PdfContentOp}
 
 pub using @geometry {type PdfCoordRectangle}
 
 pub using @core {type PdfCryptType}
-
-pub using @colour {type PdfDrawColour}
 
 pub using @shape {type PdfDrawnPath}
 

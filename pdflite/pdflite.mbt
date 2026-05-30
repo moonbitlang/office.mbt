@@ -104,20 +104,6 @@ pub using @syntax {
 }
 
 ///|
-pub using @colour {
-  type PdfDrawColour,
-  type PdfContentColour,
-  pdf_draw_colour_of_string,
-  pdf_content_black,
-  pdf_css_colour_value,
-  pdf_css_colours,
-  pdf_colours,
-  pdf_parse_draw_colour,
-  pdf_parse_colour,
-  pdf_parse_content_colour,
-}
-
-///|
 pub using @geometry {
   type PdfUnit,
   type PaperSize,

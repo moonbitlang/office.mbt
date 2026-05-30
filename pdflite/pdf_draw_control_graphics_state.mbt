@@ -4,7 +4,7 @@ pub fn PdfDrawControl::set_stroke(
   self : PdfDrawControl,
   text : String,
 ) -> Unit raise PdfError {
-  self.add_op(PdfDrawSetStroke(pdf_draw_colour_of_string(text)))
+  self.add_op(PdfDrawSetStroke(@colour.pdf_draw_colour_of_string(text)))
 }
 
 ///|
@@ -13,7 +13,7 @@ pub fn PdfDrawControl::set_fill(
   self : PdfDrawControl,
   text : String,
 ) -> Unit raise PdfError {
-  self.add_op(PdfDrawSetFill(pdf_draw_colour_of_string(text)))
+  self.add_op(PdfDrawSetFill(@colour.pdf_draw_colour_of_string(text)))
 }
 
 ///|

@@ -89,7 +89,7 @@ test "pdf_black_lines_ops rewrites stroke colour operators" {
     [Op_RG(0.1, 0.2, 0.3)],
   )
   @test.assert_eq(
-    @pdflite.pdf_black_lines_ops(@pdflite.pdf_content_black, [
+    @pdflite.pdf_black_lines_ops(@colour.pdf_content_black, [
       Op_K(0.0, 0.0, 0.0, 1.0),
     ]),
     [Op_G(0.0)],
@@ -128,7 +128,7 @@ test "pdf_black_fills_ops rewrites fill colour operators" {
     [Op_rg(0.1, 0.2, 0.3)],
   )
   @test.assert_eq(
-    @pdflite.pdf_black_fills_ops(@pdflite.pdf_content_black, [
+    @pdflite.pdf_black_fills_ops(@colour.pdf_content_black, [
       Op_k(0.0, 0.0, 0.0, 1.0),
     ]),
     [Op_g(0.0)],
@@ -181,10 +181,10 @@ test "PdfDocument black_text rewrites selected pages and form xobjects" {
   let rewritten = try! @pdflite.pdf_black_text(
     document,
     [1],
-    @pdflite.pdf_content_black,
+    @colour.pdf_content_black,
   )
   let source_order = try! @pdflite.pdf_blacktext(
-    @pdflite.pdf_content_black,
+    @colour.pdf_content_black,
     [1],
     document,
   )

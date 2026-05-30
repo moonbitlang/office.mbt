@@ -76,7 +76,7 @@ fn pdf_tweak_black_fill_op(op : PdfContentOp) -> Bool {
 /// text block, while non-text drawing operators inside the text block are
 /// copied after `ET`, matching `cpdftweak.ml`'s `blacktext_ops`.
 pub fn pdf_black_text_ops(
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] {
   let output : Array[PdfContentOp] = []
@@ -114,7 +114,7 @@ pub fn pdf_black_text_ops(
 ///|
 /// Rewrite stroke colour operators to `colour`.
 pub fn pdf_black_lines_ops(
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] {
   let output : Array[PdfContentOp] = []
@@ -132,7 +132,7 @@ pub fn pdf_black_lines_ops(
 ///|
 /// Rewrite fill colour operators to `colour`.
 pub fn pdf_black_fills_ops(
-  colour : PdfContentColour,
+  colour : @colour.PdfContentColour,
   ops : ArrayView[PdfContentOp],
 ) -> Array[PdfContentOp] {
   let output : Array[PdfContentOp] = []

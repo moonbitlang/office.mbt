@@ -1,5 +1,7 @@
 ///|
-fn pdf_draw_colour_fill_ops(colour : PdfDrawColour) -> Array[PdfContentOp] {
+fn pdf_draw_colour_fill_ops(
+  colour : @colour.PdfDrawColour,
+) -> Array[PdfContentOp] {
   match colour {
     PdfDrawNoCol => []
     PdfDrawRGB(r, g, b) => [Op_rg(r, g, b)]
@@ -9,7 +11,9 @@ fn pdf_draw_colour_fill_ops(colour : PdfDrawColour) -> Array[PdfContentOp] {
 }
 
 ///|
-fn pdf_draw_colour_stroke_ops(colour : PdfDrawColour) -> Array[PdfContentOp] {
+fn pdf_draw_colour_stroke_ops(
+  colour : @colour.PdfDrawColour,
+) -> Array[PdfContentOp] {
   match colour {
     PdfDrawNoCol => []
     PdfDrawRGB(r, g, b) => [Op_RG(r, g, b)]
