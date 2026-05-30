@@ -201,10 +201,7 @@ test "cpdfcontent clipping op prepends and keeps cpdf subpath order" {
       Op_l(3.0, 2.0),
       Op_h,
     ]).partial_path
-  let existing : @pdflite.PdfPath = {
-    winding_rule: PdfPathNonZero,
-    subpaths: [],
-  }
+  let existing : @shape.PdfPath = { winding_rule: PdfPathNonZero, subpaths: [] }
   let result = partial.content_apply_clipping_op([existing], Op_Wstar)
   @test.assert_eq(result.clipping_path.length(), 2)
   @test.assert_eq(result.clipping_path[0].winding_rule, PdfPathEvenOdd)

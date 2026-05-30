@@ -5,7 +5,7 @@ fn content_operator_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn content_operator_assert_line_for_test(
-  segment : @pdflite.PdfPathSegment,
+  segment : @shape.PdfPathSegment,
   start_x : Double,
   start_y : Double,
   finish_x : Double,

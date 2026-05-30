@@ -66,31 +66,31 @@ fn assert_content_bbox_for_shape_test(
 
 ///|
 test "cpdf shape exposes kappa and restricts angles" {
-  assert_close_for_shape_test(@pdflite.pdf_shape_kappa, 0.5522847498307936)
-  assert_close_for_shape_test(@pdflite.pdf_kappa, @pdflite.pdf_shape_kappa)
+  assert_close_for_shape_test(@shape.pdf_shape_kappa, 0.5522847498307936)
+  assert_close_for_shape_test(@shape.pdf_kappa, @shape.pdf_shape_kappa)
   assert_close_for_shape_test(
-    @pdflite.pdf_restrict_angle(@math.PI / 2.0, 0.2),
+    @shape.pdf_restrict_angle(@math.PI / 2.0, 0.2),
     0.0,
   )
   assert_close_for_shape_test(
-    @pdflite.pdf_restrict_angle(@math.PI / 2.0, 1.0),
+    @shape.pdf_restrict_angle(@math.PI / 2.0, 1.0),
     @math.PI / 2.0,
   )
 }
 
 ///|
 test "cpdf shape restrict angle preserves source edge semantics" {
-  assert_close_for_shape_test(@pdflite.pdf_restrict_angle(1.0, 0.5), 1.0)
+  assert_close_for_shape_test(@shape.pdf_restrict_angle(1.0, 0.5), 1.0)
   assert_close_for_shape_test(
-    @pdflite.pdf_restrict_angle(@math.PI / 2.0, 2.0 * @math.PI - 0.1),
+    @shape.pdf_restrict_angle(@math.PI / 2.0, 2.0 * @math.PI - 0.1),
     3.0 * @math.PI / 2.0,
   )
 }
 
 ///|
 test "cpdf shape builds rectangle paths" {
-  let path = @pdflite.pdf_shape_rectangle(10.0, 20.0, 30.0, 40.0)
-  @test.assert_eq(@pdflite.pdf_rectangle(10.0, 20.0, 30.0, 40.0), path)
+  let path = @shape.pdf_shape_rectangle(10.0, 20.0, 30.0, 40.0)
+  @test.assert_eq(@shape.pdf_rectangle(10.0, 20.0, 30.0, 40.0), path)
   @test.assert_eq(path.winding_rule, PdfPathEvenOdd)
   @test.assert_eq(path.subpaths.length(), 1)
   let subpath = path.subpaths[0]
@@ -115,8 +115,8 @@ test "cpdf shape builds rectangle paths" {
 
 ///|
 test "cpdf shape builds connected circle paths" {
-  let path = @pdflite.pdf_shape_circle(10.0, 20.0, 5.0)
-  @test.assert_eq(@pdflite.pdf_circle(10.0, 20.0, 5.0), path)
+  let path = @shape.pdf_shape_circle(10.0, 20.0, 5.0)
+  @test.assert_eq(@shape.pdf_circle(10.0, 20.0, 5.0), path)
   @test.assert_eq(path.winding_rule, PdfPathNonZero)
   @test.assert_eq(path.subpaths.length(), 1)
   let subpath = path.subpaths[0]
@@ -141,25 +141,25 @@ test "cpdf shape builds connected circle paths" {
 
 ///|
 test "cpdfcontent path geometry computes segment and path bounds" {
-  let straight : @pdflite.PdfPathSegment = PdfPathStraight(
+  let straight : @shape.PdfPathSegment = PdfPathStraight(
     @pdflite.point2(3.0, 4.0),
     @pdflite.point2(-1.0, 8.0),
   )
   assert_rectangle_for_shape_test(straight.bounds(), -1.0, 4.0, 3.0, 8.0)
-  let bezier : @pdflite.PdfPathSegment = PdfPathBezier(
+  let bezier : @shape.PdfPathSegment = PdfPathBezier(
     @pdflite.point2(10.0, 0.0),
     @pdflite.point2(-5.0, 20.0),
     @pdflite.point2(2.0, -3.0),
     @pdflite.point2(7.0, 8.0),
   )
   assert_rectangle_for_shape_test(
-    @pdflite.pdf_path_segment_bounds(bezier),
+    @shape.pdf_path_segment_bounds(bezier),
     -5.0,
     -3.0,
     10.0,
     20.0,
   )
-  let path : @pdflite.PdfPath = {
+  let path : @shape.PdfPath = {
     winding_rule: PdfPathNonZero,
     subpaths: [
       {
@@ -170,15 +170,15 @@ test "cpdfcontent path geometry computes segment and path bounds" {
     ],
   }
   assert_rectangle_for_shape_test(path.bounds(), -5.0, -3.0, 10.0, 20.0)
-  @test.assert_eq(@pdflite.pdf_path_bounds(path), path.bounds())
-  let empty : @pdflite.PdfPath = { winding_rule: PdfPathEvenOdd, subpaths: [] }
+  @test.assert_eq(@shape.pdf_path_bounds(path), path.bounds())
+  let empty : @shape.PdfPath = { winding_rule: PdfPathEvenOdd, subpaths: [] }
   assert_rectangle_for_shape_test(empty.bounds(), 0.0, 0.0, 0.0, 0.0)
 }
 
 ///|
 test "cpdfcontent path geometry transforms segments and paths" {
   let matrix = @pdflite.transform_translate(10.0, -2.0)
-  let segment : @pdflite.PdfPathSegment = PdfPathBezier(
+  let segment : @shape.PdfPathSegment = PdfPathBezier(
     @pdflite.point2(1.0, 2.0),
     @pdflite.point2(3.0, 4.0),
     @pdflite.point2(5.0, 6.0),
@@ -193,7 +193,7 @@ test "cpdfcontent path geometry transforms segments and paths" {
     }
     _ => fail("expected transformed bezier")
   }
-  let path : @pdflite.PdfPath = {
+  let path : @shape.PdfPath = {
     winding_rule: PdfPathEvenOdd,
     subpaths: [
       {
@@ -205,7 +205,7 @@ test "cpdfcontent path geometry transforms segments and paths" {
       },
     ],
   }
-  let transformed = @pdflite.pdf_path_transform(path, matrix)
+  let transformed = @shape.pdf_path_transform(path, matrix)
   @test.assert_eq(transformed.winding_rule, PdfPathEvenOdd)
   @test.assert_eq(transformed.subpaths[0].hole, PdfPathHole)
   @test.assert_eq(transformed.subpaths[0].closure, PdfPathClosed)
@@ -220,7 +220,7 @@ test "cpdfcontent path geometry transforms segments and paths" {
 
 ///|
 test "cpdfcontent path geometry emits content bounding box quads" {
-  let path : @pdflite.PdfPath = {
+  let path : @shape.PdfPath = {
     winding_rule: PdfPathEvenOdd,
     subpaths: [
       {
@@ -256,7 +256,7 @@ test "cpdfcontent path geometry emits content bounding box quads" {
   assert_content_bbox_for_shape_test(
     stroked, 0.0, 3.0, 0.0, 18.0, 8.0, 18.0, 8.0, 3.0,
   )
-  let empty : @pdflite.PdfPath = { winding_rule: PdfPathEvenOdd, subpaths: [] }
+  let empty : @shape.PdfPath = { winding_rule: PdfPathEvenOdd, subpaths: [] }
   @test.assert_eq(
     @pdflite.pdf_path_content_bounding_box(
       empty, @pdflite.transform_identity_matrix, 1.0, false,
@@ -267,22 +267,22 @@ test "cpdfcontent path geometry emits content bounding box quads" {
 
 ///|
 test "cpdfcontent path geometry serializes drawn path content JSON" {
-  let straight : @pdflite.PdfPathSegment = PdfPathStraight(
+  let straight : @shape.PdfPathSegment = PdfPathStraight(
     @pdflite.point2(1.0, 2.0),
     @pdflite.point2(3.0, 4.0),
   )
-  let bezier : @pdflite.PdfPathSegment = PdfPathBezier(
+  let bezier : @shape.PdfPathSegment = PdfPathBezier(
     @pdflite.point2(5.0, 6.0),
     @pdflite.point2(7.0, 8.0),
     @pdflite.point2(9.0, 10.0),
     @pdflite.point2(11.0, 12.0),
   )
-  let subpath : @pdflite.PdfPathSubpath = {
+  let subpath : @shape.PdfPathSubpath = {
     hole: PdfPathHole,
     closure: PdfPathClosed,
     segments: [straight, bezier],
   }
-  let drawn : @pdflite.PdfDrawnPath = {
+  let drawn : @shape.PdfDrawnPath = {
     stroked: true,
     filled: false,
     path: { winding_rule: PdfPathEvenOdd, subpaths: [subpath] },
@@ -290,10 +290,7 @@ test "cpdfcontent path geometry serializes drawn path content JSON" {
   let segment_json : Json = {
     "line": [{ "x": 1.0, "y": 2.0 }, { "x": 3.0, "y": 4.0 }],
   }
-  @test.assert_eq(
-    @pdflite.pdf_path_segment_content_json(straight),
-    segment_json,
-  )
+  @test.assert_eq(@shape.pdf_path_segment_content_json(straight), segment_json)
   let subpath_json : Json = {
     "closed": true,
     "segments": [
@@ -309,7 +306,7 @@ test "cpdfcontent path geometry serializes drawn path content JSON" {
     ],
   }
   @test.assert_eq(subpath.content_json(), subpath_json)
-  @test.assert_eq(@pdflite.pdf_path_subpath_content_json(subpath), subpath_json)
+  @test.assert_eq(@shape.pdf_path_subpath_content_json(subpath), subpath_json)
   let expected : Json = {
     "winding": "even-odd",
     "subpaths": [subpath_json],
@@ -317,5 +314,5 @@ test "cpdfcontent path geometry serializes drawn path content JSON" {
     "filled": false,
   }
   @test.assert_eq(drawn.content_json(), expected)
-  @test.assert_eq(@pdflite.pdf_drawn_path_content_json(drawn), expected)
+  @test.assert_eq(@shape.pdf_drawn_path_content_json(drawn), expected)
 }

@@ -1,7 +1,7 @@
 ///|
 fn PdfContentOperatorState::content_with_clipping_path(
   self : PdfContentOperatorState,
-  clipping_path : ArrayView[PdfPath],
+  clipping_path : ArrayView[@shape.PdfPath],
 ) -> PdfContentOperatorState {
   let paths = pdf_content_state_copy_paths(clipping_path)
   {

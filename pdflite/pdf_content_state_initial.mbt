@@ -5,7 +5,7 @@ pub fn pdf_content_initial_clipping_path(
   miny : Double,
   maxx : Double,
   maxy : Double,
-) -> Array[PdfPath] {
+) -> Array[@shape.PdfPath] {
   [
     {
       winding_rule: PdfPathEvenOdd,
@@ -27,7 +27,7 @@ pub fn pdf_content_initial_clipping_path(
 
 ///|
 /// Return cpdfcontent's initial drawn-path placeholder.
-pub fn pdf_content_initial_drawn_path() -> PdfDrawnPath {
+pub fn pdf_content_initial_drawn_path() -> @shape.PdfDrawnPath {
   {
     stroked: false,
     filled: false,

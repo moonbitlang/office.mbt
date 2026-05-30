@@ -16,7 +16,7 @@ pub(all) struct PdfContentDashPattern {
 ///|
 /// Path drawing state exported by cpdfcontent's JSON view.
 pub(all) struct PdfContentPathState {
-  clipping_path : Array[PdfPath]
+  clipping_path : Array[@shape.PdfPath]
   colourspace_stroke : PdfColourSpace
   colourspace_non_stroke : PdfColourSpace
   colour_stroke : PdfContentColourValues
@@ -31,7 +31,7 @@ pub(all) struct PdfContentPathState {
 ///|
 /// Clipping-only state exported for inline images, images, and shadings.
 pub(all) struct PdfContentClippingState {
-  clipping_path : Array[PdfPath]
+  clipping_path : Array[@shape.PdfPath]
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -41,7 +41,7 @@ pub(all) struct PdfContentGlyphState {
   knockout : Bool
   font : String
   font_size : Double
-  clipping_path : Array[PdfPath]
+  clipping_path : Array[@shape.PdfPath]
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -50,7 +50,7 @@ pub(all) enum PdfContentObject {
   PdfContentGlyphObject(Int, String, String)
   PdfContentInlineImageObject
   PdfContentImageObject(String)
-  PdfContentPathObject(PdfDrawnPath)
+  PdfContentPathObject(@shape.PdfDrawnPath)
   PdfContentShadingObject(String)
 } derive(Debug, Eq, ToJson)
 

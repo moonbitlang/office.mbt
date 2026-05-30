@@ -4,8 +4,8 @@
 pub(all) struct PdfContentOperatorFrame {
   ctm : TransformMatrix
   partial_path : @path.PdfContentPartialPath
-  clipping_path : Array[PdfPath]
-  path : PdfDrawnPath
+  clipping_path : Array[@shape.PdfPath]
+  path : @shape.PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
   miter_limit : Double
@@ -38,8 +38,8 @@ pub(all) struct PdfContentOperatorFrame {
 pub(all) struct PdfContentOperatorState {
   ctm : TransformMatrix
   partial_path : @path.PdfContentPartialPath
-  clipping_path : Array[PdfPath]
-  path : PdfDrawnPath
+  clipping_path : Array[@shape.PdfPath]
+  path : @shape.PdfDrawnPath
   path_state : PdfContentPathState
   text_state : PdfContentTextState
   miter_limit : Double

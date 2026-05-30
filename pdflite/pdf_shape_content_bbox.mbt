@@ -37,7 +37,7 @@ fn pdf_path_stroke_expand_bounds(
 /// `stroking` is true, the transformed line-width vector expands the box by
 /// half its absolute x/y displacement, matching `emit_path_bounding_box`.
 pub fn pdf_path_content_bounding_box(
-  path : PdfPath,
+  path : @shape.PdfPath,
   ctm : TransformMatrix,
   line_width : Double,
   stroking : Bool,

@@ -85,7 +85,7 @@ pub fn PdfDrawControl::add_circle(
   let values = pdf_draw_control_expect_floats(
     text, 3, "-circle requires three numbers", "malformed -circle",
   )
-  let path = pdf_shape_circle(values[0], values[1], values[2])
+  let path = @shape.pdf_shape_circle(values[0], values[1], values[2])
   match path.subpaths {
     [{ segments: [PdfPathBezier(start, _, _, _), ..] as segments, .. }, ..] => {
       self.add_op(PdfDrawTo(start.x, start.y))

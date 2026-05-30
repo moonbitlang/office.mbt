@@ -77,11 +77,17 @@ pub fn pdf_content_dash_pattern_content_json(
 }
 
 ///|
-fn pdf_content_clipping_path_content_json(paths : ArrayView[PdfPath]) -> Json {
+fn pdf_content_clipping_path_content_json(
+  paths : ArrayView[@shape.PdfPath],
+) -> Json {
   Json::array(
     [
       for path in paths => {
-        let drawn : PdfDrawnPath = { stroked: false, filled: false, path }
+        let drawn : @shape.PdfDrawnPath = {
+          stroked: false,
+          filled: false,
+          path,
+        }
         drawn.content_json()
       }
     ],

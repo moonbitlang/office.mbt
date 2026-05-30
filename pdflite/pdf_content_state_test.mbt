@@ -9,7 +9,7 @@ fn content_state_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn content_state_clipping_path_for_test() -> @pdflite.PdfPath {
+fn content_state_clipping_path_for_test() -> @shape.PdfPath {
   {
     winding_rule: PdfPathNonZero,
     subpaths: [
@@ -314,7 +314,7 @@ test "cpdfcontent state serializes glyph and clipping-only state JSON" {
 
 ///|
 test "cpdfcontent state serializes content object JSON" {
-  let drawn : @pdflite.PdfDrawnPath = {
+  let drawn : @shape.PdfDrawnPath = {
     stroked: true,
     filled: false,
     path: content_state_clipping_path_for_test(),
