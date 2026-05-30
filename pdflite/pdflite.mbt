@@ -240,17 +240,6 @@ pub using @content {
 }
 
 ///|
-pub using @path {
-  type PdfContentClippingOpResult,
-  type PdfContentPartialPath,
-  type PdfContentPartialPathState,
-  type PdfContentPathOpResult,
-  pdf_content_no_partial_path,
-  pdf_content_apply_path_op,
-  pdf_content_apply_clipping_op,
-}
-
-///|
 pub using @metadata {
   pdf_adobe,
   pdf_dc,

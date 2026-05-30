@@ -3,7 +3,7 @@
 /// operators while walking a content stream.
 pub(all) struct PdfContentOperatorFrame {
   ctm : TransformMatrix
-  partial_path : PdfContentPartialPath
+  partial_path : @path.PdfContentPartialPath
   clipping_path : Array[PdfPath]
   path : PdfDrawnPath
   path_state : PdfContentPathState
@@ -37,7 +37,7 @@ pub(all) struct PdfContentOperatorFrame {
 /// metrics, and the saved graphics-state stack.
 pub(all) struct PdfContentOperatorState {
   ctm : TransformMatrix
-  partial_path : PdfContentPartialPath
+  partial_path : @path.PdfContentPartialPath
   clipping_path : Array[PdfPath]
   path : PdfDrawnPath
   path_state : PdfContentPathState
@@ -246,7 +246,7 @@ pub fn pdf_content_initial_operator_state(
   let clipping_path = pdf_content_initial_clipping_path(minx, miny, maxx, maxy)
   {
     ctm: transform_identity_matrix,
-    partial_path: pdf_content_no_partial_path(),
+    partial_path: @path.pdf_content_no_partial_path(),
     clipping_path,
     path: pdf_content_initial_drawn_path(),
     path_state: pdf_content_initial_path_state(minx, miny, maxx, maxy),

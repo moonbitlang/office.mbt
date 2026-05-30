@@ -474,8 +474,6 @@ pub fn pdf_contains_javascript(PdfDocument) -> Bool
 
 pub fn pdf_content_add_artifacts(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
 
-pub fn pdf_content_apply_clipping_op(@path.PdfContentPartialPath, ArrayView[@shape.PdfPath], @content.PdfContentOp) -> @path.PdfContentClippingOpResult
-
 pub fn pdf_content_apply_core_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
 
 pub fn pdf_content_apply_extgstate_alpha_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
@@ -507,8 +505,6 @@ pub fn pdf_content_apply_graphics_parameter_op(PdfContentOperatorState, @content
 pub fn pdf_content_apply_graphics_state_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
 
 pub fn pdf_content_apply_marked_content_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
-
-pub fn pdf_content_apply_path_op(@path.PdfContentPartialPath, @content.PdfContentOp) -> @path.PdfContentPathOpResult
 
 pub fn pdf_content_apply_path_state_op(PdfContentPathState, @content.PdfContentOp) -> PdfContentPathState
 
@@ -601,8 +597,6 @@ pub fn pdf_content_json_entry_content_json(PdfContentJsonEntry) -> Json
 pub fn pdf_content_json_of_ops(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
 
 pub fn pdf_content_json_of_page(PdfDocument, @page.PdfPage) -> Json raise @core.PdfError
-
-pub fn pdf_content_no_partial_path() -> @path.PdfContentPartialPath
 
 pub fn pdf_content_object_content_json(PdfContentObject) -> Json
 
@@ -3623,17 +3617,9 @@ pub using @reader {type PdfClassicXRefEntry}
 
 pub using @reader {type PdfClassicXRefIndex}
 
-pub using @path {type PdfContentClippingOpResult}
-
 pub using @colour {type PdfContentColour}
 
 pub using @content {type PdfContentOp}
-
-pub using @path {type PdfContentPartialPath}
-
-pub using @path {type PdfContentPartialPathState}
-
-pub using @path {type PdfContentPathOpResult}
 
 pub using @geometry {type PdfCoordRectangle}
 

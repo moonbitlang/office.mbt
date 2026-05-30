@@ -1,8 +1,8 @@
 ///|
 fn content_path_apply_for_test(
   ops : ArrayView[@pdflite.PdfContentOp],
-) -> @pdflite.PdfContentPathOpResult {
-  let mut result : @pdflite.PdfContentPathOpResult = {
+) -> @path.PdfContentPathOpResult {
+  let mut result : @path.PdfContentPathOpResult = {
     partial_path: PdfContentNoPartialPath,
     drawn_path: None,
   }
@@ -60,10 +60,10 @@ test "cpdfcontent path machine splits move-to subpaths before stroke" {
 
 ///|
 test "cpdfcontent path machine closes fill paths and wrapper matches method" {
-  let partial = @pdflite.pdf_content_no_partial_path().content_apply_path_op(
+  let partial = @path.pdf_content_no_partial_path().content_apply_path_op(
       Op_m(0.0, 0.0),
     ).partial_path.content_apply_path_op(Op_l(1.0, 0.0)).partial_path
-  let result = @pdflite.pdf_content_apply_path_op(partial, Op_f)
+  let result = @path.pdf_content_apply_path_op(partial, Op_f)
   guard result.drawn_path is Some(drawn) else { fail("expected filled path") }
   @test.assert_eq(drawn.stroked, false)
   @test.assert_eq(drawn.filled, true)
@@ -171,7 +171,7 @@ test "cpdfcontent path machine expands rectangle operator before painting" {
 ///|
 test "cpdfcontent clipping op closes current segments and preserves path" {
   let partial = content_path_apply_for_test([Op_m(0.0, 0.0), Op_l(1.0, 0.0)]).partial_path
-  let result = @pdflite.pdf_content_apply_clipping_op(partial, [], Op_W)
+  let result = @path.pdf_content_apply_clipping_op(partial, [], Op_W)
   @test.assert_eq(result.clipping_path.length(), 1)
   let clipping = result.clipping_path[0]
   @test.assert_eq(clipping.winding_rule, PdfPathNonZero)
