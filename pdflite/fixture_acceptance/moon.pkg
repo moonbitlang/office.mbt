@@ -3,6 +3,7 @@ import {
   "bobzhang/pdflite/composition",
   "bobzhang/pdflite/content",
   "bobzhang/pdflite/metadata",
+  "bobzhang/pdflite/portfolio",
   "bobzhang/pdflite/syntax",
   "moonbitlang/async",
   "moonbitlang/async/fs",

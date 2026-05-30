@@ -1444,8 +1444,6 @@ pub fn pdf_pop(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_portfolio(PdfDocument, ArrayView[@portfolio.PdfPortfolioEntry], mod_date? : Bytes?) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_portfolio_entry(String, BytesView, relationship? : String?, description? : String?) -> @portfolio.PdfPortfolioEntry
-
 pub fn pdf_postpend_operators(PdfDocument, ArrayView[@content.PdfContentOp], @page.PdfPage, fast? : Bool) -> @page.PdfPage raise @core.PdfError
 
 pub fn pdf_prepend_operators(PdfDocument, ArrayView[@content.PdfContentOp], @page.PdfPage, fast? : Bool) -> @page.PdfPage raise @core.PdfError
@@ -3828,8 +3826,6 @@ pub using @shape {type PdfPathSubpath}
 pub using @shape {type PdfPathWindingRule}
 
 pub using @crypt_core {type PdfPermission}
-
-pub using @portfolio {type PdfPortfolioEntry}
 
 pub using @geometry {type PdfPosition}
 

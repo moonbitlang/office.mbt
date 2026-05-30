@@ -1,6 +1,6 @@
 ///|
 fn pdf_portfolio_stream(
-  entry : PdfPortfolioEntry,
+  entry : @portfolio.PdfPortfolioEntry,
   mod_date : PdfBytes,
 ) -> PdfObject {
   pdf_stream(
@@ -21,7 +21,7 @@ fn pdf_portfolio_stream(
 ///|
 fn PdfDocument::pdf_portfolio_file_spec(
   self : PdfDocument,
-  entry : PdfPortfolioEntry,
+  entry : @portfolio.PdfPortfolioEntry,
   mod_date : PdfBytes,
 ) -> PdfObject {
   let basename = pdf_portfolio_basename(entry.filename)
@@ -52,7 +52,7 @@ fn PdfDocument::pdf_portfolio_file_spec(
 ///|
 fn PdfDocument::pdf_portfolio_name_tree_entries(
   self : PdfDocument,
-  entries : ArrayView[PdfPortfolioEntry],
+  entries : ArrayView[@portfolio.PdfPortfolioEntry],
   mod_date : PdfBytes,
 ) -> Array[(PdfBytes, PdfObject)] {
   [

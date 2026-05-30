@@ -18,10 +18,10 @@ pub async fn pdf_portfolio_from_files(
   entries : ArrayView[PdfPortfolioFileEntry],
   mod_date? : @pdflite.PdfBytes? = None,
 ) -> @pdflite.PdfDocument {
-  let loaded : Array[@pdflite.PdfPortfolioEntry] = []
+  let loaded : Array[@portfolio.PdfPortfolioEntry] = []
   for entry in entries {
     loaded.push(
-      @pdflite.pdf_portfolio_entry(
+      @portfolio.pdf_portfolio_entry(
         entry.filename,
         @fs.read_file(entry.filename).binary(),
         relationship=entry.relationship,

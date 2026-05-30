@@ -1265,13 +1265,13 @@ async test "optional cpdf source hello fixture builds portfolio from real payloa
       let document = @pdflite.pdf_read_document_from_bytes(pdf_bytes)
       let portfolio = document.portfolio(
         [
-          @pdflite.pdf_portfolio_entry(
+          @portfolio.pdf_portfolio_entry(
             ".repos/cpdf-source/README.md",
             readme_payload,
             relationship=Some("Source"),
             description=Some("cpdf source README"),
           ),
-          @pdflite.pdf_portfolio_entry(
+          @portfolio.pdf_portfolio_entry(
             ".repos/cpdf-source/Changes.txt", changes_payload,
           ),
         ],

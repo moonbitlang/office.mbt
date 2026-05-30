@@ -114,13 +114,13 @@ test "PdfDocument portfolio builds embedded files name tree" {
   let second_payload = @ascii.encode("second payload")
   let document = try! portfolio_blank_doc_for_test().portfolio(
     [
-      @pdflite.pdf_portfolio_entry(
+      @portfolio.pdf_portfolio_entry(
         "fixtures/report.txt",
         first_payload,
         relationship=Some("Data"),
         description=Some("Annual report"),
       ),
-      @pdflite.pdf_portfolio_entry("more/report.txt", second_payload),
+      @portfolio.pdf_portfolio_entry("more/report.txt", second_payload),
     ],
     mod_date=Some(mod_date),
   )
@@ -170,7 +170,7 @@ test "PdfDocument portfolio preserves other root name trees" {
     javascript_tree,
   )
   let document = try! original.portfolio(
-    [@pdflite.pdf_portfolio_entry("attached.txt", @ascii.encode("attached"))],
+    [@portfolio.pdf_portfolio_entry("attached.txt", @ascii.encode("attached"))],
     mod_date=Some(@ascii.encode("D:20240102030405")),
   )
   let catalog = portfolio_catalog_for_test(document)
@@ -205,7 +205,7 @@ test "PdfDocument portfolio handles empty entries" {
 ///|
 test "PdfDocument portfolio rejects documents without a catalog" {
   let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_empty().portfolio(
-    [@pdflite.pdf_portfolio_entry("file.txt", @ascii.encode("payload"))],
+    [@portfolio.pdf_portfolio_entry("file.txt", @ascii.encode("payload"))],
     mod_date=Some(@ascii.encode("D:20240102030405")),
   )
   guard result is Err(_) else {

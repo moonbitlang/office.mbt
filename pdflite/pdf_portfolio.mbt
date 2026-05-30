@@ -5,7 +5,7 @@
 /// deterministic output; otherwise the current cpdf-style date is used.
 pub fn PdfDocument::portfolio(
   self : PdfDocument,
-  entries : ArrayView[PdfPortfolioEntry],
+  entries : ArrayView[@portfolio.PdfPortfolioEntry],
   mod_date? : PdfBytes? = None,
 ) -> PdfDocument raise PdfError {
   ignore(self.catalog())
@@ -40,7 +40,7 @@ pub fn PdfDocument::portfolio(
 /// Compatibility wrapper for `PdfDocument::portfolio`.
 pub fn pdf_portfolio(
   document : PdfDocument,
-  entries : ArrayView[PdfPortfolioEntry],
+  entries : ArrayView[@portfolio.PdfPortfolioEntry],
   mod_date? : PdfBytes? = None,
 ) -> PdfDocument raise PdfError {
   document.portfolio(entries, mod_date~)

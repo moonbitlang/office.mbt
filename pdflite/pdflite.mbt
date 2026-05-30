@@ -336,9 +336,6 @@ pub using @bookmark {
 }
 
 ///|
-pub using @portfolio {type PdfPortfolioEntry, pdf_portfolio_entry}
-
-///|
 pub using @ocg {
   type PdfOcg,
   type PdfOcgAppDict,

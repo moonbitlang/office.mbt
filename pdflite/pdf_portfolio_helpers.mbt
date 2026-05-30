@@ -25,7 +25,7 @@ fn pdf_portfolio_relationship_name(relationship : String?) -> PdfName {
 
 ///|
 fn pdf_portfolio_description(
-  entry : PdfPortfolioEntry,
+  entry : @portfolio.PdfPortfolioEntry,
   basename : String,
 ) -> String {
   match entry.description {
