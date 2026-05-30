@@ -10,7 +10,7 @@ pub fn PdfDocument::extract_images_files(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   stem : String,
-  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   inline? : Bool = false,
   dedup? : Bool = false,
   dedup_per_page? : Bool = false,
@@ -96,7 +96,7 @@ pub fn PdfDocument::extract_images_files(
 /// Compatibility wrapper for `PdfDocument::extract_images_files`.
 pub fn pdf_image_extract_images_files(
   inline : Bool,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   dedup : Bool,
   dedup_per_page : Bool,
   document : PdfDocument,

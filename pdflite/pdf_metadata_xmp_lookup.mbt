@@ -161,7 +161,7 @@ fn pdf_metadata_extract_rdf_list_items(
 ) -> String? {
   let items : Array[String] = []
   let prefixes = pdf_metadata_namespace_prefixes(
-    data, pdf_metadata_rdf_namespace, "rdf",
+    data, @metadata.pdf_metadata_rdf_namespace, "rdf",
   )
   for prefix in prefixes {
     for item in pdf_metadata_extract_rdf_list_items_for_prefix(value, prefix) {

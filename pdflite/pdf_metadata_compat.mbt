@@ -273,7 +273,7 @@ pub fn pdf_determine_subformats(
 /// Compatibility wrapper for `PdfDocument::info_json_blob`.
 pub fn pdf_output_info_json_blob(
   document : PdfDocument,
-  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   unit? : PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   document.info_json_blob(encoding~, unit~)
@@ -283,7 +283,7 @@ pub fn pdf_output_info_json_blob(
 /// Compatibility wrapper for `PdfDocument::info_blob`.
 pub fn pdf_output_info(
   document : PdfDocument,
-  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   unit? : PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   document.info_blob(encoding~, unit~)
@@ -301,7 +301,7 @@ pub fn pdf_output_xmp_info_json_blob(
 /// Compatibility wrapper for `PdfDocument::xmp_info_blob`.
 pub fn pdf_output_xmp_info(
   document : PdfDocument,
-  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   unit? : PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   ignore(encoding)

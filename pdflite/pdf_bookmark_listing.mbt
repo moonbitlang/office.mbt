@@ -6,7 +6,7 @@
 pub fn PdfDocument::list_bookmarks(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   json? : Bool = false,
   json_preserve_actions? : Bool = false,
 ) -> PdfBytes raise PdfError {
@@ -66,7 +66,7 @@ pub fn PdfDocument::bookmarks_json_blob(
 pub fn pdf_list_bookmarks(
   json : Bool,
   json_preserve_actions : Bool,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   page_numbers : ArrayView[Int],
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {

@@ -5,7 +5,7 @@ fn PdfDocument::pdf_image_extract_named_images(
   images : ArrayView[PdfObject],
   stem : String,
   page_number : Int,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
 ) -> (Array[PdfExtractedImageFile], Array[String]) raise PdfError {
   let files : Array[PdfExtractedImageFile] = Array::new(
@@ -71,7 +71,7 @@ fn PdfDocument::pdf_image_extract_form_xobject_files(
   form : PdfObject,
   stem : String,
   page_number : Int,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   dedup : Bool,
   dedup_per_page : Bool,
   state : PdfImageExtractionRunState,
@@ -117,7 +117,7 @@ fn PdfDocument::pdf_image_extract_inline_image_files(
   content : ArrayView[PdfObject],
   stem : String,
   page_number : Int,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
 ) -> Array[PdfExtractedImageFile] raise PdfError {
   let ops = self.parse_content_ops_with_resources(resources, content)
@@ -165,7 +165,7 @@ fn PdfDocument::pdf_image_extract_inline_form_files(
   form : PdfObject,
   stem : String,
   page_number : Int,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
 ) -> Array[PdfExtractedImageFile] raise PdfError {
   self.pdf_image_extract_inline_image_files(
@@ -184,7 +184,7 @@ fn PdfDocument::pdf_image_extract_smask_files(
   image : PdfObject,
   stem : String,
   page_number : Int,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   state : PdfImageExtractionRunState,
 ) -> Array[PdfExtractedImageFile] raise PdfError {
   match self.direct(image) {

@@ -26,7 +26,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_06_002(
   match self.metadata() {
     Some(metadata) =>
       if pdf_ua_matterhorn_xmp_field_exists(
-          metadata, pdf_metadata_pdfuaid_namespace, "pdfuaid", "part",
+          metadata, @metadata.pdf_metadata_pdfuaid_namespace, "pdfuaid", "part",
         ) {
         None
       } else {
@@ -43,7 +43,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_06_003(
   match self.metadata() {
     Some(metadata) =>
       if pdf_ua_matterhorn_xmp_field_exists(
-          metadata, pdf_metadata_dc_namespace, "dc", "title",
+          metadata, @metadata.pdf_metadata_dc_namespace, "dc", "title",
         ) {
         None
       } else {

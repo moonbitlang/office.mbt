@@ -1,11 +1,13 @@
 ///|
-fn pdf_metadata_xml_string_of_name(name : PdfMetadataXmlName) -> String {
+fn pdf_metadata_xml_string_of_name(
+  name : @metadata.PdfMetadataXmlName,
+) -> String {
   "NAME |" + name.uri + "| |" + name.local_name + "|"
 }
 
 ///|
 fn pdf_metadata_xml_string_of_attribute(
-  attribute : PdfMetadataXmlAttribute,
+  attribute : @metadata.PdfMetadataXmlAttribute,
 ) -> String {
   "ATTRNAME |" +
   attribute.name.uri +
@@ -18,7 +20,7 @@ fn pdf_metadata_xml_string_of_attribute(
 
 ///|
 fn pdf_metadata_xml_string_of_attributes(
-  attributes : ArrayView[PdfMetadataXmlAttribute],
+  attributes : ArrayView[@metadata.PdfMetadataXmlAttribute],
 ) -> String {
   let mut output = ""
   for attribute in attributes {
@@ -29,7 +31,7 @@ fn pdf_metadata_xml_string_of_attributes(
 
 ///|
 fn pdf_metadata_xml_string_of_trees(
-  trees : ArrayView[PdfMetadataXmlTree],
+  trees : ArrayView[@metadata.PdfMetadataXmlTree],
 ) -> String {
   let mut output = ""
   for tree in trees {
@@ -40,7 +42,9 @@ fn pdf_metadata_xml_string_of_trees(
 
 ///|
 /// Return cpdfmetadata's debug string representation for an XML tree.
-pub fn pdf_metadata_string_of_xmltree(tree : PdfMetadataXmlTree) -> String {
+pub fn pdf_metadata_string_of_xmltree(
+  tree : @metadata.PdfMetadataXmlTree,
+) -> String {
   match tree {
     PdfMetadataXmlData(data) => "D {" + data + "}"
     PdfMetadataXmlElement(tag, children) =>
@@ -56,15 +60,17 @@ pub fn pdf_metadata_string_of_xmltree(tree : PdfMetadataXmlTree) -> String {
 
 ///|
 /// Source-spelled compatibility alias for cpdfmetadata's `string_of_xmltree`.
-pub fn pdf_string_of_xmltree(tree : PdfMetadataXmlTree) -> String {
+pub fn pdf_string_of_xmltree(tree : @metadata.PdfMetadataXmlTree) -> String {
   pdf_metadata_string_of_xmltree(tree)
 }
 
 ///|
-fn pdf_metadata_xml_collect_list_items(tree : PdfMetadataXmlTree) -> String {
+fn pdf_metadata_xml_collect_list_items(
+  tree : @metadata.PdfMetadataXmlTree,
+) -> String {
   match tree {
     PdfMetadataXmlElement(tag, children) =>
-      if tag.name.uri == pdf_metadata_rdf_namespace &&
+      if tag.name.uri == @metadata.pdf_metadata_rdf_namespace &&
         (
           tag.name.local_name == "Alt" ||
           tag.name.local_name == "Seq" ||
@@ -74,7 +80,7 @@ fn pdf_metadata_xml_collect_list_items(tree : PdfMetadataXmlTree) -> String {
         for child in children {
           match child {
             PdfMetadataXmlElement(li_tag, [PdfMetadataXmlData(data)]) =>
-              if li_tag.name.uri == pdf_metadata_rdf_namespace &&
+              if li_tag.name.uri == @metadata.pdf_metadata_rdf_namespace &&
                 li_tag.name.local_name == "li" {
                 values.push(data)
               }
@@ -91,7 +97,7 @@ fn pdf_metadata_xml_collect_list_items(tree : PdfMetadataXmlTree) -> String {
 
 ///|
 fn pdf_metadata_xml_collect_list_items_all(
-  trees : ArrayView[PdfMetadataXmlTree],
+  trees : ArrayView[@metadata.PdfMetadataXmlTree],
 ) -> String? {
   for tree in trees {
     match tree {
@@ -108,7 +114,7 @@ fn pdf_metadata_xml_collect_list_items_all(
 fn pdf_metadata_xmltree_attribute_data_for(
   uri : String,
   name : String,
-  attributes : ArrayView[PdfMetadataXmlAttribute],
+  attributes : ArrayView[@metadata.PdfMetadataXmlAttribute],
 ) -> String? {
   for attribute in attributes {
     if attribute.name.uri == uri && attribute.name.local_name == name {
@@ -125,7 +131,7 @@ fn pdf_metadata_xmltree_attribute_data_for(
 pub fn pdf_metadata_xmltree_get_data_for(
   xml_uri : String,
   name : String,
-  tree : PdfMetadataXmlTree,
+  tree : @metadata.PdfMetadataXmlTree,
 ) -> String? {
   match tree {
     PdfMetadataXmlData(_) => None
@@ -155,7 +161,7 @@ pub fn pdf_metadata_xmltree_get_data_for(
 pub fn pdf_get_data_for(
   xml_uri : String,
   name : String,
-  tree : PdfMetadataXmlTree,
+  tree : @metadata.PdfMetadataXmlTree,
 ) -> String? {
   pdf_metadata_xmltree_get_data_for(xml_uri, name, tree)
 }
@@ -176,7 +182,9 @@ fn pdf_metadata_xml_escaped_attribute(text : String) -> String {
 }
 
 ///|
-fn pdf_metadata_xml_qualified_name(name : PdfMetadataXmlName) -> String {
+fn pdf_metadata_xml_qualified_name(
+  name : @metadata.PdfMetadataXmlName,
+) -> String {
   match name.prefix {
     Some(prefix) if prefix != "" => prefix + ":" + name.local_name
     _ => name.local_name
@@ -186,7 +194,7 @@ fn pdf_metadata_xml_qualified_name(name : PdfMetadataXmlName) -> String {
 ///|
 fn pdf_metadata_xmltree_push_bytes(
   output : Array[String],
-  tree : PdfMetadataXmlTree,
+  tree : @metadata.PdfMetadataXmlTree,
 ) -> Unit {
   match tree {
     PdfMetadataXmlData(data) => output.push(pdf_metadata_xml_escaped_text(data))
@@ -220,7 +228,7 @@ fn pdf_metadata_xmltree_push_bytes(
 ///
 /// Like cpdfmetadata's `bytes_of_xmltree`, this omits an XML declaration.
 pub fn pdf_metadata_bytes_of_xmltree(
-  document : PdfMetadataXmlDocument,
+  document : @metadata.PdfMetadataXmlDocument,
 ) -> PdfBytes {
   let output : Array[String] = []
   match document.dtd {
@@ -233,6 +241,8 @@ pub fn pdf_metadata_bytes_of_xmltree(
 
 ///|
 /// Source-spelled compatibility alias for cpdfmetadata's `bytes_of_xmltree`.
-pub fn pdf_bytes_of_xmltree(document : PdfMetadataXmlDocument) -> PdfBytes {
+pub fn pdf_bytes_of_xmltree(
+  document : @metadata.PdfMetadataXmlDocument,
+) -> PdfBytes {
   pdf_metadata_bytes_of_xmltree(document)
 }

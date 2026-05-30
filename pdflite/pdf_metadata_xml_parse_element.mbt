@@ -3,14 +3,14 @@ fn pdf_metadata_xml_parse_element(
   data : BytesView,
   start : Int,
   context : ArrayView[(String, String)],
-) -> (PdfMetadataXmlTree, Int) raise PdfError {
+) -> (@metadata.PdfMetadataXmlTree, Int) raise PdfError {
   let (qualified_name, tag, child_context, self_closing, after_tag) = pdf_metadata_xml_parse_start_tag(
     data, start, context,
   )
   if self_closing {
     (PdfMetadataXmlElement(tag, []), after_tag)
   } else {
-    let children : Array[PdfMetadataXmlTree] = []
+    let children : Array[@metadata.PdfMetadataXmlTree] = []
     let mut index = after_tag
     let mut closed = false
     while !closed {

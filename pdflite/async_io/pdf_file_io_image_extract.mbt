@@ -62,7 +62,7 @@ pub async fn pdf_extract_single_image_to_files(
 /// Compatibility wrapper matching cpdfimage's `extract_single_image`.
 pub async fn pdf_extract_single_image(
   merge_masks : Bool,
-  encoding : @pdflite.PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   document : @pdflite.PdfDocument,
   object_number : Int,
   stem : StringView,
@@ -96,7 +96,7 @@ pub async fn pdf_extract_images_to_files(
   document : @pdflite.PdfDocument,
   page_numbers : ArrayView[Int],
   stem : StringView,
-  encoding? : @pdflite.PdfMetadataEncoding = PdfMetadataUTF8,
+  encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
   inline? : Bool = false,
   dedup? : Bool = false,
   dedup_per_page? : Bool = false,
@@ -133,7 +133,7 @@ pub async fn pdf_extract_images_to_files(
 pub async fn pdf_extract_images(
   merge_masks : Bool,
   inline : Bool,
-  encoding : @pdflite.PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   dedup : Bool,
   dedup_per_page : Bool,
   document : @pdflite.PdfDocument,

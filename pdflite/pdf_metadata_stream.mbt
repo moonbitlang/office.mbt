@@ -44,7 +44,7 @@ pub fn PdfDocument::set_metadata_date(
         date
       }
       let updated = pdf_metadata_rewrite_xmp_field(
-        metadata, pdf_metadata_xmp_namespace, "xmp", "MetadataDate", value,
+        metadata, @metadata.pdf_metadata_xmp_namespace, "xmp", "MetadataDate", value,
       )
       self.set_metadata_from_bytes(updated, keep_version=true)
     }

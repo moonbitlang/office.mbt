@@ -7,7 +7,7 @@
 /// entities.
 pub fn pdf_metadata_xmltree_of_bytes(
   metadata : BytesView,
-) -> PdfMetadataXmlDocument raise PdfError {
+) -> @metadata.PdfMetadataXmlDocument raise PdfError {
   let (dtd, after_dtd) = pdf_metadata_xml_parse_dtd(metadata, 0)
   let root_start = pdf_metadata_xml_skip_misc(metadata, after_dtd)
   guard root_start < metadata.length() && metadata[root_start].to_int() == 60 else {
@@ -27,6 +27,6 @@ pub fn pdf_metadata_xmltree_of_bytes(
 /// Source-spelled compatibility alias for cpdfmetadata's `xmltree_of_bytes`.
 pub fn pdf_xmltree_of_bytes(
   metadata : BytesView,
-) -> PdfMetadataXmlDocument raise PdfError {
+) -> @metadata.PdfMetadataXmlDocument raise PdfError {
   pdf_metadata_xmltree_of_bytes(metadata)
 }

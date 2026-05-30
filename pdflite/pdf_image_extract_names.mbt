@@ -53,7 +53,7 @@ fn pdf_image_replace_percent_objnum(stem : String) -> String {
 ///|
 fn PdfDocument::pdf_image_extraction_name(
   self : PdfDocument,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   stem : String,
   page_number : Int,
   image : PdfObject,

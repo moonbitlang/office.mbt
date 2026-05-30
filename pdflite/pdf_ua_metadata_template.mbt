@@ -14,7 +14,7 @@ fn pdf_ua_metadata_length(subformat : PdfUASubformat, title : String) -> Int {
   pdf_ua_xml_escaped_utf8_length(title) +
   pdf_ua_ascii_length("</rdf:li></rdf:Alt></dc:title>\n</rdf:Description>\n") +
   pdf_ua_ascii_length("<rdf:Description rdf:about=\"\" xmlns:pdfuaid=\"") +
-  pdf_ua_ascii_length(pdf_metadata_pdfuaid_namespace) +
+  pdf_ua_ascii_length(@metadata.pdf_metadata_pdfuaid_namespace) +
   pdf_ua_ascii_length("\">\n") +
   pdf_ua_pdfua_marker_length(subformat) +
   pdf_ua_ascii_length(
@@ -51,7 +51,7 @@ fn pdf_ua_metadata_bytes(
     output, position, "<rdf:Description rdf:about=\"\" xmlns:pdfuaid=\"",
   )
   position = pdf_ua_write_ascii(
-    output, position, pdf_metadata_pdfuaid_namespace,
+    output, position, @metadata.pdf_metadata_pdfuaid_namespace,
   )
   position = pdf_ua_write_ascii(output, position, "\">\n")
   position = pdf_ua_write_pdfua_marker(output, position, subformat)

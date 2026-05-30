@@ -35,7 +35,7 @@ fn pdf_metadata_xml_parse_start_tag(
   data : BytesView,
   start : Int,
   context : ArrayView[(String, String)],
-) -> (String, PdfMetadataXmlTag, Array[(String, String)], Bool, Int) raise PdfError {
+) -> (String, @metadata.PdfMetadataXmlTag, Array[(String, String)], Bool, Int) raise PdfError {
   guard start < data.length() && data[start].to_int() == 60 else {
     raise BadText
   }

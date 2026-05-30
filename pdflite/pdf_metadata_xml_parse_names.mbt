@@ -65,7 +65,7 @@ fn pdf_metadata_xml_resolve_name(
   qname : BytesView,
   is_attribute : Bool,
   context : ArrayView[(String, String)],
-) -> PdfMetadataXmlName raise PdfError {
+) -> @metadata.PdfMetadataXmlName raise PdfError {
   let colon = pdf_metadata_find_byte(qname, 0, 58)
   if colon >= 0 {
     let prefix = pdf_metadata_xml_decode_name(qname[:colon])
@@ -159,8 +159,8 @@ fn pdf_metadata_xml_tag_from_raw(
   name : BytesView,
   attributes : ArrayView[(Bytes, String)],
   context : ArrayView[(String, String)],
-) -> PdfMetadataXmlTag raise PdfError {
-  let resolved_attributes : Array[PdfMetadataXmlAttribute] = []
+) -> @metadata.PdfMetadataXmlTag raise PdfError {
+  let resolved_attributes : Array[@metadata.PdfMetadataXmlAttribute] = []
   for attribute in attributes {
     resolved_attributes.push({
       name: pdf_metadata_xml_resolve_name(attribute.0, true, context),

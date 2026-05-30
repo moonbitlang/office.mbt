@@ -42,21 +42,21 @@ fn pdf_metadata_push_if_some(values : Array[String], value : String?) -> Unit {
 
 ///|
 fn pdf_metadata_namespace_fallback_prefix(xml_uri : String) -> String {
-  if xml_uri == pdf_metadata_adobe_namespace {
+  if xml_uri == @metadata.pdf_metadata_adobe_namespace {
     "pdf"
-  } else if xml_uri == pdf_metadata_xmp_namespace {
+  } else if xml_uri == @metadata.pdf_metadata_xmp_namespace {
     "xmp"
-  } else if xml_uri == pdf_metadata_dc_namespace {
+  } else if xml_uri == @metadata.pdf_metadata_dc_namespace {
     "dc"
-  } else if xml_uri == pdf_metadata_pdfuaid_namespace {
+  } else if xml_uri == @metadata.pdf_metadata_pdfuaid_namespace {
     "pdfuaid"
-  } else if xml_uri == pdf_metadata_pdfe_namespace {
+  } else if xml_uri == @metadata.pdf_metadata_pdfe_namespace {
     "pdfe"
-  } else if xml_uri == pdf_metadata_pdfaid_namespace {
+  } else if xml_uri == @metadata.pdf_metadata_pdfaid_namespace {
     "pdfaid"
-  } else if xml_uri == pdf_metadata_pdfxid_namespace {
+  } else if xml_uri == @metadata.pdf_metadata_pdfxid_namespace {
     "pdfxid"
-  } else if xml_uri == pdf_metadata_pdfvtid_namespace {
+  } else if xml_uri == @metadata.pdf_metadata_pdfvtid_namespace {
     "pdfvtid"
   } else {
     ""
@@ -74,35 +74,37 @@ fn pdf_metadata_xmp_info_fields(key : PdfName) -> Array[(String, String)]? {
   match pdf_metadata_name_with_slash(key) {
     Some("/Title") =>
       Some([
-        (pdf_metadata_adobe_namespace, "Title"),
-        (pdf_metadata_dc_namespace, "title"),
+        (@metadata.pdf_metadata_adobe_namespace, "Title"),
+        (@metadata.pdf_metadata_dc_namespace, "title"),
       ])
     Some("/Author") =>
       Some([
-        (pdf_metadata_adobe_namespace, "Author"),
-        (pdf_metadata_dc_namespace, "creator"),
+        (@metadata.pdf_metadata_adobe_namespace, "Author"),
+        (@metadata.pdf_metadata_dc_namespace, "creator"),
       ])
     Some("/Subject") =>
       Some([
-        (pdf_metadata_adobe_namespace, "Subject"),
-        (pdf_metadata_dc_namespace, "subject"),
+        (@metadata.pdf_metadata_adobe_namespace, "Subject"),
+        (@metadata.pdf_metadata_dc_namespace, "subject"),
       ])
-    Some("/Keywords") => Some([(pdf_metadata_adobe_namespace, "Keywords")])
+    Some("/Keywords") =>
+      Some([(@metadata.pdf_metadata_adobe_namespace, "Keywords")])
     Some("/Creator") =>
       Some([
-        (pdf_metadata_adobe_namespace, "Creator"),
-        (pdf_metadata_xmp_namespace, "CreatorTool"),
+        (@metadata.pdf_metadata_adobe_namespace, "Creator"),
+        (@metadata.pdf_metadata_xmp_namespace, "CreatorTool"),
       ])
-    Some("/Producer") => Some([(pdf_metadata_adobe_namespace, "Producer")])
+    Some("/Producer") =>
+      Some([(@metadata.pdf_metadata_adobe_namespace, "Producer")])
     Some("/CreationDate") =>
       Some([
-        (pdf_metadata_adobe_namespace, "CreationDate"),
-        (pdf_metadata_xmp_namespace, "CreateDate"),
+        (@metadata.pdf_metadata_adobe_namespace, "CreationDate"),
+        (@metadata.pdf_metadata_xmp_namespace, "CreateDate"),
       ])
     Some("/ModDate") =>
       Some([
-        (pdf_metadata_adobe_namespace, "ModificationDate"),
-        (pdf_metadata_xmp_namespace, "ModifyDate"),
+        (@metadata.pdf_metadata_adobe_namespace, "ModificationDate"),
+        (@metadata.pdf_metadata_xmp_namespace, "ModifyDate"),
       ])
     _ => None
   }
@@ -159,19 +161,19 @@ pub fn PdfDocument::determine_subformats(
       pdf_metadata_push_if_some(
         formats,
         pdf_metadata_get_xmp_data(
-          metadata, pdf_metadata_pdfe_namespace, "pdfe", "ISO_PDFEVersion",
+          metadata, @metadata.pdf_metadata_pdfe_namespace, "pdfe", "ISO_PDFEVersion",
         ),
       )
       match
         pdf_metadata_get_xmp_data(
-          metadata, pdf_metadata_pdfuaid_namespace, "pdfuaid", "part",
+          metadata, @metadata.pdf_metadata_pdfuaid_namespace, "pdfuaid", "part",
         ) {
         Some(part) if part != "" => formats.push("PDF/UA-" + part)
         _ => ()
       }
       let pdfa_part = match
         pdf_metadata_get_xmp_data(
-          metadata, pdf_metadata_pdfaid_namespace, "pdfaid", "part",
+          metadata, @metadata.pdf_metadata_pdfaid_namespace, "pdfaid", "part",
         ) {
         Some(part) => Some(part)
         None =>
@@ -190,7 +192,7 @@ pub fn PdfDocument::determine_subformats(
         Some(part) if part != "" => {
           let conformance = match
             pdf_metadata_get_xmp_data(
-              metadata, pdf_metadata_pdfaid_namespace, "pdfaid", "conformance",
+              metadata, @metadata.pdf_metadata_pdfaid_namespace, "pdfaid", "conformance",
             ) {
             Some(value) => value.to_lower()
             None =>
@@ -217,7 +219,7 @@ pub fn PdfDocument::determine_subformats(
       }
       match
         pdf_metadata_get_xmp_data(
-          metadata, pdf_metadata_pdfxid_namespace, "pdfxid", "GTS_PDFXVersion",
+          metadata, @metadata.pdf_metadata_pdfxid_namespace, "pdfxid", "GTS_PDFXVersion",
         ) {
         Some(value) if value != "" => formats.push(value)
         _ =>
@@ -226,7 +228,7 @@ pub fn PdfDocument::determine_subformats(
       pdf_metadata_push_if_some(
         formats,
         pdf_metadata_get_xmp_data(
-          metadata, pdf_metadata_pdfvtid_namespace, "pdfvtid", "GTS_PDFVTVersion",
+          metadata, @metadata.pdf_metadata_pdfvtid_namespace, "pdfvtid", "GTS_PDFVTVersion",
         ),
       )
     }

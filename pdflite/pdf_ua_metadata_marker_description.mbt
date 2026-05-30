@@ -20,7 +20,7 @@ fn pdf_ua_marker_description_length(
   pdf_ua_ascii_length(rdf_about) +
   pdf_ua_ascii_length("=\"\" ") +
   pdf_ua_ascii_length("xmlns:pdfuaid=\"") +
-  pdf_ua_ascii_length(pdf_metadata_pdfuaid_namespace) +
+  pdf_ua_ascii_length(@metadata.pdf_metadata_pdfuaid_namespace) +
   pdf_ua_ascii_length("\">\n") +
   pdf_ua_pdfua_marker_part_length(part, revision) +
   pdf_ua_ascii_length("</") +
@@ -47,7 +47,7 @@ fn pdf_ua_marker_description_bytes(
   position = pdf_ua_write_ascii(output, position, "=\"\" ")
   position = pdf_ua_write_ascii(output, position, "xmlns:pdfuaid=\"")
   position = pdf_ua_write_ascii(
-    output, position, pdf_metadata_pdfuaid_namespace,
+    output, position, @metadata.pdf_metadata_pdfuaid_namespace,
   )
   position = pdf_ua_write_ascii(output, position, "\">\n")
   position = pdf_ua_write_pdfua_marker_part(output, position, part, revision)

@@ -32,63 +32,63 @@ fn pdf_metadata_info_xmp_changes(
   match pdf_metadata_name_with_slash(key) {
     Some("/Producer") =>
       (
-        [(pdf_metadata_adobe_namespace, "Producer")],
+        [(@metadata.pdf_metadata_adobe_namespace, "Producer")],
         pdf_metadata_xml_value_of_object(value),
       )
     Some("/Creator") =>
       (
         [
-          (pdf_metadata_adobe_namespace, "Creator"),
-          (pdf_metadata_xmp_namespace, "CreatorTool"),
-          (pdf_metadata_dc_namespace, "creator"),
+          (@metadata.pdf_metadata_adobe_namespace, "Creator"),
+          (@metadata.pdf_metadata_xmp_namespace, "CreatorTool"),
+          (@metadata.pdf_metadata_dc_namespace, "creator"),
         ],
         pdf_metadata_xml_value_of_object(value),
       )
     Some("/Author") =>
       (
-        [(pdf_metadata_adobe_namespace, "Author")],
+        [(@metadata.pdf_metadata_adobe_namespace, "Author")],
         pdf_metadata_xml_value_of_object(value),
       )
     Some("/Title") =>
       (
         [
-          (pdf_metadata_adobe_namespace, "Title"),
-          (pdf_metadata_dc_namespace, "title"),
+          (@metadata.pdf_metadata_adobe_namespace, "Title"),
+          (@metadata.pdf_metadata_dc_namespace, "title"),
         ],
         pdf_metadata_xml_value_of_object(value),
       )
     Some("/Subject") =>
       (
         [
-          (pdf_metadata_adobe_namespace, "Subject"),
-          (pdf_metadata_dc_namespace, "subject"),
+          (@metadata.pdf_metadata_adobe_namespace, "Subject"),
+          (@metadata.pdf_metadata_dc_namespace, "subject"),
         ],
         pdf_metadata_xml_value_of_object(value),
       )
     Some("/Keywords") =>
       (
-        [(pdf_metadata_adobe_namespace, "Keywords")],
+        [(@metadata.pdf_metadata_adobe_namespace, "Keywords")],
         pdf_metadata_xml_value_of_object(value),
       )
     Some("/CreationDate") =>
       (
         [
-          (pdf_metadata_adobe_namespace, "CreationDate"),
-          (pdf_metadata_xmp_namespace, "CreateDate"),
+          (@metadata.pdf_metadata_adobe_namespace, "CreationDate"),
+          (@metadata.pdf_metadata_xmp_namespace, "CreateDate"),
         ],
         pdf_metadata_xmp_date_of_object(value),
       )
     Some("/ModDate") =>
       (
         [
-          (pdf_metadata_adobe_namespace, "ModDate"),
-          (pdf_metadata_xmp_namespace, "ModifyDate"),
+          (@metadata.pdf_metadata_adobe_namespace, "ModDate"),
+          (@metadata.pdf_metadata_xmp_namespace, "ModifyDate"),
         ],
         pdf_metadata_xmp_date_of_object(value),
       )
     Some("/Trapped") =>
       (
-        [(pdf_metadata_adobe_namespace, "Trapped")],
+        [(@metadata.pdf_metadata_adobe_namespace, "Trapped")],
         pdf_metadata_xml_value_of_object(value),
       )
     _ => raise BadNumberArgument("Unknown call to set_pdf_info")

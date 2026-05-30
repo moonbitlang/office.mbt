@@ -81,7 +81,7 @@ fn pdf_ua_remove_xml_element_prefix(
 ///|
 fn pdf_ua_remove_marker_elements(data : BytesView) -> PdfBytes {
   let prefixes = pdf_metadata_namespace_prefixes(
-    data, pdf_metadata_pdfuaid_namespace, "pdfuaid",
+    data, @metadata.pdf_metadata_pdfuaid_namespace, "pdfuaid",
   )
   let mut output = data.to_owned()
   for prefix in prefixes {
@@ -98,7 +98,7 @@ fn pdf_ua_remove_marker_elements(data : BytesView) -> PdfBytes {
 ///|
 fn pdf_ua_find_rdf_open_tag(data : BytesView) -> (Int, String)? {
   let prefixes = pdf_metadata_namespace_prefixes(
-    data, pdf_metadata_rdf_namespace, "rdf",
+    data, @metadata.pdf_metadata_rdf_namespace, "rdf",
   )
   for prefix in prefixes {
     let pattern = @ascii.encode("<" + prefix + ":RDF")

@@ -52,7 +52,7 @@ fn pdf_metadata_bool_json(value : String) -> Json {
 fn PdfDocument::pdf_metadata_info_encoded(
   self : PdfDocument,
   key : PdfName,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
 ) -> String {
   let info = match
     self.lookup_direct(pdf_metadata_info(), self.trailer_dict()) {

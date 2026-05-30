@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_annotation_contents_text(
   self : PdfDocument,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   annotation : PdfObject,
 ) -> PdfBytes raise PdfError {
   match self.lookup_direct(pdf_annotation_contents_key(), annotation) {
@@ -73,7 +73,7 @@ fn pdf_annotation_listing_line_length(
 /// contribute an empty byte string, matching cpdf's old list behavior.
 pub fn PdfDocument::get_annotations(
   self : PdfDocument,
-  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
 ) -> Array[(Int, PdfBytes)] raise PdfError {
   let pages = self.pages_of_pagetree()
   let output : Array[(Int, PdfBytes)] = Array::new(capacity=pages.length())
@@ -94,7 +94,7 @@ pub fn PdfDocument::get_annotations(
 ///|
 /// Compatibility wrapper for `PdfDocument::get_annotations`.
 pub fn pdf_get_annotations(
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   document : PdfDocument,
 ) -> Array[(Int, PdfBytes)] raise PdfError {
   document.get_annotations(encoding~)
@@ -108,7 +108,7 @@ pub fn pdf_get_annotations(
 pub fn PdfDocument::list_annotations(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  encoding? : PdfMetadataEncoding = PdfMetadataUTF8,
+  encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
 ) -> PdfBytes raise PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(
@@ -151,7 +151,7 @@ pub fn PdfDocument::list_annotations(
 /// Compatibility wrapper for `PdfDocument::list_annotations`.
 pub fn pdf_list_annotations(
   page_numbers : ArrayView[Int],
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   document : PdfDocument,
 ) -> PdfBytes raise PdfError {
   document.list_annotations(page_numbers, encoding~)

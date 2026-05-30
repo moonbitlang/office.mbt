@@ -80,7 +80,7 @@ fn pdf_bookmark_listing_stripped_codepoints(
 
 ///|
 fn pdf_bookmark_listing_process_text(
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
   text : BytesView,
 ) -> PdfBytes raise PdfError {
   match encoding {
@@ -168,7 +168,7 @@ fn PdfBookmarkListingTextLine::write_to(
 fn PdfDocument::pdf_bookmark_listing_text_line(
   self : PdfDocument,
   bookmark : @bookmark.PdfBookmark,
-  encoding : PdfMetadataEncoding,
+  encoding : @metadata.PdfMetadataEncoding,
 ) -> PdfBookmarkListingTextLine raise PdfError {
   let page_number = self.page_number_of_target(bookmark.target)
   {

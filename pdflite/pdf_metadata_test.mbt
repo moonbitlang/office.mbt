@@ -997,39 +997,45 @@ test "PdfDocument xmp_info returns legacy Info-key equivalents" {
 ///|
 test "pdf_metadata_get_data_for_bytes mirrors cpdfmetadata lookup" {
   @test.assert_eq(
-    @pdflite.pdf_metadata_adobe, @pdflite.pdf_metadata_adobe_namespace,
+    @metadata.pdf_metadata_adobe, @metadata.pdf_metadata_adobe_namespace,
   )
-  @test.assert_eq(@pdflite.pdf_adobe, @pdflite.pdf_metadata_adobe_namespace)
+  @test.assert_eq(@metadata.pdf_adobe, @metadata.pdf_metadata_adobe_namespace)
   @test.assert_eq(
-    @pdflite.pdf_metadata_xmp, @pdflite.pdf_metadata_xmp_namespace,
+    @metadata.pdf_metadata_xmp, @metadata.pdf_metadata_xmp_namespace,
   )
-  @test.assert_eq(@pdflite.pdf_xmp, @pdflite.pdf_metadata_xmp_namespace)
-  @test.assert_eq(@pdflite.pdf_metadata_dc, @pdflite.pdf_metadata_dc_namespace)
-  @test.assert_eq(@pdflite.pdf_dc, @pdflite.pdf_metadata_dc_namespace)
+  @test.assert_eq(@metadata.pdf_xmp, @metadata.pdf_metadata_xmp_namespace)
   @test.assert_eq(
-    @pdflite.pdf_metadata_rdf, @pdflite.pdf_metadata_rdf_namespace,
+    @metadata.pdf_metadata_dc, @metadata.pdf_metadata_dc_namespace,
   )
-  @test.assert_eq(@pdflite.pdf_rdf, @pdflite.pdf_metadata_rdf_namespace)
+  @test.assert_eq(@metadata.pdf_dc, @metadata.pdf_metadata_dc_namespace)
   @test.assert_eq(
-    @pdflite.pdf_metadata_pdfaid, @pdflite.pdf_metadata_pdfaid_namespace,
+    @metadata.pdf_metadata_rdf, @metadata.pdf_metadata_rdf_namespace,
   )
-  @test.assert_eq(@pdflite.pdf_pdfaid, @pdflite.pdf_metadata_pdfaid_namespace)
+  @test.assert_eq(@metadata.pdf_rdf, @metadata.pdf_metadata_rdf_namespace)
   @test.assert_eq(
-    @pdflite.pdf_metadata_pdfxid, @pdflite.pdf_metadata_pdfxid_namespace,
+    @metadata.pdf_metadata_pdfaid, @metadata.pdf_metadata_pdfaid_namespace,
   )
-  @test.assert_eq(@pdflite.pdf_pdfxid, @pdflite.pdf_metadata_pdfxid_namespace)
+  @test.assert_eq(@metadata.pdf_pdfaid, @metadata.pdf_metadata_pdfaid_namespace)
   @test.assert_eq(
-    @pdflite.pdf_metadata_pdfe, @pdflite.pdf_metadata_pdfe_namespace,
+    @metadata.pdf_metadata_pdfxid, @metadata.pdf_metadata_pdfxid_namespace,
   )
-  @test.assert_eq(@pdflite.pdf_pdfe, @pdflite.pdf_metadata_pdfe_namespace)
+  @test.assert_eq(@metadata.pdf_pdfxid, @metadata.pdf_metadata_pdfxid_namespace)
   @test.assert_eq(
-    @pdflite.pdf_metadata_pdfuaid, @pdflite.pdf_metadata_pdfuaid_namespace,
+    @metadata.pdf_metadata_pdfe, @metadata.pdf_metadata_pdfe_namespace,
   )
-  @test.assert_eq(@pdflite.pdf_pdfuaid, @pdflite.pdf_metadata_pdfuaid_namespace)
+  @test.assert_eq(@metadata.pdf_pdfe, @metadata.pdf_metadata_pdfe_namespace)
   @test.assert_eq(
-    @pdflite.pdf_metadata_pdfvtid, @pdflite.pdf_metadata_pdfvtid_namespace,
+    @metadata.pdf_metadata_pdfuaid, @metadata.pdf_metadata_pdfuaid_namespace,
   )
-  @test.assert_eq(@pdflite.pdf_pdfvtid, @pdflite.pdf_metadata_pdfvtid_namespace)
+  @test.assert_eq(
+    @metadata.pdf_pdfuaid, @metadata.pdf_metadata_pdfuaid_namespace,
+  )
+  @test.assert_eq(
+    @metadata.pdf_metadata_pdfvtid, @metadata.pdf_metadata_pdfvtid_namespace,
+  )
+  @test.assert_eq(
+    @metadata.pdf_pdfvtid, @metadata.pdf_metadata_pdfvtid_namespace,
+  )
   let xmp_text =
     #|<x:xmpmeta xmlns:x="adobe:ns:meta/"
     #| xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -1048,31 +1054,31 @@ test "pdf_metadata_get_data_for_bytes mirrors cpdfmetadata lookup" {
   let metadata = @ascii.encode(xmp_text)
   @test.assert_eq(
     @pdflite.pdf_metadata_get_data_for_bytes(
-      @pdflite.pdf_metadata_xmp, "CreatorTool", metadata,
+      @metadata.pdf_metadata_xmp, "CreatorTool", metadata,
     ),
     Some("MoonBit & cpdf + XML +"),
   )
   @test.assert_eq(
     @pdflite.pdf_metadata_get_data_for_bytes(
-      @pdflite.pdf_metadata_adobe, "Producer", metadata,
+      @metadata.pdf_metadata_adobe, "Producer", metadata,
     ),
     Some("pdflite"),
   )
   @test.assert_eq(
     @pdflite.pdf_metadata_get_data_for_bytes(
-      @pdflite.pdf_metadata_pdfaid, "part", metadata,
+      @metadata.pdf_metadata_pdfaid, "part", metadata,
     ),
     Some("2"),
   )
   @test.assert_eq(
     @pdflite.pdf_metadata_get_data_for_bytes(
-      @pdflite.pdf_metadata_dc, "subject", metadata,
+      @metadata.pdf_metadata_dc, "subject", metadata,
     ),
     Some("alpha <one>, beta 2"),
   )
   @test.assert_eq(
     @pdflite.pdf_metadata_get_data_for_bytes(
-      @pdflite.pdf_metadata_pdfuaid, "part", metadata,
+      @metadata.pdf_metadata_pdfuaid, "part", metadata,
     ),
     None,
   )
@@ -1108,19 +1114,23 @@ test "pdf_metadata XML tree helpers mirror cpdfmetadata lookup" {
   @test.assert_eq(children.length(), 2)
   @test.assert_eq(
     @pdflite.pdf_metadata_xmltree_get_data_for(
-      @pdflite.pdf_metadata_pdfaid,
+      @metadata.pdf_metadata_pdfaid,
       "part",
       document.tree,
     ),
     Some("2"),
   )
   @test.assert_eq(
-    @pdflite.pdf_get_data_for(@pdflite.pdf_pdfaid, "part", source_document.tree),
+    @pdflite.pdf_get_data_for(
+      @metadata.pdf_pdfaid,
+      "part",
+      source_document.tree,
+    ),
     Some("2"),
   )
   @test.assert_eq(
     @pdflite.pdf_metadata_xmltree_get_data_for(
-      @pdflite.pdf_metadata_dc,
+      @metadata.pdf_metadata_dc,
       "subject",
       document.tree,
     ),
@@ -1128,7 +1138,7 @@ test "pdf_metadata XML tree helpers mirror cpdfmetadata lookup" {
   )
   @test.assert_eq(
     @pdflite.pdf_metadata_xmltree_get_data_for(
-      @pdflite.pdf_metadata_pdfuaid,
+      @metadata.pdf_metadata_pdfuaid,
       "part",
       document.tree,
     ),
