@@ -1,19 +1,9 @@
-// Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/pdflite/text/unicodedata"
-
-import {
-  "bobzhang/pdflite/core",
-  "moonbitlang/core/debug",
-}
-
-// Values
-pub fn pdf_unicode_data_source() -> Bytes raise @core.PdfError
-
-pub fn pdf_unicodedata_source() -> Bytes raise @core.PdfError
-
-// Errors
-
-// Types and methods
+///|
+/// One row from UnicodeData.txt as exposed by cpdf's `Cpdfunicodedata.t`.
+///
+/// UnicodeData.txt is an ASCII, semicolon-separated data file. The fields stay
+/// as strings to match cpdf's public record and to avoid silently choosing
+/// semantics for numeric-looking values such as code values and mappings.
 pub(all) struct PdfUnicodeDataEntry {
   code_value : String
   character_name : String
@@ -30,8 +20,4 @@ pub(all) struct PdfUnicodeDataEntry {
   uppercase_mapping : String
   lowercase_mapping : String
   titlecase_mapping : String
-} derive(Eq, ToJson, @debug.Debug)
-
-// Type aliases
-
-// Traits
+} derive(Debug, Eq, ToJson)

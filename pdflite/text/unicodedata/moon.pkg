@@ -1,3 +1,4 @@
 import {
   "bobzhang/pdflite/core",
+  "moonbitlang/core/json",
 }

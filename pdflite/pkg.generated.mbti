@@ -22,6 +22,7 @@ import {
   "bobzhang/pdflite/reader",
   "bobzhang/pdflite/shape",
   "bobzhang/pdflite/syntax",
+  "bobzhang/pdflite/text/unicodedata",
   "bobzhang/pdflite/writer",
   "moonbitlang/core/buffer",
   "moonbitlang/core/debug",
@@ -1379,7 +1380,7 @@ pub fn pdf_parse_coordinates_tuple(PdfDocument, String) -> Array[(Double, Double
 
 pub fn pdf_parse_draw_colour(String) -> PdfDrawColour raise @core.PdfError
 
-pub fn pdf_parse_flate_unicode_data(BytesView) -> Array[PdfUnicodeDataEntry] raise @core.PdfError
+pub fn pdf_parse_flate_unicode_data(BytesView) -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError
 
 pub fn pdf_parse_function(PdfDocument, @syntax.PdfObject) -> PdfFunction raise @core.PdfError
 
@@ -1415,7 +1416,7 @@ pub fn pdf_parse_stream_object_from_bytes(Bytes) -> @syntax.PdfParsedIndirectObj
 
 pub fn pdf_parse_stream_object_from_view(BytesView) -> @syntax.PdfParsedIndirectObject raise @core.PdfError
 
-pub fn pdf_parse_unicode_data(BytesView) -> Array[PdfUnicodeDataEntry] raise @core.PdfError
+pub fn pdf_parse_unicode_data(BytesView) -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError
 
 pub fn pdf_parse_units_string(PdfDocument, @page.PdfPage, String) -> Array[Double] raise @core.PdfError
 
@@ -2087,11 +2088,11 @@ pub fn pdf_ua_test_matterhorn_json(PdfDocument, String) -> Json raise @core.PdfE
 
 pub fn pdf_ua_test_matterhorn_print(PdfDocument, String) -> Bytes raise @core.PdfError
 
-pub fn pdf_unicode_data() -> Array[PdfUnicodeDataEntry] raise @core.PdfError
+pub fn pdf_unicode_data() -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError
 
 pub fn pdf_unicode_data_source() -> Bytes raise @core.PdfError
 
-pub fn pdf_unicodedata() -> Array[PdfUnicodeDataEntry] raise @core.PdfError
+pub fn pdf_unicodedata() -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError
 
 pub fn pdf_unicodedata_source() -> Bytes raise @core.PdfError
 
@@ -3834,24 +3835,6 @@ pub(all) enum PdfUASubformat {
   PdfUA2
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfUnicodeDataEntry {
-  code_value : String
-  character_name : String
-  general_category : String
-  canonical_combining_classes : String
-  bidirectional_category : String
-  character_decomposition_mapping : String
-  decimal_digit_value : String
-  digit_value : String
-  numeric_value : String
-  mirrored : String
-  unicode_10_name : String
-  iso_10646_comment_field : String
-  uppercase_mapping : String
-  lowercase_mapping : String
-  titlecase_mapping : String
-} derive(Eq, ToJson, @debug.Debug)
-
 // Type aliases
 pub using @core {type BitStream}
 
@@ -4008,6 +3991,8 @@ pub using @truetype {type PdfTrueTypeSubsetPartition}
 pub using @truetype {type PdfTrueTypeSubsetTable}
 
 pub using @truetype {type PdfTrueTypeTableRecord}
+
+pub using @unicodedata {type PdfUnicodeDataEntry}
 
 pub using @geometry {type PdfUnit}
 
