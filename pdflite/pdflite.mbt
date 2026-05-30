@@ -298,7 +298,14 @@ pub using @ocg {
 }
 
 ///|
-pub using @metadata {type PdfMetadataEncoding}
+pub using @metadata {
+  type PdfMetadataEncoding,
+  type PdfMetadataXmlAttribute,
+  type PdfMetadataXmlDocument,
+  type PdfMetadataXmlName,
+  type PdfMetadataXmlTag,
+  type PdfMetadataXmlTree,
+}
 
 ///|
 pub using @afm {type PdfAfmData, pdf_read_afm}

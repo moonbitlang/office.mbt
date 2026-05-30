@@ -16,6 +16,32 @@ pub(all) enum PdfMetadataEncoding {
   PdfMetadataStripped
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfMetadataXmlAttribute {
+  name : PdfMetadataXmlName
+  value : String
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlDocument {
+  dtd : String?
+  tree : PdfMetadataXmlTree
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlName {
+  uri : String
+  local_name : String
+  prefix : String?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlTag {
+  name : PdfMetadataXmlName
+  attributes : Array[PdfMetadataXmlAttribute]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfMetadataXmlTree {
+  PdfMetadataXmlElement(PdfMetadataXmlTag, Array[PdfMetadataXmlTree])
+  PdfMetadataXmlData(String)
+} derive(Eq, ToJson, @debug.Debug)
+
 // Type aliases
 
 // Traits

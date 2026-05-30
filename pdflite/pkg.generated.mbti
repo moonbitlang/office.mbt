@@ -392,7 +392,7 @@ pub fn pdf_bytes_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise @core.P
 
 pub fn pdf_bytes_of_view(BytesView) -> Bytes
 
-pub fn pdf_bytes_of_xmltree(PdfMetadataXmlDocument) -> Bytes
+pub fn pdf_bytes_of_xmltree(@metadata.PdfMetadataXmlDocument) -> Bytes
 
 pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
@@ -920,7 +920,7 @@ pub fn pdf_get_catalog_item_cpdf_order(String, PdfDocument) -> String
 
 pub fn pdf_get_catalog_item_string(String, PdfDocument) -> String
 
-pub fn pdf_get_data_for(String, String, PdfMetadataXmlTree) -> String?
+pub fn pdf_get_data_for(String, String, @metadata.PdfMetadataXmlTree) -> String?
 
 pub fn pdf_get_dict_entries(PdfDocument, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
 
@@ -1150,7 +1150,7 @@ pub let pdf_metadata_adobe : String
 
 pub let pdf_metadata_adobe_namespace : String
 
-pub fn pdf_metadata_bytes_of_xmltree(PdfMetadataXmlDocument) -> Bytes
+pub fn pdf_metadata_bytes_of_xmltree(@metadata.PdfMetadataXmlDocument) -> Bytes
 
 pub let pdf_metadata_dc : String
 
@@ -1184,11 +1184,11 @@ pub let pdf_metadata_rdf : String
 
 pub let pdf_metadata_rdf_namespace : String
 
-pub fn pdf_metadata_string_of_xmltree(PdfMetadataXmlTree) -> String
+pub fn pdf_metadata_string_of_xmltree(@metadata.PdfMetadataXmlTree) -> String
 
-pub fn pdf_metadata_xmltree_get_data_for(String, String, PdfMetadataXmlTree) -> String?
+pub fn pdf_metadata_xmltree_get_data_for(String, String, @metadata.PdfMetadataXmlTree) -> String?
 
-pub fn pdf_metadata_xmltree_of_bytes(BytesView) -> PdfMetadataXmlDocument raise @core.PdfError
+pub fn pdf_metadata_xmltree_of_bytes(BytesView) -> @metadata.PdfMetadataXmlDocument raise @core.PdfError
 
 pub let pdf_metadata_xmp : String
 
@@ -1916,7 +1916,7 @@ pub fn pdf_string_of_type(ArrayView[PdfTypeElement]) -> Bytes
 
 pub fn pdf_string_of_type_element(PdfTypeElement) -> Bytes
 
-pub fn pdf_string_of_xmltree(PdfMetadataXmlTree) -> String
+pub fn pdf_string_of_xmltree(@metadata.PdfMetadataXmlTree) -> String
 
 pub fn pdf_stroke(PdfDrawControl) -> Unit raise @core.PdfError
 
@@ -2164,7 +2164,7 @@ pub fn pdf_write_page_labels(PdfDocument, ArrayView[PdfPageLabel]) -> PdfDocumen
 
 pub fn pdf_write_real(Double) -> Bytes raise @core.PdfError
 
-pub fn pdf_xmltree_of_bytes(BytesView) -> PdfMetadataXmlDocument raise @core.PdfError
+pub fn pdf_xmltree_of_bytes(BytesView) -> @metadata.PdfMetadataXmlDocument raise @core.PdfError
 
 pub let pdf_xmp : String
 
@@ -3635,32 +3635,6 @@ pub(all) struct PdfInterpolationFunction {
   n : Double
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfMetadataXmlAttribute {
-  name : PdfMetadataXmlName
-  value : String
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfMetadataXmlDocument {
-  dtd : String?
-  tree : PdfMetadataXmlTree
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfMetadataXmlName {
-  uri : String
-  local_name : String
-  prefix : String?
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfMetadataXmlTag {
-  name : PdfMetadataXmlName
-  attributes : Array[PdfMetadataXmlAttribute]
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) enum PdfMetadataXmlTree {
-  PdfMetadataXmlElement(PdfMetadataXmlTag, Array[PdfMetadataXmlTree])
-  PdfMetadataXmlData(String)
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfMissingFontEntry {
   page : Int
   name : String
@@ -4077,6 +4051,16 @@ pub using @core {type PdfError}
 pub using @syntax {type PdfLexeme}
 
 pub using @metadata {type PdfMetadataEncoding}
+
+pub using @metadata {type PdfMetadataXmlAttribute}
+
+pub using @metadata {type PdfMetadataXmlDocument}
+
+pub using @metadata {type PdfMetadataXmlName}
+
+pub using @metadata {type PdfMetadataXmlTag}
+
+pub using @metadata {type PdfMetadataXmlTree}
 
 pub using @core {type PdfName}
 

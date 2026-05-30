@@ -33,9 +33,3 @@ pub(all) struct PdfMetadataXmlDocument {
   dtd : String?
   tree : PdfMetadataXmlTree
 } derive(Debug, Eq, ToJson)
-
-///|
-let pdf_metadata_xml_uri : String = "http://www.w3.org/XML/1998/namespace"
-
-///|
-let pdf_metadata_xmlns_uri : String = "http://www.w3.org/2000/xmlns/"
