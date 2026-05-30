@@ -93,7 +93,7 @@ fn PdfDocument::load_reconstructed_object_xrefs(
 ) -> Unit {
   let cursor = byte_cursor_of_view(data)
   for xref in xrefs {
-    let parsed_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_object_at(
+    let parsed_result : Result[@syntax.PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_object_at(
       cursor,
       xref.offset,
       xrefs,

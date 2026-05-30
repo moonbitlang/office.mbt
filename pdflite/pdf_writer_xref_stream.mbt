@@ -128,8 +128,10 @@ fn pdf_writer_xref_stream_index_pairs(
 ///|
 fn pdf_writer_xref_stream_index_object(
   pairs : ArrayView[(Int, Int)],
-) -> PdfObject {
-  let values : Array[PdfObject] = Array::new(capacity=pairs.length() * 2)
+) -> @syntax.PdfObject {
+  let values : Array[@syntax.PdfObject] = Array::new(
+    capacity=pairs.length() * 2,
+  )
   for pair in pairs {
     let (start, length) = pair
     values.push(PdfInteger(start))
@@ -143,7 +145,7 @@ fn pdf_writer_xref_stream_trailer(
   document : PdfDocument,
   size : Int,
   previous_xref : Int?,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let trailer = pdf_writer_trailer_dictionary(document)
     .add_dict_entry(
       pdf_writer_type_name(),
@@ -180,7 +182,7 @@ fn pdf_write_document_with_xref_stream_filter(
   let xref_data = pdf_writer_xref_stream_data(
     xrefs, size, xref_stream_number, xref_stream_offset,
   )
-  let stream = pdf_stream(
+  let stream = @syntax.pdf_stream(
     pdf_writer_xref_stream_trailer(document, size, None).add_dict_entry(
       pdf_writer_length_name(),
       PdfInteger(xref_data.length()),
@@ -241,7 +243,7 @@ fn pdf_write_document_incremental_update_with_xref_stream_filter(
     xrefs, entry_numbers, xref_stream_number, xref_stream_offset,
   )
   let index_pairs = pdf_writer_xref_stream_index_pairs(entry_numbers)
-  let stream = pdf_stream(
+  let stream = @syntax.pdf_stream(
     pdf_writer_xref_stream_trailer(document, size, Some(previous_xref))
     .add_dict_entry(
       pdf_writer_index_name(),

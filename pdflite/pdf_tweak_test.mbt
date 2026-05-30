@@ -11,7 +11,7 @@ fn tweak_bytes_for_test(text : String) -> Bytes {
 ///|
 fn tweak_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
@@ -802,25 +802,25 @@ test "PdfDocument find_object_by_spec resolves page object specs" {
 test "PdfDocument find_object_by_spec reports malformed specs and missing chains" {
   let doc = @pdflite.pdf_document_empty()
   let page_doc = try! @pdflite.pdf_blank_document(200.0, 100.0, 1)
-  let bad_object : Result[@pdflite.PdfObject, Error] = try? doc.find_object_by_spec(
+  let bad_object : Result[@syntax.PdfObject, Error] = try? doc.find_object_by_spec(
     "abc",
   )
   guard bad_object is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for malformed object spec")
   }
-  let missing_chain : Result[@pdflite.PdfObject, Error] = try? doc.find_object_by_spec(
+  let missing_chain : Result[@syntax.PdfObject, Error] = try? doc.find_object_by_spec(
     "/Missing",
   )
   guard missing_chain is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for missing object chain")
   }
-  let missing_page : Result[@pdflite.PdfObject, Error] = try? doc.find_object_by_spec(
+  let missing_page : Result[@syntax.PdfObject, Error] = try? doc.find_object_by_spec(
     "P1",
   )
   guard missing_page is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected RootExpected while resolving page object refs")
   }
-  let out_of_range_page : Result[@pdflite.PdfObject, Error] = try? page_doc.find_object_by_spec(
+  let out_of_range_page : Result[@syntax.PdfObject, Error] = try? page_doc.find_object_by_spec(
     "P2",
   )
   guard out_of_range_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {
@@ -992,7 +992,7 @@ test "PdfDocument replace_stream_by_spec updates bytes and Length" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     4,
-    @pdflite.pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([
         (key_length, PdfInteger(3)),
         (key_filter, PdfNameObject(key_dummy)),
@@ -1010,7 +1010,7 @@ test "PdfDocument replace_stream_by_spec updates bytes and Length" {
     fail("expected stream object after replace_stream_by_spec")
   }
   @test.assert_eq(
-    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     tweak_bytes_for_test("new data"),
   )
   @test.assert_eq(
@@ -1087,7 +1087,7 @@ test "pdf_thin_lines_ops inserts ExtGState line width" {
   let key_extgstate = tweak_name_for_test("/ExtGState")
   let key_lw = tweak_name_for_test("/LW")
   let name_gs = tweak_name_for_test("/GS1")
-  let resources : @pdflite.PdfObject = PdfDictionary([
+  let resources : @syntax.PdfObject = PdfDictionary([
     (
       key_extgstate,
       PdfDictionary([(name_gs, PdfDictionary([(key_lw, PdfReal(0.75))]))]),
@@ -1103,7 +1103,7 @@ test "pdf_thin_lines_ops inserts ExtGState line width" {
     [Op_gs(name_gs), Op_w(0.75), Op_S],
   )
 
-  let integer_resources : @pdflite.PdfObject = PdfDictionary([
+  let integer_resources : @syntax.PdfObject = PdfDictionary([
     (
       key_extgstate,
       PdfDictionary([(name_gs, PdfDictionary([(key_lw, PdfInteger(2))]))]),
@@ -1119,7 +1119,7 @@ test "pdf_thin_lines_ops inserts ExtGState line width" {
     [Op_gs(name_gs), Op_w(2.0), Op_S],
   )
 
-  let malformed_resources : @pdflite.PdfObject = PdfDictionary([
+  let malformed_resources : @syntax.PdfObject = PdfDictionary([
     (
       key_extgstate,
       PdfDictionary([
@@ -1139,7 +1139,7 @@ test "pdf_thin_lines_ops inserts ExtGState line width" {
     ),
     [Op_gs(name_gs), Op_S],
   )
-  let missing_lw_resources : @pdflite.PdfObject = PdfDictionary([
+  let missing_lw_resources : @syntax.PdfObject = PdfDictionary([
     (key_extgstate, PdfDictionary([(name_gs, PdfDictionary([]))])),
   ])
   @test.assert_eq(
@@ -1151,7 +1151,7 @@ test "pdf_thin_lines_ops inserts ExtGState line width" {
     ),
     [Op_gs(name_gs), Op_S],
   )
-  let missing_name_resources : @pdflite.PdfObject = PdfDictionary([
+  let missing_name_resources : @syntax.PdfObject = PdfDictionary([
     (key_extgstate, PdfDictionary([])),
   ])
   @test.assert_eq(

@@ -9,7 +9,7 @@ fn writer_ascii_for_test(text : String) -> @pdflite.PdfBytes {
 }
 
 ///|
-fn writer_assert_generated_id_for_test(id : @pdflite.PdfObject?) -> Unit raise {
+fn writer_assert_generated_id_for_test(id : @syntax.PdfObject?) -> Unit raise {
   guard id is Some(PdfArray([PdfString(first), PdfString(second)])) else {
     fail("expected generated trailer ID")
   }
@@ -18,7 +18,7 @@ fn writer_assert_generated_id_for_test(id : @pdflite.PdfObject?) -> Unit raise {
 }
 
 ///|
-fn writer_secret_object_for_test(text : String) -> @pdflite.PdfObject {
+fn writer_secret_object_for_test(text : String) -> @syntax.PdfObject {
   PdfDictionary([
     (
       writer_name_for_test([47, 84, 105, 116, 108, 101]),
@@ -342,22 +342,22 @@ test "pdf_write_object escapes names and literal strings as bytes" {
 ///|
 test "pdf_write_object round trips arrays and dictionaries through primitive parser" {
   let type_key = writer_name_for_test([47, 84, 121, 112, 101])
-  let object = @pdflite.pdf_dictionary([
+  let object = @syntax.pdf_dictionary([
     (type_key, PdfNameObject(writer_name_for_test([47, 80, 97, 103, 101]))),
     (
       writer_name_for_test([47, 75, 105, 100, 115]),
-      @pdflite.pdf_array([PdfInteger(7), PdfIndirect(8)]),
+      @syntax.pdf_array([PdfInteger(7), PdfIndirect(8)]),
     ),
   ])
   let rendered = try! @pdflite.pdf_write_object(object)
-  @test.assert_eq(try! @pdflite.pdf_parse_object_from_bytes(rendered), object)
+  @test.assert_eq(try! @syntax.pdf_parse_object_from_bytes(rendered), object)
 }
 
 ///|
 test "pdf_write_indirect_object renders direct stream data" {
   let length_name = writer_name_for_test([47, 76, 101, 110, 103, 116, 104])
-  let object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length_name, PdfInteger(5))]),
+  let object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length_name, PdfInteger(5))]),
     StreamGot(writer_bytes_for_test([72, 101, 108, 108, 111])),
   )
   let rendered = try! @pdflite.pdf_write_indirect_object({
@@ -372,8 +372,8 @@ test "pdf_write_indirect_object renders direct stream data" {
 
 ///|
 test "pdf_write_indirect_object adds owned stream length" {
-  let object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(writer_bytes_for_test([72, 105])),
   )
   let rendered = try! @pdflite.pdf_write_indirect_object({
@@ -399,9 +399,9 @@ test "pdf_write_object materializes deferred stream data" {
   let cursor = @pdflite.byte_cursor_of_bytes(
     writer_bytes_for_test([65, 72, 105, 90]),
   )
-  let object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
-    StreamToGet(@pdflite.stream_to_get(cursor, 1, 2)),
+  let object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
+    StreamToGet(@syntax.stream_to_get(cursor, 1, 2)),
   )
   let rendered = try! @pdflite.pdf_write_object(object)
   let parsed = try! @pdflite.pdf_parse_stream_object_from_bytes(
@@ -430,7 +430,7 @@ test "pdf_write_document serializes objects with xref and trailer" {
   document.set_root(1)
   let type_name = writer_name_for_test([47, 84, 121, 112, 101])
   let pages_name = writer_name_for_test([47, 80, 97, 103, 101, 115])
-  let catalog = @pdflite.pdf_dictionary([
+  let catalog = @syntax.pdf_dictionary([
     (
       type_name,
       PdfNameObject(writer_name_for_test([47, 67, 97, 116, 97, 108, 111, 103])),
@@ -439,12 +439,12 @@ test "pdf_write_document serializes objects with xref and trailer" {
   ])
   let kids_name = writer_name_for_test([47, 75, 105, 100, 115])
   let count_name = writer_name_for_test([47, 67, 111, 117, 110, 116])
-  let pages = @pdflite.pdf_dictionary([
+  let pages = @syntax.pdf_dictionary([
     (
       type_name,
       PdfNameObject(writer_name_for_test([47, 80, 97, 103, 101, 115])),
     ),
-    (kids_name, @pdflite.pdf_array([])),
+    (kids_name, @syntax.pdf_array([])),
     (count_name, PdfInteger(0)),
   ])
   document.add_object_given_number(1, catalog)
@@ -483,13 +483,13 @@ test "pdf_write_document_incremental_update appends classic xref revisions" {
   document.set_version(1, 4)
   document.set_root(1)
   let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
-  let catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(1))])
+  let catalog = @syntax.pdf_dictionary([(value_name, PdfInteger(1))])
   document.add_object_given_number(1, catalog)
   let original = @pdflite.pdf_write_document(document)
   let original_parsed = @pdflite.pdf_read_document_from_bytes(original)
 
   let updated = original_parsed.copy()
-  let updated_catalog = @pdflite.pdf_dictionary([
+  let updated_catalog = @syntax.pdf_dictionary([
     (value_name, PdfInteger(2)),
     (writer_name_for_test([47, 78, 101, 119]), PdfIndirect(2)),
   ])
@@ -517,7 +517,7 @@ test "pdf_write_document_incremental_update appends classic xref revisions" {
   @test.assert_eq(reparsed.lookup_object_or_null(2), PdfInteger(99))
 
   let deleted = reparsed.copy()
-  let deleted_catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(3))])
+  let deleted_catalog = @syntax.pdf_dictionary([(value_name, PdfInteger(3))])
   deleted.add_object_given_number(1, deleted_catalog)
   deleted.remove_object(2)
   let second_update = try! @pdflite.pdf_write_document_incremental_update(
@@ -546,7 +546,7 @@ test "pdf_write_document_incremental_update writes only changed classic objects"
   document.set_version(1, 4)
   document.set_root(1)
   let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
-  let catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(1))])
+  let catalog = @syntax.pdf_dictionary([(value_name, PdfInteger(1))])
   document.add_object_given_number(1, catalog)
   document.add_object_given_number(2, PdfInteger(20))
   let original = @pdflite.pdf_write_document(document)
@@ -603,12 +603,12 @@ test "pdf_write_document_with_xref_stream round trips through public reader" {
   let type_name = writer_name_for_test([47, 84, 121, 112, 101])
   let catalog_name = writer_name_for_test([47, 67, 97, 116, 97, 108, 111, 103])
   let payload_name = writer_name_for_test([47, 80, 97, 121, 108, 111, 97, 100])
-  let catalog = @pdflite.pdf_dictionary([
+  let catalog = @syntax.pdf_dictionary([
     (type_name, PdfNameObject(catalog_name)),
     (payload_name, PdfIndirect(4)),
   ])
-  let payload = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let payload = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(writer_ascii_for_test("xref-stream payload")),
   )
   document.add_object_given_number(1, catalog)
@@ -630,7 +630,7 @@ test "pdf_write_document_with_xref_stream round trips through public reader" {
     fail("expected deferred stream payload")
   }
   @test.assert_eq(
-    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     writer_ascii_for_test("xref-stream payload"),
   )
 
@@ -649,12 +649,12 @@ test "pdf_write_document_incremental_update_with_xref_stream appends xref stream
   let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
   document.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(1))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(1))]),
   )
   let original = try! @pdflite.pdf_write_document_with_xref_stream(document)
   let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
   let updated = original_parsed.copy()
-  let updated_catalog = @pdflite.pdf_dictionary([
+  let updated_catalog = @syntax.pdf_dictionary([
     (value_name, PdfInteger(2)),
     (writer_name_for_test([47, 78, 101, 119]), PdfIndirect(2)),
   ])
@@ -691,7 +691,7 @@ test "pdf_write_document_incremental_update_with_xref_stream writes sparse Index
   document.set_version(1, 5)
   document.set_root(1)
   let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
-  let catalog = @pdflite.pdf_dictionary([(value_name, PdfInteger(1))])
+  let catalog = @syntax.pdf_dictionary([(value_name, PdfInteger(1))])
   document.add_object_given_number(1, catalog)
   document.add_object_given_number(2, PdfInteger(20))
   document.add_object_given_number(3, PdfInteger(30))
@@ -756,12 +756,12 @@ test "pdf_write_document_incremental_update_with_compressed_xref_stream uses Fla
   let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
   document.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(1))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(1))]),
   )
   let original = try! @pdflite.pdf_write_document_with_xref_stream(document)
   let original_parsed = try! @pdflite.pdf_read_document_from_bytes(original)
   let updated = original_parsed.copy()
-  let updated_catalog = @pdflite.pdf_dictionary([
+  let updated_catalog = @syntax.pdf_dictionary([
     (value_name, PdfInteger(3)),
     (writer_name_for_test([47, 70, 108, 97, 116, 101]), PdfIndirect(2)),
   ])
@@ -799,7 +799,7 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
   let value_name = writer_name_for_test([47, 86, 97, 108, 117, 101])
   document.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(1))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(1))]),
   )
   let original = @pdflite.pdf_write_document(document)
   let original_parsed = @pdflite.pdf_read_document_from_bytes(original)
@@ -807,7 +807,7 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
   let classic_update = original_parsed.copy()
   classic_update.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(2))]),
   )
   let classic = @pdflite.pdf_write_document_incremental_update_with_mode(
     original,
@@ -827,13 +827,13 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
   let classic_parsed = @pdflite.pdf_read_document_from_bytes(classic)
   @test.assert_eq(
     classic_parsed.lookup_object_or_null(1),
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(2))]),
   )
 
   let xref_update = original_parsed.copy()
   xref_update.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(3))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(3))]),
   )
   let xref_stream = @pdflite.pdf_write_document_incremental_update_with_mode(
     original,
@@ -852,13 +852,13 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
   let xref_parsed = @pdflite.pdf_read_document_from_bytes(xref_stream)
   @test.assert_eq(
     xref_parsed.lookup_object_or_null(1),
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(3))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(3))]),
   )
 
   let compressed_update = original_parsed.copy()
   compressed_update.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(4))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(4))]),
   )
   let compressed = @pdflite.pdf_write_document_incremental_update_with_mode(
     original,
@@ -877,7 +877,7 @@ test "pdf_write_document_incremental_update_with_mode dispatches public writer m
   let compressed_parsed = @pdflite.pdf_read_document_from_bytes(compressed)
   @test.assert_eq(
     compressed_parsed.lookup_object_or_null(1),
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(4))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(4))]),
   )
 }
 
@@ -890,7 +890,7 @@ test "pdf_write_document_with_compressed_xref_stream uses Flate and round trips"
   let catalog_name = writer_name_for_test([47, 67, 97, 116, 97, 108, 111, 103])
   document.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(type_name, PdfNameObject(catalog_name))]),
+    @syntax.pdf_dictionary([(type_name, PdfNameObject(catalog_name))]),
   )
   let rendered = try! @pdflite.pdf_write_document_with_compressed_xref_stream(
     document,
@@ -994,13 +994,13 @@ test "pdf_write_document_options covers id generation and incremental update" {
   original_doc.set_root(1)
   original_doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(1))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(1))]),
   )
   let original = @pdflite.pdf_write_document(original_doc)
   let update_doc = @pdflite.pdf_read_document_from_bytes(original)
   update_doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(2))]),
   )
   let updated = @pdflite.pdf_write_document_options(
     update_doc,
@@ -1020,7 +1020,7 @@ test "pdf_write_document_options covers id generation and incremental update" {
   )
   @test.assert_eq(
     @pdflite.pdf_read_document_from_bytes(updated).lookup_object_or_null(1),
-    @pdflite.pdf_dictionary([(value_name, PdfInteger(2))]),
+    @syntax.pdf_dictionary([(value_name, PdfInteger(2))]),
   )
 }
 

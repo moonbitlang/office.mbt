@@ -5,9 +5,9 @@ fn presentation_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn presentation_lookup_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : @pdflite.PdfName,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   object.lookup_immediate(key)
 }
 
@@ -27,9 +27,7 @@ fn presentation_document_for_test() -> @pdflite.PdfDocument {
 }
 
 ///|
-fn presentation_transition_for_test(
-  page : @page.PdfPage,
-) -> @pdflite.PdfObject? {
+fn presentation_transition_for_test(page : @page.PdfPage) -> @syntax.PdfObject? {
   presentation_lookup_for_test(page.rest, presentation_name_for_test("/Trans"))
 }
 
@@ -51,7 +49,7 @@ test "PdfDocument presentation adds Split transition to selected pages" {
     is Some(PdfDictionary(trans_entries)) else {
     fail("expected transition dictionary")
   }
-  let trans : @pdflite.PdfObject = PdfDictionary(trans_entries)
+  let trans : @syntax.PdfObject = PdfDictionary(trans_entries)
   @test.assert_eq(
     presentation_lookup_for_test(trans, presentation_name_for_test("/S")),
     Some(PdfNameObject(presentation_name_for_test("/Split"))),
@@ -95,7 +93,7 @@ test "PdfDocument presentation writes transition-specific entries" {
     is Some(PdfDictionary(blinds_entries)) else {
     fail("expected Blinds transition dictionary")
   }
-  let blinds_trans : @pdflite.PdfObject = PdfDictionary(blinds_entries)
+  let blinds_trans : @syntax.PdfObject = PdfDictionary(blinds_entries)
   @test.assert_eq(
     presentation_lookup_for_test(
       blinds_trans,
@@ -128,7 +126,7 @@ test "PdfDocument presentation writes transition-specific entries" {
     is Some(PdfDictionary(box_entries)) else {
     fail("expected Box transition dictionary")
   }
-  let box_trans : @pdflite.PdfObject = PdfDictionary(box_entries)
+  let box_trans : @syntax.PdfObject = PdfDictionary(box_entries)
   @test.assert_eq(
     presentation_lookup_for_test(box_trans, presentation_name_for_test("/Dm")),
     None,
@@ -155,7 +153,7 @@ test "PdfDocument presentation writes transition-specific entries" {
     is Some(PdfDictionary(wipe_entries)) else {
     fail("expected Wipe transition dictionary")
   }
-  let wipe_trans : @pdflite.PdfObject = PdfDictionary(wipe_entries)
+  let wipe_trans : @syntax.PdfObject = PdfDictionary(wipe_entries)
   @test.assert_eq(
     presentation_lookup_for_test(wipe_trans, presentation_name_for_test("/Dm")),
     None,
@@ -182,7 +180,7 @@ test "PdfDocument presentation writes transition-specific entries" {
     is Some(PdfDictionary(dissolve_entries)) else {
     fail("expected Dissolve transition dictionary")
   }
-  let dissolve_trans : @pdflite.PdfObject = PdfDictionary(dissolve_entries)
+  let dissolve_trans : @syntax.PdfObject = PdfDictionary(dissolve_entries)
   @test.assert_eq(
     presentation_lookup_for_test(
       dissolve_trans,
@@ -232,7 +230,7 @@ test "pdf_presentation supports direction effects and delay removal" {
     is Some(PdfDictionary(trans_entries)) else {
     fail("expected transition dictionary")
   }
-  let trans : @pdflite.PdfObject = PdfDictionary(trans_entries)
+  let trans : @syntax.PdfObject = PdfDictionary(trans_entries)
   @test.assert_eq(
     presentation_lookup_for_test(trans, presentation_name_for_test("/S")),
     Some(PdfNameObject(presentation_name_for_test("/Glitter"))),
@@ -303,7 +301,7 @@ test "PdfDocument presentation supports no transition name" {
     is Some(PdfDictionary(trans_entries)) else {
     fail("expected transition dictionary")
   }
-  let trans : @pdflite.PdfObject = PdfDictionary(trans_entries)
+  let trans : @syntax.PdfObject = PdfDictionary(trans_entries)
   @test.assert_eq(
     presentation_lookup_for_test(trans, presentation_name_for_test("/D")),
     Some(PdfReal(3.0)),

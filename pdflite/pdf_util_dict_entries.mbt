@@ -1,12 +1,12 @@
 ///|
 fn PdfDocument::pdf_util_dict_entry_single_object(
   self : PdfDocument,
-  object : PdfObject,
-  transform : (PdfObject) -> PdfObject,
-) -> PdfObject {
+  object : @syntax.PdfObject,
+  transform : (@syntax.PdfObject) -> @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match object {
     PdfDictionary(entries) => {
-      let rewritten = pdf_recurse_dict(
+      let rewritten = @syntax.pdf_recurse_dict(
         fn(child) { self.pdf_util_dict_entry_single_object(child, transform) },
         entries,
       )
@@ -15,7 +15,7 @@ fn PdfDocument::pdf_util_dict_entry_single_object(
     PdfStreamObject(stream) =>
       match stream.dictionary {
         PdfDictionary(entries) => {
-          stream.dictionary = pdf_recurse_dict(
+          stream.dictionary = @syntax.pdf_recurse_dict(
             fn(child) {
               self.pdf_util_dict_entry_single_object(child, transform)
             },
@@ -26,7 +26,7 @@ fn PdfDocument::pdf_util_dict_entry_single_object(
         _ => object
       }
     PdfArray(values) =>
-      pdf_recurse_array(
+      @syntax.pdf_recurse_array(
         fn(child) { self.pdf_util_dict_entry_single_object(child, transform) },
         values,
       )
@@ -37,7 +37,7 @@ fn PdfDocument::pdf_util_dict_entry_single_object(
 ///|
 fn PdfDocument::pdf_util_rewrite_dict_entries(
   self : PdfDocument,
-  transform : (PdfObject) -> PdfObject,
+  transform : (@syntax.PdfObject) -> @syntax.PdfObject,
 ) -> Unit {
   self.map_objects_in_place(fn(object) {
     self.pdf_util_dict_entry_single_object(object, transform)
@@ -51,9 +51,9 @@ fn PdfDocument::pdf_util_rewrite_dict_entries(
 ///|
 fn PdfDocument::pdf_util_collect_dict_entry_values(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   key : PdfName,
-  output : Array[PdfObject],
+  output : Array[@syntax.PdfObject],
 ) -> Unit {
   match object {
     PdfDictionary(entries) => {
@@ -90,8 +90,8 @@ fn PdfDocument::pdf_util_collect_dict_entry_values(
 fn PdfDocument::pdf_util_remove_entry_transform(
   self : PdfDocument,
   key : PdfName,
-  search : PdfObject?,
-) -> (PdfObject) -> PdfObject {
+  search : @syntax.PdfObject?,
+) -> (@syntax.PdfObject) -> @syntax.PdfObject {
   fn(object) {
     match search {
       None => try! object.remove_dict_entry(key)
@@ -108,13 +108,13 @@ fn PdfDocument::pdf_util_remove_entry_transform(
 fn PdfDocument::pdf_util_replace_entry_transform(
   self : PdfDocument,
   key : PdfName,
-  value : PdfObject,
-  search : PdfObject?,
-) -> (PdfObject) -> PdfObject {
+  value : @syntax.PdfObject,
+  search : @syntax.PdfObject?,
+) -> (@syntax.PdfObject) -> @syntax.PdfObject {
   fn(object) {
     match search {
       None => {
-        let replaced : Result[PdfObject, Error] = try? object.replace_dict_entry(
+        let replaced : Result[@syntax.PdfObject, Error] = try? object.replace_dict_entry(
           key, value,
         )
         match replaced {
@@ -141,7 +141,7 @@ fn PdfDocument::pdf_util_replace_entry_transform(
 pub fn PdfDocument::remove_dict_entry_everywhere(
   self : PdfDocument,
   key : PdfName,
-  search? : PdfObject? = None,
+  search? : @syntax.PdfObject? = None,
 ) -> Unit {
   self.pdf_util_rewrite_dict_entries(
     self.pdf_util_remove_entry_transform(key, search),
@@ -156,8 +156,8 @@ pub fn PdfDocument::remove_dict_entry_everywhere(
 pub fn PdfDocument::replace_dict_entry_everywhere(
   self : PdfDocument,
   key : PdfName,
-  value : PdfObject,
-  search? : PdfObject? = None,
+  value : @syntax.PdfObject,
+  search? : @syntax.PdfObject? = None,
 ) -> Unit {
   self.pdf_util_rewrite_dict_entries(
     self.pdf_util_replace_entry_transform(key, value, search),
@@ -174,9 +174,11 @@ pub fn PdfDocument::replace_dict_entry_everywhere(
 pub fn PdfDocument::dict_entry_values(
   self : PdfDocument,
   key : PdfName,
-) -> Array[PdfObject] {
+) -> Array[@syntax.PdfObject] {
   let object_numbers = self.object_numbers()
-  let output : Array[PdfObject] = Array::new(capacity=object_numbers.length())
+  let output : Array[@syntax.PdfObject] = Array::new(
+    capacity=object_numbers.length(),
+  )
   for number in object_numbers {
     self.pdf_util_collect_dict_entry_values(
       self.lookup_object_or_null(number),
@@ -250,7 +252,7 @@ pub fn PdfDocument::dict_entries_json_string(
 pub fn pdf_dict_entry_values(
   document : PdfDocument,
   key : PdfName,
-) -> Array[PdfObject] {
+) -> Array[@syntax.PdfObject] {
   document.dict_entry_values(key)
 }
 
@@ -318,7 +320,7 @@ pub fn pdf_get_dict_entries_cpdf_order(
 pub fn pdf_remove_dict_entry(
   document : PdfDocument,
   key : PdfName,
-  search? : PdfObject? = None,
+  search? : @syntax.PdfObject? = None,
 ) -> Unit {
   document.remove_dict_entry_everywhere(key, search~)
 }
@@ -328,7 +330,7 @@ pub fn pdf_remove_dict_entry(
 pub fn PdfDocument::remove_dict_entry_string(
   self : PdfDocument,
   key : String,
-  search? : PdfObject? = None,
+  search? : @syntax.PdfObject? = None,
 ) -> Unit {
   self.remove_dict_entry_everywhere(
     pdf_name_of_bytes(@ascii.encode(key)),
@@ -341,7 +343,7 @@ pub fn PdfDocument::remove_dict_entry_string(
 pub fn pdf_remove_dict_entry_string(
   document : PdfDocument,
   key : String,
-  search? : PdfObject? = None,
+  search? : @syntax.PdfObject? = None,
 ) -> Unit {
   document.remove_dict_entry_string(key, search~)
 }
@@ -351,8 +353,8 @@ pub fn pdf_remove_dict_entry_string(
 pub fn pdf_replace_dict_entry(
   document : PdfDocument,
   key : PdfName,
-  value : PdfObject,
-  search? : PdfObject? = None,
+  value : @syntax.PdfObject,
+  search? : @syntax.PdfObject? = None,
 ) -> Unit {
   document.replace_dict_entry_everywhere(key, value, search~)
 }
@@ -362,8 +364,8 @@ pub fn pdf_replace_dict_entry(
 pub fn PdfDocument::replace_dict_entry_string(
   self : PdfDocument,
   key : String,
-  value : PdfObject,
-  search? : PdfObject? = None,
+  value : @syntax.PdfObject,
+  search? : @syntax.PdfObject? = None,
 ) -> Unit {
   self.replace_dict_entry_everywhere(
     pdf_name_of_bytes(@ascii.encode(key)),
@@ -377,8 +379,8 @@ pub fn PdfDocument::replace_dict_entry_string(
 pub fn pdf_replace_dict_entry_string(
   document : PdfDocument,
   key : String,
-  value : PdfObject,
-  search? : PdfObject? = None,
+  value : @syntax.PdfObject,
+  search? : @syntax.PdfObject? = None,
 ) -> Unit {
   document.replace_dict_entry_string(key, value, search~)
 }

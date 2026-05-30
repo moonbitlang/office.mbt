@@ -1,5 +1,5 @@
 ///|
-fn pdf_content_extgstate_number(object : PdfObject) -> Double? {
+fn pdf_content_extgstate_number(object : @syntax.PdfObject) -> Double? {
   match object {
     PdfReal(value) => Some(value)
     PdfInteger(value) => Some(value.to_double())
@@ -8,7 +8,7 @@ fn pdf_content_extgstate_number(object : PdfObject) -> Double? {
 }
 
 ///|
-fn pdf_content_extgstate_integer(object : PdfObject) -> Int? {
+fn pdf_content_extgstate_integer(object : @syntax.PdfObject) -> Int? {
   match object {
     PdfInteger(value) => Some(value)
     _ => None
@@ -18,7 +18,7 @@ fn pdf_content_extgstate_integer(object : PdfObject) -> Int? {
 ///|
 fn PdfDocument::content_extgstate_number(
   self : PdfDocument,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
   key : PdfName,
 ) -> Double? {
   match self.lookup_direct(key, extgstate) {
@@ -30,7 +30,7 @@ fn PdfDocument::content_extgstate_number(
 ///|
 fn PdfDocument::content_extgstate_integer(
   self : PdfDocument,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
   key : PdfName,
 ) -> Int? {
   match self.lookup_direct(key, extgstate) {
@@ -42,7 +42,7 @@ fn PdfDocument::content_extgstate_integer(
 ///|
 fn PdfDocument::content_extgstate_name_value(
   self : PdfDocument,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
   key : PdfName,
 ) -> PdfName? {
   match self.lookup_direct(key, extgstate) {
@@ -54,7 +54,7 @@ fn PdfDocument::content_extgstate_name_value(
 ///|
 fn PdfDocument::content_extgstate_boolean(
   self : PdfDocument,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
   key : PdfName,
 ) -> Bool? {
   match self.lookup_direct(key, extgstate) {

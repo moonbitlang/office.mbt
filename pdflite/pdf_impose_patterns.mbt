@@ -28,8 +28,8 @@ fn pdf_impose_pattern_add_used(
 ///|
 fn PdfDocument::pdf_impose_patterns_used_with_scn(
   self : PdfDocument,
-  content : ArrayView[PdfObject],
-  resources : PdfObject,
+  content : ArrayView[@syntax.PdfObject],
+  resources : @syntax.PdfObject,
 ) -> Array[PdfName] raise PdfError {
   let used_names : Array[PdfName] = []
   match self.lookup_direct(pdf_page_pattern_resource_name, resources) {
@@ -63,8 +63,8 @@ fn pdf_impose_xobject_done(done : ArrayView[Int], number : Int) -> Bool {
 fn PdfDocument::pdf_impose_change_pattern_object(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
-  pattern : PdfObject,
-) -> PdfObject raise PdfError {
+  pattern : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let old_pattern = self.direct(pattern)
   let existing = self.parse_matrix(pdf_impose_matrix_key_name, old_pattern)
   let new_matrix = @geometry.transform_matrix_compose(matrix, existing)
@@ -82,10 +82,10 @@ fn PdfDocument::pdf_impose_change_pattern_object(
 fn PdfDocument::pdf_impose_change_pattern_matrices_resources(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   names_used_with_scn : ArrayView[PdfName],
   xobjects_done : Array[Int],
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match self.lookup_direct(pdf_page_xobject_key(), resources) {
     Some(PdfDictionary(entries)) =>
       for entry in entries {
@@ -104,7 +104,7 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_resources(
   }
   match self.lookup_direct(pdf_page_pattern_resource_name, resources) {
     Some(PdfDictionary(patterns)) => {
-      let entries : Array[(PdfName, PdfObject)] = []
+      let entries : Array[(PdfName, @syntax.PdfObject)] = []
       for entry in patterns {
         let (name, pattern) = entry
         if pdf_impose_pattern_name_used(names_used_with_scn, name) {
@@ -128,7 +128,7 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_resources(
 fn PdfDocument::pdf_impose_change_pattern_matrices_xobject(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
-  xobject : PdfObject,
+  xobject : @syntax.PdfObject,
   xobject_number : Int,
   xobjects_done : Array[Int],
 ) -> Unit raise PdfError {

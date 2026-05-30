@@ -22,7 +22,7 @@ fn pdf_type_font_resource_name(number : Int) -> PdfName {
 }
 
 ///|
-fn pdf_type_make_resources(font_numbers : ArrayView[Int]) -> PdfObject {
+fn pdf_type_make_resources(font_numbers : ArrayView[Int]) -> @syntax.PdfObject {
   PdfDictionary([
     (
       pdf_type_name("/Font"),
@@ -42,8 +42,8 @@ fn pdf_type_annotation_object(
   destination : @destination.PdfDestination,
   contents : String?,
   rectangle : (Double, Double, Double, Double),
-) -> PdfObject {
-  let entries : Array[(PdfName, PdfObject)] = []
+) -> @syntax.PdfObject {
+  let entries : Array[(PdfName, @syntax.PdfObject)] = []
   match contents {
     Some(text) =>
       entries.push(
@@ -79,8 +79,8 @@ fn pdf_type_annotation_object(
 ///|
 fn pdf_type_make_annotations(
   document : PdfDocument,
-  annotations : ArrayView[PdfObject],
-) -> PdfObject {
+  annotations : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject {
   if annotations.length() == 0 {
     PdfDictionary([])
   } else {

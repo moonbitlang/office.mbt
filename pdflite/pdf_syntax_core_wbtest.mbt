@@ -6,21 +6,21 @@
 test "private stream data materialization reports invalid deferred slices" {
   let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
   let bad_position : Result[BytesView, Error] = try? @syntax.pdf_stream_data_view(
-    StreamToGet(stream_to_get(cursor, -1, 1)),
+    StreamToGet(@syntax.stream_to_get(cursor, -1, 1)),
   )
   guard bad_position is Err(PdfError::InvalidCursorPosition(-1)) else {
     fail("expected PdfError::InvalidCursorPosition")
   }
 
   let bad_length : Result[BytesView, Error] = try? @syntax.pdf_stream_data_view(
-    StreamToGet(stream_to_get(cursor, 0, -1)),
+    StreamToGet(@syntax.stream_to_get(cursor, 0, -1)),
   )
   guard bad_length is Err(PdfError::InvalidReadLength(-1)) else {
     fail("expected PdfError::InvalidReadLength")
   }
 
   let too_long : Result[BytesView, Error] = try? @syntax.pdf_stream_data_view(
-    StreamToGet(stream_to_get(cursor, 2, 2)),
+    StreamToGet(@syntax.stream_to_get(cursor, 2, 2)),
   )
   guard too_long is Err(PdfError::EndOfInput) else {
     fail("expected PdfError::EndOfInput")
@@ -50,7 +50,7 @@ test "parser prefix helper reports malformed indirect prefixes" {
     ),
     false,
   )
-  let too_short : Result[PdfParsedIndirectObject, Error] = try? @syntax.pdf_parse_indirect_object_prefix_lexemes([
+  let too_short : Result[@syntax.PdfParsedIndirectObject, Error] = try? @syntax.pdf_parse_indirect_object_prefix_lexemes([
       LexInt(1),
       LexInt(0),
     ],
@@ -58,7 +58,7 @@ test "parser prefix helper reports malformed indirect prefixes" {
   guard too_short is Err(PdfError::ParseIndirectObjectExpected) else {
     fail("expected PdfError::ParseIndirectObjectExpected")
   }
-  let bad_header : Result[PdfParsedIndirectObject, Error] = try? @syntax.pdf_parse_indirect_object_prefix_lexemes([
+  let bad_header : Result[@syntax.PdfParsedIndirectObject, Error] = try? @syntax.pdf_parse_indirect_object_prefix_lexemes([
       LexInt(1),
       LexInt(0),
       LexNull,

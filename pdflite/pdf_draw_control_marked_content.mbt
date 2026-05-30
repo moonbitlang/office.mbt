@@ -69,7 +69,7 @@ pub fn PdfDrawControl::add_namespace(
 pub fn PdfDrawControl::add_element_info(
   self : PdfDrawControl,
   key : String,
-  value : PdfObject,
+  value : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   self.add_op(PdfDrawEltInfo(key, value))
 }

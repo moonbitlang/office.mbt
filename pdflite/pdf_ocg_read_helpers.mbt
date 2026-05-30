@@ -1,12 +1,14 @@
 ///|
-fn PdfDocument::pdf_ocg_root(self : PdfDocument) -> PdfObject raise PdfError {
+fn PdfDocument::pdf_ocg_root(
+  self : PdfDocument,
+) -> @syntax.PdfObject raise PdfError {
   self.catalog()
 }
 
 ///|
 fn PdfDocument::pdf_ocg_name_array(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[PdfName] {
   match self.direct(object) {
     PdfNameObject(name) => [name]
@@ -27,7 +29,7 @@ fn PdfDocument::pdf_ocg_name_array(
 ///|
 fn PdfDocument::pdf_ocg_indirect_numbers(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[Int] {
   match self.direct(object) {
     PdfArray(values) => {
@@ -47,7 +49,7 @@ fn PdfDocument::pdf_ocg_indirect_numbers(
 ///|
 fn PdfDocument::pdf_ocg_string_array(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[PdfBytes] {
   match self.direct(object) {
     PdfString(text) => [text]
@@ -68,7 +70,7 @@ fn PdfDocument::pdf_ocg_string_array(
 ///|
 fn PdfDocument::pdf_ocg_optional_number(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Double? {
   try self.get_number(object) catch {
     _ => None

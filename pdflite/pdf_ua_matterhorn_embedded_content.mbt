@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_ua_matterhorn_ocproperties_d(
   self : PdfDocument,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   self.lookup_chain(self.trailer_dict(), [
     pdf_ua_root_key(),
     pdf_ocg_ocproperties_key(),
@@ -12,7 +12,7 @@ fn PdfDocument::pdf_ua_matterhorn_ocproperties_d(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_ocproperties_configs(
   self : PdfDocument,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   self.lookup_chain(self.trailer_dict(), [
     pdf_ua_root_key(),
     pdf_ocg_ocproperties_key(),
@@ -84,7 +84,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_20_003(self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_file_spec_has_f_and_uf(
   self : PdfDocument,
-  file_spec : PdfObject,
+  file_spec : @syntax.PdfObject,
 ) -> Bool {
   self.lookup_direct(pdf_attach_f_key(), file_spec) is Some(_) &&
   self.lookup_direct(pdf_attach_uf_key(), file_spec) is Some(_)
@@ -129,7 +129,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_21_001(
 }
 
 ///|
-fn pdf_ua_matterhorn_xfa_config_key(object : PdfObject) -> Bool {
+fn pdf_ua_matterhorn_xfa_config_key(object : @syntax.PdfObject) -> Bool {
   match object {
     PdfString(value) =>
       pdf_view_equals_ascii(value, [99, 111, 110, 102, 105, 103])
@@ -140,7 +140,7 @@ fn pdf_ua_matterhorn_xfa_config_key(object : PdfObject) -> Bool {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_xfa_config_stream_data(
   self : PdfDocument,
-  config : PdfObject,
+  config : @syntax.PdfObject,
 ) -> PdfBytes? raise PdfError {
   match self.direct(config) {
     PdfStreamObject(stream) => {
@@ -281,7 +281,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_25_001(
       pdf_metadata_xfa(),
     ]) {
     Some(PdfArray(xfa)) => {
-      let configs : Array[PdfObject] = []
+      let configs : Array[@syntax.PdfObject] = []
       for pair in 0..<(xfa.length() / 2) {
         let index = pair * 2
         if pdf_ua_matterhorn_xfa_config_key(xfa[index]) {

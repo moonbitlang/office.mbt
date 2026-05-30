@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_text_read_type3_glyphs(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> PdfType3Glyphs raise PdfError {
   let fontbbox = match self.lookup_direct(pdf_text_font_bbox_key_name, font) {
     Some(value) =>
@@ -29,7 +29,7 @@ fn PdfDocument::pdf_text_read_type3_glyphs(
 ///|
 fn PdfDocument::pdf_text_simple_font_type_of_name(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
   subtype : PdfName,
 ) -> PdfSimpleFontType? raise PdfError {
   if subtype == pdf_text_type1_name {
@@ -48,7 +48,7 @@ fn PdfDocument::pdf_text_simple_font_type_of_name(
 ///|
 fn PdfDocument::pdf_text_read_basefont(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> PdfName? {
   match self.lookup_direct(pdf_text_base_font_key_name, font) {
     Some(PdfNameObject(name)) => Some(name)
@@ -64,7 +64,7 @@ fn PdfDocument::pdf_text_read_basefont(
 /// resolved simple-font encoding.
 pub fn PdfDocument::read_simple_font(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> PdfSimpleFont raise PdfError {
   match self.lookup_direct(pdf_text_subtype_key_name, font) {
     Some(PdfNameObject(subtype)) =>

@@ -28,7 +28,7 @@ pub fn pdf_content_entries_of_page(
 pub fn PdfDocument::content_json_of_ops(
   self : PdfDocument,
   mediabox : @geometry.PdfRectangle,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Json raise PdfError {
   pdf_content_json_entries_content_json(
@@ -41,7 +41,7 @@ pub fn PdfDocument::content_json_of_ops(
 pub fn pdf_content_json_of_ops(
   document : PdfDocument,
   mediabox : @geometry.PdfRectangle,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Json raise PdfError {
   document.content_json_of_ops(mediabox, resources, ops)
@@ -52,7 +52,7 @@ pub fn pdf_content_json_of_ops(
 pub fn pdf_content_to_json(
   document : PdfDocument,
   mediabox : @geometry.PdfRectangle,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Json raise PdfError {
   document.content_json_of_ops(mediabox, resources, ops)
@@ -63,7 +63,7 @@ pub fn pdf_content_to_json(
 pub fn PdfDocument::content_filter(
   self : PdfDocument,
   mediabox : @geometry.PdfRectangle,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
   predicate : (PdfContentJsonEntry) -> Bool,
 ) -> Array[@content.PdfContentOp] raise PdfError {
@@ -82,7 +82,7 @@ pub fn pdf_content_filter(
   document : PdfDocument,
   predicate : (PdfContentJsonEntry) -> Bool,
   mediabox : @geometry.PdfRectangle,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[@content.PdfContentOp] raise PdfError {
   document.content_filter(mediabox, resources, ops, predicate)

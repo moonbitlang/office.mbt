@@ -125,12 +125,12 @@ test "PdfObjects parsed_entries returns sorted parsed objects with generations" 
 ///|
 test "PdfObjects stream_entries returns sorted parsed stream objects" {
   let objects = @pdflite.pdf_objects_empty()
-  let first_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let first_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
-  let second_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let second_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([66])),
   )
   objects.set_entry(
@@ -173,7 +173,7 @@ test "PdfDocument empty document mirrors CamlPDF defaults" {
   doc.set_first_xref(128)
   doc.set_revision_read(2)
   doc.set_trailer_dict(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         @pdflite.pdf_name_of_bytes(
           try! @pdflite.pdf_bytes_of_int_array([47, 82, 111, 111, 116]),
@@ -194,15 +194,15 @@ test "PdfDocument empty document mirrors CamlPDF defaults" {
 ///|
 test "PdfDocument catalog reads the root object or reports @pdflite.PdfError::RootExpected" {
   let doc = @pdflite.pdf_document_empty()
-  let missing : Result[@pdflite.PdfObject, Error] = try? doc.catalog()
+  let missing : Result[@syntax.PdfObject, Error] = try? doc.catalog()
   guard missing is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected for missing catalog")
   }
   doc.set_root(4)
-  doc.add_object_given_number(4, @pdflite.pdf_dictionary([]))
-  @test.assert_eq(try! doc.catalog(), @pdflite.pdf_dictionary([]))
+  doc.add_object_given_number(4, @syntax.pdf_dictionary([]))
+  @test.assert_eq(try! doc.catalog(), @syntax.pdf_dictionary([]))
   doc.add_object_given_number(4, PdfNull)
-  let null_root : Result[@pdflite.PdfObject, Error] = try? doc.catalog()
+  let null_root : Result[@syntax.PdfObject, Error] = try? doc.catalog()
   guard null_root is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected for null catalog")
   }
@@ -218,24 +218,24 @@ test "PdfDocument catalog prefers trailer Root over stale root number" {
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_lang, PdfString(@ascii.encode("stale")))]),
+    @syntax.pdf_dictionary([(key_lang, PdfString(@ascii.encode("stale")))]),
   )
   doc.add_object_given_number(
     10,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(key_catalog)),
       (key_lang, PdfString(@ascii.encode("active"))),
     ]),
   )
-  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(10))]))
+  doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(10))]))
 
   @test.assert_eq(
     try! doc.catalog().lookup_immediate(key_lang),
     Some(PdfString(@ascii.encode("active"))),
   )
 
-  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(99))]))
-  let missing : Result[@pdflite.PdfObject, Error] = try? doc.catalog()
+  doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(99))]))
+  let missing : Result[@syntax.PdfObject, Error] = try? doc.catalog()
   guard missing is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected for unresolved trailer root")
   }
@@ -307,10 +307,10 @@ test "PdfDocument object iteration visits sorted parsed objects" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(4, PdfInteger(40), generation=2)
   doc.add_object_given_number(1, PdfInteger(10), generation=3)
-  let seen : Array[(Int, @pdflite.PdfObject)] = []
+  let seen : Array[(Int, @syntax.PdfObject)] = []
   try! doc.iter_objects(fn(number, object) { seen.push((number, object)) })
   @test.assert_eq(seen, [(1, PdfInteger(10)), (4, PdfInteger(40))])
-  let with_generation : Array[(Int, Int, @pdflite.PdfObject)] = []
+  let with_generation : Array[(Int, Int, @syntax.PdfObject)] = []
   try! doc.iter_objects_with_generation(fn(number, generation, object) {
     with_generation.push((number, generation, object))
   })
@@ -327,8 +327,8 @@ test "PdfDocument object iteration visits sorted parsed objects" {
 ///|
 test "PdfDocument stream_object_entries delegates stream entries" {
   let doc = @pdflite.pdf_document_empty()
-  let stream_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let stream_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
   doc.add_object_given_number(7, stream_object, generation=2)
@@ -342,18 +342,18 @@ test "PdfDocument stream_object_entries delegates stream entries" {
 ///|
 test "PdfDocument iter_stream visits stream objects with raising callback" {
   let doc = @pdflite.pdf_document_empty()
-  let first = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let first = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
-  let second = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let second = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([66])),
   )
   doc.add_object_given_number(5, first)
   doc.add_object_given_number(2, second)
   doc.add_object_given_number(3, PdfInteger(3))
-  let seen : Array[@pdflite.PdfObject] = []
+  let seen : Array[@syntax.PdfObject] = []
   try! doc.iter_stream(fn(object) { seen.push(object) })
   @test.assert_eq(seen, [second, first])
   let failed : Result[Unit, Error] = try? doc.iter_stream(fn(_) raise {
@@ -397,7 +397,7 @@ test "PdfDocument copy deep-copies mutable object containers and streams" {
   let key_initial = @pdflite.pdf_name_of_bytes(@ascii.encode("/Initial"))
   let key_added = @pdflite.pdf_name_of_bytes(@ascii.encode("/Added"))
   let doc = @pdflite.pdf_document_empty()
-  let stream_object : @pdflite.PdfObject = @pdflite.pdf_stream(
+  let stream_object : @syntax.PdfObject = @syntax.pdf_stream(
     PdfDictionary([(key_length, PdfInteger(1))]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
@@ -407,10 +407,10 @@ test "PdfDocument copy deep-copies mutable object containers and streams" {
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([]),
       StreamToGet(
-        @pdflite.stream_to_get(
+        @syntax.stream_to_get(
           @pdflite.byte_cursor_of_bytes(
             try! @pdflite.pdf_bytes_of_int_array([65, 66, 67]),
           ),

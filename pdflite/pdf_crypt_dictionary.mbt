@@ -1,8 +1,8 @@
 ///|
 fn pdf_crypt_arc4_v4_length(
   pdf : PdfDocument,
-  encrypt_dictionary : PdfObject,
-  cf_dictionary : PdfObject,
+  encrypt_dictionary : @syntax.PdfObject,
+  cf_dictionary : @syntax.PdfObject,
 ) -> Int? {
   match pdf_crypt_lookup_int(pdf, pdf_crypt_length_name, encrypt_dictionary) {
     Some(value) => Some(value)
@@ -13,7 +13,7 @@ fn pdf_crypt_arc4_v4_length(
 ///|
 fn pdf_crypt_type_from_encrypt_dictionary(
   pdf : PdfDocument,
-  encrypt_dictionary : PdfObject,
+  encrypt_dictionary : @syntax.PdfObject,
 ) -> PdfCryptType? {
   let standard = pdf_crypt_standard_name
   let filter = pdf_crypt_lookup_name(

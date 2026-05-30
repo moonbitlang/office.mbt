@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_metadata_box_array_json(
   self : PdfDocument,
-  box : PdfObject,
+  box : @syntax.PdfObject,
   unit : @geometry.PdfUnit,
 ) -> Json? {
   match self.direct(box) {
@@ -20,7 +20,7 @@ fn PdfDocument::pdf_metadata_box_array_json(
 ///|
 fn PdfDocument::pdf_metadata_page_box_json(
   self : PdfDocument,
-  boxes : ArrayView[PdfObject?],
+  boxes : ArrayView[@syntax.PdfObject?],
   unit : @geometry.PdfUnit,
 ) -> Json {
   if boxes.length() == 0 {

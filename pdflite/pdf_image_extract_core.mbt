@@ -12,9 +12,9 @@ fn PdfDocument::pdf_image_jbig2_global_data(
 ///|
 fn PdfDocument::pdf_image_extracted_files_of_image(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : String,
-  image : PdfObject,
+  image : @syntax.PdfObject,
   state : PdfImageExtractionState,
 ) -> Array[PdfExtractedImageFile] raise PdfError {
   pdf_check_injectible(name)

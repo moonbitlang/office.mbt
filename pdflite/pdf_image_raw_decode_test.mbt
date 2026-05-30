@@ -11,9 +11,9 @@ fn image_raw_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 ///|
 test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
-  let bad_width = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let empty_resources = @syntax.pdf_dictionary([])
+  let bad_width = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         image_raw_name_for_test("/Width"),
         PdfNameObject(image_raw_name_for_test("/Bad")),
@@ -32,8 +32,8 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   guard width_result is Err(@pdflite.PdfError::NumberExpected) else {
     fail("expected malformed width")
   }
-  let bad_bpc = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let bad_bpc = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -53,8 +53,8 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   guard bpc_result is Err(@pdflite.PdfError::NumberExpected) else {
     fail("expected malformed bits per component")
   }
-  let bad_decode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let bad_decode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -74,8 +74,8 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
   guard decode_result is Err(@pdflite.PdfError::NumberExpected) else {
     fail("expected malformed decode")
   }
-  let missing_width = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let missing_width = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
         image_raw_name_for_test("/Filter"),
@@ -92,8 +92,8 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
     name == image_raw_name_for_test("/Width") else {
     fail("expected missing width")
   }
-  let missing_bpc = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let missing_bpc = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -121,9 +121,9 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
 ///|
 test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
   let doc = @pdflite.pdf_document_empty()
-  let lab_space : @pdflite.PdfObject = PdfArray([
+  let lab_space : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Lab")),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         image_raw_name_for_test("/WhitePoint"),
         PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(1)]),
@@ -139,8 +139,8 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
       ),
     ]),
   ])
-  let lab_jpeg = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let lab_jpeg = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -152,13 +152,13 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
     StreamGot(@ascii.encode("lab")),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), lab_jpeg),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), lab_jpeg),
     PdfJPEG(@ascii.encode("lab"), Some([0.0, 1.0, -80.0, 90.0, -70.0, 85.0])),
   )
-  let tint = @pdflite.pdf_dictionary([
+  let tint = @syntax.pdf_dictionary([
     (image_raw_name_for_test("/FunctionType"), PdfInteger(2)),
   ])
-  let device_n_space : @pdflite.PdfObject = PdfArray([
+  let device_n_space : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/DeviceN")),
     PdfArray([
       PdfNameObject(image_raw_name_for_test("/Cyan")),
@@ -167,8 +167,8 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
     PdfNameObject(image_raw_name_for_test("/DeviceCMYK")),
     tint,
   ])
-  let device_n_jpeg = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let device_n_jpeg = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -180,17 +180,17 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
     StreamGot(@ascii.encode("device-n")),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), device_n_jpeg),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), device_n_jpeg),
     PdfJPEG(@ascii.encode("device-n"), Some([0.0, 1.0, 0.0, 1.0])),
   )
-  let indexed_rgb : @pdflite.PdfObject = PdfArray([
+  let indexed_rgb : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),
     PdfNameObject(image_raw_name_for_test("/DeviceRGB")),
     PdfInteger(0),
     PdfString(image_raw_bytes_for_test([10, 20, 30])),
   ])
-  let indexed_jpeg = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let indexed_jpeg = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -206,11 +206,11 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
     StreamGot(@ascii.encode("indexed")),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), indexed_jpeg),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), indexed_jpeg),
     PdfJPEG(@ascii.encode("indexed"), Some([0.0, 1.0])),
   )
-  let pattern_jpeg = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let pattern_jpeg = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -225,7 +225,7 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
     StreamGot(@ascii.encode("pattern")),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), pattern_jpeg),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), pattern_jpeg),
     PdfJPEG(@ascii.encode("pattern"), None),
   )
 }
@@ -233,10 +233,10 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
 ///|
 test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
+  let empty_resources = @syntax.pdf_dictionary([])
   let rgb_data = image_raw_bytes_for_test([1, 2, 3, 4, 5, 6])
-  let rgb = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let rgb = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -258,8 +258,8 @@ test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
     _ => fail("expected raw RGB image")
   }
   let rgb_extra_data = image_raw_bytes_for_test([1, 2, 3, 4, 5, 6, 7])
-  let rgb_extra = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let rgb_extra = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -280,8 +280,8 @@ test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
       @test.assert_eq(physical_equal(rgb_extra_data, data), false)
     _ => fail("expected raw RGB image")
   }
-  let gray = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let gray = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -296,8 +296,8 @@ test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
     try! doc.get_image_24bpp(empty_resources, gray),
     PdfRawImage(2, 1, PdfBPP24, image_raw_bytes_for_test([9, 9, 9, 10, 10, 10])),
   )
-  let cmyk = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cmyk = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -317,15 +317,15 @@ test "PdfDocument get_image_24bpp reads raw RGB gray and CMYK images" {
 ///|
 test "PdfDocument get_image_24bpp reads raw ICCBased images through alternate space" {
   let doc = @pdflite.pdf_document_empty()
-  let icc_gray : @pdflite.PdfObject = PdfArray([
+  let icc_gray : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/ICCBased")),
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([(image_raw_name_for_test("/N"), PdfInteger(1))]),
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([(image_raw_name_for_test("/N"), PdfInteger(1))]),
       StreamGot(@ascii.encode("icc")),
     ),
   ])
-  let image = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let image = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), icc_gray),
@@ -334,7 +334,7 @@ test "PdfDocument get_image_24bpp reads raw ICCBased images through alternate sp
     StreamGot(image_raw_bytes_for_test([9, 10])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), image),
     PdfRawImage(2, 1, PdfBPP24, image_raw_bytes_for_test([9, 9, 9, 10, 10, 10])),
   )
 }
@@ -342,7 +342,7 @@ test "PdfDocument get_image_24bpp reads raw ICCBased images through alternate sp
 ///|
 test "PdfDocument get_image_24bpp reads Separation images with Type 2 CMYK tint" {
   let doc = @pdflite.pdf_document_empty()
-  let tint_function = @pdflite.pdf_dictionary([
+  let tint_function = @syntax.pdf_dictionary([
     (image_raw_name_for_test("/FunctionType"), PdfInteger(2)),
     (
       image_raw_name_for_test("/Domain"),
@@ -358,14 +358,14 @@ test "PdfDocument get_image_24bpp reads Separation images with Type 2 CMYK tint"
     ),
     (image_raw_name_for_test("/N"), PdfInteger(1)),
   ])
-  let separation : @pdflite.PdfObject = PdfArray([
+  let separation : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Separation")),
     PdfNameObject(image_raw_name_for_test("/Spot")),
     PdfNameObject(image_raw_name_for_test("/DeviceCMYK")),
     tint_function,
   ])
-  let image = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let image = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), separation),
@@ -374,7 +374,7 @@ test "PdfDocument get_image_24bpp reads Separation images with Type 2 CMYK tint"
     StreamGot(image_raw_bytes_for_test([255])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), image),
     PdfRawImage(1, 1, PdfBPP24, image_raw_bytes_for_test([255, 255, 0])),
   )
 }
@@ -385,8 +385,8 @@ test "PdfDocument get_image_24bpp reads Separation images with Type 4 CMYK tint"
   let tint_data = @ascii.encode(
     "{ dup 0.5 lt { 0 } { 1 } ifelse exch pop 0 exch 0 0 }",
   )
-  let tint_function = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let tint_function = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Length"), PdfInteger(tint_data.length())),
       (image_raw_name_for_test("/FunctionType"), PdfInteger(4)),
       (
@@ -409,14 +409,14 @@ test "PdfDocument get_image_24bpp reads Separation images with Type 4 CMYK tint"
     ]),
     StreamGot(tint_data),
   )
-  let separation : @pdflite.PdfObject = PdfArray([
+  let separation : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Separation")),
     PdfNameObject(image_raw_name_for_test("/Spot")),
     PdfNameObject(image_raw_name_for_test("/DeviceCMYK")),
     tint_function,
   ])
-  let image = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let image = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), separation),
@@ -425,7 +425,7 @@ test "PdfDocument get_image_24bpp reads Separation images with Type 4 CMYK tint"
     StreamGot(image_raw_bytes_for_test([0, 255])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), image),
     PdfRawImage(
       2,
       1,
@@ -438,8 +438,8 @@ test "PdfDocument get_image_24bpp reads Separation images with Type 4 CMYK tint"
 ///|
 test "PdfDocument get_image_24bpp reads packed grayscale images" {
   let doc = @pdflite.pdf_document_empty()
-  let mask = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let mask = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(3)),
       (image_raw_name_for_test("/Height"), PdfInteger(2)),
       (image_raw_name_for_test("/ImageMask"), PdfBoolean(true)),
@@ -447,7 +447,7 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
     StreamGot(image_raw_bytes_for_test([0b1010_0000, 0b0100_0000])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), mask),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), mask),
     PdfRawImage(
       3,
       2,
@@ -457,8 +457,8 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
       ]),
     ),
   )
-  let gray2 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let gray2 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(5)),
       (image_raw_name_for_test("/Height"), PdfInteger(2)),
       (
@@ -472,7 +472,7 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
     ),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), gray2),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), gray2),
     PdfRawImage(
       5,
       2,
@@ -483,8 +483,8 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
       ]),
     ),
   )
-  let gray4 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let gray4 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(3)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -496,7 +496,7 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
     StreamGot(image_raw_bytes_for_test([0x0F, 0x80])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), gray4),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), gray4),
     PdfRawImage(
       3,
       1,
@@ -504,12 +504,12 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
       image_raw_bytes_for_test([0, 0, 0, 255, 255, 255, 136, 136, 136]),
     ),
   )
-  let cal_gray_space : @pdflite.PdfObject = PdfArray([
+  let cal_gray_space : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/CalGray")),
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
   ])
-  let cal_gray2 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cal_gray2 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(4)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), cal_gray_space),
@@ -518,7 +518,7 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
     StreamGot(image_raw_bytes_for_test([0b0001_1011])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), cal_gray2),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), cal_gray2),
     PdfRawImage(
       4,
       1,
@@ -528,8 +528,8 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
       ]),
     ),
   )
-  let cal_gray4 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cal_gray4 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), cal_gray_space),
@@ -538,7 +538,7 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
     StreamGot(image_raw_bytes_for_test([0x0F])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), cal_gray4),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), cal_gray4),
     PdfRawImage(
       2,
       1,
@@ -551,9 +551,9 @@ test "PdfDocument get_image_24bpp reads packed grayscale images" {
 ///|
 test "PdfDocument get_image_24bpp reads packed RGB images" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
-  let rgb1 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let empty_resources = @syntax.pdf_dictionary([])
+  let rgb1 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -573,8 +573,8 @@ test "PdfDocument get_image_24bpp reads packed RGB images" {
       image_raw_bytes_for_test([255, 0, 255, 0, 255, 0]),
     ),
   )
-  let rgb2 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let rgb2 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -594,8 +594,8 @@ test "PdfDocument get_image_24bpp reads packed RGB images" {
       image_raw_bytes_for_test([0, 85, 170, 255, 170, 85]),
     ),
   )
-  let rgb4 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let rgb4 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -615,12 +615,12 @@ test "PdfDocument get_image_24bpp reads packed RGB images" {
       image_raw_bytes_for_test([0, 255, 136, 17, 34, 51]),
     ),
   )
-  let cal_rgb_space : @pdflite.PdfObject = PdfArray([
+  let cal_rgb_space : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/CalRGB")),
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
   ])
-  let cal_rgb2 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cal_rgb2 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), cal_rgb_space),
@@ -637,8 +637,8 @@ test "PdfDocument get_image_24bpp reads packed RGB images" {
 ///|
 test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
   let doc = @pdflite.pdf_document_empty()
-  let inverted_mask = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let inverted_mask = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ImageMask"), PdfBoolean(true)),
@@ -650,7 +650,7 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
     StreamGot(image_raw_bytes_for_test([0b1000_0000])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), inverted_mask),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), inverted_mask),
     PdfRawImage(
       2,
       1,
@@ -658,8 +658,8 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
       image_raw_bytes_for_test([0, 0, 0, 255, 255, 255]),
     ),
   )
-  let inverted_gray = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let inverted_gray = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -675,7 +675,7 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
     StreamGot(image_raw_bytes_for_test([0, 255])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), inverted_gray),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), inverted_gray),
     PdfRawImage(
       2,
       1,
@@ -683,8 +683,8 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
       image_raw_bytes_for_test([255, 255, 255, 0, 0, 0]),
     ),
   )
-  let decoded_cmyk = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let decoded_cmyk = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -709,11 +709,11 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
     StreamGot(image_raw_bytes_for_test([0, 0, 0, 0])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), decoded_cmyk),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), decoded_cmyk),
     PdfRawImage(1, 1, PdfBPP24, image_raw_bytes_for_test([0, 0, 0])),
   )
-  let identity_empty_decode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let identity_empty_decode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -726,11 +726,11 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
     StreamGot(image_raw_bytes_for_test([4, 5, 6])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), identity_empty_decode),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), identity_empty_decode),
     PdfRawImage(1, 1, PdfBPP24, image_raw_bytes_for_test([4, 5, 6])),
   )
-  let malformed_decode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let malformed_decode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -743,14 +743,14 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
     StreamGot(image_raw_bytes_for_test([0])),
   )
   let malformed_result : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     malformed_decode,
   )
   guard malformed_result is Err(@pdflite.PdfError::FilterExpected) else {
     fail("expected malformed decode array")
   }
-  let decoded_gray4 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let decoded_gray4 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -766,7 +766,7 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
     StreamGot(image_raw_bytes_for_test([0x0F])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), decoded_gray4),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), decoded_gray4),
     PdfRawImage(
       2,
       1,
@@ -774,7 +774,7 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
       image_raw_bytes_for_test([0, 0, 0, 255, 255, 255]),
     ),
   )
-  let tint_function = @pdflite.pdf_dictionary([
+  let tint_function = @syntax.pdf_dictionary([
     (image_raw_name_for_test("/FunctionType"), PdfInteger(2)),
     (
       image_raw_name_for_test("/Domain"),
@@ -790,14 +790,14 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
     ),
     (image_raw_name_for_test("/N"), PdfInteger(1)),
   ])
-  let decoded_separation : @pdflite.PdfObject = PdfArray([
+  let decoded_separation : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Separation")),
     PdfNameObject(image_raw_name_for_test("/Spot")),
     PdfNameObject(image_raw_name_for_test("/DeviceCMYK")),
     tint_function,
   ])
-  let decoded_separation_image = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let decoded_separation_image = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), decoded_separation),
@@ -811,7 +811,7 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
       decoded_separation_image,
     ),
     PdfRawImage(1, 1, PdfBPP24, image_raw_bytes_for_test([255, 255, 0])),
@@ -821,8 +821,8 @@ test "PdfDocument get_image_24bpp applies raw image Decode arrays" {
 ///|
 test "PdfDocument get_image_24bpp rejects unsupported raw image spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let unsupported_rgb16 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let unsupported_rgb16 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -834,13 +834,13 @@ test "PdfDocument get_image_24bpp rejects unsupported raw image spaces" {
     StreamGot(image_raw_bytes_for_test([0, 0, 0, 0, 0, 0])),
   )
   let unsupported : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     unsupported_rgb16,
   )
   guard unsupported is Err(@pdflite.PdfError::FilterExpected) else {
     fail("expected unsupported raw image")
   }
-  let short_tint = @pdflite.pdf_dictionary([
+  let short_tint = @syntax.pdf_dictionary([
     (image_raw_name_for_test("/FunctionType"), PdfInteger(2)),
     (
       image_raw_name_for_test("/Domain"),
@@ -850,14 +850,14 @@ test "PdfDocument get_image_24bpp rejects unsupported raw image spaces" {
     (image_raw_name_for_test("/C1"), PdfArray([PdfInteger(1)])),
     (image_raw_name_for_test("/N"), PdfInteger(1)),
   ])
-  let separation : @pdflite.PdfObject = PdfArray([
+  let separation : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Separation")),
     PdfNameObject(image_raw_name_for_test("/Spot")),
     PdfNameObject(image_raw_name_for_test("/DeviceCMYK")),
     short_tint,
   ])
-  let bad_separation = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let bad_separation = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), separation),
@@ -866,7 +866,7 @@ test "PdfDocument get_image_24bpp rejects unsupported raw image spaces" {
     StreamGot(image_raw_bytes_for_test([255])),
   )
   let bad_tint : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     bad_separation,
   )
   guard bad_tint is Err(@pdflite.PdfError::FilterExpected) else {
@@ -877,15 +877,15 @@ test "PdfDocument get_image_24bpp rejects unsupported raw image spaces" {
 ///|
 test "PdfDocument get_image_24bpp reads indexed image tables" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
-  let indexed_rgb : @pdflite.PdfObject = PdfArray([
+  let empty_resources = @syntax.pdf_dictionary([])
+  let indexed_rgb : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),
     PdfNameObject(image_raw_name_for_test("/DeviceRGB")),
     PdfInteger(1),
     PdfString(image_raw_bytes_for_test([10, 20, 30, 40, 50, 60])),
   ])
-  let rgb8 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let rgb8 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_rgb),
@@ -902,8 +902,8 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       image_raw_bytes_for_test([10, 20, 30, 40, 50, 60]),
     ),
   )
-  let rgb8_with_decode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let rgb8_with_decode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_rgb),
@@ -919,8 +919,8 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
     try! doc.get_image_24bpp(empty_resources, rgb8_with_decode),
     PdfRawImage(1, 1, PdfBPP24, image_raw_bytes_for_test([10, 20, 30])),
   )
-  let rgb1 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let rgb1 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(3)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_rgb),
@@ -937,7 +937,7 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       image_raw_bytes_for_test([10, 20, 30, 40, 50, 60, 10, 20, 30]),
     ),
   )
-  let indexed_rgb4 : @pdflite.PdfObject = PdfArray([
+  let indexed_rgb4 : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),
     PdfNameObject(image_raw_name_for_test("/DeviceRGB")),
     PdfInteger(3),
@@ -947,8 +947,8 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       ]),
     ),
   ])
-  let rgb2 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let rgb2 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(5)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_rgb4),
@@ -967,14 +967,14 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       ]),
     ),
   )
-  let indexed_cmyk : @pdflite.PdfObject = PdfArray([
+  let indexed_cmyk : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),
     PdfNameObject(image_raw_name_for_test("/DeviceCMYK")),
     PdfInteger(1),
     PdfString(image_raw_bytes_for_test([0, 0, 0, 0, 0, 255, 255, 0])),
   ])
-  let cmyk4 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cmyk4 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_cmyk),
@@ -991,8 +991,8 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       image_raw_bytes_for_test([255, 255, 255, 255, 0, 0]),
     ),
   )
-  let cmyk1 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cmyk1 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_cmyk),
@@ -1009,7 +1009,7 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       image_raw_bytes_for_test([255, 255, 255, 255, 0, 0]),
     ),
   )
-  let indexed_cmyk4 : @pdflite.PdfObject = PdfArray([
+  let indexed_cmyk4 : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),
     PdfNameObject(image_raw_name_for_test("/DeviceCMYK")),
     PdfInteger(3),
@@ -1019,8 +1019,8 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       ]),
     ),
   ])
-  let cmyk2 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cmyk2 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(4)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_cmyk4),
@@ -1037,8 +1037,8 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       image_raw_bytes_for_test([255, 255, 255, 255, 0, 0, 0, 255, 0, 0, 0, 255]),
     ),
   )
-  let cmyk8 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cmyk8 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_cmyk),
@@ -1055,8 +1055,8 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       image_raw_bytes_for_test([255, 255, 255, 255, 0, 0]),
     ),
   )
-  let rgb4 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let rgb4 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_rgb),
@@ -1073,18 +1073,18 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       image_raw_bytes_for_test([10, 20, 30, 40, 50, 60]),
     ),
   )
-  let icc_rgb_base = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(image_raw_name_for_test("/N"), PdfInteger(3))]),
+  let icc_rgb_base = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(image_raw_name_for_test("/N"), PdfInteger(3))]),
     StreamGot(@ascii.encode("icc")),
   )
-  let indexed_icc_rgb : @pdflite.PdfObject = PdfArray([
+  let indexed_icc_rgb : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),
     PdfArray([PdfNameObject(image_raw_name_for_test("/ICCBased")), icc_rgb_base]),
     PdfInteger(1),
     PdfString(image_raw_bytes_for_test([1, 2, 3, 4, 5, 6])),
   ])
-  let icc_rgb4 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let icc_rgb4 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_icc_rgb),
@@ -1096,20 +1096,20 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
     try! doc.get_image_24bpp(empty_resources, icc_rgb4),
     PdfRawImage(2, 1, PdfBPP24, image_raw_bytes_for_test([1, 2, 3, 4, 5, 6])),
   )
-  let device_n_cmyk_base : @pdflite.PdfObject = PdfArray([
+  let device_n_cmyk_base : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/DeviceN")),
     PdfArray([PdfNameObject(image_raw_name_for_test("/Spot"))]),
     PdfNameObject(image_raw_name_for_test("/DeviceCMYK")),
     PdfNull,
   ])
-  let indexed_device_n_cmyk : @pdflite.PdfObject = PdfArray([
+  let indexed_device_n_cmyk : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),
     device_n_cmyk_base,
     PdfInteger(1),
     PdfString(image_raw_bytes_for_test([0, 0, 0, 0, 0, 255, 255, 0])),
   ])
-  let device_n_cmyk8 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let device_n_cmyk8 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_device_n_cmyk),
@@ -1126,8 +1126,8 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
       image_raw_bytes_for_test([255, 255, 255, 255, 0, 0]),
     ),
   )
-  let missing_index = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let missing_index = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(1)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_rgb),
@@ -1146,16 +1146,16 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
 ///|
 test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
   let doc = @pdflite.pdf_document_empty()
-  let lab_space : @pdflite.PdfObject = PdfArray([
+  let lab_space : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Lab")),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         image_raw_name_for_test("/WhitePoint"),
         PdfArray([PdfInteger(1000), PdfInteger(1000), PdfInteger(1000)]),
       ),
     ]),
   ])
-  let indexed_lab : @pdflite.PdfObject = PdfArray([
+  let indexed_lab : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),
     lab_space,
     PdfInteger(3),
@@ -1165,8 +1165,8 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
       ]),
     ),
   ])
-  let image8 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let image8 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(4)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_lab),
@@ -1175,7 +1175,7 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
     StreamGot(image_raw_bytes_for_test([0, 1, 2, 3])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image8),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), image8),
     PdfRawImage(
       4,
       1,
@@ -1185,8 +1185,8 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
       ]),
     ),
   )
-  let image4 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let image4 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(4)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_lab),
@@ -1195,7 +1195,7 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
     StreamGot(image_raw_bytes_for_test([0x12, 0x30])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image4),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), image4),
     PdfRawImage(
       4,
       1,
@@ -1205,8 +1205,8 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
       ]),
     ),
   )
-  let image2 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let image2 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(5)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_lab),
@@ -1215,7 +1215,7 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
     StreamGot(image_raw_bytes_for_test([0b0001_1011, 0b0100_0000])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image2),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), image2),
     PdfRawImage(
       5,
       1,
@@ -1225,8 +1225,8 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
       ]),
     ),
   )
-  let image1 = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let image1 = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (image_raw_name_for_test("/ColorSpace"), indexed_lab),
@@ -1235,7 +1235,7 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
     StreamGot(image_raw_bytes_for_test([0b0100_0000])),
   )
   @test.assert_eq(
-    try! doc.get_image_24bpp(@pdflite.pdf_dictionary([]), image1),
+    try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), image1),
     PdfRawImage(
       2,
       1,
@@ -1248,8 +1248,8 @@ test "PdfDocument get_image_24bpp converts Lab indexed image tables" {
 ///|
 test "PdfDocument get_image_24bpp reports malformed raw images" {
   let doc = @pdflite.pdf_document_empty()
-  let short_rgb = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let short_rgb = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (image_raw_name_for_test("/Width"), PdfInteger(2)),
       (image_raw_name_for_test("/Height"), PdfInteger(1)),
       (
@@ -1261,7 +1261,7 @@ test "PdfDocument get_image_24bpp reports malformed raw images" {
     StreamGot(image_raw_bytes_for_test([1, 2, 3])),
   )
   let result : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     short_rgb,
   )
   guard result is Err(@pdflite.PdfError::EndOfInput) else {

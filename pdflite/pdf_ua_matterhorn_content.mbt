@@ -1,7 +1,7 @@
 ///|
 fn pdf_ua_matterhorn_is_form_stream(
   document : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match document.lookup_direct(pdf_ua_subtype_key(), object) {
     Some(PdfNameObject(subtype)) => subtype == pdf_ua_matterhorn_form()
@@ -12,8 +12,8 @@ fn pdf_ua_matterhorn_is_form_stream(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_stream_resources(
   self : PdfDocument,
-  stream : PdfObject,
-) -> PdfObject {
+  stream : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match self.lookup_direct(pdf_ua_matterhorn_resources_key(), stream) {
     Some(resources) => resources
     None => PdfDictionary([])
@@ -145,7 +145,7 @@ fn pdf_ua_matterhorn_path_construction_op(op : @content.PdfContentOp) -> Bool {
 ///|
 fn pdf_ua_matterhorn_bdc_context(
   tag : PdfName,
-  properties : PdfObject,
+  properties : @syntax.PdfObject,
 ) -> PdfUAMatterhornContext {
   match properties {
     PdfDictionary(_) if properties.lookup_immediate(

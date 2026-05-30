@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_ocg_read_usage(
   self : PdfDocument,
-  usage : PdfObject,
+  usage : @syntax.PdfObject,
 ) -> @ocg.PdfOcgUsage {
   let creator = match
     self.lookup_chain(usage, [pdf_ocg_creatorinfo_key(), pdf_ocg_creator_key()]) {
@@ -106,7 +106,7 @@ fn PdfDocument::pdf_ocg_read_usage(
 ///|
 fn PdfDocument::pdf_ocg_read_individual(
   self : PdfDocument,
-  ocg : PdfObject,
+  ocg : @syntax.PdfObject,
 ) -> @ocg.PdfOcg raise PdfError {
   let name = match self.lookup_direct(pdf_ocg_name_key(), ocg) {
     Some(PdfString(name)) => name

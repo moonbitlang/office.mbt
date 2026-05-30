@@ -1,5 +1,7 @@
 ///|
-fn pdf_ua_matterhorn_check_10_001_differences(differences : PdfObject) -> Json? {
+fn pdf_ua_matterhorn_check_10_001_differences(
+  differences : @syntax.PdfObject,
+) -> Json? {
   match differences {
     PdfArray(items) =>
       for item in items {
@@ -17,7 +19,7 @@ fn pdf_ua_matterhorn_check_10_001_differences(differences : PdfObject) -> Json? 
 ///|
 fn PdfDocument::pdf_ua_matterhorn_check_10_001_font(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> (Json?, Bool) {
   if self.lookup_direct(pdf_text_tounicode_key_name, font) is Some(_) {
     (None, false)

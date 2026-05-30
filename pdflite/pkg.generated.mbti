@@ -266,8 +266,6 @@ pub fn pdf_apply_redactions(PdfDocument, ArrayView[Int]) -> Unit
 
 pub fn pdf_apply_type(PdfDocument, String, ArrayView[Int]) -> Unit
 
-pub fn pdf_array(ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject
-
 pub fn pdf_artifact(PdfDrawControl) -> Unit raise @core.PdfError
 
 pub fn pdf_attach_file(PdfDocument, String, BytesView, keep_version? : Bool, page_number? : Int?, relationship? : String?, description? : String?) -> PdfDocument raise @core.PdfError
@@ -592,32 +590,6 @@ pub fn pdf_crop_pdf(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Doub
 
 pub fn pdf_crop_pdf_string(ArrayView[(Double, Double, Double, Double)], PdfDocument, ArrayView[Int], box_name? : String) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_cursor_drop_whitespace(@core.ByteCursor) -> Unit
-
-pub fn pdf_cursor_lex_bool(@core.ByteCursor) -> @syntax.PdfLexeme
-
-pub fn pdf_cursor_lex_comment(@core.ByteCursor) -> @syntax.PdfLexeme
-
-pub fn pdf_cursor_lex_delimiter(@core.ByteCursor) -> @syntax.PdfLexeme
-
-pub fn pdf_cursor_lex_hex_string(@core.ByteCursor) -> @syntax.PdfLexeme raise @core.PdfError
-
-pub fn pdf_cursor_lex_keyword(@core.ByteCursor) -> @syntax.PdfLexeme raise @core.PdfError
-
-pub fn pdf_cursor_lex_literal_string(@core.ByteCursor) -> @syntax.PdfLexeme raise @core.PdfError
-
-pub fn pdf_cursor_lex_name(@core.ByteCursor) -> @syntax.PdfLexeme raise @core.PdfError
-
-pub fn pdf_cursor_lex_number(@core.ByteCursor) -> @syntax.PdfLexeme
-
-pub fn pdf_cursor_lex_token(@core.ByteCursor) -> @syntax.PdfLexeme raise @core.PdfError
-
-pub fn pdf_cursor_lex_tokens(@core.ByteCursor) -> Array[@syntax.PdfLexeme] raise @core.PdfError
-
-pub fn pdf_cursor_read_regular_token_view(@core.ByteCursor) -> BytesView
-
-pub fn pdf_cursor_read_until_whitespace_or_delimiter(@core.ByteCursor) -> BytesView
-
 pub fn pdf_date_of_object(@syntax.PdfObject) -> @date.PdfDate raise @core.PdfError
 
 pub fn pdf_debug_image_processing() -> Bool
@@ -645,8 +617,6 @@ pub fn pdf_deterministic_aes_iv_provider_from_seed(BytesView) -> (Int, Int, Int)
 pub fn pdf_deterministic_aesv3_random_provider_from_seed(BytesView) -> (@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError
 
 pub fn pdf_dict_entry_values(PdfDocument, @core.PdfName) -> Array[@syntax.PdfObject]
-
-pub fn pdf_dictionary(ArrayView[(@core.PdfName, @syntax.PdfObject)]) -> @syntax.PdfObject
 
 pub fn pdf_document_empty() -> PdfDocument
 
@@ -952,14 +922,6 @@ pub fn pdf_language(PdfDocument) -> Bytes?
 
 pub fn pdf_language_string(PdfDocument) -> String?
 
-pub fn pdf_lex_bytes(Bytes) -> Array[@syntax.PdfLexeme] raise @core.PdfError
-
-pub fn pdf_lex_single_view(BytesView) -> @syntax.PdfLexeme raise @core.PdfError
-
-pub fn pdf_lex_view(BytesView) -> Array[@syntax.PdfLexeme] raise @core.PdfError
-
-pub fn pdf_lexeme_debug_name(@syntax.PdfLexeme) -> String
-
 pub fn pdf_list_annotations(ArrayView[Int], @metadata.PdfMetadataEncoding, PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_list_attached_files(PdfDocument) -> Array[@attachment.PdfAttachment] raise @core.PdfError
@@ -1160,27 +1122,11 @@ pub fn pdf_parse_flate_unicode_data(BytesView) -> Array[@unicodedata.PdfUnicodeD
 
 pub fn pdf_parse_function(PdfDocument, @syntax.PdfObject) -> PdfFunction raise @core.PdfError
 
-pub fn pdf_parse_indirect_object_from_bytes(Bytes) -> @syntax.PdfParsedIndirectObject raise @core.PdfError
-
-pub fn pdf_parse_indirect_object_from_view(BytesView) -> @syntax.PdfParsedIndirectObject raise @core.PdfError
-
-pub fn pdf_parse_indirect_object_lexemes(ArrayView[@syntax.PdfLexeme]) -> @syntax.PdfParsedIndirectObject raise @core.PdfError
-
-pub fn pdf_parse_indirect_objects(ArrayView[@syntax.PdfLexeme]) -> Array[@syntax.PdfParsedIndirectObject] raise @core.PdfError
-
-pub fn pdf_parse_lexemes(ArrayView[@syntax.PdfLexeme]) -> Array[@syntax.PdfObject] raise @core.PdfError
-
-pub fn pdf_parse_object_from_bytes(Bytes) -> @syntax.PdfObject raise @core.PdfError
-
-pub fn pdf_parse_object_from_view(BytesView) -> @syntax.PdfObject raise @core.PdfError
-
 pub fn pdf_parse_pagespec(PdfDocument, String) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_parse_rectangle(PdfDocument, String) -> (Double, Double, Double, Double) raise @core.PdfError
 
 pub fn pdf_parse_rectangles(PdfDocument, String) -> Array[(Double, Double, Double, Double)] raise @core.PdfError
-
-pub fn pdf_parse_single_lexeme_object(ArrayView[@syntax.PdfLexeme]) -> @syntax.PdfObject raise @core.PdfError
 
 pub fn pdf_parse_single_number(PdfDocument, String) -> Double raise @core.PdfError
 
@@ -1309,10 +1255,6 @@ pub fn pdf_read_primitive_document_from_view(BytesView) -> PdfDocument raise @co
 pub fn pdf_recompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_rectify_boxes(PdfDocument, @page.PdfPage, fast? : Bool) -> @page.PdfPage raise @core.PdfError
-
-pub fn pdf_recurse_array((@syntax.PdfObject) -> @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject
-
-pub fn pdf_recurse_dict((@syntax.PdfObject) -> @syntax.PdfObject, ArrayView[(@core.PdfName, @syntax.PdfObject)], preserve_order? : Bool) -> @syntax.PdfObject
 
 pub fn pdf_redact(PdfDocument, ArrayView[(Double, Double)], ArrayView[Int]) -> PdfDocument raise @core.PdfError
 
@@ -1582,8 +1524,6 @@ pub fn pdf_startxobj(PdfDrawControl, String) -> Unit
 
 pub fn pdf_startxref_search_view(BytesView) -> BytesView
 
-pub fn pdf_stream(@syntax.PdfObject, @syntax.PdfStreamData) -> @syntax.PdfObject
-
 pub fn pdf_stretch(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn pdf_stretch_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
@@ -1609,10 +1549,6 @@ pub fn pdf_string_of_function(PdfFunction) -> String
 pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise @core.PdfError
 
 pub fn pdf_string_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise @core.PdfError
-
-pub fn pdf_string_of_lexeme(@syntax.PdfLexeme) -> String
-
-pub fn pdf_string_of_lexemes(ArrayView[@syntax.PdfLexeme]) -> String
 
 pub fn pdf_string_of_pagespec(PdfDocument, ArrayView[Int]) -> String raise @core.PdfError
 
@@ -1881,8 +1817,6 @@ pub fn pdf_xobjbbox(PdfDrawControl, PdfDocument, String) -> Unit raise @core.Pdf
 pub fn recompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn squeeze(PdfDocument, page_data? : Bool) -> PdfDocument raise @core.PdfError
-
-pub fn stream_to_get(@core.ByteCursor, Int, Int) -> @syntax.ToGet
 
 // Errors
 
@@ -3367,20 +3301,6 @@ pub using @core {type PdfCryptType}
 
 pub using @core {type PdfError}
 
-pub using @syntax {type PdfLexeme}
-
 pub using @core {type PdfName}
-
-pub using @syntax {type PdfObject}
-
-pub using @syntax {type PdfParsedIndirectObject}
-
-pub using @syntax {type PdfStream}
-
-pub using @syntax {type PdfStreamData}
-
-pub using @syntax {type PdfStreamDataCrypt}
-
-pub using @syntax {type ToGet}
 
 // Traits

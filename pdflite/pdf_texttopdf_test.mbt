@@ -22,9 +22,9 @@ fn texttopdf_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn texttopdf_lookup_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   match object.lookup_immediate(texttopdf_name_for_test(key)) {
     Some(value) => value
     None => {
@@ -37,9 +37,9 @@ fn texttopdf_lookup_for_test(
 ///|
 fn texttopdf_lookup_indirect_object_for_test(
   document : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> (Int, @pdflite.PdfObject) raise {
+) -> (Int, @syntax.PdfObject) raise {
   let reference = try! texttopdf_lookup_for_test(object, key)
   guard reference is PdfIndirect(number) else {
     fail("expected dictionary key " + key + " to be indirect")

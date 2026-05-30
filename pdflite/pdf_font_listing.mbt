@@ -3,7 +3,7 @@ fn PdfDocument::pdf_font_list_entry(
   self : PdfDocument,
   page : Int,
   name : String,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> @font.PdfFontListEntry raise PdfError {
   let direct_font = self.direct(font)
   {
@@ -21,7 +21,7 @@ fn PdfDocument::pdf_font_list_fonts_dictionary(
   self : PdfDocument,
   page : Int,
   prefix : String,
-  fonts : ArrayView[(PdfName, PdfObject)],
+  fonts : ArrayView[(PdfName, @syntax.PdfObject)],
 ) -> Array[@font.PdfFontListEntry] raise PdfError {
   let output : Array[@font.PdfFontListEntry] = Array::new(
     capacity=fonts.length(),
@@ -43,7 +43,7 @@ fn PdfDocument::pdf_font_list_xobjects(
   self : PdfDocument,
   page : Int,
   prefix : String,
-  xobjects : ArrayView[(PdfName, PdfObject)],
+  xobjects : ArrayView[(PdfName, @syntax.PdfObject)],
   seen : Array[Int],
 ) -> Array[@font.PdfFontListEntry] raise PdfError {
   let output : Array[@font.PdfFontListEntry] = Array::new(
@@ -71,7 +71,7 @@ fn PdfDocument::pdf_font_list_resources(
   self : PdfDocument,
   page : Int,
   prefix : String,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   seen : Array[Int],
 ) -> Array[@font.PdfFontListEntry] raise PdfError {
   let output : Array[@font.PdfFontListEntry] = []

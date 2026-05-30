@@ -1,6 +1,6 @@
 ///|
-fn pdf_attach_embedded_file_stream(data : PdfBytes) -> PdfObject {
-  pdf_stream(
+fn pdf_attach_embedded_file_stream(data : PdfBytes) -> @syntax.PdfObject {
+  @syntax.pdf_stream(
     PdfDictionary([
       (pdf_attach_length_key(), PdfInteger(data.length())),
       (pdf_attach_type_key(), PdfNameObject(pdf_attach_embedded_file())),
@@ -26,11 +26,11 @@ fn PdfDocument::pdf_attach_file_spec(
   data : BytesView,
   relationship : String?,
   description : String?,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let payload = data.to_owned()
   let stream_number = self.add_object(pdf_attach_embedded_file_stream(payload))
   let basename_bytes = pdf_attach_pdfdoc_string(basename)
-  let entries : Array[(PdfName, PdfObject)] = [
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (
       pdf_attach_ef_key(),
       PdfDictionary([(pdf_attach_f_key(), PdfIndirect(stream_number))]),
@@ -62,7 +62,7 @@ fn PdfDocument::pdf_attach_file_spec(
 ///|
 fn PdfDocument::pdf_attach_existing_document_entries(
   self : PdfDocument,
-) -> Array[(PdfBytes, PdfObject)] raise PdfError {
+) -> Array[(PdfBytes, @syntax.PdfObject)] raise PdfError {
   let catalog = self.catalog()
   match self.lookup_direct(pdf_attach_names_key(), catalog) {
     Some(names) =>
@@ -94,7 +94,9 @@ fn PdfDocument::pdf_attach_add_document_file(
 }
 
 ///|
-fn pdf_attach_annotation_rect(bounds : @geometry.PdfRectangle) -> PdfObject {
+fn pdf_attach_annotation_rect(
+  bounds : @geometry.PdfRectangle,
+) -> @syntax.PdfObject {
   PdfArray([
     PdfReal(18.0),
     PdfReal(bounds.max_y - 45.0),

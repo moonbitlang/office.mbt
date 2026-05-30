@@ -56,8 +56,8 @@ pub(all) struct PdfFontDescriptor {
 pub(all) struct PdfType3Glyphs {
   fontbbox : @geometry.PdfRectangle
   fontmatrix : @geometry.TransformMatrix
-  charprocs : Array[(PdfName, PdfObject)]
-  resources : PdfObject
+  charprocs : Array[(PdfName, @syntax.PdfObject)]
+  resources : @syntax.PdfObject
 } derive(Debug, Eq, ToJson)
 
 ///|

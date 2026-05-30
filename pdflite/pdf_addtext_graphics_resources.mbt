@@ -1,9 +1,9 @@
 ///|
 fn PdfDocument::pdf_addtext_opacity_resources(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   opacity : Double,
-) -> (PdfObject, PdfName?) raise PdfError {
+) -> (@syntax.PdfObject, PdfName?) raise PdfError {
   if opacity < 1.0 {
     let extgstate = match
       self.lookup_direct(pdf_addtext_extgstate_key(), resources) {
@@ -35,9 +35,9 @@ fn PdfDocument::pdf_addtext_opacity_resources(
 /// resource dictionary unchanged and return no graphics-state name.
 pub fn PdfDocument::addtext_opacity_resources(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   opacity : Double,
-) -> (PdfObject, PdfName?) raise PdfError {
+) -> (@syntax.PdfObject, PdfName?) raise PdfError {
   self.pdf_addtext_opacity_resources(resources, opacity)
 }
 
@@ -45,9 +45,9 @@ pub fn PdfDocument::addtext_opacity_resources(
 /// Compatibility wrapper for `PdfDocument::addtext_opacity_resources`.
 pub fn pdf_addtext_opacity_resources(
   document : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   opacity : Double,
-) -> (PdfObject, PdfName?) raise PdfError {
+) -> (@syntax.PdfObject, PdfName?) raise PdfError {
   document.addtext_opacity_resources(resources, opacity)
 }
 

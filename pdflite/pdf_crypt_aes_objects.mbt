@@ -10,19 +10,19 @@ fn pdf_aes_next_iv(
 
 ///|
 fn pdf_aes_encrypt_pdf_object_with_data_encryptor(
-  object : PdfObject,
+  object : @syntax.PdfObject,
   iv_provider : (Int) -> PdfBytes raise PdfError,
   iv_index : Ref[Int],
   encrypt_data : (BytesView, BytesView) -> PdfBytes raise PdfError,
   no_encrypt_metadata : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfString(bytes) => {
       let iv = pdf_aes_next_iv(iv_provider, iv_index)
       PdfString(encrypt_data(bytes, iv))
     }
     PdfArray(values) => {
-      let output : Array[PdfObject] = []
+      let output : Array[@syntax.PdfObject] = []
       for value in values {
         output.push(
           pdf_aes_encrypt_pdf_object_with_data_encryptor(
@@ -33,7 +33,7 @@ fn pdf_aes_encrypt_pdf_object_with_data_encryptor(
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (name, value) = entry
         output.push(
@@ -83,10 +83,10 @@ fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
   generation : Int,
   file_key : BytesView,
   key_length_bits : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   iv_provider : (Int) -> PdfBytes raise PdfError,
   no_encrypt_metadata : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let iv_index : Ref[Int] = { val: 0 }
   pdf_aes_encrypt_pdf_object_with_data_encryptor(
     object,
@@ -108,10 +108,10 @@ fn pdf_aesv2_encrypt_pdf_object_with_iv_provider(
 /// or stream inside the object. Identity crypt-filter streams are preserved.
 fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(
   file_key : BytesView,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   iv_provider : (Int) -> PdfBytes raise PdfError,
   no_encrypt_metadata : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let iv_index : Ref[Int] = { val: 0 }
   pdf_aes_encrypt_pdf_object_with_data_encryptor(
     object,
@@ -127,14 +127,14 @@ fn pdf_aesv3_encrypt_pdf_object_with_iv_provider(
 ///|
 fn pdf_aes_decrypt_pdf_object_with_key(
   key : BytesView,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   no_encrypt_metadata : Bool,
-  deferred_stream_crypt : PdfStreamDataCrypt,
-) -> PdfObject raise PdfError {
+  deferred_stream_crypt : @syntax.PdfStreamDataCrypt,
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfString(bytes) => PdfString(@crypt_core.pdf_aes_cbc_decrypt(key, bytes))
     PdfArray(values) => {
-      let output : Array[PdfObject] = []
+      let output : Array[@syntax.PdfObject] = []
       for value in values {
         output.push(
           pdf_aes_decrypt_pdf_object_with_key(
@@ -145,7 +145,7 @@ fn pdf_aes_decrypt_pdf_object_with_key(
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (name, value) = entry
         output.push(
@@ -208,9 +208,9 @@ fn pdf_aesv2_decrypt_pdf_object(
   generation : Int,
   file_key : BytesView,
   key_length_bits : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   no_encrypt_metadata : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let object_key = @crypt_core.pdf_encryption_object_key(
     PdfCryptAESV2,
     object_number,
@@ -238,9 +238,9 @@ fn pdf_aesv2_decrypt_pdf_object(
 /// decrypted lazily when the stream bytes are loaded.
 fn pdf_aesv3_decrypt_pdf_object(
   file_key : BytesView,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   no_encrypt_metadata : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   pdf_aes_decrypt_pdf_object_with_key(
     file_key,
     object,

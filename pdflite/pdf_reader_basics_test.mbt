@@ -66,13 +66,13 @@ test "pdf_read_primitive_document_from_bytes loads non-stream indirect objects" 
   @test.assert_eq(document.object_numbers(), [1, 2])
   @test.assert_eq(
     document.lookup_object_or_null(2),
-    @pdflite.pdf_array([PdfInteger(1), PdfInteger(2)]),
+    @syntax.pdf_array([PdfInteger(1), PdfInteger(2)]),
   )
 }
 
 ///|
-test "pdf_parse_indirect_object_from_bytes treats empty objects as null" {
-  let parsed = try! @pdflite.pdf_parse_indirect_object_from_bytes(
+test "@syntax.pdf_parse_indirect_object_from_bytes treats empty objects as null" {
+  let parsed = try! @syntax.pdf_parse_indirect_object_from_bytes(
     reader_pdf_ascii("2 0 obj\nendobj\n"),
   )
   @test.assert_eq(parsed.number, 2)
@@ -81,8 +81,8 @@ test "pdf_parse_indirect_object_from_bytes treats empty objects as null" {
 }
 
 ///|
-test "pdf_parse_indirect_object_from_bytes accepts missing endobj" {
-  let parsed = try! @pdflite.pdf_parse_indirect_object_from_bytes(
+test "@syntax.pdf_parse_indirect_object_from_bytes accepts missing endobj" {
+  let parsed = try! @syntax.pdf_parse_indirect_object_from_bytes(
     reader_pdf_ascii("2 0 obj\n42\n"),
   )
   @test.assert_eq(parsed.number, 2)
@@ -101,7 +101,7 @@ test "pdf_read_primitive_document_from_view loads borrowed slices" {
   @test.assert_eq(document.object_numbers(), [1])
   @test.assert_eq(
     document.lookup_object_or_null(1),
-    @pdflite.pdf_array([PdfInteger(1), PdfInteger(2)]),
+    @syntax.pdf_array([PdfInteger(1), PdfInteger(2)]),
   )
 }
 
@@ -278,7 +278,7 @@ test "pdf_parse_stream_object_from_bytes recovers missing stream length" {
 
 ///|
 test "pdf_parse_stream_object_from_bytes reports malformed stream keyword" {
-  let result : Result[@pdflite.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_stream_object_from_bytes(
+  let result : Result[@syntax.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_stream_object_from_bytes(
     reader_pdf_ascii(
       "7 0 obj\n<< /Length 5 >>\nstram\nHello\nendstream\nendobj",
     ),
@@ -319,7 +319,7 @@ test "pdf_read_classic_document_from_bytes uses xref and trailer root" {
   let type_name = @pdflite.pdf_name_of_bytes(
     reader_bytes_for_test([47, 84, 121, 112, 101]),
   )
-  let catalog = @pdflite.pdf_dictionary([
+  let catalog = @syntax.pdf_dictionary([
     (
       type_name,
       PdfNameObject(
@@ -389,8 +389,8 @@ test "pdf_read_classic_document_from_bytes reads stream objects by xref" {
   let document = @pdflite.pdf_document_empty()
   document.set_version(1, 4)
   document.set_root(1)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(reader_bytes_for_test([72, 101, 108, 108, 111])),
   )
   document.add_object_given_number(1, stream)

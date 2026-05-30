@@ -1,7 +1,7 @@
 ///|
 fn pdf_page_reference_numbers_inner(
   pdf : PdfDocument,
-  pages_node : PdfObject,
+  pages_node : @syntax.PdfObject,
   node_number : Int,
   depth : Int,
 ) -> Array[Int] raise PdfError {
@@ -43,7 +43,7 @@ fn pdf_page_reference_numbers_inner(
 ///|
 fn PdfDocument::pdf_pages_of_pagetree_quick_node(
   self : PdfDocument,
-  node : PdfObject,
+  node : @syntax.PdfObject,
   depth : Int,
 ) -> Int raise PdfError {
   if depth > 10000 {
@@ -84,7 +84,9 @@ fn PdfDocument::pdf_pages_of_pagetree_quick_node(
 }
 
 ///|
-fn pdf_page_root_pages_node(pdf : PdfDocument) -> PdfObject raise PdfError {
+fn pdf_page_root_pages_node(
+  pdf : PdfDocument,
+) -> @syntax.PdfObject raise PdfError {
   let root = match pdf.pdf_page_active_catalog() {
     Some((catalog, _)) => catalog
     None => raise RootExpected

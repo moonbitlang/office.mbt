@@ -4,10 +4,10 @@ fn page_content_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn page_content_raw_stream_for_test(text : String) -> @pdflite.PdfObject {
+fn page_content_raw_stream_for_test(text : String) -> @syntax.PdfObject {
   let data = @ascii.encode(text)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (page_content_name_for_test("/Length"), PdfInteger(data.length())),
     ]),
     StreamGot(data),
@@ -17,12 +17,12 @@ fn page_content_raw_stream_for_test(text : String) -> @pdflite.PdfObject {
 ///|
 fn page_content_prefix_resources_for_test(
   names : ArrayView[String],
-) -> @pdflite.PdfObject {
-  let font_entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+) -> @syntax.PdfObject {
+  let font_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
   for name in names {
     font_entries.push((page_content_name_for_test(name), PdfDictionary([])))
   }
-  @pdflite.pdf_dictionary([
+  @syntax.pdf_dictionary([
     (page_content_name_for_test("/Font"), PdfDictionary(font_entries)),
   ])
 }
@@ -30,15 +30,15 @@ fn page_content_prefix_resources_for_test(
 ///|
 fn page_content_prefix_resource_entry_for_test(
   name : String,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfDictionary([(page_content_name_for_test(name), PdfDictionary([]))])
 }
 
 ///|
 fn page_content_prefix_full_resources_for_test(
   prefix? : String = "",
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       page_content_name_for_test("/Font"),
       page_content_prefix_resource_entry_for_test("/" + prefix + "F0"),
@@ -140,9 +140,9 @@ fn page_content_renumber_content_ops_for_test() -> Array[@content.PdfContentOp] 
 
 ///|
 fn page_content_resource_value_for_test(
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   resources.lookup_immediate(page_content_name_for_test(key))
 }
 
@@ -201,7 +201,7 @@ test "PdfDocument merge_content_streams combines page content arrays" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_content_name_for_test("/Page"))),
       (key_contents, PdfArray([PdfIndirect(2), PdfIndirect(3)])),
     ]),
@@ -227,7 +227,7 @@ test "PdfDocument merge_content_streams leaves single content arrays unchanged" 
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_content_name_for_test("/Page"))),
       (key_contents, PdfArray([PdfIndirect(2)])),
     ]),
@@ -247,7 +247,7 @@ test "PdfDocument merge_content_streams rejects non-stream content arrays" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_content_name_for_test("/Page"))),
       (key_contents, PdfArray([PdfInteger(1), PdfIndirect(2)])),
     ]),
@@ -267,7 +267,7 @@ test "PdfDocument add_prefix keeps parseable content arrays split" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_content_name_for_test("/Page"))),
       (key_resources, page_content_prefix_resources_for_test(["/F0"])),
       (key_contents, PdfArray([PdfIndirect(2), PdfIndirect(3)])),
@@ -298,7 +298,7 @@ test "PdfDocument add_prefix merges split content arrays before rewriting" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_content_name_for_test("/Page"))),
       (key_resources, page_content_prefix_resources_for_test(["/F0"])),
       (key_contents, PdfArray([PdfIndirect(2), PdfIndirect(3)])),

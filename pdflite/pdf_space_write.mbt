@@ -1,10 +1,12 @@
 ///|
-fn pdf_space_number_array_object(values : ArrayView[Double]) -> PdfObject {
+fn pdf_space_number_array_object(
+  values : ArrayView[Double],
+) -> @syntax.PdfObject {
   PdfArray([ for value in values => PdfReal(value) ])
 }
 
 ///|
-fn pdf_space_point_object(point : PdfTristimulusPoint) -> PdfObject {
+fn pdf_space_point_object(point : PdfTristimulusPoint) -> @syntax.PdfObject {
   PdfArray([PdfReal(point.x), PdfReal(point.y), PdfReal(point.z)])
 }
 
@@ -57,7 +59,7 @@ fn pdf_space_indexed_lookup_bytes(
 }
 
 ///|
-fn pdf_space_empty_dictionary(object : PdfObject) -> Bool {
+fn pdf_space_empty_dictionary(object : @syntax.PdfObject) -> Bool {
   match object {
     PdfDictionary(entries) => entries.length() == 0
     _ => false
@@ -70,7 +72,7 @@ fn pdf_space_empty_dictionary(object : PdfObject) -> Bool {
 /// Returns `None` when the colour space cannot be serialized losslessly, such
 /// as an indexed table with invalid component values or a base colour space that
 /// itself cannot be represented.
-pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
+pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> @syntax.PdfObject? {
   match space {
     PdfDeviceGray => Some(PdfNameObject(pdf_space_device_gray_name))
     PdfDeviceRGB => Some(PdfNameObject(pdf_space_device_rgb_name))
@@ -152,7 +154,7 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
     PdfDeviceN(names, alternate, tint, attributes) =>
       match pdf_object_of_colour_space(alternate) {
         Some(alternate_object) => {
-          let values : Array[PdfObject] = [
+          let values : Array[@syntax.PdfObject] = [
             PdfNameObject(pdf_space_device_n_name),
             PdfArray([ for name in names => PdfNameObject(name) ]),
             alternate_object,
@@ -176,7 +178,7 @@ pub fn pdf_object_of_colour_space(space : PdfColourSpace) -> PdfObject? {
 pub fn PdfDocument::write_colour_space(
   _self : PdfDocument,
   space : PdfColourSpace,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   match pdf_object_of_colour_space(space) {
     Some(object) => object
     None => PdfNull
@@ -188,6 +190,6 @@ pub fn PdfDocument::write_colour_space(
 pub fn pdf_write_colour_space(
   document : PdfDocument,
   space : PdfColourSpace,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   document.write_colour_space(space)
 }

@@ -32,9 +32,9 @@ fn PdfDocument::pdf_tweak_remove_clipping_page(
 ///|
 fn pdf_tweak_remove_clipping_xobject(
   document : PdfDocument,
-  resources : PdfObject,
-  streams : ArrayView[PdfObject],
-) -> Array[PdfObject] raise PdfError {
+  resources : @syntax.PdfObject,
+  streams : ArrayView[@syntax.PdfObject],
+) -> Array[@syntax.PdfObject] raise PdfError {
   let ops = document.pdf_page_parse_content_ops(resources, streams)
   [pdf_content_stream_of_ops(pdf_remove_clipping_ops(ops))]
 }

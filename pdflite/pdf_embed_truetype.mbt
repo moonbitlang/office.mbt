@@ -26,7 +26,7 @@ fn PdfDocument::pdf_embed_add_truetype_fontfile(
 ) -> Int {
   let length = fontfile.length()
   self.add_object(
-    pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([
         (pdf_embed_length_key_name, PdfInteger(length)),
         (pdf_embed_length1_key_name, PdfInteger(length)),

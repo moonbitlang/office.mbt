@@ -21,7 +21,7 @@ fn double_max(a : Double, b : Double) -> Double {
 /// integers are widened to `Double`; any other object raises `PdfError::NumberExpected`.
 pub fn PdfDocument::get_number(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Double raise PdfError {
   match self.direct(object) {
     PdfReal(value) => value
@@ -39,7 +39,7 @@ pub fn PdfDocument::get_number(
 /// malformed numeric entries raise `PdfError::BadRectangle`.
 pub fn PdfDocument::parse_rectangle(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> @geometry.PdfRectangle raise PdfError {
   match self.direct(object) {
     PdfArray(values) if values.length() == 4 => {
@@ -70,8 +70,8 @@ pub fn PdfDocument::parse_rectangle(
 pub fn PdfDocument::transform_rect(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
-  object : PdfObject,
-) -> PdfObject raise PdfError {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let rectangle = self.parse_rectangle(object)
   let p0 = matrix.apply(@geometry.point2(rectangle.min_x, rectangle.min_y))
   let p1 = matrix.apply(@geometry.point2(rectangle.max_x, rectangle.max_y))
@@ -88,7 +88,7 @@ pub fn PdfDocument::transform_rect(
 ///|
 fn PdfDocument::pdf_transform_number_or_none(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Double? {
   try self.get_number(object) catch {
     _ => None
@@ -101,9 +101,9 @@ fn PdfDocument::pdf_transform_number_or_none(
 fn PdfDocument::pdf_transform_quadpoint_chunk(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
-  values : ArrayView[PdfObject],
+  values : ArrayView[@syntax.PdfObject],
   start : Int,
-) -> Array[PdfObject] {
+) -> Array[@syntax.PdfObject] {
   let numbers : Array[Double] = []
   let mut valid = true
   for index in start..<(start + 8) {
@@ -113,7 +113,7 @@ fn PdfDocument::pdf_transform_quadpoint_chunk(
     }
   }
   if valid {
-    let output : Array[PdfObject] = []
+    let output : Array[@syntax.PdfObject] = []
     for index in 0..<4 {
       let point = matrix.apply(
         @geometry.point2(numbers[index * 2], numbers[index * 2 + 1]),
@@ -139,11 +139,11 @@ fn PdfDocument::pdf_transform_quadpoint_chunk(
 pub fn PdfDocument::transform_quadpoints(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
-  object : PdfObject,
-) -> PdfObject {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match self.direct(object) {
     PdfArray(values) => {
-      let output : Array[PdfObject] = []
+      let output : Array[@syntax.PdfObject] = []
       let mut start = 0
       while start < values.length() {
         if start + 8 <= values.length() {
@@ -172,7 +172,7 @@ pub fn PdfDocument::transform_quadpoints(
 pub fn PdfDocument::parse_matrix(
   self : PdfDocument,
   key : PdfName,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> @geometry.TransformMatrix raise PdfError {
   match self.lookup_direct(key, object) {
     None => @geometry.transform_identity_matrix
@@ -191,7 +191,9 @@ pub fn PdfDocument::parse_matrix(
 
 ///|
 /// Convert a transformation matrix into its six-number PDF array form.
-pub fn pdf_object_of_matrix(matrix : @geometry.TransformMatrix) -> PdfObject {
+pub fn pdf_object_of_matrix(
+  matrix : @geometry.TransformMatrix,
+) -> @syntax.PdfObject {
   PdfArray([
     PdfReal(matrix.a),
     PdfReal(matrix.b),

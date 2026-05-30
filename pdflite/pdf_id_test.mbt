@@ -17,7 +17,7 @@ fn id_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
-fn id_expected_for_test(seed : String) -> @pdflite.PdfObject {
+fn id_expected_for_test(seed : String) -> @syntax.PdfObject {
   let digest = match seed {
     "file.pdf0.5" =>
       id_bytes_for_test([

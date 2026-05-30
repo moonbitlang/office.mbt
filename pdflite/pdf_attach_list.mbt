@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_attach_stream_data(
   self : PdfDocument,
-  stream : PdfObject,
+  stream : @syntax.PdfObject,
 ) -> PdfBytes raise PdfError {
   self.pdf_decode_stream(stream).stream_bytes()
 }
@@ -9,7 +9,7 @@ fn PdfDocument::pdf_attach_stream_data(
 ///|
 fn PdfDocument::pdf_attach_raw_stream_size(
   self : PdfDocument,
-  stream : PdfObject,
+  stream : @syntax.PdfObject,
 ) -> Int raise PdfError {
   self.direct(stream).stream_bytes().length()
 }
@@ -17,7 +17,7 @@ fn PdfDocument::pdf_attach_raw_stream_size(
 ///|
 fn PdfDocument::pdf_attach_file_spec_data(
   self : PdfDocument,
-  file_spec : PdfObject,
+  file_spec : @syntax.PdfObject,
 ) -> PdfBytes? raise PdfError {
   match self.lookup_direct(pdf_attach_ef_key(), file_spec) {
     Some(ef) =>
@@ -32,7 +32,7 @@ fn PdfDocument::pdf_attach_file_spec_data(
 ///|
 fn PdfDocument::pdf_attach_file_spec_raw_size(
   self : PdfDocument,
-  file_spec : PdfObject,
+  file_spec : @syntax.PdfObject,
 ) -> Int raise PdfError {
   match self.lookup_direct(pdf_attach_ef_key(), file_spec) {
     Some(ef) =>
@@ -47,7 +47,7 @@ fn PdfDocument::pdf_attach_file_spec_raw_size(
 ///|
 fn PdfDocument::pdf_attach_file_spec_description(
   self : PdfDocument,
-  file_spec : PdfObject,
+  file_spec : @syntax.PdfObject,
 ) -> String? raise PdfError {
   match self.lookup_direct(pdf_attach_desc_key(), file_spec) {
     Some(PdfString(bytes)) => Some(pdf_attach_string_of_pdfdoc_string(bytes))
@@ -58,7 +58,7 @@ fn PdfDocument::pdf_attach_file_spec_description(
 ///|
 fn PdfDocument::pdf_attach_file_spec_relationship(
   self : PdfDocument,
-  file_spec : PdfObject,
+  file_spec : @syntax.PdfObject,
 ) -> String? {
   match self.lookup_direct(pdf_attach_af_relationship_key(), file_spec) {
     Some(PdfNameObject(name)) => pdf_attach_relationship_text(name)
@@ -104,7 +104,7 @@ fn PdfDocument::pdf_attach_document_attachments(
 ///|
 fn PdfDocument::pdf_attach_is_file_attachment_annotation(
   self : PdfDocument,
-  annotation : PdfObject,
+  annotation : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_attach_subtype_key(), annotation) {
     Some(PdfNameObject(name)) => name == pdf_attach_file_attachment()

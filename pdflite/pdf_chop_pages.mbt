@@ -4,7 +4,7 @@ fn pdf_chop_rectangle_object(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }
 
@@ -20,7 +20,9 @@ fn pdf_chop_box(
 }
 
 ///|
-fn pdf_chop_erase_boxes(rest : PdfObject) -> PdfObject raise PdfError {
+fn pdf_chop_erase_boxes(
+  rest : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   rest
   .remove_dict_entry(pdf_chop_cropbox_key())
   .remove_dict_entry(pdf_chop_bleedbox_key())

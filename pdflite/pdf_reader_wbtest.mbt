@@ -79,7 +79,7 @@ test "private object-stream member parser repairs mismatched lengths" {
 
 ///|
 test "private object-stream member parser reports missing endstream markers" {
-  let result : Result[PdfObject, Error] = try? pdf_parse_object_stream_member_from_view(
+  let result : Result[@syntax.PdfObject, Error] = try? pdf_parse_object_stream_member_from_view(
     reader_wbtest_bytes("<< >>\nstream\nHi"),
   )
   guard result is Err(PdfError::ParseEndStreamExpected) else {
@@ -89,7 +89,7 @@ test "private object-stream member parser reports missing endstream markers" {
 
 ///|
 test "private object-stream member parser rejects non-dictionary streams" {
-  let result : Result[PdfObject, Error] = try? pdf_parse_object_stream_member_from_view(
+  let result : Result[@syntax.PdfObject, Error] = try? pdf_parse_object_stream_member_from_view(
     reader_wbtest_bytes("7\nstream\nHi\nendstream"),
   )
   guard result is Err(PdfError::ParseSingleObjectExpected) else {
@@ -315,7 +315,7 @@ test "private object stream helpers cover malformed object streams" {
   )
 
   let doc = pdf_document_empty()
-  let valid_stream = pdf_stream(
+  let valid_stream = @syntax.pdf_stream(
     PdfDictionary([
       (key_type, PdfNameObject(@reader.pdf_reader_name("/ObjStm"))),
       (key_n, PdfInteger(2)),
@@ -335,7 +335,7 @@ test "private object stream helpers cover malformed object streams" {
     try! context.read_reference({ object_stream_number: 7, index: 1 }),
     (3, PdfBoolean(false)),
   )
-  let bad_index : Result[(Int, PdfObject), Error] = try? context.read_reference({
+  let bad_index : Result[(Int, @syntax.PdfObject), Error] = try? context.read_reference({
       object_stream_number: 7,
       index: 9,
     },
@@ -442,7 +442,7 @@ test "private object stream helpers cover malformed object streams" {
   let no_type_doc = pdf_document_empty()
   no_type_doc.add_object_given_number(
     10,
-    pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([
         (key_n, PdfInteger(1)),
         (key_first, PdfInteger(4)),
@@ -460,7 +460,7 @@ test "private object stream helpers cover malformed object streams" {
   let wrong_type_doc = pdf_document_empty()
   wrong_type_doc.add_object_given_number(
     8,
-    pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([
         (key_type, PdfNameObject(@reader.pdf_reader_name("/Page"))),
         (key_n, PdfInteger(1)),
@@ -496,7 +496,7 @@ test "private object stream helpers cover malformed object streams" {
   let bad_offset_doc = pdf_document_empty()
   bad_offset_doc.add_object_given_number(
     9,
-    pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([
         (key_type, PdfNameObject(@reader.pdf_reader_name("/ObjStm"))),
         (key_n, PdfInteger(1)),
@@ -507,7 +507,7 @@ test "private object stream helpers cover malformed object streams" {
     ),
   )
   let bad_offset_context = try! bad_offset_doc.read_object_stream_context(9)
-  let bad_offset : Result[(Int, PdfObject), Error] = try? bad_offset_context.read_reference({
+  let bad_offset : Result[(Int, @syntax.PdfObject), Error] = try? bad_offset_context.read_reference({
       object_stream_number: 9,
       index: 0,
     },
@@ -573,7 +573,7 @@ test "private reader xref helpers report malformed inputs" {
   @test.assert_eq(xref_stream_ref_set.contains(8, 100), false)
 
   let no_object = byte_cursor_of_bytes(@ascii.encode("notobject"))
-  let no_object_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_first_indirect_object_at_current(
+  let no_object_result : Result[@syntax.PdfParsedIndirectObject, Error] = try? pdf_cursor_read_first_indirect_object_at_current(
     no_object, empty_xrefs,
   )
   guard no_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
@@ -581,7 +581,7 @@ test "private reader xref helpers report malformed inputs" {
   }
 
   let no_plain_object = byte_cursor_of_bytes(@ascii.encode("notobject"))
-  let no_plain_object_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_plain_indirect_object_at_current(
+  let no_plain_object_result : Result[@syntax.PdfParsedIndirectObject, Error] = try? pdf_cursor_read_plain_indirect_object_at_current(
     no_plain_object,
   )
   guard no_plain_object_result is Err(PdfError::ParseIndirectObjectExpected) else {
@@ -607,7 +607,7 @@ test "private reader xref helpers report malformed inputs" {
   )
 
   let empty_prefix = byte_cursor_of_bytes(Bytes::new(0))
-  let empty_prefix_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_indirect_prefix_at_current(
+  let empty_prefix_result : Result[@syntax.PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_indirect_prefix_at_current(
     empty_prefix,
   )
   guard empty_prefix_result is Err(PdfError::ParseIndirectObjectExpected) else {
@@ -706,9 +706,9 @@ test "private reader xref helpers report malformed inputs" {
     bad_resolved_length, pdf_cursor_read_reconstructed_xref_at_current,
   )
   let bad_resolved_length_cursor = byte_cursor_of_view(bad_resolved_length)
-  let objects_with_bad_resolved_length : Array[PdfParsedIndirectObject] = []
+  let objects_with_bad_resolved_length : Array[@syntax.PdfParsedIndirectObject] = []
   for xref in bad_resolved_length_xrefs {
-    let parsed : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_object_at(
+    let parsed : Result[@syntax.PdfParsedIndirectObject, Error] = try? pdf_cursor_read_reconstructed_object_at(
       bad_resolved_length_cursor,
       xref.offset,
       bad_resolved_length_xrefs,
@@ -738,7 +738,7 @@ test "private reader xref helpers report malformed inputs" {
     1,
   )
   let malformed_stream = byte_cursor_of_bytes(@ascii.encode("stream\nabc"))
-  let malformed_stream_result : Result[PdfParsedIndirectObject, Error] = try? pdf_cursor_finish_malformed_stream_object(
+  let malformed_stream_result : Result[@syntax.PdfParsedIndirectObject, Error] = try? pdf_cursor_finish_malformed_stream_object(
     malformed_stream,
     { number: 1, generation: 0, object: PdfDictionary([]) },
   )

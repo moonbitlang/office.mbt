@@ -30,7 +30,7 @@ fn text_core_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
 ///|
 test "pdftext top-level font and extractor wrappers match methods" {
   let doc = @pdflite.pdf_document_empty()
-  let font_object = @pdflite.pdf_dictionary([
+  let font_object = @syntax.pdf_dictionary([
     (
       text_core_name_for_test("/Subtype"),
       PdfNameObject(text_core_name_for_test("/Type1")),
@@ -79,7 +79,7 @@ test "pdftext top-level font and extractor wrappers match methods" {
   @test.assert_eq(written, 7)
   @test.assert_eq(
     output.lookup_object_or_null(7),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_core_name_for_test("/Type"),
         PdfNameObject(text_core_name_for_test("/Font")),
@@ -153,7 +153,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
         fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
         fontmatrix: @geometry.transform_identity_matrix,
         charprocs: [],
-        resources: @pdflite.pdf_dictionary([]),
+        resources: @syntax.pdf_dictionary([]),
       }),
       basefont: None,
       firstchar: 0,
@@ -173,7 +173,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
         fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
         fontmatrix: @geometry.transform_identity_matrix,
         charprocs: [],
-        resources: @pdflite.pdf_dictionary([]),
+        resources: @syntax.pdf_dictionary([]),
       }),
       basefont: None,
       firstchar: 0,

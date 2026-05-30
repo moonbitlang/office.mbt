@@ -2,9 +2,9 @@
 fn pdf_ua_metadata_stream(
   subformat : PdfUASubformat,
   title : String,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   let metadata = pdf_ua_metadata_bytes(subformat, title)
-  pdf_stream(
+  @syntax.pdf_stream(
     PdfDictionary([
       (pdf_ua_length_key(), PdfInteger(metadata.length())),
       (pdf_ua_type_key(), PdfNameObject(pdf_ua_metadata())),

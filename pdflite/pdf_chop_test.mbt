@@ -9,7 +9,7 @@ fn chop_rect_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }
 
@@ -36,7 +36,7 @@ fn chop_document_for_test(
 ///|
 fn chop_mediaboxes_for_test(
   document : @pdflite.PdfDocument,
-) -> Array[@pdflite.PdfObject] {
+) -> Array[@syntax.PdfObject] {
   let pages = try! document.pages_of_pagetree()
   [
     for page in pages => page.mediabox

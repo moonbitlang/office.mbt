@@ -515,7 +515,7 @@ test "PdfDocument test_matterhorn_json detects media clip dictionaries" {
   let key_type = ua_matterhorn_name_for_test("/Type")
   let key_s = ua_matterhorn_name_for_test("/S")
   let key_ct = ua_matterhorn_name_for_test("/CT")
-  let media_clip : @pdflite.PdfObject = PdfDictionary([
+  let media_clip : @syntax.PdfObject = PdfDictionary([
     (key_type, PdfNameObject(ua_matterhorn_name_for_test("/MediaClip"))),
     (key_s, PdfNameObject(ua_matterhorn_name_for_test("/MCD"))),
   ])

@@ -17,7 +17,7 @@ fn merge_structure_name_for_test(text : String) -> @pdflite.PdfName {
 fn merge_structure_add_catalog_entry_for_test(
   doc : @pdflite.PdfDocument,
   key : @pdflite.PdfName,
-  value : @pdflite.PdfObject,
+  value : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let root = doc.lookup_object_or_null(doc.root())
   let new_root = doc.add_object(try! root.add_dict_entry(key, value))
@@ -123,7 +123,7 @@ fn merge_structure_add_object_entry_for_test(
   doc : @pdflite.PdfDocument,
   number : Int,
   key : @pdflite.PdfName,
-  value : @pdflite.PdfObject,
+  value : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   doc.add_object_given_number(
     number,

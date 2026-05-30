@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_text_cid_string_entry(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
   error : PdfError,
 ) -> PdfBytes raise PdfError {
@@ -18,7 +18,7 @@ fn PdfDocument::pdf_text_cid_string_entry(
 /// semantics. Missing or malformed required fields raise `PdfError`.
 pub fn PdfDocument::read_cid_system_info(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> PdfCIDSystemInfo raise PdfError {
   {
     registry: self.pdf_text_cid_string_entry(
@@ -42,7 +42,7 @@ pub fn PdfDocument::read_cid_system_info(
 ///|
 fn PdfDocument::pdf_text_cid_number(
   self : PdfDocument,
-  value : PdfObject,
+  value : @syntax.PdfObject,
   error : PdfError,
 ) -> Double raise PdfError {
   self.get_number(value) catch {
@@ -53,7 +53,7 @@ fn PdfDocument::pdf_text_cid_number(
 ///|
 fn PdfDocument::pdf_text_read_cid_widths(
   self : PdfDocument,
-  values : ArrayView[PdfObject],
+  values : ArrayView[@syntax.PdfObject],
 ) -> Array[(Int, Double)] raise PdfError {
   let output : Array[(Int, Double)] = Array::new(capacity=values.length())
   let mut index = 0
@@ -98,7 +98,7 @@ fn PdfDocument::pdf_text_read_cid_widths(
 ///|
 fn PdfDocument::pdf_text_read_cid_widths2(
   self : PdfDocument,
-  values : ArrayView[PdfObject],
+  values : ArrayView[@syntax.PdfObject],
 ) -> Array[(Int, PdfCIDVerticalWidth)] raise PdfError {
   let output : Array[(Int, PdfCIDVerticalWidth)] = Array::new(
     capacity=values.length(),
@@ -173,7 +173,7 @@ fn PdfDocument::pdf_text_read_cid_widths2(
 ///|
 fn PdfDocument::pdf_text_cid_widths(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Array[(Int, Double)] raise PdfError {
   match self.lookup_direct(pdf_text_w_key_name, dictionary) {
     Some(PdfArray(values)) => self.pdf_text_read_cid_widths(values)
@@ -184,7 +184,7 @@ fn PdfDocument::pdf_text_cid_widths(
 ///|
 fn PdfDocument::pdf_text_cid_widths2(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Array[(Int, PdfCIDVerticalWidth)] raise PdfError {
   match self.lookup_direct(pdf_text_w2_key_name, dictionary) {
     Some(PdfArray(values)) => self.pdf_text_read_cid_widths2(values)
@@ -195,7 +195,7 @@ fn PdfDocument::pdf_text_cid_widths2(
 ///|
 fn PdfDocument::pdf_text_cid_default_width(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Double raise PdfError {
   match self.lookup_direct(pdf_text_dw_key_name, dictionary) {
     Some(value) => self.pdf_text_cid_number(value, CIDWidthsExpected)
@@ -206,7 +206,7 @@ fn PdfDocument::pdf_text_cid_default_width(
 ///|
 fn PdfDocument::pdf_text_cid_default_width2(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Array[Double] raise PdfError {
   match self.lookup_direct(pdf_text_dw2_key_name, dictionary) {
     Some(PdfArray(values)) => {
@@ -223,7 +223,7 @@ fn PdfDocument::pdf_text_cid_default_width2(
 ///|
 fn PdfDocument::pdf_text_read_descendant(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> PdfCompositeCIDFont raise PdfError {
   let cid_system_info = match
     self.lookup_direct(pdf_text_cid_system_info_key_name, dictionary) {
@@ -253,7 +253,7 @@ fn PdfDocument::pdf_text_read_descendant(
 ///|
 fn PdfDocument::pdf_text_read_cmap_encoding(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> PdfCMapEncoding raise PdfError {
   match self.lookup_direct(pdf_text_encoding_key_name, font) {
     Some(PdfNameObject(name)) => PdfPredefinedCMap(name)
@@ -279,7 +279,7 @@ fn PdfDocument::pdf_text_read_cmap_encoding(
 /// preserving the referenced stream object number.
 pub fn PdfDocument::read_cidkeyed_font(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> PdfCIDKeyedFont raise PdfError {
   let basefont = match self.lookup_direct(pdf_text_base_font_key_name, font) {
     Some(PdfNameObject(name)) => name

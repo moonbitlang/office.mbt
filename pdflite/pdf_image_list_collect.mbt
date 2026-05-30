@@ -1,9 +1,9 @@
 ///|
 fn PdfDocument::pdf_image_collect_inline_images(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   page_number : Int,
-  content : ArrayView[PdfObject],
+  content : ArrayView[@syntax.PdfObject],
   entries : Array[PdfImageListEntry],
   form_numbers : @hashmap.HashMap[Int, Bool],
 ) -> Unit raise PdfError {
@@ -37,10 +37,10 @@ fn PdfDocument::pdf_image_collect_inline_images(
 ///|
 fn PdfDocument::pdf_image_collect_xobject(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   page_number : Int,
   name : PdfName,
-  xobject : PdfObject,
+  xobject : @syntax.PdfObject,
   inline : Bool,
   entries : Array[PdfImageListEntry],
   form_numbers : @hashmap.HashMap[Int, Bool],

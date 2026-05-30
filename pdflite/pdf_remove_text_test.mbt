@@ -11,7 +11,7 @@ fn remove_text_bytes_for_test(text : String) -> Bytes {
 ///|
 fn remove_text_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 

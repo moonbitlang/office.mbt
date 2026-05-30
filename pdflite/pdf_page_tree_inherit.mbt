@@ -1,8 +1,8 @@
 ///|
 fn pdf_page_inherited_object(
-  current : PdfObject?,
-  inherited : PdfObject?,
-) -> PdfObject? {
+  current : @syntax.PdfObject?,
+  inherited : @syntax.PdfObject?,
+) -> @syntax.PdfObject? {
   match current {
     Some(value) => Some(value)
     None => inherited
@@ -12,7 +12,7 @@ fn pdf_page_inherited_object(
 ///|
 fn PdfDocument::pdf_page_inherited_rotation(
   self : PdfDocument,
-  node : PdfObject,
+  node : @syntax.PdfObject,
   inherited : @page.PdfPageRotation,
 ) -> @page.PdfPageRotation raise PdfError {
   match self.lookup_direct(pdf_page_rotate_key(), node) {
@@ -24,10 +24,10 @@ fn PdfDocument::pdf_page_inherited_rotation(
 ///|
 fn PdfDocument::pdf_page_find_inherited_attribute(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   key : PdfName,
   depth : Int,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   if depth > 10000 {
     raise PageTreeExpected
   }
@@ -49,9 +49,9 @@ fn PdfDocument::pdf_page_find_inherited_attribute(
 ///|
 fn PdfDocument::pdf_page_replace_inherited_key(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   key : PdfName,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   match self.pdf_page_find_inherited_attribute(object, key, 0) {
     Some(value) => Some(object.add_dict_entry(key, value))
     None => None

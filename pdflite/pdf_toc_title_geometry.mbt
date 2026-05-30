@@ -35,7 +35,9 @@ fn pdf_toc_first_font(
 }
 
 ///|
-fn pdf_toc_rectangle_object(rectangle : @geometry.PdfRectangle) -> PdfObject {
+fn pdf_toc_rectangle_object(
+  rectangle : @geometry.PdfRectangle,
+) -> @syntax.PdfObject {
   PdfArray([
     PdfReal(rectangle.min_x),
     PdfReal(rectangle.min_y),
@@ -47,7 +49,7 @@ fn pdf_toc_rectangle_object(rectangle : @geometry.PdfRectangle) -> PdfObject {
 ///|
 fn pdf_toc_cropbox_page(
   page : @page.PdfPage,
-  cropbox : PdfObject?,
+  cropbox : @syntax.PdfObject?,
 ) -> @page.PdfPage raise PdfError {
   match cropbox {
     Some(cropbox) =>
@@ -62,7 +64,7 @@ fn pdf_toc_cropbox_page(
 ///|
 fn pdf_toc_cropbox_pages(
   pages : ArrayView[@page.PdfPage],
-  cropbox : PdfObject?,
+  cropbox : @syntax.PdfObject?,
 ) -> Array[@page.PdfPage] raise PdfError {
   let output : Array[@page.PdfPage] = []
   for page in pages {

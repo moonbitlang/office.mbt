@@ -1,8 +1,8 @@
 ///|
 fn pdf_tree_raw_entries(
   pdf : PdfDocument,
-  tree : PdfObject,
-) -> Array[(PdfObject, PdfObject)] {
+  tree : @syntax.PdfObject,
+) -> Array[(@syntax.PdfObject, @syntax.PdfObject)] {
   let direct = pdf.lookup_direct_or_else(
     pdf_tree_names_key(),
     pdf_tree_nums_key(),
@@ -17,7 +17,7 @@ fn pdf_tree_raw_entries(
     Some(PdfArray(kids)) => kids.length()
     _ => 0
   }
-  let output : Array[(PdfObject, PdfObject)] = Array::new(
+  let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array::new(
     capacity=direct_capacity + child_capacity,
   )
   match direct {
@@ -41,9 +41,9 @@ fn pdf_tree_raw_entries(
 
 ///|
 fn pdf_tree_array_pairs(
-  items : ArrayView[PdfObject],
-) -> Array[(PdfObject, PdfObject)] {
-  let output : Array[(PdfObject, PdfObject)] = Array::new(
+  items : ArrayView[@syntax.PdfObject],
+) -> Array[(@syntax.PdfObject, @syntax.PdfObject)] {
+  let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array::new(
     capacity=items.length() / 2,
   )
   for i in 0..<(items.length() / 2) {
@@ -53,7 +53,10 @@ fn pdf_tree_array_pairs(
 }
 
 ///|
-fn pdf_tree_object_compare(left : PdfObject, right : PdfObject) -> Int? {
+fn pdf_tree_object_compare(
+  left : @syntax.PdfObject,
+  right : @syntax.PdfObject,
+) -> Int? {
   match (left, right) {
     (PdfString(left), PdfString(right)) =>
       Some(pdf_tree_bytes_compare(left, right))
@@ -64,8 +67,8 @@ fn pdf_tree_object_compare(left : PdfObject, right : PdfObject) -> Int? {
 
 ///|
 fn pdf_tree_limits_contain(
-  key : PdfObject,
-  limits : ArrayView[PdfObject],
+  key : @syntax.PdfObject,
+  limits : ArrayView[@syntax.PdfObject],
 ) -> Bool {
   guard limits.length() == 2 else { return false }
   match
@@ -81,9 +84,9 @@ fn pdf_tree_limits_contain(
 ///|
 fn PdfDocument::pdf_tree_lookup_array(
   self : PdfDocument,
-  key : PdfObject,
-  items : ArrayView[PdfObject],
-) -> PdfObject? {
+  key : @syntax.PdfObject,
+  items : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject? {
   ignore(self)
   for i in 0..<(items.length() / 2) {
     if items[i * 2] == key {
@@ -97,9 +100,9 @@ fn PdfDocument::pdf_tree_lookup_array(
 ///|
 fn PdfDocument::pdf_tree_lookup_kids(
   self : PdfDocument,
-  key : PdfObject,
-  kids : ArrayView[PdfObject],
-) -> PdfObject? {
+  key : @syntax.PdfObject,
+  kids : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject? {
   for kid in kids {
     match self.name_tree_lookup_object(key, kid) {
       Some(value) => break Some(value)
@@ -114,20 +117,20 @@ fn PdfDocument::pdf_tree_lookup_kids(
 /// Return the immediate key-value pairs contained in a name or number tree.
 ///
 /// The tree may store entries directly in `/Names` or `/Nums`, or indirectly in
-/// child nodes under `/Kids`. Entries are returned as raw `PdfObject` pairs, so
+/// child nodes under `/Kids`. Entries are returned as raw `@syntax.PdfObject` pairs, so
 /// callers that need typed name or number keys should use `read_name_tree` or
 /// `read_number_tree`.
 pub fn PdfDocument::contents_of_name_tree(
   self : PdfDocument,
-  tree : PdfObject,
-) -> Array[(PdfObject, PdfObject)] {
+  tree : @syntax.PdfObject,
+) -> Array[(@syntax.PdfObject, @syntax.PdfObject)] {
   match
     self.lookup_direct_or_else(pdf_tree_names_key(), pdf_tree_nums_key(), tree) {
     Some(PdfArray(items)) => pdf_tree_array_pairs(items)
     _ =>
       match self.lookup_direct(pdf_tree_kids_key(), tree) {
         Some(PdfArray(kids)) => {
-          let output : Array[(PdfObject, PdfObject)] = Array::new(
+          let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array::new(
             capacity=kids.length(),
           )
           for kid in kids {
@@ -150,9 +153,9 @@ pub fn PdfDocument::contents_of_name_tree(
 /// returning `None` for malformed nodes or missing keys.
 pub fn PdfDocument::name_tree_lookup_object(
   self : PdfDocument,
-  key : PdfObject,
-  tree : PdfObject,
-) -> PdfObject? {
+  key : @syntax.PdfObject,
+  tree : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   match self.lookup_direct(pdf_tree_limits_key(), tree) {
     Some(PdfArray(limits)) if !pdf_tree_limits_contain(key, limits) =>
       return None
@@ -184,8 +187,8 @@ pub fn PdfDocument::name_tree_lookup_object(
 pub fn PdfDocument::name_tree_lookup(
   self : PdfDocument,
   key : BytesView,
-  tree : PdfObject,
-) -> PdfObject? {
+  tree : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   self.name_tree_lookup_object(PdfString(key.to_owned()), tree)
 }
 
@@ -194,7 +197,7 @@ pub fn PdfDocument::name_tree_lookup(
 pub fn PdfDocument::number_tree_lookup(
   self : PdfDocument,
   key : Int,
-  tree : PdfObject,
-) -> PdfObject? {
+  tree : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   self.name_tree_lookup_object(PdfInteger(key), tree)
 }

@@ -11,7 +11,7 @@ fn pdf_ua_matterhorn_push_unique_name(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_read_single_attribute(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[PdfName] raise PdfError {
   match self.direct(object) {
     PdfDictionary(entries) => [ for entry in entries => entry.0 ]
@@ -26,7 +26,7 @@ fn PdfDocument::pdf_ua_matterhorn_read_single_attribute(
 fn PdfDocument::pdf_ua_matterhorn_read_attribute_entry(
   self : PdfDocument,
   key : PdfName,
-  node : PdfObject,
+  node : @syntax.PdfObject,
 ) -> Array[PdfName] raise PdfError {
   match self.lookup_direct(key, node) {
     Some(PdfArray(items)) => {
@@ -52,7 +52,7 @@ fn PdfDocument::pdf_ua_matterhorn_read_attribute_entry(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_read_struct_attributes(
   self : PdfDocument,
-  node : PdfObject,
+  node : @syntax.PdfObject,
 ) -> Array[PdfName] raise PdfError {
   let attrs : Array[PdfName] = []
   for
@@ -97,7 +97,7 @@ fn PdfDocument::pdf_ua_matterhorn_read_struct_attributes(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_read_struct_tree_inner(
   self : PdfDocument,
-  node : PdfObject,
+  node : @syntax.PdfObject,
   rolemap : PdfUAStructTreeRoleMap,
   depth : Int,
 ) -> PdfUAMatterhornStructNode raise PdfError {

@@ -8,7 +8,7 @@ fn pdf_content_form_xobject_default_bbox() -> @geometry.PdfRectangle {
 ///|
 fn PdfDocument::content_form_xobject_bbox(
   self : PdfDocument,
-  xobject : PdfObject,
+  xobject : @syntax.PdfObject,
 ) -> @geometry.PdfRectangle {
   match self.lookup_direct(pdf_xobject_bbox_key(), xobject) {
     Some(bbox) =>
@@ -25,7 +25,7 @@ fn PdfDocument::content_form_xobject_bbox(
 fn PdfDocument::content_form_xobject_setup_state(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  xobject : PdfObject,
+  xobject : @syntax.PdfObject,
 ) -> PdfContentOperatorState raise PdfError {
   let matrix = self.parse_matrix(pdf_xobject_matrix_key(), xobject)
   let bounds = self.content_form_xobject_bbox(xobject)
@@ -49,7 +49,7 @@ fn PdfDocument::content_form_xobject_setup_state(
 pub fn PdfDocument::content_form_xobject_enter_state(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> PdfContentOperatorState? raise PdfError {
   let xobject = self.content_xobject_from_resources(resources, name)
@@ -66,7 +66,7 @@ pub fn PdfDocument::content_form_xobject_enter_state(
 pub fn pdf_content_form_xobject_enter_state(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> PdfContentOperatorState? raise PdfError {
   document.content_form_xobject_enter_state(state, resources, name)
@@ -75,8 +75,8 @@ pub fn pdf_content_form_xobject_enter_state(
 ///|
 fn PdfDocument::content_direct_dictionary_object(
   self : PdfDocument,
-  object : PdfObject,
-) -> PdfObject {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match self.direct(object) {
     PdfDictionary(entries) => PdfDictionary([ for entry in entries => entry ])
     _ => PdfDictionary([])
@@ -86,8 +86,8 @@ fn PdfDocument::content_direct_dictionary_object(
 ///|
 fn PdfDocument::content_form_xobject_resource_dictionary(
   self : PdfDocument,
-  xobject : PdfObject,
-) -> PdfObject {
+  xobject : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match self.direct(xobject) {
     PdfStreamObject(stream) =>
       match self.lookup_direct(pdf_xobject_resources_key(), stream.dictionary) {
@@ -102,9 +102,9 @@ fn PdfDocument::content_form_xobject_resource_dictionary(
 ///|
 fn PdfDocument::content_form_xobject_merge_resources(
   self : PdfDocument,
-  resources : PdfObject,
-  xobject : PdfObject,
-) -> PdfObject raise PdfError {
+  resources : @syntax.PdfObject,
+  xobject : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let mut total = self.content_direct_dictionary_object(resources)
   match self.content_form_xobject_resource_dictionary(xobject) {
     PdfDictionary(entries) =>
@@ -120,9 +120,9 @@ fn PdfDocument::content_form_xobject_merge_resources(
 /// Look up a named Form XObject resource and return the resources used inside it.
 pub fn PdfDocument::content_form_xobject_resources(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   let xobject = self.content_xobject_from_resources(resources, name)
   match self.lookup_direct(pdf_xobject_subtype_key(), xobject) {
     Some(PdfNameObject(subtype)) if subtype == pdf_xobject_form() =>
@@ -136,9 +136,9 @@ pub fn PdfDocument::content_form_xobject_resources(
 /// Compatibility wrapper for `PdfDocument::content_form_xobject_resources`.
 pub fn pdf_content_form_xobject_resources(
   document : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   document.content_form_xobject_resources(resources, name)
 }
 
@@ -146,7 +146,7 @@ pub fn pdf_content_form_xobject_resources(
 /// Look up a named Form XObject resource and parse its content operators.
 pub fn PdfDocument::content_form_xobject_ops(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> Array[@content.PdfContentOp]? raise PdfError {
   let xobject = self.content_xobject_from_resources(resources, name)
@@ -166,7 +166,7 @@ pub fn PdfDocument::content_form_xobject_ops(
 /// Compatibility wrapper for `PdfDocument::content_form_xobject_ops`.
 pub fn pdf_content_form_xobject_ops(
   document : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> Array[@content.PdfContentOp]? raise PdfError {
   document.content_form_xobject_ops(resources, name)

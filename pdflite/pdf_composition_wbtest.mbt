@@ -12,14 +12,14 @@ fn pdf_composition_wb_minimal_document() -> PdfDocument {
   let key_count = pdf_composition_wb_name("/Count")
   doc.add_object_given_number(
     1,
-    pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(pdf_composition_wb_name("/Catalog"))),
       (key_pages, PdfIndirect(2)),
     ]),
   )
   doc.add_object_given_number(
     2,
-    pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(pdf_composition_wb_name("/Pages"))),
       (key_kids, PdfArray([])),
       (key_count, PdfInteger(0)),

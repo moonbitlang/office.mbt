@@ -15,7 +15,7 @@ fn pdf_composition_mark_references(
   document : PdfDocument,
   marked : @hashmap.HashMap[Int, Bool],
   output : Array[Int],
-  object : PdfObject,
+  object : @syntax.PdfObject,
   no_follow_entries? : ArrayView[PdfName] = [],
 ) -> Unit {
   for number in document.referenced_object_numbers(object, no_follow_entries~) {
@@ -61,7 +61,7 @@ fn PdfDocument::pdf_composition_images(
   self : PdfDocument,
   marked : @hashmap.HashMap[Int, Bool],
   number : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[Int] {
   let output : Array[Int] = Array::new(capacity=1)
   if !marked.contains(number) {
@@ -79,7 +79,7 @@ fn PdfDocument::pdf_composition_fonts(
   self : PdfDocument,
   marked : @hashmap.HashMap[Int, Bool],
   number : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[Int] {
   let output : Array[Int] = Array::new(capacity=1)
   if !marked.contains(number) {
@@ -99,7 +99,7 @@ fn PdfDocument::pdf_composition_fonts(
 
 ///|
 fn pdf_composition_content_numbers(
-  contents : PdfObject,
+  contents : @syntax.PdfObject,
   output : Array[Int],
 ) -> Unit {
   match contents {
@@ -120,7 +120,7 @@ fn PdfDocument::pdf_composition_content_streams(
   self : PdfDocument,
   marked : @hashmap.HashMap[Int, Bool],
   number : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[Int] {
   let output : Array[Int] = Array::new(capacity=1)
   if !marked.contains(number) {

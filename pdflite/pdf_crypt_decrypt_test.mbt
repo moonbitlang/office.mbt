@@ -116,9 +116,9 @@ fn crypt_decrypt_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn crypt_decrypt_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   data : @pdflite.PdfBytes,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfStreamObject({
     dictionary: PdfDictionary([ for entry in entries => entry ]),
     data: StreamGot(data),
@@ -127,12 +127,12 @@ fn crypt_decrypt_stream_for_test(
 
 ///|
 fn crypt_decrypt_standard_encrypt_dictionary_values_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   owner_entry : @pdflite.PdfBytes,
   user_entry : @pdflite.PdfBytes,
   permissions : Int,
-) -> @pdflite.PdfObject {
-  let output : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+) -> @syntax.PdfObject {
+  let output : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (
       crypt_decrypt_name_for_test("/Filter"),
       PdfNameObject(crypt_decrypt_name_for_test("/Standard")),
@@ -150,7 +150,7 @@ fn crypt_decrypt_standard_encrypt_dictionary_values_for_test(
 ///|
 fn crypt_decrypt_encrypt_dictionary_from_doc_for_test(
   doc : @pdflite.PdfDocument,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   match
     doc.trailer_dict().lookup_immediate(crypt_decrypt_name_for_test("/Encrypt")) {
     Some(PdfIndirect(number)) => doc.lookup_object_or_null(number)
@@ -172,7 +172,7 @@ fn crypt_decrypt_unwrap_decryption_result_for_test(
 ///|
 test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a copy" {
   let file_id = @ascii.encode("doc-id")
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (crypt_decrypt_name_for_test("/Title"), PdfString(@ascii.encode("hello"))),
   ])
   let source = @pdflite.pdf_document_empty()
@@ -274,7 +274,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a c
 ///|
 test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a copy" {
   let file_id = @ascii.encode("doc-id")
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (crypt_decrypt_name_for_test("/Title"), PdfString(@ascii.encode("owner"))),
   ])
   let source = @pdflite.pdf_document_empty()
@@ -344,7 +344,7 @@ test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a 
 ///|
 test "PdfDocument decrypt_with_passwords handles unencrypted, blank, user, and owner passwords" {
   let key_title = crypt_decrypt_name_for_test("/Title")
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("secret"))),
   ])
   let plain_doc = @pdflite.pdf_document_empty()
@@ -608,7 +608,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
     0x1d, 0x1e, 0x1f,
   ])
   let key_title = crypt_decrypt_name_for_test("/Title")
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes"))),
   ])
   let source = @pdflite.pdf_document_empty()
@@ -690,7 +690,7 @@ test "PdfDocument decrypt_with_user_password honors EncryptMetadata false" {
     0x1e, 0x1f, 0x20,
   ])
   let key_title = crypt_decrypt_name_for_test("/Title")
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes"))),
   ])
   let metadata_stream = crypt_decrypt_stream_for_test(
@@ -798,10 +798,10 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
     0x2d, 0x2e, 0x2f,
   ])
   let key_title = crypt_decrypt_name_for_test("/Title")
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3"))),
   ])
-  let encrypted_object : @pdflite.PdfObject = PdfDictionary([
+  let encrypted_object : @syntax.PdfObject = PdfDictionary([
     (
       key_title,
       PdfString(

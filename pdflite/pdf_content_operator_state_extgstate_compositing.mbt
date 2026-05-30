@@ -3,7 +3,7 @@
 pub fn PdfDocument::content_apply_extgstate_compositing_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState {
   let mut output = state
   match self.lookup_direct(pdf_content_extgstate_bm_name, extgstate) {
@@ -29,7 +29,7 @@ pub fn PdfDocument::content_apply_extgstate_compositing_op(
 pub fn pdf_content_apply_extgstate_compositing_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState {
   document.content_apply_extgstate_compositing_op(state, extgstate)
 }

@@ -15,8 +15,8 @@ fn pdf_annotation_json_int_array_contains(
 ///|
 fn pdf_annotation_json_rewrite_destination(
   page_numbers : PdfPageNumberLookup,
-  destination : PdfObject,
-) -> PdfObject {
+  destination : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match destination {
     PdfArray(items) =>
       if items.length() == 0 {
@@ -24,7 +24,7 @@ fn pdf_annotation_json_rewrite_destination(
       } else {
         match items[0] {
           PdfIndirect(number) => {
-            let rewritten : Array[PdfObject] = [
+            let rewritten : Array[@syntax.PdfObject] = [
               PdfInteger(page_numbers.page_number(number)),
             ]
             for index in 1..<items.length() {
@@ -43,8 +43,8 @@ fn pdf_annotation_json_rewrite_destination(
 fn PdfDocument::pdf_annotation_json_rewrite_destinations(
   self : PdfDocument,
   page_numbers : PdfPageNumberLookup,
-  annotation : PdfObject,
-) -> PdfObject raise PdfError {
+  annotation : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let mut rewritten = annotation
   match self.indirect_number(pdf_annotation_p_key(), rewritten) {
     Some(number) =>
@@ -84,8 +84,8 @@ fn PdfDocument::pdf_annotation_json_rewrite_destinations(
 
 ///|
 fn pdf_annotation_json_extra_root(
-  object : PdfObject,
-) -> PdfObject raise PdfError {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match object.dictionary_view() {
     Some(_) =>
       object
@@ -98,7 +98,7 @@ fn pdf_annotation_json_extra_root(
 ///|
 fn PdfDocument::pdf_annotation_json_extra_numbers(
   self : PdfDocument,
-  roots : ArrayView[PdfObject],
+  roots : ArrayView[@syntax.PdfObject],
   annotation_numbers : ArrayView[Int],
 ) -> Array[Int] raise PdfError {
   let found : @hashmap.HashMap[Int, Bool] = HashMap([])
@@ -121,7 +121,7 @@ fn PdfDocument::pdf_annotation_json_page(
   page_numbers : PdfPageNumberLookup,
   page : @page.PdfPage,
   page_number : Int,
-  extra_roots : Array[PdfObject],
+  extra_roots : Array[@syntax.PdfObject],
   annotation_numbers : Array[Int],
 ) -> Array[Json] raise PdfError {
   match self.lookup_direct(pdf_annotation_annots_key(), page.rest) {
@@ -191,7 +191,7 @@ pub fn PdfDocument::annotations_json(
   let selected_pages = @core.pdf_number_set(page_numbers)
   let entries : Array[Json] = Array::new(capacity=page_numbers.length() + 1)
   entries.push(pdf_annotation_json_format_header())
-  let extra_roots : Array[PdfObject] = Array::new(
+  let extra_roots : Array[@syntax.PdfObject] = Array::new(
     capacity=page_numbers.length(),
   )
   let annotation_numbers : Array[Int] = Array::new(

@@ -47,12 +47,12 @@ pub(all) enum PdfContentShadingKind {
 /// Parsed shading with shared colour-space, matrix, graphics-state, and
 /// antialias metadata.
 pub(all) struct PdfContentShading {
-  shading_colourspace : PdfObject
-  shading_background : PdfObject?
-  shading_bbox : PdfObject?
+  shading_colourspace : @syntax.PdfObject
+  shading_background : @syntax.PdfObject?
+  shading_bbox : @syntax.PdfObject?
   shading_antialias : Bool
   shading_matrix : @geometry.TransformMatrix
-  shading_extgstate : PdfObject
+  shading_extgstate : @syntax.PdfObject
   shading : PdfContentShadingKind
 } derive(Debug, Eq, ToJson)
 

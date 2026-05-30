@@ -97,7 +97,7 @@ fn crypt_recrypt_aesv3_r5_document_with_object_for_test(
   major : Int,
   minor : Int,
   object_number : Int,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   encrypt_metadata? : Bool = true,
 ) -> @pdflite.PdfDocument raise {
   let doc = crypt_recrypt_minimal_catalog_document_for_test(major, minor)
@@ -136,7 +136,7 @@ fn crypt_recrypt_aesv3_r6_document_with_object_for_test(
   major : Int,
   minor : Int,
   object_number : Int,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument raise {
   let doc = crypt_recrypt_minimal_catalog_document_for_test(major, minor)
   doc.add_object_given_number(object_number, object)
@@ -191,9 +191,9 @@ fn crypt_recrypt_minimal_catalog_document_for_test(
 
 ///|
 fn crypt_recrypt_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   data : @pdflite.PdfBytes,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfStreamObject({
     dictionary: PdfDictionary([ for entry in entries => entry ]),
     data: StreamGot(data),
@@ -202,9 +202,9 @@ fn crypt_recrypt_stream_for_test(
 
 ///|
 fn crypt_recrypt_stream_object_bytes_for_test(
-  stream : @pdflite.PdfStream,
+  stream : @syntax.PdfStream,
 ) -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes()
+  @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes()
 }
 
 ///|
@@ -227,8 +227,8 @@ fn crypt_recrypt_document_with_stream_for_test(
 
 ///|
 fn crypt_recrypt_assert_deferred_stream_for_test(
-  object : @pdflite.PdfObject,
-  expected_crypt : (@pdflite.PdfStreamDataCrypt) -> Bool,
+  object : @syntax.PdfObject,
+  expected_crypt : (@syntax.PdfStreamDataCrypt) -> Bool,
   expected_data : @pdflite.PdfBytes,
 ) -> Unit raise {
   guard object is PdfStreamObject(stream) else {
@@ -241,19 +241,19 @@ fn crypt_recrypt_assert_deferred_stream_for_test(
     fail("unexpected deferred stream crypt state")
   }
   @test.assert_eq(
-    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     expected_data,
   )
   @test.assert_eq(
     crypt_recrypt_bytes_contain_for_test(
       @pdflite.pdf_write_object(
-        @pdflite.pdf_stream(stream.dictionary, stream.data),
+        @syntax.pdf_stream(stream.dictionary, stream.data),
       ),
       expected_data,
     ),
     true,
   )
-  let forced = @pdflite.pdf_stream(stream.dictionary, stream.data)
+  let forced = @syntax.pdf_stream(stream.dictionary, stream.data)
   forced.get_stream()
   guard forced is PdfStreamObject(forced_stream) else {
     fail("expected forced stream object")
@@ -272,8 +272,8 @@ fn crypt_recrypt_assert_deferred_stream_for_test(
 
 ///|
 fn crypt_recrypt_assert_equivalent_object_for_test(
-  actual : @pdflite.PdfObject,
-  expected : @pdflite.PdfObject,
+  actual : @syntax.PdfObject,
+  expected : @syntax.PdfObject,
 ) -> Unit raise {
   match (actual, expected) {
     (PdfStreamObject(actual), PdfStreamObject(expected)) => {
@@ -300,10 +300,10 @@ fn crypt_recrypt_unwrap_decryption_result_for_test(
 ///|
 test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
   let key_title = crypt_recrypt_name_for_test("/Title")
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("secret"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("added"))
+  let added_object : @syntax.PdfObject = PdfString(@ascii.encode("added"))
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(1, plain_object)
   let encrypted = try! doc.encrypt_128bit_r4(
@@ -421,10 +421,10 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
       (key_count, PdfInteger(0)),
     ]),
   )
-  let secret_object : @pdflite.PdfObject = PdfDictionary([
+  let secret_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes-secret"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("aes-added"))
+  let added_object : @syntax.PdfObject = PdfString(@ascii.encode("aes-added"))
   let metadata_stream = crypt_recrypt_stream_for_test(
     [
       (crypt_recrypt_name_for_test("/Length"), PdfInteger(4)),
@@ -547,13 +547,13 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
 test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AESV3 revision 5 encryption" {
   let key_title = crypt_recrypt_name_for_test("/Title")
   let key_metadata = crypt_recrypt_name_for_test("/Metadata")
-  let original_secret : @pdflite.PdfObject = PdfDictionary([
+  let original_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-original"))),
   ])
-  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+  let updated_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-updated"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("aes3-added"))
+  let added_object : @syntax.PdfObject = PdfString(@ascii.encode("aes3-added"))
   let metadata_stream = crypt_recrypt_stream_for_test(
     [
       (crypt_recrypt_name_for_test("/Length"), PdfInteger(4)),
@@ -685,10 +685,10 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
 ///|
 test "PdfDocument recrypt_with_password_aesv3_with_iv_provider supports AESV3 revision 6" {
   let key_title = crypt_recrypt_name_for_test("/Title")
-  let original_secret : @pdflite.PdfObject = PdfDictionary([
+  let original_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-r6-original"))),
   ])
-  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+  let updated_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-r6-updated"))),
   ])
   let doc = crypt_recrypt_minimal_catalog_document_for_test(1, 7)
@@ -747,7 +747,7 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider supports AESV3 re
 test "PdfDocument encrypt_256bit_aesv3_iso_with_providers mirrors ISO AESV3 option" {
   let key_title = crypt_recrypt_name_for_test("/Title")
   let doc = crypt_recrypt_minimal_catalog_document_for_test(1, 7)
-  let secret_object : @pdflite.PdfObject = PdfDictionary([
+  let secret_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-iso-secret"))),
   ])
   doc.add_object_given_number(5, secret_object)
@@ -873,13 +873,13 @@ test "PdfDocument password reader keeps parsed encrypted streams deferred" {
 ///|
 test "PdfDocument AESV3 revision 6 recrypt supports incremental updates" {
   let key_title = crypt_recrypt_name_for_test("/Title")
-  let original_secret : @pdflite.PdfObject = PdfDictionary([
+  let original_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-r6-inc-original"))),
   ])
-  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+  let updated_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-r6-inc-updated"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     @ascii.encode("aes3-r6-inc-added"),
   )
   let doc = try! crypt_recrypt_aesv3_r6_document_with_object_for_test(
@@ -990,13 +990,13 @@ test "PdfDocument AESV3 revision 6 recrypt supports incremental updates" {
 ///|
 test "PdfDocument AESV3 recrypt supports xref stream incremental updates" {
   let key_title = crypt_recrypt_name_for_test("/Title")
-  let original_secret : @pdflite.PdfObject = PdfDictionary([
+  let original_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-xref-original"))),
   ])
-  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+  let updated_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-xref-updated"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     @ascii.encode("aes3-xref-added"),
   )
   let doc = try! crypt_recrypt_aesv3_r5_document_with_object_for_test(
@@ -1073,13 +1073,13 @@ test "PdfDocument AESV3 recrypt supports xref stream incremental updates" {
 ///|
 test "PdfDocument AESV3 recrypt supports classic incremental update" {
   let key_title = crypt_recrypt_name_for_test("/Title")
-  let original_secret : @pdflite.PdfObject = PdfDictionary([
+  let original_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-classic-original"))),
   ])
-  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+  let updated_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-classic-updated"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     @ascii.encode("aes3-classic-added"),
   )
   let doc = try! crypt_recrypt_aesv3_r5_document_with_object_for_test(
@@ -1131,13 +1131,13 @@ test "PdfDocument AESV3 recrypt supports classic incremental update" {
 test "PdfDocument AESV2 recrypt supports xref stream incremental updates" {
   let key_title = crypt_recrypt_name_for_test("/Title")
   let doc = crypt_recrypt_minimal_catalog_document_for_test(1, 5)
-  let original_secret : @pdflite.PdfObject = PdfDictionary([
+  let original_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes-original"))),
   ])
-  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+  let updated_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes-updated"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     @ascii.encode("aes-added-incremental"),
   )
   doc.add_object_given_number(5, original_secret)
@@ -1217,13 +1217,13 @@ test "PdfDocument AESV2 recrypt supports xref stream incremental updates" {
 test "PdfDocument AESV2 recrypt supports classic incremental update" {
   let key_title = crypt_recrypt_name_for_test("/Title")
   let doc = crypt_recrypt_minimal_catalog_document_for_test(1, 4)
-  let original_secret : @pdflite.PdfObject = PdfDictionary([
+  let original_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes-classic-original"))),
   ])
-  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+  let updated_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes-classic-updated"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     @ascii.encode("aes-classic-added"),
   )
   doc.add_object_given_number(5, original_secret)
@@ -1308,13 +1308,13 @@ test "PdfDocument recrypt_with_password supports classic incremental update" {
       (key_count, PdfInteger(0)),
     ]),
   )
-  let original_secret : @pdflite.PdfObject = PdfDictionary([
+  let original_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("original"))),
   ])
-  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+  let updated_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("updated"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("added"))
+  let added_object : @syntax.PdfObject = PdfString(@ascii.encode("added"))
   doc.add_object_given_number(5, original_secret)
   let encrypted = try! doc.encrypt_128bit_r4(
     @ascii.encode("user"),
@@ -1390,13 +1390,13 @@ test "PdfDocument recrypt_with_password supports xref stream incremental updates
       (key_count, PdfInteger(0)),
     ]),
   )
-  let original_secret : @pdflite.PdfObject = PdfDictionary([
+  let original_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("original-xref"))),
   ])
-  let updated_secret : @pdflite.PdfObject = PdfDictionary([
+  let updated_secret : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("updated-xref"))),
   ])
-  let added_object : @pdflite.PdfObject = PdfString(@ascii.encode("xref-added"))
+  let added_object : @syntax.PdfObject = PdfString(@ascii.encode("xref-added"))
   doc.add_object_given_number(5, original_secret)
   let encrypted = try! doc.encrypt_128bit_r4(
     @ascii.encode("user"),

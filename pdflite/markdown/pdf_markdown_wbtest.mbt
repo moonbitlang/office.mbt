@@ -357,10 +357,10 @@ test "private Markdown font cache stores indirect extractors by object number" {
       PdfWinAnsiEncoding,
     ),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       markdown_wbtest_name("/Font"),
-      @pdflite.pdf_dictionary([(markdown_wbtest_name("/F0"), PdfIndirect(7))]),
+      @syntax.pdf_dictionary([(markdown_wbtest_name("/F0"), PdfIndirect(7))]),
     ),
   ])
   let cache = pdf_markdown_font_cache()

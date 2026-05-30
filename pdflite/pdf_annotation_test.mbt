@@ -14,7 +14,7 @@ fn annotation_rect_for_test(
 }
 
 ///|
-fn annotation_contents_for_test(text : String) -> @pdflite.PdfObject {
+fn annotation_contents_for_test(text : String) -> @syntax.PdfObject {
   PdfString(@ascii.encode(text))
 }
 
@@ -319,7 +319,7 @@ test "PdfDocument set_annotations_json imports cpdf annotation rows" {
   guard imported.lookup_object_or_null(30) is PdfDictionary(imported_entries) else {
     fail("expected imported annotation 30")
   }
-  let imported_annotation : @pdflite.PdfObject = PdfDictionary(imported_entries)
+  let imported_annotation : @syntax.PdfObject = PdfDictionary(imported_entries)
   @test.assert_eq(
     imported_annotation.lookup_immediate(key_contents),
     Some(annotation_contents_for_test("json")),
@@ -336,7 +336,7 @@ test "PdfDocument set_annotations_json imports cpdf annotation rows" {
     is Some(PdfDictionary(action_entries)) else {
     fail("expected imported action")
   }
-  let action_object : @pdflite.PdfObject = PdfDictionary(action_entries)
+  let action_object : @syntax.PdfObject = PdfDictionary(action_entries)
   @test.assert_eq(
     action_object.lookup_immediate(key_d),
     Some(PdfArray([PdfIndirect(page_refs[1]), PdfNameObject(fit)])),
@@ -348,7 +348,7 @@ test "PdfDocument set_annotations_json imports cpdf annotation rows" {
   guard imported.lookup_object_or_null(31) is PdfDictionary(dest_entries) else {
     fail("expected imported annotation 31")
   }
-  let dest_annotation : @pdflite.PdfObject = PdfDictionary(dest_entries)
+  let dest_annotation : @syntax.PdfObject = PdfDictionary(dest_entries)
   @test.assert_eq(
     dest_annotation.lookup_immediate(key_dest),
     Some(PdfArray([PdfIndirect(page_refs[0]), PdfNameObject(fit)])),
@@ -662,7 +662,7 @@ test "PdfDocument read_annotation maps subtype names and border styles" {
   let key_style = annotation_name_for_test("/S")
   let key_dash = annotation_name_for_test("/D")
   let doc = @pdflite.pdf_document_empty()
-  let rectangle : @pdflite.PdfObject = PdfArray([
+  let rectangle : @syntax.PdfObject = PdfArray([
     PdfInteger(0),
     PdfInteger(0),
     PdfInteger(1),
@@ -893,7 +893,7 @@ test "PdfDocument transform_annotations updates annotation geometry" {
       ),
     ]),
   )
-  let rest : @pdflite.PdfObject = PdfDictionary([
+  let rest : @syntax.PdfObject = PdfDictionary([
     (
       key_annots,
       PdfArray([
@@ -971,7 +971,7 @@ test "PdfDocument transform_annotations updates direct annotation dictionaries" 
   let key_quadpoints = annotation_name_for_test("/QuadPoints")
   let key_line = annotation_name_for_test("/L")
   let doc = @pdflite.pdf_document_empty()
-  let rest : @pdflite.PdfObject = PdfDictionary([
+  let rest : @syntax.PdfObject = PdfDictionary([
     (
       key_annots,
       PdfArray([

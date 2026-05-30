@@ -1,5 +1,5 @@
 ///|
-fn pdf_content_filter_is_inline_dct(filter : PdfObject) -> Bool {
+fn pdf_content_filter_is_inline_dct(filter : @syntax.PdfObject) -> Bool {
   match filter {
     PdfNameObject(name) =>
       name == pdf_content_inline_dctdecode_name() ||
@@ -28,7 +28,7 @@ fn pdf_content_filter_name_inline_text_filter(
 
 ///|
 fn pdf_content_filter_inline_text_filter(
-  filter : PdfObject,
+  filter : @syntax.PdfObject,
 ) -> PdfContentInlineTextFilter? {
   match filter {
     PdfNameObject(name) => pdf_content_filter_name_inline_text_filter(name)
@@ -40,7 +40,7 @@ fn pdf_content_filter_inline_text_filter(
 
 ///|
 fn pdf_content_filter_single_inline_text_filter(
-  filter : PdfObject,
+  filter : @syntax.PdfObject,
 ) -> PdfContentInlineTextFilter? {
   match filter {
     PdfNameObject(name) => pdf_content_filter_name_inline_text_filter(name)
@@ -57,7 +57,7 @@ fn pdf_content_filter_name_is_inline_run_length(name : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_content_filter_is_inline_run_length(filter : PdfObject) -> Bool {
+fn pdf_content_filter_is_inline_run_length(filter : @syntax.PdfObject) -> Bool {
   match filter {
     PdfNameObject(name) => pdf_content_filter_name_is_inline_run_length(name)
     PdfArray([PdfNameObject(name), ..]) =>
@@ -67,7 +67,9 @@ fn pdf_content_filter_is_inline_run_length(filter : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_content_filter_is_single_inline_run_length(filter : PdfObject) -> Bool {
+fn pdf_content_filter_is_single_inline_run_length(
+  filter : @syntax.PdfObject,
+) -> Bool {
   match filter {
     PdfNameObject(name) => pdf_content_filter_name_is_inline_run_length(name)
     PdfArray([PdfNameObject(name)]) =>
@@ -83,7 +85,7 @@ fn pdf_content_filter_name_is_inline_flate(name : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_content_filter_is_inline_flate(filter : PdfObject) -> Bool {
+fn pdf_content_filter_is_inline_flate(filter : @syntax.PdfObject) -> Bool {
   match filter {
     PdfNameObject(name) => pdf_content_filter_name_is_inline_flate(name)
     PdfArray([PdfNameObject(name), ..]) =>
@@ -93,7 +95,9 @@ fn pdf_content_filter_is_inline_flate(filter : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_content_filter_is_single_inline_flate(filter : PdfObject) -> Bool {
+fn pdf_content_filter_is_single_inline_flate(
+  filter : @syntax.PdfObject,
+) -> Bool {
   match filter {
     PdfNameObject(name) => pdf_content_filter_name_is_inline_flate(name)
     PdfArray([PdfNameObject(name)]) =>
@@ -109,7 +113,7 @@ fn pdf_content_filter_name_is_inline_lzw(name : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_content_filter_is_inline_lzw(filter : PdfObject) -> Bool {
+fn pdf_content_filter_is_inline_lzw(filter : @syntax.PdfObject) -> Bool {
   match filter {
     PdfNameObject(name) => pdf_content_filter_name_is_inline_lzw(name)
     PdfArray([PdfNameObject(name), ..]) =>
@@ -119,7 +123,7 @@ fn pdf_content_filter_is_inline_lzw(filter : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_content_filter_is_single_inline_lzw(filter : PdfObject) -> Bool {
+fn pdf_content_filter_is_single_inline_lzw(filter : @syntax.PdfObject) -> Bool {
   match filter {
     PdfNameObject(name) => pdf_content_filter_name_is_inline_lzw(name)
     PdfArray([PdfNameObject(name)]) =>
@@ -129,7 +133,7 @@ fn pdf_content_filter_is_single_inline_lzw(filter : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_content_inline_image_uses_dct(dictionary : PdfObject) -> Bool {
+fn pdf_content_inline_image_uses_dct(dictionary : @syntax.PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_dct(filter)
     None => false
@@ -138,7 +142,7 @@ fn pdf_content_inline_image_uses_dct(dictionary : PdfObject) -> Bool {
 
 ///|
 fn pdf_content_inline_image_text_filter(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> PdfContentInlineTextFilter? {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_inline_text_filter(filter)
@@ -148,7 +152,7 @@ fn pdf_content_inline_image_text_filter(
 
 ///|
 fn pdf_content_inline_image_single_text_filter(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> PdfContentInlineTextFilter? {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_single_inline_text_filter(filter)
@@ -157,7 +161,9 @@ fn pdf_content_inline_image_single_text_filter(
 }
 
 ///|
-fn pdf_content_inline_image_uses_run_length(dictionary : PdfObject) -> Bool {
+fn pdf_content_inline_image_uses_run_length(
+  dictionary : @syntax.PdfObject,
+) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_run_length(filter)
     None => false
@@ -166,7 +172,7 @@ fn pdf_content_inline_image_uses_run_length(dictionary : PdfObject) -> Bool {
 
 ///|
 fn pdf_content_inline_image_uses_single_run_length(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_single_inline_run_length(filter)
@@ -175,7 +181,7 @@ fn pdf_content_inline_image_uses_single_run_length(
 }
 
 ///|
-fn pdf_content_inline_image_uses_flate(dictionary : PdfObject) -> Bool {
+fn pdf_content_inline_image_uses_flate(dictionary : @syntax.PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_flate(filter)
     None => false
@@ -183,7 +189,9 @@ fn pdf_content_inline_image_uses_flate(dictionary : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_content_inline_image_uses_single_flate(dictionary : PdfObject) -> Bool {
+fn pdf_content_inline_image_uses_single_flate(
+  dictionary : @syntax.PdfObject,
+) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_single_inline_flate(filter)
     None => false
@@ -191,7 +199,7 @@ fn pdf_content_inline_image_uses_single_flate(dictionary : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_content_inline_image_uses_lzw(dictionary : PdfObject) -> Bool {
+fn pdf_content_inline_image_uses_lzw(dictionary : @syntax.PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_inline_lzw(filter)
     None => false
@@ -199,7 +207,9 @@ fn pdf_content_inline_image_uses_lzw(dictionary : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_content_inline_image_uses_single_lzw(dictionary : PdfObject) -> Bool {
+fn pdf_content_inline_image_uses_single_lzw(
+  dictionary : @syntax.PdfObject,
+) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     Some(filter) => pdf_content_filter_is_single_inline_lzw(filter)
     None => false

@@ -39,7 +39,7 @@ pub fn pdf_parse_cmap_data(data : BytesView) -> PdfParsedCMap {
 /// with cycle protection. Malformed or non-stream inputs raise `PdfError`.
 pub fn PdfDocument::parse_cmap(
   self : PdfDocument,
-  cmap : PdfObject,
+  cmap : @syntax.PdfObject,
 ) -> PdfParsedCMap raise PdfError {
   self.parse_cmap_with_seen(cmap, HashMap([]))
 }
@@ -48,7 +48,7 @@ pub fn PdfDocument::parse_cmap(
 /// Compatibility wrapper for `PdfDocument::parse_cmap`.
 pub fn pdf_parse_cmap(
   document : PdfDocument,
-  cmap : PdfObject,
+  cmap : @syntax.PdfObject,
 ) -> PdfParsedCMap raise PdfError {
   document.parse_cmap(cmap)
 }

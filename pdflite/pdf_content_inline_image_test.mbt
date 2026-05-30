@@ -184,7 +184,7 @@ test "pdf_parse_content_ops_from_bytes falls back for array inline image spaces"
   )
   @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(data), [
     Op_InlineImage(
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (content_inline_name_for_test("/W"), PdfInteger(1)),
         (content_inline_name_for_test("/H"), PdfInteger(1)),
         (
@@ -202,7 +202,7 @@ test "pdf_parse_content_ops_from_bytes falls back for array inline image spaces"
   )
   @test.assert_eq(try! @pdflite.pdf_parse_content_ops_from_bytes(length_data), [
     Op_InlineImage(
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           content_inline_name_for_test("/CS"),
           PdfArray([PdfNameObject(content_inline_name_for_test("/RGB"))]),

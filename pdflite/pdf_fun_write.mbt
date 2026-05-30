@@ -1,5 +1,5 @@
 ///|
-fn pdf_fun_number_array_object(values : ArrayView[Double]) -> PdfObject {
+fn pdf_fun_number_array_object(values : ArrayView[Double]) -> @syntax.PdfObject {
   PdfArray([ for value in values => PdfReal(value) ])
 }
 
@@ -23,8 +23,8 @@ fn PdfFunction::pdf_fun_function_type(self : PdfFunction) -> Int {
 pub fn PdfDocument::pdf_object_of_function(
   self : PdfDocument,
   function : PdfFunction,
-) -> PdfObject {
-  let entries : Array[(PdfName, PdfObject)] = [
+) -> @syntax.PdfObject {
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_fun_function_type_key(), PdfInteger(function.pdf_fun_function_type())),
     (pdf_fun_domain_key(), pdf_fun_number_array_object(function.domain)),
   ]
@@ -44,7 +44,7 @@ pub fn PdfDocument::pdf_object_of_function(
       entries.push((pdf_fun_n_key(), PdfReal(interpolation.n)))
     }
     PdfFunctionStitching(stitching) => {
-      let function_refs : Array[PdfObject] = []
+      let function_refs : Array[@syntax.PdfObject] = []
       for child in stitching.functions {
         function_refs.push(
           PdfIndirect(self.add_object(self.pdf_object_of_function(child))),
@@ -71,6 +71,6 @@ pub fn PdfDocument::pdf_object_of_function(
 pub fn pdf_object_of_function(
   document : PdfDocument,
   function : PdfFunction,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   document.pdf_object_of_function(function)
 }

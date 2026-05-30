@@ -2,8 +2,8 @@
 fn pdf_portfolio_stream(
   entry : @portfolio.PdfPortfolioEntry,
   mod_date : PdfBytes,
-) -> PdfObject {
-  pdf_stream(
+) -> @syntax.PdfObject {
+  @syntax.pdf_stream(
     PdfDictionary([
       (
         pdf_portfolio_params_key(),
@@ -23,7 +23,7 @@ fn PdfDocument::pdf_portfolio_file_spec(
   self : PdfDocument,
   entry : @portfolio.PdfPortfolioEntry,
   mod_date : PdfBytes,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   let basename = pdf_portfolio_basename(entry.filename)
   let basename_bytes = @utf8.encode(basename)
   let contents = self.add_object(pdf_portfolio_stream(entry, mod_date))
@@ -54,7 +54,7 @@ fn PdfDocument::pdf_portfolio_name_tree_entries(
   self : PdfDocument,
   entries : ArrayView[@portfolio.PdfPortfolioEntry],
   mod_date : PdfBytes,
-) -> Array[(PdfBytes, PdfObject)] {
+) -> Array[(PdfBytes, @syntax.PdfObject)] {
   [
     for index, entry in entries => {
       let key = @utf8.encode(index.to_string() + "/" + entry.filename)
@@ -67,7 +67,7 @@ fn PdfDocument::pdf_portfolio_name_tree_entries(
 }
 
 ///|
-fn pdf_portfolio_collection() -> PdfObject {
+fn pdf_portfolio_collection() -> @syntax.PdfObject {
   PdfDictionary([
     (pdf_portfolio_view_key(), PdfNameObject(pdf_portfolio_table_view())),
   ])

@@ -106,7 +106,7 @@ fn pdf_draft_name_matches(target : PdfName?, name : PdfName) -> Bool {
 ///|
 fn PdfDocument::pdf_draft_xobject_has_subtype(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   subtype : PdfName,
 ) -> Bool {
   match self.lookup_direct(pdf_draft_subtype_key(), object) {
@@ -118,7 +118,7 @@ fn PdfDocument::pdf_draft_xobject_has_subtype(
 ///|
 fn PdfDocument::pdf_draft_xobject_is_image(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> Bool {
   match self.lookup_direct(pdf_draft_xobject_key(), resources) {
@@ -135,7 +135,7 @@ fn PdfDocument::pdf_draft_xobject_is_image(
 ///|
 fn PdfDocument::pdf_draft_rewrite_ops(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
   only_remove : PdfName?,
   boxes : Bool,
@@ -161,10 +161,10 @@ fn PdfDocument::pdf_draft_rewrite_ops(
 
 ///|
 fn pdf_draft_stream_dictionary(
-  original : PdfObject,
-  resources : PdfObject,
+  original : @syntax.PdfObject,
+  resources : @syntax.PdfObject,
   length : Int,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   original
   .remove_dict_entry(pdf_draft_filter_key())
   .remove_dict_entry(pdf_draft_decode_parms_key())
@@ -175,10 +175,10 @@ fn pdf_draft_stream_dictionary(
 ///|
 fn PdfDocument::pdf_draft_form_xobject(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   only_remove : PdfName?,
   boxes : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let direct = self.direct(object)
   match direct {
     PdfStreamObject(original_stream) => {
@@ -217,10 +217,10 @@ fn PdfDocument::pdf_draft_form_xobject(
 fn PdfDocument::pdf_draft_rewrite_xobject_entry(
   self : PdfDocument,
   name : PdfName,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   only_remove : PdfName?,
   boxes : Bool,
-) -> (PdfName, PdfObject)? raise PdfError {
+) -> (PdfName, @syntax.PdfObject)? raise PdfError {
   let direct = self.direct(object)
   if self.pdf_draft_xobject_has_subtype(direct, pdf_draft_image()) {
     if pdf_draft_name_matches(only_remove, name) {
@@ -239,13 +239,13 @@ fn PdfDocument::pdf_draft_rewrite_xobject_entry(
 ///|
 fn PdfDocument::pdf_draft_rewrite_xobjects(
   self : PdfDocument,
-  xobjects : PdfObject,
+  xobjects : @syntax.PdfObject,
   only_remove : PdfName?,
   boxes : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match self.direct(xobjects) {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (name, object) = entry
         match
@@ -263,13 +263,13 @@ fn PdfDocument::pdf_draft_rewrite_xobjects(
 ///|
 fn PdfDocument::pdf_draft_rewrite_resources(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   only_remove : PdfName?,
   boxes : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match resources {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (key, value) = entry
         if key == pdf_draft_xobject_key() {

@@ -24,7 +24,7 @@ fn pdf_draw_resource_name_number(name : PdfName) -> Int? {
 ///|
 fn PdfDocument::pdf_draw_page_resource_numbers(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
 ) -> Array[Int] {
   let output : Array[Int] = Array::new(capacity=3)
   for

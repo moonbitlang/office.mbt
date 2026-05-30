@@ -4,8 +4,10 @@ fn pdf_bookmark_colour_is_black(colour : @bookmark.PdfBookmarkColour) -> Bool {
 }
 
 ///|
-fn pdf_bookmark_node_object(bookmark : @bookmark.PdfBookmark) -> PdfObject {
-  let entries : Array[(PdfName, PdfObject)] = [
+fn pdf_bookmark_node_object(
+  bookmark : @bookmark.PdfBookmark,
+) -> @syntax.PdfObject {
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_bookmark_title_key(), PdfString(bookmark.text)),
   ]
   let destination = pdf_object_of_destination(bookmark.target)
@@ -106,10 +108,10 @@ fn pdf_bookmark_total_visible(nodes : ArrayView[PdfBookmarkNode]) -> Int {
 
 ///|
 fn pdf_bookmark_add_count(
-  object : PdfObject,
+  object : @syntax.PdfObject,
   children : ArrayView[PdfBookmarkNode],
   is_open : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   if children.length() == 0 {
     object
   } else {
@@ -166,7 +168,7 @@ fn pdf_bookmark_finalize_nodes(
 ///|
 fn pdf_bookmark_flatten_nodes(
   nodes : ArrayView[PdfBookmarkNode],
-  output : Array[(Int, PdfObject)],
+  output : Array[(Int, @syntax.PdfObject)],
 ) -> Unit {
   for node in nodes {
     output.push((node.number, node.object))
@@ -177,8 +179,8 @@ fn pdf_bookmark_flatten_nodes(
 ///|
 fn pdf_bookmark_outline_root_object(
   nodes : ArrayView[PdfBookmarkNode],
-) -> PdfObject {
-  let entries : Array[(PdfName, PdfObject)] = [
+) -> @syntax.PdfObject {
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_bookmark_first_key(), PdfIndirect(nodes[0].number)),
     (pdf_bookmark_last_key(), PdfIndirect(nodes[nodes.length() - 1].number)),
   ]
@@ -251,7 +253,7 @@ pub fn PdfDocument::add_bookmarks(
       outline_root_number,
       pdf_bookmark_outline_root_object(nodes),
     )
-    let pairs : Array[(Int, PdfObject)] = []
+    let pairs : Array[(Int, @syntax.PdfObject)] = []
     pdf_bookmark_flatten_nodes(nodes, pairs)
     for pair in pairs {
       let (number, object) = pair

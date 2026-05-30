@@ -68,9 +68,9 @@ pub fn pdf_string_of_content_op(
 /// length and no outer stream filter.
 pub fn pdf_content_stream_of_ops(
   ops : ArrayView[@content.PdfContentOp],
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let data = pdf_content_bytes_of_ops(ops)
-  pdf_stream(
+  @syntax.pdf_stream(
     PdfDictionary([(pdf_content_length_name(), PdfInteger(data.length()))]),
     StreamGot(data),
   )

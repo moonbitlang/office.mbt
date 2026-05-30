@@ -81,7 +81,10 @@ fn PdfDocument::pdf_page_scale_to_fit_matrix(
 }
 
 ///|
-fn pdf_page_scale_target_box(width : Double, height : Double) -> PdfObject {
+fn pdf_page_scale_target_box(
+  width : Double,
+  height : Double,
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(width), PdfReal(height)])
 }
 

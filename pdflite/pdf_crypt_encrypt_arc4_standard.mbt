@@ -24,7 +24,7 @@ fn PdfDocument::encrypt_arc4_standard(
   let encrypted = document.arc4_crypt_parsed_objects(
     file_key, key_length_bits, false, 0,
   )
-  let entries : Array[(PdfName, PdfObject)] = [
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_crypt_filter_name, PdfNameObject(pdf_crypt_standard_name)),
     (pdf_crypt_v_name, PdfInteger(version)),
     (pdf_crypt_r_name, PdfInteger(revision)),
@@ -35,7 +35,7 @@ fn PdfDocument::encrypt_arc4_standard(
   if write_length {
     entries.push((pdf_crypt_length_name, PdfInteger(key_length_bits)))
   }
-  let encrypt_dictionary : PdfObject = PdfDictionary(entries)
+  let encrypt_dictionary : @syntax.PdfObject = PdfDictionary(entries)
   let encrypt_number = encrypted.add_object(encrypt_dictionary)
   encrypted.set_trailer_dict(
     encrypted

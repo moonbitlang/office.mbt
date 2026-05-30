@@ -159,7 +159,7 @@ test "PdfDocument write_page_labels builds a readable page label tree" {
   guard items[0 + 1] is PdfDictionary(first_entries) else {
     fail("expected first label dictionary")
   }
-  let first : @pdflite.PdfObject = PdfDictionary(first_entries)
+  let first : @syntax.PdfObject = PdfDictionary(first_entries)
   @test.assert_eq(
     first.lookup_immediate(key_style),
     Some(PdfNameObject(page_label_name_for_test("/r"))),
@@ -172,7 +172,7 @@ test "PdfDocument write_page_labels builds a readable page label tree" {
   guard items[4 + 1] is PdfDictionary(third_entries) else {
     fail("expected third label dictionary")
   }
-  let third : @pdflite.PdfObject = PdfDictionary(third_entries)
+  let third : @syntax.PdfObject = PdfDictionary(third_entries)
   @test.assert_eq(third.lookup_immediate(key_style), None)
   @test.assert_eq(
     third.lookup_immediate(key_prefix),
@@ -187,7 +187,7 @@ test "PdfDocument read_page_labels decodes all label styles" {
   let key_nums = page_label_name_for_test("/Nums")
   let key_style = page_label_name_for_test("/S")
   let doc = page_label_catalog_document_for_test()
-  let label_tree : @pdflite.PdfObject = PdfDictionary([
+  let label_tree : @syntax.PdfObject = PdfDictionary([
     (
       key_nums,
       PdfArray([
@@ -264,7 +264,7 @@ test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
   let key_style = page_label_name_for_test("/S")
   let key_prefix = page_label_name_for_test("/P")
   let doc = page_label_catalog_document_for_test()
-  let label_tree : @pdflite.PdfObject = PdfDictionary([
+  let label_tree : @syntax.PdfObject = PdfDictionary([
     (
       key_nums,
       PdfArray([
@@ -302,7 +302,7 @@ test "PdfDocument read_page_labels keeps CamlPDF malformed range defaults" {
   ])
 
   let kids_doc = page_label_catalog_document_for_test()
-  let kids_label_tree : @pdflite.PdfObject = PdfDictionary([
+  let kids_label_tree : @syntax.PdfObject = PdfDictionary([
     (
       key_kids,
       PdfArray([

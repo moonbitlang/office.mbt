@@ -3,7 +3,7 @@ fn PdfDocument::pdf_ocg_write_config(
   self : PdfDocument,
   config : @ocg.PdfOcgConfig,
 ) -> Int {
-  let entries : Array[(PdfName, PdfObject)] = []
+  let entries : Array[(PdfName, @syntax.PdfObject)] = []
   match config.name {
     Some(name) => entries.push((pdf_ocg_name_key(), PdfString(name)))
     None => ()
@@ -50,7 +50,7 @@ fn PdfDocument::pdf_ocg_write_config(
   }
   match config.order {
     Some(order) => {
-      let order_objects : Array[PdfObject] = []
+      let order_objects : Array[@syntax.PdfObject] = []
       for item in order {
         let (label, numbers) = item
         match label {
@@ -61,7 +61,7 @@ fn PdfDocument::pdf_ocg_write_config(
               order_objects.push(pdf_ocg_indirect_array_object(numbers))
             }
           Some(label) => {
-            let children : Array[PdfObject] = [PdfString(label)]
+            let children : Array[@syntax.PdfObject] = [PdfString(label)]
             for number in numbers {
               children.push(PdfIndirect(number))
             }
@@ -106,8 +106,8 @@ fn PdfDocument::pdf_ocg_write_config(
 fn PdfDocument::pdf_ocg_write_ocg(
   self : PdfDocument,
   ocg : @ocg.PdfOcg,
-) -> PdfObject {
-  let entries : Array[(PdfName, PdfObject)] = [
+) -> @syntax.PdfObject {
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_ocg_type_key(), PdfNameObject(pdf_ocg_ocg_name())),
     (pdf_ocg_name_key(), PdfString(ocg.name)),
     (pdf_ocg_intent_key(), pdf_ocg_name_array_object(ocg.intent)),

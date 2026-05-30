@@ -94,7 +94,7 @@ fn pdf_markdown_font_cache() -> PdfMarkdownFontCache {
 fn pdf_markdown_cached_text_extractor(
   cache : PdfMarkdownFontCache,
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   font_name : @pdflite.PdfName,
 ) -> @pdflite.PdfTextExtractor? raise {
   match pdf_markdown_font_resource_entry(document, resources, font_name) {

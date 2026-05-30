@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_page_annotation_numbers(
   self : PdfDocument,
-  page_object : PdfObject,
+  page_object : @syntax.PdfObject,
 ) -> Array[Int] {
   let annots_object = match
     page_object.lookup_immediate(pdf_page_annots_key()) {
@@ -26,11 +26,11 @@ fn PdfDocument::pdf_page_annotation_numbers(
 
 ///|
 fn pdf_page_fixup_annotation_link(
-  object : PdfObject,
+  object : @syntax.PdfObject,
   key : PdfName,
   old_numbers : ArrayView[Int],
   new_numbers : ArrayView[Int],
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match object.lookup_immediate(key) {
     Some(PdfIndirect(old_number)) =>
       match pdf_page_number_index(old_numbers, old_number) {

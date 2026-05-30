@@ -26,14 +26,14 @@ fn page_tree_document_for_test() -> @pdflite.PdfDocument {
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_catalog)),
       (key_pages, PdfIndirect(2)),
     ]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_pages)),
       (key_kids, PdfArray([PdfIndirect(3), PdfIndirect(4)])),
       (key_count, PdfInteger(2)),
@@ -41,11 +41,11 @@ fn page_tree_document_for_test() -> @pdflite.PdfDocument {
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([(key_type, PdfNameObject(type_page))]),
+    @syntax.pdf_dictionary([(key_type, PdfNameObject(type_page))]),
   )
   doc.add_object_given_number(
     4,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_pages)),
       (key_kids, PdfArray([PdfIndirect(5)])),
       (key_count, PdfInteger(1)),
@@ -53,7 +53,7 @@ fn page_tree_document_for_test() -> @pdflite.PdfDocument {
   )
   doc.add_object_given_number(
     5,
-    @pdflite.pdf_dictionary([(key_type, PdfNameObject(type_page))]),
+    @syntax.pdf_dictionary([(key_type, PdfNameObject(type_page))]),
   )
   doc
 }
@@ -70,23 +70,23 @@ fn page_hello_ops_for_test() -> Array[@content.PdfContentOp] {
 }
 
 ///|
-fn page_hello_resources_for_test() -> @pdflite.PdfObject {
+fn page_hello_resources_for_test() -> @syntax.PdfObject {
   let key_font = page_name_for_test("/Font")
   let key_type = page_name_for_test("/Type")
   let key_subtype = page_name_for_test("/Subtype")
   let key_basefont = page_name_for_test("/BaseFont")
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (key_type, PdfNameObject(page_name_for_test("/Font"))),
     (key_subtype, PdfNameObject(page_name_for_test("/Type1"))),
     (key_basefont, PdfNameObject(page_name_for_test("/Times-Italic"))),
   ])
-  @pdflite.pdf_dictionary([
-    (key_font, @pdflite.pdf_dictionary([(page_name_for_test("/F0"), font)])),
+  @syntax.pdf_dictionary([
+    (key_font, @syntax.pdf_dictionary([(page_name_for_test("/F0"), font)])),
   ])
 }
 
 ///|
-fn page_index_mediabox_for_test(index : Int) -> @pdflite.PdfObject {
+fn page_index_mediabox_for_test(index : Int) -> @syntax.PdfObject {
   PdfArray([
     PdfInteger(index),
     PdfInteger(0),
@@ -106,12 +106,12 @@ fn page_indexed_blank_for_test(index : Int) -> @page.PdfPage {
 ///|
 fn page_prefix_resources_for_test(
   names : ArrayView[String],
-) -> @pdflite.PdfObject {
-  let font_entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+) -> @syntax.PdfObject {
+  let font_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
   for name in names {
     font_entries.push((page_name_for_test(name), PdfDictionary([])))
   }
-  @pdflite.pdf_dictionary([
+  @syntax.pdf_dictionary([
     (page_name_for_test("/Font"), PdfDictionary(font_entries)),
   ])
 }
@@ -132,18 +132,18 @@ fn page_prefix_document_for_test(
 
 ///|
 fn page_xobject_resources_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
-    (page_name_for_test("/XObject"), @pdflite.pdf_dictionary(entries)),
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
+    (page_name_for_test("/XObject"), @syntax.pdf_dictionary(entries)),
   ])
 }
 
 ///|
 fn page_resource_value_for_test(
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   resources.lookup_immediate(page_name_for_test(key))
 }
 
@@ -165,14 +165,14 @@ fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_catalog)),
       (key_pages, PdfIndirect(2)),
     ]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_pages)),
       (key_kids, PdfArray([PdfIndirect(3), PdfIndirect(4)])),
       (key_count, PdfInteger(2)),
@@ -191,7 +191,7 @@ fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_page)),
       (key_contents, PdfIndirect(6)),
       (key_annots, PdfArray([])),
@@ -199,7 +199,7 @@ fn page_manual_extract_document_for_test() -> @pdflite.PdfDocument {
   )
   doc.add_object_given_number(
     4,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_page)),
       (
         key_mediabox,
@@ -246,7 +246,7 @@ test "PdfDocument page_reference_numbers traverses page tree in order" {
   @test.assert_eq(
     try! doc.page_number_of_target(
       DestAction(
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (key_s, PdfNameObject(type_goto)),
           (
             key_d,
@@ -335,27 +335,27 @@ test "PdfDocument pages_of_pagetree_quick allows direct page dictionaries" {
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Catalog"))),
       (key_pages, PdfIndirect(2)),
     ]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Pages"))),
       (
         key_kids,
         PdfArray([
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (key_type, PdfNameObject(page_name_for_test("/Page"))),
           ]),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (key_type, PdfNameObject(page_name_for_test("/Pages"))),
             (
               key_kids,
               PdfArray([
-                @pdflite.pdf_dictionary([
+                @syntax.pdf_dictionary([
                   (key_type, PdfNameObject(page_name_for_test("/Page"))),
                 ]),
               ]),
@@ -380,14 +380,14 @@ test "PdfDocument pages_of_pagetree_quick rejects malformed kids" {
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Catalog"))),
       (key_pages, PdfIndirect(2)),
     ]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Pages"))),
       (key_kids, PdfArray([PdfInteger(1)])),
     ]),
@@ -407,7 +407,7 @@ test "PdfDocument page_number_of_target resolves named destinations" {
   let string_destination = @ascii.encode("chapter")
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let page_refs = try! doc.page_reference_numbers()
-  let dest : @pdflite.PdfObject = PdfArray([
+  let dest : @syntax.PdfObject = PdfArray([
     PdfIndirect(page_refs[0]),
     PdfNameObject(type_fit),
   ])
@@ -452,7 +452,7 @@ test "PdfDocument page helpers survive writer and reader round trip" {
 test "PdfDocument page_reference_numbers reports missing page root" {
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(1)
-  doc.add_object_given_number(1, @pdflite.pdf_dictionary([]))
+  doc.add_object_given_number(1, @syntax.pdf_dictionary([]))
   let result : Result[Array[Int], Error] = try? doc.page_reference_numbers()
   guard result is Err(@pdflite.PdfError::PageTreeExpected) else {
     fail("expected @pdflite.PdfError::PageTreeExpected")
@@ -663,17 +663,17 @@ test "PdfDocument shortest_unused_prefix preserves CamlPDF prefix sequence" {
 ///|
 test "PdfDocument combine_pdf_rests preserves unknown entries and appends annotations" {
   let doc = @pdflite.pdf_document_empty()
-  let first = @pdflite.pdf_dictionary([
+  let first = @syntax.pdf_dictionary([
     (page_name_for_test("/Rotate"), PdfInteger(90)),
     (page_name_for_test("/Annots"), PdfArray([PdfIndirect(1), PdfInteger(2)])),
   ])
-  let second = @pdflite.pdf_dictionary([
+  let second = @syntax.pdf_dictionary([
     (page_name_for_test("/Custom"), PdfBoolean(true)),
     (page_name_for_test("/Annots"), PdfArray([PdfIndirect(3)])),
   ])
   @test.assert_eq(
     doc.combine_pdf_rests(first, second),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (page_name_for_test("/Rotate"), PdfInteger(90)),
       (page_name_for_test("/Custom"), PdfBoolean(true)),
       (
@@ -688,16 +688,16 @@ test "PdfDocument combine_pdf_rests preserves unknown entries and appends annota
 test "PdfDocument combine_pdf_rests resolves indirect annotation arrays" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(20, PdfArray([PdfInteger(20), PdfIndirect(21)]))
-  let first = @pdflite.pdf_dictionary([
+  let first = @syntax.pdf_dictionary([
     (page_name_for_test("/Annots"), PdfIndirect(20)),
   ])
-  let second = @pdflite.pdf_dictionary([
+  let second = @syntax.pdf_dictionary([
     (page_name_for_test("/Custom"), PdfNull),
     (page_name_for_test("/Annots"), PdfInteger(1)),
   ])
   @test.assert_eq(
     doc.combine_pdf_rests(first, second),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (page_name_for_test("/Custom"), PdfNull),
       (
         page_name_for_test("/Annots"),
@@ -713,59 +713,59 @@ test "PdfDocument combine_pdf_rests ignores non-dictionary rest inputs" {
   @test.assert_eq(
     doc.combine_pdf_rests(
       PdfInteger(1),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (page_name_for_test("/Annots"), PdfArray([PdfInteger(7)])),
       ]),
     ),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (page_name_for_test("/Annots"), PdfArray([PdfInteger(7)])),
     ]),
   )
   @test.assert_eq(
     doc.combine_pdf_rests(PdfInteger(1), PdfBoolean(false)),
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
   )
 }
 
 ///|
 test "PdfDocument combine_pdf_resources unions known and unknown resource keys" {
   let doc = @pdflite.pdf_document_empty()
-  let first = @pdflite.pdf_dictionary([
+  let first = @syntax.pdf_dictionary([
     (
       page_name_for_test("/ProcSet"),
       PdfArray([PdfNameObject(page_name_for_test("/PDF"))]),
     ),
     (
       page_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([(page_name_for_test("/F0"), PdfInteger(1))]),
+      @syntax.pdf_dictionary([(page_name_for_test("/F0"), PdfInteger(1))]),
     ),
     (
       page_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (page_name_for_test("/CSA"), PdfNameObject(page_name_for_test("/RGB"))),
       ]),
     ),
   ])
-  let second = @pdflite.pdf_dictionary([
+  let second = @syntax.pdf_dictionary([
     (page_name_for_test("/Custom"), PdfBoolean(true)),
     (
       page_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([(page_name_for_test("/F1"), PdfInteger(2))]),
+      @syntax.pdf_dictionary([(page_name_for_test("/F1"), PdfInteger(2))]),
     ),
     (
       page_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (page_name_for_test("/CSB"), PdfNameObject(page_name_for_test("/CMYK"))),
       ]),
     ),
     (
       page_name_for_test("/Pattern"),
-      @pdflite.pdf_dictionary([(page_name_for_test("/P1"), PdfNull)]),
+      @syntax.pdf_dictionary([(page_name_for_test("/P1"), PdfNull)]),
     ),
   ])
   @test.assert_eq(
     doc.combine_pdf_resources(first, second),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         page_name_for_test("/ProcSet"),
         PdfArray([PdfNameObject(page_name_for_test("/PDF"))]),
@@ -773,14 +773,14 @@ test "PdfDocument combine_pdf_resources unions known and unknown resource keys" 
       (page_name_for_test("/Custom"), PdfBoolean(true)),
       (
         page_name_for_test("/Font"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (page_name_for_test("/F0"), PdfInteger(1)),
           (page_name_for_test("/F1"), PdfInteger(2)),
         ]),
       ),
       (
         page_name_for_test("/ColorSpace"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             page_name_for_test("/CSA"),
             PdfNameObject(page_name_for_test("/RGB")),
@@ -793,7 +793,7 @@ test "PdfDocument combine_pdf_resources unions known and unknown resource keys" 
       ),
       (
         page_name_for_test("/Pattern"),
-        @pdflite.pdf_dictionary([(page_name_for_test("/P1"), PdfNull)]),
+        @syntax.pdf_dictionary([(page_name_for_test("/P1"), PdfNull)]),
       ),
     ]),
   )
@@ -804,17 +804,17 @@ test "PdfDocument combine_pdf_resources resolves indirect subdictionaries" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     12,
-    @pdflite.pdf_dictionary([(page_name_for_test("/F0"), PdfInteger(1))]),
+    @syntax.pdf_dictionary([(page_name_for_test("/F0"), PdfInteger(1))]),
   )
   @test.assert_eq(
     doc.combine_pdf_resources(
-      @pdflite.pdf_dictionary([(page_name_for_test("/Font"), PdfIndirect(12))]),
+      @syntax.pdf_dictionary([(page_name_for_test("/Font"), PdfIndirect(12))]),
       PdfInteger(0),
     ),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         page_name_for_test("/Font"),
-        @pdflite.pdf_dictionary([(page_name_for_test("/F0"), PdfInteger(1))]),
+        @syntax.pdf_dictionary([(page_name_for_test("/F0"), PdfInteger(1))]),
       ),
     ]),
   )
@@ -991,8 +991,8 @@ test "PdfDocument process_xobjects rewrites form xobject streams" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     20,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
         (key_filter, PdfNameObject(page_name_for_test("/FlateDecode"))),
         (key_length, PdfInteger(3)),
@@ -1012,8 +1012,8 @@ test "PdfDocument process_xobjects rewrites form xobject streams" {
       raise ParseStreamExpected
     }
     [
-      @pdflite.pdf_stream(
-        @pdflite.pdf_dictionary([
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
           (key_filter, PdfNameObject(page_name_for_test("/ASCIIHexDecode"))),
           (key_length, PdfInteger(2)),
           (key_extra, PdfInteger(7)),
@@ -1052,13 +1052,13 @@ test "PdfDocument process_xobjects materializes deferred form streams" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     20,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
         (key_length, PdfInteger(99)),
       ]),
       StreamToGet(
-        @pdflite.stream_to_get(
+        @syntax.stream_to_get(
           @pdflite.byte_cursor_of_bytes(@ascii.encode("xxBTyy")),
           2,
           2,
@@ -1072,8 +1072,8 @@ test "PdfDocument process_xobjects materializes deferred form streams" {
       (page_name_for_test("/Fm1"), PdfIndirect(20)),
     ]),
   }
-  let seen_data : Ref[@pdflite.PdfStreamData?] = { val: None }
-  let seen_length : Ref[@pdflite.PdfObject?] = { val: None }
+  let seen_data : Ref[@syntax.PdfStreamData?] = { val: None }
+  let seen_length : Ref[@syntax.PdfObject?] = { val: None }
   try! doc.process_xobjects(page, fn(_, _, streams) raise @pdflite.PdfError {
     if streams.length() < 0 {
       raise ParseStreamExpected
@@ -1105,8 +1105,8 @@ test "PdfDocument process_xobjects skips non-form xobjects" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     21,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_name_for_test("/Image"))),
       ]),
       StreamGot(@ascii.encode("image")),
@@ -1129,8 +1129,8 @@ test "PdfDocument process_xobjects skips non-form xobjects" {
   @test.assert_eq(calls.val, 0)
   @test.assert_eq(
     doc.lookup_object_or_null(21),
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_name_for_test("/Image"))),
       ]),
       StreamGot(@ascii.encode("image")),
@@ -1160,7 +1160,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
   guard non_indirect is Err(@pdflite.PdfError::DictionaryExpected) else {
     fail("expected @pdflite.PdfError::DictionaryExpected")
   }
-  doc.add_object_given_number(22, @pdflite.pdf_dictionary([]))
+  doc.add_object_given_number(22, @syntax.pdf_dictionary([]))
   let missing_subtype_page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: page_xobject_resources_for_test([
@@ -1181,8 +1181,8 @@ test "PdfDocument process_xobjects validates xobject resources" {
   }
   doc.add_object_given_number(
     23,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
       ]),
       StreamGot(@ascii.encode("form")),
@@ -1226,7 +1226,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
       if streams.length() < 0 {
         raise ParseStreamExpected
       }
-      [@pdflite.pdf_stream(PdfInteger(1), StreamGot(@ascii.encode("bad")))]
+      [@syntax.pdf_stream(PdfInteger(1), StreamGot(@ascii.encode("bad")))]
     },
   )
   guard bad_dictionary is Err(@pdflite.PdfError::DictionaryExpected) else {
@@ -1236,7 +1236,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
   }
   doc.add_object_given_number(
     24,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
     ]),
   )
@@ -1287,7 +1287,7 @@ test "PdfDocument pages_of_pagetree extracts inherited page properties" {
   @test.assert_eq(pages[0].content, [PdfIndirect(6)])
   @test.assert_eq(
     pages[0].rest,
-    @pdflite.pdf_dictionary([(page_name_for_test("/Annots"), PdfArray([]))]),
+    @syntax.pdf_dictionary([(page_name_for_test("/Annots"), PdfArray([]))]),
   )
   @test.assert_eq(pages[1].resources, page_hello_resources_for_test())
   @test.assert_eq(
@@ -1309,20 +1309,20 @@ test "PdfDocument pages_of_pagetree falls back to last seen mediabox" {
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Catalog"))),
       (key_pages, PdfIndirect(2)),
     ]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Pages"))),
       (key_kids, PdfArray([PdfIndirect(3), PdfIndirect(4)])),
       (key_count, PdfInteger(2)),
     ]),
   )
-  let first_box : @pdflite.PdfObject = PdfArray([
+  let first_box : @syntax.PdfObject = PdfArray([
     PdfInteger(1),
     PdfInteger(2),
     PdfInteger(300),
@@ -1330,14 +1330,14 @@ test "PdfDocument pages_of_pagetree falls back to last seen mediabox" {
   ])
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Page"))),
       (key_mediabox, first_box),
     ]),
   )
   doc.add_object_given_number(
     4,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Page"))),
     ]),
   )
@@ -1354,26 +1354,26 @@ test "PdfDocument replace_inherit materializes parent page attributes" {
   let key_mediabox = page_name_for_test("/MediaBox")
   let key_cropbox = page_name_for_test("/CropBox")
   let key_rotate = page_name_for_test("/Rotate")
-  let parent_mediabox : @pdflite.PdfObject = PdfArray([
+  let parent_mediabox : @syntax.PdfObject = PdfArray([
     PdfInteger(0),
     PdfInteger(0),
     PdfInteger(300),
     PdfInteger(400),
   ])
-  let parent_cropbox : @pdflite.PdfObject = PdfArray([
+  let parent_cropbox : @syntax.PdfObject = PdfArray([
     PdfInteger(10),
     PdfInteger(20),
     PdfInteger(290),
     PdfInteger(380),
   ])
-  let resource_object = @pdflite.pdf_dictionary([
+  let resource_object = @syntax.pdf_dictionary([
     (page_name_for_test("/Font"), PdfDictionary([])),
   ])
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(8, resource_object)
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Pages"))),
       (key_mediabox, parent_mediabox),
       (key_cropbox, parent_cropbox),
@@ -1383,7 +1383,7 @@ test "PdfDocument replace_inherit materializes parent page attributes" {
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Page"))),
       (key_parent, PdfIndirect(2)),
       (key_rotate, PdfInteger(270)),
@@ -1403,7 +1403,7 @@ test "PdfDocument replace_inherit walks parent chain" {
   let key_type = page_name_for_test("/Type")
   let key_parent = page_name_for_test("/Parent")
   let key_mediabox = page_name_for_test("/MediaBox")
-  let inherited_mediabox : @pdflite.PdfObject = PdfArray([
+  let inherited_mediabox : @syntax.PdfObject = PdfArray([
     PdfInteger(1),
     PdfInteger(2),
     PdfInteger(500),
@@ -1412,21 +1412,21 @@ test "PdfDocument replace_inherit walks parent chain" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Pages"))),
       (key_mediabox, inherited_mediabox),
     ]),
   )
   doc.add_object_given_number(
     4,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Pages"))),
       (key_parent, PdfIndirect(2)),
     ]),
   )
   doc.add_object_given_number(
     5,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_name_for_test("/Page"))),
       (key_parent, PdfIndirect(4)),
     ]),
@@ -1465,10 +1465,10 @@ test "PdfDocument prepend_operators merges content in non-fast mode" {
 ///|
 test "PdfDocument prepend_operators parses inline image resource color spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       page_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (page_name_for_test("/CS1"), PdfNameObject(page_name_for_test("/RGB"))),
       ]),
     ),
@@ -1478,8 +1478,8 @@ test "PdfDocument prepend_operators parses inline image resource color spaces" {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     resources,
     content: [
-      @pdflite.pdf_stream(
-        @pdflite.pdf_dictionary([
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
           (page_name_for_test("/Length"), PdfInteger(data.length())),
         ]),
         StreamGot(data),
@@ -1492,7 +1492,7 @@ test "PdfDocument prepend_operators parses inline image resource color spaces" {
     [
       Op_q,
       Op_InlineImage(
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (page_name_for_test("/W"), PdfInteger(2)),
           (page_name_for_test("/H"), PdfInteger(1)),
           (page_name_for_test("/BPC"), PdfInteger(8)),
@@ -1513,8 +1513,8 @@ test "PdfDocument prepend_operators falls back for missing inline image resource
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
-      @pdflite.pdf_stream(
-        @pdflite.pdf_dictionary([
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
           (page_name_for_test("/Length"), PdfInteger(data.length())),
         ]),
         StreamGot(data),
@@ -1525,7 +1525,7 @@ test "PdfDocument prepend_operators falls back for missing inline image resource
   @test.assert_eq(try! doc.parse_content_ops(updated.content), [
     Op_q,
     Op_InlineImage(
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (page_name_for_test("/W"), PdfInteger(1)),
         (page_name_for_test("/H"), PdfInteger(1)),
         (page_name_for_test("/BPC"), PdfInteger(8)),
@@ -1547,8 +1547,8 @@ test "PdfDocument prepend_operators propagates non-colour parse errors" {
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
-      @pdflite.pdf_stream(
-        @pdflite.pdf_dictionary([
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
           (page_name_for_test("/Length"), PdfInteger(data.length())),
         ]),
         StreamGot(data),

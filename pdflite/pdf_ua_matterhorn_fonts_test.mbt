@@ -168,7 +168,7 @@ test "PdfDocument test_matterhorn_json checks Type2 CIDToGIDMap" {
   stream_map.add_object_given_number(
     40,
     ua_matterhorn_cid_font_type2_for_test(
-      Some(@pdflite.pdf_stream(PdfDictionary([]), StreamGot(b"\x00\x01"))),
+      Some(@syntax.pdf_stream(PdfDictionary([]), StreamGot(b"\x00\x01"))),
     ),
   )
   @test.assert_eq(
@@ -349,7 +349,7 @@ test "PdfDocument test_matterhorn_json checks CMap names" {
     PdfDictionary([
       (
         ua_matterhorn_name_for_test("/UseCMap"),
-        @pdflite.pdf_stream(PdfDictionary([]), StreamGot(b"")),
+        @syntax.pdf_stream(PdfDictionary([]), StreamGot(b"")),
       ),
     ]),
   )
@@ -807,7 +807,7 @@ test "PdfDocument test_matterhorn_json checks missing ToUnicode exemptions" {
       extras=[
         (
           ua_matterhorn_name_for_test("/ToUnicode"),
-          @pdflite.pdf_stream(PdfDictionary([]), StreamGot(b"")),
+          @syntax.pdf_stream(PdfDictionary([]), StreamGot(b"")),
         ),
       ],
     ),

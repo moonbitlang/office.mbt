@@ -5,17 +5,17 @@ fn composition_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn composition_dictionary_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary(entries)
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary(entries)
 }
 
 ///|
 fn composition_stream_for_test(
-  dictionary_entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  dictionary_entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   data : String,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_stream(
+) -> @syntax.PdfObject {
+  @syntax.pdf_stream(
     composition_dictionary_for_test(dictionary_entries),
     StreamGot(@ascii.encode(data)),
   )

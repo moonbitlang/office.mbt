@@ -31,10 +31,10 @@ pub(all) struct PdfExtractedImageFile {
 /// Build a PDF image XObject for JPEG data.
 pub fn pdf_image_object_of_jpeg_data(
   data : BytesView,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let (width, height) = @codec.pdf_jpeg_dimensions_view(data)
   let payload = data.to_owned()
-  pdf_stream(
+  @syntax.pdf_stream(
     PdfDictionary([
       (pdf_image_length_key(), PdfInteger(payload.length())),
       (pdf_image_filter_key(), PdfNameObject(pdf_image_dctdecode_name())),
@@ -53,7 +53,7 @@ pub fn pdf_image_object_of_jpeg_data(
 pub fn pdf_image_obj_of_jpeg_data(
   data : BytesView,
   path_to_im? : String = "",
-) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise PdfError {
   ignore(path_to_im)
   (pdf_image_object_of_jpeg_data(data), [])
 }
@@ -63,7 +63,7 @@ pub fn pdf_image_obj_of_jpeg_data(
 pub fn pdf_obj_of_jpeg_data(
   data : BytesView,
   path_to_im? : String = "",
-) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise PdfError {
   pdf_image_obj_of_jpeg_data(data, path_to_im~)
 }
 
@@ -71,10 +71,10 @@ pub fn pdf_obj_of_jpeg_data(
 /// Build a PDF image XObject for JPEG2000 data.
 pub fn pdf_image_object_of_jpeg2000_data(
   data : BytesView,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let (width, height) = pdf_jpeg2000_dimensions_view(data)
   let payload = data.to_owned()
-  pdf_stream(
+  @syntax.pdf_stream(
     PdfDictionary([
       (pdf_image_length_key(), PdfInteger(payload.length())),
       (pdf_image_filter_key(), PdfNameObject(pdf_image_jpxdecode_name())),
@@ -90,7 +90,7 @@ pub fn pdf_image_object_of_jpeg2000_data(
 /// Compatibility wrapper matching cpdfimage's `obj_of_jpeg2000_data` result shape.
 pub fn pdf_image_obj_of_jpeg2000_data(
   data : BytesView,
-) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise PdfError {
   (pdf_image_object_of_jpeg2000_data(data), [])
 }
 
@@ -98,7 +98,7 @@ pub fn pdf_image_obj_of_jpeg2000_data(
 /// Source-spelled cpdfimage `obj_of_jpeg2000_data` wrapper.
 pub fn pdf_obj_of_jpeg2000_data(
   data : BytesView,
-) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise PdfError {
   pdf_image_obj_of_jpeg2000_data(data)
 }
 
@@ -127,8 +127,8 @@ fn pdf_image_png_dictionary(
   color_space : PdfName,
   colors : Int,
   predictor : Bool,
-) -> Array[(PdfName, PdfObject)] {
-  let entries : Array[(PdfName, PdfObject)] = [
+) -> Array[(PdfName, @syntax.PdfObject)] {
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_image_length_key(), PdfInteger(data.length())),
     (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
     (pdf_image_bits_per_component_key(), PdfInteger(png.bit_depth)),
@@ -197,7 +197,7 @@ fn PdfPNG::pdf_image_split_alpha(
 pub fn PdfDocument::pdf_image_object_of_png_data(
   self : PdfDocument,
   data : BytesView,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let png = pdf_read_png_view(data)
   let (image_data, mask_data, predictor) = match png.color_type {
     4 | 6 => {
@@ -223,13 +223,16 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
         1,
         predictor,
       )
-      let smask = pdf_stream(PdfDictionary(mask_entries), StreamGot(mask))
+      let smask = @syntax.pdf_stream(
+        PdfDictionary(mask_entries),
+        StreamGot(mask),
+      )
       let smask_number = self.add_object(smask)
       entries.push((pdf_image_smask_key(), PdfIndirect(smask_number)))
     }
     None => ()
   }
-  pdf_stream(PdfDictionary(entries), StreamGot(image_data))
+  @syntax.pdf_stream(PdfDictionary(entries), StreamGot(image_data))
 }
 
 ///|
@@ -238,7 +241,7 @@ pub fn PdfDocument::pdf_image_object_of_png_data(
 pub fn pdf_image_object_of_png_data(
   document : PdfDocument,
   data : BytesView,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   document.pdf_image_object_of_png_data(data)
 }
 
@@ -247,7 +250,7 @@ pub fn pdf_image_object_of_png_data(
 pub fn pdf_image_obj_of_png_data(
   document : PdfDocument,
   data : BytesView,
-) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise PdfError {
   (document.pdf_image_object_of_png_data(data), [])
 }
 
@@ -256,7 +259,7 @@ pub fn pdf_image_obj_of_png_data(
 pub fn pdf_obj_of_png_data(
   document : PdfDocument,
   data : BytesView,
-) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise PdfError {
   pdf_image_obj_of_png_data(document, data)
 }
 
@@ -288,10 +291,10 @@ fn pdf_image_jbig2_dimensions_view(
 pub fn pdf_image_object_of_jbig2_data(
   data : BytesView,
   global? : BytesView? = None,
-) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise PdfError {
   let payload = data.to_owned()
   let (width, height) = pdf_image_jbig2_dimensions_view(data)
-  let entries : Array[(PdfName, PdfObject)] = [
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_image_length_key(), PdfInteger(payload.length())),
     (pdf_image_filter_key(), PdfNameObject(pdf_image_jbig2decode_name())),
     (pdf_image_subtype_key(), PdfNameObject(pdf_image_image_name())),
@@ -300,7 +303,7 @@ pub fn pdf_image_object_of_jbig2_data(
     (pdf_image_width_key(), PdfInteger(width)),
     (pdf_image_height_key(), PdfInteger(height)),
   ]
-  let extra : Array[(Int, PdfObject)] = Array::new(
+  let extra : Array[(Int, @syntax.PdfObject)] = Array::new(
     capacity=match global {
       Some(_) => 1
       None => 0
@@ -323,7 +326,7 @@ pub fn pdf_image_object_of_jbig2_data(
       extra.push(
         (
           pdf_image_jbig2_globals_object_number,
-          pdf_stream(
+          @syntax.pdf_stream(
             PdfDictionary([
               (pdf_image_length_key(), PdfInteger(global_payload.length())),
             ]),
@@ -334,7 +337,7 @@ pub fn pdf_image_object_of_jbig2_data(
     }
     None => ()
   }
-  (pdf_stream(PdfDictionary(entries), StreamGot(payload)), extra)
+  (@syntax.pdf_stream(PdfDictionary(entries), StreamGot(payload)), extra)
 }
 
 ///|
@@ -342,7 +345,7 @@ pub fn pdf_image_object_of_jbig2_data(
 pub fn pdf_image_obj_of_jbig2_data(
   data : BytesView,
   global? : BytesView? = None,
-) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise PdfError {
   pdf_image_object_of_jbig2_data(data, global~)
 }
 
@@ -351,6 +354,6 @@ pub fn pdf_image_obj_of_jbig2_data(
 pub fn pdf_obj_of_jbig2_data(
   data : BytesView,
   global? : BytesView? = None,
-) -> (PdfObject, Array[(Int, PdfObject)]) raise PdfError {
+) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise PdfError {
   pdf_image_obj_of_jbig2_data(data, global~)
 }

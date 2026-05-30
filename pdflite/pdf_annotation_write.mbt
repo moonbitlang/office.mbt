@@ -1,7 +1,7 @@
 ///|
 fn pdf_annotation_rectangle_object(
   rectangle : @geometry.PdfRectangle,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([
     PdfReal(rectangle.min_x),
     PdfReal(rectangle.min_y),
@@ -13,8 +13,8 @@ fn pdf_annotation_rectangle_object(
 ///|
 fn pdf_annotation_border_object(
   border : @annotation.PdfAnnotationBorder,
-) -> PdfObject {
-  let base : Array[PdfObject] = [
+) -> @syntax.PdfObject {
+  let base : Array[@syntax.PdfObject] = [
     PdfReal(border.horizontal_radius),
     PdfReal(border.vertical_radius),
     PdfReal(border.width),
@@ -27,8 +27,8 @@ fn pdf_annotation_border_object(
 
 ///|
 fn pdf_annotation_rest_entries(
-  rest : PdfObject,
-) -> Array[(PdfName, PdfObject)] raise PdfError {
+  rest : @syntax.PdfObject,
+) -> Array[(PdfName, @syntax.PdfObject)] raise PdfError {
   match rest {
     PdfNull => []
     PdfDictionary(entries) => [ for entry in entries => entry ]
@@ -39,8 +39,8 @@ fn pdf_annotation_rest_entries(
 ///|
 fn pdf_object_of_annotation(
   annotation : @annotation.PdfAnnotation,
-) -> PdfObject raise PdfError {
-  let entries : Array[(PdfName, PdfObject)] = [
+) -> @syntax.PdfObject raise PdfError {
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (
       pdf_annotation_subtype_key(),
       PdfNameObject(pdf_annotation_subtype_name(annotation.subtype)),
@@ -139,8 +139,8 @@ fn PdfDocument::pdf_annotation_transform_one(
 fn PdfDocument::pdf_annotation_transform_object(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
-  annotation : PdfObject,
-) -> PdfObject raise PdfError {
+  annotation : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let mut transformed = annotation
   match self.lookup_direct(pdf_annotation_rect_key(), annotation) {
     Some(rectangle) =>
@@ -178,7 +178,7 @@ fn PdfDocument::pdf_annotation_transform_object(
 pub fn PdfDocument::transform_annotations(
   self : PdfDocument,
   matrix : @geometry.TransformMatrix,
-  rest : PdfObject,
+  rest : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   match self.lookup_direct(pdf_annotation_annots_key(), rest) {
     Some(PdfArray(annotations)) =>
@@ -206,7 +206,7 @@ pub fn PdfDocument::transform_annotations(
 pub fn pdf_transform_annotations(
   document : PdfDocument,
   matrix : @geometry.TransformMatrix,
-  rest : PdfObject,
+  rest : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   document.transform_annotations(matrix, rest)
 }

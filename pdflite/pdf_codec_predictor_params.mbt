@@ -1,6 +1,6 @@
 ///|
 fn pdf_apply_first_predictor(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
   match pdf_first_decodeparms(dictionary) {
@@ -25,7 +25,7 @@ fn pdf_apply_first_predictor(
 ///|
 fn PdfDocument::pdf_apply_first_predictor_direct(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
   match self.pdf_first_decodeparms_direct(dictionary) {

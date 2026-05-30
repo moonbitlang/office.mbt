@@ -15,8 +15,8 @@ fn pdf_merge_catalog_extra_key(key : PdfName) -> Bool {
 ///|
 fn pdf_merge_catalog_extra_entries(
   documents : ArrayView[PdfDocument],
-) -> Array[(PdfName, PdfObject)] raise PdfError {
-  let entries : Array[(PdfName, PdfObject)] = []
+) -> Array[(PdfName, @syntax.PdfObject)] raise PdfError {
+  let entries : Array[(PdfName, @syntax.PdfObject)] = []
   let seen = pdf_merge_name_set()
   for document in documents {
     match document.pdf_merge_catalog() {
@@ -38,7 +38,7 @@ fn pdf_merge_catalog_extra_entries(
 fn PdfDocument::pdf_merge_catalog_entry(
   self : PdfDocument,
   key : PdfName,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   self.lookup_direct(key, self.pdf_merge_catalog())
 }
 
@@ -46,7 +46,7 @@ fn PdfDocument::pdf_merge_catalog_entry(
 fn PdfDocument::pdf_merge_add_catalog_entry(
   self : PdfDocument,
   key : PdfName,
-  value : PdfObject,
+  value : @syntax.PdfObject,
 ) -> PdfDocument raise PdfError {
   let root = self.pdf_merge_catalog()
   let new_root = self.add_object(root.add_dict_entry(key, value))

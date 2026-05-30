@@ -8,12 +8,12 @@ fn pdf_draw_content_unsupported(
 ///|
 fn pdf_draw_form_xobject_stream(
   bbox : (Double, Double, Double, Double),
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let data = pdf_content_bytes_of_ops(ops)
   let (a, b, c, d) = bbox
-  pdf_stream(
+  @syntax.pdf_stream(
     PdfDictionary([
       (pdf_draw_length_key(), PdfInteger(data.length())),
       (pdf_draw_subtype_key(), PdfNameObject(pdf_draw_form_key())),

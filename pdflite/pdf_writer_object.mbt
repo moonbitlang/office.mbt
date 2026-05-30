@@ -10,16 +10,16 @@ fn pdf_writer_length_name() -> PdfName {
 
 ///|
 fn pdf_write_stream_dictionary(
-  stream : PdfStream,
+  stream : @syntax.PdfStream,
   length : Int,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   stream.dictionary.add_dict_entry(pdf_writer_length_name(), PdfInteger(length))
 }
 
 ///|
 fn pdf_write_object_to(
   output : Array[Byte],
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   match object {
     PdfNull => pdf_writer_push_ascii(output, "null")
@@ -71,7 +71,7 @@ fn pdf_write_object_to(
 /// Serialize a direct PDF object.
 ///
 /// Stream lengths are refreshed from the current stream data while writing.
-pub fn pdf_write_object(object : PdfObject) -> PdfBytes raise PdfError {
+pub fn pdf_write_object(object : @syntax.PdfObject) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   pdf_write_object_to(output, object)
   Bytes::from_array(output)
@@ -79,7 +79,7 @@ pub fn pdf_write_object(object : PdfObject) -> PdfBytes raise PdfError {
 
 ///|
 /// Compatibility alias for `pdf_write_object`.
-pub fn pdf_string_of_pdf(object : PdfObject) -> PdfBytes raise PdfError {
+pub fn pdf_string_of_pdf(object : @syntax.PdfObject) -> PdfBytes raise PdfError {
   pdf_write_object(object)
 }
 
@@ -89,7 +89,7 @@ pub fn pdf_string_of_pdf(object : PdfObject) -> PdfBytes raise PdfError {
 /// Stream data is included because `PdfStreamObject` serialization writes the
 /// stream dictionary, `stream` marker, bytes, and `endstream` marker.
 pub fn pdf_string_of_pdf_including_data(
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> PdfBytes raise PdfError {
   pdf_write_object(object)
 }
@@ -97,7 +97,7 @@ pub fn pdf_string_of_pdf_including_data(
 ///|
 /// Serialize one indirect object including `obj` and `endobj` wrappers.
 pub fn pdf_write_indirect_object(
-  object : PdfParsedIndirectObject,
+  object : @syntax.PdfParsedIndirectObject,
 ) -> PdfBytes raise PdfError {
   let output : Array[Byte] = []
   pdf_writer_push_ascii(output, object.number.to_string())

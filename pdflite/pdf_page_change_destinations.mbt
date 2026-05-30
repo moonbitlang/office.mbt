@@ -104,9 +104,9 @@ fn PdfDocument::pdf_page_matrix_page_number_for_destination_with_lookup(
 ///|
 fn PdfDocument::pdf_page_transform_destination_object_with_lookup(
   self : PdfDocument,
-  raw_destination : PdfObject,
+  raw_destination : @syntax.PdfObject,
   lookup : PdfPageMatrixLookup,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   match
     self.pdf_page_transform_destination_object_with_shallow_lookup(
       raw_destination, lookup, false,
@@ -119,10 +119,10 @@ fn PdfDocument::pdf_page_transform_destination_object_with_lookup(
 ///|
 fn PdfDocument::pdf_page_transform_destination_object_with_shallow_lookup(
   self : PdfDocument,
-  raw_destination : PdfObject,
+  raw_destination : @syntax.PdfObject,
   lookup : PdfPageMatrixLookup,
   shallow : Bool,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   let destination = self.read_destination(raw_destination, shallow~)
   match self.pdf_page_matrix_for_destination_with_lookup(destination, lookup) {
     Some(matrix) if matrix != @geometry.transform_identity_matrix =>

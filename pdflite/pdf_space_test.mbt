@@ -222,10 +222,10 @@ test "pdf_colour_space_of_object reads direct device aliases and patterns" {
 ///|
 test "PdfDocument read_colour_space resolves resources and nested arrays" {
   let doc = @pdflite.pdf_document_empty()
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       space_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           space_name_for_test("/CS1"),
           PdfNameObject(space_name_for_test("/RGB")),
@@ -288,10 +288,10 @@ test "PdfDocument read_colour_space resolves resources and nested arrays" {
 ///|
 test "PdfDocument colour_space_components counts direct and resource spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       space_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           space_name_for_test("/CSRGB"),
           PdfNameObject(space_name_for_test("/RGB")),
@@ -340,7 +340,7 @@ test "PdfDocument colour_space_components counts direct and resource spaces" {
     3,
   )
   let missing_resource : Result[Int, Error] = try? doc.colour_space_components(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     PdfNameObject(space_name_for_test("/CSMissingDict")),
   )
   guard missing_resource is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&
@@ -360,7 +360,7 @@ test "PdfDocument colour_space_components counts direct and resource spaces" {
 ///|
 test "PdfDocument colour_space_components counts array spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let resources = @pdflite.pdf_dictionary([])
+  let resources = @syntax.pdf_dictionary([])
   @test.assert_eq(
     try! doc.colour_space_components(
       resources,
@@ -376,7 +376,7 @@ test "PdfDocument colour_space_components counts array spaces" {
       resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/CalRGB")),
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ]),
     ),
     3,
@@ -386,7 +386,7 @@ test "PdfDocument colour_space_components counts array spaces" {
       resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/Lab")),
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ]),
     ),
     3,
@@ -396,7 +396,7 @@ test "PdfDocument colour_space_components counts array spaces" {
       resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/CalCMYK")),
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ]),
     ),
     4,
@@ -406,7 +406,7 @@ test "PdfDocument colour_space_components counts array spaces" {
       resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/CalGray")),
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ]),
     ),
     1,
@@ -416,9 +416,9 @@ test "PdfDocument colour_space_components counts array spaces" {
 ///|
 test "PdfDocument colour_space_components counts special spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let resources = @pdflite.pdf_dictionary([])
-  let icc = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(4))]),
+  let resources = @syntax.pdf_dictionary([])
+  let icc = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(4))]),
     StreamGot(@ascii.encode("icc")),
   )
   @test.assert_eq(
@@ -483,7 +483,7 @@ test "PdfDocument colour_space_components counts special spaces" {
 ///|
 test "PdfDocument colour_space_components rejects malformed spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let resources = @pdflite.pdf_dictionary([])
+  let resources = @syntax.pdf_dictionary([])
   let pattern : Result[Int, Error] = try? doc.colour_space_components(
     resources,
     PdfNameObject(space_name_for_test("/Pattern")),
@@ -495,8 +495,8 @@ test "PdfDocument colour_space_components rejects malformed spaces" {
     resources,
     PdfArray([
       PdfNameObject(space_name_for_test("/ICCBased")),
-      @pdflite.pdf_stream(
-        @pdflite.pdf_dictionary([]),
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([]),
         StreamGot(@ascii.encode("icc")),
       ),
     ]),
@@ -518,13 +518,13 @@ test "PdfDocument colour_space_components rejects malformed spaces" {
 ///|
 test "PdfDocument read_colour_space parses calibrated dictionaries" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
+  let empty_resources = @syntax.pdf_dictionary([])
   @test.assert_eq(
     try! doc.read_colour_space(
       empty_resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/CalGray")),
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ]),
     ),
     Some(
@@ -536,7 +536,7 @@ test "PdfDocument read_colour_space parses calibrated dictionaries" {
       empty_resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/CalGray")),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             space_name_for_test("/WhitePoint"),
             PdfArray([PdfReal(0.9), PdfReal(1.0), PdfReal(0.8)]),
@@ -554,7 +554,7 @@ test "PdfDocument read_colour_space parses calibrated dictionaries" {
       empty_resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/CalRGB")),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             space_name_for_test("/WhitePoint"),
             PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(1)]),
@@ -580,7 +580,7 @@ test "PdfDocument read_colour_space parses calibrated dictionaries" {
       empty_resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/Lab")),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             space_name_for_test("/WhitePoint"),
             PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(1)]),
@@ -609,10 +609,10 @@ test "PdfDocument read_colour_space parses calibrated dictionaries" {
 test "PdfDocument read_colour_space reports malformed calibrated numbers" {
   let doc = @pdflite.pdf_document_empty()
   let result : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     PdfArray([
       PdfNameObject(space_name_for_test("/CalGray")),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           space_name_for_test("/WhitePoint"),
           PdfArray([
@@ -632,9 +632,9 @@ test "PdfDocument read_colour_space reports malformed calibrated numbers" {
 ///|
 test "PdfDocument read_colour_space parses ICCBased streams" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
-  let default_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
+  let empty_resources = @syntax.pdf_dictionary([])
+  let default_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
     StreamGot(@ascii.encode("icc")),
   )
   @test.assert_eq(
@@ -652,9 +652,9 @@ test "PdfDocument read_colour_space parses ICCBased streams" {
       ),
     ),
   )
-  let metadata : @pdflite.PdfObject = PdfString(@ascii.encode("meta"))
-  let explicit_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let metadata : @syntax.PdfObject = PdfString(@ascii.encode("meta"))
+  let explicit_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (space_name_for_test("/N"), PdfInteger(1)),
       (
         space_name_for_test("/Alternate"),
@@ -677,8 +677,8 @@ test "PdfDocument read_colour_space parses ICCBased streams" {
       PdfICCBased(1, PdfDeviceCMYK, [0.1, 0.9], Some(metadata), explicit_stream),
     ),
   )
-  let cmyk_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(4))]),
+  let cmyk_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(4))]),
     StreamGot(@ascii.encode("icc")),
   )
   @test.assert_eq(
@@ -701,9 +701,9 @@ test "PdfDocument read_colour_space parses ICCBased streams" {
 ///|
 test "PdfDocument read_colour_space rejects unsupported ICCBased shapes" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
-  let bad_n_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(2))]),
+  let empty_resources = @syntax.pdf_dictionary([])
+  let bad_n_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(2))]),
     StreamGot(@ascii.encode("icc")),
   )
   @test.assert_eq(
@@ -713,8 +713,8 @@ test "PdfDocument read_colour_space rejects unsupported ICCBased shapes" {
     ),
     None,
   )
-  let missing_n_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let missing_n_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(@ascii.encode("icc")),
   )
   @test.assert_eq(
@@ -732,13 +732,13 @@ test "PdfDocument read_colour_space rejects unsupported ICCBased shapes" {
       empty_resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/ICCBased")),
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ]),
     ),
     None,
   )
-  let unsupported_alternate_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let unsupported_alternate_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (space_name_for_test("/N"), PdfInteger(3)),
       (
         space_name_for_test("/Alternate"),
@@ -762,8 +762,8 @@ test "PdfDocument read_colour_space rejects unsupported ICCBased shapes" {
 ///|
 test "PdfDocument read_colour_space reports malformed ICCBased range numbers" {
   let doc = @pdflite.pdf_document_empty()
-  let malformed_range_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let malformed_range_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (space_name_for_test("/N"), PdfInteger(1)),
       (
         space_name_for_test("/Range"),
@@ -773,7 +773,7 @@ test "PdfDocument read_colour_space reports malformed ICCBased range numbers" {
     StreamGot(@ascii.encode("icc")),
   )
   let result : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     PdfArray([
       PdfNameObject(space_name_for_test("/ICCBased")),
       malformed_range_stream,
@@ -787,7 +787,7 @@ test "PdfDocument read_colour_space reports malformed ICCBased range numbers" {
 ///|
 test "PdfDocument read_colour_space parses Indexed string and stream tables" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
+  let empty_resources = @syntax.pdf_dictionary([])
   @test.assert_eq(
     try! doc.read_colour_space(
       empty_resources,
@@ -800,8 +800,8 @@ test "PdfDocument read_colour_space parses Indexed string and stream tables" {
     ),
     Some(PdfIndexed(PdfDeviceRGB, [(0, [10, 20, 30]), (1, [40, 50, 60])])),
   )
-  let lookup_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(space_name_for_test("/Length"), PdfInteger(4))]),
+  let lookup_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(space_name_for_test("/Length"), PdfInteger(4))]),
     StreamGot(space_bytes_for_test([1, 2, 3, 4])),
   )
   @test.assert_eq(
@@ -823,8 +823,8 @@ test "PdfDocument read_colour_space parses Indexed string and stream tables" {
   let encoded_lookup = @codec.pdf_ascii_hex_encode(
     space_bytes_for_test([1, 2, 3, 4]),
   )
-  let lookup_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let lookup_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (space_name_for_test("/Length"), PdfInteger(encoded_lookup.length())),
       (space_name_for_test("/Filter"), PdfIndirect(8)),
     ]),
@@ -847,9 +847,9 @@ test "PdfDocument read_colour_space parses Indexed string and stream tables" {
 ///|
 test "PdfDocument read_colour_space parses Indexed through ICCBased alternate" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
-  let icc_base = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
+  let empty_resources = @syntax.pdf_dictionary([])
+  let icc_base = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
     StreamGot(@ascii.encode("icc")),
   )
   @test.assert_eq(
@@ -880,7 +880,7 @@ test "PdfDocument read_colour_space parses Indexed through ICCBased alternate" {
 ///|
 test "PdfDocument read_colour_space rejects unsupported Indexed shapes" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
+  let empty_resources = @syntax.pdf_dictionary([])
   @test.assert_eq(
     try! doc.read_colour_space(
       empty_resources,
@@ -923,7 +923,7 @@ test "PdfDocument read_colour_space rejects unsupported Indexed shapes" {
 test "PdfDocument read_colour_space reports malformed Indexed data" {
   let doc = @pdflite.pdf_document_empty()
   let bad_hival : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     PdfArray([
       PdfNameObject(space_name_for_test("/Indexed")),
       PdfNameObject(space_name_for_test("/DeviceRGB")),
@@ -935,7 +935,7 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
     fail("expected @pdflite.PdfError::NumberExpected for Indexed hival")
   }
   let short_table : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     PdfArray([
       PdfNameObject(space_name_for_test("/Indexed")),
       PdfNameObject(space_name_for_test("/DeviceRGB")),
@@ -947,7 +947,7 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
     fail("expected @pdflite.PdfError::EndOfInput for short Indexed table")
   }
   let negative_hival : Result[@pdflite.PdfColourSpace?, Error] = try? doc.read_colour_space(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     PdfArray([
       PdfNameObject(space_name_for_test("/Indexed")),
       PdfNameObject(space_name_for_test("/DeviceRGB")),
@@ -965,8 +965,8 @@ test "PdfDocument read_colour_space reports malformed Indexed data" {
 ///|
 test "PdfDocument read_colour_space parses Separation and DeviceN spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
-  let tint = @pdflite.pdf_dictionary([
+  let empty_resources = @syntax.pdf_dictionary([])
+  let tint = @syntax.pdf_dictionary([
     (space_name_for_test("/FunctionType"), PdfInteger(2)),
   ])
   @test.assert_eq(
@@ -999,11 +999,11 @@ test "PdfDocument read_colour_space parses Separation and DeviceN spaces" {
         [space_name_for_test("/Cyan"), space_name_for_test("/Magenta")],
         PdfDeviceCMYK,
         tint,
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ),
     ),
   )
-  let attributes = @pdflite.pdf_dictionary([
+  let attributes = @syntax.pdf_dictionary([
     (
       space_name_for_test("/Subtype"),
       PdfNameObject(space_name_for_test("/NChannel")),
@@ -1034,8 +1034,8 @@ test "PdfDocument read_colour_space parses Separation and DeviceN spaces" {
 ///|
 test "PdfDocument read_colour_space rejects malformed Separation and DeviceN spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let empty_resources = @pdflite.pdf_dictionary([])
-  let tint = @pdflite.pdf_dictionary([])
+  let empty_resources = @syntax.pdf_dictionary([])
+  let tint = @syntax.pdf_dictionary([])
   @test.assert_eq(
     try! doc.read_colour_space(
       empty_resources,
@@ -1181,8 +1181,8 @@ test "pdf_object_of_colour_space writes supported colour spaces" {
       ]),
     ),
   )
-  let icc_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
+  let icc_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
     StreamGot(@ascii.encode("icc")),
   )
   @test.assert_eq(
@@ -1220,7 +1220,7 @@ test "pdf_object_of_colour_space writes supported colour spaces" {
     @pdflite.pdf_write_colour_space(@pdflite.pdf_document_empty(), PdfDeviceRGB),
     PdfNameObject(space_name_for_test("/DeviceRGB")),
   )
-  let tint : @pdflite.PdfObject = PdfDictionary([
+  let tint : @syntax.PdfObject = PdfDictionary([
     (space_name_for_test("/FunctionType"), PdfInteger(2)),
   ])
   @test.assert_eq(
@@ -1242,7 +1242,7 @@ test "pdf_object_of_colour_space writes supported colour spaces" {
         [space_name_for_test("/Cyan"), space_name_for_test("/Magenta")],
         PdfDeviceCMYK,
         tint,
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ),
     ),
     Some(
@@ -1263,7 +1263,7 @@ test "pdf_object_of_colour_space writes supported colour spaces" {
         [space_name_for_test("/Cyan")],
         PdfDeviceCMYK,
         tint,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (space_name_for_test("/Subtype"), PdfInteger(1)),
         ]),
       ),

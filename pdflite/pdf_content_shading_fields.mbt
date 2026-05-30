@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_content_shading_domain4(
   self : PdfDocument,
-  shading : PdfObject,
+  shading : @syntax.PdfObject,
 ) -> (Double, Double, Double, Double) raise PdfError {
   match self.lookup_direct(pdf_content_shading_domain_name, shading) {
     Some(PdfArray(values)) if values.length() == 4 =>
@@ -18,7 +18,7 @@ fn PdfDocument::pdf_content_shading_domain4(
 ///|
 fn PdfDocument::pdf_content_shading_domain2(
   self : PdfDocument,
-  shading : PdfObject,
+  shading : @syntax.PdfObject,
 ) -> (Double, Double) raise PdfError {
   match self.lookup_direct(pdf_content_shading_domain_name, shading) {
     Some(PdfArray(values)) if values.length() == 2 =>
@@ -30,7 +30,7 @@ fn PdfDocument::pdf_content_shading_domain2(
 ///|
 fn PdfDocument::pdf_content_shading_coords4(
   self : PdfDocument,
-  shading : PdfObject,
+  shading : @syntax.PdfObject,
 ) -> (Double, Double, Double, Double) raise PdfError {
   match self.lookup_direct(pdf_content_shading_coords_name, shading) {
     Some(PdfArray(values)) if values.length() == 4 =>
@@ -47,7 +47,7 @@ fn PdfDocument::pdf_content_shading_coords4(
 ///|
 fn PdfDocument::pdf_content_shading_coords6(
   self : PdfDocument,
-  shading : PdfObject,
+  shading : @syntax.PdfObject,
 ) -> (Double, Double, Double, Double, Double, Double) raise PdfError {
   match self.lookup_direct(pdf_content_shading_coords_name, shading) {
     Some(PdfArray(values)) if values.length() == 6 =>
@@ -66,7 +66,7 @@ fn PdfDocument::pdf_content_shading_coords6(
 ///|
 fn PdfDocument::pdf_content_shading_extend(
   self : PdfDocument,
-  shading : PdfObject,
+  shading : @syntax.PdfObject,
 ) -> (Bool, Bool) {
   match self.lookup_direct(pdf_content_shading_extend_name, shading) {
     Some(PdfArray([PdfBoolean(first), PdfBoolean(second)])) => (first, second)

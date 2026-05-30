@@ -51,8 +51,8 @@ pub fn pdf_page_protect(
 ///|
 fn PdfDocument::pdf_page_parse_content_ops(
   self : PdfDocument,
-  resources : PdfObject,
-  content : ArrayView[PdfObject],
+  resources : @syntax.PdfObject,
+  content : ArrayView[@syntax.PdfObject],
 ) -> Array[@content.PdfContentOp] raise PdfError {
   self.parse_content_ops_with_resources(resources, content) catch {
     DictionaryKeyNotFound(_) | ColourSpaceExpected =>

@@ -46,7 +46,7 @@ test "pdf_date byte APIs parse borrowed PDF date slices" {
 
 ///|
 test "pdf_date object APIs bridge PDF strings and typed dates" {
-  let object : @pdflite.PdfObject = PdfString(
+  let object : @syntax.PdfObject = PdfString(
     @ascii.encode("D:20240203040506+08'30'"),
   )
   let expected : @date.PdfDate = {

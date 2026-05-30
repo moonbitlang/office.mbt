@@ -69,7 +69,7 @@ fn PdfDocument::pdf_ua_struct_tree_rolemap(
 ///|
 fn PdfDocument::pdf_ua_struct_tree_page_ref(
   self : PdfDocument,
-  node : PdfObject,
+  node : @syntax.PdfObject,
 ) -> Int? {
   match self.direct(node).lookup_immediate(pdf_ua_pg_key()) {
     Some(PdfIndirect(number)) => Some(number)
@@ -80,7 +80,7 @@ fn PdfDocument::pdf_ua_struct_tree_page_ref(
 ///|
 fn PdfDocument::pdf_ua_read_struct_tree_text_inner(
   self : PdfDocument,
-  node : PdfObject,
+  node : @syntax.PdfObject,
   rolemap : PdfUAStructTreeRoleMap,
   depth : Int,
 ) -> PdfUAStructTreeTextNode raise PdfError {

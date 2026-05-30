@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_font_has_embedded_file(
   self : PdfDocument,
-  descriptor : PdfObject,
+  descriptor : @syntax.PdfObject,
 ) -> Bool {
   self.lookup_direct(pdf_text_font_file_key_name, descriptor) is Some(_) ||
   self.lookup_direct(pdf_text_font_file2_key_name, descriptor) is Some(_) ||
@@ -16,7 +16,7 @@ fn PdfDocument::pdf_font_has_embedded_file(
 /// `/FontFile`, `/FontFile2`, and `/FontFile3`.
 pub fn PdfDocument::is_missing_font(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_text_subtype_key_name, font) {
     Some(PdfNameObject(name)) if name == pdf_text_type3_name => false
@@ -33,7 +33,7 @@ fn PdfDocument::pdf_missing_font_entry(
   self : PdfDocument,
   page : Int,
   name : PdfName,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> @font.PdfMissingFontEntry raise PdfError {
   let encoding = match
     self.pdf_font_name_field(font, pdf_text_encoding_key_name) {
@@ -53,8 +53,8 @@ fn PdfDocument::pdf_missing_font_entry(
 fn PdfDocument::pdf_missing_font_candidates(
   self : PdfDocument,
   name : PdfName,
-  font : PdfObject,
-) -> Array[(PdfName, PdfObject)] {
+  font : @syntax.PdfObject,
+) -> Array[(PdfName, @syntax.PdfObject)] {
   match self.lookup_direct(pdf_text_descendant_fonts_key_name, font) {
     Some(PdfArray(descendants)) =>
       [
@@ -68,7 +68,7 @@ fn PdfDocument::pdf_missing_font_candidates(
 fn PdfDocument::pdf_missing_fonts_on_page(
   self : PdfDocument,
   page : Int,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
 ) -> Array[@font.PdfMissingFontEntry] raise PdfError {
   match self.lookup_direct(pdf_page_font_resource_name, resources) {
     Some(PdfDictionary(fonts)) => {

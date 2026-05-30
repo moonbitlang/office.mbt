@@ -3,8 +3,8 @@ fn pdf_content_read_inline_image(
   cursor : ByteCursor,
   context : PdfContentParseContext,
 ) -> @content.PdfContentOp raise PdfError {
-  let entries : Array[(PdfName, PdfObject)] = []
-  let mut decode_parms : PdfObject? = None
+  let entries : Array[(PdfName, @syntax.PdfObject)] = []
+  let mut decode_parms : @syntax.PdfObject? = None
   let mut done = false
   while !done {
     match pdf_content_lex_next(cursor) {

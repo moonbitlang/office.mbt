@@ -92,9 +92,9 @@ fn image_resolution_json_entry_for_test(
 
 ///|
 fn image_lookup_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   match object.lookup_immediate(image_name_for_test(key)) {
     Some(value) => value
     None => {
@@ -107,9 +107,9 @@ fn image_lookup_for_test(
 ///|
 fn image_lookup_indirect_object_for_test(
   document : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> (Int, @pdflite.PdfObject) raise {
+) -> (Int, @syntax.PdfObject) raise {
   let reference = try! image_lookup_for_test(object, key)
   guard reference is PdfIndirect(number) else {
     fail("expected dictionary key " + key + " to be indirect")
@@ -304,8 +304,8 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     21,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_name_for_test("/Subtype"),
           PdfNameObject(image_name_for_test("/Image")),
@@ -320,8 +320,8 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
   )
   doc.add_object_given_number(
     20,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_name_for_test("/Subtype"),
           PdfNameObject(image_name_for_test("/Image")),
@@ -345,10 +345,10 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
   )
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         image_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([(image_name_for_test("/Im1"), PdfIndirect(20))]),
+        @syntax.pdf_dictionary([(image_name_for_test("/Im1"), PdfIndirect(20))]),
       ),
     ]),
   }
@@ -398,7 +398,7 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
 ///|
 test "PdfDocument images_json optionally includes form inline images" {
   let doc = @pdflite.pdf_document_empty()
-  let inline_dict = @pdflite.pdf_dictionary([
+  let inline_dict = @syntax.pdf_dictionary([
     (image_name_for_test("/W"), PdfInteger(3)),
     (image_name_for_test("/H"), PdfInteger(1)),
     (image_name_for_test("/BPC"), PdfInteger(8)),
@@ -416,15 +416,15 @@ test "PdfDocument images_json optionally includes form inline images" {
     )
     .add_dict_entry(
       image_name_for_test("/Resources"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     )
   doc.add_object_given_number(30, form)
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         image_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([(image_name_for_test("/Fm1"), PdfIndirect(30))]),
+        @syntax.pdf_dictionary([(image_name_for_test("/Fm1"), PdfIndirect(30))]),
       ),
     ]),
   }
@@ -459,8 +459,8 @@ test "PdfDocument image_resolution reports selected image xobject DPI" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     20,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_name_for_test("/Subtype"),
           PdfNameObject(image_name_for_test("/Image")),
@@ -475,10 +475,10 @@ test "PdfDocument image_resolution reports selected image xobject DPI" {
   let placement = { ..@geometry.transform_identity_matrix, a: 400.0, d: 300.0 }
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         image_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([(image_name_for_test("/Im1"), PdfIndirect(20))]),
+        @syntax.pdf_dictionary([(image_name_for_test("/Im1"), PdfIndirect(20))]),
       ),
     ]),
     content: [
@@ -514,7 +514,7 @@ test "PdfDocument image_resolution reports selected image xobject DPI" {
 ///|
 test "PdfDocument image_resolution optionally includes inline images" {
   let doc = @pdflite.pdf_document_empty()
-  let inline_dict = @pdflite.pdf_dictionary([
+  let inline_dict = @syntax.pdf_dictionary([
     (image_name_for_test("/W"), PdfInteger(288)),
     (image_name_for_test("/H"), PdfInteger(72)),
     (image_name_for_test("/BPC"), PdfInteger(8)),
@@ -555,8 +555,8 @@ test "PdfDocument image_resolution descends into form xobjects" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     22,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_name_for_test("/Subtype"),
           PdfNameObject(image_name_for_test("/Image")),
@@ -579,10 +579,10 @@ test "PdfDocument image_resolution descends into form xobjects" {
     )
     .add_dict_entry(
       image_name_for_test("/Resources"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           image_name_for_test("/XObject"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (image_name_for_test("/Inner"), PdfIndirect(22)),
           ]),
         ),
@@ -592,10 +592,10 @@ test "PdfDocument image_resolution descends into form xobjects" {
   let page_scale = { ..@geometry.transform_identity_matrix, a: 2.0, d: 2.0 }
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         image_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([(image_name_for_test("/Fm1"), PdfIndirect(30))]),
+        @syntax.pdf_dictionary([(image_name_for_test("/Fm1"), PdfIndirect(30))]),
       ),
     ]),
     content: [
@@ -962,7 +962,7 @@ test "pdf_image_document_of_png_data preserves alpha mask in image document" {
 ///|
 test "pdf_image_object_of_png_data rejects 16-bit alpha PNGs" {
   let document = @pdflite.pdf_document_empty()
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_image_object_of_png_data(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_image_object_of_png_data(
     document,
     image_png_for_test(1, 1, 16, 6, 0, []),
   )
@@ -1110,7 +1110,7 @@ test "pdf_image_document_of_jbig2_data preserves globals object" {
 ///|
 test "pdf_image_object_of_jbig2_data reports short data" {
   let result : Result[
-    (@pdflite.PdfObject, Array[(Int, @pdflite.PdfObject)]),
+    (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]),
     Error,
   ] = try? @pdflite.pdf_image_object_of_jbig2_data(
     image_bytes_for_test([0, 1, 2]),

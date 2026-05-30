@@ -63,7 +63,7 @@ fn PdfDocument::pdf_metadata_bump_minor(
 ///|
 fn PdfDocument::pdf_metadata_replace_catalog(
   self : PdfDocument,
-  catalog : PdfObject,
+  catalog : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   let root_number = self.add_object(catalog)
   self.set_root(root_number)
@@ -77,7 +77,7 @@ fn PdfDocument::pdf_metadata_replace_catalog(
 ///|
 fn PdfDocument::pdf_metadata_update_catalog(
   self : PdfDocument,
-  update : (PdfObject) -> PdfObject raise PdfError,
+  update : (@syntax.PdfObject) -> @syntax.PdfObject raise PdfError,
 ) -> Unit raise PdfError {
   let catalog = self.catalog()
   self.pdf_metadata_replace_catalog(update(catalog))

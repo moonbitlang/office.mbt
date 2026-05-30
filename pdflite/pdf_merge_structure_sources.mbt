@@ -1,8 +1,8 @@
 ///|
 fn pdf_merge_structure_tree_roots(
   documents : ArrayView[PdfDocument],
-) -> Array[PdfObject] raise PdfError {
-  let roots : Array[PdfObject] = []
+) -> Array[@syntax.PdfObject] raise PdfError {
+  let roots : Array[@syntax.PdfObject] = []
   for document in documents {
     match
       document
@@ -18,8 +18,8 @@ fn pdf_merge_structure_tree_roots(
 ///|
 fn PdfDocument::pdf_merge_structure_tree_root_k_items(
   self : PdfDocument,
-  root : PdfObject,
-) -> Array[PdfObject] {
+  root : @syntax.PdfObject,
+) -> Array[@syntax.PdfObject] {
   match self.direct(root).lookup_immediate(pdf_merge_k_key()) {
     Some(PdfArray(items)) => [ for item in items => item ]
     Some(item) => [item]
@@ -30,8 +30,8 @@ fn PdfDocument::pdf_merge_structure_tree_root_k_items(
 ///|
 fn PdfDocument::pdf_merge_structure_parent_tree_entries(
   self : PdfDocument,
-  root : PdfObject,
-) -> Array[(Int, PdfObject)] {
+  root : @syntax.PdfObject,
+) -> Array[(Int, @syntax.PdfObject)] {
   match self.lookup_direct(pdf_merge_parent_tree_key(), root) {
     Some(parent_tree) => self.read_number_tree(parent_tree)
     None => []
@@ -41,10 +41,10 @@ fn PdfDocument::pdf_merge_structure_parent_tree_entries(
 ///|
 fn PdfDocument::pdf_merge_structure_name_tree_entries(
   self : PdfDocument,
-  structure_tree_roots : ArrayView[PdfObject],
+  structure_tree_roots : ArrayView[@syntax.PdfObject],
   key : PdfName,
-) -> Array[(PdfBytes, PdfObject)] {
-  let entries : Array[(PdfBytes, PdfObject)] = []
+) -> Array[(PdfBytes, @syntax.PdfObject)] {
+  let entries : Array[(PdfBytes, @syntax.PdfObject)] = []
   for root in structure_tree_roots {
     match self.lookup_direct(key, root) {
       Some(tree) =>
@@ -60,9 +60,9 @@ fn PdfDocument::pdf_merge_structure_name_tree_entries(
 ///|
 fn PdfDocument::pdf_merge_structure_dictionary(
   self : PdfDocument,
-  structure_tree_roots : ArrayView[PdfObject],
+  structure_tree_roots : ArrayView[@syntax.PdfObject],
   key : PdfName,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   let builder = pdf_merge_dictionary_builder()
   for root in structure_tree_roots {
     match self.lookup_direct(key, root) {
@@ -83,8 +83,8 @@ fn PdfDocument::pdf_merge_structure_dictionary(
 
 ///|
 fn pdf_merge_object_member(
-  objects : ArrayView[PdfObject],
-  object : PdfObject,
+  objects : ArrayView[@syntax.PdfObject],
+  object : @syntax.PdfObject,
 ) -> Bool {
   for existing in objects {
     if existing == object {
@@ -98,10 +98,10 @@ fn pdf_merge_object_member(
 ///|
 fn PdfDocument::pdf_merge_structure_array(
   self : PdfDocument,
-  structure_tree_roots : ArrayView[PdfObject],
+  structure_tree_roots : ArrayView[@syntax.PdfObject],
   key : PdfName,
-) -> Array[PdfObject] {
-  let values : Array[PdfObject] = []
+) -> Array[@syntax.PdfObject] {
+  let values : Array[@syntax.PdfObject] = []
   for root in structure_tree_roots {
     match self.lookup_direct(key, root) {
       Some(PdfArray(items)) =>

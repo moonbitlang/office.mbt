@@ -4,8 +4,8 @@ fn content_shading_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn content_shading_function_for_test(n : Double) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn content_shading_function_for_test(n : Double) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (content_shading_name_for_test("/FunctionType"), PdfInteger(2)),
     (
       content_shading_name_for_test("/Domain"),
@@ -18,7 +18,7 @@ fn content_shading_function_for_test(n : Double) -> @pdflite.PdfObject {
 ///|
 test "cpdfcontent function shading reads domain matrix and fallback function" {
   let doc = @pdflite.pdf_document_empty()
-  let shading = @pdflite.pdf_dictionary([
+  let shading = @syntax.pdf_dictionary([
     (
       content_shading_name_for_test("/Domain"),
       PdfArray([PdfInteger(2), PdfInteger(3), PdfInteger(4), PdfInteger(5)]),
@@ -53,7 +53,7 @@ test "cpdfcontent function shading reads domain matrix and fallback function" {
     fail("expected interpolation function")
   }
   @test.assert_eq(interpolation.n, 2.0)
-  guard (try! doc.content_read_function_shading(@pdflite.pdf_dictionary([])))
+  guard (try! doc.content_read_function_shading(@syntax.pdf_dictionary([])))
     is PdfContentFunctionShading(default_shading) else {
     fail("expected default function shading")
   }
@@ -72,7 +72,7 @@ test "cpdfcontent function shading reads domain matrix and fallback function" {
 ///|
 test "cpdfcontent radial and axial shading readers mirror source defaults" {
   let doc = @pdflite.pdf_document_empty()
-  let radial = @pdflite.pdf_dictionary([
+  let radial = @syntax.pdf_dictionary([
     (
       content_shading_name_for_test("/Coords"),
       PdfArray([
@@ -111,7 +111,7 @@ test "cpdfcontent radial and axial shading readers mirror source defaults" {
   @test.assert_eq(radial_shading.radialshading_domain, (0.25, 0.75))
   @test.assert_eq(radial_shading.radialshading_function.length(), 2)
   @test.assert_eq(radial_shading.radialshading_extend, (true, false))
-  guard (try! doc.content_read_axial_shading(@pdflite.pdf_dictionary([])))
+  guard (try! doc.content_read_axial_shading(@syntax.pdf_dictionary([])))
     is PdfContentAxialShading(axial_shading) else {
     fail("expected axial shading")
   }
@@ -124,7 +124,7 @@ test "cpdfcontent radial and axial shading readers mirror source defaults" {
 ///|
 test "cpdfcontent shading wrapper preserves source field semantics" {
   let doc = @pdflite.pdf_document_empty()
-  let shading_object = @pdflite.pdf_dictionary([
+  let shading_object = @syntax.pdf_dictionary([
     (content_shading_name_for_test("/ShadingType"), PdfInteger(3)),
     (
       content_shading_name_for_test("/Coords"),
@@ -144,7 +144,7 @@ test "cpdfcontent shading wrapper preserves source field semantics" {
     (content_shading_name_for_test("/Background"), PdfArray([PdfReal(0.5)])),
     (content_shading_name_for_test("/BBox"), PdfBoolean(true)),
   ])
-  let extgstate = @pdflite.pdf_dictionary([
+  let extgstate = @syntax.pdf_dictionary([
     (content_shading_name_for_test("/CA"), PdfReal(0.5)),
   ])
   let shading = try! doc.content_read_shading(
@@ -169,8 +169,8 @@ test "cpdfcontent shading wrapper preserves source field semantics" {
   }
   let fallback = try! doc.content_read_shading(
     @geometry.transform_identity_matrix,
-    @pdflite.pdf_dictionary([]),
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
   )
   @test.assert_eq(fallback.shading_colourspace, PdfNull)
   guard fallback.shading is PdfContentTensorProductPatchMesh else {
@@ -184,23 +184,23 @@ test "cpdfcontent pattern reader handles tiling shading missing resources" {
   let tiling_name = content_shading_name_for_test("/P1")
   let shading_name = content_shading_name_for_test("/P2")
   let missing_shading_name = content_shading_name_for_test("/P3")
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       content_shading_name_for_test("/Pattern"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           tiling_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (content_shading_name_for_test("/PatternType"), PdfInteger(1)),
           ]),
         ),
         (
           shading_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (content_shading_name_for_test("/PatternType"), PdfInteger(2)),
             (
               content_shading_name_for_test("/Shading"),
-              @pdflite.pdf_dictionary([
+              @syntax.pdf_dictionary([
                 (content_shading_name_for_test("/ShadingType"), PdfInteger(2)),
               ]),
             ),
@@ -208,7 +208,7 @@ test "cpdfcontent pattern reader handles tiling shading missing resources" {
         ),
         (
           missing_shading_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (content_shading_name_for_test("/PatternType"), PdfInteger(2)),
           ]),
         ),

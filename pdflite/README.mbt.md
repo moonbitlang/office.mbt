@@ -133,7 +133,7 @@ test "name writer escapes delimiter bytes" {
 
 - `PdfDocument` owns the object table, root catalog pointer, trailer dictionary,
   encryption state, and revision metadata.
-- `PdfObject` values preserve PDF syntax-level objects, including byte strings,
+- `@syntax.PdfObject` values preserve PDF syntax-level objects, including byte strings,
   names, dictionaries, streams, and indirect references.
 - Read APIs raise `PdfError` for malformed input rather than silently repairing
   data. Reconstruction helpers are explicit APIs.

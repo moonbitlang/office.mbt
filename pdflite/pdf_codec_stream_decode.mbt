@@ -1,7 +1,7 @@
 ///|
 fn pdf_decode_stream_filter_bytes(
   filter : PdfName,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
   if pdf_filter_is_one_of(
@@ -21,7 +21,7 @@ fn pdf_decode_stream_filter_bytes(
 fn PdfDocument::pdf_decode_stream_filter_bytes_direct(
   self : PdfDocument,
   filter : PdfName,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
   if pdf_filter_is_one_of(
@@ -42,8 +42,8 @@ fn PdfDocument::pdf_decode_stream_filter_bytes_direct(
 
 ///|
 fn pdf_decode_stream_onestage_value(
-  stream : PdfStream,
-) -> PdfStream raise PdfError {
+  stream : @syntax.PdfStream,
+) -> @syntax.PdfStream raise PdfError {
   pdf_stream_dictionary_length(stream.dictionary)
   let data = @syntax.pdf_stream_data_bytes(stream.data)
   match pdf_stream_first_filter(stream.dictionary) {
@@ -73,7 +73,7 @@ fn pdf_decode_stream_onestage_value(
 ///|
 fn PdfDocument::pdf_stream_dictionary_length_direct(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   match self.lookup_direct(pdf_codec_length_key(), dictionary) {
     Some(PdfInteger(_)) => ()
@@ -84,8 +84,8 @@ fn PdfDocument::pdf_stream_dictionary_length_direct(
 ///|
 fn PdfDocument::pdf_decode_stream_onestage_value_direct(
   self : PdfDocument,
-  stream : PdfStream,
-) -> PdfStream raise PdfError {
+  stream : @syntax.PdfStream,
+) -> @syntax.PdfStream raise PdfError {
   self.pdf_stream_dictionary_length_direct(stream.dictionary)
   let data = @syntax.pdf_stream_data_bytes(stream.data)
   match self.pdf_stream_first_filter_entry_direct(stream.dictionary) {
@@ -126,8 +126,8 @@ fn PdfDocument::pdf_decode_stream_onestage_value_direct(
 /// dictionary, and `/Length` is refreshed. Non-stream objects raise
 /// `PdfError::ParseStreamExpected`.
 pub fn pdf_decode_stream_onestage(
-  object : PdfObject,
-) -> PdfObject raise PdfError {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) =>
       PdfStreamObject(pdf_decode_stream_onestage_value(stream))
@@ -138,7 +138,7 @@ pub fn pdf_decode_stream_onestage(
 ///|
 fn PdfDocument::pdf_stream_has_filter_value_direct(
   self : PdfDocument,
-  stream : PdfStream,
+  stream : @syntax.PdfStream,
 ) -> Bool raise PdfError {
   self.pdf_stream_first_filter_direct(stream.dictionary) != None
 }
@@ -146,8 +146,8 @@ fn PdfDocument::pdf_stream_has_filter_value_direct(
 ///|
 fn PdfDocument::pdf_decode_stream_value_direct(
   self : PdfDocument,
-  stream : PdfStream,
-) -> PdfStream raise PdfError {
+  stream : @syntax.PdfStream,
+) -> @syntax.PdfStream raise PdfError {
   let mut current = stream
   let mut stages = 0
   while self.pdf_stream_has_filter_value_direct(current) {
@@ -167,8 +167,8 @@ fn PdfDocument::pdf_decode_stream_value_direct(
 /// document. Unsupported filters raise `PdfError::FilterNotSupported`.
 pub fn PdfDocument::pdf_decode_stream(
   self : PdfDocument,
-  object : PdfObject,
-) -> PdfObject raise PdfError {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match self.direct(object) {
     PdfStreamObject(stream) =>
       PdfStreamObject(self.pdf_decode_stream_value_direct(stream))
@@ -179,8 +179,8 @@ pub fn PdfDocument::pdf_decode_stream(
 ///|
 fn PdfDocument::pdf_decode_stream_until_unknown_value_direct(
   self : PdfDocument,
-  stream : PdfStream,
-) -> PdfStream raise PdfError {
+  stream : @syntax.PdfStream,
+) -> @syntax.PdfStream raise PdfError {
   let mut current = stream
   let mut stages = 0
   let mut stopped = false
@@ -212,8 +212,8 @@ fn PdfDocument::pdf_decode_stream_until_unknown_value_direct(
 /// malformed supported filters still raise.
 pub fn PdfDocument::pdf_decode_stream_until_unknown(
   self : PdfDocument,
-  object : PdfObject,
-) -> PdfObject raise PdfError {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match self.direct(object) {
     PdfStreamObject(stream) =>
       PdfStreamObject(self.pdf_decode_stream_until_unknown_value_direct(stream))
@@ -223,8 +223,8 @@ pub fn PdfDocument::pdf_decode_stream_until_unknown(
 
 ///|
 fn pdf_decode_stream_until_unknown_value(
-  stream : PdfStream,
-) -> PdfStream raise PdfError {
+  stream : @syntax.PdfStream,
+) -> @syntax.PdfStream raise PdfError {
   pdf_document_empty().pdf_decode_stream_until_unknown_value_direct(stream)
 }
 
@@ -261,12 +261,16 @@ pub fn PdfDocument::pdf_decode_streams_until_unknown(
 }
 
 ///|
-fn pdf_stream_has_filter_value(stream : PdfStream) -> Bool raise PdfError {
+fn pdf_stream_has_filter_value(
+  stream : @syntax.PdfStream,
+) -> Bool raise PdfError {
   pdf_stream_first_filter(stream.dictionary) != None
 }
 
 ///|
-fn pdf_decode_stream_value(stream : PdfStream) -> PdfStream raise PdfError {
+fn pdf_decode_stream_value(
+  stream : @syntax.PdfStream,
+) -> @syntax.PdfStream raise PdfError {
   let mut current = stream
   let mut stages = 0
   while pdf_stream_has_filter_value(current) {
@@ -281,7 +285,9 @@ fn pdf_decode_stream_value(stream : PdfStream) -> PdfStream raise PdfError {
 
 ///|
 /// Decode all supported filter stages from a direct stream object.
-pub fn pdf_decode_stream(object : PdfObject) -> PdfObject raise PdfError {
+pub fn pdf_decode_stream(
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => PdfStreamObject(pdf_decode_stream_value(stream))
     _ => raise ParseStreamExpected

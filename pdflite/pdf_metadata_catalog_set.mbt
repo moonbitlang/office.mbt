@@ -3,7 +3,7 @@
 pub fn PdfDocument::set_viewer_preference(
   self : PdfDocument,
   key : PdfName,
-  value : PdfObject,
+  value : @syntax.PdfObject,
   version : Int,
   keep_version? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -27,7 +27,7 @@ pub fn PdfDocument::set_viewer_preference(
 /// Set one `/ViewerPreferences` entry from cpdf's string-key tuple form.
 pub fn PdfDocument::set_viewer_preference_string(
   self : PdfDocument,
-  entry : (String, PdfObject, Int),
+  entry : (String, @syntax.PdfObject, Int),
 ) -> PdfDocument raise PdfError {
   self.set_viewer_preference(
     pdf_metadata_source_key_name(entry.0),
@@ -98,8 +98,8 @@ pub fn PdfDocument::set_non_full_screen_page_mode(
 ///|
 fn PdfDocument::pdf_metadata_rewrite_destination_page(
   self : PdfDocument,
-  destination : PdfObject,
-) -> PdfObject raise PdfError {
+  destination : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match destination {
     PdfArray(values) =>
       match values {
@@ -119,8 +119,8 @@ fn PdfDocument::pdf_metadata_rewrite_destination_page(
 ///|
 fn pdf_metadata_parse_open_action_destination(
   destination : String,
-) -> PdfObject raise PdfError {
-  let parsed : Result[PdfObject, Error] = try? pdf_parse_object_from_bytes(
+) -> @syntax.PdfObject raise PdfError {
+  let parsed : Result[@syntax.PdfObject, Error] = try? @syntax.pdf_parse_object_from_bytes(
     @ascii.encode(destination),
   )
   match parsed {
@@ -143,7 +143,7 @@ pub fn PdfDocument::set_open_action(
   self : PdfDocument,
   page_number : Int,
   fit? : Bool = true,
-  destination? : PdfObject? = None,
+  destination? : @syntax.PdfObject? = None,
 ) -> PdfDocument raise PdfError {
   let page_numbers = self.page_reference_numbers()
   if page_number < 1 || page_number > page_numbers.length() {

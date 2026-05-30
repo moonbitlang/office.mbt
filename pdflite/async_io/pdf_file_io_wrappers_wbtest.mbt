@@ -191,8 +191,8 @@ async test "async file wrappers extract single image files" {
   let document = @pdflite.pdf_document_empty()
   document.add_object_given_number(
     11,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (pdf_async_io_name_for_test("/Width"), PdfInteger(1)),
         (pdf_async_io_name_for_test("/Height"), PdfInteger(1)),
         (
@@ -206,8 +206,8 @@ async test "async file wrappers extract single image files" {
   )
   document.add_object_given_number(
     10,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (pdf_async_io_name_for_test("/Width"), PdfInteger(1)),
         (pdf_async_io_name_for_test("/Height"), PdfInteger(1)),
         (
@@ -296,8 +296,8 @@ async test "async file wrappers extract page image files" {
   let document = @pdflite.pdf_document_empty()
   document.add_object_given_number(
     11,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           pdf_async_io_name_for_test("/Subtype"),
           PdfNameObject(pdf_async_io_name_for_test("/Image")),
@@ -315,8 +315,8 @@ async test "async file wrappers extract page image files" {
   )
   document.add_object_given_number(
     10,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           pdf_async_io_name_for_test("/Subtype"),
           PdfNameObject(pdf_async_io_name_for_test("/Image")),
@@ -334,10 +334,10 @@ async test "async file wrappers extract page image files" {
   )
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (pdf_async_io_name_for_test("/Im1"), PdfIndirect(10)),
         ]),
       ),
@@ -547,7 +547,7 @@ fn pdf_async_io_assert_cpdf_source_attachment_for_test(
 ///|
 fn pdf_async_io_assert_cpdf_source_portfolio_entry_for_test(
   document : @pdflite.PdfDocument,
-  file_spec : @pdflite.PdfObject,
+  file_spec : @syntax.PdfObject,
   basename : String,
   payload : @pdflite.PdfBytes,
   mod_date : @pdflite.PdfBytes,
@@ -849,8 +849,8 @@ async test "async metadata file wrappers set write and extract XML metadata" {
   let with_stray = document.copy()
   let encoded = @flate.pdf_flate_encode(stray_payload)
   let stray_number = with_stray.add_object(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           pdf_async_io_name_for_test("/Type"),
           PdfNameObject(pdf_async_io_name_for_test("/Metadata")),
@@ -892,7 +892,7 @@ async test "async cpdftweak replace_stream reads replacement files" {
   let document = @pdflite.pdf_document_empty()
   document.add_object_given_number(
     4,
-    @pdflite.pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([
         (key_length, PdfInteger(3)),
         (key_filter, PdfNameObject(filter_name)),
@@ -907,7 +907,7 @@ async test "async cpdftweak replace_stream reads replacement files" {
     fail("expected stream object after replace_stream")
   }
   @test.assert_eq(
-    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     payload,
   )
   @test.assert_eq(
@@ -923,14 +923,14 @@ async test "async cpdftweak replace_stream reads replacement files" {
 
 ///|
 async test "async file wrappers fail dumping malformed attachment data" {
-  let file_spec : @pdflite.PdfObject = PdfDictionary([
+  let file_spec : @syntax.PdfObject = PdfDictionary([
     (
       pdf_async_io_name_for_test("/Type"),
       PdfNameObject(pdf_async_io_name_for_test("/Filespec")),
     ),
     (pdf_async_io_name_for_test("/F"), PdfString(@ascii.encode("missing.bin"))),
   ])
-  let annotation : @pdflite.PdfObject = PdfDictionary([
+  let annotation : @syntax.PdfObject = PdfDictionary([
     (
       pdf_async_io_name_for_test("/Subtype"),
       PdfNameObject(pdf_async_io_name_for_test("/FileAttachment")),
@@ -1066,7 +1066,7 @@ async test "async file wrappers incrementally update checked-in CamlPDF intro fi
   pdf_async_io_remove_if_exists_for_test(updated_path)
 
   let updated = pdf_read_document_from_file(intro_path)
-  let added_object : @pdflite.PdfObject = PdfDictionary([
+  let added_object : @syntax.PdfObject = PdfDictionary([
     (
       pdf_async_io_name_for_test("/Title"),
       PdfString(@ascii.encode("intro fixture incremental")),
@@ -1109,7 +1109,7 @@ async test "async file wrappers reconstruct malformed incremental CamlPDF intro 
   let updated = pdf_read_document_from_file(intro_path)
   let key_root = pdf_async_io_name_for_test("/Root")
   let key_payload = pdf_async_io_name_for_test("/Payload")
-  let added_object : @pdflite.PdfObject = PdfDictionary([
+  let added_object : @syntax.PdfObject = PdfDictionary([
     (
       pdf_async_io_name_for_test("/Title"),
       PdfString(@ascii.encode("intro fixture malformed incremental")),
@@ -1718,7 +1718,7 @@ async test "async file wrappers reconstruct classic objects missing from xref" {
   )
   @test.assert_eq(strict_catalog.root(), 1)
   @test.assert_eq(strict_catalog.object_numbers(), [])
-  let strict_catalog_object : Result[@pdflite.PdfObject, Error] = try? strict_catalog.catalog()
+  let strict_catalog_object : Result[@syntax.PdfObject, Error] = try? strict_catalog.catalog()
   guard strict_catalog_object is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected strict missing catalog to fail")
   }
@@ -2250,7 +2250,7 @@ async test "async file wrappers keep direct streams from swallowing following ob
       Some(PdfInteger(5)),
     )
     @test.assert_eq(
-      try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+      try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
       @ascii.encode("Hello"),
     )
     @test.assert_eq(document.lookup_object_or_null(3), PdfNull)
@@ -2335,7 +2335,7 @@ async test "async file wrappers accept direct stream line breaks and padding" {
       fail("expected CR stream object")
     }
     @test.assert_eq(
-      try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+      try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
       @ascii.encode("Hello"),
     )
   }
@@ -2344,7 +2344,7 @@ async test "async file wrappers accept direct stream line breaks and padding" {
       fail("expected CRLF stream object")
     }
     @test.assert_eq(
-      try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+      try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
       @ascii.encode("World"),
     )
   }
@@ -2353,7 +2353,7 @@ async test "async file wrappers accept direct stream line breaks and padding" {
       fail("expected padded stream object")
     }
     @test.assert_eq(
-      try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+      try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
       @ascii.encode("Space"),
     )
   }
@@ -2362,7 +2362,7 @@ async test "async file wrappers accept direct stream line breaks and padding" {
       fail("expected inline-padded stream object")
     }
     @test.assert_eq(
-      try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+      try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
       @ascii.encode("Hello"),
     )
   }
@@ -2958,7 +2958,7 @@ async test "async file wrappers recover unreadable stream lengths" {
   @test.assert_eq(unparseable.object_numbers(), [1, 3])
   @test.assert_eq(
     unparseable.lookup_object_or_null(3),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -2993,7 +2993,7 @@ async test "async file wrappers resolve commented indirect stream lengths" {
     fail("expected commented stream length data to stay deferred")
   }
   @test.assert_eq(
-    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     @ascii.encode("Hello"),
   )
   @test.assert_eq(parsed.lookup_object_or_null(2), PdfInteger(5))
@@ -3203,7 +3203,7 @@ async test "async file wrappers reconstruct malformed objects" {
     fail("expected deferred recovered stream object")
   }
   @test.assert_eq(
-    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     @ascii.encode("9 0 obj\n<< /Type /Catalog >>\nendobj"),
   )
   @test.assert_eq(nested_object.first_xref(), 0)
@@ -3310,7 +3310,7 @@ async test "async file wrappers load object-stream entries from disk" {
   let embedded_stream_length = embedded_stream.dictionary.lookup_immediate(
     pdf_async_io_name_for_test("/Length"),
   )
-  let embedded_stream_bytes = try! @pdflite.pdf_stream(
+  let embedded_stream_bytes = try! @syntax.pdf_stream(
     embedded_stream.dictionary,
     embedded_stream.data,
   ).stream_bytes()
@@ -3321,7 +3321,7 @@ async test "async file wrappers load object-stream entries from disk" {
   let reparsed_stream_length = reparsed_stream.dictionary.lookup_immediate(
     pdf_async_io_name_for_test("/Length"),
   )
-  let reparsed_stream_bytes = try! @pdflite.pdf_stream(
+  let reparsed_stream_bytes = try! @syntax.pdf_stream(
     reparsed_stream.dictionary,
     reparsed_stream.data,
   ).stream_bytes()
@@ -3688,7 +3688,7 @@ async test "async file wrappers recrypt encrypted object-stream payloads" {
     ),
   )
   pdf_async_io_assert_decrypted_object_stream_for_test(decrypted, denied)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     @ascii.encode("async object-stream recrypt added"),
   )
   decrypted.document.add_object_given_number(6, added_object)
@@ -4723,7 +4723,7 @@ async test "async file wrappers reconstruct encrypted catalogs missing from clas
     @fs.read_file(malformed_path).binary(),
   )
   @test.assert_eq(strict.root(), root_number)
-  let strict_catalog : Result[@pdflite.PdfObject, Error] = try? strict.catalog()
+  let strict_catalog : Result[@syntax.PdfObject, Error] = try? strict.catalog()
   guard strict_catalog is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected missing root object to require reconstruction")
   }
@@ -5579,7 +5579,7 @@ async test "async file wrappers write incremental updates" {
   pdf_write_document_to_file(original, original_path)
   let updated = pdf_read_document_from_file(original_path)
   let key_title = pdf_async_io_name_for_test("/Title")
-  let added_object : @pdflite.PdfObject = PdfDictionary([
+  let added_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("async incremental"))),
   ])
   updated.add_object_given_number(20, added_object)
@@ -5603,7 +5603,7 @@ async test "async file wrappers read incremental revisions" {
   pdf_write_document_to_file(original, original_path)
   let updated = pdf_read_document_from_file(original_path)
   let key_title = pdf_async_io_name_for_test("/Title")
-  let added_object : @pdflite.PdfObject = PdfDictionary([
+  let added_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("async revision"))),
   ])
   updated.add_object_given_number(22, added_object)
@@ -5645,7 +5645,7 @@ async test "async file wrappers write xref stream incremental updates" {
   pdf_write_document_to_file_with_xref_stream(original, original_path)
   let updated = pdf_read_document_from_file(original_path)
   let key_title = pdf_async_io_name_for_test("/Title")
-  let added_object : @pdflite.PdfObject = PdfDictionary([
+  let added_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("async xref incremental"))),
   ])
   updated.add_object_given_number(21, added_object)

@@ -117,8 +117,8 @@ pub fn pdf_merge_documents(
   let pages : Array[@page.PdfPage] = []
   let old_page_numbers : Array[Int] = []
   let bookmarks : Array[@bookmark.PdfBookmark] = []
-  let oldstyle_destinations : Array[(PdfName, PdfObject)] = []
-  let nametree_destinations : Array[(PdfBytes, PdfObject)] = []
+  let oldstyle_destinations : Array[(PdfName, @syntax.PdfObject)] = []
+  let nametree_destinations : Array[(PdfBytes, @syntax.PdfObject)] = []
   for document in staged {
     merged.pdf_merge_copy_objects_from(document)
     let old_page_numbers_for_document = document.page_reference_numbers()

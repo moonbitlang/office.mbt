@@ -41,8 +41,8 @@ fn text_cmap_font_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
 }
 
 ///|
-fn text_cmap_cid_system_info_object_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn text_cmap_cid_system_info_object_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Registry"),
       PdfString(text_cmap_bytes_for_test([82])),
@@ -57,9 +57,9 @@ fn text_cmap_cid_system_info_object_for_test() -> @pdflite.PdfObject {
 
 ///|
 fn text_cmap_valid_cid_descendant_for_test(
-  extra : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+  extra : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (
       text_cmap_name_for_test("/CIDSystemInfo"),
       text_cmap_cid_system_info_object_for_test(),
@@ -68,12 +68,12 @@ fn text_cmap_valid_cid_descendant_for_test(
       text_cmap_name_for_test("/BaseFont"),
       PdfNameObject(text_cmap_name_for_test("/Descendant")),
     ),
-    (text_cmap_name_for_test("/FontDescriptor"), @pdflite.pdf_dictionary([])),
+    (text_cmap_name_for_test("/FontDescriptor"), @syntax.pdf_dictionary([])),
   ]
   for entry in extra {
     entries.push(entry)
   }
-  @pdflite.pdf_dictionary(entries)
+  @syntax.pdf_dictionary(entries)
 }
 
 ///|
@@ -207,8 +207,8 @@ test "pdf_parse_cmap decodes stream objects" {
     "/WMode 0 def\n" + "1 beginbfrange\n" + "<30><31><0061>\n" + "endbfrange\n",
   )
   let encoded_cmap = @flate.pdf_flate_encode(cmap_data)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(encoded_cmap.length())),
       (
         text_cmap_name_for_test("/Filter"),
@@ -251,8 +251,8 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   let cmap_data = @ascii.encode(
     "1 begincidchar\n" + "<41> 100\n" + "endcidchar\n",
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(cmap_data.length())),
       (text_cmap_name_for_test("/WMode"), PdfInteger(1)),
       (
@@ -262,7 +262,7 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
       (text_cmap_name_for_test("/CMapType"), PdfInteger(1)),
       (
         text_cmap_name_for_test("/CIDSystemInfo"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             text_cmap_name_for_test("/Registry"),
             PdfString(@ascii.encode("DictRegistry")),
@@ -308,8 +308,8 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   )
   doc.add_object_given_number(
     19,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           text_cmap_name_for_test("/Length"),
           PdfInteger(overriding_data.length()),
@@ -322,7 +322,7 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
         (text_cmap_name_for_test("/CMapType"), PdfInteger(1)),
         (
           text_cmap_name_for_test("/CIDSystemInfo"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               text_cmap_name_for_test("/Registry"),
               PdfString(@ascii.encode("DictRegistry")),
@@ -356,8 +356,8 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
 
   doc.add_object_given_number(
     20,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(0)),
         (text_cmap_name_for_test("/CIDSystemInfo"), PdfInteger(1)),
       ]),
@@ -374,7 +374,7 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   doc.add_object_given_number(23, PdfInteger(2))
   doc.add_object_given_number(
     24,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_cmap_name_for_test("/Registry"),
         PdfString(@ascii.encode("IndirectRegistry")),
@@ -392,8 +392,8 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   )
   doc.add_object_given_number(
     26,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(0)),
         (text_cmap_name_for_test("/WMode"), PdfIndirect(21)),
         (text_cmap_name_for_test("/CMapName"), PdfIndirect(22)),
@@ -474,14 +474,14 @@ test "PdfDocument applies external CMap Identity UseCMap fallback" {
     "<0041> 77\n" +
     "endnotdefchar\n",
   )
-  let cmap = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cmap = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(cmap_data.length())),
     ]),
     StreamGot(cmap_data),
   )
   doc.add_object_given_number(5, cmap)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type0")),
@@ -530,14 +530,14 @@ test "PdfDocument applies external CMap Unicode maps before inherited fallback" 
     "<0042> 66\n" +
     "endcidchar\n",
   )
-  let cmap = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cmap = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(cmap_data.length())),
     ]),
     StreamGot(cmap_data),
   )
   doc.add_object_given_number(5, cmap)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type0")),
@@ -586,14 +586,14 @@ test "PdfDocument applies external CMap predefined UseCMap fallback" {
   let cmap_data = @ascii.encode(
     "/GB-EUC-H usecmap\n" + "1 begincidchar\n" + "<A1A1> 99\n" + "endcidchar\n",
   )
-  let cmap = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cmap = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(cmap_data.length())),
     ]),
     StreamGot(cmap_data),
   )
   doc.add_object_given_number(5, cmap)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type0")),
@@ -624,8 +624,8 @@ test "PdfDocument applies external CMap predefined UseCMap fallback" {
   let one_byte_cmap_data = @ascii.encode("/NoSuch-H usecmap\n")
   doc.add_object_given_number(
     6,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           text_cmap_name_for_test("/Length"),
           PdfInteger(one_byte_cmap_data.length()),
@@ -634,7 +634,7 @@ test "PdfDocument applies external CMap predefined UseCMap fallback" {
       StreamGot(one_byte_cmap_data),
     ),
   )
-  let one_byte_font = @pdflite.pdf_dictionary([
+  let one_byte_font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type0")),
@@ -680,8 +680,8 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
   )
   doc.add_object_given_number(
     6,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(base_data.length())),
       ]),
       StreamGot(base_data),
@@ -700,8 +700,8 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
     "<0041><0041>\n" +
     "endbfchar\n",
   )
-  let derived_cmap = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let derived_cmap = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(derived_data.length())),
       (text_cmap_name_for_test("/UseCMap"), PdfIndirect(6)),
     ]),
@@ -730,7 +730,7 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
     (0x0041, text_cmap_bytes_for_test([0x00, 0x41])),
     (0x0042, text_cmap_bytes_for_test([0x00, 0x43])),
   ])
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type0")),
@@ -772,8 +772,8 @@ test "PdfDocument ignores cyclic external CMap UseCMap stream bases" {
   )
   doc.add_object_given_number(
     9,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(cmap_data.length())),
         (text_cmap_name_for_test("/UseCMap"), PdfIndirect(9)),
       ]),
@@ -791,8 +791,8 @@ test "PdfDocument ignores malformed external CMap UseCMap values" {
   )
   doc.add_object_given_number(
     10,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(cmap_data.length())),
         (text_cmap_name_for_test("/UseCMap"), PdfInteger(1)),
       ]),
@@ -810,8 +810,8 @@ test "PdfDocument applies ToUnicode UseCMap stream composition" {
   )
   doc.add_object_given_number(
     11,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(base_data.length())),
       ]),
       StreamGot(base_data),
@@ -822,15 +822,15 @@ test "PdfDocument applies ToUnicode UseCMap stream composition" {
   )
   doc.add_object_given_number(
     12,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(derived_data.length())),
         (text_cmap_name_for_test("/UseCMap"), PdfIndirect(11)),
       ]),
       StreamGot(derived_data),
     ),
   )
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type1")),
@@ -872,8 +872,8 @@ test "PdfDocument composes multi-hop ToUnicode UseCMap stream bases" {
   )
   doc.add_object_given_number(
     31,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(base_data.length())),
       ]),
       StreamGot(base_data),
@@ -884,8 +884,8 @@ test "PdfDocument composes multi-hop ToUnicode UseCMap stream bases" {
   )
   doc.add_object_given_number(
     32,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(middle_data.length())),
         (text_cmap_name_for_test("/UseCMap"), PdfIndirect(31)),
       ]),
@@ -897,8 +897,8 @@ test "PdfDocument composes multi-hop ToUnicode UseCMap stream bases" {
   )
   doc.add_object_given_number(
     33,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (text_cmap_name_for_test("/Length"), PdfInteger(derived_data.length())),
         (text_cmap_name_for_test("/UseCMap"), PdfIndirect(32)),
       ]),
@@ -915,8 +915,8 @@ test "PdfDocument composes multi-hop ToUnicode UseCMap stream bases" {
 ///|
 test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
   let doc = @pdflite.pdf_document_empty()
-  let tounicode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let tounicode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(
       @ascii.encode(
         "1 begincodespacerange\n" +
@@ -941,7 +941,7 @@ test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
     ),
   )
   doc.add_object_given_number(2, tounicode)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type1")),
@@ -1014,8 +1014,8 @@ test "PdfDocument reads bfchar and sequential bfrange ToUnicode CMaps" {
 ///|
 test "PdfDocument reads split bfchar ToUnicode CMaps" {
   let doc = @pdflite.pdf_document_empty()
-  let tounicode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let tounicode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(
       @ascii.encode(
         "3 beginbfchar\n" +
@@ -1027,7 +1027,7 @@ test "PdfDocument reads split bfchar ToUnicode CMaps" {
     ),
   )
   doc.add_object_given_number(2, tounicode)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type1")),
@@ -1065,8 +1065,8 @@ test "PdfDocument reads split bfchar ToUnicode CMaps" {
 ///|
 test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
   let doc = @pdflite.pdf_document_empty()
-  let tounicode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let tounicode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(
       @ascii.encode(
         "3 beginbfrange\n" +
@@ -1087,7 +1087,7 @@ test "PdfDocument reads multiline bfrange array ToUnicode CMaps" {
     ),
   )
   doc.add_object_given_number(2, tounicode)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type1")),
@@ -1180,8 +1180,8 @@ test "pdf_parse_cmap_data keeps bfrange entries before multiline array" {
 ///|
 test "PdfDocument reads repeated inline bfrange arrays" {
   let doc = @pdflite.pdf_document_empty()
-  let tounicode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let tounicode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(
       @ascii.encode(
         "2 beginbfrange <40><41>[<0061><0062>] <42><43>[<0063><0064>] endbfrange\n" +
@@ -1190,7 +1190,7 @@ test "PdfDocument reads repeated inline bfrange arrays" {
     ),
   )
   doc.add_object_given_number(2, tounicode)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type1")),
@@ -1237,8 +1237,8 @@ test "PdfDocument reads repeated inline bfrange arrays" {
 ///|
 test "PdfDocument reads ToUnicode hex strings with whitespace and odd nibbles" {
   let doc = @pdflite.pdf_document_empty()
-  let tounicode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let tounicode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(
       @ascii.encode(
         "3 beginbfchar\n" +
@@ -1250,7 +1250,7 @@ test "PdfDocument reads ToUnicode hex strings with whitespace and odd nibbles" {
     ),
   )
   doc.add_object_given_number(2, tounicode)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type1")),
@@ -1305,12 +1305,12 @@ test "PdfDocument reads ToUnicode CMaps with PDF whitespace separators" {
     text_cmap_bytes_for_test([12]),
     @ascii.encode("<0043> endbfrange\n"),
   ])
-  let tounicode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let tounicode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(cmap),
   )
   doc.add_object_given_number(2, tounicode)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type1")),
@@ -1454,8 +1454,8 @@ test "PdfDocument decodes filtered ToUnicode CMap streams" {
   let doc = @pdflite.pdf_document_empty()
   let cmap = @ascii.encode("1 beginbfchar\n<41><005A>\nendbfchar\n")
   let encoded = @codec.pdf_ascii_hex_encode(cmap)
-  let tounicode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let tounicode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         text_cmap_name_for_test("/Filter"),
@@ -1465,7 +1465,7 @@ test "PdfDocument decodes filtered ToUnicode CMap streams" {
     StreamGot(encoded),
   )
   doc.add_object_given_number(2, tounicode)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type1")),
@@ -1486,15 +1486,15 @@ test "PdfDocument decodes filtered ToUnicode CMap streams" {
     8,
     PdfNameObject(text_cmap_name_for_test("/ASCIIHexDecode")),
   )
-  let tounicode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let tounicode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(encoded.length())),
       (text_cmap_name_for_test("/Filter"), PdfIndirect(8)),
     ]),
     StreamGot(encoded),
   )
   doc.add_object_given_number(9, tounicode)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type1")),
@@ -1528,14 +1528,14 @@ test "PdfDocument applies indirect external CMap text segmentation and CID mappi
     "<8140><8142> 200\n" +
     "endcidrange\n",
   )
-  let cmap = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let cmap = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_cmap_name_for_test("/Length"), PdfInteger(cmap_data.length())),
     ]),
     StreamGot(cmap_data),
   )
   doc.add_object_given_number(5, cmap)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_cmap_name_for_test("/Subtype"),
       PdfNameObject(text_cmap_name_for_test("/Type0")),

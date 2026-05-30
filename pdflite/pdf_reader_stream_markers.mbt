@@ -1,5 +1,5 @@
 ///|
-fn pdf_stream_length(object : PdfObject) -> Int raise PdfError {
+fn pdf_stream_length(object : @syntax.PdfObject) -> Int raise PdfError {
   match object.lookup_immediate(@reader.pdf_length_name()) {
     Some(PdfInteger(length)) if length >= 0 => length
     _ => raise StreamLengthExpected

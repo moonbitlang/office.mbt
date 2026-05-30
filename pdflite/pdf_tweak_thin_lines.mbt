@@ -1,5 +1,5 @@
 ///|
-fn pdf_tweak_number(object : PdfObject) -> Double? {
+fn pdf_tweak_number(object : @syntax.PdfObject) -> Double? {
   match object {
     PdfReal(value) => Some(value)
     PdfInteger(value) => Some(value.to_double())
@@ -19,7 +19,7 @@ fn pdf_tweak_ctm_scale(stack : ArrayView[@geometry.TransformMatrix]) -> Double {
 ///|
 fn pdf_tweak_extgstate_line_width(
   document : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> Double? {
   match document.lookup_direct(pdf_tweak_extgstate_key(), resources) {
@@ -43,7 +43,7 @@ fn pdf_tweak_extgstate_line_width(
 /// value as a maximum width, matching `cpdftweak.ml`.
 pub fn pdf_thin_lines_ops(
   document : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
   width : Double,
 ) -> Array[@content.PdfContentOp] raise PdfError {

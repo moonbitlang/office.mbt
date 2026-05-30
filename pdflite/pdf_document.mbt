@@ -6,8 +6,8 @@
 /// `ObjectToParseFromObjectStream` records the object-stream location needed to
 /// load compressed objects lazily.
 pub(all) enum PdfObjectData {
-  ObjectParsed(PdfObject)
-  ObjectParsedAlreadyDecrypted(PdfObject)
+  ObjectParsed(@syntax.PdfObject)
+  ObjectParsedAlreadyDecrypted(@syntax.PdfObject)
   ObjectToParse
   ObjectToParseFromObjectStream(@reader.ObjectStreamReference)
 } derive(Debug, Eq, ToJson)
@@ -62,7 +62,7 @@ pub struct PdfDocument {
   mut minor : Int
   mut root : Int
   objects : PdfObjects
-  mut trailer_dict : PdfObject
+  mut trailer_dict : @syntax.PdfObject
   mut was_linearized : Bool
   mut saved_encryption : PdfSavedEncryption?
   mut first_xref : Int

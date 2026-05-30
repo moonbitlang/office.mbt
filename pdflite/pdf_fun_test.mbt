@@ -9,9 +9,9 @@ fn fun_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 }
 
 ///|
-fn fun_type4_for_test(calculator : @pdflite.PdfBytes) -> @pdflite.PdfObject {
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+fn fun_type4_for_test(calculator : @pdflite.PdfBytes) -> @syntax.PdfObject {
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
@@ -135,7 +135,7 @@ test "PdfFunction debug strings cover all CamlPDF function kinds" {
 ///|
 test "standalone pdffun helpers parse evaluate serialize and print functions" {
   let doc = @pdflite.pdf_document_empty()
-  let function_object = @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_dictionary([
     (fun_name_for_test("/FunctionType"), PdfInteger(2)),
     (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(2)])),
@@ -147,7 +147,7 @@ test "standalone pdffun helpers parse evaluate serialize and print functions" {
   @test.assert_eq(@pdflite.pdf_eval_function(function, [0.25]), [0.5])
   @test.assert_eq(
     @pdflite.pdf_object_of_function(doc, function),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(2)),
       (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
       (fun_name_for_test("/Range"), PdfArray([PdfReal(0.0), PdfReal(2.0)])),
@@ -167,8 +167,8 @@ test "standalone pdffun helpers parse evaluate serialize and print functions" {
 test "PdfDocument parse_function reads and evaluates Type 0 sampled functions" {
   let doc = @pdflite.pdf_document_empty()
   let samples = fun_bytes_for_test([0x0F])
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(samples.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(0)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -188,8 +188,8 @@ test "PdfDocument parse_function reads and evaluates Type 0 sampled functions" {
 test "PdfDocument parse_function decodes filtered sampled function streams" {
   let doc = @pdflite.pdf_document_empty()
   let encoded = @flate.pdf_flate_encode(fun_bytes_for_test([0xF0]))
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(encoded.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(0)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -210,8 +210,8 @@ test "PdfDocument parse_function decodes filtered sampled function streams" {
     8,
     PdfNameObject(fun_name_for_test("/FlateDecode")),
   )
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(encoded.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(0)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -230,21 +230,21 @@ test "PdfDocument parse_function decodes filtered sampled function streams" {
 ///|
 test "PdfDocument parse_function reads and evaluates Type 3 stitching functions" {
   let doc = @pdflite.pdf_document_empty()
-  let first = @pdflite.pdf_dictionary([
+  let first = @syntax.pdf_dictionary([
     (fun_name_for_test("/FunctionType"), PdfInteger(2)),
     (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     (fun_name_for_test("/C0"), PdfArray([PdfInteger(0)])),
     (fun_name_for_test("/C1"), PdfArray([PdfInteger(0)])),
     (fun_name_for_test("/N"), PdfInteger(1)),
   ])
-  let second = @pdflite.pdf_dictionary([
+  let second = @syntax.pdf_dictionary([
     (fun_name_for_test("/FunctionType"), PdfInteger(2)),
     (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     (fun_name_for_test("/C0"), PdfArray([PdfInteger(1)])),
     (fun_name_for_test("/C1"), PdfArray([PdfInteger(1)])),
     (fun_name_for_test("/N"), PdfInteger(1)),
   ])
-  let function_object = @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_dictionary([
     (fun_name_for_test("/FunctionType"), PdfInteger(3)),
     (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -272,7 +272,7 @@ test "PdfDocument pdf_object_of_function writes interpolation functions" {
   let object = doc.pdf_object_of_function(function)
   @test.assert_eq(
     object,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(2)),
       (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
       (fun_name_for_test("/Range"), PdfArray([PdfReal(0.0), PdfReal(2.0)])),
@@ -311,7 +311,7 @@ test "PdfDocument pdf_object_of_function writes stitching child objects" {
   let object = doc.pdf_object_of_function(function)
   @test.assert_eq(
     object,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(3)),
       (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
       (fun_name_for_test("/Range"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
@@ -328,7 +328,7 @@ test "PdfDocument pdf_object_of_function writes stitching child objects" {
   )
   @test.assert_eq(
     doc.lookup_object_or_null(1),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(2)),
       (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
       (fun_name_for_test("/C0"), PdfArray([PdfReal(0.0)])),
@@ -338,7 +338,7 @@ test "PdfDocument pdf_object_of_function writes stitching child objects" {
   )
   @test.assert_eq(
     doc.lookup_object_or_null(2),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(2)),
       (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
       (fun_name_for_test("/C0"), PdfArray([PdfReal(1.0)])),
@@ -368,7 +368,7 @@ test "PdfDocument pdf_object_of_function writes sampled and calculator common en
   }
   @test.assert_eq(
     doc.pdf_object_of_function(sampled),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(0)),
       (fun_name_for_test("/Domain"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
       (fun_name_for_test("/Range"), PdfArray([PdfReal(0.0), PdfReal(1.0)])),
@@ -383,7 +383,7 @@ test "PdfDocument pdf_object_of_function writes sampled and calculator common en
   }
   @test.assert_eq(
     doc.pdf_object_of_function(calculator),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
     ]),
@@ -394,8 +394,8 @@ test "PdfDocument pdf_object_of_function writes sampled and calculator common en
 test "PdfDocument parse_function reads simple Type 4 calculator functions" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ 2 mul 1 add }")
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -411,8 +411,8 @@ test "PdfDocument parse_function reads simple Type 4 calculator functions" {
 test "PdfDocument parse_function ignores Type 4 calculator comments" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ 2 % ignored add\n mul 1 add }")
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -428,8 +428,8 @@ test "PdfDocument parse_function ignores Type 4 calculator comments" {
 test "PdfDocument parse_function salvages doubled-minus calculator numbers" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ --2 mul --1.5 add }")
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -445,8 +445,8 @@ test "PdfDocument parse_function salvages doubled-minus calculator numbers" {
 test "PdfDocument parse_function evaluates calculator functions with multiple inputs" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ add }")
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (
@@ -465,8 +465,8 @@ test "PdfDocument parse_function evaluates calculator functions with multiple in
 test "PdfDocument parse_function evaluates unary calculator operators" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ neg abs sqrt }")
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -484,8 +484,8 @@ test "PdfDocument parse_function evaluates numeric calculator operators" {
   let calculator = @ascii.encode(
     "{ 3.8 floor 2.1 ceiling add 2 exp 10 log add 1.5 truncate add }",
   )
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
@@ -503,8 +503,8 @@ test "PdfDocument parse_function evaluates remaining numeric calculator operator
   let calculator = @ascii.encode(
     "{ 90 sin 0 cos 1 0 atan 2.6 round 2.9 cvi 2 cvr 7 3 idiv 7 3 mod 1 ln }",
   )
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
@@ -521,8 +521,8 @@ test "PdfDocument parse_function evaluates remaining numeric calculator operator
 test "PdfDocument parse_function evaluates calculator stack operators" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ dup 1 index add exch pop }")
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -538,8 +538,8 @@ test "PdfDocument parse_function evaluates calculator stack operators" {
 test "PdfDocument parse_function evaluates calculator copy and roll operators" {
   let doc = @pdflite.pdf_document_empty()
   let copy_calculator = @ascii.encode("{ 2 3 2 copy add add add }")
-  let copy_function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let copy_function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(copy_calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
@@ -550,8 +550,8 @@ test "PdfDocument parse_function evaluates calculator copy and roll operators" {
   let copy_function = try! doc.parse_function(copy_function_object)
   @test.assert_eq(try! copy_function.eval([]), [10.0])
   let roll_calculator = @ascii.encode("{ 1 2 3 3 1 roll sub sub }")
-  let roll_function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let roll_function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(roll_calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
@@ -567,8 +567,8 @@ test "PdfDocument parse_function evaluates calculator copy and roll operators" {
 test "PdfDocument parse_function evaluates calculator ifelse procedures" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ dup 0.5 lt { 0 } { 1 } ifelse exch pop }")
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -585,8 +585,8 @@ test "PdfDocument parse_function evaluates calculator ifelse procedures" {
 test "PdfDocument parse_function evaluates calculator if and boolean operators" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ dup 0.5 ge true and { 2 mul } if }")
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -605,8 +605,8 @@ test "PdfDocument parse_function evaluates integer calculator operators" {
   let calculator = @ascii.encode(
     "{ 6 3 and 8 1 bitshift or 3 xor 0 not 0 ne { 1 } { 0 } ifelse exch pop }",
   )
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
@@ -624,8 +624,8 @@ test "PdfDocument parse_function evaluates calculator bitshift directions" {
   let calculator = @ascii.encode(
     "{ 1 5 bitshift 32 -2 bitshift -8 -1 bitshift 1 32 bitshift }",
   )
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
@@ -642,8 +642,8 @@ test "PdfDocument parse_function preserves calculator integer value semantics" {
   let calculator = @ascii.encode(
     "{ 2147483647 1 add -2147483647 2 sub 65536 65536 mul -2.1 cvi }",
   )
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
@@ -663,8 +663,8 @@ test "PdfDocument parse_function preserves calculator integer value semantics" {
 test "PdfDocument parse_function rejects float operands for integer operators" {
   let doc = @pdflite.pdf_document_empty()
   let calculator = @ascii.encode("{ 6.0 3 and }")
-  let function_object = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(4)),
       (fun_name_for_test("/Domain"), PdfArray([])),
@@ -683,7 +683,7 @@ test "PdfDocument parse_function rejects float operands for integer operators" {
 ///|
 test "PdfDocument parse_function reads and evaluates Type 2 interpolation functions" {
   let doc = @pdflite.pdf_document_empty()
-  let function_object = @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_dictionary([
     (fun_name_for_test("/FunctionType"), PdfInteger(2)),
     (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     (fun_name_for_test("/C0"), PdfArray([PdfInteger(0), PdfInteger(0)])),
@@ -699,7 +699,7 @@ test "PdfDocument parse_function reads and evaluates Type 2 interpolation functi
 ///|
 test "PdfFunction eval clamps domain inputs and output range" {
   let doc = @pdflite.pdf_document_empty()
-  let function_object = @pdflite.pdf_dictionary([
+  let function_object = @syntax.pdf_dictionary([
     (fun_name_for_test("/FunctionType"), PdfInteger(2)),
     (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -715,7 +715,7 @@ test "PdfFunction eval clamps domain inputs and output range" {
 test "PdfDocument parse_function reports unsupported or malformed functions" {
   let doc = @pdflite.pdf_document_empty()
   let unsupported : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(5)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
@@ -724,7 +724,7 @@ test "PdfDocument parse_function reports unsupported or malformed functions" {
     fail("expected @pdflite.PdfError::FunctionNotSupported")
   }
   let missing_domain : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(2)),
       (fun_name_for_test("/N"), PdfInteger(1)),
     ]),
@@ -739,8 +739,8 @@ test "PdfDocument parse_function reports unsupported or malformed functions" {
 test "PdfDocument parse_function covers sampled function options and errors" {
   let doc = @pdflite.pdf_document_empty()
   let samples = fun_bytes_for_test([0x0F])
-  let explicit_options = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let explicit_options = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(samples.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(0)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -761,8 +761,8 @@ test "PdfDocument parse_function covers sampled function options and errors" {
   @test.assert_eq(sampled.encode, [0.0, 1.0])
   @test.assert_eq(sampled.decode, [0.0, 1.0])
 
-  let fallback_encode = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let fallback_encode = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(samples.length())),
       (fun_name_for_test("/FunctionType"), PdfInteger(0)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -780,8 +780,8 @@ test "PdfDocument parse_function covers sampled function options and errors" {
   @test.assert_eq(fallback_sampled.encode, [0.0, 1.0])
 
   let bad_size_item : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (fun_name_for_test("/Length"), PdfInteger(samples.length())),
         (fun_name_for_test("/FunctionType"), PdfInteger(0)),
         (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -800,8 +800,8 @@ test "PdfDocument parse_function covers sampled function options and errors" {
   }
 
   let bad_size_array : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (fun_name_for_test("/Length"), PdfInteger(samples.length())),
         (fun_name_for_test("/FunctionType"), PdfInteger(0)),
         (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -817,8 +817,8 @@ test "PdfDocument parse_function covers sampled function options and errors" {
   }
 
   let missing_range : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (fun_name_for_test("/Length"), PdfInteger(samples.length())),
         (fun_name_for_test("/FunctionType"), PdfInteger(0)),
         (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -834,8 +834,8 @@ test "PdfDocument parse_function covers sampled function options and errors" {
   }
 
   let odd_decode : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (fun_name_for_test("/Length"), PdfInteger(samples.length())),
         (fun_name_for_test("/FunctionType"), PdfInteger(0)),
         (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -851,8 +851,8 @@ test "PdfDocument parse_function covers sampled function options and errors" {
   }
 
   let bad_bits : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (fun_name_for_test("/Length"), PdfInteger(samples.length())),
         (fun_name_for_test("/FunctionType"), PdfInteger(0)),
         (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
@@ -875,7 +875,7 @@ test "PdfDocument parse_function covers sampled function options and errors" {
 test "PdfDocument parse_function rejects malformed interpolation and stitching dictionaries" {
   let doc = @pdflite.pdf_document_empty()
   let default_c0_c1 = try! doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(2)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
       (fun_name_for_test("/N"), PdfInteger(1)),
@@ -884,7 +884,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
   @test.assert_eq(try! default_c0_c1.eval([1.0]), [1.0])
 
   let bad_function_type : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         fun_name_for_test("/FunctionType"),
         PdfNameObject(fun_name_for_test("/Bad")),
@@ -897,7 +897,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
   }
 
   let missing_n : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(2)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     ]),
@@ -908,7 +908,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
   }
 
   let mismatched_c_arrays : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(2)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
       (fun_name_for_test("/C0"), PdfArray([PdfInteger(0), PdfInteger(0)])),
@@ -920,13 +920,13 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
     fail("expected mismatched interpolation arrays")
   }
 
-  let first = @pdflite.pdf_dictionary([
+  let first = @syntax.pdf_dictionary([
     (fun_name_for_test("/FunctionType"), PdfInteger(2)),
     (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     (fun_name_for_test("/N"), PdfInteger(1)),
   ])
   let malformed_functions : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(3)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
       (fun_name_for_test("/Functions"), PdfInteger(1)),
@@ -939,7 +939,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
   }
 
   let missing_functions : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(3)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
       (fun_name_for_test("/Bounds"), PdfArray([])),
@@ -952,7 +952,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
   }
 
   let missing_bounds : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(3)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
       (fun_name_for_test("/Functions"), PdfArray([first])),
@@ -965,7 +965,7 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
   }
 
   let inconsistent_stitching : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (fun_name_for_test("/FunctionType"), PdfInteger(3)),
       (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
       (fun_name_for_test("/Functions"), PdfArray([first])),
@@ -1074,8 +1074,8 @@ test "PdfFunction calculator evaluator reports stack and type errors" {
   }
 
   let domain_function = try! doc.parse_function(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (fun_name_for_test("/Length"), PdfInteger(9)),
         (fun_name_for_test("/FunctionType"), PdfInteger(4)),
         (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),

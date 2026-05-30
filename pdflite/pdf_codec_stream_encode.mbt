@@ -1,8 +1,8 @@
 ///|
 fn pdf_add_filter_to_dictionary(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   filter : PdfName,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let filter_object = @syntax.PdfNameObject(filter)
   match dictionary.lookup_immediate(pdf_filter_key()) {
     None => dictionary.add_dict_entry(pdf_filter_key(), filter_object)
@@ -28,10 +28,10 @@ fn pdf_add_filter_to_dictionary(
 /// data is not smaller than the original stream data.
 pub fn pdf_encode_stream_with_filter(
   filter : PdfName,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   only_if_smaller? : Bool = false,
   flate_level? : Int? = None,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => {
       let data = @syntax.pdf_stream_data_bytes(stream.data)
@@ -47,7 +47,7 @@ pub fn pdf_encode_stream_with_filter(
           pdf_add_filter_to_dictionary(stream.dictionary, filter),
           encoded.length(),
         )
-        pdf_stream(dictionary, StreamGot(encoded))
+        @syntax.pdf_stream(dictionary, StreamGot(encoded))
       }
     }
     _ => raise ParseStreamExpected
@@ -65,8 +65,8 @@ fn pdf_predictor_decodeparms(
   colors : Int,
   bits_per_component : Int,
   columns : Int,
-) -> PdfObject {
-  pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (pdf_predictor_key(), PdfInteger(predictor)),
     (pdf_colors_key(), PdfInteger(colors)),
     (pdf_bits_per_component_key(), PdfInteger(bits_per_component)),
@@ -79,8 +79,8 @@ fn pdf_ccitt_encoding_decodeparms(
   k : Int,
   columns : Int,
   rows : Int,
-) -> PdfObject {
-  pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (pdf_ccitt_k_key(), PdfInteger(k)),
     (pdf_columns_key(), PdfInteger(columns)),
     (pdf_ccitt_rows_key(), PdfInteger(rows)),
@@ -89,9 +89,9 @@ fn pdf_ccitt_encoding_decodeparms(
 
 ///|
 fn pdf_add_decodeparms_to_dictionary(
-  dictionary : PdfObject,
-  decodeparms : PdfObject,
-) -> PdfObject raise PdfError {
+  dictionary : @syntax.PdfObject,
+  decodeparms : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match dictionary.lookup_immediate(pdf_decodeparms_key()) {
     None => dictionary.add_dict_entry(pdf_decodeparms_key(), decodeparms)
     Some(PdfDictionary(_) as existing) =>
@@ -113,9 +113,9 @@ fn pdf_encode_stream_with_ccitt(
   columns : Int,
   rows : Int,
   k : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   only_if_smaller : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => {
       let data = @syntax.pdf_stream_data_bytes(stream.data)
@@ -137,7 +137,7 @@ fn pdf_encode_stream_with_ccitt(
           ),
           encoded.length(),
         )
-        pdf_stream(dictionary, StreamGot(encoded))
+        @syntax.pdf_stream(dictionary, StreamGot(encoded))
       }
     }
     _ => raise ParseStreamExpected
@@ -156,10 +156,10 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
   colors : Int,
   bits_per_component : Int,
   columns : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   only_if_smaller? : Bool = false,
   flate_level? : Int? = None,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) => {
       let data = @syntax.pdf_stream_data_bytes(stream.data)
@@ -186,7 +186,7 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
           ),
           encoded.length(),
         )
-        pdf_stream(dictionary, StreamGot(encoded))
+        @syntax.pdf_stream(dictionary, StreamGot(encoded))
       }
     }
     _ => raise ParseStreamExpected
@@ -200,12 +200,12 @@ pub fn pdf_encode_stream_with_filter_and_predictor(
 /// apply a predictor before the filter. CCITT does not accept predictors.
 pub fn pdf_encode_stream_with_encoding(
   encoding : PdfStreamEncoding,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   only_if_smaller? : Bool = false,
   predictor? : PdfStreamPredictor? = None,
   predictor_columns? : Int = 1,
   flate_level? : Int? = None,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let filter = encoding.filter_name()
   match encoding {
     PdfStreamCCITT(columns, rows) =>

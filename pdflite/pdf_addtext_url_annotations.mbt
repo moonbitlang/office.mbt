@@ -8,7 +8,7 @@ pub fn pdf_addtext_url_annotation(
   rectangle : @geometry.PdfRectangle,
   url : String,
   url_border : Bool,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   PdfDictionary([
     (pdf_addtext_subtype_key_name, PdfNameObject(pdf_addtext_link_name)),
     (
@@ -169,9 +169,11 @@ pub fn PdfDocument::addtext_url_annotation_references(
   fontname : String,
   font_size : Double,
   url_border : Bool,
-) -> Array[PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise PdfError {
   let height = pdf_addtext_url_annotation_height(font, fontname, font_size)
-  let annotations : Array[PdfObject] = Array::new(capacity=urls.length())
+  let annotations : Array[@syntax.PdfObject] = Array::new(
+    capacity=urls.length(),
+  )
   for url in urls {
     let (start_width, end_width) = pdf_addtext_url_annotation_widths_with_measure(
       text, url, measure,
@@ -214,7 +216,7 @@ pub fn pdf_addtext_url_annotation_references(
   fontname : String,
   font_size : Double,
   url_border : Bool,
-) -> Array[PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise PdfError {
   document.addtext_url_annotation_references(
     text, urls, measure, origin, horizontal_offset, vertical_offset, justification_offset,
     rotation, rotation_offset, page_rotation, font, fontname, font_size, url_border,
@@ -229,13 +231,13 @@ pub fn pdf_addtext_url_annotation_references(
 /// treated as empty, matching cpdf's add-text page update.
 pub fn PdfDocument::addtext_page_rest_with_annotations(
   self : PdfDocument,
-  rest : PdfObject,
-  annotations : ArrayView[PdfObject],
-) -> PdfObject raise PdfError {
+  rest : @syntax.PdfObject,
+  annotations : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject raise PdfError {
   if annotations.length() == 0 {
     rest
   } else {
-    let updated : Array[PdfObject] = [
+    let updated : Array[@syntax.PdfObject] = [
       for annotation in annotations => annotation
     ]
     match self.lookup_direct(pdf_addtext_annots_key(), rest) {
@@ -253,8 +255,8 @@ pub fn PdfDocument::addtext_page_rest_with_annotations(
 /// Compatibility wrapper for `PdfDocument::addtext_page_rest_with_annotations`.
 pub fn pdf_addtext_page_rest_with_annotations(
   document : PdfDocument,
-  rest : PdfObject,
-  annotations : ArrayView[PdfObject],
-) -> PdfObject raise PdfError {
+  rest : @syntax.PdfObject,
+  annotations : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject raise PdfError {
   document.addtext_page_rest_with_annotations(rest, annotations)
 }

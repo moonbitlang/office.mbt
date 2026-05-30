@@ -1,8 +1,8 @@
 ///|
 fn pdf_squeeze_stream_dictionary(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   length : Int,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   dictionary
   .remove_dict_entry(pdf_filter_key())
   .remove_dict_entry(pdf_short_filter_key())
@@ -56,7 +56,7 @@ fn pdf_squeeze_occurrences(values : ArrayView[Int], needle : Int) -> Int {
 ///|
 fn pdf_squeeze_content_streams_are_unshared(
   all_content_numbers : ArrayView[Int],
-  contents : ArrayView[PdfObject],
+  contents : ArrayView[@syntax.PdfObject],
 ) -> Bool {
   for content in contents {
     match content {
@@ -75,9 +75,9 @@ fn pdf_squeeze_content_streams_are_unshared(
 fn PdfDocument::pdf_squeeze_replace_page_contents(
   self : PdfDocument,
   page_number : Int,
-  page_object : PdfObject,
-  resources : PdfObject,
-  contents : ArrayView[PdfObject],
+  page_object : @syntax.PdfObject,
+  resources : @syntax.PdfObject,
+  contents : ArrayView[@syntax.PdfObject],
 ) -> Unit raise PdfError {
   if contents.length() > 0 {
     let ops = self.parse_content_ops_with_resources(resources, contents)
@@ -134,7 +134,7 @@ fn PdfDocument::pdf_squeeze_form_xobject(
 ///|
 fn PdfDocument::pdf_squeeze_form_xobjects_in_resources(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   done : @hashmap.HashMap[Int, Bool],
 ) -> Unit raise PdfError {
   match self.lookup_direct(pdf_page_xobject_key(), resources) {

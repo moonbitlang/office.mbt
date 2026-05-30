@@ -37,7 +37,7 @@ fn content_page_json_text_document_for_test() -> @pdflite.PdfDocument raise @pdf
   let f1_key = content_page_json_name_for_test("/F1")
   document.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_page_json_name_for_test("/Type1"))),
       (
         base_font_key,
@@ -45,8 +45,8 @@ fn content_page_json_text_document_for_test() -> @pdflite.PdfDocument raise @pdf
       ),
     ]),
   )
-  let resources = @pdflite.pdf_dictionary([
-    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+  let resources = @syntax.pdf_dictionary([
+    (font_resource_key, @syntax.pdf_dictionary([(f1_key, PdfIndirect(7))])),
   ])
   let pages = try! document.pages_of_pagetree()
   let first_stream = try! @pdflite.pdf_content_stream_of_ops([

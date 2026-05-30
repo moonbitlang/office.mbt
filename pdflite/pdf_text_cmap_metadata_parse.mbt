@@ -88,8 +88,8 @@ fn pdf_text_parse_cmap_name_after_token(
 }
 
 ///|
-fn pdf_text_parse_cmap_object_token(token : BytesView) -> PdfObject? {
-  try pdf_parse_object_from_view(token) catch {
+fn pdf_text_parse_cmap_object_token(token : BytesView) -> @syntax.PdfObject? {
+  try @syntax.pdf_parse_object_from_view(token) catch {
     _ => None
   } noraise {
     object => Some(object)

@@ -140,14 +140,14 @@ test "private merge destination-name rewrite covers action and stream callsites"
   )
   @test.assert_eq(
     try! pdf_merge_rewrite_destination_callsite_object(
-      pdf_stream(
+      @syntax.pdf_stream(
         PdfDictionary([(pdf_merge_dest_key(), PdfString(old_name))]),
         StreamGot(@ascii.encode("data")),
       ),
       name_lookup,
       empty_catalog_lookup,
     ),
-    pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([(pdf_merge_dest_key(), PdfString(new_name))]),
       StreamGot(@ascii.encode("data")),
     ),
@@ -211,13 +211,13 @@ test "private merge structure helpers cover direct variants" {
   )
   let parent_changes = pdf_merge_parent_tree_change_map([(1, 7)])
 
-  let stream = pdf_stream(
+  let stream = @syntax.pdf_stream(
     PdfDictionary([(struct_parent, PdfInteger(1))]),
     StreamGot(@ascii.encode("x")),
   )
   @test.assert_eq(
     pdf_merge_renumber_struct_parent_object(stream, parent_changes),
-    pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([(struct_parent, PdfInteger(7))]),
       StreamGot(@ascii.encode("x")),
     ),
@@ -286,7 +286,7 @@ test "private merge structure helpers cover direct variants" {
 test "private merge catalog and AcroForm helpers cover malformed roots" {
   let key = pdf_merge_name("/ViewerPreferences")
   let empty = pdf_document_empty()
-  let read_missing_root : Result[PdfObject?, Error] = try? empty.pdf_merge_catalog_entry(
+  let read_missing_root : Result[@syntax.PdfObject?, Error] = try? empty.pdf_merge_catalog_entry(
     key,
   )
   guard read_missing_root is Err(PdfError::RootExpected) else {
@@ -358,7 +358,7 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
   unresolved.set_trailer_dict(
     PdfDictionary([(pdf_merge_root_key(), PdfIndirect(99))]),
   )
-  let unresolved_result : Result[PdfObject?, Error] = try? unresolved.pdf_merge_catalog_entry(
+  let unresolved_result : Result[@syntax.PdfObject?, Error] = try? unresolved.pdf_merge_catalog_entry(
     key,
   )
   guard unresolved_result is Err(PdfError::RootExpected) else {

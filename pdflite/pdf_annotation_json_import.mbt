@@ -2,13 +2,13 @@
 priv struct PdfAnnotationJsonImportRow {
   page_number : Int
   object_number : Int
-  object : PdfObject
+  object : @syntax.PdfObject
 }
 
 ///|
 priv struct PdfAnnotationJsonImportData {
   max_object_number : Int
-  extras : Array[(Int, PdfObject)]
+  extras : Array[(Int, @syntax.PdfObject)]
   annotations : Array[PdfAnnotationJsonImportRow]
 }
 
@@ -29,7 +29,9 @@ fn pdf_annotation_json_import_data(
     _ => raise SoftError("Bad Annotations JSON file")
   }
   let max_object_number : Ref[Int] = { val: 0 }
-  let extras : Array[(Int, PdfObject)] = Array::new(capacity=entries.length())
+  let extras : Array[(Int, @syntax.PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
   let annotations : Array[PdfAnnotationJsonImportRow] = Array::new(
     capacity=entries.length(),
   )
@@ -99,8 +101,8 @@ fn pdf_annotation_json_import_page_reference(
 ///|
 fn pdf_annotation_json_import_destination(
   page_reference_numbers : ArrayView[Int],
-  destination : PdfObject,
-) -> PdfObject {
+  destination : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match destination {
     PdfArray(items) =>
       if items.length() == 0 {
@@ -108,7 +110,7 @@ fn pdf_annotation_json_import_destination(
       } else {
         match items[0] {
           PdfInteger(page_number) => {
-            let rewritten : Array[PdfObject] = [
+            let rewritten : Array[@syntax.PdfObject] = [
               PdfIndirect(
                 pdf_annotation_json_import_page_reference(
                   page_reference_numbers, page_number,
@@ -131,8 +133,8 @@ fn pdf_annotation_json_import_destination(
 fn PdfDocument::pdf_annotation_json_import_destinations(
   self : PdfDocument,
   page_reference_numbers : ArrayView[Int],
-  annotation : PdfObject,
-) -> PdfObject raise PdfError {
+  annotation : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let mut rewritten = annotation
   match self.lookup_direct(pdf_annotation_p_key(), rewritten) {
     Some(PdfInteger(page_number)) =>
@@ -182,8 +184,8 @@ fn PdfDocument::pdf_annotation_json_import_rows_for_page(
   page_reference_numbers : ArrayView[Int],
   rows : ArrayView[PdfAnnotationJsonImportRow],
   page_number : Int,
-) -> Array[PdfObject] raise PdfError {
-  let imported : Array[PdfObject] = Array::new(capacity=rows.length())
+) -> Array[@syntax.PdfObject] raise PdfError {
+  let imported : Array[@syntax.PdfObject] = Array::new(capacity=rows.length())
   for row in rows {
     if row.page_number == page_number {
       self.add_object_given_number(

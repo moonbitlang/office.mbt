@@ -1,8 +1,8 @@
 ///|
 fn pdf_remove_first_filter_entry(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match dictionary.lookup_immediate(key) {
     None => dictionary
     Some(PdfNameObject(_)) | Some(PdfArray([_])) =>
@@ -18,9 +18,9 @@ fn pdf_remove_first_filter_entry(
 
 ///|
 fn pdf_remove_first_decodeparms_entry(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match dictionary.lookup_immediate(key) {
     None => dictionary
     Some(PdfDictionary(_)) | Some(PdfArray([])) =>
@@ -35,7 +35,9 @@ fn pdf_remove_first_decodeparms_entry(
 }
 
 ///|
-fn pdf_remove_first_decoder(dictionary : PdfObject) -> PdfObject raise PdfError {
+fn pdf_remove_first_decoder(
+  dictionary : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let without_filter = if dictionary.lookup_immediate(pdf_filter_key()) != None {
     pdf_remove_first_filter_entry(dictionary, pdf_filter_key())
   } else {
@@ -57,10 +59,10 @@ fn pdf_remove_first_decoder(dictionary : PdfObject) -> PdfObject raise PdfError 
 
 ///|
 fn pdf_remove_first_filter_entry_value(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
-  value : PdfObject,
-) -> PdfObject raise PdfError {
+  value : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match value {
     PdfArray([]) | PdfArray([_]) => dictionary.remove_dict_entry(key)
     PdfArray([_, .. rest]) =>
@@ -74,10 +76,10 @@ fn pdf_remove_first_filter_entry_value(
 
 ///|
 fn pdf_remove_first_decodeparms_entry_value(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
-  value : PdfObject,
-) -> PdfObject raise PdfError {
+  value : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match value {
     PdfArray([_, .. rest]) =>
       dictionary.replace_dict_entry(
@@ -91,10 +93,10 @@ fn pdf_remove_first_decodeparms_entry_value(
 ///|
 fn PdfDocument::pdf_remove_first_decoder_direct(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   filter_key : PdfName,
-  filter_value : PdfObject,
-) -> PdfObject raise PdfError {
+  filter_value : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let without_filter = pdf_remove_first_filter_entry_value(
     dictionary, filter_key, filter_value,
   )
@@ -107,8 +109,8 @@ fn PdfDocument::pdf_remove_first_decoder_direct(
 
 ///|
 fn pdf_stream_replace_length(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   length : Int,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   dictionary.replace_dict_entry(pdf_codec_length_key(), PdfInteger(length))
 }

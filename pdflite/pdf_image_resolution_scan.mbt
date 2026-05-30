@@ -3,7 +3,7 @@ fn PdfDocument::pdf_image_resolution_lookup_inline_int(
   self : PdfDocument,
   first_key : PdfName,
   second_key : PdfName,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> Int? {
   match self.lookup_direct_or_else(first_key, second_key, image) {
     Some(PdfInteger(value)) => Some(value)
@@ -28,7 +28,7 @@ fn pdf_image_resolution_find_candidate(
 ///|
 fn PdfDocument::pdf_image_resolution_candidates(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
 ) -> Array[PdfImageResolutionCandidate] raise PdfError {
   match self.lookup_direct(pdf_image_xobject_key(), resources) {
     Some(PdfDictionary(xobjects)) => {
@@ -89,8 +89,8 @@ fn PdfDocument::pdf_image_resolution_candidates(
 ///|
 fn PdfDocument::pdf_image_resolution_process_content(
   self : PdfDocument,
-  resources : PdfObject,
-  content : ArrayView[PdfObject],
+  resources : @syntax.PdfObject,
+  content : ArrayView[@syntax.PdfObject],
   candidates : ArrayView[PdfImageResolutionCandidate],
   page_number : Int,
   inline : Bool,

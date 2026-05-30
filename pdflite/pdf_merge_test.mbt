@@ -46,7 +46,7 @@ fn merge_restore_env_for_test(previous : String?) -> Unit {
 fn merge_add_catalog_entry_for_test(
   doc : @pdflite.PdfDocument,
   key : @pdflite.PdfName,
-  value : @pdflite.PdfObject,
+  value : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let root = doc.lookup_object_or_null(doc.root())
   let new_root = doc.add_object(try! root.add_dict_entry(key, value))
@@ -62,7 +62,7 @@ fn merge_add_catalog_entry_for_test(
 ///|
 fn merge_destination_object_for_test(
   doc : @pdflite.PdfDocument,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   let page_refs = try! doc.page_reference_numbers()
   @pdflite.pdf_object_of_destination(DestFit(TargetPageObject(page_refs[0])))
 }
@@ -93,7 +93,7 @@ fn merge_ocg_doc_for_test(number : Int, label : String) -> @pdflite.PdfDocument 
 ///|
 fn merge_oldstyle_dest_doc_for_test(name : String) -> @pdflite.PdfDocument {
   let doc = merge_one_page_doc_for_test(1, 4)
-  let dests : @pdflite.PdfObject = PdfDictionary([
+  let dests : @syntax.PdfObject = PdfDictionary([
     (merge_name_for_test(name), merge_destination_object_for_test(doc)),
   ])
   merge_add_catalog_entry_for_test(doc, merge_name_for_test("/Dests"), dests)
@@ -105,7 +105,7 @@ fn merge_nametree_dest_doc_for_test(name : String) -> @pdflite.PdfDocument {
   let tree = doc.build_name_tree([
     (@ascii.encode(name), merge_destination_object_for_test(doc)),
   ])
-  let names : @pdflite.PdfObject = PdfDictionary([
+  let names : @syntax.PdfObject = PdfDictionary([
     (merge_name_for_test("/Dests"), tree),
   ])
   merge_add_catalog_entry_for_test(doc, merge_name_for_test("/Names"), names)
@@ -188,7 +188,7 @@ fn merge_oldstyle_dest_callsite_doc_for_test(
 
 ///|
 fn merge_external_dest_callsite_doc_for_test(
-  destination : @pdflite.PdfObject,
+  destination : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let key_annots = merge_name_for_test("/Annots")
   let key_subtype = merge_name_for_test("/Subtype")
@@ -216,7 +216,7 @@ fn merge_external_dest_callsite_doc_for_test(
 ///|
 fn merge_destination_name_entries_for_test(
   doc : @pdflite.PdfDocument,
-) -> Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] {
+) -> Array[(@pdflite.PdfBytes, @syntax.PdfObject)] {
   match
     doc.lookup_chain(doc.lookup_object_or_null(doc.root()), [
       merge_name_for_test("/Names"),
@@ -231,7 +231,7 @@ fn merge_destination_name_entries_for_test(
 fn merge_first_annotation_dest_for_test(
   doc : @pdflite.PdfDocument,
   page_index : Int,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   let page_refs = try! doc.page_reference_numbers()
   match
     doc
@@ -249,7 +249,7 @@ fn merge_first_annotation_dest_for_test(
 fn merge_catalog_destination_for_test(
   doc : @pdflite.PdfDocument,
   name : @pdflite.PdfName,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   match
     doc
     .lookup_object_or_null(doc.root())
@@ -277,7 +277,7 @@ fn merge_name_dictionary_doc_for_test(
   let tree = doc.build_name_tree([
     (@ascii.encode(name), PdfString(@ascii.encode(value))),
   ])
-  let names : @pdflite.PdfObject = PdfDictionary([(tree_key, tree)])
+  let names : @syntax.PdfObject = PdfDictionary([(tree_key, tree)])
   merge_add_catalog_entry_for_test(doc, merge_name_for_test("/Names"), names)
 }
 
@@ -299,7 +299,7 @@ fn merge_info_doc_for_test(title : String) -> @pdflite.PdfDocument {
 fn merge_acroform_doc_with_entries_for_test(
   field_number : Int,
   label : String,
-  extra_entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  extra_entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
 ) -> @pdflite.PdfDocument {
   let key_acroform = merge_name_for_test("/AcroForm")
   let key_fields = merge_name_for_test("/Fields")
@@ -309,13 +309,13 @@ fn merge_acroform_doc_with_entries_for_test(
     field_number,
     PdfDictionary([(key_t, PdfString(@ascii.encode(label)))]),
   )
-  let form_entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+  let form_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (key_fields, PdfArray([PdfIndirect(field_number)])),
   ]
   for entry in extra_entries {
     form_entries.push(entry)
   }
-  let form : @pdflite.PdfObject = PdfDictionary(form_entries)
+  let form : @syntax.PdfObject = PdfDictionary(form_entries)
   merge_add_catalog_entry_for_test(doc, key_acroform, form)
 }
 
@@ -365,7 +365,7 @@ test "pdf_merge_documents concatenates selected pages from renumbered inputs" {
 
 ///|
 test "pdfmergeexample-style workflow renumbers copies and roundtrips" {
-  let detached : @pdflite.PdfObject = PdfString(@ascii.encode("detached"))
+  let detached : @syntax.PdfObject = PdfString(@ascii.encode("detached"))
   let first = merge_one_page_doc_for_test(1, 4)
   first.add_object_given_number(99, detached)
   let second = merge_one_page_doc_for_test(1, 7)
@@ -648,7 +648,7 @@ test "pdf_merge_documents merges AcroForm fields" {
   guard form.dictionary_view() is Some(form_entries) else {
     fail("expected AcroForm dictionary")
   }
-  let appearances : Array[@pdflite.PdfObject] = []
+  let appearances : Array[@syntax.PdfObject] = []
   for entry in form_entries {
     let (key, value) = entry
     if key == key_need_appearances {
@@ -715,7 +715,7 @@ test "pdf_merge_documents tolerates malformed named destinations" {
   let string_name = @ascii.encode("bad-string")
   let doc = merge_one_page_doc_for_test(1, 4)
   let page_refs = try! doc.page_reference_numbers()
-  let bad_destination : @pdflite.PdfObject = PdfArray([
+  let bad_destination : @syntax.PdfObject = PdfArray([
     PdfIndirect(page_refs[0]),
     PdfNameObject(type_fitr),
     PdfNameObject(bad_coordinate),
@@ -737,7 +737,7 @@ test "pdf_merge_documents tolerates malformed named destinations" {
   )
   let merged = try! @pdflite.pdf_merge_documents([with_destinations], [[1]])
   let merged_page_refs = try! merged.page_reference_numbers()
-  let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
+  let renumbered_bad_destination : @syntax.PdfObject = PdfArray([
     PdfIndirect(merged_page_refs[0]),
     PdfNameObject(type_fitr),
     PdfNameObject(bad_coordinate),
@@ -1002,7 +1002,7 @@ test "pdf_merge_documents retains safe catalog entries" {
     key_open_action,
     PdfString(@ascii.encode("drop")),
   )
-  let preferences : @pdflite.PdfObject = PdfDictionary([
+  let preferences : @syntax.PdfObject = PdfDictionary([
     (merge_name_for_test("/HideToolbar"), PdfBoolean(true)),
   ])
   let second = merge_add_catalog_entry_for_test(
@@ -1039,7 +1039,7 @@ test "pdf_merge_documents retains and retargets OpenAction destinations" {
   let type_fit = merge_name_for_test("/Fit")
   let first = merge_one_page_doc_for_test(1, 4)
   let first_page_refs = try! first.page_reference_numbers()
-  let open_action : @pdflite.PdfObject = PdfArray([
+  let open_action : @syntax.PdfObject = PdfArray([
     PdfIndirect(first_page_refs[0]),
     PdfNameObject(type_fit),
   ])
@@ -1094,7 +1094,7 @@ test "pdf_merge_documents keeps first valid OpenAction action" {
   )
   let second = merge_one_page_doc_for_test(1, 4)
   let second_page_refs = try! second.page_reference_numbers()
-  let open_action : @pdflite.PdfObject = PdfDictionary([
+  let open_action : @syntax.PdfObject = PdfDictionary([
     (key_s, PdfNameObject(type_goto)),
     (
       key_d,
@@ -1136,7 +1136,7 @@ test "pdf_merge_documents ignores malformed OpenAction destinations" {
   let bad_coordinate = merge_name_for_test("/Bad")
   let first = merge_one_page_doc_for_test(1, 4)
   let first_page_refs = try! first.page_reference_numbers()
-  let malformed_open_action : @pdflite.PdfObject = PdfArray([
+  let malformed_open_action : @syntax.PdfObject = PdfArray([
     PdfIndirect(first_page_refs[0]),
     PdfNameObject(type_fitr),
     PdfNameObject(bad_coordinate),
@@ -1152,7 +1152,7 @@ test "pdf_merge_documents ignores malformed OpenAction destinations" {
   @test.assert_eq(root.lookup_immediate(key_open_action), None)
   let second = merge_one_page_doc_for_test(1, 4)
   let second_page_refs = try! second.page_reference_numbers()
-  let valid_open_action : @pdflite.PdfObject = PdfArray([
+  let valid_open_action : @syntax.PdfObject = PdfArray([
     PdfIndirect(second_page_refs[0]),
     PdfNameObject(type_fit),
   ])
@@ -1175,7 +1175,7 @@ test "pdf_merge_documents rewrites named OpenAction destinations" {
   let key_d = merge_name_for_test("/D")
   let type_goto = merge_name_for_test("/GoTo")
   let first_name = @ascii.encode("shared-f0")
-  let first_action : @pdflite.PdfObject = PdfDictionary([
+  let first_action : @syntax.PdfObject = PdfDictionary([
     (key_s, PdfNameObject(type_goto)),
     (key_d, PdfString(@ascii.encode("shared"))),
   ])

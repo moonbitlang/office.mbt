@@ -1,7 +1,7 @@
 ///|
 fn pdf_ccitt_first_decodeparms(
-  dictionary : PdfObject,
-) -> PdfObject? raise PdfError {
+  dictionary : @syntax.PdfObject,
+) -> @syntax.PdfObject? raise PdfError {
   match pdf_decodeparms_value(dictionary) {
     None | Some(PdfNull) | Some(PdfArray([])) | Some(PdfArray([PdfNull, ..])) =>
       None
@@ -14,8 +14,8 @@ fn pdf_ccitt_first_decodeparms(
 ///|
 fn PdfDocument::pdf_ccitt_first_decodeparms_direct(
   self : PdfDocument,
-  dictionary : PdfObject,
-) -> PdfObject? raise PdfError {
+  dictionary : @syntax.PdfObject,
+) -> @syntax.PdfObject? raise PdfError {
   match self.pdf_decodeparms_value_direct(dictionary) {
     None | Some(PdfNull) | Some(PdfArray([])) => None
     Some(PdfDictionary(_) as value) => Some(value)
@@ -31,7 +31,7 @@ fn PdfDocument::pdf_ccitt_first_decodeparms_direct(
 
 ///|
 fn pdf_ccitt_decodeparms_int(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
   default : Int,
 ) -> Int raise PdfError {
@@ -45,7 +45,7 @@ fn pdf_ccitt_decodeparms_int(
 ///|
 fn PdfDocument::pdf_ccitt_decodeparms_int_direct(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
   default : Int,
 ) -> Int raise PdfError {
@@ -58,7 +58,7 @@ fn PdfDocument::pdf_ccitt_decodeparms_int_direct(
 
 ///|
 fn pdf_ccitt_decodeparms_bool(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
   default : Bool,
 ) -> Bool raise PdfError {
@@ -72,7 +72,7 @@ fn pdf_ccitt_decodeparms_bool(
 ///|
 fn PdfDocument::pdf_ccitt_decodeparms_bool_direct(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
   default : Bool,
 ) -> Bool raise PdfError {
@@ -84,7 +84,9 @@ fn PdfDocument::pdf_ccitt_decodeparms_bool_direct(
 }
 
 ///|
-fn pdf_ccitt_params(dictionary : PdfObject) -> PdfCCITTParams raise PdfError {
+fn pdf_ccitt_params(
+  dictionary : @syntax.PdfObject,
+) -> PdfCCITTParams raise PdfError {
   let defaults = pdf_ccitt_default_params()
   match pdf_ccitt_first_decodeparms(dictionary) {
     None => defaults
@@ -133,7 +135,7 @@ fn pdf_ccitt_params(dictionary : PdfObject) -> PdfCCITTParams raise PdfError {
 ///|
 fn PdfDocument::pdf_ccitt_params_direct(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> PdfCCITTParams raise PdfError {
   let defaults = pdf_ccitt_default_params()
   match self.pdf_ccitt_first_decodeparms_direct(dictionary) {

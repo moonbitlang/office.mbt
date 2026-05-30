@@ -106,8 +106,8 @@ fn PdfDocument::pdf_metadata_page_number_for_reference(
 ///|
 fn PdfDocument::pdf_metadata_rewrite_open_action_page(
   self : PdfDocument,
-  action : PdfObject,
-) -> PdfObject raise PdfError {
+  action : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match action {
     PdfArray([PdfIndirect(reference), .. rest]) =>
       match self.pdf_metadata_page_number_for_reference(reference) {
@@ -124,7 +124,9 @@ fn PdfDocument::pdf_metadata_rewrite_open_action_page(
 /// Destination arrays beginning with a page indirect reference are rewritten
 /// to one-based page numbers. For GoTo action dictionaries with `/D`, the
 /// destination is returned; other action objects are returned unchanged.
-pub fn PdfDocument::open_action(self : PdfDocument) -> PdfObject raise PdfError {
+pub fn PdfDocument::open_action(
+  self : PdfDocument,
+) -> @syntax.PdfObject raise PdfError {
   match
     self.lookup_chain(self.trailer_dict(), [
       pdf_metadata_root(),

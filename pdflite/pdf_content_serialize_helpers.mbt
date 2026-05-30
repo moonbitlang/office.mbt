@@ -14,7 +14,7 @@ fn pdf_content_copy_view(
 
 ///|
 fn pdf_content_section_bytes(
-  operands : ArrayView[PdfObject],
+  operands : ArrayView[@syntax.PdfObject],
   operator : BytesView,
 ) -> PdfBytes raise PdfError {
   let rendered_operands : Array[PdfBytes] = Array::new(
@@ -47,14 +47,14 @@ fn pdf_content_section_bytes(
 }
 
 ///|
-fn pdf_content_number_object(value : Double) -> PdfObject {
+fn pdf_content_number_object(value : Double) -> @syntax.PdfObject {
   PdfReal(value)
 }
 
 ///|
 fn pdf_content_matrix_operands(
   matrix : @geometry.TransformMatrix,
-) -> Array[PdfObject] {
+) -> Array[@syntax.PdfObject] {
   [
     pdf_content_number_object(matrix.a),
     pdf_content_number_object(matrix.b),
@@ -66,12 +66,14 @@ fn pdf_content_matrix_operands(
 }
 
 ///|
-fn pdf_content_number_array(values : ArrayView[Double]) -> PdfObject {
+fn pdf_content_number_array(values : ArrayView[Double]) -> @syntax.PdfObject {
   PdfArray([ for value in values => pdf_content_number_object(value) ])
 }
 
 ///|
-fn pdf_content_number_operands(values : ArrayView[Double]) -> Array[PdfObject] {
+fn pdf_content_number_operands(
+  values : ArrayView[Double],
+) -> Array[@syntax.PdfObject] {
   [
     for value in values => pdf_content_number_object(value)
   ]

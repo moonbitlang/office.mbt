@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_space_named_components(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> Int raise PdfError {
   if name == pdf_space_calgray_name ||
@@ -38,8 +38,8 @@ fn PdfDocument::pdf_space_named_components(
 /// operators do not consume ordinary colour components.
 pub fn PdfDocument::colour_space_components(
   self : PdfDocument,
-  resources : PdfObject,
-  object : PdfObject,
+  resources : @syntax.PdfObject,
+  object : @syntax.PdfObject,
 ) -> Int raise PdfError {
   match self.direct(object) {
     PdfNameObject(name) => self.pdf_space_named_components(resources, name)
@@ -70,8 +70,8 @@ pub fn PdfDocument::colour_space_components(
 /// Compatibility wrapper for `PdfDocument::colour_space_components`.
 pub fn pdf_colour_space_components(
   document : PdfDocument,
-  resources : PdfObject,
-  object : PdfObject,
+  resources : @syntax.PdfObject,
+  object : @syntax.PdfObject,
 ) -> Int raise PdfError {
   document.colour_space_components(resources, object)
 }

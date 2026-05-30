@@ -10,11 +10,11 @@ fn pdf_page_is_reserved_key(key : PdfName) -> Bool {
 
 ///|
 fn pdf_page_rest_entries(
-  rest : PdfObject,
-) -> Array[(PdfName, PdfObject)] raise PdfError {
+  rest : @syntax.PdfObject,
+) -> Array[(PdfName, @syntax.PdfObject)] raise PdfError {
   match rest {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = Array::new(
+      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -30,10 +30,12 @@ fn pdf_page_rest_entries(
 }
 
 ///|
-fn pdf_page_rest_object_from_page(page : PdfObject) -> PdfObject raise PdfError {
+fn pdf_page_rest_object_from_page(
+  page : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match page {
     PdfDictionary(entries) => {
-      let rest : Array[(PdfName, PdfObject)] = Array::new(
+      let rest : Array[(PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {

@@ -1,7 +1,7 @@
 ///|
 /// Read a tiling pattern as the current placeholder representation.
 pub fn pdf_content_read_tiling_pattern(
-  _pattern : PdfObject,
+  _pattern : @syntax.PdfObject,
 ) -> PdfContentPattern {
   PdfContentColouredTilingPattern(PdfContentTiling)
 }
@@ -10,13 +10,13 @@ pub fn pdf_content_read_tiling_pattern(
 /// Read a `/PatternType 2` shading pattern dictionary.
 pub fn PdfDocument::content_read_shading_pattern(
   self : PdfDocument,
-  pattern : PdfObject,
+  pattern : @syntax.PdfObject,
 ) -> PdfContentPattern raise PdfError {
   let matrix = self.parse_matrix(pdf_content_shading_matrix_name, pattern)
   let extgstate = match
     self.lookup_direct(pdf_content_shading_extgstate_name, pattern) {
     Some(PdfDictionary(_) as dictionary) => dictionary
-    _ => pdf_dictionary([])
+    _ => @syntax.pdf_dictionary([])
   }
   match self.lookup_direct(pdf_content_shading_shading_name, pattern) {
     Some(shading) =>
@@ -31,7 +31,7 @@ pub fn PdfDocument::content_read_shading_pattern(
 /// Look up and read a named pattern resource.
 pub fn PdfDocument::content_read_pattern(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> PdfContentPattern? raise PdfError {
   match self.lookup_direct(pdf_content_shading_pattern_name, resources) {
@@ -56,7 +56,7 @@ pub fn PdfDocument::content_read_pattern(
 /// Function wrapper for `PdfDocument::content_read_pattern`.
 pub fn pdf_content_read_pattern(
   document : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> PdfContentPattern? raise PdfError {
   document.content_read_pattern(resources, name)

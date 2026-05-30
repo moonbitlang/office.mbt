@@ -67,7 +67,7 @@ test "pdf_read_document_from_bytes reconstructs catalog missing from xref" {
   let strict = try! @pdflite.pdf_read_classic_document_from_bytes(payload)
   @test.assert_eq(strict.root(), 1)
   @test.assert_eq(strict.object_numbers(), [])
-  let strict_catalog : Result[@pdflite.PdfObject, Error] = try? strict.catalog()
+  let strict_catalog : Result[@syntax.PdfObject, Error] = try? strict.catalog()
   guard strict_catalog is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected")
   }
@@ -549,7 +549,7 @@ test "pdf_read_document_from_bytes skips nested object headers inside malformed 
   @test.assert_eq(parsed.object_numbers(), [3])
   @test.assert_eq(
     parsed.lookup_object_or_null(3),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
         PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),
@@ -592,7 +592,7 @@ test "pdf_read_document_from_bytes recovers unreadable stream lengths" {
   @test.assert_eq(parsed.object_numbers(), [1, 2])
   @test.assert_eq(
     parsed.lookup_object_or_null(2),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         @pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Type")),
         PdfNameObject(@pdflite.pdf_name_of_bytes(reader_pdf_ascii("/Catalog"))),

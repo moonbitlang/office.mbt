@@ -1,10 +1,10 @@
 ///|
 fn pdf_content_decode_inline_image_data(
   context : PdfContentParseContext,
-  dictionary : PdfObject,
-  decode_parms : PdfObject?,
+  dictionary : @syntax.PdfObject,
+  decode_parms : @syntax.PdfObject?,
   encoded : PdfBytes,
-) -> (PdfObject, PdfBytes) raise PdfError {
+) -> (@syntax.PdfObject, PdfBytes) raise PdfError {
   let with_decode_parms = match decode_parms {
     Some(value) =>
       dictionary.add_dict_entry(pdf_content_inline_dp_name(), value)
@@ -33,8 +33,8 @@ fn pdf_content_decode_inline_image_data(
 
 ///|
 fn pdf_content_remove_inline_image_filter_metadata(
-  dictionary : PdfObject,
-) -> PdfObject raise PdfError {
+  dictionary : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   dictionary
   .remove_dict_entry(pdf_content_inline_filter_name())
   .remove_dict_entry(pdf_content_inline_f_name())

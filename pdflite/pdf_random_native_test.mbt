@@ -9,7 +9,7 @@ fn random_native_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn random_native_secret_for_test(text : String) -> @pdflite.PdfObject {
+fn random_native_secret_for_test(text : String) -> @syntax.PdfObject {
   PdfDictionary([
     (
       random_native_name_for_test("/Title"),

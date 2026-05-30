@@ -1,5 +1,5 @@
 ///|
-fn pdf_lzw_early_change(dictionary : PdfObject) -> Int raise PdfError {
+fn pdf_lzw_early_change(dictionary : @syntax.PdfObject) -> Int raise PdfError {
   match pdf_first_decodeparms(dictionary) {
     None => 1
     Some(decodeparms) =>
@@ -10,7 +10,7 @@ fn pdf_lzw_early_change(dictionary : PdfObject) -> Int raise PdfError {
 ///|
 fn PdfDocument::pdf_lzw_early_change_direct(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Int raise PdfError {
   match self.pdf_first_decodeparms_direct(dictionary) {
     None => 1

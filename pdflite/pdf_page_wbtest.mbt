@@ -12,7 +12,7 @@ fn page_wb_document_with_pages(pages : ArrayView[@page.PdfPage]) -> PdfDocument 
 }
 
 ///|
-fn page_wb_fit_destination(page_number : Int) -> PdfObject {
+fn page_wb_fit_destination(page_number : Int) -> @syntax.PdfObject {
   PdfArray([PdfIndirect(page_number), PdfNameObject(pdf_dest_type_fit())])
 }
 
@@ -21,7 +21,7 @@ fn page_wb_xyz_destination(
   page_number : Int,
   left : Int,
   top : Int,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([
     PdfIndirect(page_number),
     PdfNameObject(pdf_dest_type_xyz()),
@@ -34,8 +34,8 @@ fn page_wb_xyz_destination(
 ///|
 fn page_wb_assert_indirect_object_for_test(
   doc : PdfDocument,
-  object : PdfObject,
-  expected : PdfObject,
+  object : @syntax.PdfObject,
+  expected : @syntax.PdfObject,
 ) -> Unit raise {
   match object {
     PdfIndirect(number) =>
@@ -49,7 +49,7 @@ fn page_wb_catalog_destination(
   doc : PdfDocument,
   catalog_number : Int,
   name : PdfName,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   match
     doc
     .lookup_object_or_null(catalog_number)
@@ -71,7 +71,7 @@ fn page_wb_catalog_destination(
 fn page_wb_name_tree_entries_from_catalog(
   doc : PdfDocument,
   catalog_number : Int,
-) -> Array[(PdfBytes, PdfObject)] {
+) -> Array[(PdfBytes, @syntax.PdfObject)] {
   match
     doc.lookup_chain(doc.lookup_object_or_null(catalog_number), [
       pdf_page_names_key(),
@@ -100,19 +100,19 @@ test "private page tree readers cover guard branches" {
   let doc = pdf_document_empty()
   @test.assert_eq(@page.pdf_page_int_of_rotation(Rotate180), 180)
   @test.assert_eq(@page.pdf_page_int_of_rotation(Rotate270), 270)
-  let bad_entries : Result[Array[(PdfName, PdfObject)], Error] = try? pdf_page_rest_entries(
+  let bad_entries : Result[Array[(PdfName, @syntax.PdfObject)], Error] = try? pdf_page_rest_entries(
     PdfInteger(1),
   )
   guard bad_entries is Err(PdfError::DictionaryExpected) else {
     fail("expected rest dictionary")
   }
-  let bad_rest : Result[PdfObject, Error] = try? pdf_page_rest_object_from_page(
+  let bad_rest : Result[@syntax.PdfObject, Error] = try? pdf_page_rest_object_from_page(
     PdfInteger(1),
   )
   guard bad_rest is Err(PdfError::DictionaryExpected) else {
     fail("expected page dictionary")
   }
-  let bad_root : Result[Array[(PdfName, PdfObject)], Error] = try? pdf_page_root_entries_without_catalog_keys(
+  let bad_root : Result[Array[(PdfName, @syntax.PdfObject)], Error] = try? pdf_page_root_entries_without_catalog_keys(
     PdfInteger(1),
   )
   guard bad_root is Err(PdfError::DictionaryExpected) else {
@@ -123,13 +123,13 @@ test "private page tree readers cover guard branches" {
     (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
   ])
   @test.assert_eq(try! doc.pdf_page_direct_child(direct_child), direct_child)
-  let missing_child : Result[PdfObject, Error] = try? doc.pdf_page_direct_child(
+  let missing_child : Result[@syntax.PdfObject, Error] = try? doc.pdf_page_direct_child(
     PdfIndirect(99),
   )
   guard missing_child is Err(PdfError::PageTreeExpected) else {
     fail("expected missing child")
   }
-  let malformed_child : Result[PdfObject, Error] = try? doc.pdf_page_direct_child(
+  let malformed_child : Result[@syntax.PdfObject, Error] = try? doc.pdf_page_direct_child(
     PdfInteger(1),
   )
   guard malformed_child is Err(PdfError::PageTreeExpected) else {
@@ -159,7 +159,7 @@ test "private page tree readers cover guard branches" {
   guard too_deep is Err(PdfError::PageTreeExpected) else {
     fail("expected page tree depth guard")
   }
-  let inherited_too_deep : Result[PdfObject?, Error] = try? doc.pdf_page_find_inherited_attribute(
+  let inherited_too_deep : Result[@syntax.PdfObject?, Error] = try? doc.pdf_page_find_inherited_attribute(
     PdfDictionary([]),
     pdf_page_mediabox_key(),
     10001,
@@ -190,7 +190,9 @@ test "private page tree readers cover guard branches" {
     fail("expected quick missing kids")
   }
 
-  let last_mediabox : Ref[PdfObject] = { val: pdf_page_default_mediabox() }
+  let last_mediabox : Ref[@syntax.PdfObject] = {
+    val: pdf_page_default_mediabox(),
+  }
   let branch_pages = try! doc.pdf_pages_of_node(
     PdfDictionary([(pdf_page_kids_key(), PdfArray([PdfDictionary([])]))]),
     None,

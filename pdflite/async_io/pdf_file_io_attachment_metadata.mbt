@@ -63,7 +63,7 @@ fn pdf_async_io_catalog_metadata_number(
 ///|
 fn pdf_async_io_is_metadata_object(
   document : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match document.lookup_direct(pdf_async_io_name("/Type"), object) {
     Some(PdfNameObject(name)) => name == pdf_async_io_name("/Metadata")
@@ -74,7 +74,7 @@ fn pdf_async_io_is_metadata_object(
 ///|
 fn pdf_async_io_metadata_stream_bytes(
   document : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
 ) -> @pdflite.PdfBytes raise @pdflite.PdfError {
   document.pdf_decode_stream(object).stream_bytes()
 }

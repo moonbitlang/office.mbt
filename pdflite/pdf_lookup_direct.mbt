@@ -1,9 +1,9 @@
 ///|
 fn PdfDocument::direct_depth(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   depth : Int,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   if depth > 1024 {
     PdfNull
   } else {
@@ -27,7 +27,10 @@ fn PdfDocument::direct_depth(
 /// Direct objects are returned unchanged. Indirect references are followed
 /// recursively through parsed entries in `self.objects`; missing, unparsed, or
 /// excessively deep references resolve to `PdfNull` rather than raising.
-pub fn PdfDocument::direct(self : PdfDocument, object : PdfObject) -> PdfObject {
+pub fn PdfDocument::direct(
+  self : PdfDocument,
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   self.direct_depth(object, 0)
 }
 
@@ -40,8 +43,8 @@ pub fn PdfDocument::direct(self : PdfDocument, object : PdfObject) -> PdfObject 
 pub fn PdfDocument::lookup_direct(
   self : PdfDocument,
   key : PdfName,
-  object : PdfObject,
-) -> PdfObject? {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   match self.direct(object).dictionary_view() {
     Some(entries) =>
       for i in 0..<entries.length() {
@@ -66,9 +69,9 @@ pub fn PdfDocument::lookup_direct(
 pub fn PdfDocument::lookup_required(
   self : PdfDocument,
   key : PdfName,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   error : PdfError,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match self.direct(object).dictionary_view() {
     Some(entries) =>
       for entry in entries {
@@ -92,8 +95,8 @@ pub fn PdfDocument::lookup_direct_or_else(
   self : PdfDocument,
   first_key : PdfName,
   second_key : PdfName,
-  object : PdfObject,
-) -> PdfObject? {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   match self.lookup_direct(first_key, object) {
     Some(value) => Some(value)
     None => self.lookup_direct(second_key, object)
@@ -132,8 +135,8 @@ fn pdf_lookup_array_index_name(name : PdfName) -> Int? {
 pub fn PdfDocument::lookup_direct_or_array(
   self : PdfDocument,
   name : PdfName,
-  object : PdfObject,
-) -> PdfObject? {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   match pdf_lookup_array_index_name(name) {
     Some(index) =>
       match object {
@@ -157,7 +160,7 @@ pub fn PdfDocument::lookup_direct_or_array(
 pub fn PdfDocument::indirect_number(
   self : PdfDocument,
   key : PdfName,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Int? {
   match self.direct(object).dictionary_view() {
     Some(entries) =>

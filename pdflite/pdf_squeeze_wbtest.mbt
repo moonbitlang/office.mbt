@@ -16,16 +16,16 @@ fn squeeze_wbtest_data() -> PdfBytes {
 
 ///|
 fn squeeze_wbtest_stream(
-  entries : ArrayView[(PdfName, PdfObject)],
+  entries : ArrayView[(PdfName, @syntax.PdfObject)],
   data : PdfBytes,
-) -> PdfObject {
-  let dictionary_entries : Array[(PdfName, PdfObject)] = [
+) -> @syntax.PdfObject {
+  let dictionary_entries : Array[(PdfName, @syntax.PdfObject)] = [
     (squeeze_wbtest_name("/Length"), PdfInteger(data.length())),
   ]
   for entry in entries {
     dictionary_entries.push(entry)
   }
-  pdf_stream(PdfDictionary(dictionary_entries), StreamGot(data))
+  @syntax.pdf_stream(PdfDictionary(dictionary_entries), StreamGot(data))
 }
 
 ///|

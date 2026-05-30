@@ -4,7 +4,7 @@ fn attach_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn attach_string_for_test(text : String) -> @pdflite.PdfObject {
+fn attach_string_for_test(text : String) -> @syntax.PdfObject {
   PdfString(@ascii.encode(text))
 }
 
@@ -14,7 +14,7 @@ fn attach_rect_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }
 
@@ -47,8 +47,8 @@ fn attach_blank_document_for_test() -> @pdflite.PdfDocument {
 fn attach_lookup_for_test(
   document : @pdflite.PdfDocument,
   key : String,
-  object : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match document.lookup_direct(attach_name_for_test(key), object) {
     Some(value) => value
     None => fail("missing key " + key)
@@ -58,14 +58,14 @@ fn attach_lookup_for_test(
 ///|
 fn attach_catalog_for_test(
   document : @pdflite.PdfDocument,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! document.catalog()
 }
 
 ///|
 fn attach_embedded_tree_for_test(
   document : @pdflite.PdfDocument,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let catalog = attach_catalog_for_test(document)
   let names = attach_lookup_for_test(document, "/Names", catalog)
   attach_lookup_for_test(document, "/EmbeddedFiles", names)
@@ -74,8 +74,8 @@ fn attach_embedded_tree_for_test(
 ///|
 fn attach_payload_stream_for_test(
   document : @pdflite.PdfDocument,
-  file_spec : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  file_spec : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   let ef = attach_lookup_for_test(document, "/EF", file_spec)
   attach_lookup_for_test(document, "/F", ef)
 }
@@ -241,7 +241,7 @@ test "PdfDocument attach_file adds page attachment annotation and preserves exis
   let key_annots = attach_name_for_test("/Annots")
   let key_subtype = attach_name_for_test("/Subtype")
   let key_rect = attach_name_for_test("/Rect")
-  let non_file : @pdflite.PdfObject = PdfDictionary([
+  let non_file : @syntax.PdfObject = PdfDictionary([
     (key_subtype, PdfNameObject(attach_name_for_test("/Text"))),
     (attach_name_for_test("/Contents"), PdfString(@ascii.encode("kept"))),
   ])
@@ -317,7 +317,7 @@ test "PdfDocument attach_file can add the first page annotation" {
 test "PdfDocument remove_attached_files removes document and page attachments only" {
   let key_annots = attach_name_for_test("/Annots")
   let key_subtype = attach_name_for_test("/Subtype")
-  let non_file : @pdflite.PdfObject = PdfDictionary([
+  let non_file : @syntax.PdfObject = PdfDictionary([
     (key_subtype, PdfNameObject(attach_name_for_test("/Text"))),
   ])
   let page = {
@@ -420,28 +420,28 @@ test "PdfDocument attach_file rejects missing page numbers" {
 ///|
 test "PdfDocument list_attached_files keeps malformed page attachment without data" {
   let key_annots = attach_name_for_test("/Annots")
-  let no_subtype : @pdflite.PdfObject = PdfDictionary([])
-  let no_contents : @pdflite.PdfObject = PdfDictionary([
+  let no_subtype : @syntax.PdfObject = PdfDictionary([])
+  let no_contents : @syntax.PdfObject = PdfDictionary([
     (
       attach_name_for_test("/Subtype"),
       PdfNameObject(attach_name_for_test("/FileAttachment")),
     ),
   ])
-  let no_fs : @pdflite.PdfObject = PdfDictionary([
+  let no_fs : @syntax.PdfObject = PdfDictionary([
     (
       attach_name_for_test("/Subtype"),
       PdfNameObject(attach_name_for_test("/FileAttachment")),
     ),
     (attach_name_for_test("/Contents"), PdfString(@ascii.encode("no-fs.bin"))),
   ])
-  let file_spec : @pdflite.PdfObject = PdfDictionary([
+  let file_spec : @syntax.PdfObject = PdfDictionary([
     (
       attach_name_for_test("/Type"),
       PdfNameObject(attach_name_for_test("/Filespec")),
     ),
     (attach_name_for_test("/F"), PdfString(@ascii.encode("missing.bin"))),
   ])
-  let annotation : @pdflite.PdfObject = PdfDictionary([
+  let annotation : @syntax.PdfObject = PdfDictionary([
     (
       attach_name_for_test("/Subtype"),
       PdfNameObject(attach_name_for_test("/FileAttachment")),
@@ -474,7 +474,7 @@ test "PdfDocument list_attached_files keeps malformed page attachment without da
 ///|
 test "PdfDocument list_attached_files ignores non-ASCII relationship names" {
   let payload = @ascii.encode("ok")
-  let stream = @pdflite.pdf_stream(
+  let stream = @syntax.pdf_stream(
     PdfDictionary([
       (attach_name_for_test("/Length"), PdfInteger(payload.length())),
     ]),
@@ -483,14 +483,14 @@ test "PdfDocument list_attached_files ignores non-ASCII relationship names" {
   let bad_relationship = @pdflite.pdf_name_of_bytes(
     try! @pdflite.pdf_bytes_of_int_array([0xFF]),
   )
-  let file_spec : @pdflite.PdfObject = PdfDictionary([
+  let file_spec : @syntax.PdfObject = PdfDictionary([
     (
       attach_name_for_test("/EF"),
       PdfDictionary([(attach_name_for_test("/F"), stream)]),
     ),
     (attach_name_for_test("/AFRelationship"), PdfNameObject(bad_relationship)),
   ])
-  let annotation : @pdflite.PdfObject = PdfDictionary([
+  let annotation : @syntax.PdfObject = PdfDictionary([
     (
       attach_name_for_test("/Subtype"),
       PdfNameObject(attach_name_for_test("/FileAttachment")),
@@ -544,10 +544,10 @@ test "PdfDocument list_attached_files rejects malformed document attachment data
 ///|
 test "PdfDocument list and size reject file specs with EF but no F stream" {
   let key_annots = attach_name_for_test("/Annots")
-  let file_spec : @pdflite.PdfObject = PdfDictionary([
+  let file_spec : @syntax.PdfObject = PdfDictionary([
     (attach_name_for_test("/EF"), PdfDictionary([])),
   ])
-  let annotation : @pdflite.PdfObject = PdfDictionary([
+  let annotation : @syntax.PdfObject = PdfDictionary([
     (
       attach_name_for_test("/Subtype"),
       PdfNameObject(attach_name_for_test("/FileAttachment")),

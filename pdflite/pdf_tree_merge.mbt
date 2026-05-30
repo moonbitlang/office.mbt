@@ -6,9 +6,9 @@
 /// conflict handling should check the inputs before calling it.
 pub fn PdfDocument::merge_name_trees_no_clash(
   self : PdfDocument,
-  trees : ArrayView[PdfObject],
-) -> PdfObject {
-  let entries : Array[(PdfBytes, PdfObject)] = Array::new(
+  trees : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject {
+  let entries : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=trees.length(),
   )
   for tree in trees {
@@ -23,8 +23,8 @@ pub fn PdfDocument::merge_name_trees_no_clash(
 /// Compatibility wrapper for `PdfDocument::merge_name_trees_no_clash`.
 pub fn pdf_merge_name_trees_no_clash(
   document : PdfDocument,
-  trees : ArrayView[PdfObject],
-) -> PdfObject {
+  trees : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject {
   document.merge_name_trees_no_clash(trees)
 }
 
@@ -36,9 +36,11 @@ pub fn pdf_merge_name_trees_no_clash(
 /// not reported as an error.
 pub fn PdfDocument::merge_number_trees_no_clash(
   self : PdfDocument,
-  trees : ArrayView[PdfObject],
-) -> PdfObject {
-  let entries : Array[(Int, PdfObject)] = Array::new(capacity=trees.length())
+  trees : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject {
+  let entries : Array[(Int, @syntax.PdfObject)] = Array::new(
+    capacity=trees.length(),
+  )
   for tree in trees {
     for entry in self.read_number_tree(tree) {
       entries.push(entry)
@@ -51,7 +53,7 @@ pub fn PdfDocument::merge_number_trees_no_clash(
 /// Compatibility wrapper for `PdfDocument::merge_number_trees_no_clash`.
 pub fn pdf_merge_number_trees_no_clash(
   document : PdfDocument,
-  trees : ArrayView[PdfObject],
-) -> PdfObject {
+  trees : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject {
   document.merge_number_trees_no_clash(trees)
 }

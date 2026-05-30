@@ -12,7 +12,7 @@ pub fn pdf_copy_id(
 /// Compatibility wrapper for `PdfDocument::set_info_entry`.
 pub fn pdf_set_pdf_info(
   key : PdfName,
-  value : PdfObject,
+  value : @syntax.PdfObject,
   version : Int,
   document : PdfDocument,
   keep_version? : Bool = false,
@@ -32,7 +32,7 @@ pub fn pdf_set_pdf_info(
 ///|
 /// Compatibility wrapper matching cpdfmetadata's string-key tuple form.
 pub fn pdf_set_pdf_info_cpdf_order(
-  entry : (String, PdfObject, Int),
+  entry : (String, @syntax.PdfObject, Int),
   document : PdfDocument,
   xmp_also? : Bool = false,
   xmp_just_set? : Bool = false,
@@ -43,7 +43,7 @@ pub fn pdf_set_pdf_info_cpdf_order(
 ///|
 /// Compatibility wrapper matching cpdfmetadata's string-key tuple form.
 pub fn pdf_set_pdf_info_string(
-  entry : (String, PdfObject, Int),
+  entry : (String, @syntax.PdfObject, Int),
   document : PdfDocument,
   xmp_also? : Bool = false,
   xmp_just_set? : Bool = false,
@@ -79,7 +79,7 @@ pub fn pdf_get_xmp_info_string(document : PdfDocument, key : String) -> String {
 /// Compatibility wrapper for `PdfDocument::set_viewer_preference`.
 pub fn pdf_set_viewer_preference(
   key : PdfName,
-  value : PdfObject,
+  value : @syntax.PdfObject,
   version : Int,
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
@@ -89,7 +89,7 @@ pub fn pdf_set_viewer_preference(
 ///|
 /// Compatibility wrapper matching cpdfmetadata's string-key tuple form.
 pub fn pdf_set_viewer_preference_cpdf_order(
-  entry : (String, PdfObject, Int),
+  entry : (String, @syntax.PdfObject, Int),
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   document.set_viewer_preference_string(entry)
@@ -98,7 +98,7 @@ pub fn pdf_set_viewer_preference_cpdf_order(
 ///|
 /// Compatibility wrapper matching cpdfmetadata's string-key tuple form.
 pub fn pdf_set_viewer_preference_string(
-  entry : (String, PdfObject, Int),
+  entry : (String, @syntax.PdfObject, Int),
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   pdf_set_viewer_preference_cpdf_order(entry, document)
@@ -137,7 +137,7 @@ pub fn pdf_set_open_action(
   document : PdfDocument,
   fit : Bool,
   page_number : Int,
-  destination? : PdfObject? = None,
+  destination? : @syntax.PdfObject? = None,
 ) -> PdfDocument raise PdfError {
   document.set_open_action(page_number, fit~, destination~)
 }
@@ -234,7 +234,9 @@ pub fn pdf_is_xfa(document : PdfDocument) -> Bool {
 
 ///|
 /// Compatibility wrapper for `PdfDocument::open_action`.
-pub fn pdf_get_open_action(document : PdfDocument) -> PdfObject raise PdfError {
+pub fn pdf_get_open_action(
+  document : PdfDocument,
+) -> @syntax.PdfObject raise PdfError {
   document.open_action()
 }
 

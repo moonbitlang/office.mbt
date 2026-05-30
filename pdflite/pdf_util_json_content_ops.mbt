@@ -2,7 +2,7 @@
 fn pdf_util_stream_of_json_ops(
   dictionary_json : Json,
   op_jsons : ArrayView[Json],
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let ops : Array[@content.PdfContentOp] = Array::new(
     capacity=op_jsons.length(),
   )
@@ -14,5 +14,5 @@ fn pdf_util_stream_of_json_ops(
     @syntax.pdf_object_length_name(),
     PdfInteger(stream_data.length()),
   )
-  pdf_stream(dictionary, StreamGot(stream_data))
+  @syntax.pdf_stream(dictionary, StreamGot(stream_data))
 }

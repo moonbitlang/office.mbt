@@ -10,9 +10,9 @@ fn type_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn type_lookup_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   match object.lookup_immediate(type_name_for_test(key)) {
     Some(value) => value
     None => {

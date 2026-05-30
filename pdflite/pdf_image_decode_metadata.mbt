@@ -3,7 +3,7 @@ fn PdfDocument::pdf_image_lookup_int_or_else(
   self : PdfDocument,
   first_key : PdfName,
   second_key : PdfName,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> Int raise PdfError {
   match self.lookup_direct_or_else(first_key, second_key, image) {
     Some(PdfInteger(value)) => value
@@ -15,7 +15,7 @@ fn PdfDocument::pdf_image_lookup_int_or_else(
 ///|
 fn PdfDocument::pdf_image_bits_per_component_int(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> Int? raise PdfError {
   match self.image_bits_per_component(image) {
     Some(PdfInteger(value)) => Some(value)
@@ -27,7 +27,7 @@ fn PdfDocument::pdf_image_bits_per_component_int(
 ///|
 fn PdfDocument::pdf_image_decode_values(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> Array[Double]? raise PdfError {
   match
     self.lookup_direct_or_else(pdf_image_decode_key(), pdf_image_d_key(), image) {
@@ -84,8 +84,8 @@ fn pdf_image_decode_defaults_for_space(
 ///|
 fn PdfDocument::pdf_image_decode_values_with_defaults(
   self : PdfDocument,
-  resources : PdfObject,
-  image : PdfObject,
+  resources : @syntax.PdfObject,
+  image : @syntax.PdfObject,
 ) -> Array[Double]? raise PdfError {
   match self.pdf_image_decode_values(image) {
     Some(values) =>
@@ -121,8 +121,8 @@ fn PdfDocument::pdf_image_decode_values_with_defaults(
 ///|
 fn PdfDocument::pdf_image_encoded_decode_values_with_defaults(
   self : PdfDocument,
-  resources : PdfObject,
-  image : PdfObject,
+  resources : @syntax.PdfObject,
+  image : @syntax.PdfObject,
 ) -> Array[Double]? raise PdfError {
   match self.pdf_image_decode_values(image) {
     Some(values) => Some(values)

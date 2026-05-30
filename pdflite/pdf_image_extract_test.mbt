@@ -24,8 +24,8 @@ test "PdfDocument extract_single_image_files emits cpdf payload names" {
   let mask_data = image_extract_bytes_for_test([128])
   doc.add_object_given_number(
     11,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (image_extract_name_for_test("/Width"), PdfInteger(1)),
         (image_extract_name_for_test("/Height"), PdfInteger(1)),
         (
@@ -40,8 +40,8 @@ test "PdfDocument extract_single_image_files emits cpdf payload names" {
   let image_data = image_extract_bytes_for_test([1, 2, 3, 4, 5, 6])
   doc.add_object_given_number(
     10,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (image_extract_name_for_test("/Width"), PdfInteger(2)),
         (image_extract_name_for_test("/Height"), PdfInteger(1)),
         (
@@ -86,8 +86,8 @@ test "PdfDocument extract_single_image_files preserves encoded image streams" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     20,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (image_extract_name_for_test("/Width"), PdfInteger(1)),
         (image_extract_name_for_test("/Height"), PdfInteger(1)),
         (
@@ -104,8 +104,8 @@ test "PdfDocument extract_single_image_files preserves encoded image streams" {
 
   doc.add_object_given_number(
     30,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (image_extract_name_for_test("/Length"), PdfInteger(7)),
       ]),
       StreamGot(@ascii.encode("globals")),
@@ -113,8 +113,8 @@ test "PdfDocument extract_single_image_files preserves encoded image streams" {
   )
   doc.add_object_given_number(
     31,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (image_extract_name_for_test("/Width"), PdfInteger(1)),
         (image_extract_name_for_test("/Height"), PdfInteger(1)),
         (
@@ -123,7 +123,7 @@ test "PdfDocument extract_single_image_files preserves encoded image streams" {
         ),
         (
           image_extract_name_for_test("/DecodeParms"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (image_extract_name_for_test("/JBIG2Globals"), PdfIndirect(30)),
           ]),
         ),
@@ -143,8 +143,8 @@ test "PdfDocument extract_images_files walks page images masks and form images i
   let mask_data = image_extract_bytes_for_test([128])
   doc.add_object_given_number(
     11,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_extract_name_for_test("/Subtype"),
           PdfNameObject(image_extract_name_for_test("/Image")),
@@ -164,8 +164,8 @@ test "PdfDocument extract_images_files walks page images masks and form images i
   let image_data = image_extract_bytes_for_test([1, 2, 3])
   doc.add_object_given_number(
     10,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_extract_name_for_test("/Subtype"),
           PdfNameObject(image_extract_name_for_test("/Image")),
@@ -189,8 +189,8 @@ test "PdfDocument extract_images_files walks page images masks and form images i
   let second_mask_data = image_extract_bytes_for_test([64])
   doc.add_object_given_number(
     14,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_extract_name_for_test("/Subtype"),
           PdfNameObject(image_extract_name_for_test("/Image")),
@@ -213,8 +213,8 @@ test "PdfDocument extract_images_files walks page images masks and form images i
   let second_jpeg_data = @ascii.encode("jpg2")
   doc.add_object_given_number(
     13,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_extract_name_for_test("/Subtype"),
           PdfNameObject(image_extract_name_for_test("/Image")),
@@ -237,8 +237,8 @@ test "PdfDocument extract_images_files walks page images masks and form images i
   let jpeg_data = @ascii.encode("jpg")
   doc.add_object_given_number(
     12,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_extract_name_for_test("/Subtype"),
           PdfNameObject(image_extract_name_for_test("/Image")),
@@ -256,18 +256,18 @@ test "PdfDocument extract_images_files walks page images masks and form images i
   )
   doc.add_object_given_number(
     20,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_extract_name_for_test("/Subtype"),
           PdfNameObject(image_extract_name_for_test("/Form")),
         ),
         (
           image_extract_name_for_test("/Resources"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               image_extract_name_for_test("/XObject"),
-              @pdflite.pdf_dictionary([
+              @syntax.pdf_dictionary([
                 (image_extract_name_for_test("/FmIm"), PdfIndirect(12)),
               ]),
             ),
@@ -280,10 +280,10 @@ test "PdfDocument extract_images_files walks page images masks and form images i
   )
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         image_extract_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (image_extract_name_for_test("/ImA"), PdfIndirect(10)),
           (image_extract_name_for_test("/ImB"), PdfIndirect(13)),
           (image_extract_name_for_test("/Fm"), PdfIndirect(20)),
@@ -349,8 +349,8 @@ test "PdfDocument extract_images_files honors global and per-page dedup" {
   let jpeg_data = @ascii.encode("jpg")
   doc.add_object_given_number(
     10,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_extract_name_for_test("/Subtype"),
           PdfNameObject(image_extract_name_for_test("/Image")),
@@ -368,10 +368,10 @@ test "PdfDocument extract_images_files honors global and per-page dedup" {
   )
   let page_one = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         image_extract_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (image_extract_name_for_test("/A"), PdfIndirect(10)),
           (image_extract_name_for_test("/B"), PdfIndirect(10)),
         ]),
@@ -380,10 +380,10 @@ test "PdfDocument extract_images_files honors global and per-page dedup" {
   }
   let page_two = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         image_extract_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (image_extract_name_for_test("/A"), PdfIndirect(10)),
         ]),
       ),
@@ -418,8 +418,8 @@ test "PdfDocument extract_images_files expands object number stem marker" {
   let jpeg_data = @ascii.encode("jpg")
   doc.add_object_given_number(
     10,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           image_extract_name_for_test("/Subtype"),
           PdfNameObject(image_extract_name_for_test("/Image")),
@@ -437,10 +437,10 @@ test "PdfDocument extract_images_files expands object number stem marker" {
   )
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         image_extract_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (image_extract_name_for_test("/A"), PdfIndirect(10)),
         ]),
       ),
@@ -456,7 +456,7 @@ test "PdfDocument extract_images_files expands object number stem marker" {
 ///|
 test "PdfDocument extract_images_files optionally emits inline images" {
   let doc = @pdflite.pdf_document_empty()
-  let inline_dict = @pdflite.pdf_dictionary([
+  let inline_dict = @syntax.pdf_dictionary([
     (image_extract_name_for_test("/W"), PdfInteger(1)),
     (image_extract_name_for_test("/H"), PdfInteger(1)),
     (image_extract_name_for_test("/BPC"), PdfInteger(8)),

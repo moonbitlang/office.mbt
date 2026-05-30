@@ -3,7 +3,7 @@
 
 ///|
 test "private annotation and bookmark guards report malformed roots" {
-  let annotation_rest : Result[PdfObject, Error] = try? pdf_annotation_rest(
+  let annotation_rest : Result[@syntax.PdfObject, Error] = try? pdf_annotation_rest(
     PdfInteger(1),
   )
   guard annotation_rest is Err(PdfError::DictionaryExpected) else {

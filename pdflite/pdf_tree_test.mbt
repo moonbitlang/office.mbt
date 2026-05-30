@@ -20,7 +20,7 @@ test "PdfDocument read_name_tree sorts and deduplicates entries" {
       ),
     ]),
   )
-  let tree : @pdflite.PdfObject = PdfDictionary([
+  let tree : @syntax.PdfObject = PdfDictionary([
     (
       tree_name_for_test("/Names"),
       PdfArray([
@@ -53,7 +53,7 @@ test "PdfDocument read_name_tree ignores malformed odd name arrays" {
       ),
     ]),
   )
-  let tree : @pdflite.PdfObject = PdfDictionary([
+  let tree : @syntax.PdfObject = PdfDictionary([
     (
       tree_name_for_test("/Names"),
       PdfArray([PdfString(tree_bytes_for_test("dangling"))]),
@@ -68,11 +68,11 @@ test "PdfDocument read_name_tree ignores malformed odd name arrays" {
 ///|
 test "PdfDocument read trees reject malformed key types" {
   let doc = @pdflite.pdf_document_empty()
-  let malformed_name_tree : @pdflite.PdfObject = PdfDictionary([
+  let malformed_name_tree : @syntax.PdfObject = PdfDictionary([
     (tree_name_for_test("/Names"), PdfArray([PdfInteger(1), PdfInteger(2)])),
   ])
   @test.assert_eq(doc.read_name_tree(malformed_name_tree), [])
-  let malformed_number_tree : @pdflite.PdfObject = PdfDictionary([
+  let malformed_number_tree : @syntax.PdfObject = PdfDictionary([
     (
       tree_name_for_test("/Nums"),
       PdfArray([PdfString(tree_bytes_for_test("bad")), PdfInteger(2)]),
@@ -84,7 +84,7 @@ test "PdfDocument read trees reject malformed key types" {
 ///|
 test "PdfDocument build_name_tree creates readable child nodes" {
   let doc = @pdflite.pdf_document_empty()
-  let entries : Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] = [
+  let entries : Array[(@pdflite.PdfBytes, @syntax.PdfObject)] = [
     for i in 0..<12 => (tree_bytes_for_test("k" + i.to_string()), PdfInteger(i))
   ]
   let tree = doc.build_name_tree(entries)
@@ -102,7 +102,7 @@ test "PdfDocument build_name_tree creates readable child nodes" {
 ///|
 test "PdfDocument build_name_tree creates nested child limits for large trees" {
   let doc = @pdflite.pdf_document_empty()
-  let entries : Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] = [
+  let entries : Array[(@pdflite.PdfBytes, @syntax.PdfObject)] = [
     for i in 0..<101 => {
       (tree_bytes_for_test("k" + i.to_string()), PdfInteger(i))
     }
@@ -127,7 +127,7 @@ test "PdfDocument build_name_tree creates nested child limits for large trees" {
 ///|
 test "PdfDocument name_tree_lookup finds nested name entries by limits" {
   let doc = @pdflite.pdf_document_empty()
-  let entries : Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] = [
+  let entries : Array[(@pdflite.PdfBytes, @syntax.PdfObject)] = [
     for i in 0..<12 => (tree_bytes_for_test("k" + i.to_string()), PdfInteger(i))
   ]
   let tree = doc.build_name_tree(entries)
@@ -152,14 +152,14 @@ test "PdfDocument name_tree_lookup finds nested name entries by limits" {
 ///|
 test "PdfDocument name_tree_lookup handles leaf misses and malformed trees" {
   let doc = @pdflite.pdf_document_empty()
-  let leaf : @pdflite.PdfObject = PdfDictionary([
+  let leaf : @syntax.PdfObject = PdfDictionary([
     (
       tree_name_for_test("/Names"),
       PdfArray([PdfString(tree_bytes_for_test("a")), PdfInteger(1)]),
     ),
   ])
   @test.assert_eq(doc.name_tree_lookup(tree_bytes_for_test("z"), leaf), None)
-  let mismatched_limits : @pdflite.PdfObject = PdfDictionary([
+  let mismatched_limits : @syntax.PdfObject = PdfDictionary([
     (
       tree_name_for_test("/Limits"),
       PdfArray([
@@ -253,7 +253,7 @@ test "PdfDocument number_tree_lookup finds nested number entries by limits" {
 ///|
 test "PdfDocument build_number_tree creates child limits and nested kids" {
   let doc = @pdflite.pdf_document_empty()
-  let entries : Array[(Int, @pdflite.PdfObject)] = [
+  let entries : Array[(Int, @syntax.PdfObject)] = [
     for i in 0..<101 => (i, PdfInteger(i))
   ]
   let tree = doc.build_number_tree(entries)
@@ -301,7 +301,7 @@ test "PdfDocument contents_of_name_tree returns raw name and number tree pairs" 
       ),
     ]),
   )
-  let tree : @pdflite.PdfObject = PdfDictionary([
+  let tree : @syntax.PdfObject = PdfDictionary([
     (
       tree_name_for_test("/Nums"),
       PdfArray([

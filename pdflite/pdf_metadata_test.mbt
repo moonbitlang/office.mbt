@@ -6,21 +6,21 @@ fn metadata_name_for_test(text : String) -> @pdflite.PdfName {
 ///|
 fn metadata_lookup_for_test(
   doc : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   doc.lookup_direct(metadata_name_for_test(key), object)
 }
 
 ///|
-fn metadata_catalog_for_test(doc : @pdflite.PdfDocument) -> @pdflite.PdfObject {
+fn metadata_catalog_for_test(doc : @pdflite.PdfDocument) -> @syntax.PdfObject {
   try! doc.catalog()
 }
 
 ///|
 fn metadata_replace_catalog_for_test(
   doc : @pdflite.PdfDocument,
-  catalog : @pdflite.PdfObject,
+  catalog : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let updated = doc.copy()
   let catalog_number = updated.add_object(catalog)
@@ -42,7 +42,7 @@ fn metadata_rect_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }
 
@@ -85,7 +85,7 @@ test "pdf_metadata_encode_output preserves raw utf8 and stripped forms" {
 test "PdfDocument copy_id_from copies trailer ID and bumps version" {
   let key_id = metadata_name_for_test("/ID")
   let source = try! @pdflite.pdf_minimum_valid_pdf()
-  let id : @pdflite.PdfObject = PdfArray([
+  let id : @syntax.PdfObject = PdfArray([
     PdfString(@ascii.encode("first-id")),
     PdfString(@ascii.encode("second-id")),
   ])
@@ -222,7 +222,7 @@ test "PdfDocument set_open_action writes fit xyz and custom destinations" {
     is Some(PdfDictionary(fit_entries)) else {
     fail("expected OpenAction dictionary")
   }
-  let fit_action : @pdflite.PdfObject = PdfDictionary(fit_entries)
+  let fit_action : @syntax.PdfObject = PdfDictionary(fit_entries)
   @test.assert_eq(
     metadata_lookup_for_test(fit_doc, fit_action, "/D"),
     Some(
@@ -350,7 +350,7 @@ test "PdfDocument set_open_action writes fit xyz and custom destinations" {
 test "PdfDocument metadata report helpers rewrite open action and JSON" {
   let doc = try! @pdflite.pdf_blank_document_paper(@geometry.paper_a4, 2)
   let open_doc = try! doc.set_open_action(2, fit=false)
-  let expected_object : @pdflite.PdfObject = PdfArray([
+  let expected_object : @syntax.PdfObject = PdfArray([
     PdfInteger(2),
     PdfNameObject(metadata_name_for_test("/XYZ")),
     PdfNull,
@@ -388,14 +388,14 @@ test "PdfDocument metadata report helpers cover mark info XFA version language" 
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let catalog_with_mark = try! metadata_catalog_for_test(doc).add_dict_entry(
     metadata_name_for_test("/MarkInfo"),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (metadata_name_for_test("/Marked"), PdfBoolean(true)),
       (metadata_name_for_test("/Suspects"), PdfBoolean(false)),
     ]),
   )
   let catalog_with_xfa = try! catalog_with_mark.add_dict_entry(
     metadata_name_for_test("/AcroForm"),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (metadata_name_for_test("/XFA"), PdfString(@ascii.encode("xfa"))),
     ]),
   )
@@ -534,7 +534,7 @@ test "PdfDocument info_json reports document fields and page boxes" {
     .set_open_action(2, fit=false)
   let catalog_with_mark = try! metadata_catalog_for_test(with_preferences).add_dict_entry(
     metadata_name_for_test("/MarkInfo"),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (metadata_name_for_test("/Marked"), PdfBoolean(true)),
       (metadata_name_for_test("/UserProperties"), PdfBoolean(true)),
       (metadata_name_for_test("/Suspects"), PdfBoolean(false)),
@@ -542,7 +542,7 @@ test "PdfDocument info_json reports document fields and page boxes" {
   )
   let catalog_with_acroform = try! catalog_with_mark.add_dict_entry(
     metadata_name_for_test("/AcroForm"),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (metadata_name_for_test("/XFA"), PdfString(@ascii.encode("xfa"))),
     ]),
   )
@@ -680,8 +680,8 @@ test "PdfDocument metadata stream set get remove and remove_all" {
   let compressed = doc.copy()
   let encoded = @flate.pdf_flate_encode(data)
   let metadata_number = compressed.add_object(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (metadata_name_for_test("/Length"), PdfInteger(encoded.length())),
         (
           metadata_name_for_test("/Type"),
@@ -717,8 +717,8 @@ test "PdfDocument metadata stream set get remove and remove_all" {
   @test.assert_eq(try! compressed.metadata(), Some(data))
   let stray = updated.copy()
   let stray_number = stray.add_object(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           metadata_name_for_test("/Type"),
           PdfNameObject(metadata_name_for_test("/Metadata")),

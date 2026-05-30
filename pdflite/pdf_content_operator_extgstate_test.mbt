@@ -9,7 +9,7 @@ test "cpdfcontent operator state applies ExtGState graphics parameters" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
   )
-  let extgstate = @pdflite.pdf_dictionary([
+  let extgstate = @syntax.pdf_dictionary([
     (content_operator_ext_name_for_test("/LW"), PdfReal(2.5)),
     (content_operator_ext_name_for_test("/LC"), PdfInteger(1)),
     (content_operator_ext_name_for_test("/LJ"), PdfInteger(2)),
@@ -37,7 +37,7 @@ test "cpdfcontent operator state applies ExtGState graphics parameters" {
   )
   let ignored = doc.content_apply_extgstate_graphics_parameter_op(
     state,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         content_operator_ext_name_for_test("/LW"),
         PdfNameObject(content_operator_ext_name_for_test("/Ignored")),
@@ -61,7 +61,7 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
   let dash = content_operator_ext_name_for_test("/D")
   let state = try! doc.content_apply_extgstate_dash_op(
     initial,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (dash, PdfArray([PdfArray([PdfInteger(3), PdfReal(1.5)]), PdfInteger(2)])),
     ]),
   )
@@ -73,7 +73,7 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
     try! @pdflite.pdf_content_apply_extgstate_dash_op(
       doc,
       initial,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           dash,
           PdfArray([PdfArray([PdfInteger(3), PdfReal(1.5)]), PdfInteger(2)]),
@@ -85,7 +85,7 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
   @test.assert_eq(
     try! doc.content_apply_extgstate_dash_op(
       state,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           dash,
           PdfArray([
@@ -100,13 +100,13 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
   @test.assert_eq(
     try! doc.content_apply_extgstate_dash_op(
       state,
-      @pdflite.pdf_dictionary([(dash, PdfArray([PdfArray([])]))]),
+      @syntax.pdf_dictionary([(dash, PdfArray([PdfArray([])]))]),
     ),
     state,
   )
   let bad_phase : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_dash_op(
     initial,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         dash,
         PdfArray([
@@ -121,7 +121,7 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
   }
   let bad_dash : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_dash_op(
     initial,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         dash,
         PdfArray([
@@ -149,7 +149,7 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
   let font_key = content_operator_ext_name_for_test("/Font")
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_ext_name_for_test("/Type1"))),
       (
         base_font_key,
@@ -157,7 +157,7 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
       ),
     ]),
   )
-  let extgstate = @pdflite.pdf_dictionary([
+  let extgstate = @syntax.pdf_dictionary([
     (font_key, PdfArray([PdfIndirect(7), PdfReal(18.5)])),
   ])
   let state = try! doc.content_apply_extgstate_font_op(initial, extgstate)
@@ -173,7 +173,7 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
   )
   let malformed_size = try! doc.content_apply_extgstate_font_op(
     initial,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (font_key, PdfArray([PdfIndirect(7), PdfString(b"large")])),
     ]),
   )
@@ -185,7 +185,7 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
   @test.assert_eq(
     try! doc.content_apply_extgstate_font_op(
       initial,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           font_key,
           PdfArray([
@@ -197,10 +197,10 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
     ),
     initial,
   )
-  doc.add_object_given_number(9, @pdflite.pdf_dictionary([]))
+  doc.add_object_given_number(9, @syntax.pdf_dictionary([]))
   let bad_font : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_font_op(
     initial,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (font_key, PdfArray([PdfIndirect(9), PdfInteger(10)])),
     ]),
   )
@@ -219,7 +219,7 @@ test "cpdfcontent operator state applies source-shaped ExtGState resources" {
   let base_font_key = content_operator_ext_name_for_test("/BaseFont")
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_ext_name_for_test("/Type1"))),
       (
         base_font_key,
@@ -229,10 +229,10 @@ test "cpdfcontent operator state applies source-shaped ExtGState resources" {
   )
   let extgstate_key = content_operator_ext_name_for_test("/ExtGState")
   let gs_name = content_operator_ext_name_for_test("/GS1")
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       extgstate_key,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (content_operator_ext_name_for_test("/LW"), PdfReal(2.5)),
         (
           content_operator_ext_name_for_test("/Font"),
@@ -263,13 +263,13 @@ test "cpdfcontent operator state applies source-shaped ExtGState resources" {
     ),
     state,
   )
-  let spec_shaped_resources = @pdflite.pdf_dictionary([
+  let spec_shaped_resources = @syntax.pdf_dictionary([
     (
       extgstate_key,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           gs_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (content_operator_ext_name_for_test("/LW"), PdfReal(9.0)),
           ]),
         ),
@@ -285,7 +285,7 @@ test "cpdfcontent operator state applies source-shaped ExtGState resources" {
   @test.assert_eq(
     try! doc.content_apply_extgstate_resource_op(
       initial,
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
       gs_name,
     ),
     initial,
@@ -298,7 +298,7 @@ test "cpdfcontent operator state applies ExtGState alpha parameters" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
   )
-  let extgstate = @pdflite.pdf_dictionary([
+  let extgstate = @syntax.pdf_dictionary([
     (content_operator_ext_name_for_test("/CA"), PdfReal(0.75)),
     (content_operator_ext_name_for_test("/ca"), PdfInteger(0)),
     (content_operator_ext_name_for_test("/AIS"), PdfBoolean(true)),
@@ -313,7 +313,7 @@ test "cpdfcontent operator state applies ExtGState alpha parameters" {
   )
   let ignored = doc.content_apply_extgstate_alpha_op(
     state,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         content_operator_ext_name_for_test("/CA"),
         PdfNameObject(content_operator_ext_name_for_test("/Ignored")),
@@ -331,7 +331,7 @@ test "cpdfcontent operator state applies ExtGState rendering parameters" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
   )
-  let extgstate = @pdflite.pdf_dictionary([
+  let extgstate = @syntax.pdf_dictionary([
     (content_operator_ext_name_for_test("/SM"), PdfInteger(2)),
     (content_operator_ext_name_for_test("/SA"), PdfBoolean(true)),
   ])
@@ -344,7 +344,7 @@ test "cpdfcontent operator state applies ExtGState rendering parameters" {
   )
   let ignored = doc.content_apply_extgstate_rendering_op(
     state,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (content_operator_ext_name_for_test("/SM"), PdfBoolean(false)),
       (content_operator_ext_name_for_test("/SA"), PdfInteger(1)),
     ]),
@@ -362,14 +362,14 @@ test "cpdfcontent operator state applies ExtGState overprint parameters" {
   let op_non_stroke = content_operator_ext_name_for_test("/op")
   let stroke_only = doc.content_apply_extgstate_overprint_op(
     initial,
-    @pdflite.pdf_dictionary([(op_stroke, PdfBoolean(true))]),
+    @syntax.pdf_dictionary([(op_stroke, PdfBoolean(true))]),
   )
   @test.assert_eq(stroke_only.overprint_stroke, true)
   @test.assert_eq(stroke_only.overprint_non_stroke, true)
   @test.assert_eq(stroke_only.overprint_mode, 0)
   let split = doc.content_apply_extgstate_overprint_op(
     initial,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (op_stroke, PdfBoolean(true)),
       (op_non_stroke, PdfBoolean(false)),
     ]),
@@ -378,7 +378,7 @@ test "cpdfcontent operator state applies ExtGState overprint parameters" {
   @test.assert_eq(split.overprint_non_stroke, false)
   let mode = doc.content_apply_extgstate_overprint_op(
     initial,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (op_stroke, PdfBoolean(true)),
       (op_non_stroke, PdfInteger(2)),
     ]),
@@ -390,7 +390,7 @@ test "cpdfcontent operator state applies ExtGState overprint parameters" {
     @pdflite.pdf_content_apply_extgstate_overprint_op(
       doc,
       initial,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (op_stroke, PdfBoolean(true)),
         (op_non_stroke, PdfInteger(2)),
       ]),
@@ -399,7 +399,7 @@ test "cpdfcontent operator state applies ExtGState overprint parameters" {
   )
   let ignored = doc.content_apply_extgstate_overprint_op(
     mode,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (op_stroke, PdfInteger(1)),
       (op_non_stroke, PdfReal(2.0)),
     ]),
@@ -413,16 +413,16 @@ test "cpdfcontent operator state applies ExtGState transfer parameters" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
   )
-  let bg2 : @pdflite.PdfObject = PdfNameObject(
+  let bg2 : @syntax.PdfObject = PdfNameObject(
     content_operator_ext_name_for_test("/BG2Value"),
   )
-  let ucr2 : @pdflite.PdfObject = PdfNameObject(
+  let ucr2 : @syntax.PdfObject = PdfNameObject(
     content_operator_ext_name_for_test("/UCR2Value"),
   )
-  let tr2 : @pdflite.PdfObject = PdfNameObject(
+  let tr2 : @syntax.PdfObject = PdfNameObject(
     content_operator_ext_name_for_test("/TR2Value"),
   )
-  let extgstate = @pdflite.pdf_dictionary([
+  let extgstate = @syntax.pdf_dictionary([
     (
       content_operator_ext_name_for_test("/BG"),
       PdfNameObject(content_operator_ext_name_for_test("/BGValue")),
@@ -449,7 +449,7 @@ test "cpdfcontent operator state applies ExtGState transfer parameters" {
   )
   let ignored = doc.content_apply_extgstate_transfer_op(
     state,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (content_operator_ext_name_for_test("/BG"), PdfNull),
       (content_operator_ext_name_for_test("/UCR"), PdfNull),
       (content_operator_ext_name_for_test("/TR"), PdfNull),
@@ -464,10 +464,10 @@ test "cpdfcontent operator state applies ExtGState halftone parameters" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
   )
-  let hto : @pdflite.PdfObject = PdfNameObject(
+  let hto : @syntax.PdfObject = PdfNameObject(
     content_operator_ext_name_for_test("/HTOValue"),
   )
-  let extgstate = @pdflite.pdf_dictionary([
+  let extgstate = @syntax.pdf_dictionary([
     (
       content_operator_ext_name_for_test("/HT"),
       PdfNameObject(content_operator_ext_name_for_test("/HTValue")),
@@ -486,7 +486,7 @@ test "cpdfcontent operator state applies ExtGState halftone parameters" {
   )
   let ignored = doc.content_apply_extgstate_halftone_op(
     state,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (content_operator_ext_name_for_test("/HT"), PdfNull),
       (content_operator_ext_name_for_test("/SMask"), PdfNull),
       (content_operator_ext_name_for_test("/HTO"), PdfNull),
@@ -501,10 +501,10 @@ test "cpdfcontent operator state applies ExtGState compositing parameters" {
   let initial = @pdflite.pdf_content_initial_operator_state(
     0.0, 0.0, 100.0, 200.0,
   )
-  let blend : @pdflite.PdfObject = PdfNameObject(
+  let blend : @syntax.PdfObject = PdfNameObject(
     content_operator_ext_name_for_test("/Multiply"),
   )
-  let extgstate = @pdflite.pdf_dictionary([
+  let extgstate = @syntax.pdf_dictionary([
     (content_operator_ext_name_for_test("/BM"), blend),
     (
       content_operator_ext_name_for_test("/UseBlackPtComp"),
@@ -520,7 +520,7 @@ test "cpdfcontent operator state applies ExtGState compositing parameters" {
   )
   let ignored = doc.content_apply_extgstate_compositing_op(
     state,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (content_operator_ext_name_for_test("/BM"), PdfNull),
       (content_operator_ext_name_for_test("/UseBlackPtComp"), PdfString(b"ON")),
     ]),
@@ -537,7 +537,7 @@ test "cpdfcontent operator state applies ExtGState text knockout" {
   let tk = content_operator_ext_name_for_test("/TK")
   let disabled = doc.content_apply_extgstate_text_op(
     initial,
-    @pdflite.pdf_dictionary([(tk, PdfBoolean(false))]),
+    @syntax.pdf_dictionary([(tk, PdfBoolean(false))]),
   )
   @test.assert_eq(disabled.text_state.knockout, false)
   @test.assert_eq(
@@ -548,14 +548,14 @@ test "cpdfcontent operator state applies ExtGState text knockout" {
     @pdflite.pdf_content_apply_extgstate_text_op(
       doc,
       initial,
-      @pdflite.pdf_dictionary([(tk, PdfBoolean(false))]),
+      @syntax.pdf_dictionary([(tk, PdfBoolean(false))]),
     ),
     disabled,
   )
   @test.assert_eq(
     doc.content_apply_extgstate_text_op(
       disabled,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (tk, PdfNameObject(content_operator_ext_name_for_test("/Ignored"))),
       ]),
     ),
@@ -564,7 +564,7 @@ test "cpdfcontent operator state applies ExtGState text knockout" {
   @test.assert_eq(
     doc.content_apply_extgstate_text_op(
       disabled,
-      @pdflite.pdf_dictionary([(tk, PdfBoolean(true))]),
+      @syntax.pdf_dictionary([(tk, PdfBoolean(true))]),
     ).text_state.knockout,
     true,
   )

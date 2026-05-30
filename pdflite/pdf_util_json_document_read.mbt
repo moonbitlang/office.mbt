@@ -1,6 +1,6 @@
 ///|
 fn pdf_util_cpdfjson_integer_field(
-  object : PdfObject,
+  object : @syntax.PdfObject,
   key : PdfName,
 ) -> Int raise PdfError {
   match object.lookup_immediate(key) {
@@ -11,7 +11,7 @@ fn pdf_util_cpdfjson_integer_field(
 
 ///|
 fn pdf_util_cpdfjson_check_stream_data(
-  params : PdfObject,
+  params : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   match params.lookup_immediate(pdf_util_cpdfjson_stream_data_included_key()) {
     Some(PdfBoolean(false)) => raise BadText
@@ -20,7 +20,9 @@ fn pdf_util_cpdfjson_check_stream_data(
 }
 
 ///|
-fn pdf_util_cpdfjson_root_number(trailer : PdfObject) -> Int raise PdfError {
+fn pdf_util_cpdfjson_root_number(
+  trailer : @syntax.PdfObject,
+) -> Int raise PdfError {
   match trailer {
     PdfDictionary(_) =>
       match trailer.lookup_immediate(pdf_util_cpdfjson_root_key()) {
@@ -42,9 +44,9 @@ fn pdf_util_cpdfjson_item_number(json : Json) -> Int raise PdfError {
 ///|
 fn pdf_util_cpdfjson_read_item(
   json : Json,
-  params : Ref[PdfObject],
-  trailer : Ref[PdfObject],
-  objects : Array[(Int, PdfObject)],
+  params : Ref[@syntax.PdfObject],
+  trailer : Ref[@syntax.PdfObject],
+  objects : Array[(Int, @syntax.PdfObject)],
 ) -> Unit raise PdfError {
   match json {
     Array([number_json, object_json]) => {
@@ -73,9 +75,11 @@ pub fn pdf_document_of_json(json : Json) -> PdfDocument raise PdfError {
     Array(values) => values
     _ => raise BadText
   }
-  let params : Ref[PdfObject] = { val: PdfNull }
-  let trailer : Ref[PdfObject] = { val: PdfNull }
-  let objects : Array[(Int, PdfObject)] = Array::new(capacity=items.length())
+  let params : Ref[@syntax.PdfObject] = { val: PdfNull }
+  let trailer : Ref[@syntax.PdfObject] = { val: PdfNull }
+  let objects : Array[(Int, @syntax.PdfObject)] = Array::new(
+    capacity=items.length(),
+  )
   for item in items {
     pdf_util_cpdfjson_read_item(item, params, trailer, objects)
   }

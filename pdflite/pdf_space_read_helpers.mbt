@@ -78,7 +78,7 @@ fn pdf_space_empty_point() -> PdfTristimulusPoint {
 ///|
 fn PdfDocument::pdf_space_read_point(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
 ) -> PdfTristimulusPoint raise PdfError {
   match self.lookup_direct(key, dictionary) {
@@ -91,7 +91,7 @@ fn PdfDocument::pdf_space_read_point(
 ///|
 fn PdfDocument::pdf_space_read_number_array(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
   length : Int,
   default : ArrayView[Double],
@@ -111,7 +111,7 @@ fn PdfDocument::pdf_space_read_number_array(
 ///|
 fn PdfDocument::pdf_space_read_number(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
   default : Double,
 ) -> Double raise PdfError {

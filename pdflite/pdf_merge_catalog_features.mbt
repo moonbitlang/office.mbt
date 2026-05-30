@@ -1,8 +1,8 @@
 ///|
 fn pdf_merge_acroforms(
   documents : ArrayView[PdfDocument],
-) -> PdfObject? raise PdfError {
-  let forms : Array[Array[(PdfName, PdfObject)]] = []
+) -> @syntax.PdfObject? raise PdfError {
+  let forms : Array[Array[(PdfName, @syntax.PdfObject)]] = []
   for document in documents {
     match document.pdf_merge_catalog_entry(pdf_merge_acroform_key()) {
       Some(PdfDictionary(form_entries)) => forms.push(form_entries)
@@ -12,7 +12,7 @@ fn pdf_merge_acroforms(
   if forms.length() == 0 {
     None
   } else {
-    let fields : Array[PdfObject] = []
+    let fields : Array[@syntax.PdfObject] = []
     let builder = pdf_merge_dictionary_builder()
     for form_entries in forms {
       for entry in form_entries {
@@ -49,7 +49,9 @@ fn pdf_merge_optional_content(
 }
 
 ///|
-fn pdf_merge_info_dictionary(documents : ArrayView[PdfDocument]) -> PdfObject? {
+fn pdf_merge_info_dictionary(
+  documents : ArrayView[PdfDocument],
+) -> @syntax.PdfObject? {
   for document in documents {
     match
       document.lookup_direct(pdf_merge_info_key(), document.trailer_dict()) {
@@ -64,7 +66,7 @@ fn pdf_merge_info_dictionary(documents : ArrayView[PdfDocument]) -> PdfObject? {
 ///|
 fn PdfDocument::pdf_merge_open_action_destination(
   self : PdfDocument,
-  open_action : PdfObject,
+  open_action : @syntax.PdfObject,
 ) -> @destination.PdfDestination raise PdfError {
   match self.direct(open_action) {
     PdfArray(_) as destination =>
@@ -77,7 +79,7 @@ fn PdfDocument::pdf_merge_open_action_destination(
 ///|
 fn PdfDocument::pdf_merge_open_action_target(
   self : PdfDocument,
-  open_action : PdfObject,
+  open_action : @syntax.PdfObject,
 ) -> @destination.PdfDestination raise PdfError {
   match self.direct(open_action) {
     PdfArray(_) as destination =>
@@ -101,7 +103,7 @@ fn pdf_merge_destination_needs_named_retention(
 fn PdfDocument::pdf_merge_open_action(
   self : PdfDocument,
   retain_named_destinations : Bool,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   match self.pdf_merge_catalog_entry(pdf_merge_open_action_key()) {
     Some(open_action) => {
       let target = self.pdf_merge_open_action_target(open_action)
@@ -127,7 +129,7 @@ fn pdf_merge_open_action(
   all_destination_name_changes : ArrayView[(PdfBytes, PdfBytes)],
   catalog_destination_name_changes : ArrayView[Array[(PdfName, PdfName)]],
   all_catalog_destination_name_changes : ArrayView[(PdfName, PdfName)],
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   for i in 0..<documents.length() {
     let document = documents[i]
     let candidate = document.pdf_merge_open_action(retain_named_destinations) catch {

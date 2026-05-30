@@ -4,8 +4,8 @@ fn dedupe_name_for_test(text : String) -> PdfName {
 }
 
 ///|
-fn dedupe_stream_for_test() -> PdfObject {
-  pdf_stream(
+fn dedupe_stream_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_stream(
     PdfDictionary([(dedupe_name_for_test("/Length"), PdfInteger(2))]),
     StreamGot(@ascii.encode("Hi")),
   )
@@ -16,11 +16,11 @@ test "private duplicate stream changes group by length and keep canonical order"
   let length = dedupe_name_for_test("/Length")
   let doc = pdf_document_empty()
   let two_byte = dedupe_stream_for_test()
-  let one_byte = pdf_stream(
+  let one_byte = @syntax.pdf_stream(
     PdfDictionary([(length, PdfInteger(1))]),
     StreamGot(@ascii.encode("H")),
   )
-  let different_dictionary = pdf_stream(
+  let different_dictionary = @syntax.pdf_stream(
     PdfDictionary([
       (length, PdfInteger(2)),
       (

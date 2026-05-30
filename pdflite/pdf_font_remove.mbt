@@ -1,8 +1,8 @@
 ///|
 fn PdfDocument::pdf_font_remove_descriptor_files(
   self : PdfDocument,
-  object : PdfObject,
-) -> PdfObject raise PdfError {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfDictionary(_) =>
       match self.lookup_direct(pdf_text_type_key_name, object) {

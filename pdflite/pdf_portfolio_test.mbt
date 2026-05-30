@@ -4,7 +4,7 @@ fn portfolio_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn portfolio_string_for_test(text : String) -> @pdflite.PdfObject {
+fn portfolio_string_for_test(text : String) -> @syntax.PdfObject {
   PdfString(@utf8.encode(text))
 }
 
@@ -17,8 +17,8 @@ fn portfolio_blank_doc_for_test() -> @pdflite.PdfDocument {
 fn portfolio_lookup_for_test(
   document : @pdflite.PdfDocument,
   key : String,
-  object : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match document.lookup_direct(portfolio_name_for_test(key), object) {
     Some(value) => value
     None => fail("missing key " + key)
@@ -28,14 +28,14 @@ fn portfolio_lookup_for_test(
 ///|
 fn portfolio_catalog_for_test(
   document : @pdflite.PdfDocument,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! document.catalog()
 }
 
 ///|
 fn portfolio_embedded_tree_for_test(
   document : @pdflite.PdfDocument,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let catalog = portfolio_catalog_for_test(document)
   let names = portfolio_lookup_for_test(document, "/Names", catalog)
   portfolio_lookup_for_test(document, "/EmbeddedFiles", names)
@@ -44,8 +44,8 @@ fn portfolio_embedded_tree_for_test(
 ///|
 fn portfolio_stream_for_test(
   document : @pdflite.PdfDocument,
-  file_spec : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  file_spec : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   let ef = portfolio_lookup_for_test(document, "/EF", file_spec)
   let stream = portfolio_lookup_for_test(document, "/F", ef)
   @test.assert_eq(portfolio_lookup_for_test(document, "/UF", ef), stream)
@@ -55,7 +55,7 @@ fn portfolio_stream_for_test(
 ///|
 fn portfolio_assert_file_spec_for_test(
   document : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   basename : String,
   description : String,
   relationship : String,

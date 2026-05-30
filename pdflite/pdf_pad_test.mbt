@@ -4,7 +4,7 @@ fn pad_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn pad_rect_for_test(width : Double) -> @pdflite.PdfObject {
+fn pad_rect_for_test(width : Double) -> @syntax.PdfObject {
   PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(width), PdfReal(10.0)])
 }
 

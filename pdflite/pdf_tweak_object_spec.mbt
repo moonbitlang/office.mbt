@@ -7,7 +7,7 @@
 pub fn PdfDocument::find_object_by_spec(
   self : PdfDocument,
   spec : String,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let bytes = @ascii.encode(spec)
   if bytes.length() == 0 {
     self.trailer_dict()
@@ -36,7 +36,7 @@ pub fn PdfDocument::find_object_by_spec(
 pub fn pdf_find_object(
   document : PdfDocument,
   spec : String,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   document.find_object_by_spec(spec)
 }
 
@@ -45,7 +45,7 @@ pub fn pdf_find_object(
 pub fn pdf_find_obj(
   document : PdfDocument,
   spec : String,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   document.find_object_by_spec(spec)
 }
 
@@ -54,7 +54,7 @@ pub fn pdf_find_obj(
 pub fn PdfDocument::replace_object_by_spec(
   self : PdfDocument,
   spec : String,
-  value : PdfObject,
+  value : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   let bytes = @ascii.encode(spec)
   if bytes.length() == 0 {
@@ -89,7 +89,7 @@ pub fn PdfDocument::replace_object_by_spec(
 pub fn pdf_replace_object_by_spec(
   document : PdfDocument,
   spec : String,
-  value : PdfObject,
+  value : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   document.replace_object_by_spec(spec, value)
 }
@@ -99,7 +99,7 @@ pub fn pdf_replace_object_by_spec(
 pub fn pdf_replace_obj(
   document : PdfDocument,
   spec : String,
-  value : PdfObject,
+  value : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   document.replace_object_by_spec(spec, value)
 }

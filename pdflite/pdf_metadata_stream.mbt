@@ -1,6 +1,6 @@
 ///|
-fn pdf_metadata_stream(data : BytesView) -> PdfObject {
-  pdf_stream(
+fn pdf_metadata_stream(data : BytesView) -> @syntax.PdfObject {
+  @syntax.pdf_stream(
     PdfDictionary([
       (pdf_metadata_length(), PdfInteger(data.length())),
       (pdf_metadata_type(), PdfNameObject(pdf_metadata_metadata())),

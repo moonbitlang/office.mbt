@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_metadata_box_text(
   self : PdfDocument,
-  box : PdfObject,
+  box : @syntax.PdfObject,
   unit : @geometry.PdfUnit,
 ) -> String {
   match self.direct(box) {
@@ -25,7 +25,7 @@ fn PdfDocument::pdf_metadata_box_text(
 ///|
 fn PdfDocument::pdf_metadata_info_box_text(
   self : PdfDocument,
-  boxes : ArrayView[PdfObject?],
+  boxes : ArrayView[@syntax.PdfObject?],
   unit : @geometry.PdfUnit,
 ) -> String {
   if boxes.length() == 0 {
@@ -50,11 +50,11 @@ fn PdfDocument::pdf_metadata_info_json_boxes(
   unit : @geometry.PdfUnit,
   output : Map[String, Json],
 ) -> Unit {
-  let mediaboxes : Array[PdfObject?] = []
-  let cropboxes : Array[PdfObject?] = []
-  let bleedboxes : Array[PdfObject?] = []
-  let trimboxes : Array[PdfObject?] = []
-  let artboxes : Array[PdfObject?] = []
+  let mediaboxes : Array[@syntax.PdfObject?] = []
+  let cropboxes : Array[@syntax.PdfObject?] = []
+  let bleedboxes : Array[@syntax.PdfObject?] = []
+  let trimboxes : Array[@syntax.PdfObject?] = []
+  let artboxes : Array[@syntax.PdfObject?] = []
   for page in pages {
     mediaboxes.push(Some(page.mediabox))
     cropboxes.push(self.lookup_direct(pdf_metadata_cropbox(), page.rest))

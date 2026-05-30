@@ -16,23 +16,23 @@ fn squeeze_data_for_test() -> @pdflite.PdfBytes {
 
 ///|
 fn squeeze_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   data : @pdflite.PdfBytes,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   let length = squeeze_name_for_test("/Length")
-  let dictionary_entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+  let dictionary_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (length, PdfInteger(data.length())),
   ]
   for entry in entries {
     dictionary_entries.push(entry)
   }
-  @pdflite.pdf_stream(PdfDictionary(dictionary_entries), StreamGot(data))
+  @syntax.pdf_stream(PdfDictionary(dictionary_entries), StreamGot(data))
 }
 
 ///|
 fn squeeze_direct_stream_for_test(
   data : @pdflite.PdfBytes,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   squeeze_stream_for_test([], data)
 }
 
@@ -40,7 +40,7 @@ fn squeeze_direct_stream_for_test(
 fn squeeze_filter_for_test(
   document : @pdflite.PdfDocument,
   object_number : Int,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   let filter = squeeze_name_for_test("/Filter")
   match document.lookup_object_or_null(object_number) {
     PdfStreamObject(stream) => stream.dictionary.lookup_immediate(filter)
@@ -49,7 +49,7 @@ fn squeeze_filter_for_test(
 }
 
 ///|
-fn squeeze_filter_is_flate_for_test(value : @pdflite.PdfObject?) -> Bool {
+fn squeeze_filter_is_flate_for_test(value : @syntax.PdfObject?) -> Bool {
   let flate = squeeze_name_for_test("/FlateDecode")
   match value {
     Some(PdfNameObject(name)) => name == flate
@@ -66,7 +66,7 @@ fn squeeze_stream_bytes_for_test(
   match document.lookup_object_or_null(object_number) {
     PdfStreamObject(stream) =>
       Some(
-        try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+        try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
       )
     _ => None
   }
@@ -83,7 +83,7 @@ fn squeeze_document_with_pages_for_test(
 }
 
 ///|
-fn squeeze_content_stream_for_test(text : String) -> @pdflite.PdfObject {
+fn squeeze_content_stream_for_test(text : String) -> @syntax.PdfObject {
   squeeze_stream_for_test([], @ascii.encode(text))
 }
 
@@ -91,7 +91,7 @@ fn squeeze_content_stream_for_test(text : String) -> @pdflite.PdfObject {
 fn squeeze_page_resource_for_test(
   name : String,
   object_number : Int,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfDictionary([
     (
       squeeze_name_for_test("/XObject"),
@@ -102,7 +102,7 @@ fn squeeze_page_resource_for_test(
 
 ///|
 fn squeeze_manual_page_document_for_test(
-  page : @pdflite.PdfObject,
+  page : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let document = @pdflite.pdf_document_empty()
   let key_type = squeeze_name_for_test("/Type")
@@ -381,11 +381,11 @@ test "PdfDocument recompress skips malformed old-filter streams" {
 ///|
 test "PdfDocument squeeze removes duplicate objects and rewrites references" {
   let key_info = squeeze_name_for_test("/Info")
-  let first : @pdflite.PdfObject = PdfDictionary([
+  let first : @syntax.PdfObject = PdfDictionary([
     (squeeze_name_for_test("/Name"), PdfString(@ascii.encode("same"))),
   ])
   let second = first
-  let holder : @pdflite.PdfObject = PdfArray([PdfIndirect(2), PdfIndirect(1)])
+  let holder : @syntax.PdfObject = PdfArray([PdfIndirect(2), PdfIndirect(1)])
   let document = @pdflite.pdf_document_empty()
   document.add_object_given_number(1, first)
   document.add_object_given_number(2, second)
@@ -409,7 +409,7 @@ test "PdfDocument squeeze removes duplicate objects and rewrites references" {
 
 ///|
 test "squeeze reaches duplicate-object fixed point" {
-  let same : @pdflite.PdfObject = PdfString(@ascii.encode("fixed point"))
+  let same : @syntax.PdfObject = PdfString(@ascii.encode("fixed point"))
   let document = @pdflite.pdf_document_empty()
   document.add_object_given_number(1, PdfArray([PdfIndirect(4)]))
   document.add_object_given_number(2, PdfArray([PdfIndirect(5)]))
@@ -431,13 +431,13 @@ test "squeeze reaches duplicate-object fixed point" {
 
 ///|
 test "squeeze preserves duplicate page and annotation objects" {
-  let page : @pdflite.PdfObject = PdfDictionary([
+  let page : @syntax.PdfObject = PdfDictionary([
     (
       squeeze_name_for_test("/Type"),
       PdfNameObject(squeeze_name_for_test("/Page")),
     ),
   ])
-  let annotation : @pdflite.PdfObject = PdfDictionary([
+  let annotation : @syntax.PdfObject = PdfDictionary([
     (
       squeeze_name_for_test("/Subtype"),
       PdfNameObject(squeeze_name_for_test("/RichMedia")),
@@ -506,7 +506,7 @@ test "squeeze normalizes direct page content without resources" {
   let key_parent = squeeze_name_for_test("/Parent")
   let key_mediabox = squeeze_name_for_test("/MediaBox")
   let key_contents = squeeze_name_for_test("/Contents")
-  let page : @pdflite.PdfObject = PdfDictionary([
+  let page : @syntax.PdfObject = PdfDictionary([
     (key_type, PdfNameObject(squeeze_name_for_test("/Page"))),
     (key_parent, PdfIndirect(1)),
     (
@@ -534,7 +534,7 @@ test "squeeze normalizes page objects outside the page tree" {
   let key_contents = squeeze_name_for_test("/Contents")
   let page = @page.pdf_page_blank(@geometry.paper_a4)
   let document = squeeze_document_with_pages_for_test([page])
-  let orphan_page : @pdflite.PdfObject = PdfDictionary([
+  let orphan_page : @syntax.PdfObject = PdfDictionary([
     (key_type, PdfNameObject(squeeze_name_for_test("/Page"))),
     (key_contents, squeeze_content_stream_for_test("q Q")),
   ])
@@ -578,7 +578,7 @@ test "squeeze leaves shared page content streams in place" {
 
 ///|
 test "squeeze normalizes form xobject streams" {
-  let form_dictionary : @pdflite.PdfObject = PdfDictionary([
+  let form_dictionary : @syntax.PdfObject = PdfDictionary([
     (
       squeeze_name_for_test("/Subtype"),
       PdfNameObject(squeeze_name_for_test("/Form")),
@@ -586,7 +586,7 @@ test "squeeze normalizes form xobject streams" {
     (squeeze_name_for_test("/Resources"), PdfDictionary([])),
     (squeeze_name_for_test("/Length"), PdfInteger(3)),
   ])
-  let form_stream = @pdflite.pdf_stream(
+  let form_stream = @syntax.pdf_stream(
     form_dictionary,
     StreamGot(@ascii.encode("q Q")),
   )
@@ -639,7 +639,7 @@ test "squeeze normalizes form xobject streams" {
 ///|
 test "squeeze skips non-page page-tree leaves" {
   let key_parent = squeeze_name_for_test("/Parent")
-  let leaf : @pdflite.PdfObject = PdfDictionary([
+  let leaf : @syntax.PdfObject = PdfDictionary([
     (key_parent, PdfIndirect(1)),
     (squeeze_name_for_test("/Marker"), PdfString(@ascii.encode("not page"))),
   ])

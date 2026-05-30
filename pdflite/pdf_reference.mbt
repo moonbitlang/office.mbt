@@ -14,8 +14,8 @@ fn pdf_reference_key_is_excluded(
 
 ///|
 fn pdf_reference_dictionary_contains(
-  entries : ArrayView[(PdfName, PdfObject)],
-  marker : (PdfName, PdfObject),
+  entries : ArrayView[(PdfName, @syntax.PdfObject)],
+  marker : (PdfName, @syntax.PdfObject),
 ) -> Bool {
   for entry in entries {
     if entry == marker {
@@ -28,8 +28,8 @@ fn pdf_reference_dictionary_contains(
 
 ///|
 fn pdf_reference_should_follow_dictionary(
-  entries : ArrayView[(PdfName, PdfObject)],
-  no_follow_contains : ArrayView[(PdfName, PdfObject)],
+  entries : ArrayView[(PdfName, @syntax.PdfObject)],
+  no_follow_contains : ArrayView[(PdfName, @syntax.PdfObject)],
 ) -> Bool {
   for marker in no_follow_contains {
     if pdf_reference_dictionary_contains(entries, marker) {
@@ -44,9 +44,9 @@ fn pdf_reference_should_follow_dictionary(
 fn PdfDocument::collect_referenced_object_numbers(
   self : PdfDocument,
   found : @hashmap.HashMap[Int, Bool],
-  object : PdfObject,
+  object : @syntax.PdfObject,
   no_follow_entries : ArrayView[PdfName],
-  no_follow_contains : ArrayView[(PdfName, PdfObject)],
+  no_follow_contains : ArrayView[(PdfName, @syntax.PdfObject)],
 ) -> Unit {
   match object {
     PdfIndirect(number) =>
@@ -106,9 +106,9 @@ fn PdfDocument::collect_referenced_object_numbers(
 /// `no_follow_contains` marker entry are not traversed.
 pub fn PdfDocument::referenced_object_numbers(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   no_follow_entries? : ArrayView[PdfName] = [],
-  no_follow_contains? : ArrayView[(PdfName, PdfObject)] = [],
+  no_follow_contains? : ArrayView[(PdfName, @syntax.PdfObject)] = [],
 ) -> Array[Int] {
   let found : @hashmap.HashMap[Int, Bool] = HashMap([])
   self.collect_referenced_object_numbers(

@@ -3,7 +3,7 @@
 pub fn PdfDocument::content_apply_extgstate_graphics_parameter_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState {
   let mut output = state
   match
@@ -44,7 +44,7 @@ pub fn PdfDocument::content_apply_extgstate_graphics_parameter_op(
 pub fn pdf_content_apply_extgstate_graphics_parameter_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState {
   document.content_apply_extgstate_graphics_parameter_op(state, extgstate)
 }
@@ -52,7 +52,7 @@ pub fn pdf_content_apply_extgstate_graphics_parameter_op(
 ///|
 fn PdfDocument::content_extgstate_dash_array(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[Double] raise PdfError {
   match self.direct(object) {
     PdfArray(values) => {
@@ -71,7 +71,7 @@ fn PdfDocument::content_extgstate_dash_array(
 pub fn PdfDocument::content_apply_extgstate_dash_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState raise PdfError {
   match self.lookup_direct(pdf_content_extgstate_d_name, extgstate) {
     Some(PdfArray([array, phase])) => {
@@ -87,7 +87,7 @@ pub fn PdfDocument::content_apply_extgstate_dash_op(
 pub fn pdf_content_apply_extgstate_dash_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState raise PdfError {
   document.content_apply_extgstate_dash_op(state, extgstate)
 }

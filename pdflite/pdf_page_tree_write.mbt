@@ -1,9 +1,9 @@
 ///|
 fn PdfDocument::pdf_page_content_references(
   self : PdfDocument,
-  content : ArrayView[PdfObject],
-) -> Array[PdfObject] {
-  let refs : Array[PdfObject] = Array::new(capacity=content.length())
+  content : ArrayView[@syntax.PdfObject],
+) -> Array[@syntax.PdfObject] {
+  let refs : Array[@syntax.PdfObject] = Array::new(capacity=content.length())
   for object in content {
     match object {
       PdfIndirect(_) => refs.push(object)
@@ -18,9 +18,9 @@ fn PdfDocument::pdf_page_object(
   self : PdfDocument,
   page : @page.PdfPage,
   parent : Int,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let rest_entries = pdf_page_rest_entries(page.rest)
-  let entries : Array[(PdfName, PdfObject)] = Array::new(
+  let entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
     capacity=6 + rest_entries.length(),
   )
   entries.push((pdf_page_type_key(), PdfNameObject(pdf_page_type_page())))
@@ -59,12 +59,12 @@ fn pdf_page_pages_node_object(
   kids : ArrayView[Int],
   count : Int,
   parent : Int,
-) -> PdfObject {
-  let kid_refs : Array[PdfObject] = Array::new(capacity=kids.length())
+) -> @syntax.PdfObject {
+  let kid_refs : Array[@syntax.PdfObject] = Array::new(capacity=kids.length())
   for number in kids {
     kid_refs.push(PdfIndirect(number))
   }
-  let entries : Array[(PdfName, PdfObject)] = Array::new(
+  let entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
     capacity=if parent == 0 { 3 } else { 4 },
   )
   entries.push((pdf_page_type_key(), PdfNameObject(pdf_page_type_pages())))

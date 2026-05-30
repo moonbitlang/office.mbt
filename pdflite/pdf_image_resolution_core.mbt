@@ -1,7 +1,11 @@
 ///|
 priv enum PdfImageResolutionObject {
   PdfImageResolutionImage(Int, Int)
-  PdfImageResolutionForm(@geometry.TransformMatrix, PdfObject, PdfObject)
+  PdfImageResolutionForm(
+    @geometry.TransformMatrix,
+    @syntax.PdfObject,
+    @syntax.PdfObject
+  )
 }
 
 ///|

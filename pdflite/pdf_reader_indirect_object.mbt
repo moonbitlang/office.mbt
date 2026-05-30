@@ -1,11 +1,11 @@
 ///|
 fn pdf_cursor_lex_first_indirect_object_tokens(
   cursor : ByteCursor,
-) -> Array[PdfLexeme] raise PdfError {
-  let tokens : Array[PdfLexeme] = []
+) -> Array[@syntax.PdfLexeme] raise PdfError {
+  let tokens : Array[@syntax.PdfLexeme] = []
   let mut done = false
   while !done {
-    match pdf_cursor_lex_token(cursor) {
+    match @syntax.pdf_cursor_lex_token(cursor) {
       StopLexing | LexNone => done = true
       LexEndObj as token => {
         tokens.push(token)
@@ -20,7 +20,7 @@ fn pdf_cursor_lex_first_indirect_object_tokens(
 ///|
 fn pdf_cursor_read_plain_indirect_object_at_current(
   cursor : ByteCursor,
-) -> PdfParsedIndirectObject raise PdfError {
+) -> @syntax.PdfParsedIndirectObject raise PdfError {
   let (objects, prefix) = @syntax.pdf_parse_indirect_object_segments(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),
   )
@@ -51,7 +51,7 @@ fn pdf_cursor_stopped_at_stream_candidate(cursor : ByteCursor) -> Bool {
 ///|
 fn pdf_cursor_read_first_indirect_object_segment_at_current(
   cursor : ByteCursor,
-) -> (PdfParsedIndirectObject, Bool) raise PdfError {
+) -> (@syntax.PdfParsedIndirectObject, Bool) raise PdfError {
   let (object, _, complete) = @syntax.pdf_parse_indirect_object_segment_at(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),
     0,
@@ -62,7 +62,7 @@ fn pdf_cursor_read_first_indirect_object_segment_at_current(
 ///|
 fn pdf_cursor_resolve_classic_stream_length(
   cursor : ByteCursor,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_index : @reader.PdfClassicXRefIndex?,
 ) -> Int raise PdfError {
@@ -77,7 +77,10 @@ fn pdf_cursor_resolve_classic_stream_length(
         Some(xref) => {
           let saved_position = cursor.absolute_position()
           cursor.seek_absolute(xref.offset)
-          let parsed_result : Result[(PdfParsedIndirectObject, Bool), Error] = try? pdf_cursor_read_first_indirect_object_segment_at_current(
+          let parsed_result : Result[
+            (@syntax.PdfParsedIndirectObject, Bool),
+            Error,
+          ] = try? pdf_cursor_read_first_indirect_object_segment_at_current(
             cursor,
           )
           cursor.seek_absolute(saved_position)
@@ -108,7 +111,7 @@ fn pdf_cursor_read_first_indirect_object_at_current(
   cursor : ByteCursor,
   xrefs : ArrayView[@reader.PdfClassicXRefEntry],
   xref_index? : @reader.PdfClassicXRefIndex? = None,
-) -> PdfParsedIndirectObject raise PdfError {
+) -> @syntax.PdfParsedIndirectObject raise PdfError {
   let (object, _, complete) = @syntax.pdf_parse_indirect_object_segment_at(
     pdf_cursor_lex_first_indirect_object_tokens(cursor),
     0,

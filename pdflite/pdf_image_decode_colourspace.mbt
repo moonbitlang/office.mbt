@@ -3,7 +3,7 @@ fn PdfDocument::pdf_image_separation_cmyk_8bpp_as_rgb24(
   self : PdfDocument,
   width : Int,
   height : Int,
-  tint : PdfObject,
+  tint : @syntax.PdfObject,
   data : BytesView,
 ) -> PdfBytes raise PdfError {
   let pixels = width * height
@@ -138,10 +138,10 @@ fn PdfDocument::pdf_image_raw_colour_space_as_rgb24_owned(
 ///|
 fn PdfDocument::pdf_image_raw_8bpp_as_rgb24_owned(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   width : Int,
   height : Int,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
   self.pdf_image_raw_colour_space_as_rgb24_owned(

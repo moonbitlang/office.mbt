@@ -372,16 +372,16 @@ test "CCITT decode parameter parsing covers defaults arrays direct entries and m
     ccitt_wb_bytes([]),
   )
 
-  let defaults = pdf_ccitt_params(pdf_dictionary([]))
+  let defaults = pdf_ccitt_params(@syntax.pdf_dictionary([]))
   @test.assert_eq(defaults.columns, 1728)
   @test.assert_eq(defaults.rows, 0)
 
   let array_params = pdf_ccitt_params(
-    pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         ccitt_wb_name("/DecodeParms"),
         PdfArray([
-          pdf_dictionary([
+          @syntax.pdf_dictionary([
             (ccitt_wb_name("/Columns"), PdfInteger(4)),
             (ccitt_wb_name("/Rows"), PdfInteger(1)),
             (ccitt_wb_name("/EndOfLine"), PdfBoolean(true)),
@@ -396,25 +396,25 @@ test "CCITT decode parameter parsing covers defaults arrays direct entries and m
 
   assert_ccitt_decodeparms_expected(
     try? pdf_ccitt_params(
-      pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfInteger(1))]),
+      @syntax.pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfInteger(1))]),
     ),
   )
   assert_ccitt_decodeparms_expected(
     try? pdf_ccitt_params(
-      pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           ccitt_wb_name("/DecodeParms"),
-          pdf_dictionary([(ccitt_wb_name("/K"), PdfBoolean(true))]),
+          @syntax.pdf_dictionary([(ccitt_wb_name("/K"), PdfBoolean(true))]),
         ),
       ]),
     ),
   )
   assert_ccitt_decodeparms_expected(
     try? pdf_ccitt_params(
-      pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           ccitt_wb_name("/DecodeParms"),
-          pdf_dictionary([(ccitt_wb_name("/EndOfLine"), PdfInteger(1))]),
+          @syntax.pdf_dictionary([(ccitt_wb_name("/EndOfLine"), PdfInteger(1))]),
         ),
       ]),
     ),
@@ -425,50 +425,52 @@ test "CCITT decode parameter parsing covers defaults arrays direct entries and m
   doc.add_object_given_number(2, PdfInteger(1))
   doc.add_object_given_number(
     3,
-    pdf_dictionary([
+    @syntax.pdf_dictionary([
       (ccitt_wb_name("/Columns"), PdfInteger(5)),
       (ccitt_wb_name("/BlackIs1"), PdfBoolean(true)),
     ]),
   )
-  let no_direct = doc.pdf_ccitt_params_direct(pdf_dictionary([]))
+  let no_direct = doc.pdf_ccitt_params_direct(@syntax.pdf_dictionary([]))
   @test.assert_eq(no_direct.columns, 1728)
   let null_direct = doc.pdf_ccitt_params_direct(
-    pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfArray([PdfIndirect(1)]))]),
+    @syntax.pdf_dictionary([
+      (ccitt_wb_name("/DecodeParms"), PdfArray([PdfIndirect(1)])),
+    ]),
   )
   @test.assert_eq(null_direct.rows, 0)
   let indirect_direct = doc.pdf_ccitt_params_direct(
-    pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfIndirect(3))]),
+    @syntax.pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfIndirect(3))]),
   )
   @test.assert_eq(indirect_direct.columns, 5)
   @test.assert_eq(indirect_direct.black_is_1, true)
   assert_ccitt_decodeparms_expected(
     try? doc.pdf_ccitt_params_direct(
-      pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfInteger(1))]),
+      @syntax.pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfInteger(1))]),
     ),
   )
   assert_ccitt_decodeparms_expected(
     try? doc.pdf_ccitt_params_direct(
-      pdf_dictionary([
+      @syntax.pdf_dictionary([
         (ccitt_wb_name("/DecodeParms"), PdfArray([PdfIndirect(2)])),
       ]),
     ),
   )
   assert_ccitt_decodeparms_expected(
     try? doc.pdf_ccitt_params_direct(
-      pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           ccitt_wb_name("/DecodeParms"),
-          pdf_dictionary([(ccitt_wb_name("/Columns"), PdfBoolean(true))]),
+          @syntax.pdf_dictionary([(ccitt_wb_name("/Columns"), PdfBoolean(true))]),
         ),
       ]),
     ),
   )
   assert_ccitt_decodeparms_expected(
     try? doc.pdf_ccitt_params_direct(
-      pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           ccitt_wb_name("/DecodeParms"),
-          pdf_dictionary([(ccitt_wb_name("/BlackIs1"), PdfInteger(1))]),
+          @syntax.pdf_dictionary([(ccitt_wb_name("/BlackIs1"), PdfInteger(1))]),
         ),
       ]),
     ),

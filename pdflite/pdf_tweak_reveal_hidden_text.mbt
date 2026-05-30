@@ -28,9 +28,9 @@ fn PdfDocument::pdf_tweak_reveal_hidden_text_page(
 ///|
 fn pdf_tweak_reveal_hidden_text_xobject(
   document : PdfDocument,
-  resources : PdfObject,
-  streams : ArrayView[PdfObject],
-) -> Array[PdfObject] raise PdfError {
+  resources : @syntax.PdfObject,
+  streams : ArrayView[@syntax.PdfObject],
+) -> Array[@syntax.PdfObject] raise PdfError {
   let ops = document.pdf_page_parse_content_ops(resources, streams)
   [pdf_content_stream_of_ops(pdf_reveal_hidden_text_ops(ops))]
 }

@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_text_tounicode_of_font(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> Array[(Int, PdfBytes)]? {
   match self.lookup_direct(pdf_text_tounicode_key_name, font) {
     Some(PdfStreamObject(_) as stream) =>

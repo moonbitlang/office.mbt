@@ -2,7 +2,7 @@
 priv struct PdfClassicReadPlan {
   xrefs : Array[@reader.PdfClassicXRefEntry]
   xref_stream_refs : Array[(Int, Int)]
-  trailer : PdfObject
+  trailer : @syntax.PdfObject
 }
 
 ///|

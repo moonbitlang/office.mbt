@@ -5,7 +5,9 @@ fn PdfDocument::pdf_attach_remove_from_page(
 ) -> @page.PdfPage raise PdfError {
   let kept = match self.lookup_direct(pdf_attach_annots_key(), page.rest) {
     Some(PdfArray(annotations)) => {
-      let kept : Array[PdfObject] = Array::new(capacity=annotations.length())
+      let kept : Array[@syntax.PdfObject] = Array::new(
+        capacity=annotations.length(),
+      )
       for annotation in annotations {
         if !self.pdf_attach_is_file_attachment_annotation(annotation) {
           kept.push(annotation)

@@ -4,7 +4,7 @@ fn PdfDocument::pdf_page_box_object(
   page : @page.PdfPage,
   box_name : PdfName,
   mediabox_if_missing : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   if box_name == pdf_page_mediabox_key() {
     page.mediabox
   } else {
@@ -65,7 +65,7 @@ fn PdfDocument::pdf_page_copy_box_source(
   page : @page.PdfPage,
   from_box : PdfName,
   mediabox_if_missing : Bool,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   if from_box == pdf_page_mediabox_key() {
     Some(page.mediabox)
   } else {
@@ -147,14 +147,14 @@ fn PdfDocument::pdf_page_set_box_page(
 ///|
 fn PdfDocument::pdf_page_change_box_object(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   transform : (Double, Double, Double, Double) -> (
     Double,
     Double,
     Double,
     Double,
   ),
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let bounds = self.parse_rectangle(object)
   pdf_page_box_bounds_object(
     transform(bounds.min_x, bounds.min_y, bounds.max_x, bounds.max_y),

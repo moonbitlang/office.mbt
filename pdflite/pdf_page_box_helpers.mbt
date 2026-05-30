@@ -109,7 +109,7 @@ fn pdf_page_box_validate_offsets(
 ///|
 fn pdf_page_box_xywh_object(
   box : (Double, Double, Double, Double),
-) -> PdfObject {
+) -> @syntax.PdfObject {
   let (x, y, width, height) = box
   PdfArray([PdfReal(x), PdfReal(y), PdfReal(x + width), PdfReal(y + height)])
 }
@@ -117,7 +117,7 @@ fn pdf_page_box_xywh_object(
 ///|
 fn pdf_page_box_bounds_object(
   bounds : (Double, Double, Double, Double),
-) -> PdfObject {
+) -> @syntax.PdfObject {
   let (min_x, min_y, max_x, max_y) = bounds
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }

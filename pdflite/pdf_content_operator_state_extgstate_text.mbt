@@ -3,7 +3,7 @@
 pub fn PdfDocument::content_apply_extgstate_text_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState {
   match self.lookup_direct(pdf_content_extgstate_tk_key(), extgstate) {
     Some(PdfBoolean(knockout)) =>
@@ -17,7 +17,7 @@ pub fn PdfDocument::content_apply_extgstate_text_op(
 pub fn pdf_content_apply_extgstate_text_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState {
   document.content_apply_extgstate_text_op(state, extgstate)
 }

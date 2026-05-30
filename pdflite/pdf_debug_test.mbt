@@ -5,9 +5,9 @@ fn debug_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn debug_dictionary_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary(entries)
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary(entries)
 }
 
 ///|

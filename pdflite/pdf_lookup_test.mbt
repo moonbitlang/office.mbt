@@ -24,7 +24,7 @@ test "PdfDocument lookup_direct follows dictionary indirections" {
   let key_type = lookup_name_for_test([47, 84, 121, 112, 101])
   let key_alt = lookup_name_for_test([47, 65, 108, 116])
   doc.add_object_given_number(2, PdfNameObject(key_type))
-  let dict = @pdflite.pdf_dictionary([(key_type, PdfIndirect(2))])
+  let dict = @syntax.pdf_dictionary([(key_type, PdfIndirect(2))])
   @test.assert_eq(
     doc.lookup_direct(key_type, dict),
     Some(PdfNameObject(key_type)),
@@ -44,7 +44,7 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
   let key_null = lookup_name_for_test([47, 78, 117, 108, 108])
   let key_missing = lookup_name_for_test([47, 77, 105, 115, 115, 105, 110, 103])
   doc.add_object_given_number(2, PdfInteger(42))
-  let dict = @pdflite.pdf_dictionary([
+  let dict = @syntax.pdf_dictionary([
     (key_type, PdfIndirect(2)),
     (key_null, PdfNull),
   ])
@@ -52,15 +52,15 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
     try! doc.lookup_required(key_type, dict, RootExpected),
     PdfInteger(42),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(key_type, PdfInteger(7))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(key_type, PdfInteger(7))]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
   @test.assert_eq(
     try! doc.lookup_required(key_type, stream, RootExpected),
     PdfInteger(7),
   )
-  let missing : Result[@pdflite.PdfObject, Error] = try? doc.lookup_required(
+  let missing : Result[@syntax.PdfObject, Error] = try? doc.lookup_required(
     key_missing,
     dict,
     RootExpected,
@@ -68,7 +68,7 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
   guard missing is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected for missing key")
   }
-  let null_value : Result[@pdflite.PdfObject, Error] = try? doc.lookup_required(
+  let null_value : Result[@syntax.PdfObject, Error] = try? doc.lookup_required(
     key_null,
     dict,
     RootExpected,
@@ -76,7 +76,7 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
   guard null_value is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected for null value")
   }
-  let not_dictionary : Result[@pdflite.PdfObject, Error] = try? doc.lookup_required(
+  let not_dictionary : Result[@syntax.PdfObject, Error] = try? doc.lookup_required(
     key_type,
     PdfInteger(1),
     DictionaryExpected,
@@ -94,7 +94,7 @@ test "PdfDocument lookup_direct_or_array follows CamlPDF array names" {
   let index_2 = lookup_name_for_test([47, 91, 50])
   let malformed_index = lookup_name_for_test([47, 91, 120])
   doc.add_object_given_number(8, PdfInteger(88))
-  let array : @pdflite.PdfObject = PdfArray([PdfInteger(7), PdfIndirect(8)])
+  let array : @syntax.PdfObject = PdfArray([PdfInteger(7), PdfIndirect(8)])
   @test.assert_eq(
     doc.lookup_direct_or_array(index_1, array),
     Some(PdfInteger(88)),
@@ -105,7 +105,7 @@ test "PdfDocument lookup_direct_or_array follows CamlPDF array names" {
   )
   @test.assert_eq(doc.lookup_direct_or_array(index_2, array), None)
   @test.assert_eq(doc.lookup_direct_or_array(index_1, PdfInteger(1)), None)
-  let dict = @pdflite.pdf_dictionary([(malformed_index, PdfInteger(5))])
+  let dict = @syntax.pdf_dictionary([(malformed_index, PdfInteger(5))])
   @test.assert_eq(
     doc.lookup_direct_or_array(malformed_index, dict),
     Some(PdfInteger(5)),
@@ -118,7 +118,7 @@ test "PdfDocument indirect_number returns the stored indirect reference" {
   let key_target = lookup_name_for_test([47, 84, 97, 114, 103, 101, 116])
   let key_other = lookup_name_for_test([47, 79, 116, 104, 101, 114])
   let key_missing = lookup_name_for_test([47, 77, 105, 115, 115, 105, 110, 103])
-  let dict = @pdflite.pdf_dictionary([
+  let dict = @syntax.pdf_dictionary([
     (key_target, PdfIndirect(5)),
     (key_other, PdfInteger(2)),
   ])
@@ -128,8 +128,8 @@ test "PdfDocument indirect_number returns the stored indirect reference" {
   @test.assert_eq(doc.indirect_number(key_other, PdfIndirect(2)), None)
   @test.assert_eq(doc.indirect_number(key_missing, PdfIndirect(2)), None)
   @test.assert_eq(doc.indirect_number(key_target, PdfInteger(1)), None)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(key_target, PdfIndirect(7))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(key_target, PdfIndirect(7))]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
   @test.assert_eq(doc.indirect_number(key_target, stream), Some(7))
@@ -141,11 +141,11 @@ test "PdfDocument lookup_chain follows nested dictionaries" {
   let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
   let key_child = lookup_name_for_test([47, 67, 104, 105, 108, 100])
   let key_value = lookup_name_for_test([47, 86, 97, 108, 117, 101])
-  let nested = @pdflite.pdf_dictionary([
+  let nested = @syntax.pdf_dictionary([
     (
       key_root,
-      @pdflite.pdf_dictionary([
-        (key_child, @pdflite.pdf_dictionary([(key_value, PdfInteger(7))])),
+      @syntax.pdf_dictionary([
+        (key_child, @syntax.pdf_dictionary([(key_value, PdfInteger(7))])),
       ]),
     ),
   ])
@@ -162,12 +162,12 @@ test "PdfDocument lookup_chain can traverse arrays by index names" {
   let key_items = lookup_name_for_test([47, 73, 116, 101, 109, 115])
   let key_value = lookup_name_for_test([47, 86, 97, 108, 117, 101])
   let index_1 = lookup_name_for_test([47, 91, 49])
-  let nested = @pdflite.pdf_dictionary([
+  let nested = @syntax.pdf_dictionary([
     (
       key_items,
       PdfArray([
         PdfInteger(0),
-        @pdflite.pdf_dictionary([(key_value, PdfInteger(9))]),
+        @syntax.pdf_dictionary([(key_value, PdfInteger(9))]),
       ]),
     ),
   ])
@@ -200,10 +200,10 @@ test "PdfDocument replace_chain preserves indirect dictionary structure" {
   let key_javascript = lookup_name_for_test([
     47, 74, 97, 118, 97, 83, 99, 114, 105, 112, 116,
   ])
-  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(1))]))
+  doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(1))]))
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_names, @pdflite.pdf_dictionary([]))]),
+    @syntax.pdf_dictionary([(key_names, @syntax.pdf_dictionary([]))]),
   )
   try! doc.replace_chain(
     [key_root, key_names, key_javascript],
@@ -230,15 +230,15 @@ test "PdfDocument replace_chain updates array chain entries" {
   let bad_index = lookup_name_for_test([47, 91, 120])
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([(key_value, PdfInteger(1))]),
+    @syntax.pdf_dictionary([(key_value, PdfInteger(1))]),
   )
   doc.set_trailer_dict(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         key_items,
         PdfArray([
           PdfIndirect(7),
-          @pdflite.pdf_dictionary([(key_value, PdfInteger(2))]),
+          @syntax.pdf_dictionary([(key_value, PdfInteger(2))]),
         ]),
       ),
     ]),
@@ -321,13 +321,13 @@ test "PdfDocument remove_chain removes direct dictionary entries" {
   ])
   let key_dests = lookup_name_for_test([47, 68, 101, 115, 116, 115])
   doc.set_trailer_dict(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         key_root,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             key_names,
-            @pdflite.pdf_dictionary([
+            @syntax.pdf_dictionary([
               (key_javascript, PdfInteger(1)),
               (key_dests, PdfInteger(2)),
             ]),
@@ -366,11 +366,11 @@ test "PdfDocument remove_chain preserves indirect dictionary structure" {
   let key_javascript = lookup_name_for_test([
     47, 74, 97, 118, 97, 83, 99, 114, 105, 112, 116,
   ])
-  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfIndirect(1))]))
+  doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(1))]))
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
-      (key_names, @pdflite.pdf_dictionary([(key_javascript, PdfInteger(1))])),
+    @syntax.pdf_dictionary([
+      (key_names, @syntax.pdf_dictionary([(key_javascript, PdfInteger(1))])),
     ]),
   )
   @test.assert_eq(
@@ -398,15 +398,15 @@ test "PdfDocument remove_chain updates array chain entries" {
   let bad_index = lookup_name_for_test([47, 91, 120])
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([(key_value, PdfInteger(1))]),
+    @syntax.pdf_dictionary([(key_value, PdfInteger(1))]),
   )
   doc.set_trailer_dict(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         key_items,
         PdfArray([
           PdfIndirect(7),
-          @pdflite.pdf_dictionary([(key_value, PdfInteger(2))]),
+          @syntax.pdf_dictionary([(key_value, PdfInteger(2))]),
         ]),
       ),
     ]),
@@ -452,7 +452,7 @@ test "PdfDocument remove_chain reports malformed short chains" {
     fail("expected @pdflite.PdfError::DictionaryExpected for empty chain")
   }
   @test.assert_eq(try! doc.remove_chain([key_root]), false)
-  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_root, PdfInteger(1))]))
+  doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfInteger(1))]))
   let existing_single : Result[Bool, Error] = try? doc.remove_chain([key_root])
   guard existing_single is Err(@pdflite.PdfError::DictionaryExpected) else {
     fail(
@@ -538,7 +538,7 @@ test "PdfDocument transform_rect and transform_quadpoints update geometry" {
       PdfInteger(99),
     ]),
   )
-  let malformed : @pdflite.PdfObject = PdfArray([
+  let malformed : @syntax.PdfObject = PdfArray([
     PdfInteger(0),
     PdfNameObject(lookup_name_for_test([47, 66, 97, 100])),
     PdfInteger(10),
@@ -553,7 +553,7 @@ test "PdfDocument transform_rect and transform_quadpoints update geometry" {
     doc.transform_quadpoints(matrix, PdfInteger(1)),
     PdfInteger(1),
   )
-  let bad_rect : Result[@pdflite.PdfObject, Error] = try? doc.transform_rect(
+  let bad_rect : Result[@syntax.PdfObject, Error] = try? doc.transform_rect(
     matrix,
     PdfInteger(1),
   )
@@ -567,7 +567,7 @@ test "PdfDocument parse_matrix and pdf_object_of_matrix round trip matrices" {
   let doc = @pdflite.pdf_document_empty()
   let key_matrix = lookup_name_for_test([47, 77, 97, 116, 114, 105, 120])
   let matrix = @geometry.transform_translate(10.0, 20.0)
-  let dict = @pdflite.pdf_dictionary([
+  let dict = @syntax.pdf_dictionary([
     (key_matrix, @pdflite.pdf_object_of_matrix(matrix)),
   ])
   @test.assert_eq(try! doc.parse_matrix(key_matrix, dict), matrix)
@@ -575,7 +575,7 @@ test "PdfDocument parse_matrix and pdf_object_of_matrix round trip matrices" {
     try! doc.parse_matrix(lookup_name_for_test([47, 77, 105, 115, 115]), dict),
     @geometry.transform_identity_matrix,
   )
-  let bad = @pdflite.pdf_dictionary([(key_matrix, PdfArray([PdfInteger(1)]))])
+  let bad = @syntax.pdf_dictionary([(key_matrix, PdfArray([PdfInteger(1)]))])
   let bad_matrix : Result[@geometry.TransformMatrix, Error] = try? doc.parse_matrix(
     key_matrix, bad,
   )

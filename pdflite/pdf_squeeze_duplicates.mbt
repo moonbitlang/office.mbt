@@ -1,13 +1,13 @@
 ///|
 priv struct PdfSqueezeDuplicateCandidate {
   number : Int
-  object : PdfObject
+  object : @syntax.PdfObject
 }
 
 ///|
 fn pdf_squeeze_materialized_object(
-  object : PdfObject,
-) -> PdfObject raise PdfError {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfStreamObject(stream) =>
       PdfStreamObject({
@@ -21,7 +21,7 @@ fn pdf_squeeze_materialized_object(
 ///|
 fn pdf_squeeze_duplicate_candidate(
   number : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> PdfSqueezeDuplicateCandidate raise PdfError {
   { number, object: pdf_squeeze_materialized_object(object) }
 }
@@ -29,7 +29,7 @@ fn pdf_squeeze_duplicate_candidate(
 ///|
 fn PdfDocument::pdf_squeeze_skip_duplicate_candidate(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_squeeze_type_key(), object) {
     Some(PdfNameObject(name)) if name == pdf_squeeze_page_name() => true

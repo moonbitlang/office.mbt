@@ -16,7 +16,7 @@ pub fn PdfDocument::addtext_existing_font_resource(
   self : PdfDocument,
   page : @page.PdfPage,
   fontname : PdfName,
-) -> (PdfName, PdfObject) raise PdfError {
+) -> (PdfName, @syntax.PdfObject) raise PdfError {
   let fontdict = match
     self.lookup_direct(pdf_addtext_font_key(), page.resources) {
     Some(fontdict) => fontdict
@@ -47,7 +47,7 @@ pub fn pdf_addtext_existing_font_resource(
   document : PdfDocument,
   page : @page.PdfPage,
   fontname : PdfName,
-) -> (PdfName, PdfObject) raise PdfError {
+) -> (PdfName, @syntax.PdfObject) raise PdfError {
   document.addtext_existing_font_resource(page, fontname)
 }
 

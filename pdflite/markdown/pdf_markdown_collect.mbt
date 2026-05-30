@@ -53,7 +53,7 @@ fn pdf_markdown_tj_word_space_needed(
 ///|
 fn pdf_markdown_extracted_codepoints_of_text_array(
   extractor : @pdflite.PdfTextExtractor?,
-  items : ArrayView[@pdflite.PdfObject],
+  items : ArrayView[@syntax.PdfObject],
 ) -> Array[Int] raise {
   let codepoints : Array[Int] = []
   let mut pending_word_space = false
@@ -109,7 +109,7 @@ fn pdf_markdown_add_positioned_text_array(
   text_matrix : @geometry.TransformMatrix,
   font_size : Double,
   extractor : @pdflite.PdfTextExtractor?,
-  items : ArrayView[@pdflite.PdfObject],
+  items : ArrayView[@syntax.PdfObject],
 ) -> Unit raise {
   pdf_markdown_push_text_chunk(
     chunks,
@@ -124,8 +124,8 @@ fn pdf_markdown_add_positioned_text_array(
 ///|
 fn pdf_markdown_collect_positioned_text_chunks(
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
-  streams : ArrayView[@pdflite.PdfObject],
+  resources : @syntax.PdfObject,
+  streams : ArrayView[@syntax.PdfObject],
   chunks : Array[PdfMarkdownTextChunk],
   next_index : Ref[Int],
   font_cache : PdfMarkdownFontCache,

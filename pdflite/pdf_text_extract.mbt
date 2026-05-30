@@ -186,7 +186,7 @@ pub fn PdfTextExtractor::charcode_of_codepoint(
 /// preserves pure lookup behavior and does not write missing-glyph diagnostics.
 pub fn pdf_charcode_extractor_of_font(
   document : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
   debug? : Bool = false,
 ) -> ((Int) -> Int?) raise PdfError {
   pdf_charcode_extractor_of_font_real(document.read_font(font), debug~)

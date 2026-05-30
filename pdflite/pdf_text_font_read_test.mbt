@@ -19,10 +19,10 @@ fn text_font_read_standard_font_data_for_test(
 ///|
 fn text_font_read_type3_charproc_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let data = @pdflite.pdf_content_bytes_of_ops(ops)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_font_read_name_for_test("/Length"), PdfInteger(data.length())),
     ]),
     StreamGot(data),
@@ -30,8 +30,8 @@ fn text_font_read_type3_charproc_stream_for_test(
 }
 
 ///|
-fn text_font_read_cid_system_info_object_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn text_font_read_cid_system_info_object_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Registry"),
       PdfString(text_font_read_bytes_for_test([82])),
@@ -46,9 +46,9 @@ fn text_font_read_cid_system_info_object_for_test() -> @pdflite.PdfObject {
 
 ///|
 fn text_font_read_valid_cid_descendant_for_test(
-  extra : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+  extra : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (
       text_font_read_name_for_test("/CIDSystemInfo"),
       text_font_read_cid_system_info_object_for_test(),
@@ -59,21 +59,21 @@ fn text_font_read_valid_cid_descendant_for_test(
     ),
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
   ]
   for entry in extra {
     entries.push(entry)
   }
-  @pdflite.pdf_dictionary(entries)
+  @syntax.pdf_dictionary(entries)
 }
 
 ///|
 fn text_font_read_cid_top_font_for_test(
   descendant_number : Int,
-  encoding : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+  encoding : @syntax.PdfObject,
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/BaseFont"),
       PdfNameObject(text_font_read_name_for_test("/T")),
@@ -89,7 +89,7 @@ fn text_font_read_cid_top_font_for_test(
 ///|
 test "PdfDocument read_font_descriptor parses metrics font files and charset" {
   let doc = @pdflite.pdf_document_empty()
-  let descriptor = @pdflite.pdf_dictionary([
+  let descriptor = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/FontBBox"),
       PdfArray([
@@ -118,7 +118,7 @@ test "PdfDocument read_font_descriptor parses metrics font files and charset" {
       ),
     ),
   ])
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/FontDescriptor"), descriptor),
   ])
   guard (try! doc.read_font_descriptor(font)) is Some(read_descriptor) else {
@@ -154,15 +154,15 @@ test "PdfDocument read_font_descriptor parses metrics font files and charset" {
 test "PdfDocument read_font_descriptor uses CamlPDF defaults and fontfile priority" {
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(
-    try! doc.read_font_descriptor(@pdflite.pdf_dictionary([])),
+    try! doc.read_font_descriptor(@syntax.pdf_dictionary([])),
     None,
   )
-  let descriptor = @pdflite.pdf_dictionary([
+  let descriptor = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/FontFile"), PdfIndirect(10)),
     (text_font_read_name_for_test("/FontFile2"), PdfIndirect(11)),
     (text_font_read_name_for_test("/CharSet"), PdfInteger(0)),
   ])
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/FontDescriptor"), descriptor),
   ])
   guard (try! doc.read_font_descriptor(font)) is Some(read_descriptor) else {
@@ -182,14 +182,14 @@ test "PdfDocument read_font_descriptor uses CamlPDF defaults and fontfile priori
 ///|
 test "PdfDocument read_font_descriptor accepts FontFile3 and stops malformed charset" {
   let doc = @pdflite.pdf_document_empty()
-  let descriptor = @pdflite.pdf_dictionary([
+  let descriptor = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/FontFile3"), PdfIndirect(12)),
     (
       text_font_read_name_for_test("/CharSet"),
       PdfString(@ascii.encode("/A 7 /B")),
     ),
   ])
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/FontDescriptor"), descriptor),
   ])
   guard (try! doc.read_font_descriptor(font)) is Some(read_descriptor) else {
@@ -206,10 +206,10 @@ test "PdfDocument read_font_descriptor accepts FontFile3 and stops malformed cha
 test "PdfDocument read_font_metrics builds 256-entry width table" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(7, PdfInteger(620))
-  let descriptor = @pdflite.pdf_dictionary([
+  let descriptor = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/MissingWidth"), PdfInteger(250)),
   ])
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/FontDescriptor"), descriptor),
     (text_font_read_name_for_test("/FirstChar"), PdfInteger(65)),
     (text_font_read_name_for_test("/LastChar"), PdfInteger(67)),
@@ -234,8 +234,8 @@ test "PdfDocument read_font_metrics builds 256-entry width table" {
 ///|
 test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
   let doc = @pdflite.pdf_document_empty()
-  @test.assert_eq(try! doc.read_font_metrics(@pdflite.pdf_dictionary([])), None)
-  let type3 = @pdflite.pdf_dictionary([
+  @test.assert_eq(try! doc.read_font_metrics(@syntax.pdf_dictionary([])), None)
+  let type3 = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type3")),
@@ -251,10 +251,10 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
   @test.assert_eq(type3_metrics[0], 9.0)
   @test.assert_eq(type3_metrics[1], 5.5)
 
-  let malformed = @pdflite.pdf_dictionary([
+  let malformed = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
     (text_font_read_name_for_test("/FirstChar"), PdfInteger(65)),
     (text_font_read_name_for_test("/LastChar"), PdfInteger(66)),
@@ -265,10 +265,10 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     fail("expected @pdflite.PdfError::FontWidthsExpected")
   }
 
-  let bad_width = @pdflite.pdf_dictionary([
+  let bad_width = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
     (text_font_read_name_for_test("/FirstChar"), PdfInteger(65)),
     (text_font_read_name_for_test("/LastChar"), PdfInteger(65)),
@@ -282,10 +282,10 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     fail("expected @pdflite.PdfError::FontWidthExpected")
   }
 
-  let bad_firstchar = @pdflite.pdf_dictionary([
+  let bad_firstchar = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
     (text_font_read_name_for_test("/FirstChar"), PdfInteger(-1)),
     (text_font_read_name_for_test("/LastChar"), PdfInteger(65)),
@@ -296,10 +296,10 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     fail("expected @pdflite.PdfError::FontFirstCharExpected")
   }
 
-  let missing_widths = @pdflite.pdf_dictionary([
+  let missing_widths = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
     (text_font_read_name_for_test("/FirstChar"), PdfInteger(65)),
     (text_font_read_name_for_test("/LastChar"), PdfInteger(65)),
@@ -309,10 +309,10 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     fail("expected @pdflite.PdfError::FontWidthsExpected for missing widths")
   }
 
-  let inverted_bounds = @pdflite.pdf_dictionary([
+  let inverted_bounds = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
     (text_font_read_name_for_test("/FirstChar"), PdfInteger(66)),
     (text_font_read_name_for_test("/LastChar"), PdfInteger(65)),
@@ -327,12 +327,12 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
 ///|
 test "PdfDocument read_simple_font builds Type1 font records" {
   let doc = @pdflite.pdf_document_empty()
-  let descriptor = @pdflite.pdf_dictionary([
+  let descriptor = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/Ascent"), PdfInteger(700)),
     (text_font_read_name_for_test("/FontFile2"), PdfIndirect(9)),
     (text_font_read_name_for_test("/MissingWidth"), PdfInteger(250)),
   ])
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type1")),
@@ -380,7 +380,7 @@ test "PdfDocument read_simple_font builds Type1 font records" {
 ///|
 test "PdfDocument read_simple_font reads Type3 glyph data" {
   let doc = @pdflite.pdf_document_empty()
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type3")),
@@ -399,7 +399,7 @@ test "PdfDocument read_simple_font reads Type3 glyph data" {
     ),
     (
       text_font_read_name_for_test("/CharProcs"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (text_font_read_name_for_test("/A"), PdfInteger(1)),
         (text_font_read_name_for_test("/B"), PdfInteger(2)),
       ]),
@@ -435,7 +435,7 @@ test "PdfDocument read_simple_font reads Type3 glyph data" {
     (text_font_read_name_for_test("/A"), PdfInteger(1)),
     (text_font_read_name_for_test("/B"), PdfInteger(2)),
   ])
-  @test.assert_eq(type3_data.resources, @pdflite.pdf_dictionary([]))
+  @test.assert_eq(type3_data.resources, @syntax.pdf_dictionary([]))
   @test.assert_eq(simple.encoding, PdfMacRomanEncoding)
   @test.assert_eq(simple.fonttype.debug_name(), "Type 3: charprocs for/A/B")
 }
@@ -449,14 +449,14 @@ test "PdfDocument read_simple_font preserves direct Type3 CharProc streams" {
   let d1_stream = text_font_read_type3_charproc_stream_for_test([
     Op_d1(600.0, 0.0, 0.0, -20.0, 600.0, 700.0),
   ])
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type3")),
     ),
     (
       text_font_read_name_for_test("/CharProcs"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (text_font_read_name_for_test("/A"), d0_stream),
         (text_font_read_name_for_test("/B"), d1_stream),
       ]),
@@ -499,7 +499,7 @@ test "PdfDocument read_simple_font preserves direct Type3 CharProc streams" {
 test "PdfDocument read_simple_font covers MMType1 TrueType and Type3 resources" {
   let doc = @pdflite.pdf_document_empty()
   let mm_type1 = try! doc.read_simple_font(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/Subtype"),
         PdfNameObject(text_font_read_name_for_test("/MMType1")),
@@ -513,7 +513,7 @@ test "PdfDocument read_simple_font covers MMType1 TrueType and Type3 resources" 
   )
 
   let true_type = try! doc.read_simple_font(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/Subtype"),
         PdfNameObject(text_font_read_name_for_test("/TrueType")),
@@ -523,18 +523,18 @@ test "PdfDocument read_simple_font covers MMType1 TrueType and Type3 resources" 
   @test.assert_eq(true_type.fonttype, PdfTrueType)
   @test.assert_eq(true_type.fonttype.debug_name(), "Truetype")
 
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/ProcSet"), PdfArray([])),
   ])
   let type3 = try! doc.read_simple_font(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/Subtype"),
         PdfNameObject(text_font_read_name_for_test("/Type3")),
       ),
       (
         text_font_read_name_for_test("/CharProcs"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (text_font_read_name_for_test("/A"), PdfInteger(1)),
         ]),
       ),
@@ -553,12 +553,12 @@ test "PdfDocument read_simple_font covers MMType1 TrueType and Type3 resources" 
 ///|
 test "PdfDocument read_simple_font rejects malformed simple fonts" {
   let doc = @pdflite.pdf_document_empty()
-  let missing_subtype = try? doc.read_simple_font(@pdflite.pdf_dictionary([]))
+  let missing_subtype = try? doc.read_simple_font(@syntax.pdf_dictionary([]))
   guard missing_subtype is Err(FontSubtypeExpected) else {
     fail("expected @pdflite.PdfError::FontSubtypeExpected for missing subtype")
   }
   let unknown_subtype = try? doc.read_simple_font(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/Subtype"),
         PdfNameObject(text_font_read_name_for_test("/CIDFontType2")),
@@ -569,7 +569,7 @@ test "PdfDocument read_simple_font rejects malformed simple fonts" {
     fail("expected @pdflite.PdfError::FontSubtypeExpected for unknown subtype")
   }
   let missing_charprocs = try? doc.read_simple_font(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/Subtype"),
         PdfNameObject(text_font_read_name_for_test("/Type3")),
@@ -584,7 +584,7 @@ test "PdfDocument read_simple_font rejects malformed simple fonts" {
 ///|
 test "PdfDocument detects and reads standard14 fonts" {
   let doc = @pdflite.pdf_document_empty()
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type1")),
@@ -609,7 +609,7 @@ test "PdfDocument detects and reads standard14 fonts" {
     ),
   )
   @test.assert_eq(standard.debug_name(), "StandardFont Helvetica-Bold")
-  let overridden = @pdflite.pdf_dictionary([
+  let overridden = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type1")),
@@ -621,7 +621,7 @@ test "PdfDocument detects and reads standard14 fonts" {
     (text_font_read_name_for_test("/Widths"), PdfArray([])),
   ])
   @test.assert_eq(doc.is_standard14_font(overridden), false)
-  let true_type_alias = @pdflite.pdf_dictionary([
+  let true_type_alias = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/TrueType")),
@@ -632,7 +632,7 @@ test "PdfDocument detects and reads standard14 fonts" {
     ),
   ])
   @test.assert_eq(doc.is_standard14_font(true_type_alias), true)
-  let wrong_subtype = @pdflite.pdf_dictionary([
+  let wrong_subtype = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/CIDFontType2")),
@@ -644,21 +644,21 @@ test "PdfDocument detects and reads standard14 fonts" {
   ])
   @test.assert_eq(doc.is_standard14_font(wrong_subtype), false)
   @test.assert_eq(doc.is_simple_font(wrong_subtype), false)
-  let missing_base = @pdflite.pdf_dictionary([
+  let missing_base = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type1")),
     ),
   ])
   @test.assert_eq(doc.is_standard14_font(missing_base), false)
-  @test.assert_eq(doc.is_simple_font(@pdflite.pdf_dictionary([])), false)
-  @test.assert_eq(doc.is_cidkeyed_font(@pdflite.pdf_dictionary([])), false)
+  @test.assert_eq(doc.is_simple_font(@syntax.pdf_dictionary([])), false)
+  @test.assert_eq(doc.is_cidkeyed_font(@syntax.pdf_dictionary([])), false)
 }
 
 ///|
 test "PdfDocument read_standard14_font rejects bad base fonts" {
   let doc = @pdflite.pdf_document_empty()
-  let unknown = @pdflite.pdf_dictionary([
+  let unknown = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/BaseFont"),
       PdfNameObject(text_font_read_name_for_test("/NotStandard")),
@@ -668,9 +668,7 @@ test "PdfDocument read_standard14_font rejects bad base fonts" {
   guard unknown_result is Err(StandardFontExpected) else {
     fail("expected @pdflite.PdfError::StandardFontExpected")
   }
-  let missing_result = try? doc.read_standard14_font(
-    @pdflite.pdf_dictionary([]),
-  )
+  let missing_result = try? doc.read_standard14_font(@syntax.pdf_dictionary([]))
   guard missing_result is Err(BaseFontExpected) else {
     fail("expected @pdflite.PdfError::BaseFontExpected")
   }
@@ -679,7 +677,7 @@ test "PdfDocument read_standard14_font rejects bad base fonts" {
 ///|
 test "PdfDocument read_font dispatches standard14 and simple fonts" {
   let doc = @pdflite.pdf_document_empty()
-  let standard = @pdflite.pdf_dictionary([
+  let standard = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/TrueType")),
@@ -707,7 +705,7 @@ test "PdfDocument read_font dispatches standard14 and simple fonts" {
     "StandardFont Helvetica",
   )
 
-  let simple = @pdflite.pdf_dictionary([
+  let simple = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type1")),
@@ -743,7 +741,7 @@ test "PdfDocument read_font dispatches standard14 and simple fonts" {
 ///|
 test "PdfDocument read_font rejects unknown fonts" {
   let doc = @pdflite.pdf_document_empty()
-  let unknown = @pdflite.pdf_dictionary([
+  let unknown = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/CIDFontType2")),
@@ -758,10 +756,10 @@ test "PdfDocument read_font rejects unknown fonts" {
 ///|
 test "PdfDocument read_font reads CID-keyed Type0 fonts" {
   let doc = @pdflite.pdf_document_empty()
-  let descendant = @pdflite.pdf_dictionary([
+  let descendant = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_font_read_name_for_test("/Registry"),
           PdfString(text_font_read_bytes_for_test([65, 100, 111, 98, 101])),
@@ -783,7 +781,7 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
     ),
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (text_font_read_name_for_test("/Ascent"), PdfInteger(880)),
       ]),
     ),
@@ -823,7 +821,7 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
     ),
   ])
   doc.add_object_given_number(33, descendant)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type0")),
@@ -867,7 +865,7 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
   @test.assert_eq(identity_v.is_identity_h(), false)
   @test.assert_eq(identity_v.is_identity_v(), true)
   @test.assert_eq(identity_v.uses_two_byte_codes(), true)
-  let ucs2_font = @pdflite.pdf_dictionary([
+  let ucs2_font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type0")),
@@ -891,7 +889,7 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
   @test.assert_eq(ucs2_cid_font.encoding.is_identity_h(), false)
   @test.assert_eq(ucs2_cid_font.encoding.is_identity_v(), false)
   @test.assert_eq(ucs2_cid_font.encoding.uses_two_byte_codes(), true)
-  let utf16_font = @pdflite.pdf_dictionary([
+  let utf16_font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/Subtype"),
       PdfNameObject(text_font_read_name_for_test("/Type0")),
@@ -956,10 +954,10 @@ test "PdfDocument read_font reads CID-keyed Type0 fonts" {
 ///|
 test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
   let doc = @pdflite.pdf_document_empty()
-  let descendant = @pdflite.pdf_dictionary([
+  let descendant = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_font_read_name_for_test("/Registry"),
           PdfString(text_font_read_bytes_for_test([82])),
@@ -977,16 +975,16 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
     ),
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
   ])
-  let cmap = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let cmap = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(text_font_read_bytes_for_test([1, 2, 3])),
   )
   doc.add_object_given_number(4, descendant)
   doc.add_object_given_number(5, cmap)
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/BaseFont"),
       PdfNameObject(text_font_read_name_for_test("/Top")),
@@ -1043,14 +1041,12 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
 ///|
 test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   let doc = @pdflite.pdf_document_empty()
-  let missing_basefont = try? doc.read_cidkeyed_font(
-    @pdflite.pdf_dictionary([]),
-  )
+  let missing_basefont = try? doc.read_cidkeyed_font(@syntax.pdf_dictionary([]))
   guard missing_basefont is Err(BaseFontExpected) else {
     fail("expected @pdflite.PdfError::BaseFontExpected")
   }
   let missing_descendant = try? doc.read_cidkeyed_font(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/BaseFont"),
         PdfNameObject(text_font_read_name_for_test("/T")),
@@ -1062,7 +1058,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   }
 
   let bad_supplement = try? doc.read_cid_system_info(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/Registry"),
         PdfString(text_font_read_bytes_for_test([82])),
@@ -1077,10 +1073,10 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     fail("expected @pdflite.PdfError::CIDSupplementExpected")
   }
 
-  let bad_system_info = @pdflite.pdf_dictionary([
+  let bad_system_info = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_font_read_name_for_test("/Ordering"),
           PdfString(text_font_read_bytes_for_test([79])),
@@ -1094,11 +1090,11 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
   ])
   doc.add_object_given_number(6, bad_system_info)
-  let bad_system_font = @pdflite.pdf_dictionary([
+  let bad_system_font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/BaseFont"),
       PdfNameObject(text_font_read_name_for_test("/T")),
@@ -1119,14 +1115,14 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
 
   doc.add_object_given_number(
     10,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/BaseFont"),
         PdfNameObject(text_font_read_name_for_test("/Descendant")),
       ),
       (
         text_font_read_name_for_test("/FontDescriptor"),
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ),
     ]),
   )
@@ -1142,14 +1138,14 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
 
   doc.add_object_given_number(
     11,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/CIDSystemInfo"),
         text_font_read_cid_system_info_object_for_test(),
       ),
       (
         text_font_read_name_for_test("/FontDescriptor"),
-        @pdflite.pdf_dictionary([]),
+        @syntax.pdf_dictionary([]),
       ),
     ]),
   )
@@ -1165,7 +1161,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
 
   doc.add_object_given_number(
     12,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_read_name_for_test("/CIDSystemInfo"),
         text_font_read_cid_system_info_object_for_test(),
@@ -1186,10 +1182,10 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     fail("expected @pdflite.PdfError::CIDFontDescriptorExpected")
   }
 
-  let bad_widths = @pdflite.pdf_dictionary([
+  let bad_widths = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_font_read_name_for_test("/Registry"),
           PdfString(text_font_read_bytes_for_test([82])),
@@ -1207,7 +1203,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
     (
       text_font_read_name_for_test("/W"),
@@ -1215,7 +1211,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
   ])
   doc.add_object_given_number(7, bad_widths)
-  let bad_widths_font = @pdflite.pdf_dictionary([
+  let bad_widths_font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/BaseFont"),
       PdfNameObject(text_font_read_name_for_test("/T")),
@@ -1234,7 +1230,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     fail("expected @pdflite.PdfError::CIDWidthsExpected")
   }
 
-  let malformed_widths : Array[@pdflite.PdfObject] = [
+  let malformed_widths : Array[@syntax.PdfObject] = [
     text_font_read_valid_cid_descendant_for_test([
       (
         text_font_read_name_for_test("/W"),
@@ -1273,10 +1269,10 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     }
   }
 
-  let bad_widths2 = @pdflite.pdf_dictionary([
+  let bad_widths2 = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_font_read_name_for_test("/Registry"),
           PdfString(text_font_read_bytes_for_test([82])),
@@ -1294,7 +1290,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
     (
       text_font_read_name_for_test("/W2"),
@@ -1302,7 +1298,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
   ])
   doc.add_object_given_number(8, bad_widths2)
-  let bad_widths2_font = @pdflite.pdf_dictionary([
+  let bad_widths2_font = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/BaseFont"),
       PdfNameObject(text_font_read_name_for_test("/T")),
@@ -1321,7 +1317,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     fail("expected @pdflite.PdfError::CIDWidths2Expected")
   }
 
-  let malformed_widths2 : Array[@pdflite.PdfObject] = [
+  let malformed_widths2 : Array[@syntax.PdfObject] = [
     text_font_read_valid_cid_descendant_for_test([
       (
         text_font_read_name_for_test("/W2"),
@@ -1365,10 +1361,10 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     }
   }
 
-  let valid_descendant = @pdflite.pdf_dictionary([
+  let valid_descendant = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_font_read_name_for_test("/Registry"),
           PdfString(text_font_read_bytes_for_test([82])),
@@ -1386,11 +1382,11 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
     (
       text_font_read_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
     ),
   ])
   doc.add_object_given_number(9, valid_descendant)
-  let direct_cmap = @pdflite.pdf_dictionary([
+  let direct_cmap = @syntax.pdf_dictionary([
     (
       text_font_read_name_for_test("/BaseFont"),
       PdfNameObject(text_font_read_name_for_test("/T")),
@@ -1401,7 +1397,7 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
     ),
     (
       text_font_read_name_for_test("/Encoding"),
-      @pdflite.pdf_stream(@pdflite.pdf_dictionary([]), StreamGot([])),
+      @syntax.pdf_stream(@syntax.pdf_dictionary([]), StreamGot([])),
     ),
   ])
   let direct_cmap_result = try? doc.read_cidkeyed_font(direct_cmap)

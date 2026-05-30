@@ -3,7 +3,7 @@
 pub fn PdfDocument::content_apply_extgstate_alpha_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState {
   let mut output = state
   match
@@ -33,7 +33,7 @@ pub fn PdfDocument::content_apply_extgstate_alpha_op(
 pub fn pdf_content_apply_extgstate_alpha_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState {
   document.content_apply_extgstate_alpha_op(state, extgstate)
 }

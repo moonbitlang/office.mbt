@@ -7,8 +7,8 @@
 /// where `data` is RGBRGB byte order.
 pub fn PdfDocument::get_image_24bpp(
   self : PdfDocument,
-  resources : PdfObject,
-  image : PdfObject,
+  resources : @syntax.PdfObject,
+  image : @syntax.PdfObject,
 ) -> PdfImage raise PdfError {
   let decoded = self.pdf_image_decode_to_image(image)
   let decoded_stream = match decoded {
@@ -83,8 +83,8 @@ pub fn PdfDocument::get_image_24bpp(
 /// Compatibility wrapper for `PdfDocument::get_image_24bpp`.
 pub fn pdf_get_image_24bpp(
   document : PdfDocument,
-  resources : PdfObject,
-  image : PdfObject,
+  resources : @syntax.PdfObject,
+  image : @syntax.PdfObject,
 ) -> PdfImage raise PdfError {
   document.get_image_24bpp(resources, image)
 }

@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_structure_parent_tree_catalog(
   self : PdfDocument,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   Some(self.catalog()) catch {
     _ => None
   }
@@ -10,7 +10,7 @@ fn PdfDocument::pdf_structure_parent_tree_catalog(
 ///|
 fn PdfDocument::pdf_structure_root_parent_tree_entries(
   self : PdfDocument,
-) -> Array[(Int, PdfObject)] {
+) -> Array[(Int, @syntax.PdfObject)] {
   match self.pdf_structure_parent_tree_catalog() {
     Some(catalog) =>
       match self.lookup_direct(pdf_structure_struct_tree_root_key(), catalog) {
@@ -35,11 +35,13 @@ fn pdf_structure_changed_parent_tree_key(
 
 ///|
 fn pdf_structure_apply_parent_tree_changes(
-  entries : ArrayView[(Int, PdfObject)],
+  entries : ArrayView[(Int, @syntax.PdfObject)],
   changes : ArrayView[(Int, Int)],
-) -> Array[(Int, PdfObject)] {
+) -> Array[(Int, @syntax.PdfObject)] {
   let change_map = pdf_merge_parent_tree_change_map(changes)
-  let output : Array[(Int, PdfObject)] = Array::new(capacity=entries.length())
+  let output : Array[(Int, @syntax.PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
   for entry in entries {
     let (old_key, value) = entry
     match pdf_structure_changed_parent_tree_key(change_map, old_key) {
@@ -56,7 +58,7 @@ fn pdf_structure_apply_parent_tree_changes(
 ///|
 fn PdfDocument::pdf_structure_replace_parent_tree(
   self : PdfDocument,
-  parent_tree : PdfObject,
+  parent_tree : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   match self.trailer_dict().lookup_immediate(pdf_structure_root_key()) {
     Some(root) =>
@@ -107,7 +109,7 @@ pub fn pdf_renumber_parent_trees(
     let all_changes : Array[Array[(Int, Int)]] = Array::new(
       capacity=documents.length(),
     )
-    let all_entries : Array[Array[(Int, PdfObject)]] = Array::new(
+    let all_entries : Array[Array[(Int, @syntax.PdfObject)]] = Array::new(
       capacity=documents.length(),
     )
     let mut next_key = 0

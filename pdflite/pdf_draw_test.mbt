@@ -605,7 +605,7 @@ test "pdf draw render state caches opacity ExtGState resources" {
 test "pdf draw document-aware image XObjects register resources and emit Do" {
   let document = @pdflite.pdf_document_empty()
   let state = @pdflite.pdf_draw_render_state_new()
-  let image_object : @pdflite.PdfObject = PdfDictionary([
+  let image_object : @syntax.PdfObject = PdfDictionary([
     (
       draw_name_for_test("/Subtype"),
       PdfNameObject(draw_name_for_test("/Image")),
@@ -635,10 +635,10 @@ test "pdf draw document-aware image XObjects register resources and emit Do" {
 test "pdf draw image XObject replacement follows latest source mapping" {
   let document = @pdflite.pdf_document_empty()
   let state = @pdflite.pdf_draw_render_state_new()
-  let first : @pdflite.PdfObject = PdfDictionary([
+  let first : @syntax.PdfObject = PdfDictionary([
     (draw_name_for_test("/Name"), PdfNameObject(draw_name_for_test("/First"))),
   ])
-  let second : @pdflite.PdfObject = PdfDictionary([
+  let second : @syntax.PdfObject = PdfDictionary([
     (draw_name_for_test("/Name"), PdfNameObject(draw_name_for_test("/Second"))),
   ])
   let im2 = draw_name_for_test("/I2")
@@ -732,7 +732,7 @@ test "pdf draw document-aware form XObjects register streams and emit Do" {
 test "pdf draw form XObjects carry nested image resources" {
   let document = @pdflite.pdf_document_empty()
   let state = @pdflite.pdf_draw_render_state_new()
-  let image_object : @pdflite.PdfObject = PdfDictionary([
+  let image_object : @syntax.PdfObject = PdfDictionary([
     (
       draw_name_for_test("/Subtype"),
       PdfNameObject(draw_name_for_test("/Image")),
@@ -1174,7 +1174,7 @@ test "PdfDocument draw structure-tree mode preserves existing structure tree" {
   let key_k = draw_name_for_test("/K")
   let key_role_map = draw_name_for_test("/RoleMap")
   let key_artifact = draw_name_for_test("/Artifact")
-  let existing_tree : @pdflite.PdfObject = PdfDictionary([
+  let existing_tree : @syntax.PdfObject = PdfDictionary([
     (key_type, PdfNameObject(key_struct_tree_root)),
     (key_k, PdfInteger(99)),
   ])

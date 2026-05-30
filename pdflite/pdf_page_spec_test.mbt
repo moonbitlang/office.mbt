@@ -4,10 +4,7 @@ fn page_spec_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn page_spec_rectangle_for_test(
-  width : Int,
-  height : Int,
-) -> @pdflite.PdfObject {
+fn page_spec_rectangle_for_test(width : Int, height : Int) -> @syntax.PdfObject {
   PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(width), PdfInteger(height)])
 }
 

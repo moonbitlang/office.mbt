@@ -37,9 +37,9 @@ fn draft_inline_image_for_test() -> @content.PdfContentOp {
 }
 
 ///|
-fn draft_image_object_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+fn draft_image_object_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         draft_name_for_test("/Subtype"),
         PdfNameObject(draft_name_for_test("/Image")),
@@ -53,26 +53,26 @@ fn draft_image_object_for_test() -> @pdflite.PdfObject {
 ///|
 fn draft_subtyped_dictionary_for_test(
   subtype : @pdflite.PdfName,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (draft_name_for_test("/Subtype"), PdfNameObject(subtype)),
   ])
 }
 
 ///|
 fn draft_resources_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
-    (draft_name_for_test("/XObject"), @pdflite.pdf_dictionary(entries)),
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
+    (draft_name_for_test("/XObject"), @syntax.pdf_dictionary(entries)),
   ])
 }
 
 ///|
 fn draft_form_object_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   let stream = try! @pdflite.pdf_content_stream_of_ops(ops)
   try! (try! stream.add_dict_entry(
     draft_name_for_test("/Subtype"),
@@ -94,8 +94,8 @@ fn draft_document_for_test(
 fn draft_lookup_for_test(
   doc : @pdflite.PdfDocument,
   key : String,
-  object : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match doc.lookup_direct(draft_name_for_test(key), object) {
     Some(value) => value
     None => fail("missing " + key)
@@ -105,8 +105,8 @@ fn draft_lookup_for_test(
 ///|
 fn draft_xobject_entries_for_test(
   doc : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
-) -> Array[(@pdflite.PdfName, @pdflite.PdfObject)] raise {
+  resources : @syntax.PdfObject,
+) -> Array[(@pdflite.PdfName, @syntax.PdfObject)] raise {
   match draft_lookup_for_test(doc, "/XObject", resources) {
     PdfDictionary(entries) => entries
     _ => fail("expected XObject dictionary")
@@ -296,7 +296,7 @@ test "pdf_draft wrapper leaves unselected pages unchanged" {
   }
   let unselected = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (draft_name_for_test("/ProcSet"), PdfArray([])),
     ]),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_Do(missing_name)])],
@@ -317,7 +317,7 @@ test "pdf_draft wrapper leaves unselected pages unchanged" {
   ])
   @test.assert_eq(
     pages[1].resources,
-    @pdflite.pdf_dictionary([(draft_name_for_test("/ProcSet"), PdfArray([]))]),
+    @syntax.pdf_dictionary([(draft_name_for_test("/ProcSet"), PdfArray([]))]),
   )
 }
 
@@ -382,7 +382,7 @@ test "PdfDocument draft keeps missing and non-image xobject draws" {
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: draft_resources_for_test([
-      (plain_name, @pdflite.pdf_dictionary([])),
+      (plain_name, @syntax.pdf_dictionary([])),
     ]),
     content: [
       try! @pdflite.pdf_content_stream_of_ops([
@@ -399,7 +399,7 @@ test "PdfDocument draft keeps missing and non-image xobject draws" {
   ])
   @test.assert_eq(
     try! draft_xobject_entries_for_test(drafted, pages[0].resources),
-    [(plain_name, @pdflite.pdf_dictionary([]))],
+    [(plain_name, @syntax.pdf_dictionary([]))],
   )
 }
 
@@ -409,7 +409,7 @@ test "PdfDocument draft keeps selected pages without xobject resources" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (draft_name_for_test("/ProcSet"), PdfArray([])),
     ]),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_Do(missing_name)])],
@@ -421,7 +421,7 @@ test "PdfDocument draft keeps selected pages without xobject resources" {
   ])
   @test.assert_eq(
     pages[0].resources,
-    @pdflite.pdf_dictionary([(draft_name_for_test("/ProcSet"), PdfArray([]))]),
+    @syntax.pdf_dictionary([(draft_name_for_test("/ProcSet"), PdfArray([]))]),
   )
 }
 
@@ -479,7 +479,7 @@ test "PdfDocument draft rejects malformed xobject resources" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (draft_name_for_test("/XObject"), PdfInteger(1)),
     ]),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_Do(image_name)])],

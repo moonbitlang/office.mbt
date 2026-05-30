@@ -1,9 +1,9 @@
 ///|
 fn PdfDocument::pdf_merge_structure_parented_item(
   self : PdfDocument,
-  item : PdfObject,
+  item : @syntax.PdfObject,
   parent_number : Int,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match item {
     PdfIndirect(number) => {
       let object = self.lookup_object_or_null(number)
@@ -29,23 +29,23 @@ fn PdfDocument::pdf_merge_structure_parented_item(
 ///|
 fn PdfDocument::pdf_merge_structure_tree_root(
   self : PdfDocument,
-  structure_tree_roots : ArrayView[PdfObject],
-  parent_tree_entries : ArrayView[(Int, PdfObject)],
+  structure_tree_roots : ArrayView[@syntax.PdfObject],
+  parent_tree_entries : ArrayView[(Int, @syntax.PdfObject)],
   add_toplevel_document : Bool,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   if structure_tree_roots.length() == 0 {
     None
   } else if structure_tree_roots.length() == 1 {
     Some(structure_tree_roots[0])
   } else {
     let root_number = self.add_object(PdfNull)
-    let kids : Array[PdfObject] = []
+    let kids : Array[@syntax.PdfObject] = []
     for root in structure_tree_roots {
       for item in self.pdf_merge_structure_tree_root_k_items(root) {
         kids.push(self.pdf_merge_structure_parented_item(item, root_number))
       }
     }
-    let entries : Array[(PdfName, PdfObject)] = [
+    let entries : Array[(PdfName, @syntax.PdfObject)] = [
       (pdf_merge_type_key(), PdfNameObject(pdf_merge_struct_tree_root_key())),
     ]
     let id_tree_entries = self.pdf_merge_structure_name_tree_entries(

@@ -162,7 +162,7 @@ let pdf_crypt_decodeparms_name : PdfName = pdf_crypt_name("/DecodeParms")
 fn pdf_crypt_lookup_name(
   pdf : PdfDocument,
   key : PdfName,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> PdfName? {
   match pdf.lookup_direct(key, dictionary) {
     Some(PdfNameObject(name)) => Some(name)
@@ -174,7 +174,7 @@ fn pdf_crypt_lookup_name(
 fn pdf_crypt_lookup_int(
   pdf : PdfDocument,
   key : PdfName,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Int? {
   match pdf.lookup_direct(key, dictionary) {
     Some(PdfInteger(value)) => Some(value)
@@ -186,7 +186,7 @@ fn pdf_crypt_lookup_int(
 fn pdf_crypt_lookup_string(
   pdf : PdfDocument,
   key : PdfName,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> PdfBytes? {
   match pdf.lookup_direct(key, dictionary) {
     Some(PdfString(value)) => Some(value)
@@ -198,7 +198,7 @@ fn pdf_crypt_lookup_string(
 fn pdf_crypt_required_string(
   pdf : PdfDocument,
   key : PdfName,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> PdfBytes raise PdfError {
   match pdf_crypt_lookup_string(pdf, key, dictionary) {
     Some(value) => value
@@ -210,7 +210,7 @@ fn pdf_crypt_required_string(
 fn pdf_crypt_required_int(
   pdf : PdfDocument,
   key : PdfName,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Int raise PdfError {
   match pdf_crypt_lookup_int(pdf, key, dictionary) {
     Some(value) => value

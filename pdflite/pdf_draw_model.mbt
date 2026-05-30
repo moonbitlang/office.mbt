@@ -45,7 +45,7 @@ pub(all) enum PdfDrawStructureData {
   PdfDrawStructureBeginTree(String)
   PdfDrawStructureEndTree
   PdfDrawStructureNamespace(String)
-  PdfDrawStructureElementInfo(String, PdfObject)
+  PdfDrawStructureElementInfo(String, @syntax.PdfObject)
   PdfDrawStructureEndElementInfo(String)
 } derive(Debug, Eq, ToJson)
 

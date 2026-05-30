@@ -2,7 +2,7 @@
 /// Read a `/ShadingType 1` function-based shading dictionary.
 pub fn PdfDocument::content_read_function_shading(
   self : PdfDocument,
-  shading : PdfObject,
+  shading : @syntax.PdfObject,
 ) -> PdfContentShadingKind raise PdfError {
   PdfContentFunctionShading({
     funshading_domain: self.pdf_content_shading_domain4(shading),
@@ -19,7 +19,7 @@ pub fn PdfDocument::content_read_function_shading(
 /// Read a `/ShadingType 3` radial shading dictionary.
 pub fn PdfDocument::content_read_radial_shading(
   self : PdfDocument,
-  shading : PdfObject,
+  shading : @syntax.PdfObject,
 ) -> PdfContentShadingKind raise PdfError {
   PdfContentRadialShading({
     radialshading_coords: self.pdf_content_shading_coords6(shading),
@@ -33,7 +33,7 @@ pub fn PdfDocument::content_read_radial_shading(
 /// Read a `/ShadingType 2` axial shading dictionary.
 pub fn PdfDocument::content_read_axial_shading(
   self : PdfDocument,
-  shading : PdfObject,
+  shading : @syntax.PdfObject,
 ) -> PdfContentShadingKind raise PdfError {
   PdfContentAxialShading({
     axialshading_coords: self.pdf_content_shading_coords4(shading),

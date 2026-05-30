@@ -17,20 +17,22 @@ fn PdfDocument::pdf_page_object_numbers_in_map(
 
 ///|
 fn pdf_page_nullify_references(
-  object : PdfObject,
+  object : @syntax.PdfObject,
   deleted_pages : @core.PdfNumberSet,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   match object {
     PdfIndirect(number) if deleted_pages.contains(number) => PdfNull
     PdfArray(items) => {
-      let output : Array[PdfObject] = Array::new(capacity=items.length())
+      let output : Array[@syntax.PdfObject] = Array::new(
+        capacity=items.length(),
+      )
       for item in items {
         output.push(pdf_page_nullify_references(item, deleted_pages))
       }
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = Array::new(
+      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -98,7 +100,7 @@ fn PdfDocument::pdf_page_nullify_deleted_page_references(
 fn PdfDocument::pdf_referenced_from_object(
   self : PdfDocument,
   found : @hashmap.HashMap[Int, Bool],
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Unit {
   match object {
     PdfIndirect(number) =>

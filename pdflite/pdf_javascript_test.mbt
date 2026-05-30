@@ -5,15 +5,15 @@ fn javascript_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn javascript_lookup_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : @pdflite.PdfName,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   object.lookup_immediate(key)
 }
 
 ///|
 fn javascript_document_with_object_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let document = @pdflite.pdf_document_empty()
   document.add_object_given_number(1, object)
@@ -139,7 +139,7 @@ test "PdfDocument remove_javascript empties JS and URI entries and removes name 
   guard document.lookup_object_or_null(2) is PdfArray([PdfDictionary(entries)]) else {
     fail("expected nested URI dictionary")
   }
-  let nested : @pdflite.PdfObject = PdfDictionary(entries)
+  let nested : @syntax.PdfObject = PdfDictionary(entries)
   @test.assert_eq(
     javascript_lookup_for_test(nested, key_uri),
     Some(PdfString(@ascii.encode(""))),

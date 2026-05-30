@@ -60,8 +60,8 @@ fn codec_stream_bits_for_test(bits : ArrayView[Int]) -> @pdflite.PdfBytes {
 test "pdf_decode_stream_onestage decodes single stream filter" {
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(5)),
       (filter, PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode"))),
     ]),
@@ -92,13 +92,13 @@ test "pdf_decode_stream_onestage applies first DecodeParms predictor" {
   let encoded = @codec.pdf_ascii_hex_encode(
     codec_stream_bytes_for_test([1, 10, 10, 10]),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode"))),
       (
         decodeparms,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (predictor, PdfInteger(15)),
           (columns, PdfInteger(3)),
         ]),
@@ -132,7 +132,7 @@ test "PdfDocument pdf_decode_stream resolves indirect filters and DecodeParms" {
   )
   doc.add_object_given_number(
     9,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (predictor, PdfInteger(15)),
       (columns, PdfInteger(3)),
     ]),
@@ -140,8 +140,8 @@ test "PdfDocument pdf_decode_stream resolves indirect filters and DecodeParms" {
   let encoded = @codec.pdf_ascii_hex_encode(
     codec_stream_bytes_for_test([1, 10, 10, 10]),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfIndirect(8)),
       (decodeparms, PdfIndirect(9)),
@@ -174,8 +174,8 @@ test "PdfDocument pdf_decode_stream decodes array filters with indirect entries"
     codec_stream_bytes_for_test([77, 97, 110]),
   )
   let encoded = @codec.pdf_ascii_hex_encode(ascii85)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (
         filter,
@@ -210,12 +210,10 @@ test "PdfDocument pdf_decode_stream handles short filter keys and DP arrays" {
     8,
     PdfNameObject(codec_stream_name_for_test("/AHx")),
   )
-  let retained_decodeparms = @pdflite.pdf_dictionary([
-    (predictor, PdfInteger(1)),
-  ])
+  let retained_decodeparms = @syntax.pdf_dictionary([(predictor, PdfInteger(1))])
   let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (short_filter, PdfArray([PdfIndirect(8)])),
       (short_decodeparms, PdfArray([PdfNull, retained_decodeparms])),
@@ -249,11 +247,11 @@ test "PdfDocument pdf_decode_stream accepts indirect DecodeParms arrays" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     9,
-    @pdflite.pdf_dictionary([(predictor, PdfInteger(1))]),
+    @syntax.pdf_dictionary([(predictor, PdfInteger(1))]),
   )
   let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode"))),
       (decodeparms, PdfArray([PdfIndirect(9)])),
@@ -284,7 +282,7 @@ test "PdfDocument pdf_decode_stream applies indirect lzw EarlyChange" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     9,
-    @pdflite.pdf_dictionary([(early_change, PdfInteger(0))]),
+    @syntax.pdf_dictionary([(early_change, PdfInteger(0))]),
   )
   let codes : Array[Int] = [256]
   for _ in 0..<255 {
@@ -292,8 +290,8 @@ test "PdfDocument pdf_decode_stream applies indirect lzw EarlyChange" {
   }
   codes.push(257)
   let encoded = codec_stream_lzw_codes_for_test(codes, 0)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(codec_stream_name_for_test("/LZWDecode"))),
       (decodeparms, PdfIndirect(9)),
@@ -322,16 +320,13 @@ test "PdfDocument pdf_decode_stream decodes CCITT Group 3 one dimensional rows" 
     // white 4, black 4; then white 0, black 8
     1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1,
   ])
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(codec_stream_name_for_test("/CCITTFaxDecode"))),
       (
         decodeparms,
-        @pdflite.pdf_dictionary([
-          (columns, PdfInteger(8)),
-          (rows, PdfInteger(2)),
-        ]),
+        @syntax.pdf_dictionary([(columns, PdfInteger(8)), (rows, PdfInteger(2))]),
       ),
     ]),
     StreamGot(encoded),
@@ -358,13 +353,13 @@ test "PdfDocument pdf_decode_stream decodes CCITT Group 4 rows" {
     0, 0, 1, 1, 0, 1, 1, 0, 1, 1,
   ])
   let decoded = @pdflite.pdf_document_empty().pdf_decode_stream(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (length, PdfInteger(encoded.length())),
         (filter, PdfNameObject(codec_stream_name_for_test("/CCITTFaxDecode"))),
         (
           decodeparms,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (codec_stream_name_for_test("/K"), PdfInteger(-1)),
             (codec_stream_name_for_test("/Columns"), PdfInteger(8)),
             (codec_stream_name_for_test("/Rows"), PdfInteger(1)),
@@ -400,14 +395,14 @@ test "PdfDocument pdf_decode_stream decodes CCITT short filter and direct Decode
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     20,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (columns, PdfInteger(8)),
       (rows, PdfInteger(1)),
       (black_is_1, PdfBoolean(true)),
     ]),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(codec_stream_name_for_test("/CCF"))),
       (decodeparms, PdfIndirect(20)),
@@ -431,14 +426,14 @@ test "PdfDocument pdf_decode_stream reports unsupported CCITT two dimensional K"
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
   let decodeparms = codec_stream_name_for_test("/DecodeParms")
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (length, PdfInteger(1)),
         (filter, PdfNameObject(codec_stream_name_for_test("/CCITTFaxDecode"))),
         (
           decodeparms,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (codec_stream_name_for_test("/K"), PdfInteger(1)),
           ]),
         ),
@@ -459,13 +454,13 @@ test "PdfDocument pdf_decode_stream_until_unknown no longer stops at CCITT" {
   let encoded = codec_stream_bits_for_test([1, 0, 1, 1])
   let doc = @pdflite.pdf_document_empty()
   let decoded = doc.pdf_decode_stream_until_unknown(
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (length, PdfInteger(encoded.length())),
         (filter, PdfNameObject(codec_stream_name_for_test("/CCITTFaxDecode"))),
         (
           decodeparms,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (codec_stream_name_for_test("/Columns"), PdfInteger(4)),
             (codec_stream_name_for_test("/Rows"), PdfInteger(1)),
           ]),
@@ -490,8 +485,8 @@ test "PdfDocument pdf_decode_stream uses default lzw EarlyChange" {
   let filter = codec_stream_name_for_test("/Filter")
   let doc = @pdflite.pdf_document_empty()
   let encoded = codec_stream_lzw_codes_for_test([256, 65, 257], 1)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(codec_stream_name_for_test("/LZWDecode"))),
     ]),
@@ -512,8 +507,8 @@ test "PdfDocument pdf_decode_stream handles empty filter arrays as raw" {
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
   let doc = @pdflite.pdf_document_empty()
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfArray([]))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfArray([]))]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
   let decoded = try! doc.pdf_decode_stream(stream)
@@ -537,42 +532,42 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
   let decodeparms = codec_stream_name_for_test("/DecodeParms")
   let predictor = codec_stream_name_for_test("/Predictor")
   let doc = @pdflite.pdf_document_empty()
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
     fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (filter, PdfNameObject(codec_stream_name_for_test("/AHx"))),
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
     stream,
   )
   guard result is Err(@pdflite.PdfError::StreamLengthExpected) else {
     fail("expected @pdflite.PdfError::StreamLengthExpected")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
     fail("expected @pdflite.PdfError::FilterExpected")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(2)),
       (filter, PdfArray([PdfInteger(1)])),
     ]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
@@ -580,47 +575,47 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
   }
   doc.add_object_given_number(
     9,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (predictor, PdfNameObject(codec_stream_name_for_test("/Bad"))),
     ]),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(5)),
       (filter, PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode"))),
       (decodeparms, PdfIndirect(9)),
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
     fail("expected @pdflite.PdfError::PredictorExpected")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(5)),
       (filter, PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode"))),
       (decodeparms, PdfArray([PdfInteger(1)])),
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
     fail("expected @pdflite.PdfError::PredictorExpected")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(5)),
       (filter, PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode"))),
       (decodeparms, PdfInteger(1)),
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
@@ -633,8 +628,8 @@ test "PdfDocument pdf_decode_stream bounds excessive filter stages" {
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
   let doc = @pdflite.pdf_document_empty()
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(1)),
       (
         filter,
@@ -649,7 +644,7 @@ test "PdfDocument pdf_decode_stream bounds excessive filter stages" {
     ]),
     StreamGot(codec_stream_ascii_for_test("x")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
@@ -670,14 +665,14 @@ test "PdfDocument pdf_decode_stream_until_unknown stops at unsupported filters" 
   )
   doc.add_object_given_number(
     9,
-    @pdflite.pdf_dictionary([(predictor, PdfInteger(1))]),
+    @syntax.pdf_dictionary([(predictor, PdfInteger(1))]),
   )
   let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
-  let unsupported : @pdflite.PdfObject = PdfNameObject(
+  let unsupported : @syntax.PdfObject = PdfNameObject(
     codec_stream_name_for_test("/NoSuchFilter"),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfArray([PdfIndirect(8), unsupported])),
       (decodeparms, PdfArray([PdfIndirect(9), PdfNull])),
@@ -719,22 +714,22 @@ test "PdfDocument pdf_decode_streams_until_unknown mutates document streams" {
   )
   doc.add_object_given_number(
     9,
-    @pdflite.pdf_dictionary([(predictor, PdfInteger(1))]),
+    @syntax.pdf_dictionary([(predictor, PdfInteger(1))]),
   )
   let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
-  let unsupported : @pdflite.PdfObject = PdfNameObject(
+  let unsupported : @syntax.PdfObject = PdfNameObject(
     codec_stream_name_for_test("/NoSuchFilter"),
   )
-  let filtered = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let filtered = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfArray([PdfIndirect(8), unsupported])),
       (decodeparms, PdfArray([PdfIndirect(9), PdfNull])),
     ]),
     StreamGot(encoded),
   )
-  let raw = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(99))]),
+  let raw = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(99))]),
     StreamGot(codec_stream_ascii_for_test("raw")),
   )
   doc.add_object_given_number(3, filtered, generation=2)
@@ -789,18 +784,18 @@ test "pdfdecomp-style stream decompression survives writer reader round trip" {
   document.set_root(1)
   document.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (type_name, PdfNameObject(codec_stream_name_for_test("/Catalog"))),
     ]),
   )
   let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
-  let unsupported : @pdflite.PdfObject = PdfNameObject(
+  let unsupported : @syntax.PdfObject = PdfNameObject(
     codec_stream_name_for_test("/NoSuchFilter"),
   )
   document.add_object_given_number(
     2,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (length, PdfInteger(encoded.length())),
         (
           filter,
@@ -824,7 +819,7 @@ test "pdfdecomp-style stream decompression survives writer reader round trip" {
     fail("expected deferred decompressed stream")
   }
   @test.assert_eq(
-    try! @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    try! @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     codec_stream_ascii_for_test("Hi"),
   )
   @test.assert_eq(
@@ -846,8 +841,8 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
   let doc = @pdflite.pdf_document_empty()
-  let raw = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+  let raw = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2))]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
   let decoded = try! doc.pdf_decode_stream_until_unknown(raw)
@@ -858,11 +853,11 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
     decoded_stream.data,
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
-  let unsupported : @pdflite.PdfObject = PdfNameObject(
+  let unsupported : @syntax.PdfObject = PdfNameObject(
     codec_stream_name_for_test("/NoSuchFilter"),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, unsupported)]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2)), (filter, unsupported)]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
   let decoded = try! doc.pdf_decode_stream_until_unknown(stream)
@@ -877,27 +872,27 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
     decoded_stream.dictionary.lookup_immediate(filter),
     Some(unsupported),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
     fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(3)),
       (filter, PdfNameObject(codec_stream_name_for_test("/AHx"))),
     ]),
     StreamGot(codec_stream_ascii_for_test("6Z>")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
     stream,
   )
   guard result is Err(@pdflite.PdfError::InvalidHexEscape) else {
     fail("expected @pdflite.PdfError::InvalidHexEscape")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(1)),
       (
         filter,
@@ -912,7 +907,7 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
     ]),
     StreamGot(codec_stream_ascii_for_test("x")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
+  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
@@ -927,13 +922,13 @@ test "pdf_decode_stream_onestage accepts DecodeParms arrays" {
   let decodeparms = codec_stream_name_for_test("/DecodeParms")
   let predictor = codec_stream_name_for_test("/Predictor")
   let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode"))),
       (
         decodeparms,
-        PdfArray([@pdflite.pdf_dictionary([(predictor, PdfInteger(1))])]),
+        PdfArray([@syntax.pdf_dictionary([(predictor, PdfInteger(1))])]),
       ),
     ]),
     StreamGot(encoded),
@@ -964,11 +959,11 @@ test "pdf_decode_stream_onestage applies lzw EarlyChange DecodeParms" {
   }
   codes.push(257)
   let encoded = codec_stream_lzw_codes_for_test(codes, 0)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(codec_stream_name_for_test("/LZWDecode"))),
-      (decodeparms, @pdflite.pdf_dictionary([(early_change, PdfInteger(0))])),
+      (decodeparms, @syntax.pdf_dictionary([(early_change, PdfInteger(0))])),
     ]),
     StreamGot(encoded),
   )
@@ -991,11 +986,9 @@ test "pdf_decode_stream_onestage handles short filters and null decodeparms" {
   let short_decodeparms = codec_stream_name_for_test("/DP")
   let predictor = codec_stream_name_for_test("/Predictor")
   let encoded = @codec.pdf_ascii_hex_encode(codec_stream_ascii_for_test("Hi"))
-  let retained_decodeparms = @pdflite.pdf_dictionary([
-    (predictor, PdfInteger(1)),
-  ])
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let retained_decodeparms = @syntax.pdf_dictionary([(predictor, PdfInteger(1))])
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (short_filter, PdfNameObject(codec_stream_name_for_test("/AHx"))),
       (short_decodeparms, PdfArray([PdfNull, retained_decodeparms])),
@@ -1027,8 +1020,8 @@ test "pdf_decode_stream_onestage removes only first array filter" {
   let encoded_once = @codec.pdf_ascii_hex_encode(
     codec_stream_ascii_for_test("9jqo~>"),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded_once.length())),
       (
         filter,
@@ -1058,8 +1051,8 @@ test "pdf_decode_stream_onestage removes only first array filter" {
 test "pdf_decode_stream_onestage treats empty filter arrays as raw" {
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfArray([]))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfArray([]))]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
   let decoded = try! @pdflite.pdf_decode_stream_onestage(stream)
@@ -1081,8 +1074,8 @@ test "pdf_decode_stream_onestage uses default lzw EarlyChange" {
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
   let encoded = codec_stream_lzw_codes_for_test([256, 65, 257], 1)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(codec_stream_name_for_test("/LZWDecode"))),
     ]),
@@ -1106,8 +1099,8 @@ test "pdf_decode_stream decodes all supported filter stages" {
     codec_stream_bytes_for_test([77, 97, 110]),
   )
   let encoded = @codec.pdf_ascii_hex_encode(ascii85)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (
         filter,
@@ -1138,8 +1131,8 @@ test "pdf_decode_stream decodes all supported filter stages" {
 test "pdf_decode_stream bounds excessive filter stages" {
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(1)),
       (
         filter,
@@ -1154,7 +1147,7 @@ test "pdf_decode_stream bounds excessive filter stages" {
     ]),
     StreamGot(codec_stream_ascii_for_test("x")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
@@ -1166,45 +1159,45 @@ test "pdf_decode_stream bounds excessive filter stages" {
 test "pdf_decode_stream_onestage reports malformed stream filters and materializes deferred data" {
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
     stream,
   )
   guard result is Err(@pdflite.PdfError::FilterExpected) else {
     fail("expected @pdflite.PdfError::FilterExpected")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
     stream,
   )
   guard result is Err(@pdflite.PdfError::StreamLengthExpected) else {
     fail("expected @pdflite.PdfError::StreamLengthExpected")
   }
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
     fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
     fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
-  let deferred = @pdflite.stream_to_get(
+  let deferred = @syntax.stream_to_get(
     @pdflite.byte_cursor_of_bytes(codec_stream_ascii_for_test("Hi")),
     0,
     2,
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2))]),
     StreamToGet(deferred),
   )
   let decoded_deferred = try! @pdflite.pdf_decode_stream_onestage(stream)
@@ -1221,34 +1214,34 @@ test "pdf_decode_stream_onestage reports malformed stream filters and materializ
   )
   let decodeparms = codec_stream_name_for_test("/DecodeParms")
   let predictor = codec_stream_name_for_test("/Predictor")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(5)),
       (filter, PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode"))),
       (
         decodeparms,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (predictor, PdfNameObject(codec_stream_name_for_test("/Bad"))),
         ]),
       ),
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
     fail("expected @pdflite.PdfError::PredictorExpected")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(5)),
       (filter, PdfNameObject(codec_stream_name_for_test("/ASCIIHexDecode"))),
       (decodeparms, PdfInteger(1)),
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
     stream,
   )
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {

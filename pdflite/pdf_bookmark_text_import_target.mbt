@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_bookmark_import_target_object(
   self : PdfDocument,
   page_number : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> @destination.PdfDestination raise PdfError {
   match object {
     PdfArray([PdfInteger(_), .. rest]) =>
@@ -29,7 +29,7 @@ fn PdfDocument::pdf_bookmark_import_target(
     Some(data) =>
       self.pdf_bookmark_import_target_object(
         page_number,
-        pdf_parse_object_from_view(data),
+        @syntax.pdf_parse_object_from_view(data),
       )
     None => self.target_of_page_number(page_number)
   }

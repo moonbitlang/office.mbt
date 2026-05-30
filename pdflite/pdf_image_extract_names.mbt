@@ -56,7 +56,7 @@ fn PdfDocument::pdf_image_extraction_name(
   encoding : @metadata.PdfMetadataEncoding,
   stem : String,
   page_number : Int,
-  image : PdfObject,
+  image : @syntax.PdfObject,
   state : PdfImageExtractionRunState,
 ) -> String raise PdfError {
   let object_number = match image {

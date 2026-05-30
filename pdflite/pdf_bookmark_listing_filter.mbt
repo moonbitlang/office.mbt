@@ -20,14 +20,14 @@ fn pdf_bookmark_listing_is_all_pages(
 fn pdf_bookmark_listing_target_object(
   target : @destination.PdfDestination,
   page_number : Int,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   let object = pdf_object_of_destination(target)
   match object {
     PdfArray(items) =>
       if items.length() == 0 {
         object
       } else {
-        let rewritten : Array[PdfObject] = [PdfInteger(page_number)]
+        let rewritten : Array[@syntax.PdfObject] = [PdfInteger(page_number)]
         for index in 1..<items.length() {
           rewritten.push(items[index])
         }

@@ -116,7 +116,7 @@ test "PdfDocument read_destination parses direct destination arrays" {
 ///|
 test "standalone destination helpers delegate to document methods" {
   let doc = @pdflite.pdf_document_empty()
-  let destination_object : @pdflite.PdfObject = PdfArray([
+  let destination_object : @syntax.PdfObject = PdfArray([
     PdfIndirect(7),
     PdfNameObject(dest_name_for_test("/XYZ")),
     PdfReal(10.0),
@@ -321,7 +321,7 @@ test "pdf_object_of_destination writes destination arrays" {
 ///|
 test "PdfDocument read_destination follows dictionary D entry" {
   let doc = @pdflite.pdf_document_empty()
-  let destination : @pdflite.PdfObject = PdfDictionary([
+  let destination : @syntax.PdfObject = PdfDictionary([
     (
       dest_name_for_test("/D"),
       PdfArray([PdfIndirect(7), PdfNameObject(dest_name_for_test("/Fit"))]),
@@ -691,7 +691,7 @@ test "PdfDocument transform_destination clips coordinates and skips external tar
     ),
     DestFitH(TargetOtherDocPageNumber(3), Some(6.0)),
   )
-  let action : @pdflite.PdfObject = PdfDictionary([
+  let action : @syntax.PdfObject = PdfDictionary([
     (dest_name_for_test("/S"), PdfNameObject(dest_name_for_test("/URI"))),
   ])
   @test.assert_eq(
@@ -704,7 +704,7 @@ test "PdfDocument transform_destination clips coordinates and skips external tar
 test "PdfDocument transform_destination rewrites GoTo action D entry" {
   let doc = @pdflite.pdf_document_empty()
   let matrix = @geometry.transform_translate(10.0, 20.0)
-  let action : @pdflite.PdfObject = PdfDictionary([
+  let action : @syntax.PdfObject = PdfDictionary([
     (dest_name_for_test("/S"), PdfNameObject(dest_name_for_test("/GoTo"))),
     (
       dest_name_for_test("/D"),
@@ -746,7 +746,7 @@ test "PdfDocument page_number_of_target handles destination target variants" {
     try! doc.page_number_of_target(DestFit(TargetPageObject(999))),
     0,
   )
-  let action : @pdflite.PdfObject = PdfDictionary([
+  let action : @syntax.PdfObject = PdfDictionary([
     (dest_name_for_test("/S"), PdfNameObject(dest_name_for_test("/URI"))),
   ])
   @test.assert_eq(try! doc.page_number_of_target(DestAction(action)), 0)

@@ -129,12 +129,12 @@ test "private image decode helpers cover scalar edge behavior" {
     fail("expected unsupported indexed 1bpp base")
   }
 
-  let filters : Array[PdfObject] = []
+  let filters : Array[@syntax.PdfObject] = []
   for _ in 0..<1025 {
     filters.push(PdfNameObject(pdf_name_of_bytes(@ascii.encode("/Crypt"))))
   }
-  let too_many_stages = pdf_stream(
-    pdf_dictionary([
+  let too_many_stages = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (pdf_name_of_bytes(@ascii.encode("/Length")), PdfInteger(sample.length())),
       (pdf_name_of_bytes(@ascii.encode("/Filter")), PdfArray(filters)),
     ]),

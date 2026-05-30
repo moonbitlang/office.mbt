@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_page_prefix_content_streams(
   self : PdfDocument,
   prefix : String,
-  page_object : PdfObject,
+  page_object : @syntax.PdfObject,
   fixed_streams : @hashmap.HashMap[Int, Bool],
 ) -> Unit raise PdfError {
   let resources = match
@@ -34,8 +34,8 @@ fn PdfDocument::pdf_page_prefix_content_streams(
 fn PdfDocument::pdf_page_prefix_object(
   self : PdfDocument,
   prefix : String,
-  object : PdfObject,
-) -> PdfObject raise PdfError {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match self.lookup_direct(pdf_page_resources_key(), object) {
     Some(resources) =>
       object.add_dict_entry(
@@ -49,8 +49,8 @@ fn PdfDocument::pdf_page_prefix_object(
 ///|
 fn PdfDocument::pdf_page_merged_content_stream(
   self : PdfDocument,
-  contents : ArrayView[PdfObject],
-) -> PdfObject raise PdfError {
+  contents : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject raise PdfError {
   let decoded_streams : Array[PdfBytes] = Array::new(capacity=contents.length())
   for content in contents {
     match self.direct(content) {
@@ -64,7 +64,7 @@ fn PdfDocument::pdf_page_merged_content_stream(
     }
   }
   let data = pdf_content_concat_streams(decoded_streams)
-  pdf_stream(
+  @syntax.pdf_stream(
     PdfDictionary([(pdf_page_length_key_name, PdfInteger(data.length()))]),
     StreamGot(data),
   )
@@ -73,8 +73,8 @@ fn PdfDocument::pdf_page_merged_content_stream(
 ///|
 fn PdfDocument::pdf_page_merge_content_object(
   self : PdfDocument,
-  object : PdfObject,
-) -> PdfObject raise PdfError {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match object.lookup_immediate(pdf_page_contents_key()) {
     Some(PdfArray(contents)) if contents.length() != 1 => {
       let stream_number = self.add_object(
@@ -108,8 +108,8 @@ pub fn PdfDocument::merge_content_streams(
 ///|
 fn PdfDocument::pdf_page_split_contents_need_merge(
   self : PdfDocument,
-  resources : PdfObject,
-  contents : ArrayView[PdfObject],
+  resources : @syntax.PdfObject,
+  contents : ArrayView[@syntax.PdfObject],
 ) -> Bool {
   if contents.length() <= 1 {
     false
@@ -129,7 +129,7 @@ fn PdfDocument::pdf_page_split_contents_need_merge(
 ///|
 fn PdfDocument::pdf_page_object_needs_content_merge(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   if !self.pdf_page_object_uses_page_resources(object) {
     false

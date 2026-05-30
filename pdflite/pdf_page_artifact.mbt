@@ -1,9 +1,9 @@
 ///|
 fn PdfDocument::pdf_page_mark_all_as_artifact_streams(
   self : PdfDocument,
-  resources : PdfObject,
-  content : ArrayView[PdfObject],
-) -> Array[PdfObject] raise PdfError {
+  resources : @syntax.PdfObject,
+  content : ArrayView[@syntax.PdfObject],
+) -> Array[@syntax.PdfObject] raise PdfError {
   let ops = self.pdf_page_parse_content_ops(resources, content)
   let marked : Array[@content.PdfContentOp] = [
     @content.pdf_content_begin_artifact(),
@@ -42,9 +42,9 @@ fn pdf_page_remove_struct_tree_op(op : @content.PdfContentOp) -> Bool {
 ///|
 fn PdfDocument::pdf_page_remove_struct_tree_streams(
   self : PdfDocument,
-  resources : PdfObject,
-  content : ArrayView[PdfObject],
-) -> Array[PdfObject] raise PdfError {
+  resources : @syntax.PdfObject,
+  content : ArrayView[@syntax.PdfObject],
+) -> Array[@syntax.PdfObject] raise PdfError {
   let ops = self.pdf_page_parse_content_ops(resources, content)
   let output : Array[@content.PdfContentOp] = []
   for op in ops {

@@ -11,17 +11,17 @@ test "PdfDocument referenced_object_numbers follows arrays dictionaries and stre
   let key_missing = reference_name_for_test("/Missing")
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_child, PdfIndirect(2))]),
+    @syntax.pdf_dictionary([(key_child, PdfIndirect(2))]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([(key_stream_child, PdfIndirect(3))]),
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([(key_stream_child, PdfIndirect(3))]),
       StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
     ),
   )
   doc.add_object_given_number(3, PdfInteger(30))
-  let start = @pdflite.pdf_dictionary([
+  let start = @syntax.pdf_dictionary([
     (key_child, PdfIndirect(1)),
     (key_missing, PdfIndirect(99)),
   ])
@@ -35,7 +35,7 @@ test "PdfDocument referenced_object_numbers skips requested dictionary entries" 
   let key_skip = reference_name_for_test("/Skip")
   doc.add_object_given_number(1, PdfInteger(1))
   doc.add_object_given_number(2, PdfInteger(2))
-  let start = @pdflite.pdf_dictionary([
+  let start = @syntax.pdf_dictionary([
     (key_keep, PdfIndirect(1)),
     (key_skip, PdfIndirect(2)),
   ])
@@ -54,14 +54,14 @@ test "PdfDocument referenced_object_numbers skips indirect marker dictionaries" 
   let type_keep = reference_name_for_test("/Keep")
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_page)),
       (key_child, PdfIndirect(3)),
     ]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_keep)),
       (key_child, PdfIndirect(4)),
     ]),
@@ -82,11 +82,11 @@ test "PdfDocument referenced_object_numbers handles cycles" {
   let key_next = reference_name_for_test("/Next")
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_next, PdfIndirect(2))]),
+    @syntax.pdf_dictionary([(key_next, PdfIndirect(2))]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([(key_next, PdfIndirect(1))]),
+    @syntax.pdf_dictionary([(key_next, PdfIndirect(1))]),
   )
   @test.assert_eq(doc.referenced_object_numbers(PdfIndirect(1)), [1, 2])
 }

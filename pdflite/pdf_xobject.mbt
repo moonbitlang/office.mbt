@@ -105,10 +105,10 @@ fn pdf_xobject_all_but_last_page(
 fn PdfDocument::pdf_xobject_form_object_of_page(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let ops = self.parse_content_ops_with_resources(page.resources, page.content)
   let data = pdf_content_bytes_of_ops(ops)
-  pdf_stream(
+  @syntax.pdf_stream(
     PdfDictionary([
       (pdf_xobject_type_key(), PdfNameObject(pdf_xobject_xobject())),
       (pdf_xobject_subtype_key(), PdfNameObject(pdf_xobject_form())),

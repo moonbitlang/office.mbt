@@ -3,7 +3,7 @@
 pub fn PdfDocument::content_entries_of_ops(
   self : PdfDocument,
   mediabox : @geometry.PdfRectangle,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   let mut state = pdf_content_initial_operator_state(
@@ -26,7 +26,7 @@ pub fn PdfDocument::content_entries_of_ops(
 pub fn pdf_content_entries_of_ops(
   document : PdfDocument,
   mediabox : @geometry.PdfRectangle,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   document.content_entries_of_ops(mediabox, resources, ops)
@@ -43,7 +43,7 @@ fn PdfContentOperatorState::content_without_font_cache(
 fn PdfDocument::content_entries_of_xobject_recursive(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   let xobject = self.content_xobject_from_resources(resources, name)
@@ -72,7 +72,7 @@ fn PdfDocument::content_entries_of_xobject_recursive(
 fn PdfDocument::content_entries_of_ops_recursive_from_state(
   self : PdfDocument,
   initial : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> PdfContentOperatorResourceResult raise PdfError {
   let mut state = initial
@@ -98,7 +98,7 @@ fn PdfDocument::content_entries_of_ops_recursive_from_state(
 pub fn PdfDocument::content_entries_of_ops_recursive(
   self : PdfDocument,
   mediabox : @geometry.PdfRectangle,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   let state = pdf_content_initial_operator_state(
@@ -115,7 +115,7 @@ pub fn PdfDocument::content_entries_of_ops_recursive(
 pub fn pdf_content_entries_of_ops_recursive(
   document : PdfDocument,
   mediabox : @geometry.PdfRectangle,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
   document.content_entries_of_ops_recursive(mediabox, resources, ops)

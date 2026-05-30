@@ -61,7 +61,7 @@ fn pdf_page_prefix_is_unused(
 ///|
 fn PdfDocument::pdf_page_resource_names(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
 ) -> Array[String] {
   let names : Array[String] = []
   for resource_key in pdf_page_resource_keys() {
@@ -90,9 +90,9 @@ fn pdf_page_is_resource_key(key : PdfName) -> Bool {
 
 ///|
 fn pdf_page_unknown_resource_entries(
-  resources : PdfObject,
-) -> Array[(PdfName, PdfObject)] {
-  let output : Array[(PdfName, PdfObject)] = []
+  resources : @syntax.PdfObject,
+) -> Array[(PdfName, @syntax.PdfObject)] {
+  let output : Array[(PdfName, @syntax.PdfObject)] = []
   match resources {
     PdfDictionary(entries) =>
       for entry in entries {
@@ -109,9 +109,9 @@ fn pdf_page_unknown_resource_entries(
 ///|
 fn PdfDocument::pdf_page_resource_entries(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   key : PdfName,
-) -> Array[(PdfName, PdfObject)] {
+) -> Array[(PdfName, @syntax.PdfObject)] {
   match self.lookup_direct(key, resources) {
     Some(PdfDictionary(entries)) => [ for entry in entries => entry ]
     _ => []
@@ -125,9 +125,9 @@ fn pdf_page_is_rest_combined_key(key : PdfName) -> Bool {
 
 ///|
 fn pdf_page_unknown_rest_entries(
-  rest : PdfObject,
-) -> Array[(PdfName, PdfObject)] {
-  let output : Array[(PdfName, PdfObject)] = []
+  rest : @syntax.PdfObject,
+) -> Array[(PdfName, @syntax.PdfObject)] {
+  let output : Array[(PdfName, @syntax.PdfObject)] = []
   match rest {
     PdfDictionary(entries) =>
       for entry in entries {
@@ -144,9 +144,9 @@ fn pdf_page_unknown_rest_entries(
 ///|
 fn PdfDocument::pdf_page_rest_array_values(
   self : PdfDocument,
-  rest : PdfObject,
+  rest : @syntax.PdfObject,
   key : PdfName,
-) -> Array[PdfObject] {
+) -> Array[@syntax.PdfObject] {
   match self.lookup_direct(key, rest) {
     Some(PdfArray(values)) => [ for value in values => value ]
     _ => []
@@ -161,10 +161,10 @@ fn PdfDocument::pdf_page_rest_array_values(
 /// `cpdfimpose` helper without porting the full imposition pipeline yet.
 pub fn PdfDocument::combine_pdf_rests(
   self : PdfDocument,
-  first : PdfObject,
-  second : PdfObject,
-) -> PdfObject {
-  let output : Array[(PdfName, PdfObject)] = []
+  first : @syntax.PdfObject,
+  second : @syntax.PdfObject,
+) -> @syntax.PdfObject {
+  let output : Array[(PdfName, @syntax.PdfObject)] = []
   for entry in pdf_page_unknown_rest_entries(first) {
     output.push(entry)
   }
@@ -189,10 +189,10 @@ pub fn PdfDocument::combine_pdf_rests(
 /// preserved. Later duplicate resource names are not renamed here.
 pub fn PdfDocument::combine_pdf_resources(
   self : PdfDocument,
-  first : PdfObject,
-  second : PdfObject,
-) -> PdfObject {
-  let output : Array[(PdfName, PdfObject)] = []
+  first : @syntax.PdfObject,
+  second : @syntax.PdfObject,
+) -> @syntax.PdfObject {
+  let output : Array[(PdfName, @syntax.PdfObject)] = []
   for entry in pdf_page_unknown_resource_entries(first) {
     output.push(entry)
   }
@@ -214,7 +214,7 @@ pub fn PdfDocument::combine_pdf_resources(
 ///|
 fn PdfDocument::pdf_page_object_uses_page_resources(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_page_type_key(), object) {
     Some(PdfNameObject(name)) =>
@@ -225,9 +225,9 @@ fn PdfDocument::pdf_page_object_uses_page_resources(
 
 ///|
 fn pdf_page_merge_dictionary_objects(
-  first : PdfObject,
-  second : PdfObject,
-) -> PdfObject raise PdfError {
+  first : @syntax.PdfObject,
+  second : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let mut output = first
   match second {
     PdfDictionary(entries) =>
@@ -243,9 +243,11 @@ fn pdf_page_merge_dictionary_objects(
 ///|
 fn PdfDocument::pdf_page_process_form_xobject(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   object_number : Int,
-  process : (PdfDocument, PdfObject, ArrayView[PdfObject]) -> Array[PdfObject] raise PdfError,
+  process : (PdfDocument, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> Array[
+    @syntax.PdfObject,
+  ] raise PdfError,
 ) -> Unit raise PdfError {
   let xobject = self.lookup_object_or_null(object_number)
   match self.lookup_direct(pdf_page_subtype_key(), xobject) {
@@ -300,7 +302,9 @@ pub fn[A, B, C] pdf_page_process_stub(
 pub fn PdfDocument::process_xobjects(
   self : PdfDocument,
   page : @page.PdfPage,
-  process : (PdfDocument, PdfObject, ArrayView[PdfObject]) -> Array[PdfObject] raise PdfError,
+  process : (PdfDocument, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> Array[
+    @syntax.PdfObject,
+  ] raise PdfError,
 ) -> Unit raise PdfError {
   match self.lookup_direct(pdf_page_xobject_key(), page.resources) {
     Some(PdfDictionary(entries)) =>

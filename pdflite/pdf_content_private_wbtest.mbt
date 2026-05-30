@@ -58,7 +58,7 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     PdfInteger(7),
   )
-  let empty_object : Result[PdfObject, Error] = try? pdf_content_read_object(
+  let empty_object : Result[@syntax.PdfObject, Error] = try? pdf_content_read_object(
     byte_cursor_of_bytes(Bytes::new(0)),
   )
   guard empty_object is Err(PdfError::ParseObjectExpected) else {

@@ -1,13 +1,13 @@
 ///|
 fn PdfDocument::pdf_page_transform_name_tree_destination_entries(
   self : PdfDocument,
-  dests_tree : PdfObject,
+  dests_tree : @syntax.PdfObject,
   matrices : ArrayView[(Int, @geometry.TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
-) -> Array[(PdfBytes, PdfObject)]? {
+) -> Array[(PdfBytes, @syntax.PdfObject)]? {
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
   let entries = self.read_name_tree(dests_tree)
-  let output : Array[(PdfBytes, PdfObject)] = Array::new(
+  let output : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   let mut changed = false

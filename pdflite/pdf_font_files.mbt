@@ -26,7 +26,7 @@ pub fn PdfFont::embedded_fontfile_number(self : PdfFont) -> Int? {
 ///|
 fn PdfDocument::pdf_font_descriptor_file_number(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> Int? {
   match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
     Some(descriptor) =>
@@ -41,7 +41,7 @@ fn PdfDocument::pdf_font_descriptor_file_number(
 ///|
 fn PdfDocument::pdf_font_embedded_file_number(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> Int? {
   match self.pdf_font_descriptor_file_number(font) {
     Some(number) => Some(number)
@@ -99,7 +99,7 @@ pub fn pdf_extract_fontfile_bytes(
 fn PdfDocument::pdf_font_copy_referenced_objects_from(
   self : PdfDocument,
   source : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> Unit {
   for number in source.referenced_object_numbers(font) {
     self.add_object_given_number(number, source.lookup_object_or_null(number))
@@ -109,8 +109,8 @@ fn PdfDocument::pdf_font_copy_referenced_objects_from(
 ///|
 fn PdfDocument::pdf_font_resource_dictionary_or_empty(
   self : PdfDocument,
-  resources : PdfObject,
-) -> PdfObject raise PdfError {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match self.lookup_direct(pdf_page_font_resource_name, resources) {
     Some(PdfDictionary(_) as fonts) => fonts
     Some(_) => raise DictionaryExpected
@@ -123,7 +123,7 @@ fn PdfDocument::pdf_font_add_to_page_resources(
   self : PdfDocument,
   page : @page.PdfPage,
   resource_name : PdfName,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> @page.PdfPage raise PdfError {
   let fonts = self.pdf_font_resource_dictionary_or_empty(page.resources)
   let updated_fonts = fonts.add_dict_entry(resource_name, font)

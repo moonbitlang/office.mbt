@@ -37,7 +37,7 @@ priv struct PdfTypeTypesetState {
   mut ops : Array[@content.PdfContentOp]
   fonts : Array[(String, Int)]
   mut page_font_numbers : Array[Int]
-  mut page_annotations : Array[PdfObject]
+  mut page_annotations : Array[@syntax.PdfObject]
   mut dest_rectangles : Array[(Double, Double, Double, Double)]
   pages : Array[@page.PdfPage]
   mut tags : Array[(String, Int)]

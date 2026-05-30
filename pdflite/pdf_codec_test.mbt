@@ -796,8 +796,8 @@ test "pdf encode filter and stream APIs accept explicit Flate levels" {
   @test.assert_eq(@pdflite.pdf_decode_filter_bytes(flate, encoded), data)
 
   let length = codec_name_for_test("/Length")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(data.length()))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(data.length()))]),
     StreamGot(data),
   )
   let stored = @pdflite.pdf_encode_stream_with_filter(

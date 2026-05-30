@@ -1,10 +1,10 @@
 ///|
 fn pdf_tweak_replace_array_entry(
-  values : ArrayView[PdfObject],
+  values : ArrayView[@syntax.PdfObject],
   index : Int,
-  value : PdfObject,
+  value : @syntax.PdfObject,
   source : String,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   if index < 0 || index >= values.length() {
     raise BadPageSpecification(source)
   }
@@ -36,12 +36,12 @@ fn pdf_tweak_chain_array_index(name : PdfName) -> Int? {
 ///|
 fn PdfDocument::pdf_tweak_replace_existing_chain(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   chain : ArrayView[PdfName],
   chain_index : Int,
-  value : PdfObject,
+  value : @syntax.PdfObject,
   source : String,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let key = chain[chain_index]
   let final_key = chain_index + 1 == chain.length()
   match object {
@@ -119,7 +119,7 @@ fn PdfDocument::pdf_tweak_replace_numbered_object(
   self : PdfDocument,
   number : Int,
   chain : ArrayView[PdfName],
-  value : PdfObject,
+  value : @syntax.PdfObject,
   source : String,
 ) -> Unit raise PdfError {
   if chain.length() == 0 {

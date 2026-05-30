@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_text_font_is_embedded(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
     Some(descriptor) =>
@@ -15,7 +15,7 @@ fn PdfDocument::pdf_text_font_is_embedded(
 ///|
 fn PdfDocument::pdf_text_font_is_symbolic(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> Bool raise PdfError {
   match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
     Some(descriptor) =>
@@ -30,7 +30,7 @@ fn PdfDocument::pdf_text_font_is_symbolic(
 ///|
 fn PdfDocument::pdf_text_default_base_encoding(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> PdfEncoding raise PdfError {
   if self.pdf_text_font_is_embedded(font) ||
     self.pdf_text_font_is_symbolic(font) {
@@ -43,8 +43,8 @@ fn PdfDocument::pdf_text_default_base_encoding(
 ///|
 fn PdfDocument::read_encoding_base(
   self : PdfDocument,
-  encoding_dictionary : PdfObject,
-  font : PdfObject,
+  encoding_dictionary : @syntax.PdfObject,
+  font : @syntax.PdfObject,
 ) -> PdfEncoding raise PdfError {
   match
     self.lookup_direct(pdf_text_base_encoding_key_name, encoding_dictionary) {
@@ -61,7 +61,7 @@ fn PdfDocument::read_encoding_base(
 ///|
 fn PdfDocument::read_encoding_differences(
   self : PdfDocument,
-  differences : PdfObject,
+  differences : @syntax.PdfObject,
 ) -> Array[PdfEncodingDifference] raise PdfError {
   match self.direct(differences) {
     PdfArray(values) => {
@@ -116,7 +116,7 @@ fn pdf_text_is_standard14_subtype_name(name : PdfName) -> Bool {
 /// encodings use `PdfImplicitInFontFile`.
 pub fn PdfDocument::read_encoding(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> PdfEncoding raise PdfError {
   match self.lookup_direct(pdf_text_encoding_key_name, font) {
     Some(PdfNameObject(name)) =>

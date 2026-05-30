@@ -117,9 +117,9 @@ fn crypt_encrypt_minimal_catalog_document_for_test(
 
 ///|
 fn crypt_encrypt_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   data : @pdflite.PdfBytes,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfStreamObject({
     dictionary: PdfDictionary([ for entry in entries => entry ]),
     data: StreamGot(data),
@@ -128,15 +128,15 @@ fn crypt_encrypt_stream_for_test(
 
 ///|
 fn crypt_encrypt_stream_object_bytes_for_test(
-  stream : @pdflite.PdfStream,
+  stream : @syntax.PdfStream,
 ) -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes()
+  @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes()
 }
 
 ///|
 fn crypt_encrypt_assert_equivalent_object_for_test(
-  actual : @pdflite.PdfObject,
-  expected : @pdflite.PdfObject,
+  actual : @syntax.PdfObject,
+  expected : @syntax.PdfObject,
 ) -> Unit raise {
   match (actual, expected) {
     (PdfStreamObject(actual), PdfStreamObject(expected)) => {
@@ -169,7 +169,7 @@ test "PdfDocument encrypt_128bit encrypts parsed objects and writes length" {
   let key_length = crypt_encrypt_name_for_test("/Length")
   let key_p = crypt_encrypt_name_for_test("/P")
   let doc = @pdflite.pdf_document_empty()
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("hello"))),
   ])
   doc.add_object_given_number(1, plain_object)
@@ -243,7 +243,7 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
   let key_type = crypt_encrypt_name_for_test("/Type")
   let key_metadata = crypt_encrypt_name_for_test("/Metadata")
   let doc = @pdflite.pdf_document_empty()
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("hello"))),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
@@ -381,7 +381,7 @@ test "PdfDocument encrypt_128bit_aesv2_with_iv_provider writes AES crypt filter"
       (key_count, PdfInteger(0)),
     ]),
   )
-  let secret_object : @pdflite.PdfObject = PdfDictionary([
+  let secret_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("secret"))),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
@@ -458,7 +458,7 @@ test "PdfDocument encrypt_128bit_aesv2_with_iv_provider writes AES crypt filter"
 test "pdfencrypt-style AES128 blank-user owner-password output roundtrips" {
   let key_title = crypt_encrypt_name_for_test("/Title")
   let doc = crypt_encrypt_minimal_catalog_document_for_test(1, 4)
-  let secret_object : @pdflite.PdfObject = PdfDictionary([
+  let secret_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("pdfencrypt-secret"))),
   ])
   doc.add_object_given_number(5, secret_object)
@@ -511,7 +511,7 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
   let key_ue = crypt_encrypt_name_for_test("/UE")
   let key_perms = crypt_encrypt_name_for_test("/Perms")
   let doc = crypt_encrypt_minimal_catalog_document_for_test(1, 7)
-  let secret_object : @pdflite.PdfObject = PdfDictionary([
+  let secret_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes3-secret"))),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
@@ -633,7 +633,7 @@ test "PdfDocument encrypted AESV3 output round trips through xref stream writers
   let key_metadata = crypt_encrypt_name_for_test("/Metadata")
   let key_encrypt = crypt_encrypt_name_for_test("/Encrypt")
   let doc = crypt_encrypt_minimal_catalog_document_for_test(1, 7)
-  let secret_object : @pdflite.PdfObject = PdfDictionary([
+  let secret_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("secret-aes3-xref"))),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
@@ -704,7 +704,7 @@ test "PdfDocument encrypted AESV2 output round trips through xref stream writers
   let key_metadata = crypt_encrypt_name_for_test("/Metadata")
   let key_encrypt = crypt_encrypt_name_for_test("/Encrypt")
   let doc = crypt_encrypt_minimal_catalog_document_for_test(1, 5)
-  let secret_object : @pdflite.PdfObject = PdfDictionary([
+  let secret_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("secret-aes-xref"))),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
@@ -794,7 +794,7 @@ test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
       (key_count, PdfInteger(0)),
     ]),
   )
-  let secret_object : @pdflite.PdfObject = PdfDictionary([
+  let secret_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("secret"))),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
@@ -884,7 +884,7 @@ test "PdfDocument encrypted ARC4 output round trips through xref stream writers"
       (key_count, PdfInteger(0)),
     ]),
   )
-  let secret_object : @pdflite.PdfObject = PdfDictionary([
+  let secret_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("secret-xref"))),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(

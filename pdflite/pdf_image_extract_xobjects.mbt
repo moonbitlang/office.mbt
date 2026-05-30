@@ -1,8 +1,8 @@
 ///|
 fn PdfDocument::pdf_image_extract_named_images(
   self : PdfDocument,
-  resources : PdfObject,
-  images : ArrayView[PdfObject],
+  resources : @syntax.PdfObject,
+  images : ArrayView[@syntax.PdfObject],
   stem : String,
   page_number : Int,
   encoding : @metadata.PdfMetadataEncoding,
@@ -33,12 +33,16 @@ fn PdfDocument::pdf_image_extract_named_images(
 ///|
 fn PdfDocument::pdf_image_partition_xobjects(
   self : PdfDocument,
-  resources : PdfObject,
-) -> (Array[PdfObject], Array[PdfObject]) {
+  resources : @syntax.PdfObject,
+) -> (Array[@syntax.PdfObject], Array[@syntax.PdfObject]) {
   match self.lookup_direct(pdf_image_xobject_key(), resources) {
     Some(PdfDictionary(xobjects)) => {
-      let images : Array[PdfObject] = Array::new(capacity=xobjects.length())
-      let forms : Array[PdfObject] = Array::new(capacity=xobjects.length())
+      let images : Array[@syntax.PdfObject] = Array::new(
+        capacity=xobjects.length(),
+      )
+      let forms : Array[@syntax.PdfObject] = Array::new(
+        capacity=xobjects.length(),
+      )
       for entry in xobjects {
         match self.lookup_direct(pdf_image_subtype_key(), entry.1) {
           Some(PdfNameObject(subtype)) if subtype == pdf_image_image_name() =>
@@ -57,8 +61,8 @@ fn PdfDocument::pdf_image_partition_xobjects(
 ///|
 fn PdfDocument::pdf_image_form_resources(
   self : PdfDocument,
-  form : PdfObject,
-) -> PdfObject {
+  form : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match self.lookup_direct(pdf_xobject_resources_key(), form) {
     Some(PdfDictionary(entries)) => PdfDictionary(entries)
     _ => PdfDictionary([])
@@ -68,7 +72,7 @@ fn PdfDocument::pdf_image_form_resources(
 ///|
 fn PdfDocument::pdf_image_extract_form_xobject_files(
   self : PdfDocument,
-  form : PdfObject,
+  form : @syntax.PdfObject,
   stem : String,
   page_number : Int,
   encoding : @metadata.PdfMetadataEncoding,
@@ -113,8 +117,8 @@ fn PdfDocument::pdf_image_extract_form_xobject_files(
 ///|
 fn PdfDocument::pdf_image_extract_inline_image_files(
   self : PdfDocument,
-  resources : PdfObject,
-  content : ArrayView[PdfObject],
+  resources : @syntax.PdfObject,
+  content : ArrayView[@syntax.PdfObject],
   stem : String,
   page_number : Int,
   encoding : @metadata.PdfMetadataEncoding,
@@ -129,7 +133,7 @@ fn PdfDocument::pdf_image_extract_inline_image_files(
           pdf_image_length_key(),
           PdfInteger(data.length()),
         )
-        let image = pdf_stream(image_dictionary, StreamGot(data))
+        let image = @syntax.pdf_stream(image_dictionary, StreamGot(data))
         let name = self.bookmark_name_of_spec(
           encoding,
           [],
@@ -162,7 +166,7 @@ fn PdfDocument::pdf_image_extract_inline_image_files(
 ///|
 fn PdfDocument::pdf_image_extract_inline_form_files(
   self : PdfDocument,
-  form : PdfObject,
+  form : @syntax.PdfObject,
   stem : String,
   page_number : Int,
   encoding : @metadata.PdfMetadataEncoding,
@@ -181,7 +185,7 @@ fn PdfDocument::pdf_image_extract_inline_form_files(
 ///|
 fn PdfDocument::pdf_image_extract_smask_files(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
   stem : String,
   page_number : Int,
   encoding : @metadata.PdfMetadataEncoding,

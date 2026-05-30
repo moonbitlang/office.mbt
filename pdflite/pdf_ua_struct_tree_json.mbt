@@ -21,7 +21,7 @@ fn pdf_ua_struct_tree_header(page_object_numbers : ArrayView[Int]) -> Json {
 ///|
 fn PdfDocument::pdf_ua_struct_tree_referenced_numbers(
   self : PdfDocument,
-  struct_tree_root : PdfObject,
+  struct_tree_root : @syntax.PdfObject,
 ) -> Array[Int] {
   self.referenced_object_numbers(struct_tree_root, no_follow_entries=[
     pdf_structure_pg_key(),
@@ -71,7 +71,7 @@ fn pdf_ua_struct_tree_json_item_number(json : Json) -> Int raise PdfError {
 ///|
 fn pdf_ua_read_struct_tree_json_row(
   json : Json,
-) -> (Int, PdfObject) raise PdfError {
+) -> (Int, @syntax.PdfObject) raise PdfError {
   match json {
     Array([number_json, object_json]) =>
       (
@@ -84,9 +84,9 @@ fn pdf_ua_read_struct_tree_json_row(
 
 ///|
 fn pdf_ua_rewrite_struct_tree_indirects(
-  object : PdfObject,
+  object : @syntax.PdfObject,
   replacements : @hashmap.HashMap[Int, Int],
-) -> PdfObject {
+) -> @syntax.PdfObject {
   match object {
     PdfIndirect(number) =>
       match replacements.get(number) {
@@ -94,14 +94,14 @@ fn pdf_ua_rewrite_struct_tree_indirects(
         None => object
       }
     PdfArray(items) => {
-      let output : Array[PdfObject] = []
+      let output : Array[@syntax.PdfObject] = []
       for item in items {
         output.push(pdf_ua_rewrite_struct_tree_indirects(item, replacements))
       }
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         output.push(
           (entry.0, pdf_ua_rewrite_struct_tree_indirects(entry.1, replacements)),
@@ -137,8 +137,8 @@ fn PdfDocument::pdf_ua_replace_struct_tree_inner(
     }
     _ => raise SoftError("Top level JSON wrong. Must be list with 0 first.")
   }
-  let positives : Array[(Int, PdfObject)] = []
-  let new_objects : Array[(Int, PdfObject)] = []
+  let positives : Array[(Int, @syntax.PdfObject)] = []
+  let new_objects : Array[(Int, @syntax.PdfObject)] = []
   for row in rows {
     let entry = pdf_ua_read_struct_tree_json_row(row)
     if entry.0 > 0 {

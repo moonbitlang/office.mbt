@@ -1,5 +1,8 @@
 ///|
-fn pdf_text_dictionary_has_key(object : PdfObject, key : PdfName) -> Bool {
+fn pdf_text_dictionary_has_key(
+  object : @syntax.PdfObject,
+  key : PdfName,
+) -> Bool {
   match object.dictionary_view() {
     Some(entries) =>
       for entry in entries {
@@ -15,7 +18,10 @@ fn pdf_text_dictionary_has_key(object : PdfObject, key : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_text_find_immediate_indirect(object : PdfObject, key : PdfName) -> Int? {
+fn pdf_text_find_immediate_indirect(
+  object : @syntax.PdfObject,
+  key : PdfName,
+) -> Int? {
   match object.dictionary_view() {
     Some(entries) =>
       for entry in entries {
@@ -34,7 +40,9 @@ fn pdf_text_find_immediate_indirect(object : PdfObject, key : PdfName) -> Int? {
 }
 
 ///|
-fn pdf_text_fontfile_of_descriptor(descriptor : PdfObject) -> PdfFontFile? {
+fn pdf_text_fontfile_of_descriptor(
+  descriptor : @syntax.PdfObject,
+) -> PdfFontFile? {
   match
     pdf_text_find_immediate_indirect(descriptor, pdf_text_font_file_key_name) {
     Some(number) => Some(PdfFontFile(number))
@@ -84,7 +92,7 @@ fn pdf_text_empty_font_descriptor() -> PdfFontDescriptor {
 fn PdfDocument::pdf_text_optional_number(
   self : PdfDocument,
   key : PdfName,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Double raise PdfError {
   match self.lookup_direct(key, object) {
     Some(value) => self.get_number(value)
@@ -96,7 +104,7 @@ fn PdfDocument::pdf_text_optional_number(
 fn PdfDocument::pdf_text_optional_integer(
   self : PdfDocument,
   key : PdfName,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Int raise PdfError {
   match self.lookup_direct(key, object) {
     Some(value) => self.get_number(value).to_int()
@@ -110,8 +118,8 @@ fn pdf_text_parse_charset(bytes : BytesView) -> Array[PdfName] raise PdfError {
   let names : Array[PdfName] = Array::new(capacity=bytes.length())
   let mut done = false
   while !done {
-    pdf_cursor_drop_whitespace(cursor)
-    match pdf_cursor_lex_name(cursor) {
+    @syntax.pdf_cursor_drop_whitespace(cursor)
+    match @syntax.pdf_cursor_lex_name(cursor) {
       LexName(name) =>
         if name == pdf_text_slash_name {
           done = true
@@ -127,7 +135,7 @@ fn pdf_text_parse_charset(bytes : BytesView) -> Array[PdfName] raise PdfError {
 ///|
 fn PdfDocument::pdf_text_font_charset(
   self : PdfDocument,
-  descriptor : PdfObject,
+  descriptor : @syntax.PdfObject,
 ) -> Array[PdfName]? raise PdfError {
   match self.lookup_direct(pdf_text_charset_key_name, descriptor) {
     Some(PdfString(bytes)) => Some(pdf_text_parse_charset(bytes))
@@ -144,7 +152,7 @@ fn PdfDocument::pdf_text_font_charset(
 /// readers.
 pub fn PdfDocument::read_font_descriptor(
   self : PdfDocument,
-  font : PdfObject,
+  font : @syntax.PdfObject,
 ) -> PdfFontDescriptor? raise PdfError {
   match self.lookup_direct(pdf_text_font_descriptor_key_name, font) {
     None => None

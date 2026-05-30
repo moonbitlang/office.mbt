@@ -126,7 +126,7 @@ fn pdf_image_content_ops(
 ///|
 fn PdfDocument::pdf_image_add_image_page(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
   process_struct_tree : Bool,
   subformat : PdfUASubformat?,
   title : String?,
@@ -183,7 +183,7 @@ fn PdfDocument::pdf_image_add_image_page(
 ///|
 /// Build a single-page PDF document that draws `image` at its natural size.
 pub fn pdf_image_document_of_object(
-  image : PdfObject,
+  image : @syntax.PdfObject,
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,
   title? : String? = None,
@@ -204,8 +204,8 @@ pub fn pdf_image_document_of_object(
 pub fn pdf_image_of_input(
   data : BytesView,
   object_of_data : (PdfDocument, BytesView) -> (
-    PdfObject,
-    Array[(Int, PdfObject)],
+    @syntax.PdfObject,
+    Array[(Int, @syntax.PdfObject)],
   ) raise PdfError,
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,

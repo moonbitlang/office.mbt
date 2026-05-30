@@ -12,7 +12,7 @@ fn PdfDocument::load_reconstructed_object_stream_entries_from_context(
     let xref = entry.0
     let reference = entry.1
     if reference.object_stream_number == object_stream_number {
-      let loaded : Result[(Int, PdfObject), Error] = try? context.read_reference(
+      let loaded : Result[(Int, @syntax.PdfObject), Error] = try? context.read_reference(
         reference,
       )
       match loaded {
@@ -67,7 +67,7 @@ fn PdfDocument::load_reconstructed_physical_object_stream_members(
     match context_result {
       Ok(context) =>
         for index in 0..<context.pairs.length() {
-          let loaded_member : Result[(Int, PdfObject), Error] = try? context.read_reference({
+          let loaded_member : Result[(Int, @syntax.PdfObject), Error] = try? context.read_reference({
               object_stream_number,
               index,
             },

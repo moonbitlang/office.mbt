@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_text_add_font_object(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   objnum : Int?,
 ) -> Int {
   match objnum {

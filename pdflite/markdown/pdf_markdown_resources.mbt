@@ -72,9 +72,9 @@ fn pdf_markdown_notdef_name() -> @pdflite.PdfName {
 ///|
 fn pdf_markdown_font_resource_entry(
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   font_name : @pdflite.PdfName,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   match document.lookup_direct(pdf_markdown_font_key(), resources) {
     Some(fonts) => fonts.lookup_immediate(font_name)
     None => None
@@ -84,9 +84,9 @@ fn pdf_markdown_font_resource_entry(
 ///|
 fn pdf_markdown_xobject_resource(
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   xobject_name : @pdflite.PdfName,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   match document.lookup_direct(pdf_markdown_xobject_key(), resources) {
     Some(xobjects) => document.lookup_direct(xobject_name, xobjects)
     None => None
@@ -96,7 +96,7 @@ fn pdf_markdown_xobject_resource(
 ///|
 fn pdf_markdown_is_form_xobject(
   document : @pdflite.PdfDocument,
-  xobject : @pdflite.PdfObject,
+  xobject : @syntax.PdfObject,
 ) -> Bool {
   match document.lookup_direct(pdf_markdown_subtype_key(), xobject) {
     Some(PdfNameObject(name)) => name == pdf_markdown_form()
@@ -107,9 +107,9 @@ fn pdf_markdown_is_form_xobject(
 ///|
 fn pdf_markdown_form_resources(
   document : @pdflite.PdfDocument,
-  parent_resources : @pdflite.PdfObject,
-  xobject : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
+  parent_resources : @syntax.PdfObject,
+  xobject : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match document.lookup_direct(pdf_markdown_resources_key(), xobject) {
     Some(resources) => resources
     None => parent_resources
@@ -119,7 +119,7 @@ fn pdf_markdown_form_resources(
 ///|
 fn pdf_markdown_form_matrix(
   document : @pdflite.PdfDocument,
-  xobject : @pdflite.PdfObject,
+  xobject : @syntax.PdfObject,
 ) -> @geometry.TransformMatrix raise {
   document.parse_matrix(pdf_markdown_matrix_key(), xobject)
 }

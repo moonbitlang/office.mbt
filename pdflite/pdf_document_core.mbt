@@ -78,7 +78,9 @@ pub fn PdfDocument::root(self : PdfDocument) -> Int {
 /// A `/Root` entry in the trailer dictionary is preferred over the stored root
 /// number. The selected reference is resolved through `direct`; if it resolves
 /// to `PdfNull`, this raises `PdfError::RootExpected`.
-pub fn PdfDocument::catalog(self : PdfDocument) -> PdfObject raise PdfError {
+pub fn PdfDocument::catalog(
+  self : PdfDocument,
+) -> @syntax.PdfObject raise PdfError {
   let object = match
     self.trailer_dict.lookup_immediate(pdf_document_root_key()) {
     Some(root) => self.direct(root)
@@ -100,7 +102,7 @@ pub fn PdfDocument::set_root(self : PdfDocument, root : Int) -> Unit {
 /// Return the current trailer dictionary object.
 ///
 /// The returned object may share mutable container state with the document.
-pub fn PdfDocument::trailer_dict(self : PdfDocument) -> PdfObject {
+pub fn PdfDocument::trailer_dict(self : PdfDocument) -> @syntax.PdfObject {
   self.trailer_dict
 }
 
@@ -108,7 +110,7 @@ pub fn PdfDocument::trailer_dict(self : PdfDocument) -> PdfObject {
 /// Replace the document trailer dictionary object.
 pub fn PdfDocument::set_trailer_dict(
   self : PdfDocument,
-  trailer_dict : PdfObject,
+  trailer_dict : @syntax.PdfObject,
 ) -> Unit {
   self.trailer_dict = trailer_dict
 }

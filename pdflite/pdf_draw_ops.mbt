@@ -31,7 +31,7 @@ pub(all) enum PdfDrawOp {
   PdfDrawClipEvenOdd
   PdfDrawFormXObject(Double, Double, Double, Double, String, Array[PdfDrawOp])
   PdfDrawUse(String)
-  PdfDrawImageXObject(String, PdfObject)
+  PdfDrawImageXObject(String, @syntax.PdfObject)
   PdfDrawImage(String)
   PdfDrawNewPage
   PdfDrawOpacity(Double)
@@ -56,7 +56,7 @@ pub(all) enum PdfDrawOp {
   PdfDrawBeginArtifact
   PdfDrawEndArtifact
   PdfDrawNamespace(String)
-  PdfDrawEltInfo(String, PdfObject)
+  PdfDrawEltInfo(String, @syntax.PdfObject)
   PdfDrawEndEltInfo(String)
   PdfDrawAutoTag(Bool)
 } derive(Debug, Eq, ToJson)

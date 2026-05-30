@@ -436,10 +436,10 @@ test "private external CMap helpers cover malformed and compact sections" {
   )
 
   let fallback_doc = pdf_document_empty()
-  let descendant = pdf_dictionary([
+  let descendant = @syntax.pdf_dictionary([
     (
       cmap_wbtest_text_name("/CIDSystemInfo"),
-      pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           cmap_wbtest_text_name("/Registry"),
           PdfString(cmap_wbtest_text_bytes([82])),
@@ -455,11 +455,11 @@ test "private external CMap helpers cover malformed and compact sections" {
       cmap_wbtest_text_name("/BaseFont"),
       PdfNameObject(cmap_wbtest_text_name("/Descendant")),
     ),
-    (cmap_wbtest_text_name("/FontDescriptor"), pdf_dictionary([])),
+    (cmap_wbtest_text_name("/FontDescriptor"), @syntax.pdf_dictionary([])),
   ])
   fallback_doc.add_object_given_number(4, descendant)
-  let bad_cmap = pdf_stream(
-    pdf_dictionary([
+  let bad_cmap = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         cmap_wbtest_text_name("/Filter"),
         PdfNameObject(cmap_wbtest_text_name("/NoSuchFilter")),
@@ -468,7 +468,7 @@ test "private external CMap helpers cover malformed and compact sections" {
     StreamGot(cmap_wbtest_text_bytes([1])),
   )
   fallback_doc.add_object_given_number(5, bad_cmap)
-  let font = pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       cmap_wbtest_text_name("/BaseFont"),
       PdfNameObject(cmap_wbtest_text_name("/Top")),
@@ -581,10 +581,10 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
   @test.assert_eq(pdf_text_find_immediate_indirect(PdfInteger(1), key), None)
   let helper_doc = pdf_document_empty()
 
-  let bad_deferred = pdf_stream(
+  let bad_deferred = @syntax.pdf_stream(
     PdfDictionary([]),
     StreamToGet(
-      stream_to_get(byte_cursor_of_bytes(@ascii.encode("abc")), -1, 1),
+      @syntax.stream_to_get(byte_cursor_of_bytes(@ascii.encode("abc")), -1, 1),
     ),
   )
   let bad_deferred_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(
@@ -593,7 +593,7 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
   guard bad_deferred_result is Err(_) else {
     fail("expected malformed deferred stream CMap to raise")
   }
-  let bad_filter = pdf_stream(
+  let bad_filter = @syntax.pdf_stream(
     PdfDictionary([(cmap_wbtest_text_name("/Filter"), PdfInteger(1))]),
     StreamGot(@ascii.encode("x")),
   )
@@ -603,7 +603,7 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
   guard bad_filter_result is Err(_) else {
     fail("expected malformed filter CMap to raise")
   }
-  let unsupported_filter = pdf_stream(
+  let unsupported_filter = @syntax.pdf_stream(
     PdfDictionary([
       (cmap_wbtest_text_name("/Length"), PdfInteger(1)),
       (

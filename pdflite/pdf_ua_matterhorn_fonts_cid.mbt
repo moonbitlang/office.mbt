@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_ua_matterhorn_type0_indirect_encoding(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Int? {
   let direct_object = self.direct(object)
   match
@@ -24,9 +24,9 @@ fn PdfDocument::pdf_ua_matterhorn_type0_indirect_encoding(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_cid_system_entry(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   key : PdfName,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   match self.lookup_direct(pdf_ua_matterhorn_cid_system_info_key(), object) {
     Some(info) => self.lookup_direct(key, info)
     None => None
@@ -36,9 +36,9 @@ fn PdfDocument::pdf_ua_matterhorn_cid_system_entry(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_descendant_cid_system_entry(
   self : PdfDocument,
-  type0_font : PdfObject,
+  type0_font : @syntax.PdfObject,
   key : PdfName,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   match
     self.lookup_direct(pdf_ua_matterhorn_descendant_fonts_key(), type0_font) {
     Some(PdfArray([descendant, ..])) =>
@@ -108,7 +108,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_31_003(self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_is_cid_font_type2(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_ua_subtype_key(), object) {
     Some(PdfNameObject(subtype)) =>
@@ -118,7 +118,7 @@ fn PdfDocument::pdf_ua_matterhorn_is_cid_font_type2(
 }
 
 ///|
-fn pdf_ua_matterhorn_object_string_extra(object : PdfObject) -> Json {
+fn pdf_ua_matterhorn_object_string_extra(object : @syntax.PdfObject) -> Json {
   let bytes = pdf_write_object(object) catch { _ => b"" }
   Json::string(@ascii.decode_lossy(bytes))
 }

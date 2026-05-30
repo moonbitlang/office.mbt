@@ -1,5 +1,7 @@
 ///|
-fn pdf_dest_read_target_page(object : PdfObject) -> @destination.PdfTargetPage? {
+fn pdf_dest_read_target_page(
+  object : @syntax.PdfObject,
+) -> @destination.PdfTargetPage? {
   match object {
     PdfIndirect(number) => Some(TargetPageObject(number))
     PdfInteger(number) => Some(TargetOtherDocPageNumber(number))
@@ -10,7 +12,7 @@ fn pdf_dest_read_target_page(object : PdfObject) -> @destination.PdfTargetPage? 
 ///|
 fn PdfDocument::pdf_dest_optional_number(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Double? raise PdfError {
   match object {
     PdfNull => None
@@ -36,7 +38,7 @@ fn pdf_dest_bytes_equal(left : PdfBytes, right : PdfBytes) -> Bool {
 ///|
 fn PdfDocument::pdf_dest_catalog(
   self : PdfDocument,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   self.catalog()
 }
 
@@ -44,7 +46,7 @@ fn PdfDocument::pdf_dest_catalog(
 fn PdfDocument::pdf_dest_lookup_string_destination(
   self : PdfDocument,
   key : PdfBytes,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   let catalog = self.pdf_dest_catalog()
   match self.lookup_direct(pdf_dest_names_key(), catalog) {
     Some(names_dict) =>
@@ -72,7 +74,7 @@ fn PdfDocument::pdf_dest_lookup_string_destination(
 /// are represented as `DestNull`.
 pub fn PdfDocument::read_destination(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   shallow? : Bool = false,
 ) -> @destination.PdfDestination raise PdfError {
   match self.direct(object) {
@@ -187,7 +189,7 @@ pub fn PdfDocument::read_destination(
 /// This is the standalone form of `PdfDocument::read_destination`.
 pub fn pdf_read_destination(
   document : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   shallow? : Bool = false,
 ) -> @destination.PdfDestination raise PdfError {
   document.read_destination(object, shallow~)

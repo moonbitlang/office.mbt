@@ -210,28 +210,28 @@ test "Pdf font debug names cover non-Type1 variants" {
 ///|
 test "PdfDocument read_encoding reads direct and dictionary encodings" {
   let doc = @pdflite.pdf_document_empty()
-  let direct_font = @pdflite.pdf_dictionary([
+  let direct_font = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Encoding"),
       PdfNameObject(text_encoding_name_for_test("/WinAnsiEncoding")),
     ),
   ])
   @test.assert_eq(try! doc.read_encoding(direct_font), PdfWinAnsiEncoding)
-  let unknown_direct = @pdflite.pdf_dictionary([
+  let unknown_direct = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Encoding"),
       PdfNameObject(text_encoding_name_for_test("/UnknownEncoding")),
     ),
   ])
   @test.assert_eq(try! doc.read_encoding(unknown_direct), PdfImplicitInFontFile)
-  let dictionary_font = @pdflite.pdf_dictionary([
+  let dictionary_font = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
     (
       text_encoding_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_encoding_name_for_test("/BaseEncoding"),
           PdfNameObject(text_encoding_name_for_test("/MacRomanEncoding")),
@@ -262,50 +262,50 @@ test "PdfDocument read_encoding reads direct and dictionary encodings" {
 ///|
 test "PdfDocument read_encoding handles default and TrueType encodings" {
   let doc = @pdflite.pdf_document_empty()
-  let plain = @pdflite.pdf_dictionary([
+  let plain = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
-    (text_encoding_name_for_test("/Encoding"), @pdflite.pdf_dictionary([])),
+    (text_encoding_name_for_test("/Encoding"), @syntax.pdf_dictionary([])),
   ])
   @test.assert_eq(try! doc.read_encoding(plain), PdfStandardEncoding)
-  let embedded = @pdflite.pdf_dictionary([
+  let embedded = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
-    (text_encoding_name_for_test("/Encoding"), @pdflite.pdf_dictionary([])),
+    (text_encoding_name_for_test("/Encoding"), @syntax.pdf_dictionary([])),
     (
       text_encoding_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (text_encoding_name_for_test("/FontFile"), PdfIndirect(99)),
       ]),
     ),
   ])
   @test.assert_eq(try! doc.read_encoding(embedded), PdfImplicitInFontFile)
-  let symbolic = @pdflite.pdf_dictionary([
+  let symbolic = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
-    (text_encoding_name_for_test("/Encoding"), @pdflite.pdf_dictionary([])),
+    (text_encoding_name_for_test("/Encoding"), @syntax.pdf_dictionary([])),
     (
       text_encoding_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (text_encoding_name_for_test("/Flags"), PdfInteger(8)),
       ]),
     ),
   ])
   @test.assert_eq(try! doc.read_encoding(symbolic), PdfImplicitInFontFile)
-  let true_type = @pdflite.pdf_dictionary([
+  let true_type = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/TrueType")),
     ),
     (
       text_encoding_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_encoding_name_for_test("/BaseEncoding"),
           PdfNameObject(text_encoding_name_for_test("/WinAnsiEncoding")),
@@ -322,21 +322,21 @@ test "PdfDocument read_encoding handles default and TrueType encodings" {
 ///|
 test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   let doc = @pdflite.pdf_document_empty()
-  let non_dictionary_encoding = @pdflite.pdf_dictionary([
+  let non_dictionary_encoding = @syntax.pdf_dictionary([
     (text_encoding_name_for_test("/Encoding"), PdfInteger(1)),
   ])
   @test.assert_eq(
     try! doc.read_encoding(non_dictionary_encoding),
     PdfImplicitInFontFile,
   )
-  let bad_differences = @pdflite.pdf_dictionary([
+  let bad_differences = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
     (
       text_encoding_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_encoding_name_for_test("/Differences"),
           PdfArray([PdfNameObject(text_encoding_name_for_test("/A"))]),
@@ -348,14 +348,14 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   guard differences_result is Err(EncodingDifferencesMalformed) else {
     fail("expected @pdflite.PdfError::EncodingDifferencesMalformed")
   }
-  let bad_base = @pdflite.pdf_dictionary([
+  let bad_base = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
     (
       text_encoding_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (text_encoding_name_for_test("/BaseEncoding"), PdfInteger(1)),
       ]),
     ),
@@ -364,14 +364,14 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   guard base_result is Err(EncodingExpected) else {
     fail("expected @pdflite.PdfError::EncodingExpected")
   }
-  let unknown_base = @pdflite.pdf_dictionary([
+  let unknown_base = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
     (
       text_encoding_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_encoding_name_for_test("/BaseEncoding"),
           PdfNameObject(text_encoding_name_for_test("/UnknownEncoding")),
@@ -383,14 +383,14 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
   guard unknown_base_result is Err(EncodingExpected) else {
     fail("expected @pdflite.PdfError::EncodingExpected for unknown base")
   }
-  let bad_difference_object = @pdflite.pdf_dictionary([
+  let bad_difference_object = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
     (
       text_encoding_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           text_encoding_name_for_test("/Differences"),
           PdfArray([PdfInteger(65), PdfNull]),
@@ -406,14 +406,14 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
       "expected @pdflite.PdfError::EncodingDifferencesMalformed for bad difference object",
     )
   }
-  let non_array_differences = @pdflite.pdf_dictionary([
+  let non_array_differences = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
     (
       text_encoding_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (text_encoding_name_for_test("/Differences"), PdfInteger(65)),
       ]),
     ),
@@ -424,23 +424,20 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
       "expected @pdflite.PdfError::EncodingDifferencesMalformed for non-array differences",
     )
   }
-  let missing_flags = @pdflite.pdf_dictionary([
+  let missing_flags = @syntax.pdf_dictionary([
     (
       text_encoding_name_for_test("/Subtype"),
       PdfNameObject(text_encoding_name_for_test("/Type1")),
     ),
-    (text_encoding_name_for_test("/Encoding"), @pdflite.pdf_dictionary([])),
-    (
-      text_encoding_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([]),
-    ),
+    (text_encoding_name_for_test("/Encoding"), @syntax.pdf_dictionary([])),
+    (text_encoding_name_for_test("/FontDescriptor"), @syntax.pdf_dictionary([])),
   ])
   let missing_flags_result = try? doc.read_encoding(missing_flags)
   guard missing_flags_result is Err(FontFlagsExpected) else {
     fail("expected @pdflite.PdfError::FontFlagsExpected")
   }
-  let bad_subtype = @pdflite.pdf_dictionary([
-    (text_encoding_name_for_test("/Encoding"), @pdflite.pdf_dictionary([])),
+  let bad_subtype = @syntax.pdf_dictionary([
+    (text_encoding_name_for_test("/Encoding"), @syntax.pdf_dictionary([])),
   ])
   let subtype_result = try? doc.read_encoding(bad_subtype)
   guard subtype_result is Err(FontSubtypeExpected) else {

@@ -4,7 +4,7 @@ fn page_extract_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn page_extract_index_mediabox_for_test(index : Int) -> @pdflite.PdfObject {
+fn page_extract_index_mediabox_for_test(index : Int) -> @syntax.PdfObject {
   PdfArray([
     PdfInteger(index),
     PdfInteger(0),
@@ -23,7 +23,7 @@ fn page_extract_indexed_blank_for_test(index : Int) -> @page.PdfPage {
 
 ///|
 fn page_extract_annotation_numbers_for_test(
-  page_object : @pdflite.PdfObject,
+  page_object : @syntax.PdfObject,
 ) -> Array[Int] {
   let numbers : Array[Int] = []
   match page_object.lookup_immediate(page_extract_name_for_test("/Annots")) {
@@ -42,7 +42,7 @@ fn page_extract_annotation_numbers_for_test(
 ///|
 fn page_extract_destination_entries_for_test(
   doc : @pdflite.PdfDocument,
-) -> Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] {
+) -> Array[(@pdflite.PdfBytes, @syntax.PdfObject)] {
   match
     doc.lookup_chain(doc.lookup_object_or_null(doc.root()), [
       page_extract_name_for_test("/Names"),
@@ -57,7 +57,7 @@ fn page_extract_destination_entries_for_test(
 fn page_extract_catalog_destination_for_test(
   doc : @pdflite.PdfDocument,
   name : String,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   match
     doc
     .lookup_object_or_null(doc.root())
@@ -115,13 +115,13 @@ test "PdfDocument pdf_of_pages materializes inherited crop boxes" {
   let key_cropbox = page_extract_name_for_test("/CropBox")
   let pages_type = page_extract_name_for_test("/Pages")
   let page_type = page_extract_name_for_test("/Page")
-  let inherited_mediabox : @pdflite.PdfObject = PdfArray([
+  let inherited_mediabox : @syntax.PdfObject = PdfArray([
     PdfInteger(0),
     PdfInteger(0),
     PdfInteger(600),
     PdfInteger(800),
   ])
-  let inherited_cropbox : @pdflite.PdfObject = PdfArray([
+  let inherited_cropbox : @syntax.PdfObject = PdfArray([
     PdfInteger(20),
     PdfInteger(30),
     PdfInteger(560),
@@ -130,7 +130,7 @@ test "PdfDocument pdf_of_pages materializes inherited crop boxes" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(pages_type)),
       (key_kids, PdfArray([PdfIndirect(3)])),
       (key_count, PdfInteger(1)),
@@ -140,7 +140,7 @@ test "PdfDocument pdf_of_pages materializes inherited crop boxes" {
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_type)),
       (key_parent, PdfIndirect(2)),
     ]),
@@ -178,16 +178,16 @@ test "PdfDocument pdf_of_pages preserves inherited indirect page attributes" {
   let pages_type = page_extract_name_for_test("/Pages")
   let page_type = page_extract_name_for_test("/Page")
   let font_name = page_extract_name_for_test("/F0")
-  let resource_object : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+  let resource_object : @syntax.PdfObject = @syntax.pdf_dictionary([
     (key_font, PdfDictionary([(font_name, PdfIndirect(10))])),
   ])
-  let media_object : @pdflite.PdfObject = PdfArray([
+  let media_object : @syntax.PdfObject = PdfArray([
     PdfInteger(0),
     PdfInteger(0),
     PdfInteger(600),
     PdfInteger(800),
   ])
-  let font_object : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+  let font_object : @syntax.PdfObject = @syntax.pdf_dictionary([
     (key_type, PdfNameObject(page_extract_name_for_test("/Font"))),
   ])
   let doc = @pdflite.pdf_document_empty()
@@ -197,7 +197,7 @@ test "PdfDocument pdf_of_pages preserves inherited indirect page attributes" {
   doc.add_object_given_number(11, PdfInteger(90))
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(pages_type)),
       (key_kids, PdfArray([PdfIndirect(3)])),
       (key_count, PdfInteger(1)),
@@ -208,7 +208,7 @@ test "PdfDocument pdf_of_pages preserves inherited indirect page attributes" {
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(page_type)),
       (key_parent, PdfIndirect(2)),
     ]),
@@ -392,7 +392,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
   ])
   ignore(try! doc.add_root(page_root, []))
   let page_refs = try! doc.page_reference_numbers()
-  let kept_dest : @pdflite.PdfObject = PdfArray([
+  let kept_dest : @syntax.PdfObject = PdfArray([
     PdfIndirect(page_refs[1]),
     PdfNameObject(type_fit),
   ])
@@ -485,20 +485,20 @@ test "PdfDocument pdf_of_pages can trim structure tree" {
   let old_page_numbers = try! doc.page_reference_numbers()
   doc.add_object_given_number(
     30,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_k, PdfArray([PdfIndirect(31), PdfIndirect(32)])),
     ]),
   )
   doc.add_object_given_number(
     31,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_pg, PdfIndirect(old_page_numbers[0])),
       (key_k, PdfInteger(0)),
     ]),
   )
   doc.add_object_given_number(
     32,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_pg, PdfIndirect(old_page_numbers[1])),
       (key_k, PdfInteger(0)),
     ]),
@@ -541,20 +541,20 @@ test "PdfDocument trim_structure_tree prunes deleted page kids" {
   let page_numbers = try! doc.page_reference_numbers()
   doc.add_object_given_number(
     30,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_k, PdfArray([PdfIndirect(31), PdfIndirect(32)])),
     ]),
   )
   doc.add_object_given_number(
     31,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_pg, PdfIndirect(page_numbers[0])),
       (key_k, PdfInteger(0)),
     ]),
   )
   doc.add_object_given_number(
     32,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_pg, PdfIndirect(page_numbers[1])),
       (key_k, PdfInteger(0)),
     ]),
@@ -576,21 +576,21 @@ test "PdfDocument pdf_of_pages duplicates reused annotations" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     10,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(page_extract_name_for_test("/Text"))),
       (key_popup, PdfIndirect(11)),
     ]),
   )
   doc.add_object_given_number(
     11,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(page_extract_name_for_test("/Popup"))),
       (key_parent, PdfIndirect(10)),
     ]),
   )
   let page = {
     ..page_extract_indexed_blank_for_test(0),
-    rest: @pdflite.pdf_dictionary([
+    rest: @syntax.pdf_dictionary([
       (key_annots, PdfArray([PdfIndirect(10), PdfIndirect(11)])),
     ]),
   }

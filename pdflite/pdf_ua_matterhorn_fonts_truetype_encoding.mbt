@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_ua_matterhorn_is_non_symbolic(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_text_font_descriptor_key_name, object) {
     Some(descriptor) =>
@@ -16,7 +16,7 @@ fn PdfDocument::pdf_ua_matterhorn_is_non_symbolic(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_is_truetype(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_ua_subtype_key(), object) {
     Some(PdfNameObject(subtype)) => subtype == pdf_text_true_type_name_value
@@ -27,7 +27,7 @@ fn PdfDocument::pdf_ua_matterhorn_is_truetype(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_is_non_symbolic_truetype(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   self.pdf_ua_matterhorn_is_truetype(object) &&
   self.pdf_ua_matterhorn_is_non_symbolic(object)

@@ -12,14 +12,14 @@ priv struct PdfDrawStructureItem {
   kind : String
   namespace_uri : String
   page_object_number : Int?
-  alt : Array[(String, PdfObject)]
+  alt : Array[(String, @syntax.PdfObject)]
   children : Array[PdfDrawStructureNode]
 }
 
 ///|
 priv struct PdfDrawStructureBuildContext {
   mut namespace_uri : String
-  element_info : Array[(String, PdfObject)]
+  element_info : Array[(String, @syntax.PdfObject)]
 }
 
 ///|
@@ -30,7 +30,7 @@ fn pdf_draw_structure_context_new() -> PdfDrawStructureBuildContext {
 ///|
 fn PdfDrawStructureBuildContext::alt_copy(
   self : PdfDrawStructureBuildContext,
-) -> Array[(String, PdfObject)] {
+) -> Array[(String, @syntax.PdfObject)] {
   [
     for entry in self.element_info => entry
   ]
@@ -40,7 +40,7 @@ fn PdfDrawStructureBuildContext::alt_copy(
 fn PdfDrawStructureBuildContext::set_element_info(
   self : PdfDrawStructureBuildContext,
   key : String,
-  value : PdfObject,
+  value : @syntax.PdfObject,
 ) -> Unit {
   for index in 0..<self.element_info.length() {
     if self.element_info[index].0 == key {
@@ -56,7 +56,7 @@ fn PdfDrawStructureBuildContext::remove_element_info(
   self : PdfDrawStructureBuildContext,
   key : String,
 ) -> Unit {
-  let output : Array[(String, PdfObject)] = Array::new(
+  let output : Array[(String, @syntax.PdfObject)] = Array::new(
     capacity=self.element_info.length(),
   )
   for entry in self.element_info {
@@ -231,7 +231,7 @@ fn PdfDrawParentMap::add(
 ///|
 fn PdfDrawParentMap::number_tree_entries(
   self : PdfDrawParentMap,
-) -> Array[(Int, PdfObject)] {
+) -> Array[(Int, @syntax.PdfObject)] {
   [
     for entry in self.entries => {
       (
@@ -249,7 +249,7 @@ fn PdfDocument::pdf_draw_write_structure_node(
   namespaces : PdfDrawNamespaceMap,
   parent_map : PdfDrawParentMap,
   node : PdfDrawStructureNode,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match node {
     PdfDrawStructureNodeMCID(mcid) => PdfInteger(mcid)
     PdfDrawStructureNodeItem(item) => {
@@ -259,7 +259,7 @@ fn PdfDocument::pdf_draw_write_structure_node(
           parent_map.add(page_object_number, object_number)
         None => ()
       }
-      let entries : Array[(PdfName, PdfObject)] = Array::new(
+      let entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
         capacity=item.alt.length() + 4,
       )
       for entry in item.alt {
@@ -279,7 +279,7 @@ fn PdfDocument::pdf_draw_write_structure_node(
       }
       entries.push((pdf_draw_s_key(), PdfNameObject(pdf_draw_name(item.kind))))
       entries.push((pdf_draw_p_key(), PdfIndirect(parent_object_number)))
-      let children : Array[PdfObject] = Array::new(
+      let children : Array[@syntax.PdfObject] = Array::new(
         capacity=item.children.length(),
       )
       for child in item.children {
@@ -306,7 +306,7 @@ fn PdfDocument::pdf_draw_write_structure_tree(
   let namespaces = pdf_draw_namespace_map_new()
   let parent_map = pdf_draw_parent_map_new()
   let root_object_number = self.add_object(PdfNull)
-  let children : Array[PdfObject] = Array::new(capacity=tree.length())
+  let children : Array[@syntax.PdfObject] = Array::new(capacity=tree.length())
   for node in tree {
     children.push(
       self.pdf_draw_write_structure_node(
@@ -327,7 +327,7 @@ fn PdfDocument::pdf_draw_write_structure_tree(
   let parent_tree_number = self.add_object(
     self.build_number_tree(parent_map.number_tree_entries()),
   )
-  let root_entries : Array[(PdfName, PdfObject)] = [
+  let root_entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_draw_type_key(), PdfNameObject(pdf_draw_struct_tree_root_key())),
     (pdf_draw_parent_tree_key(), PdfIndirect(parent_tree_number)),
     (pdf_draw_k_key(), PdfArray(children)),
@@ -336,7 +336,9 @@ fn PdfDocument::pdf_draw_write_structure_tree(
     root_entries.push(
       (
         pdf_draw_role_map_key(),
-        pdf_parse_object_from_bytes(@ascii.encode("<<" + role_map + ">>")),
+        @syntax.pdf_parse_object_from_bytes(
+          @ascii.encode("<<" + role_map + ">>"),
+        ),
       ),
     )
   }

@@ -3,8 +3,8 @@ fn PdfDocument::pdf_page_renumber_inline_image_dictionary(
   self : PdfDocument,
   changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
   page_number : Int,
-  dictionary : PdfObject,
-) -> PdfObject raise PdfError {
+  dictionary : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match
     self.lookup_direct_or_else(
       pdf_page_cs_key_name, pdf_page_colorspace_resource_name, dictionary,
@@ -147,13 +147,13 @@ fn PdfDocument::pdf_page_renumber_resource_dictionary(
   self : PdfDocument,
   changes : ArrayView[(PdfName, Int, PdfName, PdfName)],
   page_number : Int,
-  resources : PdfObject,
-) -> PdfObject raise PdfError {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   let mut output = resources
   for resource_key in pdf_page_resource_keys() {
     match self.lookup_direct(resource_key, resources) {
       Some(PdfDictionary(entries)) => {
-        let new_entries : Array[(PdfName, PdfObject)] = Array::new(
+        let new_entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
           capacity=entries.length(),
         )
         for entry in entries {

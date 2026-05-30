@@ -4,7 +4,7 @@
 /// Returns the allocated object number and records an object-altered event.
 pub fn PdfDocument::add_object(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   generation? : Int = 0,
 ) -> Int {
   self.objects.add_object(object, generation~)
@@ -18,7 +18,7 @@ pub fn PdfDocument::add_object(
 pub fn PdfDocument::add_object_given_number(
   self : PdfDocument,
   number : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   generation? : Int = 0,
 ) -> Unit {
   self.objects.add_object_given_number(number, object, generation~)
@@ -28,7 +28,7 @@ pub fn PdfDocument::add_object_given_number(
 fn PdfDocument::load_object_given_number(
   self : PdfDocument,
   number : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   generation? : Int = 0,
 ) -> Unit {
   self.objects.load_object_given_number(number, object, generation)
@@ -38,7 +38,7 @@ fn PdfDocument::load_object_given_number(
 fn PdfDocument::load_object_given_number_already_decrypted(
   self : PdfDocument,
   number : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Unit {
   self.objects.load_object_given_number_already_decrypted(number, object)
 }
@@ -54,7 +54,7 @@ pub fn PdfDocument::remove_object(self : PdfDocument, number : Int) -> Unit {
 pub fn PdfDocument::lookup_object_or_null(
   self : PdfDocument,
   number : Int,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   self.objects.lookup_object_or_null(number)
 }
 

@@ -2,13 +2,13 @@
 #warnings("-unused_value")
 fn PdfDocument::pdf_impose_transform_content(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   matrix : @geometry.TransformMatrix,
-  content : ArrayView[PdfObject],
+  content : ArrayView[@syntax.PdfObject],
   fast : Bool,
-) -> Array[PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise PdfError {
   if fast {
-    let output : Array[PdfObject] = [
+    let output : Array[@syntax.PdfObject] = [
       pdf_content_stream_of_ops([Op_q, Op_cm(matrix)]),
     ]
     pdf_impose_push_objects(output, content)
@@ -35,7 +35,7 @@ fn PdfDocument::pdf_impose_transform_content(
 fn PdfDocument::pdf_impose_combine_page_resources(
   self : PdfDocument,
   pages : ArrayView[@page.PdfPage],
-) -> PdfObject {
+) -> @syntax.PdfObject {
   let mut resources = pages[0].resources
   for index in 1..<pages.length() {
     resources = self.combine_pdf_resources(resources, pages[index].resources)
@@ -47,7 +47,7 @@ fn PdfDocument::pdf_impose_combine_page_resources(
 fn PdfDocument::pdf_impose_combine_page_rests(
   self : PdfDocument,
   pages : ArrayView[@page.PdfPage],
-) -> PdfObject {
+) -> @syntax.PdfObject {
   let mut rest = pages[0].rest
   for index in 1..<pages.length() {
     rest = self.combine_pdf_rests(rest, pages[index].rest)
@@ -68,7 +68,7 @@ fn PdfDocument::pdf_impose_pages_core(
   btt : Bool,
   center : Bool,
   margin : Double,
-  output_mediabox : PdfObject,
+  output_mediabox : @syntax.PdfObject,
   fast : Bool,
   fit_extra_hspace : Double,
   fit_extra_vspace : Double,
@@ -106,7 +106,7 @@ fn PdfDocument::pdf_impose_pages_core(
   }
   let resources = self.pdf_impose_combine_page_resources(transformed_pages)
   let rest = self.pdf_impose_combine_page_rests(transformed_pages)
-  let content : Array[PdfObject] = []
+  let content : Array[@syntax.PdfObject] = []
   for index in 0..<transformed_pages.length() {
     pdf_impose_push_objects(
       content,

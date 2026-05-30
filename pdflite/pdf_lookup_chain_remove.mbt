@@ -1,10 +1,10 @@
 ///|
 fn PdfDocument::remove_chain_from_object(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   chain : ArrayView[PdfName],
   chain_index : Int,
-) -> (PdfObject, Bool) raise PdfError {
+) -> (@syntax.PdfObject, Bool) raise PdfError {
   let key = chain[chain_index]
   let final_key = chain_index + 1 == chain.length()
   match object {

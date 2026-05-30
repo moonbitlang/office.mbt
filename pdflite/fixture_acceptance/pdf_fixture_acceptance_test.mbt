@@ -1975,7 +1975,7 @@ fn fixture_acceptance_assert_cpdf_logo_catalog_view_for_test(
     document.catalog_item(fixture_acceptance_pdf_name_for_test("/PageMode")),
     "UseNone",
   )
-  let expected_open_action : @pdflite.PdfObject = PdfArray([
+  let expected_open_action : @syntax.PdfObject = PdfArray([
     PdfInteger(1),
     PdfNameObject(fixture_acceptance_pdf_name_for_test("/XYZ")),
     PdfInteger(-32768),
@@ -2297,7 +2297,7 @@ fn fixture_acceptance_assert_cpdf_source_prefixed_logo_resources_for_test(
 ///|
 fn fixture_acceptance_assert_cpdf_source_prefixed_logo_resource_object_for_test(
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
 ) -> Unit raise {
   guard document.lookup_direct(
       fixture_acceptance_pdf_name_for_test("/ExtGState"),
@@ -2335,7 +2335,7 @@ fn fixture_acceptance_form_xobject_for_test(
   document : @pdflite.PdfDocument,
   page : @page.PdfPage,
   name : @pdflite.PdfName,
-) -> @pdflite.PdfStream raise {
+) -> @syntax.PdfStream raise {
   guard document.lookup_direct(
       fixture_acceptance_pdf_name_for_test("/XObject"),
       page.resources,
@@ -3413,8 +3413,8 @@ fn fixture_acceptance_assert_cpdf_source_changes_pdfua1_for_test(
 fn fixture_acceptance_lookup_required_for_test(
   document : @pdflite.PdfDocument,
   key : String,
-  object : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match
     document.lookup_direct(fixture_acceptance_pdf_name_for_test(key), object) {
     Some(value) => value
@@ -3425,8 +3425,8 @@ fn fixture_acceptance_lookup_required_for_test(
 ///|
 fn fixture_acceptance_lookup_immediate_required_for_test(
   key : String,
-  object : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match object.lookup_immediate(fixture_acceptance_pdf_name_for_test(key)) {
     Some(value) => value
     None => fail("missing PDF dictionary key " + key)
@@ -3437,8 +3437,8 @@ fn fixture_acceptance_lookup_immediate_required_for_test(
 fn fixture_acceptance_lookup_immediate_indirect_required_for_test(
   document : @pdflite.PdfDocument,
   key : String,
-  object : @pdflite.PdfObject,
-) -> (Int, @pdflite.PdfObject) raise {
+  object : @syntax.PdfObject,
+) -> (Int, @syntax.PdfObject) raise {
   match fixture_acceptance_lookup_immediate_required_for_test(key, object) {
     PdfIndirect(number) => (number, document.lookup_object_or_null(number))
     _ => fail("expected indirect PDF dictionary key " + key)
@@ -3451,7 +3451,7 @@ fn fixture_acceptance_rect_object_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }
 
@@ -4465,8 +4465,8 @@ fn fixture_acceptance_assert_cpdf_source_javascript_for_test(
     is PdfArray([PdfDictionary(first_entries), PdfDictionary(second_entries)]) else {
     fail("expected cpdf source JavaScript URI array")
   }
-  let first_uri : @pdflite.PdfObject = PdfDictionary(first_entries)
-  let second_uri : @pdflite.PdfObject = PdfDictionary(second_entries)
+  let first_uri : @syntax.PdfObject = PdfDictionary(first_entries)
+  let second_uri : @syntax.PdfObject = PdfDictionary(second_entries)
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/JS", first_uri),
     PdfString(@ascii.encode("nested alert")),
@@ -4525,8 +4525,8 @@ fn fixture_acceptance_assert_cpdf_source_javascript_removed_for_test(
     is PdfArray([PdfDictionary(first_entries), PdfDictionary(second_entries)]) else {
     fail("expected scrubbed cpdf source JavaScript URI array")
   }
-  let first_uri : @pdflite.PdfObject = PdfDictionary(first_entries)
-  let second_uri : @pdflite.PdfObject = PdfDictionary(second_entries)
+  let first_uri : @syntax.PdfObject = PdfDictionary(first_entries)
+  let second_uri : @syntax.PdfObject = PdfDictionary(second_entries)
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/JS", first_uri),
     PdfString(@ascii.encode("")),
@@ -4557,7 +4557,7 @@ fn fixture_acceptance_assert_cpdf_source_javascript_removed_for_test(
 ///|
 fn fixture_acceptance_assert_cpdf_source_portfolio_entry_for_test(
   document : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   basename : String,
   description : String,
   relationship : String,
@@ -4688,7 +4688,7 @@ fn fixture_acceptance_assert_cpdf_source_presentation_for_test(
     is Some(PdfDictionary(trans_entries)) else {
     fail("missing cpdf source presentation transition")
   }
-  let trans : @pdflite.PdfObject = PdfDictionary(trans_entries)
+  let trans : @syntax.PdfObject = PdfDictionary(trans_entries)
   @test.assert_eq(
     document.lookup_direct(fixture_acceptance_pdf_name_for_test("/S"), trans),
     Some(PdfNameObject(fixture_acceptance_pdf_name_for_test("/Split"))),
@@ -5835,7 +5835,7 @@ fn fixture_acceptance_cpdf_manual_toc_bookmark_for_test(
 ///|
 fn fixture_acceptance_cpdf_png_image_object_for_test(
   document : @pdflite.PdfDocument,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   guard document.lookup_direct(
@@ -5858,7 +5858,7 @@ fn fixture_acceptance_cpdf_png_image_object_for_test(
 ///|
 fn fixture_acceptance_image_document_i0_for_test(
   document : @pdflite.PdfDocument,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   guard document.lookup_direct(
@@ -5945,8 +5945,8 @@ fn fixture_acceptance_assert_cpdf_png_image_for_test(
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_inline_image_dictionary_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn fixture_acceptance_cpdf_source_inline_image_dictionary_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (fixture_acceptance_pdf_name_for_test("/W"), PdfInteger(3)),
     (fixture_acceptance_pdf_name_for_test("/H"), PdfInteger(2)),
     (fixture_acceptance_pdf_name_for_test("/BPC"), PdfInteger(8)),
@@ -6058,10 +6058,10 @@ fn fixture_acceptance_cpdf_source_nested_image_data_for_test() -> @pdflite.PdfBy
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_nested_image_for_test() -> @pdflite.PdfObject raise {
+fn fixture_acceptance_cpdf_source_nested_image_for_test() -> @syntax.PdfObject raise {
   let data = fixture_acceptance_cpdf_source_nested_image_data_for_test()
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         fixture_acceptance_pdf_name_for_test("/Type"),
         PdfNameObject(fixture_acceptance_pdf_name_for_test("/XObject")),
@@ -6093,7 +6093,7 @@ fn fixture_acceptance_cpdf_source_nested_image_for_test() -> @pdflite.PdfObject 
 ///|
 fn fixture_acceptance_cpdf_source_form_image_form_for_test(
   image_number : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   @pdflite.pdf_content_stream_of_ops([
     Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
     Op_Do(fixture_acceptance_pdf_name_for_test("/SourceNestedImage")),
@@ -6112,10 +6112,10 @@ fn fixture_acceptance_cpdf_source_form_image_form_for_test(
   )
   .add_dict_entry(
     fixture_acceptance_pdf_name_for_test("/Resources"),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         fixture_acceptance_pdf_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             fixture_acceptance_pdf_name_for_test("/SourceNestedImage"),
             PdfIndirect(image_number),
@@ -6129,8 +6129,8 @@ fn fixture_acceptance_cpdf_source_form_image_form_for_test(
 ///|
 fn fixture_acceptance_cpdf_source_page_xobjects_for_test(
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match
     document.lookup_direct(
       fixture_acceptance_pdf_name_for_test("/XObject"),
@@ -6138,7 +6138,7 @@ fn fixture_acceptance_cpdf_source_page_xobjects_for_test(
     ) {
     Some(PdfDictionary(entries)) => PdfDictionary(entries)
     Some(_) => fail("expected source page XObject resources to be a dictionary")
-    None => @pdflite.pdf_dictionary([])
+    None => @syntax.pdf_dictionary([])
   }
 }
 
@@ -6182,7 +6182,7 @@ fn fixture_acceptance_cpdf_source_hello_with_form_image_for_test(
 ///|
 fn fixture_acceptance_cpdf_source_form_image_resources_for_test(
   document : @pdflite.PdfDocument,
-) -> (@pdflite.PdfObject, @pdflite.PdfObject) raise {
+) -> (@syntax.PdfObject, @syntax.PdfObject) raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   guard document.lookup_direct(
@@ -6212,8 +6212,8 @@ fn fixture_acceptance_cpdf_source_form_image_resources_for_test(
 ///|
 fn fixture_acceptance_cpdf_source_nested_image_for_document_for_test(
   document : @pdflite.PdfDocument,
-  form_resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  form_resources : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   guard document.lookup_direct(
       fixture_acceptance_pdf_name_for_test("/XObject"),
       form_resources,
@@ -6319,7 +6319,7 @@ fn fixture_acceptance_assert_cpdf_source_form_image_for_test(
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_type3_tounicode_for_test() -> @pdflite.PdfObject {
+fn fixture_acceptance_cpdf_source_type3_tounicode_for_test() -> @syntax.PdfObject {
   let data = @ascii.encode(
     "1 begincodespacerange\n" +
     "<00><FF>\n" +
@@ -6330,8 +6330,8 @@ fn fixture_acceptance_cpdf_source_type3_tounicode_for_test() -> @pdflite.PdfObje
     "<43><2603>\n" +
     "endbfchar\n",
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         fixture_acceptance_pdf_name_for_test("/Length"),
         PdfInteger(data.length()),
@@ -6342,7 +6342,7 @@ fn fixture_acceptance_cpdf_source_type3_tounicode_for_test() -> @pdflite.PdfObje
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_type3_mark_for_test() -> @pdflite.PdfObject raise {
+fn fixture_acceptance_cpdf_source_type3_mark_for_test() -> @syntax.PdfObject raise {
   @pdflite.pdf_content_stream_of_ops([Op_q, Op_Q])
   .add_dict_entry(
     fixture_acceptance_pdf_name_for_test("/Subtype"),
@@ -6355,7 +6355,7 @@ fn fixture_acceptance_cpdf_source_type3_mark_for_test() -> @pdflite.PdfObject ra
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_type3_inline_dictionary_for_test() -> @pdflite.PdfObject {
+fn fixture_acceptance_cpdf_source_type3_inline_dictionary_for_test() -> @syntax.PdfObject {
   PdfDictionary([
     (fixture_acceptance_pdf_name_for_test("/W"), PdfInteger(2)),
     (fixture_acceptance_pdf_name_for_test("/H"), PdfInteger(1)),
@@ -6394,8 +6394,8 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
   glyph_c : Int,
   glyph_mark : Int,
   tounicode : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       fixture_acceptance_pdf_name_for_test("/Subtype"),
       PdfNameObject(fixture_acceptance_pdf_name_for_test("/Type3")),
@@ -6426,7 +6426,7 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
     ),
     (
       fixture_acceptance_pdf_name_for_test("/CharProcs"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (fixture_acceptance_pdf_name_for_test("/A"), PdfIndirect(glyph_a)),
         (fixture_acceptance_pdf_name_for_test("/B"), PdfIndirect(glyph_b)),
         (fixture_acceptance_pdf_name_for_test("/C"), PdfIndirect(glyph_c)),
@@ -6434,14 +6434,14 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
     ),
     (
       fixture_acceptance_pdf_name_for_test("/Resources"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           fixture_acceptance_pdf_name_for_test("/ProcSet"),
           PdfArray([PdfNameObject(fixture_acceptance_pdf_name_for_test("/PDF"))]),
         ),
         (
           fixture_acceptance_pdf_name_for_test("/ColorSpace"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               fixture_acceptance_pdf_name_for_test("/GlyphGray"),
               PdfNameObject(fixture_acceptance_pdf_name_for_test("/DeviceGray")),
@@ -6450,7 +6450,7 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
         ),
         (
           fixture_acceptance_pdf_name_for_test("/XObject"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               fixture_acceptance_pdf_name_for_test("/GlyphMark"),
               PdfIndirect(glyph_mark),
@@ -6468,7 +6468,7 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
     (fixture_acceptance_pdf_name_for_test("/MissingWidth"), PdfInteger(250)),
     (
       fixture_acceptance_pdf_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           fixture_acceptance_pdf_name_for_test("/Differences"),
           PdfArray([
@@ -6487,8 +6487,8 @@ fn fixture_acceptance_cpdf_source_type3_font_for_test(
 ///|
 fn fixture_acceptance_cpdf_source_page_fonts_for_test(
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match
     document.lookup_direct(
       fixture_acceptance_pdf_name_for_test("/Font"),
@@ -6496,7 +6496,7 @@ fn fixture_acceptance_cpdf_source_page_fonts_for_test(
     ) {
     Some(PdfDictionary(entries)) => PdfDictionary(entries)
     Some(_) => fail("expected source page font resources to be a dictionary")
-    None => @pdflite.pdf_dictionary([])
+    None => @syntax.pdf_dictionary([])
   }
 }
 
@@ -6733,7 +6733,7 @@ fn fixture_acceptance_assert_cpdf_source_type3_for_test(
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_variation_cmap_for_test() -> @pdflite.PdfObject {
+fn fixture_acceptance_cpdf_source_variation_cmap_for_test() -> @syntax.PdfObject {
   let cmap = @ascii.encode(
     "1 begincodespacerange\n" +
     "<00><FF>\n" +
@@ -6747,8 +6747,8 @@ fn fixture_acceptance_cpdf_source_variation_cmap_for_test() -> @pdflite.PdfObjec
     "endbfrange\n",
   )
   let encoded = @flate.pdf_flate_encode(cmap)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         fixture_acceptance_pdf_name_for_test("/Length"),
         PdfInteger(encoded.length()),
@@ -6765,8 +6765,8 @@ fn fixture_acceptance_cpdf_source_variation_cmap_for_test() -> @pdflite.PdfObjec
 ///|
 fn fixture_acceptance_cpdf_source_variation_font_for_test(
   tounicode : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       fixture_acceptance_pdf_name_for_test("/Subtype"),
       PdfNameObject(fixture_acceptance_pdf_name_for_test("/Type1")),
@@ -6886,7 +6886,7 @@ fn fixture_acceptance_assert_cpdf_source_variation_tounicode_for_test(
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_parser_corner_cmap_for_test() -> @pdflite.PdfObject {
+fn fixture_acceptance_cpdf_source_parser_corner_cmap_for_test() -> @syntax.PdfObject {
   let cmap = @ascii.encode(
     "% /Identity-H usecmap\n" +
     "/WMode 1 def % /WMode 0 def\n" +
@@ -6908,8 +6908,8 @@ fn fixture_acceptance_cpdf_source_parser_corner_cmap_for_test() -> @pdflite.PdfO
     "1 beginbfchar <4A><03A9> endbfchar\n",
   )
   let encoded = @flate.pdf_flate_encode(cmap)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         fixture_acceptance_pdf_name_for_test("/Length"),
         PdfInteger(encoded.length()),
@@ -6926,8 +6926,8 @@ fn fixture_acceptance_cpdf_source_parser_corner_cmap_for_test() -> @pdflite.PdfO
 ///|
 fn fixture_acceptance_cpdf_source_parser_corner_font_for_test(
   tounicode : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       fixture_acceptance_pdf_name_for_test("/Subtype"),
       PdfNameObject(fixture_acceptance_pdf_name_for_test("/Type1")),
@@ -7073,14 +7073,14 @@ fn fixture_acceptance_cpdf_source_usecmap_stream_for_test(
   data : @pdflite.PdfBytes,
   usecmap : Int?,
   compressed : Bool,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let stream_data = if compressed {
     @flate.pdf_flate_encode(data)
   } else {
     data
   }
-  let mut stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let mut stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         fixture_acceptance_pdf_name_for_test("/Length"),
         PdfInteger(stream_data.length()),
@@ -7106,7 +7106,7 @@ fn fixture_acceptance_cpdf_source_usecmap_stream_for_test(
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_usecmap_grandbase_cmap_for_test() -> @pdflite.PdfObject raise {
+fn fixture_acceptance_cpdf_source_usecmap_grandbase_cmap_for_test() -> @syntax.PdfObject raise {
   fixture_acceptance_cpdf_source_usecmap_stream_for_test(
     @ascii.encode(
       "1 begincodespacerange\n" +
@@ -7125,7 +7125,7 @@ fn fixture_acceptance_cpdf_source_usecmap_grandbase_cmap_for_test() -> @pdflite.
 ///|
 fn fixture_acceptance_cpdf_source_usecmap_base_cmap_for_test(
   usecmap : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   fixture_acceptance_cpdf_source_usecmap_stream_for_test(
     @ascii.encode(
       "2 beginbfchar\n" + "<44><0052>\n" + "<43><0043>\n" + "endbfchar\n",
@@ -7138,7 +7138,7 @@ fn fixture_acceptance_cpdf_source_usecmap_base_cmap_for_test(
 ///|
 fn fixture_acceptance_cpdf_source_usecmap_child_cmap_for_test(
   usecmap : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   fixture_acceptance_cpdf_source_usecmap_stream_for_test(
     @ascii.encode(
       "2 beginbfchar\n" + "<42><0059>\n" + "<43><005A>\n" + "endbfchar\n",
@@ -7169,8 +7169,8 @@ fn fixture_acceptance_cpdf_source_usecmap_text_for_test() -> @pdflite.PdfBytes r
 ///|
 fn fixture_acceptance_cpdf_source_usecmap_font_for_test(
   tounicode : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       fixture_acceptance_pdf_name_for_test("/Subtype"),
       PdfNameObject(fixture_acceptance_pdf_name_for_test("/Type1")),
@@ -7305,7 +7305,7 @@ fn fixture_acceptance_assert_cpdf_source_usecmap_tounicode_for_test(
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_usecmap_variation_grandbase_cmap_for_test() -> @pdflite.PdfObject raise {
+fn fixture_acceptance_cpdf_source_usecmap_variation_grandbase_cmap_for_test() -> @syntax.PdfObject raise {
   fixture_acceptance_cpdf_source_usecmap_stream_for_test(
     @ascii.encode(
       "1 begincodespacerange\n" +
@@ -7325,7 +7325,7 @@ fn fixture_acceptance_cpdf_source_usecmap_variation_grandbase_cmap_for_test() ->
 ///|
 fn fixture_acceptance_cpdf_source_usecmap_variation_base_cmap_for_test(
   usecmap : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   fixture_acceptance_cpdf_source_usecmap_stream_for_test(
     @ascii.encode(
       "2 beginbfchar\n" + "<44><0052>\n" + "<45><005A>\n" + "endbfchar\n",
@@ -7338,7 +7338,7 @@ fn fixture_acceptance_cpdf_source_usecmap_variation_base_cmap_for_test(
 ///|
 fn fixture_acceptance_cpdf_source_usecmap_variation_child_cmap_for_test(
   usecmap : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   fixture_acceptance_cpdf_source_usecmap_stream_for_test(
     @ascii.encode(
       "2 beginbfchar\n" + "<42><0059>\n" + "<44><03A9>\n" + "endbfchar\n",
@@ -7369,8 +7369,8 @@ fn fixture_acceptance_cpdf_source_usecmap_variation_text_for_test() -> @pdflite.
 ///|
 fn fixture_acceptance_cpdf_source_usecmap_variation_font_for_test(
   tounicode : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       fixture_acceptance_pdf_name_for_test("/Subtype"),
       PdfNameObject(fixture_acceptance_pdf_name_for_test("/Type1")),
@@ -7530,8 +7530,8 @@ fn fixture_acceptance_assert_cpdf_source_usecmap_variation_tounicode_for_test(
 fn fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
   basefont : String,
   ordering : String,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       fixture_acceptance_pdf_name_for_test("/Subtype"),
       PdfNameObject(fixture_acceptance_pdf_name_for_test("/CIDFontType2")),
@@ -7542,7 +7542,7 @@ fn fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
     ),
     (
       fixture_acceptance_pdf_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           fixture_acceptance_pdf_name_for_test("/Registry"),
           PdfString(@ascii.encode("Adobe")),
@@ -7556,7 +7556,7 @@ fn fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
     ),
     (
       fixture_acceptance_pdf_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (fixture_acceptance_pdf_name_for_test("/Ascent"), PdfInteger(880)),
         (fixture_acceptance_pdf_name_for_test("/Descent"), PdfInteger(-120)),
       ]),
@@ -7569,8 +7569,8 @@ fn fixture_acceptance_cpdf_source_predefined_type0_font_for_test(
   basefont : String,
   encoding : String,
   descendant : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       fixture_acceptance_pdf_name_for_test("/Subtype"),
       PdfNameObject(fixture_acceptance_pdf_name_for_test("/Type0")),

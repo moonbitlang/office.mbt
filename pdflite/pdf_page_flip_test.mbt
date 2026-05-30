@@ -9,23 +9,23 @@ fn page_flip_rect_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }
 
 ///|
 fn page_flip_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn page_flip_page_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  resources? : @pdflite.PdfObject = PdfDictionary([]),
-  rest? : @pdflite.PdfObject = PdfDictionary([]),
-  mediabox? : @pdflite.PdfObject = page_flip_rect_for_test(
+  resources? : @syntax.PdfObject = PdfDictionary([]),
+  rest? : @syntax.PdfObject = PdfDictionary([]),
+  mediabox? : @syntax.PdfObject = page_flip_rect_for_test(
     0.0, 0.0, 100.0, 100.0,
   ),
 ) -> @page.PdfPage {

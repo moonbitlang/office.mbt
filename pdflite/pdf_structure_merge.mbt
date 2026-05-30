@@ -1,9 +1,9 @@
 ///|
 fn PdfDocument::pdf_structure_merged_parent_tree_entries(
   self : PdfDocument,
-  structure_tree_roots : ArrayView[PdfObject],
-) -> Array[(Int, PdfObject)] {
-  let entries : Array[(Int, PdfObject)] = Array::new(
+  structure_tree_roots : ArrayView[@syntax.PdfObject],
+) -> Array[(Int, @syntax.PdfObject)] {
+  let entries : Array[(Int, @syntax.PdfObject)] = Array::new(
     capacity=structure_tree_roots.length(),
   )
   for root in structure_tree_roots {
@@ -15,7 +15,7 @@ fn PdfDocument::pdf_structure_merged_parent_tree_entries(
 }
 
 ///|
-fn pdf_structure_tree_root_object_number(root : PdfObject) -> Int {
+fn pdf_structure_tree_root_object_number(root : @syntax.PdfObject) -> Int {
   match root {
     PdfIndirect(number) => number
     _ => 0
@@ -36,7 +36,7 @@ pub fn pdf_merge_structure_trees(
 ) -> Int? raise PdfError {
   let structure_tree_roots = pdf_merge_structure_tree_roots(documents)
   let has_multiple_structure_roots = structure_tree_roots.length() > 1
-  let parent_tree_entries : Array[(Int, PdfObject)] = if has_multiple_structure_roots {
+  let parent_tree_entries : Array[(Int, @syntax.PdfObject)] = if has_multiple_structure_roots {
     document.pdf_structure_merged_parent_tree_entries(structure_tree_roots)
   } else {
     []

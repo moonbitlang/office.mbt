@@ -387,9 +387,9 @@ fn draw_fixture_matrix_for_test(
 ///|
 fn draw_fixture_lookup_for_test(
   document : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   match document.lookup_direct(draw_fixture_name_for_test(key), object) {
     Some(value) => value
     None => {

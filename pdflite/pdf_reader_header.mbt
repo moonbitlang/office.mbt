@@ -5,7 +5,7 @@
 /// recording mutation events. The document version defaults to
 /// `@reader.pdf_default_version`.
 pub fn pdf_document_of_parsed_indirect_objects(
-  objects : ArrayView[PdfParsedIndirectObject],
+  objects : ArrayView[@syntax.PdfParsedIndirectObject],
   version? : @reader.PdfVersion = @reader.pdf_default_version,
 ) -> PdfDocument {
   let document = pdf_document_empty()
@@ -36,7 +36,7 @@ pub fn pdf_read_primitive_document_from_view(
   let mut done = false
   while !done {
     let (objects, prefix) = @syntax.pdf_parse_indirect_object_segments(
-      pdf_cursor_lex_tokens(cursor),
+      @syntax.pdf_cursor_lex_tokens(cursor),
     )
     for parsed in objects {
       document.load_object_given_number(

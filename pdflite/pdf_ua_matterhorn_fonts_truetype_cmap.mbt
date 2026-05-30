@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_ua_matterhorn_truetype_fontfile(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> PdfBytes? raise PdfError {
   match
     self.lookup_chain(object, [
@@ -22,7 +22,7 @@ fn PdfDocument::pdf_ua_matterhorn_truetype_fontfile(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_truetype_cmaps(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[(Int, Int)]? raise PdfError {
   match self.pdf_ua_matterhorn_truetype_fontfile(object) {
     Some(fontfile) => Some(pdf_truetype_cmaps(fontfile))

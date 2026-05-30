@@ -1,5 +1,5 @@
 ///|
-fn impose_box_for_test(width : Double, height : Double) -> PdfObject {
+fn impose_box_for_test(width : Double, height : Double) -> @syntax.PdfObject {
   PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(width), PdfReal(height)])
 }
 
@@ -39,7 +39,7 @@ fn impose_assert_matrix_close_for_test(
 ///|
 fn impose_assert_box_close_for_test(
   document : PdfDocument,
-  box : PdfObject,
+  box : @syntax.PdfObject,
   width : Double,
   height : Double,
 ) -> Unit raise {
@@ -97,14 +97,14 @@ fn impose_transforms_for_test(
 ///|
 fn impose_content_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn impose_content_ops_for_test(
   document : PdfDocument,
-  content : ArrayView[PdfObject],
+  content : ArrayView[@syntax.PdfObject],
 ) -> Array[@content.PdfContentOp] raise PdfError {
   document.parse_content_ops_with_resources(PdfDictionary([]), content)
 }
@@ -112,8 +112,8 @@ fn impose_content_ops_for_test(
 ///|
 fn impose_page_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  resources? : PdfObject = PdfDictionary([]),
-  rest? : PdfObject = PdfDictionary([]),
+  resources? : @syntax.PdfObject = PdfDictionary([]),
+  rest? : @syntax.PdfObject = PdfDictionary([]),
   rotate? : @page.PdfPageRotation = Rotate0,
   width? : Double = 100.0,
   height? : Double = 100.0,
@@ -631,7 +631,7 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
 test "pdf_impose_transform_content wraps fast and parsed content like cpdf" {
   let document = pdf_document_empty()
   let matrix = @geometry.transform_translate(10.0, 20.0)
-  let source : ReadOnlyArray[PdfObject] = [
+  let source : ReadOnlyArray[@syntax.PdfObject] = [
     try! impose_content_stream_for_test([Op_BT, Op_ET]),
   ]
   let fast = try! document.pdf_impose_transform_content(
@@ -649,7 +649,7 @@ test "pdf_impose_transform_content wraps fast and parsed content like cpdf" {
     Op_Q,
   ])
 
-  let unbalanced : ReadOnlyArray[PdfObject] = [
+  let unbalanced : ReadOnlyArray[@syntax.PdfObject] = [
     try! impose_content_stream_for_test([Op_q, Op_BT]),
   ]
   let parsed = try! document.pdf_impose_transform_content(

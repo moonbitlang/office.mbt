@@ -103,7 +103,7 @@ pub fn pdf_content_apply_text_show_op(
 pub fn PdfDocument::content_apply_text_resource_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   op : @content.PdfContentOp,
 ) -> PdfContentOperatorTextResult raise PdfError {
   match op {
@@ -132,7 +132,7 @@ pub fn PdfDocument::content_apply_text_resource_op(
 pub fn pdf_content_apply_text_resource_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   op : @content.PdfContentOp,
 ) -> PdfContentOperatorTextResult raise PdfError {
   document.content_apply_text_resource_op(state, resources, op)

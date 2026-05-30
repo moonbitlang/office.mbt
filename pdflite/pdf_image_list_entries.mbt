@@ -26,10 +26,10 @@ fn pdf_image_list_find_entry(
 ///|
 fn PdfDocument::pdf_image_list_add_image(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   page_number : Int,
   name : PdfName,
-  image : PdfObject,
+  image : @syntax.PdfObject,
   object_number : Int,
   data_length : Int,
   inline : Bool,

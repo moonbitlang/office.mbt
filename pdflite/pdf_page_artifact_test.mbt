@@ -6,19 +6,19 @@ fn artifact_name_for_test(text : String) -> @pdflite.PdfName {
 ///|
 fn artifact_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject raise @pdflite.PdfError {
+) -> @syntax.PdfObject raise @pdflite.PdfError {
   @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn artifact_resources_for_test(
-  xobjects : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
+  xobjects : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
   if xobjects.length() == 0 {
-    @pdflite.pdf_dictionary([])
+    @syntax.pdf_dictionary([])
   } else {
-    @pdflite.pdf_dictionary([
-      (artifact_name_for_test("/XObject"), @pdflite.pdf_dictionary(xobjects)),
+    @syntax.pdf_dictionary([
+      (artifact_name_for_test("/XObject"), @syntax.pdf_dictionary(xobjects)),
     ])
   }
 }
@@ -26,8 +26,8 @@ fn artifact_resources_for_test(
 ///|
 fn artifact_page_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  resources? : @pdflite.PdfObject = @pdflite.pdf_dictionary([]),
-  rest? : @pdflite.PdfObject = @pdflite.pdf_dictionary([]),
+  resources? : @syntax.PdfObject = @syntax.pdf_dictionary([]),
+  rest? : @syntax.PdfObject = @syntax.pdf_dictionary([]),
 ) -> @page.PdfPage raise @pdflite.PdfError {
   {
     ..@page.pdf_page_blank(@geometry.paper_a4),
@@ -72,7 +72,7 @@ test "PdfDocument remove_struct_tree strips structure entries and marked content
         Op_ET,
         Op_EMC,
       ],
-      rest=@pdflite.pdf_dictionary([
+      rest=@syntax.pdf_dictionary([
         (key_struct_parents, PdfInteger(0)),
         (key_keep, PdfInteger(9)),
       ]),
@@ -86,11 +86,11 @@ test "PdfDocument remove_struct_tree strips structure entries and marked content
   )
   document.add_object_given_number(
     30,
-    @pdflite.pdf_dictionary([(key_keep, PdfInteger(30))]),
+    @syntax.pdf_dictionary([(key_keep, PdfInteger(30))]),
   )
   document.add_object_given_number(
     40,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_struct_parent, PdfInteger(1)),
       (key_keep, PdfInteger(40)),
     ]),

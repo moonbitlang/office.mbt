@@ -23,22 +23,22 @@ fn rotate_rect_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }
 
 ///|
 fn rotate_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn rotate_content_page_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  rest? : @pdflite.PdfObject = PdfDictionary([]),
-  resources? : @pdflite.PdfObject = PdfDictionary([]),
+  rest? : @syntax.PdfObject = PdfDictionary([]),
+  resources? : @syntax.PdfObject = PdfDictionary([]),
 ) -> @page.PdfPage {
   {
     content: [rotate_stream_for_test(ops)],

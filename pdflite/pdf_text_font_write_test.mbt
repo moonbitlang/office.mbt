@@ -46,10 +46,10 @@ fn text_font_write_descriptor_for_test() -> @pdflite.PdfFontDescriptor {
 ///|
 fn text_font_write_type3_charproc_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let data = @pdflite.pdf_content_bytes_of_ops(ops)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_font_write_name_for_test("/Length"), PdfInteger(data.length())),
     ]),
     StreamGot(data),
@@ -67,7 +67,7 @@ test "PdfDocument write_encoding writes custom differences" {
   )
   @test.assert_eq(
     doc.lookup_object_or_null(number),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_write_name_for_test("/Type"),
         PdfNameObject(text_font_write_name_for_test("/Encoding")),
@@ -96,7 +96,7 @@ test "pdf_make_font builds Type1 font dictionaries" {
       text_font_write_name_for_test("/Helvetica"),
       PdfWinAnsiEncoding,
     ),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_write_name_for_test("/Type"),
         PdfNameObject(text_font_write_name_for_test("/Font")),
@@ -138,7 +138,7 @@ test "PdfDocument write_font writes standard14 fonts" {
   @test.assert_eq(number, 1)
   @test.assert_eq(
     doc.lookup_object_or_null(number),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_write_name_for_test("/Type"),
         PdfNameObject(text_font_write_name_for_test("/Font")),
@@ -170,7 +170,7 @@ test "PdfDocument write_font writes standard14 fonts" {
   @test.assert_eq(fixed_number, 20)
   @test.assert_eq(
     doc.lookup_object_or_null(20),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_write_name_for_test("/Type"),
         PdfNameObject(text_font_write_name_for_test("/Font")),
@@ -217,7 +217,7 @@ test "PdfDocument write_font writes Type3 fonts" {
           (text_font_write_name_for_test("/A"), d0_stream),
           (text_font_write_name_for_test("/B"), d1_stream),
         ],
-        resources: @pdflite.pdf_dictionary([
+        resources: @syntax.pdf_dictionary([
           (text_font_write_name_for_test("/ProcSet"), PdfArray([])),
         ]),
       }),
@@ -233,7 +233,7 @@ test "PdfDocument write_font writes Type3 fonts" {
   @test.assert_eq(number, 1)
   @test.assert_eq(
     doc.lookup_object_or_null(number),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_write_name_for_test("/Type"),
         PdfNameObject(text_font_write_name_for_test("/Font")),
@@ -259,14 +259,14 @@ test "PdfDocument write_font writes Type3 fonts" {
       ),
       (
         text_font_write_name_for_test("/CharProcs"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (text_font_write_name_for_test("/A"), d0_stream),
           (text_font_write_name_for_test("/B"), d1_stream),
         ]),
       ),
       (
         text_font_write_name_for_test("/Resources"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (text_font_write_name_for_test("/ProcSet"), PdfArray([])),
         ]),
       ),
@@ -295,7 +295,7 @@ test "PdfDocument write_font writes Type3 fonts" {
   ])
   @test.assert_eq(
     type3_data.resources,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (text_font_write_name_for_test("/ProcSet"), PdfArray([])),
     ]),
   )
@@ -315,7 +315,7 @@ test "PdfDocument write_font writes Type3 custom encoding object" {
         fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
         fontmatrix: @geometry.transform_identity_matrix,
         charprocs: [(text_font_write_name_for_test("/A"), PdfInteger(10))],
-        resources: @pdflite.pdf_dictionary([]),
+        resources: @syntax.pdf_dictionary([]),
       }),
       basefont: None,
       firstchar: 0,
@@ -332,7 +332,7 @@ test "PdfDocument write_font writes Type3 custom encoding object" {
   @test.assert_eq(number, 20)
   @test.assert_eq(
     doc.lookup_object_or_null(1),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_write_name_for_test("/Type"),
         PdfNameObject(text_font_write_name_for_test("/Encoding")),
@@ -386,7 +386,7 @@ test "PdfDocument write_font writes embedded TrueType fonts" {
   @test.assert_eq(number, 2)
   @test.assert_eq(
     doc.lookup_object_or_null(1),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_write_name_for_test("/Type"),
         PdfNameObject(text_font_write_name_for_test("/FontDescriptor")),
@@ -418,7 +418,7 @@ test "PdfDocument write_font writes embedded TrueType fonts" {
   )
   @test.assert_eq(
     doc.lookup_object_or_null(number),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         text_font_write_name_for_test("/Type"),
         PdfNameObject(text_font_write_name_for_test("/Font")),

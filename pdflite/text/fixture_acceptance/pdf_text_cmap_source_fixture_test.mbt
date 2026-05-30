@@ -45,12 +45,12 @@ fn text_fixture_assert_hello_text_for_test(
 ///|
 fn text_fixture_source_page_fonts_for_test(
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match document.lookup_direct(text_fixture_name_for_test("/Font"), resources) {
     Some(PdfDictionary(entries)) => PdfDictionary(entries)
     Some(_) => fail("expected source page font resources to be a dictionary")
-    None => @pdflite.pdf_dictionary([])
+    None => @syntax.pdf_dictionary([])
   }
 }
 
@@ -87,14 +87,14 @@ fn text_fixture_usecmap_stream_for_test(
   data : @pdflite.PdfBytes,
   usecmap : Int?,
   compressed : Bool,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let stream_data = if compressed {
     @flate.pdf_flate_encode(data)
   } else {
     data
   }
-  let mut stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let mut stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_fixture_name_for_test("/Length"), PdfInteger(stream_data.length())),
     ]),
     StreamGot(stream_data),
@@ -117,7 +117,7 @@ fn text_fixture_usecmap_stream_for_test(
 }
 
 ///|
-fn text_fixture_usecmap_grandbase_cmap_for_test() -> @pdflite.PdfObject raise {
+fn text_fixture_usecmap_grandbase_cmap_for_test() -> @syntax.PdfObject raise {
   text_fixture_usecmap_stream_for_test(
     @ascii.encode(
       "1 begincodespacerange\n" +
@@ -136,7 +136,7 @@ fn text_fixture_usecmap_grandbase_cmap_for_test() -> @pdflite.PdfObject raise {
 ///|
 fn text_fixture_usecmap_base_cmap_for_test(
   usecmap : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   text_fixture_usecmap_stream_for_test(
     @ascii.encode(
       "2 beginbfchar\n" + "<44><0052>\n" + "<43><0043>\n" + "endbfchar\n",
@@ -149,7 +149,7 @@ fn text_fixture_usecmap_base_cmap_for_test(
 ///|
 fn text_fixture_usecmap_child_cmap_for_test(
   usecmap : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   text_fixture_usecmap_stream_for_test(
     @ascii.encode(
       "2 beginbfchar\n" + "<42><0059>\n" + "<43><005A>\n" + "endbfchar\n",
@@ -176,8 +176,8 @@ fn text_fixture_usecmap_text_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn text_fixture_usecmap_font_for_test(tounicode : Int) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn text_fixture_usecmap_font_for_test(tounicode : Int) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       text_fixture_name_for_test("/Subtype"),
       PdfNameObject(text_fixture_name_for_test("/Type1")),
@@ -336,7 +336,7 @@ async test "cpdf source hello fixture composes ToUnicode UseCMap chain" {
 }
 
 ///|
-fn text_fixture_usecmap_variation_grandbase_cmap_for_test() -> @pdflite.PdfObject raise {
+fn text_fixture_usecmap_variation_grandbase_cmap_for_test() -> @syntax.PdfObject raise {
   text_fixture_usecmap_stream_for_test(
     @ascii.encode(
       "1 begincodespacerange\n" +
@@ -356,7 +356,7 @@ fn text_fixture_usecmap_variation_grandbase_cmap_for_test() -> @pdflite.PdfObjec
 ///|
 fn text_fixture_usecmap_variation_base_cmap_for_test(
   usecmap : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   text_fixture_usecmap_stream_for_test(
     @ascii.encode(
       "2 beginbfchar\n" + "<44><0052>\n" + "<45><005A>\n" + "endbfchar\n",
@@ -369,7 +369,7 @@ fn text_fixture_usecmap_variation_base_cmap_for_test(
 ///|
 fn text_fixture_usecmap_variation_child_cmap_for_test(
   usecmap : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   text_fixture_usecmap_stream_for_test(
     @ascii.encode(
       "2 beginbfchar\n" + "<42><0059>\n" + "<44><03A9>\n" + "endbfchar\n",
@@ -400,8 +400,8 @@ fn text_fixture_usecmap_variation_text_for_test() -> @pdflite.PdfBytes raise {
 ///|
 fn text_fixture_usecmap_variation_font_for_test(
   tounicode : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       text_fixture_name_for_test("/Subtype"),
       PdfNameObject(text_fixture_name_for_test("/Type1")),
@@ -604,12 +604,12 @@ fn text_fixture_parser_corner_cmap_data_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn text_fixture_parser_corner_cmap_for_test() -> @pdflite.PdfObject {
+fn text_fixture_parser_corner_cmap_for_test() -> @syntax.PdfObject {
   let encoded = @flate.pdf_flate_encode(
     text_fixture_parser_corner_cmap_data_for_test(),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (text_fixture_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         text_fixture_name_for_test("/Filter"),
@@ -623,8 +623,8 @@ fn text_fixture_parser_corner_cmap_for_test() -> @pdflite.PdfObject {
 ///|
 fn text_fixture_parser_corner_font_for_test(
   tounicode : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       text_fixture_name_for_test("/Subtype"),
       PdfNameObject(text_fixture_name_for_test("/Type1")),

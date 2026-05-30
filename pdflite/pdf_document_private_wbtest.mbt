@@ -39,7 +39,10 @@ test "pdf duplicate stream candidates reject non-stream objects" {
     pdf_duplicate_stream_candidate(1, PdfInteger(1)) is None,
     true,
   )
-  let stream = pdf_stream(PdfDictionary([]), StreamGot(@ascii.encode("a")))
+  let stream = @syntax.pdf_stream(
+    PdfDictionary([]),
+    StreamGot(@ascii.encode("a")),
+  )
   guard pdf_duplicate_stream_candidate(2, stream) is Some(candidate) else {
     fail("expected stream candidate")
   }
@@ -79,8 +82,8 @@ test "PdfDocument stream decompression preserves already-decrypted state" {
   let length = pdf_name_of_bytes(@ascii.encode("/Length"))
   let filter = pdf_name_of_bytes(@ascii.encode("/Filter"))
   let encoded = @codec.pdf_ascii_hex_encode(@ascii.encode("Hi"))
-  let stream = pdf_stream(
-    pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
       (filter, PdfNameObject(pdf_name_of_bytes(@ascii.encode("/AHx")))),
     ]),

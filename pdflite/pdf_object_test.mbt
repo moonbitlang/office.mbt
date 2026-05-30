@@ -5,7 +5,7 @@ fn object_name_for_test(values : ArrayView[Int]) -> @pdflite.PdfName {
 
 ///|
 fn object_dictionary_keys_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[@pdflite.PdfName] {
   match object.dictionary_view() {
     Some(entries) => [ for entry in entries => entry.0 ]
@@ -15,8 +15,8 @@ fn object_dictionary_keys_for_test(
 
 ///|
 fn object_bump_integer_for_test(
-  object : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match object {
     PdfInteger(value) => PdfInteger(value + 1)
     _ => object
@@ -24,15 +24,15 @@ fn object_bump_integer_for_test(
 }
 
 ///|
-test "PdfObject stores byte strings names arrays and dictionaries" {
+test "@syntax.PdfObject stores byte strings names arrays and dictionaries" {
   let name_type = object_name_for_test([47, 84, 121, 112, 101])
   let string_bytes = try! @pdflite.pdf_bytes_of_int_array([0, 255])
-  let object = @pdflite.pdf_dictionary([
+  let object = @syntax.pdf_dictionary([
     (name_type, PdfNameObject(name_type)),
     (object_name_for_test([47, 83]), PdfString(string_bytes)),
     (
       object_name_for_test([47, 65]),
-      @pdflite.pdf_array([PdfInteger(1), PdfBoolean(true)]),
+      @syntax.pdf_array([PdfInteger(1), PdfBoolean(true)]),
     ),
   ])
   @test.assert_eq(
@@ -43,37 +43,34 @@ test "PdfObject stores byte strings names arrays and dictionaries" {
     try! @pdflite.pdf_bytes_of_int_array([65, 66, 67]),
     source="object stream",
   )
-  let deferred = @pdflite.stream_to_get(cursor, 1, 2)
+  let deferred = @syntax.stream_to_get(cursor, 1, 2)
   @test.assert_eq(deferred.input().source(), "object stream")
   @test.assert_eq(deferred.input().length(), 3)
   @test.assert_eq(deferred.position(), 1)
   @test.assert_eq(deferred.length(), 2)
-  let non_dict_stream = @pdflite.pdf_stream(
-    PdfInteger(1),
-    StreamToGet(deferred),
-  )
+  let non_dict_stream = @syntax.pdf_stream(PdfInteger(1), StreamToGet(deferred))
   @test.assert_eq(non_dict_stream.dictionary_view(), None)
 }
 
 ///|
-test "pdf_recurse_array and pdf_recurse_dict map one container level" {
+test "@syntax.pdf_recurse_array and @syntax.pdf_recurse_dict map one container level" {
   let name_a = object_name_for_test([47, 65])
   let name_b = object_name_for_test([47, 66])
   let name_c = object_name_for_test([47, 67])
   @test.assert_eq(
-    @pdflite.pdf_recurse_array(object_bump_integer_for_test, [
+    @syntax.pdf_recurse_array(object_bump_integer_for_test, [
       PdfInteger(1),
       PdfBoolean(false),
     ]),
     PdfArray([PdfInteger(2), PdfBoolean(false)]),
   )
-  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (name_a, PdfInteger(1)),
     (name_b, PdfBoolean(false)),
     (name_c, PdfInteger(3)),
   ]
   @test.assert_eq(
-    @pdflite.pdf_recurse_dict(object_bump_integer_for_test, entries),
+    @syntax.pdf_recurse_dict(object_bump_integer_for_test, entries),
     PdfDictionary([
       (name_c, PdfInteger(4)),
       (name_b, PdfBoolean(false)),
@@ -81,7 +78,7 @@ test "pdf_recurse_array and pdf_recurse_dict map one container level" {
     ]),
   )
   @test.assert_eq(
-    @pdflite.pdf_recurse_dict(
+    @syntax.pdf_recurse_dict(
       object_bump_integer_for_test,
       entries,
       preserve_order=true,
@@ -95,11 +92,11 @@ test "pdf_recurse_array and pdf_recurse_dict map one container level" {
 }
 
 ///|
-test "PdfObject dictionary add follows CamlPDF replacement order" {
+test "@syntax.PdfObject dictionary add follows CamlPDF replacement order" {
   let name_a = object_name_for_test([47, 65])
   let name_b = object_name_for_test([47, 66])
   let name_c = object_name_for_test([47, 67])
-  let dict = @pdflite.pdf_dictionary([
+  let dict = @syntax.pdf_dictionary([
     (name_a, PdfInteger(1)),
     (name_b, PdfInteger(2)),
   ])
@@ -113,19 +110,19 @@ test "PdfObject dictionary add follows CamlPDF replacement order" {
 }
 
 ///|
-test "PdfObject find_indirect reads immediate dictionary references" {
+test "@syntax.PdfObject find_indirect reads immediate dictionary references" {
   let name_a = object_name_for_test([47, 65])
   let name_b = object_name_for_test([47, 66])
   let name_c = object_name_for_test([47, 67])
-  let dict = @pdflite.pdf_dictionary([
+  let dict = @syntax.pdf_dictionary([
     (name_a, PdfIndirect(8)),
     (name_b, PdfInteger(2)),
   ])
   @test.assert_eq(try! dict.find_indirect(name_a), Some(8))
   @test.assert_eq(try! dict.find_indirect(name_b), None)
   @test.assert_eq(try! dict.find_indirect(name_c), None)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(name_a, PdfIndirect(9))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(name_a, PdfIndirect(9))]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
   let stream_result : Result[Int?, Error] = try? stream.find_indirect(name_a)
@@ -137,19 +134,19 @@ test "PdfObject find_indirect reads immediate dictionary references" {
 }
 
 ///|
-test "PdfObject stream_bytes materializes owned and deferred stream data" {
+test "@syntax.PdfObject stream_bytes materializes owned and deferred stream data" {
   let owned = try! @pdflite.pdf_bytes_of_int_array([65, 66])
-  let owned_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
+  let owned_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
     StreamGot(owned),
   )
   @test.assert_eq(try! owned_stream.stream_bytes(), owned)
   let cursor = @pdflite.byte_cursor_of_bytes(
     try! @pdflite.pdf_bytes_of_int_array([70, 71, 72, 73]),
   )
-  let deferred_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([]),
-    StreamToGet(@pdflite.stream_to_get(cursor, 1, 2)),
+  let deferred_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([]),
+    StreamToGet(@syntax.stream_to_get(cursor, 1, 2)),
   )
   @test.assert_eq(
     try! deferred_stream.stream_bytes(),
@@ -162,12 +159,12 @@ test "PdfObject stream_bytes materializes owned and deferred stream data" {
 }
 
 ///|
-test "PdfObject get_stream materializes deferred streams and corrects length" {
+test "@syntax.PdfObject get_stream materializes deferred streams and corrects length" {
   let key_length = object_name_for_test([47, 76, 101, 110, 103, 116, 104])
-  let deferred_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(key_length, PdfInteger(99))]),
+  let deferred_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(key_length, PdfInteger(99))]),
     StreamToGet(
-      @pdflite.stream_to_get(
+      @syntax.stream_to_get(
         @pdflite.byte_cursor_of_bytes(
           try! @pdflite.pdf_bytes_of_int_array([65, 66, 67]),
         ),
@@ -193,10 +190,10 @@ test "PdfObject get_stream materializes deferred streams and corrects length" {
     stream.data,
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([66, 67])),
   )
-  let non_dictionary_stream = @pdflite.pdf_stream(
+  let non_dictionary_stream = @syntax.pdf_stream(
     PdfNull,
     StreamToGet(
-      @pdflite.stream_to_get(
+      @syntax.stream_to_get(
         @pdflite.byte_cursor_of_bytes(
           try! @pdflite.pdf_bytes_of_int_array([68]),
         ),
@@ -210,7 +207,7 @@ test "PdfObject get_stream materializes deferred streams and corrects length" {
     try! non_dictionary_stream.stream_bytes(),
     try! @pdflite.pdf_bytes_of_int_array([68]),
   )
-  let non_stream_object : @pdflite.PdfObject = PdfInteger(1)
+  let non_stream_object : @syntax.PdfObject = PdfInteger(1)
   let non_stream : Result[Unit, Error] = try? non_stream_object.get_stream()
   guard non_stream is Err(@pdflite.PdfError::ParseStreamExpected) else {
     fail("expected @pdflite.PdfError::ParseStreamExpected")
@@ -218,12 +215,12 @@ test "PdfObject get_stream materializes deferred streams and corrects length" {
 }
 
 ///|
-test "PdfObject unique_key scans dictionary names in CamlPDF order" {
+test "@syntax.PdfObject unique_key scans dictionary names in CamlPDF order" {
   let name_gs0 = object_name_for_test([47, 103, 115, 48])
   let name_gs1 = object_name_for_test([47, 103, 115, 49])
   let name_gs2 = object_name_for_test([47, 103, 115, 50])
   let name_other = object_name_for_test([47, 111, 116, 104, 101, 114])
-  let dict = @pdflite.pdf_dictionary([
+  let dict = @syntax.pdf_dictionary([
     (name_gs1, PdfInteger(1)),
     (name_other, PdfInteger(2)),
     (name_gs0, PdfInteger(3)),
@@ -232,26 +229,26 @@ test "PdfObject unique_key scans dictionary names in CamlPDF order" {
 }
 
 ///|
-test "PdfObject unique_key supports empty prefixes" {
+test "@syntax.PdfObject unique_key supports empty prefixes" {
   let name_0 = object_name_for_test([47, 48])
   let name_1 = object_name_for_test([47, 49])
-  let dict = @pdflite.pdf_dictionary([(name_0, PdfInteger(1))])
+  let dict = @syntax.pdf_dictionary([(name_0, PdfInteger(1))])
   @test.assert_eq(try! dict.unique_key(""), name_1)
 }
 
 ///|
-test "PdfObject unique_key reads stream dictionaries" {
+test "@syntax.PdfObject unique_key reads stream dictionaries" {
   let name_im0 = object_name_for_test([47, 73, 109, 48])
   let name_im1 = object_name_for_test([47, 73, 109, 49])
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(name_im0, PdfInteger(1))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(name_im0, PdfInteger(1))]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65])),
   )
   @test.assert_eq(try! stream.unique_key("Im"), name_im1)
 }
 
 ///|
-test "PdfObject unique_key reports non-dictionary objects" {
+test "@syntax.PdfObject unique_key reports non-dictionary objects" {
   let result : Result[@pdflite.PdfName, Error] = try? @syntax.PdfInteger(1).unique_key(
     "gs",
   )
@@ -261,13 +258,13 @@ test "PdfObject unique_key reports non-dictionary objects" {
 }
 
 ///|
-test "PdfObject dictionary replace and remove report checked errors" {
+test "@syntax.PdfObject dictionary replace and remove report checked errors" {
   let name_a = object_name_for_test([47, 65])
   let name_b = object_name_for_test([47, 66])
-  let dict = @pdflite.pdf_dictionary([(name_a, PdfInteger(1))])
+  let dict = @syntax.pdf_dictionary([(name_a, PdfInteger(1))])
   let replaced = try! dict.replace_dict_entry(name_a, PdfInteger(10))
   @test.assert_eq(replaced.lookup_immediate(name_a), Some(PdfInteger(10)))
-  let missing : Result[@pdflite.PdfObject, Error] = try? dict.replace_dict_entry(
+  let missing : Result[@syntax.PdfObject, Error] = try? dict.replace_dict_entry(
     name_b,
     PdfInteger(2),
   )
@@ -275,7 +272,7 @@ test "PdfObject dictionary replace and remove report checked errors" {
     missing_key == name_b else {
     fail("expected @pdflite.PdfError::DictionaryKeyNotFound")
   }
-  let not_dict_replace : Result[@pdflite.PdfObject, Error] = try? @syntax.PdfInteger(
+  let not_dict_replace : Result[@syntax.PdfObject, Error] = try? @syntax.PdfInteger(
     1,
   ).replace_dict_entry(name_a, PdfInteger(2))
   guard not_dict_replace
@@ -285,13 +282,13 @@ test "PdfObject dictionary replace and remove report checked errors" {
   }
   let removed = try! dict.remove_dict_entry(name_a)
   @test.assert_eq(removed.lookup_immediate(name_a), None)
-  let not_dict_add : Result[@pdflite.PdfObject, Error] = try? @syntax.PdfInteger(
+  let not_dict_add : Result[@syntax.PdfObject, Error] = try? @syntax.PdfInteger(
     1,
   ).add_dict_entry(name_a, PdfInteger(2))
   guard not_dict_add is Err(@pdflite.PdfError::DictionaryExpected) else {
     fail("expected @pdflite.PdfError::DictionaryExpected")
   }
-  let not_dict : Result[@pdflite.PdfObject, Error] = try? @syntax.PdfInteger(1).remove_dict_entry(
+  let not_dict : Result[@syntax.PdfObject, Error] = try? @syntax.PdfInteger(1).remove_dict_entry(
     name_a,
   )
   guard not_dict is Err(@pdflite.PdfError::DictionaryExpected) else {
@@ -300,12 +297,12 @@ test "PdfObject dictionary replace and remove report checked errors" {
 }
 
 ///|
-test "PdfObject stream dictionary helpers mutate stream dictionaries" {
+test "@syntax.PdfObject stream dictionary helpers mutate stream dictionaries" {
   let name_length = object_name_for_test([47, 76, 101, 110, 103, 116, 104])
   let stream_data = @syntax.StreamGot(
     try! @pdflite.pdf_bytes_of_int_array([65, 66]),
   )
-  let stream = @pdflite.pdf_stream(PdfNull, stream_data)
+  let stream = @syntax.pdf_stream(PdfNull, stream_data)
   let updated = try! stream.add_dict_entry(name_length, PdfInteger(2))
   @test.assert_eq(updated.lookup_immediate(name_length), Some(PdfInteger(2)))
   let replaced = try! updated.replace_dict_entry(name_length, PdfInteger(4))

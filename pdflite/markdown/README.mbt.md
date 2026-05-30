@@ -23,12 +23,9 @@ fn readme_name(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn readme_font_resources(font : @pdflite.PdfObject) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
-    (
-      readme_name("/Font"),
-      @pdflite.pdf_dictionary([(readme_name("/F0"), font)]),
-    ),
+fn readme_font_resources(font : @syntax.PdfObject) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
+    (readme_name("/Font"), @syntax.pdf_dictionary([(readme_name("/F0"), font)])),
   ])
 }
 

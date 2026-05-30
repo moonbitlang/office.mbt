@@ -117,7 +117,7 @@ pub fn pdf_content_shading_entry(
 pub fn PdfDocument::content_shading_entry_from_resources(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> PdfContentJsonEntry? {
   match self.lookup_direct(pdf_content_shading_shading_name, resources) {
@@ -156,7 +156,7 @@ pub fn PdfDocument::content_shading_entry_from_resources(
 pub fn pdf_content_shading_entry_from_resources(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> PdfContentJsonEntry? {
   document.content_shading_entry_from_resources(state, resources, name)
@@ -228,9 +228,9 @@ pub fn pdf_content_image_entry(
 ///|
 fn PdfDocument::content_xobject_from_resources(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match self.lookup_direct(pdf_xobject_xobject(), resources) {
     Some(xobjects) =>
       match self.lookup_direct(name, xobjects) {
@@ -246,7 +246,7 @@ fn PdfDocument::content_xobject_from_resources(
 pub fn PdfDocument::content_image_entry_from_resources(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> PdfContentJsonEntry? raise PdfError {
   let xobject = self.content_xobject_from_resources(resources, name)
@@ -263,7 +263,7 @@ pub fn PdfDocument::content_image_entry_from_resources(
 pub fn pdf_content_image_entry_from_resources(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> PdfContentJsonEntry? raise PdfError {
   document.content_image_entry_from_resources(state, resources, name)

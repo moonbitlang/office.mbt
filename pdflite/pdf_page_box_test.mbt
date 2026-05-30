@@ -9,19 +9,19 @@ fn page_box_rect_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }
 
 ///|
 fn page_box_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
-fn page_box_page_for_test(rest : @pdflite.PdfObject) -> @page.PdfPage {
+fn page_box_page_for_test(rest : @syntax.PdfObject) -> @page.PdfPage {
   {
     content: [page_box_stream_for_test([Op_S])],
     mediabox: page_box_rect_for_test(0.0, 0.0, 100.0, 200.0),

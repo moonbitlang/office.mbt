@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_annotation_subtype(
   self : PdfDocument,
-  annotation : PdfObject,
+  annotation : @syntax.PdfObject,
   depth : Int,
 ) -> @annotation.PdfAnnotationSubtype raise PdfError {
   match self.lookup_direct(pdf_annotation_subtype_key(), annotation) {
@@ -70,7 +70,7 @@ fn PdfDocument::pdf_annotation_subtype(
 ///|
 fn PdfDocument::pdf_annotation_number_array(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Array[Int] raise PdfError {
   match self.direct(object) {
     PdfArray(items) => {
@@ -87,7 +87,7 @@ fn PdfDocument::pdf_annotation_number_array(
 ///|
 fn PdfDocument::pdf_annotation_border(
   self : PdfDocument,
-  annotation : PdfObject,
+  annotation : @syntax.PdfObject,
 ) -> @annotation.PdfAnnotationBorder raise PdfError {
   match self.lookup_direct(pdf_annotation_bs_key(), annotation) {
     Some(border_style_dict) => {
@@ -134,7 +134,7 @@ fn PdfDocument::pdf_annotation_border(
 ///|
 fn PdfDocument::pdf_annotation_colour(
   self : PdfDocument,
-  annotation : PdfObject,
+  annotation : @syntax.PdfObject,
 ) -> @annotation.PdfAnnotationColour? raise PdfError {
   match self.lookup_direct(pdf_annotation_colour_key(), annotation) {
     Some(PdfArray([red, green, blue])) =>
@@ -159,10 +159,12 @@ fn pdf_annotation_is_record_key(key : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_annotation_rest(annotation : PdfObject) -> PdfObject raise PdfError {
+fn pdf_annotation_rest(
+  annotation : @syntax.PdfObject,
+) -> @syntax.PdfObject raise PdfError {
   match annotation {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = Array::new(
+      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -180,7 +182,7 @@ fn pdf_annotation_rest(annotation : PdfObject) -> PdfObject raise PdfError {
 ///|
 fn PdfDocument::pdf_annotation_read_depth(
   self : PdfDocument,
-  annotation : PdfObject,
+  annotation : @syntax.PdfObject,
   depth : Int,
 ) -> @annotation.PdfAnnotation raise PdfError {
   let direct_annotation = self.direct(annotation)
@@ -214,7 +216,7 @@ fn PdfDocument::pdf_annotation_read_depth(
 /// parents are resolved recursively up to a bounded depth to avoid cycles.
 pub fn PdfDocument::read_annotation(
   self : PdfDocument,
-  annotation : PdfObject,
+  annotation : @syntax.PdfObject,
 ) -> @annotation.PdfAnnotation raise PdfError {
   self.pdf_annotation_read_depth(annotation, 0)
 }
@@ -222,7 +224,7 @@ pub fn PdfDocument::read_annotation(
 ///|
 fn PdfDocument::pdf_annotation_popup_parent(
   self : PdfDocument,
-  annotation : PdfObject,
+  annotation : @syntax.PdfObject,
 ) -> Int? {
   match self.direct(annotation).lookup_immediate(pdf_annotation_parent_key()) {
     Some(PdfIndirect(parent)) => Some(parent)

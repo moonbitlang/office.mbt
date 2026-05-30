@@ -1,7 +1,7 @@
 ///|
 fn pdf_content_inline_image_entry_bytes(
   key : PdfName,
-  value : PdfObject,
+  value : @syntax.PdfObject,
 ) -> PdfBytes raise PdfError {
   let key_bytes = pdf_write_object(PdfNameObject(key))
   let value_bytes = pdf_write_object(value)
@@ -18,8 +18,8 @@ fn pdf_content_inline_image_entry_bytes(
 
 ///|
 fn pdf_content_inline_image_bytes(
-  dictionary : PdfObject,
-  decode_parms : PdfObject?,
+  dictionary : @syntax.PdfObject,
+  decode_parms : @syntax.PdfObject?,
   data : PdfBytes,
 ) -> PdfBytes raise PdfError {
   let compress_inline_image = pdf_content_inline_filter_is_empty(dictionary)

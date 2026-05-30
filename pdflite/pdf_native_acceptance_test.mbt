@@ -423,31 +423,31 @@ fn acceptance_text_page_for_test(text : String) -> @page.PdfPage raise {
 }
 
 ///|
-fn acceptance_one_page_resources_for_test() -> @pdflite.PdfObject {
+fn acceptance_one_page_resources_for_test() -> @syntax.PdfObject {
   let type_name = acceptance_name_for_test("/Type")
   let subtype = acceptance_name_for_test("/Subtype")
   let basefont = acceptance_name_for_test("/BaseFont")
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (type_name, PdfNameObject(acceptance_name_for_test("/Font"))),
     (subtype, PdfNameObject(acceptance_name_for_test("/Type1"))),
     (basefont, PdfNameObject(acceptance_name_for_test("/Times-Italic"))),
   ])
-  @pdflite.pdf_dictionary([
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([(acceptance_name_for_test("/F0"), font)]),
+      @syntax.pdf_dictionary([(acceptance_name_for_test("/F0"), font)]),
     ),
   ])
 }
 
 ///|
-fn acceptance_partial_filter_stream_for_test() -> @pdflite.PdfObject {
+fn acceptance_partial_filter_stream_for_test() -> @syntax.PdfObject {
   let encoded = @codec.pdf_ascii_hex_encode(acceptance_ascii_for_test("Hi"))
-  let unsupported : @pdflite.PdfObject = PdfNameObject(
+  let unsupported : @syntax.PdfObject = PdfNameObject(
     acceptance_name_for_test("/NoSuchFilter"),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         acceptance_name_for_test("/Filter"),
@@ -534,8 +534,8 @@ fn acceptance_pdftest_rewrite_document_for_test(
 
 ///|
 fn acceptance_font_object_for_test(
-  resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   let fonts = match
     resources.lookup_immediate(acceptance_name_for_test("/Font")) {
     Some(fonts) => fonts
@@ -607,15 +607,15 @@ fn acceptance_tounicode_text_document_for_test() -> @pdflite.PdfDocument raise {
   )
   doc.add_object_given_number(
     60,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
         (acceptance_name_for_test("/Filter"), PdfIndirect(61)),
       ]),
       StreamGot(encoded),
     ),
   )
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type1")),
@@ -626,10 +626,10 @@ fn acceptance_tounicode_text_document_for_test() -> @pdflite.PdfDocument raise {
     ),
     (acceptance_name_for_test("/ToUnicode"), PdfIndirect(60)),
   ])
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([(acceptance_name_for_test("/F0"), font)]),
+      @syntax.pdf_dictionary([(acceptance_name_for_test("/F0"), font)]),
     ),
   ])
   let page = {
@@ -717,7 +717,7 @@ fn acceptance_assert_tounicode_text_for_test(
 }
 
 ///|
-fn acceptance_tounicode_variation_cmap_for_test() -> @pdflite.PdfObject {
+fn acceptance_tounicode_variation_cmap_for_test() -> @syntax.PdfObject {
   let cmap = acceptance_ascii_for_test(
     "1 begincodespacerange\n" +
     "<00><FF>\n" +
@@ -731,8 +731,8 @@ fn acceptance_tounicode_variation_cmap_for_test() -> @pdflite.PdfObject {
     "endbfrange\n",
   )
   let encoded = @flate.pdf_flate_encode(cmap)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         acceptance_name_for_test("/Filter"),
@@ -751,7 +751,7 @@ fn acceptance_tounicode_variation_document_for_test() -> @pdflite.PdfDocument ra
     62,
     acceptance_tounicode_variation_cmap_for_test(),
   )
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type1")),
@@ -762,10 +762,10 @@ fn acceptance_tounicode_variation_document_for_test() -> @pdflite.PdfDocument ra
     ),
     (acceptance_name_for_test("/ToUnicode"), PdfIndirect(62)),
   ])
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([(acceptance_name_for_test("/FVar"), font)]),
+      @syntax.pdf_dictionary([(acceptance_name_for_test("/FVar"), font)]),
     ),
   ])
   let page = {
@@ -835,7 +835,7 @@ fn acceptance_assert_tounicode_variation_text_for_test(
 }
 
 ///|
-fn acceptance_tounicode_parser_corner_cmap_for_test() -> @pdflite.PdfObject {
+fn acceptance_tounicode_parser_corner_cmap_for_test() -> @syntax.PdfObject {
   let cmap = acceptance_ascii_for_test(
     "% /Identity-H usecmap\n" +
     "/WMode 1 def % /WMode 0 def\n" +
@@ -857,8 +857,8 @@ fn acceptance_tounicode_parser_corner_cmap_for_test() -> @pdflite.PdfObject {
     "1 beginbfchar <4A><03A9> endbfchar\n",
   )
   let encoded = @flate.pdf_flate_encode(cmap)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         acceptance_name_for_test("/Filter"),
@@ -877,7 +877,7 @@ fn acceptance_tounicode_parser_corner_document_for_test() -> @pdflite.PdfDocumen
     64,
     acceptance_tounicode_parser_corner_cmap_for_test(),
   )
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type1")),
@@ -888,10 +888,10 @@ fn acceptance_tounicode_parser_corner_document_for_test() -> @pdflite.PdfDocumen
     ),
     (acceptance_name_for_test("/ToUnicode"), PdfIndirect(64)),
   ])
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([(acceptance_name_for_test("/FCorner"), font)]),
+      @syntax.pdf_dictionary([(acceptance_name_for_test("/FCorner"), font)]),
     ),
   ])
   let page = {
@@ -966,7 +966,7 @@ fn acceptance_assert_tounicode_parser_corner_text_for_test(
 }
 
 ///|
-fn acceptance_tounicode_sequence_cmap_for_test() -> @pdflite.PdfObject {
+fn acceptance_tounicode_sequence_cmap_for_test() -> @syntax.PdfObject {
   let cmap = acceptance_ascii_for_test(
     "/CIDInit /ProcSet findresource begin\n" +
     "12 dict begin\n" +
@@ -994,8 +994,8 @@ fn acceptance_tounicode_sequence_cmap_for_test() -> @pdflite.PdfObject {
     "end\n",
   )
   let encoded = @flate.pdf_flate_encode(cmap)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         acceptance_name_for_test("/Filter"),
@@ -1015,10 +1015,10 @@ fn acceptance_tounicode_sequence_document_for_test() -> @pdflite.PdfDocument rai
     acceptance_identity_h_descendant_font_for_test(),
   )
   doc.add_object_given_number(74, acceptance_tounicode_sequence_cmap_for_test())
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Fseq"),
           acceptance_identity_h_font_for_test().add_dict_entry(
@@ -1122,7 +1122,7 @@ fn acceptance_assert_tounicode_sequence_text_for_test(
 }
 
 ///|
-fn acceptance_type3_tounicode_stream_for_test() -> @pdflite.PdfObject {
+fn acceptance_type3_tounicode_stream_for_test() -> @syntax.PdfObject {
   let cmap = acceptance_ascii_for_test(
     "1 begincodespacerange\n" +
     "<00><FF>\n" +
@@ -1133,8 +1133,8 @@ fn acceptance_type3_tounicode_stream_for_test() -> @pdflite.PdfObject {
     "endbfchar\n",
   )
   let encoded = @flate.pdf_flate_encode(cmap)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         acceptance_name_for_test("/Filter"),
@@ -1148,10 +1148,10 @@ fn acceptance_type3_tounicode_stream_for_test() -> @pdflite.PdfObject {
 ///|
 fn acceptance_type3_charproc_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let data = @pdflite.pdf_content_bytes_of_ops(ops)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
     ]),
     StreamGot(data),
@@ -1159,7 +1159,7 @@ fn acceptance_type3_charproc_stream_for_test(
 }
 
 ///|
-fn acceptance_type3_glyph_inline_dictionary_for_test() -> @pdflite.PdfObject {
+fn acceptance_type3_glyph_inline_dictionary_for_test() -> @syntax.PdfObject {
   PdfDictionary([
     (acceptance_name_for_test("/W"), PdfInteger(2)),
     (acceptance_name_for_test("/H"), PdfInteger(1)),
@@ -1192,10 +1192,10 @@ fn acceptance_type3_resource_charproc_ops_for_test() -> Array[
 }
 
 ///|
-fn acceptance_type3_glyph_mark_xobject_for_test() -> @pdflite.PdfObject {
+fn acceptance_type3_glyph_mark_xobject_for_test() -> @syntax.PdfObject {
   let data = acceptance_ascii_for_test("q Q")
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Subtype"),
         PdfNameObject(acceptance_name_for_test("/Form")),
@@ -1207,8 +1207,8 @@ fn acceptance_type3_glyph_mark_xobject_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_type3_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_type3_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type3")),
@@ -1235,7 +1235,7 @@ fn acceptance_type3_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/CharProcs"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/A"), PdfIndirect(64)),
         (acceptance_name_for_test("/B"), PdfIndirect(65)),
         (acceptance_name_for_test("/C"), PdfIndirect(66)),
@@ -1243,14 +1243,14 @@ fn acceptance_type3_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/Resources"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/ProcSet"),
           PdfArray([PdfNameObject(acceptance_name_for_test("/PDF"))]),
         ),
         (
           acceptance_name_for_test("/ColorSpace"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               acceptance_name_for_test("/GlyphGray"),
               PdfNameObject(acceptance_name_for_test("/DeviceGray")),
@@ -1259,7 +1259,7 @@ fn acceptance_type3_font_for_test() -> @pdflite.PdfObject {
         ),
         (
           acceptance_name_for_test("/XObject"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (acceptance_name_for_test("/GlyphMark"), PdfIndirect(67)),
           ]),
         ),
@@ -1274,7 +1274,7 @@ fn acceptance_type3_font_for_test() -> @pdflite.PdfObject {
     (acceptance_name_for_test("/MissingWidth"), PdfInteger(250)),
     (
       acceptance_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Differences"),
           PdfArray([
@@ -1315,10 +1315,10 @@ fn acceptance_type3_text_document_for_test() -> @pdflite.PdfDocument raise {
     67,
     acceptance_type3_glyph_mark_xobject_for_test(),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Ft3"), acceptance_type3_font_for_test()),
       ]),
     ),
@@ -1386,14 +1386,14 @@ fn acceptance_assert_type3_text_for_test(
   ])
   @test.assert_eq(
     type3_data.resources,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/ProcSet"),
         PdfArray([PdfNameObject(acceptance_name_for_test("/PDF"))]),
       ),
       (
         acceptance_name_for_test("/ColorSpace"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             acceptance_name_for_test("/GlyphGray"),
             PdfNameObject(acceptance_name_for_test("/DeviceGray")),
@@ -1402,7 +1402,7 @@ fn acceptance_assert_type3_text_for_test(
       ),
       (
         acceptance_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (acceptance_name_for_test("/GlyphMark"), PdfIndirect(67)),
         ]),
       ),
@@ -1418,7 +1418,7 @@ fn acceptance_assert_type3_text_for_test(
     fail("expected Type3 glyph XObject resource")
   }
   @test.assert_eq(
-    @pdflite.pdf_stream(glyph_mark.dictionary, glyph_mark.data).stream_bytes(),
+    @syntax.pdf_stream(glyph_mark.dictionary, glyph_mark.data).stream_bytes(),
     acceptance_ascii_for_test("q Q"),
   )
   guard simple.fontmetrics is Some(metrics) else {
@@ -1473,11 +1473,11 @@ fn acceptance_type3_form_xobject_ops_for_test() -> Array[@content.PdfContentOp] 
 }
 
 ///|
-fn acceptance_type3_form_xobject_resources_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_type3_form_xobject_resources_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/XObject"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/NestedImage"), PdfIndirect(178)),
       ]),
     ),
@@ -1485,12 +1485,12 @@ fn acceptance_type3_form_xobject_resources_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_type3_form_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_type3_form_xobject_for_test() -> @syntax.PdfObject raise {
   let data = @pdflite.pdf_content_bytes_of_ops(
     acceptance_type3_form_xobject_ops_for_test(),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -1514,8 +1514,8 @@ fn acceptance_type3_form_xobject_for_test() -> @pdflite.PdfObject raise {
 }
 
 ///|
-fn acceptance_type3_form_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_type3_form_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type3")),
@@ -1537,13 +1537,13 @@ fn acceptance_type3_form_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/CharProcs"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/GlyphNested"), PdfIndirect(176)),
       ]),
     ),
     (
       acceptance_name_for_test("/Resources"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/ProcSet"),
           PdfArray([
@@ -1553,7 +1553,7 @@ fn acceptance_type3_form_font_for_test() -> @pdflite.PdfObject {
         ),
         (
           acceptance_name_for_test("/XObject"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (acceptance_name_for_test("/GlyphForm"), PdfIndirect(177)),
           ]),
         ),
@@ -1564,7 +1564,7 @@ fn acceptance_type3_form_font_for_test() -> @pdflite.PdfObject {
     (acceptance_name_for_test("/Widths"), PdfArray([PdfInteger(500)])),
     (
       acceptance_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Differences"),
           PdfArray([
@@ -1589,10 +1589,10 @@ fn acceptance_type3_form_resource_document_for_test() -> @pdflite.PdfDocument ra
   )
   doc.add_object_given_number(177, acceptance_type3_form_xobject_for_test())
   doc.add_object_given_number(178, acceptance_image_indexed_xobject_for_test())
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Ft3Form"),
           acceptance_type3_form_font_for_test(),
@@ -1670,7 +1670,7 @@ fn acceptance_assert_type3_form_resource_text_for_test(
     PdfRawImage(4, 1, PdfBPP24, acceptance_expected_indexed_rgb24_for_test()),
   )
   @test.assert_eq(
-    @pdflite.pdf_stream(form_stream.dictionary, form_stream.data).stream_bytes(),
+    @syntax.pdf_stream(form_stream.dictionary, form_stream.data).stream_bytes(),
     @pdflite.pdf_content_bytes_of_ops(
       acceptance_type3_form_xobject_ops_for_test(),
     ),
@@ -1683,8 +1683,8 @@ fn acceptance_assert_type3_form_resource_text_for_test(
 }
 
 ///|
-fn acceptance_type3_encoded_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_type3_encoded_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type3")),
@@ -1711,14 +1711,14 @@ fn acceptance_type3_encoded_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/CharProcs"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/A"), PdfIndirect(84)),
         (acceptance_name_for_test("/Omega"), PdfIndirect(85)),
       ]),
     ),
     (
       acceptance_name_for_test("/Resources"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/ProcSet"),
           PdfArray([PdfNameObject(acceptance_name_for_test("/PDF"))]),
@@ -1734,7 +1734,7 @@ fn acceptance_type3_encoded_font_for_test() -> @pdflite.PdfObject {
     (acceptance_name_for_test("/MissingWidth"), PdfInteger(250)),
     (
       acceptance_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Differences"),
           PdfArray([
@@ -1762,10 +1762,10 @@ fn acceptance_type3_encoded_text_document_for_test() -> @pdflite.PdfDocument rai
       Op_d1(620.0, 0.0, 0.0, -20.0, 620.0, 700.0),
     ]),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Ft3Enc"),
           acceptance_type3_encoded_font_for_test(),
@@ -1856,7 +1856,7 @@ fn acceptance_assert_type3_encoded_text_for_test(
 }
 
 ///|
-fn acceptance_type3_fixture_inline_dictionary_for_test() -> @pdflite.PdfObject {
+fn acceptance_type3_fixture_inline_dictionary_for_test() -> @syntax.PdfObject {
   PdfDictionary([
     (acceptance_name_for_test("/W"), PdfInteger(2)),
     (acceptance_name_for_test("/H"), PdfInteger(1)),
@@ -1889,8 +1889,8 @@ fn acceptance_type3_fixture_t_ops_for_test() -> Array[@content.PdfContentOp] rai
 }
 
 ///|
-fn acceptance_type3_fixture_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_type3_fixture_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type3")),
@@ -1917,7 +1917,7 @@ fn acceptance_type3_fixture_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/CharProcs"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/E"), PdfIndirect(186)),
         (acceptance_name_for_test("/X"), PdfIndirect(187)),
         (acceptance_name_for_test("/T"), PdfIndirect(188)),
@@ -1926,7 +1926,7 @@ fn acceptance_type3_fixture_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/Resources"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/ProcSet"),
           PdfArray([
@@ -1936,7 +1936,7 @@ fn acceptance_type3_fixture_font_for_test() -> @pdflite.PdfObject {
         ),
         (
           acceptance_name_for_test("/ColorSpace"),
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               acceptance_name_for_test("/GlyphGray"),
               PdfNameObject(acceptance_name_for_test("/DeviceGray")),
@@ -1959,7 +1959,7 @@ fn acceptance_type3_fixture_font_for_test() -> @pdflite.PdfObject {
     (acceptance_name_for_test("/MissingWidth"), PdfInteger(99)),
     (
       acceptance_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Differences"),
           PdfArray([
@@ -1999,10 +1999,10 @@ fn acceptance_type3_fixture_charproc_document_for_test() -> @pdflite.PdfDocument
     189,
     acceptance_type3_charproc_stream_for_test([Op_d0(700.0, 0.0)]),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Ft3Fixture"),
           acceptance_type3_fixture_font_for_test(),
@@ -2104,7 +2104,7 @@ fn acceptance_assert_type3_fixture_charprocs_for_test(
   )
   @test.assert_eq(
     type3_data.resources,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/ProcSet"),
         PdfArray([
@@ -2114,7 +2114,7 @@ fn acceptance_assert_type3_fixture_charprocs_for_test(
       ),
       (
         acceptance_name_for_test("/ColorSpace"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             acceptance_name_for_test("/GlyphGray"),
             PdfNameObject(acceptance_name_for_test("/DeviceGray")),
@@ -2162,8 +2162,8 @@ fn acceptance_identity_h_text_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_identity_h_descendant_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_identity_h_descendant_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/CIDFontType2")),
@@ -2174,7 +2174,7 @@ fn acceptance_identity_h_descendant_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Registry"),
           PdfString(acceptance_ascii_for_test("Adobe")),
@@ -2188,7 +2188,7 @@ fn acceptance_identity_h_descendant_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Ascent"), PdfInteger(880)),
         (acceptance_name_for_test("/Descent"), PdfInteger(-120)),
       ]),
@@ -2207,8 +2207,8 @@ fn acceptance_identity_h_descendant_font_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_identity_h_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_identity_h_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type0")),
@@ -2231,8 +2231,8 @@ fn acceptance_identity_v_text_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_identity_v_descendant_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_identity_v_descendant_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/CIDFontType2")),
@@ -2243,7 +2243,7 @@ fn acceptance_identity_v_descendant_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Registry"),
           PdfString(acceptance_ascii_for_test("Adobe")),
@@ -2257,7 +2257,7 @@ fn acceptance_identity_v_descendant_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Ascent"), PdfInteger(880)),
         (acceptance_name_for_test("/Descent"), PdfInteger(-120)),
       ]),
@@ -2289,8 +2289,8 @@ fn acceptance_identity_v_descendant_font_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_identity_v_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_identity_v_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type0")),
@@ -2315,10 +2315,10 @@ fn acceptance_identity_h_text_document_for_test() -> @pdflite.PdfDocument raise 
     72,
     acceptance_identity_h_descendant_font_for_test(),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Fcid"),
           acceptance_identity_h_font_for_test(),
@@ -2358,10 +2358,10 @@ fn acceptance_identity_v_text_document_for_test() -> @pdflite.PdfDocument raise 
     72,
     acceptance_identity_v_descendant_font_for_test(),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Fcid"),
           acceptance_identity_v_font_for_test(),
@@ -2394,7 +2394,7 @@ fn acceptance_identity_v_text_document_for_test() -> @pdflite.PdfDocument raise 
 }
 
 ///|
-fn acceptance_identity_h_tounicode_cmap_for_test() -> @pdflite.PdfObject {
+fn acceptance_identity_h_tounicode_cmap_for_test() -> @syntax.PdfObject {
   let cmap = acceptance_ascii_for_test(
     "1 begincodespacerange\n" +
     "<0000><FFFF>\n" +
@@ -2408,8 +2408,8 @@ fn acceptance_identity_h_tounicode_cmap_for_test() -> @pdflite.PdfObject {
     "endbfrange\n",
   )
   let encoded = @codec.pdf_ascii_hex_encode(cmap)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         acceptance_name_for_test("/Filter"),
@@ -2432,10 +2432,10 @@ fn acceptance_identity_h_tounicode_text_document_for_test() -> @pdflite.PdfDocum
     73,
     acceptance_identity_h_tounicode_cmap_for_test(),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Fcid"),
           acceptance_identity_h_font_for_test().add_dict_entry(
@@ -2474,8 +2474,8 @@ fn acceptance_identity_h_tounicode_text_document_for_test() -> @pdflite.PdfDocum
 fn acceptance_predefined_cmap_descendant_font_for_test(
   basefont : String,
   ordering : String,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/CIDFontType2")),
@@ -2486,7 +2486,7 @@ fn acceptance_predefined_cmap_descendant_font_for_test(
     ),
     (
       acceptance_name_for_test("/CIDSystemInfo"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/Registry"),
           PdfString(acceptance_ascii_for_test("Adobe")),
@@ -2500,7 +2500,7 @@ fn acceptance_predefined_cmap_descendant_font_for_test(
     ),
     (
       acceptance_name_for_test("/FontDescriptor"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Ascent"), PdfInteger(880)),
         (acceptance_name_for_test("/Descent"), PdfInteger(-120)),
       ]),
@@ -2516,8 +2516,8 @@ fn acceptance_gbk2k_text_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_gbk2k_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_gbk2k_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type0")),
@@ -2544,10 +2544,10 @@ fn acceptance_gbk2k_text_document_for_test() -> @pdflite.PdfDocument raise {
       "/GBK2KDescendant", "GB1",
     ),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Fgbk2k"), acceptance_gbk2k_font_for_test()),
       ]),
     ),
@@ -2582,8 +2582,8 @@ fn acceptance_big5_text_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_big5_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_big5_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type0")),
@@ -2610,10 +2610,10 @@ fn acceptance_big5_text_document_for_test() -> @pdflite.PdfDocument raise {
       "/ETenB5Descendant", "CNS1",
     ),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Fbig5"), acceptance_big5_font_for_test()),
       ]),
     ),
@@ -2644,8 +2644,8 @@ fn acceptance_hkscs_text_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_hkscs_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_hkscs_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type0")),
@@ -2672,10 +2672,10 @@ fn acceptance_hkscs_text_document_for_test() -> @pdflite.PdfDocument raise {
       "/HKscsB5Descendant", "CNS1",
     ),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Fhkscs"), acceptance_hkscs_font_for_test()),
       ]),
     ),
@@ -2710,8 +2710,8 @@ fn acceptance_cns_euc_vertical_text_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_cns_euc_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_cns_euc_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type0")),
@@ -2729,8 +2729,8 @@ fn acceptance_cns_euc_font_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_cns_euc_vertical_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_cns_euc_vertical_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type0")),
@@ -2748,11 +2748,11 @@ fn acceptance_cns_euc_vertical_font_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_cns_euc_resources_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_cns_euc_resources_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Fcns"), acceptance_cns_euc_font_for_test()),
       ]),
     ),
@@ -2760,11 +2760,11 @@ fn acceptance_cns_euc_resources_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_cns_euc_vertical_resources_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_cns_euc_vertical_resources_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/FcnsV"),
           acceptance_cns_euc_vertical_font_for_test(),
@@ -3116,8 +3116,8 @@ fn acceptance_predefined_cmap_type0_font_for_test(
   basefont : String,
   encoding : String,
   descendant_object : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Subtype"),
       PdfNameObject(acceptance_name_for_test("/Type0")),
@@ -3254,13 +3254,13 @@ fn acceptance_assert_matterhorn_cmap_typo_for_test(
 ///|
 fn acceptance_predefined_cmap_page_for_test(
   font_name : String,
-  font : @pdflite.PdfObject,
+  font : @syntax.PdfObject,
   text : @pdflite.PdfBytes,
 ) -> @page.PdfPage raise {
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([(acceptance_name_for_test(font_name), font)]),
+      @syntax.pdf_dictionary([(acceptance_name_for_test(font_name), font)]),
     ),
   ])
   {
@@ -3278,7 +3278,7 @@ fn acceptance_predefined_cmap_page_for_test(
 }
 
 ///|
-fn acceptance_unicode_predefined_tounicode_cmap_for_test() -> @pdflite.PdfObject {
+fn acceptance_unicode_predefined_tounicode_cmap_for_test() -> @syntax.PdfObject {
   let cmap = acceptance_ascii_for_test(
     "2 begincodespacerange\n" +
     "<E38182><E38182>\n" +
@@ -3290,8 +3290,8 @@ fn acceptance_unicode_predefined_tounicode_cmap_for_test() -> @pdflite.PdfObject
     "endbfchar\n",
   )
   let encoded = @flate.pdf_flate_encode(cmap)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         acceptance_name_for_test("/Filter"),
@@ -4503,9 +4503,9 @@ fn acceptance_japan1_supplemental_cmap_text_document_for_test() -> @pdflite.PdfD
 
 ///|
 fn acceptance_font_object_by_name_for_test(
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   name : @pdflite.PdfName,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let fonts = match
     resources.lookup_immediate(acceptance_name_for_test("/Font")) {
     Some(fonts) => fonts
@@ -4910,7 +4910,7 @@ fn acceptance_assert_predefined_cmap_font_shape_for_test(
   font_name : String,
   encoding : String,
   ordering : String,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   acceptance_assert_predefined_cmap_font_shape_with_two_byte_for_test(
     doc, page, font_name, encoding, ordering, false,
   )
@@ -4924,7 +4924,7 @@ fn acceptance_assert_predefined_cmap_font_shape_with_two_byte_for_test(
   encoding : String,
   ordering : String,
   uses_two_byte_codes : Bool,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let font = acceptance_font_object_by_name_for_test(
     page.resources,
     acceptance_name_for_test(font_name),
@@ -5647,10 +5647,10 @@ fn acceptance_assert_japan1_supplemental_cmap_text_for_test(
 }
 
 ///|
-fn acceptance_truetype_font_file_for_test() -> @pdflite.PdfObject {
+fn acceptance_truetype_font_file_for_test() -> @syntax.PdfObject {
   let data = acceptance_ascii_for_test("minimal-ttf-data")
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
     ]),
     StreamGot(data),
@@ -5697,10 +5697,10 @@ fn acceptance_truetype_text_document_for_test() -> @pdflite.PdfDocument raise {
     }),
     objnum=Some(73),
   )
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/Ftt"), PdfIndirect(font_number)),
       ]),
     ),
@@ -5823,12 +5823,12 @@ fn acceptance_expected_ccitt_rgb24_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_image_indexed_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_image_indexed_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(
     acceptance_indexed_image_sample_for_test(),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -5860,12 +5860,12 @@ fn acceptance_image_indexed_xobject_for_test() -> @pdflite.PdfObject raise {
 }
 
 ///|
-fn acceptance_image_ccitt_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_image_ccitt_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = acceptance_text_bytes_for_test([
     0xB6, 0x6A, 0x28, 0x00, 0x80, 0x08,
   ])
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -5887,7 +5887,7 @@ fn acceptance_image_ccitt_xobject_for_test() -> @pdflite.PdfObject raise {
       ),
       (
         acceptance_name_for_test("/DecodeParms"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (acceptance_name_for_test("/Columns"), PdfInteger(8)),
           (acceptance_name_for_test("/Rows"), PdfInteger(2)),
         ]),
@@ -5906,10 +5906,10 @@ fn acceptance_jpeg_payload_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_image_jpeg_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_image_jpeg_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(acceptance_jpeg_payload_for_test())
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -5942,10 +5942,10 @@ fn acceptance_image_jpeg_xobject_for_test() -> @pdflite.PdfObject raise {
 }
 
 ///|
-fn acceptance_image_jpx_xobject_for_test() -> @pdflite.PdfObject {
+fn acceptance_image_jpx_xobject_for_test() -> @syntax.PdfObject {
   let data = acceptance_ascii_for_test("jpx-data")
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -5971,10 +5971,10 @@ fn acceptance_image_jpx_xobject_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_image_jbig2_globals_for_test() -> @pdflite.PdfObject {
+fn acceptance_image_jbig2_globals_for_test() -> @syntax.PdfObject {
   let data = acceptance_ascii_for_test("jbig2-globals")
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
     ]),
     StreamGot(data),
@@ -5982,10 +5982,10 @@ fn acceptance_image_jbig2_globals_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_image_jbig2_xobject_for_test() -> @pdflite.PdfObject {
+fn acceptance_image_jbig2_xobject_for_test() -> @syntax.PdfObject {
   let encoded = @flate.pdf_flate_encode(acceptance_ascii_for_test("jbig2-data"))
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6007,7 +6007,7 @@ fn acceptance_image_jbig2_xobject_for_test() -> @pdflite.PdfObject {
         acceptance_name_for_test("/DecodeParms"),
         PdfArray([
           PdfNull,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (acceptance_name_for_test("/JBIG2Globals"), PdfIndirect(73)),
           ]),
         ]),
@@ -6041,7 +6041,7 @@ fn acceptance_jbig2_source_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
-fn acceptance_inline_image_dictionary_for_test() -> @pdflite.PdfObject {
+fn acceptance_inline_image_dictionary_for_test() -> @syntax.PdfObject {
   PdfDictionary([
     (acceptance_name_for_test("/W"), PdfInteger(3)),
     (acceptance_name_for_test("/H"), PdfInteger(1)),
@@ -6059,7 +6059,7 @@ fn acceptance_inline_image_data_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_inline_jpeg_dictionary_for_test() -> @pdflite.PdfObject {
+fn acceptance_inline_jpeg_dictionary_for_test() -> @syntax.PdfObject {
   PdfDictionary([
     (acceptance_name_for_test("/W"), PdfInteger(1)),
     (acceptance_name_for_test("/H"), PdfInteger(1)),
@@ -6106,10 +6106,10 @@ fn acceptance_image_lifecycle_document_for_test() -> @pdflite.PdfDocument raise 
   doc.add_object_given_number(72, acceptance_image_jpx_xobject_for_test())
   doc.add_object_given_number(73, acceptance_image_jbig2_globals_for_test())
   doc.add_object_given_number(74, acceptance_image_jbig2_xobject_for_test())
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/XObject"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (raw_name, PdfIndirect(70)),
         (ccitt_name, PdfIndirect(75)),
         (jpeg_name, PdfIndirect(71)),
@@ -6133,10 +6133,10 @@ fn acceptance_image_lifecycle_document_for_test() -> @pdflite.PdfDocument raise 
 }
 
 ///|
-fn acceptance_encoded_image_alias_lab_space_for_test() -> @pdflite.PdfObject {
+fn acceptance_encoded_image_alias_lab_space_for_test() -> @syntax.PdfObject {
   PdfArray([
     PdfNameObject(acceptance_name_for_test("/Lab")),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/WhitePoint"),
         PdfArray([PdfInteger(1), PdfInteger(1), PdfInteger(1)]),
@@ -6160,10 +6160,10 @@ fn acceptance_encoded_image_alias_jpeg_payload_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn acceptance_encoded_image_alias_jpeg_xobject_for_test() -> @pdflite.PdfObject {
+fn acceptance_encoded_image_alias_jpeg_xobject_for_test() -> @syntax.PdfObject {
   let data = acceptance_encoded_image_alias_jpeg_payload_for_test()
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6194,10 +6194,10 @@ fn acceptance_encoded_image_alias_jpx_payload_for_test() -> @pdflite.PdfBytes {
 }
 
 ///|
-fn acceptance_encoded_image_alias_jpx_xobject_for_test() -> @pdflite.PdfObject {
+fn acceptance_encoded_image_alias_jpx_xobject_for_test() -> @syntax.PdfObject {
   let data = acceptance_encoded_image_alias_jpx_payload_for_test()
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6230,10 +6230,10 @@ fn acceptance_encoded_image_alias_jpx_xobject_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_encoded_image_alias_jbig2_globals_for_test() -> @pdflite.PdfObject {
+fn acceptance_encoded_image_alias_jbig2_globals_for_test() -> @syntax.PdfObject {
   let data = acceptance_ascii_for_test("alias-jbig2-globals")
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
     ]),
     StreamGot(data),
@@ -6246,10 +6246,10 @@ fn acceptance_encoded_image_alias_jbig2_payload_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
-fn acceptance_encoded_image_alias_jbig2_xobject_for_test() -> @pdflite.PdfObject {
+fn acceptance_encoded_image_alias_jbig2_xobject_for_test() -> @syntax.PdfObject {
   let data = acceptance_encoded_image_alias_jbig2_payload_for_test()
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6266,7 +6266,7 @@ fn acceptance_encoded_image_alias_jbig2_xobject_for_test() -> @pdflite.PdfObject
       ),
       (
         acceptance_name_for_test("/DP"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (acceptance_name_for_test("/JBIG2Globals"), PdfIndirect(198)),
         ]),
       ),
@@ -6288,11 +6288,11 @@ fn acceptance_encoded_image_alias_content_ops_for_test() -> Array[
 }
 
 ///|
-fn acceptance_encoded_image_alias_resources_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_encoded_image_alias_resources_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/NamedLabJpeg"),
           acceptance_encoded_image_alias_lab_space_for_test(),
@@ -6301,7 +6301,7 @@ fn acceptance_encoded_image_alias_resources_for_test() -> @pdflite.PdfObject {
     ),
     (
       acceptance_name_for_test("/XObject"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/ImAliasJpeg"), PdfIndirect(196)),
         (acceptance_name_for_test("/ImAliasJpx"), PdfIndirect(197)),
         (acceptance_name_for_test("/ImAliasJbig2"), PdfIndirect(199)),
@@ -6351,12 +6351,12 @@ fn acceptance_named_image_rgb_sample_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_named_image_rgb_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_named_image_rgb_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(
     acceptance_named_image_rgb_sample_for_test(),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6388,12 +6388,12 @@ fn acceptance_named_image_gray_sample_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_named_image_gray_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_named_image_gray_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(
     acceptance_named_image_gray_sample_for_test(),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6424,10 +6424,10 @@ fn acceptance_named_image_gray_xobject_for_test() -> @pdflite.PdfObject raise {
 }
 
 ///|
-fn acceptance_named_image_mask_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_named_image_mask_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(acceptance_text_bytes_for_test([0x80]))
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6464,12 +6464,12 @@ fn acceptance_named_image_indexed_sample_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_named_image_indexed_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_named_image_indexed_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(
     acceptance_named_image_indexed_sample_for_test(),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6506,11 +6506,11 @@ fn acceptance_named_image_content_ops_for_test() -> Array[@content.PdfContentOp]
 }
 
 ///|
-fn acceptance_named_image_resources_for_test() -> @pdflite.PdfObject raise {
-  @pdflite.pdf_dictionary([
+fn acceptance_named_image_resources_for_test() -> @syntax.PdfObject raise {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/NamedRGB"),
           PdfNameObject(acceptance_name_for_test("/DeviceRGB")),
@@ -6532,7 +6532,7 @@ fn acceptance_named_image_resources_for_test() -> @pdflite.PdfObject raise {
     ),
     (
       acceptance_name_for_test("/XObject"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/ImNamedRGB"), PdfIndirect(80)),
         (acceptance_name_for_test("/ImNamedGray"), PdfIndirect(81)),
         (acceptance_name_for_test("/ImMask"), PdfIndirect(82)),
@@ -6589,10 +6589,10 @@ fn acceptance_expected_cmyk_rgb24_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_cmyk_image_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_cmyk_image_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(acceptance_cmyk_image_sample_for_test())
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6619,12 +6619,12 @@ fn acceptance_cmyk_image_xobject_for_test() -> @pdflite.PdfObject raise {
 }
 
 ///|
-fn acceptance_cmyk_decoded_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_cmyk_decoded_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(
     acceptance_text_bytes_for_test([0, 0, 0, 0]),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6669,12 +6669,12 @@ fn acceptance_indexed_cmyk_image_sample_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_indexed_cmyk_image_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_indexed_cmyk_image_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(
     acceptance_indexed_cmyk_image_sample_for_test(),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6710,11 +6710,11 @@ fn acceptance_cmyk_image_content_ops_for_test() -> Array[@content.PdfContentOp] 
 }
 
 ///|
-fn acceptance_cmyk_image_resources_for_test() -> @pdflite.PdfObject raise {
-  @pdflite.pdf_dictionary([
+fn acceptance_cmyk_image_resources_for_test() -> @syntax.PdfObject raise {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/NamedCMYK"),
           PdfNameObject(acceptance_name_for_test("/DeviceCMYK")),
@@ -6732,7 +6732,7 @@ fn acceptance_cmyk_image_resources_for_test() -> @pdflite.PdfObject raise {
     ),
     (
       acceptance_name_for_test("/XObject"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/ImRawCMYK"), PdfIndirect(88)),
         (acceptance_name_for_test("/ImDecodeCMYK"), PdfIndirect(89)),
         (acceptance_name_for_test("/ImIndexedCMYK"), PdfIndirect(90)),
@@ -6767,10 +6767,10 @@ fn acceptance_cmyk_image_document_for_test() -> @pdflite.PdfDocument raise {
 }
 
 ///|
-fn acceptance_alt_image_icc_profile_for_test() -> @pdflite.PdfObject {
+fn acceptance_alt_image_icc_profile_for_test() -> @syntax.PdfObject {
   let data = acceptance_ascii_for_test("icc")
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/N"), PdfInteger(1)),
       (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
     ]),
@@ -6784,12 +6784,12 @@ fn acceptance_alt_image_icc_gray_sample_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_alt_image_icc_gray_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_alt_image_icc_gray_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(
     acceptance_alt_image_icc_gray_sample_for_test(),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6816,8 +6816,8 @@ fn acceptance_alt_image_icc_gray_xobject_for_test() -> @pdflite.PdfObject raise 
 }
 
 ///|
-fn acceptance_alt_image_separation_tint_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_alt_image_separation_tint_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (acceptance_name_for_test("/FunctionType"), PdfInteger(2)),
     (
       acceptance_name_for_test("/Domain"),
@@ -6836,10 +6836,10 @@ fn acceptance_alt_image_separation_tint_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn acceptance_alt_image_separation_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_alt_image_separation_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(acceptance_text_bytes_for_test([255]))
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6871,10 +6871,10 @@ fn acceptance_alt_image_device_n_palette_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_alt_image_device_n_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_alt_image_device_n_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(acceptance_text_bytes_for_test([0, 1]))
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6908,12 +6908,12 @@ fn acceptance_alt_image_lab_palette_for_test() -> @pdflite.PdfBytes raise {
 }
 
 ///|
-fn acceptance_alt_image_lab_xobject_for_test() -> @pdflite.PdfObject raise {
+fn acceptance_alt_image_lab_xobject_for_test() -> @syntax.PdfObject raise {
   let encoded = @flate.pdf_flate_encode(
     acceptance_text_bytes_for_test([0, 1, 2, 3]),
   )
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XObject")),
@@ -6950,11 +6950,11 @@ fn acceptance_alt_image_content_ops_for_test() -> Array[@content.PdfContentOp] {
 }
 
 ///|
-fn acceptance_alt_image_resources_for_test() -> @pdflite.PdfObject raise {
-  @pdflite.pdf_dictionary([
+fn acceptance_alt_image_resources_for_test() -> @syntax.PdfObject raise {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           acceptance_name_for_test("/NamedICCGray"),
           PdfArray([
@@ -6991,7 +6991,7 @@ fn acceptance_alt_image_resources_for_test() -> @pdflite.PdfObject raise {
             PdfNameObject(acceptance_name_for_test("/Indexed")),
             PdfArray([
               PdfNameObject(acceptance_name_for_test("/Lab")),
-              @pdflite.pdf_dictionary([
+              @syntax.pdf_dictionary([
                 (
                   acceptance_name_for_test("/WhitePoint"),
                   PdfArray([
@@ -7010,7 +7010,7 @@ fn acceptance_alt_image_resources_for_test() -> @pdflite.PdfObject raise {
     ),
     (
       acceptance_name_for_test("/XObject"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/ImICCGray"), PdfIndirect(92)),
         (acceptance_name_for_test("/ImSpot"), PdfIndirect(93)),
         (acceptance_name_for_test("/ImDeviceN"), PdfIndirect(94)),
@@ -7056,9 +7056,9 @@ fn acceptance_alt_image_document_for_test() -> @pdflite.PdfDocument raise {
 ///|
 fn acceptance_image_xobject_for_test(
   doc : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   name : @pdflite.PdfName,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   guard doc.lookup_direct(acceptance_name_for_test("/XObject"), resources)
     is Some(xobjects) else {
     fail("expected XObject resources")
@@ -7118,18 +7118,18 @@ fn acceptance_assert_jbig2_source_document_for_test(
     fail("expected source JBIG2 globals stream")
   }
   @test.assert_eq(
-    @pdflite.pdf_stream(globals.dictionary, globals.data).stream_bytes(),
+    @syntax.pdf_stream(globals.dictionary, globals.data).stream_bytes(),
     acceptance_jbig2_source_globals_for_test(),
   )
 }
 
 ///|
 fn acceptance_composition_source_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   data : String,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary(entries),
+) -> @syntax.PdfObject {
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary(entries),
     StreamGot(acceptance_ascii_for_test(data)),
   )
 }
@@ -7154,7 +7154,7 @@ fn acceptance_composition_source_document_for_test() -> @pdflite.PdfDocument {
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(acceptance_name_for_test("/Catalog"))),
       (key_pages, PdfIndirect(2)),
       (key_struct_tree_root, PdfIndirect(50)),
@@ -7162,7 +7162,7 @@ fn acceptance_composition_source_document_for_test() -> @pdflite.PdfDocument {
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(acceptance_name_for_test("/Pages"))),
       (key_kids, PdfArray([PdfIndirect(3)])),
       (key_count, PdfInteger(1)),
@@ -7170,7 +7170,7 @@ fn acceptance_composition_source_document_for_test() -> @pdflite.PdfDocument {
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(acceptance_name_for_test("/Page"))),
       (key_parent, PdfIndirect(2)),
       (key_contents, PdfArray([PdfIndirect(20)])),
@@ -7189,15 +7189,15 @@ fn acceptance_composition_source_document_for_test() -> @pdflite.PdfDocument {
   )
   doc.add_object_given_number(
     40,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(acceptance_name_for_test("/Font"))),
       (key_font_descriptor, PdfIndirect(41)),
     ]),
   )
-  doc.add_object_given_number(41, @pdflite.pdf_dictionary([]))
+  doc.add_object_given_number(41, @syntax.pdf_dictionary([]))
   doc.add_object_given_number(
     50,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_pg, PdfIndirect(3)),
       (key_child, PdfIndirect(51)),
     ]),
@@ -7216,11 +7216,8 @@ fn acceptance_composition_source_document_for_test() -> @pdflite.PdfDocument {
   doc.add_object_given_number(61, PdfString(acceptance_ascii_for_test("piece")))
   doc.add_object_given_number(
     70,
-    @pdflite.pdf_dictionary([
-      (
-        key_piece_info,
-        @pdflite.pdf_dictionary([(key_private, PdfIndirect(61))]),
-      ),
+    @syntax.pdf_dictionary([
+      (key_piece_info, @syntax.pdf_dictionary([(key_private, PdfIndirect(61))])),
     ]),
   )
   doc
@@ -7449,7 +7446,7 @@ fn acceptance_assert_encoded_image_aliases_for_test(
   @test.assert_eq(
     jbig2_stream.dictionary.lookup_immediate(acceptance_name_for_test("/DP")),
     Some(
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (acceptance_name_for_test("/JBIG2Globals"), PdfIndirect(198)),
       ]),
     ),
@@ -7466,7 +7463,7 @@ fn acceptance_assert_encoded_image_aliases_for_test(
     fail("expected JBIG2 globals stream")
   }
   @test.assert_eq(
-    @pdflite.pdf_stream(globals.dictionary, globals.data).stream_bytes(),
+    @syntax.pdf_stream(globals.dictionary, globals.data).stream_bytes(),
     acceptance_ascii_for_test("alias-jbig2-globals"),
   )
 }
@@ -7661,7 +7658,7 @@ fn acceptance_assert_decompressed_partial_filter_stream_for_test(
     fail("expected partially decoded acceptance stream")
   }
   @test.assert_eq(
-    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     acceptance_ascii_for_test("Hi"),
   )
   @test.assert_eq(
@@ -7700,7 +7697,7 @@ fn acceptance_add_revision_marker_for_test(
   text : String,
 ) -> @pdflite.PdfDocument raise {
   let updated = source.copy()
-  let marker : @pdflite.PdfObject = PdfString(acceptance_ascii_for_test(text))
+  let marker : @syntax.PdfObject = PdfString(acceptance_ascii_for_test(text))
   updated.add_object_given_number(object_number, marker)
   let catalog = updated.lookup_object_or_null(updated.root())
   updated.add_object_given_number(
@@ -7861,7 +7858,7 @@ fn acceptance_assert_minimal_page_tree_for_test(
 }
 
 ///|
-fn acceptance_secret_object_for_test(text : String) -> @pdflite.PdfObject {
+fn acceptance_secret_object_for_test(text : String) -> @syntax.PdfObject {
   PdfDictionary([
     (
       acceptance_name_for_test("/Title"),
@@ -7878,9 +7875,9 @@ fn acceptance_metadata_bytes_for_test() -> @pdflite.PdfBytes {
 ///|
 fn acceptance_metadata_stream_for_test(
   data : @pdflite.PdfBytes,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(data.length())),
       (
         acceptance_name_for_test("/Type"),
@@ -7898,7 +7895,7 @@ fn acceptance_metadata_stream_for_test(
 ///|
 fn acceptance_metadata_encryption_document_for_test(
   metadata : @pdflite.PdfBytes,
-  secret : @pdflite.PdfObject,
+  secret : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument raise {
   let doc = acceptance_one_page_document_for_test()
   doc.add_object_given_number(62, acceptance_metadata_stream_for_test(metadata))
@@ -7934,7 +7931,7 @@ fn acceptance_assert_metadata_stream_for_test(
     Some(PdfNameObject(acceptance_name_for_test("/XML"))),
   )
   @test.assert_eq(
-    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     expected,
   )
 }
@@ -7943,7 +7940,7 @@ fn acceptance_assert_metadata_stream_for_test(
 fn acceptance_assert_metadata_encryption_for_test(
   doc : @pdflite.PdfDocument,
   metadata : @pdflite.PdfBytes,
-  secret : @pdflite.PdfObject,
+  secret : @syntax.PdfObject,
 ) -> Unit raise {
   acceptance_assert_one_page_invariants_for_test(doc, (1, 5))
   let catalog = doc.catalog()
@@ -7973,8 +7970,8 @@ fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
     object_stream_data,
     @pdflite.pdf_write_object(secret),
   )
-  let object_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let object_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/ObjStm")),
@@ -7993,7 +7990,7 @@ fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/Catalog")),
@@ -8070,8 +8067,8 @@ fn acceptance_encrypted_object_stream_pdf_with_passwords_for_test(
   )
   acceptance_push_xref_stream_entry_for_test(xref_data, 1, encrypt_offset, 0)
   acceptance_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/XRef")),
@@ -8749,14 +8746,14 @@ fn acceptance_assert_indirect_filtered_object_stream_for_test(
     Some(PdfIndirect(8)),
   )
   @test.assert_eq(
-    @pdflite.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
+    @syntax.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
     @codec.pdf_ascii_hex_encode(
       acceptance_indirect_filtered_object_stream_payload_for_test(),
     ),
   )
   @test.assert_eq(
     @codec.pdf_ascii_hex_decode(
-      @pdflite.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
+      @syntax.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
     ),
     acceptance_indirect_filtered_object_stream_payload_for_test(),
   )
@@ -8829,7 +8826,7 @@ fn acceptance_assert_prev_object_stream_page_tree_for_test(
     Some(PdfInteger(acceptance_prev_object_stream_first_for_test())),
   )
   @test.assert_eq(
-    @pdflite.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
+    @syntax.pdf_stream(object_stream.dictionary, object_stream.data).stream_bytes(),
     acceptance_prev_object_stream_payload_for_test(),
   )
 }
@@ -8869,7 +8866,7 @@ fn acceptance_assert_text_pages_for_test(
 ///|
 fn acceptance_document_contains_object_for_test(
   doc : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   for number in doc.object_numbers() {
     if doc.lookup_object_or_null(number) == object {
@@ -8938,7 +8935,7 @@ fn acceptance_assert_bookmarks_target_pages_for_test(
 fn acceptance_add_catalog_entry_for_test(
   doc : @pdflite.PdfDocument,
   key : @pdflite.PdfName,
-  value : @pdflite.PdfObject,
+  value : @syntax.PdfObject,
 ) -> Unit raise {
   let root = doc.root()
   doc.add_object_given_number(
@@ -8978,7 +8975,7 @@ fn acceptance_document_feature_lifecycle_document_for_test() -> @pdflite.PdfDocu
     .add_dict_entry(
       key_annots,
       PdfArray([
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (key_subtype, PdfNameObject(type_link)),
           (
             key_rect,
@@ -9174,21 +9171,21 @@ fn acceptance_reused_annotation_document_for_test() -> @pdflite.PdfDocument rais
   doc.set_version(1, 6)
   doc.add_object_given_number(
     10,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(acceptance_name_for_test("/Text"))),
       (key_popup, PdfIndirect(11)),
     ]),
   )
   doc.add_object_given_number(
     11,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(acceptance_name_for_test("/Popup"))),
       (key_parent, PdfIndirect(10)),
     ]),
   )
   let page = {
     ..acceptance_text_page_for_test("annotated-page"),
-    rest: @pdflite.pdf_dictionary([
+    rest: @syntax.pdf_dictionary([
       (key_annots, PdfArray([PdfIndirect(10), PdfIndirect(11)])),
     ]),
   }
@@ -9403,10 +9400,10 @@ fn acceptance_compressed_roundtrip_for_test(
 }
 
 ///|
-fn acceptance_raw_stream_for_test(text : String) -> @pdflite.PdfObject {
+fn acceptance_raw_stream_for_test(text : String) -> @syntax.PdfObject {
   let bytes = acceptance_ascii_for_test(text)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (acceptance_name_for_test("/Length"), PdfInteger(bytes.length())),
     ]),
     StreamGot(bytes),
@@ -9623,8 +9620,8 @@ fn acceptance_assert_structure_extraction_for_test(
 }
 
 ///|
-fn acceptance_resource_lifecycle_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn acceptance_resource_lifecycle_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Type"),
       PdfNameObject(acceptance_name_for_test("/Font")),
@@ -9645,26 +9642,26 @@ fn acceptance_resource_lifecycle_resources_for_test(
   font_name : @pdflite.PdfName,
   form_name : @pdflite.PdfName,
   form_number : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (font_name, acceptance_resource_lifecycle_font_for_test()),
       ]),
     ),
     (
       acceptance_name_for_test("/XObject"),
-      @pdflite.pdf_dictionary([(form_name, PdfIndirect(form_number))]),
+      @syntax.pdf_dictionary([(form_name, PdfIndirect(form_number))]),
     ),
   ])
 }
 
 ///|
-fn acceptance_resource_lifecycle_form_for_test() -> @pdflite.PdfObject {
+fn acceptance_resource_lifecycle_form_for_test() -> @syntax.PdfObject {
   let bytes = acceptance_ascii_for_test("FORM-OLD")
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Subtype"),
         PdfNameObject(acceptance_name_for_test("/Form")),
@@ -9708,7 +9705,7 @@ fn acceptance_page_resource_for_test(
   page : @page.PdfPage,
   resource_key : @pdflite.PdfName,
   name : @pdflite.PdfName,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   guard doc.lookup_direct(resource_key, page.resources) is Some(resources) else {
     fail("expected resource dictionary")
   }
@@ -9734,7 +9731,7 @@ fn acceptance_assert_resource_form_for_test(
     fail("expected form stream")
   }
   @test.assert_eq(
-    @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
+    @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes(),
     acceptance_ascii_for_test("FORM-LIFECYCLE"),
   )
   @test.assert_eq(
@@ -9776,8 +9773,8 @@ fn acceptance_process_resource_lifecycle_forms_for_test(
       }
       let bytes = acceptance_ascii_for_test("FORM-LIFECYCLE")
       [
-        @pdflite.pdf_stream(
-          @pdflite.pdf_dictionary([
+        @syntax.pdf_stream(
+          @syntax.pdf_dictionary([
             (
               acceptance_name_for_test("/Filter"),
               PdfNameObject(acceptance_name_for_test("/ASCIIHexDecode")),
@@ -9872,10 +9869,10 @@ fn acceptance_assert_resource_lifecycle_renumbered_for_test(
 }
 
 ///|
-fn acceptance_change_pages_form_for_test() -> @pdflite.PdfObject {
+fn acceptance_change_pages_form_for_test() -> @syntax.PdfObject {
   let bytes = acceptance_ascii_for_test("q Q")
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Subtype"),
         PdfNameObject(acceptance_name_for_test("/Form")),
@@ -9923,7 +9920,7 @@ fn acceptance_change_pages_xyz_for_test(
   page_number : Int,
   left : Int,
   top : Int,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([
     PdfIndirect(page_number),
     PdfNameObject(acceptance_name_for_test("/XYZ")),
@@ -9935,9 +9932,9 @@ fn acceptance_change_pages_xyz_for_test(
 
 ///|
 fn acceptance_change_pages_goto_for_test(
-  destination : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+  destination : @syntax.PdfObject,
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/S"),
       PdfNameObject(acceptance_name_for_test("/GoTo")),
@@ -9968,7 +9965,7 @@ fn acceptance_resource_heavy_change_pages_document_for_test() -> @pdflite.PdfDoc
   ignore(doc.add_root(page_root, []))
   let page_numbers = doc.page_reference_numbers()
   let page_number = page_numbers[0]
-  let indirect_annotation = @pdflite.pdf_dictionary([
+  let indirect_annotation = @syntax.pdf_dictionary([
     (key_subtype, PdfNameObject(type_link)),
     (
       key_rect,
@@ -9976,7 +9973,7 @@ fn acceptance_resource_heavy_change_pages_document_for_test() -> @pdflite.PdfDoc
     ),
     (key_dest, acceptance_change_pages_xyz_for_test(page_number, 1, 2)),
   ])
-  let direct_action_annotation = @pdflite.pdf_dictionary([
+  let direct_action_annotation = @syntax.pdf_dictionary([
     (key_subtype, PdfNameObject(type_link)),
     (
       key_rect,
@@ -10157,12 +10154,12 @@ fn acceptance_assert_resource_heavy_change_pages_for_test(
 }
 
 ///|
-fn acceptance_inherited_change_pages_mediabox_for_test() -> @pdflite.PdfObject {
+fn acceptance_inherited_change_pages_mediabox_for_test() -> @syntax.PdfObject {
   PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(500), PdfInteger(700)])
 }
 
 ///|
-fn acceptance_inherited_change_pages_cropbox_for_test() -> @pdflite.PdfObject {
+fn acceptance_inherited_change_pages_cropbox_for_test() -> @syntax.PdfObject {
   PdfArray([PdfInteger(10), PdfInteger(20), PdfInteger(490), PdfInteger(680)])
 }
 
@@ -10208,7 +10205,7 @@ fn acceptance_inherited_change_pages_document_for_test() -> @pdflite.PdfDocument
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_pages)),
       (key_kids, PdfArray([PdfIndirect(3)])),
       (key_count, PdfInteger(1)),
@@ -10220,7 +10217,7 @@ fn acceptance_inherited_change_pages_document_for_test() -> @pdflite.PdfDocument
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(type_page)),
       (key_parent, PdfIndirect(2)),
       (key_contents, PdfIndirect(72)),
@@ -10236,7 +10233,7 @@ fn acceptance_inherited_change_pages_document_for_test() -> @pdflite.PdfDocument
   )
   doc.add_object_given_number(
     80,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(type_link)),
       (
         key_rect,
@@ -10245,7 +10242,7 @@ fn acceptance_inherited_change_pages_document_for_test() -> @pdflite.PdfDocument
       (key_action, PdfIndirect(81)),
     ]),
   )
-  let uri_action = @pdflite.pdf_dictionary([
+  let uri_action = @syntax.pdf_dictionary([
     (
       acceptance_name_for_test("/S"),
       PdfNameObject(acceptance_name_for_test("/URI")),
@@ -10255,7 +10252,7 @@ fn acceptance_inherited_change_pages_document_for_test() -> @pdflite.PdfDocument
       PdfString(acceptance_ascii_for_test("https://example.test")),
     ),
   ])
-  let uri_annotation = @pdflite.pdf_dictionary([
+  let uri_annotation = @syntax.pdf_dictionary([
     (key_subtype, PdfNameObject(type_link)),
     (
       key_rect,
@@ -10555,7 +10552,7 @@ fn acceptance_draft_substitute_ops_for_test() -> Array[@content.PdfContentOp] {
 ///|
 fn acceptance_draft_xobject_is_image_for_test(
   doc : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   name : @pdflite.PdfName,
 ) -> Bool {
   match doc.lookup_direct(acceptance_name_for_test("/XObject"), resources) {
@@ -10577,18 +10574,18 @@ fn acceptance_draft_xobject_is_image_for_test(
 ///|
 fn acceptance_draft_remove_image_xobjects_for_test(
   doc : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   let key_xobject = acceptance_name_for_test("/XObject")
   match resources {
     PdfDictionary(entries) => {
-      let retained : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+      let retained : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (key, value) = entry
         if key == key_xobject {
           match doc.direct(value) {
             PdfDictionary(xobjects) => {
-              let kept : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+              let kept : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
               for xobject_entry in xobjects {
                 let (resource_name, _) = xobject_entry
                 if !acceptance_draft_xobject_is_image_for_test(
@@ -10614,7 +10611,7 @@ fn acceptance_draft_remove_image_xobjects_for_test(
 ///|
 fn acceptance_draft_ops_for_test(
   doc : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[@content.PdfContentOp] {
   let output : Array[@content.PdfContentOp] = []
@@ -10683,8 +10680,8 @@ fn acceptance_draft_source_document_for_test() -> @pdflite.PdfDocument raise {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(acceptance_name_for_test("/Image"))),
         (key_length, PdfInteger(0)),
       ]),
@@ -10693,8 +10690,8 @@ fn acceptance_draft_source_document_for_test() -> @pdflite.PdfDocument raise {
   )
   doc.add_object_given_number(
     8,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(acceptance_name_for_test("/Form"))),
         (key_length, PdfInteger(3)),
       ]),
@@ -10703,10 +10700,10 @@ fn acceptance_draft_source_document_for_test() -> @pdflite.PdfDocument raise {
   )
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (image_name, PdfIndirect(7)),
           (form_name, PdfIndirect(8)),
         ]),

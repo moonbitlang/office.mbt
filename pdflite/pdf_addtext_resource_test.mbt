@@ -100,7 +100,7 @@ test "PdfDocument addtext_page_font_dictionary uses empty fallback" {
 ///|
 test "PdfDocument addtext_page_font_dictionary resolves indirect fonts" {
   let document = @pdflite.pdf_document_empty()
-  let fonts : @pdflite.PdfObject = PdfDictionary([
+  let fonts : @syntax.PdfObject = PdfDictionary([
     (addtext_resource_name_for_test("/F0"), PdfInteger(1)),
   ])
   let number = document.add_object(fonts)
@@ -133,7 +133,7 @@ test "pdf_addtext_allocate_font_names handles non-fontpack resources" {
   let f0 = addtext_resource_name_for_test("/F0")
   let f1 = addtext_resource_name_for_test("/F1")
   let f2 = addtext_resource_name_for_test("/F2")
-  let fontdict : @pdflite.PdfObject = PdfDictionary([
+  let fontdict : @syntax.PdfObject = PdfDictionary([
     (f0, PdfInteger(1)),
     (f1, PdfInteger(2)),
   ])
@@ -148,7 +148,7 @@ test "pdf_addtext_allocate_font_names reserves fontpack placeholders" {
   let f0 = addtext_resource_name_for_test("/F0")
   let f1 = addtext_resource_name_for_test("/F1")
   let f2 = addtext_resource_name_for_test("/F2")
-  let fontdict : @pdflite.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
+  let fontdict : @syntax.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
   let pack : @pdflite.PdfFontPack = {
     fonts: [
       addtext_resource_standard_font_for_test(),
@@ -172,7 +172,7 @@ test "pdf_addtext_fontpack_resource_dictionary installs embedded font references
   let f0 = addtext_resource_name_for_test("/F0")
   let f1 = addtext_resource_name_for_test("/F1")
   let f2 = addtext_resource_name_for_test("/F2")
-  let fontdict : @pdflite.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
+  let fontdict : @syntax.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
   let updated = try! @pdflite.pdf_addtext_fontpack_resource_dictionary(
     fontdict,
     [f1, f2],
@@ -181,7 +181,7 @@ test "pdf_addtext_fontpack_resource_dictionary installs embedded font references
   @test.assert_eq(updated.lookup_immediate(f0), Some(PdfInteger(1)))
   @test.assert_eq(updated.lookup_immediate(f1), Some(PdfIndirect(10)))
   @test.assert_eq(updated.lookup_immediate(f2), Some(PdfIndirect(11)))
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_addtext_fontpack_resource_dictionary(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_addtext_fontpack_resource_dictionary(
     fontdict,
     [f1],
     [10, 11],
@@ -198,8 +198,8 @@ test "pdf_addtext_install_font_resource adds selected font dictionary" {
   let procset = addtext_resource_name_for_test("/ProcSet")
   let f0 = addtext_resource_name_for_test("/F0")
   let f1 = addtext_resource_name_for_test("/F1")
-  let resources : @pdflite.PdfObject = PdfDictionary([(procset, PdfArray([]))])
-  let fontdict : @pdflite.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
+  let resources : @syntax.PdfObject = PdfDictionary([(procset, PdfArray([]))])
+  let fontdict : @syntax.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
   let updated = try! @pdflite.pdf_addtext_install_font_resource(
     resources,
     fontdict,
@@ -229,8 +229,8 @@ test "pdf_addtext_install_fontpack_resources adds embedded font dictionary" {
   let f0 = addtext_resource_name_for_test("/F0")
   let f1 = addtext_resource_name_for_test("/F1")
   let f2 = addtext_resource_name_for_test("/F2")
-  let resources : @pdflite.PdfObject = PdfDictionary([])
-  let fontdict : @pdflite.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
+  let resources : @syntax.PdfObject = PdfDictionary([])
+  let fontdict : @syntax.PdfObject = PdfDictionary([(f0, PdfInteger(1))])
   let updated = try! @pdflite.pdf_addtext_install_fontpack_resources(
     resources,
     fontdict,
@@ -271,7 +271,7 @@ test "pdf_addtext_selected_font_object preserves existing-font mode" {
 ///|
 test "PdfDocument addtext_selected_font_object propagates writer errors" {
   let document = @pdflite.pdf_document_empty()
-  let result : Result[@pdflite.PdfObject?, Error] = try? document.addtext_selected_font_object(
+  let result : Result[@syntax.PdfObject?, Error] = try? document.addtext_selected_font_object(
     Some(addtext_resource_simple_font_for_test(700.0)),
   )
   guard result is Err(@pdflite.PdfError::FontWriteUnsupported) else {
@@ -365,7 +365,7 @@ test "PdfDocument addtext_resource_setup preserves existing-font resources" {
   let document = @pdflite.pdf_document_empty()
   let font_key = addtext_resource_name_for_test("/Font")
   let resource_name = addtext_resource_name_for_test("/Fx")
-  let fontdict : @pdflite.PdfObject = PdfDictionary([
+  let fontdict : @syntax.PdfObject = PdfDictionary([
     (resource_name, PdfIndirect(10)),
   ])
   let page = {

@@ -124,10 +124,10 @@ fn marked_text_content_ops_for_test() -> Array[@content.PdfContentOp] {
 }
 
 ///|
-fn content_stream_for_test(text : String) -> @pdflite.PdfObject {
+fn content_stream_for_test(text : String) -> @syntax.PdfObject {
   let data = content_bytes_for_test(text)
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (content_name_for_test("/Length"), PdfInteger(data.length())),
     ]),
     StreamGot(data),
@@ -151,27 +151,27 @@ fn hello_document_for_content_test() -> @pdflite.PdfDocument {
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(content_name_for_test("/Catalog"))),
       (key_pages, PdfIndirect(2)),
     ]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(content_name_for_test("/Pages"))),
       (key_kids, PdfArray([PdfIndirect(3)])),
       (key_count, PdfInteger(1)),
     ]),
   )
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (key_type, PdfNameObject(content_name_for_test("/Font"))),
     (key_subtype, PdfNameObject(content_name_for_test("/Type1"))),
     (key_basefont, PdfNameObject(content_name_for_test("/Times-Italic"))),
   ])
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_type, PdfNameObject(content_name_for_test("/Page"))),
       (key_parent, PdfIndirect(2)),
       (
@@ -185,10 +185,10 @@ fn hello_document_for_content_test() -> @pdflite.PdfDocument {
       ),
       (
         key_resources,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             key_font,
-            @pdflite.pdf_dictionary([(content_name_for_test("/F0"), font)]),
+            @syntax.pdf_dictionary([(content_name_for_test("/F0"), font)]),
           ),
         ]),
       ),
@@ -327,7 +327,7 @@ test "@content.pdf_content_add_artifacts wraps unmarked operator runs" {
 ///|
 test "@content.pdf_content_add_artifacts preserves real marked content" {
   let span = content_name_for_test("/Span")
-  let properties = @pdflite.pdf_dictionary([
+  let properties = @syntax.pdf_dictionary([
     (content_name_for_test("/MCID"), PdfInteger(7)),
   ])
   @test.assert_eq(
@@ -485,8 +485,8 @@ test "PdfDocument parse_content_ops reads indirect owned content streams" {
   let encoded = @codec.pdf_ascii_hex_encode(content_bytes_for_test("q Q"))
   doc.add_object_given_number(
     9,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (content_name_for_test("/Length"), PdfInteger(encoded.length())),
         (content_name_for_test("/Filter"), PdfIndirect(8)),
       ]),
@@ -515,10 +515,10 @@ test "PdfDocument parse_content_ops inserts whitespace between split streams" {
 ///|
 test "PdfDocument parse_content_ops_with_resources sizes named inline image spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       content_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           content_name_for_test("/CS1"),
           PdfNameObject(content_name_for_test("/RGB")),
@@ -532,7 +532,7 @@ test "PdfDocument parse_content_ops_with_resources sizes named inline image spac
     ]),
     [
       Op_InlineImage(
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (content_name_for_test("/W"), PdfInteger(2)),
           (content_name_for_test("/H"), PdfInteger(1)),
           (content_name_for_test("/BPC"), PdfInteger(8)),
@@ -552,10 +552,10 @@ test "PdfDocument parse_content_ops_with_resources sizes named inline image spac
 ///|
 test "PdfDocument parse_content_bytes_with_resources parses one resource-aware stream" {
   let doc = @pdflite.pdf_document_empty()
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       content_name_for_test("/ColorSpace"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           content_name_for_test("/CS1"),
           PdfNameObject(content_name_for_test("/RGB")),
@@ -570,7 +570,7 @@ test "PdfDocument parse_content_bytes_with_resources parses one resource-aware s
     ),
     [
       Op_InlineImage(
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (content_name_for_test("/W"), PdfInteger(2)),
           (content_name_for_test("/H"), PdfInteger(1)),
           (content_name_for_test("/BPC"), PdfInteger(8)),
@@ -590,12 +590,12 @@ test "PdfDocument parse_content_bytes_with_resources parses one resource-aware s
 test "PdfDocument parse_content_ops_with_resources sizes array inline image spaces" {
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(
-    try! doc.parse_content_ops_with_resources(@pdflite.pdf_dictionary([]), [
+    try! doc.parse_content_ops_with_resources(@syntax.pdf_dictionary([]), [
       content_stream_for_test("BI /W 2 /H 1 /BPC 8 /CS [/RGB] ID A EI B EI Q"),
     ]),
     [
       Op_InlineImage(
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (content_name_for_test("/W"), PdfInteger(2)),
           (content_name_for_test("/H"), PdfInteger(1)),
           (content_name_for_test("/BPC"), PdfInteger(8)),
@@ -616,14 +616,14 @@ test "PdfDocument parse_content_ops_with_resources sizes array inline image spac
 test "PdfDocument parse_content_ops_with_resources reports missing inline image resources" {
   let doc = @pdflite.pdf_document_empty()
   @test.assert_eq(
-    try! doc.parse_content_ops_with_resources(@pdflite.pdf_dictionary([]), [
+    try! doc.parse_content_ops_with_resources(@syntax.pdf_dictionary([]), [
       content_stream_for_test(
         "BI /W 1 /H 1 /BPC 8 /CS /Missing /L 6 ID A EI B\nEI Q",
       ),
     ]),
     [
       Op_InlineImage(
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (content_name_for_test("/W"), PdfInteger(1)),
           (content_name_for_test("/H"), PdfInteger(1)),
           (content_name_for_test("/BPC"), PdfInteger(8)),
@@ -640,7 +640,7 @@ test "PdfDocument parse_content_ops_with_resources reports missing inline image 
     ],
   )
   let result : Result[Array[@content.PdfContentOp], Error] = try? doc.parse_content_ops_with_resources(
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     [content_stream_for_test("BI /W 1 /H 1 /BPC 8 /CS /Missing ID abc EI")],
   )
   guard result is Err(@pdflite.PdfError::DictionaryKeyNotFound(name)) &&

@@ -405,7 +405,7 @@ fn image_external_images_for_test(
 ) -> Array[@pdflite.PdfImage] raise {
   let subtype_key = image_external_name_for_test("/Subtype")
   let image_name = image_external_name_for_test("/Image")
-  let resources = @pdflite.pdf_dictionary([])
+  let resources = @syntax.pdf_dictionary([])
   let images : Array[@pdflite.PdfImage] = []
   for number in document.object_numbers() {
     let object = document.lookup_object_or_null(number)
@@ -696,8 +696,8 @@ fn image_external_assert_cpdf_source_hello_text_for_test(
 }
 
 ///|
-fn image_external_cpdf_source_inline_image_dictionary_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn image_external_cpdf_source_inline_image_dictionary_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (image_external_name_for_test("/W"), PdfInteger(3)),
     (image_external_name_for_test("/H"), PdfInteger(2)),
     (image_external_name_for_test("/BPC"), PdfInteger(8)),
@@ -795,10 +795,10 @@ fn image_external_cpdf_source_nested_image_data_for_test() -> @pdflite.PdfBytes 
 }
 
 ///|
-fn image_external_cpdf_source_nested_image_for_test() -> @pdflite.PdfObject raise {
+fn image_external_cpdf_source_nested_image_for_test() -> @syntax.PdfObject raise {
   let data = image_external_cpdf_source_nested_image_data_for_test()
-  @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         image_external_name_for_test("/Type"),
         PdfNameObject(image_external_name_for_test("/XObject")),
@@ -827,7 +827,7 @@ fn image_external_cpdf_source_nested_image_for_test() -> @pdflite.PdfObject rais
 ///|
 fn image_external_cpdf_source_form_image_form_for_test(
   image_number : Int,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   @pdflite.pdf_content_stream_of_ops([
     Op_cm({ a: 72.0, b: 0.0, c: 0.0, d: 72.0, e: 72.0, f: 72.0 }),
     Op_Do(image_external_name_for_test("/SourceNestedImage")),
@@ -846,10 +846,10 @@ fn image_external_cpdf_source_form_image_form_for_test(
   )
   .add_dict_entry(
     image_external_name_for_test("/Resources"),
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         image_external_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             image_external_name_for_test("/SourceNestedImage"),
             PdfIndirect(image_number),
@@ -863,13 +863,13 @@ fn image_external_cpdf_source_form_image_form_for_test(
 ///|
 fn image_external_cpdf_source_page_xobjects_for_test(
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match
     document.lookup_direct(image_external_name_for_test("/XObject"), resources) {
     Some(PdfDictionary(entries)) => PdfDictionary(entries)
     Some(_) => fail("expected source page XObject resources to be a dictionary")
-    None => @pdflite.pdf_dictionary([])
+    None => @syntax.pdf_dictionary([])
   }
 }
 
@@ -909,7 +909,7 @@ fn image_external_cpdf_source_hello_with_form_image_for_test(
 ///|
 fn image_external_cpdf_source_form_image_resources_for_test(
   document : @pdflite.PdfDocument,
-) -> (@pdflite.PdfObject, @pdflite.PdfObject) raise {
+) -> (@syntax.PdfObject, @syntax.PdfObject) raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   guard document.lookup_direct(
@@ -936,8 +936,8 @@ fn image_external_cpdf_source_form_image_resources_for_test(
 ///|
 fn image_external_cpdf_source_nested_image_for_document_for_test(
   document : @pdflite.PdfDocument,
-  form_resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  form_resources : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   guard document.lookup_direct(
       image_external_name_for_test("/XObject"),
       form_resources,

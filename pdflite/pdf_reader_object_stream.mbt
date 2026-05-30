@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_object_stream_required_int(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   key : PdfName,
 ) -> Int raise PdfError {
   match self.lookup_direct(key, dictionary) {
@@ -21,7 +21,7 @@ priv struct PdfObjectStreamContext {
 ///|
 fn PdfDocument::read_object_stream_context_from_object(
   self : PdfDocument,
-  object_stream_object : PdfObject,
+  object_stream_object : @syntax.PdfObject,
 ) -> PdfObjectStreamContext raise PdfError {
   match object_stream_object {
     PdfStreamObject(stream) => {
@@ -57,7 +57,7 @@ fn PdfDocument::read_object_stream_context_from_object(
 fn PdfObjectStreamContext::read_reference(
   self : PdfObjectStreamContext,
   reference : @reader.ObjectStreamReference,
-) -> (Int, PdfObject) raise PdfError {
+) -> (Int, @syntax.PdfObject) raise PdfError {
   if reference.index < 0 || reference.index >= self.pairs.length() {
     raise XRefEntryExpected
   }

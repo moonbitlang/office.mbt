@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_annotation_contents_text(
   self : PdfDocument,
   encoding : @metadata.PdfMetadataEncoding,
-  annotation : PdfObject,
+  annotation : @syntax.PdfObject,
 ) -> PdfBytes raise PdfError {
   match self.lookup_direct(pdf_annotation_contents_key(), annotation) {
     Some(PdfString(contents)) => pdf_metadata_encode_output(encoding, contents)

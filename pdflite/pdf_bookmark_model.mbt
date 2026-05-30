@@ -118,14 +118,14 @@ fn pdf_bookmark_flags_key() -> PdfName {
 ///|
 fn PdfDocument::pdf_bookmark_catalog(
   self : PdfDocument,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   self.catalog()
 }
 
 ///|
 struct PdfBookmarkNode {
   number : Int
-  object : PdfObject
+  object : @syntax.PdfObject
   children : Array[PdfBookmarkNode]
   is_open : Bool
 } derive(Debug, Eq, ToJson)

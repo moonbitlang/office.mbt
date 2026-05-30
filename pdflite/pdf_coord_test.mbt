@@ -9,7 +9,7 @@ fn coord_rect_object_for_test(
   y0 : Int,
   x1 : Int,
   y1 : Int,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfInteger(x0), PdfInteger(y0), PdfInteger(x1), PdfInteger(y1)])
 }
 
@@ -17,7 +17,7 @@ fn coord_rect_object_for_test(
 fn coord_page_for_test(
   width : Int,
   height : Int,
-  cropbox? : @pdflite.PdfObject? = None,
+  cropbox? : @syntax.PdfObject? = None,
 ) -> @page.PdfPage {
   let page = @page.pdf_page_custom(
     coord_rect_object_for_test(0, 0, width, height),

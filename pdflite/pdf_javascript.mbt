@@ -57,7 +57,7 @@ fn pdf_javascript_javascript_key() -> PdfName {
 let pdf_javascript_empty_bytes : PdfBytes = @ascii.encode("")
 
 ///|
-fn pdf_javascript_empty_string() -> PdfObject {
+fn pdf_javascript_empty_string() -> @syntax.PdfObject {
   PdfString(pdf_javascript_empty_bytes)
 }
 
@@ -103,7 +103,7 @@ fn pdf_javascript_bytes_has_prefix(
 ///|
 fn PdfDocument::pdf_javascript_object_has_uri(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_javascript_uri_key(), object) {
     Some(PdfString(bytes)) =>
@@ -115,7 +115,7 @@ fn PdfDocument::pdf_javascript_object_has_uri(
 ///|
 fn PdfDocument::pdf_javascript_object_has_action(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_javascript_s_key(), object) {
     Some(PdfString(bytes)) =>
@@ -127,7 +127,7 @@ fn PdfDocument::pdf_javascript_object_has_action(
 ///|
 fn PdfDocument::pdf_javascript_object_has_javascript(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   self.pdf_javascript_object_has_action(object) ||
   self.pdf_javascript_object_has_uri(object)
@@ -136,8 +136,8 @@ fn PdfDocument::pdf_javascript_object_has_javascript(
 ///|
 fn PdfDocument::pdf_javascript_remove_from_dictionary(
   self : PdfDocument,
-  object : PdfObject,
-) -> PdfObject {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   let mut output = object
   match self.lookup_direct(pdf_javascript_js_key(), output) {
     Some(_) =>
@@ -163,11 +163,11 @@ fn PdfDocument::pdf_javascript_remove_from_dictionary(
 ///|
 fn PdfDocument::pdf_javascript_remove_from_object(
   self : PdfDocument,
-  object : PdfObject,
-) -> PdfObject {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match object {
     PdfDictionary(entries) => {
-      let rewritten = pdf_recurse_dict(
+      let rewritten = @syntax.pdf_recurse_dict(
         fn(child) { self.pdf_javascript_remove_from_object(child) },
         entries,
       )
@@ -176,7 +176,7 @@ fn PdfDocument::pdf_javascript_remove_from_object(
     PdfStreamObject(stream) =>
       match stream.dictionary {
         PdfDictionary(entries) => {
-          stream.dictionary = pdf_recurse_dict(
+          stream.dictionary = @syntax.pdf_recurse_dict(
             fn(child) { self.pdf_javascript_remove_from_object(child) },
             entries,
           )
@@ -185,7 +185,7 @@ fn PdfDocument::pdf_javascript_remove_from_object(
         _ => object
       }
     PdfArray(values) =>
-      pdf_recurse_array(
+      @syntax.pdf_recurse_array(
         fn(child) { self.pdf_javascript_remove_from_object(child) },
         values,
       )
@@ -196,7 +196,7 @@ fn PdfDocument::pdf_javascript_remove_from_object(
 ///|
 fn PdfDocument::pdf_javascript_object_contains(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   if self.pdf_javascript_object_has_javascript(object) {
     true

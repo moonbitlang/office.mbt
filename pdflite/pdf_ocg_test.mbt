@@ -14,7 +14,7 @@ fn ocg_json_int_for_test(value : Int) -> Json {
 }
 
 ///|
-fn ocg_name_object_for_test(text : String) -> @pdflite.PdfObject {
+fn ocg_name_object_for_test(text : String) -> @syntax.PdfObject {
   PdfNameObject(ocg_name_for_test(text))
 }
 
@@ -54,7 +54,7 @@ fn ocg_conflicting_root_document_for_test(
       (key_lang, PdfString(ocg_bytes_for_test("stale"))),
     ]),
   )
-  let active_entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+  let active_entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (key_type, PdfNameObject(type_catalog)),
     (key_page_mode, ocg_name_object_for_test("/UseOC")),
   ]
@@ -137,7 +137,7 @@ fn ocg_document_with_content_for_test() -> @pdflite.PdfDocument {
   let key_list_mode = ocg_name_for_test("/ListMode")
   let key_rb_groups = ocg_name_for_test("/RBGroups")
   let key_locked = ocg_name_for_test("/Locked")
-  let usage : @pdflite.PdfObject = PdfDictionary([
+  let usage : @syntax.PdfObject = PdfDictionary([
     (
       key_creator_info,
       PdfDictionary([
@@ -204,12 +204,12 @@ fn ocg_document_with_content_for_test() -> @pdflite.PdfDocument {
       (key_usage, usage),
     ]),
   )
-  let appdict : @pdflite.PdfObject = PdfDictionary([
+  let appdict : @syntax.PdfObject = PdfDictionary([
     (key_event, ocg_name_object_for_test("/Print")),
     (key_ocgs, PdfArray([PdfIndirect(10)])),
     (key_category, PdfArray([ocg_name_object_for_test("/Print")])),
   ])
-  let config : @pdflite.PdfObject = PdfDictionary([
+  let config : @syntax.PdfObject = PdfDictionary([
     (key_name, PdfString(ocg_bytes_for_test("Default"))),
     (key_creator, PdfString(ocg_bytes_for_test("Author"))),
     (key_base_state, ocg_name_object_for_test("/OFF")),
@@ -227,7 +227,7 @@ fn ocg_document_with_content_for_test() -> @pdflite.PdfDocument {
     (key_rb_groups, PdfArray([PdfArray([PdfIndirect(10), PdfIndirect(11)])])),
     (key_locked, PdfArray([PdfIndirect(10)])),
   ])
-  let ocproperties : @pdflite.PdfObject = PdfDictionary([
+  let ocproperties : @syntax.PdfObject = PdfDictionary([
     (key_ocgs, PdfArray([PdfIndirect(10)])),
     (key_d, config),
     (

@@ -27,7 +27,7 @@ pub fn PdfDocument::encrypt_128bit_r4(
     file_key, 128, no_encrypt_metadata, 0,
   )
   let std_cf = pdf_crypt_std_cf_name
-  let encrypt_dictionary : PdfObject = PdfDictionary([
+  let encrypt_dictionary : @syntax.PdfObject = PdfDictionary([
     (pdf_crypt_filter_name, PdfNameObject(pdf_crypt_standard_name)),
     (pdf_crypt_v_name, PdfInteger(4)),
     (
@@ -92,7 +92,7 @@ pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(
     file_key, 128, iv_provider, no_encrypt_metadata,
   )
   let std_cf = pdf_crypt_std_cf_name
-  let encrypt_dictionary : PdfObject = PdfDictionary([
+  let encrypt_dictionary : @syntax.PdfObject = PdfDictionary([
     (pdf_crypt_filter_name, PdfNameObject(pdf_crypt_standard_name)),
     (pdf_crypt_v_name, PdfInteger(4)),
     (

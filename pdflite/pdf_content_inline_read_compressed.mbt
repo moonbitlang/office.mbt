@@ -31,8 +31,8 @@ fn pdf_content_read_flate_inline_image_decoded(
 ///|
 fn pdf_content_read_lzw_inline_image_data(
   cursor : ByteCursor,
-  dictionary : PdfObject,
-  decode_parms : PdfObject?,
+  dictionary : @syntax.PdfObject,
+  decode_parms : @syntax.PdfObject?,
 ) -> PdfBytes raise PdfError {
   match cursor.peek_byte() {
     value if pdf_is_whitespace_byte(value) => cursor.nudge()

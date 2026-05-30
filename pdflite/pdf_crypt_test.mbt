@@ -111,9 +111,9 @@ fn crypt_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn crypt_stream_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   data : @pdflite.PdfBytes,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfStreamObject({
     dictionary: PdfDictionary([ for entry in entries => entry ]),
     data: StreamGot(data),
@@ -130,10 +130,10 @@ fn crypt_repeated_bytes_for_test(
 
 ///|
 fn crypt_standard_encrypt_dictionary_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   owner_length? : Int = 40,
   user_length? : Int = 40,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   crypt_standard_encrypt_dictionary_values_for_test(
     entries,
     crypt_repeated_bytes_for_test(0x4f, owner_length),
@@ -144,12 +144,12 @@ fn crypt_standard_encrypt_dictionary_for_test(
 
 ///|
 fn crypt_standard_encrypt_dictionary_values_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
   owner_entry : @pdflite.PdfBytes,
   user_entry : @pdflite.PdfBytes,
   permissions : Int,
-) -> @pdflite.PdfObject {
-  let output : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+) -> @syntax.PdfObject {
+  let output : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (
       crypt_name_for_test("/Filter"),
       PdfNameObject(crypt_name_for_test("/Standard")),
@@ -166,7 +166,7 @@ fn crypt_standard_encrypt_dictionary_values_for_test(
 
 ///|
 fn crypt_doc_with_encrypt_for_test(
-  encrypt_dictionary : @pdflite.PdfObject,
+  encrypt_dictionary : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let doc = @pdflite.pdf_document_empty()
   doc.set_trailer_dict(
@@ -756,7 +756,7 @@ test "PdfDocument encrypt_40bit encrypts parsed objects and installs dictionary"
   let key_o = crypt_name_for_test("/O")
   let key_u = crypt_name_for_test("/U")
   let doc = @pdflite.pdf_document_empty()
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("hello"))),
   ])
   doc.add_object_given_number(1, plain_object)
@@ -894,7 +894,7 @@ test "PdfDocument encrypt_40bit adds a file id when missing" {
 ///|
 test "PdfDocument crypt methods cover standalone workflows" {
   let key_title = crypt_name_for_test("/Title")
-  let plain_object : @pdflite.PdfObject = PdfDictionary([
+  let plain_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("standalone-secret"))),
   ])
   let plain_doc = @pdflite.pdf_document_empty()
@@ -1001,10 +1001,10 @@ test "PdfDocument crypt methods cover standalone workflows" {
 ///|
 test "PdfDocument provider methods cover AES encrypt and recrypt" {
   let key_title = crypt_name_for_test("/Title")
-  let original_object : @pdflite.PdfObject = PdfDictionary([
+  let original_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes-wrapper-original"))),
   ])
-  let updated_object : @pdflite.PdfObject = PdfDictionary([
+  let updated_object : @syntax.PdfObject = PdfDictionary([
     (key_title, PdfString(@ascii.encode("aes-wrapper-updated"))),
   ])
   let doc = @pdflite.pdf_document_empty()

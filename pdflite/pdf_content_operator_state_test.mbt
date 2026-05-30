@@ -263,7 +263,7 @@ test "cpdfcontent operator state applies resource font lookup and cache" {
   let f1_key = content_operator_name_for_test("/F1")
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
       (
         base_font_key,
@@ -271,8 +271,8 @@ test "cpdfcontent operator state applies resource font lookup and cache" {
       ),
     ]),
   )
-  let resources = @pdflite.pdf_dictionary([
-    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+  let resources = @syntax.pdf_dictionary([
+    (font_resource_key, @syntax.pdf_dictionary([(f1_key, PdfIndirect(7))])),
   ])
   let font = try! doc.read_font(PdfIndirect(7))
   let state = try! doc.content_apply_font_resource_op(
@@ -292,7 +292,7 @@ test "cpdfcontent operator state applies resource font lookup and cache" {
   )
   let cached = try! doc.content_apply_font_resource_op(
     state,
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     f1_key,
     16.0,
   )
@@ -313,11 +313,11 @@ test "cpdfcontent operator state applies resource font lookup and cache" {
     initial.text_state.current_font,
   )
   @test.assert_eq(missing.text_state.font_cache.length(), 0)
-  doc.add_object_given_number(9, @pdflite.pdf_dictionary([]))
-  let bad_resources = @pdflite.pdf_dictionary([
+  doc.add_object_given_number(9, @syntax.pdf_dictionary([]))
+  let bad_resources = @syntax.pdf_dictionary([
     (
       font_resource_key,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (content_operator_name_for_test("/Bad"), PdfIndirect(9)),
       ]),
     ),
@@ -345,7 +345,7 @@ test "cpdfcontent operator state applies resource-backed text operators" {
   let f1_key = content_operator_name_for_test("/F1")
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
       (
         base_font_key,
@@ -353,8 +353,8 @@ test "cpdfcontent operator state applies resource-backed text operators" {
       ),
     ]),
   )
-  let resources = @pdflite.pdf_dictionary([
-    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+  let resources = @syntax.pdf_dictionary([
+    (font_resource_key, @syntax.pdf_dictionary([(f1_key, PdfIndirect(7))])),
   ])
   let font = try! doc.read_font(PdfIndirect(7))
   let tf_result = try! doc.content_apply_text_resource_op(
@@ -416,7 +416,7 @@ test "cpdfcontent operator state applies single resource operator dispatcher" {
   let image_name = content_operator_name_for_test("/Im1")
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
       (
         base_font_key,
@@ -424,14 +424,14 @@ test "cpdfcontent operator state applies single resource operator dispatcher" {
       ),
     ]),
   )
-  let resources = @pdflite.pdf_dictionary([
-    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+  let resources = @syntax.pdf_dictionary([
+    (font_resource_key, @syntax.pdf_dictionary([(f1_key, PdfIndirect(7))])),
     (
       xobject_key,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           image_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               subtype_key,
               PdfNameObject(content_operator_name_for_test("/Image")),
@@ -440,7 +440,7 @@ test "cpdfcontent operator state applies single resource operator dispatcher" {
         ),
       ]),
     ),
-    (extgstate_key, @pdflite.pdf_dictionary([(alpha_key, PdfReal(0.4))])),
+    (extgstate_key, @syntax.pdf_dictionary([(alpha_key, PdfReal(0.4))])),
   ])
   let moved = try! doc.content_apply_resource_op(
     initial,
@@ -491,7 +491,7 @@ test "cpdfcontent operator state applies single resource operator dispatcher" {
   let inline_result = try! doc.content_apply_resource_op(
     initial,
     resources,
-    Op_InlineImage(@pdflite.pdf_dictionary([]), None, b"raw"),
+    Op_InlineImage(@syntax.pdf_dictionary([]), None, b"raw"),
   )
   @test.assert_eq(inline_result.entries.length(), 1)
   @test.assert_eq(inline_result.entries[0].object, PdfContentInlineImageObject)
@@ -515,7 +515,7 @@ test "cpdfcontent operator state collects nonrecursive content entries" {
   let f1_key = content_operator_name_for_test("/F1")
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
       (
         base_font_key,
@@ -523,8 +523,8 @@ test "cpdfcontent operator state collects nonrecursive content entries" {
       ),
     ]),
   )
-  let resources = @pdflite.pdf_dictionary([
-    (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
+  let resources = @syntax.pdf_dictionary([
+    (font_resource_key, @syntax.pdf_dictionary([(f1_key, PdfIndirect(7))])),
   ])
   let mediabox : @geometry.PdfRectangle = {
     min_x: 0.0,
@@ -538,7 +538,7 @@ test "cpdfcontent operator state collects nonrecursive content entries" {
     Op_m(0.0, 0.0),
     Op_l(10.0, 0.0),
     Op_S,
-    Op_InlineImage(@pdflite.pdf_dictionary([]), None, b"raw"),
+    Op_InlineImage(@syntax.pdf_dictionary([]), None, b"raw"),
   ]
   let entries = try! doc.content_entries_of_ops(mediabox, resources, ops)
   @test.assert_eq(entries.length(), 3)
@@ -568,7 +568,7 @@ test "cpdfcontent operator state recursively collects Form XObject entries" {
   let form_name = content_operator_name_for_test("/Fm1")
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
       (
         base_font_key,
@@ -578,14 +578,14 @@ test "cpdfcontent operator state recursively collects Form XObject entries" {
   )
   doc.add_object_given_number(
     8,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Type1"))),
       (base_font_key, PdfNameObject(content_operator_name_for_test("/Courier"))),
     ]),
   )
   let form_data = @ascii.encode("/FForm 10 Tf (A) Tj")
-  let form_xobject = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let form_xobject = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Form"))),
       (length_key, PdfInteger(form_data.length())),
       (
@@ -594,19 +594,19 @@ test "cpdfcontent operator state recursively collects Form XObject entries" {
       ),
       (
         resources_key,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             font_resource_key,
-            @pdflite.pdf_dictionary([(fform_key, PdfIndirect(7))]),
+            @syntax.pdf_dictionary([(fform_key, PdfIndirect(7))]),
           ),
         ]),
       ),
     ]),
     StreamGot(form_data),
   )
-  let page_resources = @pdflite.pdf_dictionary([
-    (font_resource_key, @pdflite.pdf_dictionary([(fpage_key, PdfIndirect(8))])),
-    (xobject_key, @pdflite.pdf_dictionary([(form_name, form_xobject)])),
+  let page_resources = @syntax.pdf_dictionary([
+    (font_resource_key, @syntax.pdf_dictionary([(fpage_key, PdfIndirect(8))])),
+    (xobject_key, @syntax.pdf_dictionary([(form_name, form_xobject)])),
   ])
   let mediabox : @geometry.PdfRectangle = {
     min_x: 0.0,
@@ -647,13 +647,13 @@ test "cpdfcontent operator state recursively collects image XObject entries" {
   let image_name = content_operator_name_for_test("/Im1")
   let xobject_key = content_operator_name_for_test("/XObject")
   let subtype_key = content_operator_name_for_test("/Subtype")
-  let page_resources = @pdflite.pdf_dictionary([
+  let page_resources = @syntax.pdf_dictionary([
     (
       xobject_key,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           image_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               subtype_key,
               PdfNameObject(content_operator_name_for_test("/Image")),
@@ -908,13 +908,13 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
   let no_subtype_name = content_operator_name_for_test("/NoSubtype")
   let xobject_key = content_operator_name_for_test("/XObject")
   let subtype_key = content_operator_name_for_test("/Subtype")
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       xobject_key,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           image_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               subtype_key,
               PdfNameObject(content_operator_name_for_test("/Image")),
@@ -923,7 +923,7 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
         ),
         (
           form_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               subtype_key,
               PdfNameObject(content_operator_name_for_test("/Form")),
@@ -932,11 +932,11 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
         ),
         (
           unknown_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (subtype_key, PdfNameObject(content_operator_name_for_test("/PS"))),
           ]),
         ),
-        (no_subtype_name, @pdflite.pdf_dictionary([])),
+        (no_subtype_name, @syntax.pdf_dictionary([])),
       ]),
     ),
   ])
@@ -972,7 +972,7 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
   @test.assert_eq(wrapper_entry, image_entry)
   let missing_resources : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
     state,
-    @pdflite.pdf_dictionary([]),
+    @syntax.pdf_dictionary([]),
     image_name,
   )
   guard missing_resources
@@ -1022,13 +1022,13 @@ test "cpdfcontent operator state prepares Form XObject resources" {
   let matrix_key = content_operator_name_for_test("/Matrix")
   let bbox_key = content_operator_name_for_test("/BBox")
   let form_matrix = @geometry.transform_translate(10.0, 20.0)
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       xobject_key,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           form_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               subtype_key,
               PdfNameObject(content_operator_name_for_test("/Form")),
@@ -1047,7 +1047,7 @@ test "cpdfcontent operator state prepares Form XObject resources" {
         ),
         (
           image_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               subtype_key,
               PdfNameObject(content_operator_name_for_test("/Image")),
@@ -1056,7 +1056,7 @@ test "cpdfcontent operator state prepares Form XObject resources" {
         ),
         (
           bad_bbox_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               subtype_key,
               PdfNameObject(content_operator_name_for_test("/Form")),
@@ -1066,7 +1066,7 @@ test "cpdfcontent operator state prepares Form XObject resources" {
         ),
         (
           bad_matrix_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (
               subtype_key,
               PdfNameObject(content_operator_name_for_test("/Form")),
@@ -1172,20 +1172,17 @@ test "cpdfcontent operator state merges Form XObject resources" {
   let form_font_name = content_operator_name_for_test("/FForm")
   let color_space_name = content_operator_name_for_test("/CSPage")
   let graphics_state_name = content_operator_name_for_test("/GSForm")
-  let form_xobject = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let form_xobject = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Form"))),
       (
         resources_key,
-        @pdflite.pdf_dictionary([
-          (font_key, @pdflite.pdf_dictionary([(form_font_name, PdfInteger(2))])),
-          (
-            xobject_key,
-            @pdflite.pdf_dictionary([(nested_name, PdfInteger(10))]),
-          ),
+        @syntax.pdf_dictionary([
+          (font_key, @syntax.pdf_dictionary([(form_font_name, PdfInteger(2))])),
+          (xobject_key, @syntax.pdf_dictionary([(nested_name, PdfInteger(10))])),
           (
             extgstate_key,
-            @pdflite.pdf_dictionary([(graphics_state_name, PdfInteger(11))]),
+            @syntax.pdf_dictionary([(graphics_state_name, PdfInteger(11))]),
           ),
           (custom_key, PdfInteger(9)),
         ]),
@@ -1193,25 +1190,25 @@ test "cpdfcontent operator state merges Form XObject resources" {
     ]),
     StreamGot(Bytes::new(0)),
   )
-  let image_xobject = @pdflite.pdf_dictionary([
+  let image_xobject = @syntax.pdf_dictionary([
     (subtype_key, PdfNameObject(content_operator_name_for_test("/Image"))),
   ])
-  let page_resources = @pdflite.pdf_dictionary([
-    (font_key, @pdflite.pdf_dictionary([(page_font_name, PdfInteger(1))])),
+  let page_resources = @syntax.pdf_dictionary([
+    (font_key, @syntax.pdf_dictionary([(page_font_name, PdfInteger(1))])),
     (
       color_space_key,
-      @pdflite.pdf_dictionary([(color_space_name, PdfInteger(3))]),
+      @syntax.pdf_dictionary([(color_space_name, PdfInteger(3))]),
     ),
     (
       xobject_key,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (form_name, form_xobject),
         (image_name, image_xobject),
       ]),
     ),
     (custom_key, PdfInteger(7)),
   ])
-  let result : Result[@pdflite.PdfObject?, Error] = try? doc.content_form_xobject_resources(
+  let result : Result[@syntax.PdfObject?, Error] = try? doc.content_form_xobject_resources(
     page_resources, form_name,
   )
   guard result is Ok(Some(total_resources)) else {
@@ -1219,32 +1216,32 @@ test "cpdfcontent operator state merges Form XObject resources" {
   }
   @test.assert_eq(
     doc.lookup_direct(font_key, total_resources),
-    Some(@pdflite.pdf_dictionary([(form_font_name, PdfInteger(2))])),
+    Some(@syntax.pdf_dictionary([(form_font_name, PdfInteger(2))])),
   )
   @test.assert_eq(
     doc.lookup_direct(color_space_key, total_resources),
-    Some(@pdflite.pdf_dictionary([(color_space_name, PdfInteger(3))])),
+    Some(@syntax.pdf_dictionary([(color_space_name, PdfInteger(3))])),
   )
   @test.assert_eq(
     doc.lookup_direct(xobject_key, total_resources),
-    Some(@pdflite.pdf_dictionary([(nested_name, PdfInteger(10))])),
+    Some(@syntax.pdf_dictionary([(nested_name, PdfInteger(10))])),
   )
   @test.assert_eq(
     doc.lookup_direct(extgstate_key, total_resources),
-    Some(@pdflite.pdf_dictionary([(graphics_state_name, PdfInteger(11))])),
+    Some(@syntax.pdf_dictionary([(graphics_state_name, PdfInteger(11))])),
   )
   @test.assert_eq(
     doc.lookup_direct(custom_key, total_resources),
     Some(PdfInteger(9)),
   )
-  let wrapper_result : Result[@pdflite.PdfObject?, Error] = try? @pdflite.pdf_content_form_xobject_resources(
+  let wrapper_result : Result[@syntax.PdfObject?, Error] = try? @pdflite.pdf_content_form_xobject_resources(
     doc, page_resources, form_name,
   )
   guard wrapper_result is Ok(Some(wrapper_resources)) else {
     fail("expected wrapper merged Form XObject resources")
   }
   @test.assert_eq(wrapper_resources, total_resources)
-  let image_result : Result[@pdflite.PdfObject?, Error] = try? doc.content_form_xobject_resources(
+  let image_result : Result[@syntax.PdfObject?, Error] = try? doc.content_form_xobject_resources(
     page_resources, image_name,
   )
   guard image_result is Ok(None) else {
@@ -1266,16 +1263,16 @@ test "cpdfcontent operator state parses Form XObject ops with merged resources" 
   let form_data = @ascii.encode(
     "BI /W 2 /H 1 /BPC 8 /CS /CSForm ID A EI B EI Q",
   )
-  let form_xobject = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let form_xobject = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Form"))),
       (length_key, PdfInteger(form_data.length())),
       (
         resources_key,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (
             color_space_key,
-            @pdflite.pdf_dictionary([
+            @syntax.pdf_dictionary([
               (
                 color_space_name,
                 PdfNameObject(content_operator_name_for_test("/RGB")),
@@ -1287,13 +1284,13 @@ test "cpdfcontent operator state parses Form XObject ops with merged resources" 
     ]),
     StreamGot(form_data),
   )
-  let image_xobject = @pdflite.pdf_dictionary([
+  let image_xobject = @syntax.pdf_dictionary([
     (subtype_key, PdfNameObject(content_operator_name_for_test("/Image"))),
   ])
-  let page_resources = @pdflite.pdf_dictionary([
+  let page_resources = @syntax.pdf_dictionary([
     (
       xobject_key,
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (form_name, form_xobject),
         (image_name, image_xobject),
       ]),
@@ -1307,7 +1304,7 @@ test "cpdfcontent operator state parses Form XObject ops with merged resources" 
   }
   @test.assert_eq(ops, [
     Op_InlineImage(
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (content_operator_name_for_test("/W"), PdfInteger(2)),
         (content_operator_name_for_test("/H"), PdfInteger(1)),
         (content_operator_name_for_test("/BPC"), PdfInteger(8)),
@@ -1429,13 +1426,13 @@ test "cpdfcontent operator state reads shading entries from resources" {
   let shading_name = content_operator_name_for_test("/Sh1")
   let unbounded_name = content_operator_name_for_test("/Sh2")
   let invalid_name = content_operator_name_for_test("/Sh3")
-  let resources = @pdflite.pdf_dictionary([
+  let resources = @syntax.pdf_dictionary([
     (
       content_operator_name_for_test("/Shading"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           shading_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (content_operator_name_for_test("/ShadingType"), PdfInteger(2)),
             (
               content_operator_name_for_test("/BBox"),
@@ -1450,13 +1447,13 @@ test "cpdfcontent operator state reads shading entries from resources" {
         ),
         (
           unbounded_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (content_operator_name_for_test("/ShadingType"), PdfInteger(2)),
           ]),
         ),
         (
           invalid_name,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (content_operator_name_for_test("/ShadingType"), PdfInteger(2)),
             (content_operator_name_for_test("/BBox"), PdfBoolean(true)),
           ]),

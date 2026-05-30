@@ -278,9 +278,9 @@ test "pdf_write_document rejects deferred object states" {
 ///|
 test "private writer stream dictionary uses materialized deferred length" {
   let cursor = byte_cursor_of_bytes(@ascii.encode("abc"))
-  let stream = pdf_stream(
+  let stream = @syntax.pdf_stream(
     PdfDictionary([]),
-    StreamToGet(stream_to_get(cursor, 0, 1)),
+    StreamToGet(@syntax.stream_to_get(cursor, 0, 1)),
   )
   guard stream is PdfStreamObject(stream_value) else {
     fail("expected PdfStreamObject")

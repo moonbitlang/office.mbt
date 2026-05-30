@@ -1,6 +1,6 @@
 ///|
 fn pdf_content_parse_section(
-  operands : ArrayView[PdfObject],
+  operands : ArrayView[@syntax.PdfObject],
   operator : BytesView,
 ) -> @content.PdfContentOp raise PdfError {
   match @content.pdf_content_parse_known_section(operands, operator) {
@@ -11,7 +11,7 @@ fn pdf_content_parse_section(
 
 ///|
 fn pdf_content_section_unknown(
-  operands : ArrayView[PdfObject],
+  operands : ArrayView[@syntax.PdfObject],
   operator : BytesView,
 ) -> @content.PdfContentOp raise PdfError {
   Op_Unknown(pdf_content_section_bytes(operands, operator))
@@ -48,7 +48,7 @@ fn pdf_parse_content_ops_from_view_with_context(
   let cursor = byte_cursor_of_view(data)
   let op_capacity = pdf_content_parse_ops_capacity(data)
   let ops : Array[@content.PdfContentOp] = Array::new(capacity=op_capacity)
-  let operands : Array[PdfObject] = Array::new(capacity=8)
+  let operands : Array[@syntax.PdfObject] = Array::new(capacity=8)
   let mut done = false
   while !done {
     match pdf_content_lex_next(cursor) {

@@ -7,7 +7,7 @@
 /// page resources.
 pub fn PdfDocument::parse_content_ops(
   self : PdfDocument,
-  streams : ArrayView[PdfObject],
+  streams : ArrayView[@syntax.PdfObject],
 ) -> Array[@content.PdfContentOp] raise PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
   pdf_parse_content_ops_from_view(pdf_content_concat_streams(raw_streams))
@@ -20,8 +20,8 @@ pub fn PdfDocument::parse_content_ops(
 /// lookup when an unfiltered inline image has no reliable declared length.
 pub fn PdfDocument::parse_content_ops_with_resources(
   self : PdfDocument,
-  resources : PdfObject,
-  streams : ArrayView[PdfObject],
+  resources : @syntax.PdfObject,
+  streams : ArrayView[@syntax.PdfObject],
 ) -> Array[@content.PdfContentOp] raise PdfError {
   let raw_streams = self.pdf_content_raw_streams(streams)
   pdf_parse_content_ops_from_view_with_context(
@@ -40,7 +40,7 @@ pub fn PdfDocument::parse_content_ops_with_resources(
 /// This is the owned-byte wrapper for `parse_content_view_with_resources`.
 pub fn PdfDocument::parse_content_bytes_with_resources(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   data : PdfBytes,
 ) -> Array[@content.PdfContentOp] raise PdfError {
   self.parse_content_view_with_resources(resources, data)
@@ -53,7 +53,7 @@ pub fn PdfDocument::parse_content_bytes_with_resources(
 /// need to keep, such as text strings and inline-image data.
 pub fn PdfDocument::parse_content_view_with_resources(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   data : BytesView,
 ) -> Array[@content.PdfContentOp] raise PdfError {
   pdf_parse_content_ops_from_view_with_context(
@@ -69,7 +69,7 @@ pub fn PdfDocument::parse_content_view_with_resources(
 ///|
 fn PdfDocument::pdf_content_raw_streams(
   self : PdfDocument,
-  streams : ArrayView[PdfObject],
+  streams : ArrayView[@syntax.PdfObject],
 ) -> Array[PdfBytes] raise PdfError {
   let raw_streams : Array[PdfBytes] = Array::new(capacity=streams.length())
   for stream_ref in streams {
@@ -89,9 +89,9 @@ fn PdfDocument::pdf_content_raw_streams(
 ///|
 fn pdf_content_read_complex_object(
   cursor : ByteCursor,
-  first : PdfLexeme,
-) -> PdfObject raise PdfError {
-  let lexemes : Array[PdfLexeme] = [first]
+  first : @syntax.PdfLexeme,
+) -> @syntax.PdfObject raise PdfError {
+  let lexemes : Array[@syntax.PdfLexeme] = [first]
   let mut array_depth = 0
   let mut dict_depth = 0
   match first {
@@ -100,7 +100,7 @@ fn pdf_content_read_complex_object(
     _ => ()
   }
   while array_depth > 0 || dict_depth > 0 {
-    let token = pdf_cursor_lex_token(cursor)
+    let token = @syntax.pdf_cursor_lex_token(cursor)
     match token {
       StopLexing | LexNone => raise ParseObjectExpected
       LexLeftSquare => array_depth += 1
@@ -111,17 +111,19 @@ fn pdf_content_read_complex_object(
     }
     lexemes.push(token)
   }
-  pdf_parse_single_lexeme_object(lexemes)
+  @syntax.pdf_parse_single_lexeme_object(lexemes)
 }
 
 ///|
-fn pdf_content_read_object(cursor : ByteCursor) -> PdfObject raise PdfError {
-  let token = pdf_cursor_lex_token(cursor)
+fn pdf_content_read_object(
+  cursor : ByteCursor,
+) -> @syntax.PdfObject raise PdfError {
+  let token = @syntax.pdf_cursor_lex_token(cursor)
   match token {
     StopLexing | LexNone => raise ParseObjectExpected
     LexLeftSquare | LexLeftDict =>
       pdf_content_read_complex_object(cursor, token)
-    _ => pdf_parse_single_lexeme_object([token])
+    _ => @syntax.pdf_parse_single_lexeme_object([token])
   }
 }
 
@@ -137,12 +139,12 @@ fn pdf_content_operator_or_literal(view : BytesView) -> PdfContentLexeme {
 
 ///|
 fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError {
-  pdf_cursor_drop_whitespace(cursor)
+  @syntax.pdf_cursor_drop_whitespace(cursor)
   let value = cursor.peek_byte()
   match value {
     value if value == pdf_no_more => ContentEnd
     37 => {
-      ignore(pdf_cursor_lex_comment(cursor))
+      ignore(@syntax.pdf_cursor_lex_comment(cursor))
       ContentComment
     }
     47 | 40 | 91 | 60 => ContentOperand(pdf_content_read_object(cursor))
@@ -150,8 +152,8 @@ fn pdf_content_lex_next(cursor : ByteCursor) -> PdfContentLexeme raise PdfError 
       ContentOperand(pdf_content_read_object(cursor))
     116 | 102 | 110 =>
       pdf_content_operator_or_literal(
-        pdf_cursor_read_regular_token_view(cursor),
+        @syntax.pdf_cursor_read_regular_token_view(cursor),
       )
-    _ => ContentOperator(pdf_cursor_read_regular_token_view(cursor))
+    _ => ContentOperator(@syntax.pdf_cursor_read_regular_token_view(cursor))
   }
 }

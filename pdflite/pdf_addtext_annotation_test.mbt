@@ -81,7 +81,7 @@ test "pdf_addtext_url_annotation builds cpdf link annotation objects" {
     "https://example.test",
     true,
   )
-  let expected : @pdflite.PdfObject = PdfDictionary([
+  let expected : @syntax.PdfObject = PdfDictionary([
     (
       addtext_annot_name_for_test("/Subtype"),
       PdfNameObject(addtext_annot_name_for_test("/Link")),
@@ -317,7 +317,7 @@ test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
   let urls : Array[@addtext.PdfAddTextUrl] = [
     { url: "https://a.test", start: 0, end: 2 },
   ]
-  let result : Result[Array[@pdflite.PdfObject], Error] = try? @pdflite.pdf_addtext_url_annotation_references(
+  let result : Result[Array[@syntax.PdfObject], Error] = try? @pdflite.pdf_addtext_url_annotation_references(
     document,
     "ab",
     urls,
@@ -347,8 +347,8 @@ test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
 ///|
 test "pdf_addtext_page_rest_with_annotations preserves empty annotation updates" {
   let document = @pdflite.pdf_document_empty()
-  let rest : @pdflite.PdfObject = PdfInteger(7)
-  let annotations : Array[@pdflite.PdfObject] = []
+  let rest : @syntax.PdfObject = PdfInteger(7)
+  let annotations : Array[@syntax.PdfObject] = []
   @test.assert_eq(
     try! document.addtext_page_rest_with_annotations(rest, annotations),
     rest,
@@ -361,11 +361,11 @@ test "pdf_addtext_page_rest_with_annotations prepends resolved existing arrays" 
   let existing_number = document.add_object(PdfArray([PdfIndirect(30)]))
   let key_annots = addtext_annot_name_for_test("/Annots")
   let key_other = addtext_annot_name_for_test("/Other")
-  let rest : @pdflite.PdfObject = PdfDictionary([
+  let rest : @syntax.PdfObject = PdfDictionary([
     (key_annots, PdfIndirect(existing_number)),
     (key_other, PdfInteger(5)),
   ])
-  let annotations : Array[@pdflite.PdfObject] = [
+  let annotations : Array[@syntax.PdfObject] = [
     PdfIndirect(10),
     PdfIndirect(11),
   ]
@@ -383,8 +383,8 @@ test "pdf_addtext_page_rest_with_annotations prepends resolved existing arrays" 
 test "pdf_addtext_page_rest_with_annotations treats malformed annots as empty" {
   let document = @pdflite.pdf_document_empty()
   let key_annots = addtext_annot_name_for_test("/Annots")
-  let rest : @pdflite.PdfObject = PdfDictionary([(key_annots, PdfInteger(99))])
-  let annotations : Array[@pdflite.PdfObject] = [PdfIndirect(20)]
+  let rest : @syntax.PdfObject = PdfDictionary([(key_annots, PdfInteger(99))])
+  let annotations : Array[@syntax.PdfObject] = [PdfIndirect(20)]
   let updated = try! @pdflite.pdf_addtext_page_rest_with_annotations(
     document, rest, annotations,
   )
@@ -491,7 +491,7 @@ test "PdfDocument addtext_rectangle handles relative box opacity and underneath 
   let page = {
     ..pages[0],
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_BT, Op_ET])],
-    rest: @pdflite.pdf_dictionary([
+    rest: @syntax.pdf_dictionary([
       (
         cropbox,
         PdfArray([PdfReal(10.0), PdfReal(20.0), PdfReal(70.0), PdfReal(40.0)]),

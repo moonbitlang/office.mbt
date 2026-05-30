@@ -1,7 +1,7 @@
 ///|
 fn pdf_ua_matterhorn_font_uses_known_encoding(
   document : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match document.lookup_direct(pdf_text_encoding_key_name, object) {
     Some(PdfNameObject(name)) =>
@@ -23,7 +23,7 @@ fn pdf_ua_matterhorn_supported_cid_ordering(name : PdfName) -> Bool {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_type0_uses_supported_cid_collection(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match
     (

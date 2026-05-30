@@ -6,7 +6,7 @@ test "private codec dictionary and predictor guards report malformed inputs" {
   let empty = @syntax.PdfDictionary([])
   @test.assert_eq(pdf_remove_first_filter_entry(empty, pdf_filter_key()), empty)
   let bad_filter = @syntax.PdfDictionary([(pdf_filter_key(), PdfInteger(1))])
-  let bad_filter_result : Result[PdfObject, Error] = try? pdf_remove_first_filter_entry(
+  let bad_filter_result : Result[@syntax.PdfObject, Error] = try? pdf_remove_first_filter_entry(
     bad_filter,
     pdf_filter_key(),
   )
@@ -16,7 +16,7 @@ test "private codec dictionary and predictor guards report malformed inputs" {
   let bad_decodeparms = @syntax.PdfDictionary([
     (pdf_decodeparms_key(), PdfInteger(1)),
   ])
-  let bad_decodeparms_result : Result[PdfObject, Error] = try? pdf_remove_first_decodeparms_entry(
+  let bad_decodeparms_result : Result[@syntax.PdfObject, Error] = try? pdf_remove_first_decodeparms_entry(
     bad_decodeparms,
     pdf_decodeparms_key(),
   )

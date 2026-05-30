@@ -15,12 +15,12 @@ fn markdown_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes raise {
 
 ///|
 fn markdown_font_resources_for_test(
-  font : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+  font : @syntax.PdfObject,
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       markdown_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([(markdown_name_for_test("/F0"), font)]),
+      @syntax.pdf_dictionary([(markdown_name_for_test("/F0"), font)]),
     ),
   ])
 }
@@ -28,11 +28,11 @@ fn markdown_font_resources_for_test(
 ///|
 fn markdown_indirect_font_resources_for_test(
   font_number : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       markdown_name_for_test("/Font"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (markdown_name_for_test("/F0"), PdfIndirect(font_number)),
       ]),
     ),
@@ -40,7 +40,7 @@ fn markdown_indirect_font_resources_for_test(
 }
 
 ///|
-fn markdown_standard_font_for_test() -> @pdflite.PdfObject raise {
+fn markdown_standard_font_for_test() -> @syntax.PdfObject raise {
   @pdflite.pdf_make_font(
     markdown_name_for_test("/Helvetica"),
     PdfWinAnsiEncoding,
@@ -48,8 +48,8 @@ fn markdown_standard_font_for_test() -> @pdflite.PdfObject raise {
 }
 
 ///|
-fn markdown_control_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn markdown_control_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       markdown_name_for_test("/Type"),
       PdfNameObject(markdown_name_for_test("/Font")),
@@ -64,7 +64,7 @@ fn markdown_control_font_for_test() -> @pdflite.PdfObject {
     ),
     (
       markdown_name_for_test("/Encoding"),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           markdown_name_for_test("/BaseEncoding"),
           PdfNameObject(markdown_name_for_test("/StandardEncoding")),
@@ -87,8 +87,8 @@ fn markdown_control_font_for_test() -> @pdflite.PdfObject {
 }
 
 ///|
-fn markdown_no_tounicode_truetype_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn markdown_no_tounicode_truetype_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       markdown_name_for_test("/Type"),
       PdfNameObject(markdown_name_for_test("/Font")),
@@ -269,10 +269,10 @@ fn markdown_positioned_form_document_for_test() -> @pdflite.PdfDocument raise {
         Op_Q,
       ]),
     ],
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         markdown_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([(form_name, PdfIndirect(80))]),
+        @syntax.pdf_dictionary([(form_name, PdfIndirect(80))]),
       ),
     ]),
   }
@@ -360,8 +360,8 @@ fn markdown_positioned_cjk_spacing_document_for_test() -> @pdflite.PdfDocument r
   )
   doc.add_object_given_number(
     81,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (markdown_name_for_test("/Length"), PdfInteger(cmap.length())),
       ]),
       StreamGot(cmap),
@@ -383,7 +383,7 @@ fn markdown_positioned_cjk_spacing_document_for_test() -> @pdflite.PdfDocument r
       ]),
     ],
     resources: markdown_font_resources_for_test(
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           markdown_name_for_test("/Type"),
           PdfNameObject(markdown_name_for_test("/Font")),
@@ -406,8 +406,8 @@ fn markdown_positioned_cjk_spacing_document_for_test() -> @pdflite.PdfDocument r
 }
 
 ///|
-fn markdown_tounicode_font_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn markdown_tounicode_font_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       markdown_name_for_test("/Type"),
       PdfNameObject(markdown_name_for_test("/Font")),
@@ -440,8 +440,8 @@ fn markdown_cjk_document_for_test() -> @pdflite.PdfDocument raise {
   doc.set_version(1, 4)
   doc.add_object_given_number(
     60,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (markdown_name_for_test("/Length"), PdfInteger(cmap.length())),
       ]),
       StreamGot(cmap),
@@ -481,8 +481,8 @@ fn markdown_cjk_tj_spacing_document_for_test() -> @pdflite.PdfDocument raise {
   doc.set_version(1, 4)
   doc.add_object_given_number(
     82,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (markdown_name_for_test("/Length"), PdfInteger(cmap.length())),
       ]),
       StreamGot(cmap),
@@ -505,7 +505,7 @@ fn markdown_cjk_tj_spacing_document_for_test() -> @pdflite.PdfDocument raise {
       ]),
     ],
     resources: markdown_font_resources_for_test(
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           markdown_name_for_test("/Type"),
           PdfNameObject(markdown_name_for_test("/Font")),
@@ -542,8 +542,8 @@ fn markdown_hangul_tj_spacing_document_for_test() -> @pdflite.PdfDocument raise 
   doc.set_version(1, 4)
   doc.add_object_given_number(
     83,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (markdown_name_for_test("/Length"), PdfInteger(cmap.length())),
       ]),
       StreamGot(cmap),
@@ -566,7 +566,7 @@ fn markdown_hangul_tj_spacing_document_for_test() -> @pdflite.PdfDocument raise 
       ]),
     ],
     resources: markdown_font_resources_for_test(
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (
           markdown_name_for_test("/Type"),
           PdfNameObject(markdown_name_for_test("/Font")),
@@ -602,7 +602,7 @@ fn markdown_missing_font_document_for_test() -> @pdflite.PdfDocument raise {
         Op_ET,
       ]),
     ],
-    resources: @pdflite.pdf_dictionary([]),
+    resources: @syntax.pdf_dictionary([]),
   }
   let page_root = doc.add_pagetree([page])
   ignore(doc.add_root(page_root, []))
@@ -665,10 +665,10 @@ fn markdown_form_xobject_document_for_test() -> @pdflite.PdfDocument raise {
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [@pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         markdown_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([(form_name, PdfIndirect(70))]),
+        @syntax.pdf_dictionary([(form_name, PdfIndirect(70))]),
       ),
     ]),
   }
@@ -695,14 +695,14 @@ fn markdown_inherited_form_xobject_document_for_test() -> @pdflite.PdfDocument r
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [@pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         markdown_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([(form_name, PdfIndirect(72))]),
+        @syntax.pdf_dictionary([(form_name, PdfIndirect(72))]),
       ),
       (
         markdown_name_for_test("/Font"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (markdown_name_for_test("/F0"), markdown_standard_font_for_test()),
         ]),
       ),
@@ -720,8 +720,8 @@ fn markdown_non_text_xobject_document_for_test() -> @pdflite.PdfDocument raise {
   let image_name = markdown_name_for_test("/Im0")
   doc.add_object_given_number(
     73,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (
           markdown_name_for_test("/Subtype"),
           PdfNameObject(markdown_name_for_test("/Image")),
@@ -733,8 +733,8 @@ fn markdown_non_text_xobject_document_for_test() -> @pdflite.PdfDocument raise {
   )
   doc.add_object_given_number(
     74,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (markdown_name_for_test("/Length"), PdfInteger(0)),
       ]),
       StreamGot([]),
@@ -749,10 +749,10 @@ fn markdown_non_text_xobject_document_for_test() -> @pdflite.PdfDocument raise {
         Op_Do(image_name),
       ]),
     ],
-    resources: @pdflite.pdf_dictionary([
+    resources: @syntax.pdf_dictionary([
       (
         markdown_name_for_test("/XObject"),
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (markdown_name_for_test("/NoSubtype"), PdfIndirect(74)),
           (image_name, PdfIndirect(73)),
         ]),
@@ -775,7 +775,7 @@ fn markdown_missing_xobject_dictionary_document_for_test() -> @pdflite.PdfDocume
         Op_Do(markdown_name_for_test("/Missing")),
       ]),
     ],
-    resources: @pdflite.pdf_dictionary([]),
+    resources: @syntax.pdf_dictionary([]),
   }
   let page_root = doc.add_pagetree([page])
   ignore(doc.add_root(page_root, []))

@@ -282,7 +282,7 @@ test "PdfDocument addtext_calc_textwidth measures existing page fonts" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_layout_name_for_test("/F1")
   let basefont = addtext_layout_name_for_test("/Helvetica")
-  let font_object : @pdflite.PdfObject = PdfDictionary([
+  let font_object : @syntax.PdfObject = PdfDictionary([
     (
       addtext_layout_name_for_test("/Subtype"),
       PdfNameObject(addtext_layout_name_for_test("/Type1")),
@@ -494,7 +494,7 @@ test "pdf_addtext_prepare_line wrapper honors relative boxes" {
   let cropbox = addtext_layout_name_for_test("/CropBox")
   let page = {
     ..(try! document.pages_of_pagetree())[0],
-    rest: @pdflite.pdf_dictionary([
+    rest: @syntax.pdf_dictionary([
       (
         cropbox,
         PdfArray([PdfReal(10.0), PdfReal(20.0), PdfReal(70.0), PdfReal(40.0)]),

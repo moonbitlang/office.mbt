@@ -75,8 +75,8 @@ fn pdf_impose_concat_ops(
 
 ///|
 fn pdf_impose_push_objects(
-  output : Array[PdfObject],
-  objects : ArrayView[PdfObject],
+  output : Array[@syntax.PdfObject],
+  objects : ArrayView[@syntax.PdfObject],
 ) -> Unit {
   for object in objects {
     output.push(object)

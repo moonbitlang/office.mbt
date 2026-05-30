@@ -138,7 +138,7 @@ fn pdf_writer_flate_decode_name() -> PdfName {
 ///|
 fn pdf_writer_trailer_dictionary(
   document : PdfDocument,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let mut trailer = document.trailer_dict()
   trailer = trailer.add_dict_entry(
     pdf_writer_size_name(),

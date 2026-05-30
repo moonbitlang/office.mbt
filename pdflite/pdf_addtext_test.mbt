@@ -181,7 +181,7 @@ test "PdfDocument addtext_opacity_resources allocates graphics state" {
   let gs1 = addtext_name_for_test("/gs1")
   let ca = addtext_name_for_test("/ca")
   let ca_stroke = addtext_name_for_test("/CA")
-  let resources : @pdflite.PdfObject = PdfDictionary([
+  let resources : @syntax.PdfObject = PdfDictionary([
     (extgstate, PdfDictionary([(gs0, PdfInteger(1))])),
   ])
   let (updated, name) = try! document.addtext_opacity_resources(resources, 0.25)
@@ -206,7 +206,7 @@ test "PdfDocument addtext_opacity_resources allocates graphics state" {
 ///|
 test "pdf_addtext_opacity_resources preserves opaque resources" {
   let document = @pdflite.pdf_document_empty()
-  let resources : @pdflite.PdfObject = PdfDictionary([
+  let resources : @syntax.PdfObject = PdfDictionary([
     (addtext_name_for_test("/ProcSet"), PdfArray([])),
   ])
   @test.assert_eq(
@@ -847,7 +847,7 @@ test "pdf_addtext_line_page wrapper prepends existing font text without opacity"
   let font_key = addtext_name_for_test("/Font")
   let extgstate = addtext_name_for_test("/ExtGState")
   let resource_name = addtext_name_for_test("/Fx")
-  let font_object : @pdflite.PdfObject = PdfDictionary([
+  let font_object : @syntax.PdfObject = PdfDictionary([
     (
       addtext_name_for_test("/Subtype"),
       PdfNameObject(addtext_name_for_test("/Type1")),
@@ -919,7 +919,7 @@ test "PdfDocument addtext_line_page emits resolved BaseFont resource names" {
   let font_key = addtext_name_for_test("/Font")
   let resource_name = addtext_name_for_test("/Fx")
   let basefont = addtext_name_for_test("/Helvetica")
-  let font_object : @pdflite.PdfObject = PdfDictionary([
+  let font_object : @syntax.PdfObject = PdfDictionary([
     (
       addtext_name_for_test("/Subtype"),
       PdfNameObject(addtext_name_for_test("/Type1")),
@@ -979,7 +979,7 @@ test "PdfDocument addtext_line_page encodes existing font text" {
   let font_key = addtext_name_for_test("/Font")
   let resource_name = addtext_name_for_test("/Fx")
   let basefont = addtext_name_for_test("/Helvetica")
-  let font_object : @pdflite.PdfObject = PdfDictionary([
+  let font_object : @syntax.PdfObject = PdfDictionary([
     (
       addtext_name_for_test("/Subtype"),
       PdfNameObject(addtext_name_for_test("/Type1")),
@@ -1358,7 +1358,7 @@ test "PdfDocument addtexts_with_source delegates existing named fonts" {
   let font_key = addtext_name_for_test("/Font")
   let resource_name = addtext_name_for_test("/Fx")
   let basefont = addtext_name_for_test("/Helvetica")
-  let font_object : @pdflite.PdfObject = PdfDictionary([
+  let font_object : @syntax.PdfObject = PdfDictionary([
     (
       addtext_name_for_test("/Subtype"),
       PdfNameObject(addtext_name_for_test("/Type1")),
@@ -1460,7 +1460,7 @@ test "pdf_addtexts_with_source rejects empty premade fontpacks" {
 test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/F1")
-  let font_object : @pdflite.PdfObject = PdfDictionary([
+  let font_object : @syntax.PdfObject = PdfDictionary([
     (
       addtext_name_for_test("/BaseFont"),
       PdfNameObject(addtext_name_for_test("/Helvetica")),
@@ -1511,7 +1511,7 @@ test "PdfDocument addtext_existing_font_resource falls back to BaseFont names" {
 test "PdfDocument addtext_existing_font_resource reports missing fonts" {
   let document = @pdflite.pdf_document_empty()
   let basefont = addtext_name_for_test("/Helvetica")
-  let missing_dictionary : Result[(@pdflite.PdfName, @pdflite.PdfObject), Error] = try? document.addtext_existing_font_resource(
+  let missing_dictionary : Result[(@pdflite.PdfName, @syntax.PdfObject), Error] = try? document.addtext_existing_font_resource(
     @page.pdf_page_blank(@geometry.paper_a4),
     basefont,
   )
@@ -1525,7 +1525,7 @@ test "PdfDocument addtext_existing_font_resource reports missing fonts" {
       (addtext_name_for_test("/Font"), PdfDictionary([])),
     ]),
   }
-  let missing_font : Result[(@pdflite.PdfName, @pdflite.PdfObject), Error] = try? document.addtext_existing_font_resource(
+  let missing_font : Result[(@pdflite.PdfName, @syntax.PdfObject), Error] = try? document.addtext_existing_font_resource(
     page, basefont,
   )
   guard missing_font
@@ -1538,7 +1538,7 @@ test "PdfDocument addtext_existing_font_resource reports missing fonts" {
 test "PdfDocument addtext_width_of_existing_font_resource measures direct keys" {
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/F1")
-  let font_object : @pdflite.PdfObject = PdfDictionary([
+  let font_object : @syntax.PdfObject = PdfDictionary([
     (
       addtext_name_for_test("/Subtype"),
       PdfNameObject(addtext_name_for_test("/Type1")),
@@ -1577,7 +1577,7 @@ test "PdfDocument addtext_width_of_existing_font_resource returns fallback resou
   let document = @pdflite.pdf_document_empty()
   let resource_name = addtext_name_for_test("/Fx")
   let basefont = addtext_name_for_test("/Helvetica")
-  let font_object : @pdflite.PdfObject = PdfDictionary([
+  let font_object : @syntax.PdfObject = PdfDictionary([
     (
       addtext_name_for_test("/Subtype"),
       PdfNameObject(addtext_name_for_test("/Type1")),

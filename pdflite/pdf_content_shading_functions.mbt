@@ -6,7 +6,7 @@ fn pdf_content_default_function() -> PdfFunction {
 ///|
 fn PdfDocument::pdf_content_shading_function_or_default(
   self : PdfDocument,
-  object : PdfObject?,
+  object : @syntax.PdfObject?,
 ) -> PdfFunction {
   match object {
     Some(function_object) =>
@@ -22,7 +22,7 @@ fn PdfDocument::pdf_content_shading_function_or_default(
 ///|
 fn PdfDocument::pdf_content_shading_functions(
   self : PdfDocument,
-  shading : PdfObject,
+  shading : @syntax.PdfObject,
 ) -> Array[PdfFunction] raise PdfError {
   match self.lookup_direct(pdf_content_shading_function_name, shading) {
     Some(PdfArray(functions)) => {

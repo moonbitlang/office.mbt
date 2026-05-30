@@ -6,10 +6,10 @@
 /// by the deduplication pass.
 pub fn PdfDocument::read_name_tree(
   self : PdfDocument,
-  tree : PdfObject,
-) -> Array[(PdfBytes, PdfObject)] {
+  tree : @syntax.PdfObject,
+) -> Array[(PdfBytes, @syntax.PdfObject)] {
   let raw_entries = pdf_tree_raw_entries(self, tree)
-  let parsed : Array[(PdfBytes, PdfObject)] = Array::new(
+  let parsed : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=raw_entries.length(),
   )
   let mut malformed = false
@@ -30,8 +30,8 @@ pub fn PdfDocument::read_name_tree(
 /// Compatibility wrapper for `PdfDocument::read_name_tree`.
 pub fn pdf_read_name_tree(
   document : PdfDocument,
-  tree : PdfObject,
-) -> Array[(PdfBytes, PdfObject)] {
+  tree : @syntax.PdfObject,
+) -> Array[(PdfBytes, @syntax.PdfObject)] {
   document.read_name_tree(tree)
 }
 
@@ -43,10 +43,10 @@ pub fn pdf_read_name_tree(
 /// collapsed by the deduplication pass.
 pub fn PdfDocument::read_number_tree(
   self : PdfDocument,
-  tree : PdfObject,
-) -> Array[(Int, PdfObject)] {
+  tree : @syntax.PdfObject,
+) -> Array[(Int, @syntax.PdfObject)] {
   let raw_entries = pdf_tree_raw_entries(self, tree)
-  let parsed : Array[(Int, PdfObject)] = Array::new(
+  let parsed : Array[(Int, @syntax.PdfObject)] = Array::new(
     capacity=raw_entries.length(),
   )
   let mut malformed = false
@@ -70,10 +70,10 @@ pub fn PdfDocument::read_number_tree(
 /// `PdfBytes`; each integer key is encoded with `Int::to_string`.
 pub fn pdf_read_number_tree(
   document : PdfDocument,
-  tree : PdfObject,
-) -> Array[(PdfBytes, PdfObject)] {
+  tree : @syntax.PdfObject,
+) -> Array[(PdfBytes, @syntax.PdfObject)] {
   let number_entries = document.read_number_tree(tree)
-  let output : Array[(PdfBytes, PdfObject)] = Array::new(
+  let output : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=number_entries.length(),
   )
   for entry in number_entries {

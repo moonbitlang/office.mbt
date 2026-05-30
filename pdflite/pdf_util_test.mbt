@@ -33,9 +33,9 @@ fn util_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn util_lookup_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : @pdflite.PdfName,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   object.lookup_immediate(key)
 }
 
@@ -45,27 +45,27 @@ test "PdfDocument remove_dict_entry_everywhere rewrites trailer objects streams 
   let key_keep = util_name_for_test("/Keep")
   let doc = @pdflite.pdf_document_empty()
   doc.set_trailer_dict(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_keep, PdfInteger(1)),
       (key_remove, PdfInteger(2)),
     ]),
   )
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_remove, PdfInteger(10)),
-      (key_keep, @pdflite.pdf_dictionary([(key_remove, PdfInteger(11))])),
+      (key_keep, @syntax.pdf_dictionary([(key_remove, PdfInteger(11))])),
     ]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_array([
-      @pdflite.pdf_dictionary([(key_remove, PdfInteger(20))]),
+    @syntax.pdf_array([
+      @syntax.pdf_dictionary([(key_remove, PdfInteger(20))]),
       PdfInteger(3),
     ]),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(key_remove, PdfInteger(30))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(key_remove, PdfInteger(30))]),
     StreamGot(try! @pdflite.pdf_bytes_of_int_array([65, 66])),
   )
   doc.add_object_given_number(3, stream)
@@ -118,14 +118,14 @@ test "PdfDocument dictionary entry rewrite honours resolved search values" {
   doc.add_object_given_number(11, PdfInteger(42))
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_target, PdfIndirect(10)),
       (key_other, PdfInteger(1)),
     ]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([(key_target, PdfIndirect(11))]),
+    @syntax.pdf_dictionary([(key_target, PdfIndirect(11))]),
   )
 
   doc.remove_dict_entry_everywhere(key_target, search=Some(PdfInteger(99)))
@@ -156,14 +156,14 @@ test "pdf_replace_dict_entry ignores missing keys and updates trailer" {
   let key_keep = util_name_for_test("/Keep")
   let doc = @pdflite.pdf_document_empty()
   doc.set_trailer_dict(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_keep, PdfInteger(1)),
       (key_target, PdfInteger(2)),
     ]),
   )
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_keep, PdfInteger(3))]),
+    @syntax.pdf_dictionary([(key_keep, PdfInteger(3))]),
   )
 
   @pdflite.pdf_replace_dict_entry(doc, key_target, PdfInteger(9))
@@ -186,12 +186,12 @@ test "cpdfutil string-key dictionary wrappers match source argument shape" {
   doc.add_object_given_number(10, PdfInteger(99))
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_target, PdfIndirect(10)),
       (key_keep, PdfInteger(1)),
     ]),
   )
-  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_target, PdfInteger(2))]))
+  doc.set_trailer_dict(@syntax.pdf_dictionary([(key_target, PdfInteger(2))]))
 
   @pdflite.pdf_remove_dict_entry_string(
     doc,
@@ -233,11 +233,11 @@ test "PdfDocument dict_entry_values scans dictionaries arrays streams and traile
   doc.add_object_given_number(9, PdfInteger(99))
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_target, PdfInteger(1)),
       (
         key_nested,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (key_target, PdfString(@ascii.encode("nested"))),
         ]),
       ),
@@ -245,20 +245,20 @@ test "PdfDocument dict_entry_values scans dictionaries arrays streams and traile
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_array([@pdflite.pdf_dictionary([(key_target, PdfReal(2.5))])]),
+    @syntax.pdf_array([@syntax.pdf_dictionary([(key_target, PdfReal(2.5))])]),
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([(key_target, PdfNameObject(key_stream_value))]),
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([(key_target, PdfNameObject(key_stream_value))]),
       StreamGot(@ascii.encode("stream")),
     ),
   )
   doc.add_object_given_number(
     4,
-    @pdflite.pdf_stream(PdfInteger(0), StreamGot(@ascii.encode("bad"))),
+    @syntax.pdf_stream(PdfInteger(0), StreamGot(@ascii.encode("bad"))),
   )
-  doc.set_trailer_dict(@pdflite.pdf_dictionary([(key_target, PdfIndirect(9))]))
+  doc.set_trailer_dict(@syntax.pdf_dictionary([(key_target, PdfIndirect(9))]))
 
   @test.assert_eq(@pdflite.pdf_dict_entry_values(doc, key_target), [
     PdfString(@ascii.encode("nested")),
@@ -277,11 +277,11 @@ test "pdf_print_dict_entry renders resolved values as PDF syntax" {
   doc.add_object_given_number(10, PdfNameObject(key_value))
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_target, PdfIndirect(10))]),
+    @syntax.pdf_dictionary([(key_target, PdfIndirect(10))]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([(key_target, PdfString(@ascii.encode("plain")))]),
+    @syntax.pdf_dictionary([(key_target, PdfString(@ascii.encode("plain")))]),
   )
 
   @test.assert_eq(try! @pdflite.pdf_print_dict_entry(doc, key_target), [
@@ -298,11 +298,11 @@ test "cpdftweak print_dict_entry source-order wrapper accepts string keys" {
   doc.add_object_given_number(10, PdfNameObject(key_value))
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_target, PdfIndirect(10))]),
+    @syntax.pdf_dictionary([(key_target, PdfIndirect(10))]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([(key_target, PdfString(@ascii.encode("plain")))]),
+    @syntax.pdf_dictionary([(key_target, PdfString(@ascii.encode("plain")))]),
   )
 
   let expected = try! @pdflite.pdf_print_dict_entry(doc, key_target)
@@ -328,15 +328,15 @@ test "pdf_get_dict_entries renders cpdf style JSON wrappers" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_target, PdfInteger(7))]),
+    @syntax.pdf_dictionary([(key_target, PdfInteger(7))]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([(key_target, PdfNameObject(key_value))]),
+    @syntax.pdf_dictionary([(key_target, PdfNameObject(key_value))]),
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         key_target,
         PdfArray([PdfBoolean(true), PdfNull, PdfReal(2.5), PdfIndirect(5)]),
@@ -345,12 +345,12 @@ test "pdf_get_dict_entries renders cpdf style JSON wrappers" {
   )
   doc.add_object_given_number(
     4,
-    @pdflite.pdf_dictionary([(key_target, PdfIndirect(5))]),
+    @syntax.pdf_dictionary([(key_target, PdfIndirect(5))]),
   )
   doc.add_object_given_number(
     5,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([(key_other, PdfInteger(1))]),
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([(key_other, PdfInteger(1))]),
       StreamGot(@ascii.encode("payload")),
     ),
   )
@@ -373,7 +373,7 @@ test "cpdftweak get_dict_entries source-order wrapper accepts string keys" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_target, PdfString(@ascii.encode("hello")))]),
+    @syntax.pdf_dictionary([(key_target, PdfString(@ascii.encode("hello")))]),
   )
 
   let expected = try! @pdflite.pdf_get_dict_entries(doc, key_target, utf8=true)
@@ -398,10 +398,10 @@ test "PdfDocument json_of_object exposes cpdf single-object dictionary shape" {
   let key_number = util_name_for_test("/Number")
   let key_value = util_name_for_test("/Value")
   let doc = @pdflite.pdf_document_empty()
-  let object = @pdflite.pdf_dictionary([
+  let object = @syntax.pdf_dictionary([
     (
       key_array,
-      @pdflite.pdf_array([
+      @syntax.pdf_array([
         PdfBoolean(true),
         PdfNull,
         PdfReal(1.5),
@@ -435,8 +435,8 @@ test "PdfDocument json_of_object exposes cpdf single-object dictionary shape" {
 test "PdfDocument json_of_object emits streams and utf8 string wrappers" {
   let key_other = util_name_for_test("/Other")
   let doc = @pdflite.pdf_document_empty()
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(key_other, PdfInteger(1))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(key_other, PdfInteger(1))]),
     StreamGot(@ascii.encode("payload")),
   )
   let stream_expected = Json::object(
@@ -505,7 +505,7 @@ test "PdfDocument CPDFJSON output honors clean_strings option" {
   )
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_title, PdfString(unicode_ascii))]),
+    @syntax.pdf_dictionary([(key_title, PdfString(unicode_ascii))]),
   )
   let exported = try! doc.json_of_document(clean_strings=true)
   @test.assert_eq(
@@ -528,8 +528,8 @@ test "PdfDocument CPDFJSON output honors clean_strings option" {
 test "PdfDocument CPDFJSON output honors no_stream_data option" {
   let key_other = util_name_for_test("/Other")
   let doc = @pdflite.pdf_document_empty()
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(key_other, PdfInteger(1))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(key_other, PdfInteger(1))]),
     StreamGot(@ascii.encode("payload")),
   )
   let stream_json = try! doc.json_of_object(stream, no_stream_data=true)
@@ -615,10 +615,10 @@ test "PdfDocument CPDFJSON output honors no_stream_data option" {
 ///|
 fn util_cpdfjson_encoded_function_stream_for_test(
   data : String,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   let bytes = @ascii.encode(data)
-  let raw_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let raw_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (util_name_for_test("/FunctionType"), PdfInteger(4)),
       (util_name_for_test("/Length"), PdfInteger(bytes.length())),
     ]),
@@ -681,7 +681,7 @@ test "PdfDocument CPDFJSON parse_content decodes function streams" {
   )
   document.add_object_given_number(
     4,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         util_name_for_test("/Type"),
         PdfNameObject(util_name_for_test("/Catalog")),
@@ -725,12 +725,12 @@ test "PdfDocument CPDFJSON document output honors decompress_streams option" {
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_payload, PdfIndirect(5))]),
+    @syntax.pdf_dictionary([(key_payload, PdfIndirect(5))]),
   )
   doc.add_object_given_number(
     5,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_length, PdfInteger(5)),
         (key_filter, PdfNameObject(util_name_for_test("/ASCIIHexDecode"))),
       ]),
@@ -940,7 +940,7 @@ test "pdf_object_of_json decodes parsed content-stream operation arrays" {
 
 ///|
 test "pdf_object_of_json rejects malformed parsed content operations" {
-  let bad_number : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_object_of_json({
+  let bad_number : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_object_of_json({
       "S": [{}, [[{ "I": 2.0 }, "w"]]],
     },
   )
@@ -948,7 +948,7 @@ test "pdf_object_of_json rejects malformed parsed content operations" {
     fail("expected NumberExpected for malformed parsed content number")
   }
 
-  let bad_shape : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_object_of_json({
+  let bad_shape : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_object_of_json({
       "S": [{}, [["q", "bad"]]],
     },
   )
@@ -1039,7 +1039,7 @@ test "pdf_document_of_json imports cpdf top-level document arrays" {
   guard document.catalog() is PdfDictionary(catalog_entries) else {
     fail("expected imported catalog")
   }
-  let catalog_object : @pdflite.PdfObject = PdfDictionary(catalog_entries)
+  let catalog_object : @syntax.PdfObject = PdfDictionary(catalog_entries)
   @test.assert_eq(
     catalog_object.lookup_immediate(util_name_for_test("/Pages")),
     Some(PdfIndirect(1)),
@@ -1273,14 +1273,14 @@ test "PdfDocument json_of_document precombines split content before parsing" {
   let document = @pdflite.pdf_document_empty()
   document.add_object_given_number(
     2,
-    @pdflite.pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([(key_length, PdfInteger(6))]),
       StreamGot(@ascii.encode("BT /F0")),
     ),
   )
   document.add_object_given_number(
     3,
-    @pdflite.pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([(key_length, PdfInteger(8))]),
       StreamGot(@ascii.encode("36 Tf ET")),
     ),
@@ -1391,7 +1391,7 @@ test "pdf_get_dict_entries emits utf8 string wrappers when requested" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_target, PdfString(@ascii.encode("hello")))]),
+    @syntax.pdf_dictionary([(key_target, PdfString(@ascii.encode("hello")))]),
   )
   let expected : Json = [{ "U": "hello" }]
 
@@ -1411,11 +1411,11 @@ test "pdf_get_dict_entries escapes malformed string and name bytes" {
   )
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([(key_target, PdfString(malformed_string))]),
+    @syntax.pdf_dictionary([(key_target, PdfString(malformed_string))]),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([(key_target, PdfNameObject(malformed_name))]),
+    @syntax.pdf_dictionary([(key_target, PdfNameObject(malformed_name))]),
   )
   let string_json = Json::string(
     try! @ascii.decode(@pdflite.pdf_write_hex_string(malformed_string)),
@@ -1447,11 +1447,11 @@ test "pdf_remove_dict_entry skips malformed stream dictionaries" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_stream(PdfInteger(1), StreamGot(@ascii.encode("x"))),
+    @syntax.pdf_stream(PdfInteger(1), StreamGot(@ascii.encode("x"))),
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([(key_remove, PdfInteger(2))]),
+    @syntax.pdf_dictionary([(key_remove, PdfInteger(2))]),
   )
 
   @pdflite.pdf_remove_dict_entry(doc, key_remove)

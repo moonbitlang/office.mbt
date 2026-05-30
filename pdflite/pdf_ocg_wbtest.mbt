@@ -9,7 +9,7 @@ fn ocg_wb_text(text : String) -> PdfBytes {
 }
 
 ///|
-fn ocg_wb_name_object(text : String) -> PdfObject {
+fn ocg_wb_name_object(text : String) -> @syntax.PdfObject {
   PdfNameObject(ocg_wb_name(text))
 }
 

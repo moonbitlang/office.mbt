@@ -81,12 +81,23 @@ pub(all) enum PdfColourSpace {
     Array[Double]
   )
   PdfLab(PdfTristimulusPoint, PdfTristimulusPoint, Array[Double])
-  PdfICCBased(Int, PdfColourSpace, Array[Double], PdfObject?, PdfObject)
+  PdfICCBased(
+    Int,
+    PdfColourSpace,
+    Array[Double],
+    @syntax.PdfObject?,
+    @syntax.PdfObject
+  )
   PdfIndexed(PdfColourSpace, Array[(Int, Array[Int])])
   PdfPattern
   PdfPatternWithBaseColourSpace(PdfColourSpace)
-  PdfSeparation(PdfName, PdfColourSpace, PdfObject)
-  PdfDeviceN(Array[PdfName], PdfColourSpace, PdfObject, PdfObject)
+  PdfSeparation(PdfName, PdfColourSpace, @syntax.PdfObject)
+  PdfDeviceN(
+    Array[PdfName],
+    PdfColourSpace,
+    @syntax.PdfObject,
+    @syntax.PdfObject
+  )
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -165,7 +176,9 @@ pub fn pdf_colour_space_of_device_name(name : PdfName) -> PdfColourSpace? {
 /// This recognizes device colour-space names, singleton arrays, and
 /// pattern-with-base arrays. Use `PdfDocument::read_colour_space` when resource
 /// lookup, calibrated spaces, ICC profiles, or indexed spaces are needed.
-pub fn pdf_colour_space_of_object(object : PdfObject) -> PdfColourSpace? {
+pub fn pdf_colour_space_of_object(
+  object : @syntax.PdfObject,
+) -> PdfColourSpace? {
   match object {
     PdfNameObject(name) => pdf_colour_space_of_device_name(name)
     PdfArray([PdfNameObject(name), base]) if name == pdf_space_pattern_name =>

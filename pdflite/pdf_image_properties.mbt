@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_image_is_mask(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> Bool {
   match
     self.lookup_direct_or_else(
@@ -21,8 +21,8 @@ fn PdfDocument::pdf_image_is_mask(
 /// reads `/ColorSpace` or `/CS`, resolving named spaces through `resources`.
 pub fn PdfDocument::image_colour_space(
   self : PdfDocument,
-  image : PdfObject,
-  resources : PdfObject,
+  image : @syntax.PdfObject,
+  resources : @syntax.PdfObject,
 ) -> PdfColourSpace raise PdfError {
   if self.pdf_image_is_mask(image) {
     PdfDeviceGray
@@ -47,8 +47,8 @@ pub fn PdfDocument::image_colour_space(
 /// Compatibility alias for `PdfDocument::image_colour_space`.
 pub fn PdfDocument::colspace(
   self : PdfDocument,
-  image : PdfObject,
-  resources : PdfObject,
+  image : @syntax.PdfObject,
+  resources : @syntax.PdfObject,
 ) -> PdfColourSpace raise PdfError {
   self.image_colour_space(image, resources)
 }
@@ -57,8 +57,8 @@ pub fn PdfDocument::colspace(
 /// Compatibility wrapper for `PdfDocument::colspace`.
 pub fn pdf_image_colspace(
   document : PdfDocument,
-  image : PdfObject,
-  resources : PdfObject,
+  image : @syntax.PdfObject,
+  resources : @syntax.PdfObject,
 ) -> PdfColourSpace raise PdfError {
   document.colspace(image, resources)
 }
@@ -70,8 +70,8 @@ pub fn pdf_image_colspace(
 /// is returned to preserve the PDF representation.
 pub fn PdfDocument::image_bits_per_component(
   self : PdfDocument,
-  image : PdfObject,
-) -> PdfObject? {
+  image : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   match
     self.lookup_direct_or_else(
       pdf_image_bits_per_component_key(),
@@ -90,12 +90,18 @@ pub fn PdfDocument::image_bits_per_component(
 
 ///|
 /// Compatibility alias for `PdfDocument::image_bits_per_component`.
-pub fn PdfDocument::bpc(self : PdfDocument, image : PdfObject) -> PdfObject? {
+pub fn PdfDocument::bpc(
+  self : PdfDocument,
+  image : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   self.image_bits_per_component(image)
 }
 
 ///|
 /// Compatibility wrapper for `PdfDocument::bpc`.
-pub fn pdf_image_bpc(document : PdfDocument, image : PdfObject) -> PdfObject? {
+pub fn pdf_image_bpc(
+  document : PdfDocument,
+  image : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   document.bpc(image)
 }

@@ -60,7 +60,7 @@ pub fn pdf_autotags(
 pub fn pdf_eltinfo(
   control : PdfDrawControl,
   key : String,
-  value : PdfObject,
+  value : @syntax.PdfObject,
 ) -> Unit raise PdfError {
   control.add_element_info(key, value)
 }

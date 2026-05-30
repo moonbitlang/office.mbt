@@ -6,8 +6,8 @@ fn page_change_name_for_test(text : String) -> @pdflite.PdfName {
 ///|
 fn page_change_assert_indirect_object_for_test(
   doc : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
-  expected : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
+  expected : @syntax.PdfObject,
 ) -> Unit raise {
   match object {
     PdfIndirect(number) =>
@@ -28,26 +28,26 @@ fn page_change_hello_ops_for_test() -> Array[@content.PdfContentOp] {
 }
 
 ///|
-fn page_change_hello_resources_for_test() -> @pdflite.PdfObject {
+fn page_change_hello_resources_for_test() -> @syntax.PdfObject {
   let key_font = page_change_name_for_test("/Font")
   let key_type = page_change_name_for_test("/Type")
   let key_subtype = page_change_name_for_test("/Subtype")
   let key_basefont = page_change_name_for_test("/BaseFont")
-  let font = @pdflite.pdf_dictionary([
+  let font = @syntax.pdf_dictionary([
     (key_type, PdfNameObject(page_change_name_for_test("/Font"))),
     (key_subtype, PdfNameObject(page_change_name_for_test("/Type1"))),
     (key_basefont, PdfNameObject(page_change_name_for_test("/Times-Italic"))),
   ])
-  @pdflite.pdf_dictionary([
+  @syntax.pdf_dictionary([
     (
       key_font,
-      @pdflite.pdf_dictionary([(page_change_name_for_test("/F0"), font)]),
+      @syntax.pdf_dictionary([(page_change_name_for_test("/F0"), font)]),
     ),
   ])
 }
 
 ///|
-fn page_change_index_mediabox_for_test(index : Int) -> @pdflite.PdfObject {
+fn page_change_index_mediabox_for_test(index : Int) -> @syntax.PdfObject {
   PdfArray([
     PdfInteger(index),
     PdfInteger(0),
@@ -66,10 +66,10 @@ fn page_change_indexed_blank_for_test(index : Int) -> @page.PdfPage {
 
 ///|
 fn page_change_xobject_resources_for_test(
-  entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
-    (page_change_name_for_test("/XObject"), @pdflite.pdf_dictionary(entries)),
+  entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
+    (page_change_name_for_test("/XObject"), @syntax.pdf_dictionary(entries)),
   ])
 }
 
@@ -92,7 +92,7 @@ fn page_change_draft_substitute_ops_for_test() -> Array[@content.PdfContentOp] {
 ///|
 fn page_change_draft_xobject_is_image_for_test(
   doc : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   name : @pdflite.PdfName,
 ) -> Bool {
   match doc.lookup_direct(page_change_name_for_test("/XObject"), resources) {
@@ -114,18 +114,18 @@ fn page_change_draft_xobject_is_image_for_test(
 ///|
 fn page_change_draft_remove_image_xobjects_for_test(
   doc : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   let key_xobject = page_change_name_for_test("/XObject")
   match resources {
     PdfDictionary(entries) => {
-      let retained : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+      let retained : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (key, value) = entry
         if key == key_xobject {
           match doc.direct(value) {
             PdfDictionary(xobjects) => {
-              let kept : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = []
+              let kept : Array[(@pdflite.PdfName, @syntax.PdfObject)] = []
               for xobject_entry in xobjects {
                 let (name, _) = xobject_entry
                 if !page_change_draft_xobject_is_image_for_test(
@@ -151,7 +151,7 @@ fn page_change_draft_remove_image_xobjects_for_test(
 ///|
 fn page_change_draft_ops_for_test(
   doc : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[@content.PdfContentOp] {
   let output : Array[@content.PdfContentOp] = []
@@ -214,7 +214,7 @@ fn page_change_draft_document_for_test(
 ///|
 fn page_change_destination_entries_for_test(
   doc : @pdflite.PdfDocument,
-) -> Array[(@pdflite.PdfBytes, @pdflite.PdfObject)] {
+) -> Array[(@pdflite.PdfBytes, @syntax.PdfObject)] {
   match
     doc.lookup_chain(doc.lookup_object_or_null(doc.root()), [
       page_change_name_for_test("/Names"),
@@ -229,7 +229,7 @@ fn page_change_destination_entries_for_test(
 fn page_change_catalog_destination_for_test(
   doc : @pdflite.PdfDocument,
   name : String,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   match
     doc
     .lookup_object_or_null(doc.root())
@@ -301,7 +301,7 @@ test "PdfDocument change_pages preserves document metadata and trailer entries" 
   ignore(
     try! doc.add_root(page_root, [(key_lang, PdfString(@ascii.encode("en-US")))]),
   )
-  let document_id : @pdflite.PdfObject = PdfArray([
+  let document_id : @syntax.PdfObject = PdfArray([
     PdfString(@ascii.encode("first-id")),
     PdfString(@ascii.encode("second-id")),
   ])
@@ -377,8 +377,8 @@ test "pdfdraft-style image replacement removes image xobjects and roundtrips" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     7,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_change_name_for_test("/Image"))),
         (key_length, PdfInteger(0)),
       ]),
@@ -387,8 +387,8 @@ test "pdfdraft-style image replacement removes image xobjects and roundtrips" {
   )
   doc.add_object_given_number(
     8,
-    @pdflite.pdf_stream(
-      @pdflite.pdf_dictionary([
+    @syntax.pdf_stream(
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_change_name_for_test("/Form"))),
         (key_length, PdfInteger(3)),
       ]),
@@ -576,7 +576,7 @@ test "PdfDocument change_pages transforms link annotations and open action" {
     PdfArray([
       PdfIndirect(direct_annotation_number),
       PdfIndirect(action_annotation_number),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(type_link)),
         (
           key_dest,
@@ -589,11 +589,11 @@ test "PdfDocument change_pages transforms link annotations and open action" {
           ]),
         ),
       ]),
-      @pdflite.pdf_dictionary([
+      @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(type_link)),
         (
           key_action,
-          @pdflite.pdf_dictionary([
+          @syntax.pdf_dictionary([
             (key_s, PdfNameObject(type_goto)),
             (
               key_d,
@@ -612,7 +612,7 @@ test "PdfDocument change_pages transforms link annotations and open action" {
   )
   doc.add_object_given_number(
     direct_annotation_number,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(type_link)),
       (
         key_dest,
@@ -628,11 +628,11 @@ test "PdfDocument change_pages transforms link annotations and open action" {
   )
   doc.add_object_given_number(
     action_annotation_number,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(type_link)),
       (
         key_action,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (key_s, PdfNameObject(type_goto)),
           (
             key_d,
@@ -814,7 +814,7 @@ test "PdfDocument change_pages leaves full-page fit destinations untransformed" 
   )
   doc.add_object_given_number(
     direct_annotation_number,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(type_link)),
       (
         key_dest,
@@ -824,11 +824,11 @@ test "PdfDocument change_pages leaves full-page fit destinations untransformed" 
   )
   doc.add_object_given_number(
     action_annotation_number,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(type_link)),
       (
         key_action,
-        @pdflite.pdf_dictionary([
+        @syntax.pdf_dictionary([
           (key_s, PdfNameObject(type_goto)),
           (
             key_d,
@@ -939,7 +939,7 @@ test "PdfDocument change_pages tolerates malformed matrix destinations" {
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
-  let bad_destination : @pdflite.PdfObject = PdfArray([
+  let bad_destination : @syntax.PdfObject = PdfArray([
     PdfIndirect(old_numbers[0]),
     PdfNameObject(type_fitr),
     PdfNameObject(bad_coordinate),
@@ -955,7 +955,7 @@ test "PdfDocument change_pages tolerates malformed matrix destinations" {
   )
   doc.add_object_given_number(
     annotation_number,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_subtype, PdfNameObject(type_link)),
       (key_dest, bad_destination),
     ]),
@@ -972,7 +972,7 @@ test "PdfDocument change_pages tolerates malformed matrix destinations" {
     matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
-  let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
+  let renumbered_bad_destination : @syntax.PdfObject = PdfArray([
     PdfIndirect(new_numbers[0]),
     PdfNameObject(type_fitr),
     PdfNameObject(bad_coordinate),
@@ -1010,7 +1010,7 @@ test "PdfDocument change_pages tolerates malformed action matrix destinations" {
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
-  let bad_destination : @pdflite.PdfObject = PdfArray([
+  let bad_destination : @syntax.PdfObject = PdfArray([
     PdfIndirect(old_numbers[0]),
     PdfNameObject(type_fitr),
     PdfNameObject(bad_coordinate),
@@ -1018,11 +1018,11 @@ test "PdfDocument change_pages tolerates malformed action matrix destinations" {
     PdfInteger(3),
     PdfInteger(4),
   ])
-  let bad_action : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+  let bad_action : @syntax.PdfObject = @syntax.pdf_dictionary([
     (key_s, PdfNameObject(type_goto)),
     (key_d, bad_destination),
   ])
-  let bad_annotation : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+  let bad_annotation : @syntax.PdfObject = @syntax.pdf_dictionary([
     (key_subtype, PdfNameObject(type_link)),
     (key_action, bad_action),
   ])
@@ -1044,7 +1044,7 @@ test "PdfDocument change_pages tolerates malformed action matrix destinations" {
     matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
-  let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
+  let renumbered_bad_destination : @syntax.PdfObject = PdfArray([
     PdfIndirect(new_numbers[0]),
     PdfNameObject(type_fitr),
     PdfNameObject(bad_coordinate),
@@ -1052,11 +1052,11 @@ test "PdfDocument change_pages tolerates malformed action matrix destinations" {
     PdfInteger(3),
     PdfInteger(4),
   ])
-  let renumbered_bad_action : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+  let renumbered_bad_action : @syntax.PdfObject = @syntax.pdf_dictionary([
     (key_s, PdfNameObject(type_goto)),
     (key_d, renumbered_bad_destination),
   ])
-  let renumbered_bad_annotation : @pdflite.PdfObject = @pdflite.pdf_dictionary([
+  let renumbered_bad_annotation : @syntax.PdfObject = @syntax.pdf_dictionary([
     (key_subtype, PdfNameObject(type_link)),
     (key_action, renumbered_bad_action),
   ])
@@ -1086,7 +1086,7 @@ test "PdfDocument change_pages tolerates malformed catalog matrix destinations" 
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
-  let bad_destination : @pdflite.PdfObject = PdfArray([
+  let bad_destination : @syntax.PdfObject = PdfArray([
     PdfIndirect(old_numbers[0]),
     PdfNameObject(type_fitr),
     PdfNameObject(bad_coordinate),
@@ -1116,7 +1116,7 @@ test "PdfDocument change_pages tolerates malformed catalog matrix destinations" 
     matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
-  let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
+  let renumbered_bad_destination : @syntax.PdfObject = PdfArray([
     PdfIndirect(new_numbers[0]),
     PdfNameObject(type_fitr),
     PdfNameObject(bad_coordinate),

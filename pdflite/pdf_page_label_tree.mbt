@@ -1,6 +1,6 @@
 ///|
 fn pdf_page_label_style_of_object(
-  object : PdfObject?,
+  object : @syntax.PdfObject?,
 ) -> @label.PdfPageLabelStyle {
   match object {
     Some(PdfNameObject(name)) if name == pdf_page_label_style_decimal_name() =>
@@ -18,7 +18,9 @@ fn pdf_page_label_style_of_object(
 }
 
 ///|
-fn pdf_page_label_style_object(style : @label.PdfPageLabelStyle) -> PdfObject? {
+fn pdf_page_label_style_object(
+  style : @label.PdfPageLabelStyle,
+) -> @syntax.PdfObject? {
   match style {
     PageLabelDecimalArabic =>
       Some(PdfNameObject(pdf_page_label_style_decimal_name()))
@@ -37,15 +39,15 @@ fn pdf_page_label_style_object(style : @label.PdfPageLabelStyle) -> PdfObject? {
 ///|
 fn PdfDocument::pdf_page_label_raw_entries(
   self : PdfDocument,
-  tree : PdfObject,
-) -> Array[(PdfObject, PdfObject)] raise PdfError {
+  tree : @syntax.PdfObject,
+) -> Array[(@syntax.PdfObject, @syntax.PdfObject)] raise PdfError {
   let direct = self.lookup_direct_or_else(
     pdf_tree_names_key(),
     pdf_tree_nums_key(),
     tree,
   )
   let kids_object = self.lookup_direct(pdf_tree_kids_key(), tree)
-  let output : Array[(PdfObject, PdfObject)] = Array::new(
+  let output : Array[(@syntax.PdfObject, @syntax.PdfObject)] = Array::new(
     capacity=match direct {
       Some(PdfArray(items)) => items.length() / 2
       _ =>
@@ -77,8 +79,8 @@ fn PdfDocument::pdf_page_label_raw_entries(
 ///|
 fn PdfDocument::pdf_page_label_of_range(
   self : PdfDocument,
-  start_page_object : PdfObject,
-  object : PdfObject,
+  start_page_object : @syntax.PdfObject,
+  object : @syntax.PdfObject,
 ) -> @label.PdfPageLabel {
   {
     label_style: pdf_page_label_style_of_object(
@@ -102,8 +104,8 @@ fn PdfDocument::pdf_page_label_of_range(
 }
 
 ///|
-fn pdf_page_label_object(label : @label.PdfPageLabel) -> PdfObject {
-  let entries : Array[(PdfName, PdfObject)] = Array::new(capacity=3)
+fn pdf_page_label_object(label : @label.PdfPageLabel) -> @syntax.PdfObject {
+  let entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(capacity=3)
   match pdf_page_label_style_object(label.label_style) {
     Some(style) => entries.push((pdf_page_label_style_key(), style))
     None => ()
@@ -124,7 +126,7 @@ fn pdf_page_label_object(label : @label.PdfPageLabel) -> PdfObject {
 ///|
 fn PdfDocument::pdf_page_label_catalog(
   self : PdfDocument,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   self.catalog()
 }
 
@@ -214,7 +216,9 @@ pub fn PdfDocument::write_page_labels(
   } else {
     let root = self.pdf_page_label_catalog()
     let pdf = self.copy()
-    let entries : Array[(Int, PdfObject)] = Array::new(capacity=labels.length())
+    let entries : Array[(Int, @syntax.PdfObject)] = Array::new(
+      capacity=labels.length(),
+    )
     for label in labels {
       entries.push((label.start_page - 1, pdf_page_label_object(label)))
     }

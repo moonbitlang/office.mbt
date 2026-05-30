@@ -206,7 +206,7 @@ fn pdf_merge_parent_tree_key() -> PdfName {
 ///|
 fn PdfDocument::pdf_merge_catalog(
   self : PdfDocument,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   self.catalog()
 }
 

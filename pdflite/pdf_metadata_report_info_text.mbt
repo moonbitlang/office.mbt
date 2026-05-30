@@ -100,11 +100,11 @@ pub fn PdfDocument::info_blob(
       "False"
     },
   )
-  let mediaboxes : Array[PdfObject?] = []
-  let cropboxes : Array[PdfObject?] = []
-  let bleedboxes : Array[PdfObject?] = []
-  let trimboxes : Array[PdfObject?] = []
-  let artboxes : Array[PdfObject?] = []
+  let mediaboxes : Array[@syntax.PdfObject?] = []
+  let cropboxes : Array[@syntax.PdfObject?] = []
+  let bleedboxes : Array[@syntax.PdfObject?] = []
+  let trimboxes : Array[@syntax.PdfObject?] = []
+  let artboxes : Array[@syntax.PdfObject?] = []
   for page in pages {
     mediaboxes.push(Some(page.mediabox))
     cropboxes.push(self.lookup_direct(pdf_metadata_cropbox(), page.rest))

@@ -3,7 +3,7 @@ fn pdf_crypt_saved_arc4_dictionary(
   values : PdfEncryptionValues,
   key_length_bits : Int,
   revision : Int,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   if revision == 4 {
     let std_cf = pdf_crypt_std_cf_name
     PdfDictionary([
@@ -35,7 +35,7 @@ fn pdf_crypt_saved_arc4_dictionary(
       (pdf_crypt_stmf_name, PdfNameObject(std_cf)),
     ])
   } else {
-    let entries : Array[(PdfName, PdfObject)] = [
+    let entries : Array[(PdfName, @syntax.PdfObject)] = [
       (pdf_crypt_filter_name, PdfNameObject(pdf_crypt_standard_name)),
       (
         pdf_crypt_v_name,
@@ -54,7 +54,9 @@ fn pdf_crypt_saved_arc4_dictionary(
 }
 
 ///|
-fn pdf_crypt_saved_aesv2_dictionary(values : PdfEncryptionValues) -> PdfObject {
+fn pdf_crypt_saved_aesv2_dictionary(
+  values : PdfEncryptionValues,
+) -> @syntax.PdfObject {
   let std_cf = pdf_crypt_std_cf_name
   PdfDictionary([
     (pdf_crypt_filter_name, PdfNameObject(pdf_crypt_standard_name)),
@@ -86,7 +88,7 @@ fn pdf_crypt_saved_aesv2_dictionary(values : PdfEncryptionValues) -> PdfObject {
 ///|
 fn pdf_crypt_saved_aesv3_dictionary(
   values : PdfEncryptionValues,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let std_cf = pdf_crypt_std_cf_name
   let revision = match values.crypt_type {
     PdfCryptAESV3(true) => 6

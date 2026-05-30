@@ -201,7 +201,9 @@ fn pdf_content_inline_lzw_name() -> PdfName {
 }
 
 ///|
-fn pdf_content_inline_filter_value(dictionary : PdfObject) -> PdfObject? {
+fn pdf_content_inline_filter_value(
+  dictionary : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   match dictionary.lookup_immediate(pdf_content_inline_f_name()) {
     Some(value) => Some(value)
     None => dictionary.lookup_immediate(pdf_content_inline_filter_name())
@@ -210,10 +212,10 @@ fn pdf_content_inline_filter_value(dictionary : PdfObject) -> PdfObject? {
 
 ///|
 fn pdf_content_inline_lookup_orelse(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   first : PdfName,
   second : PdfName,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   match dictionary.lookup_immediate(first) {
     Some(value) => Some(value)
     None => dictionary.lookup_immediate(second)
@@ -222,7 +224,7 @@ fn pdf_content_inline_lookup_orelse(
 
 ///|
 fn pdf_content_inline_int_orelse(
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
   first : PdfName,
   second : PdfName,
 ) -> Int? {
@@ -233,7 +235,7 @@ fn pdf_content_inline_int_orelse(
 }
 
 ///|
-fn pdf_content_inline_image_mask(dictionary : PdfObject) -> Bool {
+fn pdf_content_inline_image_mask(dictionary : @syntax.PdfObject) -> Bool {
   match
     pdf_content_inline_lookup_orelse(
       dictionary, pdf_content_inline_im_key_name, pdf_content_inline_image_mask_key_name,
@@ -246,7 +248,7 @@ fn pdf_content_inline_image_mask(dictionary : PdfObject) -> Bool {
 ///|
 fn pdf_content_inline_components(
   colour_space_components : PdfContentColourSpaceComponents?,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Int? raise PdfError {
   match
     pdf_content_inline_lookup_orelse(
@@ -279,7 +281,9 @@ fn pdf_content_inline_components(
 }
 
 ///|
-fn pdf_content_inline_bits_per_component(dictionary : PdfObject) -> Int? {
+fn pdf_content_inline_bits_per_component(
+  dictionary : @syntax.PdfObject,
+) -> Int? {
   match
     pdf_content_inline_int_orelse(
       dictionary, pdf_content_inline_bpc_key_name, pdf_content_inline_bits_per_component_key_name,
@@ -291,14 +295,16 @@ fn pdf_content_inline_bits_per_component(dictionary : PdfObject) -> Int? {
 }
 
 ///|
-fn pdf_content_inline_declared_data_length(dictionary : PdfObject) -> Int? {
+fn pdf_content_inline_declared_data_length(
+  dictionary : @syntax.PdfObject,
+) -> Int? {
   pdf_content_inline_int_orelse(
     dictionary, pdf_content_inline_l_key_name, pdf_content_length_key_name,
   )
 }
 
 ///|
-fn pdf_content_inline_filter_is_empty(dictionary : PdfObject) -> Bool {
+fn pdf_content_inline_filter_is_empty(dictionary : @syntax.PdfObject) -> Bool {
   match pdf_content_inline_filter_value(dictionary) {
     None | Some(PdfArray([])) => true
     _ => false
@@ -308,7 +314,7 @@ fn pdf_content_inline_filter_is_empty(dictionary : PdfObject) -> Bool {
 ///|
 fn pdf_content_inline_image_data_length(
   colour_space_components : PdfContentColourSpaceComponents?,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Int? raise PdfError {
   if !pdf_content_inline_filter_is_empty(dictionary) {
     pdf_content_inline_declared_data_length(dictionary)

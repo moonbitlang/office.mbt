@@ -93,10 +93,10 @@ fn PdfEncryptionValues::decrypt_single_stream_with_file_key(
   self : PdfEncryptionValues,
   object_number : Int,
   generation : Int,
-  stream : PdfObject,
+  stream : @syntax.PdfObject,
   file_key : BytesView,
   no_encrypt_metadata : Bool,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let no_encrypt_metadata = self.effective_no_encrypt_metadata(
     no_encrypt_metadata,
   )
@@ -124,11 +124,11 @@ pub fn PdfDocument::decrypt_single_stream(
   self : PdfDocument,
   object_number : Int,
   generation : Int,
-  stream : PdfObject,
+  stream : @syntax.PdfObject,
   user_password? : BytesView? = None,
   owner_password? : BytesView? = None,
   no_encrypt_metadata? : Bool = false,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   if !self.is_encrypted() {
     Some(stream)
   } else {

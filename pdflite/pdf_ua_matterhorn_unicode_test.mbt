@@ -87,7 +87,7 @@ test "PdfDocument test_matterhorn_json checks character code Unicode mapping" {
     ua_matterhorn_font_for_test("/Type1", "/WithToUnicode", None, None, extras=[
       (
         ua_matterhorn_name_for_test("/ToUnicode"),
-        @pdflite.pdf_stream(PdfDictionary([]), StreamGot(b"")),
+        @syntax.pdf_stream(PdfDictionary([]), StreamGot(b"")),
       ),
     ]),
   )

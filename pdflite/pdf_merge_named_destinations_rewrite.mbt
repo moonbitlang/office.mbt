@@ -1,12 +1,12 @@
 ///|
 fn pdf_merge_rewrite_destination_callsite_object(
-  object : PdfObject,
+  object : @syntax.PdfObject,
   name_lookup : PdfMergeDestinationNameLookup,
   catalog_name_lookup : PdfMergeCatalogDestinationNameLookup,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match object {
     PdfArray(items) => {
-      let output : Array[PdfObject] = []
+      let output : Array[@syntax.PdfObject] = []
       for item in items {
         output.push(
           pdf_merge_rewrite_destination_callsite_object(
@@ -17,7 +17,7 @@ fn pdf_merge_rewrite_destination_callsite_object(
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (key, value) = entry
         output.push(

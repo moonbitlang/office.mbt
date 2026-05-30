@@ -1,5 +1,7 @@
 ///|
-fn pdf_metadata_xml_value_of_object(value : PdfObject) -> String raise PdfError {
+fn pdf_metadata_xml_value_of_object(
+  value : @syntax.PdfObject,
+) -> String raise PdfError {
   match value {
     PdfString(bytes) =>
       @utf8.decode(pdf_utf8_of_pdfdocstring(bytes)) catch {
@@ -12,7 +14,9 @@ fn pdf_metadata_xml_value_of_object(value : PdfObject) -> String raise PdfError 
 }
 
 ///|
-fn pdf_metadata_xmp_date_of_object(value : PdfObject) -> String raise PdfError {
+fn pdf_metadata_xmp_date_of_object(
+  value : @syntax.PdfObject,
+) -> String raise PdfError {
   match value {
     PdfString(bytes) =>
       pdf_metadata_xmp_date(
@@ -27,7 +31,7 @@ fn pdf_metadata_xmp_date_of_object(value : PdfObject) -> String raise PdfError {
 ///|
 fn pdf_metadata_info_xmp_changes(
   key : PdfName,
-  value : PdfObject,
+  value : @syntax.PdfObject,
 ) -> (Array[(String, String)], String) raise PdfError {
   match pdf_metadata_name_with_slash(key) {
     Some("/Producer") =>

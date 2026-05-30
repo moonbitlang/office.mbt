@@ -14,7 +14,7 @@ fn pdf_spot_separation() -> PdfName {
 ///|
 fn pdf_spot_colour_of_object(
   document : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> PdfName? {
   match object {
     PdfArray([PdfNameObject(kind), colourant, ..]) if kind ==

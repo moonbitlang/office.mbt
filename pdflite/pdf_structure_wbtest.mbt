@@ -15,7 +15,7 @@ test "structure parent tree helpers cover absent roots and direct roots" {
   no_parent_tree.set_root(1)
   no_parent_tree.add_object_given_number(
     1,
-    pdf_dictionary([(key_struct_tree_root, PdfDictionary([]))]),
+    @syntax.pdf_dictionary([(key_struct_tree_root, PdfDictionary([]))]),
   )
   @test.assert_eq(no_parent_tree.pdf_structure_root_parent_tree_entries(), [])
 
@@ -23,7 +23,7 @@ test "structure parent tree helpers cover absent roots and direct roots" {
   direct_root.set_root(1)
   direct_root.add_object_given_number(
     1,
-    pdf_dictionary([(key_struct_tree_root, PdfDictionary([]))]),
+    @syntax.pdf_dictionary([(key_struct_tree_root, PdfDictionary([]))]),
   )
   try! direct_root.pdf_structure_replace_parent_tree(
     direct_root.build_number_tree([(0, PdfInteger(7))]),

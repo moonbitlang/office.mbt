@@ -12,19 +12,21 @@ fn pdf_tree_group_count(length : Int) -> Int {
 ///|
 fn PdfDocument::pdf_tree_build_name_tree_range(
   self : PdfDocument,
-  entries : ArrayView[(PdfBytes, PdfObject)],
+  entries : ArrayView[(PdfBytes, @syntax.PdfObject)],
   start : Int,
   stop : Int,
   is_root : Bool,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   if stop - start <= 10 {
-    let items : Array[PdfObject] = Array::new(capacity=(stop - start) * 2)
+    let items : Array[@syntax.PdfObject] = Array::new(
+      capacity=(stop - start) * 2,
+    )
     for i in start..<stop {
       items.push(PdfString(entries[i].0))
       items.push(entries[i].1)
     }
     let dict_capacity = if is_root { 1 } else { 2 }
-    let dict_entries : Array[(PdfName, PdfObject)] = Array::new(
+    let dict_entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
       capacity=dict_capacity,
     )
     dict_entries.push((pdf_tree_names_key(), PdfArray(items)))
@@ -40,7 +42,7 @@ fn PdfDocument::pdf_tree_build_name_tree_range(
   } else {
     let count = stop - start
     let groups = pdf_tree_group_count(count)
-    let kids : Array[PdfObject] = Array::new(capacity=groups)
+    let kids : Array[@syntax.PdfObject] = Array::new(capacity=groups)
     for group in 0..<groups {
       let child_start = start + group * count / groups
       let child_stop = start + (group + 1) * count / groups
@@ -50,7 +52,7 @@ fn PdfDocument::pdf_tree_build_name_tree_range(
       kids.push(PdfIndirect(self.add_object(child)))
     }
     let dict_capacity = if is_root { 1 } else { 2 }
-    let dict_entries : Array[(PdfName, PdfObject)] = Array::new(
+    let dict_entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
       capacity=dict_capacity,
     )
     dict_entries.push((pdf_tree_kids_key(), PdfArray(kids)))
@@ -74,8 +76,8 @@ fn PdfDocument::pdf_tree_build_name_tree_range(
 /// entries, allocating child objects in `self` as needed.
 pub fn PdfDocument::build_name_tree(
   self : PdfDocument,
-  entries : ArrayView[(PdfBytes, PdfObject)],
-) -> PdfObject {
+  entries : ArrayView[(PdfBytes, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
   if entries.length() == 0 {
     PdfDictionary([(pdf_tree_names_key(), PdfArray([]))])
   } else {
@@ -93,10 +95,10 @@ pub fn PdfDocument::build_name_tree(
 pub fn pdf_build_name_tree(
   is_number : Bool,
   document : PdfDocument,
-  entries : ArrayView[(PdfBytes, PdfObject)],
-) -> PdfObject raise PdfError {
+  entries : ArrayView[(PdfBytes, @syntax.PdfObject)],
+) -> @syntax.PdfObject raise PdfError {
   if is_number {
-    let number_entries : Array[(Int, PdfObject)] = Array::new(
+    let number_entries : Array[(Int, @syntax.PdfObject)] = Array::new(
       capacity=entries.length(),
     )
     for entry in entries {
@@ -111,19 +113,21 @@ pub fn pdf_build_name_tree(
 ///|
 fn PdfDocument::pdf_tree_build_number_tree_range(
   self : PdfDocument,
-  entries : ArrayView[(Int, PdfObject)],
+  entries : ArrayView[(Int, @syntax.PdfObject)],
   start : Int,
   stop : Int,
   is_root : Bool,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   if stop - start <= 10 {
-    let items : Array[PdfObject] = Array::new(capacity=(stop - start) * 2)
+    let items : Array[@syntax.PdfObject] = Array::new(
+      capacity=(stop - start) * 2,
+    )
     for i in start..<stop {
       items.push(PdfInteger(entries[i].0))
       items.push(entries[i].1)
     }
     let dict_capacity = if is_root { 1 } else { 2 }
-    let dict_entries : Array[(PdfName, PdfObject)] = Array::new(
+    let dict_entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
       capacity=dict_capacity,
     )
     dict_entries.push((pdf_tree_nums_key(), PdfArray(items)))
@@ -142,7 +146,7 @@ fn PdfDocument::pdf_tree_build_number_tree_range(
   } else {
     let count = stop - start
     let groups = pdf_tree_group_count(count)
-    let kids : Array[PdfObject] = Array::new(capacity=groups)
+    let kids : Array[@syntax.PdfObject] = Array::new(capacity=groups)
     for group in 0..<groups {
       let child_start = start + group * count / groups
       let child_stop = start + (group + 1) * count / groups
@@ -152,7 +156,7 @@ fn PdfDocument::pdf_tree_build_number_tree_range(
       kids.push(PdfIndirect(self.add_object(child)))
     }
     let dict_capacity = if is_root { 1 } else { 2 }
-    let dict_entries : Array[(PdfName, PdfObject)] = Array::new(
+    let dict_entries : Array[(PdfName, @syntax.PdfObject)] = Array::new(
       capacity=dict_capacity,
     )
     dict_entries.push((pdf_tree_kids_key(), PdfArray(kids)))
@@ -179,8 +183,8 @@ fn PdfDocument::pdf_tree_build_number_tree_range(
 /// entries, allocating child objects in `self` as needed.
 pub fn PdfDocument::build_number_tree(
   self : PdfDocument,
-  entries : ArrayView[(Int, PdfObject)],
-) -> PdfObject {
+  entries : ArrayView[(Int, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
   if entries.length() == 0 {
     PdfDictionary([(pdf_tree_nums_key(), PdfArray([]))])
   } else {

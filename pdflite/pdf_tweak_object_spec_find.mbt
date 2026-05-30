@@ -1,10 +1,10 @@
 ///|
 fn PdfDocument::pdf_tweak_find_chained_object(
   self : PdfDocument,
-  start : PdfObject,
+  start : @syntax.PdfObject,
   chain : ArrayView[PdfName],
   source : String,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   match self.lookup_chain(start, chain) {
     Some(object) => object
     None => raise BadPageSpecification(source)
@@ -17,7 +17,7 @@ fn PdfDocument::pdf_tweak_find_numbered_object(
   number : Int,
   chain : ArrayView[PdfName],
   source : String,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let object = if number == 0 {
     self.trailer_dict()
   } else {

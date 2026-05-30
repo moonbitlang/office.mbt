@@ -32,10 +32,10 @@ fn ccitt_public_wrap_view_for_test(
 ///|
 fn ccitt_public_decode_stream_for_test(
   encoded : @pdflite.PdfBytes,
-  decodeparms_entries : ArrayView[(@pdflite.PdfName, @pdflite.PdfObject)],
+  decodeparms_entries : ArrayView[(@pdflite.PdfName, @syntax.PdfObject)],
 ) -> @pdflite.PdfBytes raise {
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (ccitt_public_name_for_test("/Length"), PdfInteger(encoded.length())),
       (
         ccitt_public_name_for_test("/Filter"),
@@ -43,7 +43,7 @@ fn ccitt_public_decode_stream_for_test(
       ),
       (
         ccitt_public_name_for_test("/DecodeParms"),
-        @pdflite.pdf_dictionary(decodeparms_entries),
+        @syntax.pdf_dictionary(decodeparms_entries),
       ),
     ]),
     StreamGot(encoded),

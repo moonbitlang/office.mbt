@@ -50,12 +50,12 @@ fn pdf_generate_current_id_bytes(path : String) -> PdfBytes {
 }
 
 ///|
-fn pdf_id_object(digest : PdfBytes) -> PdfObject {
+fn pdf_id_object(digest : PdfBytes) -> @syntax.PdfObject {
   PdfArray([PdfString(digest), PdfString(digest)])
 }
 
 ///|
-fn pdf_generate_current_id(path : String) -> PdfObject {
+fn pdf_generate_current_id(path : String) -> @syntax.PdfObject {
   pdf_id_object(pdf_generate_current_id_bytes(path))
 }
 
@@ -66,7 +66,10 @@ fn pdf_generate_current_id(path : String) -> PdfObject {
 /// The digest construction follows CamlPDF's path-plus-time behavior. When
 /// `CAMLPDF_REPRODUCIBLE_IDS=true`, the seed is fixed so tests and
 /// reproducible builds can produce stable IDs.
-pub fn pdf_generate_id(path : String, get_time : () -> Double) -> PdfObject {
+pub fn pdf_generate_id(
+  path : String,
+  get_time : () -> Double,
+) -> @syntax.PdfObject {
   let digest = pdf_generate_id_bytes_from_text(path, fn() {
     pdf_id_ocaml_string_of_float(get_time())
   })

@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_page_destination_was_nulled(
   self : PdfDocument,
-  destination : PdfObject,
+  destination : @syntax.PdfObject,
 ) -> Bool {
   match self.direct(destination) {
     PdfArray(items) if items.length() > 0 =>
@@ -17,10 +17,10 @@ fn PdfDocument::pdf_page_destination_was_nulled(
 ///|
 fn PdfDocument::pdf_page_live_destinations(
   self : PdfDocument,
-  dests_tree : PdfObject,
-) -> Array[(PdfBytes, PdfObject)] {
+  dests_tree : @syntax.PdfObject,
+) -> Array[(PdfBytes, @syntax.PdfObject)] {
   let entries = self.read_name_tree(dests_tree)
-  let output : Array[(PdfBytes, PdfObject)] = Array::new(
+  let output : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -35,11 +35,11 @@ fn PdfDocument::pdf_page_live_destinations(
 ///|
 fn PdfDocument::pdf_page_live_catalog_destinations(
   self : PdfDocument,
-  dests : PdfObject,
-) -> PdfObject {
+  dests : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match dests {
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = Array::new(
+      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {

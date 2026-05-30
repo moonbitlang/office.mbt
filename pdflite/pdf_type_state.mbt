@@ -65,7 +65,7 @@ fn PdfTypeTypesetState::write_destination_annotations(
   match self.dest {
     Some((destination, contents)) =>
       if self.dest_rectangles.length() > 0 {
-        let annotations : Array[PdfObject] = []
+        let annotations : Array[@syntax.PdfObject] = []
         let mut index = self.dest_rectangles.length()
         while index > 0 {
           index -= 1

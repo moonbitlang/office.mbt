@@ -18,12 +18,12 @@ pub(all) struct PdfContentOperatorFrame {
   overprint_stroke : Bool
   overprint_non_stroke : Bool
   overprint_mode : Int
-  black_generation : PdfObject
-  undercolour_removal : PdfObject
-  transfer : PdfObject
-  halftone : PdfObject
-  blend_mode : PdfObject
-  soft_mask : PdfObject
+  black_generation : @syntax.PdfObject
+  undercolour_removal : @syntax.PdfObject
+  transfer : @syntax.PdfObject
+  halftone : @syntax.PdfObject
+  blend_mode : @syntax.PdfObject
+  soft_mask : @syntax.PdfObject
   black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
@@ -52,12 +52,12 @@ pub(all) struct PdfContentOperatorState {
   overprint_stroke : Bool
   overprint_non_stroke : Bool
   overprint_mode : Int
-  black_generation : PdfObject
-  undercolour_removal : PdfObject
-  transfer : PdfObject
-  halftone : PdfObject
-  blend_mode : PdfObject
-  soft_mask : PdfObject
+  black_generation : @syntax.PdfObject
+  undercolour_removal : @syntax.PdfObject
+  transfer : @syntax.PdfObject
+  halftone : @syntax.PdfObject
+  blend_mode : @syntax.PdfObject
+  soft_mask : @syntax.PdfObject
   black_point_compensation : String
   marked_content_point : PdfContentMarkedContent?
   marked_content : Array[PdfContentMarkedContent]
@@ -86,7 +86,7 @@ pub(all) struct PdfContentOperatorResourceResult {
 /// operators.
 pub(all) struct PdfContentMarkedContent {
   tag : String
-  properties : PdfObject?
+  properties : @syntax.PdfObject?
 } derive(Debug, Eq, ToJson)
 
 ///|

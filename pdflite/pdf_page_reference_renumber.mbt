@@ -30,20 +30,22 @@ fn PdfPageReferenceMap::changed_reference(
 
 ///|
 fn pdf_page_renumber_object_with_map(
-  object : PdfObject,
+  object : @syntax.PdfObject,
   changes : PdfPageReferenceMap,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   match object {
     PdfIndirect(number) => PdfIndirect(changes.changed_reference(number))
     PdfArray(items) => {
-      let output : Array[PdfObject] = Array::new(capacity=items.length())
+      let output : Array[@syntax.PdfObject] = Array::new(
+        capacity=items.length(),
+      )
       for item in items {
         output.push(pdf_page_renumber_object_with_map(item, changes))
       }
       PdfArray(output)
     }
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = Array::new(
+      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {

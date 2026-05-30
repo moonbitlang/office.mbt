@@ -7,7 +7,7 @@ fn PdfDocument::encryption_object_number(self : PdfDocument) -> Int {
 }
 
 ///|
-fn pdf_crypt_file_id_object(file_id : BytesView) -> PdfObject {
+fn pdf_crypt_file_id_object(file_id : BytesView) -> @syntax.PdfObject {
   let owned = file_id.to_owned()
   PdfArray([PdfString(owned), PdfString(owned)])
 }

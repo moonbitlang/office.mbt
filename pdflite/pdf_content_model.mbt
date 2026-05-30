@@ -1,6 +1,6 @@
 ///|
 enum PdfContentLexeme {
-  ContentOperand(PdfObject)
+  ContentOperand(@syntax.PdfObject)
   ContentOperator(BytesView)
   ContentComment
   ContentEnd
@@ -13,10 +13,10 @@ enum PdfContentInlineTextFilter {
 } derive(Debug, Eq)
 
 ///|
-type PdfContentColourSpaceComponents = (PdfObject) -> Int raise PdfError
+type PdfContentColourSpaceComponents = (@syntax.PdfObject) -> Int raise PdfError
 
 ///|
-type PdfContentStreamDecoder = (PdfStream) -> PdfStream raise PdfError
+type PdfContentStreamDecoder = (@syntax.PdfStream) -> @syntax.PdfStream raise PdfError
 
 ///|
 priv struct PdfContentParseContext {

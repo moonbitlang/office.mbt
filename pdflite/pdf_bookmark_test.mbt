@@ -169,7 +169,7 @@ fn bookmark_listing_document_for_test() -> @pdflite.PdfDocument raise {
 
 ///|
 fn bookmark_single_outline_doc_for_test(
-  outline : @pdflite.PdfObject,
+  outline : @syntax.PdfObject,
 ) -> @pdflite.PdfDocument {
   let key_type = bookmark_name_for_test("/Type")
   let key_outlines = bookmark_name_for_test("/Outlines")
@@ -747,7 +747,7 @@ test "PdfDocument read_bookmarks handles preserved destinations and fallback fie
   @test.assert_eq(bookmark.text, bookmark_bytes_for_test(""))
   @test.assert_eq(bookmark.target, DestString(bookmark_bytes_for_test("named")))
   @test.assert_eq(bookmark.colour, @bookmark.pdf_bookmark_black)
-  let action_with_dest : @pdflite.PdfObject = PdfDictionary([
+  let action_with_dest : @syntax.PdfObject = PdfDictionary([
     (
       key_d,
       PdfArray([PdfIndirect(7), PdfNameObject(bookmark_name_for_test("/Fit"))]),
@@ -763,7 +763,7 @@ test "PdfDocument read_bookmarks handles preserved destinations and fallback fie
     (try! doc.read_bookmarks(preserve_actions=true))[0].target,
     DestFit(TargetPageObject(7)),
   )
-  let action_without_dest : @pdflite.PdfObject = PdfDictionary([
+  let action_without_dest : @syntax.PdfObject = PdfDictionary([
     (key_s, PdfNameObject(bookmark_name_for_test("/URI"))),
   ])
   let doc = bookmark_single_outline_doc_for_test(
@@ -790,7 +790,7 @@ test "PdfDocument read_bookmarks can preserve non-array actions" {
   let key_root = bookmark_name_for_test("/Root")
   let type_catalog = bookmark_name_for_test("/Catalog")
   let doc = @pdflite.pdf_document_empty()
-  let action : @pdflite.PdfObject = PdfDictionary([
+  let action : @syntax.PdfObject = PdfDictionary([
     (key_s, PdfNameObject(bookmark_name_for_test("/GoTo"))),
     (key_d, PdfString(bookmark_bytes_for_test("named"))),
   ])
@@ -984,7 +984,7 @@ test "PdfDocument add_bookmarks builds linked outline objects" {
     1,
     PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
   )
-  let action : @pdflite.PdfObject = PdfDictionary([
+  let action : @syntax.PdfObject = PdfDictionary([
     (key_s, PdfNameObject(bookmark_name_for_test("/URI"))),
   ])
   let bookmarks : Array[@bookmark.PdfBookmark] = [

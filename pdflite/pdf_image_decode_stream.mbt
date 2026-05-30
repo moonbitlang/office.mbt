@@ -1,15 +1,15 @@
 ///|
 priv enum PdfImageDecodedStream {
-  PdfImageRawStream(PdfStream)
-  PdfImageDctStream(PdfStream)
-  PdfImageJpxStream(PdfStream)
-  PdfImageJbig2Stream(PdfStream)
+  PdfImageRawStream(@syntax.PdfStream)
+  PdfImageDctStream(@syntax.PdfStream)
+  PdfImageJpxStream(@syntax.PdfStream)
+  PdfImageJbig2Stream(@syntax.PdfStream)
 }
 
 ///|
 fn PdfDocument::pdf_image_decode_stream_stages(
   self : PdfDocument,
-  current : PdfStream,
+  current : @syntax.PdfStream,
   stages : Int,
 ) -> PdfImageDecodedStream raise PdfError {
   match self.pdf_stream_first_filter_direct(current.dictionary) {
@@ -35,7 +35,7 @@ fn PdfDocument::pdf_image_decode_stream_stages(
 ///|
 fn PdfDocument::pdf_image_decode_to_image(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> PdfImageDecodedStream raise PdfError {
   let current = match self.direct(image) {
     PdfStreamObject(stream) => stream
@@ -47,7 +47,7 @@ fn PdfDocument::pdf_image_decode_to_image(
 ///|
 fn PdfDocument::pdf_image_jbig2_globals(
   self : PdfDocument,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Int? {
   let first_decodeparms = match
     self.lookup_direct_or_else(

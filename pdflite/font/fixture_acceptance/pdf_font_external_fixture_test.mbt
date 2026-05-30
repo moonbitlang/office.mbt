@@ -23,7 +23,7 @@ fn font_external_inline_image_op_for_test(
   data_length : Int,
 ) -> @content.PdfContentOp {
   Op_InlineImage(
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (font_external_name_for_test("/W"), PdfInteger(width)),
       (font_external_name_for_test("/H"), PdfInteger(height)),
       (font_external_name_for_test("/BPC"), PdfInteger(1)),
@@ -62,7 +62,7 @@ async fn font_external_fixture_bytes_for_test(path : String) -> Bytes? {
 fn font_external_first_page_font_for_test(
   document : @pdflite.PdfDocument,
   font_name : String,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   let font_resources = match
@@ -503,7 +503,7 @@ fn font_external_assert_pdfium_resource_fixture_for_test(
   })
   @test.assert_eq(
     type3_data.resources,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         font_external_name_for_test("/ProcSet"),
         PdfArray([

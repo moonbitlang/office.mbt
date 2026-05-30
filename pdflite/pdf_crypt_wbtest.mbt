@@ -28,10 +28,10 @@ fn crypt_wb_name_for_test(text : String) -> PdfName {
 
 ///|
 fn crypt_wb_standard_encrypt_dictionary_for_test(
-  entries : ArrayView[(PdfName, PdfObject)],
+  entries : ArrayView[(PdfName, @syntax.PdfObject)],
   owner_length? : Int = 40,
   user_length? : Int = 40,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   crypt_wb_standard_encrypt_dictionary_values_for_test(
     entries,
     crypt_wb_repeated_bytes_for_test(0x4f, owner_length),
@@ -42,12 +42,12 @@ fn crypt_wb_standard_encrypt_dictionary_for_test(
 
 ///|
 fn crypt_wb_standard_encrypt_dictionary_values_for_test(
-  entries : ArrayView[(PdfName, PdfObject)],
+  entries : ArrayView[(PdfName, @syntax.PdfObject)],
   owner_entry : PdfBytes,
   user_entry : PdfBytes,
   permissions : Int,
-) -> PdfObject {
-  let output : Array[(PdfName, PdfObject)] = [
+) -> @syntax.PdfObject {
+  let output : Array[(PdfName, @syntax.PdfObject)] = [
     (
       crypt_wb_name_for_test("/Filter"),
       PdfNameObject(crypt_wb_name_for_test("/Standard")),
@@ -64,7 +64,7 @@ fn crypt_wb_standard_encrypt_dictionary_values_for_test(
 
 ///|
 fn crypt_wb_doc_with_encrypt_for_test(
-  encrypt_dictionary : PdfObject,
+  encrypt_dictionary : @syntax.PdfObject,
 ) -> PdfDocument {
   let doc = pdf_document_empty()
   doc.set_trailer_dict(
@@ -84,7 +84,7 @@ fn crypt_wb_doc_with_encrypt_for_test(
 
 ///|
 fn crypt_wb_expect_encryption_method_error_for_test(
-  encrypt_dictionary : PdfObject,
+  encrypt_dictionary : @syntax.PdfObject,
 ) -> Unit raise {
   let doc = crypt_wb_doc_with_encrypt_for_test(encrypt_dictionary)
   let result : Result[PdfEncryptionValues, Error] = try? doc.encryption_values()
@@ -956,7 +956,7 @@ test "private AESV3 saved dictionary requires permissions entry" {
     user_encryption_key: Some(Bytes::new(32)),
     owner_encryption_key: Some(Bytes::new(32)),
   }
-  let result : Result[PdfObject, Error] = try? pdf_crypt_saved_aesv3_dictionary(
+  let result : Result[@syntax.PdfObject, Error] = try? pdf_crypt_saved_aesv3_dictionary(
     values,
   )
   match result {
@@ -993,7 +993,7 @@ test "private document decrypt supports ISO AESV3 object crypt with a file key" 
   }
   let file_key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
   let doc = pdf_document_empty()
-  let secret : PdfObject = PdfString(@ascii.encode("revision 6 secret"))
+  let secret : @syntax.PdfObject = PdfString(@ascii.encode("revision 6 secret"))
   let encrypted = try! pdf_aesv3_encrypt_pdf_object_with_iv_provider(
     file_key,
     secret,

@@ -7,7 +7,7 @@ async fn pdf_async_io_remove_if_exists_for_test(path : String) -> Unit {
 
 ///|
 fn pdf_async_io_assert_generated_id_for_test(
-  id : @pdflite.PdfObject?,
+  id : @syntax.PdfObject?,
 ) -> Unit raise {
   guard id is Some(PdfArray([PdfString(first), PdfString(second)])) else {
     fail("expected generated trailer ID")
@@ -533,8 +533,8 @@ fn pdf_async_io_ocg_content_for_test(
 
 ///|
 fn pdf_async_io_resource_dictionary_for_test(
-  entries : ArrayView[(String, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
+  entries : ArrayView[(String, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
   PdfDictionary(
     [
       for entry in entries => (pdf_async_io_name_for_test(entry.0), entry.1)
@@ -543,9 +543,9 @@ fn pdf_async_io_resource_dictionary_for_test(
 }
 
 ///|
-fn pdf_async_io_font_file_stream_for_test(data : String) -> @pdflite.PdfObject {
+fn pdf_async_io_font_file_stream_for_test(data : String) -> @syntax.PdfObject {
   let bytes = @ascii.encode(data)
-  @pdflite.pdf_stream(
+  @syntax.pdf_stream(
     PdfDictionary([
       (pdf_async_io_name_for_test("/Length"), PdfInteger(bytes.length())),
     ]),
@@ -557,7 +557,7 @@ fn pdf_async_io_font_file_stream_for_test(data : String) -> @pdflite.PdfObject {
 fn pdf_async_io_font_descriptor_with_file_for_test(
   font_file_key : String,
   font_file_number : Int,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfDictionary([
     (pdf_async_io_name_for_test(font_file_key), PdfIndirect(font_file_number)),
     (pdf_async_io_name_for_test("/Flags"), PdfInteger(32)),
@@ -568,9 +568,9 @@ fn pdf_async_io_font_descriptor_with_file_for_test(
 fn pdf_async_io_font_for_test(
   subtype : String,
   basefont : String,
-  descriptor : @pdflite.PdfObject?,
-) -> @pdflite.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+  descriptor : @syntax.PdfObject?,
+) -> @syntax.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (
       pdf_async_io_name_for_test("/Type"),
       PdfNameObject(pdf_async_io_name_for_test("/Font")),
@@ -668,9 +668,9 @@ fn pdf_async_io_codepoints_contain_for_test(
 ///|
 fn pdf_async_io_font_resource_for_test(
   doc : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
+  resources : @syntax.PdfObject,
   font_name : @pdflite.PdfName,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   match doc.lookup_direct(pdf_async_io_name_for_test("/Font"), resources) {
     Some(fonts) => doc.lookup_direct(font_name, fonts)
     None => None
@@ -789,7 +789,7 @@ fn pdf_async_io_assert_intro_fixture_text_for_test(
 }
 
 ///|
-fn pdf_async_io_secret_object_for_test(text : String) -> @pdflite.PdfObject {
+fn pdf_async_io_secret_object_for_test(text : String) -> @syntax.PdfObject {
   PdfDictionary([
     (pdf_async_io_name_for_test("/Title"), PdfString(@ascii.encode(text))),
   ])
@@ -864,7 +864,7 @@ fn pdf_async_io_push_classic_xref_entry_for_test(
 fn pdf_async_io_write_indirect_object_for_test(
   output : Array[Byte],
   number : Int,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
 ) -> Unit {
   for
     byte in (try! @pdflite.pdf_write_indirect_object({
@@ -895,8 +895,8 @@ fn pdf_async_io_push_raw_indirect_object_for_test(
 }
 
 ///|
-fn pdf_async_io_classic_catalog_object_for_test() -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+fn pdf_async_io_classic_catalog_object_for_test() -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       pdf_async_io_name_for_test("/Type"),
       PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -907,8 +907,8 @@ fn pdf_async_io_classic_catalog_object_for_test() -> @pdflite.PdfObject {
 ///|
 fn pdf_async_io_catalog_with_payload_for_test(
   payload_number : Int,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_dictionary([
+) -> @syntax.PdfObject {
+  @syntax.pdf_dictionary([
     (
       pdf_async_io_name_for_test("/Type"),
       PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -1015,7 +1015,7 @@ fn pdf_async_io_xref_stream_with_type_for_test(
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -1127,7 +1127,7 @@ fn pdf_async_io_malformed_pdf_without_startxref_for_test() -> @pdflite.PdfBytes 
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -1550,7 +1550,7 @@ fn pdf_async_io_classic_catalog_pdf_with_prev_xref_bad_startxref_for_test() -> @
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -1566,7 +1566,7 @@ fn pdf_async_io_classic_catalog_pdf_with_prev_xref_bad_startxref_for_test() -> @
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -2192,7 +2192,7 @@ fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pd
   pdf_async_io_write_indirect_object_for_test(
     output,
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Pages")),
@@ -2205,7 +2205,7 @@ fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pd
   pdf_async_io_write_indirect_object_for_test(
     output,
     5,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Page")),
@@ -2215,7 +2215,7 @@ fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pd
         pdf_async_io_name_for_test("/MediaBox"),
         PdfArray([PdfInteger(0), PdfInteger(0), PdfInteger(10), PdfInteger(10)]),
       ),
-      (pdf_async_io_name_for_test("/Resources"), @pdflite.pdf_dictionary([])),
+      (pdf_async_io_name_for_test("/Resources"), @syntax.pdf_dictionary([])),
     ]),
   )
   let object_stream_data : Array[Byte] = []
@@ -2248,8 +2248,8 @@ fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pd
   )
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, page_offset, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2268,7 +2268,7 @@ fn pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test() -> @pd
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -2313,8 +2313,8 @@ fn pdf_async_io_mismatched_object_stream_root_physical_catalog_for_test() -> @pd
     xref_data, 1, object_stream_offset, 0,
   )
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2333,7 +2333,7 @@ fn pdf_async_io_mismatched_object_stream_root_physical_catalog_for_test() -> @pd
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -2356,7 +2356,7 @@ fn pdf_async_io_xref_stream_pdf_with_two_object_stream_entries_for_test() -> @pd
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -2405,8 +2405,8 @@ fn pdf_async_io_xref_stream_pdf_with_two_object_stream_entries_for_test() -> @pd
   )
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 2, 3, 1)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2468,8 +2468,8 @@ fn pdf_async_io_xref_stream_pdf_with_stream_object_in_object_stream_for_test() -
     xref_data, 1, object_stream_offset, 0,
   )
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2499,7 +2499,7 @@ fn pdf_async_io_xref_stream_prev_update_with_object_stream_root_bad_startxref_fo
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -2516,8 +2516,8 @@ fn pdf_async_io_xref_stream_prev_update_with_object_stream_root_bad_startxref_fo
   pdf_async_io_push_xref_stream_entry_for_test(
     first_xref_data, 1, first_xref_offset, 0,
   )
-  let first_xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let first_xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2571,8 +2571,8 @@ fn pdf_async_io_xref_stream_prev_update_with_object_stream_root_bad_startxref_fo
   pdf_async_io_push_xref_stream_entry_for_test(
     second_xref_data, 1, second_xref_offset, 0,
   )
-  let second_xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let second_xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2629,8 +2629,8 @@ fn pdf_async_io_xref_stream_pdf_with_bad_filtered_object_stream_root_for_test() 
     xref_data, 1, object_stream_offset, 0,
   )
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2692,8 +2692,8 @@ fn pdf_async_io_xref_stream_pdf_with_decodeparms_object_stream_root_for_test(
     xref_data, 1, object_stream_offset, 0,
   )
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2737,7 +2737,7 @@ fn pdf_async_io_bad_first_object_stream_payload_for_test() -> @pdflite.PdfBytes 
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -2772,8 +2772,8 @@ fn pdf_async_io_bad_first_object_stream_payload_for_test() -> @pdflite.PdfBytes 
     xref_data, 1, object_stream_offset, 0,
   )
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2803,7 +2803,7 @@ fn pdf_async_io_indirect_object_stream_bounds_bad_startxref_for_test() -> @pdfli
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -2844,8 +2844,8 @@ fn pdf_async_io_indirect_object_stream_bounds_bad_startxref_for_test() -> @pdfli
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, first_offset, 0)
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 2, 3, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2873,7 +2873,7 @@ fn pdf_async_io_indirect_object_stream_filter_bad_startxref_for_test() -> @pdfli
   pdf_async_io_write_indirect_object_for_test(
     output,
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -2917,8 +2917,8 @@ fn pdf_async_io_indirect_object_stream_filter_bad_startxref_for_test() -> @pdfli
   )
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 2, 3, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),
@@ -2953,8 +2953,8 @@ fn pdf_async_io_encrypted_object_stream_pdf_for_test(
   for byte in @pdflite.pdf_write_object(secret) {
     object_stream_data.push(byte)
   }
-  let object_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let object_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/ObjStm")),
@@ -2973,7 +2973,7 @@ fn pdf_async_io_encrypted_object_stream_pdf_for_test(
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/Catalog")),
@@ -3049,8 +3049,8 @@ fn pdf_async_io_encrypted_object_stream_pdf_for_test(
   )
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, encrypt_offset, 0)
   pdf_async_io_push_xref_stream_entry_for_test(xref_data, 1, xref_offset, 0)
-  let xref_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let xref_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/Type"),
         PdfNameObject(pdf_async_io_name_for_test("/XRef")),

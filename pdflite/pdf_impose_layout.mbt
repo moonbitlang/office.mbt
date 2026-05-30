@@ -84,7 +84,7 @@ fn pdf_impose_translate(
 ///|
 fn PdfDocument::pdf_impose_make_margin(
   self : PdfDocument,
-  output_mediabox : PdfObject,
+  output_mediabox : @syntax.PdfObject,
   margin : Double,
   matrix : @geometry.TransformMatrix,
 ) -> @geometry.TransformMatrix raise PdfError {
@@ -124,7 +124,7 @@ fn PdfDocument::pdf_impose_transform_for_slot(
   rtl : Bool,
   btt : Bool,
   margin : Double,
-  output_mediabox : PdfObject,
+  output_mediabox : @syntax.PdfObject,
   fit_extra_hspace : Double,
   fit_extra_vspace : Double,
   cent_extra_x : Double,
@@ -151,13 +151,13 @@ priv struct PdfImposeLayout {
   pages_per_sheet : Int
   x_slots : Int
   y_slots : Int
-  output_mediabox : PdfObject
+  output_mediabox : @syntax.PdfObject
   fit_extra_hspace : Double
   fit_extra_vspace : Double
 }
 
 ///|
-fn pdf_impose_output_box(width : Double, height : Double) -> PdfObject {
+fn pdf_impose_output_box(width : Double, height : Double) -> @syntax.PdfObject {
   PdfArray([PdfReal(0.0), PdfReal(0.0), PdfReal(width), PdfReal(height)])
 }
 
@@ -243,7 +243,7 @@ fn PdfDocument::pdf_impose_layout(
   y : Double,
   margin : Double,
   page_count : Int,
-  mediabox : PdfObject,
+  mediabox : @syntax.PdfObject,
 ) -> PdfImposeLayout raise PdfError {
   let bounds = self.parse_rectangle(mediabox)
   let page_width = bounds.max_x - bounds.min_x
@@ -267,8 +267,8 @@ fn PdfDocument::pdf_impose_transforms(
   btt : Bool,
   center : Bool,
   margin : Double,
-  mediabox : PdfObject,
-  output_mediabox : PdfObject,
+  mediabox : @syntax.PdfObject,
+  output_mediabox : @syntax.PdfObject,
   fit_extra_hspace : Double,
   fit_extra_vspace : Double,
   count : Int,

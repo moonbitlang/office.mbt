@@ -1,8 +1,8 @@
 ///|
 fn pdf_tree_sort_name_entries(
-  entries : ArrayView[(PdfBytes, PdfObject)],
-) -> Array[(PdfBytes, PdfObject)] {
-  let sorted : Array[(PdfBytes, PdfObject)] = Array::new(
+  entries : ArrayView[(PdfBytes, @syntax.PdfObject)],
+) -> Array[(PdfBytes, @syntax.PdfObject)] {
+  let sorted : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -14,9 +14,11 @@ fn pdf_tree_sort_name_entries(
 
 ///|
 fn pdf_tree_sort_number_entries(
-  entries : ArrayView[(Int, PdfObject)],
-) -> Array[(Int, PdfObject)] {
-  let sorted : Array[(Int, PdfObject)] = Array::new(capacity=entries.length())
+  entries : ArrayView[(Int, @syntax.PdfObject)],
+) -> Array[(Int, @syntax.PdfObject)] {
+  let sorted : Array[(Int, @syntax.PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
   for entry in entries {
     sorted.push(entry)
   }
@@ -26,9 +28,9 @@ fn pdf_tree_sort_number_entries(
 
 ///|
 fn pdf_tree_dedup_name_entries(
-  entries : ArrayView[(PdfBytes, PdfObject)],
-) -> Array[(PdfBytes, PdfObject)] {
-  let output : Array[(PdfBytes, PdfObject)] = Array::new(
+  entries : ArrayView[(PdfBytes, @syntax.PdfObject)],
+) -> Array[(PdfBytes, @syntax.PdfObject)] {
+  let output : Array[(PdfBytes, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -44,9 +46,11 @@ fn pdf_tree_dedup_name_entries(
 
 ///|
 fn pdf_tree_dedup_number_entries(
-  entries : ArrayView[(Int, PdfObject)],
-) -> Array[(Int, PdfObject)] {
-  let output : Array[(Int, PdfObject)] = Array::new(capacity=entries.length())
+  entries : ArrayView[(Int, @syntax.PdfObject)],
+) -> Array[(Int, @syntax.PdfObject)] {
+  let output : Array[(Int, @syntax.PdfObject)] = Array::new(
+    capacity=entries.length(),
+  )
   for entry in entries {
     if output.length() > 0 && output[output.length() - 1].0 == entry.0 {
       output[output.length() - 1] = entry

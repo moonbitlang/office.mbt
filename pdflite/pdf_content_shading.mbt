@@ -4,8 +4,8 @@
 pub fn PdfDocument::content_read_shading(
   self : PdfDocument,
   shading_matrix : @geometry.TransformMatrix,
-  shading_extgstate : PdfObject,
-  shading : PdfObject,
+  shading_extgstate : @syntax.PdfObject,
+  shading : @syntax.PdfObject,
 ) -> PdfContentShading raise PdfError {
   let shading_kind = match
     self.lookup_direct(pdf_content_shading_type_name, shading) {

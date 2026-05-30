@@ -26,7 +26,7 @@ pub fn PdfDocument::copy_id_from(
 pub fn PdfDocument::set_info_entry(
   self : PdfDocument,
   key : PdfName,
-  value : PdfObject,
+  value : @syntax.PdfObject,
   version : Int,
   keep_version? : Bool = false,
   xmp_also? : Bool = false,
@@ -77,7 +77,7 @@ pub fn PdfDocument::set_info_entry(
 /// Set or replace one `/Info` entry from cpdf's string-key tuple form.
 pub fn PdfDocument::set_info_entry_string(
   self : PdfDocument,
-  entry : (String, PdfObject, Int),
+  entry : (String, @syntax.PdfObject, Int),
   keep_version? : Bool = false,
   xmp_also? : Bool = false,
   xmp_just_set? : Bool = false,

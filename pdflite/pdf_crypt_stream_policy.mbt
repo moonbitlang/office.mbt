@@ -29,7 +29,10 @@ fn pdf_crypt_stream_type_key() -> PdfName {
 }
 
 ///|
-fn pdf_crypt_object_is_name(object : PdfObject?, expected : PdfName) -> Bool {
+fn pdf_crypt_object_is_name(
+  object : @syntax.PdfObject?,
+  expected : PdfName,
+) -> Bool {
   match object {
     Some(PdfNameObject(name)) => name == expected
     _ => false
@@ -37,7 +40,7 @@ fn pdf_crypt_object_is_name(object : PdfObject?, expected : PdfName) -> Bool {
 }
 
 ///|
-fn pdf_crypt_first_filter_is_crypt(dictionary : PdfObject) -> Bool {
+fn pdf_crypt_first_filter_is_crypt(dictionary : @syntax.PdfObject) -> Bool {
   match dictionary.lookup_immediate(pdf_crypt_stream_filter_key()) {
     Some(PdfNameObject(name)) => name == pdf_crypt_crypt_name
     Some(PdfArray([PdfNameObject(name), ..])) => name == pdf_crypt_crypt_name
@@ -46,7 +49,7 @@ fn pdf_crypt_first_filter_is_crypt(dictionary : PdfObject) -> Bool {
 }
 
 ///|
-fn pdf_crypt_decodeparms_is_identity(dictionary : PdfObject) -> Bool {
+fn pdf_crypt_decodeparms_is_identity(dictionary : @syntax.PdfObject) -> Bool {
   match dictionary.lookup_immediate(pdf_crypt_stream_decodeparms_key()) {
     Some(PdfDictionary(_) as decodeparms)
     | Some(PdfArray([PdfDictionary(_) as decodeparms, ..])) =>
@@ -62,7 +65,7 @@ fn pdf_crypt_decodeparms_is_identity(dictionary : PdfObject) -> Bool {
 ///|
 fn pdf_crypt_stream_is_identity(
   no_encrypt_metadata : Bool,
-  dictionary : PdfObject,
+  dictionary : @syntax.PdfObject,
 ) -> Bool {
   if no_encrypt_metadata &&
     pdf_crypt_object_is_name(

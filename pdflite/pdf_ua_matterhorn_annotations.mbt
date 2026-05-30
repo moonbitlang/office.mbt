@@ -103,7 +103,7 @@ fn pdf_ua_matterhorn_28_004_subtype_requires_contents_or_alt(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_parent_tree_entries(
   self : PdfDocument,
-) -> Array[(Int, PdfObject)] {
+) -> Array[(Int, @syntax.PdfObject)] {
   match
     self.lookup_chain(self.trailer_dict(), [
       pdf_ua_root_key(),
@@ -117,9 +117,9 @@ fn PdfDocument::pdf_ua_matterhorn_parent_tree_entries(
 
 ///|
 fn pdf_ua_matterhorn_parent_tree_lookup(
-  parent_tree : ArrayView[(Int, PdfObject)],
+  parent_tree : ArrayView[(Int, @syntax.PdfObject)],
   key : Int,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   for entry in parent_tree {
     if entry.0 == key {
       return Some(entry.1)
@@ -196,8 +196,8 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_005(_self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_struct_parent_check(
   self : PdfDocument,
-  object : PdfObject,
-  parent_tree : ArrayView[(Int, PdfObject)],
+  object : @syntax.PdfObject,
+  parent_tree : ArrayView[(Int, @syntax.PdfObject)],
   expected_type : PdfName,
   wrong_type_extra : String,
   missing_struct_parent_extra : String?,
@@ -283,7 +283,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_012(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_media_clip_mcd_without_ct(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match
     (
@@ -328,7 +328,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_016(_self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_is_printer_mark(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_ua_subtype_key(), object) {
     Some(PdfNameObject(subtype)) => subtype == pdf_ua_matterhorn_printer_mark()
@@ -351,9 +351,9 @@ fn PdfDocument::pdf_ua_matterhorn_check_28_017(self : PdfDocument) -> Json? {
 ///|
 fn PdfDocument::pdf_ua_matterhorn_normal_appearance_streams(
   self : PdfDocument,
-  annotation : PdfObject,
-) -> Array[PdfObject] {
-  let output : Array[PdfObject] = []
+  annotation : @syntax.PdfObject,
+) -> Array[@syntax.PdfObject] {
+  let output : Array[@syntax.PdfObject] = []
   match self.lookup_direct(pdf_ua_matterhorn_ap_key(), annotation) {
     Some(appearance_dictionary) =>
       match

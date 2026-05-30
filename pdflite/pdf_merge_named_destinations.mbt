@@ -3,12 +3,12 @@ fn PdfDocument::pdf_merge_oldstyle_destinations(
   self : PdfDocument,
   changes : ArrayView[(Int, Int)],
   name_changes : ArrayView[(PdfName, PdfName)],
-) -> Array[(PdfName, PdfObject)] raise PdfError {
+) -> Array[(PdfName, @syntax.PdfObject)] raise PdfError {
   let change_map = pdf_page_reference_map(changes)
   let name_map = pdf_merge_catalog_destination_name_map(name_changes)
   match self.pdf_merge_catalog_entry(pdf_merge_dests_key()) {
     Some(PdfDictionary(entries)) => {
-      let output : Array[(PdfName, PdfObject)] = []
+      let output : Array[(PdfName, @syntax.PdfObject)] = []
       for entry in entries {
         let (key, destination) = entry
         let renamed_key = name_map.changed(key)
@@ -33,14 +33,14 @@ fn PdfDocument::pdf_merge_nametree_destinations(
   self : PdfDocument,
   changes : ArrayView[(Int, Int)],
   name_changes : ArrayView[(PdfBytes, PdfBytes)],
-) -> Array[(PdfBytes, PdfObject)] raise PdfError {
+) -> Array[(PdfBytes, @syntax.PdfObject)] raise PdfError {
   let change_map = pdf_page_reference_map(changes)
   let name_map = pdf_merge_destination_name_map(name_changes)
   match self.pdf_merge_catalog_entry(pdf_merge_names_key()) {
     Some(names) =>
       match self.lookup_direct(pdf_merge_dests_key(), names) {
         Some(dests_tree) => {
-          let output : Array[(PdfBytes, PdfObject)] = []
+          let output : Array[(PdfBytes, @syntax.PdfObject)] = []
           for entry in self.read_name_tree(dests_tree) {
             let (key, destination) = entry
             let renamed_key = name_map.changed(key)
@@ -65,9 +65,11 @@ fn PdfDocument::pdf_merge_nametree_destinations(
 ///|
 fn PdfDocument::pdf_merge_add_named_destinations(
   self : PdfDocument,
-  oldstyle_destinations : ArrayView[(PdfName, PdfObject)],
-  nametree_destinations : ArrayView[(PdfBytes, PdfObject)],
-  name_dictionary_entries : ArrayView[(PdfName, Array[(PdfBytes, PdfObject)])],
+  oldstyle_destinations : ArrayView[(PdfName, @syntax.PdfObject)],
+  nametree_destinations : ArrayView[(PdfBytes, @syntax.PdfObject)],
+  name_dictionary_entries : ArrayView[
+    (PdfName, Array[(PdfBytes, @syntax.PdfObject)]),
+  ],
 ) -> PdfDocument raise PdfError {
   let pdf = if oldstyle_destinations.length() > 0 {
     self.pdf_merge_add_catalog_entry(
@@ -77,7 +79,7 @@ fn PdfDocument::pdf_merge_add_named_destinations(
   } else {
     self
   }
-  let names_entries : Array[(PdfName, PdfObject)] = []
+  let names_entries : Array[(PdfName, @syntax.PdfObject)] = []
   if nametree_destinations.length() > 0 {
     names_entries.push(
       (pdf_merge_dests_key(), pdf.build_name_tree(nametree_destinations)),

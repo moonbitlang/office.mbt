@@ -45,7 +45,7 @@ fn pdf_util_json_truncated_number(value : Double) -> Int {
 ///|
 fn PdfDocument::pdf_util_json_of_object(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   utf8 : Bool,
   clean_strings : Bool,
   no_stream_data : Bool,
@@ -155,7 +155,7 @@ fn PdfDocument::pdf_util_json_of_object(
 /// `json_of_document`.
 pub fn PdfDocument::json_of_object(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   utf8? : Bool = false,
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,
@@ -187,19 +187,19 @@ fn pdf_util_name_from_json_text(text : String) -> PdfName {
 fn pdf_util_stream_of_json_data(
   dictionary_json : Json,
   data : String,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let stream_data = pdf_util_pdf_string_from_json_text(data)
   let dictionary = pdf_object_of_json(dictionary_json).add_dict_entry(
     @syntax.pdf_object_length_name(),
     PdfInteger(stream_data.length()),
   )
-  pdf_stream(dictionary, StreamGot(stream_data))
+  @syntax.pdf_stream(dictionary, StreamGot(stream_data))
 }
 
 ///|
 fn pdf_util_object_of_json_object(
   entries : Map[String, Json],
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   if entries.length() == 1 {
     match entries.get("U") {
       Some(String(text)) =>
@@ -228,7 +228,7 @@ fn pdf_util_object_of_json_object(
       _ => ()
     }
   }
-  let output : Array[(PdfName, PdfObject)] = Array::new(
+  let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
     capacity=entries.length(),
   )
   for entry in entries {
@@ -246,7 +246,7 @@ fn pdf_util_object_of_json_object(
 /// JSON values, CPDFJSON integer/real/name/string wrappers, dictionaries,
 /// arrays, indirect references, streams with embedded string data, and streams
 /// with parsed content-operation arrays are supported.
-pub fn pdf_object_of_json(json : Json) -> PdfObject raise PdfError {
+pub fn pdf_object_of_json(json : Json) -> @syntax.PdfObject raise PdfError {
   match json {
     Null => PdfNull
     True => PdfBoolean(true)
@@ -254,7 +254,9 @@ pub fn pdf_object_of_json(json : Json) -> PdfObject raise PdfError {
     Number(value, repr=_) => PdfIndirect(pdf_util_json_integral_number(value))
     String(text) => PdfString(pdf_util_pdf_string_from_json_text(text))
     Array(values) => {
-      let output : Array[PdfObject] = Array::new(capacity=values.length())
+      let output : Array[@syntax.PdfObject] = Array::new(
+        capacity=values.length(),
+      )
       for value in values {
         output.push(pdf_object_of_json(value))
       }
@@ -268,7 +270,7 @@ pub fn pdf_object_of_json(json : Json) -> PdfObject raise PdfError {
 /// Compatibility wrapper for `PdfDocument::json_of_object`.
 pub fn pdf_json_of_object(
   document : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   utf8? : Bool = false,
   clean_strings? : Bool = false,
   no_stream_data? : Bool = false,

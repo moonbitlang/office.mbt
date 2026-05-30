@@ -1,10 +1,10 @@
 ///|
 fn PdfDocument::pdf_page_stamp_protect_content(
   self : PdfDocument,
-  resources : PdfObject,
-  content : ArrayView[PdfObject],
+  resources : @syntax.PdfObject,
+  content : ArrayView[@syntax.PdfObject],
   fast : Bool,
-) -> Array[PdfObject] raise PdfError {
+) -> Array[@syntax.PdfObject] raise PdfError {
   let deficit = if fast {
     0
   } else {
@@ -31,7 +31,7 @@ fn PdfDocument::pdf_page_stamp_protect_content(
   }
   end_ops.push(Op_Q)
   let end_number = self.add_object(pdf_content_stream_of_ops(end_ops))
-  let output : Array[PdfObject] = [PdfIndirect(begin_number)]
+  let output : Array[@syntax.PdfObject] = [PdfIndirect(begin_number)]
   for object in content {
     output.push(object)
   }
@@ -41,10 +41,10 @@ fn PdfDocument::pdf_page_stamp_protect_content(
 
 ///|
 fn pdf_page_stamp_concat_content(
-  first : ArrayView[PdfObject],
-  second : ArrayView[PdfObject],
-) -> Array[PdfObject] {
-  let output : Array[PdfObject] = []
+  first : ArrayView[@syntax.PdfObject],
+  second : ArrayView[@syntax.PdfObject],
+) -> Array[@syntax.PdfObject] {
+  let output : Array[@syntax.PdfObject] = []
   for object in first {
     output.push(object)
   }

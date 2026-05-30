@@ -191,7 +191,7 @@ fn pdf_content_text_tj_adjustment(
 /// normalized `TJ` array shape.
 pub fn PdfFont::content_text_layout_of_tj_array(
   self : PdfFont,
-  elements : ArrayView[PdfObject],
+  elements : ArrayView[@syntax.PdfObject],
   layout : PdfContentTextLayout,
 ) -> PdfContentTextLayoutResult {
   let glyphs : Array[PdfContentTextGlyphPlacement] = Array::new(
@@ -231,7 +231,7 @@ pub fn PdfFont::content_text_layout_of_tj_array(
 /// Compatibility wrapper for `PdfFont::content_text_layout_of_tj_array`.
 pub fn pdf_content_text_layout_of_tj_array(
   font : PdfFont,
-  elements : ArrayView[PdfObject],
+  elements : ArrayView[@syntax.PdfObject],
   layout : PdfContentTextLayout,
 ) -> PdfContentTextLayoutResult {
   font.content_text_layout_of_tj_array(elements, layout)

@@ -1,12 +1,12 @@
 ///|
-fn pdf_text_integer_of_double(value : Double) -> PdfObject {
+fn pdf_text_integer_of_double(value : Double) -> @syntax.PdfObject {
   PdfInteger(value.to_int())
 }
 
 ///|
 fn pdf_text_font_descriptor_bbox_object(
   fontbbox : @geometry.PdfRectangle,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([
     pdf_text_integer_of_double(fontbbox.min_x),
     pdf_text_integer_of_double(fontbbox.min_y),
@@ -40,7 +40,7 @@ fn PdfDocument::pdf_text_make_true_type_font(
   widths : Array[Int],
   descriptor : PdfFontDescriptor,
   encoding : PdfEncoding,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let ttf = match pdf_text_fontfile2_number(descriptor.fontfile) {
     Some(number) => number
     None => raise FontWriteUnsupported

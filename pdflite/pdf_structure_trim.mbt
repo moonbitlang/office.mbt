@@ -13,7 +13,7 @@ fn PdfDocument::pdf_structure_indirect_number(
 ///|
 fn PdfDocument::pdf_structure_object_has_deleted_page_in_set(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   deleted_pages : @core.PdfNumberSet,
 ) -> Bool {
   match self.direct(object).lookup_immediate(pdf_structure_pg_key()) {
@@ -52,7 +52,7 @@ fn PdfDocument::pdf_structure_indirect_survives_in_set(
 ///|
 fn PdfDocument::pdf_structure_k_item_survives_in_set(
   self : PdfDocument,
-  item : PdfObject,
+  item : @syntax.PdfObject,
   deleted_pages : @core.PdfNumberSet,
 ) -> Bool {
   match item {
@@ -65,10 +65,10 @@ fn PdfDocument::pdf_structure_k_item_survives_in_set(
 ///|
 fn PdfDocument::pdf_structure_filter_k_items_in_set(
   self : PdfDocument,
-  items : ArrayView[PdfObject],
+  items : ArrayView[@syntax.PdfObject],
   deleted_pages : @core.PdfNumberSet,
-) -> Array[PdfObject]? {
-  let output : Array[PdfObject] = Array::new(capacity=items.length())
+) -> Array[@syntax.PdfObject]? {
+  let output : Array[@syntax.PdfObject] = Array::new(capacity=items.length())
   let mut changed = false
   for item in items {
     if self.pdf_structure_k_item_survives_in_set(item, deleted_pages) {
@@ -87,9 +87,9 @@ fn PdfDocument::pdf_structure_filter_k_items_in_set(
 ///|
 fn PdfDocument::pdf_structure_filtered_k_value_in_set(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   deleted_pages : @core.PdfNumberSet,
-) -> Array[PdfObject]? {
+) -> Array[@syntax.PdfObject]? {
   match self.direct(object) {
     PdfDictionary(_) as dictionary =>
       match dictionary.lookup_immediate(pdf_structure_k_key()) {
@@ -105,7 +105,9 @@ fn PdfDocument::pdf_structure_filtered_k_value_in_set(
 }
 
 ///|
-fn pdf_structure_k_object(items : ArrayView[PdfObject]) -> PdfObject {
+fn pdf_structure_k_object(
+  items : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject {
   if items.length() == 1 {
     items[0]
   } else {
@@ -141,7 +143,7 @@ fn PdfDocument::pdf_structure_trim_deleted_pages(
         }
       }
       let object_numbers = self.object_numbers()
-      let replacements : Array[(Int, PdfObject)] = Array::new(
+      let replacements : Array[(Int, @syntax.PdfObject)] = Array::new(
         capacity=object_numbers.length(),
       )
       for object_number in object_numbers {

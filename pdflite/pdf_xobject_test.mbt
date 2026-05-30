@@ -6,9 +6,9 @@ fn xobject_name_for_test(text : String) -> @pdflite.PdfName {
 ///|
 fn xobject_lookup_for_test(
   doc : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   doc.lookup_direct(xobject_name_for_test(key), object)
 }
 
@@ -25,7 +25,7 @@ fn xobject_page_doc_for_test(
 ///|
 fn xobject_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 

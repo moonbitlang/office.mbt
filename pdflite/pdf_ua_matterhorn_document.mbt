@@ -56,7 +56,7 @@ fn PdfDocument::pdf_ua_matterhorn_check_06_003(
 ///|
 fn PdfDocument::pdf_ua_matterhorn_display_doc_title(
   self : PdfDocument,
-) -> PdfObject? {
+) -> @syntax.PdfObject? {
   self.lookup_chain(self.trailer_dict(), [
     pdf_ua_root_key(),
     pdf_ua_viewer_preferences_key(),

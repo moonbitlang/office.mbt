@@ -1,11 +1,11 @@
 ///|
 fn pdf_page_root_entries_without_catalog_keys(
-  object : PdfObject,
-) -> Array[(PdfName, PdfObject)] raise PdfError {
+  object : @syntax.PdfObject,
+) -> Array[(PdfName, @syntax.PdfObject)] raise PdfError {
   match object {
     PdfNull => []
     PdfDictionary(entries) => {
-      let output : Array[(PdfName, PdfObject)] = Array::new(
+      let output : Array[(PdfName, @syntax.PdfObject)] = Array::new(
         capacity=entries.length(),
       )
       for entry in entries {
@@ -29,7 +29,7 @@ fn pdf_page_root_entries_without_catalog_keys(
 pub fn PdfDocument::add_root(
   self : PdfDocument,
   page_root_number : Int,
-  extras : ArrayView[(PdfName, PdfObject)],
+  extras : ArrayView[(PdfName, @syntax.PdfObject)],
 ) -> Int raise PdfError {
   let mut root = @syntax.PdfDictionary([
     (pdf_page_type_key(), PdfNameObject(pdf_page_type_catalog())),
@@ -63,7 +63,7 @@ pub fn PdfDocument::add_root(
 /// Copy a document, add a catalog root, and return the copy.
 pub fn pdf_add_root(
   page_root_number : Int,
-  extras : ArrayView[(PdfName, PdfObject)],
+  extras : ArrayView[(PdfName, @syntax.PdfObject)],
   document : PdfDocument,
 ) -> PdfDocument raise PdfError {
   let pdf = document.copy()

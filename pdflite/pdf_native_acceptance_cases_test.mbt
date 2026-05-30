@@ -779,7 +779,7 @@ test "native acceptance suite recrypts non-stream encrypted object-stream payloa
   acceptance_assert_decrypted_object_stream_payload_for_test(decrypted, [
     PdfNoCopy,
   ])
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("object-stream-recrypt-added"),
   )
   decrypted.document.add_object_given_number(6, added_object)
@@ -1326,7 +1326,7 @@ test "native acceptance suite preserves unencrypted metadata through AES recrypt
     metadata,
     secret,
   )
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("metadata-added"),
   )
   decrypted.document.add_object_given_number(64, added_object)
@@ -1450,7 +1450,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed trailer
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("malformed-trailer-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -1527,7 +1527,7 @@ test "native acceptance suite decrypts reconstructed encrypted missing-root trai
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("missing-root-trailer-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -1589,7 +1589,7 @@ test "native acceptance suite decrypts reconstructed encrypted catalogs missing 
   )
   let strict = @pdflite.pdf_read_classic_document_from_bytes(malformed)
   @test.assert_eq(strict.root(), root_number)
-  let strict_catalog : Result[@pdflite.PdfObject, Error] = try? strict.catalog()
+  let strict_catalog : Result[@syntax.PdfObject, Error] = try? strict.catalog()
   guard strict_catalog is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected missing root object to require reconstruction")
   }
@@ -1610,7 +1610,7 @@ test "native acceptance suite decrypts reconstructed encrypted catalogs missing 
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("catalog-missing-xref-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -1649,13 +1649,11 @@ test "native acceptance suite decrypts reconstructed encrypted page trees missin
   doc.set_version(1, 4)
   doc.set_root(1)
   doc.set_trailer_dict(
-    @pdflite.pdf_dictionary([
-      (acceptance_name_for_test("/Root"), PdfIndirect(1)),
-    ]),
+    @syntax.pdf_dictionary([(acceptance_name_for_test("/Root"), PdfIndirect(1))]),
   )
   doc.add_object_given_number(
     1,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/Catalog")),
@@ -1665,7 +1663,7 @@ test "native acceptance suite decrypts reconstructed encrypted page trees missin
   )
   doc.add_object_given_number(
     2,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/Pages")),
@@ -1676,7 +1674,7 @@ test "native acceptance suite decrypts reconstructed encrypted page trees missin
   )
   doc.add_object_given_number(
     3,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (
         acceptance_name_for_test("/Type"),
         PdfNameObject(acceptance_name_for_test("/Page")),
@@ -1743,7 +1741,7 @@ test "native acceptance suite decrypts reconstructed encrypted page trees missin
   @test.assert_eq(decrypted.document.root(), 1)
   @test.assert_eq(try! decrypted.document.endpage(), 1)
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("page-tree-missing-xref-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -1900,7 +1898,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref su
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 4))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("malformed-xref-subsection-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -1977,7 +1975,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("malformed-xref-stream-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -2056,7 +2054,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("malformed-xref-stream-width-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -2135,7 +2133,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("malformed-xref-stream-size-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -2247,7 +2245,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("malformed-xref-stream-filter-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -2389,7 +2387,7 @@ test "native acceptance suite decrypts reconstructed encrypted malformed xref-st
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("malformed-xref-stream-decodeparms-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -2469,7 +2467,7 @@ test "native acceptance suite decrypts reconstructed encrypted xref-stream unsup
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("xref-stream-unsupported-predictor-recrypt-added"),
   )
   decrypted.document.add_object_given_number(62, added_object)
@@ -2542,7 +2540,7 @@ test "native acceptance suite recrypts reconstructed bad-startxref encrypted doc
   @test.assert_eq(decrypted.denied_permissions, denied)
   acceptance_assert_pages_have_hello_content_for_test(decrypted.document, 1)
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("bad-startxref-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -2625,7 +2623,7 @@ test "native acceptance suite reconstructs compressed encrypted documents with b
   acceptance_assert_one_page_invariants_for_test(decrypted.document, (1, 5))
   @test.assert_eq(decrypted.document.lookup_object_or_null(60), secret)
 
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("compressed-encrypted-recrypt-added"),
   )
   decrypted.document.add_object_given_number(61, added_object)
@@ -2777,7 +2775,7 @@ test "native acceptance suite reconstructs encrypted incremental revisions with 
   acceptance_assert_one_page_invariants_for_test(recovered.document, (1, 4))
   @test.assert_eq(recovered.document.lookup_object_or_null(60), updated_secret)
 
-  let added_object : @pdflite.PdfObject = PdfString(
+  let added_object : @syntax.PdfObject = PdfString(
     acceptance_ascii_for_test("malformed-incremental-recrypt-added"),
   )
   recovered.document.add_object_given_number(61, added_object)

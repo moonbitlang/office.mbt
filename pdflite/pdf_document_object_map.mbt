@@ -90,7 +90,7 @@ fn PdfObjectMap::copy(self : PdfObjectMap) -> PdfObjectMap {
 pub fn PdfObjectMap::lookup_parsed_or_null(
   self : PdfObjectMap,
   number : Int,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   match self.get_entry(number) {
     Some({ data: ObjectParsed(object), .. }) => object
     Some({ data: ObjectParsedAlreadyDecrypted(object), .. }) => object

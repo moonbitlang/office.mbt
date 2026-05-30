@@ -55,7 +55,7 @@ pub fn PdfDocument::write_optional_content_groups(
     PdfArray([ for entry in optional_content.ocgs => PdfIndirect(entry.0) ]),
   )
   let default_number = pdf.pdf_ocg_write_config(optional_content.default_config)
-  let entries : Array[(PdfName, PdfObject)] = [
+  let entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_ocg_ocgs_key(), PdfIndirect(ocg_array_number)),
     (pdf_ocg_d_key(), PdfIndirect(default_number)),
   ]

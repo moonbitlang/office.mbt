@@ -62,8 +62,8 @@ fn pdf_markdown_positioned_text_codepoints_of_page(
 ///|
 fn pdf_markdown_push_text_codepoints_of_streams(
   document : @pdflite.PdfDocument,
-  resources : @pdflite.PdfObject,
-  streams : ArrayView[@pdflite.PdfObject],
+  resources : @syntax.PdfObject,
+  streams : ArrayView[@syntax.PdfObject],
   output : Array[Int],
   font_cache : PdfMarkdownFontCache,
   depth : Int,

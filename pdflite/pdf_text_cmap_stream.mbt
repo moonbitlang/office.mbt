@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_text_cmap_stream_dictionary_wmode(
   self : PdfDocument,
-  stream_object : PdfObject,
+  stream_object : @syntax.PdfObject,
 ) -> Int? {
   match self.lookup_direct(pdf_text_wmode_key_name, stream_object) {
     Some(PdfInteger(value)) => Some(value)
@@ -12,7 +12,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_wmode(
 ///|
 fn PdfDocument::pdf_text_cmap_stream_dictionary_cmap_name(
   self : PdfDocument,
-  stream_object : PdfObject,
+  stream_object : @syntax.PdfObject,
 ) -> PdfName? {
   match self.lookup_direct(pdf_text_cmap_name_key_name, stream_object) {
     Some(PdfNameObject(name)) => Some(name)
@@ -23,7 +23,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_cmap_name(
 ///|
 fn PdfDocument::pdf_text_cmap_stream_dictionary_cmap_type(
   self : PdfDocument,
-  stream_object : PdfObject,
+  stream_object : @syntax.PdfObject,
 ) -> Int? {
   match self.lookup_direct(pdf_text_cmap_type_key_name, stream_object) {
     Some(PdfInteger(value)) => Some(value)
@@ -34,7 +34,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_cmap_type(
 ///|
 fn PdfDocument::pdf_text_cmap_stream_dictionary_usecmap_name(
   self : PdfDocument,
-  stream_object : PdfObject,
+  stream_object : @syntax.PdfObject,
 ) -> PdfName? {
   match self.lookup_direct(pdf_text_usecmap_key_name, stream_object) {
     Some(PdfNameObject(name)) => Some(name)
@@ -45,7 +45,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_usecmap_name(
 ///|
 fn PdfDocument::pdf_text_cmap_stream_dictionary_cid_system_info(
   self : PdfDocument,
-  stream_object : PdfObject,
+  stream_object : @syntax.PdfObject,
 ) -> PdfCIDSystemInfo? {
   match self.lookup_direct(pdf_text_cid_system_info_key_name, stream_object) {
     Some(value) =>
@@ -61,7 +61,7 @@ fn PdfDocument::pdf_text_cmap_stream_dictionary_cid_system_info(
 ///|
 fn PdfDocument::pdf_text_apply_cmap_stream_dictionary_metadata(
   self : PdfDocument,
-  stream_object : PdfObject,
+  stream_object : @syntax.PdfObject,
   parsed : PdfParsedCMap,
 ) -> PdfParsedCMap {
   {
@@ -93,7 +93,7 @@ fn PdfDocument::pdf_text_apply_cmap_stream_dictionary_metadata(
 ///|
 fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> PdfBytes raise PdfError {
   match self.direct(object) {
     PdfStreamObject(stream) => {
@@ -111,7 +111,7 @@ fn PdfDocument::pdf_text_decoded_cmap_stream_data_direct(
 ///|
 fn PdfDocument::parse_cmap_with_seen(
   self : PdfDocument,
-  cmap : PdfObject,
+  cmap : @syntax.PdfObject,
   seen : @hashmap.HashMap[Int, Bool],
 ) -> PdfParsedCMap raise PdfError {
   match cmap {

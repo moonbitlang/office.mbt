@@ -15,14 +15,16 @@ fn PdfImageExtractionRunState::reset_written(
 ///|
 fn PdfImageExtractionRunState::claim_images(
   self : PdfImageExtractionRunState,
-  images : ArrayView[PdfObject],
+  images : ArrayView[@syntax.PdfObject],
   dedup : Bool,
   dedup_per_page : Bool,
-) -> Array[PdfObject] {
+) -> Array[@syntax.PdfObject] {
   if !dedup && !dedup_per_page {
     images.to_owned()
   } else {
-    let claimed : Array[PdfObject] = Array::new(capacity=images.length())
+    let claimed : Array[@syntax.PdfObject] = Array::new(
+      capacity=images.length(),
+    )
     for image in images {
       match image {
         PdfIndirect(number) if self.written.contains(number) => ()

@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_image_indirect_mask_number(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
   key : PdfName,
 ) -> Int? {
   match self.direct(image) {
@@ -24,9 +24,9 @@ fn PdfDocument::pdf_image_indirect_mask_number(
 ///|
 fn PdfDocument::pdf_image_list_mask(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   page_number : Int,
-  image : PdfObject,
+  image : @syntax.PdfObject,
   inline : Bool,
   entries : Array[PdfImageListEntry],
   form_numbers : @hashmap.HashMap[Int, Bool],

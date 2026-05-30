@@ -5,17 +5,17 @@ fn create_name_for_test(text : String) -> @pdflite.PdfName {
 
 ///|
 fn create_lookup_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : @pdflite.PdfName,
-) -> @pdflite.PdfObject? {
+) -> @syntax.PdfObject? {
   object.lookup_immediate(key)
 }
 
 ///|
 fn create_lookup_required_for_test(
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   match create_lookup_for_test(object, create_name_for_test(key)) {
     Some(value) => value
     None => {
@@ -28,9 +28,9 @@ fn create_lookup_required_for_test(
 ///|
 fn create_lookup_indirect_object_for_test(
   document : @pdflite.PdfDocument,
-  object : @pdflite.PdfObject,
+  object : @syntax.PdfObject,
   key : String,
-) -> @pdflite.PdfObject raise {
+) -> @syntax.PdfObject raise {
   let reference = try! create_lookup_required_for_test(object, key)
   guard reference is PdfIndirect(number) else {
     fail("expected dictionary key " + key + " to be indirect")
@@ -40,7 +40,7 @@ fn create_lookup_indirect_object_for_test(
 }
 
 ///|
-fn create_stream_bytes_for_test(object : @pdflite.PdfObject) -> Bytes raise {
+fn create_stream_bytes_for_test(object : @syntax.PdfObject) -> Bytes raise {
   guard object is PdfStreamObject(stream) else {
     fail("expected stream object")
     []

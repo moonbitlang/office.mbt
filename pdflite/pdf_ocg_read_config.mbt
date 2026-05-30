@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_ocg_read_appdict(
   self : PdfDocument,
-  appdict : PdfObject,
+  appdict : @syntax.PdfObject,
 ) -> @ocg.PdfOcgAppDict {
   let event : @ocg.PdfOcgEvent = match
     self.lookup_direct(pdf_ocg_event_key(), appdict) {
@@ -23,7 +23,7 @@ fn PdfDocument::pdf_ocg_read_appdict(
 ///|
 fn PdfDocument::pdf_ocg_read_order(
   self : PdfDocument,
-  order : PdfObject,
+  order : @syntax.PdfObject,
 ) -> Array[(PdfBytes?, Array[Int])] {
   match self.direct(order) {
     PdfArray(items) => {
@@ -66,7 +66,7 @@ fn PdfDocument::pdf_ocg_read_order(
 ///|
 fn PdfDocument::pdf_ocg_read_config(
   self : PdfDocument,
-  config : PdfObject,
+  config : @syntax.PdfObject,
 ) -> @ocg.PdfOcgConfig {
   let name = match self.lookup_direct(pdf_ocg_name_key(), config) {
     Some(PdfString(value)) => Some(value)

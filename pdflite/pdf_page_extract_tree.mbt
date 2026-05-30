@@ -13,7 +13,7 @@ fn pdf_page_root_pages_number(pdf : PdfDocument) -> Int raise PdfError {
 ///|
 fn PdfDocument::pdf_page_tree_nodes_not_pages_inner(
   self : PdfDocument,
-  node : PdfObject,
+  node : @syntax.PdfObject,
   node_number : Int,
   depth : Int,
 ) -> Array[Int] raise PdfError {
@@ -63,7 +63,7 @@ fn PdfDocument::pdf_page_tree_nodes_not_pages(
 ///|
 fn PdfDocument::pdf_page_reference_numbers_unordered_inner(
   self : PdfDocument,
-  node : PdfObject,
+  node : @syntax.PdfObject,
   node_number : Int,
   depth : Int,
 ) -> Array[Int] raise PdfError {
@@ -124,11 +124,11 @@ fn pdf_page_first_duplicate_number(numbers : ArrayView[Int]) -> Int? {
 
 ///|
 fn pdf_page_rewrite_first_kid(
-  kids : ArrayView[PdfObject],
+  kids : ArrayView[@syntax.PdfObject],
   old_number : Int,
   new_number : Int,
-) -> (Array[PdfObject], Bool) {
-  let output : Array[PdfObject] = Array::new(capacity=kids.length())
+) -> (Array[@syntax.PdfObject], Bool) {
+  let output : Array[@syntax.PdfObject] = Array::new(capacity=kids.length())
   let mut rewritten = false
   for kid in kids {
     match kid {

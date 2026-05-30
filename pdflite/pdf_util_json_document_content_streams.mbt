@@ -19,7 +19,7 @@ fn pdf_util_push_unique_int(values : Array[Int], value : Int) -> Unit {
 ///|
 fn PdfDocument::pdf_util_mark_contents_value(
   self : PdfDocument,
-  value : PdfObject,
+  value : @syntax.PdfObject,
   numbers : Array[Int],
 ) -> Unit {
   match value {
@@ -77,7 +77,7 @@ fn PdfDocument::pdf_util_indirect_marks_content_stream(
 ///|
 fn PdfDocument::pdf_util_collect_content_stream_numbers(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   numbers : Array[Int],
 ) -> Unit {
   match object {
@@ -121,7 +121,7 @@ fn PdfDocument::pdf_util_content_stream_numbers(
 ///|
 fn PdfDocument::pdf_util_json_of_parsed_content_stream(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
   utf8 : Bool,
   clean_strings : Bool,
   no_stream_data : Bool,

@@ -1,14 +1,14 @@
 ///|
 priv struct PdfDuplicateStreamCandidate {
   number : Int
-  dictionary : PdfObject
+  dictionary : @syntax.PdfObject
   data : BytesView
 }
 
 ///|
 fn pdf_duplicate_stream_candidate(
   number : Int,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> PdfDuplicateStreamCandidate? {
   match object {
     PdfStreamObject({ dictionary, data }) =>

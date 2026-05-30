@@ -19,8 +19,8 @@ fn codec_stream_encode_name_for_test(text : String) -> @pdflite.PdfName {
 test "pdf_encode_stream_with_filter adds filter and updates length" {
   let length = codec_stream_encode_name_for_test("/Length")
   let filter = codec_stream_encode_name_for_test("/Filter")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2))]),
     StreamGot(codec_stream_encode_ascii_for_test("Hi")),
   )
   let encoded = try! @pdflite.pdf_encode_stream_with_filter(
@@ -84,8 +84,8 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
   let length = codec_stream_encode_name_for_test("/Length")
   let filter = codec_stream_encode_name_for_test("/Filter")
   let decodeparms = codec_stream_encode_name_for_test("/DecodeParms")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2))]),
     StreamGot(codec_stream_encode_ascii_for_test("Hi")),
   )
   let encoded = try! @pdflite.pdf_encode_stream_with_encoding(
@@ -104,8 +104,8 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
     Some(PdfNameObject(codec_stream_encode_name_for_test("/ASCIIHexDecode"))),
   )
 
-  let predictor_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(6))]),
+  let predictor_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(6))]),
     StreamGot(codec_stream_encode_bytes_for_test([10, 20, 30, 11, 25, 35])),
   )
   let predicted = try! @pdflite.pdf_encode_stream_with_encoding(
@@ -150,8 +150,8 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
   )
   @test.assert_eq(skipped_stream.dictionary.lookup_immediate(filter), None)
 
-  let ccitt_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+  let ccitt_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2))]),
     StreamGot(codec_stream_encode_bytes_for_test([0xF0, 0x00])),
   )
   let ccitt = try! @pdflite.pdf_encode_stream_with_encoding(
@@ -201,7 +201,7 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
     None,
   )
 
-  let ccitt_bad_predictor : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
+  let ccitt_bad_predictor : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
     PdfStreamCCITT(8, 2),
     ccitt_stream,
     predictor=Some(PdfStreamPredictorPNGUp),
@@ -210,7 +210,7 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
     fail("expected CCITT predictor encoding to raise")
   }
 
-  let ccitt_bad_object : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
+  let ccitt_bad_object : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
     PdfStreamCCITT(8, 2),
     PdfInteger(0),
   )
@@ -218,8 +218,8 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
     fail("expected CCITT encoding of a non-stream to raise")
   }
 
-  let ccitt_g4_stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(3))]),
+  let ccitt_g4_stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(3))]),
     StreamGot(codec_stream_encode_bytes_for_test([0xC0, 0xB0, 0x80])),
   )
   let ccitt_g4 = try! @pdflite.pdf_encode_stream_with_encoding(
@@ -265,7 +265,7 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
   )
   @test.assert_eq(skipped_g4_stream.dictionary.lookup_immediate(filter), None)
 
-  let ccitt_g4_bad_predictor : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
+  let ccitt_g4_bad_predictor : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
     PdfStreamCCITTG4(4, 3),
     ccitt_g4_stream,
     predictor=Some(PdfStreamPredictorPNGUp),
@@ -282,8 +282,8 @@ test "pdf_encode_stream_with_filter prepends existing filters" {
   let ascii_hex = codec_stream_encode_name_for_test("/ASCIIHexDecode")
   let run_length = codec_stream_encode_name_for_test("/RunLengthDecode")
   let ascii85 = codec_stream_encode_name_for_test("/ASCII85Decode")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(2)),
       (filter, PdfNameObject(run_length)),
     ]),
@@ -297,8 +297,8 @@ test "pdf_encode_stream_with_filter prepends existing filters" {
     encoded_stream.dictionary.lookup_immediate(filter),
     Some(PdfArray([PdfNameObject(ascii_hex), PdfNameObject(run_length)])),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(2)),
       (filter, PdfArray([PdfNameObject(ascii85)])),
     ]),
@@ -318,8 +318,8 @@ test "pdf_encode_stream_with_filter prepends existing filters" {
 test "pdf_encode_stream_with_filter can skip non-smaller encodings" {
   let length = codec_stream_encode_name_for_test("/Length")
   let filter = codec_stream_encode_name_for_test("/Filter")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2))]),
     StreamGot(codec_stream_encode_ascii_for_test("Hi")),
   )
   let skipped = try! @pdflite.pdf_encode_stream_with_filter(
@@ -340,8 +340,8 @@ test "pdf_encode_stream_with_filter can skip non-smaller encodings" {
     Some(PdfInteger(2)),
   )
   let repeated = codec_stream_encode_bytes_for_test([ for _ in 0..<30 => 65 ])
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(repeated.length()))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(repeated.length()))]),
     StreamGot(repeated),
   )
   let encoded = try! @pdflite.pdf_encode_stream_with_filter(
@@ -367,8 +367,8 @@ test "pdf_encode_stream_with_filter_and_predictor round trips through decode str
   let length = codec_stream_encode_name_for_test("/Length")
   let filter = codec_stream_encode_name_for_test("/Filter")
   let decodeparms = codec_stream_encode_name_for_test("/DecodeParms")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(6))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(6))]),
     StreamGot(codec_stream_encode_bytes_for_test([10, 20, 30, 11, 25, 35])),
   )
   let encoded = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
@@ -411,8 +411,8 @@ test "pdf_encode_stream_with_filter_and_predictor round trips tiff predictor" {
   let length = codec_stream_encode_name_for_test("/Length")
   let filter = codec_stream_encode_name_for_test("/Filter")
   let predictor = codec_stream_encode_name_for_test("/Predictor")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(6))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(6))]),
     StreamGot(codec_stream_encode_bytes_for_test([10, 20, 30, 13, 25, 35])),
   )
   let encoded = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
@@ -456,8 +456,8 @@ test "pdf_encode_stream_with_filter_and_predictor can skip non-smaller encodings
   let length = codec_stream_encode_name_for_test("/Length")
   let filter = codec_stream_encode_name_for_test("/Filter")
   let decodeparms = codec_stream_encode_name_for_test("/DecodeParms")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(3))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(3))]),
     StreamGot(codec_stream_encode_ascii_for_test("abc")),
   )
   let skipped = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
@@ -485,9 +485,9 @@ test "pdf_encode_stream_with_filter_and_predictor prepends decodeparms" {
   let length = codec_stream_encode_name_for_test("/Length")
   let decodeparms = codec_stream_encode_name_for_test("/DecodeParms")
   let predictor = codec_stream_encode_name_for_test("/Predictor")
-  let existing = @pdflite.pdf_dictionary([(predictor, PdfInteger(1))])
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(3)), (decodeparms, existing)]),
+  let existing = @syntax.pdf_dictionary([(predictor, PdfInteger(1))])
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(3)), (decodeparms, existing)]),
     StreamGot(codec_stream_encode_ascii_for_test("abc")),
   )
   let encoded = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(
@@ -506,8 +506,8 @@ test "pdf_encode_stream_with_filter_and_predictor prepends decodeparms" {
     fail("expected DecodeParms array")
   }
   @test.assert_eq(existing_decodeparms, existing)
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(3)),
       (decodeparms, PdfArray([existing])),
     ]),
@@ -535,20 +535,20 @@ test "pdf_encode_stream_with_filter_and_predictor prepends decodeparms" {
 test "pdf stream encoding reports malformed objects and materializes deferred data" {
   let length = codec_stream_encode_name_for_test("/Length")
   let filter = codec_stream_encode_name_for_test("/Filter")
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
     codec_stream_encode_name_for_test("/ASCIIHexDecode"),
     PdfNull,
   )
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
     fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
-  let deferred = @pdflite.stream_to_get(
+  let deferred = @syntax.stream_to_get(
     @pdflite.byte_cursor_of_bytes(codec_stream_encode_ascii_for_test("Hi")),
     0,
     2,
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2))]),
     StreamToGet(deferred),
   )
   let encoded_deferred = try! @pdflite.pdf_encode_stream_with_filter(
@@ -563,11 +563,11 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     decoded_stream.data,
     StreamGot(codec_stream_encode_ascii_for_test("Hi")),
   )
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
     StreamGot(codec_stream_encode_ascii_for_test("Hi")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
     codec_stream_encode_name_for_test("/ASCIIHexDecode"),
     stream,
   )
@@ -575,14 +575,14 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     fail("expected @pdflite.PdfError::FilterExpected")
   }
   let decodeparms = codec_stream_encode_name_for_test("/DecodeParms")
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([
       (length, PdfInteger(2)),
       (decodeparms, PdfInteger(1)),
     ]),
     StreamGot(codec_stream_encode_ascii_for_test("Hi")),
   )
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
     codec_stream_encode_name_for_test("/ASCIIHexDecode"),
     11,
     1,
@@ -593,7 +593,7 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
   guard result is Err(@pdflite.PdfError::PredictorExpected) else {
     fail("expected @pdflite.PdfError::PredictorExpected")
   }
-  let result : Result[@pdflite.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
+  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
     codec_stream_encode_name_for_test("/ASCIIHexDecode"),
     11,
     1,
@@ -604,8 +604,8 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
   guard result is Err(@pdflite.PdfError::ParseStreamExpected) else {
     fail("expected @pdflite.PdfError::ParseStreamExpected")
   }
-  let stream = @pdflite.pdf_stream(
-    @pdflite.pdf_dictionary([(length, PdfInteger(2))]),
+  let stream = @syntax.pdf_stream(
+    @syntax.pdf_dictionary([(length, PdfInteger(2))]),
     StreamToGet(deferred),
   )
   let encoded_deferred = try! @pdflite.pdf_encode_stream_with_filter_and_predictor(

@@ -7,15 +7,15 @@ fn reader_bytes_for_test(values : ArrayView[Int]) -> @pdflite.PdfBytes {
 ///|
 #warnings("-unused_value")
 fn reader_stream_bytes_for_test(
-  stream : @pdflite.PdfStream,
+  stream : @syntax.PdfStream,
 ) -> @pdflite.PdfBytes raise {
-  @pdflite.pdf_stream(stream.dictionary, stream.data).stream_bytes()
+  @syntax.pdf_stream(stream.dictionary, stream.data).stream_bytes()
 }
 
 ///|
 #warnings("-unused_value")
 fn reader_assert_deferred_stream_data_for_test(
-  stream : @pdflite.PdfStream,
+  stream : @syntax.PdfStream,
   expected : @pdflite.PdfBytes,
 ) -> Unit raise {
   guard stream.data is StreamToGet(_) else {

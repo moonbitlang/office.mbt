@@ -100,7 +100,7 @@ fn pdf_content_entries_of_optional(
 pub fn PdfDocument::content_apply_resource_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   op : @content.PdfContentOp,
 ) -> PdfContentOperatorResourceResult raise PdfError {
   match op {
@@ -162,7 +162,7 @@ pub fn PdfDocument::content_apply_resource_op(
 pub fn pdf_content_apply_resource_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   op : @content.PdfContentOp,
 ) -> PdfContentOperatorResourceResult raise PdfError {
   document.content_apply_resource_op(state, resources, op)

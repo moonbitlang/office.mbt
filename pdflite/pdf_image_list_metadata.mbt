@@ -3,7 +3,7 @@ fn PdfDocument::pdf_image_lookup_int_or_default(
   self : PdfDocument,
   first_key : PdfName,
   second_key : PdfName,
-  image : PdfObject,
+  image : @syntax.PdfObject,
   default : Int,
 ) -> Int raise PdfError {
   match self.lookup_direct_or_else(first_key, second_key, image) {
@@ -15,7 +15,7 @@ fn PdfDocument::pdf_image_lookup_int_or_default(
 ///|
 fn PdfDocument::pdf_image_stream_length(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
   fallback : Int,
 ) -> Int {
   match self.lookup_direct(pdf_image_length_key(), image) {
@@ -27,7 +27,7 @@ fn PdfDocument::pdf_image_stream_length(
 ///|
 fn PdfDocument::pdf_image_bits_per_component_number(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> Int? raise PdfError {
   match self.image_bits_per_component(image) {
     Some(PdfInteger(value)) => Some(value)
@@ -39,8 +39,8 @@ fn PdfDocument::pdf_image_bits_per_component_number(
 ///|
 fn PdfDocument::pdf_image_colourspace_name(
   self : PdfDocument,
-  image : PdfObject,
-  resources : PdfObject,
+  image : @syntax.PdfObject,
+  resources : @syntax.PdfObject,
 ) -> String? {
   Some(self.image_colour_space(image, resources).debug_name()) catch {
     _ => None
@@ -48,7 +48,9 @@ fn PdfDocument::pdf_image_colourspace_name(
 }
 
 ///|
-fn pdf_image_single_filter_object(filter : PdfObject) -> PdfObject {
+fn pdf_image_single_filter_object(
+  filter : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   match filter {
     PdfArray([single]) => single
     _ => filter
@@ -56,7 +58,7 @@ fn pdf_image_single_filter_object(filter : PdfObject) -> PdfObject {
 }
 
 ///|
-fn pdf_image_filter_is_name(filter : PdfObject, name : PdfName) -> Bool {
+fn pdf_image_filter_is_name(filter : @syntax.PdfObject, name : PdfName) -> Bool {
   match filter {
     PdfNameObject(filter_name) => filter_name == name
     PdfArray([PdfNameObject(filter_name)]) => filter_name == name
@@ -67,8 +69,8 @@ fn pdf_image_filter_is_name(filter : PdfObject, name : PdfName) -> Bool {
 ///|
 fn PdfDocument::pdf_image_first_decodeparms(
   self : PdfDocument,
-  image : PdfObject,
-) -> PdfObject? {
+  image : @syntax.PdfObject,
+) -> @syntax.PdfObject? {
   match
     self.lookup_direct_or_else(
       pdf_image_decodeparms_key(),
@@ -88,7 +90,7 @@ fn PdfDocument::pdf_image_first_decodeparms(
 ///|
 fn PdfDocument::pdf_image_decodeparms_k(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> Int? {
   match self.pdf_image_first_decodeparms(image) {
     Some(decodeparms) =>
@@ -103,7 +105,7 @@ fn PdfDocument::pdf_image_decodeparms_k(
 ///|
 fn PdfDocument::pdf_image_decodeparms_has_jbig2_globals(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> Bool {
   match self.pdf_image_first_decodeparms(image) {
     Some(decodeparms) =>
@@ -118,7 +120,7 @@ fn PdfDocument::pdf_image_decodeparms_has_jbig2_globals(
 ///|
 fn PdfDocument::pdf_image_filter_name(
   self : PdfDocument,
-  image : PdfObject,
+  image : @syntax.PdfObject,
 ) -> String? raise PdfError {
   match
     self.lookup_direct_or_else(pdf_image_filter_key(), pdf_image_f_key(), image) {

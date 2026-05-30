@@ -14,7 +14,7 @@ fn pdf_coord_box_object(
   document : PdfDocument,
   page : @page.PdfPage,
   kind : String,
-) -> PdfObject {
+) -> @syntax.PdfObject {
   match pdf_coord_box_key(kind) {
     Some(key) =>
       match document.lookup_direct(key, page.rest) {

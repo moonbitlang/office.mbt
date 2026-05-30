@@ -156,7 +156,7 @@ fn PdfDocument::pdf_text_write_tounicode(
   let sorted = pdf_text_tounicode_sorted(entries)
   let bytes = pdf_text_tounicode_bytes(sorted)
   self.add_object(
-    pdf_stream(
+    @syntax.pdf_stream(
       PdfDictionary([(pdf_text_length_key_name, PdfInteger(bytes.length()))]),
       StreamGot(bytes),
     ),

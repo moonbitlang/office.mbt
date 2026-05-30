@@ -4,7 +4,7 @@ fn font_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn font_descriptor_for_test() -> @pdflite.PdfObject {
+fn font_descriptor_for_test() -> @syntax.PdfObject {
   PdfDictionary([
     (font_name_for_test("/FontFile"), PdfIndirect(4)),
     (font_name_for_test("/FontFile2"), PdfIndirect(5)),
@@ -44,8 +44,8 @@ fn font_json_int_for_test(value : Int) -> Json {
 
 ///|
 fn font_resource_dictionary_for_test(
-  entries : ArrayView[(String, @pdflite.PdfObject)],
-) -> @pdflite.PdfObject {
+  entries : ArrayView[(String, @syntax.PdfObject)],
+) -> @syntax.PdfObject {
   PdfDictionary(
     [
       for entry in entries => (font_name_for_test(entry.0), entry.1)
@@ -57,8 +57,8 @@ fn font_resource_dictionary_for_test(
 fn font_required_lookup_for_test(
   document : @pdflite.PdfDocument,
   key : String,
-  object : @pdflite.PdfObject,
-) -> @pdflite.PdfObject raise {
+  object : @syntax.PdfObject,
+) -> @syntax.PdfObject raise {
   match document.lookup_direct(font_name_for_test(key), object) {
     Some(value) => value
     None => fail("missing key " + key)
@@ -70,8 +70,8 @@ fn font_font_object_for_test(
   subtype : String,
   basefont : String,
   encoding : String?,
-) -> @pdflite.PdfObject {
-  let entries : Array[(@pdflite.PdfName, @pdflite.PdfObject)] = [
+) -> @syntax.PdfObject {
+  let entries : Array[(@pdflite.PdfName, @syntax.PdfObject)] = [
     (font_name_for_test("/Type"), PdfNameObject(font_name_for_test("/Font"))),
     (font_name_for_test("/Subtype"), PdfNameObject(font_name_for_test(subtype))),
     (
@@ -97,8 +97,8 @@ fn font_font_object_with_descriptor_for_test(
   subtype : String,
   basefont : String,
   encoding : String?,
-  descriptor : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
+  descriptor : @syntax.PdfObject,
+) -> @syntax.PdfObject {
   guard font_font_object_for_test(subtype, basefont, encoding)
     is PdfDictionary(entries) else {
     return PdfDictionary([])
@@ -109,8 +109,8 @@ fn font_font_object_with_descriptor_for_test(
 
 ///|
 fn font_composite_font_for_test(
-  descendants : ArrayView[@pdflite.PdfObject],
-) -> @pdflite.PdfObject {
+  descendants : ArrayView[@syntax.PdfObject],
+) -> @syntax.PdfObject {
   guard font_font_object_for_test("/Type0", "/CompositeFont", None)
     is PdfDictionary(entries) else {
     return PdfDictionary([])
@@ -125,7 +125,7 @@ fn font_composite_font_for_test(
 }
 
 ///|
-fn font_descriptor_without_files_for_test() -> @pdflite.PdfObject {
+fn font_descriptor_without_files_for_test() -> @syntax.PdfObject {
   PdfDictionary([(font_name_for_test("/Flags"), PdfInteger(4))])
 }
 
@@ -133,7 +133,7 @@ fn font_descriptor_without_files_for_test() -> @pdflite.PdfObject {
 fn font_descriptor_with_file_for_test(
   key : String,
   number : Int,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfDictionary([
     (font_name_for_test(key), PdfIndirect(number)),
     (font_name_for_test("/Flags"), PdfInteger(32)),
@@ -141,16 +141,16 @@ fn font_descriptor_with_file_for_test(
 }
 
 ///|
-fn font_file_stream_for_test(data : String) -> @pdflite.PdfObject {
+fn font_file_stream_for_test(data : String) -> @syntax.PdfObject {
   let bytes = @ascii.encode(data)
-  @pdflite.pdf_stream(
+  @syntax.pdf_stream(
     PdfDictionary([(font_name_for_test("/Length"), PdfInteger(bytes.length()))]),
     StreamGot(bytes),
   )
 }
 
 ///|
-fn font_minimal_font_object_for_test() -> @pdflite.PdfObject {
+fn font_minimal_font_object_for_test() -> @syntax.PdfObject {
   PdfDictionary([
     (font_name_for_test("/Type"), PdfNameObject(font_name_for_test("/Font"))),
   ])
@@ -158,9 +158,9 @@ fn font_minimal_font_object_for_test() -> @pdflite.PdfObject {
 
 ///|
 fn font_form_xobject_for_test(
-  resources : @pdflite.PdfObject,
-) -> @pdflite.PdfObject {
-  @pdflite.pdf_stream(
+  resources : @syntax.PdfObject,
+) -> @syntax.PdfObject {
+  @syntax.pdf_stream(
     PdfDictionary([
       (
         font_name_for_test("/Subtype"),
@@ -685,7 +685,7 @@ test "PdfDocument font_from_name resolves page and XObject paths" {
   )
   @test.assert_eq(try! doc.font_from_name("/Missing", 1), PdfNull)
   @test.assert_eq(try! doc.font_from_name("/Fm/Missing", 1), PdfNull)
-  let bad_page : Result[@pdflite.PdfObject, Error] = try? doc.font_from_name(
+  let bad_page : Result[@syntax.PdfObject, Error] = try? doc.font_from_name(
     "/F1", 2,
   )
   guard bad_page is Err(@pdflite.PdfError::BadPageSpecification(_)) else {

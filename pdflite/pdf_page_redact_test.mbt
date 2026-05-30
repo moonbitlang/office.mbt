@@ -6,15 +6,15 @@ fn page_redact_name_for_test(text : String) -> @pdflite.PdfName {
 ///|
 fn page_redact_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
 fn page_redact_page_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  rest? : @pdflite.PdfObject = PdfDictionary([]),
-  resources? : @pdflite.PdfObject = PdfDictionary([]),
+  rest? : @syntax.PdfObject = PdfDictionary([]),
+  resources? : @syntax.PdfObject = PdfDictionary([]),
   rotate? : @page.PdfPageRotation = Rotate0,
 ) -> @page.PdfPage {
   {
@@ -61,11 +61,11 @@ fn page_redact_structure_doc_for_test() -> @pdflite.PdfDocument raise {
   let page_numbers = doc.page_reference_numbers()
   doc.add_object_given_number(
     30,
-    @pdflite.pdf_dictionary([(key_k, PdfArray([PdfIndirect(31)]))]),
+    @syntax.pdf_dictionary([(key_k, PdfArray([PdfIndirect(31)]))]),
   )
   doc.add_object_given_number(
     31,
-    @pdflite.pdf_dictionary([
+    @syntax.pdf_dictionary([
       (key_obj, PdfIndirect(page_numbers[0])),
       (key_k, PdfInteger(0)),
     ]),

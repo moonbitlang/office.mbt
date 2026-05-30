@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_bookmark_title(
   self : PdfDocument,
-  outline : PdfObject,
+  outline : @syntax.PdfObject,
 ) -> PdfBytes {
   match self.lookup_direct(pdf_bookmark_title_key(), outline) {
     Some(PdfString(title)) => title
@@ -12,7 +12,7 @@ fn PdfDocument::pdf_bookmark_title(
 ///|
 fn PdfDocument::pdf_bookmark_target(
   self : PdfDocument,
-  outline : PdfObject,
+  outline : @syntax.PdfObject,
   preserve_actions : Bool,
 ) -> @destination.PdfDestination raise PdfError {
   match self.lookup_direct(pdf_bookmark_dest_key(), outline) {
@@ -42,7 +42,7 @@ fn PdfDocument::pdf_bookmark_target(
 ///|
 fn PdfDocument::pdf_bookmark_is_open(
   self : PdfDocument,
-  outline : PdfObject,
+  outline : @syntax.PdfObject,
 ) -> Bool {
   match self.lookup_direct(pdf_bookmark_count_key(), outline) {
     Some(PdfInteger(count)) => count > 0
@@ -53,7 +53,7 @@ fn PdfDocument::pdf_bookmark_is_open(
 ///|
 fn PdfDocument::pdf_bookmark_colour_number(
   self : PdfDocument,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> Double? {
   try self.get_number(object) catch {
     _ => None
@@ -65,7 +65,7 @@ fn PdfDocument::pdf_bookmark_colour_number(
 ///|
 fn PdfDocument::pdf_bookmark_colour(
   self : PdfDocument,
-  outline : PdfObject,
+  outline : @syntax.PdfObject,
 ) -> @bookmark.PdfBookmarkColour {
   match self.lookup_direct(pdf_bookmark_colour_key(), outline) {
     Some(PdfArray([red, green, blue])) =>
@@ -85,7 +85,7 @@ fn PdfDocument::pdf_bookmark_colour(
 ///|
 fn PdfDocument::pdf_bookmark_flags(
   self : PdfDocument,
-  outline : PdfObject,
+  outline : @syntax.PdfObject,
 ) -> Int {
   match self.lookup_direct(pdf_bookmark_flags_key(), outline) {
     Some(PdfInteger(flags)) => flags
@@ -97,7 +97,7 @@ fn PdfDocument::pdf_bookmark_flags(
 fn PdfDocument::pdf_bookmark_of_outline(
   self : PdfDocument,
   level : Int,
-  outline : PdfObject,
+  outline : @syntax.PdfObject,
   preserve_actions : Bool,
 ) -> @bookmark.PdfBookmark raise PdfError {
   {
@@ -114,7 +114,7 @@ fn PdfDocument::pdf_bookmark_of_outline(
 fn PdfDocument::pdf_bookmark_traverse_siblings(
   self : PdfDocument,
   level : Int,
-  first : PdfObject,
+  first : @syntax.PdfObject,
   preserve_actions : Bool,
   output : Array[@bookmark.PdfBookmark],
   depth : Int,
@@ -147,7 +147,7 @@ fn PdfDocument::pdf_bookmark_traverse_siblings(
 fn PdfDocument::pdf_bookmark_traverse_children(
   self : PdfDocument,
   level : Int,
-  outline : PdfObject,
+  outline : @syntax.PdfObject,
   preserve_actions : Bool,
   output : Array[@bookmark.PdfBookmark],
   depth : Int,

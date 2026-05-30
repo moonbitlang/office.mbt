@@ -1,9 +1,9 @@
 ///|
 fn PdfDocument::pdf_page_transform_action_object_with_lookup(
   self : PdfDocument,
-  raw_action : PdfObject,
+  raw_action : @syntax.PdfObject,
   lookup : PdfPageMatrixLookup,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   let action = self.direct(raw_action)
   match
     (
@@ -57,9 +57,9 @@ fn PdfDocument::pdf_page_transform_bookmarks_for_matrices(
 ///|
 fn PdfDocument::pdf_page_transform_link_annotation_object_with_lookup(
   self : PdfDocument,
-  annotation : PdfObject,
+  annotation : @syntax.PdfObject,
   lookup : PdfPageMatrixLookup,
-) -> PdfObject? raise PdfError {
+) -> @syntax.PdfObject? raise PdfError {
   match self.lookup_direct(pdf_page_subtype_key(), annotation) {
     Some(PdfNameObject(kind)) if kind == pdf_page_type_link() =>
       match annotation.lookup_immediate(pdf_page_dest_key()) {

@@ -3,7 +3,7 @@
 pub fn PdfDocument::content_apply_extgstate_font_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState raise PdfError {
   match self.lookup_direct(pdf_content_extgstate_font_name, extgstate) {
     Some(PdfArray([PdfIndirect(font_number), size])) => {
@@ -31,7 +31,7 @@ pub fn PdfDocument::content_apply_extgstate_font_op(
 pub fn pdf_content_apply_extgstate_font_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  extgstate : PdfObject,
+  extgstate : @syntax.PdfObject,
 ) -> PdfContentOperatorState raise PdfError {
   document.content_apply_extgstate_font_op(state, extgstate)
 }
@@ -39,7 +39,7 @@ pub fn pdf_content_apply_extgstate_font_op(
 ///|
 fn PdfDocument::content_font_resource(
   self : PdfDocument,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   name : PdfName,
 ) -> PdfFont? raise PdfError {
   match self.lookup_direct(pdf_page_font_resource_name, resources) {
@@ -57,7 +57,7 @@ fn PdfDocument::content_font_resource(
 pub fn PdfDocument::content_apply_font_resource_op(
   self : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   font_name : PdfName,
   font_size : Double,
 ) -> PdfContentOperatorState raise PdfError {
@@ -84,7 +84,7 @@ pub fn PdfDocument::content_apply_font_resource_op(
 pub fn pdf_content_apply_font_resource_op(
   document : PdfDocument,
   state : PdfContentOperatorState,
-  resources : PdfObject,
+  resources : @syntax.PdfObject,
   font_name : PdfName,
   font_size : Double,
 ) -> PdfContentOperatorState raise PdfError {

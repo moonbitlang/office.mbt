@@ -3,7 +3,7 @@ fn PdfDocument::pdf_font_table_target_font(
   self : PdfDocument,
   font_name : String,
   page_number : Int,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   let font = self.font_from_name(font_name, page_number)
   let mut selected = font
   match font {

@@ -39,7 +39,7 @@ fn pdf_debug_concat_chunks(chunks : ArrayView[PdfBytes]) -> PdfBytes {
 ///|
 fn pdf_debug_object_line(
   prefix : String,
-  object : PdfObject,
+  object : @syntax.PdfObject,
 ) -> PdfBytes raise PdfError {
   pdf_bytes_concat_views([
     @ascii.encode(prefix),

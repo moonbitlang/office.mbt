@@ -9,19 +9,19 @@ fn combine_rect_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   PdfArray([PdfReal(min_x), PdfReal(min_y), PdfReal(max_x), PdfReal(max_y)])
 }
 
 ///|
 fn combine_stream_for_test(
   ops : ArrayView[@content.PdfContentOp],
-) -> @pdflite.PdfObject {
+) -> @syntax.PdfObject {
   try! @pdflite.pdf_content_stream_of_ops(ops)
 }
 
 ///|
-fn combine_font_resources_for_test(name : String) -> @pdflite.PdfObject {
+fn combine_font_resources_for_test(name : String) -> @syntax.PdfObject {
   PdfDictionary([
     (
       combine_name_for_test("/Font"),
@@ -33,7 +33,7 @@ fn combine_font_resources_for_test(name : String) -> @pdflite.PdfObject {
 ///|
 fn combine_page_for_test(
   ops : ArrayView[@content.PdfContentOp],
-  resources? : @pdflite.PdfObject = PdfDictionary([]),
+  resources? : @syntax.PdfObject = PdfDictionary([]),
   width? : Double = 100.0,
   height? : Double = 100.0,
 ) -> @page.PdfPage {

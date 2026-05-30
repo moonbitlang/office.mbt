@@ -54,7 +54,7 @@ fn pdf_texttopdf_group_tag_triples(
 fn pdf_texttopdf_page_reference(
   page_references : ArrayView[Int],
   page_index : Int,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   guard page_index >= 0 && page_index < page_references.length() else {
     raise BadPageSpecification("texttopdf: page reference not found")
   }
@@ -67,10 +67,10 @@ fn pdf_texttopdf_structure_elements(
   parent_number : Int,
   page_references : ArrayView[Int],
   nodes : ArrayView[Array[(Int, Int, Int)]],
-) -> Array[PdfObject] raise PdfError {
-  let output : Array[PdfObject] = []
+) -> Array[@syntax.PdfObject] raise PdfError {
+  let output : Array[@syntax.PdfObject] = []
   for parts in nodes {
-    let kids : Array[PdfObject] = []
+    let kids : Array[@syntax.PdfObject] = []
     for part in parts {
       let (_, page_index, mcid) = part
       kids.push(
@@ -101,9 +101,9 @@ fn pdf_texttopdf_structure_elements(
 
 ///|
 fn pdf_texttopdf_structure_element_for_tag(
-  structure_elements : ArrayView[PdfObject],
+  structure_elements : ArrayView[@syntax.PdfObject],
   tag_number : Int,
-) -> PdfObject raise PdfError {
+) -> @syntax.PdfObject raise PdfError {
   guard tag_number >= 0 && tag_number < structure_elements.length() else {
     raise BadPageSpecification("texttopdf: structure tag not found")
   }
@@ -114,11 +114,11 @@ fn pdf_texttopdf_structure_element_for_tag(
 fn pdf_texttopdf_parent_tree_entries(
   page_count : Int,
   triples : ArrayView[(Int, Int, Int)],
-  structure_elements : ArrayView[PdfObject],
-) -> Array[(Int, PdfObject)] raise PdfError {
-  let output : Array[(Int, PdfObject)] = []
+  structure_elements : ArrayView[@syntax.PdfObject],
+) -> Array[(Int, @syntax.PdfObject)] raise PdfError {
+  let output : Array[(Int, @syntax.PdfObject)] = []
   for page_index in 0..<page_count {
-    let entries : Array[PdfObject] = []
+    let entries : Array[@syntax.PdfObject] = []
     for triple in triples {
       let (tag_number, triple_page, _) = triple
       if triple_page == page_index {
@@ -180,7 +180,7 @@ fn PdfDocument::pdf_texttopdf_add_structure_tree(
       ),
     ),
   )
-  let root_entries : Array[(PdfName, PdfObject)] = [
+  let root_entries : Array[(PdfName, @syntax.PdfObject)] = [
     (pdf_texttopdf_type_key(), PdfNameObject(pdf_texttopdf_struct_tree_root())),
     (pdf_structure_parent_tree_key(), PdfIndirect(parent_tree)),
   ]
