@@ -71,10 +71,10 @@ fn ocg_conflicting_root_document_for_test(
 fn ocg_merge_content_for_test(
   number : Int,
   layer_name : String,
-  base_state : @pdflite.PdfOcgState,
+  base_state : @ocg.PdfOcgState,
   on_numbers : Array[Int],
   off_numbers : Array[Int],
-) -> @pdflite.PdfOptionalContent {
+) -> @ocg.PdfOptionalContent {
   {
     ocgs: [
       (
@@ -87,7 +87,7 @@ fn ocg_merge_content_for_test(
       ),
     ],
     default_config: {
-      ..@pdflite.pdf_ocg_default_config(),
+      ..@ocg.pdf_ocg_default_config(),
       name: Some(ocg_bytes_for_test("Merged")),
       base_state,
       on: on_numbers,
@@ -95,7 +95,7 @@ fn ocg_merge_content_for_test(
       order: Some([(Some(ocg_bytes_for_test(layer_name)), [number])]),
       radio_button_groups: Some([[number]]),
     },
-    configs: [{ ..@pdflite.pdf_ocg_default_config(), locked: [number] }],
+    configs: [{ ..@ocg.pdf_ocg_default_config(), locked: [number] }],
   }
 }
 
@@ -298,7 +298,7 @@ test "PdfDocument read_optional_content_groups decodes OCG dictionaries" {
   @test.assert_eq(content.default_config.on, [10])
   @test.assert_eq(content.default_config.off, [11])
   @test.assert_eq(content.default_config.intent, [ocg_name_for_test("/View")])
-  let expected_apps : Array[@pdflite.PdfOcgAppDict] = [
+  let expected_apps : Array[@ocg.PdfOcgAppDict] = [
     { event: OcgPrint, ocgs: [10], category: [ocg_name_for_test("/Print")] },
   ]
   @test.assert_eq(content.default_config.usage_applications, expected_apps)
@@ -488,13 +488,13 @@ test "PdfDocument ocg_replace_json writes parsed optional content" {
 
 ///|
 test "pdf_ocg_read_json rejects malformed optional content JSON" {
-  let top_level : Result[@pdflite.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
+  let top_level : Result[@ocg.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
     Json::array([]),
   )
   guard top_level is Err(@pdflite.PdfError::SoftError(_)) else {
     fail("expected @pdflite.PdfError::SoftError for top-level array")
   }
-  let bad_default : Result[@pdflite.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
+  let bad_default : Result[@ocg.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
     Json::object(
       Map([
         ("OCGs", Json::object(Map([]))),
@@ -566,7 +566,7 @@ test "PdfDocument ocg_coalesce removes duplicate names and rewrites references" 
     20,
     PdfDictionary([(key_custom, PdfIndirect(11))]),
   )
-  let duplicate_content : @pdflite.PdfOptionalContent = {
+  let duplicate_content : @ocg.PdfOptionalContent = {
     ocgs: [
       (
         10,
@@ -586,7 +586,7 @@ test "PdfDocument ocg_coalesce removes duplicate names and rewrites references" 
       ),
     ],
     default_config: {
-      ..@pdflite.pdf_ocg_default_config(),
+      ..@ocg.pdf_ocg_default_config(),
       on: [10, 11],
       off: [11],
       usage_applications: [
@@ -596,7 +596,7 @@ test "PdfDocument ocg_coalesce removes duplicate names and rewrites references" 
       radio_button_groups: Some([[10, 11]]),
       locked: [11],
     },
-    configs: [{ ..@pdflite.pdf_ocg_default_config(), locked: [11] }],
+    configs: [{ ..@ocg.pdf_ocg_default_config(), locked: [11] }],
   }
   let with_duplicates = try! doc.write_optional_content_groups(
     duplicate_content,
@@ -631,7 +631,7 @@ test "PdfDocument read_optional_content_groups prefers trailer root" {
     try! doc.read_optional_content_groups(),
     Some({
       ocgs: [],
-      default_config: @pdflite.pdf_ocg_default_config(),
+      default_config: @ocg.pdf_ocg_default_config(),
       configs: [],
     }),
   )
@@ -649,7 +649,7 @@ test "PdfDocument read_optional_content_groups rejects unresolved trailer root" 
     1,
     PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
   )
-  let result : Result[@pdflite.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
+  let result : Result[@ocg.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
   guard result is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected")
   }
@@ -658,7 +658,7 @@ test "PdfDocument read_optional_content_groups rejects unresolved trailer root" 
 ///|
 test "PdfDocument write_optional_content_groups builds readable OCG data" {
   let doc = ocg_catalog_document_for_test()
-  let usage : @pdflite.PdfOcgUsage = {
+  let usage : @ocg.PdfOcgUsage = {
     creator_info: Some(
       (ocg_bytes_for_test("tool"), ocg_name_for_test("/Artwork")),
     ),
@@ -673,7 +673,7 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
     page_element_subtype: None,
   }
   let default_config = {
-    ..@pdflite.pdf_ocg_default_config(),
+    ..@ocg.pdf_ocg_default_config(),
     name: Some(ocg_bytes_for_test("Default")),
     base_state: OcgOff,
     on: [7],
@@ -686,10 +686,10 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
     locked: [7],
   }
   let extra_config = {
-    ..@pdflite.pdf_ocg_default_config(),
+    ..@ocg.pdf_ocg_default_config(),
     base_state: OcgUnchanged,
   }
-  let content : @pdflite.PdfOptionalContent = {
+  let content : @ocg.PdfOptionalContent = {
     ocgs: [
       (
         7,
@@ -719,7 +719,7 @@ test "PdfDocument write_optional_content_groups builds readable OCG data" {
 ///|
 test "PdfDocument write_optional_content_groups reserves explicit OCG numbers before usage objects" {
   let doc = ocg_catalog_document_for_test()
-  let usage : @pdflite.PdfOcgUsage = {
+  let usage : @ocg.PdfOcgUsage = {
     creator_info: Some(
       (ocg_bytes_for_test("tool"), ocg_name_for_test("/Artwork")),
     ),
@@ -733,7 +733,7 @@ test "PdfDocument write_optional_content_groups reserves explicit OCG numbers be
     user: None,
     page_element_subtype: Some(ocg_name_for_test("/FG")),
   }
-  let content : @pdflite.PdfOptionalContent = {
+  let content : @ocg.PdfOptionalContent = {
     ocgs: [
       (
         10,
@@ -752,7 +752,7 @@ test "PdfDocument write_optional_content_groups reserves explicit OCG numbers be
         },
       ),
     ],
-    default_config: { ..@pdflite.pdf_ocg_default_config(), on: [10], off: [11] },
+    default_config: { ..@ocg.pdf_ocg_default_config(), on: [10], off: [11] },
     configs: [],
   }
   let updated = try! doc.write_optional_content_groups(content)
@@ -768,10 +768,10 @@ test "PdfDocument write_optional_content_groups preserves trailer-root catalog e
   let key_page_mode = ocg_name_for_test("/PageMode")
   let key_ocproperties = ocg_name_for_test("/OCProperties")
   let doc = ocg_conflicting_root_document_for_test(false)
-  let content : @pdflite.PdfOptionalContent = {
+  let content : @ocg.PdfOptionalContent = {
     ocgs: [],
     default_config: {
-      ..@pdflite.pdf_ocg_default_config(),
+      ..@ocg.pdf_ocg_default_config(),
       name: Some(ocg_bytes_for_test("Default")),
     },
     configs: [],
@@ -863,12 +863,12 @@ test "PdfDocument remove_optional_content_groups preserves trailer-root catalog 
 ///|
 test "PdfDocument optional content helpers require a root catalog" {
   let doc = @pdflite.pdf_document_empty()
-  let content : @pdflite.PdfOptionalContent = {
+  let content : @ocg.PdfOptionalContent = {
     ocgs: [],
-    default_config: @pdflite.pdf_ocg_default_config(),
+    default_config: @ocg.pdf_ocg_default_config(),
     configs: [],
   }
-  let read_result : Result[@pdflite.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
+  let read_result : Result[@ocg.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
   guard read_result is Err(@pdflite.PdfError::RootExpected) else {
     fail("expected @pdflite.PdfError::RootExpected")
   }

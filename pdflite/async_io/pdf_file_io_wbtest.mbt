@@ -508,7 +508,7 @@ fn pdf_async_io_ocg_catalog_for_test() -> @pdflite.PdfDocument {
 fn pdf_async_io_ocg_content_for_test(
   number : Int,
   name : String,
-) -> @pdflite.PdfOptionalContent {
+) -> @ocg.PdfOptionalContent {
   let name_bytes = @ascii.encode(name)
   {
     ocgs: [
@@ -522,7 +522,7 @@ fn pdf_async_io_ocg_content_for_test(
       ),
     ],
     default_config: {
-      ..@pdflite.pdf_ocg_default_config(),
+      ..@ocg.pdf_ocg_default_config(),
       name: Some(@ascii.encode("Default")),
       on: [number],
       order: Some([(Some(name_bytes), [number])]),

@@ -68,16 +68,16 @@ fn pdf_ocg_coalesce_order(
 ///|
 fn pdf_ocg_coalesce_appdict(
   changes : ArrayView[(Int, Int)],
-  appdict : PdfOcgAppDict,
-) -> PdfOcgAppDict {
+  appdict : @ocg.PdfOcgAppDict,
+) -> @ocg.PdfOcgAppDict {
   { ..appdict, ocgs: pdf_ocg_coalesce_numbers(changes, appdict.ocgs) }
 }
 
 ///|
 fn pdf_ocg_coalesce_config(
   changes : ArrayView[(Int, Int)],
-  config : PdfOcgConfig,
-) -> PdfOcgConfig {
+  config : @ocg.PdfOcgConfig,
+) -> @ocg.PdfOcgConfig {
   {
     ..config,
     on: pdf_ocg_coalesce_numbers(changes, config.on),
@@ -106,10 +106,10 @@ fn pdf_ocg_coalesce_config(
 
 ///|
 fn pdf_ocg_coalesce_content(
-  content : PdfOptionalContent,
-) -> (PdfOptionalContent, Array[(Int, Int)]) {
+  content : @ocg.PdfOptionalContent,
+) -> (@ocg.PdfOptionalContent, Array[(Int, Int)]) {
   let representatives : Array[(PdfBytes, Int)] = []
-  let ocgs : Array[(Int, PdfOcg)] = []
+  let ocgs : Array[(Int, @ocg.PdfOcg)] = []
   let changes : Array[(Int, Int)] = []
   for entry in content.ocgs {
     let (number, ocg) = entry

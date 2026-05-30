@@ -123,7 +123,7 @@ test "private OCG usage reader covers partial dictionaries" {
 ///|
 test "private OCG individual and public reader guard malformed roots" {
   let doc = pdf_document_empty()
-  let missing_name : Result[PdfOcg, Error] = try? doc.pdf_ocg_read_individual(
+  let missing_name : Result[@ocg.PdfOcg, Error] = try? doc.pdf_ocg_read_individual(
     PdfDictionary([]),
   )
   guard missing_name is Err(PdfError::DictionaryKeyNotFound(_)) else {
@@ -147,7 +147,7 @@ test "private OCG individual and public reader guard malformed roots" {
       ),
     ]),
   )
-  let missing_default : Result[PdfOptionalContent?, Error] = try? root_doc.read_optional_content_groups()
+  let missing_default : Result[@ocg.PdfOptionalContent?, Error] = try? root_doc.read_optional_content_groups()
   guard missing_default is Err(PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected missing default config")
   }
@@ -155,7 +155,7 @@ test "private OCG individual and public reader guard malformed roots" {
 
 ///|
 test "private OCG copy and merge helpers cover optional fields" {
-  let usage : PdfOcgUsage = {
+  let usage : @ocg.PdfOcgUsage = {
     creator_info: Some((ocg_wb_text("creator"), ocg_wb_name("/Subtype"))),
     language: Some((ocg_wb_text("en"), None)),
     export_state: Some(pdf_ocg_off_name()),
@@ -180,8 +180,8 @@ test "private OCG copy and merge helpers cover optional fields" {
       usage: Some(usage),
     },
   )
-  let config : PdfOcgConfig = {
-    ..pdf_ocg_default_config(),
+  let config : @ocg.PdfOcgConfig = {
+    ..@ocg.pdf_ocg_default_config(),
     creator: Some(ocg_wb_text("creator")),
     usage_applications: [
       { event: OcgView, ocgs: [1], category: [pdf_ocg_view_name()] },
@@ -195,7 +195,7 @@ test "private OCG copy and merge helpers cover optional fields" {
   let doc = pdf_document_empty()
   doc.set_root(1)
   doc.add_object_given_number(1, PdfDictionary([]))
-  let content : PdfOptionalContent = {
+  let content : @ocg.PdfOptionalContent = {
     ocgs: [
       (
         1,
@@ -289,7 +289,7 @@ test "private OCG writers cover event and optional usage/config forms" {
   )
 
   let config_number = doc.pdf_ocg_write_config({
-    ..pdf_ocg_default_config(),
+    ..@ocg.pdf_ocg_default_config(),
     creator: Some(ocg_wb_text("creator")),
     usage_applications: [
       { event: OcgExport, ocgs: [1], category: [pdf_ocg_export_name()] },
@@ -311,7 +311,7 @@ test "private OCG writers cover event and optional usage/config forms" {
 test "private OCG empty optional paths stay stable" {
   let doc = pdf_document_empty()
   let empty_usage = doc.pdf_ocg_read_usage(PdfDictionary([]))
-  let expected_usage : PdfOcgUsage = {
+  let expected_usage : @ocg.PdfOcgUsage = {
     creator_info: None,
     language: None,
     export_state: None,
@@ -354,7 +354,7 @@ test "private OCG empty optional paths stay stable" {
   merge_doc.add_object_given_number(1, PdfDictionary([]))
   let written = try! merge_doc.write_optional_content_groups({
     ocgs: [],
-    default_config: pdf_ocg_default_config(),
+    default_config: @ocg.pdf_ocg_default_config(),
     configs: [],
   })
   let merged = try! pdf_optional_content_merge([written])

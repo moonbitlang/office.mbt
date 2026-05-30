@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_ocg_write_config(
   self : PdfDocument,
-  config : PdfOcgConfig,
+  config : @ocg.PdfOcgConfig,
 ) -> Int {
   let entries : Array[(PdfName, PdfObject)] = []
   match config.name {
@@ -105,7 +105,7 @@ fn PdfDocument::pdf_ocg_write_config(
 ///|
 fn PdfDocument::pdf_ocg_write_ocg(
   self : PdfDocument,
-  ocg : PdfOcg,
+  ocg : @ocg.PdfOcg,
 ) -> PdfObject {
   let entries : Array[(PdfName, PdfObject)] = [
     (pdf_ocg_type_key(), PdfNameObject(pdf_ocg_ocg_name())),

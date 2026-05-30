@@ -42,7 +42,7 @@ fn pdf_merge_acroforms(
 ///|
 fn pdf_merge_optional_content(
   documents : ArrayView[PdfDocument],
-) -> PdfOptionalContent? {
+) -> @ocg.PdfOptionalContent? {
   pdf_optional_content_merge(documents) catch {
     _ => None
   }

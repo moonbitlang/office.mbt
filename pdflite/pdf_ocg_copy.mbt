@@ -1,5 +1,5 @@
 ///|
-fn pdf_ocg_copy_usage(usage : PdfOcgUsage) -> PdfOcgUsage {
+fn pdf_ocg_copy_usage(usage : @ocg.PdfOcgUsage) -> @ocg.PdfOcgUsage {
   {
     creator_info: usage.creator_info,
     language: usage.language,
@@ -18,7 +18,7 @@ fn pdf_ocg_copy_usage(usage : PdfOcgUsage) -> PdfOcgUsage {
 }
 
 ///|
-fn pdf_ocg_copy_ocg(ocg : PdfOcg) -> PdfOcg {
+fn pdf_ocg_copy_ocg(ocg : @ocg.PdfOcg) -> @ocg.PdfOcg {
   {
     name: ocg.name,
     intent: ocg.intent.copy(),
@@ -46,7 +46,7 @@ fn pdf_ocg_copy_groups(groups : ArrayView[Array[Int]]) -> Array[Array[Int]] {
 }
 
 ///|
-fn pdf_ocg_copy_appdict(appdict : PdfOcgAppDict) -> PdfOcgAppDict {
+fn pdf_ocg_copy_appdict(appdict : @ocg.PdfOcgAppDict) -> @ocg.PdfOcgAppDict {
   {
     event: appdict.event,
     ocgs: appdict.ocgs.copy(),
@@ -55,7 +55,7 @@ fn pdf_ocg_copy_appdict(appdict : PdfOcgAppDict) -> PdfOcgAppDict {
 }
 
 ///|
-fn pdf_ocg_copy_config(config : PdfOcgConfig) -> PdfOcgConfig {
+fn pdf_ocg_copy_config(config : @ocg.PdfOcgConfig) -> @ocg.PdfOcgConfig {
   {
     name: config.name,
     creator: config.creator,

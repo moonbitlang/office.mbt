@@ -9393,7 +9393,7 @@ fn acceptance_catalog_merge_document_for_test(
       ),
     ],
     default_config: {
-      ..@pdflite.pdf_ocg_default_config(),
+      ..@ocg.pdf_ocg_default_config(),
       on: [ocg_number],
       order: Some([(Some(acceptance_ascii_for_test(label)), [ocg_number])]),
     },

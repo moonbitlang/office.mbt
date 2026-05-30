@@ -1,5 +1,5 @@
 ///|
-fn pdf_ocg_read_json_ocg(json : Json) -> PdfOcg raise PdfError {
+fn pdf_ocg_read_json_ocg(json : Json) -> @ocg.PdfOcg raise PdfError {
   match json {
     Object(entries) if entries.length() == 3 => {
       let intent = pdf_ocg_read_json_field(
@@ -24,10 +24,12 @@ fn pdf_ocg_read_json_ocg(json : Json) -> PdfOcg raise PdfError {
 }
 
 ///|
-fn pdf_ocg_read_json_ocgs(json : Json) -> Array[(Int, PdfOcg)] raise PdfError {
+fn pdf_ocg_read_json_ocgs(
+  json : Json,
+) -> Array[(Int, @ocg.PdfOcg)] raise PdfError {
   match json {
     Object(entries) => {
-      let output : Array[(Int, PdfOcg)] = []
+      let output : Array[(Int, @ocg.PdfOcg)] = []
       for entry in entries {
         let number : Int = @strconv.from_str(entry.0) catch {
           _ =>
@@ -44,10 +46,12 @@ fn pdf_ocg_read_json_ocgs(json : Json) -> Array[(Int, PdfOcg)] raise PdfError {
 }
 
 ///|
-fn pdf_ocg_read_json_configs(json : Json) -> Array[PdfOcgConfig] raise PdfError {
+fn pdf_ocg_read_json_configs(
+  json : Json,
+) -> Array[@ocg.PdfOcgConfig] raise PdfError {
   match json {
     Array(values) => {
-      let output : Array[PdfOcgConfig] = []
+      let output : Array[@ocg.PdfOcgConfig] = []
       for value in values {
         output.push(pdf_ocg_read_json_config(value))
       }

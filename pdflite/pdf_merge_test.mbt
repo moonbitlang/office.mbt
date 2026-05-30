@@ -82,7 +82,7 @@ fn merge_ocg_doc_for_test(number : Int, label : String) -> @pdflite.PdfDocument 
       ),
     ],
     default_config: {
-      ..@pdflite.pdf_ocg_default_config(),
+      ..@ocg.pdf_ocg_default_config(),
       on: [number],
       order: Some([(Some(@ascii.encode(label)), [number])]),
     },

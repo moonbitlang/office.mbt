@@ -59,7 +59,7 @@ fn pdf_ocg_read_json_radio_groups(
 }
 
 ///|
-fn pdf_ocg_read_json_appdict(json : Json) -> PdfOcgAppDict? raise PdfError {
+fn pdf_ocg_read_json_appdict(json : Json) -> @ocg.PdfOcgAppDict? raise PdfError {
   match json {
     Null => None
     Object(entries) if entries.length() == 3 => {
@@ -86,10 +86,10 @@ fn pdf_ocg_read_json_appdict(json : Json) -> PdfOcgAppDict? raise PdfError {
 ///|
 fn pdf_ocg_read_json_appdicts(
   json : Json,
-) -> Array[PdfOcgAppDict] raise PdfError {
+) -> Array[@ocg.PdfOcgAppDict] raise PdfError {
   match json {
     Array(values) => {
-      let output : Array[PdfOcgAppDict] = []
+      let output : Array[@ocg.PdfOcgAppDict] = []
       for value in values {
         match pdf_ocg_read_json_appdict(value) {
           Some(appdict) => output.push(appdict)
@@ -106,7 +106,7 @@ fn pdf_ocg_read_json_appdicts(
 }
 
 ///|
-fn pdf_ocg_read_json_config(json : Json) -> PdfOcgConfig raise PdfError {
+fn pdf_ocg_read_json_config(json : Json) -> @ocg.PdfOcgConfig raise PdfError {
   match json {
     Object(entries) if entries.length() == 11 => {
       let n = pdf_ocg_read_json_field(

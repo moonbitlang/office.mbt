@@ -1,6 +1,8 @@
 ///|
 /// Parse cpdf's optional-content group JSON representation.
-pub fn pdf_ocg_read_json(json : Json) -> PdfOptionalContent? raise PdfError {
+pub fn pdf_ocg_read_json(
+  json : Json,
+) -> @ocg.PdfOptionalContent? raise PdfError {
   match json {
     Null => None
     Object(entries) if entries.length() == 3 => {

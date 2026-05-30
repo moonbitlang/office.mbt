@@ -14,7 +14,7 @@ fn pdf_ocg_string_array_object(strings : ArrayView[PdfBytes]) -> PdfObject {
 }
 
 ///|
-fn pdf_ocg_write_appdict(appdict : PdfOcgAppDict) -> PdfObject {
+fn pdf_ocg_write_appdict(appdict : @ocg.PdfOcgAppDict) -> PdfObject {
   let event_name = match appdict.event {
     OcgView => pdf_ocg_view_name()
     OcgPrint => pdf_ocg_print_name()

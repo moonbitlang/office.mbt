@@ -3973,8 +3973,8 @@ fn fixture_acceptance_cpdf_source_ocg_layer_for_test(text : String) -> Bytes {
 }
 
 ///|
-fn fixture_acceptance_cpdf_source_ocg_content_for_test() -> @pdflite.PdfOptionalContent {
-  let usage : @pdflite.PdfOcgUsage = {
+fn fixture_acceptance_cpdf_source_ocg_content_for_test() -> @ocg.PdfOptionalContent {
+  let usage : @ocg.PdfOcgUsage = {
     creator_info: Some(
       (
         fixture_acceptance_cpdf_source_ocg_layer_for_test("fixture"),
@@ -4082,7 +4082,7 @@ fn fixture_acceptance_cpdf_source_ocg_content_for_test() -> @pdflite.PdfOptional
     },
     configs: [
       {
-        ..@pdflite.pdf_ocg_default_config(),
+        ..@ocg.pdf_ocg_default_config(),
         name: Some(
           fixture_acceptance_cpdf_source_ocg_layer_for_test("Alternate Source"),
         ),

@@ -6,8 +6,8 @@
 /// documents before merging when object numbers may collide.
 pub fn pdf_optional_content_merge(
   documents : ArrayView[PdfDocument],
-) -> PdfOptionalContent? raise PdfError {
-  let contents : Array[PdfOptionalContent] = []
+) -> @ocg.PdfOptionalContent? raise PdfError {
+  let contents : Array[@ocg.PdfOptionalContent] = []
   for document in documents {
     match document.read_optional_content_groups() {
       Some(content) => contents.push(content)
@@ -17,8 +17,8 @@ pub fn pdf_optional_content_merge(
   if contents.length() == 0 {
     None
   } else {
-    let ocgs : Array[(Int, PdfOcg)] = []
-    let configs : Array[PdfOcgConfig] = []
+    let ocgs : Array[(Int, @ocg.PdfOcg)] = []
+    let configs : Array[@ocg.PdfOcgConfig] = []
     let on : Array[Int] = []
     let off : Array[Int] = []
     let order : Array[(PdfBytes?, Array[Int])] = []
@@ -27,10 +27,10 @@ pub fn pdf_optional_content_merge(
     let mut has_radio_button_groups = false
     let mut name : PdfBytes? = None
     let mut creator : PdfBytes? = None
-    let mut base_state : PdfOcgState = OcgOn
+    let mut base_state : @ocg.PdfOcgState = OcgOn
     let mut intent : Array[PdfName] = []
-    let mut usage_applications : Array[PdfOcgAppDict] = []
-    let mut list_mode : PdfOcgListMode = OcgAllPages
+    let mut usage_applications : Array[@ocg.PdfOcgAppDict] = []
+    let mut list_mode : @ocg.PdfOcgListMode = OcgAllPages
     let mut locked : Array[Int] = []
     for content in contents {
       for entry in content.ocgs {

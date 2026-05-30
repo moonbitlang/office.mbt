@@ -33,7 +33,7 @@ pub fn pdf_remove_ocg(document : PdfDocument) -> PdfDocument raise PdfError {
 /// objects, and the original document is left unchanged.
 pub fn PdfDocument::write_optional_content_groups(
   self : PdfDocument,
-  optional_content : PdfOptionalContent,
+  optional_content : @ocg.PdfOptionalContent,
 ) -> PdfDocument raise PdfError {
   let root = self.pdf_ocg_root()
   let pdf = self.copy()
@@ -89,7 +89,7 @@ pub fn PdfDocument::write_optional_content_groups(
 /// Compatibility wrapper for `PdfDocument::write_optional_content_groups`.
 pub fn pdf_write_ocg(
   document : PdfDocument,
-  optional_content : PdfOptionalContent,
+  optional_content : @ocg.PdfOptionalContent,
 ) -> PdfDocument raise PdfError {
   document.write_optional_content_groups(optional_content)
 }

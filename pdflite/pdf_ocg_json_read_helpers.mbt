@@ -136,7 +136,7 @@ fn pdf_ocg_read_json_pdf_strings(
 fn pdf_ocg_read_json_state(
   json : Json,
   message : String,
-) -> PdfOcgState raise PdfError {
+) -> @ocg.PdfOcgState raise PdfError {
   match json {
     String("/ON") => OcgOn
     String("/OFF") => OcgOff
@@ -149,7 +149,7 @@ fn pdf_ocg_read_json_state(
 fn pdf_ocg_read_json_list_mode(
   json : Json,
   message : String,
-) -> PdfOcgListMode raise PdfError {
+) -> @ocg.PdfOcgListMode raise PdfError {
   match json {
     String("/AllPages") => OcgAllPages
     String("/VisiblePages") => OcgVisiblePages
@@ -161,7 +161,7 @@ fn pdf_ocg_read_json_list_mode(
 fn pdf_ocg_read_json_event(
   json : Json,
   message : String,
-) -> PdfOcgEvent raise PdfError {
+) -> @ocg.PdfOcgEvent raise PdfError {
   match json {
     String("/View") => OcgView
     String("/Print") => OcgPrint

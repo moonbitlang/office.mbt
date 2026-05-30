@@ -319,19 +319,6 @@ pub using @bookmark {
 }
 
 ///|
-pub using @ocg {
-  type PdfOcg,
-  type PdfOcgAppDict,
-  type PdfOcgConfig,
-  type PdfOcgEvent,
-  type PdfOcgListMode,
-  type PdfOcgState,
-  type PdfOcgUsage,
-  type PdfOptionalContent,
-  pdf_ocg_default_config,
-}
-
-///|
 pub using @metadata {
   pdf_adobe,
   pdf_dc,

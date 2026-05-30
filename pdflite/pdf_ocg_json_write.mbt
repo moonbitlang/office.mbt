@@ -62,7 +62,7 @@ fn pdf_ocg_json_strings(strings : ArrayView[PdfBytes]) -> Json raise PdfError {
 }
 
 ///|
-fn pdf_ocg_json_state(state : PdfOcgState) -> Json {
+fn pdf_ocg_json_state(state : @ocg.PdfOcgState) -> Json {
   Json::string(
     match state {
       OcgOn => "/ON"
@@ -73,7 +73,7 @@ fn pdf_ocg_json_state(state : PdfOcgState) -> Json {
 }
 
 ///|
-fn pdf_ocg_json_list_mode(mode : PdfOcgListMode) -> Json {
+fn pdf_ocg_json_list_mode(mode : @ocg.PdfOcgListMode) -> Json {
   Json::string(
     match mode {
       OcgAllPages => "/AllPages"
@@ -83,7 +83,7 @@ fn pdf_ocg_json_list_mode(mode : PdfOcgListMode) -> Json {
 }
 
 ///|
-fn pdf_ocg_json_event(event : PdfOcgEvent) -> Json {
+fn pdf_ocg_json_event(event : @ocg.PdfOcgEvent) -> Json {
   Json::string(
     match event {
       OcgView => "/View"
@@ -132,7 +132,7 @@ fn pdf_ocg_json_radio_groups(groups : Array[Array[Int]]?) -> Json {
 }
 
 ///|
-fn pdf_ocg_json_appdict(appdict : PdfOcgAppDict) -> Json raise PdfError {
+fn pdf_ocg_json_appdict(appdict : @ocg.PdfOcgAppDict) -> Json raise PdfError {
   Json::object(
     Map([
       ("Event", pdf_ocg_json_event(appdict.event)),
@@ -144,7 +144,7 @@ fn pdf_ocg_json_appdict(appdict : PdfOcgAppDict) -> Json raise PdfError {
 
 ///|
 fn pdf_ocg_json_appdicts(
-  appdicts : ArrayView[PdfOcgAppDict],
+  appdicts : ArrayView[@ocg.PdfOcgAppDict],
 ) -> Json raise PdfError {
   let output : Array[Json] = []
   for appdict in appdicts {
@@ -154,7 +154,7 @@ fn pdf_ocg_json_appdicts(
 }
 
 ///|
-fn pdf_ocg_json_config(config : PdfOcgConfig) -> Json raise PdfError {
+fn pdf_ocg_json_config(config : @ocg.PdfOcgConfig) -> Json raise PdfError {
   Json::object(
     Map([
       ("Name", pdf_ocg_json_optional_string(config.name)),
@@ -173,7 +173,7 @@ fn pdf_ocg_json_config(config : PdfOcgConfig) -> Json raise PdfError {
 }
 
 ///|
-fn pdf_ocg_json_usage(usage : PdfOcgUsage) -> Json raise PdfError {
+fn pdf_ocg_json_usage(usage : @ocg.PdfOcgUsage) -> Json raise PdfError {
   Json::object(
     Map([
       (
@@ -233,7 +233,9 @@ fn pdf_ocg_json_usage(usage : PdfOcgUsage) -> Json raise PdfError {
 }
 
 ///|
-fn pdf_ocg_json_optional_usage(usage : PdfOcgUsage?) -> Json raise PdfError {
+fn pdf_ocg_json_optional_usage(
+  usage : @ocg.PdfOcgUsage?,
+) -> Json raise PdfError {
   match usage {
     Some(usage) => pdf_ocg_json_usage(usage)
     None => Json::null()
@@ -241,7 +243,7 @@ fn pdf_ocg_json_optional_usage(usage : PdfOcgUsage?) -> Json raise PdfError {
 }
 
 ///|
-fn pdf_ocg_json_ocg(ocg : PdfOcg) -> Json raise PdfError {
+fn pdf_ocg_json_ocg(ocg : @ocg.PdfOcg) -> Json raise PdfError {
   Json::object(
     Map([
       ("Name", pdf_ocg_json_string(ocg.name)),
@@ -252,7 +254,9 @@ fn pdf_ocg_json_ocg(ocg : PdfOcg) -> Json raise PdfError {
 }
 
 ///|
-fn pdf_ocg_json_ocgs(ocgs : ArrayView[(Int, PdfOcg)]) -> Json raise PdfError {
+fn pdf_ocg_json_ocgs(
+  ocgs : ArrayView[(Int, @ocg.PdfOcg)],
+) -> Json raise PdfError {
   let entries : Map[String, Json] = Map([])
   for item in ocgs {
     let (number, ocg) = item
@@ -263,7 +267,7 @@ fn pdf_ocg_json_ocgs(ocgs : ArrayView[(Int, PdfOcg)]) -> Json raise PdfError {
 
 ///|
 fn pdf_ocg_json_configs(
-  configs : ArrayView[PdfOcgConfig],
+  configs : ArrayView[@ocg.PdfOcgConfig],
 ) -> Json raise PdfError {
   let output : Array[Json] = []
   for config in configs {

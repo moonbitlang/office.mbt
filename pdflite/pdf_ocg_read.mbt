@@ -6,14 +6,14 @@
 /// numbers so callers can preserve or renumber references before writing.
 pub fn PdfDocument::read_optional_content_groups(
   self : PdfDocument,
-) -> PdfOptionalContent? raise PdfError {
+) -> @ocg.PdfOptionalContent? raise PdfError {
   let root = self.pdf_ocg_root()
   match self.lookup_direct(pdf_ocg_ocproperties_key(), root) {
     None => None
     Some(ocproperties) => {
       let ocgs = match self.lookup_direct(pdf_ocg_ocgs_key(), ocproperties) {
         Some(PdfArray(indirects)) => {
-          let output : Array[(Int, PdfOcg)] = []
+          let output : Array[(Int, @ocg.PdfOcg)] = []
           for indirect in indirects {
             match indirect {
               PdfIndirect(number) =>
@@ -47,7 +47,7 @@ pub fn PdfDocument::read_optional_content_groups(
 /// Compatibility wrapper for `PdfDocument::read_optional_content_groups`.
 pub fn pdf_read_ocg(
   document : PdfDocument,
-) -> PdfOptionalContent? raise PdfError {
+) -> @ocg.PdfOptionalContent? raise PdfError {
   document.read_optional_content_groups()
 }
 

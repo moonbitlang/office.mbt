@@ -1226,8 +1226,6 @@ pub fn pdf_objects_of_entries(ArrayView[(Int, PdfObjectEntry)]) -> PdfObjects
 
 pub fn pdf_ocg_coalesce(PdfDocument) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_ocg_default_config() -> @ocg.PdfOcgConfig
-
 pub fn pdf_ocg_get_list(PdfDocument) -> Array[Bytes] raise @core.PdfError
 
 pub fn pdf_ocg_list(Bool, PdfDocument) -> Bytes raise @core.PdfError
@@ -3754,22 +3752,6 @@ pub using @metadata {type PdfMetadataXmlTree}
 pub using @core {type PdfName}
 
 pub using @syntax {type PdfObject}
-
-pub using @ocg {type PdfOcg}
-
-pub using @ocg {type PdfOcgAppDict}
-
-pub using @ocg {type PdfOcgConfig}
-
-pub using @ocg {type PdfOcgEvent}
-
-pub using @ocg {type PdfOcgListMode}
-
-pub using @ocg {type PdfOcgState}
-
-pub using @ocg {type PdfOcgUsage}
-
-pub using @ocg {type PdfOptionalContent}
 
 pub using @page {type PdfPage}
 
