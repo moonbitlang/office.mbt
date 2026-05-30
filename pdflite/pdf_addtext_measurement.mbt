@@ -98,6 +98,13 @@ pub fn pdf_addtext_width_of_fontpack(
 }
 
 ///|
+fn pdf_addtext_utf8_string(bytes : BytesView) -> String raise PdfError {
+  @utf8.decode(bytes) catch {
+    _ => raise InvalidUTF8
+  }
+}
+
+///|
 /// Measure text bytes with cpdf add-text's selected font mode.
 ///
 /// This ports the local `calc_textwidth` branch in `cpdfaddtext.ml`. Font packs

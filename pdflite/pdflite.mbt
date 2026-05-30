@@ -213,6 +213,7 @@ pub using @spec {
 pub using @addtext {
   pdf_addtext_apply_justification_offset,
   pdf_addtext_diagonal_offsets,
+  pdf_addtext_get_urls_line,
   pdf_addtext_initial_line_offsets,
   pdf_addtext_justification_offset,
   pdf_addtext_line_advance,
