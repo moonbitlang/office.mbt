@@ -1,0 +1,45 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/content/colour"
+
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_colours() -> Array[(String, Int)]
+
+pub let pdf_content_black : PdfContentColour
+
+pub fn pdf_css_colour_value(String) -> Int?
+
+pub fn pdf_css_colours() -> Array[(String, Int)]
+
+pub fn pdf_draw_colour_of_string(String) -> PdfDrawColour
+
+pub fn pdf_parse_colour(String) -> PdfContentColour raise @core.PdfError
+
+pub fn pdf_parse_content_colour(String) -> PdfContentColour raise @core.PdfError
+
+pub fn pdf_parse_draw_colour(String) -> PdfDrawColour raise @core.PdfError
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfContentColour {
+  PdfContentGrey(Double)
+  PdfContentRGB(Double, Double, Double)
+  PdfContentCMYK(Double, Double, Double, Double)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentColour::to_draw_colour(Self) -> PdfDrawColour
+
+pub(all) enum PdfDrawColour {
+  PdfDrawNoCol
+  PdfDrawRGB(Double, Double, Double)
+  PdfDrawGrey(Double)
+  PdfDrawCYMK(Double, Double, Double, Double)
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits

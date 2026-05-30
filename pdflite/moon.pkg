@@ -5,6 +5,7 @@ import {
   "bobzhang/pdflite/bookmark",
   "bobzhang/pdflite/codec",
   "bobzhang/pdflite/content",
+  "bobzhang/pdflite/content/colour",
   "bobzhang/pdflite/content/path",
   "bobzhang/pdflite/core",
   "bobzhang/pdflite/crypt_core",

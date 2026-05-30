@@ -173,12 +173,12 @@ pub fn pdf_css_colour_value(name : String) -> Int? {
 }
 
 ///|
-fn pdf_colour_bad() -> Unit raise PdfError {
+fn pdf_colour_bad() -> Unit raise @core.PdfError {
   raise BadNumberArgument("Bad color")
 }
 
 ///|
-fn pdf_colour_number(lexeme : PdfLexeme) -> Double raise PdfError {
+fn pdf_colour_number(lexeme : @syntax.PdfLexeme) -> Double raise @core.PdfError {
   match lexeme {
     LexInt(value) => value.to_double()
     LexReal(value) => value
@@ -190,15 +190,17 @@ fn pdf_colour_number(lexeme : PdfLexeme) -> Double raise PdfError {
 }
 
 ///|
-fn pdf_colour_lexemes(text : String) -> Array[PdfLexeme] raise PdfError {
-  let cursor = byte_cursor_of_view(@utf8.encode(text))
-  let tokens : Array[PdfLexeme] = []
+fn pdf_colour_lexemes(
+  text : String,
+) -> Array[@syntax.PdfLexeme] raise @core.PdfError {
+  let cursor = @core.byte_cursor_of_view(@utf8.encode(text))
+  let tokens : Array[@syntax.PdfLexeme] = []
   let mut done = false
   while !done {
-    match pdf_cursor_lex_token(cursor) {
+    match @syntax.pdf_cursor_lex_token(cursor) {
       StopLexing => {
-        pdf_cursor_drop_whitespace(cursor)
-        if cursor.peek_byte() != pdf_no_more {
+        @syntax.pdf_cursor_drop_whitespace(cursor)
+        if cursor.peek_byte() != @core.pdf_no_more {
           pdf_colour_bad()
         }
         done = true
@@ -227,7 +229,7 @@ fn pdf_colour_rgb_value(value : Int) -> PdfContentColour {
 /// three numbers are RGB, and four numbers are CMYK.
 pub fn pdf_parse_content_colour(
   text : String,
-) -> PdfContentColour raise PdfError {
+) -> PdfContentColour raise @core.PdfError {
   match pdf_css_colour_value(text) {
     Some(value) => pdf_colour_rgb_value(value)
     None =>
@@ -256,6 +258,6 @@ pub fn pdf_parse_content_colour(
 
 ///|
 /// Source-spelled compatibility wrapper for cpdfdrawcontrol's `parse_colour`.
-pub fn pdf_parse_colour(text : String) -> PdfContentColour raise PdfError {
+pub fn pdf_parse_colour(text : String) -> PdfContentColour raise @core.PdfError {
   pdf_parse_content_colour(text)
 }
