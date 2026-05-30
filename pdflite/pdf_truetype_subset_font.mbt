@@ -1,11 +1,4 @@
 ///|
-/// Rebuilt subset-table bytes and their unpadded logical length.
-pub(all) struct PdfTrueTypeSubsetTable {
-  length : Int
-  bytes : PdfBytes
-} derive(Debug, Eq)
-
-///|
 fn pdf_truetype_required_subset_table(tag : String) -> Bool {
   tag == "head" ||
   tag == "hhea" ||

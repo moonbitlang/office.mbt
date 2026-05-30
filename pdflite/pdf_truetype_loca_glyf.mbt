@@ -150,14 +150,6 @@ pub fn pdf_truetype_expand_composite_glyphs(
 }
 
 ///|
-/// Byte range for one glyph inside the TrueType `glyf` table.
-pub(all) struct PdfTrueTypeGlyphByteRange {
-  glyph_index : Int
-  start_offset : Int
-  end_offset : Int
-} derive(Debug, Eq, ToJson)
-
-///|
 /// Return `glyf` byte ranges for glyphs after composite expansion.
 ///
 /// Ranges are relative to the start of the `glyf` table, matching the source

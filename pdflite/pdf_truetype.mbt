@@ -1,28 +1,4 @@
 ///|
-/// One subset record returned by cpdf-style TrueType parsing.
-pub(all) struct PdfTrueTypeParsedSubset {
-  flags : Int
-  minx : Int
-  miny : Int
-  maxx : Int
-  maxy : Int
-  italicangle : Int
-  ascent : Int
-  descent : Int
-  capheight : Int
-  stemv : Int
-  xheight : Int
-  avgwidth : Int
-  maxwidth : Int
-  firstchar : Int
-  lastchar : Int
-  widths : Array[Int]
-  subset_fontfile : PdfBytes
-  subset : Array[Int]
-  tounicode : Array[(Int, PdfBytes)]?
-} derive(Debug, Eq)
-
-///|
 fn pdf_truetype_subset_extremes(
   subset_codepoints : ArrayView[Int],
 ) -> (Int, Int) raise PdfError {

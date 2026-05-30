@@ -100,14 +100,6 @@ fn pdf_truetype_split_subsets(
 }
 
 ///|
-/// Result of splitting a TrueType Unicode subset into cpdf's main and higher
-/// subset groups.
-pub(all) struct PdfTrueTypeSubsetPartition {
-  main_subset : Array[Int]
-  higher_subsets : Array[Array[Int]]
-} derive(Debug, Eq, ToJson)
-
-///|
 /// Split a Unicode subset into the main simple-font subset and higher
 /// implicit-font-file subsets.
 ///

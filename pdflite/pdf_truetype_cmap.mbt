@@ -53,13 +53,6 @@ fn pdf_truetype_cmap_glyph_from_entries(
 }
 
 ///|
-/// Mapping from a Unicode codepoint to a TrueType glyph index.
-pub(all) struct PdfTrueTypeCMapGlyph {
-  codepoint : Int
-  glyph_index : Int
-} derive(Debug, Eq, ToJson)
-
-///|
 fn pdf_truetype_push_cmap_glyph(
   entries : Array[PdfTrueTypeCMapGlyph],
   codepoint : Int,

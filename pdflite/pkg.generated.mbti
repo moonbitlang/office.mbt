@@ -1999,7 +1999,7 @@ pub fn pdf_trim_structure_tree(PdfDocument, ArrayView[Int]) -> Unit raise @core.
 
 pub fn pdf_truetype_cmap_glyph(BytesView, Int) -> Int?
 
-pub fn pdf_truetype_cmap_glyphs(BytesView) -> Array[PdfTrueTypeCMapGlyph]
+pub fn pdf_truetype_cmap_glyphs(BytesView) -> Array[@truetype.PdfTrueTypeCMapGlyph]
 
 pub fn pdf_truetype_cmaps(BytesView) -> Array[(Int, Int)]
 
@@ -2007,7 +2007,7 @@ pub fn pdf_truetype_descriptor_metrics(BytesView) -> @truetype.PdfTrueTypeDescri
 
 pub fn pdf_truetype_expand_composite_glyphs(BytesView, ArrayView[Int]) -> Array[Int] raise @core.PdfError
 
-pub fn pdf_truetype_glyph_byte_ranges(BytesView, ArrayView[Int]) -> Array[PdfTrueTypeGlyphByteRange] raise @core.PdfError
+pub fn pdf_truetype_glyph_byte_ranges(BytesView, ArrayView[Int]) -> Array[@truetype.PdfTrueTypeGlyphByteRange] raise @core.PdfError
 
 pub fn pdf_truetype_higher_tounicode(ArrayView[Int]) -> Array[(Int, Bytes)]? raise @core.PdfError
 
@@ -2015,15 +2015,15 @@ pub fn pdf_truetype_loca_offsets(BytesView) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_truetype_metrics(BytesView) -> @truetype.PdfTrueTypeMetrics raise @core.PdfError
 
-pub fn pdf_truetype_parse(BytesView, PdfEncoding, ArrayView[Int]) -> Array[PdfTrueTypeParsedSubset] raise @core.PdfError
+pub fn pdf_truetype_parse(BytesView, PdfEncoding, ArrayView[Int]) -> Array[@truetype.PdfTrueTypeParsedSubset] raise @core.PdfError
 
-pub fn pdf_truetype_partition_subsets(PdfEncoding, ArrayView[Int]) -> PdfTrueTypeSubsetPartition
+pub fn pdf_truetype_partition_subsets(PdfEncoding, ArrayView[Int]) -> @truetype.PdfTrueTypeSubsetPartition
 
-pub fn pdf_truetype_subset_cmap_table(BytesView, ArrayView[Int]) -> PdfTrueTypeSubsetTable raise @core.PdfError
+pub fn pdf_truetype_subset_cmap_table(BytesView, ArrayView[Int]) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError
 
 pub fn pdf_truetype_subset_font(BytesView, ArrayView[Int], rewrite_cmap? : Bool) -> Bytes raise @core.PdfError
 
-pub fn pdf_truetype_subset_glyf_table(BytesView, ArrayView[Int]) -> PdfTrueTypeSubsetTable raise @core.PdfError
+pub fn pdf_truetype_subset_glyf_table(BytesView, ArrayView[Int]) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError
 
 pub fn pdf_truetype_subset_glyph_indices(BytesView, ArrayView[Int]) -> Array[Int] raise @core.PdfError
 
@@ -3803,49 +3803,6 @@ pub(all) struct PdfTristimulusPoint {
   z : Double
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) struct PdfTrueTypeCMapGlyph {
-  codepoint : Int
-  glyph_index : Int
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfTrueTypeGlyphByteRange {
-  glyph_index : Int
-  start_offset : Int
-  end_offset : Int
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfTrueTypeParsedSubset {
-  flags : Int
-  minx : Int
-  miny : Int
-  maxx : Int
-  maxy : Int
-  italicangle : Int
-  ascent : Int
-  descent : Int
-  capheight : Int
-  stemv : Int
-  xheight : Int
-  avgwidth : Int
-  maxwidth : Int
-  firstchar : Int
-  lastchar : Int
-  widths : Array[Int]
-  subset_fontfile : Bytes
-  subset : Array[Int]
-  tounicode : Array[(Int, Bytes)]?
-} derive(Eq, @debug.Debug)
-
-pub(all) struct PdfTrueTypeSubsetPartition {
-  main_subset : Array[Int]
-  higher_subsets : Array[Array[Int]]
-} derive(Eq, ToJson, @debug.Debug)
-
-pub(all) struct PdfTrueTypeSubsetTable {
-  length : Int
-  bytes : Bytes
-} derive(Eq, @debug.Debug)
-
 pub(all) struct PdfType3Glyphs {
   fontbbox : @geometry.PdfRectangle
   fontmatrix : @geometry.TransformMatrix
@@ -4036,9 +3993,19 @@ pub using @syntax {type PdfStreamDataCrypt}
 
 pub using @destination {type PdfTargetPage}
 
+pub using @truetype {type PdfTrueTypeCMapGlyph}
+
 pub using @truetype {type PdfTrueTypeDescriptorMetrics}
 
+pub using @truetype {type PdfTrueTypeGlyphByteRange}
+
 pub using @truetype {type PdfTrueTypeMetrics}
+
+pub using @truetype {type PdfTrueTypeParsedSubset}
+
+pub using @truetype {type PdfTrueTypeSubsetPartition}
+
+pub using @truetype {type PdfTrueTypeSubsetTable}
 
 pub using @truetype {type PdfTrueTypeTableRecord}
 
