@@ -43,7 +43,7 @@ pub fn PdfDocument::redact_pages(
   let redacted = self.change_pages(rewritten, change_references=true)
   if process_struct_tree {
     redacted.trim_structure_tree(
-      pdf_invert_page_range(pages.length(), page_numbers),
+      @spec.pdf_invert_page_range(pages.length(), page_numbers),
     )
   }
   redacted

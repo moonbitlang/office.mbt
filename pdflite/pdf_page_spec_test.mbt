@@ -44,76 +44,69 @@ fn page_spec_document_for_test(
 
 ///|
 test "cpdf pagespec parses basic ranges and words" {
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, ""), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, ""), [
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
   ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "1,3-5,7"), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "1,3-5,7"), [
     1, 3, 4, 5, 7,
   ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "5-3"), [
-    5, 4, 3,
-  ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "end-8"), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "5-3"), [5, 4, 3])
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "end-8"), [
     10, 9, 8,
   ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "8-end"), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "8-end"), [
     8, 9, 10,
   ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "~1,~3"), [
-    10, 8,
-  ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "reverse"), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "~1,~3"), [10, 8])
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "reverse"), [
     10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
   ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "empty"), [])
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "empty"), [])
 }
 
 ///|
 test "cpdf pagespec applies odd even not duplicate and bounds filtering" {
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "odd"), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "odd"), [
     1, 3, 5, 7, 9,
   ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "even"), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "even"), [
     2, 4, 6, 8, 10,
   ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "1-8odd"), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "1-8odd"), [
     1, 3, 5, 7,
   ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "1-8even"), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "1-8even"), [
     2, 4, 6, 8,
   ])
-  @test.assert_eq(
-    try! @pdflite.pdf_parse_pagespec_for_count(10, "NOT1-8even"),
-    [1, 3, 5, 7, 9, 10],
-  )
-  @test.assert_eq(@pdflite.pdf_invert_range(10, [2, 4, 6, 8]), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "NOT1-8even"), [
     1, 3, 5, 7, 9, 10,
   ])
+  @test.assert_eq(@spec.pdf_invert_range(10, [2, 4, 6, 8]), [1, 3, 5, 7, 9, 10])
   @test.assert_eq(
-    @pdflite.pdf_invert_range(10, [2, 4, 6, 8]),
-    @pdflite.pdf_invert_page_range(10, [2, 4, 6, 8]),
+    @spec.pdf_invert_range(10, [2, 4, 6, 8]),
+    @spec.pdf_invert_page_range(10, [2, 4, 6, 8]),
   )
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "2DUP1-3"), [
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "2DUP1-3"), [
     1, 1, 2, 2, 3, 3,
   ])
-  @test.assert_eq(try! @pdflite.pdf_parse_pagespec_for_count(10, "0,1,11"), [1])
+  @test.assert_eq(try! @spec.pdf_parse_pagespec_for_count(10, "0,1,11"), [1])
 }
 
 ///|
 test "cpdf pagespec rejects malformed syntax" {
-  let leading_comma : Result[Array[Int], Error] = try? @pdflite.pdf_parse_pagespec_for_count(
+  let leading_comma : Result[Array[Int], Error] = try? @spec.pdf_parse_pagespec_for_count(
     10, ",1",
   )
   guard leading_comma is Err(@pdflite.PdfError::BadPageSpecification(",1")) else {
     fail("expected BadPageSpecification for leading comma")
   }
-  let doubled_dash : Result[Array[Int], Error] = try? @pdflite.pdf_parse_pagespec_for_count(
+  let doubled_dash : Result[Array[Int], Error] = try? @spec.pdf_parse_pagespec_for_count(
     10, "1--3",
   )
   guard doubled_dash is Err(@pdflite.PdfError::BadPageSpecification("1--3")) else {
     fail("expected BadPageSpecification for doubled dash")
   }
-  let zero_pages : Result[Array[Int], Error] = try? @pdflite.pdf_parse_pagespec_for_count(
+  let zero_pages : Result[Array[Int], Error] = try? @spec.pdf_parse_pagespec_for_count(
     0, "1",
   )
   guard zero_pages is Err(@pdflite.PdfError::BadPageSpecification("1")) else {
@@ -199,20 +192,20 @@ test "cpdf pagespec resolves escaped bracket page labels" {
 ///|
 test "cpdf pagespec formats ranges" {
   @test.assert_eq(
-    @pdflite.pdf_string_of_pagespec_for_count(10, [2, 4, 6, 8, 10]),
+    @spec.pdf_string_of_pagespec_for_count(10, [2, 4, 6, 8, 10]),
     "even",
   )
   @test.assert_eq(
-    @pdflite.pdf_string_of_pagespec_for_count(9, [1, 3, 5, 7, 9]),
+    @spec.pdf_string_of_pagespec_for_count(9, [1, 3, 5, 7, 9]),
     "odd",
   )
   @test.assert_eq(
-    @pdflite.pdf_string_of_pagespec_for_count(4, [1, 2, 3, 4]),
+    @spec.pdf_string_of_pagespec_for_count(4, [1, 2, 3, 4]),
     "all",
   )
   @test.assert_eq(
-    @pdflite.pdf_string_of_pagespec_for_count(10, [5, 1, 2, 4, 9, 10]),
+    @spec.pdf_string_of_pagespec_for_count(10, [5, 1, 2, 4, 9, 10]),
     "1-2,4-5,9-10",
   )
-  @test.assert_eq(@pdflite.pdf_string_of_pagespec_for_count(10, []), "")
+  @test.assert_eq(@spec.pdf_string_of_pagespec_for_count(10, []), "")
 }

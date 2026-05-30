@@ -1016,10 +1016,6 @@ pub fn pdf_impose(PdfDocument, Double, Double, fit? : Bool, columns? : Bool, rtl
 
 pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
 
-pub fn pdf_invert_page_range(Int, ArrayView[Int]) -> Array[Int]
-
-pub fn pdf_invert_range(Int, ArrayView[Int]) -> Array[Int]
-
 pub fn pdf_is_delimiter_byte(Int) -> Bool
 
 pub fn pdf_is_digit_byte(Int) -> Bool
@@ -1371,10 +1367,6 @@ pub fn pdf_parse_object_from_bytes(Bytes) -> @syntax.PdfObject raise @core.PdfEr
 pub fn pdf_parse_object_from_view(BytesView) -> @syntax.PdfObject raise @core.PdfError
 
 pub fn pdf_parse_pagespec(PdfDocument, String) -> Array[Int] raise @core.PdfError
-
-pub fn pdf_parse_pagespec_for_count(Int, String) -> Array[Int] raise @core.PdfError
-
-pub fn pdf_parse_pagespec_without_pdf(String) -> Array[Int] raise @core.PdfError
 
 pub fn pdf_parse_rectangle(PdfDocument, String) -> (Double, Double, Double, Double) raise @core.PdfError
 
@@ -1869,8 +1861,6 @@ pub fn pdf_string_of_lexemes(ArrayView[@syntax.PdfLexeme]) -> String
 pub fn pdf_string_of_page_label(@label.PdfPageLabel) -> Bytes
 
 pub fn pdf_string_of_pagespec(PdfDocument, ArrayView[Int]) -> String raise @core.PdfError
-
-pub fn pdf_string_of_pagespec_for_count(Int, ArrayView[Int]) -> String
 
 pub fn pdf_string_of_pdf(@syntax.PdfObject) -> Bytes raise @core.PdfError
 
