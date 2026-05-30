@@ -4,7 +4,9 @@ fn pdf_text_integer_of_double(value : Double) -> PdfObject {
 }
 
 ///|
-fn pdf_text_font_descriptor_bbox_object(fontbbox : PdfRectangle) -> PdfObject {
+fn pdf_text_font_descriptor_bbox_object(
+  fontbbox : @geometry.PdfRectangle,
+) -> PdfObject {
   PdfArray([
     pdf_text_integer_of_double(fontbbox.min_x),
     pdf_text_integer_of_double(fontbbox.min_y),

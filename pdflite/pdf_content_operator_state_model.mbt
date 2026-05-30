@@ -2,7 +2,7 @@
 /// Saved graphics/text interpreter frame pushed by PDF `q`/`Q` graphics-state
 /// operators while walking a content stream.
 pub(all) struct PdfContentOperatorFrame {
-  ctm : TransformMatrix
+  ctm : @geometry.TransformMatrix
   partial_path : @path.PdfContentPartialPath
   clipping_path : Array[@shape.PdfPath]
   path : @shape.PdfDrawnPath
@@ -36,7 +36,7 @@ pub(all) struct PdfContentOperatorFrame {
 /// It tracks graphics state, text state, marked-content context, Type 3 font
 /// metrics, and the saved graphics-state stack.
 pub(all) struct PdfContentOperatorState {
-  ctm : TransformMatrix
+  ctm : @geometry.TransformMatrix
   partial_path : @path.PdfContentPartialPath
   clipping_path : Array[@shape.PdfPath]
   path : @shape.PdfDrawnPath
@@ -245,7 +245,7 @@ pub fn pdf_content_initial_operator_state(
 ) -> PdfContentOperatorState {
   let clipping_path = pdf_content_initial_clipping_path(minx, miny, maxx, maxy)
   {
-    ctm: transform_identity_matrix,
+    ctm: @geometry.transform_identity_matrix,
     partial_path: @path.pdf_content_no_partial_path(),
     clipping_path,
     path: pdf_content_initial_drawn_path(),

@@ -35,7 +35,7 @@ fn pdf_toc_first_font(
 }
 
 ///|
-fn pdf_toc_rectangle_object(rectangle : PdfRectangle) -> PdfObject {
+fn pdf_toc_rectangle_object(rectangle : @geometry.PdfRectangle) -> PdfObject {
   PdfArray([
     PdfReal(rectangle.min_x),
     PdfReal(rectangle.min_y),

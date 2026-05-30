@@ -151,7 +151,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
     PdfFontSimple({
       fonttype: PdfType3({
         fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
-        fontmatrix: @pdflite.transform_identity_matrix,
+        fontmatrix: @geometry.transform_identity_matrix,
         charprocs: [],
         resources: @pdflite.pdf_dictionary([]),
       }),
@@ -171,7 +171,7 @@ test "PdfDocument write_font rejects unsupported font variants" {
     PdfFontSimple({
       fonttype: PdfType3({
         fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
-        fontmatrix: @pdflite.transform_identity_matrix,
+        fontmatrix: @geometry.transform_identity_matrix,
         charprocs: [],
         resources: @pdflite.pdf_dictionary([]),
       }),

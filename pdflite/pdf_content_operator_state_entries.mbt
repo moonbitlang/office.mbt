@@ -50,7 +50,7 @@ pub fn pdf_content_path_entry(
 
 ///|
 fn pdf_content_rectangle_bounding_box(
-  rectangle : PdfRectangle,
+  rectangle : @geometry.PdfRectangle,
 ) -> PdfContentBoundingBox {
   {
     x0: rectangle.min_x,
@@ -85,7 +85,7 @@ fn PdfContentOperatorState::content_unbounded_shading_bounding_box(
 pub fn PdfContentOperatorState::content_shading_entry(
   self : PdfContentOperatorState,
   name : PdfName,
-  shading_bbox : PdfRectangle?,
+  shading_bbox : @geometry.PdfRectangle?,
 ) -> PdfContentJsonEntry? {
   let bounding_box = match shading_bbox {
     Some(rectangle) => Some(pdf_content_rectangle_bounding_box(rectangle))
@@ -107,7 +107,7 @@ pub fn PdfContentOperatorState::content_shading_entry(
 pub fn pdf_content_shading_entry(
   state : PdfContentOperatorState,
   name : PdfName,
-  shading_bbox : PdfRectangle?,
+  shading_bbox : @geometry.PdfRectangle?,
 ) -> PdfContentJsonEntry? {
   state.content_shading_entry(name, shading_bbox)
 }
@@ -126,7 +126,7 @@ pub fn PdfDocument::content_shading_entry_from_resources(
         Some(shading_object) =>
           try
             self.content_read_shading(
-              transform_identity_matrix,
+              @geometry.transform_identity_matrix,
               PdfNull,
               shading_object,
             )
@@ -167,10 +167,10 @@ pub fn pdf_content_shading_entry_from_resources(
 pub fn PdfContentOperatorState::content_unit_square_bounding_box(
   self : PdfContentOperatorState,
 ) -> PdfContentBoundingBox {
-  let p0 = self.ctm.apply(point2(0.0, 0.0))
-  let p1 = self.ctm.apply(point2(0.0, 1.0))
-  let p2 = self.ctm.apply(point2(1.0, 1.0))
-  let p3 = self.ctm.apply(point2(1.0, 0.0))
+  let p0 = self.ctm.apply(@geometry.point2(0.0, 0.0))
+  let p1 = self.ctm.apply(@geometry.point2(0.0, 1.0))
+  let p2 = self.ctm.apply(@geometry.point2(1.0, 1.0))
+  let p3 = self.ctm.apply(@geometry.point2(1.0, 0.0))
   {
     x0: p0.x,
     y0: p0.y,

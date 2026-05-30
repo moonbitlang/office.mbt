@@ -120,6 +120,6 @@ fn pdf_markdown_form_resources(
 fn pdf_markdown_form_matrix(
   document : @pdflite.PdfDocument,
   xobject : @pdflite.PdfObject,
-) -> @pdflite.TransformMatrix raise {
+) -> @geometry.TransformMatrix raise {
   document.parse_matrix(pdf_markdown_matrix_key(), xobject)
 }

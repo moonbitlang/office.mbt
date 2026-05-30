@@ -3,7 +3,7 @@
 pub fn pdf_page_info_json(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> Json raise PdfError {
   document.page_info_json(page_numbers, unit~)
 }
@@ -13,7 +13,7 @@ pub fn pdf_page_info_json(
 pub fn pdf_json_page_info(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  unit : PdfUnit,
+  unit : @geometry.PdfUnit,
 ) -> Json raise PdfError {
   document.page_info_json(page_numbers, unit~)
 }
@@ -23,7 +23,7 @@ pub fn pdf_json_page_info(
 pub fn pdf_output_page_info_json_blob(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   document.page_info_json_blob(page_numbers, unit~)
 }
@@ -37,7 +37,7 @@ pub fn pdf_output_page_info_json_blob(
 pub fn PdfDocument::output_page_info(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
   json? : Bool = false,
   raisejson? : Bool = false,
 ) -> PdfBytes raise PdfError {
@@ -52,7 +52,7 @@ pub fn PdfDocument::output_page_info(
 ///|
 /// Compatibility wrapper matching cpdfpage's `output_page_info` argument order.
 pub fn pdf_output_page_info(
-  unit : PdfUnit,
+  unit : @geometry.PdfUnit,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   json? : Bool = false,
@@ -66,7 +66,7 @@ pub fn pdf_output_page_info(
 pub fn pdf_output_page_info_text(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   document.page_info_text(page_numbers, unit~)
 }

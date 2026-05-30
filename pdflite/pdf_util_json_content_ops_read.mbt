@@ -6,7 +6,7 @@ fn pdf_util_json_op_matrix(
   d : Json,
   e : Json,
   f : Json,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   {
     a: pdf_util_json_op_float(a),
     b: pdf_util_json_op_float(b),

@@ -20,7 +20,7 @@ pub(all) enum PdfDrawOp {
   PdfDrawSetLineJoin(Int)
   PdfDrawSetMiterLimit(Double)
   PdfDrawSetDashPattern(Array[Double], Double)
-  PdfDrawMatrix(TransformMatrix)
+  PdfDrawMatrix(@geometry.TransformMatrix)
   PdfDrawQq(Array[PdfDrawOp])
   PdfDrawFill
   PdfDrawFillEvenOdd

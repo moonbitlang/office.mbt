@@ -37,7 +37,7 @@ pub(all) struct PdfFontDescriptor {
   avgwidth : Double
   maxwidth : Double
   flags : Int
-  fontbbox : PdfRectangle
+  fontbbox : @geometry.PdfRectangle
   italicangle : Double
   capheight : Double
   xheight : Double
@@ -54,8 +54,8 @@ pub(all) struct PdfFontDescriptor {
 /// `resources` is the Type 3 resource dictionary used when interpreting those
 /// glyph programs.
 pub(all) struct PdfType3Glyphs {
-  fontbbox : PdfRectangle
-  fontmatrix : TransformMatrix
+  fontbbox : @geometry.PdfRectangle
+  fontmatrix : @geometry.TransformMatrix
   charprocs : Array[(PdfName, PdfObject)]
   resources : PdfObject
 } derive(Debug, Eq, ToJson)

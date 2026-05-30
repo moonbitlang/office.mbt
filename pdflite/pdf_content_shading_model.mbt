@@ -9,7 +9,7 @@ pub(all) enum PdfContentTiling {
 /// Function-based shading dictionary data.
 pub(all) struct PdfContentFunctionShading {
   funshading_domain : (Double, Double, Double, Double)
-  funshading_matrix : TransformMatrix
+  funshading_matrix : @geometry.TransformMatrix
   funshading_function : PdfFunction
 } derive(Debug, Eq, ToJson)
 
@@ -51,7 +51,7 @@ pub(all) struct PdfContentShading {
   shading_background : PdfObject?
   shading_bbox : PdfObject?
   shading_antialias : Bool
-  shading_matrix : TransformMatrix
+  shading_matrix : @geometry.TransformMatrix
   shading_extgstate : PdfObject
   shading : PdfContentShadingKind
 } derive(Debug, Eq, ToJson)

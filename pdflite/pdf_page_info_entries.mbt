@@ -12,12 +12,15 @@ priv struct PdfPageInfoEntry {
 }
 
 ///|
-fn pdf_page_info_unit_number(value : Double, unit : PdfUnit) -> Double {
+fn pdf_page_info_unit_number(
+  value : Double,
+  unit : @geometry.PdfUnit,
+) -> Double {
   match unit {
     PdfPoint => value
-    Inch => unit_inches(value, PdfPoint)
-    Centimetre => unit_centimetres(value, PdfPoint)
-    Millimetre => unit_millimetres(value, PdfPoint)
+    Inch => @geometry.unit_inches(value, PdfPoint)
+    Centimetre => @geometry.unit_centimetres(value, PdfPoint)
+    Millimetre => @geometry.unit_millimetres(value, PdfPoint)
   }
 }
 
@@ -26,7 +29,7 @@ fn PdfDocument::pdf_page_info_box_numbers(
   self : PdfDocument,
   page : @page.PdfPage,
   box_name : PdfName,
-  unit : PdfUnit,
+  unit : @geometry.PdfUnit,
 ) -> Array[Double]? raise PdfError {
   let object = if box_name == pdf_page_mediabox_key() {
     Some(page.mediabox)
@@ -73,7 +76,7 @@ fn PdfDocument::pdf_page_info_entry(
   page_number : Int,
   page : @page.PdfPage,
   labels : ArrayView[@label.PdfPageLabel],
-  unit : PdfUnit,
+  unit : @geometry.PdfUnit,
 ) -> PdfPageInfoEntry raise PdfError {
   {
     page_number,
@@ -100,7 +103,7 @@ fn PdfDocument::pdf_page_info_entry(
 fn PdfDocument::pdf_page_info_entries(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  unit : PdfUnit,
+  unit : @geometry.PdfUnit,
 ) -> Array[PdfPageInfoEntry] raise PdfError {
   let pages = self.pages_of_pagetree()
   pdf_page_box_validate_page_numbers(page_numbers, pages.length(), "page_info")

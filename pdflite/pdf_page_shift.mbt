@@ -52,7 +52,7 @@ fn pdf_page_shift_select_page_indexed_offsets(
 fn PdfDocument::pdf_page_shift_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   fast : Bool,
 ) -> @page.PdfPage raise PdfError {
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
@@ -81,7 +81,7 @@ pub fn PdfDocument::shift_pages(
   let pages = self.pages_of_pagetree()
   let page_indexes = pdf_page_shift_offset_index_map(page_numbers)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {
@@ -89,7 +89,7 @@ pub fn PdfDocument::shift_pages(
     match page_indexes.get(page_number) {
       Some(offset_index) => {
         let offset = offsets[offset_index]
-        let matrix = transform_translate(offset.0, offset.1)
+        let matrix = @geometry.transform_translate(offset.0, offset.1)
         rewritten.push(self.pdf_page_shift_page(pages[index], matrix, fast))
         matrices.push((page_number, matrix))
       }

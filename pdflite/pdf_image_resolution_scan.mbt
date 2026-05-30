@@ -94,7 +94,7 @@ fn PdfDocument::pdf_image_resolution_process_content(
   candidates : ArrayView[PdfImageResolutionCandidate],
   page_number : Int,
   inline : Bool,
-  initial_matrix : TransformMatrix,
+  initial_matrix : @geometry.TransformMatrix,
   depth : Int,
   results : Array[PdfImageResolutionEntry],
 ) -> Unit raise PdfError {
@@ -102,13 +102,13 @@ fn PdfDocument::pdf_image_resolution_process_content(
     return
   }
   let ops = self.parse_content_ops_with_resources(resources, content)
-  let transforms : Array[TransformMatrix] = [initial_matrix]
+  let transforms : Array[@geometry.TransformMatrix] = [initial_matrix]
   for op in ops {
     match op {
       Op_cm(matrix) =>
         if transforms.length() > 0 {
           let index = transforms.length() - 1
-          transforms[index] = transform_matrix_compose(
+          transforms[index] = @geometry.transform_matrix_compose(
             transforms[index],
             matrix,
           )
@@ -180,7 +180,7 @@ fn PdfDocument::pdf_image_resolution_process_content(
                 form_candidates,
                 page_number,
                 inline,
-                transform_matrix_compose(
+                @geometry.transform_matrix_compose(
                   matrix,
                   transforms[transforms.length() - 1],
                 ),

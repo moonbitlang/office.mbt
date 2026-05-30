@@ -46,7 +46,7 @@ test "cpdfcontent function shading reads domain matrix and fallback function" {
   @test.assert_eq(function_shading.funshading_domain, (2.0, 3.0, 4.0, 5.0))
   @test.assert_eq(
     function_shading.funshading_matrix,
-    @pdflite.transform_translate(7.0, 8.0),
+    @geometry.transform_translate(7.0, 8.0),
   )
   guard function_shading.funshading_function.func
     is PdfFunctionInterpolation(interpolation) else {
@@ -60,7 +60,7 @@ test "cpdfcontent function shading reads domain matrix and fallback function" {
   @test.assert_eq(default_shading.funshading_domain, (0.0, 1.0, 0.0, 1.0))
   @test.assert_eq(
     default_shading.funshading_matrix,
-    @pdflite.transform_identity_matrix,
+    @geometry.transform_identity_matrix,
   )
   guard default_shading.funshading_function.func
     is PdfFunctionCalculator(calculator) else {
@@ -148,7 +148,7 @@ test "cpdfcontent shading wrapper preserves source field semantics" {
     (content_shading_name_for_test("/CA"), PdfReal(0.5)),
   ])
   let shading = try! doc.content_read_shading(
-    @pdflite.transform_translate(1.0, 2.0),
+    @geometry.transform_translate(1.0, 2.0),
     extgstate,
     shading_object,
   )
@@ -161,14 +161,14 @@ test "cpdfcontent shading wrapper preserves source field semantics" {
   @test.assert_eq(shading.shading_antialias, true)
   @test.assert_eq(
     shading.shading_matrix,
-    @pdflite.transform_translate(1.0, 2.0),
+    @geometry.transform_translate(1.0, 2.0),
   )
   @test.assert_eq(shading.shading_extgstate, extgstate)
   guard shading.shading is PdfContentRadialShading(_) else {
     fail("expected radial shading kind")
   }
   let fallback = try! doc.content_read_shading(
-    @pdflite.transform_identity_matrix,
+    @geometry.transform_identity_matrix,
     @pdflite.pdf_dictionary([]),
     @pdflite.pdf_dictionary([]),
   )

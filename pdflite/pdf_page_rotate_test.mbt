@@ -2,7 +2,7 @@
 fn rotate_page_for_test(
   rotate? : @page.PdfPageRotation = Rotate0,
 ) -> @page.PdfPage {
-  { ..@page.pdf_page_blank(@pdflite.paper_a4), rotate, }
+  { ..@page.pdf_page_blank(@geometry.paper_a4), rotate, }
 }
 
 ///|
@@ -130,12 +130,12 @@ test "PdfDocument rotate_contents transforms content annotations patterns and de
   let key_rect = rotate_name_for_test("/Rect")
   let pattern_name = rotate_name_for_test("/P1")
   let xyz_name = rotate_name_for_test("/XYZ")
-  let old_matrix = @pdflite.transform_translate(1.0, 2.0)
-  let matrix = @pdflite.transform_rotate(
-    @pdflite.point2(50.0, 50.0),
+  let old_matrix = @geometry.transform_translate(1.0, 2.0)
+  let matrix = @geometry.transform_rotate(
+    @geometry.point2(50.0, 50.0),
     -@math.PI / 2.0,
   )
-  let content_matrix : @pdflite.TransformMatrix = {
+  let content_matrix : @geometry.TransformMatrix = {
     a: 0.0,
     b: -1.0,
     c: 1.0,
@@ -210,13 +210,13 @@ test "PdfDocument rotate_contents transforms content annotations patterns and de
     rotated.lookup_object_or_null(number).lookup_immediate(key_matrix),
     Some(
       @pdflite.pdf_object_of_matrix(
-        @pdflite.transform_matrix_compose(matrix, old_matrix),
+        @geometry.transform_matrix_compose(matrix, old_matrix),
       ),
     ),
   )
 
   let rotated_numbers = try! rotated.page_reference_numbers()
-  let destination_point = matrix.apply(@pdflite.point2(60.0, 70.0))
+  let destination_point = matrix.apply(@geometry.point2(60.0, 70.0))
   guard rotated
     .lookup_object_or_null(rotated.root())
     .lookup_immediate(key_open_action)

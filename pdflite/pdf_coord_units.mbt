@@ -30,42 +30,42 @@ fn pdf_coord_is_unit(text : String) -> Bool {
 }
 
 ///|
-fn pdf_coord_paper_points(paper : PaperSize) -> (Double, Double) {
+fn pdf_coord_paper_points(paper : @geometry.PaperSize) -> (Double, Double) {
   (
-    unit_points(paper.width(), paper.unit()),
-    unit_points(paper.height(), paper.unit()),
+    @geometry.unit_points(paper.width(), paper.unit()),
+    @geometry.unit_points(paper.height(), paper.unit()),
   )
 }
 
 ///|
-fn pdf_coord_paper_size(text : String) -> PaperSize? {
+fn pdf_coord_paper_size(text : String) -> @geometry.PaperSize? {
   match text {
-    "a0portrait" => Some(paper_a0)
-    "a1portrait" => Some(paper_a1)
-    "a2portrait" => Some(paper_a2)
-    "a3portrait" => Some(paper_a3)
-    "a4portrait" => Some(paper_a4)
-    "a5portrait" => Some(paper_a5)
-    "a6portrait" => Some(paper_a6)
-    "a7portrait" => Some(paper_a7)
-    "a8portrait" => Some(paper_a8)
-    "a9portrait" => Some(paper_a9)
-    "a10portrait" => Some(paper_a10)
-    "a0landscape" => Some(paper_a0.landscape())
-    "a1landscape" => Some(paper_a1.landscape())
-    "a2landscape" => Some(paper_a2.landscape())
-    "a3landscape" => Some(paper_a3.landscape())
-    "a4landscape" => Some(paper_a4.landscape())
-    "a5landscape" => Some(paper_a5.landscape())
-    "a6landscape" => Some(paper_a6.landscape())
-    "a7landscape" => Some(paper_a7.landscape())
-    "a8landscape" => Some(paper_a8.landscape())
-    "a9landscape" => Some(paper_a9.landscape())
-    "a10landscape" => Some(paper_a10.landscape())
-    "usletterportrait" => Some(paper_usletter)
-    "uslegalportrait" => Some(paper_uslegal)
-    "usletterlandscape" => Some(paper_usletter.landscape())
-    "uslegallandscape" => Some(paper_uslegal.landscape())
+    "a0portrait" => Some(@geometry.paper_a0)
+    "a1portrait" => Some(@geometry.paper_a1)
+    "a2portrait" => Some(@geometry.paper_a2)
+    "a3portrait" => Some(@geometry.paper_a3)
+    "a4portrait" => Some(@geometry.paper_a4)
+    "a5portrait" => Some(@geometry.paper_a5)
+    "a6portrait" => Some(@geometry.paper_a6)
+    "a7portrait" => Some(@geometry.paper_a7)
+    "a8portrait" => Some(@geometry.paper_a8)
+    "a9portrait" => Some(@geometry.paper_a9)
+    "a10portrait" => Some(@geometry.paper_a10)
+    "a0landscape" => Some(@geometry.paper_a0.landscape())
+    "a1landscape" => Some(@geometry.paper_a1.landscape())
+    "a2landscape" => Some(@geometry.paper_a2.landscape())
+    "a3landscape" => Some(@geometry.paper_a3.landscape())
+    "a4landscape" => Some(@geometry.paper_a4.landscape())
+    "a5landscape" => Some(@geometry.paper_a5.landscape())
+    "a6landscape" => Some(@geometry.paper_a6.landscape())
+    "a7landscape" => Some(@geometry.paper_a7.landscape())
+    "a8landscape" => Some(@geometry.paper_a8.landscape())
+    "a9landscape" => Some(@geometry.paper_a9.landscape())
+    "a10landscape" => Some(@geometry.paper_a10.landscape())
+    "usletterportrait" => Some(@geometry.paper_usletter)
+    "uslegalportrait" => Some(@geometry.paper_uslegal)
+    "usletterlandscape" => Some(@geometry.paper_usletter.landscape())
+    "uslegallandscape" => Some(@geometry.paper_uslegal.landscape())
     _ => None
   }
 }

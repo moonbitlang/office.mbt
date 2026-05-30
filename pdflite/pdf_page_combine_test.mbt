@@ -100,7 +100,7 @@ test "PdfDocument combine_pages overlays paired pages and truncates extra overla
     Op_S,
     Op_Q,
     Op_q,
-    Op_cm(@pdflite.transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_Tf(combine_name_for_test("/aStampA"), 12.0),
     Op_Q,
   ])
@@ -110,7 +110,7 @@ test "PdfDocument combine_pages overlays paired pages and truncates extra overla
     Op_ET,
     Op_Q,
     Op_q,
-    Op_cm(@pdflite.transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_Tf(combine_name_for_test("/aStampB"), 8.0),
     Op_Q,
   ])
@@ -147,7 +147,7 @@ test "pdf_combine_pages can put a padded overlay under base pages" {
 
   @test.assert_eq(combine_content_ops_for_test(combined, pages[0]), [
     Op_q,
-    Op_cm(@pdflite.transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_g(0.5),
     Op_Q,
     Op_q,
@@ -157,7 +157,7 @@ test "pdf_combine_pages can put a padded overlay under base pages" {
   ])
   @test.assert_eq(combine_content_ops_for_test(combined, pages[1]), [
     Op_q,
-    Op_cm(@pdflite.transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_Q,
     Op_q,
     Op_l(3.0, 4.0),
@@ -192,9 +192,9 @@ test "PdfDocument combine_pages scale_to_fit centers each overlay page" {
     combined => combined
   }
   let pages = try! combined.pages_of_pagetree()
-  let expected_matrix = @pdflite.transform_matrix_compose(
-    @pdflite.transform_translate(0.0, 25.0),
-    @pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 5.0, 5.0),
+  let expected_matrix = @geometry.transform_matrix_compose(
+    @geometry.transform_translate(0.0, 25.0),
+    @geometry.transform_scale(@geometry.point2(0.0, 0.0), 5.0, 5.0),
   )
 
   @test.assert_eq(combine_content_ops_for_test(combined, pages[0]), [

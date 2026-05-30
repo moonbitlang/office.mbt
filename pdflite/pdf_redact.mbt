@@ -88,7 +88,7 @@ pub fn pdf_apply_type(
 
 ///|
 fn pdf_redact_annotation_box_ops(
-  rectangle : PdfRectangle,
+  rectangle : @geometry.PdfRectangle,
   light : Bool,
 ) -> Array[@content.PdfContentOp] {
   let stroke_colour : @content.PdfContentOp = if light {
@@ -162,7 +162,9 @@ fn pdf_redact_push_content_box_ops(
 }
 
 ///|
-fn pdf_redact_content_entry_bounds(entry : PdfContentJsonEntry) -> PdfRectangle {
+fn pdf_redact_content_entry_bounds(
+  entry : PdfContentJsonEntry,
+) -> @geometry.PdfRectangle {
   let bbox = entry.bounding_box
   let min_x = double_min(
     double_min(bbox.x0, bbox.x1),
@@ -185,8 +187,8 @@ fn pdf_redact_content_entry_bounds(entry : PdfContentJsonEntry) -> PdfRectangle 
 
 ///|
 fn pdf_redact_rectangles_overlap(
-  first : PdfRectangle,
-  second : PdfRectangle,
+  first : @geometry.PdfRectangle,
+  second : @geometry.PdfRectangle,
 ) -> Bool {
   !(first.max_x < second.min_x ||
   second.max_x < first.min_x ||
@@ -196,7 +198,7 @@ fn pdf_redact_rectangles_overlap(
 
 ///|
 fn pdf_redact_content_box_matches_shape(
-  shape : PdfRectangle,
+  shape : @geometry.PdfRectangle,
   entry : PdfContentJsonEntry,
 ) -> Bool {
   let bounds = pdf_redact_content_entry_bounds(entry)
@@ -216,7 +218,7 @@ fn pdf_redact_content_box_matches_shape(
 
 ///|
 fn pdf_redact_content_box_selected(
-  shape : PdfRectangle?,
+  shape : @geometry.PdfRectangle?,
   entry : PdfContentJsonEntry,
 ) -> Bool {
   match shape {
@@ -229,7 +231,7 @@ fn pdf_redact_content_box_selected(
 fn PdfDocument::pdf_redact_page_content_box_ops(
   self : PdfDocument,
   page : @page.PdfPage,
-  shape : PdfRectangle?,
+  shape : @geometry.PdfRectangle?,
   light : Bool,
 ) -> Array[@content.PdfContentOp] raise PdfError {
   let output : Array[@content.PdfContentOp] = []
@@ -290,7 +292,7 @@ pub fn pdf_show_annotation_bounding_boxes(
 pub fn PdfDocument::show_bounding_boxes(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  shape? : PdfRectangle? = None,
+  shape? : @geometry.PdfRectangle? = None,
   light? : Bool = false,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -322,7 +324,7 @@ pub fn PdfDocument::show_bounding_boxes(
 pub fn pdf_show_bounding_boxes(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  shape? : PdfRectangle? = None,
+  shape? : @geometry.PdfRectangle? = None,
   light? : Bool = false,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -333,7 +335,7 @@ pub fn pdf_show_bounding_boxes(
 /// Compatibility wrapper matching cpdfredact's `show_bounding_boxes` order.
 pub fn pdf_show_bounding_boxes_cpdf_order(
   fast : Bool,
-  shape : PdfRectangle?,
+  shape : @geometry.PdfRectangle?,
   light : Bool,
   document : PdfDocument,
   page_numbers : ArrayView[Int],

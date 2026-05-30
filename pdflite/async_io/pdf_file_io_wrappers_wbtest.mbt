@@ -333,7 +333,7 @@ async test "async file wrappers extract page image files" {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         pdf_async_io_name_for_test("/XObject"),
@@ -942,7 +942,7 @@ async test "async file wrappers fail dumping malformed attachment data" {
     (pdf_async_io_name_for_test("/FS"), file_spec),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     rest: PdfDictionary([
       (pdf_async_io_name_for_test("/Annots"), PdfArray([annotation])),
     ]),

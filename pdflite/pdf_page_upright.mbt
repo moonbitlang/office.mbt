@@ -116,13 +116,13 @@ pub fn pdf_alluprightonly_cpdf_order(
 fn PdfDocument::pdf_page_upright_rotation_matrix(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
-  let center = point2(
+  let center = @geometry.point2(
     (bounds.min_x + bounds.max_x) / 2.0,
     (bounds.min_y + bounds.max_y) / 2.0,
   )
-  transform_rotate(
+  @geometry.transform_rotate(
     center,
     -pdf_page_upright_degrees(page.rotate) * @math.PI / 180.0,
   )
@@ -142,7 +142,7 @@ fn pdf_page_upright_box_names() -> Array[PdfName] {
 fn PdfDocument::pdf_page_upright_transform_boxes(
   self : PdfDocument,
   page : @page.PdfPage,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
 ) -> @page.PdfPage raise PdfError {
   let mut rest = page.rest
   for name in pdf_page_upright_box_names() {
@@ -159,10 +159,10 @@ fn PdfDocument::pdf_page_upright_transform_boxes(
 fn PdfDocument::pdf_page_upright_transform_content(
   self : PdfDocument,
   page : @page.PdfPage,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   fast : Bool,
 ) -> @page.PdfPage raise PdfError {
-  if matrix == transform_identity_matrix {
+  if matrix == @geometry.transform_identity_matrix {
     page
   } else {
     let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
@@ -176,13 +176,13 @@ fn PdfDocument::pdf_page_upright_rectify(
   self : PdfDocument,
   page : @page.PdfPage,
   fast : Bool,
-) -> (@page.PdfPage, TransformMatrix) raise PdfError {
+) -> (@page.PdfPage, @geometry.TransformMatrix) raise PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
   if pdf_page_upright_near_zero(bounds.min_x) &&
     pdf_page_upright_near_zero(bounds.min_y) {
-    (page, transform_identity_matrix)
+    (page, @geometry.transform_identity_matrix)
   } else {
-    let matrix = transform_translate(-bounds.min_x, -bounds.min_y)
+    let matrix = @geometry.transform_translate(-bounds.min_x, -bounds.min_y)
     let page = self.pdf_page_upright_transform_boxes(page, matrix)
     let page = self.pdf_page_shift_page(page, matrix, fast)
     (page, matrix)
@@ -194,9 +194,9 @@ fn PdfDocument::pdf_page_upright_page(
   self : PdfDocument,
   page : @page.PdfPage,
   fast : Bool,
-) -> (@page.PdfPage, TransformMatrix) raise PdfError {
+) -> (@page.PdfPage, @geometry.TransformMatrix) raise PdfError {
   if self.pdf_page_upright_is_upright(page) {
-    (page, transform_identity_matrix)
+    (page, @geometry.transform_identity_matrix)
   } else {
     let rotation_matrix = self.pdf_page_upright_rotation_matrix(page)
     let page = self.pdf_page_upright_transform_boxes(page, rotation_matrix)
@@ -206,7 +206,10 @@ fn PdfDocument::pdf_page_upright_page(
       fast,
     )
     let (page, rectification_matrix) = self.pdf_page_upright_rectify(page, fast)
-    (page, transform_matrix_compose(rectification_matrix, rotation_matrix))
+    (
+      page,
+      @geometry.transform_matrix_compose(rectification_matrix, rotation_matrix),
+    )
   }
 }
 
@@ -232,7 +235,7 @@ pub fn PdfDocument::upright_pages(
   } else {
     let selected_pages = @core.pdf_number_set(page_numbers)
     let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-    let matrices : Array[(Int, TransformMatrix)] = Array::new(
+    let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
       capacity=page_numbers.length(),
     )
     for index in 0..<pages.length() {

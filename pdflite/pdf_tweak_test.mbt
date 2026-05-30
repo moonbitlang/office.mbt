@@ -1034,7 +1034,7 @@ test "PdfDocument replace_stream_by_spec updates bytes and Length" {
 ///|
 test "pdf_thin_lines_ops honors thresholds and CTM scale" {
   let document = @pdflite.pdf_document_empty()
-  let scale_two : @pdflite.TransformMatrix = {
+  let scale_two : @geometry.TransformMatrix = {
     a: 2.0,
     b: 0.0,
     c: 0.0,
@@ -1177,7 +1177,7 @@ test "pdf_thin_lines_ops inserts ExtGState line width" {
 ///|
 test "pdf_thin_lines_ops rejects CTM operations after unbalanced restore" {
   let document = @pdflite.pdf_document_empty()
-  let scale_two : @pdflite.TransformMatrix = {
+  let scale_two : @geometry.TransformMatrix = {
     a: 2.0,
     b: 0.0,
     c: 0.0,

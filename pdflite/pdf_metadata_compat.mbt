@@ -274,7 +274,7 @@ pub fn pdf_determine_subformats(
 pub fn pdf_output_info_json_blob(
   document : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   document.info_json_blob(encoding~, unit~)
 }
@@ -284,7 +284,7 @@ pub fn pdf_output_info_json_blob(
 pub fn pdf_output_info(
   document : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   document.info_blob(encoding~, unit~)
 }
@@ -302,7 +302,7 @@ pub fn pdf_output_xmp_info_json_blob(
 pub fn pdf_output_xmp_info(
   document : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   ignore(encoding)
   ignore(unit)

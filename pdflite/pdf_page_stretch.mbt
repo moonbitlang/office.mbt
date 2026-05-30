@@ -4,15 +4,15 @@ fn PdfDocument::pdf_page_stretch_matrix(
   page : @page.PdfPage,
   target_width : Double,
   target_height : Double,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   let bounds = self.pdf_page_scale_bounds(page)
   let source_width = bounds.max_x - bounds.min_x
   let source_height = bounds.max_y - bounds.min_y
   if source_width <= 0.0 || source_height <= 0.0 {
     raise BadNumberArgument("stretch_pages: zero-sized pages are invalid")
   }
-  transform_scale(
-    point2(0.0, 0.0),
+  @geometry.transform_scale(
+    @geometry.point2(0.0, 0.0),
     target_width / source_width,
     target_height / source_height,
   )
@@ -44,7 +44,7 @@ pub fn PdfDocument::stretch_pages(
   let pages = self.pages_of_pagetree()
   let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {

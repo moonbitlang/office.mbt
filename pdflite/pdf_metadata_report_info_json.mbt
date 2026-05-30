@@ -3,7 +3,7 @@
 pub fn PdfDocument::info_json(
   self : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> Json raise PdfError {
   let output : Map[String, Json] = Map([])
   let (major, minor) = self.version()
@@ -102,7 +102,7 @@ pub fn PdfDocument::info_json(
 pub fn PdfDocument::info_json_blob(
   self : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   @utf8.encode(self.info_json(encoding~, unit~).stringify())
 }

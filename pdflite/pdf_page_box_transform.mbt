@@ -60,7 +60,7 @@ pub fn PdfDocument::rectify_boxes(
   if bounds.min_x != 0.0 || bounds.min_y != 0.0 {
     self.pdf_page_shift_page(
       page,
-      transform_translate(-bounds.min_x, -bounds.min_y),
+      @geometry.transform_translate(-bounds.min_x, -bounds.min_y),
       fast,
     )
   } else {

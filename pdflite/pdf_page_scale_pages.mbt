@@ -19,7 +19,7 @@ pub fn PdfDocument::scale_pages(
   let pages = self.pages_of_pagetree()
   let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {
@@ -27,7 +27,11 @@ pub fn PdfDocument::scale_pages(
     match page_indexes.get(page_number) {
       Some(scale_index) => {
         let scale = scales[scale_index]
-        let matrix = transform_scale(point2(0.0, 0.0), scale.0, scale.1)
+        let matrix = @geometry.transform_scale(
+          @geometry.point2(0.0, 0.0),
+          scale.0,
+          scale.1,
+        )
         rewritten.push(
           self.pdf_page_scale_page_data(pages[index], matrix, fast),
         )

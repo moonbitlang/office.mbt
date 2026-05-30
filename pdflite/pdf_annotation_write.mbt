@@ -1,5 +1,7 @@
 ///|
-fn pdf_annotation_rectangle_object(rectangle : PdfRectangle) -> PdfObject {
+fn pdf_annotation_rectangle_object(
+  rectangle : @geometry.PdfRectangle,
+) -> PdfObject {
   PdfArray([
     PdfReal(rectangle.min_x),
     PdfReal(rectangle.min_y),
@@ -123,7 +125,7 @@ pub fn pdf_add_annotation(
 ///|
 fn PdfDocument::pdf_annotation_transform_one(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   annotation_number : Int,
 ) -> Unit raise PdfError {
   let annotation = self.lookup_object_or_null(annotation_number)
@@ -136,7 +138,7 @@ fn PdfDocument::pdf_annotation_transform_one(
 ///|
 fn PdfDocument::pdf_annotation_transform_object(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   annotation : PdfObject,
 ) -> PdfObject raise PdfError {
   let mut transformed = annotation
@@ -175,7 +177,7 @@ fn PdfDocument::pdf_annotation_transform_object(
 /// the page's `/Annots` array are updated in place.
 pub fn PdfDocument::transform_annotations(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   rest : PdfObject,
 ) -> Unit raise PdfError {
   match self.lookup_direct(pdf_annotation_annots_key(), rest) {
@@ -203,7 +205,7 @@ pub fn PdfDocument::transform_annotations(
 /// Compatibility wrapper for `PdfDocument::transform_annotations`.
 pub fn pdf_transform_annotations(
   document : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   rest : PdfObject,
 ) -> Unit raise PdfError {
   document.transform_annotations(matrix, rest)

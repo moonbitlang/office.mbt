@@ -450,7 +450,7 @@ test "PdfDocument toc_typeset_pages uses first-page cropbox geometry" {
     50.0,
     30.0,
     30.0,
-    @pdflite.paper_size_make(PdfPoint, 200.0, 100.0),
+    @geometry.paper_size_make(PdfPoint, 200.0, 100.0),
     expected_elements,
   )
   let expected_pages = [
@@ -513,7 +513,7 @@ test "PdfDocument toc_insert_pages prepends pages and shifts labels" {
     },
   ]
   let toc_page = @page.pdf_page_blank(
-    @pdflite.paper_size_make(PdfPoint, 50.0, 50.0),
+    @geometry.paper_size_make(PdfPoint, 50.0, 50.0),
   )
   let expected_labels : Array[@label.PdfPageLabel] = [
     {

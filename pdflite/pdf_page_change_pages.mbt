@@ -10,7 +10,7 @@ pub fn PdfDocument::change_pages(
   self : PdfDocument,
   pages : ArrayView[@page.PdfPage],
   change_references? : Bool = false,
-  matrices? : ArrayView[(Int, TransformMatrix)] = [],
+  matrices? : ArrayView[(Int, @geometry.TransformMatrix)] = [],
   changes? : ArrayView[(Int, Int)] = [],
 ) -> PdfDocument raise PdfError {
   let old_page_numbers = self.page_reference_numbers()
@@ -49,7 +49,7 @@ pub fn pdf_change_pages(
   change_references : Bool,
   document : PdfDocument,
   pages : ArrayView[@page.PdfPage],
-  matrices? : ArrayView[(Int, TransformMatrix)] = [],
+  matrices? : ArrayView[(Int, @geometry.TransformMatrix)] = [],
   changes? : ArrayView[(Int, Int)] = [],
 ) -> PdfDocument raise PdfError {
   document.change_pages(pages, change_references~, matrices~, changes~)

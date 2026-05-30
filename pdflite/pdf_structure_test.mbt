@@ -15,7 +15,7 @@ fn structure_struct_tree_doc_for_test() -> @pdflite.PdfDocument raise {
   let key_pg = structure_name_for_test("/Pg")
   let key_label = structure_name_for_test("/Label")
   let doc = @pdflite.pdf_document_empty()
-  let page_root = doc.add_pagetree([@page.pdf_page_blank(@pdflite.paper_a4)])
+  let page_root = doc.add_pagetree([@page.pdf_page_blank(@geometry.paper_a4)])
   ignore(doc.add_root(page_root, [(key_struct_tree_root, PdfIndirect(30))]))
   let page_numbers = doc.page_reference_numbers()
   doc.add_object_given_number(
@@ -153,8 +153,8 @@ fn structure_text_tree_doc_for_test() -> @pdflite.PdfDocument raise {
   let name_document = structure_name_for_test("/Document")
   let doc = @pdflite.pdf_document_empty()
   let page_root = doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(doc.add_root(page_root, [(key_struct_tree_root, PdfIndirect(30))]))
   let page_numbers = doc.page_reference_numbers()
@@ -221,7 +221,7 @@ test "PdfDocument extract_struct_tree exports cpdf-style object graph JSON" {
     @utf8.encode(exported.stringify()),
   )
 
-  let without_tree = @pdflite.pdf_blank_document_paper(@pdflite.paper_a4, 1)
+  let without_tree = @pdflite.pdf_blank_document_paper(@geometry.paper_a4, 1)
   guard (try! without_tree.extract_struct_tree()) is Array([_]) else {
     fail("expected only the CPDFJSON header when no structure tree exists")
   }
@@ -236,7 +236,7 @@ test "PdfDocument struct_tree_text renders cpdf-style tree with role map and pag
   @test.assert_eq(try! doc.struct_tree_text(), expected)
   @test.assert_eq(try! @pdflite.pdf_ua_print_struct_tree(doc), expected)
 
-  let without_tree = @pdflite.pdf_blank_document_paper(@pdflite.paper_a4, 1)
+  let without_tree = @pdflite.pdf_blank_document_paper(@geometry.paper_a4, 1)
   @test.assert_eq(try! without_tree.struct_tree_text(), Bytes::new(0))
 }
 
@@ -662,8 +662,8 @@ test "PdfDocument trim_structure_tree removes parents whose kids target deleted 
   let key_obj = structure_name_for_test("/Obj")
   let doc = @pdflite.pdf_document_empty()
   let page_root = doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(doc.add_root(page_root, []))
   let page_numbers = doc.page_reference_numbers()

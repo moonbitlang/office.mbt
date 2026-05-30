@@ -279,7 +279,7 @@ test "PdfDocument extract_images_files walks page images masks and form images i
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         image_extract_name_for_test("/XObject"),
@@ -367,7 +367,7 @@ test "PdfDocument extract_images_files honors global and per-page dedup" {
     ),
   )
   let page_one = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         image_extract_name_for_test("/XObject"),
@@ -379,7 +379,7 @@ test "PdfDocument extract_images_files honors global and per-page dedup" {
     ]),
   }
   let page_two = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         image_extract_name_for_test("/XObject"),
@@ -436,7 +436,7 @@ test "PdfDocument extract_images_files expands object number stem marker" {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         image_extract_name_for_test("/XObject"),
@@ -467,7 +467,7 @@ test "PdfDocument extract_images_files optionally emits inline images" {
   ])
   let inline_data = image_extract_bytes_for_test([7, 8, 9])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       try! @pdflite.pdf_content_stream_of_ops([
         Op_InlineImage(inline_dict, None, inline_data),

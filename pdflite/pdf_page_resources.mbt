@@ -287,8 +287,8 @@ pub fn[A, B, C] pdf_page_process_stub(
   process : (A, B) -> C raise,
   number : A,
   page : B,
-) -> (C, A, TransformMatrix) raise {
-  (process(number, page), number, transform_identity_matrix)
+) -> (C, A, @geometry.TransformMatrix) raise {
+  (process(number, page), number, @geometry.transform_identity_matrix)
 }
 
 ///|

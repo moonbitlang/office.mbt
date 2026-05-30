@@ -480,7 +480,7 @@ test "squeeze deduplicates equal streams before recompressing" {
 ///|
 test "squeeze normalizes unshared page content streams" {
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       squeeze_content_stream_for_test("q"),
       squeeze_content_stream_for_test("Q"),
@@ -532,7 +532,7 @@ test "squeeze normalizes direct page content without resources" {
 test "squeeze normalizes page objects outside the page tree" {
   let key_type = squeeze_name_for_test("/Type")
   let key_contents = squeeze_name_for_test("/Contents")
-  let page = @page.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@geometry.paper_a4)
   let document = squeeze_document_with_pages_for_test([page])
   let orphan_page : @pdflite.PdfObject = PdfDictionary([
     (key_type, PdfNameObject(squeeze_name_for_test("/Page"))),
@@ -558,7 +558,7 @@ test "squeeze leaves shared page content streams in place" {
   let document = @pdflite.pdf_document_empty()
   document.add_object_given_number(80, shared)
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [PdfIndirect(80)],
   }
   let page_root = try! document.add_pagetree([page, page])
@@ -606,7 +606,7 @@ test "squeeze normalizes form xobject streams" {
     ]),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [squeeze_content_stream_for_test("q /Fm1 Do Q")],
     resources: PdfDictionary([
       (
@@ -653,7 +653,7 @@ test "squeeze skips non-page page-tree leaves" {
 ///|
 test "squeeze reports malformed xobject resource entries" {
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         squeeze_name_for_test("/XObject"),
@@ -688,7 +688,7 @@ test "squeeze reports non-stream form xobjects" {
     ]),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: squeeze_page_resource_for_test("/Fm1", 95),
   }
   let page_root = try! document.add_pagetree([page])

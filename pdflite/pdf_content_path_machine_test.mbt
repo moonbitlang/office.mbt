@@ -14,11 +14,11 @@ fn content_path_apply_for_test(
 
 ///|
 fn content_path_assert_point_for_test(
-  point : @pdflite.Point2,
+  point : @geometry.Point2,
   x : Double,
   y : Double,
 ) -> Unit raise {
-  @test.assert_eq(point, @pdflite.point2(x, y))
+  @test.assert_eq(point, @geometry.point2(x, y))
 }
 
 ///|

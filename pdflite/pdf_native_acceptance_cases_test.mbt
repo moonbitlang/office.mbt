@@ -884,7 +884,7 @@ test "native acceptance suite reconstructs malformed feature-rich classic docume
   let changed = parsed.change_pages(
     parsed.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(5.0, -6.0))],
+    matrices=[(1, @geometry.transform_translate(5.0, -6.0))],
   )
   let rewritten = @pdflite.pdf_write_document_with_compressed_xref_stream(
     changed,
@@ -1051,7 +1051,7 @@ test "native acceptance suite changes resource-heavy pages with mixed references
       },
     ],
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let reparsed = acceptance_compressed_roundtrip_for_test(changed)
   acceptance_assert_resource_heavy_change_pages_for_test(reparsed)
@@ -1076,7 +1076,7 @@ test "native acceptance suite changes inherited pages with indirect actions" {
       },
     ],
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let reparsed = acceptance_compressed_roundtrip_for_test(changed)
   acceptance_assert_inherited_change_pages_for_test(reparsed)
@@ -1158,7 +1158,7 @@ test "native acceptance suite changes pages after compressed reader boundary" {
   let changed = try! parsed.change_pages(
     try! parsed.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(5.0, -6.0))],
+    matrices=[(1, @geometry.transform_translate(5.0, -6.0))],
   )
   let rewritten = try! @pdflite.pdf_write_document(changed)
   let reparsed = try! @pdflite.pdf_read_document_from_bytes(rewritten)
@@ -1191,7 +1191,7 @@ test "native acceptance suite changes page count with explicit reference mapping
     [acceptance_count_change_replacement_page_for_test()],
     change_references=true,
     changes=[(2, 1)],
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   acceptance_assert_count_changed_document_for_test(changed)
   let reparsed = acceptance_compressed_roundtrip_for_test(changed)
@@ -1234,7 +1234,7 @@ test "native acceptance suite preserves document feature lifecycle" {
   let changed = parsed.change_pages(
     parsed.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(5.0, -6.0))],
+    matrices=[(1, @geometry.transform_translate(5.0, -6.0))],
   )
   let rewritten = @pdflite.pdf_write_document(changed)
   let reparsed = @pdflite.pdf_read_document_from_bytes(rewritten)

@@ -992,7 +992,7 @@ async test "optional cpdf source README typesets tagged text PDF" {
       let document = try! @pdflite.pdf_texttopdf_typeset(
         fixture_acceptance_cpdf_source_texttopdf_fontpack_for_test(),
         12.0,
-        @pdflite.paper_a4,
+        @geometry.paper_a4,
         readme_payload,
         process_struct_tree=true,
         title=Some("cpdf source README"),
@@ -1023,7 +1023,7 @@ async test "optional cpdf source README typesets PDF UA2 text PDF" {
       let document = try! @pdflite.pdf_texttopdf_typeset(
         fixture_acceptance_cpdf_source_texttopdf_fontpack_for_test(),
         12.0,
-        @pdflite.paper_a4,
+        @geometry.paper_a4,
         readme_payload,
         subformat=Some(PdfUA2),
         title=Some(title),
@@ -1058,7 +1058,7 @@ async test "optional cpdf source Changes typesets PDF UA1 text PDF" {
       let document = try! @pdflite.pdf_texttopdf_typeset(
         fixture_acceptance_cpdf_source_texttopdf_fontpack_for_test(),
         11.0,
-        @pdflite.paper_a4,
+        @geometry.paper_a4,
         changes_payload,
         subformat=Some(PdfUA1),
         title=Some(title),

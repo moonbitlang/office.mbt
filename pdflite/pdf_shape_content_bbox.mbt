@@ -1,5 +1,7 @@
 ///|
-fn pdf_path_content_quad(bounds : PdfRectangle) -> PdfContentBoundingBox {
+fn pdf_path_content_quad(
+  bounds : @geometry.PdfRectangle,
+) -> PdfContentBoundingBox {
   {
     x0: bounds.min_x,
     y0: bounds.min_y,
@@ -14,12 +16,12 @@ fn pdf_path_content_quad(bounds : PdfRectangle) -> PdfContentBoundingBox {
 
 ///|
 fn pdf_path_stroke_expand_bounds(
-  bounds : PdfRectangle,
-  ctm : TransformMatrix,
+  bounds : @geometry.PdfRectangle,
+  ctm : @geometry.TransformMatrix,
   line_width : Double,
-) -> PdfRectangle {
-  let origin = ctm.apply(point2(0.0, 0.0))
-  let stroke = ctm.apply(point2(line_width, line_width))
+) -> @geometry.PdfRectangle {
+  let origin = ctm.apply(@geometry.point2(0.0, 0.0))
+  let stroke = ctm.apply(@geometry.point2(line_width, line_width))
   let dx = (stroke.x - origin.x).abs()
   let dy = (stroke.y - origin.y).abs()
   {
@@ -38,7 +40,7 @@ fn pdf_path_stroke_expand_bounds(
 /// half its absolute x/y displacement, matching `emit_path_bounding_box`.
 pub fn pdf_path_content_bounding_box(
   path : @shape.PdfPath,
-  ctm : TransformMatrix,
+  ctm : @geometry.TransformMatrix,
   line_width : Double,
   stroking : Bool,
 ) -> PdfContentBoundingBox? {

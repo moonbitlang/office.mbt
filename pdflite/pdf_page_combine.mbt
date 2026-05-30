@@ -18,7 +18,7 @@ fn pdf_page_combine_with_blank_pages(
     output.push(page)
   }
   for _ in 0..<count {
-    output.push(@page.pdf_page_blank(paper_a4))
+    output.push(@page.pdf_page_blank(@geometry.paper_a4))
   }
   output
 }

@@ -2,7 +2,7 @@
 /// Collect cpdfcontent JSON entries for one non-recursive content-operator list.
 pub fn PdfDocument::content_entries_of_ops(
   self : PdfDocument,
-  mediabox : PdfRectangle,
+  mediabox : @geometry.PdfRectangle,
   resources : PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
@@ -25,7 +25,7 @@ pub fn PdfDocument::content_entries_of_ops(
 /// Compatibility wrapper for `PdfDocument::content_entries_of_ops`.
 pub fn pdf_content_entries_of_ops(
   document : PdfDocument,
-  mediabox : PdfRectangle,
+  mediabox : @geometry.PdfRectangle,
   resources : PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
@@ -97,7 +97,7 @@ fn PdfDocument::content_entries_of_ops_recursive_from_state(
 /// Collect cpdfcontent JSON entries for content operators, recursively walking Forms.
 pub fn PdfDocument::content_entries_of_ops_recursive(
   self : PdfDocument,
-  mediabox : PdfRectangle,
+  mediabox : @geometry.PdfRectangle,
   resources : PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {
@@ -114,7 +114,7 @@ pub fn PdfDocument::content_entries_of_ops_recursive(
 /// Compatibility wrapper for `PdfDocument::content_entries_of_ops_recursive`.
 pub fn pdf_content_entries_of_ops_recursive(
   document : PdfDocument,
-  mediabox : PdfRectangle,
+  mediabox : @geometry.PdfRectangle,
   resources : PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[PdfContentJsonEntry] raise PdfError {

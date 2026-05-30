@@ -17,7 +17,10 @@ fn content_state_clipping_path_for_test() -> @shape.PdfPath {
         hole: PdfPathNotHole,
         closure: PdfPathOpen,
         segments: [
-          PdfPathStraight(@pdflite.point2(1.0, 2.0), @pdflite.point2(3.0, 4.0)),
+          PdfPathStraight(
+            @geometry.point2(1.0, 2.0),
+            @geometry.point2(3.0, 4.0),
+          ),
         ],
       },
     ],

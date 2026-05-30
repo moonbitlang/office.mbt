@@ -291,7 +291,7 @@ test "private page root and content helpers cover filtered shapes" {
   @test.assert_eq(doc.pdf_page_content_list(Some(PdfInteger(1))), [])
 
   let fast_page = try! doc.postpend_operators(
-    { ..@page.pdf_page_blank(paper_a4), content: [stream] },
+    { ..@page.pdf_page_blank(@geometry.paper_a4), content: [stream] },
     [Op_g(0.5)],
     fast=true,
   )
@@ -340,11 +340,13 @@ test "private page object entry rewriting covers parser states" {
 
 ///|
 test "PdfDocument change_pages preserves object stream bookkeeping" {
-  let doc = page_wb_document_with_pages([@page.pdf_page_blank(paper_a4)])
+  let doc = page_wb_document_with_pages([
+    @page.pdf_page_blank(@geometry.paper_a4),
+  ])
   let page_numbers = try! doc.page_reference_numbers()
   doc.objects.object_stream_ids[page_numbers[0]] = 42
   let changed = try! doc.change_pages(
-    [{ ..@page.pdf_page_blank(paper_a4), rotate: Rotate90 }],
+    [{ ..@page.pdf_page_blank(@geometry.paper_a4), rotate: Rotate90 }],
     change_references=true,
   )
   @test.assert_eq(
@@ -358,10 +360,12 @@ test "PdfDocument change_pages preserves object stream bookkeeping" {
 
 ///|
 test "private page destination transforms cover unchanged branches" {
-  let doc = page_wb_document_with_pages([@page.pdf_page_blank(paper_a4)])
+  let doc = page_wb_document_with_pages([
+    @page.pdf_page_blank(@geometry.paper_a4),
+  ])
   let page_numbers = try! doc.page_reference_numbers()
   let destination = page_wb_fit_destination(page_numbers[0])
-  let translation = transform_translate(10.0, 20.0)
+  let translation = @geometry.transform_translate(10.0, 20.0)
   let identity_lookup = pdf_page_matrix_lookup([], page_numbers)
   let translation_lookup = pdf_page_matrix_lookup(
     [(1, translation)],
@@ -499,7 +503,7 @@ test "private page link and open-action transforms cover fallback branches" {
   let key_action = pdf_page_action_key()
   let doc = page_wb_document_with_pages([
     {
-      ..@page.pdf_page_blank(paper_a4),
+      ..@page.pdf_page_blank(@geometry.paper_a4),
       rest: PdfDictionary([
         (
           key_annots,
@@ -576,7 +580,7 @@ test "private page link and open-action transforms cover fallback branches" {
     .add_dict_entry(pdf_page_open_action_key(), action),
   )
   doc.pdf_page_transform_open_action_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     page_numbers,
   )
   match
@@ -621,10 +625,12 @@ test "private page link and open-action transforms cover fallback branches" {
     .add_dict_entry(pdf_page_open_action_key(), PdfInteger(1)),
   )
   doc.pdf_page_transform_open_action_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     page_numbers,
   )
-  let unresolved = page_wb_document_with_pages([@page.pdf_page_blank(paper_a4)])
+  let unresolved = page_wb_document_with_pages([
+    @page.pdf_page_blank(@geometry.paper_a4),
+  ])
   unresolved.set_trailer_dict(
     PdfDictionary([(pdf_page_root_key(), PdfIndirect(99))]),
   )
@@ -633,7 +639,9 @@ test "private page link and open-action transforms cover fallback branches" {
 
 ///|
 test "private page open-action transform uses trailer root catalog" {
-  let doc = page_wb_document_with_pages([@page.pdf_page_blank(paper_a4)])
+  let doc = page_wb_document_with_pages([
+    @page.pdf_page_blank(@geometry.paper_a4),
+  ])
   let page_numbers = try! doc.page_reference_numbers()
   let stale_root = doc.root()
   let active_root = 10
@@ -654,7 +662,7 @@ test "private page open-action transform uses trailer root catalog" {
   doc.set_trailer_dict(PdfDictionary([(pdf_page_root_key(), PdfIndirect(10))]))
 
   doc.pdf_page_transform_open_action_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     page_numbers,
   )
 
@@ -742,8 +750,8 @@ test "private page selection annotation and destination helpers cover fallbacks"
 ///|
 test "private page destination cleanup covers indirect containers" {
   let doc = page_wb_document_with_pages([
-    @page.pdf_page_blank(paper_a4),
-    @page.pdf_page_blank(paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   let page_numbers = try! doc.page_reference_numbers()
   doc.add_object_given_number(
@@ -770,7 +778,9 @@ test "private page destination cleanup covers indirect containers" {
     ]),
   )
 
-  let names_doc = page_wb_document_with_pages([@page.pdf_page_blank(paper_a4)])
+  let names_doc = page_wb_document_with_pages([
+    @page.pdf_page_blank(@geometry.paper_a4),
+  ])
   let names_page_numbers = try! names_doc.page_reference_numbers()
   let dest_tree = names_doc.build_name_tree([
     (page_wb_text("keep"), page_wb_fit_destination(names_page_numbers[0])),
@@ -794,7 +804,7 @@ test "private page destination cleanup covers indirect containers" {
   }
 
   let sparse_names_doc = page_wb_document_with_pages([
-    @page.pdf_page_blank(paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   sparse_names_doc.add_object_given_number(61, PdfDictionary([]))
   sparse_names_doc.add_object_given_number(
@@ -811,7 +821,9 @@ test "private page destination cleanup covers indirect containers" {
 test "private page destination cleanup uses trailer root catalog" {
   let drop_name = pdf_page_name("/Drop")
   let keep_name = pdf_page_name("/Keep")
-  let doc = page_wb_document_with_pages([@page.pdf_page_blank(paper_a4)])
+  let doc = page_wb_document_with_pages([
+    @page.pdf_page_blank(@geometry.paper_a4),
+  ])
   let page_numbers = try! doc.page_reference_numbers()
   let stale_catalog_number = doc.root()
   let stale_tree = doc.build_name_tree([
@@ -888,12 +900,14 @@ test "private page destination cleanup uses trailer root catalog" {
 
 ///|
 test "private page named destination transforms cover indirect containers" {
-  let doc = page_wb_document_with_pages([@page.pdf_page_blank(paper_a4)])
+  let doc = page_wb_document_with_pages([
+    @page.pdf_page_blank(@geometry.paper_a4),
+  ])
   let page_numbers = try! doc.page_reference_numbers()
   @test.assert_eq(
     doc.pdf_page_transform_catalog_destinations_object(
       PdfInteger(1),
-      [(1, transform_translate(10.0, 20.0))],
+      [(1, @geometry.transform_translate(10.0, 20.0))],
       page_numbers,
     ),
     None,
@@ -921,7 +935,7 @@ test "private page named destination transforms cover indirect containers" {
     .add_dict_entry(pdf_page_dests_key(), PdfIndirect(70)),
   )
   try! doc.pdf_page_transform_catalog_destinations_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     page_numbers,
   )
   @test.assert_eq(
@@ -941,7 +955,7 @@ test "private page named destination transforms cover indirect containers" {
   )
 
   let unchanged_indirect_doc = page_wb_document_with_pages([
-    @page.pdf_page_blank(paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   let unchanged_indirect_pages = try! unchanged_indirect_doc.page_reference_numbers()
   unchanged_indirect_doc.add_object_given_number(
@@ -974,7 +988,7 @@ test "private page named destination transforms cover indirect containers" {
   )
 
   let unchanged_direct_doc = page_wb_document_with_pages([
-    @page.pdf_page_blank(paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   let unchanged_direct_pages = try! unchanged_direct_doc.page_reference_numbers()
   unchanged_direct_doc.add_object_given_number(
@@ -1009,7 +1023,9 @@ test "private page named destination transforms cover indirect containers" {
     ),
   )
 
-  let names_doc = page_wb_document_with_pages([@page.pdf_page_blank(paper_a4)])
+  let names_doc = page_wb_document_with_pages([
+    @page.pdf_page_blank(@geometry.paper_a4),
+  ])
   let names_page_numbers = try! names_doc.page_reference_numbers()
   let dest_tree = names_doc.build_name_tree([
     (page_wb_text("keep"), page_wb_xyz_destination(names_page_numbers[0], 3, 4)),
@@ -1033,7 +1049,7 @@ test "private page named destination transforms cover indirect containers" {
     .add_dict_entry(pdf_page_names_key(), PdfIndirect(80)),
   )
   try! names_doc.pdf_page_transform_destination_name_tree_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     names_page_numbers,
   )
   match
@@ -1055,7 +1071,7 @@ test "private page named destination transforms cover indirect containers" {
   }
 
   let sparse_names_doc = page_wb_document_with_pages([
-    @page.pdf_page_blank(paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   sparse_names_doc.add_object_given_number(
     sparse_names_doc.root(),
@@ -1064,12 +1080,12 @@ test "private page named destination transforms cover indirect containers" {
     .add_dict_entry(pdf_page_names_key(), PdfDictionary([])),
   )
   try! sparse_names_doc.pdf_page_transform_destination_name_tree_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     try! sparse_names_doc.page_reference_numbers(),
   )
 
   let unchanged_indirect_names_doc = page_wb_document_with_pages([
-    @page.pdf_page_blank(paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   let unchanged_indirect_name_pages = try! unchanged_indirect_names_doc.page_reference_numbers()
   let unchanged_indirect_tree = unchanged_indirect_names_doc.build_name_tree([
@@ -1100,7 +1116,7 @@ test "private page named destination transforms cover indirect containers" {
   }
 
   let sparse_indirect_names_doc = page_wb_document_with_pages([
-    @page.pdf_page_blank(paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   sparse_indirect_names_doc.add_object_given_number(82, PdfDictionary([]))
   sparse_indirect_names_doc.add_object_given_number(
@@ -1110,7 +1126,7 @@ test "private page named destination transforms cover indirect containers" {
     .add_dict_entry(pdf_page_names_key(), PdfIndirect(82)),
   )
   try! sparse_indirect_names_doc.pdf_page_transform_destination_name_tree_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     try! sparse_indirect_names_doc.page_reference_numbers(),
   )
   @test.assert_eq(
@@ -1119,7 +1135,7 @@ test "private page named destination transforms cover indirect containers" {
   )
 
   let unchanged_direct_names_doc = page_wb_document_with_pages([
-    @page.pdf_page_blank(paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   let unchanged_direct_name_pages = try! unchanged_direct_names_doc.page_reference_numbers()
   let unchanged_direct_tree = unchanged_direct_names_doc.build_name_tree([
@@ -1153,7 +1169,9 @@ test "private page named destination transforms cover indirect containers" {
 test "private page named destination transforms use trailer root catalog" {
   let active_name = pdf_page_name("/Active")
   let stale_name = pdf_page_name("/Stale")
-  let doc = page_wb_document_with_pages([@page.pdf_page_blank(paper_a4)])
+  let doc = page_wb_document_with_pages([
+    @page.pdf_page_blank(@geometry.paper_a4),
+  ])
   let page_numbers = try! doc.page_reference_numbers()
   let stale_catalog_number = doc.root()
   let stale_tree = doc.build_name_tree([
@@ -1193,11 +1211,11 @@ test "private page named destination transforms use trailer root catalog" {
   )
 
   try! doc.pdf_page_transform_catalog_destinations_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     page_numbers,
   )
   try! doc.pdf_page_transform_destination_name_tree_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     page_numbers,
   )
 
@@ -1250,7 +1268,7 @@ test "private page active catalog covers fallback and absent roots" {
     ]),
   )
   try! fallback.pdf_page_transform_catalog_destinations_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     [7],
   )
   @test.assert_eq(
@@ -1268,11 +1286,11 @@ test "private page active catalog covers fallback and absent roots" {
 
   let empty = pdf_document_empty()
   try! empty.pdf_page_transform_catalog_destinations_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     [7],
   )
   try! empty.pdf_page_transform_destination_name_tree_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     [7],
   )
   try! empty.pdf_page_fixup_catalog_destinations()
@@ -1293,7 +1311,7 @@ test "private page active catalog covers fallback and absent roots" {
     PdfDictionary([(pdf_page_root_key(), PdfIndirect(99))]),
   )
   try! unresolved.pdf_page_transform_catalog_destinations_for_matrices(
-    [(1, transform_translate(10.0, 20.0))],
+    [(1, @geometry.transform_translate(10.0, 20.0))],
     [7],
   )
   @test.assert_eq(
@@ -1338,7 +1356,7 @@ test "private page prefix helpers cover direct and fallback operators" {
 
 ///|
 test "private page selection reports empty and invalid ranges" {
-  let page = @page.pdf_page_blank(paper_a4)
+  let page = @page.pdf_page_blank(@geometry.paper_a4)
   @test.assert_eq(try! pdf_page_select_pages([page], [1]), [page])
   let empty_result : Result[Array[@page.PdfPage], Error] = try? pdf_page_select_pages(
     [page],
@@ -1366,7 +1384,10 @@ test "private materialized page inheritance keeps partial attributes" {
   let target = pdf_document_empty()
   let original_page = @syntax.PdfDictionary([
     (pdf_page_type_key(), PdfNameObject(pdf_page_type_page())),
-    (pdf_page_mediabox_key(), @page.pdf_page_rectangle_of_paper(paper_a4)),
+    (
+      pdf_page_mediabox_key(),
+      @page.pdf_page_rectangle_of_paper(@geometry.paper_a4),
+    ),
   ])
   target.add_object_given_number(3, original_page)
   try! target.pdf_page_preserve_materialized_inherited_entries(source, [1], [3])

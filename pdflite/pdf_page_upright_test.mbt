@@ -116,18 +116,18 @@ test "PdfDocument upright_pages removes rotation and rectifies boxes" {
       ]),
     ),
   ])
-  let rotation_matrix = @pdflite.transform_rotate(
-    @pdflite.point2(50.0, 100.0),
+  let rotation_matrix = @geometry.transform_rotate(
+    @geometry.point2(50.0, 100.0),
     -@math.PI / 2.0,
   )
   let content_rotation_matrix = { ..rotation_matrix, a: 0.0, d: 0.0 }
   let rotated_mediabox = try! document.transform_rect(rotation_matrix, mediabox)
   let rotated_bounds = try! document.parse_rectangle(rotated_mediabox)
-  let rectification_matrix = @pdflite.transform_translate(
+  let rectification_matrix = @geometry.transform_translate(
     -rotated_bounds.min_x,
     -rotated_bounds.min_y,
   )
-  let total_matrix = @pdflite.transform_matrix_compose(
+  let total_matrix = @geometry.transform_matrix_compose(
     rectification_matrix, rotation_matrix,
   )
   let upright = try! document.upright_pages([1])
@@ -199,7 +199,7 @@ test "PdfDocument upright_pages rectifies non-zero origins and destinations" {
     page_upright_rect_for_test(0.0, 0.0, 100.0, 100.0),
   )
   @test.assert_eq(page_upright_ops_for_test(upright, pages[0]), [
-    Op_cm(@pdflite.transform_translate(-10.0, -20.0)),
+    Op_cm(@geometry.transform_translate(-10.0, -20.0)),
     Op_S,
   ])
   guard upright

@@ -194,7 +194,7 @@ test "pdf_blank_document creates requested point-sized pages" {
 ///|
 test "pdf_ua_create_pdfua1 creates blank document metadata and marker" {
   let document = try! @pdflite.pdf_ua_create_pdfua1(
-    "Accessible title", @pdflite.paper_a4, 2,
+    "Accessible title", @geometry.paper_a4, 2,
   )
   let pages = try! document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 2)
@@ -216,7 +216,7 @@ test "pdf_ua_create_pdfua1 creates blank document metadata and marker" {
 ///|
 test "pdf_ua_create_pdfua2 creates PDF 2.0 marker and escapes title XML" {
   let document = try! @pdflite.pdf_ua_create_pdfua2(
-    "A&B <C>", @pdflite.paper_a4, 1,
+    "A&B <C>", @geometry.paper_a4, 1,
   )
   let pages = try! document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
@@ -255,7 +255,7 @@ test "PdfDocument mark_pdfua1 creates metadata without mutating original" {
 ///|
 test "PdfDocument mark_pdfua2 replaces and remove_pdfua_mark deletes marker" {
   let document = try! @pdflite.pdf_ua_create_pdfua1(
-    "Accessible title", @pdflite.paper_a4, 1,
+    "Accessible title", @geometry.paper_a4, 1,
   )
   let marked = try! @pdflite.pdf_ua_mark2(2026, document)
   guard (try! marked.metadata()) is Some(marked_metadata) else {
@@ -291,12 +291,12 @@ test "PdfDocument mark_pdfua2 replaces and remove_pdfua_mark deletes marker" {
 
 ///|
 test "pdf_blank_document_paper creates pages from named paper size" {
-  let document = try! @pdflite.pdf_blank_document_paper(@pdflite.paper_a4, 1)
+  let document = try! @pdflite.pdf_blank_document_paper(@geometry.paper_a4, 1)
   let pages = try! document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
   @test.assert_eq(
     pages[0].mediabox,
-    @page.pdf_page_blank(@pdflite.paper_a4).mediabox,
+    @page.pdf_page_blank(@geometry.paper_a4).mediabox,
   )
   guard create_trailer_id_for_test(document) is Some((first_id, second_id)) else {
     fail("expected trailer /ID array")

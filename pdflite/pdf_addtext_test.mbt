@@ -19,7 +19,7 @@ fn addtext_assert_pair_close_for_test(
 
 ///|
 fn addtext_assert_rotation_offset_for_test(
-  position : @pdflite.PdfPosition,
+  position : @geometry.PdfPosition,
   rotation : @addtext.PdfAddTextRotation,
   expected : (Double, Double),
 ) -> Unit raise {
@@ -50,7 +50,7 @@ fn addtext_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn addtext_bounds_for_test() -> @pdflite.PdfRectangle {
+fn addtext_bounds_for_test() -> @geometry.PdfRectangle {
   { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0 }
 }
 
@@ -64,13 +64,13 @@ fn addtext_matrix_for_test(
   text_rotation : Double,
   rotation_h_offset : Double,
   rotation_v_offset : Double,
-) -> @pdflite.TransformMatrix {
-  @pdflite.transform_matrix_of_transform([
+) -> @geometry.TransformMatrix {
+  @geometry.transform_matrix_of_transform([
     Translate(
       x - horizontal_offset + rotation_h_offset,
       y - vertical_offset + rotation_v_offset,
     ),
-    Rotate(@pdflite.point2(0.0, 0.0), base_rotation + text_rotation),
+    Rotate(@geometry.point2(0.0, 0.0), base_rotation + text_rotation),
   ])
 }
 
@@ -432,7 +432,7 @@ test "pdf_addtext_rotation_radians mirrors cpdf addtext rotation mapping" {
 ///|
 test "pdf_addtext_rotation_offsets follows cpdf position table" {
   let cases : Array[
-    (@pdflite.PdfPosition, @addtext.PdfAddTextRotation, (Double, Double)),
+    (@geometry.PdfPosition, @addtext.PdfAddTextRotation, (Double, Double)),
   ] = [
     (PdfPositionTopLeft(0.0, 0.0), PdfAddTextRot0, (0.0, 0.0)),
     (PdfPositionTopLeft(0.0, 0.0), PdfAddTextRot90, (0.0, 0.0)),
@@ -858,7 +858,7 @@ test "pdf_addtext_line_page wrapper prepends existing font text without opacity"
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (font_key, PdfDictionary([(resource_name, font_object)])),
     ]),
@@ -927,7 +927,7 @@ test "PdfDocument addtext_line_page emits resolved BaseFont resource names" {
     (addtext_name_for_test("/BaseFont"), PdfNameObject(basefont)),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (font_key, PdfDictionary([(resource_name, font_object)])),
     ]),
@@ -987,7 +987,7 @@ test "PdfDocument addtext_line_page encodes existing font text" {
     (addtext_name_for_test("/BaseFont"), PdfNameObject(basefont)),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (font_key, PdfDictionary([(resource_name, font_object)])),
     ]),
@@ -1467,7 +1467,7 @@ test "PdfDocument addtext_existing_font_resource finds direct resource keys" {
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         addtext_name_for_test("/Font"),
@@ -1493,7 +1493,7 @@ test "PdfDocument addtext_existing_font_resource falls back to BaseFont names" {
     ]),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         addtext_name_for_test("/Font"),
@@ -1512,7 +1512,7 @@ test "PdfDocument addtext_existing_font_resource reports missing fonts" {
   let document = @pdflite.pdf_document_empty()
   let basefont = addtext_name_for_test("/Helvetica")
   let missing_dictionary : Result[(@pdflite.PdfName, @pdflite.PdfObject), Error] = try? document.addtext_existing_font_resource(
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
     basefont,
   )
   guard missing_dictionary
@@ -1520,7 +1520,7 @@ test "PdfDocument addtext_existing_font_resource reports missing fonts" {
     fail("expected missing font dictionary error")
   }
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (addtext_name_for_test("/Font"), PdfDictionary([])),
     ]),
@@ -1549,7 +1549,7 @@ test "PdfDocument addtext_width_of_existing_font_resource measures direct keys" 
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         addtext_name_for_test("/Font"),
@@ -1585,7 +1585,7 @@ test "PdfDocument addtext_width_of_existing_font_resource returns fallback resou
     (addtext_name_for_test("/BaseFont"), PdfNameObject(basefont)),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         addtext_name_for_test("/Font"),

@@ -199,7 +199,7 @@ pub fn pdf_change_bookmark(
 /// are preserved.
 pub fn PdfDocument::transform_bookmark(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   bookmark : @bookmark.PdfBookmark,
 ) -> @bookmark.PdfBookmark raise PdfError {
   { ..bookmark, target: self.transform_destination(matrix, bookmark.target) }
@@ -209,7 +209,7 @@ pub fn PdfDocument::transform_bookmark(
 /// Compatibility wrapper for `PdfDocument::transform_bookmark`.
 pub fn pdf_transform_bookmark(
   document : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   bookmark : @bookmark.PdfBookmark,
 ) -> @bookmark.PdfBookmark raise PdfError {
   document.transform_bookmark(matrix, bookmark)

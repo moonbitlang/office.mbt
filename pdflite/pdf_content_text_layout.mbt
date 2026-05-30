@@ -6,15 +6,15 @@ pub(all) struct PdfContentTextLayout {
   character_spacing : Double
   word_spacing : Double
   rise : Double
-  ctm : TransformMatrix
-  text_matrix : TransformMatrix
+  ctm : @geometry.TransformMatrix
+  text_matrix : @geometry.TransformMatrix
 } derive(Debug, Eq, ToJson)
 
 ///|
 /// Geometry emitted for one glyph by cpdfcontent-style text placement.
 pub(all) struct PdfContentTextGlyphPlacement {
   charcode : Int
-  text_matrix : TransformMatrix
+  text_matrix : @geometry.TransformMatrix
   width : Double
   pvx : Double
   pvy : Double
@@ -27,7 +27,7 @@ pub(all) struct PdfContentTextGlyphPlacement {
 /// Result of placing one raw PDF text string with cpdfcontent text semantics.
 pub(all) struct PdfContentTextLayoutResult {
   glyphs : Array[PdfContentTextGlyphPlacement]
-  text_matrix : TransformMatrix
+  text_matrix : @geometry.TransformMatrix
 } derive(Debug, Eq, ToJson)
 
 ///|
@@ -41,8 +41,8 @@ fn pdf_content_text_divisor(font : PdfFont) -> Double {
 ///|
 fn pdf_content_text_render_matrix(
   layout : PdfContentTextLayout,
-) -> TransformMatrix {
-  let parameters : TransformMatrix = {
+) -> @geometry.TransformMatrix {
+  let parameters : @geometry.TransformMatrix = {
     a: layout.font_size * layout.horizontal_scaling,
     b: 0.0,
     c: 0.0,
@@ -50,25 +50,25 @@ fn pdf_content_text_render_matrix(
     e: 0.0,
     f: layout.rise,
   }
-  transform_matrix_compose(
+  @geometry.transform_matrix_compose(
     layout.ctm,
-    transform_matrix_compose(layout.text_matrix, parameters),
+    @geometry.transform_matrix_compose(layout.text_matrix, parameters),
   )
 }
 
 ///|
 fn pdf_content_text_bounding_box(
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   width : Double,
   pvx : Double,
   pvy : Double,
   ascent : Double,
   descent : Double,
 ) -> PdfContentBoundingBox {
-  let p0 = matrix.apply(point2(pvx, descent - pvy))
-  let p1 = matrix.apply(point2(pvx, ascent - pvy))
-  let p2 = matrix.apply(point2(width + pvx, ascent - pvy))
-  let p3 = matrix.apply(point2(width + pvx, descent - pvy))
+  let p0 = matrix.apply(@geometry.point2(pvx, descent - pvy))
+  let p1 = matrix.apply(@geometry.point2(pvx, ascent - pvy))
+  let p2 = matrix.apply(@geometry.point2(width + pvx, ascent - pvy))
+  let p3 = matrix.apply(@geometry.point2(width + pvx, descent - pvy))
   {
     x0: p0.x,
     y0: p0.y,
@@ -151,9 +151,9 @@ pub fn PdfFont::content_text_layout_of_bytes(
       advance_y: advance.1,
       bounding_box,
     })
-    text_matrix = transform_matrix_compose(
+    text_matrix = @geometry.transform_matrix_compose(
       text_matrix,
-      transform_translate(advance.0, advance.1),
+      @geometry.transform_translate(advance.0, advance.1),
     )
   }
   { glyphs, text_matrix }
@@ -216,9 +216,9 @@ pub fn PdfFont::content_text_layout_of_tj_array(
           ..layout,
           text_matrix,
         })
-        text_matrix = transform_matrix_compose(
+        text_matrix = @geometry.transform_matrix_compose(
           text_matrix,
-          transform_translate(advance.0, advance.1),
+          @geometry.transform_translate(advance.0, advance.1),
         )
       }
       _ => ()

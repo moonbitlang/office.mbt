@@ -46,7 +46,7 @@ test "PdfDocument test_matterhorn_json detects missing XMP fields" {
 ///|
 test "PdfDocument test_matterhorn_json accepts PDF/UA metadata" {
   let document = try! @pdflite.pdf_ua_create_pdfua1(
-    "Accessible Title", @pdflite.paper_a4, 1,
+    "Accessible Title", @geometry.paper_a4, 1,
   )
   @test.assert_eq(try! document.test_matterhorn_json("06-001"), Json::array([]))
   @test.assert_eq(try! document.test_matterhorn_json("06-002"), Json::array([]))

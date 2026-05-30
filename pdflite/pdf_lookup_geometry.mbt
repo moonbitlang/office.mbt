@@ -40,7 +40,7 @@ pub fn PdfDocument::get_number(
 pub fn PdfDocument::parse_rectangle(
   self : PdfDocument,
   object : PdfObject,
-) -> PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise PdfError {
   match self.direct(object) {
     PdfArray(values) if values.length() == 4 => {
       let x0 = try? self.get_number(values[0])
@@ -69,14 +69,14 @@ pub fn PdfDocument::parse_rectangle(
 /// of those transformed points are written as `[minX minY maxX maxY]`.
 pub fn PdfDocument::transform_rect(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   object : PdfObject,
 ) -> PdfObject raise PdfError {
   let rectangle = self.parse_rectangle(object)
-  let p0 = matrix.apply(point2(rectangle.min_x, rectangle.min_y))
-  let p1 = matrix.apply(point2(rectangle.max_x, rectangle.max_y))
-  let p2 = matrix.apply(point2(rectangle.min_x, rectangle.max_y))
-  let p3 = matrix.apply(point2(rectangle.max_x, rectangle.min_y))
+  let p0 = matrix.apply(@geometry.point2(rectangle.min_x, rectangle.min_y))
+  let p1 = matrix.apply(@geometry.point2(rectangle.max_x, rectangle.max_y))
+  let p2 = matrix.apply(@geometry.point2(rectangle.min_x, rectangle.max_y))
+  let p3 = matrix.apply(@geometry.point2(rectangle.max_x, rectangle.min_y))
   PdfArray([
     PdfReal(double_min(double_min(p0.x, p1.x), double_min(p2.x, p3.x))),
     PdfReal(double_min(double_min(p0.y, p1.y), double_min(p2.y, p3.y))),
@@ -100,7 +100,7 @@ fn PdfDocument::pdf_transform_number_or_none(
 ///|
 fn PdfDocument::pdf_transform_quadpoint_chunk(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   values : ArrayView[PdfObject],
   start : Int,
 ) -> Array[PdfObject] {
@@ -116,7 +116,7 @@ fn PdfDocument::pdf_transform_quadpoint_chunk(
     let output : Array[PdfObject] = []
     for index in 0..<4 {
       let point = matrix.apply(
-        point2(numbers[index * 2], numbers[index * 2 + 1]),
+        @geometry.point2(numbers[index * 2], numbers[index * 2 + 1]),
       )
       output.push(PdfReal(point.x))
       output.push(PdfReal(point.y))
@@ -138,7 +138,7 @@ fn PdfDocument::pdf_transform_quadpoint_chunk(
 /// unchanged.
 pub fn PdfDocument::transform_quadpoints(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   object : PdfObject,
 ) -> PdfObject {
   match self.direct(object) {
@@ -173,9 +173,9 @@ pub fn PdfDocument::parse_matrix(
   self : PdfDocument,
   key : PdfName,
   object : PdfObject,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   match self.lookup_direct(key, object) {
-    None => transform_identity_matrix
+    None => @geometry.transform_identity_matrix
     Some(PdfArray(values)) if values.length() == 6 =>
       {
         a: self.get_number(values[0]),
@@ -191,7 +191,7 @@ pub fn PdfDocument::parse_matrix(
 
 ///|
 /// Convert a transformation matrix into its six-number PDF array form.
-pub fn pdf_object_of_matrix(matrix : TransformMatrix) -> PdfObject {
+pub fn pdf_object_of_matrix(matrix : @geometry.TransformMatrix) -> PdfObject {
   PdfArray([
     PdfReal(matrix.a),
     PdfReal(matrix.b),

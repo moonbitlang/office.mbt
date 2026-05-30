@@ -111,7 +111,7 @@ fn pdf_image_content_ops(
   }
   output.push(
     Op_cm({
-      ..transform_identity_matrix,
+      ..@geometry.transform_identity_matrix,
       a: width.to_double(),
       d: height.to_double(),
     }),

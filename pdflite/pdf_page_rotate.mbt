@@ -31,20 +31,23 @@ fn PdfDocument::pdf_page_rotate_contents_matrix(
   self : PdfDocument,
   page : @page.PdfPage,
   rotation : Double,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
-  let origin = point2(
+  let origin = @geometry.point2(
     (bounds.min_x + bounds.max_x) / 2.0,
     (bounds.min_y + bounds.max_y) / 2.0,
   )
-  transform_rotate(origin, -pdf_page_rotate_degrees_to_radians(rotation))
+  @geometry.transform_rotate(
+    origin,
+    -pdf_page_rotate_degrees_to_radians(rotation),
+  )
 }
 
 ///|
 fn PdfDocument::pdf_page_rotate_contents_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   fast : Bool,
 ) -> @page.PdfPage raise PdfError {
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
@@ -125,7 +128,7 @@ pub fn PdfDocument::rotate_contents(
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {

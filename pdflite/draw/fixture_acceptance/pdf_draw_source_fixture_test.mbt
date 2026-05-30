@@ -380,7 +380,7 @@ fn draw_fixture_matrix_for_test(
   d : Double,
   e : Double,
   f : Double,
-) -> @pdflite.TransformMatrix {
+) -> @geometry.TransformMatrix {
   { a, b, c, d, e, f }
 }
 
@@ -1292,7 +1292,7 @@ async test "cpdf source xobject manual fixture parses form resource reuse" {
       @test.assert_eq(draw_fixture_page_ops_for_test(document), [
         Op_Do(draw_fixture_name_for_test("/X1")),
         Op_RG(1.0, 0.0, 0.0),
-        Op_cm(@pdflite.transform_translate(20.0, 20.0)),
+        Op_cm(@geometry.transform_translate(20.0, 20.0)),
         Op_Do(draw_fixture_name_for_test("/X1")),
       ])
       let xobjects = draw_fixture_lookup_for_test(
@@ -1413,7 +1413,10 @@ async test "cpdf source textclip manual fixture parses clipping text mode" {
       let ops = draw_fixture_page_ops_for_test(document)
       @test.assert_eq(ops.length(), 19)
       @test.assert_eq(ops[0], Op_Tr(7))
-      @test.assert_eq(ops[1], Op_cm(@pdflite.transform_translate(100.0, 200.0)))
+      @test.assert_eq(
+        ops[1],
+        Op_cm(@geometry.transform_translate(100.0, 200.0)),
+      )
       @test.assert_eq(ops[2], Op_TL(55.0))
       @test.assert_eq(draw_fixture_count_op_for_test(ops, Op_Tstar), 2)
       @test.assert_eq(ops[18], Op_f)
@@ -1463,7 +1466,7 @@ async test "cpdf source fontparams manual fixture parses text-state operators" {
     None => ()
     Some(document) =>
       @test.assert_eq(draw_fixture_page_ops_for_test(document), [
-        Op_cm(@pdflite.transform_translate(10.0, 20.0)),
+        Op_cm(@geometry.transform_translate(10.0, 20.0)),
         Op_BT,
         Op_Tz(75.0),
         Op_Tc(5.0),
@@ -1503,7 +1506,7 @@ async test "cpdf source text manual fixture parses text section operators" {
     None => ()
     Some(document) =>
       @test.assert_eq(draw_fixture_page_ops_for_test(document), [
-        Op_cm(@pdflite.transform_translate(50.0, 50.0)),
+        Op_cm(@geometry.transform_translate(50.0, 50.0)),
         Op_BT,
         Op_Tf(draw_fixture_name_for_test("/F1"), 144.0),
         Op_Tj(@ascii.encode("Hello")),

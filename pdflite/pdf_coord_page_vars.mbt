@@ -30,7 +30,7 @@ fn pdf_coord_box_rectangle(
   document : PdfDocument,
   page : @page.PdfPage,
   kind : String,
-) -> PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise PdfError {
   document.parse_rectangle(pdf_coord_box_object(document, page, kind))
 }
 

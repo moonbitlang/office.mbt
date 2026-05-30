@@ -17,7 +17,7 @@ fn pdf_addtext_rotation_adjustment_offsets(
 pub fn pdf_addtext_baseline_offsets(
   font : PdfFont?,
   font_size : Double,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   rotation : @addtext.PdfAddTextRotation,
   midline : Bool,
   topline : Bool,

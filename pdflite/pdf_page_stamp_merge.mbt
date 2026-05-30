@@ -60,7 +60,7 @@ fn PdfDocument::pdf_page_stamp_pair(
   overlay_page : @page.PdfPage,
   under_page : @page.PdfPage,
   relative_to_box : PdfName,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   topline : Bool,
   midline : Bool,
   scale_to_fit : Bool,

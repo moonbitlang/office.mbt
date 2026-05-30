@@ -66,7 +66,7 @@ test "pdf draw debug strings match cpdf spelling" {
   @test.assert_eq(
     @pdflite.pdf_string_of_drawops([
       PdfDrawRect(0.0, 0.0, 1.0, 2.0),
-      PdfDrawMatrix(@pdflite.transform_translate(1.0, 2.0)),
+      PdfDrawMatrix(@geometry.transform_translate(1.0, 2.0)),
       PdfDrawFontPack("F0", { fonts: [], entries: [] }, []),
       PdfDrawTag("Span"),
       PdfDrawSTag("P"),
@@ -90,7 +90,7 @@ test "pdf draw debug strings preserve nested leading spaces" {
 
 ///|
 test "pdf draw core ops convert to PDF content ops" {
-  let matrix = @pdflite.transform_translate(7.0, 8.0)
+  let matrix = @geometry.transform_translate(7.0, 8.0)
   let ops : Array[@pdflite.PdfDrawOp] = [
     PdfDrawSetLineThickness(2.0),
     PdfDrawSetLineCap(1),
@@ -208,7 +208,7 @@ test "pdf draw text section and text state ops convert to PDF content ops" {
       PdfDrawRenderMode(3),
       PdfDrawRise(4.0),
       PdfDrawNewline,
-      PdfDrawQq([PdfDrawMatrix(@pdflite.transform_translate(1.0, 2.0))]),
+      PdfDrawQq([PdfDrawMatrix(@geometry.transform_translate(1.0, 2.0))]),
     ]),
   ]
   let expected : Array[@content.PdfContentOp] = [
@@ -221,7 +221,7 @@ test "pdf draw text section and text state ops convert to PDF content ops" {
     Op_Ts(4.0),
     Op_Tstar,
     Op_q,
-    Op_cm(@pdflite.transform_translate(1.0, 2.0)),
+    Op_cm(@geometry.transform_translate(1.0, 2.0)),
     Op_Q,
     Op_ET,
   ]

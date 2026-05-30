@@ -27,7 +27,7 @@ pub fn pdf_content_entries_of_page(
 /// Serialize recursive cpdfcontent entries for one already-parsed operator list.
 pub fn PdfDocument::content_json_of_ops(
   self : PdfDocument,
-  mediabox : PdfRectangle,
+  mediabox : @geometry.PdfRectangle,
   resources : PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Json raise PdfError {
@@ -40,7 +40,7 @@ pub fn PdfDocument::content_json_of_ops(
 /// Compatibility wrapper for `PdfDocument::content_json_of_ops`.
 pub fn pdf_content_json_of_ops(
   document : PdfDocument,
-  mediabox : PdfRectangle,
+  mediabox : @geometry.PdfRectangle,
   resources : PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Json raise PdfError {
@@ -51,7 +51,7 @@ pub fn pdf_content_json_of_ops(
 /// Source-spelled compatibility wrapper for cpdfcontent's `to_json`.
 pub fn pdf_content_to_json(
   document : PdfDocument,
-  mediabox : PdfRectangle,
+  mediabox : @geometry.PdfRectangle,
   resources : PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Json raise PdfError {
@@ -62,7 +62,7 @@ pub fn pdf_content_to_json(
 /// Walk content entries, call `predicate` for each one, and return the original ops.
 pub fn PdfDocument::content_filter(
   self : PdfDocument,
-  mediabox : PdfRectangle,
+  mediabox : @geometry.PdfRectangle,
   resources : PdfObject,
   ops : ArrayView[@content.PdfContentOp],
   predicate : (PdfContentJsonEntry) -> Bool,
@@ -81,7 +81,7 @@ pub fn PdfDocument::content_filter(
 pub fn pdf_content_filter(
   document : PdfDocument,
   predicate : (PdfContentJsonEntry) -> Bool,
-  mediabox : PdfRectangle,
+  mediabox : @geometry.PdfRectangle,
   resources : PdfObject,
   ops : ArrayView[@content.PdfContentOp],
 ) -> Array[@content.PdfContentOp] raise PdfError {

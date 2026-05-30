@@ -34,7 +34,7 @@ fn PdfTypeTypesetState::write_page(
   self : PdfTypeTypesetState,
   document : PdfDocument,
   process_struct_tree : Bool,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
 ) -> Unit raise PdfError {
   let ops = if process_struct_tree {
     @content.pdf_content_add_artifacts(self.ops)
@@ -120,7 +120,9 @@ fn PdfTypeTypesetState::write_text(
 ) -> Unit raise PdfError {
   let text_width = pdf_type_width_of_bytes(self.width_table, text)
   self.ops.push(Op_q)
-  self.ops.push(Op_cm(transform_translate(self.xpos, page_height - self.ypos)))
+  self.ops.push(
+    Op_cm(@geometry.transform_translate(self.xpos, page_height - self.ypos)),
+  )
   self.ops.push(Op_BT)
   self.ops.push(Op_Tj(text))
   self.ops.push(Op_ET)
@@ -147,7 +149,7 @@ fn PdfTypeTypesetState::new_page(
   process_struct_tree : Bool,
   lmargin : Double,
   tmargin : Double,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
 ) -> Unit raise PdfError {
   self.write_page(document, process_struct_tree, paper)
   self.page_font_numbers = []
@@ -170,7 +172,7 @@ fn PdfTypeTypesetState::write_element(
   process_struct_tree : Bool,
   lmargin : Double,
   tmargin : Double,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   page_height : Double,
   element : PdfTypeElement,
 ) -> Unit raise PdfError {

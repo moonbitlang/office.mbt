@@ -11,13 +11,13 @@ pub fn PdfDocument::pdf_type_typeset(
   rmargin : Double,
   tmargin : Double,
   bmargin : Double,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   elements : ArrayView[PdfTypeElement],
 ) -> PdfTypeTypesetResult raise PdfError {
   let numbered = pdf_type_number_tags(elements)
   let laid_out = pdf_type_layout(lmargin, rmargin, paper, numbered)
   let paginated = pdf_type_paginate(tmargin, bmargin, paper, laid_out)
-  let page_height = unit_points(paper.height(), paper.unit())
+  let page_height = @geometry.unit_points(paper.height(), paper.unit())
   let state = pdf_type_initial_state(lmargin, tmargin)
   for element in paginated {
     state.write_element(
@@ -37,7 +37,7 @@ pub fn pdf_type_typeset(
   rmargin : Double,
   tmargin : Double,
   bmargin : Double,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   elements : ArrayView[PdfTypeElement],
 ) -> PdfTypeTypesetResult raise PdfError {
   document.pdf_type_typeset(
@@ -53,7 +53,7 @@ pub fn pdf_type_typeset_cpdf_order(
   rmargin : Double,
   tmargin : Double,
   bmargin : Double,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   document : PdfDocument,
   elements : ArrayView[PdfTypeElement],
 ) -> PdfTypeTypesetResult raise PdfError {

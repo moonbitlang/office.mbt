@@ -2,7 +2,7 @@
 fn pdf_ua_create_pdfua(
   subformat : PdfUASubformat,
   title : String,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   page_count : Int,
 ) -> PdfDocument raise PdfError {
   let document = pdf_create_blank_document_with_id_time(
@@ -16,7 +16,7 @@ fn pdf_ua_create_pdfua(
 /// Create a blank PDF/UA-1 document with the given title and page size.
 pub fn pdf_ua_create_pdfua1(
   title : String,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   page_count : Int,
 ) -> PdfDocument raise PdfError {
   pdf_ua_create_pdfua(PdfUA1, title, paper, page_count)
@@ -26,7 +26,7 @@ pub fn pdf_ua_create_pdfua1(
 /// Create a blank PDF/UA-2 document with the given title and page size.
 pub fn pdf_ua_create_pdfua2(
   title : String,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   page_count : Int,
 ) -> PdfDocument raise PdfError {
   pdf_ua_create_pdfua(PdfUA2, title, paper, page_count)

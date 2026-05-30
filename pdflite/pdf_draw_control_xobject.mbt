@@ -108,7 +108,7 @@ pub fn PdfDrawControl::start_xobject(
 /// Set the bounding box used for the next closed form XObject.
 pub fn PdfDrawControl::set_xobject_bbox(
   self : PdfDrawControl,
-  bbox : PdfCoordRectangle,
+  bbox : @geometry.PdfCoordRectangle,
 ) -> Unit {
   self.xobject_bbox = bbox
 }

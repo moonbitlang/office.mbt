@@ -1,5 +1,7 @@
 ///|
-fn pdf_page_scale_position_offset(position : PdfPosition) -> (Double, Double) {
+fn pdf_page_scale_position_offset(
+  position : @geometry.PdfPosition,
+) -> (Double, Double) {
   match position {
     PdfPositionTop(distance) => (0.0, -distance)
     PdfPositionTopLeft(x, y) => (x, -y)
@@ -17,7 +19,7 @@ fn pdf_page_scale_position_offset(position : PdfPosition) -> (Double, Double) {
 fn PdfDocument::pdf_page_scale_bounds(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise PdfError {
   self.parse_rectangle(
     match self.lookup_direct(pdf_page_cropbox_key(), page.rest) {
       Some(cropbox) => cropbox
@@ -30,15 +32,19 @@ fn PdfDocument::pdf_page_scale_bounds(
 fn PdfDocument::pdf_page_scale_matrix(
   self : PdfDocument,
   page : @page.PdfPage,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   scale : Double,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   let bounds = self.pdf_page_scale_bounds(page)
-  let origin = pdf_calculate_position(true, 0.0, bounds, position)
+  let origin = @geometry.pdf_calculate_position(true, 0.0, bounds, position)
   let offset = pdf_page_scale_position_offset(position)
-  transform_matrix_compose(
-    transform_translate(offset.0, offset.1),
-    transform_scale(point2(origin.x, origin.y), scale, scale),
+  @geometry.transform_matrix_compose(
+    @geometry.transform_translate(offset.0, offset.1),
+    @geometry.transform_scale(
+      @geometry.point2(origin.x, origin.y),
+      scale,
+      scale,
+    ),
   )
 }
 
@@ -46,7 +52,7 @@ fn PdfDocument::pdf_page_scale_matrix(
 fn PdfDocument::pdf_page_scale_page(
   self : PdfDocument,
   page : @page.PdfPage,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   fast : Bool,
 ) -> @page.PdfPage raise PdfError {
   let page = self.pdf_impose_change_pattern_matrices_page(matrix, page)
@@ -109,7 +115,7 @@ fn pdf_page_scale_select_page_indexed_pairs(
 fn PdfDocument::pdf_page_scale_page_data(
   self : PdfDocument,
   page : @page.PdfPage,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   fast : Bool,
 ) -> @page.PdfPage raise PdfError {
   let page = self.pdf_page_upright_transform_boxes(page, matrix)

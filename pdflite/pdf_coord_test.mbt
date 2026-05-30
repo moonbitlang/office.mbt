@@ -82,7 +82,7 @@ fn assert_close_for_coord_test(
 
 ///|
 fn assert_point_for_coord_test(
-  actual : @pdflite.Point2,
+  actual : @geometry.Point2,
   x : Double,
   y : Double,
 ) -> Unit raise {
@@ -102,7 +102,7 @@ fn assert_coordinate_tuple_for_test(
 
 ///|
 fn assert_coord_rectangle_for_test(
-  actual : @pdflite.PdfCoordRectangle,
+  actual : @geometry.PdfCoordRectangle,
   x : Double,
   y : Double,
   width : Double,
@@ -122,17 +122,20 @@ test "cpdf coord parses unit numbers and paper sizes" {
   assert_close_for_coord_test(try! document.parse_single_number("1in"), 72.0)
   assert_close_for_coord_test(try! document.parse_single_number("12pt"), 12.0)
   let values = try! document.parse_units_string(
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
     "a4portrait",
   )
   @test.assert_eq(values.length(), 2)
   assert_close_for_coord_test(
     values[0],
-    @pdflite.unit_points(@pdflite.paper_a4.width(), @pdflite.paper_a4.unit()),
+    @geometry.unit_points(@geometry.paper_a4.width(), @geometry.paper_a4.unit()),
   )
   assert_close_for_coord_test(
     values[1],
-    @pdflite.unit_points(@pdflite.paper_a4.height(), @pdflite.paper_a4.unit()),
+    @geometry.unit_points(
+      @geometry.paper_a4.height(),
+      @geometry.paper_a4.unit(),
+    ),
   )
 }
 
@@ -260,14 +263,14 @@ test "cpdf coord parses coordinates across document pages" {
 ///|
 test "cpdf coord reports arity errors" {
   let document = @pdflite.pdf_document_empty()
-  let bad_rect : Result[@pdflite.PdfCoordRectangle, Error] = try? document.parse_coordinate_rectangle(
+  let bad_rect : Result[@geometry.PdfCoordRectangle, Error] = try? document.parse_coordinate_rectangle(
     "10 20 30",
   )
   guard bad_rect
     is Err(@pdflite.PdfError::BadRectangleSpecification("10 20 30")) else {
     fail("expected BadRectangleSpecification for three rectangle numbers")
   }
-  let bad_coord : Result[@pdflite.Point2, Error] = try? document.parse_coordinate(
+  let bad_coord : Result[@geometry.Point2, Error] = try? document.parse_coordinate(
     "10 20 30",
   )
   guard bad_coord

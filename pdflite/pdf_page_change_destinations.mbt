@@ -1,15 +1,15 @@
 ///|
 priv struct PdfPageMatrixLookup {
   page_numbers : PdfPageNumberLookup
-  matrices : @hashmap.HashMap[Int, TransformMatrix]
+  matrices : @hashmap.HashMap[Int, @geometry.TransformMatrix]
 }
 
 ///|
 fn pdf_page_matrix_lookup(
-  matrices : ArrayView[(Int, TransformMatrix)],
+  matrices : ArrayView[(Int, @geometry.TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> PdfPageMatrixLookup {
-  let values : @hashmap.HashMap[Int, TransformMatrix] = HashMap([])
+  let values : @hashmap.HashMap[Int, @geometry.TransformMatrix] = HashMap([])
   for entry in matrices {
     let (matrix_page_number, matrix) = entry
     if !values.contains(matrix_page_number) {
@@ -26,7 +26,7 @@ fn pdf_page_matrix_lookup(
 fn PdfPageMatrixLookup::matrix_for_page_number(
   self : PdfPageMatrixLookup,
   page_number : Int,
-) -> TransformMatrix? {
+) -> @geometry.TransformMatrix? {
   self.matrices.get(page_number)
 }
 
@@ -47,7 +47,7 @@ fn PdfDocument::pdf_page_matrix_for_destination_with_lookup(
   self : PdfDocument,
   destination : @destination.PdfDestination,
   lookup : PdfPageMatrixLookup,
-) -> TransformMatrix? raise PdfError {
+) -> @geometry.TransformMatrix? raise PdfError {
   let page_number = self.pdf_page_matrix_page_number_for_destination_with_lookup(
     destination, lookup,
   )
@@ -125,7 +125,7 @@ fn PdfDocument::pdf_page_transform_destination_object_with_shallow_lookup(
 ) -> PdfObject? raise PdfError {
   let destination = self.read_destination(raw_destination, shallow~)
   match self.pdf_page_matrix_for_destination_with_lookup(destination, lookup) {
-    Some(matrix) if matrix != transform_identity_matrix =>
+    Some(matrix) if matrix != @geometry.transform_identity_matrix =>
       Some(
         pdf_object_of_destination(
           self.transform_destination(matrix, destination),

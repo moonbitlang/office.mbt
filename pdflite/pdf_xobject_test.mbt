@@ -33,7 +33,7 @@ fn xobject_stream_for_test(
 fn xobject_base_document_for_test() -> @pdflite.PdfDocument {
   let key_font = xobject_name_for_test("/Font")
   let first = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         key_font,
@@ -43,7 +43,7 @@ fn xobject_base_document_for_test() -> @pdflite.PdfDocument {
     content: [xobject_stream_for_test([Op_q, Op_Q])],
   }
   let second = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [xobject_stream_for_test([Op_BT, Op_ET])],
   }
   xobject_page_doc_for_test([first, second])
@@ -53,7 +53,7 @@ fn xobject_base_document_for_test() -> @pdflite.PdfDocument {
 fn xobject_overlay_document_for_test() -> @pdflite.PdfDocument {
   let key_xobject = xobject_name_for_test("/XObject")
   let first = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         key_xobject,
@@ -69,7 +69,7 @@ fn xobject_overlay_document_for_test() -> @pdflite.PdfDocument {
     ],
   }
   let second = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [xobject_stream_for_test([Op_BT, Op_ET])],
   }
   xobject_page_doc_for_test([first, second])
@@ -100,7 +100,7 @@ test "PdfDocument stamp_as_xobject embeds first overlay page as form resource" {
   )
   @test.assert_eq(
     xobject_lookup_for_test(stamped, stream.dictionary, "/BBox"),
-    Some(@page.pdf_page_rectangle_of_paper(@pdflite.paper_a4)),
+    Some(@page.pdf_page_rectangle_of_paper(@geometry.paper_a4)),
   )
   guard xobject_lookup_for_test(stamped, stream.dictionary, "/Resources")
     is Some(form_resources) else {

@@ -30,7 +30,7 @@ fn artifact_page_for_test(
   rest? : @pdflite.PdfObject = @pdflite.pdf_dictionary([]),
 ) -> @page.PdfPage raise @pdflite.PdfError {
   {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [artifact_stream_for_test(ops)],
     resources,
     rest,

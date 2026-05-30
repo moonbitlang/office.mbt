@@ -10,8 +10,8 @@ fn addtext_annot_assert_close_for_test(
 
 ///|
 fn addtext_annot_assert_point_close_for_test(
-  actual : @pdflite.Point2,
-  expected : @pdflite.Point2,
+  actual : @geometry.Point2,
+  expected : @geometry.Point2,
 ) -> Unit raise {
   addtext_annot_assert_close_for_test(actual.x, expected.x)
   addtext_annot_assert_close_for_test(actual.y, expected.y)
@@ -23,7 +23,7 @@ fn addtext_annot_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn addtext_annot_bounds_for_test() -> @pdflite.PdfRectangle {
+fn addtext_annot_bounds_for_test() -> @geometry.PdfRectangle {
   { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0 }
 }
 
@@ -73,10 +73,10 @@ fn addtext_annot_simple_font_for_test(capheight : Double) -> @pdflite.PdfFont {
 ///|
 test "pdf_addtext_url_annotation builds cpdf link annotation objects" {
   let annotation = @pdflite.pdf_addtext_url_annotation(
-    @pdflite.point2(1.0, 2.0),
-    @pdflite.point2(3.0, 4.0),
-    @pdflite.point2(5.0, 6.0),
-    @pdflite.point2(7.0, 8.0),
+    @geometry.point2(1.0, 2.0),
+    @geometry.point2(3.0, 4.0),
+    @geometry.point2(5.0, 6.0),
+    @geometry.point2(7.0, 8.0),
     { min_x: 1.0, min_y: 2.0, max_x: 7.0, max_y: 8.0 },
     "https://example.test",
     true,
@@ -127,10 +127,10 @@ test "pdf_addtext_url_annotation builds cpdf link annotation objects" {
   ])
   @test.assert_eq(annotation, expected)
   let hidden_border = @pdflite.pdf_addtext_url_annotation(
-    @pdflite.point2(1.0, 2.0),
-    @pdflite.point2(3.0, 4.0),
-    @pdflite.point2(5.0, 6.0),
-    @pdflite.point2(7.0, 8.0),
+    @geometry.point2(1.0, 2.0),
+    @geometry.point2(3.0, 4.0),
+    @geometry.point2(5.0, 6.0),
+    @geometry.point2(7.0, 8.0),
     addtext_annot_bounds_for_test(),
     "https://example.test",
     false,
@@ -160,21 +160,21 @@ test "pdf_addtext_url_annotation_height uses cap height and font-size fallback" 
 ///|
 test "pdf_addtext_url_annotation_geometry builds unrotated quads and bounds" {
   let geometry = @pdflite.pdf_addtext_url_annotation_geometry(
-    @pdflite.point2(100.0, 200.0),
+    @geometry.point2(100.0, 200.0),
     10.0,
     20.0,
     5.0,
     0.0,
-    @pdflite.point2(0.0, 0.0),
+    @geometry.point2(0.0, 0.0),
     0.0,
     3.0,
     13.0,
     7.0,
   )
-  @test.assert_eq(geometry.p0, @pdflite.point2(88.0, 180.0))
-  @test.assert_eq(geometry.p1, @pdflite.point2(98.0, 187.0))
-  @test.assert_eq(geometry.p2, @pdflite.point2(88.0, 187.0))
-  @test.assert_eq(geometry.p3, @pdflite.point2(98.0, 180.0))
+  @test.assert_eq(geometry.p0, @geometry.point2(88.0, 180.0))
+  @test.assert_eq(geometry.p1, @geometry.point2(98.0, 187.0))
+  @test.assert_eq(geometry.p2, @geometry.point2(88.0, 187.0))
+  @test.assert_eq(geometry.p3, @geometry.point2(98.0, 180.0))
   @test.assert_eq(geometry.rectangle, {
     min_x: 88.0,
     min_y: 180.0,
@@ -186,12 +186,12 @@ test "pdf_addtext_url_annotation_geometry builds unrotated quads and bounds" {
 ///|
 test "pdf_addtext_url_annotation_geometry applies rotation before offset" {
   let geometry = @pdflite.pdf_addtext_url_annotation_geometry(
-    @pdflite.point2(10.0, 20.0),
+    @geometry.point2(10.0, 20.0),
     0.0,
     0.0,
     0.0,
     @math.PI / 2.0,
-    @pdflite.point2(1.0, 2.0),
+    @geometry.point2(1.0, 2.0),
     0.0,
     0.0,
     4.0,
@@ -199,19 +199,19 @@ test "pdf_addtext_url_annotation_geometry applies rotation before offset" {
   )
   addtext_annot_assert_point_close_for_test(
     geometry.p0,
-    @pdflite.point2(11.0, 22.0),
+    @geometry.point2(11.0, 22.0),
   )
   addtext_annot_assert_point_close_for_test(
     geometry.p1,
-    @pdflite.point2(9.0, 26.0),
+    @geometry.point2(9.0, 26.0),
   )
   addtext_annot_assert_point_close_for_test(
     geometry.p2,
-    @pdflite.point2(9.0, 22.0),
+    @geometry.point2(9.0, 22.0),
   )
   addtext_annot_assert_point_close_for_test(
     geometry.p3,
-    @pdflite.point2(11.0, 26.0),
+    @geometry.point2(11.0, 26.0),
   )
   addtext_annot_assert_close_for_test(geometry.rectangle.min_x, 9.0)
   addtext_annot_assert_close_for_test(geometry.rectangle.min_y, 22.0)
@@ -260,12 +260,12 @@ test "PdfDocument addtext_url_annotation_references creates indirect links" {
     "abcd",
     urls,
     fn(prefix) { prefix.length().to_double() * 2.0 },
-    @pdflite.point2(100.0, 200.0),
+    @geometry.point2(100.0, 200.0),
     10.0,
     20.0,
     5.0,
     0.0,
-    @pdflite.point2(0.0, 0.0),
+    @geometry.point2(0.0, 0.0),
     0.0,
     None,
     "NotAFont",
@@ -327,12 +327,12 @@ test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
       }
       prefix.length().to_double()
     },
-    @pdflite.point2(0.0, 0.0),
+    @geometry.point2(0.0, 0.0),
     0.0,
     0.0,
     0.0,
     0.0,
-    @pdflite.point2(0.0, 0.0),
+    @geometry.point2(0.0, 0.0),
     0.0,
     Some(addtext_annot_simple_font_for_test(500.0)),
     "Ignored",

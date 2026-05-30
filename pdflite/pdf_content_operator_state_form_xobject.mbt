@@ -1,5 +1,5 @@
 ///|
-fn pdf_content_form_xobject_default_bbox() -> PdfRectangle {
+fn pdf_content_form_xobject_default_bbox() -> @geometry.PdfRectangle {
   let min_float = 2.2250738585072014e-308
   let max_float = 1.7976931348623157e308
   { min_x: min_float, min_y: min_float, max_x: max_float, max_y: max_float }
@@ -9,7 +9,7 @@ fn pdf_content_form_xobject_default_bbox() -> PdfRectangle {
 fn PdfDocument::content_form_xobject_bbox(
   self : PdfDocument,
   xobject : PdfObject,
-) -> PdfRectangle {
+) -> @geometry.PdfRectangle {
   match self.lookup_direct(pdf_xobject_bbox_key(), xobject) {
     Some(bbox) =>
       try self.parse_rectangle(bbox) catch {

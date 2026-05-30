@@ -131,7 +131,7 @@ test "PdfDocument stamp_pages overlays selected pages with prefixed resources an
     Op_S,
     Op_Q,
     Op_q,
-    Op_cm(@pdflite.transform_translate(10.0, 20.0)),
+    Op_cm(@geometry.transform_translate(10.0, 20.0)),
     Op_Tf(stamp_name_for_test("/aStampFont"), 12.0),
     Op_Q,
   ])
@@ -180,7 +180,7 @@ test "pdf_stamp can place overlay content under the base content" {
 
   @test.assert_eq(stamp_content_ops_for_test(stamped, pages[0]), [
     Op_q,
-    Op_cm(@pdflite.transform_translate(5.0, 6.0)),
+    Op_cm(@geometry.transform_translate(5.0, 6.0)),
     Op_Tf(stamp_name_for_test("/aStampFont"), 12.0),
     Op_Q,
     Op_q,
@@ -234,9 +234,9 @@ test "PdfDocument stamp_pages scale_to_fit centers the first overlay page" {
     stamped => stamped
   }
   let pages = try! stamped.pages_of_pagetree()
-  let expected_matrix = @pdflite.transform_matrix_compose(
-    @pdflite.transform_translate(0.0, 25.0),
-    @pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 5.0, 5.0),
+  let expected_matrix = @geometry.transform_matrix_compose(
+    @geometry.transform_translate(0.0, 25.0),
+    @geometry.transform_scale(@geometry.point2(0.0, 0.0), 5.0, 5.0),
   )
 
   @test.assert_eq(stamp_content_ops_for_test(stamped, pages[0]), [
@@ -274,7 +274,7 @@ test "PdfDocument stamp_pages can mark processed overlay content as artifact" {
     Op_S,
     Op_Q,
     Op_q,
-    Op_cm(@pdflite.transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_BMC(stamp_name_for_test("/Artifact")),
     Op_m(2.0, 3.0),
     Op_EMC,

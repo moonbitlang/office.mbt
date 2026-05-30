@@ -30,7 +30,7 @@ pub fn PdfDocument::stamp_pages(
   page_numbers : ArrayView[Int],
   overlay : PdfDocument,
   relative_to_box? : PdfName = pdf_page_mediabox_key(),
-  position? : PdfPosition = PdfPositionBottomLeft(0.0, 0.0),
+  position? : @geometry.PdfPosition = PdfPositionBottomLeft(0.0, 0.0),
   topline? : Bool = false,
   midline? : Bool = false,
   fast? : Bool = false,
@@ -77,7 +77,7 @@ pub fn PdfDocument::stamp_pages(
     let stamp_page = if selected_pages.contains(page_number) {
       overlay_page
     } else {
-      @page.pdf_page_blank(paper_a4)
+      @page.pdf_page_blank(@geometry.paper_a4)
     }
     new_pages.push(
       merged.pdf_page_stamp_pair(

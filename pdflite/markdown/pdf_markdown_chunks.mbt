@@ -16,11 +16,11 @@ priv struct PdfMarkdownTextLine {
 
 ///|
 fn pdf_markdown_text_matrix_position(
-  ctm : @pdflite.TransformMatrix,
-  text_matrix : @pdflite.TransformMatrix,
-) -> @pdflite.Point2 {
-  @pdflite.transform_matrix_compose(ctm, text_matrix).apply(
-    @pdflite.point2(0.0, 0.0),
+  ctm : @geometry.TransformMatrix,
+  text_matrix : @geometry.TransformMatrix,
+) -> @geometry.Point2 {
+  @geometry.transform_matrix_compose(ctm, text_matrix).apply(
+    @geometry.point2(0.0, 0.0),
   )
 }
 
@@ -61,8 +61,8 @@ fn pdf_markdown_estimated_chunk_width(
 fn pdf_markdown_push_text_chunk(
   chunks : Array[PdfMarkdownTextChunk],
   next_index : Ref[Int],
-  ctm : @pdflite.TransformMatrix,
-  text_matrix : @pdflite.TransformMatrix,
+  ctm : @geometry.TransformMatrix,
+  text_matrix : @geometry.TransformMatrix,
   font_size : Double,
   codepoints : Array[Int],
 ) -> Unit {

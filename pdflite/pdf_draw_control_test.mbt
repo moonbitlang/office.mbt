@@ -244,11 +244,13 @@ test "pdf draw control command helpers append cpdf draw ops" {
     PdfDrawSetMiterLimit(4.5),
     PdfDrawSetDashPattern([1.0, 2.0], 3.0),
     PdfDrawMatrix({ a: 1.0, b: 2.0, c: 3.0, d: 4.0, e: 5.0, f: 6.0 }),
-    PdfDrawMatrix(@pdflite.transform_translate(7.0, 8.0)),
-    PdfDrawMatrix(@pdflite.transform_rotate(@pdflite.point2(0.0, 0.0), 0.5)),
-    PdfDrawMatrix(@pdflite.transform_scale(@pdflite.point2(1.0, 2.0), 3.0, 4.0)),
-    PdfDrawMatrix(@pdflite.transform_shear_x(@pdflite.point2(1.0, 2.0), 0.25)),
-    PdfDrawMatrix(@pdflite.transform_shear_y(@pdflite.point2(1.0, 2.0), 0.75)),
+    PdfDrawMatrix(@geometry.transform_translate(7.0, 8.0)),
+    PdfDrawMatrix(@geometry.transform_rotate(@geometry.point2(0.0, 0.0), 0.5)),
+    PdfDrawMatrix(
+      @geometry.transform_scale(@geometry.point2(1.0, 2.0), 3.0, 4.0),
+    ),
+    PdfDrawMatrix(@geometry.transform_shear_x(@geometry.point2(1.0, 2.0), 0.25)),
+    PdfDrawMatrix(@geometry.transform_shear_y(@geometry.point2(1.0, 2.0), 0.75)),
     PdfDrawUse("XO"),
   ]
   @test.assert_eq(control.ops(), expected)

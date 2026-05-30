@@ -59,11 +59,11 @@ pub fn pdf_type_split_text(
 pub fn pdf_type_layout(
   lmargin : Double,
   rmargin : Double,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   elements : ArrayView[PdfTypeElement],
 ) -> Array[PdfTypeElement] raise PdfError {
   ignore(rmargin)
-  let xpos_max = unit_points(paper.width(), paper.unit()) - lmargin
+  let xpos_max = @geometry.unit_points(paper.width(), paper.unit()) - lmargin
   let mut xpos = lmargin
   let mut widths : Array[Double] = []
   let output : Array[PdfTypeElement] = []
@@ -133,10 +133,10 @@ fn pdf_type_push_page_break(
 pub fn pdf_type_paginate(
   tmargin : Double,
   bmargin : Double,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   elements : ArrayView[PdfTypeElement],
 ) -> Array[PdfTypeElement] {
-  let max_ypos = unit_points(paper.height(), paper.unit()) - bmargin
+  let max_ypos = @geometry.unit_points(paper.height(), paper.unit()) - bmargin
   let output : Array[PdfTypeElement] = []
   let mut ypos = tmargin
   let mut font_size = 0.0

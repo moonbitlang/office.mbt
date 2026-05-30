@@ -83,7 +83,7 @@ pub fn PdfDocument::toc_typeset_pages(
   let media = self.parse_rectangle(first_page.mediabox)
   let media_width = media.max_x - media.min_x
   let media_height = media.max_y - media.min_y
-  let paper = paper_size_make(PdfPoint, media_width, media_height)
+  let paper = @geometry.paper_size_make(PdfPoint, media_width, media_height)
   let margin = double_min(media_width, media_height) * 0.1
   let cropbox = match
     self.lookup_direct(pdf_page_cropbox_key(), first_page.rest) {

@@ -13,8 +13,8 @@ fn content_operator_assert_line_for_test(
 ) -> Unit raise {
   match segment {
     PdfPathStraight(start, finish) => {
-      @test.assert_eq(start, @pdflite.point2(start_x, start_y))
-      @test.assert_eq(finish, @pdflite.point2(finish_x, finish_y))
+      @test.assert_eq(start, @geometry.point2(start_x, start_y))
+      @test.assert_eq(finish, @geometry.point2(finish_x, finish_y))
     }
     _ => fail("expected straight path segment")
   }
@@ -28,7 +28,7 @@ test "cpdfcontent operator state exposes initial state" {
   let clipping_path = @pdflite.pdf_content_initial_clipping_path(
     0.0, 0.0, 100.0, 200.0,
   )
-  @test.assert_eq(state.ctm, @pdflite.transform_identity_matrix)
+  @test.assert_eq(state.ctm, @geometry.transform_identity_matrix)
   @test.assert_eq(state.partial_path, PdfContentNoPartialPath)
   @test.assert_eq(state.clipping_path, clipping_path)
   @test.assert_eq(state.path, @pdflite.pdf_content_initial_drawn_path())
@@ -95,7 +95,7 @@ test "cpdfcontent operator state saves and restores q Q frames" {
   @test.assert_eq(pushed.state_stack[0].black_point_compensation, "/Default")
   let changed : @pdflite.PdfContentOperatorState = {
     ..pushed,
-    ctm: @pdflite.transform_translate(7.0, 8.0),
+    ctm: @geometry.transform_translate(7.0, 8.0),
     partial_path: pushed.partial_path.content_apply_path_op(Op_m(1.0, 2.0)).partial_path,
     clipping_path: [],
     path_state: pushed.path_state.content_apply_path_state_op(Op_w(3.0)),
@@ -155,18 +155,18 @@ test "cpdfcontent operator state composes cm matrices" {
   )
   let moved = initial
     .content_apply_graphics_state_op(
-      Op_cm(@pdflite.transform_translate(10.0, 20.0)),
+      Op_cm(@geometry.transform_translate(10.0, 20.0)),
     )
     .content_apply_graphics_state_op(
-      Op_cm(@pdflite.transform_translate(1.0, 2.0)),
+      Op_cm(@geometry.transform_translate(1.0, 2.0)),
     )
-  @test.assert_eq(moved.ctm, @pdflite.transform_translate(11.0, 22.0))
+  @test.assert_eq(moved.ctm, @geometry.transform_translate(11.0, 22.0))
   @test.assert_eq(
     @pdflite.pdf_content_apply_graphics_state_op(
       initial,
-      Op_cm(@pdflite.transform_translate(3.0, 4.0)),
+      Op_cm(@geometry.transform_translate(3.0, 4.0)),
     ).ctm,
-    @pdflite.transform_translate(3.0, 4.0),
+    @geometry.transform_translate(3.0, 4.0),
   )
   @test.assert_eq(initial.content_apply_graphics_state_op(Op_w(9.0)), initial)
 }
@@ -216,7 +216,7 @@ test "cpdfcontent operator core threads graphics stack" {
   )
   let changed = initial
     .content_apply_core_op(Op_q)
-    .content_apply_core_op(Op_cm(@pdflite.transform_translate(5.0, 6.0)))
+    .content_apply_core_op(Op_cm(@geometry.transform_translate(5.0, 6.0)))
     .content_apply_core_op(Op_w(7.0))
     .content_apply_core_op(Op_Tw(8.0))
     .content_apply_core_op(Op_M(9.0))
@@ -224,7 +224,7 @@ test "cpdfcontent operator core threads graphics stack" {
     .content_apply_core_op(Op_BMC(content_operator_name_for_test("/Artifact")))
     .content_apply_core_op(Op_d0(500.0, 0.0))
   @test.assert_eq(changed.state_stack.length(), 1)
-  @test.assert_eq(changed.ctm, @pdflite.transform_translate(5.0, 6.0))
+  @test.assert_eq(changed.ctm, @geometry.transform_translate(5.0, 6.0))
   @test.assert_eq(changed.path_state.line_width, 7.0)
   @test.assert_eq(changed.text_state.word_spacing, 8.0)
   @test.assert_eq(changed.marked_content.length(), 1)
@@ -526,7 +526,7 @@ test "cpdfcontent operator state collects nonrecursive content entries" {
   let resources = @pdflite.pdf_dictionary([
     (font_resource_key, @pdflite.pdf_dictionary([(f1_key, PdfIndirect(7))])),
   ])
-  let mediabox : @pdflite.PdfRectangle = {
+  let mediabox : @geometry.PdfRectangle = {
     min_x: 0.0,
     min_y: 0.0,
     max_x: 100.0,
@@ -608,7 +608,7 @@ test "cpdfcontent operator state recursively collects Form XObject entries" {
     (font_resource_key, @pdflite.pdf_dictionary([(fpage_key, PdfIndirect(8))])),
     (xobject_key, @pdflite.pdf_dictionary([(form_name, form_xobject)])),
   ])
-  let mediabox : @pdflite.PdfRectangle = {
+  let mediabox : @geometry.PdfRectangle = {
     min_x: 0.0,
     min_y: 0.0,
     max_x: 100.0,
@@ -663,14 +663,14 @@ test "cpdfcontent operator state recursively collects image XObject entries" {
       ]),
     ),
   ])
-  let mediabox : @pdflite.PdfRectangle = {
+  let mediabox : @geometry.PdfRectangle = {
     min_x: 0.0,
     min_y: 0.0,
     max_x: 100.0,
     max_y: 200.0,
   }
   let ops : Array[@content.PdfContentOp] = [
-    Op_cm(@pdflite.transform_translate(5.0, 6.0)),
+    Op_cm(@geometry.transform_translate(5.0, 6.0)),
     Op_Do(image_name),
   ]
   let entries = try! doc.content_entries_of_ops_recursive(
@@ -858,7 +858,7 @@ test "cpdfcontent operator state emits image entries from current CTM" {
   )
   let state : @pdflite.PdfContentOperatorState = {
     ..initial,
-    ctm: @pdflite.transform_translate(5.0, 6.0),
+    ctm: @geometry.transform_translate(5.0, 6.0),
   }
   let bounding_box : @pdflite.PdfContentBoundingBox = {
     x0: 5.0,
@@ -900,7 +900,7 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
   )
   let state : @pdflite.PdfContentOperatorState = {
     ..initial,
-    ctm: @pdflite.transform_translate(5.0, 6.0),
+    ctm: @geometry.transform_translate(5.0, 6.0),
   }
   let image_name = content_operator_name_for_test("/Im1")
   let form_name = content_operator_name_for_test("/Fm1")
@@ -1011,7 +1011,7 @@ test "cpdfcontent operator state prepares Form XObject resources" {
   )
   let state : @pdflite.PdfContentOperatorState = {
     ..initial,
-    ctm: @pdflite.transform_translate(5.0, 6.0),
+    ctm: @geometry.transform_translate(5.0, 6.0),
   }
   let form_name = content_operator_name_for_test("/Fm1")
   let image_name = content_operator_name_for_test("/Im1")
@@ -1021,7 +1021,7 @@ test "cpdfcontent operator state prepares Form XObject resources" {
   let subtype_key = content_operator_name_for_test("/Subtype")
   let matrix_key = content_operator_name_for_test("/Matrix")
   let bbox_key = content_operator_name_for_test("/BBox")
-  let form_matrix = @pdflite.transform_translate(10.0, 20.0)
+  let form_matrix = @geometry.transform_translate(10.0, 20.0)
   let resources = @pdflite.pdf_dictionary([
     (
       xobject_key,
@@ -1085,7 +1085,7 @@ test "cpdfcontent operator state prepares Form XObject resources" {
   }
   @test.assert_eq(
     form_state.ctm,
-    @pdflite.transform_matrix_compose(state.ctm, form_matrix),
+    @geometry.transform_matrix_compose(state.ctm, form_matrix),
   )
   @test.assert_eq(
     form_state.state_stack.length(),
@@ -1375,7 +1375,7 @@ test "cpdfcontent operator state emits shading entries" {
   )
   let state : @pdflite.PdfContentOperatorState = {
     ..initial,
-    ctm: @pdflite.transform_translate(5.0, 6.0),
+    ctm: @geometry.transform_translate(5.0, 6.0),
   }
   let name = content_operator_name_for_test("/Sh1")
   let explicit = state.content_shading_entry(
@@ -1424,7 +1424,7 @@ test "cpdfcontent operator state reads shading entries from resources" {
   )
   let state : @pdflite.PdfContentOperatorState = {
     ..initial,
-    ctm: @pdflite.transform_translate(5.0, 6.0),
+    ctm: @geometry.transform_translate(5.0, 6.0),
   }
   let shading_name = content_operator_name_for_test("/Sh1")
   let unbounded_name = content_operator_name_for_test("/Sh2")

@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::pdf_page_transform_matrix_destinations(
   self : PdfDocument,
-  matrices : ArrayView[(Int, TransformMatrix)],
+  matrices : ArrayView[(Int, @geometry.TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
   transform_bookmarks : Bool,
 ) -> PdfDocument raise PdfError {

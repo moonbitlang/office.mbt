@@ -325,7 +325,7 @@ test "PdfDocument rectify_boxes zeroes media origin and shifts content" {
     Some(page_box_rect_for_test(10.0, 10.0, 70.0, 70.0)),
   )
   @test.assert_eq(page_box_ops_for_test(document, rectified), [
-    Op_cm(@pdflite.transform_translate(-10.0, -20.0)),
+    Op_cm(@geometry.transform_translate(-10.0, -20.0)),
     Op_S,
   ])
 

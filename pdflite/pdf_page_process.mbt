@@ -7,12 +7,16 @@
 pub fn PdfDocument::process_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  process : (Int, @page.PdfPage) -> (@page.PdfPage, Int, TransformMatrix) raise PdfError,
+  process : (Int, @page.PdfPage) -> (
+    @page.PdfPage,
+    Int,
+    @geometry.TransformMatrix,
+  ) raise PdfError,
 ) -> PdfDocument raise PdfError {
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
     capacity=pages.length(),
   )
   for index in 0..<pages.length() {
@@ -25,7 +29,7 @@ pub fn PdfDocument::process_pages(
       matrices.push((matrix_page, matrix))
     } else {
       rewritten.push(pages[index])
-      matrices.push((page_number, transform_identity_matrix))
+      matrices.push((page_number, @geometry.transform_identity_matrix))
     }
   }
   pdf_progress_done()
@@ -37,7 +41,11 @@ pub fn PdfDocument::process_pages(
 pub fn pdf_process_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  process : (Int, @page.PdfPage) -> (@page.PdfPage, Int, TransformMatrix) raise PdfError,
+  process : (Int, @page.PdfPage) -> (
+    @page.PdfPage,
+    Int,
+    @geometry.TransformMatrix,
+  ) raise PdfError,
 ) -> PdfDocument raise PdfError {
   document.process_pages(page_numbers, process)
 }
@@ -45,7 +53,11 @@ pub fn pdf_process_pages(
 ///|
 /// Compatibility wrapper matching cpdfpage's `process_pages` argument order.
 pub fn pdf_process_pages_cpdf_order(
-  process : (Int, @page.PdfPage) -> (@page.PdfPage, Int, TransformMatrix) raise PdfError,
+  process : (Int, @page.PdfPage) -> (
+    @page.PdfPage,
+    Int,
+    @geometry.TransformMatrix,
+  ) raise PdfError,
   document : PdfDocument,
   page_numbers : ArrayView[Int],
 ) -> PdfDocument raise PdfError {

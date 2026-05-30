@@ -1,6 +1,6 @@
 ///|
 fn pdf_page_scale_to_fit_rotate_should_rotate(
-  bounds : PdfRectangle,
+  bounds : @geometry.PdfRectangle,
   target_width : Double,
   target_height : Double,
 ) -> Bool {

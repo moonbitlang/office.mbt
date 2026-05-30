@@ -20,7 +20,7 @@ fn assert_close_for_shape_test(
 
 ///|
 fn assert_point_for_shape_test(
-  actual : @pdflite.Point2,
+  actual : @geometry.Point2,
   x : Double,
   y : Double,
 ) -> Unit raise {
@@ -30,7 +30,7 @@ fn assert_point_for_shape_test(
 
 ///|
 fn assert_rectangle_for_shape_test(
-  actual : @pdflite.PdfRectangle,
+  actual : @geometry.PdfRectangle,
   min_x : Double,
   min_y : Double,
   max_x : Double,
@@ -142,15 +142,15 @@ test "cpdf shape builds connected circle paths" {
 ///|
 test "cpdfcontent path geometry computes segment and path bounds" {
   let straight : @shape.PdfPathSegment = PdfPathStraight(
-    @pdflite.point2(3.0, 4.0),
-    @pdflite.point2(-1.0, 8.0),
+    @geometry.point2(3.0, 4.0),
+    @geometry.point2(-1.0, 8.0),
   )
   assert_rectangle_for_shape_test(straight.bounds(), -1.0, 4.0, 3.0, 8.0)
   let bezier : @shape.PdfPathSegment = PdfPathBezier(
-    @pdflite.point2(10.0, 0.0),
-    @pdflite.point2(-5.0, 20.0),
-    @pdflite.point2(2.0, -3.0),
-    @pdflite.point2(7.0, 8.0),
+    @geometry.point2(10.0, 0.0),
+    @geometry.point2(-5.0, 20.0),
+    @geometry.point2(2.0, -3.0),
+    @geometry.point2(7.0, 8.0),
   )
   assert_rectangle_for_shape_test(
     @shape.pdf_path_segment_bounds(bezier),
@@ -177,12 +177,12 @@ test "cpdfcontent path geometry computes segment and path bounds" {
 
 ///|
 test "cpdfcontent path geometry transforms segments and paths" {
-  let matrix = @pdflite.transform_translate(10.0, -2.0)
+  let matrix = @geometry.transform_translate(10.0, -2.0)
   let segment : @shape.PdfPathSegment = PdfPathBezier(
-    @pdflite.point2(1.0, 2.0),
-    @pdflite.point2(3.0, 4.0),
-    @pdflite.point2(5.0, 6.0),
-    @pdflite.point2(7.0, 8.0),
+    @geometry.point2(1.0, 2.0),
+    @geometry.point2(3.0, 4.0),
+    @geometry.point2(5.0, 6.0),
+    @geometry.point2(7.0, 8.0),
   )
   match segment.transform(matrix) {
     PdfPathBezier(start, control1, control2, finish) => {
@@ -200,7 +200,10 @@ test "cpdfcontent path geometry transforms segments and paths" {
         hole: PdfPathHole,
         closure: PdfPathClosed,
         segments: [
-          PdfPathStraight(@pdflite.point2(0.0, 0.0), @pdflite.point2(2.0, 3.0)),
+          PdfPathStraight(
+            @geometry.point2(0.0, 0.0),
+            @geometry.point2(2.0, 3.0),
+          ),
         ],
       },
     ],
@@ -227,14 +230,17 @@ test "cpdfcontent path geometry emits content bounding box quads" {
         hole: PdfPathNotHole,
         closure: PdfPathOpen,
         segments: [
-          PdfPathStraight(@pdflite.point2(1.0, 2.0), @pdflite.point2(3.0, 5.0)),
+          PdfPathStraight(
+            @geometry.point2(1.0, 2.0),
+            @geometry.point2(3.0, 5.0),
+          ),
         ],
       },
     ],
   }
   guard @pdflite.pdf_path_content_bounding_box(
       path,
-      @pdflite.transform_translate(10.0, 20.0),
+      @geometry.transform_translate(10.0, 20.0),
       1.0,
       false,
     )
@@ -244,8 +250,8 @@ test "cpdfcontent path geometry emits content bounding box quads" {
   assert_content_bbox_for_shape_test(
     filled, 11.0, 22.0, 11.0, 25.0, 13.0, 25.0, 13.0, 22.0,
   )
-  let scaled_ctm : @pdflite.TransformMatrix = {
-    ..@pdflite.transform_identity_matrix,
+  let scaled_ctm : @geometry.TransformMatrix = {
+    ..@geometry.transform_identity_matrix,
     a: 2.0,
     d: 3.0,
   }
@@ -259,7 +265,7 @@ test "cpdfcontent path geometry emits content bounding box quads" {
   let empty : @shape.PdfPath = { winding_rule: PdfPathEvenOdd, subpaths: [] }
   @test.assert_eq(
     @pdflite.pdf_path_content_bounding_box(
-      empty, @pdflite.transform_identity_matrix, 1.0, false,
+      empty, @geometry.transform_identity_matrix, 1.0, false,
     ),
     None,
   )
@@ -268,14 +274,14 @@ test "cpdfcontent path geometry emits content bounding box quads" {
 ///|
 test "cpdfcontent path geometry serializes drawn path content JSON" {
   let straight : @shape.PdfPathSegment = PdfPathStraight(
-    @pdflite.point2(1.0, 2.0),
-    @pdflite.point2(3.0, 4.0),
+    @geometry.point2(1.0, 2.0),
+    @geometry.point2(3.0, 4.0),
   )
   let bezier : @shape.PdfPathSegment = PdfPathBezier(
-    @pdflite.point2(5.0, 6.0),
-    @pdflite.point2(7.0, 8.0),
-    @pdflite.point2(9.0, 10.0),
-    @pdflite.point2(11.0, 12.0),
+    @geometry.point2(5.0, 6.0),
+    @geometry.point2(7.0, 8.0),
+    @geometry.point2(9.0, 10.0),
+    @geometry.point2(11.0, 12.0),
   )
   let subpath : @shape.PdfPathSubpath = {
     hole: PdfPathHole,

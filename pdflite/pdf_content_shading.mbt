@@ -3,7 +3,7 @@
 /// graphics-state dictionary supplied by the caller.
 pub fn PdfDocument::content_read_shading(
   self : PdfDocument,
-  shading_matrix : TransformMatrix,
+  shading_matrix : @geometry.TransformMatrix,
   shading_extgstate : PdfObject,
   shading : PdfObject,
 ) -> PdfContentShading raise PdfError {

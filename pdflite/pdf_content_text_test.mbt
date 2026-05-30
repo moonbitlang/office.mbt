@@ -20,8 +20,8 @@ fn content_text_assert_close_for_test(
 
 ///|
 fn content_text_assert_matrix_close_for_test(
-  actual : @pdflite.TransformMatrix,
-  expected : @pdflite.TransformMatrix,
+  actual : @geometry.TransformMatrix,
+  expected : @geometry.TransformMatrix,
 ) -> Unit raise {
   content_text_assert_close_for_test(actual.a, expected.a)
   content_text_assert_close_for_test(actual.b, expected.b)
@@ -63,8 +63,8 @@ test "cpdfcontent text state exposes initial defaults and basic operators" {
   @test.assert_eq(initial.rendering_mode, 0)
   @test.assert_eq(initial.rise, 0.0)
   @test.assert_eq(initial.knockout, true)
-  @test.assert_eq(initial.text_matrix, @pdflite.transform_identity_matrix)
-  @test.assert_eq(initial.line_matrix, @pdflite.transform_identity_matrix)
+  @test.assert_eq(initial.text_matrix, @geometry.transform_identity_matrix)
+  @test.assert_eq(initial.line_matrix, @geometry.transform_identity_matrix)
   let state = initial
     .content_apply_text_state_op(Op_Tc(1.5))
     .content_apply_text_state_op(Op_Tw(2.5))
@@ -106,30 +106,30 @@ test "cpdfcontent text state applies text matrix operators" {
   @test.assert_eq(moved.leading, 7.0)
   content_text_assert_matrix_close_for_test(
     moved.text_matrix,
-    @pdflite.transform_translate(15.0, 13.0),
+    @geometry.transform_translate(15.0, 13.0),
   )
   content_text_assert_matrix_close_for_test(
     moved.line_matrix,
-    @pdflite.transform_translate(15.0, 13.0),
+    @geometry.transform_translate(15.0, 13.0),
   )
   let next_line = moved.content_apply_text_state_op(Op_Tstar)
   content_text_assert_matrix_close_for_test(
     next_line.text_matrix,
-    @pdflite.transform_translate(15.0, 6.0),
+    @geometry.transform_translate(15.0, 6.0),
   )
   let replaced = next_line.content_apply_text_state_op(
-    Op_Tm(@pdflite.transform_translate(1.0, 2.0)),
+    Op_Tm(@geometry.transform_translate(1.0, 2.0)),
   )
   content_text_assert_matrix_close_for_test(
     replaced.line_matrix,
-    @pdflite.transform_translate(1.0, 2.0),
+    @geometry.transform_translate(1.0, 2.0),
   )
   let quote = replaced
     .content_apply_text_state_op(Op_TL(3.0))
     .content_apply_text_state_op(Op_quote(content_text_bytes_for_test([65])))
   content_text_assert_matrix_close_for_test(
     quote.text_matrix,
-    @pdflite.transform_translate(1.0, -1.0),
+    @geometry.transform_translate(1.0, -1.0),
   )
   let double_quote = quote.content_apply_text_state_op(
     Op_double_quote(8.0, 9.0, content_text_bytes_for_test([66])),
@@ -138,11 +138,11 @@ test "cpdfcontent text state applies text matrix operators" {
   @test.assert_eq(double_quote.character_spacing, 9.0)
   content_text_assert_matrix_close_for_test(
     double_quote.text_matrix,
-    @pdflite.transform_translate(1.0, -4.0),
+    @geometry.transform_translate(1.0, -4.0),
   )
   let reset = double_quote.content_apply_text_state_op(Op_BT)
-  @test.assert_eq(reset.text_matrix, @pdflite.transform_identity_matrix)
-  @test.assert_eq(reset.line_matrix, @pdflite.transform_identity_matrix)
+  @test.assert_eq(reset.text_matrix, @geometry.transform_identity_matrix)
+  @test.assert_eq(reset.line_matrix, @geometry.transform_identity_matrix)
 }
 
 ///|
@@ -196,14 +196,14 @@ test "cpdfcontent text op emits glyphs and advances text matrix" {
     .content_apply_text_state_op(Op_Ts(3.0))
     .content_apply_text_state_op(Op_Td(10.0, 20.0))
   let layout = state.content_text_layout(
-    @pdflite.transform_translate(100.0, 200.0),
+    @geometry.transform_translate(100.0, 200.0),
   )
   @test.assert_eq(layout.font_size, 10.0)
   @test.assert_eq(layout.horizontal_scaling, 0.8)
   @test.assert_eq(layout.rise, 3.0)
   let result = state.content_apply_text_op(
     font,
-    @pdflite.transform_translate(100.0, 200.0),
+    @geometry.transform_translate(100.0, 200.0),
     Op_Tj(content_text_bytes_for_test([65, 32])),
   )
   @test.assert_eq(result.glyphs.length(), 2)
@@ -211,11 +211,11 @@ test "cpdfcontent text op emits glyphs and advances text matrix" {
   @test.assert_eq(result.glyphs[1].charcode, 32)
   content_text_assert_matrix_close_for_test(
     result.text_state.text_matrix,
-    @pdflite.transform_translate(19.2, 20.0),
+    @geometry.transform_translate(19.2, 20.0),
   )
   content_text_assert_matrix_close_for_test(
     result.text_state.line_matrix,
-    @pdflite.transform_translate(10.0, 20.0),
+    @geometry.transform_translate(10.0, 20.0),
   )
   let tj = @pdflite.pdf_content_apply_text_op(
     @pdflite.pdf_content_initial_text_state()
@@ -224,7 +224,7 @@ test "cpdfcontent text op emits glyphs and advances text matrix" {
     .content_apply_text_state_op(Op_Tw(2.0))
     .content_apply_text_state_op(Op_Tz(80.0)),
     font,
-    @pdflite.transform_identity_matrix,
+    @geometry.transform_identity_matrix,
     Op_TJ(
       PdfArray([
         PdfString(content_text_bytes_for_test([65])),
@@ -236,7 +236,7 @@ test "cpdfcontent text op emits glyphs and advances text matrix" {
   @test.assert_eq(tj.glyphs.length(), 2)
   content_text_assert_matrix_close_for_test(
     tj.text_state.text_matrix,
-    @pdflite.transform_translate(8.64, 0.0),
+    @geometry.transform_translate(8.64, 0.0),
   )
 }
 
@@ -246,35 +246,35 @@ test "cpdfcontent text op applies quote shorthands before showing text" {
   let state = @pdflite.pdf_content_initial_text_state()
     .content_apply_text_state_op(Op_Tf(content_text_name_for_test("/F1"), 10.0))
     .content_apply_text_state_op(Op_TL(7.0))
-    .content_apply_text_state_op(Op_Tm(@pdflite.transform_translate(1.0, 2.0)))
+    .content_apply_text_state_op(Op_Tm(@geometry.transform_translate(1.0, 2.0)))
   let quote = state.content_apply_text_op(
     font,
-    @pdflite.transform_identity_matrix,
+    @geometry.transform_identity_matrix,
     Op_quote(content_text_bytes_for_test([65])),
   )
   @test.assert_eq(quote.glyphs.length(), 1)
   content_text_assert_matrix_close_for_test(
     quote.glyphs[0].text_matrix,
-    @pdflite.transform_translate(1.0, -5.0),
+    @geometry.transform_translate(1.0, -5.0),
   )
   content_text_assert_matrix_close_for_test(
     quote.text_state.text_matrix,
-    @pdflite.transform_translate(6.0, -5.0),
+    @geometry.transform_translate(6.0, -5.0),
   )
   content_text_assert_matrix_close_for_test(
     quote.text_state.line_matrix,
-    @pdflite.transform_translate(1.0, -5.0),
+    @geometry.transform_translate(1.0, -5.0),
   )
   let double_quote = state.content_apply_text_op(
     font,
-    @pdflite.transform_identity_matrix,
+    @geometry.transform_identity_matrix,
     Op_double_quote(8.0, 9.0, content_text_bytes_for_test([65])),
   )
   @test.assert_eq(double_quote.text_state.word_spacing, 8.0)
   @test.assert_eq(double_quote.text_state.character_spacing, 9.0)
   content_text_assert_matrix_close_for_test(
     double_quote.text_state.text_matrix,
-    @pdflite.transform_translate(15.0, -5.0),
+    @geometry.transform_translate(15.0, -5.0),
   )
 }
 
@@ -613,8 +613,8 @@ test "cpdfcontent text layout mirrors horizontal process_tj placement" {
     character_spacing: 1.0,
     word_spacing: 2.0,
     rise: 3.0,
-    ctm: @pdflite.transform_translate(100.0, 200.0),
-    text_matrix: @pdflite.transform_translate(10.0, 20.0),
+    ctm: @geometry.transform_translate(100.0, 200.0),
+    text_matrix: @geometry.transform_translate(10.0, 20.0),
   }
   let result = font.content_text_layout_of_bytes(
     content_text_bytes_for_test([65, 32]),
@@ -625,7 +625,7 @@ test "cpdfcontent text layout mirrors horizontal process_tj placement" {
   @test.assert_eq(first.charcode, 65)
   content_text_assert_matrix_close_for_test(
     first.text_matrix,
-    @pdflite.transform_translate(10.0, 20.0),
+    @geometry.transform_translate(10.0, 20.0),
   )
   content_text_assert_close_for_test(first.width, 0.5)
   content_text_assert_close_for_test(first.advance_x, 4.8)
@@ -644,7 +644,7 @@ test "cpdfcontent text layout mirrors horizontal process_tj placement" {
   @test.assert_eq(second.charcode, 32)
   content_text_assert_matrix_close_for_test(
     second.text_matrix,
-    @pdflite.transform_translate(14.8, 20.0),
+    @geometry.transform_translate(14.8, 20.0),
   )
   content_text_assert_close_for_test(second.width, 0.25)
   content_text_assert_close_for_test(second.advance_x, 4.4)
@@ -660,7 +660,7 @@ test "cpdfcontent text layout mirrors horizontal process_tj placement" {
   })
   content_text_assert_matrix_close_for_test(
     result.text_matrix,
-    @pdflite.transform_translate(19.2, 20.0),
+    @geometry.transform_translate(19.2, 20.0),
   )
   let wrapped = @pdflite.pdf_content_text_layout_of_bytes(
     font,
@@ -698,8 +698,8 @@ test "cpdfcontent text layout mirrors vertical process_tj placement" {
     character_spacing: 1.0,
     word_spacing: 2.0,
     rise: 0.0,
-    ctm: @pdflite.transform_identity_matrix,
-    text_matrix: @pdflite.transform_identity_matrix,
+    ctm: @geometry.transform_identity_matrix,
+    text_matrix: @geometry.transform_identity_matrix,
   }
   let result = font.content_text_layout_of_bytes(
     content_text_bytes_for_test([0x01, 0x02]),
@@ -725,7 +725,7 @@ test "cpdfcontent text layout mirrors vertical process_tj placement" {
   })
   content_text_assert_matrix_close_for_test(
     result.text_matrix,
-    @pdflite.transform_translate(0.0, 10.0),
+    @geometry.transform_translate(0.0, 10.0),
   )
 }
 
@@ -750,8 +750,8 @@ test "cpdfcontent TJ layout applies horizontal numeric adjustments" {
     character_spacing: 1.0,
     word_spacing: 2.0,
     rise: 0.0,
-    ctm: @pdflite.transform_identity_matrix,
-    text_matrix: @pdflite.transform_identity_matrix,
+    ctm: @geometry.transform_identity_matrix,
+    text_matrix: @geometry.transform_identity_matrix,
   }
   let result = font.content_text_layout_of_tj_array(
     [
@@ -766,11 +766,11 @@ test "cpdfcontent TJ layout applies horizontal numeric adjustments" {
   @test.assert_eq(result.glyphs[1].charcode, 66)
   content_text_assert_matrix_close_for_test(
     result.glyphs[1].text_matrix,
-    @pdflite.transform_translate(3.84, 0.0),
+    @geometry.transform_translate(3.84, 0.0),
   )
   content_text_assert_matrix_close_for_test(
     result.text_matrix,
-    @pdflite.transform_translate(8.64, 0.0),
+    @geometry.transform_translate(8.64, 0.0),
   )
   let wrapped = @pdflite.pdf_content_text_layout_of_tj_array(
     font,
@@ -780,7 +780,7 @@ test "cpdfcontent TJ layout applies horizontal numeric adjustments" {
   @test.assert_eq(wrapped.glyphs.length(), 1)
   content_text_assert_matrix_close_for_test(
     wrapped.text_matrix,
-    @pdflite.transform_translate(4.8, 0.0),
+    @geometry.transform_translate(4.8, 0.0),
   )
 }
 
@@ -811,8 +811,8 @@ test "cpdfcontent TJ layout applies vertical numeric adjustments" {
     character_spacing: 0.0,
     word_spacing: 0.0,
     rise: 0.0,
-    ctm: @pdflite.transform_identity_matrix,
-    text_matrix: @pdflite.transform_identity_matrix,
+    ctm: @geometry.transform_identity_matrix,
+    text_matrix: @geometry.transform_identity_matrix,
   }
   let text = content_text_bytes_for_test([0x01, 0x02])
   let result = font.content_text_layout_of_tj_array(
@@ -822,10 +822,10 @@ test "cpdfcontent TJ layout applies vertical numeric adjustments" {
   @test.assert_eq(result.glyphs.length(), 2)
   content_text_assert_matrix_close_for_test(
     result.glyphs[1].text_matrix,
-    @pdflite.transform_translate(0.0, 4.5),
+    @geometry.transform_translate(0.0, 4.5),
   )
   content_text_assert_matrix_close_for_test(
     result.text_matrix,
-    @pdflite.transform_translate(0.0, 11.5),
+    @geometry.transform_translate(0.0, 11.5),
   )
 }

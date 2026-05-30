@@ -1,7 +1,7 @@
 ///|
 priv enum PdfImageResolutionObject {
   PdfImageResolutionImage(Int, Int)
-  PdfImageResolutionForm(TransformMatrix, PdfObject, PdfObject)
+  PdfImageResolutionForm(@geometry.TransformMatrix, PdfObject, PdfObject)
 }
 
 ///|
@@ -75,20 +75,31 @@ fn pdf_image_resolution_entry_compare(
 }
 
 ///|
-fn pdf_image_resolution_distance(left : Point2, right : Point2) -> Double {
+fn pdf_image_resolution_distance(
+  left : @geometry.Point2,
+  right : @geometry.Point2,
+) -> Double {
   let dx = right.x - left.x
   let dy = right.y - left.y
   (dx * dx + dy * dy).sqrt()
 }
 
 ///|
-fn pdf_image_resolution_inches(matrix : TransformMatrix) -> (Double, Double) {
-  let origin = matrix.apply(point2(0.0, 0.0))
-  let x_axis = matrix.apply(point2(1.0, 0.0))
-  let y_axis = matrix.apply(point2(0.0, 1.0))
+fn pdf_image_resolution_inches(
+  matrix : @geometry.TransformMatrix,
+) -> (Double, Double) {
+  let origin = matrix.apply(@geometry.point2(0.0, 0.0))
+  let x_axis = matrix.apply(@geometry.point2(1.0, 0.0))
+  let y_axis = matrix.apply(@geometry.point2(0.0, 1.0))
   (
-    unit_inches(pdf_image_resolution_distance(origin, x_axis), PdfPoint),
-    unit_inches(pdf_image_resolution_distance(origin, y_axis), PdfPoint),
+    @geometry.unit_inches(
+      pdf_image_resolution_distance(origin, x_axis),
+      PdfPoint,
+    ),
+    @geometry.unit_inches(
+      pdf_image_resolution_distance(origin, y_axis),
+      PdfPoint,
+    ),
   )
 }
 
@@ -100,7 +111,7 @@ fn pdf_image_resolution_push_entry(
   width : Int,
   height : Int,
   object_number : Int,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
 ) -> Unit raise PdfError {
   let (x_inches, y_inches) = pdf_image_resolution_inches(matrix)
   entries.push({

@@ -200,7 +200,7 @@ test "PdfDocument write_font writes Type3 fonts" {
   let d1_stream = text_font_write_type3_charproc_stream_for_test([
     Op_d1(600.0, 0.0, 0.0, -20.0, 600.0, 700.0),
   ])
-  let fontmatrix : @pdflite.TransformMatrix = {
+  let fontmatrix : @geometry.TransformMatrix = {
     a: 0.001,
     b: 0.0,
     c: 0.0,
@@ -313,7 +313,7 @@ test "PdfDocument write_font writes Type3 custom encoding object" {
     PdfFontSimple({
       fonttype: PdfType3({
         fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
-        fontmatrix: @pdflite.transform_identity_matrix,
+        fontmatrix: @geometry.transform_identity_matrix,
         charprocs: [(text_font_write_name_for_test("/A"), PdfInteger(10))],
         resources: @pdflite.pdf_dictionary([]),
       }),

@@ -3,7 +3,7 @@
 fn PdfDocument::pdf_impose_transform_content(
   self : PdfDocument,
   resources : PdfObject,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   content : ArrayView[PdfObject],
   fast : Bool,
 ) -> Array[PdfObject] raise PdfError {

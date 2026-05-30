@@ -3,10 +3,10 @@
 pub fn PdfDocument::parse_coordinate(
   self : PdfDocument,
   text : String,
-) -> Point2 raise PdfError {
+) -> @geometry.Point2 raise PdfError {
   let values = self.parse_units_string(pdf_coord_default_page(), text)
   match values {
-    [x, y] => point2(x, y)
+    [x, y] => @geometry.point2(x, y)
     _ => raise BadCoordinateSpecification(text)
   }
 }
@@ -16,12 +16,12 @@ pub fn PdfDocument::parse_coordinate(
 pub fn pdf_parse_coordinate(
   document : PdfDocument,
   text : String,
-) -> Point2 raise PdfError {
+) -> @geometry.Point2 raise PdfError {
   document.parse_coordinate(text)
 }
 
 ///|
-fn pdf_coord_point_tuple(point : Point2) -> (Double, Double) {
+fn pdf_coord_point_tuple(point : @geometry.Point2) -> (Double, Double) {
   (point.x, point.y)
 }
 
@@ -61,14 +61,14 @@ fn pdf_coord_preprocess_coordinates(text : String) -> String {
 pub fn PdfDocument::parse_coordinates(
   self : PdfDocument,
   text : String,
-) -> Array[Point2] raise PdfError {
+) -> Array[@geometry.Point2] raise PdfError {
   let source = pdf_coord_preprocess_coordinates(text)
   let pages = self.pages_of_pagetree()
-  let output : Array[Point2] = Array::new(capacity=pages.length())
+  let output : Array[@geometry.Point2] = Array::new(capacity=pages.length())
   for page in pages {
     let values = self.parse_units_string(page, source)
     match values {
-      [x, y] => output.push(point2(x, y))
+      [x, y] => output.push(@geometry.point2(x, y))
       _ => raise BadCoordinateSpecification(source)
     }
   }
@@ -80,7 +80,7 @@ pub fn PdfDocument::parse_coordinates(
 pub fn pdf_parse_coordinates(
   document : PdfDocument,
   text : String,
-) -> Array[Point2] raise PdfError {
+) -> Array[@geometry.Point2] raise PdfError {
   document.parse_coordinates(text)
 }
 

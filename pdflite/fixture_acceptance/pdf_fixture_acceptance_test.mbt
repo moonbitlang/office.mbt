@@ -2125,7 +2125,7 @@ fn fixture_acceptance_assert_cpdf_logo_boxes_and_transparency_for_test(
   @test.assert_eq(document.endpage(), 1)
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
-  let logo_box : @pdflite.PdfRectangle = {
+  let logo_box : @geometry.PdfRectangle = {
     min_x: 0.0,
     min_y: 0.0,
     max_x: 56.693,
@@ -2431,7 +2431,7 @@ fn fixture_acceptance_assert_cpdf_source_logo_rest_merged_for_test(
 ) -> Unit raise {
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
-  let logo_box : @pdflite.PdfRectangle = {
+  let logo_box : @geometry.PdfRectangle = {
     min_x: 0.0,
     min_y: 0.0,
     max_x: 56.693,
@@ -3461,7 +3461,7 @@ fn fixture_acceptance_rect_for_test(
   min_y : Double,
   max_x : Double,
   max_y : Double,
-) -> @pdflite.PdfRectangle {
+) -> @geometry.PdfRectangle {
   { min_x, min_y, max_x, max_y }
 }
 
@@ -3700,7 +3700,7 @@ fn fixture_acceptance_assert_cpdf_source_chop_for_test(
   @test.assert_eq(document.endpage(), 4)
   let pages = document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 4)
-  let expected_boxes : ReadOnlyArray[@pdflite.PdfRectangle] = [
+  let expected_boxes : ReadOnlyArray[@geometry.PdfRectangle] = [
     fixture_acceptance_rect_for_test(10.0, 220.0, 110.0, 420.0),
     fixture_acceptance_rect_for_test(110.0, 220.0, 210.0, 420.0),
     fixture_acceptance_rect_for_test(10.0, 20.0, 110.0, 220.0),
@@ -4311,7 +4311,7 @@ fn fixture_acceptance_assert_cpdf_source_page_transform_for_test(
   @test.assert_eq(ops[0], Op_re(10.0, 20.0, 200.0, 400.0))
   @test.assert_eq(ops[1], Op_W)
   @test.assert_eq(ops[2], Op_n)
-  @test.assert_eq(ops[3], Op_cm(@pdflite.transform_translate(12.0, 34.0)))
+  @test.assert_eq(ops[3], Op_cm(@geometry.transform_translate(12.0, 34.0)))
   @test.assert_eq(fixture_acceptance_has_text_showing_op_for_test(ops), true)
   let text = @utf8.decode_lossy(document.test_extract_text([1]))
   fixture_acceptance_assert_contains_for_test(text, "Hello, World!")

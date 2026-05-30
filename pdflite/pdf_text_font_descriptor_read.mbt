@@ -57,7 +57,7 @@ fn pdf_text_fontfile_of_descriptor(descriptor : PdfObject) -> PdfFontFile? {
 }
 
 ///|
-fn pdf_text_zero_rectangle() -> PdfRectangle {
+fn pdf_text_zero_rectangle() -> @geometry.PdfRectangle {
   { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 }
 }
 

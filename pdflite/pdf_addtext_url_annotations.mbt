@@ -1,11 +1,11 @@
 ///|
 /// Build cpdf's URL link annotation object for add-text markup.
 pub fn pdf_addtext_url_annotation(
-  p0 : Point2,
-  p1 : Point2,
-  p2 : Point2,
-  p3 : Point2,
-  rectangle : PdfRectangle,
+  p0 : @geometry.Point2,
+  p1 : @geometry.Point2,
+  p2 : @geometry.Point2,
+  p3 : @geometry.Point2,
+  rectangle : @geometry.PdfRectangle,
   url : String,
   url_border : Bool,
 ) -> PdfObject {
@@ -52,11 +52,11 @@ pub fn pdf_addtext_url_annotation(
 
 ///|
 fn pdf_addtext_bounds_of_points(
-  p0 : Point2,
-  p1 : Point2,
-  p2 : Point2,
-  p3 : Point2,
-) -> PdfRectangle {
+  p0 : @geometry.Point2,
+  p1 : @geometry.Point2,
+  p2 : @geometry.Point2,
+  p3 : @geometry.Point2,
+) -> @geometry.PdfRectangle {
   {
     min_x: double_min(double_min(p0.x, p1.x), double_min(p2.x, p3.x)),
     min_y: double_min(double_min(p0.y, p1.y), double_min(p2.y, p3.y)),
@@ -81,12 +81,12 @@ pub fn pdf_addtext_url_annotation_height(
 ///|
 /// Calculate the transformed quad points and bounds for an add-text URL span.
 pub fn pdf_addtext_url_annotation_geometry(
-  origin : Point2,
+  origin : @geometry.Point2,
   horizontal_offset : Double,
   vertical_offset : Double,
   justification_offset : Double,
   rotation : Double,
-  rotation_offset : Point2,
+  rotation_offset : @geometry.Point2,
   page_rotation : Double,
   start_width : Double,
   end_width : Double,
@@ -98,14 +98,14 @@ pub fn pdf_addtext_url_annotation_geometry(
   let min_y = base_y
   let max_x = base_x + end_width
   let max_y = base_y + height
-  let matrix = transform_matrix_of_transform([
+  let matrix = @geometry.transform_matrix_of_transform([
     Translate(rotation_offset.x, rotation_offset.y),
-    Rotate(point2(base_x, base_y), rotation + page_rotation),
+    Rotate(@geometry.point2(base_x, base_y), rotation + page_rotation),
   ])
-  let p0 = matrix.apply(point2(min_x, min_y))
-  let p1 = matrix.apply(point2(max_x, max_y))
-  let p2 = matrix.apply(point2(min_x, max_y))
-  let p3 = matrix.apply(point2(max_x, min_y))
+  let p0 = matrix.apply(@geometry.point2(min_x, min_y))
+  let p1 = matrix.apply(@geometry.point2(max_x, max_y))
+  let p2 = matrix.apply(@geometry.point2(min_x, max_y))
+  let p3 = matrix.apply(@geometry.point2(max_x, min_y))
   { p0, p1, p2, p3, rectangle: pdf_addtext_bounds_of_points(p0, p1, p2, p3) }
 }
 
@@ -158,12 +158,12 @@ pub fn PdfDocument::addtext_url_annotation_references(
   text : String,
   urls : ArrayView[@addtext.PdfAddTextUrl],
   measure : (String) -> Double raise PdfError,
-  origin : Point2,
+  origin : @geometry.Point2,
   horizontal_offset : Double,
   vertical_offset : Double,
   justification_offset : Double,
   rotation : Double,
-  rotation_offset : Point2,
+  rotation_offset : @geometry.Point2,
   page_rotation : Double,
   font : PdfFont?,
   fontname : String,
@@ -203,12 +203,12 @@ pub fn pdf_addtext_url_annotation_references(
   text : String,
   urls : ArrayView[@addtext.PdfAddTextUrl],
   measure : (String) -> Double raise PdfError,
-  origin : Point2,
+  origin : @geometry.Point2,
   horizontal_offset : Double,
   vertical_offset : Double,
   justification_offset : Double,
   rotation : Double,
-  rotation_offset : Point2,
+  rotation_offset : @geometry.Point2,
   page_rotation : Double,
   font : PdfFont?,
   fontname : String,

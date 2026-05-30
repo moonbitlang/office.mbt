@@ -94,7 +94,7 @@ fn PdfDocument::pdf_attach_add_document_file(
 }
 
 ///|
-fn pdf_attach_annotation_rect(bounds : PdfRectangle) -> PdfObject {
+fn pdf_attach_annotation_rect(bounds : @geometry.PdfRectangle) -> PdfObject {
   PdfArray([
     PdfReal(18.0),
     PdfReal(bounds.max_y - 45.0),

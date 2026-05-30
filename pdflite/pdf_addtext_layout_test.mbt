@@ -1,7 +1,7 @@
 ///|
 fn addtext_layout_offset_for_test(
   rotation : @addtext.PdfAddTextRotation,
-  position : @pdflite.PdfPosition,
+  position : @geometry.PdfPosition,
   justification : @addtext.PdfAddTextJustification,
 ) -> Double {
   @addtext.pdf_addtext_justification_offset(
@@ -45,7 +45,7 @@ fn addtext_layout_name_for_test(text : String) -> @pdflite.PdfName {
 }
 
 ///|
-fn addtext_layout_bounds_for_test() -> @pdflite.PdfRectangle {
+fn addtext_layout_bounds_for_test() -> @geometry.PdfRectangle {
   { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 50.0 }
 }
 
@@ -222,7 +222,7 @@ test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
 ///|
 test "PdfDocument addtext_calc_textwidth measures selected fonts" {
   let document = @pdflite.pdf_document_empty()
-  let page = @page.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@geometry.paper_a4)
   addtext_layout_assert_close_for_test(
     try! document.addtext_calc_textwidth(
       page,
@@ -239,7 +239,7 @@ test "PdfDocument addtext_calc_textwidth measures selected fonts" {
 ///|
 test "PdfDocument addtext_calc_textwidth measures fontpacks from UTF-8" {
   let document = @pdflite.pdf_document_empty()
-  let page = @page.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@geometry.paper_a4)
   let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
   metrics[66] = 610.0
   let pack : @pdflite.PdfFontPack = {
@@ -290,7 +290,7 @@ test "PdfDocument addtext_calc_textwidth measures existing page fonts" {
     (addtext_layout_name_for_test("/BaseFont"), PdfNameObject(basefont)),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         addtext_layout_name_for_test("/Font"),
@@ -320,7 +320,7 @@ test "PdfDocument addtext_calc_textwidth measures existing page fonts" {
 ///|
 test "PdfDocument addtext_line_widths measures selected font paragraphs" {
   let document = @pdflite.pdf_document_empty()
-  let page = @page.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@geometry.paper_a4)
   let widths = try! document.addtext_line_widths(
     page,
     Some(addtext_layout_standard_font_for_test()),
@@ -340,7 +340,7 @@ test "PdfDocument addtext_line_widths measures selected font paragraphs" {
 ///|
 test "pdf_addtext_line_widths wrapper handles fontpacks" {
   let document = @pdflite.pdf_document_empty()
-  let page = @page.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@geometry.paper_a4)
   let metrics : Array[Double] = [ for _ in 0..<256 => 0.0 ]
   metrics[66] = 610.0
   let pack : @pdflite.PdfFontPack = {
@@ -372,7 +372,7 @@ test "pdf_addtext_line_widths wrapper handles fontpacks" {
 ///|
 test "PdfDocument addtext_line_widths reports empty expanded lines" {
   let document = @pdflite.pdf_document_empty()
-  let page = @page.pdf_page_blank(@pdflite.paper_a4)
+  let page = @page.pdf_page_blank(@geometry.paper_a4)
   let result : Result[@addtext.PdfAddTextLineWidths, Error] = try? document.addtext_line_widths(
     page,
     Some(addtext_layout_standard_font_for_test()),
@@ -634,10 +634,10 @@ test "pdf_addtext_line_placement combines horizontal placement values" {
     3.0,
     PdfAddTextLeftJustify,
   )
-  @test.assert_eq(placement.origin, @pdflite.point2(75.0, 44.0))
+  @test.assert_eq(placement.origin, @geometry.point2(75.0, 44.0))
   @test.assert_eq(placement.base_rotation, 0.0)
   @test.assert_eq(placement.text_rotation, 0.0)
-  @test.assert_eq(placement.rotation_offset, @pdflite.point2(0.0, 0.0))
+  @test.assert_eq(placement.rotation_offset, @geometry.point2(0.0, 0.0))
   @test.assert_eq(placement.horizontal_offset, 32.0)
   @test.assert_eq(placement.vertical_offset, 3.0)
   @test.assert_eq(placement.justification_offset, 30.0)
@@ -655,13 +655,13 @@ test "pdf_addtext_line_placement combines vertical rotation values" {
     3.0,
     PdfAddTextCentreJustify,
   )
-  @test.assert_eq(placement.origin, @pdflite.point2(40.0, 46.0))
+  @test.assert_eq(placement.origin, @geometry.point2(40.0, 46.0))
   @test.assert_eq(placement.base_rotation, 0.0)
   addtext_layout_assert_close_for_test(
     placement.text_rotation,
     @math.PI * 3.0 / 2.0,
   )
-  @test.assert_eq(placement.rotation_offset, @pdflite.point2(10.0, 0.0))
+  @test.assert_eq(placement.rotation_offset, @geometry.point2(10.0, 0.0))
   @test.assert_eq(placement.horizontal_offset, 2.0)
   @test.assert_eq(placement.vertical_offset, 18.0)
   @test.assert_eq(placement.justification_offset, -15.0)

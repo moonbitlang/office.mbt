@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_page_transform_catalog_destinations_object(
   self : PdfDocument,
   dests : PdfObject,
-  matrices : ArrayView[(Int, TransformMatrix)],
+  matrices : ArrayView[(Int, @geometry.TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> PdfObject? {
   let lookup = pdf_page_matrix_lookup(matrices, page_reference_numbers)
@@ -73,7 +73,7 @@ fn PdfDocument::pdf_page_replace_active_catalog_entry(
 ///|
 fn PdfDocument::pdf_page_transform_catalog_destinations_for_matrices(
   self : PdfDocument,
-  matrices : ArrayView[(Int, TransformMatrix)],
+  matrices : ArrayView[(Int, @geometry.TransformMatrix)],
   page_reference_numbers : ArrayView[Int],
 ) -> Unit raise PdfError {
   match self.pdf_page_active_catalog() {

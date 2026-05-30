@@ -78,9 +78,9 @@ fn pdf_content_simple_width_of_charcode(
     Some(metrics) if charcode >= 0 && charcode < metrics.length() => {
       let matrix = match font.fonttype {
         PdfType3(data) => data.fontmatrix
-        _ => transform_identity_matrix
+        _ => @geometry.transform_identity_matrix
       }
-      let point = matrix.apply(point2(metrics[charcode], 0.0))
+      let point = matrix.apply(@geometry.point2(metrics[charcode], 0.0))
       (point.x, 0.0, 0.0)
     }
     _ => (0.0, 0.0, 0.0)

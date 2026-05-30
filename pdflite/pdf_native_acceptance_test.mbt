@@ -389,7 +389,7 @@ fn acceptance_push_indirect_object_for_test(
 ///|
 fn acceptance_one_page_ops_for_test() -> Array[@content.PdfContentOp] {
   [
-    Op_cm(@pdflite.transform_translate(50.0, 770.0)),
+    Op_cm(@geometry.transform_translate(50.0, 770.0)),
     Op_BT,
     Op_Tf(acceptance_name_for_test("/F0"), 36.0),
     Op_Tj(acceptance_ascii_for_test("Hello, World!")),
@@ -412,7 +412,7 @@ fn acceptance_text_page_ops_for_test(
 ///|
 fn acceptance_text_page_for_test(text : String) -> @page.PdfPage raise {
   {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops(
         acceptance_text_page_ops_for_test(text),
@@ -467,7 +467,7 @@ fn acceptance_one_page_document_for_test() -> @pdflite.PdfDocument raise {
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops(acceptance_one_page_ops_for_test()),
     ],
@@ -492,7 +492,7 @@ fn acceptance_split_content_document_for_test() -> @pdflite.PdfDocument raise {
   doc.set_version(1, 4)
   let ops = acceptance_one_page_ops_for_test()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops(ops[0:3]),
       @pdflite.pdf_content_stream_of_ops(ops[3:ops.length()]),
@@ -633,7 +633,7 @@ fn acceptance_tounicode_text_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -769,7 +769,7 @@ fn acceptance_tounicode_variation_document_for_test() -> @pdflite.PdfDocument ra
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -895,7 +895,7 @@ fn acceptance_tounicode_parser_corner_document_for_test() -> @pdflite.PdfDocumen
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -1030,7 +1030,7 @@ fn acceptance_tounicode_sequence_document_for_test() -> @pdflite.PdfDocument rai
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -1324,7 +1324,7 @@ fn acceptance_type3_text_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -1601,7 +1601,7 @@ fn acceptance_type3_form_resource_document_for_test() -> @pdflite.PdfDocument ra
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -1774,7 +1774,7 @@ fn acceptance_type3_encoded_text_document_for_test() -> @pdflite.PdfDocument rai
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -2011,7 +2011,7 @@ fn acceptance_type3_fixture_charproc_document_for_test() -> @pdflite.PdfDocument
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -2327,7 +2327,7 @@ fn acceptance_identity_h_text_document_for_test() -> @pdflite.PdfDocument raise 
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -2370,7 +2370,7 @@ fn acceptance_identity_v_text_document_for_test() -> @pdflite.PdfDocument raise 
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -2447,7 +2447,7 @@ fn acceptance_identity_h_tounicode_text_document_for_test() -> @pdflite.PdfDocum
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -2553,7 +2553,7 @@ fn acceptance_gbk2k_text_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -2619,7 +2619,7 @@ fn acceptance_big5_text_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -2681,7 +2681,7 @@ fn acceptance_hkscs_text_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -2791,7 +2791,7 @@ fn acceptance_cns_euc_text_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   )
   let horizontal_page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -2803,7 +2803,7 @@ fn acceptance_cns_euc_text_document_for_test() -> @pdflite.PdfDocument raise {
     resources: acceptance_cns_euc_resources_for_test(),
   }
   let vertical_page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -3264,7 +3264,7 @@ fn acceptance_predefined_cmap_page_for_test(
     ),
   ])
   {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -5706,7 +5706,7 @@ fn acceptance_truetype_text_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -6119,7 +6119,7 @@ fn acceptance_image_lifecycle_document_for_test() -> @pdflite.PdfDocument raise 
     ),
   ])
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops(
         acceptance_image_content_ops_for_test(),
@@ -6332,7 +6332,7 @@ fn acceptance_encoded_image_alias_document_for_test() -> @pdflite.PdfDocument ra
   )
   let resources = acceptance_encoded_image_alias_resources_for_test()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops(
         acceptance_encoded_image_alias_content_ops_for_test(),
@@ -6561,7 +6561,7 @@ fn acceptance_named_image_resource_document_for_test() -> @pdflite.PdfDocument r
   )
   let resources = acceptance_named_image_resources_for_test()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops(
         acceptance_named_image_content_ops_for_test(),
@@ -6753,7 +6753,7 @@ fn acceptance_cmyk_image_document_for_test() -> @pdflite.PdfDocument raise {
   )
   let resources = acceptance_cmyk_image_resources_for_test()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops(
         acceptance_cmyk_image_content_ops_for_test(),
@@ -7040,7 +7040,7 @@ fn acceptance_alt_image_document_for_test() -> @pdflite.PdfDocument raise {
   doc.add_object_given_number(95, acceptance_alt_image_lab_xobject_for_test())
   let resources = acceptance_alt_image_resources_for_test()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops(
         acceptance_alt_image_content_ops_for_test(),
@@ -9686,7 +9686,7 @@ fn acceptance_resource_lifecycle_document_for_test() -> @pdflite.PdfDocument rai
   doc.set_version(1, 6)
   doc.add_object_given_number(70, acceptance_resource_lifecycle_form_for_test())
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: acceptance_resource_lifecycle_resources_for_test(
       acceptance_name_for_test("/F0"),
       acceptance_name_for_test("/Fm1"),
@@ -9904,7 +9904,7 @@ fn acceptance_change_pages_resource_page_for_test(
   text : String,
 ) -> @page.PdfPage raise {
   {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: acceptance_resource_lifecycle_resources_for_test(
       acceptance_name_for_test("/F0"),
       acceptance_name_for_test("/Fm1"),
@@ -10702,7 +10702,7 @@ fn acceptance_draft_source_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: @pdflite.pdf_dictionary([
       (
         acceptance_name_for_test("/XObject"),

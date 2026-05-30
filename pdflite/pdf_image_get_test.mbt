@@ -435,9 +435,9 @@ test "PdfDocument get_image_24bpp extracts image XObjects after PDF roundtrip" {
       StreamGot(flate_data),
     ),
   )
-  let placement = { ..@pdflite.transform_identity_matrix, a: 2.0, d: 1.0 }
+  let placement = { ..@geometry.transform_identity_matrix, a: 2.0, d: 1.0 }
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       try! @pdflite.pdf_content_stream_of_ops([
         Op_q,

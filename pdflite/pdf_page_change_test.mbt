@@ -19,7 +19,7 @@ fn page_change_assert_indirect_object_for_test(
 ///|
 fn page_change_hello_ops_for_test() -> Array[@content.PdfContentOp] {
   [
-    Op_cm(@pdflite.transform_translate(50.0, 770.0)),
+    Op_cm(@geometry.transform_translate(50.0, 770.0)),
     Op_BT,
     Op_Tf(page_change_name_for_test("/F0"), 36.0),
     Op_Tj(@ascii.encode("Hello, World!")),
@@ -59,7 +59,7 @@ fn page_change_index_mediabox_for_test(index : Int) -> @pdflite.PdfObject {
 ///|
 fn page_change_indexed_blank_for_test(index : Int) -> @page.PdfPage {
   {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     mediabox: page_change_index_mediabox_for_test(index),
   }
 }
@@ -251,7 +251,7 @@ fn page_change_catalog_destination_for_test(
 test "PdfDocument change_pages writes modified content into a replacement page tree" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       try! @pdflite.pdf_content_stream_of_ops(page_change_hello_ops_for_test()),
     ],
@@ -296,7 +296,7 @@ test "PdfDocument change_pages preserves document metadata and trailer entries" 
   doc.set_version(1, 7)
   doc.set_first_xref(4096)
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(
     try! doc.add_root(page_root, [(key_lang, PdfString(@ascii.encode("en-US")))]),
@@ -308,7 +308,7 @@ test "PdfDocument change_pages preserves document metadata and trailer entries" 
   doc.set_trailer_dict(doc.trailer_dict().add_dict_entry(key_id, document_id))
 
   let changed = try! doc.change_pages([
-    { ..@page.pdf_page_blank(@pdflite.paper_a4), rotate: Rotate90 },
+    { ..@page.pdf_page_blank(@geometry.paper_a4), rotate: Rotate90 },
   ])
   @test.assert_eq(changed.version(), (1, 7))
   @test.assert_eq(changed.first_xref(), 4096)
@@ -333,7 +333,7 @@ test "pdftest-style content parse rewrite change_pages round trip" {
   let doc = @pdflite.pdf_document_empty()
   let ops = page_change_hello_ops_for_test()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       try! @pdflite.pdf_content_stream_of_ops(ops[0:3]),
       try! @pdflite.pdf_content_stream_of_ops(ops[3:ops.length()]),
@@ -396,7 +396,7 @@ test "pdfdraft-style image replacement removes image xobjects and roundtrips" {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: page_change_xobject_resources_for_test([
       (image_name, PdfIndirect(7)),
       (form_name, PdfIndirect(8)),
@@ -465,8 +465,8 @@ test "PdfDocument change_pages renumbers same-count page references" {
   let key_open_action = page_change_name_for_test("/OpenAction")
   let type_fit = page_change_name_for_test("/Fit")
   let doc = @pdflite.pdf_document_empty()
-  let first = @page.pdf_page_blank(@pdflite.paper_a4)
-  let second = { ..@page.pdf_page_blank(@pdflite.paper_a4), rotate: Rotate90 }
+  let first = @page.pdf_page_blank(@geometry.paper_a4)
+  let second = { ..@page.pdf_page_blank(@geometry.paper_a4), rotate: Rotate90 }
   let page_root = try! doc.add_pagetree([first, second])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
@@ -502,7 +502,7 @@ test "PdfDocument change_pages renumbers same-count page references" {
 test "PdfDocument change_pages transforms bookmark destinations with matrices" {
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
@@ -524,7 +524,7 @@ test "PdfDocument change_pages transforms bookmark destinations with matrices" {
   let changed = try! bookmarked.change_pages(
     try! bookmarked.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
   @test.assert_eq(try! changed.read_bookmarks(preserve_actions=true), [
@@ -561,7 +561,7 @@ test "PdfDocument change_pages transforms link annotations and open action" {
   let annotation_array_number = 22
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
@@ -666,7 +666,7 @@ test "PdfDocument change_pages transforms link annotations and open action" {
   let changed = try! doc.change_pages(
     try! doc.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
   match
@@ -796,7 +796,7 @@ test "PdfDocument change_pages leaves full-page fit destinations untransformed" 
   let action_annotation_number = 21
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
@@ -850,7 +850,7 @@ test "PdfDocument change_pages leaves full-page fit destinations untransformed" 
   let changed = try! doc.change_pages(
     try! doc.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
   @test.assert_eq(
@@ -884,7 +884,7 @@ test "PdfDocument change_pages leaves integer page destinations untransformed" {
   let type_xyz = page_change_name_for_test("/XYZ")
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   doc.add_object_given_number(
@@ -905,7 +905,7 @@ test "PdfDocument change_pages leaves integer page destinations untransformed" {
   let changed = try! doc.change_pages(
     try! doc.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   @test.assert_eq(
     changed
@@ -935,7 +935,7 @@ test "PdfDocument change_pages tolerates malformed matrix destinations" {
   let annotation_number = 20
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
@@ -969,7 +969,7 @@ test "PdfDocument change_pages tolerates malformed matrix destinations" {
   let changed = try! doc.change_pages(
     try! doc.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
   let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
@@ -1006,7 +1006,7 @@ test "PdfDocument change_pages tolerates malformed action matrix destinations" {
   let bad_coordinate = page_change_name_for_test("/Bad")
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
@@ -1041,7 +1041,7 @@ test "PdfDocument change_pages tolerates malformed action matrix destinations" {
   let changed = try! doc.change_pages(
     try! doc.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
   let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
@@ -1082,7 +1082,7 @@ test "PdfDocument change_pages tolerates malformed catalog matrix destinations" 
   let string_destination = @ascii.encode("bad-chapter")
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
@@ -1113,7 +1113,7 @@ test "PdfDocument change_pages tolerates malformed catalog matrix destinations" 
   let changed = try! doc.change_pages(
     try! doc.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
   let renumbered_bad_destination : @pdflite.PdfObject = PdfArray([
@@ -1143,7 +1143,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
   let string_destination = @ascii.encode("chapter")
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
@@ -1204,7 +1204,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
   let changed = try! bookmarked.change_pages(
     try! bookmarked.pages_of_pagetree(),
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
   @test.assert_eq(page_change_destination_entries_for_test(changed), [
@@ -1260,8 +1260,8 @@ test "PdfDocument change_pages leaves references when count differs without mapp
   let type_xyz = page_change_name_for_test("/XYZ")
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
-    @page.pdf_page_blank(@pdflite.paper_a4),
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   let old_numbers = try! doc.page_reference_numbers()
@@ -1281,9 +1281,9 @@ test "PdfDocument change_pages leaves references when count differs without mapp
     ),
   )
   let changed = try! doc.change_pages(
-    [@page.pdf_page_blank(@pdflite.paper_a4)],
+    [@page.pdf_page_blank(@geometry.paper_a4)],
     change_references=true,
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   @test.assert_eq((try! changed.page_reference_numbers()).length(), 1)
   @test.assert_eq(
@@ -1399,7 +1399,7 @@ test "PdfDocument change_pages skips bookmark matrices when page count changes" 
     [page_change_indexed_blank_for_test(9)],
     change_references=true,
     changes=[(2, 1)],
-    matrices=[(1, @pdflite.transform_translate(10.0, 20.0))],
+    matrices=[(1, @geometry.transform_translate(10.0, 20.0))],
   )
   let new_numbers = try! changed.page_reference_numbers()
   @test.assert_eq(new_numbers.length(), 1)

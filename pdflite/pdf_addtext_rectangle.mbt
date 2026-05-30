@@ -1,12 +1,12 @@
 ///|
 /// Calculate the cpdf add-rectangle lower-left origin after placement.
 pub fn pdf_addtext_rectangle_origin(
-  bounds : PdfRectangle,
-  position : PdfPosition,
+  bounds : @geometry.PdfRectangle,
+  position : @geometry.PdfPosition,
   width : Double,
   height : Double,
 ) -> (Double, Double) {
-  let placed = pdf_calculate_position(false, width, bounds, position)
+  let placed = @geometry.pdf_calculate_position(false, width, bounds, position)
   let y = match position {
     PdfPositionTop(_) | PdfPositionTopLeft(_, _) | PdfPositionTopRight(_, _) =>
       placed.y - height
@@ -21,7 +21,7 @@ fn PdfDocument::pdf_addtext_rectangle_bounds(
   self : PdfDocument,
   page : @page.PdfPage,
   relative_to_box : PdfName,
-) -> PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise PdfError {
   if relative_to_box == pdf_page_mediabox_key() {
     self.parse_rectangle(page.mediabox)
   } else {
@@ -50,7 +50,7 @@ fn PdfDocument::pdf_addtext_rectangle_page(
   page : @page.PdfPage,
   coord : String,
   colour : @colour.PdfContentColour,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   relative_to_box : PdfName,
   outline : Bool,
   line_width : Double,
@@ -87,7 +87,7 @@ pub fn PdfDocument::addtext_rectangle(
   page_numbers : ArrayView[Int],
   coord : String,
   colour : @colour.PdfContentColour,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   relative_to_box? : PdfName = pdf_page_mediabox_key(),
   outline? : Bool = false,
   line_width? : Double = 1.0,
@@ -127,7 +127,7 @@ pub fn pdf_addtext_rectangle(
   page_numbers : ArrayView[Int],
   coord : String,
   colour : @colour.PdfContentColour,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   relative_to_box? : PdfName = pdf_page_mediabox_key(),
   outline? : Bool = false,
   line_width? : Double = 1.0,
@@ -158,7 +158,7 @@ pub fn pdf_addrectangle(
   outline : Bool,
   line_width : Double,
   opacity : Double,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   relative_to_box : String,
   underneath : Bool,
   page_numbers : ArrayView[Int],

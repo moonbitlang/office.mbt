@@ -23,7 +23,7 @@ pub(all) struct PdfDrawControlFrame {
 /// `TextSection`, `Qq`, and `FormXObject` operations when closed.
 pub struct PdfDrawControl {
   frames : Array[PdfDrawControlFrame]
-  mut xobject_bbox : PdfCoordRectangle
+  mut xobject_bbox : @geometry.PdfCoordRectangle
   mut font_name : String
   mut font_size : Double
   mut fontpack : PdfFontPack?
@@ -34,7 +34,7 @@ pub struct PdfDrawControl {
 } derive(Debug, Eq, ToJson)
 
 ///|
-fn pdf_draw_control_default_bbox() -> PdfCoordRectangle {
+fn pdf_draw_control_default_bbox() -> @geometry.PdfCoordRectangle {
   { x: 0.0, y: 0.0, width: 1000.0, height: 1000.0 }
 }
 

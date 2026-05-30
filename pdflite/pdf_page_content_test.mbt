@@ -150,7 +150,7 @@ fn page_content_resource_value_for_test(
 test "PdfDocument add_prefix renames resources and content references" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: page_content_prefix_full_resources_for_test(),
     content: [
       try! @pdflite.pdf_content_stream_of_ops(
@@ -182,7 +182,7 @@ test "PdfDocument add_prefix rewrites shared content streams once" {
     ]),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: page_content_prefix_resources_for_test(["/F0"]),
     content: [PdfIndirect(9)],
   }
@@ -329,7 +329,7 @@ test "PdfDocument add_prefix merges split content arrays before rewriting" {
 test "PdfDocument renumber_pages gives duplicate page resources distinct names" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: page_content_prefix_resources_for_test(["/F0"]),
     content: [
       try! @pdflite.pdf_content_stream_of_ops([
@@ -363,7 +363,7 @@ test "PdfDocument renumber_pages gives duplicate page resources distinct names" 
 test "PdfDocument renumber_pages rewrites resource-backed content operators" {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: page_content_prefix_full_resources_for_test(),
     content: [
       try! @pdflite.pdf_content_stream_of_ops(

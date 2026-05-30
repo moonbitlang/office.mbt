@@ -486,13 +486,13 @@ test "PdfDocument get_number and parse_rectangle mirror Pdf helpers" {
   guard bad_number is Err(@pdflite.PdfError::NumberExpected) else {
     fail("expected @pdflite.PdfError::NumberExpected")
   }
-  let bad_rect : Result[@pdflite.PdfRectangle, Error] = try? doc.parse_rectangle(
+  let bad_rect : Result[@geometry.PdfRectangle, Error] = try? doc.parse_rectangle(
     PdfArray([PdfInteger(1)]),
   )
   guard bad_rect is Err(@pdflite.PdfError::RectangleExpected) else {
     fail("expected @pdflite.PdfError::RectangleExpected")
   }
-  let bad_number_rect : Result[@pdflite.PdfRectangle, Error] = try? doc.parse_rectangle(
+  let bad_number_rect : Result[@geometry.PdfRectangle, Error] = try? doc.parse_rectangle(
     PdfArray([PdfInteger(1), PdfNull, PdfInteger(3), PdfInteger(4)]),
   )
   guard bad_number_rect is Err(@pdflite.PdfError::BadRectangle) else {
@@ -503,7 +503,7 @@ test "PdfDocument get_number and parse_rectangle mirror Pdf helpers" {
 ///|
 test "PdfDocument transform_rect and transform_quadpoints update geometry" {
   let doc = @pdflite.pdf_document_empty()
-  let matrix = @pdflite.transform_translate(1.0, 2.0)
+  let matrix = @geometry.transform_translate(1.0, 2.0)
   @test.assert_eq(
     try! doc.transform_rect(
       matrix,
@@ -566,17 +566,17 @@ test "PdfDocument transform_rect and transform_quadpoints update geometry" {
 test "PdfDocument parse_matrix and pdf_object_of_matrix round trip matrices" {
   let doc = @pdflite.pdf_document_empty()
   let key_matrix = lookup_name_for_test([47, 77, 97, 116, 114, 105, 120])
-  let matrix = @pdflite.transform_translate(10.0, 20.0)
+  let matrix = @geometry.transform_translate(10.0, 20.0)
   let dict = @pdflite.pdf_dictionary([
     (key_matrix, @pdflite.pdf_object_of_matrix(matrix)),
   ])
   @test.assert_eq(try! doc.parse_matrix(key_matrix, dict), matrix)
   @test.assert_eq(
     try! doc.parse_matrix(lookup_name_for_test([47, 77, 105, 115, 115]), dict),
-    @pdflite.transform_identity_matrix,
+    @geometry.transform_identity_matrix,
   )
   let bad = @pdflite.pdf_dictionary([(key_matrix, PdfArray([PdfInteger(1)]))])
-  let bad_matrix : Result[@pdflite.TransformMatrix, Error] = try? doc.parse_matrix(
+  let bad_matrix : Result[@geometry.TransformMatrix, Error] = try? doc.parse_matrix(
     key_matrix, bad,
   )
   guard bad_matrix is Err(@pdflite.PdfError::MatrixMalformed) else {

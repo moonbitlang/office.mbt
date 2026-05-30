@@ -698,7 +698,7 @@ fn ua_matterhorn_document_for_test(
 ) -> @pdflite.PdfDocument {
   let doc = @pdflite.pdf_document_empty()
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [try! @pdflite.pdf_content_stream_of_ops(ops)],
     resources,
     rest,

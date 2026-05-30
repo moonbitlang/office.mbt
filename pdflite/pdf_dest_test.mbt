@@ -131,7 +131,7 @@ test "standalone destination helpers delegate to document methods" {
     try! @pdflite.pdf_read_destination(doc, destination_object, shallow=true),
     try! doc.read_destination(destination_object, shallow=true),
   )
-  let matrix = @pdflite.transform_translate(10.0, 20.0)
+  let matrix = @geometry.transform_translate(10.0, 20.0)
   let destination : @destination.PdfDestination = DestXYZ(
     TargetPageObject(7),
     Some(1.0),
@@ -614,7 +614,7 @@ test "PdfDocument read_destination rejects unresolved trailer root for string de
 ///|
 test "PdfDocument transform_destination adjusts page-object coordinates" {
   let doc = @pdflite.pdf_document_empty()
-  let matrix = @pdflite.transform_translate(10.0, 20.0)
+  let matrix = @geometry.transform_translate(10.0, 20.0)
   @test.assert_eq(
     try! doc.transform_destination(
       matrix,
@@ -676,7 +676,7 @@ test "PdfDocument transform_destination adjusts page-object coordinates" {
 ///|
 test "PdfDocument transform_destination clips coordinates and skips external targets" {
   let doc = @pdflite.pdf_document_empty()
-  let matrix = @pdflite.transform_translate(40000.0, -40000.0)
+  let matrix = @geometry.transform_translate(40000.0, -40000.0)
   @test.assert_eq(
     try! doc.transform_destination(
       matrix,
@@ -703,7 +703,7 @@ test "PdfDocument transform_destination clips coordinates and skips external tar
 ///|
 test "PdfDocument transform_destination rewrites GoTo action D entry" {
   let doc = @pdflite.pdf_document_empty()
-  let matrix = @pdflite.transform_translate(10.0, 20.0)
+  let matrix = @geometry.transform_translate(10.0, 20.0)
   let action : @pdflite.PdfObject = PdfDictionary([
     (dest_name_for_test("/S"), PdfNameObject(dest_name_for_test("/GoTo"))),
     (

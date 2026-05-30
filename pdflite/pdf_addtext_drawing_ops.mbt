@@ -94,13 +94,13 @@ fn pdf_addtext_text_matrix(
   text_rotation : Double,
   rotation_h_offset : Double,
   rotation_v_offset : Double,
-) -> TransformMatrix {
-  transform_matrix_of_transform([
+) -> @geometry.TransformMatrix {
+  @geometry.transform_matrix_of_transform([
     Translate(
       x - horizontal_offset + rotation_h_offset,
       y - vertical_offset + rotation_v_offset,
     ),
-    Rotate(point2(0.0, 0.0), base_rotation + text_rotation),
+    Rotate(@geometry.point2(0.0, 0.0), base_rotation + text_rotation),
   ])
 }
 

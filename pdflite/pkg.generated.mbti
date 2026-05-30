@@ -50,34 +50,6 @@ pub fn byte_output_new(initial_size? : Int) -> @core.ByteOutput raise @core.PdfE
 
 pub fn decompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
 
-pub let paper_a0 : @geometry.PaperSize
-
-pub let paper_a1 : @geometry.PaperSize
-
-pub let paper_a10 : @geometry.PaperSize
-
-pub let paper_a2 : @geometry.PaperSize
-
-pub let paper_a3 : @geometry.PaperSize
-
-pub let paper_a4 : @geometry.PaperSize
-
-pub let paper_a5 : @geometry.PaperSize
-
-pub let paper_a6 : @geometry.PaperSize
-
-pub let paper_a7 : @geometry.PaperSize
-
-pub let paper_a8 : @geometry.PaperSize
-
-pub let paper_a9 : @geometry.PaperSize
-
-pub fn paper_size_make(@geometry.PdfUnit, Double, Double) -> @geometry.PaperSize
-
-pub let paper_uslegal : @geometry.PaperSize
-
-pub let paper_usletter : @geometry.PaperSize
-
 pub fn pdf_add_annotation(PdfDocument, @page.PdfPage, @annotation.PdfAnnotation) -> @page.PdfPage raise @core.PdfError
 
 pub fn pdf_add_bookmark_title(String, Bool, PdfDocument) -> PdfDocument raise @core.PdfError
@@ -363,8 +335,6 @@ pub fn pdf_bytes_of_xmltree(@metadata.PdfMetadataXmlDocument) -> Bytes
 pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
 
 pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
-
-pub fn pdf_calculate_position(Bool, Double, @geometry.PdfRectangle, @geometry.PdfPosition) -> @geometry.PdfCalculatedPosition
 
 pub fn pdf_ccitt_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
 
@@ -1908,69 +1878,11 @@ pub fn pdf_xmltree_of_bytes(BytesView) -> @metadata.PdfMetadataXmlDocument raise
 
 pub fn pdf_xobjbbox(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
 
-pub fn point2(Double, Double) -> @geometry.Point2
-
 pub fn recompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
 
 pub fn squeeze(PdfDocument, page_data? : Bool) -> PdfDocument raise @core.PdfError
 
 pub fn stream_to_get(@core.ByteCursor, Int, Int) -> @syntax.ToGet
-
-pub fn transform_append(ArrayView[@geometry.TransformOp], ArrayView[@geometry.TransformOp]) -> Array[@geometry.TransformOp]
-
-pub fn transform_apply(ArrayView[@geometry.TransformOp], @geometry.Point2) -> @geometry.Point2
-
-pub fn transform_apply_matrix(@geometry.TransformMatrix, @geometry.Point2) -> @geometry.Point2
-
-pub fn transform_apply_ops(ArrayView[@geometry.TransformOp], @geometry.Point2) -> @geometry.Point2
-
-pub fn transform_compose_op(@geometry.TransformOp, ArrayView[@geometry.TransformOp]) -> Array[@geometry.TransformOp]
-
-pub fn transform_decompose(@geometry.TransformMatrix) -> @geometry.TransformDecomposition
-
-pub fn transform_identity() -> Array[@geometry.TransformOp]
-
-pub let transform_identity_matrix : @geometry.TransformMatrix
-
-pub fn transform_matrix_compose(@geometry.TransformMatrix, @geometry.TransformMatrix) -> @geometry.TransformMatrix
-
-pub fn transform_matrix_invert(@geometry.TransformMatrix) -> @geometry.TransformMatrix raise @core.PdfError
-
-pub fn transform_matrix_of_op(@geometry.TransformOp) -> @geometry.TransformMatrix
-
-pub fn transform_matrix_of_ops(ArrayView[@geometry.TransformOp]) -> @geometry.TransformMatrix
-
-pub fn transform_matrix_of_transform(ArrayView[@geometry.TransformOp]) -> @geometry.TransformMatrix
-
-pub fn transform_recompose(@geometry.TransformDecomposition) -> @geometry.TransformMatrix
-
-pub fn transform_recompose_components(Double, Double, Double, Double, Double, Double) -> @geometry.TransformMatrix
-
-pub fn transform_rotate(@geometry.Point2, Double) -> @geometry.TransformMatrix
-
-pub fn transform_scale(@geometry.Point2, Double, Double) -> @geometry.TransformMatrix
-
-pub fn transform_shear_x(@geometry.Point2, Double) -> @geometry.TransformMatrix
-
-pub fn transform_shear_y(@geometry.Point2, Double) -> @geometry.TransformMatrix
-
-pub fn transform_string_of_matrix(@geometry.TransformMatrix) -> String
-
-pub fn transform_string_of_op(@geometry.TransformOp) -> String
-
-pub fn transform_string_of_ops(ArrayView[@geometry.TransformOp]) -> String
-
-pub fn transform_string_of_transform(ArrayView[@geometry.TransformOp]) -> String
-
-pub fn transform_translate(Double, Double) -> @geometry.TransformMatrix
-
-pub fn unit_centimetres(Double, @geometry.PdfUnit) -> Double
-
-pub fn unit_inches(Double, @geometry.PdfUnit) -> Double
-
-pub fn unit_millimetres(Double, @geometry.PdfUnit) -> Double
-
-pub fn unit_points(Double, @geometry.PdfUnit) -> Double
 
 // Errors
 
@@ -3449,13 +3361,7 @@ pub using @core {type ByteCursor}
 
 pub using @core {type ByteOutput}
 
-pub using @geometry {type PaperSize}
-
 pub type PdfBytes = Bytes
-
-pub using @geometry {type PdfCalculatedPosition}
-
-pub using @geometry {type PdfCoordRectangle}
 
 pub using @core {type PdfCryptType}
 
@@ -3469,26 +3375,12 @@ pub using @syntax {type PdfObject}
 
 pub using @syntax {type PdfParsedIndirectObject}
 
-pub using @geometry {type PdfPosition}
-
-pub using @geometry {type PdfRectangle}
-
 pub using @syntax {type PdfStream}
 
 pub using @syntax {type PdfStreamData}
 
 pub using @syntax {type PdfStreamDataCrypt}
 
-pub using @geometry {type PdfUnit}
-
-pub using @geometry {type Point2}
-
 pub using @syntax {type ToGet}
-
-pub using @geometry {type TransformDecomposition}
-
-pub using @geometry {type TransformMatrix}
-
-pub using @geometry {type TransformOp}
 
 // Traits

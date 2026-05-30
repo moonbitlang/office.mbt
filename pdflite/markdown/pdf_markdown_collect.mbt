@@ -9,13 +9,13 @@ let pdf_markdown_inline_x_tolerance : Double = 0.5
 
 ///|
 fn pdf_markdown_translate_text_line(
-  text_line_matrix : @pdflite.TransformMatrix,
+  text_line_matrix : @geometry.TransformMatrix,
   tx : Double,
   ty : Double,
-) -> @pdflite.TransformMatrix {
-  @pdflite.transform_matrix_compose(
+) -> @geometry.TransformMatrix {
+  @geometry.transform_matrix_compose(
     text_line_matrix,
-    @pdflite.transform_translate(tx, ty),
+    @geometry.transform_translate(tx, ty),
   )
 }
 
@@ -85,8 +85,8 @@ fn pdf_markdown_extracted_codepoints_of_text_array(
 fn pdf_markdown_add_positioned_text_run(
   chunks : Array[PdfMarkdownTextChunk],
   next_index : Ref[Int],
-  ctm : @pdflite.TransformMatrix,
-  text_matrix : @pdflite.TransformMatrix,
+  ctm : @geometry.TransformMatrix,
+  text_matrix : @geometry.TransformMatrix,
   font_size : Double,
   extractor : @pdflite.PdfTextExtractor?,
   text : @pdflite.PdfBytes,
@@ -105,8 +105,8 @@ fn pdf_markdown_add_positioned_text_run(
 fn pdf_markdown_add_positioned_text_array(
   chunks : Array[PdfMarkdownTextChunk],
   next_index : Ref[Int],
-  ctm : @pdflite.TransformMatrix,
-  text_matrix : @pdflite.TransformMatrix,
+  ctm : @geometry.TransformMatrix,
+  text_matrix : @geometry.TransformMatrix,
   font_size : Double,
   extractor : @pdflite.PdfTextExtractor?,
   items : ArrayView[@pdflite.PdfObject],
@@ -129,13 +129,13 @@ fn pdf_markdown_collect_positioned_text_chunks(
   chunks : Array[PdfMarkdownTextChunk],
   next_index : Ref[Int],
   font_cache : PdfMarkdownFontCache,
-  inherited_ctm : @pdflite.TransformMatrix,
+  inherited_ctm : @geometry.TransformMatrix,
   depth : Int,
 ) -> Unit raise {
   let mut ctm = inherited_ctm
-  let ctm_stack : Array[@pdflite.TransformMatrix] = []
-  let mut text_matrix = @pdflite.transform_identity_matrix
-  let mut text_line_matrix = @pdflite.transform_identity_matrix
+  let ctm_stack : Array[@geometry.TransformMatrix] = []
+  let mut text_matrix = @geometry.transform_identity_matrix
+  let mut text_line_matrix = @geometry.transform_identity_matrix
   let mut leading = 0.0
   let mut font_size = 0.0
   let mut extractor : @pdflite.PdfTextExtractor? = None
@@ -143,10 +143,10 @@ fn pdf_markdown_collect_positioned_text_chunks(
     match op {
       Op_q => ctm_stack.push(ctm)
       Op_Q => if ctm_stack.length() > 0 { ctm = ctm_stack.pop().unwrap() }
-      Op_cm(matrix) => ctm = @pdflite.transform_matrix_compose(ctm, matrix)
+      Op_cm(matrix) => ctm = @geometry.transform_matrix_compose(ctm, matrix)
       Op_BT => {
-        text_matrix = @pdflite.transform_identity_matrix
-        text_line_matrix = @pdflite.transform_identity_matrix
+        text_matrix = @geometry.transform_identity_matrix
+        text_line_matrix = @geometry.transform_identity_matrix
       }
       Op_Tf(font_name, size) => {
         font_size = size
@@ -218,7 +218,7 @@ fn pdf_markdown_collect_positioned_text_chunks(
                 let form_resources = pdf_markdown_form_resources(
                   document, resources, xobject,
                 )
-                let form_ctm = @pdflite.transform_matrix_compose(
+                let form_ctm = @geometry.transform_matrix_compose(
                   ctm,
                   pdf_markdown_form_matrix(document, xobject),
                 )

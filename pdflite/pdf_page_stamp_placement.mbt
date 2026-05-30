@@ -11,7 +11,7 @@ fn pdf_page_stamp_shift_of_position(
   stamp_height : Double,
   page_width : Double,
   page_height : Double,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
 ) -> (Double, Double) {
   let dy = if midline {
     stamp_height / 2.0
@@ -68,7 +68,7 @@ fn PdfDocument::pdf_page_stamp_box(
   self : PdfDocument,
   page : @page.PdfPage,
   box_name : PdfName,
-) -> PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise PdfError {
   self.parse_rectangle(
     if box_name == pdf_page_mediabox_key() {
       page.mediabox
@@ -107,10 +107,10 @@ fn pdf_page_stamp_scale_to_fit_factor(
 
 ///|
 fn pdf_page_stamp_scale_to_fit_matrix(
-  stamp_box : PdfRectangle,
-  target_box : PdfRectangle,
+  stamp_box : @geometry.PdfRectangle,
+  target_box : @geometry.PdfRectangle,
   relative_to_box : PdfName,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   let stamp_width = stamp_box.max_x - stamp_box.min_x
   let stamp_height = stamp_box.max_y - stamp_box.min_y
   let target_width = target_box.max_x - target_box.min_x
@@ -124,23 +124,25 @@ fn pdf_page_stamp_scale_to_fit_matrix(
   )
   let dx = target_box.min_x + (target_width - stamp_width * scale) / 2.0
   let dy = target_box.min_y + (target_height - stamp_height * scale) / 2.0
-  let ops : Array[TransformOp] = [Translate(dx, dy)]
+  let ops : Array[@geometry.TransformOp] = [Translate(dx, dy)]
   if relative_to_box != pdf_page_mediabox_key() {
     ops.push(Translate(target_box.min_x, target_box.min_y))
   }
-  ops.push(Scale(point2(stamp_box.min_x, stamp_box.min_y), scale, scale))
-  transform_matrix_of_ops(ops)
+  ops.push(
+    Scale(@geometry.point2(stamp_box.min_x, stamp_box.min_y), scale, scale),
+  )
+  @geometry.transform_matrix_of_ops(ops)
 }
 
 ///|
 fn pdf_page_stamp_position_matrix(
-  stamp_box : PdfRectangle,
-  target_box : PdfRectangle,
+  stamp_box : @geometry.PdfRectangle,
+  target_box : @geometry.PdfRectangle,
   relative_to_box : PdfName,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   topline : Bool,
   midline : Bool,
-) -> TransformMatrix {
+) -> @geometry.TransformMatrix {
   let stamp_width = stamp_box.max_x - stamp_box.min_x
   let stamp_height = stamp_box.max_y - stamp_box.min_y
   let target_width = target_box.max_x - target_box.min_x
@@ -148,10 +150,10 @@ fn pdf_page_stamp_position_matrix(
   let (dx, dy) = pdf_page_stamp_shift_of_position(
     topline, midline, stamp_width, stamp_height, target_width, target_height, position,
   )
-  let ops : Array[TransformOp] = []
+  let ops : Array[@geometry.TransformOp] = []
   if relative_to_box != pdf_page_mediabox_key() {
     ops.push(Translate(target_box.min_x, target_box.min_y))
   }
   ops.push(Translate(dx, dy))
-  transform_matrix_of_ops(ops)
+  @geometry.transform_matrix_of_ops(ops)
 }

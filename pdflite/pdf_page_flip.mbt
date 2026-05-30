@@ -2,18 +2,26 @@
 fn PdfDocument::pdf_page_vertical_flip_matrix(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
-  transform_scale(point2(0.0, (bounds.min_y + bounds.max_y) / 2.0), 1.0, -1.0)
+  @geometry.transform_scale(
+    @geometry.point2(0.0, (bounds.min_y + bounds.max_y) / 2.0),
+    1.0,
+    -1.0,
+  )
 }
 
 ///|
 fn PdfDocument::pdf_page_horizontal_flip_matrix(
   self : PdfDocument,
   page : @page.PdfPage,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   let bounds = self.parse_rectangle(page.mediabox)
-  transform_scale(point2((bounds.min_x + bounds.max_x) / 2.0, 0.0), -1.0, 1.0)
+  @geometry.transform_scale(
+    @geometry.point2((bounds.min_x + bounds.max_x) / 2.0, 0.0),
+    -1.0,
+    1.0,
+  )
 }
 
 ///|
@@ -22,13 +30,13 @@ fn PdfDocument::pdf_page_flip_pages(
   page_numbers : ArrayView[Int],
   context : String,
   fast : Bool,
-  matrix_of_page : (@page.PdfPage) -> TransformMatrix raise PdfError,
+  matrix_of_page : (@page.PdfPage) -> @geometry.TransformMatrix raise PdfError,
 ) -> PdfDocument raise PdfError {
   pdf_page_box_validate_page_numbers(page_numbers, self.endpage(), context)
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {

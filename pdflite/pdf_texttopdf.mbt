@@ -7,7 +7,7 @@
 pub fn pdf_texttopdf_typeset(
   fontpack : PdfFontPack,
   font_size : Double,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   text : BytesView,
   process_struct_tree? : Bool = false,
   subformat? : PdfUASubformat? = None,
@@ -29,7 +29,7 @@ pub fn pdf_texttopdf_typeset(
     instructions
   }
   let elements = pdf_texttopdf_document_elements(tagged)
-  let margin = unit_points(paper.width(), paper.unit()) / 15.0
+  let margin = @geometry.unit_points(paper.width(), paper.unit()) / 15.0
   let result = document.pdf_type_typeset(
     process_struct_tree, margin, margin, margin, margin, paper, elements,
   )
@@ -56,7 +56,7 @@ pub fn pdf_texttopdf_typeset(
 /// order.
 pub fn pdf_texttopdf_typeset_cpdf_order(
   process_struct_tree : Bool,
-  paper : PaperSize,
+  paper : @geometry.PaperSize,
   fontpack : PdfFontPack,
   font_size : Double,
   text : BytesView,

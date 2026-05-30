@@ -214,7 +214,7 @@ fn font_listing_document_for_test() -> @pdflite.PdfDocument {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (key_font, font_resource_dictionary_for_test([("/F1", PdfIndirect(20))])),
       (
@@ -228,7 +228,7 @@ fn font_listing_document_for_test() -> @pdflite.PdfDocument {
   }
   let page_root = try! doc.add_pagetree([
     page,
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   doc
@@ -307,7 +307,7 @@ fn font_missing_document_for_test() -> @pdflite.PdfDocument {
     font_font_object_for_test("/Type1", "/XObjectMissing", None),
   )
   let first_page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         key_font,
@@ -326,7 +326,7 @@ fn font_missing_document_for_test() -> @pdflite.PdfDocument {
     ]),
   }
   let second_page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (key_font, font_resource_dictionary_for_test([("/F6", PdfIndirect(47))])),
     ]),
@@ -389,7 +389,7 @@ fn font_extraction_document_for_test() -> @pdflite.PdfDocument {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         key_font,
@@ -428,7 +428,7 @@ fn font_copy_source_document_for_test() -> @pdflite.PdfDocument {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         key_font,
@@ -450,7 +450,7 @@ fn font_copy_target_document_for_test() -> @pdflite.PdfDocument {
     font_font_object_for_test("/Type1", "/ExistingFont", None),
   )
   let first_page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     resources: PdfDictionary([
       (
         key_font,
@@ -460,7 +460,7 @@ fn font_copy_target_document_for_test() -> @pdflite.PdfDocument {
   }
   let page_root = try! doc.add_pagetree([
     first_page,
-    @page.pdf_page_blank(@pdflite.paper_a4),
+    @page.pdf_page_blank(@geometry.paper_a4),
   ])
   ignore(try! doc.add_root(page_root, []))
   doc

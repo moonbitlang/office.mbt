@@ -151,7 +151,8 @@ pub fn PdfContentOperatorState::content_apply_graphics_state_op(
   match op {
     Op_q => self.content_push_state()
     Op_Q => self.content_pop_state()
-    Op_cm(matrix) => { ..self, ctm: transform_matrix_compose(self.ctm, matrix) }
+    Op_cm(matrix) =>
+      { ..self, ctm: @geometry.transform_matrix_compose(self.ctm, matrix) }
     _ => self
   }
 }

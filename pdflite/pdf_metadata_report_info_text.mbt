@@ -3,7 +3,7 @@
 pub fn PdfDocument::info_blob(
   self : PdfDocument,
   encoding? : @metadata.PdfMetadataEncoding = PdfMetadataUTF8,
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   let output : Array[String] = []
   let (major, minor) = self.version()

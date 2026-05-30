@@ -25,7 +25,7 @@ pub fn PdfDocument::image_resolution(
         candidates,
         page_number,
         inline,
-        transform_identity_matrix,
+        @geometry.transform_identity_matrix,
         0,
         results,
       )

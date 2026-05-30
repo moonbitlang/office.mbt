@@ -1265,7 +1265,7 @@ test "PdfDocument transform_bookmark transforms bookmark target" {
   }
   @test.assert_eq(
     try! doc.transform_bookmark(
-      @pdflite.transform_translate(10.0, 20.0),
+      @geometry.transform_translate(10.0, 20.0),
       bookmark,
     ),
     { ..bookmark, target: DestFitH(TargetPageObject(7), Some(25.0)) },
@@ -1273,7 +1273,7 @@ test "PdfDocument transform_bookmark transforms bookmark target" {
   @test.assert_eq(
     try! @pdflite.pdf_transform_bookmark(
       doc,
-      @pdflite.transform_translate(10.0, 20.0),
+      @geometry.transform_translate(10.0, 20.0),
       bookmark,
     ),
     { ..bookmark, target: DestFitH(TargetPageObject(7), Some(25.0)) },

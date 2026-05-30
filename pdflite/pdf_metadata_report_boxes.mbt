@@ -2,7 +2,7 @@
 fn PdfDocument::pdf_metadata_box_text(
   self : PdfDocument,
   box : PdfObject,
-  unit : PdfUnit,
+  unit : @geometry.PdfUnit,
 ) -> String {
   match self.direct(box) {
     PdfArray(values) if values.length() == 4 => {
@@ -26,7 +26,7 @@ fn PdfDocument::pdf_metadata_box_text(
 fn PdfDocument::pdf_metadata_info_box_text(
   self : PdfDocument,
   boxes : ArrayView[PdfObject?],
-  unit : PdfUnit,
+  unit : @geometry.PdfUnit,
 ) -> String {
   if boxes.length() == 0 {
     return ""
@@ -47,7 +47,7 @@ fn PdfDocument::pdf_metadata_info_box_text(
 fn PdfDocument::pdf_metadata_info_json_boxes(
   self : PdfDocument,
   pages : ArrayView[@page.PdfPage],
-  unit : PdfUnit,
+  unit : @geometry.PdfUnit,
   output : Map[String, Json],
 ) -> Unit {
   let mediaboxes : Array[PdfObject?] = []

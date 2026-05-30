@@ -1,6 +1,6 @@
 ///|
 fn pdf_page_scale_to_fit_position_offset(
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   target_width : Double,
   target_height : Double,
   source_width : Double,
@@ -24,12 +24,12 @@ fn pdf_page_scale_to_fit_position_offset(
 
 ///|
 fn pdf_page_scale_to_fit_matrix_from_bounds(
-  bounds : PdfRectangle,
+  bounds : @geometry.PdfRectangle,
   target_width : Double,
   target_height : Double,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   input_scale : Double,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   let source_width = bounds.max_x - bounds.min_x
   let source_height = bounds.max_y - bounds.min_y
   if source_width <= 0.0 || source_height <= 0.0 {
@@ -46,13 +46,17 @@ fn pdf_page_scale_to_fit_matrix_from_bounds(
   let position_offset = pdf_page_scale_to_fit_position_offset(
     position, target_width, target_height, source_width, source_height, fit_scale,
   )
-  transform_matrix_compose(
-    transform_translate(fixup_trans_x, fixup_trans_y),
-    transform_matrix_compose(
-      transform_translate(position_offset.0, position_offset.1),
-      transform_matrix_compose(
-        transform_translate(trans_x, trans_y),
-        transform_scale(point2(0.0, 0.0), fit_scale, fit_scale),
+  @geometry.transform_matrix_compose(
+    @geometry.transform_translate(fixup_trans_x, fixup_trans_y),
+    @geometry.transform_matrix_compose(
+      @geometry.transform_translate(position_offset.0, position_offset.1),
+      @geometry.transform_matrix_compose(
+        @geometry.transform_translate(trans_x, trans_y),
+        @geometry.transform_scale(
+          @geometry.point2(0.0, 0.0),
+          fit_scale,
+          fit_scale,
+        ),
       ),
     ),
   )
@@ -64,9 +68,9 @@ fn PdfDocument::pdf_page_scale_to_fit_matrix(
   page : @page.PdfPage,
   target_width : Double,
   target_height : Double,
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   input_scale : Double,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   pdf_page_scale_to_fit_matrix_from_bounds(
     self.pdf_page_scale_bounds(page),
     target_width,
@@ -105,7 +109,7 @@ fn PdfDocument::pdf_page_scale_to_fit_page(
   page : @page.PdfPage,
   target_width : Double,
   target_height : Double,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   fast : Bool,
 ) -> @page.PdfPage raise PdfError {
   let page = self.pdf_page_scale_to_fit_boxes(page, target_width, target_height)
@@ -120,7 +124,7 @@ pub fn PdfDocument::scale_to_fit_pages(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   sizes : ArrayView[(Double, Double)],
-  position? : PdfPosition = PdfPositionCentre,
+  position? : @geometry.PdfPosition = PdfPositionCentre,
   input_scale? : Double = 1.0,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -137,7 +141,7 @@ pub fn PdfDocument::scale_to_fit_pages(
   let pages = self.pages_of_pagetree()
   let page_indexes = pdf_page_scale_pair_index_map(page_numbers)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {
@@ -175,7 +179,7 @@ pub fn pdf_scale_to_fit_pages(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
   sizes : ArrayView[(Double, Double)],
-  position? : PdfPosition = PdfPositionCentre,
+  position? : @geometry.PdfPosition = PdfPositionCentre,
   input_scale? : Double = 1.0,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -194,7 +198,7 @@ pub fn PdfDocument::scale_to_fit_pdf(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
   sizes : ArrayView[(Double, Double)],
-  position? : PdfPosition = PdfPositionCentre,
+  position? : @geometry.PdfPosition = PdfPositionCentre,
   input_scale? : Double = 1.0,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -222,7 +226,7 @@ pub fn PdfDocument::scale_to_fit_pdf(
 ///|
 /// Compatibility wrapper matching cpdfpage's `scale_to_fit_pdf` argument order.
 pub fn[T] pdf_scale_to_fit_pdf(
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   input_scale : Double,
   sizes : ArrayView[(Double, Double)],
   _op : T,

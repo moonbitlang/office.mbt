@@ -59,7 +59,7 @@ test "PdfDocument shift_pages transforms content annotations and pattern matrice
   let key_pattern = page_shift_name_for_test("/Pattern")
   let key_matrix = page_shift_name_for_test("/Matrix")
   let pattern_name = page_shift_name_for_test("/P1")
-  let old_matrix = @pdflite.transform_translate(1.0, 2.0)
+  let old_matrix = @geometry.transform_translate(1.0, 2.0)
   let first = page_shift_page_for_test(
     [Op_scnName(pattern_name, []), Op_S],
     resources=PdfDictionary([
@@ -91,7 +91,7 @@ test "PdfDocument shift_pages transforms content annotations and pattern matrice
   let shifted = try! document.shift_pages([1], [(10.0, 20.0)])
   let pages = try! shifted.pages_of_pagetree()
   @test.assert_eq(page_shift_ops_for_test(shifted, pages[0]), [
-    Op_cm(@pdflite.transform_translate(10.0, 20.0)),
+    Op_cm(@geometry.transform_translate(10.0, 20.0)),
     Op_scnName(pattern_name, []),
     Op_S,
   ])
@@ -113,8 +113,8 @@ test "PdfDocument shift_pages transforms content annotations and pattern matrice
     shifted.lookup_object_or_null(number).lookup_immediate(key_matrix),
     Some(
       @pdflite.pdf_object_of_matrix(
-        @pdflite.transform_matrix_compose(
-          @pdflite.transform_translate(10.0, 20.0),
+        @geometry.transform_matrix_compose(
+          @geometry.transform_translate(10.0, 20.0),
           old_matrix,
         ),
       ),
@@ -127,7 +127,7 @@ test "change_pattern_matrices_page exposes cpdfpage pattern rewrite helper" {
   let key_pattern = page_shift_name_for_test("/Pattern")
   let key_matrix = page_shift_name_for_test("/Matrix")
   let pattern_name = page_shift_name_for_test("/P1")
-  let old_matrix = @pdflite.transform_translate(1.0, 2.0)
+  let old_matrix = @geometry.transform_translate(1.0, 2.0)
   let page = page_shift_page_for_test(
     [Op_scnName(pattern_name, []), Op_S],
     resources=PdfDictionary([
@@ -145,7 +145,7 @@ test "change_pattern_matrices_page exposes cpdfpage pattern rewrite helper" {
     ]),
   )
   let document = page_shift_document_for_test([page])
-  let matrix = @pdflite.transform_translate(10.0, 20.0)
+  let matrix = @geometry.transform_translate(10.0, 20.0)
   let rewritten = try! document.change_pattern_matrices_page(matrix, page)
   guard rewritten.resources.lookup_immediate(key_pattern)
     is Some(PdfDictionary([(name, PdfIndirect(number))])) &&
@@ -156,7 +156,7 @@ test "change_pattern_matrices_page exposes cpdfpage pattern rewrite helper" {
     document.lookup_object_or_null(number).lookup_immediate(key_matrix),
     Some(
       @pdflite.pdf_object_of_matrix(
-        @pdflite.transform_matrix_compose(matrix, old_matrix),
+        @geometry.transform_matrix_compose(matrix, old_matrix),
       ),
     ),
   )
@@ -191,7 +191,7 @@ test "change_pattern_matrices_page exposes cpdfpage pattern rewrite helper" {
     .lookup_immediate(key_matrix),
     Some(
       @pdflite.pdf_object_of_matrix(
-        @pdflite.transform_matrix_compose(matrix, old_matrix),
+        @geometry.transform_matrix_compose(matrix, old_matrix),
       ),
     ),
   )
@@ -252,7 +252,7 @@ test "cpdf shift_pdf wrapper uses absolute page-indexed offsets" {
   let pages = try! shifted.pages_of_pagetree()
   @test.assert_eq(page_shift_ops_for_test(shifted, pages[0]), [Op_S])
   @test.assert_eq(page_shift_ops_for_test(shifted, pages[1]), [
-    Op_cm(@pdflite.transform_translate(10.0, 20.0)),
+    Op_cm(@geometry.transform_translate(10.0, 20.0)),
     Op_BT,
     Op_ET,
   ])

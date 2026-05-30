@@ -52,7 +52,9 @@ fn pdf_content_number_object(value : Double) -> PdfObject {
 }
 
 ///|
-fn pdf_content_matrix_operands(matrix : TransformMatrix) -> Array[PdfObject] {
+fn pdf_content_matrix_operands(
+  matrix : @geometry.TransformMatrix,
+) -> Array[PdfObject] {
   [
     pdf_content_number_object(matrix.a),
     pdf_content_number_object(matrix.b),

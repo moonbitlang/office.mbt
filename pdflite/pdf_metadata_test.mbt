@@ -211,7 +211,7 @@ test "PdfDocument viewer preferences and catalog items use cpdf strings" {
 
 ///|
 test "PdfDocument set_open_action writes fit xyz and custom destinations" {
-  let doc = try! @pdflite.pdf_blank_document_paper(@pdflite.paper_a4, 2)
+  let doc = try! @pdflite.pdf_blank_document_paper(@geometry.paper_a4, 2)
   let page_refs = try! doc.page_reference_numbers()
   let fit_doc = try! doc.set_open_action(2)
   guard metadata_lookup_for_test(
@@ -348,7 +348,7 @@ test "PdfDocument set_open_action writes fit xyz and custom destinations" {
 
 ///|
 test "PdfDocument metadata report helpers rewrite open action and JSON" {
-  let doc = try! @pdflite.pdf_blank_document_paper(@pdflite.paper_a4, 2)
+  let doc = try! @pdflite.pdf_blank_document_paper(@geometry.paper_a4, 2)
   let open_doc = try! doc.set_open_action(2, fit=false)
   let expected_object : @pdflite.PdfObject = PdfArray([
     PdfInteger(2),

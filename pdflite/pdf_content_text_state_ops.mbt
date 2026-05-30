@@ -9,9 +9,9 @@ fn PdfContentTextState::content_text_move(
   tx : Double,
   ty : Double,
 ) -> PdfContentTextState {
-  let line_matrix = transform_matrix_compose(
+  let line_matrix = @geometry.transform_matrix_compose(
     self.line_matrix,
-    transform_translate(tx, ty),
+    @geometry.transform_translate(tx, ty),
   )
   { ..self, text_matrix: line_matrix, line_matrix }
 }
@@ -20,7 +20,7 @@ fn PdfContentTextState::content_text_move(
 /// Convert text state to the layout input used by cpdfcontent glyph placement.
 pub fn PdfContentTextState::content_text_layout(
   self : PdfContentTextState,
-  ctm : TransformMatrix,
+  ctm : @geometry.TransformMatrix,
 ) -> PdfContentTextLayout {
   {
     font_size: self.font_size,
@@ -43,8 +43,8 @@ pub fn PdfContentTextState::content_apply_text_state_op(
     Op_BT =>
       {
         ..self,
-        text_matrix: transform_identity_matrix,
-        line_matrix: transform_identity_matrix,
+        text_matrix: @geometry.transform_identity_matrix,
+        line_matrix: @geometry.transform_identity_matrix,
       }
     Op_ET => self
     Op_Tc(spacing) => { ..self, character_spacing: spacing }
@@ -104,7 +104,7 @@ fn pdf_content_text_op_with_layout_result(
 pub fn PdfContentTextState::content_apply_text_op(
   self : PdfContentTextState,
   font : PdfFont,
-  ctm : TransformMatrix,
+  ctm : @geometry.TransformMatrix,
   op : @content.PdfContentOp,
 ) -> PdfContentTextOpResult {
   match op {
@@ -142,7 +142,7 @@ pub fn PdfContentTextState::content_apply_text_op(
 pub fn pdf_content_apply_text_op(
   state : PdfContentTextState,
   font : PdfFont,
-  ctm : TransformMatrix,
+  ctm : @geometry.TransformMatrix,
   op : @content.PdfContentOp,
 ) -> PdfContentTextOpResult {
   state.content_apply_text_op(font, ctm, op)

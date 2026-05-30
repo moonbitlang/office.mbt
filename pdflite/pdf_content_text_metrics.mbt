@@ -116,8 +116,12 @@ fn pdf_content_standard_font_extra_metrics(
 pub fn PdfFont::content_extra_metrics(self : PdfFont) -> (Double, Double) {
   match self {
     PdfFontSimple({ fonttype: PdfType3(data), .. }) => {
-      let top = data.fontmatrix.apply(point2(0.0, data.fontbbox.max_y))
-      let bottom = data.fontmatrix.apply(point2(0.0, data.fontbbox.min_y))
+      let top = data.fontmatrix.apply(
+        @geometry.point2(0.0, data.fontbbox.max_y),
+      )
+      let bottom = data.fontmatrix.apply(
+        @geometry.point2(0.0, data.fontbbox.min_y),
+      )
       (top.y, bottom.y)
     }
     PdfFontSimple({ fontdescriptor: Some(descriptor), .. }) =>

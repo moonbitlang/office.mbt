@@ -49,7 +49,7 @@ fn pdf_markdown_positioned_text_codepoints_of_page(
     chunks,
     next_index,
     font_cache,
-    @pdflite.transform_identity_matrix,
+    @geometry.transform_identity_matrix,
     0,
   )
   if pdf_markdown_chunks_have_positions(chunks) {

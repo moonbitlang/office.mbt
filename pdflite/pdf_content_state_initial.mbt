@@ -14,10 +14,22 @@ pub fn pdf_content_initial_clipping_path(
           hole: PdfPathNotHole,
           closure: PdfPathClosed,
           segments: [
-            PdfPathStraight(point2(minx, miny), point2(minx, maxy)),
-            PdfPathStraight(point2(minx, maxy), point2(maxx, maxy)),
-            PdfPathStraight(point2(maxx, maxy), point2(maxx, miny)),
-            PdfPathStraight(point2(maxx, miny), point2(minx, miny)),
+            PdfPathStraight(
+              @geometry.point2(minx, miny),
+              @geometry.point2(minx, maxy),
+            ),
+            PdfPathStraight(
+              @geometry.point2(minx, maxy),
+              @geometry.point2(maxx, maxy),
+            ),
+            PdfPathStraight(
+              @geometry.point2(maxx, maxy),
+              @geometry.point2(maxx, miny),
+            ),
+            PdfPathStraight(
+              @geometry.point2(maxx, miny),
+              @geometry.point2(minx, miny),
+            ),
           ],
         },
       ],

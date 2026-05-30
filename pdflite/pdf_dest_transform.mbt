@@ -11,12 +11,12 @@ fn pdf_dest_clip(value : Double) -> Double {
 
 ///|
 fn pdf_dest_transform_point(
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   x : Double,
   y : Double,
-) -> Point2 {
-  let point = matrix.apply(point2(x, y))
-  point2(pdf_dest_clip(point.x), pdf_dest_clip(point.y))
+) -> @geometry.Point2 {
+  let point = matrix.apply(@geometry.point2(x, y))
+  @geometry.point2(pdf_dest_clip(point.x), pdf_dest_clip(point.y))
 }
 
 ///|
@@ -27,7 +27,7 @@ fn pdf_dest_transform_point(
 /// targets are preserved.
 pub fn PdfDocument::transform_destination(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   destination : @destination.PdfDestination,
 ) -> @destination.PdfDestination raise PdfError {
   match destination {
@@ -95,7 +95,7 @@ pub fn PdfDocument::transform_destination(
 /// This is the standalone form of `PdfDocument::transform_destination`.
 pub fn pdf_transform_destination(
   document : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   destination : @destination.PdfDestination,
 ) -> @destination.PdfDestination raise PdfError {
   document.transform_destination(matrix, destination)

@@ -8,7 +8,7 @@ fn pdf_tweak_number(object : PdfObject) -> Double? {
 }
 
 ///|
-fn pdf_tweak_ctm_scale(stack : ArrayView[TransformMatrix]) -> Double {
+fn pdf_tweak_ctm_scale(stack : ArrayView[@geometry.TransformMatrix]) -> Double {
   if stack.length() == 0 {
     1.0
   } else {
@@ -49,7 +49,9 @@ pub fn pdf_thin_lines_ops(
 ) -> Array[@content.PdfContentOp] raise PdfError {
   let limit = if width < 0.0 { -width } else { width }
   let is_minimum = width >= 0.0
-  let ctm_stack : Array[TransformMatrix] = [transform_identity_matrix]
+  let ctm_stack : Array[@geometry.TransformMatrix] = [
+    @geometry.transform_identity_matrix,
+  ]
   let output : Array[@content.PdfContentOp] = []
   for op in ops {
     match op {
@@ -71,7 +73,10 @@ pub fn pdf_thin_lines_ops(
           raise MatrixMalformed
         }
         let index = ctm_stack.length() - 1
-        ctm_stack[index] = transform_matrix_compose(ctm_stack[index], matrix)
+        ctm_stack[index] = @geometry.transform_matrix_compose(
+          ctm_stack[index],
+          matrix,
+        )
         output.push(op)
       }
       Op_q => {

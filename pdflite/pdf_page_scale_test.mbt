@@ -63,10 +63,10 @@ test "PdfDocument scale_contents uses cropbox position and transforms annotation
   let key_pattern = page_scale_name_for_test("/Pattern")
   let key_matrix = page_scale_name_for_test("/Matrix")
   let pattern_name = page_scale_name_for_test("/P1")
-  let old_matrix = @pdflite.transform_translate(1.0, 2.0)
-  let matrix = @pdflite.transform_matrix_compose(
-    @pdflite.transform_translate(5.0, 7.0),
-    @pdflite.transform_scale(@pdflite.point2(10.0, 20.0), 0.5, 0.5),
+  let old_matrix = @geometry.transform_translate(1.0, 2.0)
+  let matrix = @geometry.transform_matrix_compose(
+    @geometry.transform_translate(5.0, 7.0),
+    @geometry.transform_scale(@geometry.point2(10.0, 20.0), 0.5, 0.5),
   )
   let first = page_scale_page_for_test(
     [Op_scnName(pattern_name, []), Op_S],
@@ -126,7 +126,7 @@ test "PdfDocument scale_contents uses cropbox position and transforms annotation
     scaled.lookup_object_or_null(number).lookup_immediate(key_matrix),
     Some(
       @pdflite.pdf_object_of_matrix(
-        @pdflite.transform_matrix_compose(matrix, old_matrix),
+        @geometry.transform_matrix_compose(matrix, old_matrix),
       ),
     ),
   )
@@ -262,7 +262,7 @@ test "PdfDocument scale_pages scales boxes content and destinations" {
     Some(page_scale_rect_for_test(20.0, 60.0, 100.0, 180.0)),
   )
   @test.assert_eq(page_scale_ops_for_test(scaled, pages[0]), [
-    Op_cm(@pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 2.0, 3.0)),
+    Op_cm(@geometry.transform_scale(@geometry.point2(0.0, 0.0), 2.0, 3.0)),
     Op_S,
   ])
   @test.assert_eq(
@@ -315,7 +315,7 @@ test "cpdf scale_pdf wrapper uses absolute page-indexed scales" {
   )
   @test.assert_eq(page_scale_ops_for_test(scaled, pages[0]), [Op_S])
   @test.assert_eq(page_scale_ops_for_test(scaled, pages[1]), [
-    Op_cm(@pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 2.0, 3.0)),
+    Op_cm(@geometry.transform_scale(@geometry.point2(0.0, 0.0), 2.0, 3.0)),
     Op_BT,
     Op_ET,
   ])
@@ -369,7 +369,7 @@ test "PdfDocument stretch_pages scales from cropbox without preserving aspect" {
   let key_crop = page_scale_name_for_test("/CropBox")
   let key_open_action = page_scale_name_for_test("/OpenAction")
   let xyz_name = page_scale_name_for_test("/XYZ")
-  let matrix = @pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 3.0, 4.0)
+  let matrix = @geometry.transform_scale(@geometry.point2(0.0, 0.0), 3.0, 4.0)
   let first = page_scale_page_for_test(
     [Op_S],
     rest=PdfDictionary([
@@ -459,7 +459,7 @@ test "cpdf stretch wrapper uses absolute page-indexed sizes" {
   )
   @test.assert_eq(page_scale_ops_for_test(stretched, pages[0]), [Op_S])
   @test.assert_eq(page_scale_ops_for_test(stretched, pages[1]), [
-    Op_cm(@pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 0.5, 2.0)),
+    Op_cm(@geometry.transform_scale(@geometry.point2(0.0, 0.0), 0.5, 2.0)),
     Op_BT,
   ])
 }
@@ -546,13 +546,13 @@ test "PdfDocument scale_to_fit_pages centers content and sets target boxes" {
   )
   @test.assert_eq(page_scale_ops_for_test(fitted, pages[0]), [
     Op_cm(
-      @pdflite.transform_matrix_compose(
-        @pdflite.transform_translate(0.0, 0.0),
-        @pdflite.transform_matrix_compose(
-          @pdflite.transform_translate(0.0, 0.0),
-          @pdflite.transform_matrix_compose(
-            @pdflite.transform_translate(0.0, 50.0),
-            @pdflite.transform_scale(@pdflite.point2(0.0, 0.0), 2.0, 2.0),
+      @geometry.transform_matrix_compose(
+        @geometry.transform_translate(0.0, 0.0),
+        @geometry.transform_matrix_compose(
+          @geometry.transform_translate(0.0, 0.0),
+          @geometry.transform_matrix_compose(
+            @geometry.transform_translate(0.0, 50.0),
+            @geometry.transform_scale(@geometry.point2(0.0, 0.0), 2.0, 2.0),
           ),
         ),
       ),

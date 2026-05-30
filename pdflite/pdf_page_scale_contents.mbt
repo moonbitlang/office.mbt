@@ -7,7 +7,7 @@
 pub fn PdfDocument::scale_contents(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   scale : Double,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -19,7 +19,7 @@ pub fn PdfDocument::scale_contents(
   let pages = self.pages_of_pagetree()
   let selected_pages = @core.pdf_number_set(page_numbers)
   let rewritten : Array[@page.PdfPage] = Array::new(capacity=pages.length())
-  let matrices : Array[(Int, TransformMatrix)] = Array::new(
+  let matrices : Array[(Int, @geometry.TransformMatrix)] = Array::new(
     capacity=page_numbers.length(),
   )
   for index in 0..<pages.length() {
@@ -40,7 +40,7 @@ pub fn PdfDocument::scale_contents(
 pub fn pdf_scale_contents(
   document : PdfDocument,
   page_numbers : ArrayView[Int],
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   scale : Double,
   fast? : Bool = false,
 ) -> PdfDocument raise PdfError {
@@ -50,7 +50,7 @@ pub fn pdf_scale_contents(
 ///|
 /// Compatibility wrapper matching cpdfpage's `scale_contents` argument order.
 pub fn pdf_scale_contents_cpdf_order(
-  position : PdfPosition,
+  position : @geometry.PdfPosition,
   scale : Double,
   document : PdfDocument,
   page_numbers : ArrayView[Int],

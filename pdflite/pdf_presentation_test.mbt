@@ -16,10 +16,10 @@ fn presentation_document_for_test() -> @pdflite.PdfDocument {
   let key_dur = presentation_name_for_test("/Dur")
   let key_old = presentation_name_for_test("/Old")
   let first = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     rest: PdfDictionary([(key_dur, PdfReal(99.0)), (key_old, PdfInteger(1))]),
   }
-  let second = @page.pdf_page_blank(@pdflite.paper_a4)
+  let second = @page.pdf_page_blank(@geometry.paper_a4)
   let document = @pdflite.pdf_document_empty()
   let root = try! document.add_pagetree([first, second])
   ignore(try! document.add_root(root, []))

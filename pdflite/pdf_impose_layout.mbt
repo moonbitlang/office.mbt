@@ -69,13 +69,13 @@ fn pdf_impose_translate(
   col : Int,
   px : Double,
   py : Double,
-) -> TransformMatrix {
+) -> @geometry.TransformMatrix {
   let cex = if rtl { -cent_extra_x } else { cent_extra_x }
   let cey = if btt { -cent_extra_y } else { cent_extra_y }
   let space_col = if rtl { x - col - 1 } else { col }
   let total_fit_extra_hspace = fit_extra_hspace * (space_col.to_double() + 1.0)
   let total_fit_extra_vspace = fit_extra_vspace * (row.to_double() + 1.0)
-  transform_translate(
+  @geometry.transform_translate(
     px + cex + total_fit_extra_hspace,
     py + cey + total_fit_extra_vspace,
   )
@@ -86,8 +86,8 @@ fn PdfDocument::pdf_impose_make_margin(
   self : PdfDocument,
   output_mediabox : PdfObject,
   margin : Double,
-  matrix : TransformMatrix,
-) -> TransformMatrix raise PdfError {
+  matrix : @geometry.TransformMatrix,
+) -> @geometry.TransformMatrix raise PdfError {
   if margin == 0.0 {
     matrix
   } else {
@@ -100,12 +100,19 @@ fn PdfDocument::pdf_impose_make_margin(
     let hfactor = (width - margin - margin) / width
     let vfactor = (height - margin - margin) / height
     let factor = if hfactor < vfactor { hfactor } else { vfactor }
-    let scale = transform_scale(point2(0.0, 0.0), factor, factor)
-    let shift = transform_translate(
+    let scale = @geometry.transform_scale(
+      @geometry.point2(0.0, 0.0),
+      factor,
+      factor,
+    )
+    let shift = @geometry.transform_translate(
       (width - width * factor) / 2.0,
       (height - height * factor) / 2.0,
     )
-    transform_matrix_compose(shift, transform_matrix_compose(scale, matrix))
+    @geometry.transform_matrix_compose(
+      shift,
+      @geometry.transform_matrix_compose(scale, matrix),
+    )
   }
 }
 
@@ -126,7 +133,7 @@ fn PdfDocument::pdf_impose_transform_for_slot(
   col : Int,
   px : Double,
   py : Double,
-) -> TransformMatrix raise PdfError {
+) -> @geometry.TransformMatrix raise PdfError {
   let matrix = pdf_impose_translate(
     x, rtl, btt, cent_extra_x, cent_extra_y, fit_extra_hspace, fit_extra_vspace,
     row, col, px, py,
@@ -265,14 +272,14 @@ fn PdfDocument::pdf_impose_transforms(
   fit_extra_hspace : Double,
   fit_extra_vspace : Double,
   count : Int,
-) -> Array[TransformMatrix] raise PdfError {
+) -> Array[@geometry.TransformMatrix] raise PdfError {
   pdf_impose_validate_transform_inputs(x, y, count)
   let page_box = self.parse_rectangle(mediabox)
   let width = page_box.max_x - page_box.min_x
   let height = page_box.max_y - page_box.min_y
   let final_full_cols = count % x
   let final_full_rows = count % y
-  let output : Array[TransformMatrix] = []
+  let output : Array[@geometry.TransformMatrix] = []
   let mut remaining = count
   let mut cent_extra_x = 0.0
   let mut cent_extra_y = 0.0

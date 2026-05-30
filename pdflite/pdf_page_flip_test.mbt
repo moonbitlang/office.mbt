@@ -64,9 +64,9 @@ test "PdfDocument flip_pages_vertically transforms content annotations patterns 
   let key_open_action = page_flip_name_for_test("/OpenAction")
   let pattern_name = page_flip_name_for_test("/P1")
   let xyz_name = page_flip_name_for_test("/XYZ")
-  let old_matrix = @pdflite.transform_translate(1.0, 2.0)
-  let flip_matrix = @pdflite.transform_scale(
-    @pdflite.point2(0.0, 120.0),
+  let old_matrix = @geometry.transform_translate(1.0, 2.0)
+  let flip_matrix = @geometry.transform_scale(
+    @geometry.point2(0.0, 120.0),
     1.0,
     -1.0,
   )
@@ -145,7 +145,7 @@ test "PdfDocument flip_pages_vertically transforms content annotations patterns 
     flipped.lookup_object_or_null(number).lookup_immediate(key_matrix),
     Some(
       @pdflite.pdf_object_of_matrix(
-        @pdflite.transform_matrix_compose(flip_matrix, old_matrix),
+        @geometry.transform_matrix_compose(flip_matrix, old_matrix),
       ),
     ),
   )
@@ -177,8 +177,8 @@ test "PdfDocument flip_pages_vertically transforms content annotations patterns 
 
 ///|
 test "PdfDocument flip_pages_horizontally transforms selected pages and wrapper" {
-  let horizontal_matrix = @pdflite.transform_scale(
-    @pdflite.point2(60.0, 0.0),
+  let horizontal_matrix = @geometry.transform_scale(
+    @geometry.point2(60.0, 0.0),
     -1.0,
     1.0,
   )

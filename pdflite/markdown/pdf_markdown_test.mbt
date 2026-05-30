@@ -116,7 +116,7 @@ fn markdown_latin_document_for_test() -> @pdflite.PdfDocument raise {
     markdown_standard_font_for_test(),
   )
   let page1 = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -140,7 +140,7 @@ fn markdown_latin_document_for_test() -> @pdflite.PdfDocument raise {
     resources,
   }
   let page2 = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -164,7 +164,7 @@ fn markdown_unreliable_notdef_control_document_for_test() -> @pdflite.PdfDocumen
     markdown_no_tounicode_truetype_font_for_test(),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -189,7 +189,7 @@ fn markdown_control_text_document_for_test() -> @pdflite.PdfDocument raise {
     markdown_control_font_for_test(),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -214,16 +214,16 @@ fn markdown_positioned_document_for_test() -> @pdflite.PdfDocument raise {
     markdown_standard_font_for_test(),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
         Op_Tf(markdown_name_for_test("/F0"), 12.0),
-        Op_Tm(@pdflite.transform_translate(200.0, 700.0)),
+        Op_Tm(@geometry.transform_translate(200.0, 700.0)),
         Op_Tj(markdown_ascii_for_test("Right")),
-        Op_Tm(@pdflite.transform_translate(50.0, 680.0)),
+        Op_Tm(@geometry.transform_translate(50.0, 680.0)),
         Op_Tj(markdown_ascii_for_test("Lower")),
-        Op_Tm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_Tm(@geometry.transform_translate(50.0, 700.0)),
         Op_Tj(markdown_ascii_for_test("Left")),
         Op_ET,
       ]),
@@ -256,15 +256,15 @@ fn markdown_positioned_form_document_for_test() -> @pdflite.PdfDocument raise {
   doc.add_object_given_number(80, form)
   let form_name = markdown_name_for_test("/FmPlaced")
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_q,
-        Op_cm(@pdflite.transform_translate(200.0, 700.0)),
+        Op_cm(@geometry.transform_translate(200.0, 700.0)),
         Op_Do(form_name),
         Op_Q,
         Op_q,
-        Op_cm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_cm(@geometry.transform_translate(50.0, 700.0)),
         Op_Do(form_name),
         Op_Q,
       ]),
@@ -289,12 +289,12 @@ fn markdown_positioned_text_state_document_for_test() -> @pdflite.PdfDocument ra
     markdown_standard_font_for_test(),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
         Op_Tf(markdown_name_for_test("/F0"), 12.0),
-        Op_Tm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_Tm(@geometry.transform_translate(50.0, 700.0)),
         Op_TJ(
           PdfArray([
             PdfString(markdown_ascii_for_test("A")),
@@ -327,14 +327,14 @@ fn markdown_positioned_hyphenated_line_document_for_test() -> @pdflite.PdfDocume
     markdown_standard_font_for_test(),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
         Op_Tf(markdown_name_for_test("/F0"), 12.0),
-        Op_Tm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_Tm(@geometry.transform_translate(50.0, 700.0)),
         Op_Tj(markdown_ascii_for_test("soft -")),
-        Op_Tm(@pdflite.transform_translate(50.0, 680.0)),
+        Op_Tm(@geometry.transform_translate(50.0, 680.0)),
         Op_Tj(markdown_ascii_for_test("ware")),
         Op_ET,
       ]),
@@ -368,16 +368,16 @@ fn markdown_positioned_cjk_spacing_document_for_test() -> @pdflite.PdfDocument r
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
         Op_Tf(markdown_name_for_test("/F0"), 10.0),
-        Op_Tm(@pdflite.transform_translate(50.0, 700.0)),
+        Op_Tm(@geometry.transform_translate(50.0, 700.0)),
         Op_Tj(markdown_bytes_for_test([65])),
-        Op_Tm(@pdflite.transform_translate(66.0, 700.0)),
+        Op_Tm(@geometry.transform_translate(66.0, 700.0)),
         Op_Tj(markdown_bytes_for_test([65])),
-        Op_Tm(@pdflite.transform_translate(88.0, 700.0)),
+        Op_Tm(@geometry.transform_translate(88.0, 700.0)),
         Op_Tj(markdown_bytes_for_test([65])),
         Op_ET,
       ]),
@@ -448,7 +448,7 @@ fn markdown_cjk_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -489,7 +489,7 @@ fn markdown_cjk_tj_spacing_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -550,7 +550,7 @@ fn markdown_hangul_tj_spacing_document_for_test() -> @pdflite.PdfDocument raise 
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -593,7 +593,7 @@ fn markdown_missing_font_document_for_test() -> @pdflite.PdfDocument raise {
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -617,7 +617,7 @@ fn markdown_line_break_document_for_test() -> @pdflite.PdfDocument raise {
     markdown_standard_font_for_test(),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_BT,
@@ -663,7 +663,7 @@ fn markdown_form_xobject_document_for_test() -> @pdflite.PdfDocument raise {
     )
   doc.add_object_given_number(70, form)
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [@pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
     resources: @pdflite.pdf_dictionary([
       (
@@ -693,7 +693,7 @@ fn markdown_inherited_form_xobject_document_for_test() -> @pdflite.PdfDocument r
   )
   doc.add_object_given_number(72, form)
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [@pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
     resources: @pdflite.pdf_dictionary([
       (
@@ -741,7 +741,7 @@ fn markdown_non_text_xobject_document_for_test() -> @pdflite.PdfDocument raise {
     ),
   )
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_Do(markdown_name_for_test("/Missing")),
@@ -769,7 +769,7 @@ fn markdown_missing_xobject_dictionary_document_for_test() -> @pdflite.PdfDocume
   let doc = @pdflite.pdf_document_empty()
   doc.set_version(1, 4)
   let page = {
-    ..@page.pdf_page_blank(@pdflite.paper_a4),
+    ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
       @pdflite.pdf_content_stream_of_ops([
         Op_Do(markdown_name_for_test("/Missing")),

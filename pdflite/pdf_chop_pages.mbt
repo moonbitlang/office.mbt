@@ -12,7 +12,7 @@ fn pdf_chop_rectangle_object(
 fn pdf_chop_box(
   document : PdfDocument,
   page : @page.PdfPage,
-) -> PdfRectangle raise PdfError {
+) -> @geometry.PdfRectangle raise PdfError {
   match document.lookup_direct(pdf_chop_cropbox_key(), page.rest) {
     Some(cropbox) => document.parse_rectangle(cropbox)
     None => document.parse_rectangle(page.mediabox)
@@ -56,7 +56,7 @@ fn pdf_chop_index_order(count : Int, reverse : Bool) -> Array[Int] {
 ///|
 fn pdf_chop_grid_pages(
   page : @page.PdfPage,
-  bounds : PdfRectangle,
+  bounds : @geometry.PdfRectangle,
   x : Int,
   y : Int,
   columns : Bool,

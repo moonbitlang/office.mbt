@@ -139,7 +139,7 @@ fn pdf_page_info_text_length(entries : ArrayView[PdfPageInfoEntry]) -> Int {
 pub fn PdfDocument::page_info_text(
   self : PdfDocument,
   page_numbers : ArrayView[Int],
-  unit? : PdfUnit = PdfPoint,
+  unit? : @geometry.PdfUnit = PdfPoint,
 ) -> PdfBytes raise PdfError {
   let entries = self.pdf_page_info_entries(page_numbers, unit)
   let output = Array::make(pdf_page_info_text_length(entries), b'\x00')

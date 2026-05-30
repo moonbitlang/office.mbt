@@ -118,7 +118,9 @@ pub fn PdfDrawControl::matrix_translate(
   let values = pdf_draw_control_expect_floats(
     text, 2, "-mtrans takes two numbers", "-mtrans takes two numbers",
   )
-  self.add_op(PdfDrawMatrix(transform_translate(values[0], values[1])))
+  self.add_op(
+    PdfDrawMatrix(@geometry.transform_translate(values[0], values[1])),
+  )
 }
 
 ///|
@@ -131,7 +133,12 @@ pub fn PdfDrawControl::matrix_rotate(
     text, 3, "-mrot takes three numbers", "-mrot takes three numbers",
   )
   self.add_op(
-    PdfDrawMatrix(transform_rotate(point2(values[0], values[1]), values[2])),
+    PdfDrawMatrix(
+      @geometry.transform_rotate(
+        @geometry.point2(values[0], values[1]),
+        values[2],
+      ),
+    ),
   )
 }
 
@@ -146,7 +153,11 @@ pub fn PdfDrawControl::matrix_scale(
   )
   self.add_op(
     PdfDrawMatrix(
-      transform_scale(point2(values[0], values[1]), values[2], values[3]),
+      @geometry.transform_scale(
+        @geometry.point2(values[0], values[1]),
+        values[2],
+        values[3],
+      ),
     ),
   )
 }
@@ -161,7 +172,12 @@ pub fn PdfDrawControl::matrix_shear_x(
     text, 3, "-mshearx takes three numbers", "-mshearx takes three numbers",
   )
   self.add_op(
-    PdfDrawMatrix(transform_shear_x(point2(values[0], values[1]), values[2])),
+    PdfDrawMatrix(
+      @geometry.transform_shear_x(
+        @geometry.point2(values[0], values[1]),
+        values[2],
+      ),
+    ),
   )
 }
 
@@ -175,7 +191,12 @@ pub fn PdfDrawControl::matrix_shear_y(
     text, 3, "-msheary takes three numbers", "-msheary takes three numbers",
   )
   self.add_op(
-    PdfDrawMatrix(transform_shear_y(point2(values[0], values[1]), values[2])),
+    PdfDrawMatrix(
+      @geometry.transform_shear_y(
+        @geometry.point2(values[0], values[1]),
+        values[2],
+      ),
+    ),
   )
 }
 

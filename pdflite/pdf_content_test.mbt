@@ -24,7 +24,7 @@ fn content_concat_for_test(
 ///|
 fn hello_content_ops_for_test() -> Array[@content.PdfContentOp] {
   [
-    Op_cm(@pdflite.transform_translate(50.0, 770.0)),
+    Op_cm(@geometry.transform_translate(50.0, 770.0)),
     Op_BT,
     Op_Tf(content_name_for_test("/F0"), 36.0),
     Op_Tj(content_bytes_for_test("Hello, World!")),
@@ -83,7 +83,7 @@ fn comprehensive_content_ops_for_test() -> Array[@content.PdfContentOp] {
     Op_Wstar,
     Op_Td(5.0, 6.0),
     Op_TD(7.0, 8.0),
-    Op_Tm(@pdflite.transform_translate(9.0, 10.0)),
+    Op_Tm(@geometry.transform_translate(9.0, 10.0)),
     Op_Tstar,
     Op_G(0.5),
     Op_g(0.25),

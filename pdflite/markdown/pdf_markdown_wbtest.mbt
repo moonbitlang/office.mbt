@@ -89,8 +89,8 @@ test "private positioned text array treats large integer adjustment as space" {
   pdf_markdown_add_positioned_text_array(
     chunks,
     next_index,
-    @pdflite.transform_identity_matrix,
-    @pdflite.transform_translate(10.0, 100.0),
+    @geometry.transform_identity_matrix,
+    @geometry.transform_translate(10.0, 100.0),
     12.0,
     Some(extractor),
     [

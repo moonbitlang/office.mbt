@@ -21,12 +21,12 @@ fn pdf_metadata_combine_with_commas(values : ArrayView[String]) -> String {
 }
 
 ///|
-fn pdf_metadata_unit_number(value : Double, unit : PdfUnit) -> Double {
+fn pdf_metadata_unit_number(value : Double, unit : @geometry.PdfUnit) -> Double {
   match unit {
     PdfPoint => value
-    Inch => unit_inches(value, PdfPoint)
-    Centimetre => unit_centimetres(value, PdfPoint)
-    Millimetre => unit_millimetres(value, PdfPoint)
+    Inch => @geometry.unit_inches(value, PdfPoint)
+    Centimetre => @geometry.unit_centimetres(value, PdfPoint)
+    Millimetre => @geometry.unit_millimetres(value, PdfPoint)
   }
 }
 

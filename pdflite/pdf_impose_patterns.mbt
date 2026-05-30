@@ -62,12 +62,12 @@ fn pdf_impose_xobject_done(done : ArrayView[Int], number : Int) -> Bool {
 ///|
 fn PdfDocument::pdf_impose_change_pattern_object(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   pattern : PdfObject,
 ) -> PdfObject raise PdfError {
   let old_pattern = self.direct(pattern)
   let existing = self.parse_matrix(pdf_impose_matrix_key_name, old_pattern)
-  let new_matrix = transform_matrix_compose(matrix, existing)
+  let new_matrix = @geometry.transform_matrix_compose(matrix, existing)
   PdfIndirect(
     self.add_object(
       old_pattern.add_dict_entry(
@@ -81,7 +81,7 @@ fn PdfDocument::pdf_impose_change_pattern_object(
 ///|
 fn PdfDocument::pdf_impose_change_pattern_matrices_resources(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   resources : PdfObject,
   names_used_with_scn : ArrayView[PdfName],
   xobjects_done : Array[Int],
@@ -127,7 +127,7 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_resources(
 ///|
 fn PdfDocument::pdf_impose_change_pattern_matrices_xobject(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   xobject : PdfObject,
   xobject_number : Int,
   xobjects_done : Array[Int],
@@ -172,7 +172,7 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_xobject(
 ///|
 fn PdfDocument::pdf_impose_change_pattern_matrices_page(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   page : @page.PdfPage,
 ) -> @page.PdfPage raise PdfError {
   let used = self.pdf_impose_patterns_used_with_scn(
@@ -195,7 +195,7 @@ fn PdfDocument::pdf_impose_change_pattern_matrices_page(
 /// Rewrite pattern matrices used by a page after applying a page transform.
 pub fn PdfDocument::change_pattern_matrices_page(
   self : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   page : @page.PdfPage,
 ) -> @page.PdfPage raise PdfError {
   self.pdf_impose_change_pattern_matrices_page(matrix, page)
@@ -205,7 +205,7 @@ pub fn PdfDocument::change_pattern_matrices_page(
 /// Compatibility wrapper matching cpdfpage's `change_pattern_matrices_page`.
 pub fn pdf_change_pattern_matrices_page(
   document : PdfDocument,
-  matrix : TransformMatrix,
+  matrix : @geometry.TransformMatrix,
   page : @page.PdfPage,
 ) -> @page.PdfPage raise PdfError {
   document.change_pattern_matrices_page(matrix, page)

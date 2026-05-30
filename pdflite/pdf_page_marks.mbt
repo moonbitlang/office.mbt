@@ -6,7 +6,7 @@ fn PdfDocument::pdf_page_marks_rectangle(
   self : PdfDocument,
   page : @page.PdfPage,
   box_name : PdfName,
-) -> PdfRectangle? raise PdfError {
+) -> @geometry.PdfRectangle? raise PdfError {
   let object = if box_name == pdf_page_mediabox_key() {
     Some(page.mediabox)
   } else {
@@ -131,8 +131,8 @@ fn pdf_page_trim_marks_push_line(
 
 ///|
 fn pdf_page_trim_marks_ops(
-  trim : PdfRectangle,
-  media : PdfRectangle,
+  trim : @geometry.PdfRectangle,
+  media : @geometry.PdfRectangle,
 ) -> Array[@content.PdfContentOp] {
   let ops : Array[@content.PdfContentOp] = [
     Op_q,

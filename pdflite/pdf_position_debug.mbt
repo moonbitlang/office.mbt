@@ -40,7 +40,7 @@ fn pdf_position_debug_one(name : String, value : Double) -> String {
 
 ///|
 /// Return the cpdf debug spelling for a position keyword.
-pub fn pdf_string_of_position(position : PdfPosition) -> String {
+pub fn pdf_string_of_position(position : @geometry.PdfPosition) -> String {
   match position {
     PdfPositionPosCentre(x, y) => pdf_position_debug_two("PosCentre", x, y)
     PdfPositionPosLeft(x, y) => pdf_position_debug_two("PosLeft", x, y)

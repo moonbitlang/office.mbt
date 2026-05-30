@@ -25,8 +25,8 @@ fn impose_assert_close_for_test(
 
 ///|
 fn impose_assert_matrix_close_for_test(
-  actual : TransformMatrix,
-  expected : TransformMatrix,
+  actual : @geometry.TransformMatrix,
+  expected : @geometry.TransformMatrix,
 ) -> Unit raise {
   impose_assert_close_for_test(actual.a, expected.a)
   impose_assert_close_for_test(actual.b, expected.b)
@@ -53,7 +53,7 @@ fn impose_assert_box_close_for_test(
 ///|
 fn impose_assert_cm_close_for_test(
   op : @content.PdfContentOp,
-  expected : TransformMatrix,
+  expected : @geometry.TransformMatrix,
 ) -> Unit raise {
   guard op is Op_cm(matrix) else { fail("expected cm operator") }
   impose_assert_matrix_close_for_test(matrix, expected)
@@ -76,7 +76,7 @@ fn impose_transforms_for_test(
   fit_extra_hspace? : Double = 0.0,
   fit_extra_vspace? : Double = 0.0,
   count? : Int = 3,
-) -> Array[TransformMatrix] raise PdfError {
+) -> Array[@geometry.TransformMatrix] raise PdfError {
   pdf_document_empty().pdf_impose_transforms(
     fit,
     x,
@@ -167,7 +167,7 @@ test "pdf_impose_make_space expands non-fit pages after shifting contents" {
   let pages = try! spaced.pages_of_pagetree()
   @test.assert_eq(pages[0].mediabox, impose_box_for_test(120.0, 100.0))
   @test.assert_eq(try! impose_page_content_ops_for_test(spaced, pages[0]), [
-    Op_cm(transform_translate(10.0, 10.0)),
+    Op_cm(@geometry.transform_translate(10.0, 10.0)),
     Op_re(0.0, 0.0, 100.0, 80.0),
     Op_W,
     Op_n,
@@ -184,8 +184,8 @@ test "pdf_impose_make_space fit scales and shifts while preserving page size" {
   let pages = try! spaced.pages_of_pagetree()
   @test.assert_eq(pages[0].mediabox, impose_box_for_test(100.0, 80.0))
   @test.assert_eq(try! impose_page_content_ops_for_test(spaced, pages[0]), [
-    Op_cm(transform_translate(10.0, 10.0)),
-    Op_cm(transform_scale(point2(0.0, 0.0), 0.8, 0.8)),
+    Op_cm(@geometry.transform_translate(10.0, 10.0)),
+    Op_cm(@geometry.transform_scale(@geometry.point2(0.0, 0.0), 0.8, 0.8)),
     Op_re(0.0, 0.0, 100.0, 80.0),
     Op_W,
     Op_n,
@@ -337,16 +337,16 @@ test "PdfDocument impose assembles simple non-fit sheets" {
   @test.assert_eq(pages.length(), 1)
   @test.assert_eq(pages[0].mediabox, impose_box_for_test(200.0, 100.0))
   @test.assert_eq(try! impose_page_content_ops_for_test(imposed, pages[0]), [
-    Op_cm(transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_q,
-    Op_cm(transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_re(0.0, 0.0, 100.0, 100.0),
     Op_W,
     Op_n,
     Op_S,
     Op_Q,
     Op_q,
-    Op_cm(transform_translate(100.0, 0.0)),
+    Op_cm(@geometry.transform_translate(100.0, 0.0)),
     Op_re(0.0, 0.0, 100.0, 100.0),
     Op_W,
     Op_n,
@@ -367,7 +367,7 @@ test "PdfDocument impose applies non-fit output margin through wrapper" {
   @test.assert_eq(pages.length(), 1)
   @test.assert_eq(pages[0].mediabox, impose_box_for_test(120.0, 220.0))
   let ops = try! impose_page_content_ops_for_test(imposed, pages[0])
-  @test.assert_eq(ops[0], Op_cm(transform_translate(10.0, 10.0)))
+  @test.assert_eq(ops[0], Op_cm(@geometry.transform_translate(10.0, 10.0)))
 }
 
 ///|
@@ -381,7 +381,7 @@ test "PdfDocument impose calculates fit-mode extra spacing" {
   @test.assert_eq(pages[0].mediabox, impose_box_for_test(250.0, 120.0))
   @test.assert_eq(try! impose_page_content_ops_for_test(imposed, pages[0]), [
     Op_q,
-    Op_cm(transform_translate(16.6666666667, 10.0)),
+    Op_cm(@geometry.transform_translate(16.6666666667, 10.0)),
     Op_re(0.0, 0.0, 100.0, 100.0),
     Op_W,
     Op_n,
@@ -442,9 +442,9 @@ test "PdfDocument impose marks source content as artifact for structure trees" {
   let imposed = try! document.impose(1.0, 1.0, process_struct_tree=true)
   let pages = try! imposed.pages_of_pagetree()
   @test.assert_eq(try! impose_page_content_ops_for_test(imposed, pages[0]), [
-    Op_cm(transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_q,
-    Op_cm(transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_re(0.0, 0.0, 100.0, 100.0),
     Op_W,
     Op_n,
@@ -472,26 +472,29 @@ test "PdfDocument twoup_stack imposes and uprights two-page sheets" {
     200.0,
   )
   let ops = try! impose_page_content_ops_for_test(stacked, pages[0])
-  impose_assert_cm_close_for_test(ops[0], transform_translate(-50.0, 50.0))
+  impose_assert_cm_close_for_test(
+    ops[0],
+    @geometry.transform_translate(-50.0, 50.0),
+  )
   impose_assert_cm_close_for_test(
     ops[1],
-    transform_rotate(point2(100.0, 50.0), @math.PI / 2.0),
+    @geometry.transform_rotate(@geometry.point2(100.0, 50.0), @math.PI / 2.0),
   )
   let actual_tail : Array[@content.PdfContentOp] = []
   for op in ops[2:] {
     actual_tail.push(op)
   }
   @test.assert_eq(actual_tail, [
-    Op_cm(transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_q,
-    Op_cm(transform_translate(0.0, 0.0)),
+    Op_cm(@geometry.transform_translate(0.0, 0.0)),
     Op_re(0.0, 0.0, 100.0, 100.0),
     Op_W,
     Op_n,
     Op_S,
     Op_Q,
     Op_q,
-    Op_cm(transform_translate(100.0, 0.0)),
+    Op_cm(@geometry.transform_translate(100.0, 0.0)),
     Op_re(0.0, 0.0, 100.0, 100.0),
     Op_W,
     Op_n,
@@ -531,14 +534,14 @@ test "PdfDocument impose rejects empty input" {
 ///|
 test "pdf_impose_transforms preserves row and column ordering" {
   @test.assert_eq(try! impose_transforms_for_test(columns=false, count=3), [
-    transform_translate(0.0, 200.0),
-    transform_translate(100.0, 200.0),
-    transform_translate(0.0, 0.0),
+    @geometry.transform_translate(0.0, 200.0),
+    @geometry.transform_translate(100.0, 200.0),
+    @geometry.transform_translate(0.0, 0.0),
   ])
   @test.assert_eq(try! impose_transforms_for_test(columns=true, count=3), [
-    transform_translate(0.0, 200.0),
-    transform_translate(0.0, 0.0),
-    transform_translate(100.0, 200.0),
+    @geometry.transform_translate(0.0, 200.0),
+    @geometry.transform_translate(0.0, 0.0),
+    @geometry.transform_translate(100.0, 200.0),
   ])
 }
 
@@ -546,7 +549,10 @@ test "pdf_impose_transforms preserves row and column ordering" {
 test "pdf_impose_transforms centers short final rows" {
   @test.assert_eq(
     try! impose_transforms_for_test(x=3, y=1, center=true, count=2),
-    [transform_translate(50.0, 0.0), transform_translate(150.0, 0.0)],
+    [
+      @geometry.transform_translate(50.0, 0.0),
+      @geometry.transform_translate(150.0, 0.0),
+    ],
   )
 }
 
@@ -555,10 +561,10 @@ test "pdf_impose_transforms preserves right-to-left and bottom-to-top ordering" 
   @test.assert_eq(
     try! impose_transforms_for_test(rtl=true, btt=true, count=4),
     [
-      transform_translate(100.0, 0.0),
-      transform_translate(0.0, 0.0),
-      transform_translate(100.0, 200.0),
-      transform_translate(0.0, 200.0),
+      @geometry.transform_translate(100.0, 0.0),
+      @geometry.transform_translate(0.0, 0.0),
+      @geometry.transform_translate(100.0, 200.0),
+      @geometry.transform_translate(0.0, 200.0),
     ],
   )
 }
@@ -575,7 +581,10 @@ test "pdf_impose_transforms applies fit spacing and margin transforms" {
       fit_extra_vspace=7.0,
       count=2,
     ),
-    [transform_translate(5.0, 7.0), transform_translate(110.0, 7.0)],
+    [
+      @geometry.transform_translate(5.0, 7.0),
+      @geometry.transform_translate(110.0, 7.0),
+    ],
   )
   @test.assert_eq(
     try! impose_transforms_for_test(
@@ -595,7 +604,7 @@ test "pdf_impose_transforms applies fit spacing and margin transforms" {
 
 ///|
 test "pdf_impose_transforms rejects invalid grids and margins" {
-  let bad_grid : Result[Array[TransformMatrix], Error] = try? impose_transforms_for_test(
+  let bad_grid : Result[Array[@geometry.TransformMatrix], Error] = try? impose_transforms_for_test(
     x=0,
   )
   guard bad_grid
@@ -603,7 +612,7 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
     fail("expected BadNumberArgument for non-positive imposition grid")
   }
 
-  let bad_margin : Result[Array[TransformMatrix], Error] = try? impose_transforms_for_test(
+  let bad_margin : Result[Array[@geometry.TransformMatrix], Error] = try? impose_transforms_for_test(
     fit=true,
     x=1,
     y=1,
@@ -621,7 +630,7 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
 ///|
 test "pdf_impose_transform_content wraps fast and parsed content like cpdf" {
   let document = pdf_document_empty()
-  let matrix = transform_translate(10.0, 20.0)
+  let matrix = @geometry.transform_translate(10.0, 20.0)
   let source : ReadOnlyArray[PdfObject] = [
     try! impose_content_stream_for_test([Op_BT, Op_ET]),
   ]
@@ -732,12 +741,12 @@ test "pdf_impose_pages_core combines pages and transforms annotations" {
     ),
     [
       Op_q,
-      Op_cm(transform_translate(0.0, 0.0)),
+      Op_cm(@geometry.transform_translate(0.0, 0.0)),
       Op_BT,
       Op_ET,
       Op_Q,
       Op_q,
-      Op_cm(transform_translate(100.0, 0.0)),
+      Op_cm(@geometry.transform_translate(100.0, 0.0)),
       Op_S,
       Op_Q,
     ],
@@ -777,13 +786,13 @@ test "pdf_impose pattern matrix rewrite only changes scn-used patterns" {
   let pattern_name = impose_name_for_test("/P1")
   let pattern_by_values = impose_name_for_test("/P2")
   let old_matrix = {
-    ..transform_identity_matrix,
+    ..@geometry.transform_identity_matrix,
     a: 2.0,
     d: 3.0,
     e: 4.0,
     f: 5.0,
   }
-  let by_values_matrix = transform_translate(7.0, 8.0)
+  let by_values_matrix = @geometry.transform_translate(7.0, 8.0)
   let page = try! impose_page_for_test(
     [Op_scnName(pattern_name, []), Op_SCNName(pattern_by_values, [0.5])],
     resources=PdfDictionary([
@@ -803,7 +812,7 @@ test "pdf_impose pattern matrix rewrite only changes scn-used patterns" {
     ]),
   )
   let rewritten = try! document.pdf_impose_change_pattern_matrices_page(
-    transform_translate(10.0, 20.0),
+    @geometry.transform_translate(10.0, 20.0),
     page,
   )
   guard rewritten.resources.lookup_immediate(key_pattern)
@@ -813,8 +822,8 @@ test "pdf_impose pattern matrix rewrite only changes scn-used patterns" {
   guard patterns[0] is (name, PdfIndirect(number)) && name == pattern_name else {
     fail("expected scn-used pattern to be cloned as an indirect object")
   }
-  let expected_matrix = transform_matrix_compose(
-    transform_translate(10.0, 20.0),
+  let expected_matrix = @geometry.transform_matrix_compose(
+    @geometry.transform_translate(10.0, 20.0),
     old_matrix,
   )
   @test.assert_eq(
@@ -836,7 +845,7 @@ test "pdf_impose pages core rewrites pattern matrices before combining resources
   let key_matrix = impose_name_for_test("/Matrix")
   let key_pattern = impose_name_for_test("/Pattern")
   let pattern_name = impose_name_for_test("/P1")
-  let old_matrix = transform_translate(3.0, 4.0)
+  let old_matrix = @geometry.transform_translate(3.0, 4.0)
   let first_page = try! impose_page_for_test([Op_S])
   let second_page = try! impose_page_for_test(
     [Op_scnName(pattern_name, [])],
@@ -876,7 +885,10 @@ test "pdf_impose pages core rewrites pattern matrices before combining resources
     document.lookup_object_or_null(number).lookup_immediate(key_matrix),
     Some(
       pdf_object_of_matrix(
-        transform_matrix_compose(transform_translate(100.0, 0.0), old_matrix),
+        @geometry.transform_matrix_compose(
+          @geometry.transform_translate(100.0, 0.0),
+          old_matrix,
+        ),
       ),
     ),
   )
@@ -893,7 +905,7 @@ test "pdf_impose pattern matrix rewrite descends into form xobjects" {
   let form_name = impose_name_for_test("/Form")
   let xobject_name = impose_name_for_test("/Fm1")
   let pattern_name = impose_name_for_test("/PX")
-  let old_matrix = transform_translate(1.0, 2.0)
+  let old_matrix = @geometry.transform_translate(1.0, 2.0)
   let form = try! (try! pdf_content_stream_of_ops([Op_SCNName(pattern_name, [])]))
     .add_dict_entry(key_subtype, PdfNameObject(form_name))
     .add_dict_entry(
@@ -919,7 +931,7 @@ test "pdf_impose pattern matrix rewrite descends into form xobjects" {
   )
   ignore(
     try! document.pdf_impose_change_pattern_matrices_page(
-      transform_translate(10.0, 20.0),
+      @geometry.transform_translate(10.0, 20.0),
       page,
     ),
   )
@@ -937,7 +949,10 @@ test "pdf_impose pattern matrix rewrite descends into form xobjects" {
     document.lookup_object_or_null(number).lookup_immediate(key_matrix),
     Some(
       pdf_object_of_matrix(
-        transform_matrix_compose(transform_translate(10.0, 20.0), old_matrix),
+        @geometry.transform_matrix_compose(
+          @geometry.transform_translate(10.0, 20.0),
+          old_matrix,
+        ),
       ),
     ),
   )

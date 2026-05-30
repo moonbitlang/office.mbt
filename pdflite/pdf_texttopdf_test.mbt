@@ -162,7 +162,7 @@ test "pdf_texttopdf_tag_paragraphs wraps blank-line paragraphs" {
 
 ///|
 test "pdf_texttopdf_typeset creates a standalone text document" {
-  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 100.0, 100.0)
   let fontpack = texttopdf_standard_pack_for_test()
   let text = @ascii.encode("Hi")
   let document = try! @pdflite.pdf_texttopdf_typeset(
@@ -205,7 +205,7 @@ test "pdf_texttopdf_typeset creates a standalone text document" {
 
 ///|
 test "pdf_texttopdf_typeset creates a blank document for empty text" {
-  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 100.0, 100.0)
   let document = try! @pdflite.pdf_texttopdf_typeset(
     texttopdf_standard_pack_for_test(),
     10.0,
@@ -223,7 +223,7 @@ test "pdf_texttopdf_typeset creates a blank document for empty text" {
 
 ///|
 test "pdf_texttopdf_typeset can build paragraph structure tree" {
-  let paper = @pdflite.paper_size_make(PdfPoint, 120.0, 120.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 120.0, 120.0)
   let document = try! @pdflite.pdf_texttopdf_typeset(
     texttopdf_standard_pack_for_test(),
     10.0,
@@ -319,7 +319,7 @@ test "pdf_ua_subformat_of_string parses CamlPDF PDF/UA names" {
 
 ///|
 test "pdf_texttopdf_typeset requires title when subformat is requested" {
-  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 100.0, 100.0)
   let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_texttopdf_typeset(
     texttopdf_standard_pack_for_test(),
     10.0,
@@ -334,7 +334,7 @@ test "pdf_texttopdf_typeset requires title when subformat is requested" {
 
 ///|
 test "pdf_texttopdf_typeset PDF/UA-1 writes accessibility catalog metadata" {
-  let paper = @pdflite.paper_size_make(PdfPoint, 120.0, 120.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 120.0, 120.0)
   let document = try! @pdflite.pdf_texttopdf_typeset(
     texttopdf_standard_pack_for_test(),
     10.0,
@@ -391,7 +391,7 @@ test "pdf_texttopdf_typeset PDF/UA-1 writes accessibility catalog metadata" {
 
 ///|
 test "pdf_texttopdf_typeset PDF/UA-2 wraps paragraphs under document namespace" {
-  let paper = @pdflite.paper_size_make(PdfPoint, 120.0, 120.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 120.0, 120.0)
   let document = try! @pdflite.pdf_texttopdf_typeset(
     texttopdf_standard_pack_for_test(),
     10.0,

@@ -254,7 +254,7 @@ test "pdf_type_split_text preserves CamlPDF word splitting edge cases" {
 ///|
 test "pdf_type_layout wraps text and glue with CamlPDF margin behavior" {
   let font = type_simple_font_with_constant_width_for_test(100.0)
-  let paper = @pdflite.paper_size_make(PdfPoint, 10.0, 100.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 10.0, 100.0)
   let laid_out = try! @pdflite.pdf_type_layout(1.0, 1000.0, paper, [
     PdfTypeFont("body", font, 10.0),
     PdfTypeText(@ascii.encode("one two three")),
@@ -275,7 +275,7 @@ test "pdf_type_layout wraps text and glue with CamlPDF margin behavior" {
 ///|
 test "pdf_type_paginate closes and reopens active tags around breaks" {
   let font = type_standard_font_for_test()
-  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 20.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 100.0, 20.0)
   let paginated = @pdflite.pdf_type_paginate(2.0, 3.0, paper, [
     PdfTypeFont("body", font, 10.0),
     PdfTypeBeginDocument,
@@ -304,7 +304,7 @@ test "pdf_type_paginate closes and reopens active tags around breaks" {
 test "pdf_type_typeset writes page content and font resources" {
   let document = @pdflite.pdf_document_empty()
   let font = type_standard_font_for_test()
-  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 100.0, 100.0)
   let result = try! document.pdf_type_typeset(
     false,
     10.0,
@@ -334,7 +334,7 @@ test "pdf_type_typeset writes page content and font resources" {
   @test.assert_eq(try! type_page_ops_for_test(page), [
     Op_Tf(type_name_for_test("/F1"), 10.0),
     Op_q,
-    Op_cm(@pdflite.transform_translate(10.0, 70.0)),
+    Op_cm(@geometry.transform_translate(10.0, 70.0)),
     Op_BT,
     Op_Tj(@ascii.encode("Hi")),
     Op_ET,
@@ -346,7 +346,7 @@ test "pdf_type_typeset writes page content and font resources" {
 test "pdf_type_typeset reuses fonts across explicit page breaks" {
   let document = @pdflite.pdf_document_empty()
   let font = type_standard_font_for_test()
-  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 100.0, 100.0)
   let elements : Array[@pdflite.PdfTypeElement] = [
     PdfTypeFont("body", font, 10.0),
     PdfTypeBeginDocument,
@@ -374,7 +374,7 @@ test "pdf_type_typeset reuses fonts across explicit page breaks" {
   @test.assert_eq(try! type_page_ops_for_test(result.pages[1]), [
     Op_Tf(type_name_for_test("/F1"), 10.0),
     Op_q,
-    Op_cm(@pdflite.transform_translate(10.0, 70.0)),
+    Op_cm(@geometry.transform_translate(10.0, 70.0)),
     Op_BT,
     Op_Tj(@ascii.encode("B")),
     Op_ET,
@@ -390,7 +390,7 @@ test "pdf_type_typeset reuses fonts across explicit page breaks" {
 test "pdf_type_typeset creates link annotations and numbered marked content" {
   let document = @pdflite.pdf_document_empty()
   let font = type_standard_font_for_test()
-  let paper = @pdflite.paper_size_make(PdfPoint, 100.0, 100.0)
+  let paper = @geometry.paper_size_make(PdfPoint, 100.0, 100.0)
   let link_text = @ascii.encode("Go")
   let widths = try! @pdflite.pdf_type_font_widths(font, 10.0)
   let link_width = try! @pdflite.pdf_type_width_of_bytes(widths, link_text)
@@ -446,7 +446,7 @@ test "pdf_type_typeset creates link annotations and numbered marked content" {
   @test.assert_eq(try! type_page_ops_for_test(page), [
     Op_Tf(type_name_for_test("/F1"), 10.0),
     Op_q,
-    Op_cm(@pdflite.transform_translate(10.0, 70.0)),
+    Op_cm(@geometry.transform_translate(10.0, 70.0)),
     Op_BT,
     Op_Tj(link_text),
     Op_ET,
@@ -456,7 +456,7 @@ test "pdf_type_typeset creates link annotations and numbered marked content" {
       PdfDictionary([(type_name_for_test("/MCID"), PdfInteger(0))]),
     ),
     Op_q,
-    Op_cm(@pdflite.transform_translate(10.0 + link_width, 70.0)),
+    Op_cm(@geometry.transform_translate(10.0 + link_width, 70.0)),
     Op_BT,
     Op_Tj(@ascii.encode("T")),
     Op_ET,
