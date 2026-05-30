@@ -187,6 +187,15 @@ pub using @label {
 }
 
 ///|
+pub using @spec {
+  pdf_invert_page_range,
+  pdf_invert_range,
+  pdf_parse_pagespec_for_count,
+  pdf_parse_pagespec_without_pdf,
+  pdf_string_of_pagespec_for_count,
+}
+
+///|
 pub using @addtext {
   type PdfAddTextLinePlacement,
   type PdfAddTextLineWidths,

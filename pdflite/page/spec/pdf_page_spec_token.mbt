@@ -5,7 +5,7 @@ fn pdf_pagespec_is_digit(value : Int) -> Bool {
 
 ///|
 fn pdf_pagespec_is_separator(value : Int) -> Bool {
-  value == 45 || value == 44 || pdf_is_whitespace_byte(value)
+  value == 45 || value == 44 || @core.pdf_is_whitespace_byte(value)
 }
 
 ///|
@@ -60,7 +60,7 @@ fn pdf_pagespec_tokenize(
   let mut index = 0
   while index < bytes.length() {
     let value = bytes[index].to_int()
-    if pdf_is_whitespace_byte(value) {
+    if @core.pdf_is_whitespace_byte(value) {
       index += 1
     } else if value == 45 {
       tokens.push(PageSpecDash)

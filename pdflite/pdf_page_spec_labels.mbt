@@ -13,8 +13,8 @@ fn pdf_pagespec_copy_view(
 }
 
 ///|
-fn PdfPageSpecContext::read_page_label_reference(
-  self : PdfPageSpecContext,
+fn PdfDocumentPageSpecContext::read_page_label_reference(
+  self : PdfDocumentPageSpecContext,
   spec : BytesView,
   open_index : Int,
 ) -> (Bytes, Int) raise PdfError {
@@ -65,8 +65,8 @@ fn PdfPageSpecContext::read_page_label_reference(
 }
 
 ///|
-fn PdfPageSpecContext::page_number_bytes_for_label(
-  self : PdfPageSpecContext,
+fn PdfDocumentPageSpecContext::page_number_bytes_for_label(
+  self : PdfDocumentPageSpecContext,
   label : BytesView,
   labels : ArrayView[PdfPageLabel],
 ) -> Bytes raise PdfError {
@@ -92,8 +92,8 @@ fn PdfPageSpecContext::page_number_bytes_for_label(
 }
 
 ///|
-fn PdfPageSpecContext::resolved_page_labels_length(
-  self : PdfPageSpecContext,
+fn PdfDocumentPageSpecContext::resolved_page_labels_length(
+  self : PdfDocumentPageSpecContext,
   spec : BytesView,
   labels : ArrayView[PdfPageLabel],
 ) -> Int raise PdfError {
@@ -122,49 +122,37 @@ fn PdfPageSpecContext::resolved_page_labels_length(
 }
 
 ///|
-fn PdfPageSpecContext::resolve_page_labels(
-  self : PdfPageSpecContext,
+fn PdfDocumentPageSpecContext::resolve_page_labels(
+  self : PdfDocumentPageSpecContext,
   spec : BytesView,
 ) -> Bytes raise PdfError {
-  match self.document {
-    None => {
-      for byte in spec {
-        if byte.to_int() == 91 || byte.to_int() == 93 {
-          self.bad()
-        }
-      }
-      spec.to_owned()
-    }
-    Some(document) => {
-      let labels = document.read_page_labels()
-      let output = Array::make(
-        self.resolved_page_labels_length(spec, labels),
-        b'\x00',
-      )
-      let mut index = 0
-      let mut position = 0
-      while index < spec.length() {
-        let value = spec[index].to_int()
-        if value == 91 {
-          let (label, next_index) = self.read_page_label_reference(spec, index)
-          let page_number = self.page_number_bytes_for_label(label, labels)
-          position = pdf_pagespec_copy_view(output, position, page_number)
-          index = next_index
-        } else if value == 92 &&
-          index + 1 < spec.length() &&
-          (spec[index + 1].to_int() == 91 || spec[index + 1].to_int() == 93) {
-          output[position] = spec[index + 1]
-          position += 1
-          index += 2
-        } else if value == 93 {
-          self.bad()
-        } else {
-          output[position] = spec[index]
-          position += 1
-          index += 1
-        }
-      }
-      Bytes::from_array(output)
+  let labels = self.document.read_page_labels()
+  let output = Array::make(
+    self.resolved_page_labels_length(spec, labels),
+    b'\x00',
+  )
+  let mut index = 0
+  let mut position = 0
+  while index < spec.length() {
+    let value = spec[index].to_int()
+    if value == 91 {
+      let (label, next_index) = self.read_page_label_reference(spec, index)
+      let page_number = self.page_number_bytes_for_label(label, labels)
+      position = pdf_pagespec_copy_view(output, position, page_number)
+      index = next_index
+    } else if value == 92 &&
+      index + 1 < spec.length() &&
+      (spec[index + 1].to_int() == 91 || spec[index + 1].to_int() == 93) {
+      output[position] = spec[index + 1]
+      position += 1
+      index += 2
+    } else if value == 93 {
+      self.bad()
+    } else {
+      output[position] = spec[index]
+      position += 1
+      index += 1
     }
   }
+  Bytes::from_array(output)
 }
