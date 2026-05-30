@@ -1,5 +1,6 @@
 import {
   "bobzhang/pdflite",
+  "bobzhang/pdflite/metadata",
   "bobzhang/pdflite/syntax",
   "bobzhang/pdflite/writer",
   "moonbitlang/core/encoding/ascii",
@@ -12,6 +13,7 @@ import {
 import {
   "bobzhang/pdflite",
   "bobzhang/pdflite/content",
+  "bobzhang/pdflite/metadata",
   "bobzhang/pdflite/syntax",
   "bobzhang/pdflite/writer",
   "moonbitlang/core/test",

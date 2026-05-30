@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/metadata"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfMetadataEncoding {
+  PdfMetadataRaw
+  PdfMetadataUTF8
+  PdfMetadataStripped
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits

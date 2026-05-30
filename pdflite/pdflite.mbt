@@ -298,6 +298,9 @@ pub using @ocg {
 }
 
 ///|
+pub using @metadata {type PdfMetadataEncoding}
+
+///|
 pub using @afm {type PdfAfmData, pdf_read_afm}
 
 ///|

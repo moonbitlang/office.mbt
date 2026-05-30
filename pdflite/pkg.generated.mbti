@@ -10,6 +10,7 @@ import {
   "bobzhang/pdflite/date",
   "bobzhang/pdflite/font/afm",
   "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/metadata",
   "bobzhang/pdflite/ocg",
   "bobzhang/pdflite/page",
   "bobzhang/pdflite/portfolio",
@@ -361,7 +362,7 @@ pub fn pdf_blank_document_paper(@geometry.PaperSize, Int) -> PdfDocument raise @
 
 pub let pdf_bookmark_black : PdfBookmarkColour
 
-pub fn pdf_bookmark_name_of_spec(PdfMetadataEncoding, ArrayView[PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
+pub fn pdf_bookmark_name_of_spec(@metadata.PdfMetadataEncoding, ArrayView[PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
 
 pub fn pdf_bookmarks_open_to_level(Int, PdfDocument) -> PdfDocument raise @core.PdfError
 
@@ -821,7 +822,7 @@ pub fn pdf_encode_filter_view(@core.PdfName, BytesView) -> Bytes raise @core.Pdf
 
 pub fn pdf_encode_filter_view_with_flate_level(@core.PdfName, BytesView, Int) -> Bytes raise @core.PdfError
 
-pub fn pdf_encode_output(PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
+pub fn pdf_encode_output(@metadata.PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise @core.PdfError
 
@@ -905,7 +906,7 @@ pub fn pdf_format_real(Double) -> Bytes raise @core.PdfError
 
 pub fn pdf_generate_id(String, () -> Double) -> @syntax.PdfObject
 
-pub fn pdf_get_annotations(PdfMetadataEncoding, PdfDocument) -> Array[(Int, Bytes)] raise @core.PdfError
+pub fn pdf_get_annotations(@metadata.PdfMetadataEncoding, PdfDocument) -> Array[(Int, Bytes)] raise @core.PdfError
 
 pub fn pdf_get_annotations_json(ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
 
@@ -995,7 +996,7 @@ pub fn pdf_image_document_of_object(@syntax.PdfObject, process_struct_tree? : Bo
 
 pub fn pdf_image_document_of_png_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
 
-pub fn pdf_image_extract_images_files(Bool, PdfMetadataEncoding, Bool, Bool, PdfDocument, ArrayView[Int], String) -> Array[PdfExtractedImageFile] raise @core.PdfError
+pub fn pdf_image_extract_images_files(Bool, @metadata.PdfMetadataEncoding, Bool, Bool, PdfDocument, ArrayView[Int], String) -> Array[PdfExtractedImageFile] raise @core.PdfError
 
 pub fn pdf_image_extract_single_image_files(PdfDocument, Int, String) -> Array[PdfExtractedImageFile] raise @core.PdfError
 
@@ -1101,11 +1102,11 @@ pub fn pdf_lex_view(BytesView) -> Array[@syntax.PdfLexeme] raise @core.PdfError
 
 pub fn pdf_lexeme_debug_name(@syntax.PdfLexeme) -> String
 
-pub fn pdf_list_annotations(ArrayView[Int], PdfMetadataEncoding, PdfDocument) -> Bytes raise @core.PdfError
+pub fn pdf_list_annotations(ArrayView[Int], @metadata.PdfMetadataEncoding, PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_list_attached_files(PdfDocument) -> Array[PdfAttachment] raise @core.PdfError
 
-pub fn pdf_list_bookmarks(Bool, Bool, PdfMetadataEncoding, ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
+pub fn pdf_list_bookmarks(Bool, Bool, @metadata.PdfMetadataEncoding, ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
 
 pub fn pdf_list_fonts(PdfDocument, ArrayView[Int]) -> Array[PdfFontListEntry] raise @core.PdfError
 
@@ -1155,7 +1156,7 @@ pub let pdf_metadata_dc : String
 
 pub let pdf_metadata_dc_namespace : String
 
-pub fn pdf_metadata_encode_output(PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
+pub fn pdf_metadata_encode_output(@metadata.PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_metadata_get_data_for_bytes(String, String, BytesView) -> String?
 
@@ -1205,7 +1206,7 @@ pub fn pdf_name_of_bytes(Bytes) -> @core.PdfName
 
 pub fn pdf_name_of_colour_space(PdfColourSpace) -> @core.PdfName?
 
-pub fn pdf_name_of_spec(PdfMetadataEncoding, ArrayView[PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
+pub fn pdf_name_of_spec(@metadata.PdfMetadataEncoding, ArrayView[PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
 
 pub fn pdf_name_of_view(BytesView) -> @core.PdfName
 
@@ -1265,9 +1266,9 @@ pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, proce
 
 pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> @ocg.PdfOptionalContent? raise @core.PdfError
 
-pub fn pdf_output_info(PdfDocument, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+pub fn pdf_output_info(PdfDocument, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 
-pub fn pdf_output_info_json_blob(PdfDocument, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+pub fn pdf_output_info_json_blob(PdfDocument, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 
 pub fn pdf_output_page_info(@geometry.PdfUnit, PdfDocument, ArrayView[Int], json? : Bool, raisejson? : Bool) -> Bytes raise @core.PdfError
 
@@ -1275,7 +1276,7 @@ pub fn pdf_output_page_info_json_blob(PdfDocument, ArrayView[Int], unit? : @geom
 
 pub fn pdf_output_page_info_text(PdfDocument, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 
-pub fn pdf_output_xmp_info(PdfDocument, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+pub fn pdf_output_xmp_info(PdfDocument, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 
 pub fn pdf_output_xmp_info_json_blob(PdfDocument) -> Bytes raise @core.PdfError
 
@@ -2870,7 +2871,7 @@ pub fn PdfDocument::attach_file(Self, String, BytesView, keep_version? : Bool, p
 pub fn PdfDocument::black_fills(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
 pub fn PdfDocument::black_lines(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
 pub fn PdfDocument::black_text(Self, ArrayView[Int], PdfContentColour) -> Self raise @core.PdfError
-pub fn PdfDocument::bookmark_name_of_spec(Self, PdfMetadataEncoding, ArrayView[PdfBookmark], Int, String, Int, String, Int, Int) -> String raise @core.PdfError
+pub fn PdfDocument::bookmark_name_of_spec(Self, @metadata.PdfMetadataEncoding, ArrayView[PdfBookmark], Int, String, Int, String, Int, Int) -> String raise @core.PdfError
 pub fn PdfDocument::bookmarks_json(Self, json_preserve_actions? : Bool) -> Json raise @core.PdfError
 pub fn PdfDocument::bookmarks_json_blob(Self, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::bookmarks_open_to_level(Self, Int) -> Self raise @core.PdfError
@@ -2966,7 +2967,7 @@ pub fn PdfDocument::endpage(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::endpage_fast(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
 pub fn PdfDocument::extract_fontfile_bytes(Self, Int, String) -> Bytes? raise @core.PdfError
-pub fn PdfDocument::extract_images_files(Self, ArrayView[Int], String, encoding? : PdfMetadataEncoding, inline? : Bool, dedup? : Bool, dedup_per_page? : Bool) -> Array[PdfExtractedImageFile] raise @core.PdfError
+pub fn PdfDocument::extract_images_files(Self, ArrayView[Int], String, encoding? : @metadata.PdfMetadataEncoding, inline? : Bool, dedup? : Bool, dedup_per_page? : Bool) -> Array[PdfExtractedImageFile] raise @core.PdfError
 pub fn PdfDocument::extract_single_image_files(Self, Int, String) -> Array[PdfExtractedImageFile] raise @core.PdfError
 pub fn PdfDocument::extract_struct_tree(Self) -> Json raise @core.PdfError
 pub fn PdfDocument::find_object_by_spec(Self, String) -> @syntax.PdfObject raise @core.PdfError
@@ -2978,7 +2979,7 @@ pub fn PdfDocument::font_table(Self, String, Int) -> Array[PdfFontTableEntry] ra
 pub fn PdfDocument::font_table_text(Self, String, Int) -> Bytes raise @core.PdfError
 pub fn PdfDocument::fonts_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
 pub fn PdfDocument::fonts_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
-pub fn PdfDocument::get_annotations(Self, encoding? : PdfMetadataEncoding) -> Array[(Int, Bytes)] raise @core.PdfError
+pub fn PdfDocument::get_annotations(Self, encoding? : @metadata.PdfMetadataEncoding) -> Array[(Int, Bytes)] raise @core.PdfError
 pub fn PdfDocument::get_image_24bpp(Self, @syntax.PdfObject, @syntax.PdfObject) -> PdfImage raise @core.PdfError
 pub fn PdfDocument::get_number(Self, @syntax.PdfObject) -> Double raise @core.PdfError
 pub fn PdfDocument::hard_box(Self, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
@@ -2995,9 +2996,9 @@ pub fn PdfDocument::images_json(Self, ArrayView[Int], inline? : Bool) -> Json ra
 pub fn PdfDocument::images_json_blob(Self, ArrayView[Int], inline? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::impose(Self, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::indirect_number(Self, @core.PdfName, @syntax.PdfObject) -> Int?
-pub fn PdfDocument::info_blob(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
-pub fn PdfDocument::info_json(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
-pub fn PdfDocument::info_json_blob(Self, encoding? : PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+pub fn PdfDocument::info_blob(Self, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+pub fn PdfDocument::info_json(Self, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
+pub fn PdfDocument::info_json_blob(Self, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
 pub fn PdfDocument::info_utf8(Self, @core.PdfName) -> String
 pub fn PdfDocument::info_utf8_string(Self, String) -> String
 pub fn PdfDocument::is_cidkeyed_font(Self, @syntax.PdfObject) -> Bool
@@ -3017,9 +3018,9 @@ pub fn PdfDocument::json_of_object(Self, @syntax.PdfObject, utf8? : Bool, clean_
 pub fn PdfDocument::json_to_output(Self, utf8? : Bool, parse_content? : Bool, no_stream_data? : Bool, decompress_streams? : Bool, clean_strings? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::language(Self) -> Bytes?
 pub fn PdfDocument::language_string(Self) -> String?
-pub fn PdfDocument::list_annotations(Self, ArrayView[Int], encoding? : PdfMetadataEncoding) -> Bytes raise @core.PdfError
+pub fn PdfDocument::list_annotations(Self, ArrayView[Int], encoding? : @metadata.PdfMetadataEncoding) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_attached_files(Self) -> Array[PdfAttachment] raise @core.PdfError
-pub fn PdfDocument::list_bookmarks(Self, ArrayView[Int], encoding? : PdfMetadataEncoding, json? : Bool, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::list_bookmarks(Self, ArrayView[Int], encoding? : @metadata.PdfMetadataEncoding, json? : Bool, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_fonts(Self, ArrayView[Int]) -> Array[PdfFontListEntry] raise @core.PdfError
 pub fn PdfDocument::list_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::list_spot_colours(Self) -> Array[@core.PdfName]
@@ -3634,12 +3635,6 @@ pub(all) struct PdfInterpolationFunction {
   n : Double
 } derive(Eq, ToJson, @debug.Debug)
 
-pub(all) enum PdfMetadataEncoding {
-  PdfMetadataRaw
-  PdfMetadataUTF8
-  PdfMetadataStripped
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfMetadataXmlAttribute {
   name : PdfMetadataXmlName
   value : String
@@ -4080,6 +4075,8 @@ pub using @crypt_core {type PdfEncryptionMethod}
 pub using @core {type PdfError}
 
 pub using @syntax {type PdfLexeme}
+
+pub using @metadata {type PdfMetadataEncoding}
 
 pub using @core {type PdfName}
 
