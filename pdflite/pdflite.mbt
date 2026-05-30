@@ -221,9 +221,6 @@ pub using @annotation {
 }
 
 ///|
-pub using @attachment {type PdfAttachment}
-
-///|
 pub using @shape {
   type PdfDrawnPath,
   type PdfPath,

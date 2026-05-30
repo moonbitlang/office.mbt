@@ -69,14 +69,14 @@ fn PdfDocument::pdf_attach_file_spec_relationship(
 ///|
 fn PdfDocument::pdf_attach_document_attachments(
   self : PdfDocument,
-) -> Array[PdfAttachment] raise PdfError {
+) -> Array[@attachment.PdfAttachment] raise PdfError {
   let catalog = self.catalog()
   match self.lookup_direct(pdf_attach_names_key(), catalog) {
     Some(names) =>
       match self.lookup_direct(pdf_attach_embedded_files_key(), names) {
         Some(tree) => {
           let entries = self.read_name_tree(tree)
-          let output : Array[PdfAttachment] = Array::new(
+          let output : Array[@attachment.PdfAttachment] = Array::new(
             capacity=entries.length(),
           )
           for entry in entries {
@@ -115,9 +115,11 @@ fn PdfDocument::pdf_attach_is_file_attachment_annotation(
 ///|
 fn PdfDocument::pdf_attach_page_attachments(
   self : PdfDocument,
-) -> Array[PdfAttachment] raise PdfError {
+) -> Array[@attachment.PdfAttachment] raise PdfError {
   let pages = self.pages_of_pagetree()
-  let output : Array[PdfAttachment] = Array::new(capacity=pages.length())
+  let output : Array[@attachment.PdfAttachment] = Array::new(
+    capacity=pages.length(),
+  )
   for index, page in pages {
     match self.lookup_direct(pdf_attach_annots_key(), page.rest) {
       Some(PdfArray(annotations)) =>
@@ -154,7 +156,7 @@ fn PdfDocument::pdf_attach_page_attachments(
 /// List document-level and page-level file attachments.
 pub fn PdfDocument::list_attached_files(
   self : PdfDocument,
-) -> Array[PdfAttachment] raise PdfError {
+) -> Array[@attachment.PdfAttachment] raise PdfError {
   [
     ..self.pdf_attach_document_attachments(),
     ..self.pdf_attach_page_attachments(),
@@ -165,6 +167,6 @@ pub fn PdfDocument::list_attached_files(
 /// Compatibility wrapper for `PdfDocument::list_attached_files`.
 pub fn pdf_list_attached_files(
   document : PdfDocument,
-) -> Array[PdfAttachment] raise PdfError {
+) -> Array[@attachment.PdfAttachment] raise PdfError {
   document.list_attached_files()
 }

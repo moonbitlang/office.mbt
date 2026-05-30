@@ -15,7 +15,7 @@ fn pdf_async_io_join_path(directory : StringView, filename : String) -> String {
 
 ///|
 fn pdf_async_io_attachment_data(
-  attachment : @pdflite.PdfAttachment,
+  attachment : @attachment.PdfAttachment,
 ) -> @pdflite.PdfBytes raise @pdflite.PdfError {
   match attachment.data {
     Some(data) => data

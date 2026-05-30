@@ -535,7 +535,7 @@ test "PdfDocument list_attached_files rejects malformed document attachment data
     ],
     PdfIndirect(tree_number),
   )
-  let result : Result[Array[@pdflite.PdfAttachment], Error] = try? document.list_attached_files()
+  let result : Result[Array[@attachment.PdfAttachment], Error] = try? document.list_attached_files()
   guard result is Err(@pdflite.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected malformed document attachment to fail")
   }
@@ -560,7 +560,7 @@ test "PdfDocument list and size reject file specs with EF but no F stream" {
     rest: PdfDictionary([(key_annots, PdfArray([annotation]))]),
   }
   let document = attach_document_for_test([page])
-  let list_result : Result[Array[@pdflite.PdfAttachment], Error] = try? document.list_attached_files()
+  let list_result : Result[Array[@attachment.PdfAttachment], Error] = try? document.list_attached_files()
   guard list_result is Err(@pdflite.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected missing /F to fail listing")
   }

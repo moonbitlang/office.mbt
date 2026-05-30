@@ -1,5 +1,6 @@
 import {
   "bobzhang/pdflite",
+  "bobzhang/pdflite/attachment",
   "bobzhang/pdflite/metadata",
   "bobzhang/pdflite/portfolio",
   "bobzhang/pdflite/syntax",
