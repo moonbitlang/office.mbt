@@ -1,0 +1,7 @@
+// import {
+//   "bobzhang/docx2html" @lib,
+// }
+
+options(
+  "is-main": true,
+)
