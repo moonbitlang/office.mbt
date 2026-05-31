@@ -1467,6 +1467,33 @@ test "document converter tolerates missing note and comment bodies" {
 }
 
 ///|
+test "document converter appends note backlinks without paragraph bodies" {
+  let empty_note = @docx2html.Note::{
+    note_type: "footnote",
+    note_id: "empty",
+    body: [],
+  }
+  let loose_note = @docx2html.Note::{
+    note_type: "footnote",
+    note_id: "loose",
+    body: [@docx2html.text("Loose")],
+  }
+  let doc = @docx2html.document(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([NoteReference(note_type="footnote", note_id="empty")]),
+        @docx2html.run([NoteReference(note_type="footnote", note_id="loose")]),
+      ]),
+    ],
+    notes=[empty_note, loose_note],
+  )
+  inspect(
+    @docx2html.convert_document_to_html(doc, id_prefix="doc-42-").value,
+    content="<p><sup><a href=\"#doc-42-footnote-empty\" id=\"doc-42-footnote-ref-empty\">[1]</a><a href=\"#doc-42-footnote-loose\" id=\"doc-42-footnote-ref-loose\">[2]</a></sup></p><ol><li id=\"doc-42-footnote-empty\"><p> <a href=\"#doc-42-footnote-ref-empty\">↑</a></p></li><li id=\"doc-42-footnote-loose\">Loose<p> <a href=\"#doc-42-footnote-ref-loose\">↑</a></p></li></ol>",
+  )
+}
+
+///|
 test "document converter emits data uri images" {
   let image = @docx2html.Image::{
     content_type: "image/jpeg",
