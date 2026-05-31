@@ -655,6 +655,27 @@ test "docx table properties include table style name" {
 }
 
 ///|
+test "docx table style warnings match Mammoth" {
+  let xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tblPr><w:tblStyle w:val="TableNormal" /></w:tblPr></w:tbl>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = empty_body_reader({ relationships: [] })
+  match reader.read_element(root)[0] {
+    Table(properties~, ..) => {
+      debug_inspect(properties.style_id, content="Some(\"TableNormal\")")
+      debug_inspect(properties.style_name, content="None")
+    }
+    _ => fail("expected table")
+  }
+  debug_inspect(
+    reader.messages,
+    content=(
+      #|[Warning("Table style with ID TableNormal was referenced but not defined in the document")]
+    ),
+  )
+}
+
+///|
 test "docx styles are keyed by type and keep first duplicate" {
   let styles = styles_from_xml(
     (
