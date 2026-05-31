@@ -50,3 +50,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Break style mappings are replacements, not wrappers around the default line-break node: `br[type='page'] => hr` emits `<hr />`, while unmapped page/column breaks still disappear.
 - Mammoth's Markdown writer preserves HTML `id` attributes by emitting raw `<a id="..."></a>` anchors at the start of the Markdown construct, after heading markers and before link brackets.
 - In style-map target paths, `!` is an ignore path, not a literal HTML tag. Keep it as a sentinel until wrapping so matched content can be dropped.
+- Complex fields are paragraph-local state: collect `w:instrText` across direct or run-nested nodes between `w:fldChar begin` and `separate`, then wrap displayed runs while the parsed hyperlink field is active.

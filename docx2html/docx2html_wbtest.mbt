@@ -154,6 +154,44 @@ test "docx deleted paragraph content is prepended to next paragraph" {
 }
 
 ///|
+fn complex_field_paragraph_html(instruction : String) -> String raise DocxError {
+  let xml = "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText>" +
+    instruction +
+    "</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:t>Hello</w:t></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>"
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  convert_document_to_html(document(elements)).value
+}
+
+///|
+test "docx complex field hyperlinks are read" {
+  inspect(
+    complex_field_paragraph_html(" HYPERLINK \"http://example.com\""),
+    content="<p><a href=\"http://example.com\">Hello</a></p>",
+  )
+  inspect(
+    complex_field_paragraph_html(" HYPERLINK http://example.com"),
+    content="<p><a href=\"http://example.com\">Hello</a></p>",
+  )
+  inspect(
+    complex_field_paragraph_html(" HYPERLINK \\l \"InternalLink\""),
+    content="<p><a href=\"#InternalLink\">Hello</a></p>",
+  )
+}
+
+///|
+test "docx complex field hyperlink instructions can be split across runs" {
+  let xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:fldChar w:fldCharType="begin" /></w:r><w:r><w:instrText> HYPE</w:instrText></w:r><w:r><w:instrText>RLINK "http://example.com"</w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate" /></w:r><w:r><w:t>Hello</w:t></w:r><w:r><w:fldChar w:fldCharType="end" /></w:r></w:p>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<p><a href=\"http://example.com\">Hello</a></p>",
+  )
+}
+
+///|
 fn read_vml_wrapper_html(tag : String) -> String raise DocxError {
   let xml = "<" +
     tag +

@@ -618,10 +618,199 @@ fn BodyReader::read_paragraph_elements_with_prefix(
     element.first_or_empty("w:pPr"),
   )
   let elements = [
-    paragraph(self.read_children(prefix + element.children), properties~),
+    paragraph(
+      self.read_paragraph_children(prefix + element.children),
+      properties~,
+    ),
   ]
   elements.append(self.read_text_box_elements(element))
   elements
+}
+
+///|
+priv enum ComplexField {
+  ComplexFieldBegin
+  ComplexHyperlink(href~ : String?, anchor~ : String?)
+  ComplexFieldUnknown
+}
+
+///|
+fn BodyReader::read_paragraph_children(
+  self : BodyReader,
+  children : Array[XmlNode],
+) -> Array[DocumentElement] raise DocxError {
+  let elements : Array[DocumentElement] = []
+  let stack : Array[ComplexField] = []
+  let mut instruction_text = ""
+  for child in children {
+    match child {
+      XmlElement(element) => {
+        instruction_text += collect_instruction_text(element)
+        match read_field_char_type(element) {
+          Some("begin") => {
+            stack.push(ComplexFieldBegin)
+            instruction_text = ""
+            elements.append(self.read_element(element))
+          }
+          Some("separate") => {
+            match stack.pop() {
+              Some(ComplexFieldBegin) =>
+                stack.push(parse_complex_field_instruction(instruction_text))
+              Some(field) => stack.push(field)
+              None => ()
+            }
+            instruction_text = ""
+            elements.append(self.read_element(element))
+          }
+          Some("end") => {
+            match stack.pop() {
+              Some(ComplexFieldBegin) => ()
+              Some(_) => ()
+              None => ()
+            }
+            instruction_text = ""
+            elements.append(self.read_element(element))
+          }
+          _ =>
+            if element.name != "w:instrText" {
+              elements.append(
+                wrap_with_current_hyperlink(stack, self.read_element(element)),
+              )
+            }
+        }
+      }
+      XmlText(_) => ()
+    }
+  }
+  elements
+}
+
+///|
+fn collect_instruction_text(element : XmlElement) -> String raise DocxError {
+  let builder = StringBuilder()
+  if element.name == "w:instrText" {
+    builder.write_string(element.text())
+  }
+  for child in element.children {
+    match child {
+      XmlElement(child_element) =>
+        builder.write_string(collect_instruction_text(child_element))
+      XmlText(_) => ()
+    }
+  }
+  builder.to_string()
+}
+
+///|
+fn read_field_char_type(element : XmlElement) -> String? {
+  if element.name == "w:fldChar" {
+    return element.attributes.get("w:fldCharType")
+  }
+  for child in element.children {
+    match child {
+      XmlElement(child_element) =>
+        match read_field_char_type(child_element) {
+          Some(value) => return Some(value)
+          None => ()
+        }
+      XmlText(_) => ()
+    }
+  }
+  None
+}
+
+///|
+fn parse_complex_field_instruction(instruction_text : String) -> ComplexField {
+  let text = instruction_text.trim().to_owned()
+  let keyword = "HYPERLINK"
+  if !text.has_prefix(keyword) {
+    return ComplexFieldUnknown
+  }
+  let mut rest = text[keyword.length():].trim().to_owned()
+  if rest.has_prefix("\\l") {
+    rest = rest[2:].trim().to_owned()
+    match read_field_location(rest) {
+      Some(anchor) => ComplexHyperlink(href=None, anchor=Some(anchor))
+      None => ComplexFieldUnknown
+    }
+  } else {
+    match read_field_location(rest) {
+      Some(href) => ComplexHyperlink(href=Some(href), anchor=None)
+      None => ComplexFieldUnknown
+    }
+  }
+}
+
+///|
+fn read_field_location(value : String) -> String? {
+  let text = value.trim().to_owned()
+  if text == "" {
+    None
+  } else if text.has_prefix("\"") {
+    match text[1:].find("\"") {
+      Some(index) => Some(text[1:1 + index].to_owned())
+      None => Some(text[1:].to_owned())
+    }
+  } else {
+    Some(read_until_whitespace(text))
+  }
+}
+
+///|
+fn read_until_whitespace(value : String) -> String {
+  let mut index = 0
+  while index < value.length() {
+    let char = value[index]
+    if char == ' ' || char == '\t' || char == '\n' || char == '\r' {
+      return value[:index].to_owned()
+    }
+    index = index + 1
+  }
+  value
+}
+
+///|
+fn wrap_with_current_hyperlink(
+  stack : Array[ComplexField],
+  elements : Array[DocumentElement],
+) -> Array[DocumentElement] {
+  match current_hyperlink_field(stack) {
+    Some((href, anchor)) => {
+      let wrapped : Array[DocumentElement] = []
+      for element in elements {
+        wrapped.push(wrap_element_with_hyperlink(element, href, anchor))
+      }
+      wrapped
+    }
+    None => elements
+  }
+}
+
+///|
+fn current_hyperlink_field(stack : Array[ComplexField]) -> (String?, String?)? {
+  for index = stack.length() - 1; index >= 0; index = index - 1 {
+    match stack[index] {
+      ComplexHyperlink(href~, anchor~) => return Some((href, anchor))
+      _ => ()
+    }
+  }
+  None
+}
+
+///|
+fn wrap_element_with_hyperlink(
+  element : DocumentElement,
+  href : String?,
+  anchor : String?,
+) -> DocumentElement {
+  match element {
+    Run(children~, properties~) =>
+      Run(
+        children=[Hyperlink(children~, href~, anchor~, target_frame=None)],
+        properties~,
+      )
+    _ => Hyperlink(children=[element], href~, anchor~, target_frame=None)
+  }
 }
 
 ///|
