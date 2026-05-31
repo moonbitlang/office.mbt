@@ -1144,6 +1144,18 @@ test "document converter maps caps and highlight run properties" {
 
 ///|
 test "document converter renders hyperlink anchors and targets" {
+  let external_with_anchor = @docx2html.document([
+    Hyperlink(
+      children=[@docx2html.run([@docx2html.text("Hello.")])],
+      href=Some("http://example.com/#old"),
+      anchor=Some("new"),
+      target_frame=None,
+    ),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(external_with_anchor).value,
+    content="<a href=\"http://example.com/#new\">Hello.</a>",
+  )
   let anchor_doc = @docx2html.document([
     Hyperlink(
       children=[@docx2html.run([@docx2html.text("Hello.")])],
@@ -1167,6 +1179,28 @@ test "document converter renders hyperlink anchors and targets" {
   inspect(
     @docx2html.convert_document_to_html(target_doc).value,
     content="<a href=\"#start\" target=\"_blank\">Hello.</a>",
+  )
+}
+
+///|
+test "document converter collapses adjacent hyperlinks with the same target" {
+  let doc = @docx2html.document([
+    Hyperlink(
+      children=[@docx2html.run([@docx2html.text("Hello ")])],
+      href=Some("http://www.example.com"),
+      anchor=None,
+      target_frame=None,
+    ),
+    Hyperlink(
+      children=[@docx2html.run([@docx2html.text("world")])],
+      href=Some("http://www.example.com"),
+      anchor=None,
+      target_frame=None,
+    ),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(doc).value,
+    content="<a href=\"http://www.example.com\">Hello world</a>",
   )
 }
 
