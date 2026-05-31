@@ -71,8 +71,25 @@ test "extract_raw_text reads list docx text" {
 ///|
 test "extract_raw_text matches Mammoth fixture outputs" {
   inspect(
+    @docx2html.extract_raw_text(utf8_bom_docx()[:]).value,
+    content="This XML has a byte order mark.\n\n",
+  )
+  inspect(@docx2html.extract_raw_text(empty_docx()[:]).value, content="\n\n")
+  inspect(
     @docx2html.extract_raw_text(tables_docx()[:]).value,
     content="Above\n\nTop left\n\nTop right\n\nBottom left\n\nBottom right\n\nBelow\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(underline_docx()[:]).value,
+    content="The Sunset Tree\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(strikethrough_docx()[:]).value,
+    content="Today's Special: Salmon Sold out\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(strict_format_docx()[:]).value,
+    content="Test\n\n",
   )
   inspect(
     @docx2html.extract_raw_text(footnotes_docx()[:]).value,
@@ -94,6 +111,18 @@ test "extract_raw_text matches Mammoth fixture outputs" {
     @docx2html.extract_raw_text(tiny_picture_docx()[:]).value,
     content="\n\n",
   )
+  inspect(
+    @docx2html.extract_raw_text(tiny_picture_target_base_relative_docx()[:]).value,
+    content="\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(footnote_hyperlink_docx()[:]).value,
+    content="\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(embedded_style_map_docx()[:]).value,
+    content="Walking on imported air\n\n",
+  )
   let external_picture = @docx2html.extract_raw_text(external_picture_docx()[:])
   inspect(external_picture.value, content="\n\n")
   debug_inspect(external_picture.messages, content="[]")
@@ -113,6 +142,11 @@ test "convert_to_markdown reads docx list structure" {
 
 ///|
 test "convert_to_markdown matches Mammoth fixture outputs" {
+  inspect(
+    @docx2html.convert_to_markdown(utf8_bom_docx()[:]).value,
+    content="This XML has a byte order mark\\.\n\n",
+  )
+  inspect(@docx2html.convert_to_markdown(empty_docx()[:]).value, content="")
   inspect(
     @docx2html.convert_to_markdown(tables_docx()[:]).value,
     content="Above\n\nTop left\n\nTop right\n\nBottom left\n\nBottom right\n\nBelow\n\n",
@@ -189,6 +223,16 @@ test "convert_to_markdown matches Mammoth fixture outputs" {
   inspect(
     @docx2html.convert_to_markdown(embedded_style_map_docx()[:]).value,
     content="# Walking on imported air\n\n",
+  )
+  let external_picture = @docx2html.convert_to_markdown(
+    external_picture_docx()[:],
+  )
+  inspect(external_picture.value, content="")
+  debug_inspect(
+    external_picture.messages,
+    content=(
+      #|[Error("could not read external image 'tiny-picture.png', external file access is disabled")]
+    ),
   )
 }
 
@@ -432,6 +476,10 @@ test "relationships are handled inside footnotes" {
 
 ///|
 test "comments are appended when comment references are style mapped" {
+  inspect(
+    @docx2html.convert_to_html(comments_docx()[:]).value,
+    content="<p>Ouch.</p>",
+  )
   let result = @docx2html.convert_to_html(
     comments_docx()[:],
     id_prefix="doc-42-",
