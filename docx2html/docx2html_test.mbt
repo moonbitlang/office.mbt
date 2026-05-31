@@ -1044,6 +1044,17 @@ test "html simplifier removes empty nodes before collapsing" {
   inspect(
     @docx2html.write_html(
       @docx2html.simplify_html([
+        @docx2html.html_element("p", children=[
+          @docx2html.html_text("Hello"),
+          @docx2html.html_text(""),
+        ]),
+      ]),
+    ),
+    content="<p>Hello</p>",
+  )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([
         @docx2html.html_element("blockquote", children=[
           @docx2html.html_element("p", children=[@docx2html.html_text("Hello")]),
         ]),
@@ -1091,6 +1102,19 @@ test "html simplifier follows Mammoth freshness collapse rules" {
       ]),
     ),
     content="<p>Hello there</p>",
+  )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([
+        @docx2html.html_element("pre", children=[@docx2html.html_text("Hello")]),
+        @docx2html.html_element(
+          "pre",
+          children=[@docx2html.html_text(" there")],
+          separator="\n",
+        ),
+      ]),
+    ),
+    content="<pre>Hello\n there</pre>",
   )
 }
 
