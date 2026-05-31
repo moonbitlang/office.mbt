@@ -1447,6 +1447,21 @@ test "docx symbols are mapped from supported dingbat fonts" {
 }
 
 ///|
+test "docx symbols warn when unsupported like Mammoth" {
+  let xml =
+    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Dingwings" w:char="28" />,
+  let element = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = empty_body_reader({ relationships: [] })
+  debug_inspect(reader.read_element(element), content="[]")
+  debug_inspect(
+    reader.messages,
+    content=(
+      #|[Warning("A w:sym element with an unsupported character was ignored: char 28 in font Dingwings")]
+    ),
+  )
+}
+
+///|
 fn read_vml_wrapper_html(tag : String) -> String raise DocxError {
   let xml = "<" +
     tag +
