@@ -189,6 +189,66 @@ test "docx content types include Mammoth image fallbacks" {
 }
 
 ///|
+test "docx content types reader handles defaults and overrides" {
+  let content_types = read_content_types(
+    zip_with_text(
+      "[Content_Types].xml",
+      (
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+        #|  <Default Extension="png" ContentType="image/png" />
+        #|  <Override PartName="/word/media/hat.png" ContentType="image/hat" />
+        #|</Types>
+      ),
+    ),
+  )
+  inspect(
+    content_types.find_content_type("word/media/other.png"),
+    content="image/png",
+  )
+  inspect(
+    content_types.find_content_type("word/media/hat.png"),
+    content="image/hat",
+  )
+}
+
+///|
+test "docx relationships reader finds targets by id and type" {
+  let relationships = read_relationships(
+    zip_with_text(
+      "_rels/.rels",
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        #|  <Relationship Id="rId2" Target="docProps/core.xml" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" />
+        #|  <Relationship Id="rId1" Target="word/document.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" />
+        #|  <Relationship Id="rId3" Target="word/document2.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" TargetMode="External" />
+        #|</Relationships>
+      ),
+    ),
+    "_rels/.rels",
+  )
+  inspect(
+    relationships.find_target_by_id("rId1").unwrap(),
+    content="word/document.xml",
+  )
+  debug_inspect(
+    relationships.find_targets_by_type(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    ),
+    content="[\"word/document.xml\", \"word/document2.xml\"]",
+  )
+  debug_inspect(
+    relationships.find_targets_by_type(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    ),
+    content="[]",
+  )
+  inspect(
+    relationships.find_by_id("rId3").unwrap().target_mode.unwrap(),
+    content="External",
+  )
+}
+
+///|
 test "docx reader reads paragraph style alignment and indent properties" {
   let styles : Map[String, StyleInfo] = {
     "paragraph:Heading1": {
