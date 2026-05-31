@@ -799,6 +799,13 @@ test "docx styles are keyed by type and keep first duplicate" {
     None => fail("expected table style")
   }
   debug_inspect(styles.find_style("paragraph", "TableNormal"), content="None")
+  let legacy_wrong_type : Map[String, StyleInfo] = {
+    "Shared": { style_id: "Shared", style_type: "table", name: "Shared Table" },
+  }
+  debug_inspect(
+    legacy_wrong_type.find_style("paragraph", "Shared"),
+    content="None",
+  )
   let paragraph_xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="Shared" /></w:pPr></w:p>
   let paragraph = read_xml_string(
@@ -1570,6 +1577,15 @@ test "docx complex field hyperlinks are read" {
 }
 
 ///|
+test "docx complex field helpers tolerate non-field descendants" {
+  let element = xml_element("w:r", children=[
+    xml_text("ignored"),
+    XmlElement(xml_element("w:t", children=[xml_text("plain")])),
+  ])
+  debug_inspect(read_complex_field_checkbox_checked(element), content="None")
+}
+
+///|
 test "docx malformed complex field boundaries fail open" {
   inspect(
     body_elements_html_from_xml(
@@ -1582,6 +1598,12 @@ test "docx malformed complex field boundaries fail open" {
       "<w:p><w:r><w:fldChar w:fldCharType=\"end\" /></w:r><w:r><w:t>Hello</w:t></w:r></w:p>",
     ),
     content="<p>Hello</p>",
+  )
+  inspect(
+    body_elements_html_from_xml(
+      "<w:p><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> HYPERLINK \"http://example.com\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:t>Hello</w:t></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>",
+    ),
+    content="<p><a href=\"http://example.com\">Hello</a></p>",
   )
   inspect(
     body_elements_html_from_xml("<w:p>ignored<w:r><w:t>Hello</w:t></w:r></w:p>"),
@@ -1652,6 +1674,61 @@ test "docx text boxes read alternate content fallback" {
 }
 
 ///|
+test "docx text box helper handles alternate content root" {
+  let xml =
+    #|<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><mc:Choice Requires="wps"><w:txbxContent><w:p><w:r><w:t>Choice</w:t></w:r></w:p></w:txbxContent></mc:Choice><mc:Fallback><w:txbxContent><w:p><w:r><w:t>Fallback</w:t></w:r></w:p></w:txbxContent></mc:Fallback></mc:AlternateContent>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_text_box_elements(
+    root,
+  )
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<p>Fallback</p>",
+  )
+}
+
+///|
+test "docx structured checkbox replacement recurses through containers" {
+  let nested = Document(
+    children=[
+      Hyperlink(
+        children=[
+          Table(
+            children=[
+              TableRow(
+                children=[
+                  TableCell(
+                    children=[text("placeholder")],
+                    col_span=1,
+                    row_span=1,
+                  ),
+                ],
+                is_header=false,
+              ),
+            ],
+            properties=TableProperties::default(),
+          ),
+        ],
+        href=None,
+        anchor=None,
+        target_frame=None,
+      ),
+    ],
+    notes=[],
+    comments=[],
+  )
+  let (replaced, found) = replace_first_text_in_element(nested, true)
+  inspect(found, content="true")
+  inspect(
+    convert_document_to_html(replaced).value,
+    content="<table><tr><td><input type=\"checkbox\" checked=\"checked\" /></td></tr></table>",
+  )
+  let (unchanged, tab_found) = replace_first_text_in_element(tab(), true)
+  inspect(tab_found, content="false")
+  debug_inspect(unchanged, content="Tab")
+}
+
+///|
 fn complex_field_checkbox_html(
   checkbox_children : String,
   separate~ : Bool,
@@ -1695,6 +1772,40 @@ test "docx complex field checkboxes are read" {
     ),
     content="<p><input type=\"checkbox\" checked=\"checked\" /></p>",
   )
+}
+
+///|
+test "style map matcher helpers cover run property predicates" {
+  inspect(read_list_level("p:ordered-list"), content="1")
+  inspect(style_warning_label("numbering"), content="numbering")
+  let cases : Array[(DocumentMatcher, RunProperties, Bool)] = [
+    (RunPropertyMatcher("bold"), run_properties_from_xml("<w:b />"), true),
+    (RunPropertyMatcher("italic"), run_properties_from_xml("<w:i />"), true),
+    (
+      RunPropertyMatcher("underline"),
+      run_properties_from_xml("<w:u w:val=\"single\" />"),
+      true,
+    ),
+    (
+      RunPropertyMatcher("strikethrough"),
+      run_properties_from_xml("<w:strike />"),
+      true,
+    ),
+    (RunPropertyMatcher("allCaps"), run_properties_from_xml("<w:caps />"), true),
+    (
+      RunPropertyMatcher("smallCaps"),
+      run_properties_from_xml("<w:smallCaps />"),
+      true,
+    ),
+    (RunPropertyMatcher("bold"), run_properties_from_xml(""), false),
+  ]
+  for item in cases {
+    let (matcher, properties, expected) = item
+    inspect(
+      matcher.matches(Run(children=[], properties~)),
+      content=expected.to_string(),
+    )
+  }
 }
 
 ///|

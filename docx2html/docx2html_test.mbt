@@ -1847,6 +1847,32 @@ test "document converter ignores comments unless style mapped" {
 }
 
 ///|
+test "document converter resolves nested comment references against root comments" {
+  let comment = @docx2html.Comment::{
+    comment_id: "4",
+    body: [@docx2html.paragraph([@docx2html.text("Who's there?")])],
+    author_name: "The Piemaker",
+    author_initials: "TP",
+  }
+  let nested = @docx2html.Document(
+    children=[
+      @docx2html.paragraph([@docx2html.text("Nested"), CommentReference("4")]),
+    ],
+    notes=[],
+    comments=[],
+  )
+  let doc = @docx2html.document([nested], comments=[comment])
+  inspect(
+    @docx2html.convert_document_to_html(
+      doc,
+      style_map=["comment-reference => sup"],
+      id_prefix="doc-42-",
+    ).value,
+    content="<p>Nested<sup><a href=\"#doc-42-comment-4\" id=\"doc-42-comment-ref-4\">[TP1]</a></sup></p><dl><dt id=\"doc-42-comment-4\">Comment [TP1]</dt><dd><p>Who's there? <a href=\"#doc-42-comment-ref-4\">↑</a></p></dd></dl>",
+  )
+}
+
+///|
 test "document converter handles long documents like Mammoth" {
   let paragraphs : Array[@docx2html.DocumentElement] = []
   for _ in 0..<1000 {
