@@ -48,3 +48,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - DrawingML picture hyperlinks are stored separately from the image `a:blip`: read `a:hlinkClick/@r:id` from the drawing properties and wrap the resulting `Image` in a `Hyperlink`.
 - HTML style-map target paths need their own parser pass for classes and attributes (`p.tip[lang='fr']`); splitting on `:` naively breaks escaped class names such as `p.a\:b`.
 - Break style mappings are replacements, not wrappers around the default line-break node: `br[type='page'] => hr` emits `<hr />`, while unmapped page/column breaks still disappear.
+- Mammoth's Markdown writer preserves HTML `id` attributes by emitting raw `<a id="..."></a>` anchors at the start of the Markdown construct, after heading markers and before link brackets.

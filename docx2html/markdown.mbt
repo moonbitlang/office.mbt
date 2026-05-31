@@ -28,6 +28,7 @@ fn MarkdownWriter::write_node(self : MarkdownWriter, node : HtmlNode) -> Unit {
     Element(tag~, attributes~, children~, ..) =>
       match tag {
         "p" => {
+          self.write_id_anchor(attributes)
           self.write_nodes(children)
           self.buffer.write_string("\n\n")
         }
@@ -45,15 +46,33 @@ fn MarkdownWriter::write_node(self : MarkdownWriter, node : HtmlNode) -> Unit {
         "a" => self.write_anchor(attributes, children)
         "img" => self.write_image(attributes)
         "h1" | "h2" | "h3" | "h4" | "h5" | "h6" =>
-          self.write_heading(tag, children)
+          self.write_heading(tag, attributes, children)
         "ul" => self.write_list(children, ordered=false)
         "ol" => self.write_list(children, ordered=true)
         "li" => {
           self.write_nodes(children)
           self.buffer.write_string("\n")
         }
-        _ => self.write_nodes(children)
+        _ => {
+          self.write_id_anchor(attributes)
+          self.write_nodes(children)
+        }
       }
+  }
+}
+
+///|
+fn MarkdownWriter::write_id_anchor(
+  self : MarkdownWriter,
+  attributes : Map[String, String],
+) -> Unit {
+  match attributes.get("id") {
+    Some(id) => {
+      self.buffer.write_string("<a id=\"")
+      self.buffer.write_string(escape_html_attribute(id))
+      self.buffer.write_string("\"></a>")
+    }
+    None => ()
   }
 }
 
@@ -63,6 +82,7 @@ fn MarkdownWriter::write_anchor(
   attributes : Map[String, String],
   children : Array[HtmlNode],
 ) -> Unit {
+  self.write_id_anchor(attributes)
   match attributes.get("href") {
     Some(href) => {
       self.buffer.write_string("[")
@@ -97,6 +117,7 @@ fn MarkdownWriter::write_image(
 fn MarkdownWriter::write_heading(
   self : MarkdownWriter,
   tag : String,
+  attributes : Map[String, String],
   children : Array[HtmlNode],
 ) -> Unit {
   let level = tag[1].to_int() - ('0' : UInt16).to_int()
@@ -104,6 +125,7 @@ fn MarkdownWriter::write_heading(
     self.buffer.write_string("#")
   }
   self.buffer.write_string(" ")
+  self.write_id_anchor(attributes)
   self.write_nodes(children)
   self.buffer.write_string("\n\n")
 }

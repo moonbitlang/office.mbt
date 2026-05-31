@@ -85,6 +85,28 @@ test "markdown writer emits links and images" {
 }
 
 ///|
+test "markdown writer preserves element ids as anchors" {
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("h1", attributes={ "id": "start" }, children=[
+        @docx2html.html_text("Hello"),
+      ]),
+    ]),
+    content="# <a id=\"start\"></a>Hello\n\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element(
+        "a",
+        attributes={ "href": "http://example.com", "id": "start" },
+        children=[@docx2html.html_text("Hello")],
+      ),
+    ]),
+    content="<a id=\"start\"></a>[Hello](http://example.com)",
+  )
+}
+
+///|
 test "document markdown conversion uses style maps" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.run([@docx2html.text("marked")])]),
