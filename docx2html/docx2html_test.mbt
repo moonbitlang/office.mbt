@@ -1260,6 +1260,39 @@ test "style map malformed html option diagnostics match Mammoth" {
 }
 
 ///|
+test "style map malformed named value diagnostics match Mammoth" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
+  ])
+  let result = @docx2html.convert_document_to_html(doc, style_map=[
+    "p[=] => h1", "p[style-name^] => h1", "highlight[=] => mark", "highlight[color] => mark",
+    "highlight[color=] => mark", "highlight[color='yellow' => mark", "br[=] => br",
+    "br[type] => br", "br[type=] => br", "br[type='page' => hr", "p:ordered-list() => p",
+    "p:ordered-list(1 => p",
+  ])
+  inspect(result.value, content="<p>Walking on imported air</p>")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[
+      #|  Warning("Did not understand this style mapping, so ignored it: p[=] => h1\nError was at character number 3: Expected identifier \"style-name\" but got equals"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p[style-name^] => h1\nError was at character number 13: Expected style name matcher but got unrecognisedCharacter \"^\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: highlight[=] => mark\nError was at character number 11: Expected identifier \"color\" but got equals"),
+      #|  Warning("Did not understand this style mapping, so ignored it: highlight[color] => mark\nError was at character number 16: Expected equals but got close-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: highlight[color=] => mark\nError was at character number 17: Expected string but got close-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: highlight[color='yellow' => mark\nError was at character number 25: Expected close-square-bracket but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: br[=] => br\nError was at character number 4: Expected identifier \"type\" but got equals"),
+      #|  Warning("Did not understand this style mapping, so ignored it: br[type] => br\nError was at character number 8: Expected equals but got close-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: br[type=] => br\nError was at character number 9: Expected string but got close-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: br[type='page' => hr\nError was at character number 15: Expected close-square-bracket but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p:ordered-list() => p\nError was at character number 16: Expected integer but got close-paren"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p:ordered-list(1 => p\nError was at character number 17: Expected close-paren but got whitespace"),
+      #|]
+    ),
+  )
+}
+
+///|
 test "style map style-name prefix matchers are honored" {
   let heading_properties = @docx2html.ParagraphProperties::{
     style_id: None,
