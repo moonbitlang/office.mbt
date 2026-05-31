@@ -408,6 +408,71 @@ test "docx part targets match Mammoth URI resolution" {
 }
 
 ///|
+test "docx related part paths use existing relationship targets before fallbacks" {
+  let relationship_types = [
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+  ]
+  let fallback_paths = [
+    "word/comments.xml", "word/endnotes.xml", "word/footnotes.xml", "word/numbering.xml",
+    "word/styles.xml",
+  ]
+  let resolved : Array[String] = []
+  for index in 0..<relationship_types.length() {
+    let relationship_type = relationship_types[index]
+    let fallback_path = fallback_paths[index]
+    let relationships = Relationships::{
+      relationships: [
+        {
+          id: "rPart",
+          relationship_type,
+          target: "target-path.xml",
+          target_mode: None,
+        },
+      ],
+    }
+    resolved.push(
+      find_part_path(
+        zip_with_text("word/target-path.xml", " "),
+        relationships,
+        relationship_type~,
+        base_path="word",
+        fallback_path~,
+      ),
+    )
+    resolved.push(
+      find_part_path(
+        zip_with_text(fallback_path, " "),
+        relationships,
+        relationship_type~,
+        base_path="word",
+        fallback_path~,
+      ),
+    )
+  }
+  debug_inspect(
+    resolved,
+    content=(
+      #|[
+      #|  "word/target-path.xml",
+      #|  "word/comments.xml",
+      #|  "word/target-path.xml",
+      #|  "word/endnotes.xml",
+      #|  "word/target-path.xml",
+      #|  "word/footnotes.xml",
+      #|  "word/target-path.xml",
+      #|  "word/numbering.xml",
+      #|  "word/target-path.xml",
+      #|  "word/styles.xml",
+      #|]
+    ),
+  )
+}
+
+///|
 test "docx xml part reader reports missing parts" {
   try read_xml_part({ entries: {} }, "word/missing.xml") catch {
     MissingPart(message~) =>
