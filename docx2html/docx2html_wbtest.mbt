@@ -85,6 +85,17 @@ fn run_properties_from_xml(
 }
 
 ///|
+fn body_elements_from_xml(
+  element_xml : String,
+) -> Array[DocumentElement] raise DocxError {
+  let xml = "<w:root xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+    element_xml +
+    "</w:root>"
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  empty_body_reader({ relationships: [] }).read_children(root.children)
+}
+
+///|
 test "docx content types include Mammoth image fallbacks" {
   let content_types = ContentTypes::{ defaults: {}, overrides: {} }
   inspect(
@@ -115,6 +126,37 @@ test "docx content types include Mammoth image fallbacks" {
   inspect(
     with_default.find_content_type("/word/media/hat.png"),
     content="image/hat",
+  )
+}
+
+///|
+test "docx reader reads inline control elements like Mammoth" {
+  debug_inspect(
+    body_elements_from_xml("<w:tab /><w:noBreakHyphen /><w:softHyphen />"),
+    content="[Tab, Text(\"‑\"), Text(\"­\")]",
+  )
+}
+
+///|
+test "docx reader reads references and bookmarks like Mammoth" {
+  debug_inspect(
+    body_elements_from_xml(
+      "<w:footnoteReference w:id=\"4\" /><w:endnoteReference w:id=\"7\" /><w:commentReference w:id=\"9\" /><w:bookmarkStart w:name=\"_Peter\" w:id=\"42\" />",
+    ),
+    content=(
+      #|[
+      #|  NoteReference(note_type="footnote", note_id="4"),
+      #|  NoteReference(note_type="endnote", note_id="7"),
+      #|  CommentReference("9"),
+      #|  BookmarkStart("_Peter"),
+      #|]
+    ),
+  )
+  debug_inspect(
+    body_elements_from_xml(
+      "<w:bookmarkStart w:name=\"_GoBack\" /><w:bookmarkEnd />",
+    ),
+    content="[]",
   )
 }
 
