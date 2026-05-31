@@ -249,6 +249,22 @@ test "docx relationships reader finds targets by id and type" {
 }
 
 ///|
+test "docx main document path follows package relationships and fallback" {
+  let office_document_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+  let from_relationship = zip_with_text(
+    "_rels/.rels",
+    relationship_part(office_document_type, "/word/document2.xml"),
+  )
+  from_relationship.entries["word/document2.xml"] = @utf8.encode(" ")
+  inspect(
+    find_main_document_path(from_relationship),
+    content="word/document2.xml",
+  )
+  let fallback = zip_with_text("word/document.xml", " ")
+  inspect(find_main_document_path(fallback), content="word/document.xml")
+}
+
+///|
 test "docx reader reads paragraph style alignment and indent properties" {
   let styles : Map[String, StyleInfo] = {
     "paragraph:Heading1": {
