@@ -48,6 +48,59 @@ test "xml reads elements attributes text and namespaces" {
 }
 
 ///|
+test "xml helpers expose text edge cases and recursive descendants" {
+  let root = @docx2html.xml_element("root", children=[
+    @docx2html.xml_text("prefix"),
+    XmlElement(
+      @docx2html.xml_element("child", children=[
+        XmlElement(
+          @docx2html.xml_element("target", children=[
+            @docx2html.xml_text("leaf"),
+          ]),
+        ),
+      ]),
+    ),
+  ])
+  inspect(root.descendants_by_tag_name("target").length(), content="1")
+  inspect(root.first_or_empty("missing").text(), content="")
+  try root.text() catch {
+    InvalidXml(message~) =>
+      inspect(message, content="element does not contain simple text")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected XML text failure")
+  }
+  try
+    @docx2html.xml_element("root", children=[
+      XmlElement(@docx2html.xml_element("child")),
+    ]).text()
+  catch {
+    InvalidXml(message~) =>
+      inspect(message, content="element does not contain simple text")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected XML text failure")
+  }
+}
+
+///|
+test "xml parser handles comments cdata declarations and entities" {
+  let root = @docx2html.read_xml_string(
+    (
+      #|<?xml version="1.0"?><!--before--><root><!--ignored--><![CDATA[A < B]]><?inside?><!DOCTYPE ignored><child attr="&quot;&apos;&gt;">x &gt; &quot; &apos; &unknown; &</child></root>
+    ),
+  )
+  inspect(root.children.length(), content="2")
+  match root.children[0] {
+    XmlText(value) => inspect(value, content="A < B")
+    _ => fail("expected CDATA text")
+  }
+  let child = root.first_or_empty("child")
+  inspect(child.attributes.get_or_default("attr", ""), content="\"'>")
+  inspect(child.text(), content="x > \" ' &unknown; &")
+}
+
+///|
 test "xml reader uses mc fallback content like Mammoth" {
   let namespaces : Map[String, String] = {
     "http://schemas.openxmlformats.org/markup-compatibility/2006": "mc",
@@ -76,6 +129,32 @@ test "xml reports malformed documents" {
   try @docx2html.read_xml_string("<body><p></body>") catch {
     InvalidXml(message~) =>
       inspect(message, content="mismatched closing tag: expected p got body")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected XML parse failure")
+  }
+  try @docx2html.read_xml_string("<>") catch {
+    InvalidXml(message~) => inspect(message, content="expected XML name")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected XML parse failure")
+  }
+  try @docx2html.read_xml_string("<root attr=>") catch {
+    InvalidXml(message~) =>
+      inspect(message, content="expected quoted attribute value")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected XML parse failure")
+  }
+  try @docx2html.read_xml_string("<root attr=\"value>") catch {
+    InvalidXml(message~) =>
+      inspect(message, content="unterminated attribute value")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected XML parse failure")
+  }
+  try @docx2html.read_xml_string("<root") catch {
+    InvalidXml(message~) => inspect(message, content="expected XML name")
     _ => fail("expected InvalidXml")
   } noraise {
     _ => fail("expected XML parse failure")

@@ -20,6 +20,22 @@ test "result messages are deduplicated when combined" {
 }
 
 ///|
+test "conversion defaults and result mapping preserve messages" {
+  let options = @docx2html.ConvertOptions::default()
+  inspect(options.output_format, content="html")
+  inspect(options.ignore_empty_paragraphs, content="true")
+  inspect(options.style_map.length() > 0, content="true")
+  let result = @docx2html.ConversionResult::{
+    value: "walking",
+    messages: [Warning("same")],
+  }
+  debug_inspect(
+    result.map(fn(value) { value + " on imported air" }),
+    content="{ value: \"walking on imported air\", messages: [Warning(\"same\")] }",
+  )
+}
+
+///|
 test "raw text recursively extracts text and tabs" {
   let element = @docx2html.document([
     @docx2html.paragraph([
@@ -55,6 +71,27 @@ test "raw text terminates paragraphs with blank lines" {
     @docx2html.text("world."),
   ])
   inspect(element.to_raw_text(), content="Hello world.\n\n")
+}
+
+///|
+test "raw text and descendants recurse through table nodes" {
+  let table = @docx2html.Table(
+    children=[
+      TableRow(
+        children=[
+          TableCell(
+            children=[@docx2html.paragraph([@docx2html.text("Cell")])],
+            col_span=1,
+            row_span=1,
+          ),
+        ],
+        is_header=false,
+      ),
+    ],
+    properties=@docx2html.TableProperties::default(),
+  )
+  inspect(table.to_raw_text(), content="Cell\n\n")
+  inspect(@docx2html.document_descendants(table).length(), content="4")
 }
 
 ///|
