@@ -575,6 +575,10 @@ test "docx reader reads paragraph style alignment and indent properties" {
     [fallback.indent.start, fallback.indent.end],
     content="[Some(\"720\"), Some(\"1440\")]",
   )
+  let end_precedence = paragraph_properties_from_xml(
+    "<w:ind w:end=\"720\" w:right=\"40\" />",
+  )
+  debug_inspect(end_precedence.indent.end, content="Some(\"720\")")
 }
 
 ///|
@@ -590,6 +594,16 @@ test "docx reader leaves missing paragraph properties empty" {
       properties.indent.end,
       properties.indent.first_line,
       properties.indent.hanging,
+    ],
+    content="[None, None, None, None]",
+  )
+  let empty_indent = paragraph_properties_from_xml("<w:ind />")
+  debug_inspect(
+    [
+      empty_indent.indent.start,
+      empty_indent.indent.end,
+      empty_indent.indent.first_line,
+      empty_indent.indent.hanging,
     ],
     content="[None, None, None, None]",
   )

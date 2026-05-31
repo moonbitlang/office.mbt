@@ -32,6 +32,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - WordprocessingML readers should ignore property elements as content (`w:pPr`, `w:rPr`) and build explicit `ParagraphProperties`/`RunProperties` instead.
 - Mammoth's loose JS fallback behavior is represented with checked `DocxError` only for archive/XML/required-part failures; unsupported Word elements initially produce empty output unless a warning is user-visible in upstream behavior.
 - Mammoth's HTML simplifier merges adjacent inline wrappers but must not merge structural table tags. Mark generated `tr`/`td` nodes as fresh to preserve row/cell boundaries.
+- Paragraph indent values stay as DOCX string attributes. Prefer `w:start` over legacy `w:left` and `w:end` over legacy `w:right`; missing attributes remain `None` rather than defaulting to numeric zero.
 - Run property style mappings such as `u => em` and `strike => del` are applied through property-specific lookup only. Do not also treat them as ordinary run-style mappings, or wrappers are duplicated.
 - Mammoth's `readHighlightValue` uses JavaScript truthiness: missing, empty, and `"none"` `w:highlight/@w:val` all mean no highlight. In MoonBit, normalize `Some("")` explicitly.
 - Word boolean run properties treat a missing element as false and a present element as true unless `w:val` is `"false"` or `"0"`. Underline is special: `<w:u />`, `"false"`, `"0"`, and `"none"` are false, while `"true"`, `"1"`, and named underline styles such as `"single"` are true.
