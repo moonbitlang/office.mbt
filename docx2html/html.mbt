@@ -63,7 +63,14 @@ pub fn write_html(
   nodes : Array[HtmlNode],
   pretty_print? : Bool = false,
 ) -> String {
-  let writer = HtmlWriter::{ pretty_print, buffer: StringBuilder(), indent: 0 }
+  let writer = HtmlWriter::{
+    pretty_print,
+    buffer: StringBuilder(),
+    indent: 0,
+    stack: [],
+    start: true,
+    in_text: false,
+  }
   writer.write_nodes(nodes)
   let result = writer.buffer.to_string()
   if pretty_print && result.has_suffix("\n") {
@@ -78,6 +85,9 @@ priv struct HtmlWriter {
   pretty_print : Bool
   buffer : StringBuilder
   mut indent : Int
+  stack : Array[String]
+  mut start : Bool
+  mut in_text : Bool
 }
 
 ///|
@@ -90,45 +100,132 @@ fn HtmlWriter::write_nodes(self : HtmlWriter, nodes : Array[HtmlNode]) -> Unit {
 ///|
 fn HtmlWriter::write_node(self : HtmlWriter, node : HtmlNode) -> Unit {
   match node {
-    TextNode(value) => {
+    TextNode(value) =>
       if self.pretty_print {
-        self.write_indent()
+        self.write_pretty_text(value)
+      } else {
+        self.buffer.write_string(escape_html(value))
       }
-      self.buffer.write_string(escape_html(value))
-      if self.pretty_print {
-        self.buffer.write_string("\n")
-      }
-    }
     ForceWrite => ()
     Element(tag~, attributes~, children~, ..) => {
       let tag_name = html_primary_tag(tag)
-      if self.pretty_print {
-        self.write_indent()
-      }
-      self.buffer.write_string("<")
-      self.buffer.write_string(tag_name)
-      self.write_attributes(attributes)
       if children.is_empty() && is_void_html_tag(tag_name) {
-        self.buffer.write_string(" />")
+        self.write_self_closing_tag(tag_name, attributes)
       } else {
-        self.buffer.write_string(">")
-        if self.pretty_print {
-          self.buffer.write_string("\n")
-        }
-        self.indent = self.indent + 1
+        self.write_open_tag(tag_name, attributes)
         self.write_nodes(children)
-        self.indent = self.indent - 1
-        if self.pretty_print {
-          self.write_indent()
-        }
-        self.buffer.write_string("</")
-        self.buffer.write_string(tag_name)
-        self.buffer.write_string(">")
-      }
-      if self.pretty_print {
-        self.buffer.write_string("\n")
+        self.write_close_tag(tag_name)
       }
     }
+  }
+}
+
+///|
+fn HtmlWriter::write_open_tag(
+  self : HtmlWriter,
+  tag_name : String,
+  attributes : Map[String, String],
+) -> Unit {
+  if self.pretty_print && is_pretty_indented_tag(tag_name) {
+    self.write_pretty_indent()
+  }
+  self.stack.push(tag_name)
+  self.buffer.write_string("<")
+  self.buffer.write_string(tag_name)
+  self.write_attributes(attributes)
+  self.buffer.write_string(">")
+  if self.pretty_print && is_pretty_indented_tag(tag_name) {
+    self.indent = self.indent + 1
+  }
+  self.start = false
+}
+
+///|
+fn HtmlWriter::write_close_tag(self : HtmlWriter, tag_name : String) -> Unit {
+  if self.pretty_print && is_pretty_indented_tag(tag_name) {
+    self.indent = self.indent - 1
+    self.write_pretty_indent()
+  }
+  ignore(self.stack.pop())
+  self.buffer.write_string("</")
+  self.buffer.write_string(tag_name)
+  self.buffer.write_string(">")
+}
+
+///|
+fn HtmlWriter::write_self_closing_tag(
+  self : HtmlWriter,
+  tag_name : String,
+  attributes : Map[String, String],
+) -> Unit {
+  if self.pretty_print {
+    self.write_pretty_indent()
+  }
+  self.buffer.write_string("<")
+  self.buffer.write_string(tag_name)
+  self.write_attributes(attributes)
+  self.buffer.write_string(" />")
+  self.start = false
+}
+
+///|
+fn HtmlWriter::write_pretty_text(self : HtmlWriter, value : String) -> Unit {
+  self.start_pretty_text()
+  if self.is_inside_pre() {
+    self.buffer.write_string(escape_html(value))
+  } else {
+    self.buffer.write_string(escape_html(indent_first_text_newline(value)))
+  }
+}
+
+///|
+fn HtmlWriter::start_pretty_text(self : HtmlWriter) -> Unit {
+  if !self.in_text {
+    self.write_pretty_indent()
+    self.in_text = true
+  }
+}
+
+///|
+fn HtmlWriter::write_pretty_indent(self : HtmlWriter) -> Unit {
+  self.in_text = false
+  if !self.start && self.is_inside_indented_element() && !self.is_inside_pre() {
+    self.buffer.write_string("\n")
+    for _ in 0..<self.indent {
+      self.buffer.write_string("  ")
+    }
+  }
+}
+
+///|
+fn HtmlWriter::is_inside_indented_element(self : HtmlWriter) -> Bool {
+  match self.stack.last() {
+    Some(tag_name) => is_pretty_indented_tag(tag_name)
+    None => true
+  }
+}
+
+///|
+fn HtmlWriter::is_inside_pre(self : HtmlWriter) -> Bool {
+  for tag_name in self.stack {
+    if tag_name == "pre" {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn is_pretty_indented_tag(tag_name : String) -> Bool {
+  tag_name == "div" || tag_name == "p" || tag_name == "ul" || tag_name == "li"
+}
+
+///|
+fn indent_first_text_newline(value : String) -> String {
+  match value.find("\n") {
+    Some(index) =>
+      value[:index + 1].to_owned() + "  " + value[index + 1:].to_owned()
+    None => value
   }
 }
 
@@ -168,13 +265,6 @@ fn is_void_html_tag(tag : String) -> Bool {
   tag == "source" ||
   tag == "track" ||
   tag == "wbr"
-}
-
-///|
-fn HtmlWriter::write_indent(self : HtmlWriter) -> Unit {
-  for _ in 0..<self.indent {
-    self.buffer.write_string("  ")
-  }
 }
 
 ///|

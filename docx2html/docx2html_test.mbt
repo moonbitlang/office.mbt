@@ -47,6 +47,47 @@ test "html writer escapes text and attributes" {
 }
 
 ///|
+test "pretty html writer follows Mammoth indentation rules" {
+  inspect(
+    @docx2html.write_html(
+      [
+        @docx2html.html_element("p", children=[
+          @docx2html.html_text("One"),
+          @docx2html.html_element("em", children=[@docx2html.html_text("Two")]),
+        ]),
+      ],
+      pretty_print=true,
+    ),
+    content="<p>\n  One<em>Two</em>\n</p>",
+  )
+  inspect(
+    @docx2html.write_html(
+      [
+        @docx2html.html_element("pre", children=[
+          @docx2html.html_element("p", children=[
+            @docx2html.html_text("One\nTwo"),
+          ]),
+        ]),
+      ],
+      pretty_print=true,
+    ),
+    content="<pre><p>One\nTwo</p></pre>",
+  )
+  inspect(
+    @docx2html.write_html(
+      [
+        @docx2html.html_element("p", children=[
+          @docx2html.html_text("One"),
+          @docx2html.html_text("Two"),
+        ]),
+      ],
+      pretty_print=true,
+    ),
+    content="<p>\n  OneTwo\n</p>",
+  )
+}
+
+///|
 test "markdown writer handles common inline elements" {
   let nodes = [
     @docx2html.html_element("p", children=[
