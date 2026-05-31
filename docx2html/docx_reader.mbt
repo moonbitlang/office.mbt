@@ -184,6 +184,7 @@ pub fn extract_raw_text(
     external_files=external_file_access_options(
       external_file_access, read_external_file,
     ),
+    read_images=false,
   )
   let result = extract_raw_text_from_document(read_result.document)
   prepend_messages(result, read_result.messages)
@@ -259,6 +260,7 @@ fn read_docx_zip(
 fn read_docx_zip_with_messages(
   zip : ZipArchive,
   external_files? : ExternalFileAccess = default_external_file_access(),
+  read_images? : Bool = true,
 ) -> DocxReadResult raise DocxError {
   let main_document_path = find_main_document_path(zip)
   let relationships = read_relationships(
@@ -288,6 +290,7 @@ fn read_docx_zip_with_messages(
     relationships,
     base_path,
     external_files~,
+    read_images~,
   )
   let comments_result = read_comments_for_document(
     zip,
@@ -297,6 +300,7 @@ fn read_docx_zip_with_messages(
     relationships,
     base_path,
     external_files~,
+    read_images~,
   )
   let xml = read_xml_part(zip, main_document_path)
   let document_result = read_document_xml_with_messages(
@@ -310,6 +314,7 @@ fn read_docx_zip_with_messages(
     notes_result.notes,
     comments_result.comments,
     external_files~,
+    read_images~,
   )
   let messages : Array[Message] = []
   messages.append(notes_result.messages)
@@ -718,6 +723,7 @@ fn read_notes_for_document(
   document_relationships : Relationships,
   base_path : String,
   external_files? : ExternalFileAccess = default_external_file_access(),
+  read_images? : Bool = true,
 ) -> NotesReadResult raise DocxError {
   let notes : Array[Note] = []
   let messages : Array[Message] = []
@@ -732,6 +738,7 @@ fn read_notes_for_document(
     document_relationships~,
     base_path~,
     external_files~,
+    read_images~,
   )
   notes.append(footnotes.notes)
   messages.append(footnotes.messages)
@@ -746,6 +753,7 @@ fn read_notes_for_document(
     document_relationships~,
     base_path~,
     external_files~,
+    read_images~,
   )
   notes.append(endnotes.notes)
   messages.append(endnotes.messages)
@@ -764,6 +772,7 @@ fn read_note_part(
   document_relationships~ : Relationships,
   base_path~ : String,
   external_files? : ExternalFileAccess = default_external_file_access(),
+  read_images? : Bool = true,
 ) -> NotesReadResult raise DocxError {
   let path = find_part_path(
     zip,
@@ -788,6 +797,7 @@ fn read_note_part(
     numbering,
     messages: [],
     external_files,
+    read_images,
   }
   let root = read_xml_part(zip, path)
   let notes : Array[Note] = []
@@ -814,6 +824,7 @@ fn read_comments_for_document(
   document_relationships : Relationships,
   base_path : String,
   external_files? : ExternalFileAccess = default_external_file_access(),
+  read_images? : Bool = true,
 ) -> CommentsReadResult raise DocxError {
   let path = find_part_path(
     zip,
@@ -838,6 +849,7 @@ fn read_comments_for_document(
     numbering,
     messages: [],
     external_files,
+    read_images,
   }
   let root = read_xml_part(zip, path)
   let comments : Array[Comment] = []
@@ -947,6 +959,7 @@ fn read_document_xml_with_messages(
   notes : Array[Note],
   comments : Array[Comment],
   external_files? : ExternalFileAccess = default_external_file_access(),
+  read_images? : Bool = true,
 ) -> DocxReadResult raise DocxError {
   let body = match root.first("w:body") {
     Some(body) => body
@@ -964,6 +977,7 @@ fn read_document_xml_with_messages(
     numbering,
     messages: [],
     external_files,
+    read_images,
   }
   {
     document: document(reader.read_children(body.children), notes~, comments~),
@@ -981,6 +995,7 @@ priv struct BodyReader {
   numbering : NumberingMap
   messages : Array[Message]
   external_files : ExternalFileAccess
+  read_images : Bool
 }
 
 ///|
@@ -1934,6 +1949,9 @@ fn BodyReader::read_blip(
   drawing_element : XmlElement,
   blip : XmlElement,
 ) -> Image? {
+  if !self.read_images {
+    return None
+  }
   let relationship_id = match blip.attributes.get("r:embed") {
     Some(id) => Some(id)
     None => blip.attributes.get("r:link")
@@ -1967,6 +1985,9 @@ fn BodyReader::read_vml_image_data(
   self : BodyReader,
   element : XmlElement,
 ) -> Array[DocumentElement] {
+  if !self.read_images {
+    return []
+  }
   match element.attributes.get("r:id") {
     Some(id) =>
       match
@@ -1990,6 +2011,9 @@ fn BodyReader::read_image_by_relationship(
   relationship_id : String,
   alt_text~ : String?,
 ) -> Image? {
+  if !self.read_images {
+    return None
+  }
   match self.relationships.find_by_id(relationship_id) {
     Some(rel) =>
       if rel.target_mode == Some("External") {

@@ -94,6 +94,9 @@ test "extract_raw_text matches Mammoth fixture outputs" {
     @docx2html.extract_raw_text(tiny_picture_docx()[:]).value,
     content="\n\n",
   )
+  let external_picture = @docx2html.extract_raw_text(external_picture_docx()[:])
+  inspect(external_picture.value, content="\n\n")
+  debug_inspect(external_picture.messages, content="[]")
 }
 
 ///|

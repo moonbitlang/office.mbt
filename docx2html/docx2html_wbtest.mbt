@@ -13,6 +13,7 @@ fn empty_body_reader(relationships : Relationships) -> BodyReader {
     numbering: NumberingMap::empty(),
     messages: [],
     external_files: default_external_file_access(),
+    read_images: true,
   }
 }
 
@@ -30,6 +31,7 @@ fn body_reader_with_numbering(
     numbering,
     messages: [],
     external_files: default_external_file_access(),
+    read_images: true,
   }
 }
 
@@ -1057,6 +1059,7 @@ test "docx table properties include table style name" {
     numbering: NumberingMap::empty(),
     messages: [],
     external_files: default_external_file_access(),
+    read_images: true,
   }
   debug_inspect(
     reader.read_element(root),
@@ -2308,6 +2311,7 @@ fn drawing_image_reader() -> BodyReader {
     numbering: NumberingMap::empty(),
     messages: [],
     external_files: default_external_file_access(),
+    read_images: true,
   }
 }
 
@@ -2492,6 +2496,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     numbering: NumberingMap::empty(),
     messages: [],
     external_files: default_external_file_access(),
+    read_images: true,
   }
   debug_inspect(missing_entry_reader.read_element(missing_entry), content="[]")
   debug_inspect(
@@ -2547,6 +2552,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     numbering: NumberingMap::empty(),
     messages: [],
     external_files: default_external_file_access(),
+    read_images: true,
   }
   debug_inspect(external_reader.read_element(external_image), content="[]")
   debug_inspect(
@@ -2579,6 +2585,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     numbering: NumberingMap::empty(),
     messages: [],
     external_files: default_external_file_access(),
+    read_images: true,
   }
   inspect(
     unsupported_reader.read_element(unsupported_type).length(),
