@@ -6,6 +6,31 @@ test "convert_to_html reads single paragraph docx fixture" {
 }
 
 ///|
+test "read_docx reads single paragraph docx fixture" {
+  match @docx2html.read_docx(single_paragraph_docx()[:]) {
+    Document(children~, notes~, comments~) => {
+      inspect(notes.length(), content="0")
+      inspect(comments.length(), content="0")
+      match children[0] {
+        Paragraph(children=paragraph_children, ..) =>
+          match paragraph_children[0] {
+            Run(children=run_children, ..) =>
+              debug_inspect(
+                run_children,
+                content=(
+                  #|[Text("Walking on imported air")]
+                ),
+              )
+            _ => fail("expected run")
+          }
+        _ => fail("expected paragraph")
+      }
+    }
+    _ => fail("expected document")
+  }
+}
+
+///|
 test "pretty printing expands element content" {
   let result = @docx2html.convert_to_html(
     single_paragraph_docx()[:],
