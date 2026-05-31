@@ -1876,10 +1876,12 @@ fn BodyReader::read_image_by_relationship(
   match self.relationships.find_by_id(relationship_id) {
     Some(rel) =>
       if rel.target_mode == Some("External") {
-        self.warn(
-          "could not read external image '" +
-          rel.target +
-          "', external file access is disabled",
+        self.messages.push(
+          Error(
+            "could not read external image '" +
+            rel.target +
+            "', external file access is disabled",
+          ),
         )
         None
       } else {

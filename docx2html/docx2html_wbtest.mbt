@@ -887,7 +887,7 @@ test "docx image reader records Mammoth-compatible warnings" {
   debug_inspect(
     external_reader.messages,
     content=(
-      #|[Warning("could not read external image 'tiny-picture.png', external file access is disabled")]
+      #|[Error("could not read external image 'tiny-picture.png', external file access is disabled")]
     ),
   )
   let unsupported_type_xml =
