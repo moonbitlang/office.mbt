@@ -12,6 +12,7 @@ fn empty_body_reader(relationships : Relationships) -> BodyReader {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    external_files: default_external_file_access(),
   }
 }
 
@@ -28,6 +29,7 @@ fn body_reader_with_numbering(
     base_path: "word",
     numbering,
     messages: [],
+    external_files: default_external_file_access(),
   }
 }
 
@@ -625,6 +627,7 @@ test "docx table properties include table style name" {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    external_files: default_external_file_access(),
   }
   debug_inspect(
     reader.read_element(root),
@@ -1475,6 +1478,7 @@ fn drawing_image_reader() -> BodyReader {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    external_files: default_external_file_access(),
   }
 }
 
@@ -1627,6 +1631,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    external_files: default_external_file_access(),
   }
   debug_inspect(external_reader.read_element(external_image), content="[]")
   debug_inspect(
@@ -1658,6 +1663,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
+    external_files: default_external_file_access(),
   }
   inspect(
     unsupported_reader.read_element(unsupported_type).length(),

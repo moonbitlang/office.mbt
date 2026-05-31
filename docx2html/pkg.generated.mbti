@@ -14,9 +14,9 @@ pub fn convert_document_to_html(DocumentElement, style_map? : Array[String], inc
 
 pub fn convert_document_to_markdown(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement) -> ConversionResult
 
-pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement) -> ConversionResult raise DocxError
+pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
 
-pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement) -> ConversionResult raise DocxError
+pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
 
 pub fn data_uri_image_converter(Image) -> ImageConversion
 
@@ -34,7 +34,7 @@ pub fn escape_html_attribute(String) -> String
 
 pub fn escape_markdown_text(String) -> String
 
-pub fn extract_raw_text(BytesView) -> ConversionResult raise DocxError
+pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
 
 pub fn extract_raw_text_from_document(DocumentElement) -> ConversionResult
 
@@ -60,7 +60,7 @@ pub fn page_break() -> DocumentElement
 
 pub fn paragraph(Array[DocumentElement], properties? : ParagraphProperties) -> DocumentElement
 
-pub fn read_docx(BytesView) -> DocumentElement raise DocxError
+pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocumentElement raise DocxError
 
 pub fn read_embedded_style_map(BytesView) -> String? raise DocxError
 

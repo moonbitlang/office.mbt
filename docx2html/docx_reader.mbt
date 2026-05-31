@@ -62,6 +62,30 @@ priv struct DocxReadResult {
 }
 
 ///|
+priv struct ExternalFileAccess {
+  enabled : Bool
+  read_file : (String) -> Bytes?
+}
+
+///|
+fn no_external_file_reader(_path : String) -> Bytes? {
+  None
+}
+
+///|
+fn default_external_file_access() -> ExternalFileAccess {
+  external_file_access_options(false, no_external_file_reader)
+}
+
+///|
+fn external_file_access_options(
+  enabled : Bool,
+  read_file : (String) -> Bytes?,
+) -> ExternalFileAccess {
+  { enabled, read_file }
+}
+
+///|
 priv struct NotesReadResult {
   notes : Array[Note]
   messages : Array[Message]
@@ -84,9 +108,16 @@ pub fn convert_to_html(
   pretty_print? : Bool = false,
   convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
   transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
 ) -> ConversionResult raise DocxError {
   let zip = open_zip(docx)
-  let read_result = read_docx_zip_with_messages(zip)
+  let read_result = read_docx_zip_with_messages(
+    zip,
+    external_files=external_file_access_options(
+      external_file_access, read_external_file,
+    ),
+  )
   let style_map = combine_docx_style_maps_from_zip(
     zip,
     style_map,
@@ -113,9 +144,16 @@ pub fn convert_to_markdown(
   include_embedded_style_map? : Bool = true,
   convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
   transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
 ) -> ConversionResult raise DocxError {
   let zip = open_zip(docx)
-  let read_result = read_docx_zip_with_messages(zip)
+  let read_result = read_docx_zip_with_messages(
+    zip,
+    external_files=external_file_access_options(
+      external_file_access, read_external_file,
+    ),
+  )
   let style_map = combine_docx_style_maps_from_zip(
     zip,
     style_map,
@@ -132,8 +170,17 @@ pub fn convert_to_markdown(
 }
 
 ///|
-pub fn extract_raw_text(docx : BytesView) -> ConversionResult raise DocxError {
-  let read_result = read_docx_zip_with_messages(open_zip(docx))
+pub fn extract_raw_text(
+  docx : BytesView,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+) -> ConversionResult raise DocxError {
+  let read_result = read_docx_zip_with_messages(
+    open_zip(docx),
+    external_files=external_file_access_options(
+      external_file_access, read_external_file,
+    ),
+  )
   let result = extract_raw_text_from_document(read_result.document)
   prepend_messages(result, read_result.messages)
 }
@@ -183,18 +230,31 @@ fn read_embedded_style_map_from_zip(
 }
 
 ///|
-pub fn read_docx(docx : BytesView) -> DocumentElement raise DocxError {
-  read_docx_zip(open_zip(docx))
+pub fn read_docx(
+  docx : BytesView,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+) -> DocumentElement raise DocxError {
+  read_docx_zip(
+    open_zip(docx),
+    external_files=external_file_access_options(
+      external_file_access, read_external_file,
+    ),
+  )
 }
 
 ///|
-fn read_docx_zip(zip : ZipArchive) -> DocumentElement raise DocxError {
-  read_docx_zip_with_messages(zip).document
+fn read_docx_zip(
+  zip : ZipArchive,
+  external_files? : ExternalFileAccess = default_external_file_access(),
+) -> DocumentElement raise DocxError {
+  read_docx_zip_with_messages(zip, external_files~).document
 }
 
 ///|
 fn read_docx_zip_with_messages(
   zip : ZipArchive,
+  external_files? : ExternalFileAccess = default_external_file_access(),
 ) -> DocxReadResult raise DocxError {
   let main_document_path = find_main_document_path(zip)
   let relationships = read_relationships(
@@ -217,10 +277,22 @@ fn read_docx_zip_with_messages(
     zip, relationships, styles, base_path,
   )
   let notes_result = read_notes_for_document(
-    zip, styles, numbering, content_types, relationships, base_path,
+    zip,
+    styles,
+    numbering,
+    content_types,
+    relationships,
+    base_path,
+    external_files~,
   )
   let comments_result = read_comments_for_document(
-    zip, styles, numbering, content_types, relationships, base_path,
+    zip,
+    styles,
+    numbering,
+    content_types,
+    relationships,
+    base_path,
+    external_files~,
   )
   let xml = read_xml_part(zip, main_document_path)
   let document_result = read_document_xml_with_messages(
@@ -233,6 +305,7 @@ fn read_docx_zip_with_messages(
     base_path,
     notes_result.notes,
     comments_result.comments,
+    external_files~,
   )
   let messages : Array[Message] = []
   messages.append(notes_result.messages)
@@ -640,6 +713,7 @@ fn read_notes_for_document(
   content_types : ContentTypes,
   document_relationships : Relationships,
   base_path : String,
+  external_files? : ExternalFileAccess = default_external_file_access(),
 ) -> NotesReadResult raise DocxError {
   let notes : Array[Note] = []
   let messages : Array[Message] = []
@@ -653,6 +727,7 @@ fn read_notes_for_document(
     content_types~,
     document_relationships~,
     base_path~,
+    external_files~,
   )
   notes.append(footnotes.notes)
   messages.append(footnotes.messages)
@@ -666,6 +741,7 @@ fn read_notes_for_document(
     content_types~,
     document_relationships~,
     base_path~,
+    external_files~,
   )
   notes.append(endnotes.notes)
   messages.append(endnotes.messages)
@@ -683,6 +759,7 @@ fn read_note_part(
   content_types~ : ContentTypes,
   document_relationships~ : Relationships,
   base_path~ : String,
+  external_files? : ExternalFileAccess = default_external_file_access(),
 ) -> NotesReadResult raise DocxError {
   let path = find_part_path(
     zip,
@@ -706,6 +783,7 @@ fn read_note_part(
     base_path: split_zip_path(path).0,
     numbering,
     messages: [],
+    external_files,
   }
   let root = read_xml_part(zip, path)
   let notes : Array[Note] = []
@@ -731,6 +809,7 @@ fn read_comments_for_document(
   content_types : ContentTypes,
   document_relationships : Relationships,
   base_path : String,
+  external_files? : ExternalFileAccess = default_external_file_access(),
 ) -> CommentsReadResult raise DocxError {
   let path = find_part_path(
     zip,
@@ -754,6 +833,7 @@ fn read_comments_for_document(
     base_path: split_zip_path(path).0,
     numbering,
     messages: [],
+    external_files,
   }
   let root = read_xml_part(zip, path)
   let comments : Array[Comment] = []
@@ -862,6 +942,7 @@ fn read_document_xml_with_messages(
   base_path : String,
   notes : Array[Note],
   comments : Array[Comment],
+  external_files? : ExternalFileAccess = default_external_file_access(),
 ) -> DocxReadResult raise DocxError {
   let body = match root.first("w:body") {
     Some(body) => body
@@ -878,6 +959,7 @@ fn read_document_xml_with_messages(
     base_path,
     numbering,
     messages: [],
+    external_files,
   }
   {
     document: document(reader.read_children(body.children), notes~, comments~),
@@ -894,6 +976,7 @@ priv struct BodyReader {
   base_path : String
   numbering : NumberingMap
   messages : Array[Message]
+  external_files : ExternalFileAccess
 }
 
 ///|
@@ -1906,33 +1989,65 @@ fn BodyReader::read_image_by_relationship(
   match self.relationships.find_by_id(relationship_id) {
     Some(rel) =>
       if rel.target_mode == Some("External") {
-        self.messages.push(
-          Error(
-            "could not read external image '" +
-            rel.target +
-            "', external file access is disabled",
-          ),
-        )
-        None
+        self.read_external_image(rel.target, alt_text~)
       } else {
         let path = resolve_part_target(self.base_path, rel.target)
         match self.zip.read_bytes(path) {
-          Some(data) => {
-            let content_type = self.content_types.find_content_type(path)
-            if !is_supported_web_image_type(content_type) {
-              self.warn(
-                "Image of type " +
-                content_type +
-                " is unlikely to display in web browsers",
-              )
-            }
-            Some({ content_type, alt_text, data })
-          }
+          Some(data) => Some(self.make_image(path, data, alt_text~))
           None => None
         }
       }
     None => None
   }
+}
+
+///|
+fn BodyReader::read_external_image(
+  self : BodyReader,
+  target : String,
+  alt_text~ : String?,
+) -> Image? {
+  if !self.external_files.enabled {
+    self.messages.push(
+      Error(
+        "could not read external image '" +
+        target +
+        "', external file access is disabled",
+      ),
+    )
+    return None
+  }
+  match (self.external_files.read_file)(target) {
+    Some(data) => Some(self.make_image(target, data, alt_text~))
+    None => {
+      self.messages.push(
+        Error(
+          "could not find external image '" +
+          target +
+          "', path of input document is unknown",
+        ),
+      )
+      None
+    }
+  }
+}
+
+///|
+fn BodyReader::make_image(
+  self : BodyReader,
+  path : String,
+  data : Bytes,
+  alt_text~ : String?,
+) -> Image {
+  let content_type = self.content_types.find_content_type(path)
+  if !is_supported_web_image_type(content_type) {
+    self.warn(
+      "Image of type " +
+      content_type +
+      " is unlikely to display in web browsers",
+    )
+  }
+  { content_type, alt_text, data }
 }
 
 ///|

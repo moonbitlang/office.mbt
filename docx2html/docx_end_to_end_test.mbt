@@ -186,6 +186,49 @@ test "external linked images produce Mammoth-compatible error messages" {
 }
 
 ///|
+fn tiny_picture_png() -> Bytes {
+  try! @base64.decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=",
+    ignore_whitespace=true,
+  )
+}
+
+///|
+test "external linked images can be loaded when explicitly enabled" {
+  let result = @docx2html.convert_to_html(
+    external_picture_docx()[:],
+    external_file_access=true,
+    read_external_file=fn(path) {
+      if path == "tiny-picture.png" {
+        Some(tiny_picture_png())
+      } else {
+        None
+      }
+    },
+  )
+  inspect(
+    result.value,
+    content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
+  )
+  debug_inspect(result.messages, content="[]")
+}
+
+///|
+test "external linked images report unknown path without a loader" {
+  let result = @docx2html.convert_to_html(
+    external_picture_docx()[:],
+    external_file_access=true,
+  )
+  inspect(result.value, content="")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[Error("could not find external image 'tiny-picture.png', path of input document is unknown")]
+    ),
+  )
+}
+
+///|
 test "footnotes are appended to text" {
   let result = @docx2html.convert_to_html(
     footnotes_docx()[:],
