@@ -229,6 +229,24 @@ test "docx reader reads references and bookmarks like Mammoth" {
 }
 
 ///|
+test "docx reader uses structured document tag content without checkbox" {
+  debug_inspect(
+    body_elements_from_xml(
+      "<w:sdt><w:sdtContent><w:t>Blackdown</w:t></w:sdtContent></w:sdt>",
+    ),
+    content="[Text(\"Blackdown\")]",
+  )
+}
+
+///|
+test "docx reader ignores raw XML text nodes in children" {
+  match body_elements_from_xml("<w:r>[text]</w:r>")[0] {
+    Run(children~, ..) => debug_inspect(children, content="[]")
+    _ => fail("expected run")
+  }
+}
+
+///|
 test "docx reader reads Mammoth run boolean properties" {
   let enabled = run_properties_from_xml(
     "<w:b /><w:i w:val=\"true\" /><w:strike w:val=\"1\" /><w:caps /><w:smallCaps />",
