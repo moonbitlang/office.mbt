@@ -471,6 +471,8 @@ test "docx reader reads run font vertical alignment and highlight properties" {
   debug_inspect(properties.font, content="Some(\"Arial\")")
   debug_inspect(properties.font_size, content="Some(14)")
   debug_inspect(properties.highlight, content="Some(\"yellow\")")
+  let subscript = run_properties_from_xml("<w:vertAlign w:val=\"subscript\" />")
+  debug_inspect(subscript.vertical_alignment, content="Subscript")
 }
 
 ///|
@@ -636,6 +638,23 @@ test "docx hyperlink reader preserves children when no target is present" {
     Run(..) => ()
     _ => fail("expected hyperlink children")
   }
+}
+
+///|
+test "docx hyperlink reader preserves children when relationship target is missing" {
+  let xml =
+    #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="missing"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = empty_body_reader({ relationships: [] })
+  match reader.read_element(root)[0] {
+    Hyperlink(children~, href=None, anchor=None, target_frame=None) =>
+      inspect(
+        convert_document_to_html(document(children)).value,
+        content="Hello",
+      )
+    _ => fail("expected unaddressed hyperlink")
+  }
+  debug_inspect(reader.messages, content="[]")
 }
 
 ///|
@@ -1723,6 +1742,55 @@ test "docx image reader records Mammoth-compatible warnings" {
   debug_inspect(missing_blip_reader.read_element(missing_blip), content="[]")
   debug_inspect(
     missing_blip_reader.messages,
+    content=(
+      #|[Warning("Could not find image file for a:blip element")]
+    ),
+  )
+  let missing_relationship_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rMissing" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let missing_relationship = read_xml_string(
+    missing_relationship_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let missing_relationship_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(
+    missing_relationship_reader.read_element(missing_relationship),
+    content="[]",
+  )
+  debug_inspect(
+    missing_relationship_reader.messages,
+    content=(
+      #|[Warning("Could not find image file for a:blip element")]
+    ),
+  )
+  let missing_entry_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rMissingEntry" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let missing_entry = read_xml_string(
+    missing_entry_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let missing_entry_reader = BodyReader::{
+    styles: {},
+    zip: { entries: {} },
+    relationships: {
+      relationships: [
+        {
+          id: "rMissingEntry",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "media/missing.png",
+          target_mode: None,
+        },
+      ],
+    },
+    content_types: { defaults: { "png": "image/png" }, overrides: {} },
+    base_path: "word",
+    numbering: NumberingMap::empty(),
+    messages: [],
+    external_files: default_external_file_access(),
+  }
+  debug_inspect(missing_entry_reader.read_element(missing_entry), content="[]")
+  debug_inspect(
+    missing_entry_reader.messages,
     content=(
       #|[Warning("Could not find image file for a:blip element")]
     ),
