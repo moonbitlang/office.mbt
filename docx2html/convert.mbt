@@ -1,11 +1,9 @@
 ///|
-pub(all) struct ConvertOptions {
+priv struct ConvertOptions {
   style_map : Array[StyleMapping]
   ignore_empty_paragraphs : Bool
   id_prefix : String
-  pretty_print : Bool
-  output_format : String
-} derive(Debug, Eq)
+}
 
 ///|
 pub(all) struct ImageConversion {
@@ -19,17 +17,6 @@ pub fn image_conversion(
   messages? : Array[Message] = [],
 ) -> ImageConversion {
   { nodes, messages }
-}
-
-///|
-pub fn ConvertOptions::default() -> ConvertOptions {
-  {
-    style_map: read_style_map(default_style_map_lines()),
-    ignore_empty_paragraphs: true,
-    id_prefix: "",
-    pretty_print: false,
-    output_format: "html",
-  }
 }
 
 ///|
@@ -54,8 +41,6 @@ pub fn convert_document_to_html(
     style_map: parsed_style_map.mappings,
     ignore_empty_paragraphs,
     id_prefix,
-    pretty_print,
-    output_format: "html",
   }
   let converter = DocumentConverter::{
     options,
@@ -95,8 +80,6 @@ pub fn convert_document_to_markdown(
     style_map: parsed_style_map.mappings,
     ignore_empty_paragraphs,
     id_prefix,
-    pretty_print: false,
-    output_format: "markdown",
   }
   let converter = DocumentConverter::{
     options,

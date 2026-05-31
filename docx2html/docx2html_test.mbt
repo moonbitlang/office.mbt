@@ -21,10 +21,11 @@ test "result messages are deduplicated when combined" {
 
 ///|
 test "conversion defaults and result mapping preserve messages" {
-  let options = @docx2html.ConvertOptions::default()
-  inspect(options.output_format, content="html")
-  inspect(options.ignore_empty_paragraphs, content="true")
-  inspect(options.style_map.length() > 0, content="true")
+  inspect(
+    @docx2html.convert_document_to_html(@docx2html.paragraph([])).value,
+    content="",
+  )
+  inspect(@docx2html.default_style_map_lines().length() > 0, content="true")
   let result = @docx2html.ConversionResult::{
     value: "walking",
     messages: [Warning("same")],

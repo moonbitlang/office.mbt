@@ -127,15 +127,6 @@ pub(all) struct ConversionResult {
 pub fn ConversionResult::combine(Self, Self) -> Self
 pub fn ConversionResult::map(Self, (String) -> String raise?) -> Self raise?
 
-pub(all) struct ConvertOptions {
-  style_map : Array[StyleMapping]
-  ignore_empty_paragraphs : Bool
-  id_prefix : String
-  pretty_print : Bool
-  output_format : String
-} derive(Eq, @debug.Debug)
-pub fn ConvertOptions::default() -> Self
-
 pub(all) enum DocumentElement {
   Document(children~ : Array[DocumentElement], notes~ : Array[Note], comments~ : Array[Comment])
   Paragraph(children~ : Array[DocumentElement], properties~ : ParagraphProperties)
