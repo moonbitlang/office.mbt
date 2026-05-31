@@ -96,6 +96,22 @@ fn body_elements_from_xml(
 }
 
 ///|
+fn paragraph_properties_from_xml(
+  properties_xml : String,
+  styles? : Map[String, StyleInfo] = {},
+) -> ParagraphProperties raise DocxError {
+  let xml = "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr>" +
+    properties_xml +
+    "</w:pPr></w:p>"
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  match
+    body_reader_with_numbering(styles, NumberingMap::empty()).read_element(root)[0] {
+    Paragraph(properties~, ..) => properties
+    _ => abort("expected paragraph")
+  }
+}
+
+///|
 test "docx content types include Mammoth image fallbacks" {
   let content_types = ContentTypes::{ defaults: {}, overrides: {} }
   inspect(
@@ -126,6 +142,58 @@ test "docx content types include Mammoth image fallbacks" {
   inspect(
     with_default.find_content_type("/word/media/hat.png"),
     content="image/hat",
+  )
+}
+
+///|
+test "docx reader reads paragraph style alignment and indent properties" {
+  let styles : Map[String, StyleInfo] = {
+    "paragraph:Heading1": {
+      style_id: "Heading1",
+      style_type: "paragraph",
+      name: "Heading 1",
+    },
+  }
+  let properties = paragraph_properties_from_xml(
+    "<w:pStyle w:val=\"Heading1\" /><w:jc w:val=\"center\" /><w:ind w:start=\"720\" w:left=\"40\" w:right=\"1440\" w:firstLine=\"360\" w:hanging=\"120\" />",
+    styles~,
+  )
+  debug_inspect(properties.style_id, content="Some(\"Heading1\")")
+  debug_inspect(properties.style_name, content="Some(\"Heading 1\")")
+  debug_inspect(properties.alignment, content="Some(\"center\")")
+  debug_inspect(
+    [
+      properties.indent.start,
+      properties.indent.end,
+      properties.indent.first_line,
+      properties.indent.hanging,
+    ],
+    content="[Some(\"720\"), Some(\"1440\"), Some(\"360\"), Some(\"120\")]",
+  )
+  let fallback = paragraph_properties_from_xml(
+    "<w:ind w:left=\"720\" w:end=\"1440\" />",
+  )
+  debug_inspect(
+    [fallback.indent.start, fallback.indent.end],
+    content="[Some(\"720\"), Some(\"1440\")]",
+  )
+}
+
+///|
+test "docx reader leaves missing paragraph properties empty" {
+  let properties = paragraph_properties_from_xml("")
+  debug_inspect(
+    [properties.style_id, properties.style_name, properties.alignment],
+    content="[None, None, None]",
+  )
+  debug_inspect(
+    [
+      properties.indent.start,
+      properties.indent.end,
+      properties.indent.first_line,
+      properties.indent.hanging,
+    ],
+    content="[None, None, None, None]",
   )
 }
 
