@@ -4,7 +4,8 @@ pub(all) enum HtmlNode {
     tag~ : String,
     attributes~ : Map[String, String],
     children~ : Array[HtmlNode],
-    fresh~ : Bool
+    fresh~ : Bool,
+    separator~ : String?
   )
   TextNode(String)
   ForceWrite
@@ -21,8 +22,15 @@ pub fn html_element(
   attributes? : Map[String, String] = {},
   children? : Array[HtmlNode] = [],
   fresh? : Bool = false,
+  separator? : String = "",
 ) -> HtmlNode {
-  Element(tag~, attributes~, children~, fresh~)
+  Element(
+    tag~,
+    attributes~,
+    children~,
+    fresh~,
+    separator=separator_option(separator),
+  )
 }
 
 ///|
@@ -30,8 +38,24 @@ pub fn fresh_html_element(
   tag : String,
   attributes? : Map[String, String] = {},
   children? : Array[HtmlNode] = [],
+  separator? : String = "",
 ) -> HtmlNode {
-  Element(tag~, attributes~, children~, fresh=true)
+  Element(
+    tag~,
+    attributes~,
+    children~,
+    fresh=true,
+    separator=separator_option(separator),
+  )
+}
+
+///|
+fn separator_option(value : String) -> String? {
+  if value == "" {
+    None
+  } else {
+    Some(value)
+  }
 }
 
 ///|

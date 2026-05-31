@@ -24,6 +24,7 @@ pub(all) struct HtmlPathElement {
   tag : String
   attributes : Map[String, String]
   fresh : Bool
+  separator : String?
 } derive(Debug, Eq)
 
 ///|
@@ -418,8 +419,53 @@ fn read_html_path_element(value : String) -> HtmlPathElement {
     None => decode_style_escapes(tag_choices)
   }
   let fresh = options_text.contains("fresh")
+  let separator = read_html_path_separator(options_text)
   let attributes = read_html_path_attributes(element_text)
-  { tag, attributes, fresh }
+  { tag, attributes, fresh, separator }
+}
+
+///|
+fn read_html_path_separator(options_text : String) -> String? {
+  let marker = "separator('"
+  match options_text.find(marker) {
+    Some(start) =>
+      read_style_string_value(options_text, start + marker.length())
+    None => None
+  }
+}
+
+///|
+fn read_style_string_value(value : String, start : Int) -> String? {
+  let builder = StringBuilder()
+  let mut index = start
+  while index < value.length() {
+    let char = value[index]
+    if char == '\\' && index + 1 < value.length() {
+      write_style_escape(builder, value, index + 1)
+      index = index + 2
+    } else if char == '\'' {
+      return Some(builder.to_string())
+    } else {
+      builder.write_string(value[index:index + 1].to_owned())
+      index = index + 1
+    }
+  }
+  None
+}
+
+///|
+fn write_style_escape(
+  builder : StringBuilder,
+  value : String,
+  index : Int,
+) -> Unit {
+  let char = value[index]
+  match char {
+    'n' => builder.write_string("\n")
+    'r' => builder.write_string("\r")
+    't' => builder.write_string("\t")
+    _ => builder.write_string(value[index:index + 1].to_owned())
+  }
 }
 
 ///|

@@ -188,6 +188,20 @@ test "style map bang html path ignores matched content" {
 }
 
 ///|
+test "style map separator is inserted only when html elements collapse" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("One")]),
+    @docx2html.paragraph([@docx2html.text("Two")]),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(doc, style_map=[
+      "p => pre:separator('\\n')",
+    ]).value,
+    content="<pre>One\nTwo</pre>",
+  )
+}
+
+///|
 test "invalid style maps warn and keep valid mappings" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("Walking on imported air")]),

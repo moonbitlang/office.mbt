@@ -55,3 +55,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - `w:sym` needs font-specific dingbat mapping. Mammoth also treats private-use `F0xx` codes as `xx` for supported fonts, so normalize before lookup.
 - Style-name prefix matchers (`style-name^='Heading'`) must be represented distinctly from exact style-name matches; otherwise they can accidentally become broad paragraph/run/table matchers.
 - Invalid style-map lines should produce converter warnings while preserving the valid mappings that follow; a silent `None` parse result loses Mammoth-visible diagnostics.
+- HTML path separators are metadata on the generated element, not eager text children: `:separator('\n')` is emitted only when simplification collapses a later matching element into an earlier one.
