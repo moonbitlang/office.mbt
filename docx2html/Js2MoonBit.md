@@ -22,6 +22,8 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Node `TextDecoder("utf8")` maps to `@utf8.decode(bytes[:], ignore_bom=true)` so DOCX XML parts with a UTF-8 BOM match Mammoth behavior.
 - Mammoth's XML DOM adapter normalizes namespace URIs into short names (`w:p`) using a caller-provided URI map, falling back to `{uri}local`. The MoonBit XML parser preserves that rule directly.
 - XML namespace declarations update parser scope but are not retained as normal attributes; DOCX readers depend on semantic names, not `xmlns` attributes.
+- Parser code that is written in JS as a permissive loop often becomes structurally total in MoonBit. For example, an XML `while true` parser whose branches all return or raise may leave only an `abort("unreachable")` after the loop; do not invent malformed inputs to hit that branch.
+- Some standard-library shapes are total even when the ported JS code treated them defensively. `String::split(...).next()` on an existing string has a first segment, so a `None` fallback after it is not a meaningful parity target.
 
 ## DOCX Reader
 
@@ -32,6 +34,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Run property style mappings such as `u => em` and `strike => del` are applied through property-specific lookup only. Do not also treat them as ordinary run-style mappings, or wrappers are duplicated.
 - Mammoth's `readHighlightValue` uses JavaScript truthiness: missing, empty, and `"none"` `w:highlight/@w:val` all mean no highlight. In MoonBit, normalize `Some("")` explicitly.
 - Mammoth's font-size reader uses `/^[0-9]+$/` before `parseInt`, so signs, whitespace, empty strings, and partial numeric prefixes are invalid. MoonBit's `parse_int` needs an explicit ASCII digit guard to match it.
+- When a MoonBit guard proves parsing safe, the checked-error fallback can remain as defensive code even if coverage cannot hit it. The `w:sz` font-size path is one such case: after `is_ascii_decimal_string`, `parse_int` should not fail for supported inputs.
 - DOCX fixture tests should be added before broadening parser support; upstream outputs expose small semantic gaps faster than isolated unit ports.
 - Embedded media requires three DOCX layers: document relationships for `r:embed`, `[Content_Types].xml` for MIME type, and ZIP part resolution relative to the document part. Absolute package targets must be stripped of their leading slash.
 - Recursive XML descendant lookup is needed for DrawingML chains such as `wp:inline -> a:graphic -> pic:pic -> a:blip`; direct child lookup is insufficient outside simple WordprocessingML.
@@ -72,6 +75,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - DOCX reader warnings need a message pipeline into conversion results. Elements that are handled through a secondary pass, such as `w:txbxContent`, may need to be quiet in the normal child traversal to avoid false unrecognised-element warnings.
 - Image-reader failures are non-fatal diagnostics in Mammoth: missing `a:blip` image files and VML image IDs emit warnings and no element, while unsupported-but-readable content types still produce an image plus a warning.
 - Table row-span normalization should fail open with Mammoth warnings when unexpected non-row or non-cell children appear; in those cases keep the original table children rather than trying to merge `vMerge` cells.
+- Once row-span normalization has detected unexpected non-row/non-cell children and returned early, later wildcard arms inside the merge loops are typed defensive leftovers. Treat them as invariants to preserve, not as branches that need artificial coverage.
 - HTML simplification removes empty text and empty non-void elements before collapsing; preserve intentionally empty paragraphs/tables/rows/cells by inserting a non-rendering `ForceWrite` marker, matching Mammoth's internal AST.
 - Bookmark anchors are another intentional empty element: Mammoth emits `<a id="..."></a>` with `forceWrite`, so MoonBit must include `ForceWrite` or simplification drops the anchor.
 - Word numbering is not inferable from `w:numPr` alone. Read `numbering.xml`, resolve `w:num` through `w:abstractNum`, treat `w:numFmt="bullet"` as unordered, and keep list levels aligned with MoonBit's 1-based style-map matchers. Mammoth's paragraph lookup order is exact `numId`+`ilvl`, then paragraph-style numbering, then malformed `numId`-only fallback at level 0.
@@ -99,3 +103,9 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Node filesystem calls in the CLI map cleanly to `moonbitlang/x/fs` on native. Keep the library bytes-first; put path/argv concerns in `cmd/main` so package APIs remain target-independent.
 - CLI `--style-map PATH` should read the file as UTF-8 text and then reuse the public `read_style_map_string` helper. This keeps comment/blank-line filtering identical between string options, embedded maps, and CLI style-map files.
 - Mammoth's `--output-dir` is just a custom image converter with side effects: increment an image counter, write the image bytes to disk, and return an `<img src="N.ext">`. MoonBit image converters are non-raising, so catch filesystem errors inside the converter and return an `ImageConversion` diagnostic instead of throwing through the callback type.
+
+## Testing and Coverage
+
+- Use `moon coverage analyze > uncovered.log` as a guide, not as a replacement for upstream parity review. After porting dynamic JS code to typed MoonBit, a small number of uncovered branches may be proof of stronger invariants rather than missing behavior.
+- Prefer adding parity tests for reachable Mammoth behavior: missing DOCX parts, malformed relationship targets, unsupported media, fail-open table structures, invalid style-map lines, and CLI file-output paths. Avoid contorting tests around branches that can only be reached by violating a prior typed invariant.
+- Keep temporary coverage reports out of commits. `uncovered.log` is useful for choosing the next slice, but the committed evidence should be focused tests and the final `moon test --target native` / `moon check --target native --warn-list +73` gate.
