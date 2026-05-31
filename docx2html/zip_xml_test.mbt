@@ -80,6 +80,27 @@ test "xml reads elements attributes text and namespaces" {
 }
 
 ///|
+test "xml namespace mapping follows Mammoth reader behavior" {
+  let unmapped = @docx2html.read_xml_string("<w:body xmlns:w=\"word\" />")
+  inspect(unmapped.name, content="{word}body")
+  let namespace_map : Map[String, String] = { "word": "x" }
+  let mapped = @docx2html.read_xml_string(
+    "<w:body xmlns:w=\"word\" w:val=\"Hello!\" />",
+    namespace_map~,
+  )
+  inspect(mapped.name, content="x:body")
+  inspect(mapped.attributes.get_or_default("x:val", ""), content="Hello!")
+  let root = @docx2html.read_xml_string(
+    "<body><a /><b index=\"1\" /><b index=\"2\" /></body>",
+  )
+  match root.first("b") {
+    Some(first) =>
+      inspect(first.attributes.get_or_default("index", ""), content="1")
+    None => fail("expected first b element")
+  }
+}
+
+///|
 test "xml helpers expose text edge cases and recursive descendants" {
   let root = @docx2html.xml_element("root", children=[
     @docx2html.xml_text("prefix"),
