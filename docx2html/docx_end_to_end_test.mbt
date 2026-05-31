@@ -564,6 +564,27 @@ test "embedded style maps are combined after explicit mappings" {
 }
 
 ///|
+test "embedded style maps written into docx affect conversion" {
+  let rewritten = @docx2html.embed_style_map(
+    single_paragraph_docx()[:],
+    "p => h2",
+  )
+  debug_inspect(
+    @docx2html.read_embedded_style_map(rewritten[:]),
+    content="Some(\"p => h2\")",
+  )
+  inspect(
+    @docx2html.convert_to_html(rewritten[:]).value,
+    content="<h2>Walking on imported air</h2>",
+  )
+  let replaced = @docx2html.embed_style_map(rewritten[:], "p => p")
+  inspect(
+    @docx2html.convert_to_html(replaced[:]).value,
+    content="<p>Walking on imported air</p>",
+  )
+}
+
+///|
 test "invalid explicit style maps warn while valid mappings still apply" {
   let result = @docx2html.convert_to_html(single_paragraph_docx()[:], style_map=[
     "????", "p => h1",
