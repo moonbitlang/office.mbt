@@ -657,6 +657,9 @@ fn wrap_html_path(
   path : Array[HtmlPathElement],
   nodes : Array[HtmlNode],
 ) -> Array[HtmlNode] {
+  if path.length() == 1 && path[0].tag == "!" {
+    return []
+  }
   let mut wrapped = nodes
   for index = path.length() - 1; index >= 0; index = index - 1 {
     let part = path[index]

@@ -177,6 +177,17 @@ test "style map html paths preserve classes and attributes" {
 }
 
 ///|
+test "style map bang html path ignores matched content" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Ignored")]),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(doc, style_map=["p => !"]).value,
+    content="",
+  )
+}
+
+///|
 test "document converter warns for unrecognised styles" {
   let paragraph_properties = @docx2html.ParagraphProperties::{
     style_id: Some("MysteryParagraph"),
