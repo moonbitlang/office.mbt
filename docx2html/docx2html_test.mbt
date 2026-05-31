@@ -126,6 +126,12 @@ test "markdown writer handles common inline elements" {
   )
   inspect(
     @docx2html.write_markdown([
+      @docx2html.html_element("a", children=[@docx2html.html_text("Hello")]),
+    ]),
+    content="Hello",
+  )
+  inspect(
+    @docx2html.write_markdown([
       @docx2html.html_element("p", children=[
         @docx2html.html_text("Hello "),
         @docx2html.html_element("strong", children=[
@@ -150,6 +156,12 @@ test "markdown writer escapes text and handles breaks and headings" {
       @docx2html.html_element("br"),
     ]),
     content="Hello World  \n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("h1", children=[@docx2html.html_text("Hello")]),
+    ]),
+    content="# Hello\n\n",
   )
   inspect(
     @docx2html.write_markdown([
@@ -303,6 +315,46 @@ test "markdown writer follows Mammoth list rules" {
       ]),
     ]),
     content="1. Outer One\n\t1. Nested One\n\t\t1. Inner One\n\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("ol", children=[
+        @docx2html.html_element("li", children=[
+          @docx2html.html_text("Hello "),
+          @docx2html.html_element("strong", children=[
+            @docx2html.html_text("Strong"),
+          ]),
+          @docx2html.html_text(" World"),
+        ]),
+        @docx2html.html_element("li", children=[
+          @docx2html.html_text("Hello "),
+          @docx2html.html_element("em", children=[
+            @docx2html.html_text("Emphasis"),
+          ]),
+          @docx2html.html_text(" World"),
+        ]),
+      ]),
+    ]),
+    content="1. Hello __Strong__ World\n2. Hello *Emphasis* World\n\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("p", children=[
+        @docx2html.html_text("Hello World"),
+      ]),
+      @docx2html.html_element("ul", children=[
+        @docx2html.html_element("li", children=[
+          @docx2html.html_text("First Item"),
+        ]),
+        @docx2html.html_element("li", children=[
+          @docx2html.html_text("Second Item"),
+        ]),
+      ]),
+      @docx2html.html_element("p", children=[
+        @docx2html.html_text("Hello World"),
+      ]),
+    ]),
+    content="Hello World\n\n- First Item\n- Second Item\n\nHello World\n\n",
   )
   inspect(
     @docx2html.write_markdown([
@@ -1306,6 +1358,40 @@ test "document converter emits data uri images" {
   inspect(
     @docx2html.convert_document_to_html(doc).value,
     content="<p><img alt=\"alt\" src=\"data:image/jpeg;base64,YWJj\" /></p>",
+  )
+}
+
+///|
+test "image helper follows Mammoth alt attribute merging" {
+  let without_alt = @docx2html.Image::{
+    content_type: "image/jpeg",
+    alt_text: None,
+    data: b"abc",
+  }
+  inspect(
+    @docx2html.write_html(
+      @docx2html.img_element(fn(_image) { { "src": "<src>" } })(without_alt).nodes,
+    ),
+    content="<img src=\"&lt;src&gt;\" />",
+  )
+  let with_alt = @docx2html.Image::{
+    content_type: "image/jpeg",
+    alt_text: Some("<alt>"),
+    data: b"abc",
+  }
+  inspect(
+    @docx2html.write_html(
+      @docx2html.img_element(fn(_image) { { "src": "<src>" } })(with_alt).nodes,
+    ),
+    content="<img alt=\"&lt;alt&gt;\" src=\"&lt;src&gt;\" />",
+  )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.img_element(fn(_image) {
+        { "alt": "<alt override>", "src": "<src>" }
+      })(with_alt).nodes,
+    ),
+    content="<img alt=\"&lt;alt override&gt;\" src=\"&lt;src&gt;\" />",
   )
 }
 
