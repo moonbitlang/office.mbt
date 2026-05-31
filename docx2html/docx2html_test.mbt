@@ -1228,6 +1228,42 @@ test "document converter emits data uri images" {
 }
 
 ///|
+test "document converter accepts custom image converters" {
+  let image = @docx2html.Image::{
+    content_type: "image/jpeg",
+    alt_text: Some("default alt"),
+    data: b"abc",
+  }
+  let doc = @docx2html.document([@docx2html.paragraph([Image(image)])])
+  let convert_image = @docx2html.img_element(fn(image) {
+    {
+      "alt": "override " + image.content_type,
+      "src": "custom:" + image.content_type,
+    }
+  })
+  inspect(
+    @docx2html.convert_document_to_html(doc, convert_image~).value,
+    content="<p><img alt=\"override image/jpeg\" src=\"custom:image/jpeg\" /></p>",
+  )
+}
+
+///|
+test "document converter records custom image converter messages" {
+  let image = @docx2html.Image::{
+    content_type: "image/jpeg",
+    alt_text: None,
+    data: b"abc",
+  }
+  let doc = @docx2html.document([@docx2html.paragraph([Image(image)])])
+  let convert_image = fn(_image) {
+    @docx2html.image_conversion([], messages=[Warning("skipped image")])
+  }
+  let result = @docx2html.convert_document_to_html(doc, convert_image~)
+  inspect(result.value, content="")
+  debug_inspect(result.messages, content="[Warning(\"skipped image\")]")
+}
+
+///|
 test "document converter uses blank comment label initials" {
   let comment = @docx2html.Comment::{
     comment_id: "4",

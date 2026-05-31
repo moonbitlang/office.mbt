@@ -127,6 +127,18 @@ test "inline images referenced relative to document part are included" {
 }
 
 ///|
+test "convert_to_html applies custom image converter to docx images" {
+  let convert_image = @docx2html.img_element(fn(image) {
+    { "src": image.content_type }
+  })
+  let result = @docx2html.convert_to_html(
+    tiny_picture_docx()[:],
+    convert_image~,
+  )
+  inspect(result.value, content="<p><img src=\"image/png\" /></p>")
+}
+
+///|
 test "inline images referenced relative to package base are included" {
   let result = @docx2html.convert_to_html(
     tiny_picture_target_base_relative_docx()[:],

@@ -82,6 +82,7 @@ pub fn convert_to_html(
   ignore_empty_paragraphs? : Bool = true,
   id_prefix? : String = "",
   pretty_print? : Bool = false,
+  convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
 ) -> ConversionResult raise DocxError {
   let zip = open_zip(docx)
   let read_result = read_docx_zip_with_messages(zip)
@@ -97,6 +98,7 @@ pub fn convert_to_html(
     ignore_empty_paragraphs~,
     id_prefix~,
     pretty_print~,
+    convert_image~,
   )
   prepend_messages(result, read_result.messages)
 }
@@ -107,6 +109,7 @@ pub fn convert_to_markdown(
   style_map? : Array[String] = [],
   include_default_style_map? : Bool = true,
   include_embedded_style_map? : Bool = true,
+  convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
 ) -> ConversionResult raise DocxError {
   let zip = open_zip(docx)
   let read_result = read_docx_zip_with_messages(zip)
@@ -119,6 +122,7 @@ pub fn convert_to_markdown(
     read_result.document,
     style_map~,
     include_default_style_map~,
+    convert_image~,
   )
   prepend_messages(result, read_result.messages)
 }

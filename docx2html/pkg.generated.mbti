@@ -10,13 +10,15 @@ pub fn checkbox(Bool) -> DocumentElement
 
 pub fn column_break() -> DocumentElement
 
-pub fn convert_document_to_html(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool) -> ConversionResult
+pub fn convert_document_to_html(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion) -> ConversionResult
 
-pub fn convert_document_to_markdown(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool) -> ConversionResult
+pub fn convert_document_to_markdown(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, convert_image? : (Image) -> ImageConversion) -> ConversionResult
 
-pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool) -> ConversionResult raise DocxError
+pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion) -> ConversionResult raise DocxError
 
-pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool) -> ConversionResult raise DocxError
+pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, convert_image? : (Image) -> ImageConversion) -> ConversionResult raise DocxError
+
+pub fn data_uri_image_converter(Image) -> ImageConversion
 
 pub fn default_style_map_lines() -> Array[String]
 
@@ -37,6 +39,10 @@ pub fn fresh_html_element(String, attributes? : Map[String, String], children? :
 pub fn html_element(String, attributes? : Map[String, String], children? : Array[HtmlNode], fresh? : Bool, separator? : String) -> HtmlNode
 
 pub fn html_text(String) -> HtmlNode
+
+pub fn image_conversion(Array[HtmlNode], messages? : Array[Message]) -> ImageConversion
+
+pub fn img_element((Image) -> Map[String, String]) -> (Image) -> ImageConversion
 
 pub fn join_zip_path(Array[String]) -> String
 
@@ -169,6 +175,11 @@ pub(all) struct Image {
   content_type : String
   alt_text : String?
   data : Bytes
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ImageConversion {
+  nodes : Array[HtmlNode]
+  messages : Array[Message]
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Indent {

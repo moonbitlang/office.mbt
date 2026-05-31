@@ -8,6 +8,20 @@ pub(all) struct ConvertOptions {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct ImageConversion {
+  nodes : Array[HtmlNode]
+  messages : Array[Message]
+} derive(Debug, Eq)
+
+///|
+pub fn image_conversion(
+  nodes : Array[HtmlNode],
+  messages? : Array[Message] = [],
+) -> ImageConversion {
+  { nodes, messages }
+}
+
+///|
 pub fn ConvertOptions::default() -> ConvertOptions {
   {
     style_map: read_style_map(default_style_map_lines()),
@@ -26,6 +40,7 @@ pub fn convert_document_to_html(
   ignore_empty_paragraphs? : Bool = true,
   id_prefix? : String = "",
   pretty_print? : Bool = false,
+  convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
 ) -> ConversionResult {
   let all_style_lines : Array[String] = []
   all_style_lines.append(style_map)
@@ -48,6 +63,7 @@ pub fn convert_document_to_html(
     comments: document_comments(document),
     comment_references: [],
     comment_number: 1,
+    image_converter: convert_image,
   }
   let nodes = converter.convert_element(document)
   {
@@ -61,6 +77,7 @@ pub fn convert_document_to_markdown(
   document : DocumentElement,
   style_map? : Array[String] = [],
   include_default_style_map? : Bool = true,
+  convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
 ) -> ConversionResult {
   let all_style_lines : Array[String] = []
   all_style_lines.append(style_map)
@@ -83,6 +100,7 @@ pub fn convert_document_to_markdown(
     comments: document_comments(document),
     comment_references: [],
     comment_number: 1,
+    image_converter: convert_image,
   }
   let nodes = converter.convert_element(document)
   { value: write_markdown(simplify_html(nodes)), messages: converter.messages }
@@ -97,6 +115,7 @@ priv struct DocumentConverter {
   comments : Array[Comment]
   comment_references : Array[CommentReferenceInfo]
   mut comment_number : Int
+  image_converter : (Image) -> ImageConversion
 }
 
 ///|
@@ -181,7 +200,7 @@ fn DocumentConverter::convert_element(
       [self.convert_table_row(children, as_header=is_header)]
     TableCell(children~, col_span~, row_span~) =>
       [self.convert_table_cell(children, col_span~, row_span~, as_header=false)]
-    Image(image) => [self.convert_image(image)]
+    Image(image) => self.convert_image(image)
     NoteReference(note_type~, note_id~) => {
       let label = self.note_number.to_string()
       self.note_number = self.note_number + 1
@@ -537,19 +556,40 @@ fn force_write_nodes(children : Array[HtmlNode]) -> Array[HtmlNode] {
 fn DocumentConverter::convert_image(
   self : DocumentConverter,
   image : Image,
-) -> HtmlNode {
-  let attrs : Map[String, String] = {
-    "src": "data:" +
-    image.content_type +
-    ";base64," +
-    @base64.encode(image.data[:]),
+) -> Array[HtmlNode] {
+  let result = (self.image_converter)(image)
+  self.messages.append(result.messages)
+  result.nodes
+}
+
+///|
+pub fn data_uri_image_converter(image : Image) -> ImageConversion {
+  img_element(fn(image) {
+    {
+      "src": "data:" +
+      image.content_type +
+      ";base64," +
+      @base64.encode(image.data[:]),
+    }
+  })(image)
+}
+
+///|
+pub fn img_element(
+  read_attributes : (Image) -> Map[String, String],
+) -> (Image) -> ImageConversion {
+  fn(image) {
+    let attrs : Map[String, String] = {}
+    match image.alt_text {
+      Some(alt) => attrs["alt"] = alt
+      None => ()
+    }
+    for item in read_attributes(image) {
+      let (key, value) = item
+      attrs[key] = value
+    }
+    image_conversion([fresh_html_element("img", attributes=attrs)])
   }
-  match image.alt_text {
-    Some(alt) => attrs["alt"] = alt
-    None => ()
-  }
-  ignore(self)
-  html_element("img", attributes=attrs)
 }
 
 ///|
