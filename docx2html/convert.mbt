@@ -170,32 +170,10 @@ fn DocumentConverter::convert_element(
       [html_element("a", attributes={ "id": self.options.id_prefix + name })]
     Table(children~, properties~) =>
       self.convert_table(element, children, properties)
-    TableRow(children~, is_header~) => {
-      let cells = self.convert_children(children)
-      let children = if is_header {
-        table_cells_to_header(cells)
-      } else {
-        cells
-      }
-      [html_element("tr", children=force_write_nodes(children), fresh=true)]
-    }
-    TableCell(children~, col_span~, row_span~) => {
-      let attrs : Map[String, String] = {}
-      if col_span != 1 {
-        attrs["colspan"] = col_span.to_string()
-      }
-      if row_span != 1 {
-        attrs["rowspan"] = row_span.to_string()
-      }
-      [
-        html_element(
-          "td",
-          attributes=attrs,
-          children=force_write_nodes(self.convert_children(children)),
-          fresh=true,
-        ),
-      ]
-    }
+    TableRow(children~, is_header~) =>
+      [self.convert_table_row(children, as_header=is_header)]
+    TableCell(children~, col_span~, row_span~) =>
+      [self.convert_table_cell(children, col_span~, row_span~, as_header=false)]
     Image(image) => [self.convert_image(image)]
     NoteReference(note_type~, note_id~) => {
       let label = self.note_number.to_string()
@@ -230,21 +208,6 @@ fn DocumentConverter::convert_break(
         Page | Column => []
       }
   }
-}
-
-///|
-fn table_cells_to_header(nodes : Array[HtmlNode]) -> Array[HtmlNode] {
-  let headers : Array[HtmlNode] = []
-  for node in nodes {
-    match node {
-      Element(tag="td", attributes~, children~, fresh~, separator~) =>
-        headers.push(
-          Element(tag="th", attributes~, children~, fresh~, separator~),
-        )
-      _ => headers.push(node)
-    }
-  }
-  headers
 }
 
 ///|
@@ -429,7 +392,7 @@ fn DocumentConverter::convert_table(
   children : Array[DocumentElement],
   properties : TableProperties,
 ) -> Array[HtmlNode] {
-  let rows = force_write_nodes(self.convert_children(children))
+  let rows = force_write_nodes(self.convert_table_children(children))
   let default_path = [
     { tag: "table", attributes: {}, fresh: true, separator: None },
   ]
@@ -441,6 +404,119 @@ fn DocumentConverter::convert_table(
     )
   }
   self.wrap_with_style(element, rows, default_path)
+}
+
+///|
+fn DocumentConverter::convert_table_children(
+  self : DocumentConverter,
+  children : Array[DocumentElement],
+) -> Array[HtmlNode] {
+  let body_index = first_body_row_index(children)
+  if body_index == 0 {
+    self.convert_children(children)
+  } else {
+    [
+      html_element(
+        "thead",
+        children=self.convert_table_segment(
+          children,
+          start=0,
+          end=body_index,
+          as_header=true,
+        ),
+        fresh=true,
+      ),
+      html_element(
+        "tbody",
+        children=self.convert_table_segment(
+          children,
+          start=body_index,
+          end=children.length(),
+          as_header=false,
+        ),
+        fresh=true,
+      ),
+    ]
+  }
+}
+
+///|
+fn first_body_row_index(children : Array[DocumentElement]) -> Int {
+  let mut index = 0
+  for child in children {
+    match child {
+      TableRow(is_header=true, ..) => index = index + 1
+      _ => return index
+    }
+  }
+  index
+}
+
+///|
+fn DocumentConverter::convert_table_segment(
+  self : DocumentConverter,
+  children : Array[DocumentElement],
+  start~ : Int,
+  end~ : Int,
+  as_header~ : Bool,
+) -> Array[HtmlNode] {
+  let nodes : Array[HtmlNode] = []
+  for index in start..<end {
+    match children[index] {
+      TableRow(children=row_children, ..) =>
+        nodes.push(self.convert_table_row(row_children, as_header~))
+      other => nodes.append(self.convert_element(other))
+    }
+  }
+  nodes
+}
+
+///|
+fn DocumentConverter::convert_table_row(
+  self : DocumentConverter,
+  children : Array[DocumentElement],
+  as_header~ : Bool,
+) -> HtmlNode {
+  let nodes : Array[HtmlNode] = []
+  for child in children {
+    match child {
+      TableCell(children=cell_children, col_span~, row_span~) =>
+        nodes.push(
+          self.convert_table_cell(
+            cell_children,
+            col_span~,
+            row_span~,
+            as_header~,
+          ),
+        )
+      _ => nodes.append(self.convert_element(child))
+    }
+  }
+  html_element("tr", children=force_write_nodes(nodes), fresh=true)
+}
+
+///|
+fn DocumentConverter::convert_table_cell(
+  self : DocumentConverter,
+  children : Array[DocumentElement],
+  col_span~ : Int,
+  row_span~ : Int,
+  as_header~ : Bool,
+) -> HtmlNode {
+  let attrs : Map[String, String] = {}
+  if col_span != 1 {
+    attrs["colspan"] = col_span.to_string()
+  }
+  if row_span != 1 {
+    attrs["rowspan"] = row_span.to_string()
+  }
+  let tag = if as_header { "th" } else { "td" }
+  html_element(
+    tag,
+    attributes=attrs,
+    children=force_write_nodes(self.convert_children(children)),
+    fresh=true,
+  )
 }
 
 ///|

@@ -630,7 +630,7 @@ test "document converter renders checkboxes like Mammoth" {
 }
 
 ///|
-test "document converter renders header table rows with th cells" {
+test "document converter groups leading header table rows" {
   let table = @docx2html.Table(
     children=[
       TableRow(
@@ -648,7 +648,46 @@ test "document converter renders header table rows with th cells" {
   )
   inspect(
     @docx2html.convert_document_to_html(table).value,
-    content="<table><tr><th><p>Head</p></th></tr></table>",
+    content="<table><thead><tr><th><p>Head</p></th></tr></thead></table>",
+  )
+  let mixed_table = @docx2html.Table(
+    children=[
+      TableRow(
+        children=[
+          TableCell(
+            children=[@docx2html.paragraph([@docx2html.text("H1")])],
+            col_span=1,
+            row_span=1,
+          ),
+        ],
+        is_header=true,
+      ),
+      TableRow(
+        children=[
+          TableCell(
+            children=[@docx2html.paragraph([@docx2html.text("H2")])],
+            col_span=1,
+            row_span=1,
+          ),
+        ],
+        is_header=true,
+      ),
+      TableRow(
+        children=[
+          TableCell(
+            children=[@docx2html.paragraph([@docx2html.text("Body")])],
+            col_span=1,
+            row_span=1,
+          ),
+        ],
+        is_header=false,
+      ),
+    ],
+    properties=@docx2html.TableProperties::default(),
+  )
+  inspect(
+    @docx2html.convert_document_to_html(mixed_table).value,
+    content="<table><thead><tr><th><p>H1</p></th></tr><tr><th><p>H2</p></th></tr></thead><tbody><tr><td><p>Body</p></td></tr></tbody></table>",
   )
 }
 
