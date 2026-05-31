@@ -1501,3 +1501,17 @@ test "document converter ignores comments unless style mapped" {
     content="<p>Knock knock<sup><a href=\"#doc-42-comment-4\" id=\"doc-42-comment-ref-4\">[TP1]</a></sup></p><dl><dt id=\"doc-42-comment-4\">Comment [TP1]</dt><dd><p>Who's there? <a href=\"#doc-42-comment-ref-4\">↑</a></p></dd></dl>",
   )
 }
+
+///|
+test "document converter handles long documents like Mammoth" {
+  let paragraphs : Array[@docx2html.DocumentElement] = []
+  for _ in 0..<1000 {
+    paragraphs.push(paragraph_of_text("Hello."))
+  }
+  inspect(
+    @docx2html.convert_document_to_html(@docx2html.document(paragraphs)).value.has_prefix(
+      "<p>Hello.</p>",
+    ),
+    content="true",
+  )
+}
