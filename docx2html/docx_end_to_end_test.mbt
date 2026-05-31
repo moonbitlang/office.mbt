@@ -112,6 +112,18 @@ test "inline images referenced relative to package base are included" {
 }
 
 ///|
+test "external linked images produce Mammoth-compatible error messages" {
+  let result = @docx2html.convert_to_html(external_picture_docx()[:])
+  inspect(result.value, content="")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[Error("could not read external image 'tiny-picture.png', external file access is disabled")]
+    ),
+  )
+}
+
+///|
 test "footnotes are appended to text" {
   let result = @docx2html.convert_to_html(
     footnotes_docx()[:],
