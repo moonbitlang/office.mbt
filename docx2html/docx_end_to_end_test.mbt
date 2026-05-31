@@ -273,6 +273,17 @@ test "convert_to_markdown applies document transform option" {
 test "simple list is converted to list elements" {
   let result = @docx2html.convert_to_html(simple_list_docx()[:])
   inspect(result.value, content="<ul><li>Apple</li><li>Banana</li></ul>")
+  let without_default_style_map = @docx2html.convert_to_html(
+    simple_list_docx()[:],
+    include_default_style_map=false,
+  )
+  inspect(without_default_style_map.value, content="<p>Apple</p><p>Banana</p>")
+  debug_inspect(
+    without_default_style_map.messages,
+    content=(
+      #|[Warning("Unrecognised paragraph style: 'List Paragraph' (Style ID: ListParagraph)")]
+    ),
+  )
 }
 
 ///|
@@ -527,6 +538,14 @@ test "embedded style maps are combined after explicit mappings" {
   inspect(
     @docx2html.convert_to_html(
       embedded_style_map_docx()[:],
+      include_default_style_map=false,
+    ).value,
+    content="<h1>Walking on imported air</h1>",
+  )
+  inspect(
+    @docx2html.convert_to_html(
+      embedded_style_map_docx()[:],
+      include_default_style_map=false,
       include_embedded_style_map=false,
     ).value,
     content="<p>Walking on imported air</p>",

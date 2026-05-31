@@ -55,7 +55,7 @@ pub fn convert_document_to_html(
   let nodes = converter.convert_element(document)
   {
     value: write_html(simplify_html(nodes), pretty_print~),
-    messages: converter.messages,
+    messages: dedupe_messages(converter.messages),
   }
 }
 
@@ -92,7 +92,10 @@ pub fn convert_document_to_markdown(
     image_converter: convert_image,
   }
   let nodes = converter.convert_element(document)
-  { value: write_markdown(simplify_html(nodes)), messages: converter.messages }
+  {
+    value: write_markdown(simplify_html(nodes)),
+    messages: dedupe_messages(converter.messages),
+  }
 }
 
 ///|
