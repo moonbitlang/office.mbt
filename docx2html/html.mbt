@@ -70,7 +70,7 @@ fn HtmlWriter::write_node(self : HtmlWriter, node : HtmlNode) -> Unit {
       self.buffer.write_string("<")
       self.buffer.write_string(tag)
       self.write_attributes(attributes)
-      if children.is_empty() {
+      if children.is_empty() && is_void_html_tag(tag) {
         self.buffer.write_string(" />")
       } else {
         self.buffer.write_string(">")
@@ -86,6 +86,24 @@ fn HtmlWriter::write_node(self : HtmlWriter, node : HtmlNode) -> Unit {
       }
     }
   }
+}
+
+///|
+fn is_void_html_tag(tag : String) -> Bool {
+  tag == "area" ||
+  tag == "base" ||
+  tag == "br" ||
+  tag == "col" ||
+  tag == "embed" ||
+  tag == "hr" ||
+  tag == "img" ||
+  tag == "input" ||
+  tag == "link" ||
+  tag == "meta" ||
+  tag == "param" ||
+  tag == "source" ||
+  tag == "track" ||
+  tag == "wbr"
 }
 
 ///|

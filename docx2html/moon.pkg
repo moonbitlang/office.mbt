@@ -1,3 +1,4 @@
 import {
   "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/string",
 }

@@ -83,3 +83,87 @@ test "markdown writer emits links and images" {
     content="[link](https://example.test) ![tiny](data:image/png;base64,abc)\n\n",
   )
 }
+
+///|
+test "document converter maps paragraphs and escapes text" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("A < B")]),
+  ])
+  let result = @docx2html.convert_document_to_html(doc)
+  inspect(result.value, content="<p>A &lt; B</p>")
+  debug_inspect(result.messages, content="[]")
+}
+
+///|
+test "document converter ignores empty paragraphs by default" {
+  let doc = @docx2html.document([@docx2html.paragraph([])])
+  inspect(@docx2html.convert_document_to_html(doc).value, content="")
+  inspect(
+    @docx2html.convert_document_to_html(doc, ignore_empty_paragraphs=false).value,
+    content="<p></p>",
+  )
+}
+
+///|
+test "document converter uses style mappings before defaults" {
+  let properties = @docx2html.ParagraphProperties::{
+    style_id: Some("Heading1"),
+    style_name: None,
+    numbering: None,
+    alignment: None,
+    indent: @docx2html.Indent::default(),
+  }
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Title")], properties~),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(doc).value,
+    content="<h1>Title</h1>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(doc, style_map=["p.Heading1 => h2"]).value,
+    content="<h2>Title</h2>",
+  )
+}
+
+///|
+test "document converter wraps inline run properties" {
+  let bold = @docx2html.RunProperties::{
+    style_id: None,
+    style_name: None,
+    is_bold: true,
+    is_underline: false,
+    is_italic: false,
+    is_strikethrough: false,
+    is_all_caps: false,
+    is_small_caps: false,
+    vertical_alignment: Baseline,
+    font: None,
+    font_size: None,
+    highlight: None,
+  }
+  let doc = @docx2html.document([
+    @docx2html.paragraph([
+      @docx2html.run([@docx2html.text("one")], properties=bold),
+      @docx2html.run([@docx2html.text("two")], properties=bold),
+    ]),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(doc).value,
+    content="<p><strong>onetwo</strong></p>",
+  )
+}
+
+///|
+test "document converter emits data uri images" {
+  let image = @docx2html.Image::{
+    content_type: "image/jpeg",
+    alt_text: Some("alt"),
+    data: b"abc",
+  }
+  let doc = @docx2html.document([@docx2html.paragraph([Image(image)])])
+  inspect(
+    @docx2html.convert_document_to_html(doc).value,
+    content="<p><img alt=\"alt\" src=\"data:image/jpeg;base64,YWJj\" /></p>",
+  )
+}

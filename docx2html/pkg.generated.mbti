@@ -8,6 +8,12 @@ import {
 // Values
 pub fn column_break() -> DocumentElement
 
+pub fn convert_document_to_html(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool) -> ConversionResult
+
+pub fn convert_document_to_markdown(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool) -> ConversionResult
+
+pub fn default_style_map_lines() -> Array[String]
+
 pub fn document(Array[DocumentElement], notes? : Array[Note], comments? : Array[Comment]) -> DocumentElement
 
 pub fn escape_html(String) -> String
@@ -30,7 +36,15 @@ pub fn page_break() -> DocumentElement
 
 pub fn paragraph(Array[DocumentElement], properties? : ParagraphProperties) -> DocumentElement
 
+pub fn read_style_map(Array[String]) -> Array[StyleMapping]
+
+pub fn read_style_map_string(String) -> Array[String]
+
+pub fn read_style_mapping(String) -> StyleMapping?
+
 pub fn run(Array[DocumentElement], properties? : RunProperties) -> DocumentElement
+
+pub fn simplify_html(Array[HtmlNode]) -> Array[HtmlNode]
 
 pub fn success(String) -> ConversionResult
 
@@ -65,6 +79,15 @@ pub(all) struct ConversionResult {
 pub fn ConversionResult::combine(Self, Self) -> Self
 pub fn ConversionResult::map(Self, (String) -> String raise?) -> Self raise?
 
+pub(all) struct ConvertOptions {
+  style_map : Array[StyleMapping]
+  ignore_empty_paragraphs : Bool
+  id_prefix : String
+  pretty_print : Bool
+  output_format : String
+} derive(Eq, @debug.Debug)
+pub fn ConvertOptions::default() -> Self
+
 pub(all) enum DocumentElement {
   Document(children~ : Array[DocumentElement], notes~ : Array[Note], comments~ : Array[Comment])
   Paragraph(children~ : Array[DocumentElement], properties~ : ParagraphProperties)
@@ -84,10 +107,26 @@ pub(all) enum DocumentElement {
 } derive(Eq, @debug.Debug)
 pub fn DocumentElement::to_raw_text(Self) -> String
 
+pub(all) enum DocumentMatcher {
+  ParagraphMatcher(style_id~ : String?, style_name~ : String?, numbering~ : Numbering?)
+  RunMatcher(style_id~ : String?, style_name~ : String?)
+  RunPropertyMatcher(String)
+  HighlightMatcher(String?)
+  TableMatcher(style_id~ : String?, style_name~ : String?)
+  BreakMatcher
+  CommentReferenceMatcher
+} derive(Eq, @debug.Debug)
+
 pub(all) enum HtmlNode {
   Element(tag~ : String, attributes~ : Map[String, String], children~ : Array[HtmlNode], fresh~ : Bool)
   TextNode(String)
   ForceWrite
+} derive(Eq, @debug.Debug)
+
+pub(all) struct HtmlPathElement {
+  tag : String
+  attributes : Map[String, String]
+  fresh : Bool
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Image {
@@ -144,6 +183,11 @@ pub(all) struct RunProperties {
   highlight : String?
 } derive(Eq, @debug.Debug)
 pub fn RunProperties::default() -> Self
+
+pub(all) struct StyleMapping {
+  from : DocumentMatcher
+  to : Array[HtmlPathElement]
+} derive(Eq, @debug.Debug)
 
 pub(all) struct TableProperties {
   style_id : String?
