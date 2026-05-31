@@ -2188,7 +2188,6 @@ test "docx complex field checkboxes are read" {
 
 ///|
 test "style map matcher helpers cover run property predicates" {
-  inspect(read_list_level("p:ordered-list"), content="1")
   inspect(style_warning_label("numbering"), content="numbering")
   let cases : Array[(DocumentMatcher, RunProperties, Bool)] = [
     (RunPropertyMatcher("bold"), run_properties_from_xml("<w:b />"), true),

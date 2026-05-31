@@ -862,21 +862,26 @@ test "style map parser handles malformed and escaped edge cases" {
     ) => ()
     _ => fail("expected paragraph style ID before attributes")
   }
-  match expect_style_mapping("highlight[color='yellow] => mark").from {
-    HighlightMatcher(None) => ()
-    _ => fail("expected malformed highlight color to be ignored")
-  }
-  match expect_style_mapping("p[style-name^='Heading] => h1").from {
-    ParagraphMatcher(style_id=None, style_name=None, numbering=None) => ()
-    _ => fail("expected malformed style-name prefix to be ignored")
-  }
-  match expect_style_mapping("p:ordered-list(x) => ol > li").from {
-    ParagraphMatcher(numbering=Some({ is_ordered: true, level: 1 }), ..) => ()
-    _ => fail("expected invalid list level to default to one")
-  }
-  match expect_style_mapping("p:ordered-list(2 => ol > li").from {
-    ParagraphMatcher(numbering=Some({ is_ordered: true, level: 1 }), ..) => ()
-    _ => fail("expected unterminated list level to default to one")
+  debug_inspect(
+    @docx2html.read_style_mapping("highlight[color='yellow] => mark"),
+    content="None",
+  )
+  debug_inspect(
+    @docx2html.read_style_mapping("p[style-name^='Heading] => h1"),
+    content="None",
+  )
+  debug_inspect(
+    @docx2html.read_style_mapping("p:ordered-list(x) => ol > li"),
+    content="None",
+  )
+  debug_inspect(
+    @docx2html.read_style_mapping("p:ordered-list(2 => ol > li"),
+    content="None",
+  )
+  match
+    expect_style_mapping("p:ordered-list(2):unordered-list(3) => ul > li").from {
+    ParagraphMatcher(numbering=Some({ is_ordered: false, level: 3 }), ..) => ()
+    _ => fail("expected later list suffix to win")
   }
   inspect(@docx2html.read_style_map(["p => span "]).length(), content="0")
   let separator = expect_style_mapping("p => span:separator('---')").to[0].separator
@@ -1147,7 +1152,7 @@ test "invalid style maps warn and keep valid mappings" {
     @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
-    "????", "p => h1", "r => span a", "p => span#",
+    "????", "p => h1", "r => span a", "p => span#", "p:ordered-list(x) => ol > li",
   ])
   inspect(result.value, content="<h1>Walking on imported air</h1>")
   debug_inspect(
@@ -1157,6 +1162,7 @@ test "invalid style maps warn and keep valid mappings" {
       #|  Warning("Did not understand this style mapping, so ignored it: ????\nError was at character number 1: Expected element type but got unrecognisedCharacter \"?\""),
       #|  Warning("Did not understand this style mapping, so ignored it: r => span a\nError was at character number 10: Expected end but got whitespace"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span#\nError was at character number 10: Expected end but got unrecognisedCharacter \"#\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: p:ordered-list(x) => ol > li\nError was at character number 16: Expected integer but got identifier \"x\""),
       #|]
     ),
   )

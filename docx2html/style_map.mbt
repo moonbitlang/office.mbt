@@ -40,6 +40,13 @@ priv struct StyleMapReadResult {
 }
 
 ///|
+priv struct ParsedMatcherSuffixes {
+  style_id : String?
+  style_name : StyleNameMatcher?
+  numbering : Numbering?
+}
+
+///|
 pub fn read_style_mapping(line : String) -> StyleMapping? {
   read_style_mapping_with_message(line).0
 }
@@ -69,63 +76,57 @@ fn read_style_map_with_messages(lines : Array[String]) -> StyleMapReadResult {
 
 ///|
 fn read_style_mapping_with_message(line : String) -> (StyleMapping?, Message?) {
-  match line.find("=>") {
-    Some(arrow) => {
-      if line.length() > 0 && is_style_whitespace(line[0]) {
-        return (
-          None,
-          Some(
-            style_mapping_warning(
-              line, "Error was at character number 1: Expected element type but got whitespace",
-            ),
-          ),
-        )
-      }
-      if arrow == 0 || !is_style_whitespace(line[arrow - 1]) {
-        return (
-          None,
-          Some(
-            style_mapping_warning(
-              line,
-              "Error was at character number " +
-              (arrow + 1).to_string() +
-              ": Expected whitespace but got arrow",
-            ),
-          ),
-        )
-      }
-      let from_text = line[:arrow].trim().to_owned()
-      let after_arrow = arrow + 2
-      let to_raw = line[after_arrow:].to_owned()
-      let to_text = to_raw.trim().to_owned()
-      match read_document_matcher(from_text) {
-        Some(from) =>
-          match validate_html_path_text(line, to_raw, after_arrow) {
-            Some(error) => (None, Some(style_mapping_warning(line, error)))
-            None => (Some({ from, to: read_html_path(to_text) }), None)
-          }
-        None =>
-          (
-            None,
-            Some(
-              style_mapping_warning(
-                line,
-                describe_document_matcher_failure(from_text),
-              ),
-            ),
-          )
-      }
-    }
+  let end = line.length()
+  let (from, first_index, error) = parse_style_document_matcher(line, 0, end)
+  let mut index = first_index
+  match error {
+    Some(error) => return (None, Some(style_mapping_warning(line, error)))
+    None => ()
+  }
+  let from = match from {
+    Some(from) => from
     None =>
-      (
+      return (
         None,
         Some(
           style_mapping_warning(
             line,
-            describe_document_matcher_failure(line.trim().to_owned()),
+            style_parse_error(line, index, end, "element type"),
           ),
         ),
       )
+  }
+  if index >= end || !is_style_whitespace(line[index]) {
+    return (
+      None,
+      Some(
+        style_mapping_warning(
+          line,
+          style_parse_error(line, index, end, "whitespace"),
+        ),
+      ),
+    )
+  }
+  while index < end && is_style_whitespace(line[index]) {
+    index = index + 1
+  }
+  if !starts_with_at(line, index, end, "=>") {
+    return (
+      None,
+      Some(
+        style_mapping_warning(
+          line,
+          style_parse_error(line, index, end, "arrow"),
+        ),
+      ),
+    )
+  }
+  let after_arrow = index + 2
+  let to_raw = line[after_arrow:].to_owned()
+  let to_text = to_raw.trim().to_owned()
+  match validate_html_path_text(line, to_raw, after_arrow) {
+    Some(error) => (None, Some(style_mapping_warning(line, error)))
+    None => (Some({ from, to: read_html_path(to_text) }), None)
   }
 }
 
@@ -137,17 +138,6 @@ fn style_mapping_warning(line : String, error : String) -> Message {
     "\n" +
     error,
   )
-}
-
-///|
-fn describe_document_matcher_failure(from_text : String) -> String {
-  if from_text == "" {
-    "Error was at character number 1: Expected element type but got end"
-  } else {
-    "Error was at character number 1: Expected element type but got unrecognisedCharacter \"" +
-    from_text[:1].to_owned() +
-    "\""
-  }
 }
 
 ///|
@@ -163,154 +153,368 @@ pub fn read_style_map_string(style_map : String) -> Array[String] {
 }
 
 ///|
-fn read_document_matcher(value : String) -> DocumentMatcher? {
-  if value == "b" {
-    Some(RunPropertyMatcher("bold"))
-  } else if value == "i" {
-    Some(RunPropertyMatcher("italic"))
-  } else if value == "u" {
-    Some(RunPropertyMatcher("underline"))
-  } else if value == "strike" {
-    Some(RunPropertyMatcher("strikethrough"))
-  } else if value == "all-caps" {
-    Some(RunPropertyMatcher("allCaps"))
-  } else if value == "small-caps" {
-    Some(RunPropertyMatcher("smallCaps"))
-  } else if value == "highlight" {
-    Some(HighlightMatcher(None))
-  } else if value.has_prefix("highlight[") {
-    Some(HighlightMatcher(read_attribute_value(value, "color")))
-  } else if is_matcher_tag(value, "table") {
-    Some(read_table_matcher(value))
-  } else if is_matcher_tag(value, "br") {
-    Some(BreakMatcher(read_break_matcher_type(value)))
-  } else if value == "comment-reference" {
-    Some(CommentReferenceMatcher)
-  } else if is_matcher_tag(value, "p") {
-    Some(read_paragraph_matcher(value))
-  } else if is_matcher_tag(value, "r") {
-    Some(read_run_matcher(value))
-  } else {
-    None
-  }
-}
-
-///|
-fn is_matcher_tag(value : String, tag : String) -> Bool {
-  value == tag ||
-  value.has_prefix(tag + ".") ||
-  value.has_prefix(tag + "[") ||
-  value.has_prefix(tag + ":")
-}
-
-///|
-fn read_break_matcher_type(value : String) -> BreakType {
-  match read_attribute_value(value, "type") {
-    Some("page") => Page
-    Some("column") => Column
-    _ => Line
-  }
-}
-
-///|
-fn read_paragraph_matcher(value : String) -> DocumentMatcher {
-  let style_id = read_style_id(value, "p")
-  let style_name = read_style_name_matcher(value)
-  let numbering = if value.contains(":ordered-list(") {
-    Some({ is_ordered: true, level: read_list_level(value) })
-  } else if value.contains(":unordered-list(") {
-    Some({ is_ordered: false, level: read_list_level(value) })
-  } else {
-    None
-  }
-  ParagraphMatcher(style_id~, style_name~, numbering~)
-}
-
-///|
-fn read_run_matcher(value : String) -> DocumentMatcher {
-  RunMatcher(
-    style_id=read_style_id(value, "r"),
-    style_name=read_style_name_matcher(value),
+fn parse_style_document_matcher(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (DocumentMatcher?, Int, String?) {
+  let (name, next, error) = parse_style_identifier(
+    line, index, end, "element type",
   )
-}
-
-///|
-fn read_table_matcher(value : String) -> DocumentMatcher {
-  TableMatcher(
-    style_id=read_style_id(value, "table"),
-    style_name=read_style_name_matcher(value),
-  )
-}
-
-///|
-fn read_style_id(value : String, prefix : String) -> String? {
-  let prefix = prefix + "."
-  if value.has_prefix(prefix) {
-    let rest = value[prefix.length():].to_owned()
-    match rest.find("[") {
-      Some(index) => Some(rest[:index].to_owned())
-      None => Some(rest)
-    }
-  } else {
-    None
+  match error {
+    Some(error) => return (None, next, Some(error))
+    None => ()
   }
-}
-
-///|
-fn read_attribute_value(value : String, name : String) -> String? {
-  let needle = name + "='"
-  match value.find(needle) {
-    Some(start) => {
-      let value_start = start + needle.length()
-      match value[value_start:].find("'") {
-        Some(length) => Some(value[value_start:value_start + length].to_owned())
-        None => None
+  match name {
+    "p" => {
+      let (suffixes, next, error) = parse_style_matcher_suffixes(
+        line,
+        next,
+        end,
+        allow_list=true,
+      )
+      match error {
+        Some(error) => (None, next, Some(error))
+        None =>
+          (
+            Some(
+              ParagraphMatcher(
+                style_id=suffixes.style_id,
+                style_name=suffixes.style_name,
+                numbering=suffixes.numbering,
+              ),
+            ),
+            next,
+            None,
+          )
       }
     }
-    None => None
-  }
-}
-
-///|
-fn read_style_name_matcher(value : String) -> StyleNameMatcher? {
-  match read_attribute_value(value, "style-name") {
-    Some(name) => Some(ExactStyleName(name))
-    None =>
-      match read_prefix_attribute_value(value, "style-name") {
-        Some(prefix) => Some(PrefixStyleName(prefix))
-        None => None
-      }
-  }
-}
-
-///|
-fn read_prefix_attribute_value(value : String, name : String) -> String? {
-  let needle = name + "^='"
-  match value.find(needle) {
-    Some(start) => {
-      let value_start = start + needle.length()
-      match value[value_start:].find("'") {
-        Some(length) => Some(value[value_start:value_start + length].to_owned())
-        None => None
+    "r" => {
+      let (suffixes, next, error) = parse_style_matcher_suffixes(
+        line,
+        next,
+        end,
+        allow_list=true,
+      )
+      match error {
+        Some(error) => (None, next, Some(error))
+        None =>
+          (
+            Some(
+              RunMatcher(
+                style_id=suffixes.style_id,
+                style_name=suffixes.style_name,
+              ),
+            ),
+            next,
+            None,
+          )
       }
     }
-    None => None
+    "table" => parse_style_table_matcher(line, next, end)
+    "b" => (Some(RunPropertyMatcher("bold")), next, None)
+    "i" => (Some(RunPropertyMatcher("italic")), next, None)
+    "u" => (Some(RunPropertyMatcher("underline")), next, None)
+    "strike" => (Some(RunPropertyMatcher("strikethrough")), next, None)
+    "all-caps" => (Some(RunPropertyMatcher("allCaps")), next, None)
+    "small-caps" => (Some(RunPropertyMatcher("smallCaps")), next, None)
+    "highlight" => parse_style_highlight_matcher(line, next, end)
+    "comment-reference" => (Some(CommentReferenceMatcher), next, None)
+    "br" => parse_style_break_matcher(line, next, end)
+    _ =>
+      (None, index, Some(style_parse_error(line, index, end, "element type")))
   }
 }
 
 ///|
-fn read_list_level(value : String) -> Int {
-  match value.find("(") {
-    Some(start) =>
-      match value[start + 1:].find(")") {
-        Some(length) =>
-          @string.parse_int(value[start + 1:start + 1 + length].to_owned()) catch {
-            _ => 1
+fn parse_style_matcher_suffixes(
+  line : String,
+  index : Int,
+  end : Int,
+  allow_list~ : Bool,
+) -> (ParsedMatcherSuffixes, Int, String?) {
+  let mut suffixes = ParsedMatcherSuffixes::{
+    style_id: None,
+    style_name: None,
+    numbering: None,
+  }
+  let mut index = index
+  while index < end {
+    if line[index] == '.' {
+      let (style_id, next, error) = parse_style_identifier(
+        line,
+        index + 1,
+        end,
+        "identifier",
+      )
+      match error {
+        Some(error) => return (suffixes, next, Some(error))
+        None => {
+          suffixes = { ..suffixes, style_id: Some(style_id) }
+          index = next
+        }
+      }
+    } else if line[index] == '[' {
+      let (style_name, next, error) = parse_style_name_suffix(
+        line,
+        index + 1,
+        end,
+      )
+      match error {
+        Some(error) => return (suffixes, next, Some(error))
+        None => {
+          suffixes = { ..suffixes, style_name, }
+          index = next
+        }
+      }
+    } else if allow_list && line[index] == ':' {
+      let (numbering, next, consumed, error) = parse_style_list_suffix(
+        line, index, end,
+      )
+      match error {
+        Some(error) => return (suffixes, next, Some(error))
+        None =>
+          if consumed {
+            suffixes = { ..suffixes, numbering, }
+            index = next
+          } else {
+            return (suffixes, index, None)
           }
-        None => 1
       }
-    None => 1
+    } else {
+      return (suffixes, index, None)
+    }
   }
+  (suffixes, index, None)
+}
+
+///|
+fn parse_style_table_matcher(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (DocumentMatcher?, Int, String?) {
+  let (suffixes, next, error) = parse_style_matcher_suffixes(
+    line,
+    index,
+    end,
+    allow_list=false,
+  )
+  match error {
+    Some(error) => (None, next, Some(error))
+    None =>
+      (
+        Some(
+          TableMatcher(
+            style_id=suffixes.style_id,
+            style_name=suffixes.style_name,
+          ),
+        ),
+        next,
+        None,
+      )
+  }
+}
+
+///|
+fn parse_style_name_suffix(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (StyleNameMatcher?, Int, String?) {
+  let (name, first_index, error) = parse_style_identifier(
+    line, index, end, "identifier",
+  )
+  let mut index = first_index
+  match error {
+    Some(error) => return (None, index, Some(error))
+    None => ()
+  }
+  if name != "style-name" {
+    return (
+      None,
+      index,
+      Some(style_parse_error(line, index, end, "style name matcher")),
+    )
+  }
+  let mut is_prefix = false
+  if starts_with_at(line, index, end, "^=") {
+    is_prefix = true
+    index = index + 2
+  } else if index < end && line[index] == '=' {
+    index = index + 1
+  } else {
+    return (
+      None,
+      index,
+      Some(style_parse_error(line, index, end, "style name matcher")),
+    )
+  }
+  let (value, next, error) = parse_style_string(line, index, end)
+  match error {
+    Some(error) => return (None, next, Some(error))
+    None => index = next
+  }
+  if index >= end || line[index] != ']' {
+    return (
+      None,
+      index,
+      Some(style_parse_error(line, index, end, "close-square-bracket")),
+    )
+  }
+  let matcher = if is_prefix {
+    PrefixStyleName(value)
+  } else {
+    ExactStyleName(value)
+  }
+  (Some(matcher), index + 1, None)
+}
+
+///|
+fn parse_style_list_suffix(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (Numbering?, Int, Bool, String?) {
+  if index >= end || line[index] != ':' {
+    return (None, index, false, None)
+  }
+  let (name, first_next, error) = parse_style_identifier(
+    line,
+    index + 1,
+    end,
+    "identifier",
+  )
+  let mut next = first_next
+  match error {
+    Some(error) => return (None, next, true, Some(error))
+    None => ()
+  }
+  let is_ordered = match name {
+    "ordered-list" => true
+    "unordered-list" => false
+    _ => return (None, index, false, None)
+  }
+  if next >= end || line[next] != '(' {
+    return (
+      None,
+      next,
+      true,
+      Some(style_parse_error(line, next, end, "open-paren")),
+    )
+  }
+  let (level, after_level, error) = parse_style_integer(line, next + 1, end)
+  match error {
+    Some(error) => return (None, after_level, true, Some(error))
+    None => next = after_level
+  }
+  if next >= end || line[next] != ')' {
+    return (
+      None,
+      next,
+      true,
+      Some(style_parse_error(line, next, end, "close-paren")),
+    )
+  }
+  (Some({ is_ordered, level }), next + 1, true, None)
+}
+
+///|
+fn parse_style_highlight_matcher(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (DocumentMatcher?, Int, String?) {
+  if index >= end || line[index] != '[' {
+    return (Some(HighlightMatcher(None)), index, None)
+  }
+  let (name, first_index, error) = parse_style_identifier(
+    line,
+    index + 1,
+    end,
+    "identifier",
+  )
+  let mut index = first_index
+  match error {
+    Some(error) => return (None, index, Some(error))
+    None => ()
+  }
+  if name != "color" {
+    return (None, index, Some(style_parse_error(line, index, end, "equals")))
+  }
+  if index >= end || line[index] != '=' {
+    return (None, index, Some(style_parse_error(line, index, end, "equals")))
+  }
+  let (color, next, error) = parse_style_string(line, index + 1, end)
+  match error {
+    Some(error) => return (None, next, Some(error))
+    None => index = next
+  }
+  if index >= end || line[index] != ']' {
+    return (
+      None,
+      index,
+      Some(style_parse_error(line, index, end, "close-square-bracket")),
+    )
+  }
+  (Some(HighlightMatcher(Some(color))), index + 1, None)
+}
+
+///|
+fn parse_style_break_matcher(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (DocumentMatcher?, Int, String?) {
+  if index >= end || line[index] != '[' {
+    return (
+      None,
+      index,
+      Some(style_parse_error(line, index, end, "open-square-bracket")),
+    )
+  }
+  let (name, first_index, error) = parse_style_identifier(
+    line,
+    index + 1,
+    end,
+    "identifier",
+  )
+  let mut index = first_index
+  match error {
+    Some(error) => return (None, index, Some(error))
+    None => ()
+  }
+  if name != "type" {
+    return (None, index, Some(style_parse_error(line, index, end, "equals")))
+  }
+  if index >= end || line[index] != '=' {
+    return (None, index, Some(style_parse_error(line, index, end, "equals")))
+  }
+  let (break_type, next, error) = parse_style_string(line, index + 1, end)
+  match error {
+    Some(error) => return (None, next, Some(error))
+    None => index = next
+  }
+  if index >= end || line[index] != ']' {
+    return (
+      None,
+      index,
+      Some(style_parse_error(line, index, end, "close-square-bracket")),
+    )
+  }
+  (
+    Some(
+      BreakMatcher(
+        match break_type {
+          "page" => Page
+          "column" => Column
+          _ => Line
+        },
+      ),
+    ),
+    index + 1,
+    None,
+  )
 }
 
 ///|
@@ -638,6 +842,32 @@ fn parse_style_string(
 }
 
 ///|
+fn parse_style_integer(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (Int, Int, String?) {
+  if index >= end || line[index] < '0' || line[index] > '9' {
+    return (0, index, Some(style_parse_error(line, index, end, "integer")))
+  }
+  let value_text = read_style_integer_token(line, index, end)
+  let next = index + value_text.length()
+  let value = @string.parse_int(value_text) catch { _ => 0 }
+  (value, next, None)
+}
+
+///|
+fn starts_with_at(
+  line : String,
+  index : Int,
+  end : Int,
+  value : String,
+) -> Bool {
+  index + value.length() <= end &&
+  line[index:index + value.length()].to_owned() == value
+}
+
+///|
 fn is_style_identifier_start(line : String, index : Int, end : Int) -> Bool {
   if index >= end {
     false
@@ -680,6 +910,12 @@ fn style_parse_error(
 fn describe_style_token(line : String, index : Int, end : Int) -> String {
   if index >= end {
     return "end"
+  }
+  if starts_with_at(line, index, end, "=>") {
+    return "arrow"
+  }
+  if starts_with_at(line, index, end, "^=") {
+    return "startsWith"
   }
   match line[index] {
     ' ' | '\t' | '\n' | '\r' => "whitespace"
