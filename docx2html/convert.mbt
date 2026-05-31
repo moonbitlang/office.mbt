@@ -167,7 +167,14 @@ fn DocumentConverter::convert_element(
     }
     Break(break_type) => self.convert_break(element, break_type)
     BookmarkStart(name) =>
-      [html_element("a", attributes={ "id": self.options.id_prefix + name })]
+      [
+        html_element(
+          "a",
+          attributes={ "id": self.options.id_prefix + name },
+          children=[ForceWrite],
+          fresh=true,
+        ),
+      ]
     Table(children~, properties~) =>
       self.convert_table(element, children, properties)
     TableRow(children~, is_header~) =>

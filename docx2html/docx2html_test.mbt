@@ -717,6 +717,21 @@ test "document converter collapses unaddressed hyperlinks to children" {
 }
 
 ///|
+test "document converter renders bookmarks and tabs like Mammoth" {
+  inspect(
+    @docx2html.convert_document_to_html(
+      @docx2html.document([BookmarkStart("_Peter")]),
+      id_prefix="doc-42-",
+    ).value,
+    content="<a id=\"doc-42-_Peter\"></a>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(@docx2html.tab()).value,
+    content="\t",
+  )
+}
+
+///|
 test "document converter renders checkboxes like Mammoth" {
   inspect(
     @docx2html.convert_document_to_html(@docx2html.checkbox(false)).value,
@@ -807,6 +822,35 @@ test "document converter maps break types through style maps" {
 }
 
 ///|
+test "document converter renders footnote references like Mammoth" {
+  inspect(
+    @docx2html.convert_document_to_html(
+      NoteReference(note_type="footnote", note_id="4"),
+      id_prefix="doc-42-",
+    ).value,
+    content="<sup><a href=\"#doc-42-footnote-4\" id=\"doc-42-footnote-ref-4\">[1]</a></sup>",
+  )
+  let note = @docx2html.Note::{
+    note_type: "footnote",
+    note_id: "4",
+    body: [@docx2html.paragraph([@docx2html.text("Who's there?")])],
+  }
+  let doc = @docx2html.document(
+    [
+      @docx2html.paragraph([
+        @docx2html.text("Knock knock"),
+        @docx2html.run([NoteReference(note_type="footnote", note_id="4")]),
+      ]),
+    ],
+    notes=[note],
+  )
+  inspect(
+    @docx2html.convert_document_to_html(doc, id_prefix="doc-42-").value,
+    content="<p>Knock knock<sup><a href=\"#doc-42-footnote-4\" id=\"doc-42-footnote-ref-4\">[1]</a></sup></p><ol><li id=\"doc-42-footnote-4\"><p>Who's there? <a href=\"#doc-42-footnote-ref-4\">↑</a></p></li></ol>",
+  )
+}
+
+///|
 test "document converter emits data uri images" {
   let image = @docx2html.Image::{
     content_type: "image/jpeg",
@@ -817,6 +861,28 @@ test "document converter emits data uri images" {
   inspect(
     @docx2html.convert_document_to_html(doc).value,
     content="<p><img alt=\"alt\" src=\"data:image/jpeg;base64,YWJj\" /></p>",
+  )
+}
+
+///|
+test "document converter uses blank comment label initials" {
+  let comment = @docx2html.Comment::{
+    comment_id: "4",
+    body: [@docx2html.paragraph([@docx2html.text("Who's there?")])],
+    author_name: "",
+    author_initials: "",
+  }
+  let doc = @docx2html.document(
+    [@docx2html.paragraph([CommentReference("4")])],
+    comments=[comment],
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      doc,
+      style_map=["comment-reference => sup"],
+      id_prefix="doc-42-",
+    ).value,
+    content="<p><sup><a href=\"#doc-42-comment-4\" id=\"doc-42-comment-ref-4\">[1]</a></sup></p><dl><dt id=\"doc-42-comment-4\">Comment [1]</dt><dd><p>Who's there? <a href=\"#doc-42-comment-ref-4\">↑</a></p></dd></dl>",
   )
 }
 
