@@ -43,6 +43,20 @@ fn numbering_from_xml(
 }
 
 ///|
+fn zip_with_text(path : String, text : String) -> ZipArchive {
+  let entries : Map[String, Bytes] = {}
+  entries[path] = @utf8.encode(text)
+  { entries, }
+}
+
+///|
+fn empty_docx_zip() -> ZipArchive {
+  let xml =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body /></w:document>
+  zip_with_text("word/document.xml", xml)
+}
+
+///|
 test "docx hyperlink reader replaces external URL fragment when anchor is set" {
   let xml =
     #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="r42" w:anchor="fragment"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
@@ -183,6 +197,64 @@ test "docx body reader records Mammoth-compatible warnings" {
     unknown_reader.messages,
     content=(
       #|[Warning("An unrecognised element was ignored: w:not-an-element")]
+    ),
+  )
+}
+
+///|
+test "docx note and comment reader warnings are preserved" {
+  let footnotes_xml =
+    #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:id="1"><w:not-an-element /></w:footnote></w:footnotes>
+  let styles : Map[String, StyleInfo] = {}
+  let numbering = NumberingMap::empty()
+  let content_types = ContentTypes::{ defaults: {}, overrides: {} }
+  let document_relationships = Relationships::{ relationships: [] }
+  let base_path = "word"
+  let footnotes = read_note_part(
+    zip_with_text("word/footnotes.xml", footnotes_xml),
+    note_type="footnote",
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+    fallback_path="word/footnotes.xml",
+    styles~,
+    numbering~,
+    content_types~,
+    document_relationships~,
+    base_path~,
+  )
+  inspect(footnotes.notes.length(), content="1")
+  debug_inspect(
+    footnotes.messages,
+    content=(
+      #|[Warning("An unrecognised element was ignored: w:not-an-element")]
+    ),
+  )
+  let comments_xml =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0"><w:not-an-element /></w:comment></w:comments>
+  let comments = read_comments_for_document(
+    zip_with_text("word/comments.xml", comments_xml),
+    styles,
+    numbering,
+    content_types,
+    document_relationships,
+    base_path,
+  )
+  inspect(comments.comments.length(), content="1")
+  debug_inspect(
+    comments.messages,
+    content=(
+      #|[Warning("An unrecognised element was ignored: w:not-an-element")]
+    ),
+  )
+  let docx = empty_docx_zip()
+  docx.entries["word/footnotes.xml"] = @utf8.encode(footnotes_xml)
+  docx.entries["word/comments.xml"] = @utf8.encode(comments_xml)
+  debug_inspect(
+    read_docx_zip_with_messages(docx).messages,
+    content=(
+      #|[
+      #|  Warning("An unrecognised element was ignored: w:not-an-element"),
+      #|  Warning("An unrecognised element was ignored: w:not-an-element"),
+      #|]
     ),
   )
 }

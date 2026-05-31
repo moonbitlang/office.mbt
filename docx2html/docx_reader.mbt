@@ -62,6 +62,18 @@ priv struct DocxReadResult {
 }
 
 ///|
+priv struct NotesReadResult {
+  notes : Array[Note]
+  messages : Array[Message]
+}
+
+///|
+priv struct CommentsReadResult {
+  comments : Array[Comment]
+  messages : Array[Message]
+}
+
+///|
 pub fn convert_to_html(
   docx : BytesView,
   style_map? : Array[String] = [],
@@ -187,17 +199,29 @@ fn read_docx_zip_with_messages(
   let numbering = read_numbering_for_document(
     zip, relationships, styles, base_path,
   )
-  let notes = read_notes_for_document(
+  let notes_result = read_notes_for_document(
     zip, styles, numbering, content_types, relationships, base_path,
   )
-  let comments = read_comments_for_document(
+  let comments_result = read_comments_for_document(
     zip, styles, numbering, content_types, relationships, base_path,
   )
   let xml = read_xml_part(zip, main_document_path)
-  read_document_xml_with_messages(
-    xml, styles, numbering, zip, relationships, content_types, base_path, notes,
-    comments,
+  let document_result = read_document_xml_with_messages(
+    xml,
+    styles,
+    numbering,
+    zip,
+    relationships,
+    content_types,
+    base_path,
+    notes_result.notes,
+    comments_result.comments,
   )
+  let messages : Array[Message] = []
+  messages.append(notes_result.messages)
+  messages.append(comments_result.messages)
+  messages.append(document_result.messages)
+  { document: document_result.document, messages }
 }
 
 ///|
@@ -572,35 +596,36 @@ fn read_notes_for_document(
   content_types : ContentTypes,
   document_relationships : Relationships,
   base_path : String,
-) -> Array[Note] raise DocxError {
+) -> NotesReadResult raise DocxError {
   let notes : Array[Note] = []
-  notes.append(
-    read_note_part(
-      zip,
-      note_type="footnote",
-      relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
-      fallback_path=join_zip_path([base_path, "footnotes.xml"]),
-      styles~,
-      numbering~,
-      content_types~,
-      document_relationships~,
-      base_path~,
-    ),
+  let messages : Array[Message] = []
+  let footnotes = read_note_part(
+    zip,
+    note_type="footnote",
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+    fallback_path=join_zip_path([base_path, "footnotes.xml"]),
+    styles~,
+    numbering~,
+    content_types~,
+    document_relationships~,
+    base_path~,
   )
-  notes.append(
-    read_note_part(
-      zip,
-      note_type="endnote",
-      relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
-      fallback_path=join_zip_path([base_path, "endnotes.xml"]),
-      styles~,
-      numbering~,
-      content_types~,
-      document_relationships~,
-      base_path~,
-    ),
+  notes.append(footnotes.notes)
+  messages.append(footnotes.messages)
+  let endnotes = read_note_part(
+    zip,
+    note_type="endnote",
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
+    fallback_path=join_zip_path([base_path, "endnotes.xml"]),
+    styles~,
+    numbering~,
+    content_types~,
+    document_relationships~,
+    base_path~,
   )
-  notes
+  notes.append(endnotes.notes)
+  messages.append(endnotes.messages)
+  { notes, messages }
 }
 
 ///|
@@ -614,14 +639,14 @@ fn read_note_part(
   content_types~ : ContentTypes,
   document_relationships~ : Relationships,
   base_path~ : String,
-) -> Array[Note] raise DocxError {
+) -> NotesReadResult raise DocxError {
   let path = match
     document_relationships.find_target_by_type(relationship_type) {
     Some(target) => resolve_part_target(base_path, target)
     None => fallback_path
   }
   if !zip.exists(path) {
-    return []
+    return { notes: [], messages: [] }
   }
   let part_relationships = read_relationships(
     zip,
@@ -637,19 +662,19 @@ fn read_note_part(
     messages: [],
   }
   let root = read_xml_part(zip, path)
-  let result : Array[Note] = []
+  let notes : Array[Note] = []
   for note_element in root.elements_by_tag_name("w:" + note_type) {
     let note_kind = note_element.attributes.get("w:type")
     if note_kind != Some("separator") &&
       note_kind != Some("continuationSeparator") {
-      result.push({
+      notes.push({
         note_type,
         note_id: note_element.attributes.get_or_default("w:id", ""),
         body: reader.read_children(note_element.children),
       })
     }
   }
-  result
+  { notes, messages: reader.messages }
 }
 
 ///|
@@ -660,7 +685,7 @@ fn read_comments_for_document(
   content_types : ContentTypes,
   document_relationships : Relationships,
   base_path : String,
-) -> Array[Comment] raise DocxError {
+) -> CommentsReadResult raise DocxError {
   let path = match
     document_relationships.find_target_by_type(
       "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
@@ -669,7 +694,7 @@ fn read_comments_for_document(
     None => join_zip_path([base_path, "comments.xml"])
   }
   if !zip.exists(path) {
-    return []
+    return { comments: [], messages: [] }
   }
   let part_relationships = read_relationships(
     zip,
@@ -694,7 +719,7 @@ fn read_comments_for_document(
       author_initials: read_optional_attribute(comment_element, "w:initials"),
     })
   }
-  comments
+  { comments, messages: reader.messages }
 }
 
 ///|
