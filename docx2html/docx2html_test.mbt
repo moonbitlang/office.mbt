@@ -781,6 +781,54 @@ test "style map parser reads upstream document matcher forms" {
 }
 
 ///|
+test "style map parser handles malformed and escaped edge cases" {
+  debug_inspect(@docx2html.read_style_mapping("wat => p"), content="None")
+  debug_inspect(@docx2html.read_style_mapping(" => p"), content="None")
+  match expect_style_mapping("p.Heading[style-name='Title'] => h1").from {
+    ParagraphMatcher(
+      style_id=Some("Heading"),
+      style_name=Some(_),
+      numbering=None
+    ) => ()
+    _ => fail("expected paragraph style ID before attributes")
+  }
+  match expect_style_mapping("highlight[color='yellow] => mark").from {
+    HighlightMatcher(None) => ()
+    _ => fail("expected malformed highlight color to be ignored")
+  }
+  match expect_style_mapping("p[style-name^='Heading] => h1").from {
+    ParagraphMatcher(style_id=None, style_name=None, numbering=None) => ()
+    _ => fail("expected malformed style-name prefix to be ignored")
+  }
+  match expect_style_mapping("p:ordered-list(x) => ol > li").from {
+    ParagraphMatcher(numbering=Some({ is_ordered: true, level: 1 }), ..) => ()
+    _ => fail("expected invalid list level to default to one")
+  }
+  match expect_style_mapping("p:ordered-list(2 => ol > li").from {
+    ParagraphMatcher(numbering=Some({ is_ordered: true, level: 1 }), ..) => ()
+    _ => fail("expected unterminated list level to default to one")
+  }
+  inspect(@docx2html.read_style_map(["p => span "]).length(), content="1")
+  let separator = expect_style_mapping("p => span:separator('---')").to[0].separator
+  inspect(separator.unwrap(), content="---")
+  let escaped_attr = expect_style_mapping("p => span[data-x='a\\'b']").to[0]
+  inspect(escaped_attr.attributes.get_or_default("data-x", ""), content="a'b")
+  let loose_attr = expect_style_mapping("p => span[data-x='a'.tail]").to[0]
+  inspect(loose_attr.attributes.get_or_default("data-x", ""), content="a")
+  inspect(loose_attr.attributes.get_or_default("class", ""), content="tail]")
+  let unterminated_attr = expect_style_mapping("p => span[data-x='abc").to[0]
+  inspect(
+    unterminated_attr.attributes.get_or_default("data-x", ""),
+    content="abc",
+  )
+  let missing_equals = expect_style_mapping("p => span[data-x]").to[0]
+  inspect(missing_equals.attributes.contains("data-x"), content="false")
+  let literal_tail = expect_style_mapping("p => span[data-x='a']#").to[0]
+  inspect(literal_tail.attributes.get_or_default("data-x", ""), content="a")
+  inspect(expect_style_mapping("p => x\\:y").to[0].tag, content="x:y")
+}
+
+///|
 test "style map string reader follows Mammoth option rules" {
   debug_inspect(
     @docx2html.read_style_map_string(
