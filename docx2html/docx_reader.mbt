@@ -1470,11 +1470,21 @@ fn BodyReader::read_blip(
   }
   match relationship_id {
     Some(id) =>
-      self.read_image_by_relationship(
-        id,
-        alt_text=read_drawing_alt_text(drawing_element),
-      )
-    None => None
+      match
+        self.read_image_by_relationship(
+          id,
+          alt_text=read_drawing_alt_text(drawing_element),
+        ) {
+        Some(image) => Some(image)
+        None => {
+          self.warn("Could not find image file for a:blip element")
+          None
+        }
+      }
+    None => {
+      self.warn("Could not find image file for a:blip element")
+      None
+    }
   }
 }
 
@@ -1493,7 +1503,10 @@ fn BodyReader::read_vml_image_data(
         Some(image) => [Image(image)]
         None => []
       }
-    None => []
+    None => {
+      self.warn("A v:imagedata element without a relationship ID was ignored")
+      []
+    }
   }
 }
 
@@ -1510,17 +1523,31 @@ fn BodyReader::read_image_by_relationship(
       } else {
         let path = resolve_part_target(self.base_path, rel.target)
         match self.zip.read_bytes(path) {
-          Some(data) =>
-            Some({
-              content_type: self.content_types.find_content_type(path),
-              alt_text,
-              data,
-            })
+          Some(data) => {
+            let content_type = self.content_types.find_content_type(path)
+            if !is_supported_web_image_type(content_type) {
+              self.warn(
+                "Image of type " +
+                content_type +
+                " is unlikely to display in web browsers",
+              )
+            }
+            Some({ content_type, alt_text, data })
+          }
           None => None
         }
       }
     None => None
   }
+}
+
+///|
+fn is_supported_web_image_type(content_type : String) -> Bool {
+  content_type == "image/png" ||
+  content_type == "image/gif" ||
+  content_type == "image/jpeg" ||
+  content_type == "image/svg+xml" ||
+  content_type == "image/tiff"
 }
 
 ///|

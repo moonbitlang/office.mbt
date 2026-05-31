@@ -371,3 +371,68 @@ test "docx drawing image hyperlink wraps image" {
     content="<a href=\"http://example.com\"><img src=\"data:image/png;base64,YWJj\" /></a>",
   )
 }
+
+///|
+test "docx image reader records Mammoth-compatible warnings" {
+  let drawing_without_blip_id =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let missing_blip = read_xml_string(
+    drawing_without_blip_id,
+    namespace_map=office_namespace_map(),
+  )
+  let missing_blip_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(missing_blip_reader.read_element(missing_blip), content="[]")
+  debug_inspect(
+    missing_blip_reader.messages,
+    content=(
+      #|[Warning("Could not find image file for a:blip element")]
+    ),
+  )
+  let vml_without_id =
+    #|<v:imagedata xmlns:v="urn:schemas-microsoft-com:vml" />
+  let vml = read_xml_string(
+    vml_without_id,
+    namespace_map=office_namespace_map(),
+  )
+  let vml_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(vml_reader.read_element(vml), content="[]")
+  debug_inspect(
+    vml_reader.messages,
+    content=(
+      #|[Warning("A v:imagedata element without a relationship ID was ignored")]
+    ),
+  )
+  let unsupported_type_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let unsupported_type = read_xml_string(
+    unsupported_type_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let unsupported_reader = BodyReader::{
+    styles: {},
+    zip: { entries: { "word/media/hat.emf": b"abc" } },
+    relationships: {
+      relationships: [
+        {
+          id: "rImage",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "media/hat.emf",
+          target_mode: None,
+        },
+      ],
+    },
+    content_types: { defaults: { "emf": "image/x-emf" }, overrides: {} },
+    base_path: "word",
+    messages: [],
+  }
+  inspect(
+    unsupported_reader.read_element(unsupported_type).length(),
+    content="1",
+  )
+  debug_inspect(
+    unsupported_reader.messages,
+    content=(
+      #|[Warning("Image of type image/x-emf is unlikely to display in web browsers")]
+    ),
+  )
+}
