@@ -1,0 +1,163 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn column_break() -> DocumentElement
+
+pub fn document(Array[DocumentElement], notes? : Array[Note], comments? : Array[Comment]) -> DocumentElement
+
+pub fn escape_html(String) -> String
+
+pub fn escape_html_attribute(String) -> String
+
+pub fn escape_markdown_text(String) -> String
+
+pub fn extract_raw_text_from_document(DocumentElement) -> ConversionResult
+
+pub fn fresh_html_element(String, attributes? : Map[String, String], children? : Array[HtmlNode]) -> HtmlNode
+
+pub fn html_element(String, attributes? : Map[String, String], children? : Array[HtmlNode], fresh? : Bool) -> HtmlNode
+
+pub fn html_text(String) -> HtmlNode
+
+pub fn line_break() -> DocumentElement
+
+pub fn page_break() -> DocumentElement
+
+pub fn paragraph(Array[DocumentElement], properties? : ParagraphProperties) -> DocumentElement
+
+pub fn run(Array[DocumentElement], properties? : RunProperties) -> DocumentElement
+
+pub fn success(String) -> ConversionResult
+
+pub fn tab() -> DocumentElement
+
+pub fn text(String) -> DocumentElement
+
+pub fn write_html(Array[HtmlNode], pretty_print? : Bool) -> String
+
+pub fn write_markdown(Array[HtmlNode]) -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum BreakType {
+  Line
+  Page
+  Column
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Comment {
+  comment_id : String
+  body : Array[DocumentElement]
+  author_name : String
+  author_initials : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ConversionResult {
+  value : String
+  messages : Array[Message]
+} derive(Eq, @debug.Debug)
+pub fn ConversionResult::combine(Self, Self) -> Self
+pub fn ConversionResult::map(Self, (String) -> String raise?) -> Self raise?
+
+pub(all) enum DocumentElement {
+  Document(children~ : Array[DocumentElement], notes~ : Array[Note], comments~ : Array[Comment])
+  Paragraph(children~ : Array[DocumentElement], properties~ : ParagraphProperties)
+  Run(children~ : Array[DocumentElement], properties~ : RunProperties)
+  Text(String)
+  Tab
+  Checkbox(Bool)
+  Hyperlink(children~ : Array[DocumentElement], href~ : String?, anchor~ : String?, target_frame~ : String?)
+  NoteReference(note_type~ : String, note_id~ : String)
+  CommentReference(String)
+  Image(Image)
+  Table(children~ : Array[DocumentElement], properties~ : TableProperties)
+  TableRow(children~ : Array[DocumentElement], is_header~ : Bool)
+  TableCell(children~ : Array[DocumentElement], col_span~ : Int, row_span~ : Int)
+  Break(BreakType)
+  BookmarkStart(String)
+} derive(Eq, @debug.Debug)
+pub fn DocumentElement::to_raw_text(Self) -> String
+
+pub(all) enum HtmlNode {
+  Element(tag~ : String, attributes~ : Map[String, String], children~ : Array[HtmlNode], fresh~ : Bool)
+  TextNode(String)
+  ForceWrite
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Image {
+  content_type : String
+  alt_text : String?
+  data : Bytes
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Indent {
+  start : String?
+  end : String?
+  first_line : String?
+  hanging : String?
+} derive(Eq, @debug.Debug)
+pub fn Indent::default() -> Self
+
+pub(all) enum Message {
+  Warning(String)
+  Error(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Note {
+  note_type : String
+  note_id : String
+  body : Array[DocumentElement]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Numbering {
+  is_ordered : Bool
+  level : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ParagraphProperties {
+  style_id : String?
+  style_name : String?
+  numbering : Numbering?
+  alignment : String?
+  indent : Indent
+} derive(Eq, @debug.Debug)
+pub fn ParagraphProperties::default() -> Self
+
+pub(all) struct RunProperties {
+  style_id : String?
+  style_name : String?
+  is_bold : Bool
+  is_underline : Bool
+  is_italic : Bool
+  is_strikethrough : Bool
+  is_all_caps : Bool
+  is_small_caps : Bool
+  vertical_alignment : VerticalAlignment
+  font : String?
+  font_size : Int?
+  highlight : String?
+} derive(Eq, @debug.Debug)
+pub fn RunProperties::default() -> Self
+
+pub(all) struct TableProperties {
+  style_id : String?
+  style_name : String?
+} derive(Eq, @debug.Debug)
+pub fn TableProperties::default() -> Self
+
+pub(all) enum VerticalAlignment {
+  Baseline
+  Superscript
+  Subscript
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+
