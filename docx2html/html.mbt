@@ -101,13 +101,14 @@ fn HtmlWriter::write_node(self : HtmlWriter, node : HtmlNode) -> Unit {
     }
     ForceWrite => ()
     Element(tag~, attributes~, children~, ..) => {
+      let tag_name = html_primary_tag(tag)
       if self.pretty_print {
         self.write_indent()
       }
       self.buffer.write_string("<")
-      self.buffer.write_string(tag)
+      self.buffer.write_string(tag_name)
       self.write_attributes(attributes)
-      if children.is_empty() && is_void_html_tag(tag) {
+      if children.is_empty() && is_void_html_tag(tag_name) {
         self.buffer.write_string(" />")
       } else {
         self.buffer.write_string(">")
@@ -121,7 +122,7 @@ fn HtmlWriter::write_node(self : HtmlWriter, node : HtmlNode) -> Unit {
           self.write_indent()
         }
         self.buffer.write_string("</")
-        self.buffer.write_string(tag)
+        self.buffer.write_string(tag_name)
         self.buffer.write_string(">")
       }
       if self.pretty_print {
@@ -132,7 +133,27 @@ fn HtmlWriter::write_node(self : HtmlWriter, node : HtmlNode) -> Unit {
 }
 
 ///|
+fn html_primary_tag(tag : String) -> String {
+  match tag.split("|").next() {
+    Some(first) => first.trim().to_owned()
+    None => tag
+  }
+}
+
+///|
+fn html_tag_matches(candidate : String, actual : String) -> Bool {
+  let actual = html_primary_tag(actual)
+  for choice in candidate.split("|") {
+    if choice.trim().to_owned() == actual {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn is_void_html_tag(tag : String) -> Bool {
+  let tag = html_primary_tag(tag)
   tag == "area" ||
   tag == "base" ||
   tag == "br" ||

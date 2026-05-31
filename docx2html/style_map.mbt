@@ -414,10 +414,7 @@ fn is_style_whitespace(char : UInt16) -> Bool {
 fn read_html_path_element(value : String) -> HtmlPathElement {
   let (element_text, options_text) = split_html_path_options(value)
   let tag_choices = read_html_tag_choices(element_text)
-  let tag = match tag_choices.split("|").next() {
-    Some(first) => decode_style_escapes(first.trim().to_owned())
-    None => decode_style_escapes(tag_choices)
-  }
+  let tag = decode_style_escapes(tag_choices)
   let fresh = options_text.contains("fresh")
   let separator = read_html_path_separator(options_text)
   let attributes = read_html_path_attributes(element_text)
@@ -685,11 +682,12 @@ pub fn default_style_map_lines() -> Array[String] {
     "p[style-name='annotation text'] => p:fresh", "r[style-name='annotation reference'] =>",
     "p[style-name='Footnote'] => p:fresh", "r[style-name='Footnote anchor'] =>",
     "p[style-name='Endnote'] => p:fresh", "r[style-name='Endnote anchor'] =>", "p:unordered-list(1) => ul > li:fresh",
-    "p:unordered-list(2) => ul > li > ul > li:fresh", "p:unordered-list(3) => ul > li > ul > li > ul > li:fresh",
-    "p:unordered-list(4) => ul > li > ul > li > ul > li > ul > li:fresh", "p:unordered-list(5) => ul > li > ul > li > ul > li > ul > li > ul > li:fresh",
-    "p:ordered-list(1) => ol > li:fresh", "p:ordered-list(2) => ol > li > ol > li:fresh",
-    "p:ordered-list(3) => ol > li > ol > li > ol > li:fresh", "p:ordered-list(4) => ol > li > ol > li > ol > li > ol > li:fresh",
-    "p:ordered-list(5) => ol > li > ol > li > ol > li > ol > li > ol > li:fresh",
+    "p:unordered-list(2) => ul|ol > li > ul > li:fresh", "p:unordered-list(3) => ul|ol > li > ul|ol > li > ul > li:fresh",
+    "p:unordered-list(4) => ul|ol > li > ul|ol > li > ul|ol > li > ul > li:fresh",
+    "p:unordered-list(5) => ul|ol > li > ul|ol > li > ul|ol > li > ul|ol > li > ul > li:fresh",
+    "p:ordered-list(1) => ol > li:fresh", "p:ordered-list(2) => ul|ol > li > ol > li:fresh",
+    "p:ordered-list(3) => ul|ol > li > ul|ol > li > ol > li:fresh", "p:ordered-list(4) => ul|ol > li > ul|ol > li > ul|ol > li > ol > li:fresh",
+    "p:ordered-list(5) => ul|ol > li > ul|ol > li > ul|ol > li > ul|ol > li > ol > li:fresh",
     "r[style-name='Hyperlink'] =>", "p[style-name='Normal'] => p:fresh", "p.Body => p:fresh",
     "p[style-name='Body'] => p:fresh",
   ]

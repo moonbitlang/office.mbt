@@ -753,7 +753,7 @@ fn append_simplified(result : Array[HtmlNode], node : HtmlNode) -> Unit {
           tag=tag_a,
           attributes=attrs_a,
           children=children_a,
-          fresh=false,
+          fresh=fresh_a,
           separator=separator_a
         ),
         Element(
@@ -764,13 +764,13 @@ fn append_simplified(result : Array[HtmlNode], node : HtmlNode) -> Unit {
           separator=separator_b
         ),
       ) =>
-        if tag_a == tag_b && attrs_a == attrs_b {
+        if html_tag_matches(tag_b, tag_a) && attrs_a == attrs_b {
           let merged = merge_html_children(children_a, children_b, separator_b)
           result[last_index] = Element(
             tag=tag_a,
             attributes=attrs_a,
             children=merged,
-            fresh=false,
+            fresh=fresh_a,
             separator=separator_a,
           )
         } else {

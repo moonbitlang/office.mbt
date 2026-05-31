@@ -202,6 +202,68 @@ test "style map separator is inserted only when html elements collapse" {
 }
 
 ///|
+test "default nested list mappings collapse across orderedness" {
+  let unordered_parent = @docx2html.ParagraphProperties::{
+    style_id: None,
+    style_name: None,
+    numbering: Some({ is_ordered: false, level: 1 }),
+    alignment: None,
+    indent: @docx2html.Indent::default(),
+  }
+  let ordered_child = @docx2html.ParagraphProperties::{
+    style_id: None,
+    style_name: None,
+    numbering: Some({ is_ordered: true, level: 2 }),
+    alignment: None,
+    indent: @docx2html.Indent::default(),
+  }
+  inspect(
+    @docx2html.convert_document_to_html(
+      @docx2html.document([
+        @docx2html.paragraph(
+          [@docx2html.text("Parent")],
+          properties=unordered_parent,
+        ),
+        @docx2html.paragraph(
+          [@docx2html.text("Child")],
+          properties=ordered_child,
+        ),
+      ]),
+    ).value,
+    content="<ul><li>Parent<ol><li>Child</li></ol></li></ul>",
+  )
+  let ordered_parent = @docx2html.ParagraphProperties::{
+    style_id: None,
+    style_name: None,
+    numbering: Some({ is_ordered: true, level: 1 }),
+    alignment: None,
+    indent: @docx2html.Indent::default(),
+  }
+  let unordered_child = @docx2html.ParagraphProperties::{
+    style_id: None,
+    style_name: None,
+    numbering: Some({ is_ordered: false, level: 2 }),
+    alignment: None,
+    indent: @docx2html.Indent::default(),
+  }
+  inspect(
+    @docx2html.convert_document_to_html(
+      @docx2html.document([
+        @docx2html.paragraph(
+          [@docx2html.text("Parent")],
+          properties=ordered_parent,
+        ),
+        @docx2html.paragraph(
+          [@docx2html.text("Child")],
+          properties=unordered_child,
+        ),
+      ]),
+    ).value,
+    content="<ol><li>Parent<ul><li>Child</li></ul></li></ol>",
+  )
+}
+
+///|
 test "html simplifier removes empty nodes before collapsing" {
   inspect(
     @docx2html.write_html(@docx2html.simplify_html([@docx2html.html_text("")])),
