@@ -129,7 +129,8 @@ fn DocumentConverter::convert_element(
       let comment_nodes = self.convert_comments(comments)
       nodes + note_nodes + comment_nodes
     }
-    Paragraph(children~, ..) => self.convert_paragraph(element, children)
+    Paragraph(children~, properties~) =>
+      self.convert_paragraph(element, children, properties)
     Run(children~, properties~) =>
       self.convert_run(element, children, properties)
     Text(value) => [html_text(value)]
@@ -167,7 +168,8 @@ fn DocumentConverter::convert_element(
     Break(_) => []
     BookmarkStart(name) =>
       [html_element("a", attributes={ "id": self.options.id_prefix + name })]
-    Table(children~, ..) => self.convert_table(element, children)
+    Table(children~, properties~) =>
+      self.convert_table(element, children, properties)
     TableRow(children~, is_header~) => {
       let tag = if is_header { "th" } else { "td" }
       ignore(tag)
@@ -236,12 +238,20 @@ fn DocumentConverter::convert_paragraph(
   self : DocumentConverter,
   element : DocumentElement,
   children : Array[DocumentElement],
+  properties : ParagraphProperties,
 ) -> Array[HtmlNode] {
   let content = self.convert_children(children)
   if self.options.ignore_empty_paragraphs && html_nodes_are_empty(content) {
     []
   } else {
     let default_path = [{ tag: "p", attributes: {}, fresh: true }]
+    if find_style_mapping(element, self.options.style_map) == None {
+      self.warn_unrecognised_style(
+        "paragraph",
+        properties.style_id,
+        properties.style_name,
+      )
+    }
     self.wrap_with_style(element, content, default_path)
   }
 }
@@ -295,12 +305,41 @@ fn DocumentConverter::convert_run(
   }
   match find_run_style_mapping(element, self.options.style_map) {
     Some(mapping) => paths.push(mapping.to)
-    None => ()
+    None =>
+      self.warn_unrecognised_style(
+        "run",
+        properties.style_id,
+        properties.style_name,
+      )
   }
   for path in paths {
     nodes = wrap_html_path(path, nodes)
   }
   nodes
+}
+
+///|
+fn DocumentConverter::warn_unrecognised_style(
+  self : DocumentConverter,
+  kind : String,
+  style_id : String?,
+  style_name : String?,
+) -> Unit {
+  match (style_id, style_name) {
+    (Some(id), Some(name)) =>
+      self.messages.push(
+        Warning(
+          "Unrecognised " +
+          kind +
+          " style: '" +
+          name +
+          "' (Style ID: " +
+          id +
+          ")",
+        ),
+      )
+    _ => ()
+  }
 }
 
 ///|
@@ -344,9 +383,17 @@ fn DocumentConverter::convert_table(
   self : DocumentConverter,
   element : DocumentElement,
   children : Array[DocumentElement],
+  properties : TableProperties,
 ) -> Array[HtmlNode] {
   let rows = self.convert_children(children)
   let default_path = [{ tag: "table", attributes: {}, fresh: true }]
+  if find_style_mapping(element, self.options.style_map) == None {
+    self.warn_unrecognised_style(
+      "table",
+      properties.style_id,
+      properties.style_name,
+    )
+  }
   self.wrap_with_style(element, rows, default_path)
 }
 

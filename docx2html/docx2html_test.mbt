@@ -138,6 +138,51 @@ test "document converter uses style mappings before defaults" {
 }
 
 ///|
+test "document converter warns for unrecognised styles" {
+  let paragraph_properties = @docx2html.ParagraphProperties::{
+    style_id: Some("MysteryParagraph"),
+    style_name: Some("Mystery Paragraph"),
+    numbering: None,
+    alignment: None,
+    indent: @docx2html.Indent::default(),
+  }
+  let paragraph_doc = @docx2html.document([
+    @docx2html.paragraph(
+      [@docx2html.text("Hello.")],
+      properties=paragraph_properties,
+    ),
+  ])
+  debug_inspect(
+    @docx2html.convert_document_to_html(paragraph_doc).messages,
+    content=(
+      #|[Warning("Unrecognised paragraph style: 'Mystery Paragraph' (Style ID: MysteryParagraph)")]
+    ),
+  )
+  let run_properties = @docx2html.RunProperties::{
+    style_id: Some("MysteryRun"),
+    style_name: Some("Mystery Run"),
+    is_bold: false,
+    is_underline: false,
+    is_italic: false,
+    is_strikethrough: false,
+    is_all_caps: false,
+    is_small_caps: false,
+    vertical_alignment: Baseline,
+    font: None,
+    font_size: None,
+    highlight: None,
+  }
+  debug_inspect(
+    @docx2html.convert_document_to_html(
+      @docx2html.run([@docx2html.text("Hello.")], properties=run_properties),
+    ).messages,
+    content=(
+      #|[Warning("Unrecognised run style: 'Mystery Run' (Style ID: MysteryRun)")]
+    ),
+  )
+}
+
+///|
 test "document converter wraps inline run properties" {
   let bold = @docx2html.RunProperties::{
     style_id: None,
