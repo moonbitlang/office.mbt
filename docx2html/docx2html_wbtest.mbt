@@ -494,6 +494,21 @@ test "docx hyperlink reader replaces external URL fragment when anchor is set" {
   let xml =
     #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="r42" w:anchor="fragment"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let without_fragment_reader = empty_body_reader({
+    relationships: [
+      {
+        id: "r42",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        target: "http://example.com/",
+        target_mode: Some("External"),
+      },
+    ],
+  })
+  match without_fragment_reader.read_element(root)[0] {
+    Hyperlink(href~, ..) =>
+      debug_inspect(href, content="Some(\"http://example.com/#fragment\")")
+    _ => fail("expected hyperlink")
+  }
   let reader = empty_body_reader({
     relationships: [
       {
