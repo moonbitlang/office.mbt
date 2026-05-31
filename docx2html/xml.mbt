@@ -63,6 +63,26 @@ pub fn XmlElement::elements_by_tag_name(
 }
 
 ///|
+pub fn XmlElement::descendants_by_tag_name(
+  self : XmlElement,
+  name : String,
+) -> Array[XmlElement] {
+  let elements : Array[XmlElement] = []
+  for child in self.children {
+    match child {
+      XmlElement(element) => {
+        if element.name == name {
+          elements.push(element)
+        }
+        elements.append(element.descendants_by_tag_name(name))
+      }
+      _ => ()
+    }
+  }
+  elements
+}
+
+///|
 pub fn XmlElement::text(self : XmlElement) -> String raise DocxError {
   if self.children.length() == 0 {
     ""

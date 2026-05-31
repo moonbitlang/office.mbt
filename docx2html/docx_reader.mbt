@@ -19,6 +19,12 @@ pub(all) struct StyleInfo {
 } derive(Debug, Eq)
 
 ///|
+pub(all) struct ContentTypes {
+  defaults : Map[String, String]
+  overrides : Map[String, String]
+} derive(Debug, Eq)
+
+///|
 pub fn convert_to_html(
   docx : BytesView,
   style_map? : Array[String] = [],
@@ -57,9 +63,21 @@ pub fn extract_raw_text(docx : BytesView) -> ConversionResult raise DocxError {
 pub fn read_docx(docx : BytesView) -> DocumentElement raise DocxError {
   let zip = open_zip(docx)
   let main_document_path = find_main_document_path(zip)
+  let relationships = read_relationships(
+    zip,
+    relationships_path_for_part(main_document_path),
+  )
+  let content_types = read_content_types(zip)
   let styles = read_styles(zip, "word/styles.xml")
   let xml = read_xml_part(zip, main_document_path)
-  read_document_xml(xml, styles)
+  read_document_xml(
+    xml,
+    styles,
+    zip,
+    relationships,
+    content_types,
+    split_zip_path(main_document_path).0,
+  )
 }
 
 ///|
@@ -168,6 +186,82 @@ fn Relationships::find_target_by_type(
 }
 
 ///|
+fn Relationships::find_target_by_id(
+  self : Relationships,
+  id : String,
+) -> String? {
+  for rel in self.relationships {
+    if rel.id == id {
+      return Some(rel.target)
+    }
+  }
+  None
+}
+
+///|
+fn Relationships::find_by_id(
+  self : Relationships,
+  id : String,
+) -> Relationship? {
+  for rel in self.relationships {
+    if rel.id == id {
+      return Some(rel)
+    }
+  }
+  None
+}
+
+///|
+fn relationships_path_for_part(path : String) -> String {
+  let (dir, base) = split_zip_path(path)
+  join_zip_path([dir, "_rels", base + ".rels"])
+}
+
+///|
+fn read_content_types(zip : ZipArchive) -> ContentTypes raise DocxError {
+  let defaults : Map[String, String] = {}
+  let overrides : Map[String, String] = {}
+  match zip.read_text("[Content_Types].xml") {
+    Some(text) => {
+      let root = read_xml_string(text, namespace_map=office_namespace_map())
+      for element in root.elements_by_tag_name("Default") {
+        let extension = element.attributes.get_or_default("Extension", "")
+        let content_type = element.attributes.get_or_default("ContentType", "")
+        if extension != "" && content_type != "" {
+          defaults[extension] = content_type
+        }
+      }
+      for element in root.elements_by_tag_name("Override") {
+        let part_name = element.attributes.get_or_default("PartName", "")
+        let content_type = element.attributes.get_or_default("ContentType", "")
+        if part_name != "" && content_type != "" {
+          overrides[strip_leading_slash(part_name)] = content_type
+        }
+      }
+    }
+    None => ()
+  }
+  { defaults, overrides }
+}
+
+///|
+fn ContentTypes::find_content_type(
+  self : ContentTypes,
+  path : String,
+) -> String {
+  let normalized = strip_leading_slash(path)
+  match self.overrides.get(normalized) {
+    Some(content_type) => content_type
+    None =>
+      match normalized.rev_find(".") {
+        Some(index) =>
+          self.defaults.get_or_default(normalized[index + 1:].to_owned(), "")
+        None => ""
+      }
+  }
+}
+
+///|
 fn read_styles(
   zip : ZipArchive,
   path : String,
@@ -198,15 +292,29 @@ fn read_styles(
 fn read_document_xml(
   root : XmlElement,
   styles : Map[String, StyleInfo],
+  zip : ZipArchive,
+  relationships : Relationships,
+  content_types : ContentTypes,
+  base_path : String,
 ) -> DocumentElement raise DocxError {
   let body = root.first_or_empty("w:body")
-  let reader = BodyReader::{ styles, }
+  let reader = BodyReader::{
+    styles,
+    zip,
+    relationships,
+    content_types,
+    base_path,
+  }
   document(reader.read_children(body.children))
 }
 
 ///|
 priv struct BodyReader {
   styles : Map[String, StyleInfo]
+  zip : ZipArchive
+  relationships : Relationships
+  content_types : ContentTypes
+  base_path : String
 }
 
 ///|
@@ -243,6 +351,9 @@ fn BodyReader::read_element(
         Some(name) => [BookmarkStart(name)]
       }
     "w:hyperlink" => [self.read_hyperlink(element)]
+    "w:drawing" | "w:pict" | "w:object" => self.read_children(element.children)
+    "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
+    "v:imagedata" => self.read_vml_image_data(element)
     "w:tbl" => [self.read_table(element)]
     "w:tr" => [self.read_table_row(element)]
     "w:tc" => [self.read_table_cell(element)]
@@ -458,11 +569,120 @@ fn BodyReader::read_hyperlink(
   self : BodyReader,
   element : XmlElement,
 ) -> DocumentElement raise DocxError {
+  let href = match element.attributes.get("r:id") {
+    Some(id) => self.relationships.find_target_by_id(id)
+    None => None
+  }
   Hyperlink(
     children=self.read_children(element.children),
-    href=None,
+    href~,
     anchor=element.attributes.get("w:anchor"),
     target_frame=element.attributes.get("w:tgtFrame"),
+  )
+}
+
+///|
+fn BodyReader::read_drawing_element(
+  self : BodyReader,
+  element : XmlElement,
+) -> Array[DocumentElement] {
+  let results : Array[DocumentElement] = []
+  for blip in element.descendants_by_tag_name("a:blip") {
+    match self.read_blip(element, blip) {
+      Some(image) => results.push(Image(image))
+      None => ()
+    }
+  }
+  results
+}
+
+///|
+fn BodyReader::read_blip(
+  self : BodyReader,
+  drawing_element : XmlElement,
+  blip : XmlElement,
+) -> Image? {
+  let relationship_id = match blip.attributes.get("r:embed") {
+    Some(id) => Some(id)
+    None => blip.attributes.get("r:link")
+  }
+  match relationship_id {
+    Some(id) =>
+      self.read_image_by_relationship(
+        id,
+        alt_text=read_drawing_alt_text(drawing_element),
+      )
+    None => None
+  }
+}
+
+///|
+fn BodyReader::read_vml_image_data(
+  self : BodyReader,
+  element : XmlElement,
+) -> Array[DocumentElement] {
+  match element.attributes.get("r:id") {
+    Some(id) =>
+      match
+        self.read_image_by_relationship(
+          id,
+          alt_text=element.attributes.get("o:title"),
+        ) {
+        Some(image) => [Image(image)]
+        None => []
+      }
+    None => []
+  }
+}
+
+///|
+fn BodyReader::read_image_by_relationship(
+  self : BodyReader,
+  relationship_id : String,
+  alt_text~ : String?,
+) -> Image? {
+  match self.relationships.find_by_id(relationship_id) {
+    Some(rel) =>
+      if rel.target_mode == Some("External") {
+        None
+      } else {
+        let path = resolve_part_target(self.base_path, rel.target)
+        match self.zip.read_bytes(path) {
+          Some(data) =>
+            Some({
+              content_type: self.content_types.find_content_type(path),
+              alt_text,
+              data,
+            })
+          None => None
+        }
+      }
+    None => None
+  }
+}
+
+///|
+fn read_drawing_alt_text(element : XmlElement) -> String? {
+  let properties = element.first_or_empty("wp:docPr")
+  match properties.attributes.get("descr") {
+    Some(value) =>
+      if value.trim().is_empty() {
+        properties.attributes.get("title")
+      } else {
+        Some(value)
+      }
+    None => properties.attributes.get("title")
+  }
+}
+
+///|
+fn resolve_part_target(base_path : String, target : String) -> String {
+  strip_leading_slash(
+    if target.has_prefix("/") {
+      target
+    } else {
+      join_zip_path([base_path, target])
+    },
   )
 }
 

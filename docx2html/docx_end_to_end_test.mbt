@@ -80,3 +80,23 @@ test "strict docx format is read" {
   inspect(result.value, content="<p>Test</p>")
   debug_inspect(result.messages, content="[]")
 }
+
+///|
+test "inline images referenced relative to document part are included" {
+  let result = @docx2html.convert_to_html(tiny_picture_docx()[:])
+  inspect(
+    result.value,
+    content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
+  )
+}
+
+///|
+test "inline images referenced relative to package base are included" {
+  let result = @docx2html.convert_to_html(
+    tiny_picture_target_base_relative_docx()[:],
+  )
+  inspect(
+    result.value,
+    content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
+  )
+}

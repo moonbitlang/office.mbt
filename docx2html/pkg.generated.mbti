@@ -98,6 +98,11 @@ pub(all) struct Comment {
   author_initials : String
 } derive(Eq, @debug.Debug)
 
+pub(all) struct ContentTypes {
+  defaults : Map[String, String]
+  overrides : Map[String, String]
+} derive(Eq, @debug.Debug)
+
 pub(all) struct ConversionResult {
   value : String
   messages : Array[Message]
@@ -249,6 +254,7 @@ pub(all) struct XmlElement {
   attributes : Map[String, String]
   children : Array[XmlNode]
 } derive(Eq, @debug.Debug)
+pub fn XmlElement::descendants_by_tag_name(Self, String) -> Array[Self]
 pub fn XmlElement::elements_by_tag_name(Self, String) -> Array[Self]
 pub fn XmlElement::first(Self, String) -> Self?
 pub fn XmlElement::first_or_empty(Self, String) -> Self
