@@ -340,6 +340,74 @@ test "document converter maps paragraphs and escapes text" {
 }
 
 ///|
+test "document transforms are applied before conversion" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Hello.")]),
+  ])
+  let transform_document = @docx2html.transform_paragraphs(fn(_paragraph) {
+    @docx2html.paragraph([@docx2html.text("Goodbye.")])
+  })
+  inspect(
+    @docx2html.convert_document_to_html(doc, transform_document~).value,
+    content="<p>Goodbye.</p>",
+  )
+}
+
+///|
+test "document transform helpers follow Mammoth post-order traversal" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("x")])]),
+  ])
+  let mut count = 0
+  let transformed = @docx2html.transform_elements(doc, fn(element) {
+    count = count + 1
+    match element {
+      Text(value) => @docx2html.text(value + count.to_string())
+      Run(children~, properties~) =>
+        Run(
+          children=children + [@docx2html.text("r" + count.to_string())],
+          properties~,
+        )
+      Paragraph(children~, properties~) =>
+        Paragraph(
+          children=children + [@docx2html.text("p" + count.to_string())],
+          properties~,
+        )
+      Document(children~, notes~, comments~) =>
+        Document(
+          children=children + [@docx2html.text("d" + count.to_string())],
+          notes~,
+          comments~,
+        )
+      _ => element
+    }
+  })
+  inspect(transformed.to_raw_text(), content="x1r2p3\n\nd4")
+}
+
+///|
+test "document transform helpers can target runs and descendants" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Hello")])]),
+  ])
+  let transform_document = @docx2html.transform_runs(fn(_run) {
+    @docx2html.run([@docx2html.text("Run")])
+  })
+  inspect(
+    @docx2html.convert_document_to_html(doc, transform_document~).value,
+    content="<p>Run</p>",
+  )
+  let runs = @docx2html.document_descendants_where(doc, fn(element) {
+    element is Run(..)
+  })
+  inspect(runs.length(), content="1")
+  inspect(
+    @docx2html.document_descendants(@docx2html.text("leaf")).length(),
+    content="0",
+  )
+}
+
+///|
 test "document converter ignores empty paragraphs by default" {
   let doc = @docx2html.document([@docx2html.paragraph([])])
   inspect(@docx2html.convert_document_to_html(doc).value, content="")

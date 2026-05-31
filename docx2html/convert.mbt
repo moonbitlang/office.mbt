@@ -41,7 +41,9 @@ pub fn convert_document_to_html(
   id_prefix? : String = "",
   pretty_print? : Bool = false,
   convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
+  transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
 ) -> ConversionResult {
+  let document = transform_document(document)
   let all_style_lines : Array[String] = []
   all_style_lines.append(style_map)
   if include_default_style_map {
@@ -78,7 +80,9 @@ pub fn convert_document_to_markdown(
   style_map? : Array[String] = [],
   include_default_style_map? : Bool = true,
   convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
+  transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
 ) -> ConversionResult {
+  let document = transform_document(document)
   let all_style_lines : Array[String] = []
   all_style_lines.append(style_map)
   if include_default_style_map {
