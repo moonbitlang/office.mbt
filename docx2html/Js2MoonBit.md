@@ -63,7 +63,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - DrawingML picture hyperlinks are stored separately from the image `a:blip`: read `a:hlinkClick/@r:id` from the drawing properties and wrap the resulting `Image` in a `Hyperlink`.
 - DrawingML image alt text comes from `wp:docPr`: prefer non-blank `descr`, fall back to `title`, and apply the same rule for inline and anchored drawings.
 - `mc:AlternateContent` is an Office XML reader concern, not a body-reader-only case: splice `mc:Fallback` children into the parsed XML tree and drop the wrapper, or ignore the wrapper when no fallback exists.
-- HTML style-map target paths need their own parser pass for classes and attributes (`p.tip[lang='fr']`); splitting on `:` naively breaks escaped class names such as `p.a\:b`.
+- HTML style-map target paths need their own parser pass for classes and attributes (`p.tip[lang='fr']`); splitting on `:` naively breaks escaped class names such as `p.a\:b`, and attribute names such as `data\:x` need the same escape decoding as tag and class identifiers.
 - Break style mappings are replacements, not wrappers around the default line-break node: `br[type='page'] => hr` emits `<hr />`, while unmapped page/column breaks still disappear.
 - Mammoth's Markdown writer preserves HTML `id` attributes by emitting raw `<a id="..."></a>` anchors at the start of the Markdown construct: after heading/list markers, and before link brackets.
 - Mammoth Markdown has no table or definition-list syntax path: converted DOCX tables and appended comments pass through unknown HTML container tags and flatten to their text in document order, with anchors and paragraph blank lines preserved.

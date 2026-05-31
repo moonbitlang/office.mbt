@@ -1133,7 +1133,9 @@ fn read_html_class(value : String, start : Int) -> (String, Int) {
 fn read_html_attribute(value : String, start : Int) -> (String, String, Int) {
   match value[start:].find("='") {
     Some(equals_index) => {
-      let name = value[start:start + equals_index].to_owned()
+      let name = decode_style_escapes(
+        value[start:start + equals_index].to_owned(),
+      )
       let value_start = start + equals_index + 2
       let mut index = value_start
       let builder = StringBuilder()

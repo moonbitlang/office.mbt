@@ -900,6 +900,11 @@ test "style map parser handles malformed and escaped edge cases" {
       "p => pre:separator('a>b:c')",
     ).to[0]
   inspect(separator_with_delimiters.separator.unwrap(), content="a>b:c")
+  let escaped_attr_name = expect_style_mapping("p => span[data\\:x='a\\:b']").to[0]
+  inspect(
+    escaped_attr_name.attributes.get_or_default("data:x", ""),
+    content="a:b",
+  )
   debug_inspect(
     @docx2html.read_style_mapping("p => span[data-x='a'.tail]"),
     content="None",
