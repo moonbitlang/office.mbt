@@ -10,6 +10,7 @@ fn empty_body_reader(relationships : Relationships) -> BodyReader {
     relationships,
     content_types: { defaults: {}, overrides: {} },
     base_path: "word",
+    messages: [],
   }
 }
 
@@ -89,6 +90,7 @@ test "docx table properties include table style name" {
     relationships: { relationships: [] },
     content_types: { defaults: {}, overrides: {} },
     base_path: "word",
+    messages: [],
   }
   debug_inspect(
     reader.read_element(root),
@@ -99,6 +101,59 @@ test "docx table properties include table style name" {
       #|    properties={ style_id: Some("TableNormal"), style_name: Some("Normal Table") },
       #|  ),
       #|]
+    ),
+  )
+}
+
+///|
+test "docx body reader records Mammoth-compatible warnings" {
+  let paragraph_xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="Heading1" /></w:pPr></w:p>
+  let paragraph = read_xml_string(
+    paragraph_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let paragraph_reader = empty_body_reader({ relationships: [] })
+  let paragraph_elements = paragraph_reader.read_element(paragraph)
+  match paragraph_elements[0] {
+    Paragraph(properties~, ..) => {
+      debug_inspect(properties.style_id, content="Some(\"Heading1\")")
+      debug_inspect(properties.style_name, content="None")
+    }
+    _ => fail("expected paragraph")
+  }
+  debug_inspect(
+    paragraph_reader.messages,
+    content=(
+      #|[Warning("Paragraph style with ID Heading1 was referenced but not defined in the document")]
+    ),
+  )
+  let break_xml =
+    #|<w:br xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:type="unknownBreakType" />
+  let break_element = read_xml_string(
+    break_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let break_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(break_reader.read_element(break_element), content="[]")
+  debug_inspect(
+    break_reader.messages,
+    content=(
+      #|[Warning("Unsupported break type: unknownBreakType")]
+    ),
+  )
+  let unknown_xml =
+    #|<w:not-an-element xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" />
+  let unknown = read_xml_string(
+    unknown_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let unknown_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(unknown_reader.read_element(unknown), content="[]")
+  debug_inspect(
+    unknown_reader.messages,
+    content=(
+      #|[Warning("An unrecognised element was ignored: w:not-an-element")]
     ),
   )
 }
@@ -309,6 +364,7 @@ test "docx drawing image hyperlink wraps image" {
     },
     content_types: { defaults: { "png": "image/png" }, overrides: {} },
     base_path: "word",
+    messages: [],
   }
   inspect(
     convert_document_to_html(document(reader.read_element(root))).value,

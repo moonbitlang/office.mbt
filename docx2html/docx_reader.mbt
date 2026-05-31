@@ -25,6 +25,12 @@ pub(all) struct ContentTypes {
 } derive(Debug, Eq)
 
 ///|
+priv struct DocxReadResult {
+  document : DocumentElement
+  messages : Array[Message]
+}
+
+///|
 pub fn convert_to_html(
   docx : BytesView,
   style_map? : Array[String] = [],
@@ -35,20 +41,21 @@ pub fn convert_to_html(
   pretty_print? : Bool = false,
 ) -> ConversionResult raise DocxError {
   let zip = open_zip(docx)
-  let document = read_docx_zip(zip)
+  let read_result = read_docx_zip_with_messages(zip)
   let style_map = combine_docx_style_maps_from_zip(
     zip,
     style_map,
     include_embedded_style_map~,
   )
-  convert_document_to_html(
-    document,
+  let result = convert_document_to_html(
+    read_result.document,
     style_map~,
     include_default_style_map~,
     ignore_empty_paragraphs~,
     id_prefix~,
     pretty_print~,
   )
+  prepend_messages(result, read_result.messages)
 }
 
 ///|
@@ -59,18 +66,40 @@ pub fn convert_to_markdown(
   include_embedded_style_map? : Bool = true,
 ) -> ConversionResult raise DocxError {
   let zip = open_zip(docx)
-  let document = read_docx_zip(zip)
+  let read_result = read_docx_zip_with_messages(zip)
   let style_map = combine_docx_style_maps_from_zip(
     zip,
     style_map,
     include_embedded_style_map~,
   )
-  convert_document_to_markdown(document, style_map~, include_default_style_map~)
+  let result = convert_document_to_markdown(
+    read_result.document,
+    style_map~,
+    include_default_style_map~,
+  )
+  prepend_messages(result, read_result.messages)
 }
 
 ///|
 pub fn extract_raw_text(docx : BytesView) -> ConversionResult raise DocxError {
-  extract_raw_text_from_document(read_docx(docx))
+  let read_result = read_docx_zip_with_messages(open_zip(docx))
+  let result = extract_raw_text_from_document(read_result.document)
+  prepend_messages(result, read_result.messages)
+}
+
+///|
+fn prepend_messages(
+  result : ConversionResult,
+  messages : Array[Message],
+) -> ConversionResult {
+  if messages.is_empty() {
+    result
+  } else {
+    let combined : Array[Message] = []
+    combined.append(messages)
+    combined.append(result.messages)
+    { value: result.value, messages: combined }
+  }
 }
 
 ///|
@@ -109,6 +138,13 @@ pub fn read_docx(docx : BytesView) -> DocumentElement raise DocxError {
 
 ///|
 fn read_docx_zip(zip : ZipArchive) -> DocumentElement raise DocxError {
+  read_docx_zip_with_messages(zip).document
+}
+
+///|
+fn read_docx_zip_with_messages(
+  zip : ZipArchive,
+) -> DocxReadResult raise DocxError {
   let main_document_path = find_main_document_path(zip)
   let relationships = read_relationships(
     zip,
@@ -124,7 +160,7 @@ fn read_docx_zip(zip : ZipArchive) -> DocumentElement raise DocxError {
     zip, styles, content_types, relationships, base_path,
   )
   let xml = read_xml_part(zip, main_document_path)
-  read_document_xml(
+  read_document_xml_with_messages(
     xml, styles, zip, relationships, content_types, base_path, notes, comments,
   )
 }
@@ -376,6 +412,7 @@ fn read_note_part(
     relationships: part_relationships,
     content_types,
     base_path: split_zip_path(path).0,
+    messages: [],
   }
   let root = read_xml_part(zip, path)
   let result : Array[Note] = []
@@ -421,6 +458,7 @@ fn read_comments_for_document(
     relationships: part_relationships,
     content_types,
     base_path: split_zip_path(path).0,
+    messages: [],
   }
   let root = read_xml_part(zip, path)
   let comments : Array[Comment] = []
@@ -478,7 +516,7 @@ fn read_styles(
 }
 
 ///|
-fn read_document_xml(
+fn read_document_xml_with_messages(
   root : XmlElement,
   styles : Map[String, StyleInfo],
   zip : ZipArchive,
@@ -487,7 +525,7 @@ fn read_document_xml(
   base_path : String,
   notes : Array[Note],
   comments : Array[Comment],
-) -> DocumentElement raise DocxError {
+) -> DocxReadResult raise DocxError {
   let body = root.first_or_empty("w:body")
   let reader = BodyReader::{
     styles,
@@ -495,8 +533,12 @@ fn read_document_xml(
     relationships,
     content_types,
     base_path,
+    messages: [],
   }
-  document(reader.read_children(body.children), notes~, comments~)
+  {
+    document: document(reader.read_children(body.children), notes~, comments~),
+    messages: reader.messages,
+  }
 }
 
 ///|
@@ -506,6 +548,7 @@ priv struct BodyReader {
   relationships : Relationships
   content_types : ContentTypes
   base_path : String
+  messages : Array[Message]
 }
 
 ///|
@@ -572,7 +615,7 @@ fn BodyReader::read_element(
     "w:footnoteRef" | "w:endnoteRef" => []
     "w:commentReference" =>
       [CommentReference(element.attributes.get_or_default("w:id", ""))]
-    "w:br" => [self.read_break(element)]
+    "w:br" => self.read_break(element)
     "w:bookmarkStart" =>
       match element.attributes.get("w:name") {
         Some("_GoBack") | None => []
@@ -592,8 +635,43 @@ fn BodyReader::read_element(
     "w:ins" | "w:smartTag" | "w:sdtContent" =>
       self.read_children(element.children)
     "w:sdt" => self.read_structured_document_tag(element)
-    _ => []
+    _ =>
+      if is_ignored_body_element(element.name) {
+        []
+      } else {
+        self.warn("An unrecognised element was ignored: " + element.name)
+        []
+      }
   }
+}
+
+///|
+fn BodyReader::warn(self : BodyReader, message : String) -> Unit {
+  self.messages.push(Warning(message))
+}
+
+///|
+fn is_ignored_body_element(name : String) -> Bool {
+  name == "office-word:wrap" ||
+  name == "v:shadow" ||
+  name == "v:shapetype" ||
+  name == "w:annotationRef" ||
+  name == "w:bookmarkEnd" ||
+  name == "w:sectPr" ||
+  name == "w:proofErr" ||
+  name == "w:lastRenderedPageBreak" ||
+  name == "w:commentRangeStart" ||
+  name == "w:commentRangeEnd" ||
+  name == "w:del" ||
+  name == "w:footnoteRef" ||
+  name == "w:endnoteRef" ||
+  name == "w:txbxContent" ||
+  name == "w:pPr" ||
+  name == "w:rPr" ||
+  name == "w:tblPr" ||
+  name == "w:tblGrid" ||
+  name == "w:trPr" ||
+  name == "w:tcPr"
 }
 
 ///|
@@ -606,7 +684,15 @@ fn BodyReader::read_symbol(
   let char = element.attributes.get_or_default("w:char", "")
   match symbol_to_unicode(font, char) {
     Some(value) => [text(value)]
-    None => []
+    None => {
+      self.warn(
+        "A w:sym element with an unsupported character was ignored: char " +
+        char +
+        " in font " +
+        font,
+      )
+      []
+    }
   }
 }
 
@@ -1156,11 +1242,39 @@ fn BodyReader::style_name(
           if style.style_type == style_type {
             Some(style.name)
           } else {
+            self.warn_undefined_style(style_type, id)
             None
           }
-        None => None
+        None => {
+          self.warn_undefined_style(style_type, id)
+          None
+        }
       }
     None => None
+  }
+}
+
+///|
+fn BodyReader::warn_undefined_style(
+  self : BodyReader,
+  style_type : String,
+  style_id : String,
+) -> Unit {
+  self.warn(
+    style_warning_label(style_type) +
+    " style with ID " +
+    style_id +
+    " was referenced but not defined in the document",
+  )
+}
+
+///|
+fn style_warning_label(style_type : String) -> String {
+  match style_type {
+    "paragraph" => "Paragraph"
+    "character" => "Run"
+    "table" => "Table"
+    _ => style_type
   }
 }
 
@@ -1231,13 +1345,15 @@ fn read_highlight(value : String?) -> String? {
 fn BodyReader::read_break(
   self : BodyReader,
   element : XmlElement,
-) -> DocumentElement {
-  ignore(self)
+) -> Array[DocumentElement] {
   match element.attributes.get("w:type") {
-    None | Some("textWrapping") => line_break()
-    Some("page") => page_break()
-    Some("column") => column_break()
-    Some(_) => line_break()
+    None | Some("textWrapping") => [line_break()]
+    Some("page") => [page_break()]
+    Some("column") => [column_break()]
+    Some(break_type) => {
+      self.warn("Unsupported break type: " + break_type)
+      []
+    }
   }
 }
 

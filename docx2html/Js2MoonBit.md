@@ -56,3 +56,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Style-name prefix matchers (`style-name^='Heading'`) must be represented distinctly from exact style-name matches; otherwise they can accidentally become broad paragraph/run/table matchers.
 - Invalid style-map lines should produce converter warnings while preserving the valid mappings that follow; a silent `None` parse result loses Mammoth-visible diagnostics.
 - HTML path separators are metadata on the generated element, not eager text children: `:separator('\n')` is emitted only when simplification collapses a later matching element into an earlier one.
+- DOCX reader warnings need a message pipeline into conversion results. Elements that are handled through a secondary pass, such as `w:txbxContent`, may need to be quiet in the normal child traversal to avoid false unrecognised-element warnings.
