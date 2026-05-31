@@ -907,6 +907,35 @@ test "style map separator is inserted only when html elements collapse" {
 }
 
 ///|
+test "html path matching follows Mammoth tag choice and attribute rules" {
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([
+        @docx2html.html_element("ol", children=[@docx2html.html_text("One")]),
+        @docx2html.html_element("ul|ol", children=[@docx2html.html_text("Two")]),
+      ]),
+    ),
+    content="<ol>OneTwo</ol>",
+  )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([
+        @docx2html.html_element("p", attributes={ "class": "tip" }, children=[
+          @docx2html.html_text("One"),
+        ]),
+        @docx2html.html_element("p", attributes={ "class": "tip help" }, children=[
+          @docx2html.html_text("Two"),
+        ]),
+        @docx2html.html_element("p", attributes={ "class": "tip help" }, children=[
+          @docx2html.html_text("Three"),
+        ]),
+      ]),
+    ),
+    content="<p class=\"tip\">One</p><p class=\"tip help\">TwoThree</p>",
+  )
+}
+
+///|
 test "default nested list mappings collapse across orderedness" {
   let unordered_parent = @docx2html.ParagraphProperties::{
     style_id: None,
