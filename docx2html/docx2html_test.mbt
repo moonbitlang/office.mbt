@@ -60,6 +60,7 @@ test "html writer escapes text and attributes" {
     @docx2html.write_html(nodes),
     content="<p title=\"&quot;quoted&quot; &amp; &lt;tag&gt;\">A &lt; B &amp; C &gt; D</p>",
   )
+  inspect(@docx2html.write_html([@docx2html.html_text("\"")]), content="\"")
 }
 
 ///|
@@ -598,6 +599,44 @@ test "html simplifier removes empty nodes before collapsing" {
       ]),
     ),
     content="<blockquote><p>Hellothere</p></blockquote>",
+  )
+}
+
+///|
+test "html simplifier follows Mammoth freshness collapse rules" {
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([
+        @docx2html.fresh_html_element("p", children=[
+          @docx2html.html_text("Hello"),
+        ]),
+        @docx2html.fresh_html_element("p", children=[
+          @docx2html.html_text(" there"),
+        ]),
+      ]),
+    ),
+    content="<p>Hello</p><p> there</p>",
+  )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([
+        @docx2html.fresh_html_element("p", children=[
+          @docx2html.html_text("Hello"),
+        ]),
+        @docx2html.html_element("p", children=[@docx2html.html_text(" there")]),
+      ]),
+    ),
+    content="<p>Hello there</p>",
+  )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([
+        @docx2html.html_element("p", children=[@docx2html.html_text("Hello")]),
+        @docx2html.fresh_html_element("p"),
+        @docx2html.html_element("p", children=[@docx2html.html_text(" there")]),
+      ]),
+    ),
+    content="<p>Hello there</p>",
   )
 }
 
