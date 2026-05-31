@@ -47,12 +47,10 @@ fn MarkdownWriter::write_node(self : MarkdownWriter, node : HtmlNode) -> Unit {
         "img" => self.write_image(attributes)
         "h1" | "h2" | "h3" | "h4" | "h5" | "h6" =>
           self.write_heading(tag, attributes, children)
-        "ul" => self.write_list(children, ordered=false)
-        "ol" => self.write_list(children, ordered=true)
-        "li" => {
-          self.write_nodes(children)
-          self.buffer.write_string("\n")
-        }
+        "ul" => self.write_list(children, ordered=false, indent=0, nested=false)
+        "ol" => self.write_list(children, ordered=true, indent=0, nested=false)
+        "li" =>
+          self.write_list_item(children, ordered=false, indent=0, number=1)
         _ => {
           self.write_id_anchor(attributes)
           self.write_nodes(children)
@@ -100,16 +98,14 @@ fn MarkdownWriter::write_image(
   self : MarkdownWriter,
   attributes : Map[String, String],
 ) -> Unit {
-  match attributes.get("src") {
-    Some(src) => {
-      let alt = attributes.get_or_default("alt", "")
-      self.buffer.write_string("![")
-      self.buffer.write_string(escape_markdown_text(alt))
-      self.buffer.write_string("](")
-      self.buffer.write_string(src)
-      self.buffer.write_string(")")
-    }
-    None => ()
+  let src = attributes.get_or_default("src", "")
+  let alt = attributes.get_or_default("alt", "")
+  if src != "" || alt != "" {
+    self.buffer.write_string("![")
+    self.buffer.write_string(escape_markdown_text(alt))
+    self.buffer.write_string("](")
+    self.buffer.write_string(src)
+    self.buffer.write_string(")")
   }
 }
 
@@ -135,24 +131,86 @@ fn MarkdownWriter::write_list(
   self : MarkdownWriter,
   children : Array[HtmlNode],
   ordered~ : Bool,
+  indent~ : Int,
+  nested~ : Bool,
 ) -> Unit {
+  if nested {
+    self.buffer.write_string("\n")
+  }
   let mut index = 1
   for child in children {
     match child {
       Element(tag="li", children=li_children, ..) => {
-        if ordered {
-          self.buffer.write_string("\{index}. ")
-          index = index + 1
-        } else {
-          self.buffer.write_string("- ")
-        }
-        self.write_nodes(li_children)
-        self.buffer.write_string("\n")
+        self.write_list_item(li_children, ordered~, indent~, number=index)
+        index = index + 1
       }
       _ => self.write_node(child)
     }
   }
-  self.buffer.write_string("\n")
+  if !nested {
+    self.buffer.write_string("\n")
+  }
+}
+
+///|
+fn MarkdownWriter::write_list_item(
+  self : MarkdownWriter,
+  children : Array[HtmlNode],
+  ordered~ : Bool,
+  indent~ : Int,
+  number~ : Int,
+) -> Unit {
+  for _ in 0..<indent {
+    self.buffer.write_string("\t")
+  }
+  if ordered {
+    self.buffer.write_string("\{number}. ")
+  } else {
+    self.buffer.write_string("- ")
+  }
+  let ended_by_nested_list = self.write_list_item_children(
+    children,
+    nested_indent=indent + 1,
+  )
+  if !ended_by_nested_list {
+    self.buffer.write_string("\n")
+  }
+}
+
+///|
+fn MarkdownWriter::write_list_item_children(
+  self : MarkdownWriter,
+  children : Array[HtmlNode],
+  nested_indent~ : Int,
+) -> Bool {
+  let mut ended_by_nested_list = false
+  for child in children {
+    match child {
+      Element(tag="ul", children=nested_children, ..) => {
+        self.write_list(
+          nested_children,
+          ordered=false,
+          indent=nested_indent,
+          nested=true,
+        )
+        ended_by_nested_list = true
+      }
+      Element(tag="ol", children=nested_children, ..) => {
+        self.write_list(
+          nested_children,
+          ordered=true,
+          indent=nested_indent,
+          nested=true,
+        )
+        ended_by_nested_list = true
+      }
+      _ => {
+        self.write_node(child)
+        ended_by_nested_list = false
+      }
+    }
+  }
+  ended_by_nested_list
 }
 
 ///|

@@ -126,6 +126,28 @@ test "markdown writer emits links and images" {
 }
 
 ///|
+test "markdown writer follows Mammoth image edge cases" {
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("img", attributes={
+        "src": "http://example.com/image.jpg",
+      }),
+    ]),
+    content="![](http://example.com/image.jpg)",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("img", attributes={ "alt": "Alt Text" }),
+    ]),
+    content="![Alt Text]()",
+  )
+  inspect(
+    @docx2html.write_markdown([@docx2html.html_element("img")]),
+    content="",
+  )
+}
+
+///|
 test "markdown writer preserves element ids as anchors" {
   inspect(
     @docx2html.write_markdown([
@@ -144,6 +166,79 @@ test "markdown writer preserves element ids as anchors" {
       ),
     ]),
     content="<a id=\"start\"></a>[Hello](http://example.com)",
+  )
+}
+
+///|
+test "markdown writer follows Mammoth list rules" {
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("li", children=[@docx2html.html_text("Hello")]),
+    ]),
+    content="- Hello\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("ol", children=[
+        @docx2html.html_element("li", children=[@docx2html.html_text("Hello")]),
+        @docx2html.html_element("li", children=[@docx2html.html_text("World")]),
+      ]),
+    ]),
+    content="1. Hello\n2. World\n\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("ol", children=[
+        @docx2html.html_element("li", children=[
+          @docx2html.html_text("Outer One"),
+          @docx2html.html_element("ol", children=[
+            @docx2html.html_element("li", children=[
+              @docx2html.html_text("Nested One"),
+            ]),
+            @docx2html.html_element("li", children=[
+              @docx2html.html_text("Nested Two"),
+            ]),
+          ]),
+        ]),
+        @docx2html.html_element("li", children=[
+          @docx2html.html_text("Outer Two"),
+        ]),
+      ]),
+    ]),
+    content="1. Outer One\n\t1. Nested One\n\t2. Nested Two\n2. Outer Two\n\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("ul", children=[
+        @docx2html.html_element("li", children=[
+          @docx2html.html_text("Outer One"),
+          @docx2html.html_element("ul", children=[
+            @docx2html.html_element("li", children=[
+              @docx2html.html_text("Nested One"),
+            ]),
+            @docx2html.html_element("li", children=[
+              @docx2html.html_text("Nested Two"),
+            ]),
+          ]),
+        ]),
+        @docx2html.html_element("li", children=[
+          @docx2html.html_text("Outer Two"),
+        ]),
+      ]),
+    ]),
+    content="- Outer One\n\t- Nested One\n\t- Nested Two\n- Outer Two\n\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("ol", children=[
+        @docx2html.html_element("li", children=[@docx2html.html_text("First")]),
+      ]),
+      @docx2html.html_element("p", children=[@docx2html.html_text("Hello")]),
+      @docx2html.html_element("ol", children=[
+        @docx2html.html_element("li", children=[@docx2html.html_text("Second")]),
+      ]),
+    ]),
+    content="1. First\n\nHello\n\n1. Second\n\n",
   )
 }
 
