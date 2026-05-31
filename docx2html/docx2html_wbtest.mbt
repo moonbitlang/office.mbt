@@ -105,6 +105,19 @@ test "docx content types include Mammoth image fallbacks" {
 }
 
 ///|
+test "docx reader treats empty highlight as no highlight" {
+  debug_inspect(
+    [
+      read_highlight(None),
+      read_highlight(Some("")),
+      read_highlight(Some("none")),
+      read_highlight(Some("yellow")),
+    ],
+    content="[None, None, None, Some(\"yellow\")]",
+  )
+}
+
+///|
 test "docx hyperlink reader replaces external URL fragment when anchor is set" {
   let xml =
     #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="r42" w:anchor="fragment"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>

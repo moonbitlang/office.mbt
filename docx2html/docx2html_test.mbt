@@ -549,6 +549,41 @@ test "document converter warns for unrecognised styles" {
 }
 
 ///|
+fn run_properties(
+  is_bold? : Bool = false,
+  is_underline? : Bool = false,
+  is_italic? : Bool = false,
+  is_strikethrough? : Bool = false,
+  is_all_caps? : Bool = false,
+  is_small_caps? : Bool = false,
+  vertical_alignment? : @docx2html.VerticalAlignment = Baseline,
+  highlight? : String? = None,
+) -> @docx2html.RunProperties {
+  {
+    style_id: None,
+    style_name: None,
+    is_bold,
+    is_underline,
+    is_italic,
+    is_strikethrough,
+    is_all_caps,
+    is_small_caps,
+    vertical_alignment,
+    font: None,
+    font_size: None,
+    highlight,
+  }
+}
+
+///|
+fn run_text(
+  text : String,
+  properties : @docx2html.RunProperties,
+) -> @docx2html.DocumentElement {
+  @docx2html.run([@docx2html.text(text)], properties~)
+}
+
+///|
 test "document converter wraps inline run properties" {
   let bold = @docx2html.RunProperties::{
     style_id: None,
@@ -573,6 +608,70 @@ test "document converter wraps inline run properties" {
   inspect(
     @docx2html.convert_document_to_html(doc).value,
     content="<p><strong>onetwo</strong></p>",
+  )
+}
+
+///|
+test "document converter matches Mammoth run property wrappers" {
+  inspect(
+    @docx2html.convert_document_to_html(
+      run_text("Hello.", run_properties(is_bold=true, is_italic=true)),
+    ).value,
+    content="<strong><em>Hello.</em></strong>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      run_text("Hello.", run_properties(vertical_alignment=Superscript)),
+    ).value,
+    content="<sup>Hello.</sup>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      run_text("Hello.", run_properties(vertical_alignment=Subscript)),
+    ).value,
+    content="<sub>Hello.</sub>",
+  )
+}
+
+///|
+test "document converter maps caps and highlight run properties" {
+  let all_caps = run_text("Hello.", run_properties(is_all_caps=true))
+  inspect(@docx2html.convert_document_to_html(all_caps).value, content="Hello.")
+  inspect(
+    @docx2html.convert_document_to_html(all_caps, style_map=["all-caps => span"]).value,
+    content="<span>Hello.</span>",
+  )
+  let small_caps = run_text("Hello.", run_properties(is_small_caps=true))
+  inspect(
+    @docx2html.convert_document_to_html(small_caps).value,
+    content="Hello.",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(small_caps, style_map=[
+      "small-caps => span",
+    ]).value,
+    content="<span>Hello.</span>",
+  )
+  let highlighted = run_text("Hello.", run_properties(highlight=Some("yellow")))
+  inspect(
+    @docx2html.convert_document_to_html(highlighted).value,
+    content="Hello.",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(highlighted, style_map=[
+      "highlight => mark",
+    ]).value,
+    content="<mark>Hello.</mark>",
+  )
+  let paragraph = @docx2html.paragraph([
+    run_text("Yellow", run_properties(highlight=Some("yellow"))),
+    run_text("Red", run_properties(highlight=Some("red"))),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(paragraph, style_map=[
+      "highlight[color='yellow'] => mark.yellow", "highlight => mark",
+    ]).value,
+    content="<p><mark class=\"yellow\">Yellow</mark><mark>Red</mark></p>",
   )
 }
 

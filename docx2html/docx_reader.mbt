@@ -1672,7 +1672,7 @@ fn[T] first_some(first : T?, second : T?) -> T? {
 ///|
 fn read_highlight(value : String?) -> String? {
   match value {
-    Some("none") | None => None
+    Some("") | Some("none") | None => None
     Some(value) => Some(value)
   }
 }
