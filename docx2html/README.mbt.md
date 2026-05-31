@@ -29,6 +29,12 @@ how to load files. External linked images stay disabled by default, matching
 Mammoth; pass `external_file_access=true` and a `read_external_file` callback
 when the source document is allowed to read sibling files.
 
+Embedded style maps can be inspected or rewritten without a JavaScript-style
+mutable ZIP object. Use `read_embedded_style_map(docx[:])` to read the raw
+`mammoth/style-map` part, and `embed_style_map(docx[:], "p => h1")` to return a
+new DOCX archive with the style map, relationship entry, and content-type
+override updated.
+
 ## Native CLI
 
 From this repository checkout, the native executable mirrors the common Mammoth
