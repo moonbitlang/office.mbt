@@ -192,6 +192,52 @@ test "docx complex field hyperlink instructions can be split across runs" {
 }
 
 ///|
+fn complex_field_checkbox_html(
+  checkbox_children : String,
+  separate~ : Bool,
+) -> String raise DocxError {
+  let separate_xml = if separate {
+    "<w:r><w:fldChar w:fldCharType=\"separate\" /></w:r>"
+  } else {
+    ""
+  }
+  let xml = "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:fldChar w:fldCharType=\"begin\"><w:ffData><w:checkBox>" +
+    checkbox_children +
+    "</w:checkBox></w:ffData></w:fldChar></w:r><w:instrText> FORMCHECKBOX </w:instrText>" +
+    separate_xml +
+    "<w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>"
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  convert_document_to_html(document(elements)).value
+}
+
+///|
+test "docx complex field checkboxes are read" {
+  inspect(
+    complex_field_checkbox_html("", separate=false),
+    content="<p><input type=\"checkbox\" /></p>",
+  )
+  inspect(
+    complex_field_checkbox_html("<w:default w:val=\"1\" />", separate=false),
+    content="<p><input type=\"checkbox\" checked=\"checked\" /></p>",
+  )
+  inspect(
+    complex_field_checkbox_html(
+      "<w:default w:val=\"1\" /><w:checked w:val=\"0\" />",
+      separate=false,
+    ),
+    content="<p><input type=\"checkbox\" /></p>",
+  )
+  inspect(
+    complex_field_checkbox_html(
+      "<w:default w:val=\"0\" /><w:checked w:val=\"1\" />",
+      separate=true,
+    ),
+    content="<p><input type=\"checkbox\" checked=\"checked\" /></p>",
+  )
+}
+
+///|
 fn read_vml_wrapper_html(tag : String) -> String raise DocxError {
   let xml = "<" +
     tag +

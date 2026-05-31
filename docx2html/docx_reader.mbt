@@ -629,8 +629,9 @@ fn BodyReader::read_paragraph_elements_with_prefix(
 
 ///|
 priv enum ComplexField {
-  ComplexFieldBegin
+  ComplexFieldBegin(checkbox_checked~ : Bool?)
   ComplexHyperlink(href~ : String?, anchor~ : String?)
+  ComplexCheckbox(Bool)
   ComplexFieldUnknown
 }
 
@@ -648,14 +649,22 @@ fn BodyReader::read_paragraph_children(
         instruction_text += collect_instruction_text(element)
         match read_field_char_type(element) {
           Some("begin") => {
-            stack.push(ComplexFieldBegin)
+            stack.push(
+              ComplexFieldBegin(
+                checkbox_checked=read_complex_field_checkbox_checked(element),
+              ),
+            )
             instruction_text = ""
             elements.append(self.read_element(element))
           }
           Some("separate") => {
             match stack.pop() {
-              Some(ComplexFieldBegin) =>
-                stack.push(parse_complex_field_instruction(instruction_text))
+              Some(ComplexFieldBegin(checkbox_checked~)) =>
+                stack.push(
+                  parse_complex_field_instruction(
+                    instruction_text, checkbox_checked,
+                  ),
+                )
               Some(field) => stack.push(field)
               None => ()
             }
@@ -664,7 +673,17 @@ fn BodyReader::read_paragraph_children(
           }
           Some("end") => {
             match stack.pop() {
-              Some(ComplexFieldBegin) => ()
+              Some(ComplexFieldBegin(checkbox_checked~)) =>
+                match
+                  parse_complex_field_instruction(
+                    instruction_text, checkbox_checked,
+                  ) {
+                  ComplexCheckbox(checked) =>
+                    elements.push(run([checkbox(checked)]))
+                  _ => ()
+                }
+              Some(ComplexCheckbox(checked)) =>
+                elements.push(run([checkbox(checked)]))
               Some(_) => ()
               None => ()
             }
@@ -720,24 +739,66 @@ fn read_field_char_type(element : XmlElement) -> String? {
 }
 
 ///|
-fn parse_complex_field_instruction(instruction_text : String) -> ComplexField {
+fn read_complex_field_checkbox_checked(element : XmlElement) -> Bool? {
+  match first_descendant_or_self(element, "w:fldChar") {
+    Some(field_char) =>
+      match field_char.first_or_empty("w:ffData").first("w:checkBox") {
+        Some(checkbox_element) =>
+          match checkbox_element.first("w:checked") {
+            Some(checked_element) =>
+              Some(read_boolean_element(Some(checked_element)))
+            None =>
+              Some(read_boolean_element(checkbox_element.first("w:default")))
+          }
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
+fn first_descendant_or_self(element : XmlElement, name : String) -> XmlElement? {
+  if element.name == name {
+    return Some(element)
+  }
+  for child in element.children {
+    match child {
+      XmlElement(child_element) =>
+        match first_descendant_or_self(child_element, name) {
+          Some(result) => return Some(result)
+          None => ()
+        }
+      XmlText(_) => ()
+    }
+  }
+  None
+}
+
+///|
+fn parse_complex_field_instruction(
+  instruction_text : String,
+  checkbox_checked : Bool?,
+) -> ComplexField {
   let text = instruction_text.trim().to_owned()
   let keyword = "HYPERLINK"
-  if !text.has_prefix(keyword) {
-    return ComplexFieldUnknown
-  }
-  let mut rest = text[keyword.length():].trim().to_owned()
-  if rest.has_prefix("\\l") {
-    rest = rest[2:].trim().to_owned()
-    match read_field_location(rest) {
-      Some(anchor) => ComplexHyperlink(href=None, anchor=Some(anchor))
-      None => ComplexFieldUnknown
+  if text.has_prefix(keyword) {
+    let mut rest = text[keyword.length():].trim().to_owned()
+    if rest.has_prefix("\\l") {
+      rest = rest[2:].trim().to_owned()
+      match read_field_location(rest) {
+        Some(anchor) => ComplexHyperlink(href=None, anchor=Some(anchor))
+        None => ComplexFieldUnknown
+      }
+    } else {
+      match read_field_location(rest) {
+        Some(href) => ComplexHyperlink(href=Some(href), anchor=None)
+        None => ComplexFieldUnknown
+      }
     }
+  } else if text.has_prefix("FORMCHECKBOX") {
+    ComplexCheckbox(checkbox_checked.unwrap_or(false))
   } else {
-    match read_field_location(rest) {
-      Some(href) => ComplexHyperlink(href=Some(href), anchor=None)
-      None => ComplexFieldUnknown
-    }
+    ComplexFieldUnknown
   }
 }
 
