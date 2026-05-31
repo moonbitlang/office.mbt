@@ -75,12 +75,14 @@ fn empty_docx_zip() -> ZipArchive {
 ///|
 fn run_properties_from_xml(
   properties_xml : String,
+  styles? : Map[String, StyleInfo] = {},
 ) -> RunProperties raise DocxError {
   let xml = "<w:r xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:rPr>" +
     properties_xml +
     "</w:rPr></w:r>"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  match empty_body_reader({ relationships: [] }).read_element(root)[0] {
+  match
+    body_reader_with_numbering(styles, NumberingMap::empty()).read_element(root)[0] {
     Run(properties~, ..) => properties
     _ => abort("expected run")
   }
@@ -606,6 +608,30 @@ test "docx reader leaves missing paragraph properties empty" {
       empty_indent.indent.hanging,
     ],
     content="[None, None, None, None]",
+  )
+}
+
+///|
+test "docx reader reads run style id and name like Mammoth" {
+  let unstyled = run_properties_from_xml("")
+  debug_inspect(
+    [unstyled.style_id, unstyled.style_name],
+    content="[None, None]",
+  )
+  let styles : Map[String, StyleInfo] = {
+    "character:Heading1Char": {
+      style_id: "Heading1Char",
+      style_type: "character",
+      name: "Heading 1 Char",
+    },
+  }
+  let styled = run_properties_from_xml(
+    "<w:rStyle w:val=\"Heading1Char\" />",
+    styles~,
+  )
+  debug_inspect(
+    [styled.style_id, styled.style_name],
+    content="[Some(\"Heading1Char\"), Some(\"Heading 1 Char\")]",
   )
 }
 
