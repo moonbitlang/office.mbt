@@ -10,8 +10,36 @@ fn empty_body_reader(relationships : Relationships) -> BodyReader {
     relationships,
     content_types: { defaults: {}, overrides: {} },
     base_path: "word",
+    numbering: NumberingMap::empty(),
     messages: [],
   }
+}
+
+///|
+fn body_reader_with_numbering(
+  styles : Map[String, StyleInfo],
+  numbering : NumberingMap,
+) -> BodyReader {
+  {
+    styles,
+    zip: { entries: {} },
+    relationships: { relationships: [] },
+    content_types: { defaults: {}, overrides: {} },
+    base_path: "word",
+    numbering,
+    messages: [],
+  }
+}
+
+///|
+fn numbering_from_xml(
+  xml : String,
+  styles : Map[String, StyleInfo],
+) -> NumberingMap raise DocxError {
+  read_numbering_xml(
+    read_xml_string(xml, namespace_map=office_namespace_map()),
+    styles,
+  )
 }
 
 ///|
@@ -90,6 +118,7 @@ test "docx table properties include table style name" {
     relationships: { relationships: [] },
     content_types: { defaults: {}, overrides: {} },
     base_path: "word",
+    numbering: NumberingMap::empty(),
     messages: [],
   }
   debug_inspect(
@@ -156,6 +185,128 @@ test "docx body reader records Mammoth-compatible warnings" {
       #|[Warning("An unrecognised element was ignored: w:not-an-element")]
     ),
   )
+}
+
+///|
+test "docx numbering xml maps explicit and style-based list levels" {
+  let numbering = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42">
+      #|    <w:lvl w:ilvl="0"><w:numFmt w:val="bullet" /><w:pStyle w:val="ListBullet" /></w:lvl>
+      #|    <w:lvl w:ilvl="1"><w:numFmt w:val="decimal" /></w:lvl>
+      #|  </w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  match numbering.find_level("47", "0") {
+    Some(level) => {
+      inspect(level.is_ordered, content="false")
+      inspect(level.level, content="1")
+    }
+    None => fail("expected numbering level")
+  }
+  match numbering.find_level("47", "1") {
+    Some(level) => {
+      inspect(level.is_ordered, content="true")
+      inspect(level.level, content="2")
+    }
+    None => fail("expected numbering level")
+  }
+  match numbering.find_level_by_paragraph_style_id("ListBullet") {
+    Some(level) => {
+      inspect(level.is_ordered, content="false")
+      inspect(level.level, content="1")
+    }
+    None => fail("expected paragraph style numbering level")
+  }
+}
+
+///|
+test "docx numbering xml follows numbering style links" {
+  let numbering = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="100"><w:numStyleLink w:val="List1" /></w:abstractNum>
+      #|  <w:abstractNum w:abstractNumId="101">
+      #|    <w:lvl w:ilvl="0"><w:numFmt w:val="decimal" /></w:lvl>
+      #|  </w:abstractNum>
+      #|  <w:num w:numId="200"><w:abstractNumId w:val="100" /></w:num>
+      #|  <w:num w:numId="201"><w:abstractNumId w:val="101" /></w:num>
+      #|</w:numbering>
+    ),
+    { "List1": { style_id: "List1", style_type: "numbering", name: "201" } },
+  )
+  match numbering.find_level("200", "0") {
+    Some(level) => {
+      inspect(level.is_ordered, content="true")
+      inspect(level.level, content="1")
+    }
+    None => fail("expected linked numbering level")
+  }
+}
+
+///|
+test "docx paragraph numbering uses numbering xml semantics" {
+  let numbering = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42">
+      #|    <w:lvl w:ilvl="0"><w:numFmt w:val="bullet" /><w:pStyle w:val="ListBullet" /></w:lvl>
+      #|    <w:lvl w:ilvl="1"><w:numFmt w:val="decimal" /></w:lvl>
+      #|  </w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  let explicit_xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:numPr><w:ilvl w:val="1" /><w:numId w:val="47" /></w:numPr></w:pPr></w:p>
+  let explicit = read_xml_string(
+    explicit_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let explicit_reader = body_reader_with_numbering({}, numbering)
+  match explicit_reader.read_element(explicit)[0] {
+    Paragraph(properties~, ..) =>
+      match properties.numbering {
+        Some(level) => {
+          inspect(level.is_ordered, content="true")
+          inspect(level.level, content="2")
+        }
+        None => fail("expected explicit numbering")
+      }
+    _ => fail("expected paragraph")
+  }
+  let style_xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="ListBullet" /></w:pPr></w:p>
+  let style_paragraph = read_xml_string(
+    style_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let style_reader = body_reader_with_numbering(
+    {
+      "ListBullet": {
+        style_id: "ListBullet",
+        style_type: "paragraph",
+        name: "List Bullet",
+      },
+    },
+    numbering,
+  )
+  match style_reader.read_element(style_paragraph)[0] {
+    Paragraph(properties~, ..) =>
+      match properties.numbering {
+        Some(level) => {
+          inspect(level.is_ordered, content="false")
+          inspect(level.level, content="1")
+        }
+        None => fail("expected style numbering")
+      }
+    _ => fail("expected paragraph")
+  }
 }
 
 ///|
@@ -396,6 +547,7 @@ test "docx drawing image hyperlink wraps image" {
     },
     content_types: { defaults: { "png": "image/png" }, overrides: {} },
     base_path: "word",
+    numbering: NumberingMap::empty(),
     messages: [],
   }
   inspect(
@@ -455,6 +607,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     },
     content_types: { defaults: { "emf": "image/x-emf" }, overrides: {} },
     base_path: "word",
+    numbering: NumberingMap::empty(),
     messages: [],
   }
   inspect(

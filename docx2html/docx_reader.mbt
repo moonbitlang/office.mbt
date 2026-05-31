@@ -19,6 +19,37 @@ pub(all) struct StyleInfo {
 } derive(Debug, Eq)
 
 ///|
+priv struct NumberingLevel {
+  is_ordered : Bool
+  level : Int
+  paragraph_style_id : String?
+}
+
+///|
+priv struct AbstractNumbering {
+  levels : Map[String, NumberingLevel]
+  num_style_link : String?
+}
+
+///|
+priv struct NumberingMap {
+  nums : Map[String, String]
+  abstract_nums : Map[String, AbstractNumbering]
+  levels_by_paragraph_style_id : Map[String, NumberingLevel]
+  numbering_style_num_ids : Map[String, String]
+}
+
+///|
+fn NumberingMap::empty() -> NumberingMap {
+  {
+    nums: {},
+    abstract_nums: {},
+    levels_by_paragraph_style_id: {},
+    numbering_style_num_ids: {},
+  }
+}
+
+///|
 pub(all) struct ContentTypes {
   defaults : Map[String, String]
   overrides : Map[String, String]
@@ -153,15 +184,19 @@ fn read_docx_zip_with_messages(
   let content_types = read_content_types(zip)
   let styles = read_styles(zip, "word/styles.xml")
   let base_path = split_zip_path(main_document_path).0
+  let numbering = read_numbering_for_document(
+    zip, relationships, styles, base_path,
+  )
   let notes = read_notes_for_document(
-    zip, styles, content_types, relationships, base_path,
+    zip, styles, numbering, content_types, relationships, base_path,
   )
   let comments = read_comments_for_document(
-    zip, styles, content_types, relationships, base_path,
+    zip, styles, numbering, content_types, relationships, base_path,
   )
   let xml = read_xml_part(zip, main_document_path)
   read_document_xml_with_messages(
-    xml, styles, zip, relationships, content_types, base_path, notes, comments,
+    xml, styles, numbering, zip, relationships, content_types, base_path, notes,
+    comments,
   )
 }
 
@@ -348,9 +383,192 @@ fn ContentTypes::find_content_type(
 }
 
 ///|
+fn read_numbering_for_document(
+  zip : ZipArchive,
+  document_relationships : Relationships,
+  styles : Map[String, StyleInfo],
+  base_path : String,
+) -> NumberingMap raise DocxError {
+  let path = match
+    document_relationships.find_target_by_type(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
+    ) {
+    Some(target) => resolve_part_target(base_path, target)
+    None => join_zip_path([base_path, "numbering.xml"])
+  }
+  if zip.exists(path) {
+    read_numbering_xml(read_xml_part(zip, path), styles)
+  } else {
+    NumberingMap::empty()
+  }
+}
+
+///|
+fn read_numbering_xml(
+  root : XmlElement,
+  styles : Map[String, StyleInfo],
+) -> NumberingMap {
+  let abstract_nums = read_abstract_numberings(root)
+  {
+    nums: read_numbering_instances(root),
+    abstract_nums,
+    levels_by_paragraph_style_id: index_levels_by_paragraph_style_id(
+      abstract_nums,
+    ),
+    numbering_style_num_ids: index_numbering_style_num_ids(styles),
+  }
+}
+
+///|
+fn read_abstract_numberings(
+  root : XmlElement,
+) -> Map[String, AbstractNumbering] {
+  let abstract_nums : Map[String, AbstractNumbering] = {}
+  for element in root.elements_by_tag_name("w:abstractNum") {
+    match element.attributes.get("w:abstractNumId") {
+      Some(id) => abstract_nums[id] = read_abstract_numbering(element)
+      None => ()
+    }
+  }
+  abstract_nums
+}
+
+///|
+fn read_abstract_numbering(element : XmlElement) -> AbstractNumbering {
+  let levels : Map[String, NumberingLevel] = {}
+  let mut level_without_index : NumberingLevel? = None
+  for level_element in element.elements_by_tag_name("w:lvl") {
+    let level = read_numbering_level(level_element)
+    match level_element.attributes.get("w:ilvl") {
+      Some(index) => levels[index] = level
+      None => level_without_index = Some(level)
+    }
+  }
+  match level_without_index {
+    Some(level) => if !levels.contains("0") { levels["0"] = level }
+    None => ()
+  }
+  {
+    levels,
+    num_style_link: element.first_or_empty("w:numStyleLink").attributes.get(
+      "w:val",
+    ),
+  }
+}
+
+///|
+fn read_numbering_level(element : XmlElement) -> NumberingLevel {
+  let level_index = @string.parse_int(
+    element.attributes.get_or_default("w:ilvl", "0"),
+  ) catch {
+    _ => 0
+  }
+  let num_fmt = element.first_or_empty("w:numFmt").attributes.get("w:val")
+  {
+    is_ordered: num_fmt != Some("bullet"),
+    level: level_index + 1,
+    paragraph_style_id: element.first_or_empty("w:pStyle").attributes.get(
+      "w:val",
+    ),
+  }
+}
+
+///|
+fn read_numbering_instances(root : XmlElement) -> Map[String, String] {
+  let nums : Map[String, String] = {}
+  for element in root.elements_by_tag_name("w:num") {
+    let num_id = element.attributes.get_or_default("w:numId", "")
+    let abstract_num_id = element.first_or_empty("w:abstractNumId").attributes.get_or_default(
+      "w:val", "",
+    )
+    if num_id != "" && abstract_num_id != "" {
+      nums[num_id] = abstract_num_id
+    }
+  }
+  nums
+}
+
+///|
+fn index_levels_by_paragraph_style_id(
+  abstract_nums : Map[String, AbstractNumbering],
+) -> Map[String, NumberingLevel] {
+  let levels : Map[String, NumberingLevel] = {}
+  for item in abstract_nums.to_array() {
+    let (_, abstract_num) = item
+    for level_item in abstract_num.levels.to_array() {
+      let (_, level) = level_item
+      match level.paragraph_style_id {
+        Some(style_id) => levels[style_id] = level
+        None => ()
+      }
+    }
+  }
+  levels
+}
+
+///|
+fn index_numbering_style_num_ids(
+  styles : Map[String, StyleInfo],
+) -> Map[String, String] {
+  let style_num_ids : Map[String, String] = {}
+  for item in styles.to_array() {
+    let (style_id, style) = item
+    if style.style_type == "numbering" {
+      style_num_ids[style_id] = style.name
+    }
+  }
+  style_num_ids
+}
+
+///|
+fn NumberingMap::find_level(
+  self : NumberingMap,
+  num_id : String,
+  level : String,
+) -> Numbering? {
+  match self.nums.get(num_id) {
+    Some(abstract_num_id) =>
+      match self.abstract_nums.get(abstract_num_id) {
+        Some(abstract_num) =>
+          match abstract_num.num_style_link {
+            Some(style_id) =>
+              match self.numbering_style_num_ids.get(style_id) {
+                Some(linked_num_id) => self.find_level(linked_num_id, level)
+                None => None
+              }
+            None =>
+              match abstract_num.levels.get(level) {
+                Some(numbering_level) => Some(numbering_level.to_numbering())
+                None => None
+              }
+          }
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
+fn NumberingMap::find_level_by_paragraph_style_id(
+  self : NumberingMap,
+  style_id : String,
+) -> Numbering? {
+  match self.levels_by_paragraph_style_id.get(style_id) {
+    Some(level) => Some(level.to_numbering())
+    None => None
+  }
+}
+
+///|
+fn NumberingLevel::to_numbering(self : NumberingLevel) -> Numbering {
+  { is_ordered: self.is_ordered, level: self.level }
+}
+
+///|
 fn read_notes_for_document(
   zip : ZipArchive,
   styles : Map[String, StyleInfo],
+  numbering : NumberingMap,
   content_types : ContentTypes,
   document_relationships : Relationships,
   base_path : String,
@@ -363,6 +581,7 @@ fn read_notes_for_document(
       relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
       fallback_path=join_zip_path([base_path, "footnotes.xml"]),
       styles~,
+      numbering~,
       content_types~,
       document_relationships~,
       base_path~,
@@ -375,6 +594,7 @@ fn read_notes_for_document(
       relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
       fallback_path=join_zip_path([base_path, "endnotes.xml"]),
       styles~,
+      numbering~,
       content_types~,
       document_relationships~,
       base_path~,
@@ -390,6 +610,7 @@ fn read_note_part(
   relationship_type~ : String,
   fallback_path~ : String,
   styles~ : Map[String, StyleInfo],
+  numbering~ : NumberingMap,
   content_types~ : ContentTypes,
   document_relationships~ : Relationships,
   base_path~ : String,
@@ -412,6 +633,7 @@ fn read_note_part(
     relationships: part_relationships,
     content_types,
     base_path: split_zip_path(path).0,
+    numbering,
     messages: [],
   }
   let root = read_xml_part(zip, path)
@@ -434,6 +656,7 @@ fn read_note_part(
 fn read_comments_for_document(
   zip : ZipArchive,
   styles : Map[String, StyleInfo],
+  numbering : NumberingMap,
   content_types : ContentTypes,
   document_relationships : Relationships,
   base_path : String,
@@ -458,6 +681,7 @@ fn read_comments_for_document(
     relationships: part_relationships,
     content_types,
     base_path: split_zip_path(path).0,
+    numbering,
     messages: [],
   }
   let root = read_xml_part(zip, path)
@@ -500,13 +724,7 @@ fn read_styles(
       for style in root.elements_by_tag_name("w:style") {
         let style_id = style.attributes.get_or_default("w:styleId", "")
         if style_id != "" {
-          styles[style_id] = {
-            style_id,
-            style_type: style.attributes.get_or_default("w:type", ""),
-            name: style.first_or_empty("w:name").attributes.get_or_default(
-              "w:val", "",
-            ),
-          }
+          styles[style_id] = read_style_info(style, style_id)
         }
       }
     }
@@ -516,9 +734,27 @@ fn read_styles(
 }
 
 ///|
+fn read_style_info(element : XmlElement, style_id : String) -> StyleInfo {
+  let style_type = element.attributes.get_or_default("w:type", "")
+  {
+    style_id,
+    style_type,
+    name: if style_type == "numbering" {
+      element
+      .first_or_empty("w:pPr")
+      .first_or_empty("w:numPr")
+      .first_or_empty("w:numId").attributes.get_or_default("w:val", "")
+    } else {
+      element.first_or_empty("w:name").attributes.get_or_default("w:val", "")
+    },
+  }
+}
+
+///|
 fn read_document_xml_with_messages(
   root : XmlElement,
   styles : Map[String, StyleInfo],
+  numbering : NumberingMap,
   zip : ZipArchive,
   relationships : Relationships,
   content_types : ContentTypes,
@@ -533,6 +769,7 @@ fn read_document_xml_with_messages(
     relationships,
     content_types,
     base_path,
+    numbering,
     messages: [],
   }
   {
@@ -548,6 +785,7 @@ priv struct BodyReader {
   relationships : Relationships
   content_types : ContentTypes
   base_path : String
+  numbering : NumberingMap
   messages : Array[Message]
 }
 
@@ -1149,7 +1387,7 @@ fn BodyReader::read_paragraph_properties(
   {
     style_id,
     style_name,
-    numbering: self.read_numbering(element.first_or_empty("w:numPr")),
+    numbering: self.read_numbering(style_id, element.first_or_empty("w:numPr")),
     alignment: element.first_or_empty("w:jc").attributes.get("w:val"),
     indent: self.read_indent(element.first_or_empty("w:ind")),
   }
@@ -1175,19 +1413,30 @@ fn BodyReader::read_indent(self : BodyReader, element : XmlElement) -> Indent {
 ///|
 fn BodyReader::read_numbering(
   self : BodyReader,
+  style_id : String?,
   element : XmlElement,
 ) -> Numbering? {
-  ignore(self)
-  match element.first_or_empty("w:numId").attributes.get("w:val") {
-    Some(_) => {
-      let level = @string.parse_int(
-        element.first_or_empty("w:ilvl").attributes.get_or_default("w:val", "0"),
-      ) catch {
-        _ => 0
+  let level = element.first_or_empty("w:ilvl").attributes.get("w:val")
+  let num_id = element.first_or_empty("w:numId").attributes.get("w:val")
+  match (level, num_id) {
+    (Some(level), Some(num_id)) => self.numbering.find_level(num_id, level)
+    _ =>
+      match style_id {
+        Some(style_id) =>
+          match self.numbering.find_level_by_paragraph_style_id(style_id) {
+            Some(numbering) => Some(numbering)
+            None =>
+              match num_id {
+                Some(num_id) => self.numbering.find_level(num_id, "0")
+                None => None
+              }
+          }
+        None =>
+          match num_id {
+            Some(num_id) => self.numbering.find_level(num_id, "0")
+            None => None
+          }
       }
-      Some({ is_ordered: false, level: level + 1 })
-    }
-    None => None
   }
 }
 
