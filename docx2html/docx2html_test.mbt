@@ -753,6 +753,7 @@ test "style map parser reads upstream html path forms" {
   inspect(choice.to[0].tag, content="ul|ol")
   inspect(choice.to[1].tag, content="li")
   debug_inspect(expect_style_mapping("r =>").to, content="[]")
+  debug_inspect(expect_style_mapping("r =>   ").to, content="[]")
   let separator = expect_style_mapping("p => p:separator('\\r\\n\\t\\'\\\\')").to[0].separator
   inspect(separator.unwrap(), content="\r\n\t'\\")
 }
@@ -1234,13 +1235,14 @@ test "style map malformed suffix diagnostics match Mammoth" {
 }
 
 ///|
-test "style map malformed html option diagnostics match Mammoth" {
+test "style map malformed html path diagnostics match Mammoth" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
     "p => span:separator", "p => span:separator(x)", "p => span:separator('x'", "p => span:separator('x'):fresh",
-    "p => span[=]", "p => span[data-x]", "p => span[data-x='abc",
+    "p => span[=]", "p => span[data-x]", "p => span[data-x='abc", "p => ul| > li",
+    "p => ul > !", "p => >", "p => |li",
   ])
   inspect(result.value, content="<p>Walking on imported air</p>")
   debug_inspect(
@@ -1254,6 +1256,10 @@ test "style map malformed html option diagnostics match Mammoth" {
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[=]\nError was at character number 11: Expected identifier but got equals"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x]\nError was at character number 17: Expected equals but got close-square-bracket"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x='abc\nError was at character number 18: Expected string but got unterminated-string \"abc\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => ul| > li\nError was at character number 8: Expected end but got choice"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => ul > !\nError was at character number 8: Expected end but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => >\nError was at character number 6: Expected end but got gt"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => |li\nError was at character number 6: Expected end but got choice"),
       #|]
     ),
   )

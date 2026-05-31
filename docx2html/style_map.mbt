@@ -579,6 +579,9 @@ fn parse_style_html_path(
   if line[index] == '!' {
     return (index + 1, None)
   }
+  if !is_style_identifier_start(line, index, end) {
+    return (index, None)
+  }
   let (first_index, error) = parse_style_html_path_element(line, index, end)
   let mut index = first_index
   match error {
@@ -599,6 +602,9 @@ fn parse_style_html_path(
       if next < end && is_style_whitespace(line[next]) {
         while next < end && is_style_whitespace(line[next]) {
           next = next + 1
+        }
+        if next >= end || !is_style_identifier_start(line, next, end) {
+          return (separator_start, None)
         }
         let (next_index, error) = parse_style_html_path_element(line, next, end)
         match error {
@@ -675,6 +681,10 @@ fn parse_style_tag_choices(
     None => builder.write_string(tag)
   }
   while index < end && line[index] == '|' {
+    let choice_index = index
+    if !is_style_identifier_start(line, index + 1, end) {
+      return (builder.to_string(), choice_index, None)
+    }
     builder.write_string("|")
     let (tag, next, error) = parse_style_identifier(
       line,
