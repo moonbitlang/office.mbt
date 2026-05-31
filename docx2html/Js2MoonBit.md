@@ -73,3 +73,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Markdown images use JavaScript truthiness for `src || alt`: emit `![alt](src)` when either attribute is non-empty, including alt-only images, but emit nothing when both are empty.
 - Mammoth table conversion treats only the leading run of header rows as table headers. Wrap those rows in `thead`, wrap following rows in `tbody`, and rely on HTML simplification to remove an empty trailing `tbody`.
 - External linked images are disabled by default in Mammoth. When porting to a native bytes-first API without an input path, emit the specific external-access error message and suppress the generic missing-blip warning for that same image.
+- VML image alt text is stored on `o:title`, where `o` is `urn:schemas-microsoft-com:office:office`; include that namespace in the DOCX XML namespace map or real fixture attributes will not match the synthetic `o:title` test shape.

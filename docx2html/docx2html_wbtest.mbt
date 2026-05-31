@@ -804,6 +804,18 @@ test "docx drawing image hyperlink wraps image" {
 }
 
 ///|
+test "docx vml image title becomes alt text" {
+  let xml =
+    #|<v:imagedata xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rImage" o:title="It's a hat" />
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
+  )
+}
+
+///|
 test "docx drawing image reader follows Mammoth picture chain" {
   let loose_blip_xml =
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:blip r:embed="rImage" /></wp:inline>

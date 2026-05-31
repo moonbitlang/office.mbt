@@ -255,6 +255,7 @@ fn office_namespace_map() -> Map[String, String] {
     "http://schemas.openxmlformats.org/drawingml/2006/main": "a",
     "http://schemas.openxmlformats.org/drawingml/2006/picture": "pic",
     "http://schemas.microsoft.com/office/word/2010/wordml": "wordml",
+    "urn:schemas-microsoft-com:office:office": "o",
     "urn:schemas-microsoft-com:vml": "v",
   }
 }
