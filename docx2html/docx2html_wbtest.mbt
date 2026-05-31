@@ -387,6 +387,46 @@ test "docx relationships reader finds targets by id and type" {
 }
 
 ///|
+test "docx external file URI paths follow Mammoth local URI rules" {
+  debug_inspect(
+    external_uri_to_path("file:///a/b/c", platform="linux"),
+    content="Some(\"/a/b/c\")",
+  )
+  debug_inspect(
+    external_uri_to_path("file:///a%20b", platform="linux"),
+    content="Some(\"/a b\")",
+  )
+  debug_inspect(
+    external_uri_to_path("file://localhost/a/b/c", platform="linux"),
+    content="Some(\"/a/b/c\")",
+  )
+  debug_inspect(
+    external_uri_to_path("file://example/a/b/c", platform="linux"),
+    content="None",
+  )
+  debug_inspect(
+    external_uri_to_path("file:///c:/a", platform="linux"),
+    content="Some(\"/c:/a\")",
+  )
+  debug_inspect(
+    external_uri_to_path("file:///C:/a", platform="win32"),
+    content="Some(\"C:/a\")",
+  )
+  debug_inspect(
+    external_uri_to_path("a%20b/c", platform="linux"),
+    content="Some(\"a b/c\")",
+  )
+  debug_inspect(
+    external_file_candidate_paths("a%20b/c"),
+    content="[\"a%20b/c\", \"a b/c\"]",
+  )
+  debug_inspect(
+    external_file_candidate_paths("http://example.com/a.png"),
+    content="[\"http://example.com/a.png\"]",
+  )
+}
+
+///|
 test "docx main document path follows package relationships and fallback" {
   let office_document_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
   let from_relationship = zip_with_text(
@@ -2439,6 +2479,44 @@ test "docx linked DrawingML images use the external loader" {
   inspect(
     convert_document_to_html(document(reader.read_element(root))).value,
     content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
+  )
+  debug_inspect(reader.messages, content="[]")
+}
+
+///|
+test "docx linked DrawingML image loader tries decoded file URI paths" {
+  let xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rLinkedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = BodyReader::{
+    styles: {},
+    zip: { entries: {} },
+    relationships: {
+      relationships: [
+        {
+          id: "rLinkedImage",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "file:///media/tiny%20picture.png",
+          target_mode: None,
+        },
+      ],
+    },
+    content_types: { defaults: {}, overrides: {} },
+    base_path: "word",
+    numbering: NumberingMap::empty(),
+    messages: [],
+    external_files: external_file_access_options(true, fn(path) {
+      if path == "/media/tiny picture.png" {
+        Some(b"abc")
+      } else {
+        None
+      }
+    }),
+    read_images: true,
+  }
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<img src=\"data:image/png;base64,YWJj\" />",
   )
   debug_inspect(reader.messages, content="[]")
 }

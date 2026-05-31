@@ -2119,18 +2119,152 @@ fn BodyReader::read_external_image(
     )
     return None
   }
-  match (self.external_files.read_file)(target) {
-    Some(data) => Some(self.make_image(target, data, alt_text~))
-    None => {
-      self.messages.push(
-        Error(
-          "could not find external image '" +
-          target +
-          "', path of input document is unknown",
-        ),
-      )
-      None
+  for path in external_file_candidate_paths(target) {
+    match (self.external_files.read_file)(path) {
+      Some(data) => return Some(self.make_image(path, data, alt_text~))
+      None => ()
     }
+  }
+  self.messages.push(
+    Error(
+      "could not find external image '" +
+      target +
+      "', path of input document is unknown",
+    ),
+  )
+  None
+}
+
+///|
+fn external_file_candidate_paths(target : String) -> Array[String] {
+  let paths = [target]
+  match external_uri_to_path(target) {
+    Some(path) => if path != target { paths.push(path) }
+    None => ()
+  }
+  paths
+}
+
+///|
+fn external_uri_to_path(uri : String, platform? : String = "") -> String? {
+  let raw_path = if uri.has_prefix("file://") {
+    local_file_uri_path(uri)
+  } else if is_relative_uri(uri) {
+    Some(uri)
+  } else {
+    None
+  }
+  match raw_path {
+    Some(path) => {
+      let decoded = percent_decode_uri_path(path)
+      if platform == "win32" && is_windows_file_uri_path(decoded) {
+        Some(decoded[1:].to_owned())
+      } else {
+        Some(decoded)
+      }
+    }
+    None => None
+  }
+}
+
+///|
+fn local_file_uri_path(uri : String) -> String? {
+  let rest = uri["file://".length():]
+  if rest.has_prefix("/") {
+    Some(rest.to_owned())
+  } else {
+    match rest.find("/") {
+      Some(slash) => {
+        let host = rest[:slash].to_owned()
+        if host == "" || host == "localhost" {
+          Some(rest[slash:].to_owned())
+        } else {
+          None
+        }
+      }
+      None => if rest == "" || rest == "localhost" { Some("") } else { None }
+    }
+  }
+}
+
+///|
+fn is_relative_uri(uri : String) -> Bool {
+  !uri.has_prefix("//") && find_uri_scheme_colon(uri) == None
+}
+
+///|
+fn find_uri_scheme_colon(uri : String) -> Int? {
+  if uri.length() == 0 || !is_uri_scheme_start(uri[0]) {
+    return None
+  }
+  for index in 1..<uri.length() {
+    let char = uri[index]
+    if char == ':' {
+      return Some(index)
+    } else if char == '/' || char == '\\' || char == '?' || char == '#' {
+      return None
+    } else if !is_uri_scheme_char(char) {
+      return None
+    }
+  }
+  None
+}
+
+///|
+fn is_uri_scheme_start(char : UInt16) -> Bool {
+  (char >= 'A' && char <= 'Z') || (char >= 'a' && char <= 'z')
+}
+
+///|
+fn is_uri_scheme_char(char : UInt16) -> Bool {
+  is_uri_scheme_start(char) ||
+  (char >= '0' && char <= '9') ||
+  char == '+' ||
+  char == '-' ||
+  char == '.'
+}
+
+///|
+fn is_windows_file_uri_path(path : String) -> Bool {
+  path.length() >= 3 &&
+  path[0] == '/' &&
+  is_uri_scheme_start(path[1]) &&
+  path[2] == ':'
+}
+
+///|
+fn percent_decode_uri_path(path : String) -> String {
+  let bytes : Array[Byte] = []
+  let mut index = 0
+  while index < path.length() {
+    if index + 2 < path.length() && path[index] == '%' {
+      match (hex_value(path[index + 1]), hex_value(path[index + 2])) {
+        (Some(high), Some(low)) => {
+          bytes.push((high * 16 + low).to_byte())
+          index += 3
+          continue
+        }
+        _ => ()
+      }
+    }
+    bytes.push(path[index].to_int().to_byte())
+    index += 1
+  }
+  @utf8.decode(Bytes::from_array(bytes)[:]) catch {
+    _ => path
+  }
+}
+
+///|
+fn hex_value(char : UInt16) -> Int? {
+  if char >= '0' && char <= '9' {
+    Some(char.to_int() - '0'.to_int())
+  } else if char >= 'A' && char <= 'F' {
+    Some(char.to_int() - 'A'.to_int() + 10)
+  } else if char >= 'a' && char <= 'f' {
+    Some(char.to_int() - 'a'.to_int() + 10)
+  } else {
+    None
   }
 }
 
