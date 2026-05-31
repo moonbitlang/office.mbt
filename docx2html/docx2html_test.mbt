@@ -387,6 +387,37 @@ test "style map parser reads upstream document matcher forms" {
 }
 
 ///|
+test "style map string reader follows Mammoth option rules" {
+  debug_inspect(
+    @docx2html.read_style_map_string(
+      "\n# p.SectionTitle => h3\np.SectionTitle => h2\n\n",
+    ),
+    content="[\"p.SectionTitle => h2\"]",
+  )
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Title")], properties={
+      style_id: Some("Heading1"),
+      style_name: None,
+      numbering: None,
+      alignment: None,
+      indent: @docx2html.Indent::default(),
+    }),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(doc).value,
+    content="<h1>Title</h1>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      doc,
+      style_map=["p.Heading1 => h2"],
+      include_default_style_map=false,
+    ).value,
+    content="<h2>Title</h2>",
+  )
+}
+
+///|
 test "style map separator is inserted only when html elements collapse" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("One")]),
