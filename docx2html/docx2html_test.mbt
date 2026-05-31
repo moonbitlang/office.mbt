@@ -371,6 +371,14 @@ test "markdown writer follows Mammoth list rules" {
   )
   inspect(
     @docx2html.write_markdown([
+      @docx2html.html_element("li", attributes={ "id": "item-1" }, children=[
+        @docx2html.html_text("Hello"),
+      ]),
+    ]),
+    content="- <a id=\"item-1\"></a>Hello\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
       @docx2html.html_element("ol", children=[
         @docx2html.html_element("li", children=[@docx2html.html_text("Hello")]),
         @docx2html.html_element("li", children=[@docx2html.html_text("World")]),

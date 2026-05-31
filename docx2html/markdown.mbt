@@ -50,7 +50,13 @@ fn MarkdownWriter::write_node(self : MarkdownWriter, node : HtmlNode) -> Unit {
         "ul" => self.write_list(children, ordered=false, indent=0, nested=false)
         "ol" => self.write_list(children, ordered=true, indent=0, nested=false)
         "li" =>
-          self.write_list_item(children, ordered=false, indent=0, number=1)
+          self.write_list_item(
+            attributes,
+            children,
+            ordered=false,
+            indent=0,
+            number=1,
+          )
         _ => {
           self.write_id_anchor(attributes)
           self.write_nodes(children)
@@ -140,8 +146,14 @@ fn MarkdownWriter::write_list(
   let mut index = 1
   for child in children {
     match child {
-      Element(tag="li", children=li_children, ..) => {
-        self.write_list_item(li_children, ordered~, indent~, number=index)
+      Element(tag="li", attributes=li_attributes, children=li_children, ..) => {
+        self.write_list_item(
+          li_attributes,
+          li_children,
+          ordered~,
+          indent~,
+          number=index,
+        )
         index = index + 1
       }
       _ => self.write_node(child)
@@ -155,6 +167,7 @@ fn MarkdownWriter::write_list(
 ///|
 fn MarkdownWriter::write_list_item(
   self : MarkdownWriter,
+  attributes : Map[String, String],
   children : Array[HtmlNode],
   ordered~ : Bool,
   indent~ : Int,
@@ -168,6 +181,7 @@ fn MarkdownWriter::write_list_item(
   } else {
     self.buffer.write_string("- ")
   }
+  self.write_id_anchor(attributes)
   let ended_by_nested_list = self.write_list_item_children(
     children,
     nested_indent=indent + 1,

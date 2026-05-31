@@ -274,6 +274,22 @@ test "footnotes are appended to text" {
     content="<p>Ouch<sup><a href=\"#doc-42-footnote-1\" id=\"doc-42-footnote-ref-1\">[1]</a></sup>.<sup><a href=\"#doc-42-footnote-2\" id=\"doc-42-footnote-ref-2\">[2]</a></sup></p><ol><li id=\"doc-42-footnote-1\"><p> A tachyon walks into a bar. <a href=\"#doc-42-footnote-ref-1\">↑</a></p></li><li id=\"doc-42-footnote-2\"><p> Fin. <a href=\"#doc-42-footnote-ref-2\">↑</a></p></li></ol>",
   )
   debug_inspect(result.messages, content="[]")
+  let markdown = @docx2html.convert_to_markdown(footnotes_docx()[:])
+  inspect(
+    markdown.value,
+    content=(
+      #|Ouch<a id="footnote-ref-1"></a>[\[1\]](#footnote-1)\.<a id="footnote-ref-2"></a>[\[2\]](#footnote-2)
+      #|
+      #|1. <a id="footnote-1"></a> A tachyon walks into a bar\. [↑](#footnote-ref-1)
+      #|
+      #|
+      #|2. <a id="footnote-2"></a> Fin\. [↑](#footnote-ref-2)
+      #|
+      #|
+      #|
+      #|
+    ),
+  )
 }
 
 ///|
