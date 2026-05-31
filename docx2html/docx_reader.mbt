@@ -415,10 +415,27 @@ fn ContentTypes::find_content_type(
     Some(content_type) => content_type
     None =>
       match normalized.rev_find(".") {
-        Some(index) =>
-          self.defaults.get_or_default(normalized[index + 1:].to_owned(), "")
+        Some(index) => {
+          let extension = normalized[index + 1:].to_owned()
+          match self.defaults.get(extension) {
+            Some(content_type) => content_type
+            None => fallback_content_type(extension)
+          }
+        }
         None => ""
       }
+  }
+}
+
+///|
+fn fallback_content_type(extension : String) -> String {
+  match extension.to_lower() {
+    "png" => "image/png"
+    "gif" => "image/gif"
+    "jpeg" | "jpg" => "image/jpeg"
+    "bmp" => "image/bmp"
+    "tif" | "tiff" => "image/tiff"
+    _ => ""
   }
 }
 

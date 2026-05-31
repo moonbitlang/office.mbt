@@ -71,6 +71,40 @@ fn empty_docx_zip() -> ZipArchive {
 }
 
 ///|
+test "docx content types include Mammoth image fallbacks" {
+  let content_types = ContentTypes::{ defaults: {}, overrides: {} }
+  inspect(
+    content_types.find_content_type("word/media/hat.png"),
+    content="image/png",
+  )
+  inspect(
+    content_types.find_content_type("word/media/hat.PnG"),
+    content="image/png",
+  )
+  inspect(
+    content_types.find_content_type("word/media/hat.jpeg"),
+    content="image/jpeg",
+  )
+  inspect(
+    content_types.find_content_type("word/media/hat.bmp"),
+    content="image/bmp",
+  )
+  inspect(content_types.find_content_type("word/media/hat"), content="")
+  let with_default = ContentTypes::{
+    defaults: { "png": "image/custom-png" },
+    overrides: { "word/media/hat.png": "image/hat" },
+  }
+  inspect(
+    with_default.find_content_type("word/media/other.png"),
+    content="image/custom-png",
+  )
+  inspect(
+    with_default.find_content_type("/word/media/hat.png"),
+    content="image/hat",
+  )
+}
+
+///|
 test "docx hyperlink reader replaces external URL fragment when anchor is set" {
   let xml =
     #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="r42" w:anchor="fragment"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
