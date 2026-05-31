@@ -390,13 +390,70 @@ test "style map parser reads upstream document matcher forms" {
       debug_inspect(numbering, content="{ is_ordered: true, level: 1 }")
     _ => fail("expected ordered list matcher")
   }
+  match expect_style_mapping("r => span").from {
+    RunMatcher(style_id=None, style_name=None) => ()
+    _ => fail("expected plain run matcher")
+  }
+  match expect_style_mapping("r.Emphasis => em").from {
+    RunMatcher(style_id=Some("Emphasis"), style_name=None) => ()
+    _ => fail("expected run style ID matcher")
+  }
+  match expect_style_mapping("r[style-name='Code'] => code").from {
+    RunMatcher(style_id=None, style_name=Some(ExactStyleName("Code"))) => ()
+    _ => fail("expected run style-name matcher")
+  }
   match expect_style_mapping("table.TableNormal => table").from {
     TableMatcher(style_id=Some("TableNormal"), style_name=None) => ()
     _ => fail("expected table style ID matcher")
   }
+  match expect_style_mapping("table[style-name='Normal Table'] => table").from {
+    TableMatcher(style_id=None, style_name=Some(ExactStyleName("Normal Table"))) =>
+      ()
+    _ => fail("expected table style-name matcher")
+  }
+  match expect_style_mapping("b => strong").from {
+    RunPropertyMatcher("bold") => ()
+    _ => fail("expected bold matcher")
+  }
+  match expect_style_mapping("i => em").from {
+    RunPropertyMatcher("italic") => ()
+    _ => fail("expected italic matcher")
+  }
+  match expect_style_mapping("u => span.underline").from {
+    RunPropertyMatcher("underline") => ()
+    _ => fail("expected underline matcher")
+  }
+  match expect_style_mapping("strike => s").from {
+    RunPropertyMatcher("strikethrough") => ()
+    _ => fail("expected strikethrough matcher")
+  }
+  match expect_style_mapping("all-caps => span").from {
+    RunPropertyMatcher("allCaps") => ()
+    _ => fail("expected all-caps matcher")
+  }
+  match expect_style_mapping("small-caps => span").from {
+    RunPropertyMatcher("smallCaps") => ()
+    _ => fail("expected small-caps matcher")
+  }
+  match expect_style_mapping("highlight => mark").from {
+    HighlightMatcher(None) => ()
+    _ => fail("expected highlight matcher")
+  }
   match expect_style_mapping("highlight[color='yellow'] => mark").from {
     HighlightMatcher(Some("yellow")) => ()
     _ => fail("expected highlight color matcher")
+  }
+  match expect_style_mapping("comment-reference => sup").from {
+    CommentReferenceMatcher => ()
+    _ => fail("expected comment reference matcher")
+  }
+  match expect_style_mapping("br[type='line'] => br").from {
+    BreakMatcher(Line) => ()
+    _ => fail("expected line break matcher")
+  }
+  match expect_style_mapping("br[type='page'] => hr").from {
+    BreakMatcher(Page) => ()
+    _ => fail("expected page break matcher")
   }
   match expect_style_mapping("br[type='column'] => span").from {
     BreakMatcher(Column) => ()
