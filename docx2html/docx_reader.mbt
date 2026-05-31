@@ -1014,11 +1014,48 @@ fn BodyReader::read_drawing_element(
   let results : Array[DocumentElement] = []
   for blip in element.descendants_by_tag_name("a:blip") {
     match self.read_blip(element, blip) {
-      Some(image) => results.push(Image(image))
+      Some(image) =>
+        results.push(self.wrap_image_with_drawing_hyperlink(element, image))
       None => ()
     }
   }
   results
+}
+
+///|
+fn BodyReader::wrap_image_with_drawing_hyperlink(
+  self : BodyReader,
+  drawing_element : XmlElement,
+  image : Image,
+) -> DocumentElement {
+  match self.read_drawing_hyperlink(drawing_element) {
+    Some(href) =>
+      Hyperlink(
+        children=[Image(image)],
+        href=Some(href),
+        anchor=None,
+        target_frame=None,
+      )
+    None => Image(image)
+  }
+}
+
+///|
+fn BodyReader::read_drawing_hyperlink(
+  self : BodyReader,
+  drawing_element : XmlElement,
+) -> String? {
+  for link in drawing_element.descendants_by_tag_name("a:hlinkClick") {
+    match link.attributes.get("r:id") {
+      Some(id) =>
+        match self.relationships.find_target_by_id(id) {
+          Some(target) => return Some(target)
+          None => ()
+        }
+      None => ()
+    }
+  }
+  None
 }
 
 ///|

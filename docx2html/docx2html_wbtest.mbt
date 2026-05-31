@@ -171,3 +171,36 @@ test "docx vml containers pass through children" {
   inspect(read_vml_wrapper_html("v:group"), content="Hello")
   inspect(read_vml_wrapper_html("v:rect"), content="Hello")
 }
+
+///|
+test "docx drawing image hyperlink wraps image" {
+  let xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture"><a:hlinkClick r:id="rLink" /></wp:docPr><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = BodyReader::{
+    styles: {},
+    zip: { entries: { "word/media/tiny.png": b"abc" } },
+    relationships: {
+      relationships: [
+        {
+          id: "rImage",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "media/tiny.png",
+          target_mode: None,
+        },
+        {
+          id: "rLink",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+          target: "http://example.com",
+          target_mode: Some("External"),
+        },
+      ],
+    },
+    content_types: { defaults: { "png": "image/png" }, overrides: {} },
+    base_path: "word",
+  }
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<a href=\"http://example.com\"><img src=\"data:image/png;base64,YWJj\" /></a>",
+  )
+}
