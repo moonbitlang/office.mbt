@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn checkbox(Bool) -> DocumentElement
+
 pub fn column_break() -> DocumentElement
 
 pub fn convert_document_to_html(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool) -> ConversionResult

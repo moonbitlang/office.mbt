@@ -136,9 +136,9 @@ fn DocumentConverter::convert_element(
     Text(value) => [html_text(value)]
     Tab => [html_text("\t")]
     Checkbox(checked) => {
-      let attrs : Map[String, String] = { "type": "checkbox", "disabled": "" }
+      let attrs : Map[String, String] = { "type": "checkbox" }
       if checked {
-        attrs["checked"] = ""
+        attrs["checked"] = "checked"
       }
       [html_element("input", attributes=attrs)]
     }

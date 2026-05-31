@@ -150,6 +150,7 @@ fn office_namespace_map() -> Map[String, String] {
     "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing": "wp",
     "http://schemas.openxmlformats.org/drawingml/2006/main": "a",
     "http://schemas.openxmlformats.org/drawingml/2006/picture": "pic",
+    "http://schemas.microsoft.com/office/word/2010/wordml": "wordml",
     "urn:schemas-microsoft-com:vml": "v",
   }
 }
@@ -568,8 +569,7 @@ fn BodyReader::read_element(
     "w:tc" => [self.read_table_cell(element)]
     "w:ins" | "w:smartTag" | "w:sdtContent" =>
       self.read_children(element.children)
-    "w:sdt" =>
-      self.read_children(element.first_or_empty("w:sdtContent").children)
+    "w:sdt" => self.read_structured_document_tag(element)
     _ => []
   }
 }
@@ -607,6 +607,128 @@ fn BodyReader::read_text_box_elements(
       }
       elements
     }
+  }
+}
+
+///|
+fn BodyReader::read_structured_document_tag(
+  self : BodyReader,
+  element : XmlElement,
+) -> Array[DocumentElement] raise DocxError {
+  let content = self.read_children(
+    element.first_or_empty("w:sdtContent").children,
+  )
+  match read_structured_checkbox(element.first_or_empty("w:sdtPr")) {
+    Some(checked) => {
+      let (replaced, found) = replace_first_text_with_checkbox(content, checked)
+      if found {
+        replaced
+      } else {
+        [checkbox(checked)]
+      }
+    }
+    None => content
+  }
+}
+
+///|
+fn read_structured_checkbox(element : XmlElement) -> Bool? {
+  match element.first("wordml:checkbox") {
+    Some(checkbox_element) =>
+      match checkbox_element.first("wordml:checked") {
+        Some(checked_element) =>
+          Some(
+            read_boolean_attribute_value(
+              checked_element.attributes.get("wordml:val"),
+            ),
+          )
+        None => Some(false)
+      }
+    None => None
+  }
+}
+
+///|
+fn read_boolean_attribute_value(value : String?) -> Bool {
+  value != Some("false") && value != Some("0")
+}
+
+///|
+fn replace_first_text_with_checkbox(
+  elements : Array[DocumentElement],
+  checked : Bool,
+) -> (Array[DocumentElement], Bool) {
+  let replaced : Array[DocumentElement] = []
+  let mut found = false
+  for element in elements {
+    if found {
+      replaced.push(element)
+    } else {
+      let (next, next_found) = replace_first_text_in_element(element, checked)
+      replaced.push(next)
+      if next_found {
+        found = true
+      }
+    }
+  }
+  (replaced, found)
+}
+
+///|
+fn replace_first_text_in_element(
+  element : DocumentElement,
+  checked : Bool,
+) -> (DocumentElement, Bool) {
+  match element {
+    Text(value) =>
+      if value.length() > 0 {
+        (checkbox(checked), true)
+      } else {
+        (element, false)
+      }
+    Document(children~, notes~, comments~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (Document(children=new_children, notes~, comments~), found)
+    }
+    Paragraph(children~, properties~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (Paragraph(children=new_children, properties~), found)
+    }
+    Run(children~, properties~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (Run(children=new_children, properties~), found)
+    }
+    Hyperlink(children~, href~, anchor~, target_frame~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (Hyperlink(children=new_children, href~, anchor~, target_frame~), found)
+    }
+    Table(children~, properties~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (Table(children=new_children, properties~), found)
+    }
+    TableRow(children~, is_header~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (TableRow(children=new_children, is_header~), found)
+    }
+    TableCell(children~, col_span~, row_span~) => {
+      let (new_children, found) = replace_first_text_with_checkbox(
+        children, checked,
+      )
+      (TableCell(children=new_children, col_span~, row_span~), found)
+    }
+    _ => (element, false)
   }
 }
 

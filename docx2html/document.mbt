@@ -189,6 +189,11 @@ pub fn tab() -> DocumentElement {
 }
 
 ///|
+pub fn checkbox(checked : Bool) -> DocumentElement {
+  Checkbox(checked)
+}
+
+///|
 pub fn line_break() -> DocumentElement {
   Break(Line)
 }

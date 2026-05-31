@@ -252,6 +252,18 @@ test "document converter collapses unaddressed hyperlinks to children" {
 }
 
 ///|
+test "document converter renders checkboxes like Mammoth" {
+  inspect(
+    @docx2html.convert_document_to_html(@docx2html.checkbox(false)).value,
+    content="<input type=\"checkbox\" />",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(@docx2html.checkbox(true)).value,
+    content="<input type=\"checkbox\" checked=\"checked\" />",
+  )
+}
+
+///|
 test "document converter emits data uri images" {
   let image = @docx2html.Image::{
     content_type: "image/jpeg",
