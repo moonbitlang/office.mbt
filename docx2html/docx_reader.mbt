@@ -29,11 +29,18 @@ pub fn convert_to_html(
   docx : BytesView,
   style_map? : Array[String] = [],
   include_default_style_map? : Bool = true,
+  include_embedded_style_map? : Bool = true,
   ignore_empty_paragraphs? : Bool = true,
   id_prefix? : String = "",
   pretty_print? : Bool = false,
 ) -> ConversionResult raise DocxError {
-  let document = read_docx(docx)
+  let zip = open_zip(docx)
+  let document = read_docx_zip(zip)
+  let style_map = combine_docx_style_maps_from_zip(
+    zip,
+    style_map,
+    include_embedded_style_map~,
+  )
   convert_document_to_html(
     document,
     style_map~,
@@ -49,8 +56,15 @@ pub fn convert_to_markdown(
   docx : BytesView,
   style_map? : Array[String] = [],
   include_default_style_map? : Bool = true,
+  include_embedded_style_map? : Bool = true,
 ) -> ConversionResult raise DocxError {
-  let document = read_docx(docx)
+  let zip = open_zip(docx)
+  let document = read_docx_zip(zip)
+  let style_map = combine_docx_style_maps_from_zip(
+    zip,
+    style_map,
+    include_embedded_style_map~,
+  )
   convert_document_to_markdown(document, style_map~, include_default_style_map~)
 }
 
@@ -60,8 +74,41 @@ pub fn extract_raw_text(docx : BytesView) -> ConversionResult raise DocxError {
 }
 
 ///|
+pub fn read_embedded_style_map(docx : BytesView) -> String? raise DocxError {
+  read_embedded_style_map_from_zip(open_zip(docx))
+}
+
+///|
+fn combine_docx_style_maps_from_zip(
+  zip : ZipArchive,
+  explicit_style_map : Array[String],
+  include_embedded_style_map~ : Bool,
+) -> Array[String] raise DocxError {
+  let combined : Array[String] = []
+  combined.append(explicit_style_map)
+  if include_embedded_style_map {
+    match read_embedded_style_map_from_zip(zip) {
+      Some(style_map) => combined.append(read_style_map_string(style_map))
+      None => ()
+    }
+  }
+  combined
+}
+
+///|
+fn read_embedded_style_map_from_zip(
+  zip : ZipArchive,
+) -> String? raise DocxError {
+  zip.read_text("mammoth/style-map")
+}
+
+///|
 pub fn read_docx(docx : BytesView) -> DocumentElement raise DocxError {
-  let zip = open_zip(docx)
+  read_docx_zip(open_zip(docx))
+}
+
+///|
+fn read_docx_zip(zip : ZipArchive) -> DocumentElement raise DocxError {
   let main_document_path = find_main_document_path(zip)
   let relationships = read_relationships(
     zip,

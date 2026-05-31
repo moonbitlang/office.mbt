@@ -36,3 +36,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Footnote and endnote parts have their own relationship files (`word/_rels/footnotes.xml.rels`, `word/_rels/endnotes.xml.rels`). Reuse the same body reader with a note-part base path so hyperlinks and images inside notes resolve relative to the note part, not the main document.
 - Mammoth's HTML fixtures are sensitive to attribute order. MoonBit's `String::compare` is shortlex, so do not rely on it to mimic JavaScript/Mammoth output; use an explicit HTML attribute rank and then compare equal-rank keys.
 - Comment references are ignored unless a `comment-reference` style mapping exists. When mapped, labels use the comment initials plus a document-order counter (`[MW1]`), not the raw Word comment ID.
+- Embedded style maps live at `mammoth/style-map` as raw text. Conversion style-map precedence is explicit options first, embedded map second, default map last.

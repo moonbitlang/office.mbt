@@ -153,3 +153,34 @@ test "comments are appended when comment references are style mapped" {
   )
   debug_inspect(result.messages, content="[]")
 }
+
+///|
+test "embedded style maps are combined after explicit mappings" {
+  debug_inspect(
+    @docx2html.read_embedded_style_map(embedded_style_map_docx()[:]),
+    content="Some(\"p => h1\")",
+  )
+  inspect(
+    @docx2html.convert_to_html(embedded_style_map_docx()[:]).value,
+    content="<h1>Walking on imported air</h1>",
+  )
+  inspect(
+    @docx2html.convert_to_html(embedded_style_map_docx()[:], style_map=[
+      "p => p",
+    ]).value,
+    content="<p>Walking on imported air</p>",
+  )
+  inspect(
+    @docx2html.convert_to_html(embedded_style_map_docx()[:], style_map=[
+      "r => strong",
+    ]).value,
+    content="<h1><strong>Walking on imported air</strong></h1>",
+  )
+  inspect(
+    @docx2html.convert_to_html(
+      embedded_style_map_docx()[:],
+      include_embedded_style_map=false,
+    ).value,
+    content="<p>Walking on imported air</p>",
+  )
+}

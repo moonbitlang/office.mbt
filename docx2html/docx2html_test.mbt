@@ -85,6 +85,17 @@ test "markdown writer emits links and images" {
 }
 
 ///|
+test "document markdown conversion uses style maps" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("marked")])]),
+  ])
+  inspect(
+    @docx2html.convert_document_to_markdown(doc, style_map=["r => strong"]).value,
+    content="__marked__\n\n",
+  )
+}
+
+///|
 test "document converter maps paragraphs and escapes text" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("A < B")]),

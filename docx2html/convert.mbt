@@ -61,12 +61,18 @@ pub fn convert_document_to_markdown(
   style_map? : Array[String] = [],
   include_default_style_map? : Bool = true,
 ) -> ConversionResult {
-  let result = convert_document_to_html(
-    document,
-    style_map~,
-    include_default_style_map~,
-  )
-  let options = ConvertOptions::default()
+  let all_style_lines : Array[String] = []
+  all_style_lines.append(style_map)
+  if include_default_style_map {
+    all_style_lines.append(default_style_map_lines())
+  }
+  let options = ConvertOptions::{
+    style_map: read_style_map(all_style_lines),
+    ignore_empty_paragraphs: true,
+    id_prefix: "",
+    pretty_print: false,
+    output_format: "markdown",
+  }
   let converter = DocumentConverter::{
     options,
     messages: [],
@@ -77,7 +83,7 @@ pub fn convert_document_to_markdown(
     comment_number: 1,
   }
   let nodes = converter.convert_element(document)
-  { value: write_markdown(simplify_html(nodes)), messages: result.messages }
+  { value: write_markdown(simplify_html(nodes)), messages: converter.messages }
 }
 
 ///|

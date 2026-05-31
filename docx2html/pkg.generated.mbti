@@ -12,9 +12,9 @@ pub fn convert_document_to_html(DocumentElement, style_map? : Array[String], inc
 
 pub fn convert_document_to_markdown(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool) -> ConversionResult
 
-pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool) -> ConversionResult raise DocxError
+pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool) -> ConversionResult raise DocxError
 
-pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool) -> ConversionResult raise DocxError
+pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool) -> ConversionResult raise DocxError
 
 pub fn default_style_map_lines() -> Array[String]
 
@@ -47,6 +47,8 @@ pub fn page_break() -> DocumentElement
 pub fn paragraph(Array[DocumentElement], properties? : ParagraphProperties) -> DocumentElement
 
 pub fn read_docx(BytesView) -> DocumentElement raise DocxError
+
+pub fn read_embedded_style_map(BytesView) -> String? raise DocxError
 
 pub fn read_style_map(Array[String]) -> Array[StyleMapping]
 
