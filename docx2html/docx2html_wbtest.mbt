@@ -172,8 +172,20 @@ test "docx content types include Mammoth image fallbacks" {
     content="image/jpeg",
   )
   inspect(
+    content_types.find_content_type("word/media/hat.gif"),
+    content="image/gif",
+  )
+  inspect(
     content_types.find_content_type("word/media/hat.bmp"),
     content="image/bmp",
+  )
+  inspect(
+    content_types.find_content_type("word/media/hat.tif"),
+    content="image/tiff",
+  )
+  inspect(
+    content_types.find_content_type("word/media/hat.tiff"),
+    content="image/tiff",
   )
   inspect(content_types.find_content_type("word/media/hat"), content="")
   let with_default = ContentTypes::{
