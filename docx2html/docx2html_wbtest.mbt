@@ -138,3 +138,17 @@ test "docx table deleted rows are ignored" {
     content="<table><tr><td><p>Kept</p></td></tr></table>",
   )
 }
+
+///|
+test "docx deleted paragraph content is prepended to next paragraph" {
+  let xml =
+    #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:rPr><w:del /></w:rPr></w:pPr><w:r><w:t>One</w:t></w:r></w:p><w:p><w:r><w:t>Two</w:t></w:r></w:p><w:p><w:r><w:t>Three</w:t></w:r></w:p></w:body>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_children(
+    root.children,
+  )
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<p>OneTwo</p><p>Three</p>",
+  )
+}

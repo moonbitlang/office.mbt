@@ -514,9 +514,23 @@ fn BodyReader::read_children(
   children : Array[XmlNode],
 ) -> Array[DocumentElement] raise DocxError {
   let elements : Array[DocumentElement] = []
+  let deleted_paragraph_contents : Array[XmlNode] = []
   for child in children {
     match child {
-      XmlElement(element) => elements.append(self.read_element(element))
+      XmlElement(element) =>
+        if element.name == "w:p" && is_deleted_paragraph(element) {
+          deleted_paragraph_contents.append(element.children)
+        } else if element.name == "w:p" &&
+          !deleted_paragraph_contents.is_empty() {
+          elements.append(
+            self.read_paragraph_elements_with_prefix(
+              element, deleted_paragraph_contents,
+            ),
+          )
+          deleted_paragraph_contents.clear()
+        } else {
+          elements.append(self.read_element(element))
+        }
       XmlText(_) => ()
     }
   }
@@ -529,7 +543,12 @@ fn BodyReader::read_element(
   element : XmlElement,
 ) -> Array[DocumentElement] raise DocxError {
   match element.name {
-    "w:p" => self.read_paragraph_elements(element)
+    "w:p" =>
+      if is_deleted_paragraph(element) {
+        []
+      } else {
+        self.read_paragraph_elements(element)
+      }
     "w:r" => [self.read_run(element)]
     "w:t" => [text(element.text())]
     "w:tab" => [tab()]
@@ -575,14 +594,30 @@ fn BodyReader::read_element(
 }
 
 ///|
+fn is_deleted_paragraph(element : XmlElement) -> Bool {
+  element.first_or_empty("w:pPr").first_or_empty("w:rPr").first("w:del") != None
+}
+
+///|
 fn BodyReader::read_paragraph_elements(
   self : BodyReader,
   element : XmlElement,
 ) -> Array[DocumentElement] raise DocxError {
+  self.read_paragraph_elements_with_prefix(element, [])
+}
+
+///|
+fn BodyReader::read_paragraph_elements_with_prefix(
+  self : BodyReader,
+  element : XmlElement,
+  prefix : Array[XmlNode],
+) -> Array[DocumentElement] raise DocxError {
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
   )
-  let elements = [paragraph(self.read_children(element.children), properties~)]
+  let elements = [
+    paragraph(self.read_children(prefix + element.children), properties~),
+  ]
   elements.append(self.read_text_box_elements(element))
   elements
 }
