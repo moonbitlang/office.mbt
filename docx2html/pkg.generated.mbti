@@ -12,6 +12,10 @@ pub fn convert_document_to_html(DocumentElement, style_map? : Array[String], inc
 
 pub fn convert_document_to_markdown(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool) -> ConversionResult
 
+pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool) -> ConversionResult raise DocxError
+
+pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool) -> ConversionResult raise DocxError
+
 pub fn default_style_map_lines() -> Array[String]
 
 pub fn document(Array[DocumentElement], notes? : Array[Note], comments? : Array[Comment]) -> DocumentElement
@@ -21,6 +25,8 @@ pub fn escape_html(String) -> String
 pub fn escape_html_attribute(String) -> String
 
 pub fn escape_markdown_text(String) -> String
+
+pub fn extract_raw_text(BytesView) -> ConversionResult raise DocxError
 
 pub fn extract_raw_text_from_document(DocumentElement) -> ConversionResult
 
@@ -39,6 +45,8 @@ pub fn open_zip(BytesView) -> ZipArchive raise DocxError
 pub fn page_break() -> DocumentElement
 
 pub fn paragraph(Array[DocumentElement], properties? : ParagraphProperties) -> DocumentElement
+
+pub fn read_docx(BytesView) -> DocumentElement raise DocxError
 
 pub fn read_style_map(Array[String]) -> Array[StyleMapping]
 
@@ -186,6 +194,17 @@ pub(all) struct ParagraphProperties {
 } derive(Eq, @debug.Debug)
 pub fn ParagraphProperties::default() -> Self
 
+pub(all) struct Relationship {
+  id : String
+  relationship_type : String
+  target : String
+  target_mode : String?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Relationships {
+  relationships : Array[Relationship]
+} derive(Eq, @debug.Debug)
+
 pub(all) struct RunProperties {
   style_id : String?
   style_name : String?
@@ -201,6 +220,12 @@ pub(all) struct RunProperties {
   highlight : String?
 } derive(Eq, @debug.Debug)
 pub fn RunProperties::default() -> Self
+
+pub(all) struct StyleInfo {
+  style_id : String
+  style_type : String
+  name : String
+} derive(Eq, @debug.Debug)
 
 pub(all) struct StyleMapping {
   from : DocumentMatcher
