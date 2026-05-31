@@ -40,11 +40,23 @@ test "zip path helpers match Mammoth behavior" {
   let (dir, base) = @docx2html.split_zip_path("a/b/c")
   inspect(dir, content="a/b")
   inspect(base, content="c")
+  let (absolute_dir, absolute_base) = @docx2html.split_zip_path("/a/b/c")
+  inspect(absolute_dir, content="/a/b")
+  inspect(absolute_base, content="c")
   let (empty_dir, name) = @docx2html.split_zip_path("name")
   inspect(empty_dir, content="")
   inspect(name, content="name")
+  inspect(@docx2html.join_zip_path(["a", "b"]), content="a/b")
+  inspect(@docx2html.join_zip_path(["a/b", "c"]), content="a/b/c")
+  inspect(@docx2html.join_zip_path(["a", "b/c"]), content="a/b/c")
+  inspect(@docx2html.join_zip_path(["/a/b", "c"]), content="/a/b/c")
+  inspect(@docx2html.join_zip_path(["a", ""]), content="a")
+  inspect(@docx2html.join_zip_path(["", "b"]), content="b")
   inspect(@docx2html.join_zip_path(["a", "", "b/c"]), content="a/b/c")
+  inspect(@docx2html.join_zip_path(["a", "/b"]), content="/b")
   inspect(@docx2html.join_zip_path(["a", "/b", "c"]), content="/b/c")
+  inspect(@docx2html.join_zip_path(["/a", "/b"]), content="/b")
+  inspect(@docx2html.join_zip_path(["/a"]), content="/a")
 }
 
 ///|
