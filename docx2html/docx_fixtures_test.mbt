@@ -303,6 +303,15 @@ fn empty_docx() -> Bytes {
 }
 
 ///|
+fn empty_zip() -> Bytes {
+  decode_fixture(
+    (
+      #|UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==
+    ),
+  )
+}
+
+///|
 fn utf8_bom_docx() -> Bytes {
   decode_fixture(
     (

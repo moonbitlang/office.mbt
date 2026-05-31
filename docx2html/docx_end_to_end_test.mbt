@@ -38,9 +38,21 @@ test "extract_raw_text reads docx text" {
 }
 
 ///|
+test "extract_raw_text reads list docx text" {
+  let result = @docx2html.extract_raw_text(simple_list_docx()[:])
+  inspect(result.value, content="Apple\n\nBanana\n\n")
+}
+
+///|
 test "convert_to_markdown reads docx text" {
   let result = @docx2html.convert_to_markdown(single_paragraph_docx()[:])
   inspect(result.value, content="Walking on imported air\n\n")
+}
+
+///|
+test "convert_to_markdown reads docx list structure" {
+  let result = @docx2html.convert_to_markdown(simple_list_docx()[:])
+  inspect(result.value, content="- Apple\n- Banana\n\n")
 }
 
 ///|
@@ -89,6 +101,20 @@ test "strict docx format is read" {
   let result = @docx2html.convert_to_html(strict_format_docx()[:])
   inspect(result.value, content="<p>Test</p>")
   debug_inspect(result.messages, content="[]")
+}
+
+///|
+test "invalid docx without main document raises Mammoth-compatible error" {
+  try @docx2html.convert_to_html(empty_zip()[:]) catch {
+    MissingPart(message~) =>
+      inspect(
+        message,
+        content="Could not find main document part. Are you sure this is a valid .docx file?",
+      )
+    _ => fail("expected MissingPart")
+  } noraise {
+    _ => fail("expected missing main document failure")
+  }
 }
 
 ///|
