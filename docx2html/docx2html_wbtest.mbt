@@ -1448,8 +1448,19 @@ test "docx complex field hyperlinks are read" {
     content="<p><a href=\"http://example.com\">Hello</a></p>",
   )
   inspect(
+    complex_field_paragraph_html(
+      " HYPERLINK http://example.com \\o \"tooltip\"",
+    ),
+    content="<p><a href=\"http://example.com\">Hello</a></p>",
+  )
+  inspect(complex_field_paragraph_html(" HYPERLINK "), content="<p>Hello</p>")
+  inspect(
     complex_field_paragraph_html(" HYPERLINK \\l \"InternalLink\""),
     content="<p><a href=\"#InternalLink\">Hello</a></p>",
+  )
+  inspect(
+    complex_field_paragraph_html(" HYPERLINK \\l "),
+    content="<p>Hello</p>",
   )
   inspect(
     complex_field_paragraph_html(" HYPERLINK \\l InternalLink"),
