@@ -33,30 +33,97 @@ pub(all) struct StyleMapping {
 } derive(Debug, Eq)
 
 ///|
+priv struct StyleMapReadResult {
+  mappings : Array[StyleMapping]
+  messages : Array[Message]
+}
+
+///|
 pub fn read_style_mapping(line : String) -> StyleMapping? {
-  let parts = line.split("=>").collect()
-  if parts.length() != 2 {
-    None
-  } else {
-    let from_text = parts[0].trim().to_owned()
-    let to_text = parts[1].trim().to_owned()
-    match read_document_matcher(from_text) {
-      Some(from) => Some({ from, to: read_html_path(to_text) })
-      None => None
-    }
-  }
+  read_style_mapping_with_message(line).0
 }
 
 ///|
 pub fn read_style_map(lines : Array[String]) -> Array[StyleMapping] {
+  read_style_map_with_messages(lines).mappings
+}
+
+///|
+fn read_style_map_with_messages(lines : Array[String]) -> StyleMapReadResult {
   let mappings : Array[StyleMapping] = []
+  let messages : Array[Message] = []
   for line in lines {
-    match read_style_mapping(line) {
+    let (mapping, message) = read_style_mapping_with_message(line)
+    match mapping {
       Some(mapping) => mappings.push(mapping)
       None => ()
     }
+    match message {
+      Some(message) => messages.push(message)
+      None => ()
+    }
   }
-  mappings
+  { mappings, messages }
+}
+
+///|
+fn read_style_mapping_with_message(line : String) -> (StyleMapping?, Message?) {
+  match line.find("=>") {
+    Some(arrow) => {
+      let from_text = line[:arrow].trim().to_owned()
+      let after_arrow = arrow + 2
+      let to_raw = line[after_arrow:].to_owned()
+      let to_text = to_raw.trim().to_owned()
+      match read_document_matcher(from_text) {
+        Some(from) =>
+          match validate_html_path_text(line, to_raw, after_arrow) {
+            Some(error) => (None, Some(style_mapping_warning(line, error)))
+            None => (Some({ from, to: read_html_path(to_text) }), None)
+          }
+        None =>
+          (
+            None,
+            Some(
+              style_mapping_warning(
+                line,
+                describe_document_matcher_failure(from_text),
+              ),
+            ),
+          )
+      }
+    }
+    None =>
+      (
+        None,
+        Some(
+          style_mapping_warning(
+            line,
+            describe_document_matcher_failure(line.trim().to_owned()),
+          ),
+        ),
+      )
+  }
+}
+
+///|
+fn style_mapping_warning(line : String, error : String) -> Message {
+  Warning(
+    "Did not understand this style mapping, so ignored it: " +
+    line +
+    "\n" +
+    error,
+  )
+}
+
+///|
+fn describe_document_matcher_failure(from_text : String) -> String {
+  if from_text == "" {
+    "Error was at character number 1: Expected element type but got end"
+  } else {
+    "Error was at character number 1: Expected element type but got unrecognisedCharacter \"" +
+    from_text[:1].to_owned() +
+    "\""
+  }
 }
 
 ///|
@@ -89,19 +156,27 @@ fn read_document_matcher(value : String) -> DocumentMatcher? {
     Some(HighlightMatcher(None))
   } else if value.has_prefix("highlight[") {
     Some(HighlightMatcher(read_attribute_value(value, "color")))
-  } else if value.has_prefix("table") {
+  } else if is_matcher_tag(value, "table") {
     Some(read_table_matcher(value))
-  } else if value.has_prefix("br") {
+  } else if is_matcher_tag(value, "br") {
     Some(BreakMatcher(read_break_matcher_type(value)))
   } else if value == "comment-reference" {
     Some(CommentReferenceMatcher)
-  } else if value.has_prefix("p") {
+  } else if is_matcher_tag(value, "p") {
     Some(read_paragraph_matcher(value))
-  } else if value.has_prefix("r") {
+  } else if is_matcher_tag(value, "r") {
     Some(read_run_matcher(value))
   } else {
     None
   }
+}
+
+///|
+fn is_matcher_tag(value : String, tag : String) -> Bool {
+  value == tag ||
+  value.has_prefix(tag + ".") ||
+  value.has_prefix(tag + "[") ||
+  value.has_prefix(tag + ":")
 }
 
 ///|
@@ -227,6 +302,111 @@ fn read_html_path(value : String) -> Array[HtmlPathElement] {
     }
   }
   elements
+}
+
+///|
+fn validate_html_path_text(
+  line : String,
+  to_raw : String,
+  after_arrow : Int,
+) -> String? {
+  let leading = leading_whitespace_count(to_raw)
+  let trailing = trailing_whitespace_count(to_raw)
+  let start = after_arrow + leading
+  let end = after_arrow + to_raw.length() - trailing
+  if start >= end {
+    return None
+  }
+  let mut index = start
+  let mut in_string = false
+  while index < end {
+    let char = line[index]
+    if in_string {
+      if char == '\\' {
+        index = index + 2
+      } else {
+        if char == '\'' {
+          in_string = false
+        }
+        index = index + 1
+      }
+    } else if char == '\'' {
+      in_string = true
+      index = index + 1
+    } else if is_style_whitespace(char) {
+      let previous = previous_non_whitespace(line, index - 1, start)
+      let next = next_non_whitespace(line, index + 1, end)
+      if previous == Some('>') || next == Some('>') {
+        index = index + 1
+      } else {
+        return Some(
+          "Error was at character number " +
+          (index + 1).to_string() +
+          ": Expected end but got whitespace",
+        )
+      }
+    } else {
+      index = index + 1
+    }
+  }
+  None
+}
+
+///|
+fn leading_whitespace_count(value : String) -> Int {
+  let mut index = 0
+  while index < value.length() && is_style_whitespace(value[index]) {
+    index = index + 1
+  }
+  index
+}
+
+///|
+fn trailing_whitespace_count(value : String) -> Int {
+  let mut count = 0
+  let mut index = value.length() - 1
+  while index >= 0 && is_style_whitespace(value[index]) {
+    count = count + 1
+    index = index - 1
+  }
+  count
+}
+
+///|
+fn previous_non_whitespace(
+  value : String,
+  start : Int,
+  lower_bound : Int,
+) -> UInt16? {
+  let mut index = start
+  while index >= lower_bound {
+    if !is_style_whitespace(value[index]) {
+      return Some(value[index])
+    }
+    index = index - 1
+  }
+  None
+}
+
+///|
+fn next_non_whitespace(
+  value : String,
+  start : Int,
+  upper_bound : Int,
+) -> UInt16? {
+  let mut index = start
+  while index < upper_bound {
+    if !is_style_whitespace(value[index]) {
+      return Some(value[index])
+    }
+    index = index + 1
+  }
+  None
+}
+
+///|
+fn is_style_whitespace(char : UInt16) -> Bool {
+  char == ' ' || char == '\t' || char == '\n' || char == '\r'
 }
 
 ///|

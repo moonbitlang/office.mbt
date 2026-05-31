@@ -188,6 +188,26 @@ test "style map bang html path ignores matched content" {
 }
 
 ///|
+test "invalid style maps warn and keep valid mappings" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
+  ])
+  let result = @docx2html.convert_document_to_html(doc, style_map=[
+    "????", "p => h1", "r => span a",
+  ])
+  inspect(result.value, content="<h1>Walking on imported air</h1>")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[
+      #|  Warning("Did not understand this style mapping, so ignored it: ????\nError was at character number 1: Expected element type but got unrecognisedCharacter \"?\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: r => span a\nError was at character number 10: Expected end but got whitespace"),
+      #|]
+    ),
+  )
+}
+
+///|
 test "style map style-name prefix matchers are honored" {
   let heading_properties = @docx2html.ParagraphProperties::{
     style_id: None,

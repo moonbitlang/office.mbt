@@ -32,8 +32,9 @@ pub fn convert_document_to_html(
   if include_default_style_map {
     all_style_lines.append(default_style_map_lines())
   }
+  let parsed_style_map = read_style_map_with_messages(all_style_lines)
   let options = ConvertOptions::{
-    style_map: read_style_map(all_style_lines),
+    style_map: parsed_style_map.mappings,
     ignore_empty_paragraphs,
     id_prefix,
     pretty_print,
@@ -41,7 +42,7 @@ pub fn convert_document_to_html(
   }
   let converter = DocumentConverter::{
     options,
-    messages: [],
+    messages: parsed_style_map.messages,
     note_references: [],
     note_number: 1,
     comments: document_comments(document),
@@ -66,8 +67,9 @@ pub fn convert_document_to_markdown(
   if include_default_style_map {
     all_style_lines.append(default_style_map_lines())
   }
+  let parsed_style_map = read_style_map_with_messages(all_style_lines)
   let options = ConvertOptions::{
-    style_map: read_style_map(all_style_lines),
+    style_map: parsed_style_map.mappings,
     ignore_empty_paragraphs: true,
     id_prefix: "",
     pretty_print: false,
@@ -75,7 +77,7 @@ pub fn convert_document_to_markdown(
   }
   let converter = DocumentConverter::{
     options,
-    messages: [],
+    messages: parsed_style_map.messages,
     note_references: [],
     note_number: 1,
     comments: document_comments(document),
