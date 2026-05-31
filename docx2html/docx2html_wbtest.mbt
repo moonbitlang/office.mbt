@@ -112,6 +112,22 @@ fn paragraph_properties_from_xml(
 }
 
 ///|
+fn paragraph_numbering_from_xml(
+  properties_xml : String,
+  styles : Map[String, StyleInfo],
+  numbering : NumberingMap,
+) -> Numbering? raise DocxError {
+  let xml = "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr>" +
+    properties_xml +
+    "</w:pPr></w:p>"
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  match body_reader_with_numbering(styles, numbering).read_element(root)[0] {
+    Paragraph(properties~, ..) => properties.numbering
+    _ => abort("expected paragraph")
+  }
+}
+
+///|
 test "docx content types include Mammoth image fallbacks" {
   let content_types = ContentTypes::{ defaults: {}, overrides: {} }
   inspect(
@@ -801,6 +817,52 @@ test "docx paragraph numbering uses numbering xml semantics" {
       }
     _ => fail("expected paragraph")
   }
+}
+
+///|
+test "docx paragraph numbering follows Mammoth fallback order" {
+  let numbering = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42">
+      #|    <w:lvl w:ilvl="0"><w:numFmt w:val="bullet" /></w:lvl>
+      #|    <w:lvl w:ilvl="1"><w:numFmt w:val="decimal" /><w:pStyle w:val="ListDecimal" /></w:lvl>
+      #|  </w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  debug_inspect(
+    paragraph_numbering_from_xml(
+      "<w:numPr><w:numId w:val=\"47\" /></w:numPr>",
+      {},
+      numbering,
+    ),
+    content="Some({ is_ordered: false, level: 1 })",
+  )
+  debug_inspect(
+    paragraph_numbering_from_xml(
+      "<w:pStyle w:val=\"ListDecimal\" /><w:numPr><w:numId w:val=\"47\" /></w:numPr>",
+      {
+        "ListDecimal": {
+          style_id: "ListDecimal",
+          style_type: "paragraph",
+          name: "List Decimal",
+        },
+      },
+      numbering,
+    ),
+    content="Some({ is_ordered: true, level: 2 })",
+  )
+  debug_inspect(
+    paragraph_numbering_from_xml(
+      "<w:numPr><w:ilvl w:val=\"1\" /></w:numPr>",
+      {},
+      numbering,
+    ),
+    content="None",
+  )
 }
 
 ///|
