@@ -69,6 +69,34 @@ test "extract_raw_text reads list docx text" {
 }
 
 ///|
+test "extract_raw_text matches Mammoth fixture outputs" {
+  inspect(
+    @docx2html.extract_raw_text(tables_docx()[:]).value,
+    content="Above\n\nTop left\n\nTop right\n\nBottom left\n\nBottom right\n\nBelow\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(footnotes_docx()[:]).value,
+    content="Ouch.\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(endnotes_docx()[:]).value,
+    content="Ouch.\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(comments_docx()[:]).value,
+    content="Ouch.\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(text_box_docx()[:]).value,
+    content="\n\nDatum plane\n\n",
+  )
+  inspect(
+    @docx2html.extract_raw_text(tiny_picture_docx()[:]).value,
+    content="\n\n",
+  )
+}
+
+///|
 test "convert_to_markdown reads docx text" {
   let result = @docx2html.convert_to_markdown(single_paragraph_docx()[:])
   inspect(result.value, content="Walking on imported air\n\n")
