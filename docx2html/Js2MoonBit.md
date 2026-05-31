@@ -60,7 +60,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Structured document tag checkboxes use the Word 2010 `wordml` namespace. When content is present, replace the first non-empty text node with `Checkbox` and drop the placeholder glyph; when no text is present, emit the checkbox itself.
 - Vertical table merges are easier to port as a reader normalization pass: temporarily mark continuation cells while reading `w:tcPr/w:vMerge`, then calculate row spans at the table boundary and remove continuation cells before exposing the document model.
 - Deleted paragraphs are not simply dropped: Mammoth buffers their XML children and prepends them to the next non-deleted paragraph while keeping that next paragraph's properties.
-- Many VML nodes are transparent containers in Mammoth (`v:shape`, `v:group`, `v:rect`, etc.). Add explicit passthrough cases instead of assuming `w:pict` recursion is enough.
+- Many VML and object wrappers are transparent containers in Mammoth (`w:drawing`, `w:object`, `v:roundrect`, `v:shape`, `v:textbox`, `v:group`, `v:rect`). Add explicit passthrough cases instead of assuming `w:pict` recursion is enough.
 - DrawingML picture hyperlinks are stored separately from the image `a:blip`: read `a:hlinkClick/@r:id` from the drawing properties and wrap the resulting `Image` in a `Hyperlink`.
 - DrawingML image alt text comes from `wp:docPr`: prefer non-blank `descr`, fall back to `title`, and apply the same rule for inline and anchored drawings.
 - `mc:AlternateContent` is an Office XML reader concern, not a body-reader-only case: splice `mc:Fallback` children into the parsed XML tree and drop the wrapper, or ignore the wrapper when no fallback exists.

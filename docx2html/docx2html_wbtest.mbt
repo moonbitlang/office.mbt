@@ -2314,13 +2314,16 @@ fn read_vml_wrapper_html(tag : String) -> String raise DocxError {
 
 ///|
 test "docx vml containers pass through children" {
+  inspect(read_vml_wrapper_html("v:roundrect"), content="Hello")
   inspect(read_vml_wrapper_html("v:shape"), content="Hello")
+  inspect(read_vml_wrapper_html("v:textbox"), content="Hello")
   inspect(read_vml_wrapper_html("v:group"), content="Hello")
   inspect(read_vml_wrapper_html("v:rect"), content="Hello")
 }
 
 ///|
 test "docx transparent wrappers pass through children" {
+  inspect(read_vml_wrapper_html("w:drawing"), content="Hello")
   inspect(read_vml_wrapper_html("w:ins"), content="Hello")
   inspect(read_vml_wrapper_html("w:object"), content="Hello")
   inspect(read_vml_wrapper_html("w:smartTag"), content="Hello")
