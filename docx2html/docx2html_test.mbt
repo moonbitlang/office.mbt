@@ -1289,6 +1289,50 @@ test "document converter matches Mammoth run property wrappers" {
 }
 
 ///|
+test "document converter follows Mammoth run property style-map overrides" {
+  inspect(
+    @docx2html.convert_document_to_html(
+      run_text("Hello.", run_properties(is_underline=true)),
+    ).value,
+    content="Hello.",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      run_text("Hello.", run_properties(is_bold=true)),
+      style_map=["b => em"],
+    ).value,
+    content="<em>Hello.</em>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      run_text("Hello.", run_properties(is_bold=true, is_underline=true)),
+      style_map=["u => u"],
+    ).value,
+    content="<strong><u>Hello.</u></strong>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      run_text("Hello.", run_properties(is_strikethrough=true)),
+    ).value,
+    content="<s>Hello.</s>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      run_text("Hello.", run_properties(is_strikethrough=true)),
+      style_map=["strike => del"],
+    ).value,
+    content="<del>Hello.</del>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      run_text("Hello.", run_properties(is_italic=true)),
+      style_map=["i => strong"],
+    ).value,
+    content="<strong>Hello.</strong>",
+  )
+}
+
+///|
 test "document converter maps caps and highlight run properties" {
   let all_caps = run_text("Hello.", run_properties(is_all_caps=true))
   inspect(@docx2html.convert_document_to_html(all_caps).value, content="Hello.")
