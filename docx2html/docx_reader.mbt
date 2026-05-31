@@ -1581,7 +1581,9 @@ fn BodyReader::read_table(
   element : XmlElement,
 ) -> DocumentElement raise DocxError {
   Table(
-    children=calculate_table_row_spans(self.read_children(element.children)),
+    children=self.calculate_table_row_spans(
+      self.read_children(element.children),
+    ),
     properties=self.read_table_properties(element.first_or_empty("w:tblPr")),
   )
 }
@@ -1642,23 +1644,40 @@ fn read_vertical_merge_continue(properties : XmlElement) -> Bool {
 }
 
 ///|
-fn calculate_table_row_spans(
+fn BodyReader::calculate_table_row_spans(
+  self : BodyReader,
   elements : Array[DocumentElement],
 ) -> Array[DocumentElement] {
-  let mut can_merge = true
+  let mut unexpected_non_row = false
+  for row in elements {
+    match row {
+      TableRow(..) => ()
+      _ => unexpected_non_row = true
+    }
+  }
+  if unexpected_non_row {
+    self.warn(
+      "unexpected non-row element in table, cell merging may be incorrect",
+    )
+    return elements
+  }
+  let mut unexpected_non_cell = false
   for row in elements {
     match row {
       TableRow(children~, ..) =>
         for cell in children {
           match cell {
             TableCell(..) => ()
-            _ => can_merge = false
+            _ => unexpected_non_cell = true
           }
         }
-      _ => can_merge = false
+      _ => ()
     }
   }
-  if !can_merge {
+  if unexpected_non_cell {
+    self.warn(
+      "unexpected non-cell element in table row, cell merging may be incorrect",
+    )
     return elements
   }
   let row_spans : Array[Array[Int]] = []

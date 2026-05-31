@@ -183,6 +183,38 @@ test "docx table vertical merges account for column spans" {
 }
 
 ///|
+test "docx table reader warns when row span calculation is unreliable" {
+  let non_row_xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:tc><w:p /></w:tc></w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tr><w:tc><w:p /></w:tc></w:tr></w:tbl>
+  let non_row = read_xml_string(
+    non_row_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let non_row_reader = empty_body_reader({ relationships: [] })
+  ignore(non_row_reader.read_element(non_row))
+  debug_inspect(
+    non_row_reader.messages,
+    content=(
+      #|[Warning("unexpected non-row element in table, cell merging may be incorrect")]
+    ),
+  )
+  let non_cell_xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:tc><w:p /></w:tc><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tc><w:p /></w:tc></w:tr></w:tbl>
+  let non_cell = read_xml_string(
+    non_cell_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let non_cell_reader = empty_body_reader({ relationships: [] })
+  ignore(non_cell_reader.read_element(non_cell))
+  debug_inspect(
+    non_cell_reader.messages,
+    content=(
+      #|[Warning("unexpected non-cell element in table row, cell merging may be incorrect")]
+    ),
+  )
+}
+
+///|
 test "docx table deleted rows are ignored" {
   let xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:trPr><w:del /></w:trPr><w:tc><w:p><w:r><w:t>Deleted</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>Kept</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
