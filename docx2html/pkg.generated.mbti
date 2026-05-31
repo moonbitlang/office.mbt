@@ -30,7 +30,11 @@ pub fn html_element(String, attributes? : Map[String, String], children? : Array
 
 pub fn html_text(String) -> HtmlNode
 
+pub fn join_zip_path(Array[String]) -> String
+
 pub fn line_break() -> DocumentElement
+
+pub fn open_zip(BytesView) -> ZipArchive raise DocxError
 
 pub fn page_break() -> DocumentElement
 
@@ -42,9 +46,13 @@ pub fn read_style_map_string(String) -> Array[String]
 
 pub fn read_style_mapping(String) -> StyleMapping?
 
+pub fn read_xml_string(String, namespace_map? : Map[String, String]) -> XmlElement raise DocxError
+
 pub fn run(Array[DocumentElement], properties? : RunProperties) -> DocumentElement
 
 pub fn simplify_html(Array[HtmlNode]) -> Array[HtmlNode]
+
+pub fn split_zip_path(String) -> (String, String)
 
 pub fn success(String) -> ConversionResult
 
@@ -56,7 +64,17 @@ pub fn write_html(Array[HtmlNode], pretty_print? : Bool) -> String
 
 pub fn write_markdown(Array[HtmlNode]) -> String
 
+pub fn xml_element(String, attributes? : Map[String, String], children? : Array[XmlNode]) -> XmlElement
+
+pub fn xml_text(String) -> XmlNode
+
 // Errors
+pub(all) suberror DocxError {
+  InvalidZip(message~ : String)
+  InvalidXml(message~ : String)
+  MissingPart(message~ : String)
+  Unsupported(message~ : String)
+} derive(Eq, @debug.Debug)
 
 // Types and methods
 pub(all) enum BreakType {
@@ -200,6 +218,28 @@ pub(all) enum VerticalAlignment {
   Superscript
   Subscript
 } derive(Eq, @debug.Debug)
+
+pub(all) struct XmlElement {
+  name : String
+  attributes : Map[String, String]
+  children : Array[XmlNode]
+} derive(Eq, @debug.Debug)
+pub fn XmlElement::elements_by_tag_name(Self, String) -> Array[Self]
+pub fn XmlElement::first(Self, String) -> Self?
+pub fn XmlElement::first_or_empty(Self, String) -> Self
+pub fn XmlElement::text(Self) -> String raise DocxError
+
+pub(all) enum XmlNode {
+  XmlElement(XmlElement)
+  XmlText(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ZipArchive {
+  entries : Map[String, Bytes]
+} derive(Eq, @debug.Debug)
+pub fn ZipArchive::exists(Self, String) -> Bool
+pub fn ZipArchive::read_bytes(Self, String) -> Bytes?
+pub fn ZipArchive::read_text(Self, String) -> String? raise DocxError
 
 // Type aliases
 

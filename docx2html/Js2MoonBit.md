@@ -15,3 +15,10 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Mammoth's dynamic document nodes are represented as a recursive `DocumentElement` enum. This makes unsupported nodes explicit instead of relying on missing object properties.
 - HTML nodes are separate from document nodes. Writers consume `HtmlNode`, which keeps DOCX semantics out of the string emitters.
 - Snapshot-style tests should use `inspect` for stable string output and `debug_inspect` for structured values.
+
+## ZIP and XML
+
+- JSZip's async object API maps to a small `ZipArchive` wrapper over `hustcer/fzip`. Convert public `BytesView` input to `FixedArray[Byte]` only at the `@fzip.unzip_sync` boundary.
+- Node `TextDecoder("utf8")` maps to `@utf8.decode(bytes[:], ignore_bom=true)` so DOCX XML parts with a UTF-8 BOM match Mammoth behavior.
+- Mammoth's XML DOM adapter normalizes namespace URIs into short names (`w:p`) using a caller-provided URI map, falling back to `{uri}local`. The MoonBit XML parser preserves that rule directly.
+- XML namespace declarations update parser scope but are not retained as normal attributes; DOCX readers depend on semantic names, not `xmlns` attributes.

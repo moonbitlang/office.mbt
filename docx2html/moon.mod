@@ -22,3 +22,7 @@ license = "Apache-2.0"
 keywords = [ ]
 
 description = ""
+
+import {
+  "hustcer/fzip@0.5.8",
+}

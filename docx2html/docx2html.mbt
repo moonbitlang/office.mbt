@@ -5,6 +5,14 @@ pub(all) enum Message {
 } derive(Debug, Eq)
 
 ///|
+pub(all) suberror DocxError {
+  InvalidZip(message~ : String)
+  InvalidXml(message~ : String)
+  MissingPart(message~ : String)
+  Unsupported(message~ : String)
+} derive(Debug, Eq)
+
+///|
 pub(all) struct ConversionResult {
   value : String
   messages : Array[Message]
