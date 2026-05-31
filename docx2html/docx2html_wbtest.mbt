@@ -1112,14 +1112,17 @@ test "docx styles are keyed by type and keep first duplicate" {
     Some(style) => inspect(style.name, content="Normal Table")
     None => fail("expected table style")
   }
-  debug_inspect(styles.find_style("paragraph", "TableNormal"), content="None")
+  match styles.find_style("paragraph", "TableNormal") {
+    None => ()
+    Some(_) => fail("expected table style not to match paragraph lookup")
+  }
   let legacy_wrong_type : Map[String, StyleInfo] = {
     "Shared": { style_id: "Shared", style_type: "table", name: "Shared Table" },
   }
-  debug_inspect(
-    legacy_wrong_type.find_style("paragraph", "Shared"),
-    content="None",
-  )
+  match legacy_wrong_type.find_style("paragraph", "Shared") {
+    None => ()
+    Some(_) => fail("expected mismatched style type to be ignored")
+  }
   let paragraph_xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="Shared" /></w:pPr></w:p>
   let paragraph = read_xml_string(

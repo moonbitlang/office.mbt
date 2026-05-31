@@ -1,22 +1,22 @@
 ///|
-pub(all) struct Relationship {
+priv struct Relationship {
   id : String
   relationship_type : String
   target : String
   target_mode : String?
-} derive(Debug, Eq)
+}
 
 ///|
-pub(all) struct Relationships {
+priv struct Relationships {
   relationships : Array[Relationship]
-} derive(Debug, Eq)
+}
 
 ///|
-pub(all) struct StyleInfo {
+priv struct StyleInfo {
   style_id : String
   style_type : String
   name : String
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct NumberingLevel {
@@ -50,10 +50,10 @@ fn NumberingMap::empty() -> NumberingMap {
 }
 
 ///|
-pub(all) struct ContentTypes {
+priv struct ContentTypes {
   defaults : Map[String, String]
   overrides : Map[String, String]
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct DocxReadResult {

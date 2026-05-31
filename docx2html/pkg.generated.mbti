@@ -120,11 +120,6 @@ pub(all) struct Comment {
   author_initials : String
 } derive(Eq, @debug.Debug)
 
-pub(all) struct ContentTypes {
-  defaults : Map[String, String]
-  overrides : Map[String, String]
-} derive(Eq, @debug.Debug)
-
 pub(all) struct ConversionResult {
   value : String
   messages : Array[Message]
@@ -227,17 +222,6 @@ pub(all) struct ParagraphProperties {
 } derive(Eq, @debug.Debug)
 pub fn ParagraphProperties::default() -> Self
 
-pub(all) struct Relationship {
-  id : String
-  relationship_type : String
-  target : String
-  target_mode : String?
-} derive(Eq, @debug.Debug)
-
-pub(all) struct Relationships {
-  relationships : Array[Relationship]
-} derive(Eq, @debug.Debug)
-
 pub(all) struct RunProperties {
   style_id : String?
   style_name : String?
@@ -253,12 +237,6 @@ pub(all) struct RunProperties {
   highlight : String?
 } derive(Eq, @debug.Debug)
 pub fn RunProperties::default() -> Self
-
-pub(all) struct StyleInfo {
-  style_id : String
-  style_type : String
-  name : String
-} derive(Eq, @debug.Debug)
 
 pub(all) struct StyleMapping {
   from : DocumentMatcher
