@@ -39,3 +39,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Embedded style maps live at `mammoth/style-map` as raw text. Conversion style-map precedence is explicit options first, embedded map second, default map last.
 - For text boxes, `w:txbxContent` is extra content: read it with the normal body reader and append it after the containing paragraph. In `mc:AlternateContent`, prefer `mc:Fallback`, matching Mammoth's conservative compatibility behavior.
 - Pretty HTML output should trim the final writer newline after emitting indented nodes, since Mammoth's public output has internal newlines but no trailing newline.
+- For `w:hyperlink`, a relationship target plus `w:anchor` becomes one external `href` with the URL fragment replaced. An anchor without a relationship remains an internal anchor and receives `id_prefix` during HTML conversion.

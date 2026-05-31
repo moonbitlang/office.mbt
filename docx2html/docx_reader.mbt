@@ -557,7 +557,7 @@ fn BodyReader::read_element(
         Some("_GoBack") | None => []
         Some(name) => [BookmarkStart(name)]
       }
-    "w:hyperlink" => [self.read_hyperlink(element)]
+    "w:hyperlink" => self.read_hyperlink(element)
     "w:drawing" | "w:pict" | "w:object" => self.read_children(element.children)
     "mc:AlternateContent" =>
       self.read_children(element.first_or_empty("mc:Fallback").children)
@@ -802,17 +802,49 @@ fn BodyReader::read_break(
 fn BodyReader::read_hyperlink(
   self : BodyReader,
   element : XmlElement,
-) -> DocumentElement raise DocxError {
-  let href = match element.attributes.get("r:id") {
-    Some(id) => self.relationships.find_target_by_id(id)
+) -> Array[DocumentElement] raise DocxError {
+  let target_frame = non_empty_attribute(element, "w:tgtFrame")
+  match element.attributes.get("r:id") {
+    Some(id) => {
+      let href = match self.relationships.find_target_by_id(id) {
+        Some(target) =>
+          match element.attributes.get("w:anchor") {
+            Some(anchor) => Some(replace_url_fragment(target, anchor))
+            None => Some(target)
+          }
+        None => None
+      }
+      [
+        Hyperlink(
+          children=self.read_children(element.children),
+          href~,
+          anchor=None,
+          target_frame~,
+        ),
+      ]
+    }
+    None =>
+      match element.attributes.get("w:anchor") {
+        Some(anchor) =>
+          [
+            Hyperlink(
+              children=self.read_children(element.children),
+              href=None,
+              anchor=Some(anchor),
+              target_frame~,
+            ),
+          ]
+        None => self.read_children(element.children)
+      }
+  }
+}
+
+///|
+fn non_empty_attribute(element : XmlElement, name : String) -> String? {
+  match element.attributes.get(name) {
+    Some(value) => if value == "" { None } else { Some(value) }
     None => None
   }
-  Hyperlink(
-    children=self.read_children(element.children),
-    href~,
-    anchor=element.attributes.get("w:anchor"),
-    target_frame=element.attributes.get("w:tgtFrame"),
-  )
 }
 
 ///|

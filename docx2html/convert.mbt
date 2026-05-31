@@ -143,25 +143,24 @@ fn DocumentConverter::convert_element(
     }
     Hyperlink(children~, href~, anchor~, target_frame~) => {
       let attrs : Map[String, String] = {}
-      match href {
-        Some(value) => attrs["href"] = value
-        None => ()
-      }
-      match anchor {
-        Some(value) => attrs["href"] = "#" + value
-        None => ()
+      match (href, anchor) {
+        (Some(value), None) => attrs["href"] = value
+        (Some(value), Some(anchor)) =>
+          attrs["href"] = replace_url_fragment(value, anchor)
+        (None, Some(value)) =>
+          attrs["href"] = "#" + self.options.id_prefix + value
+        (None, None) => ()
       }
       match target_frame {
-        Some(value) => attrs["target"] = value
+        Some(value) => if value != "" { attrs["target"] = value }
         None => ()
       }
-      [
-        html_element(
-          "a",
-          attributes=attrs,
-          children=self.convert_children(children),
-        ),
-      ]
+      let converted_children = self.convert_children(children)
+      if attrs.is_empty() {
+        converted_children
+      } else {
+        [html_element("a", attributes=attrs, children=converted_children)]
+      }
     }
     Break(Line) =>
       self.wrap_with_style_or_default(element, [html_element("br")])
@@ -209,6 +208,15 @@ fn DocumentConverter::convert_element(
     CommentReference(comment_id) =>
       self.convert_comment_reference(element, comment_id)
   }
+}
+
+///|
+fn replace_url_fragment(href : String, fragment : String) -> String {
+  let base = match href.find("#") {
+    Some(index) => href[:index].to_owned()
+    None => href
+  }
+  base + "#" + fragment
 }
 
 ///|

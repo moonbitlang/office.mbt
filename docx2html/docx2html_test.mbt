@@ -166,6 +166,47 @@ test "document converter wraps inline run properties" {
 }
 
 ///|
+test "document converter renders hyperlink anchors and targets" {
+  let anchor_doc = @docx2html.document([
+    Hyperlink(
+      children=[@docx2html.run([@docx2html.text("Hello.")])],
+      href=None,
+      anchor=Some("_Peter"),
+      target_frame=None,
+    ),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(anchor_doc, id_prefix="doc-42-").value,
+    content="<a href=\"#doc-42-_Peter\">Hello.</a>",
+  )
+  let target_doc = @docx2html.document([
+    Hyperlink(
+      children=[@docx2html.run([@docx2html.text("Hello.")])],
+      href=None,
+      anchor=Some("start"),
+      target_frame=Some("_blank"),
+    ),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(target_doc).value,
+    content="<a href=\"#start\" target=\"_blank\">Hello.</a>",
+  )
+}
+
+///|
+test "document converter collapses unaddressed hyperlinks to children" {
+  let doc = @docx2html.document([
+    Hyperlink(
+      children=[@docx2html.run([@docx2html.text("Plain")])],
+      href=None,
+      anchor=None,
+      target_frame=None,
+    ),
+  ])
+  inspect(@docx2html.convert_document_to_html(doc).value, content="Plain")
+}
+
+///|
 test "document converter emits data uri images" {
   let image = @docx2html.Image::{
     content_type: "image/jpeg",
