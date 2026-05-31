@@ -354,6 +354,20 @@ test "document transforms are applied before conversion" {
 }
 
 ///|
+test "document transforms are applied before markdown conversion" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Hello.")]),
+  ])
+  let transform_document = @docx2html.transform_paragraphs(fn(_paragraph) {
+    @docx2html.paragraph([@docx2html.text("Goodbye.")])
+  })
+  inspect(
+    @docx2html.convert_document_to_markdown(doc, transform_document~).value,
+    content="Goodbye\\.\n\n",
+  )
+}
+
+///|
 test "document transform helpers follow Mammoth post-order traversal" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.run([@docx2html.text("x")])]),

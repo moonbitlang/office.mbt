@@ -68,6 +68,18 @@ test "convert_to_html applies document transform option" {
 }
 
 ///|
+test "convert_to_markdown applies document transform option" {
+  let transform_document = @docx2html.transform_paragraphs(fn(_paragraph) {
+    @docx2html.paragraph([@docx2html.text("Goodbye.")])
+  })
+  let result = @docx2html.convert_to_markdown(
+    single_paragraph_docx()[:],
+    transform_document~,
+  )
+  inspect(result.value, content="Goodbye\\.\n\n")
+}
+
+///|
 test "simple list is converted to list elements" {
   let result = @docx2html.convert_to_html(simple_list_docx()[:])
   inspect(result.value, content="<ul><li>Apple</li><li>Banana</li></ul>")
