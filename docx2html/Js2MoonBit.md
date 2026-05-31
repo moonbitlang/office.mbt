@@ -31,6 +31,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Mammoth's HTML simplifier merges adjacent inline wrappers but must not merge structural table tags. Mark generated `tr`/`td` nodes as fresh to preserve row/cell boundaries.
 - Run property style mappings such as `u => em` and `strike => del` are applied through property-specific lookup only. Do not also treat them as ordinary run-style mappings, or wrappers are duplicated.
 - Mammoth's `readHighlightValue` uses JavaScript truthiness: missing, empty, and `"none"` `w:highlight/@w:val` all mean no highlight. In MoonBit, normalize `Some("")` explicitly.
+- Mammoth's font-size reader uses `/^[0-9]+$/` before `parseInt`, so signs, whitespace, empty strings, and partial numeric prefixes are invalid. MoonBit's `parse_int` needs an explicit ASCII digit guard to match it.
 - DOCX fixture tests should be added before broadening parser support; upstream outputs expose small semantic gaps faster than isolated unit ports.
 - Embedded media requires three DOCX layers: document relationships for `r:embed`, `[Content_Types].xml` for MIME type, and ZIP part resolution relative to the document part. Absolute package targets must be stripped of their leading slash.
 - Recursive XML descendant lookup is needed for DrawingML chains such as `wp:inline -> a:graphic -> pic:pic -> a:blip`; direct child lookup is insufficient outside simple WordprocessingML.

@@ -118,6 +118,22 @@ test "docx reader treats empty highlight as no highlight" {
 }
 
 ///|
+test "docx reader reads font size with Mammoth unsigned decimal semantics" {
+  debug_inspect(
+    [
+      read_font_size(None),
+      read_font_size(Some("28")),
+      read_font_size(Some("28a")),
+      read_font_size(Some("-2")),
+      read_font_size(Some("+2")),
+      read_font_size(Some(" 28")),
+      read_font_size(Some("")),
+    ],
+    content="[None, Some(14), None, None, None, None, None]",
+  )
+}
+
+///|
 test "docx hyperlink reader replaces external URL fragment when anchor is set" {
   let xml =
     #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="r42" w:anchor="fragment"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>

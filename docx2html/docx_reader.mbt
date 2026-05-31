@@ -1652,13 +1652,28 @@ fn read_vertical_alignment(value : String?) -> VerticalAlignment {
 fn read_font_size(value : String?) -> Int? {
   match value {
     Some(text) =>
-      try @string.parse_int(text) catch {
-        _ => None
-      } noraise {
-        value => Some(value / 2)
+      if is_ascii_decimal_string(text) {
+        try @string.parse_int(text) catch {
+          _ => None
+        } noraise {
+          value => Some(value / 2)
+        }
+      } else {
+        None
       }
     None => None
   }
+}
+
+///|
+fn is_ascii_decimal_string(value : String) -> Bool {
+  let mut is_decimal = value.length() > 0
+  for index in 0..<value.length() {
+    if value[index] < 48 || value[index] > 57 {
+      is_decimal = false
+    }
+  }
+  is_decimal
 }
 
 ///|
