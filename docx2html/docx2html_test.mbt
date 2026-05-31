@@ -1280,6 +1280,15 @@ test "document converter warns for unrecognised styles" {
       #|[Warning("Unrecognised run style: 'Mystery Run' (Style ID: MysteryRun)")]
     ),
   )
+  let table_properties = @docx2html.TableProperties::{
+    style_id: Some("MysteryTable"),
+    style_name: Some("Mystery Table"),
+  }
+  let table_result = @docx2html.convert_document_to_html(
+    Table(children=[], properties=table_properties),
+  )
+  inspect(table_result.value, content="<table></table>")
+  debug_inspect(table_result.messages, content="[]")
 }
 
 ///|

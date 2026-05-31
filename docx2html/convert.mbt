@@ -428,13 +428,7 @@ fn DocumentConverter::convert_table(
   let default_path = [
     { tag: "table", attributes: {}, fresh: true, separator: None },
   ]
-  if find_style_mapping(element, self.options.style_map) == None {
-    self.warn_unrecognised_style(
-      "table",
-      properties.style_id,
-      properties.style_name,
-    )
-  }
+  ignore(properties)
   self.wrap_with_style(element, rows, default_path)
 }
 
