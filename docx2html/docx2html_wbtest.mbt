@@ -1419,6 +1419,52 @@ test "docx drawing image hyperlink wraps image" {
 }
 
 ///|
+test "docx drawing image alt text follows Mammoth precedence" {
+  let description_and_title =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" title="hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let root = read_xml_string(
+    description_and_title,
+    namespace_map=office_namespace_map(),
+  )
+  let reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
+  )
+  let blank_description =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr=" " title="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let root = read_xml_string(
+    blank_description,
+    namespace_map=office_namespace_map(),
+  )
+  let reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
+  )
+  let title_only =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" title="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let root = read_xml_string(title_only, namespace_map=office_namespace_map())
+  let reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
+  )
+}
+
+///|
+test "docx anchored drawing images are read" {
+  let xml =
+    #|<wp:anchor xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:anchor>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
+  )
+}
+
+///|
 test "docx vml image title becomes alt text" {
   let xml =
     #|<v:imagedata xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rImage" o:title="It's a hat" />

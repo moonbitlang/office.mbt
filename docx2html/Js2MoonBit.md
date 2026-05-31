@@ -50,6 +50,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Deleted paragraphs are not simply dropped: Mammoth buffers their XML children and prepends them to the next non-deleted paragraph while keeping that next paragraph's properties.
 - Many VML nodes are transparent containers in Mammoth (`v:shape`, `v:group`, `v:rect`, etc.). Add explicit passthrough cases instead of assuming `w:pict` recursion is enough.
 - DrawingML picture hyperlinks are stored separately from the image `a:blip`: read `a:hlinkClick/@r:id` from the drawing properties and wrap the resulting `Image` in a `Hyperlink`.
+- DrawingML image alt text comes from `wp:docPr`: prefer non-blank `descr`, fall back to `title`, and apply the same rule for inline and anchored drawings.
 - `mc:AlternateContent` is an Office XML reader concern, not a body-reader-only case: splice `mc:Fallback` children into the parsed XML tree and drop the wrapper, or ignore the wrapper when no fallback exists.
 - HTML style-map target paths need their own parser pass for classes and attributes (`p.tip[lang='fr']`); splitting on `:` naively breaks escaped class names such as `p.a\:b`.
 - Break style mappings are replacements, not wrappers around the default line-break node: `br[type='page'] => hr` emits `<hr />`, while unmapped page/column breaks still disappear.
