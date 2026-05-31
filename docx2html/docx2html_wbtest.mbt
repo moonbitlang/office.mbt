@@ -339,6 +339,30 @@ test "docx reader reads inline control elements like Mammoth" {
 }
 
 ///|
+test "docx body reader uses mc fallback content like Mammoth" {
+  let with_fallback_xml =
+    #|<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><mc:Choice Requires="wps"><w:t>Choice</w:t></mc:Choice><mc:Fallback><w:t>Fallback</w:t></mc:Fallback></mc:AlternateContent>
+  let with_fallback = read_xml_string(
+    with_fallback_xml,
+    namespace_map=office_namespace_map(),
+  )
+  debug_inspect(
+    empty_body_reader({ relationships: [] }).read_element(with_fallback),
+    content="[Text(\"Fallback\")]",
+  )
+  let without_fallback_xml =
+    #|<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><mc:Choice Requires="wps"><w:t>Choice</w:t></mc:Choice></mc:AlternateContent>
+  let without_fallback = read_xml_string(
+    without_fallback_xml,
+    namespace_map=office_namespace_map(),
+  )
+  debug_inspect(
+    empty_body_reader({ relationships: [] }).read_element(without_fallback),
+    content="[]",
+  )
+}
+
+///|
 test "docx reader maps break types like Mammoth" {
   debug_inspect(
     body_elements_from_xml(
