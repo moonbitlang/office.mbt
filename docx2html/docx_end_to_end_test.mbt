@@ -56,6 +56,15 @@ test "convert_to_markdown reads docx list structure" {
 }
 
 ///|
+test "convert_to_markdown preserves empty paragraphs when requested" {
+  let result = @docx2html.convert_to_markdown(
+    empty_docx()[:],
+    ignore_empty_paragraphs=false,
+  )
+  inspect(result.value, content="\n\n")
+}
+
+///|
 test "convert_to_html applies document transform option" {
   let transform_document = @docx2html.transform_paragraphs(fn(_paragraph) {
     @docx2html.paragraph([@docx2html.text("Goodbye.")])

@@ -382,6 +382,24 @@ test "document markdown conversion uses style maps" {
 }
 
 ///|
+test "document markdown conversion honors common converter options" {
+  inspect(
+    @docx2html.convert_document_to_markdown(
+      @docx2html.paragraph([]),
+      ignore_empty_paragraphs=false,
+    ).value,
+    content="\n\n",
+  )
+  inspect(
+    @docx2html.convert_document_to_markdown(
+      NoteReference(note_type="footnote", note_id="4"),
+      id_prefix="doc-42-",
+    ).value,
+    content="<a id=\"doc-42-footnote-ref-4\"></a>[\\[1\\]](#doc-42-footnote-4)",
+  )
+}
+
+///|
 test "document converter maps paragraphs and escapes text" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("A < B")]),

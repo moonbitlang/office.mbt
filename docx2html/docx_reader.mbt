@@ -142,6 +142,8 @@ pub fn convert_to_markdown(
   style_map? : Array[String] = [],
   include_default_style_map? : Bool = true,
   include_embedded_style_map? : Bool = true,
+  ignore_empty_paragraphs? : Bool = true,
+  id_prefix? : String = "",
   convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
   transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
   external_file_access? : Bool = false,
@@ -163,6 +165,8 @@ pub fn convert_to_markdown(
     read_result.document,
     style_map~,
     include_default_style_map~,
+    ignore_empty_paragraphs~,
+    id_prefix~,
     convert_image~,
     transform_document~,
   )

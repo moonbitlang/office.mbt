@@ -12,11 +12,11 @@ pub fn column_break() -> DocumentElement
 
 pub fn convert_document_to_html(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement) -> ConversionResult
 
-pub fn convert_document_to_markdown(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement) -> ConversionResult
+pub fn convert_document_to_markdown(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement) -> ConversionResult
 
 pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
 
-pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
+pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
 
 pub fn data_uri_image_converter(Image) -> ImageConversion
 

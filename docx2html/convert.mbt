@@ -79,6 +79,8 @@ pub fn convert_document_to_markdown(
   document : DocumentElement,
   style_map? : Array[String] = [],
   include_default_style_map? : Bool = true,
+  ignore_empty_paragraphs? : Bool = true,
+  id_prefix? : String = "",
   convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
   transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
 ) -> ConversionResult {
@@ -91,8 +93,8 @@ pub fn convert_document_to_markdown(
   let parsed_style_map = read_style_map_with_messages(all_style_lines)
   let options = ConvertOptions::{
     style_map: parsed_style_map.mappings,
-    ignore_empty_paragraphs: true,
-    id_prefix: "",
+    ignore_empty_paragraphs,
+    id_prefix,
     pretty_print: false,
     output_format: "markdown",
   }
