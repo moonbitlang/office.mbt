@@ -238,6 +238,33 @@ test "docx complex field checkboxes are read" {
 }
 
 ///|
+test "docx symbols are mapped from supported dingbat fonts" {
+  let ascii_xml =
+    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Wingdings" w:char="28" />,
+  let ascii = read_xml_string(ascii_xml, namespace_map=office_namespace_map())
+  inspect(
+    convert_document_to_html(
+      document(empty_body_reader({ relationships: [] }).read_element(ascii)),
+    ).value,
+    content="\u{1F57F}",
+  )
+  let private_use_xml =
+    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Wingdings" w:char="F028" />,
+  let private_use = read_xml_string(
+    private_use_xml,
+    namespace_map=office_namespace_map(),
+  )
+  inspect(
+    convert_document_to_html(
+      document(
+        empty_body_reader({ relationships: [] }).read_element(private_use),
+      ),
+    ).value,
+    content="\u{1F57F}",
+  )
+}
+
+///|
 fn read_vml_wrapper_html(tag : String) -> String raise DocxError {
   let xml = "<" +
     tag +

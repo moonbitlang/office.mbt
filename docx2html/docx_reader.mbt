@@ -554,6 +554,7 @@ fn BodyReader::read_element(
     "w:tab" => [tab()]
     "w:noBreakHyphen" => [text("\u{2011}")]
     "w:softHyphen" => [text("\u{00AD}")]
+    "w:sym" => self.read_symbol(element)
     "w:footnoteReference" =>
       [
         NoteReference(
@@ -592,6 +593,39 @@ fn BodyReader::read_element(
       self.read_children(element.children)
     "w:sdt" => self.read_structured_document_tag(element)
     _ => []
+  }
+}
+
+///|
+fn BodyReader::read_symbol(
+  self : BodyReader,
+  element : XmlElement,
+) -> Array[DocumentElement] {
+  ignore(self)
+  let font = element.attributes.get_or_default("w:font", "")
+  let char = element.attributes.get_or_default("w:char", "")
+  match symbol_to_unicode(font, char) {
+    Some(value) => [text(value)]
+    None => []
+  }
+}
+
+///|
+fn symbol_to_unicode(font : String, char : String) -> String? {
+  let normalized_char = normalize_symbol_char(char)
+  match (font, normalized_char) {
+    ("Wingdings", "28") => Some("\u{1F57F}")
+    _ => None
+  }
+}
+
+///|
+fn normalize_symbol_char(char : String) -> String {
+  let upper = char.to_upper()
+  if upper.length() == 4 && upper.has_prefix("F0") {
+    upper[2:].to_owned()
+  } else {
+    upper
   }
 }
 
