@@ -2156,6 +2156,7 @@ test "docx structured checkbox replacement recurses through containers" {
 fn complex_field_checkbox_html(
   checkbox_children : String,
   separate~ : Bool,
+  instruction_text? : String = " FORMCHECKBOX ",
 ) -> String raise DocxError {
   let separate_xml = if separate {
     "<w:r><w:fldChar w:fldCharType=\"separate\" /></w:r>"
@@ -2164,7 +2165,9 @@ fn complex_field_checkbox_html(
   }
   let xml = "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:fldChar w:fldCharType=\"begin\"><w:ffData><w:checkBox>" +
     checkbox_children +
-    "</w:checkBox></w:ffData></w:fldChar></w:r><w:instrText> FORMCHECKBOX </w:instrText>" +
+    "</w:checkBox></w:ffData></w:fldChar></w:r><w:instrText>" +
+    instruction_text +
+    "</w:instrText>" +
     separate_xml +
     "<w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>"
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
@@ -2195,6 +2198,30 @@ test "docx complex field checkboxes are read" {
       separate=true,
     ),
     content="<p><input type=\"checkbox\" checked=\"checked\" /></p>",
+  )
+  inspect(
+    complex_field_checkbox_html(
+      "",
+      separate=false,
+      instruction_text=" NOTFORMCHECKBOX ",
+    ),
+    content="<p><input type=\"checkbox\" /></p>",
+  )
+  inspect(
+    complex_field_checkbox_html(
+      "",
+      separate=false,
+      instruction_text="FORMCHECKBOXES",
+    ),
+    content="<p><input type=\"checkbox\" /></p>",
+  )
+  inspect(
+    complex_field_checkbox_html(
+      "",
+      separate=false,
+      instruction_text="formcheckbox",
+    ),
+    content="",
   )
 }
 

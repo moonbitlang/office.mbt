@@ -1358,8 +1358,7 @@ fn parse_non_hyperlink_field_instruction(
   instruction_text : String,
   checkbox_checked : Bool?,
 ) -> ComplexField {
-  let text = instruction_text.trim().to_owned()
-  if text.has_prefix("FORMCHECKBOX") {
+  if instruction_text.contains("FORMCHECKBOX") {
     ComplexCheckbox(checkbox_checked.unwrap_or(false))
   } else {
     ComplexFieldUnknown
