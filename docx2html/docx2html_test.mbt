@@ -1184,6 +1184,29 @@ test "invalid style maps warn and keep valid mappings" {
 }
 
 ///|
+test "style map named matcher diagnostics match Mammoth" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
+  ])
+  let result = @docx2html.convert_document_to_html(doc, style_map=[
+    "r[bad='x'] => span", "table[bad='x'] => table", "highlight[bad='yellow'] => mark",
+    "br[bad='line'] => br",
+  ])
+  inspect(result.value, content="<p>Walking on imported air</p>")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[
+      #|  Warning("Did not understand this style mapping, so ignored it: r[bad='x'] => span\nError was at character number 3: Expected identifier \"style-name\" but got identifier \"bad\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: table[bad='x'] => table\nError was at character number 7: Expected identifier \"style-name\" but got identifier \"bad\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: highlight[bad='yellow'] => mark\nError was at character number 11: Expected identifier \"color\" but got identifier \"bad\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: br[bad='line'] => br\nError was at character number 4: Expected identifier \"type\" but got identifier \"bad\""),
+      #|]
+    ),
+  )
+}
+
+///|
 test "style map style-name prefix matchers are honored" {
   let heading_properties = @docx2html.ParagraphProperties::{
     style_id: None,

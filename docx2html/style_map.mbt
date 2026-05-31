@@ -322,8 +322,9 @@ fn parse_style_name_suffix(
   index : Int,
   end : Int,
 ) -> (StyleNameMatcher?, Int, String?) {
+  let name_start = index
   let (name, first_index, error) = parse_style_identifier(
-    line, index, end, "identifier",
+    line, index, end, "identifier \"style-name\"",
   )
   let mut index = first_index
   match error {
@@ -333,8 +334,10 @@ fn parse_style_name_suffix(
   if name != "style-name" {
     return (
       None,
-      index,
-      Some(style_parse_error(line, index, end, "style name matcher")),
+      name_start,
+      Some(
+        style_parse_error(line, name_start, end, "identifier \"style-name\""),
+      ),
     )
   }
   let mut is_prefix = false
@@ -428,11 +431,9 @@ fn parse_style_highlight_matcher(
   if index >= end || line[index] != '[' {
     return (Some(HighlightMatcher(None)), index, None)
   }
+  let name_start = index + 1
   let (name, first_index, error) = parse_style_identifier(
-    line,
-    index + 1,
-    end,
-    "identifier",
+    line, name_start, end, "identifier \"color\"",
   )
   let mut index = first_index
   match error {
@@ -440,7 +441,11 @@ fn parse_style_highlight_matcher(
     None => ()
   }
   if name != "color" {
-    return (None, index, Some(style_parse_error(line, index, end, "equals")))
+    return (
+      None,
+      name_start,
+      Some(style_parse_error(line, name_start, end, "identifier \"color\"")),
+    )
   }
   if index >= end || line[index] != '=' {
     return (None, index, Some(style_parse_error(line, index, end, "equals")))
@@ -473,11 +478,9 @@ fn parse_style_break_matcher(
       Some(style_parse_error(line, index, end, "open-square-bracket")),
     )
   }
+  let name_start = index + 1
   let (name, first_index, error) = parse_style_identifier(
-    line,
-    index + 1,
-    end,
-    "identifier",
+    line, name_start, end, "identifier \"type\"",
   )
   let mut index = first_index
   match error {
@@ -485,7 +488,11 @@ fn parse_style_break_matcher(
     None => ()
   }
   if name != "type" {
-    return (None, index, Some(style_parse_error(line, index, end, "equals")))
+    return (
+      None,
+      name_start,
+      Some(style_parse_error(line, name_start, end, "identifier \"type\"")),
+    )
   }
   if index >= end || line[index] != '=' {
     return (None, index, Some(style_parse_error(line, index, end, "equals")))
