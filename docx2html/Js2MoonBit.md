@@ -66,7 +66,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - HTML style-map target paths need their own parser pass for classes and attributes (`p.tip[lang='fr']`); splitting on `:` naively breaks escaped class names such as `p.a\:b`.
 - Break style mappings are replacements, not wrappers around the default line-break node: `br[type='page'] => hr` emits `<hr />`, while unmapped page/column breaks still disappear.
 - Mammoth's Markdown writer preserves HTML `id` attributes by emitting raw `<a id="..."></a>` anchors at the start of the Markdown construct: after heading/list markers, and before link brackets.
-- Mammoth Markdown has no table syntax path: converted DOCX tables pass through unknown HTML table tags and flatten to their cell text in document order, with paragraph blank lines preserved.
+- Mammoth Markdown has no table or definition-list syntax path: converted DOCX tables and appended comments pass through unknown HTML container tags and flatten to their text in document order, with anchors and paragraph blank lines preserved.
 - In style-map target paths, `!` is an ignore path, not a literal HTML tag. Keep it as a sentinel until wrapping so matched content can be dropped.
 - Complex fields are paragraph-local state: collect `w:instrText` across direct or run-nested nodes between `w:fldChar begin` and `separate`, then wrap displayed runs while the parsed hyperlink field is active.
 - Unquoted complex-field `HYPERLINK` targets stop at the first whitespace, so later switches such as `\o` are not part of the URL. If `HYPERLINK` or `HYPERLINK \l` has no location, keep the displayed runs as plain content.

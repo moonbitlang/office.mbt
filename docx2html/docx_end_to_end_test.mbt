@@ -166,6 +166,20 @@ test "convert_to_markdown matches Mammoth fixture outputs" {
     content="Ouch\\.\n\n",
   )
   inspect(
+    @docx2html.convert_to_markdown(comments_docx()[:], id_prefix="doc-42-", style_map=[
+      "comment-reference => sup",
+    ]).value,
+    content=(
+      #|Ouch<a id="doc-42-comment-ref-0"></a>[\[MW1\]](#doc-42-comment-0)\.<a id="doc-42-comment-ref-2"></a>[\[MW2\]](#doc-42-comment-2)
+      #|
+      #|<a id="doc-42-comment-0"></a>Comment \[MW1\]A tachyon walks into a bar\. [↑](#doc-42-comment-ref-0)
+      #|
+      #|<a id="doc-42-comment-2"></a>Comment \[MW2\]Fin\. [↑](#doc-42-comment-ref-2)
+      #|
+      #|
+    ),
+  )
+  inspect(
     @docx2html.convert_to_markdown(text_box_docx()[:]).value,
     content="Datum plane\n\n",
   )
