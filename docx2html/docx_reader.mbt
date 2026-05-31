@@ -565,7 +565,7 @@ fn BodyReader::read_element(
     "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
     "v:imagedata" => self.read_vml_image_data(element)
     "w:tbl" => [self.read_table(element)]
-    "w:tr" => [self.read_table_row(element)]
+    "w:tr" => self.read_table_row(element)
     "w:tc" => [self.read_table_cell(element)]
     "w:ins" | "w:smartTag" | "w:sdtContent" =>
       self.read_children(element.children)
@@ -1080,18 +1080,32 @@ fn BodyReader::read_table(
   element : XmlElement,
 ) -> DocumentElement raise DocxError {
   Table(
-    children=self.read_children(element.children),
-    properties=TableProperties::default(),
+    children=calculate_table_row_spans(self.read_children(element.children)),
+    properties=self.read_table_properties(element.first_or_empty("w:tblPr")),
   )
+}
+
+///|
+fn BodyReader::read_table_properties(
+  self : BodyReader,
+  element : XmlElement,
+) -> TableProperties {
+  let style_id = element.first_or_empty("w:tblStyle").attributes.get("w:val")
+  { style_id, style_name: self.style_name(style_id, "table") }
 }
 
 ///|
 fn BodyReader::read_table_row(
   self : BodyReader,
   element : XmlElement,
-) -> DocumentElement raise DocxError {
-  let is_header = element.first_or_empty("w:trPr").first("w:tblHeader") != None
-  TableRow(children=self.read_children(element.children), is_header~)
+) -> Array[DocumentElement] raise DocxError {
+  let properties = element.first_or_empty("w:trPr")
+  if properties.first("w:del") != None {
+    []
+  } else {
+    let is_header = properties.first("w:tblHeader") != None
+    [TableRow(children=self.read_children(element.children), is_header~)]
+  }
 }
 
 ///|
@@ -1110,6 +1124,112 @@ fn BodyReader::read_table_cell(
   TableCell(
     children=self.read_children(element.children),
     col_span~,
-    row_span=1,
+    row_span=if read_vertical_merge_continue(properties) { 0 } else { 1 },
   )
+}
+
+///|
+fn read_vertical_merge_continue(properties : XmlElement) -> Bool {
+  match properties.first("w:vMerge") {
+    Some(element) =>
+      match element.attributes.get("w:val") {
+        None | Some("continue") => true
+        _ => false
+      }
+    None => false
+  }
+}
+
+///|
+fn calculate_table_row_spans(
+  elements : Array[DocumentElement],
+) -> Array[DocumentElement] {
+  let mut can_merge = true
+  for row in elements {
+    match row {
+      TableRow(children~, ..) =>
+        for cell in children {
+          match cell {
+            TableCell(..) => ()
+            _ => can_merge = false
+          }
+        }
+      _ => can_merge = false
+    }
+  }
+  if !can_merge {
+    return elements
+  }
+  let row_spans : Array[Array[Int]] = []
+  let skip_cells : Array[Array[Bool]] = []
+  for row in elements {
+    match row {
+      TableRow(children~, ..) => {
+        let spans : Array[Int] = []
+        let skips : Array[Bool] = []
+        for _ in children {
+          spans.push(1)
+          skips.push(false)
+        }
+        row_spans.push(spans)
+        skip_cells.push(skips)
+      }
+      _ => ()
+    }
+  }
+  let open_cells : Map[Int, (Int, Int)] = {}
+  for row_index in 0..<elements.length() {
+    match elements[row_index] {
+      TableRow(children~, ..) => {
+        let mut column_index = 0
+        for cell_index in 0..<children.length() {
+          match children[cell_index] {
+            TableCell(col_span~, row_span~, ..) => {
+              if row_span == 0 {
+                match open_cells.get(column_index) {
+                  Some((origin_row, origin_cell)) => {
+                    row_spans[origin_row][origin_cell] = row_spans[origin_row][origin_cell] +
+                      1
+                    skip_cells[row_index][cell_index] = true
+                  }
+                  None => open_cells[column_index] = (row_index, cell_index)
+                }
+              } else {
+                open_cells[column_index] = (row_index, cell_index)
+              }
+              column_index = column_index + col_span
+            }
+            _ => ()
+          }
+        }
+      }
+      _ => ()
+    }
+  }
+  let rows : Array[DocumentElement] = []
+  for row_index in 0..<elements.length() {
+    match elements[row_index] {
+      TableRow(children~, is_header~) => {
+        let new_children : Array[DocumentElement] = []
+        for cell_index in 0..<children.length() {
+          if !skip_cells[row_index][cell_index] {
+            match children[cell_index] {
+              TableCell(children=cell_children, col_span~, ..) =>
+                new_children.push(
+                  TableCell(
+                    children=cell_children,
+                    col_span~,
+                    row_span=row_spans[row_index][cell_index],
+                  ),
+                )
+              _ => new_children.push(children[cell_index])
+            }
+          }
+        }
+        rows.push(TableRow(children=new_children, is_header~))
+      }
+      _ => rows.push(elements[row_index])
+    }
+  }
+  rows
 }

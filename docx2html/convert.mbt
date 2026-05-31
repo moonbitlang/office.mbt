@@ -171,9 +171,14 @@ fn DocumentConverter::convert_element(
     Table(children~, properties~) =>
       self.convert_table(element, children, properties)
     TableRow(children~, is_header~) => {
-      let tag = if is_header { "th" } else { "td" }
-      ignore(tag)
-      [html_element("tr", children=self.convert_children(children), fresh=true)]
+      let cells = self.convert_children(children)
+      [
+        html_element(
+          "tr",
+          children=if is_header { table_cells_to_header(cells) } else { cells },
+          fresh=true,
+        ),
+      ]
     }
     TableCell(children~, col_span~, row_span~) => {
       let attrs : Map[String, String] = {}
@@ -210,6 +215,19 @@ fn DocumentConverter::convert_element(
     CommentReference(comment_id) =>
       self.convert_comment_reference(element, comment_id)
   }
+}
+
+///|
+fn table_cells_to_header(nodes : Array[HtmlNode]) -> Array[HtmlNode] {
+  let headers : Array[HtmlNode] = []
+  for node in nodes {
+    match node {
+      Element(tag="td", attributes~, children~, fresh~) =>
+        headers.push(Element(tag="th", attributes~, children~, fresh~))
+      _ => headers.push(node)
+    }
+  }
+  headers
 }
 
 ///|

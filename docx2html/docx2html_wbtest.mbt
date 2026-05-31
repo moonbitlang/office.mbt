@@ -71,3 +71,70 @@ test "docx structured document tag checkbox replaces content character" {
     content="<table><tr><td><p><input type=\"checkbox\" checked=\"checked\" /></p></td></tr></table>",
   )
 }
+
+///|
+test "docx table properties include table style name" {
+  let xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tblPr><w:tblStyle w:val="TableNormal" /></w:tblPr></w:tbl>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = BodyReader::{
+    styles: {
+      "TableNormal": {
+        style_id: "TableNormal",
+        style_type: "table",
+        name: "Normal Table",
+      },
+    },
+    zip: { entries: {} },
+    relationships: { relationships: [] },
+    content_types: { defaults: {}, overrides: {} },
+    base_path: "word",
+  }
+  debug_inspect(
+    reader.read_element(root),
+    content=(
+      #|[
+      #|  Table(
+      #|    children=[],
+      #|    properties={ style_id: Some("TableNormal"), style_name: Some("Normal Table") },
+      #|  ),
+      #|]
+    ),
+  )
+}
+
+///|
+test "docx table vertical merges become row spans" {
+  let xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:tc><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge w:val="continue" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:p /></w:tc></w:tr></w:tbl>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<table><tr><td></td></tr><tr><td rowspan=\"3\"></td></tr><tr></tr><tr></tr><tr><td></td></tr></table>",
+  )
+}
+
+///|
+test "docx table vertical merges account for column spans" {
+  let xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:tc><w:p /></w:tc><w:tc><w:p /></w:tc><w:tc><w:tcPr><w:vMerge w:val="restart" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:gridSpan w:val="2" /></w:tcPr><w:p /></w:tc><w:tc><w:tcPr><w:vMerge w:val="continue" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:p /></w:tc><w:tc><w:p /></w:tc><w:tc><w:tcPr><w:vMerge w:val="continue" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:p /></w:tc><w:tc><w:p /></w:tc><w:tc><w:p /></w:tc></w:tr></w:tbl>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<table><tr><td></td><td></td><td rowspan=\"3\"></td></tr><tr><td colspan=\"2\"></td></tr><tr><td></td><td></td></tr><tr><td></td><td></td><td></td></tr></table>",
+  )
+}
+
+///|
+test "docx table deleted rows are ignored" {
+  let xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:trPr><w:del /></w:trPr><w:tc><w:p><w:r><w:t>Deleted</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>Kept</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<table><tr><td><p>Kept</p></td></tr></table>",
+  )
+}

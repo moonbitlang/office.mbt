@@ -264,6 +264,29 @@ test "document converter renders checkboxes like Mammoth" {
 }
 
 ///|
+test "document converter renders header table rows with th cells" {
+  let table = @docx2html.Table(
+    children=[
+      TableRow(
+        children=[
+          TableCell(
+            children=[@docx2html.paragraph([@docx2html.text("Head")])],
+            col_span=1,
+            row_span=1,
+          ),
+        ],
+        is_header=true,
+      ),
+    ],
+    properties=@docx2html.TableProperties::default(),
+  )
+  inspect(
+    @docx2html.convert_document_to_html(table).value,
+    content="<table><tr><th><p>Head</p></th></tr></table>",
+  )
+}
+
+///|
 test "document converter emits data uri images" {
   let image = @docx2html.Image::{
     content_type: "image/jpeg",
