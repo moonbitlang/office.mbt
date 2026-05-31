@@ -982,6 +982,11 @@ fn complex_field_paragraph_html(instruction : String) -> String raise DocxError 
 }
 
 ///|
+fn body_elements_html_from_xml(element_xml : String) -> String raise DocxError {
+  convert_document_to_html(document(body_elements_from_xml(element_xml))).value
+}
+
+///|
 test "docx complex field hyperlinks are read" {
   inspect(
     complex_field_paragraph_html(" HYPERLINK \"http://example.com\""),
@@ -995,6 +1000,10 @@ test "docx complex field hyperlinks are read" {
     complex_field_paragraph_html(" HYPERLINK \\l \"InternalLink\""),
     content="<p><a href=\"#InternalLink\">Hello</a></p>",
   )
+  inspect(
+    complex_field_paragraph_html(" HYPERLINK \\l InternalLink"),
+    content="<p><a href=\"#InternalLink\">Hello</a></p>",
+  )
 }
 
 ///|
@@ -1006,6 +1015,22 @@ test "docx complex field hyperlink instructions can be split across runs" {
   inspect(
     convert_document_to_html(document(elements)).value,
     content="<p><a href=\"http://example.com\">Hello</a></p>",
+  )
+}
+
+///|
+test "docx complex field hyperlink scope follows field boundaries" {
+  inspect(
+    body_elements_html_from_xml(
+      "<w:p><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> HYPERLINK \"http://example.com\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r><w:r><w:t>After</w:t></w:r></w:p>",
+    ),
+    content="<p>After</p>",
+  )
+  inspect(
+    body_elements_html_from_xml(
+      "<w:p><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> HYPERLINK \"http://example.com\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> AUTHOR \"John Doe\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:t>John Doe</w:t></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>",
+    ),
+    content="<p><a href=\"http://example.com\">John Doe</a></p>",
   )
 }
 
