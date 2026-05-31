@@ -855,7 +855,13 @@ fn read_document_xml_with_messages(
   notes : Array[Note],
   comments : Array[Comment],
 ) -> DocxReadResult raise DocxError {
-  let body = root.first_or_empty("w:body")
+  let body = match root.first("w:body") {
+    Some(body) => body
+    None =>
+      raise InvalidXml(
+        message="Could not find the body element: are you sure this is a docx file?",
+      )
+  }
   let reader = BodyReader::{
     styles,
     zip,

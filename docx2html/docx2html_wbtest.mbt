@@ -788,6 +788,36 @@ test "docx related parts fall back when relationship target is missing" {
 }
 
 ///|
+test "docx document xml reader rejects missing body" {
+  let root = read_xml_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body2 /></w:document>",
+    namespace_map=office_namespace_map(),
+  )
+  try
+    read_document_xml_with_messages(
+      root,
+      {},
+      NumberingMap::empty(),
+      { entries: {} },
+      { relationships: [] },
+      { defaults: {}, overrides: {} },
+      "word",
+      [],
+      [],
+    )
+  catch {
+    InvalidXml(message~) =>
+      inspect(
+        message,
+        content="Could not find the body element: are you sure this is a docx file?",
+      )
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected missing body error")
+  }
+}
+
+///|
 test "docx reader messages are deduplicated when prepended" {
   debug_inspect(
     prepend_messages(
