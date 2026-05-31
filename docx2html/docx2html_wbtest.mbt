@@ -251,10 +251,20 @@ test "docx note and comment reader warnings are preserved" {
   debug_inspect(
     read_docx_zip_with_messages(docx).messages,
     content=(
-      #|[
-      #|  Warning("An unrecognised element was ignored: w:not-an-element"),
-      #|  Warning("An unrecognised element was ignored: w:not-an-element"),
-      #|]
+      #|[Warning("An unrecognised element was ignored: w:not-an-element")]
+    ),
+  )
+}
+
+///|
+test "docx reader messages are deduplicated when prepended" {
+  debug_inspect(
+    prepend_messages(
+      { value: "", messages: [Warning("same"), Warning("converted")] },
+      [Warning("same"), Warning("read")],
+    ).messages,
+    content=(
+      #|[Warning("same"), Warning("read"), Warning("converted")]
     ),
   )
 }

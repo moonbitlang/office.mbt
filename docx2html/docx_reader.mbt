@@ -141,7 +141,7 @@ fn prepend_messages(
     let combined : Array[Message] = []
     combined.append(messages)
     combined.append(result.messages)
-    { value: result.value, messages: combined }
+    { value: result.value, messages: dedupe_messages(combined) }
   }
 }
 
@@ -221,7 +221,7 @@ fn read_docx_zip_with_messages(
   messages.append(notes_result.messages)
   messages.append(comments_result.messages)
   messages.append(document_result.messages)
-  { document: document_result.document, messages }
+  { document: document_result.document, messages: dedupe_messages(messages) }
 }
 
 ///|
@@ -625,7 +625,7 @@ fn read_notes_for_document(
   )
   notes.append(endnotes.notes)
   messages.append(endnotes.messages)
-  { notes, messages }
+  { notes, messages: dedupe_messages(messages) }
 }
 
 ///|
