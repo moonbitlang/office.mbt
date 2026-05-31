@@ -351,6 +351,16 @@ test "convert_to_html applies custom image converter to docx images" {
     convert_image~,
   )
   inspect(result.value, content="<p><img src=\"image/png\" /></p>")
+  let convert_image_from_data = @docx2html.img_element(fn(image) {
+    let encoded = @base64.encode(image.data[:])
+    { "src": encoded[:2].to_owned() + "," + image.content_type }
+  })
+  let data_result = @docx2html.convert_to_html(
+    tiny_picture_docx()[:],
+    convert_image=convert_image_from_data,
+  )
+  inspect(data_result.value, content="<p><img src=\"iV,image/png\" /></p>")
+  debug_inspect(data_result.messages, content="[]")
 }
 
 ///|
