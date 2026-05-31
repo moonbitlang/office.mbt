@@ -1415,6 +1415,12 @@ test "docx complex field hyperlink scope follows field boundaries" {
   )
   inspect(
     body_elements_html_from_xml(
+      "<w:p><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> HYPERLINK \"http://example.com\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> AUTHOR \"John Doe\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r><w:r><w:t>this is a hyperlink</w:t></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>",
+    ),
+    content="<p><a href=\"http://example.com\">this is a hyperlink</a></p>",
+  )
+  inspect(
+    body_elements_html_from_xml(
       "<w:p><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> HYPERLINK \"http://example.com\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> AUTHOR \"John Doe\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:t>John Doe</w:t></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>",
     ),
     content="<p><a href=\"http://example.com\">John Doe</a></p>",
