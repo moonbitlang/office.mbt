@@ -19,9 +19,9 @@ repository = ""
 
 license = "Apache-2.0"
 
-keywords = [ ]
+keywords = [ "docx", "html", "markdown", "mammoth" ]
 
-description = ""
+description = "Native MoonBit DOCX to HTML/Markdown converter ported from Mammoth"
 
 import {
   "hustcer/fzip@0.5.8",
