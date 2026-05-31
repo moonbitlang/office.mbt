@@ -2386,6 +2386,10 @@ test "docx image reader skips DrawingML and VML reads when disabled" {
     direct_reader.read_image_by_relationship("rImage", alt_text=None),
     content="None",
   )
+  debug_inspect(
+    direct_reader.read_linked_image_by_relationship("rImage", alt_text=None),
+    content="None",
+  )
   debug_inspect(direct_reader.messages, content="[]")
 }
 
@@ -2430,6 +2434,38 @@ test "docx linked DrawingML images use the external loader" {
         None
       }
     }),
+    read_images: true,
+  }
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
+  )
+  debug_inspect(reader.messages, content="[]")
+}
+
+///|
+test "docx embedded DrawingML images ignore relationship target mode" {
+  let xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rEmbeddedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = BodyReader::{
+    styles: {},
+    zip: { entries: { "word/media/hat.png": b"abc" } },
+    relationships: {
+      relationships: [
+        {
+          id: "rEmbeddedImage",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "media/hat.png",
+          target_mode: Some("External"),
+        },
+      ],
+    },
+    content_types: { defaults: { "png": "image/png" }, overrides: {} },
+    base_path: "word",
+    numbering: NumberingMap::empty(),
+    messages: [],
+    external_files: default_external_file_access(),
     read_images: true,
   }
   inspect(
@@ -2640,6 +2676,25 @@ test "docx image reader records Mammoth-compatible warnings" {
   let missing_vml_reader = empty_body_reader({ relationships: [] })
   debug_inspect(missing_vml_reader.read_element(missing_vml), content="[]")
   debug_inspect(missing_vml_reader.messages, content="[]")
+  let missing_linked_relationship_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rMissing" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let missing_linked_relationship = read_xml_string(
+    missing_linked_relationship_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let missing_linked_relationship_reader = empty_body_reader({
+    relationships: [],
+  })
+  debug_inspect(
+    missing_linked_relationship_reader.read_element(missing_linked_relationship),
+    content="[]",
+  )
+  debug_inspect(
+    missing_linked_relationship_reader.messages,
+    content=(
+      #|[Warning("Could not find image file for a:blip element")]
+    ),
+  )
   let external_image_xml =
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rExternal" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let external_image = read_xml_string(

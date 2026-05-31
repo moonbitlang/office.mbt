@@ -2077,16 +2077,13 @@ fn BodyReader::read_image_by_relationship(
     return None
   }
   match self.relationships.find_by_id(relationship_id) {
-    Some(rel) =>
-      if rel.target_mode == Some("External") {
-        self.read_external_image(rel.target, alt_text~)
-      } else {
-        let path = resolve_part_target(self.base_path, rel.target)
-        match self.zip.read_bytes(path) {
-          Some(data) => Some(self.make_image(path, data, alt_text~))
-          None => None
-        }
+    Some(rel) => {
+      let path = resolve_part_target(self.base_path, rel.target)
+      match self.zip.read_bytes(path) {
+        Some(data) => Some(self.make_image(path, data, alt_text~))
+        None => None
       }
+    }
     None => None
   }
 }
