@@ -859,6 +859,37 @@ test "docx image reader records Mammoth-compatible warnings" {
       #|[Warning("A v:imagedata element without a relationship ID was ignored")]
     ),
   )
+  let external_image_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rExternal" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let external_image = read_xml_string(
+    external_image_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let external_reader = BodyReader::{
+    styles: {},
+    zip: { entries: {} },
+    relationships: {
+      relationships: [
+        {
+          id: "rExternal",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "tiny-picture.png",
+          target_mode: Some("External"),
+        },
+      ],
+    },
+    content_types: { defaults: {}, overrides: {} },
+    base_path: "word",
+    numbering: NumberingMap::empty(),
+    messages: [],
+  }
+  debug_inspect(external_reader.read_element(external_image), content="[]")
+  debug_inspect(
+    external_reader.messages,
+    content=(
+      #|[Warning("could not read external image 'tiny-picture.png', external file access is disabled")]
+    ),
+  )
   let unsupported_type_xml =
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let unsupported_type = read_xml_string(

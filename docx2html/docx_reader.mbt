@@ -1822,7 +1822,8 @@ fn BodyReader::read_blip(
     None => blip.attributes.get("r:link")
   }
   match relationship_id {
-    Some(id) =>
+    Some(id) => {
+      let message_count = self.messages.length()
       match
         self.read_image_by_relationship(
           id,
@@ -1830,10 +1831,13 @@ fn BodyReader::read_blip(
         ) {
         Some(image) => Some(image)
         None => {
-          self.warn("Could not find image file for a:blip element")
+          if self.messages.length() == message_count {
+            self.warn("Could not find image file for a:blip element")
+          }
           None
         }
       }
+    }
     None => {
       self.warn("Could not find image file for a:blip element")
       None
@@ -1872,6 +1876,11 @@ fn BodyReader::read_image_by_relationship(
   match self.relationships.find_by_id(relationship_id) {
     Some(rel) =>
       if rel.target_mode == Some("External") {
+        self.warn(
+          "could not read external image '" +
+          rel.target +
+          "', external file access is disabled",
+        )
         None
       } else {
         let path = resolve_part_target(self.base_path, rel.target)

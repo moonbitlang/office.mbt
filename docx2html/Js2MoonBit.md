@@ -72,3 +72,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Mammoth's Markdown list writer carries mutable list context: nested lists start with a newline, increase tab indentation, suppress their own trailing blank line, and ordered counts reset per list. A `li` outside any list is rendered as an unordered item.
 - Markdown images use JavaScript truthiness for `src || alt`: emit `![alt](src)` when either attribute is non-empty, including alt-only images, but emit nothing when both are empty.
 - Mammoth table conversion treats only the leading run of header rows as table headers. Wrap those rows in `thead`, wrap following rows in `tbody`, and rely on HTML simplification to remove an empty trailing `tbody`.
+- External linked images are disabled by default in Mammoth. When porting to a native bytes-first API without an input path, emit the specific external-access warning and suppress the generic missing-blip warning for that same image.
