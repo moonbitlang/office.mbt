@@ -71,6 +71,20 @@ fn empty_docx_zip() -> ZipArchive {
 }
 
 ///|
+fn run_properties_from_xml(
+  properties_xml : String,
+) -> RunProperties raise DocxError {
+  let xml = "<w:r xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:rPr>" +
+    properties_xml +
+    "</w:rPr></w:r>"
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  match empty_body_reader({ relationships: [] }).read_element(root)[0] {
+    Run(properties~, ..) => properties
+    _ => abort("expected run")
+  }
+}
+
+///|
 test "docx content types include Mammoth image fallbacks" {
   let content_types = ContentTypes::{ defaults: {}, overrides: {} }
   inspect(
@@ -102,6 +116,77 @@ test "docx content types include Mammoth image fallbacks" {
     with_default.find_content_type("/word/media/hat.png"),
     content="image/hat",
   )
+}
+
+///|
+test "docx reader reads Mammoth run boolean properties" {
+  let enabled = run_properties_from_xml(
+    "<w:b /><w:i w:val=\"true\" /><w:strike w:val=\"1\" /><w:caps /><w:smallCaps />",
+  )
+  debug_inspect(
+    [
+      enabled.is_bold,
+      enabled.is_italic,
+      enabled.is_strikethrough,
+      enabled.is_all_caps,
+      enabled.is_small_caps,
+    ],
+    content="[true, true, true, true, true]",
+  )
+  let disabled = run_properties_from_xml(
+    "<w:b w:val=\"false\" /><w:i w:val=\"0\" /><w:strike w:val=\"false\" /><w:caps w:val=\"0\" /><w:smallCaps w:val=\"false\" />",
+  )
+  debug_inspect(
+    [
+      disabled.is_bold,
+      disabled.is_italic,
+      disabled.is_strikethrough,
+      disabled.is_all_caps,
+      disabled.is_small_caps,
+    ],
+    content="[false, false, false, false, false]",
+  )
+}
+
+///|
+test "docx reader reads underline with Mammoth special cases" {
+  let missing = run_properties_from_xml("").is_underline
+  let empty_value = run_properties_from_xml("<w:u />").is_underline
+  let false_value = run_properties_from_xml("<w:u w:val=\"false\" />").is_underline
+  let zero_value = run_properties_from_xml("<w:u w:val=\"0\" />").is_underline
+  let none_value = run_properties_from_xml("<w:u w:val=\"none\" />").is_underline
+  let single_value = run_properties_from_xml("<w:u w:val=\"single\" />").is_underline
+  debug_inspect(
+    [missing, empty_value, false_value, zero_value, none_value, single_value],
+    content="[false, false, false, false, false, true]",
+  )
+}
+
+///|
+test "docx reader reads run font vertical alignment and highlight properties" {
+  let defaults = run_properties_from_xml("")
+  debug_inspect(defaults.vertical_alignment, content="Baseline")
+  debug_inspect(defaults.font, content="None")
+  debug_inspect(defaults.font_size, content="None")
+  debug_inspect(defaults.highlight, content="None")
+  let properties = run_properties_from_xml(
+    "<w:vertAlign w:val=\"superscript\" /><w:rFonts w:ascii=\"Arial\" /><w:sz w:val=\"28\" /><w:highlight w:val=\"yellow\" />",
+  )
+  debug_inspect(properties.vertical_alignment, content="Superscript")
+  debug_inspect(properties.font, content="Some(\"Arial\")")
+  debug_inspect(properties.font_size, content="Some(14)")
+  debug_inspect(properties.highlight, content="Some(\"yellow\")")
+}
+
+///|
+test "docx reader does not include run properties as run children" {
+  let xml =
+    #|<w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:rPr><w:rStyle w:val="Heading1Char" /></w:rPr></w:r>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  match empty_body_reader({ relationships: [] }).read_element(root)[0] {
+    Run(children~, ..) => debug_inspect(children, content="[]")
+    _ => fail("expected run")
+  }
 }
 
 ///|
