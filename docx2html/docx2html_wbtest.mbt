@@ -1202,6 +1202,23 @@ test "docx body reader records Mammoth-compatible warnings" {
       #|[Warning("Paragraph style with ID Heading1 was referenced but not defined in the document")]
     ),
   )
+  let run_xml =
+    #|<w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:rPr><w:rStyle w:val="Heading1Char" /></w:rPr></w:r>
+  let run = read_xml_string(run_xml, namespace_map=office_namespace_map())
+  let run_reader = empty_body_reader({ relationships: [] })
+  match run_reader.read_element(run)[0] {
+    Run(properties~, ..) => {
+      debug_inspect(properties.style_id, content="Some(\"Heading1Char\")")
+      debug_inspect(properties.style_name, content="None")
+    }
+    _ => fail("expected run")
+  }
+  debug_inspect(
+    run_reader.messages,
+    content=(
+      #|[Warning("Run style with ID Heading1Char was referenced but not defined in the document")]
+    ),
+  )
   let break_xml =
     #|<w:br xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:type="unknownBreakType" />
   let break_element = read_xml_string(
