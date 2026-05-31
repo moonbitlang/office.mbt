@@ -37,6 +37,15 @@ test "raw text converts individual upstream element cases" {
   inspect(@docx2html.text("Hello.").to_raw_text(), content="Hello.")
   inspect(@docx2html.tab().to_raw_text(), content="\t")
   inspect(@docx2html.line_break().to_raw_text(), content="")
+  inspect(
+    @docx2html.Hyperlink(
+      children=[@docx2html.text("linked")],
+      href=Some("http://example.com"),
+      anchor=None,
+      target_frame=None,
+    ).to_raw_text(),
+    content="linked",
+  )
 }
 
 ///|
@@ -489,6 +498,39 @@ test "document transform helpers can target runs and descendants" {
     @docx2html.document_descendants(@docx2html.text("leaf")).length(),
     content="0",
   )
+}
+
+///|
+test "document transforms recurse through hyperlinks and tables" {
+  let link = @docx2html.Hyperlink(
+    children=[@docx2html.text("Link")],
+    href=Some("http://example.com"),
+    anchor=None,
+    target_frame=None,
+  )
+  let table = @docx2html.Table(
+    children=[
+      TableRow(
+        children=[
+          TableCell(children=[@docx2html.text("Cell")], col_span=1, row_span=1),
+        ],
+        is_header=false,
+      ),
+    ],
+    properties=@docx2html.TableProperties::default(),
+  )
+  let doc = @docx2html.document([link, table])
+  let transformed = @docx2html.transform_elements(doc, fn(element) {
+    match element {
+      Text(value) => @docx2html.text(value + "!")
+      _ => element
+    }
+  })
+  inspect(
+    @docx2html.convert_document_to_html(transformed).value,
+    content="<a href=\"http://example.com\">Link!</a><table><tr><td>Cell!</td></tr></table>",
+  )
+  inspect(@docx2html.document_descendants(link).length(), content="1")
 }
 
 ///|
