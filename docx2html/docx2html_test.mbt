@@ -852,6 +852,8 @@ test "style map parser reads upstream document matcher forms" {
 test "style map parser handles malformed and escaped edge cases" {
   debug_inspect(@docx2html.read_style_mapping("wat => p"), content="None")
   debug_inspect(@docx2html.read_style_mapping(" => p"), content="None")
+  debug_inspect(@docx2html.read_style_mapping("p=> h1"), content="None")
+  debug_inspect(@docx2html.read_style_mapping("p =>h1"), content="None")
   match expect_style_mapping("p.Heading[style-name='Title'] => h1").from {
     ParagraphMatcher(
       style_id=Some("Heading"),
@@ -876,23 +878,35 @@ test "style map parser handles malformed and escaped edge cases" {
     ParagraphMatcher(numbering=Some({ is_ordered: true, level: 1 }), ..) => ()
     _ => fail("expected unterminated list level to default to one")
   }
-  inspect(@docx2html.read_style_map(["p => span "]).length(), content="1")
+  inspect(@docx2html.read_style_map(["p => span "]).length(), content="0")
   let separator = expect_style_mapping("p => span:separator('---')").to[0].separator
   inspect(separator.unwrap(), content="---")
+  let fresh_separator = expect_style_mapping("p => span:fresh:separator('x')").to[0]
+  inspect(fresh_separator.separator.unwrap(), content="x")
+  debug_inspect(fresh_separator.fresh, content="true")
   let escaped_attr = expect_style_mapping("p => span[data-x='a\\'b']").to[0]
   inspect(escaped_attr.attributes.get_or_default("data-x", ""), content="a'b")
-  let loose_attr = expect_style_mapping("p => span[data-x='a'.tail]").to[0]
-  inspect(loose_attr.attributes.get_or_default("data-x", ""), content="a")
-  inspect(loose_attr.attributes.get_or_default("class", ""), content="tail]")
-  let unterminated_attr = expect_style_mapping("p => span[data-x='abc").to[0]
-  inspect(
-    unterminated_attr.attributes.get_or_default("data-x", ""),
-    content="abc",
+  debug_inspect(
+    @docx2html.read_style_mapping("p => span[data-x='a'.tail]"),
+    content="None",
   )
-  let missing_equals = expect_style_mapping("p => span[data-x]").to[0]
-  inspect(missing_equals.attributes.contains("data-x"), content="false")
-  let literal_tail = expect_style_mapping("p => span[data-x='a']#").to[0]
-  inspect(literal_tail.attributes.get_or_default("data-x", ""), content="a")
+  debug_inspect(
+    @docx2html.read_style_mapping("p => span[data-x='abc"),
+    content="None",
+  )
+  debug_inspect(
+    @docx2html.read_style_mapping("p => span[data-x]"),
+    content="None",
+  )
+  debug_inspect(
+    @docx2html.read_style_mapping("p => span[data-x='a']#"),
+    content="None",
+  )
+  debug_inspect(
+    @docx2html.read_style_mapping("p => span:separator('x'):fresh"),
+    content="None",
+  )
+  debug_inspect(@docx2html.read_style_mapping("p => ul>li"), content="None")
   inspect(expect_style_mapping("p => x\\:y").to[0].tag, content="x:y")
 }
 
@@ -1133,7 +1147,7 @@ test "invalid style maps warn and keep valid mappings" {
     @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
-    "????", "p => h1", "r => span a",
+    "????", "p => h1", "r => span a", "p => span#",
   ])
   inspect(result.value, content="<h1>Walking on imported air</h1>")
   debug_inspect(
@@ -1142,6 +1156,7 @@ test "invalid style maps warn and keep valid mappings" {
       #|[
       #|  Warning("Did not understand this style mapping, so ignored it: ????\nError was at character number 1: Expected element type but got unrecognisedCharacter \"?\""),
       #|  Warning("Did not understand this style mapping, so ignored it: r => span a\nError was at character number 10: Expected end but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span#\nError was at character number 10: Expected end but got unrecognisedCharacter \"#\""),
       #|]
     ),
   )

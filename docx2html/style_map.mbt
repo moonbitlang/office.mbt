@@ -71,6 +71,29 @@ fn read_style_map_with_messages(lines : Array[String]) -> StyleMapReadResult {
 fn read_style_mapping_with_message(line : String) -> (StyleMapping?, Message?) {
   match line.find("=>") {
     Some(arrow) => {
+      if line.length() > 0 && is_style_whitespace(line[0]) {
+        return (
+          None,
+          Some(
+            style_mapping_warning(
+              line, "Error was at character number 1: Expected element type but got whitespace",
+            ),
+          ),
+        )
+      }
+      if arrow == 0 || !is_style_whitespace(line[arrow - 1]) {
+        return (
+          None,
+          Some(
+            style_mapping_warning(
+              line,
+              "Error was at character number " +
+              (arrow + 1).to_string() +
+              ": Expected whitespace but got arrow",
+            ),
+          ),
+        )
+      }
       let from_text = line[:arrow].trim().to_owned()
       let after_arrow = arrow + 2
       let to_raw = line[after_arrow:].to_owned()
@@ -311,103 +334,407 @@ fn validate_html_path_text(
   to_raw : String,
   after_arrow : Int,
 ) -> String? {
-  let leading = leading_whitespace_count(to_raw)
-  let trailing = trailing_whitespace_count(to_raw)
-  let start = after_arrow + leading
-  let end = after_arrow + to_raw.length() - trailing
-  if start >= end {
+  let end = after_arrow + to_raw.length()
+  if after_arrow >= end {
     return None
   }
-  let mut index = start
-  let mut in_string = false
-  while index < end {
-    let char = line[index]
-    if in_string {
-      if char == '\\' {
-        index = index + 2
+  if !is_style_whitespace(line[after_arrow]) {
+    return Some(style_parse_error(line, after_arrow, end, "end"))
+  }
+  let mut index = after_arrow
+  while index < end && is_style_whitespace(line[index]) {
+    index = index + 1
+  }
+  if index >= end {
+    return None
+  }
+  let (index, error) = parse_style_html_path(line, index, end)
+  match error {
+    Some(error) => Some(error)
+    None =>
+      if index == end {
+        None
       } else {
-        if char == '\'' {
-          in_string = false
-        }
-        index = index + 1
+        Some(style_parse_error(line, index, end, "end"))
       }
-    } else if char == '\'' {
-      in_string = true
-      index = index + 1
-    } else if is_style_whitespace(char) {
-      let previous = previous_non_whitespace(line, index - 1, start)
-      let next = next_non_whitespace(line, index + 1, end)
-      if previous == Some('>') || next == Some('>') {
-        index = index + 1
+  }
+}
+
+///|
+fn parse_style_html_path(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (Int, String?) {
+  if line[index] == '!' {
+    return (index + 1, None)
+  }
+  let (first_index, error) = parse_style_html_path_element(line, index, end)
+  let mut index = first_index
+  match error {
+    Some(error) => return (index, Some(error))
+    None => ()
+  }
+  while index < end {
+    let separator_start = index
+    let mut after_space = index
+    while after_space < end && is_style_whitespace(line[after_space]) {
+      after_space = after_space + 1
+    }
+    if after_space == index {
+      return (index, None)
+    }
+    if after_space < end && line[after_space] == '>' {
+      let mut next = after_space + 1
+      if next < end && is_style_whitespace(line[next]) {
+        while next < end && is_style_whitespace(line[next]) {
+          next = next + 1
+        }
+        let (next_index, error) = parse_style_html_path_element(line, next, end)
+        match error {
+          Some(error) => return (next_index, Some(error))
+          None => index = next_index
+        }
       } else {
-        return Some(
-          "Error was at character number " +
-          (index + 1).to_string() +
-          ": Expected end but got whitespace",
-        )
+        return (separator_start, None)
       }
     } else {
-      index = index + 1
+      return (separator_start, None)
     }
   }
-  None
+  (index, None)
 }
 
 ///|
-fn leading_whitespace_count(value : String) -> Int {
-  let mut index = 0
-  while index < value.length() && is_style_whitespace(value[index]) {
-    index = index + 1
+fn parse_style_html_path_element(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (Int, String?) {
+  let (_, first_index, error) = parse_style_tag_choices(line, index, end)
+  let mut index = first_index
+  match error {
+    Some(error) => return (index, Some(error))
+    None => ()
   }
-  index
-}
-
-///|
-fn trailing_whitespace_count(value : String) -> Int {
-  let mut count = 0
-  let mut index = value.length() - 1
-  while index >= 0 && is_style_whitespace(value[index]) {
-    count = count + 1
-    index = index - 1
-  }
-  count
-}
-
-///|
-fn previous_non_whitespace(
-  value : String,
-  start : Int,
-  lower_bound : Int,
-) -> UInt16? {
-  let mut index = start
-  while index >= lower_bound {
-    if !is_style_whitespace(value[index]) {
-      return Some(value[index])
+  while index < end {
+    if line[index] == '.' {
+      let (_, next, error) = parse_style_identifier(
+        line,
+        index + 1,
+        end,
+        "identifier",
+      )
+      match error {
+        Some(error) => return (next, Some(error))
+        None => index = next
+      }
+    } else if line[index] == '[' {
+      let (_, next, error) = parse_style_attribute(line, index + 1, end)
+      match error {
+        Some(error) => return (next, Some(error))
+        None => index = next
+      }
+    } else {
+      break
     }
-    index = index - 1
   }
-  None
+  let (next, consumed) = consume_style_option_identifier(
+    line, index, end, "fresh",
+  )
+  if consumed {
+    index = next
+  }
+  let (next, consumed, error) = consume_style_separator_option(line, index, end)
+  match error {
+    Some(error) => (next, Some(error))
+    None => (if consumed { next } else { index }, None)
+  }
 }
 
 ///|
-fn next_non_whitespace(
-  value : String,
-  start : Int,
-  upper_bound : Int,
-) -> UInt16? {
-  let mut index = start
-  while index < upper_bound {
-    if !is_style_whitespace(value[index]) {
-      return Some(value[index])
-    }
-    index = index + 1
+fn parse_style_tag_choices(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (String, Int, String?) {
+  let builder = StringBuilder()
+  let (tag, first_index, error) = parse_style_identifier(
+    line, index, end, "identifier",
+  )
+  let mut index = first_index
+  match error {
+    Some(error) => return ("", index, Some(error))
+    None => builder.write_string(tag)
   }
-  None
+  while index < end && line[index] == '|' {
+    builder.write_string("|")
+    let (tag, next, error) = parse_style_identifier(
+      line,
+      index + 1,
+      end,
+      "identifier",
+    )
+    match error {
+      Some(error) => return (builder.to_string(), next, Some(error))
+      None => {
+        builder.write_string(tag)
+        index = next
+      }
+    }
+  }
+  (builder.to_string(), index, None)
 }
 
 ///|
 fn is_style_whitespace(char : UInt16) -> Bool {
   char == ' ' || char == '\t' || char == '\n' || char == '\r'
+}
+
+///|
+fn parse_style_attribute(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (String, Int, String?) {
+  let (name, first_index, error) = parse_style_identifier(
+    line, index, end, "identifier",
+  )
+  let mut index = first_index
+  match error {
+    Some(error) => return ("", index, Some(error))
+    None => ()
+  }
+  if index >= end || line[index] != '=' {
+    return (name, index, Some(style_parse_error(line, index, end, "equals")))
+  }
+  index = index + 1
+  let (_, next, error) = parse_style_string(line, index, end)
+  match error {
+    Some(error) => return (name, next, Some(error))
+    None => index = next
+  }
+  if index >= end || line[index] != ']' {
+    return (
+      name,
+      index,
+      Some(style_parse_error(line, index, end, "close-square-bracket")),
+    )
+  }
+  (name, index + 1, None)
+}
+
+///|
+fn consume_style_option_identifier(
+  line : String,
+  index : Int,
+  end : Int,
+  expected : String,
+) -> (Int, Bool) {
+  if index >= end || line[index] != ':' {
+    return (index, false)
+  }
+  let (name, next, error) = parse_style_identifier(
+    line,
+    index + 1,
+    end,
+    "identifier",
+  )
+  match error {
+    Some(_) => (index, false)
+    None => if name == expected { (next, true) } else { (index, false) }
+  }
+}
+
+///|
+fn consume_style_separator_option(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (Int, Bool, String?) {
+  let (next, consumed) = consume_style_option_identifier(
+    line, index, end, "separator",
+  )
+  if !consumed {
+    return (index, false, None)
+  }
+  if next >= end || line[next] != '(' {
+    return (next, true, Some(style_parse_error(line, next, end, "open-paren")))
+  }
+  let (_, value_end, error) = parse_style_string(line, next + 1, end)
+  match error {
+    Some(error) => return (value_end, true, Some(error))
+    None => ()
+  }
+  if value_end >= end || line[value_end] != ')' {
+    return (
+      value_end,
+      true,
+      Some(style_parse_error(line, value_end, end, "close-paren")),
+    )
+  }
+  (value_end + 1, true, None)
+}
+
+///|
+fn parse_style_identifier(
+  line : String,
+  index : Int,
+  end : Int,
+  expected : String,
+) -> (String, Int, String?) {
+  if !is_style_identifier_start(line, index, end) {
+    return ("", index, Some(style_parse_error(line, index, end, expected)))
+  }
+  let builder = StringBuilder()
+  let mut index = index
+  while index < end {
+    if line[index] == '\\' && index + 1 < end {
+      builder.write_string(line[index + 1:index + 2].to_owned())
+      index = index + 2
+    } else if is_style_identifier_part(line[index]) {
+      builder.write_string(line[index:index + 1].to_owned())
+      index = index + 1
+    } else {
+      break
+    }
+  }
+  (builder.to_string(), index, None)
+}
+
+///|
+fn parse_style_string(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (String, Int, String?) {
+  if index >= end || line[index] != '\'' {
+    return ("", index, Some(style_parse_error(line, index, end, "string")))
+  }
+  let builder = StringBuilder()
+  let mut cursor = index + 1
+  while cursor < end {
+    if line[cursor] == '\\' && cursor + 1 < end {
+      write_style_escape(builder, line, cursor + 1)
+      cursor = cursor + 2
+    } else if line[cursor] == '\'' {
+      return (builder.to_string(), cursor + 1, None)
+    } else {
+      builder.write_string(line[cursor:cursor + 1].to_owned())
+      cursor = cursor + 1
+    }
+  }
+  (
+    "",
+    index,
+    Some(
+      "Error was at character number " +
+      (index + 1).to_string() +
+      ": Expected string but got unterminated-string \"" +
+      builder.to_string() +
+      "\"",
+    ),
+  )
+}
+
+///|
+fn is_style_identifier_start(line : String, index : Int, end : Int) -> Bool {
+  if index >= end {
+    false
+  } else if line[index] == '\\' {
+    index + 1 < end
+  } else {
+    is_style_identifier_start_char(line[index])
+  }
+}
+
+///|
+fn is_style_identifier_start_char(char : UInt16) -> Bool {
+  (char >= 'a' && char <= 'z') ||
+  (char >= 'A' && char <= 'Z') ||
+  char == '-' ||
+  char == '_'
+}
+
+///|
+fn is_style_identifier_part(char : UInt16) -> Bool {
+  is_style_identifier_start_char(char) || (char >= '0' && char <= '9')
+}
+
+///|
+fn style_parse_error(
+  line : String,
+  index : Int,
+  end : Int,
+  expected : String,
+) -> String {
+  "Error was at character number " +
+  (index + 1).to_string() +
+  ": Expected " +
+  expected +
+  " but got " +
+  describe_style_token(line, index, end)
+}
+
+///|
+fn describe_style_token(line : String, index : Int, end : Int) -> String {
+  if index >= end {
+    return "end"
+  }
+  match line[index] {
+    ' ' | '\t' | '\n' | '\r' => "whitespace"
+    '=' => "equals"
+    '>' => "gt"
+    ':' => "colon"
+    '.' => "dot"
+    '[' => "open-square-bracket"
+    ']' => "close-square-bracket"
+    '(' => "open-paren"
+    ')' => "close-paren"
+    '|' => "choice"
+    '!' => "bang"
+    '\'' => describe_unterminated_style_string(line, index, end)
+    _ =>
+      if is_style_identifier_start(line, index, end) {
+        let (identifier, _, _) = parse_style_identifier(
+          line, index, end, "identifier",
+        )
+        "identifier \"" + identifier + "\""
+      } else if line[index] >= '0' && line[index] <= '9' {
+        "integer \"" + read_style_integer_token(line, index, end) + "\""
+      } else {
+        "unrecognisedCharacter \"" + line[index:index + 1].to_owned() + "\""
+      }
+  }
+}
+
+///|
+fn describe_unterminated_style_string(
+  line : String,
+  index : Int,
+  end : Int,
+) -> String {
+  let builder = StringBuilder()
+  let mut cursor = index + 1
+  while cursor < end {
+    if line[cursor] == '\\' && cursor + 1 < end {
+      builder.write_string(line[cursor + 1:cursor + 2].to_owned())
+      cursor = cursor + 2
+    } else {
+      builder.write_string(line[cursor:cursor + 1].to_owned())
+      cursor = cursor + 1
+    }
+  }
+  "unterminated-string \"" + builder.to_string() + "\""
+}
+
+///|
+fn read_style_integer_token(line : String, index : Int, end : Int) -> String {
+  let mut cursor = index
+  while cursor < end && line[cursor] >= '0' && line[cursor] <= '9' {
+    cursor = cursor + 1
+  }
+  line[index:cursor].to_owned()
 }
 
 ///|
