@@ -2014,29 +2014,29 @@ fn BodyReader::read_blip(
   if !self.read_images {
     return None
   }
-  let relationship_id = match blip.attributes.get("r:embed") {
-    Some(id) => Some(id)
-    None => blip.attributes.get("r:link")
-  }
-  match relationship_id {
-    Some(id) => {
-      let message_count = self.messages.length()
-      match
-        self.read_image_by_relationship(
-          id,
-          alt_text=read_drawing_alt_text(drawing_element),
-        ) {
-        Some(image) => Some(image)
-        None => {
-          if self.messages.length() == message_count {
-            self.warn("Could not find image file for a:blip element")
-          }
-          None
-        }
+  let message_count = self.messages.length()
+  let image = match blip.attributes.get("r:embed") {
+    Some(id) =>
+      self.read_image_by_relationship(
+        id,
+        alt_text=read_drawing_alt_text(drawing_element),
+      )
+    None =>
+      match blip.attributes.get("r:link") {
+        Some(id) =>
+          self.read_linked_image_by_relationship(
+            id,
+            alt_text=read_drawing_alt_text(drawing_element),
+          )
+        None => None
       }
-    }
+  }
+  match image {
+    Some(image) => Some(image)
     None => {
-      self.warn("Could not find image file for a:blip element")
+      if self.messages.length() == message_count {
+        self.warn("Could not find image file for a:blip element")
+      }
       None
     }
   }
@@ -2087,6 +2087,21 @@ fn BodyReader::read_image_by_relationship(
           None => None
         }
       }
+    None => None
+  }
+}
+
+///|
+fn BodyReader::read_linked_image_by_relationship(
+  self : BodyReader,
+  relationship_id : String,
+  alt_text~ : String?,
+) -> Image? {
+  if !self.read_images {
+    return None
+  }
+  match self.relationships.find_by_id(relationship_id) {
+    Some(rel) => self.read_external_image(rel.target, alt_text~)
     None => None
   }
 }

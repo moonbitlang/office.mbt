@@ -2402,6 +2402,44 @@ test "docx drawing image hyperlink wraps image" {
 }
 
 ///|
+test "docx linked DrawingML images use the external loader" {
+  let xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rLinkedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = BodyReader::{
+    styles: {},
+    zip: { entries: {} },
+    relationships: {
+      relationships: [
+        {
+          id: "rLinkedImage",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "file:///media/hat.png",
+          target_mode: None,
+        },
+      ],
+    },
+    content_types: { defaults: {}, overrides: {} },
+    base_path: "word",
+    numbering: NumberingMap::empty(),
+    messages: [],
+    external_files: external_file_access_options(true, fn(path) {
+      if path == "file:///media/hat.png" {
+        Some(b"abc")
+      } else {
+        None
+      }
+    }),
+    read_images: true,
+  }
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<img alt=\"It's a hat\" src=\"data:image/png;base64,YWJj\" />",
+  )
+  debug_inspect(reader.messages, content="[]")
+}
+
+///|
 test "docx drawing image alt text follows Mammoth precedence" {
   let description_and_title =
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" title="hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
