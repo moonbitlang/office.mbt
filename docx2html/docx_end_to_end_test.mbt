@@ -100,3 +100,42 @@ test "inline images referenced relative to package base are included" {
     content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
   )
 }
+
+///|
+test "footnotes are appended to text" {
+  let result = @docx2html.convert_to_html(
+    footnotes_docx()[:],
+    id_prefix="doc-42-",
+  )
+  inspect(
+    result.value,
+    content="<p>Ouch<sup><a href=\"#doc-42-footnote-1\" id=\"doc-42-footnote-ref-1\">[1]</a></sup>.<sup><a href=\"#doc-42-footnote-2\" id=\"doc-42-footnote-ref-2\">[2]</a></sup></p><ol><li id=\"doc-42-footnote-1\"><p> A tachyon walks into a bar. <a href=\"#doc-42-footnote-ref-1\">↑</a></p></li><li id=\"doc-42-footnote-2\"><p> Fin. <a href=\"#doc-42-footnote-ref-2\">↑</a></p></li></ol>",
+  )
+  debug_inspect(result.messages, content="[]")
+}
+
+///|
+test "endnotes are appended to text" {
+  let result = @docx2html.convert_to_html(
+    endnotes_docx()[:],
+    id_prefix="doc-42-",
+  )
+  inspect(
+    result.value,
+    content="<p>Ouch<sup><a href=\"#doc-42-endnote-2\" id=\"doc-42-endnote-ref-2\">[1]</a></sup>.<sup><a href=\"#doc-42-endnote-3\" id=\"doc-42-endnote-ref-3\">[2]</a></sup></p><ol><li id=\"doc-42-endnote-2\"><p> A tachyon walks into a bar. <a href=\"#doc-42-endnote-ref-2\">↑</a></p></li><li id=\"doc-42-endnote-3\"><p> Fin. <a href=\"#doc-42-endnote-ref-3\">↑</a></p></li></ol>",
+  )
+  debug_inspect(result.messages, content="[]")
+}
+
+///|
+test "relationships are handled inside footnotes" {
+  let result = @docx2html.convert_to_html(
+    footnote_hyperlink_docx()[:],
+    id_prefix="doc-42-",
+  )
+  inspect(
+    result.value,
+    content="<p><sup><a href=\"#doc-42-footnote-1\" id=\"doc-42-footnote-ref-1\">[1]</a></sup></p><ol><li id=\"doc-42-footnote-1\"><p> <a href=\"http://www.example.com\">Example</a> <a href=\"#doc-42-footnote-ref-1\">↑</a></p></li></ol>",
+  )
+  debug_inspect(result.messages, content="[]")
+}

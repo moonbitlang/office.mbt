@@ -69,14 +69,13 @@ pub fn read_docx(docx : BytesView) -> DocumentElement raise DocxError {
   )
   let content_types = read_content_types(zip)
   let styles = read_styles(zip, "word/styles.xml")
+  let base_path = split_zip_path(main_document_path).0
+  let notes = read_notes_for_document(
+    zip, styles, content_types, relationships, base_path,
+  )
   let xml = read_xml_part(zip, main_document_path)
   read_document_xml(
-    xml,
-    styles,
-    zip,
-    relationships,
-    content_types,
-    split_zip_path(main_document_path).0,
+    xml, styles, zip, relationships, content_types, base_path, notes,
   )
 }
 
@@ -262,6 +261,88 @@ fn ContentTypes::find_content_type(
 }
 
 ///|
+fn read_notes_for_document(
+  zip : ZipArchive,
+  styles : Map[String, StyleInfo],
+  content_types : ContentTypes,
+  document_relationships : Relationships,
+  base_path : String,
+) -> Array[Note] raise DocxError {
+  let notes : Array[Note] = []
+  notes.append(
+    read_note_part(
+      zip,
+      note_type="footnote",
+      relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+      fallback_path=join_zip_path([base_path, "footnotes.xml"]),
+      styles~,
+      content_types~,
+      document_relationships~,
+      base_path~,
+    ),
+  )
+  notes.append(
+    read_note_part(
+      zip,
+      note_type="endnote",
+      relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
+      fallback_path=join_zip_path([base_path, "endnotes.xml"]),
+      styles~,
+      content_types~,
+      document_relationships~,
+      base_path~,
+    ),
+  )
+  notes
+}
+
+///|
+fn read_note_part(
+  zip : ZipArchive,
+  note_type~ : String,
+  relationship_type~ : String,
+  fallback_path~ : String,
+  styles~ : Map[String, StyleInfo],
+  content_types~ : ContentTypes,
+  document_relationships~ : Relationships,
+  base_path~ : String,
+) -> Array[Note] raise DocxError {
+  let path = match
+    document_relationships.find_target_by_type(relationship_type) {
+    Some(target) => resolve_part_target(base_path, target)
+    None => fallback_path
+  }
+  if !zip.exists(path) {
+    return []
+  }
+  let part_relationships = read_relationships(
+    zip,
+    relationships_path_for_part(path),
+  )
+  let reader = BodyReader::{
+    styles,
+    zip,
+    relationships: part_relationships,
+    content_types,
+    base_path: split_zip_path(path).0,
+  }
+  let root = read_xml_part(zip, path)
+  let result : Array[Note] = []
+  for note_element in root.elements_by_tag_name("w:" + note_type) {
+    let note_kind = note_element.attributes.get("w:type")
+    if note_kind != Some("separator") &&
+      note_kind != Some("continuationSeparator") {
+      result.push({
+        note_type,
+        note_id: note_element.attributes.get_or_default("w:id", ""),
+        body: reader.read_children(note_element.children),
+      })
+    }
+  }
+  result
+}
+
+///|
 fn read_styles(
   zip : ZipArchive,
   path : String,
@@ -296,6 +377,7 @@ fn read_document_xml(
   relationships : Relationships,
   content_types : ContentTypes,
   base_path : String,
+  notes : Array[Note],
 ) -> DocumentElement raise DocxError {
   let body = root.first_or_empty("w:body")
   let reader = BodyReader::{
@@ -305,7 +387,7 @@ fn read_document_xml(
     content_types,
     base_path,
   }
-  document(reader.read_children(body.children))
+  document(reader.read_children(body.children), notes~)
 }
 
 ///|
@@ -344,6 +426,21 @@ fn BodyReader::read_element(
     "w:tab" => [tab()]
     "w:noBreakHyphen" => [text("\u{2011}")]
     "w:softHyphen" => [text("\u{00AD}")]
+    "w:footnoteReference" =>
+      [
+        NoteReference(
+          note_type="footnote",
+          note_id=element.attributes.get_or_default("w:id", ""),
+        ),
+      ]
+    "w:endnoteReference" =>
+      [
+        NoteReference(
+          note_type="endnote",
+          note_id=element.attributes.get_or_default("w:id", ""),
+        ),
+      ]
+    "w:footnoteRef" | "w:endnoteRef" => []
     "w:br" => [self.read_break(element)]
     "w:bookmarkStart" =>
       match element.attributes.get("w:name") {

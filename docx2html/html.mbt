@@ -119,7 +119,16 @@ fn HtmlWriter::write_attributes(
   attributes : Map[String, String],
 ) -> Unit {
   let items = attributes.to_array()
-  items.sort_by(fn(a, b) { a.0.compare(b.0) })
+  items.sort_by(fn(a, b) {
+    let (key_a, _) = a
+    let (key_b, _) = b
+    let rank_diff = html_attribute_rank(key_a) - html_attribute_rank(key_b)
+    if rank_diff != 0 {
+      rank_diff
+    } else {
+      key_a.compare(key_b)
+    }
+  })
   for item in items {
     let (key, value) = item
     self.buffer.write_string(" ")
@@ -127,6 +136,21 @@ fn HtmlWriter::write_attributes(
     self.buffer.write_string("=\"")
     self.buffer.write_string(escape_html_attribute(value))
     self.buffer.write_string("\"")
+  }
+}
+
+///|
+fn html_attribute_rank(key : String) -> Int {
+  match key {
+    "href" => 0
+    "alt" => 0
+    "type" => 0
+    "id" => 1
+    "src" => 1
+    "checked" => 1
+    "target" => 2
+    "disabled" => 2
+    _ => 10
   }
 }
 

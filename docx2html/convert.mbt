@@ -39,7 +39,12 @@ pub fn convert_document_to_html(
     pretty_print,
     output_format: "html",
   }
-  let converter = DocumentConverter::{ options, messages: [] }
+  let converter = DocumentConverter::{
+    options,
+    messages: [],
+    note_references: [],
+    note_number: 1,
+  }
   let nodes = converter.convert_element(document)
   {
     value: write_html(simplify_html(nodes), pretty_print~),
@@ -59,7 +64,12 @@ pub fn convert_document_to_markdown(
     include_default_style_map~,
   )
   let options = ConvertOptions::default()
-  let converter = DocumentConverter::{ options, messages: [] }
+  let converter = DocumentConverter::{
+    options,
+    messages: [],
+    note_references: [],
+    note_number: 1,
+  }
   let nodes = converter.convert_element(document)
   { value: write_markdown(simplify_html(nodes)), messages: result.messages }
 }
@@ -68,6 +78,14 @@ pub fn convert_document_to_markdown(
 priv struct DocumentConverter {
   options : ConvertOptions
   messages : Array[Message]
+  note_references : Array[NoteReferenceInfo]
+  mut note_number : Int
+}
+
+///|
+priv struct NoteReferenceInfo {
+  note_type : String
+  note_id : String
 }
 
 ///|
@@ -78,7 +96,7 @@ fn DocumentConverter::convert_element(
   match element {
     Document(children~, notes~, comments~) => {
       let nodes = self.convert_children(children)
-      let note_nodes = self.convert_notes(notes)
+      let note_nodes = self.convert_referenced_notes(notes)
       let comment_nodes = self.convert_comments(comments)
       nodes + note_nodes + comment_nodes
     }
@@ -146,12 +164,15 @@ fn DocumentConverter::convert_element(
     }
     Image(image) => [self.convert_image(image)]
     NoteReference(note_type~, note_id~) => {
+      let label = self.note_number.to_string()
+      self.note_number = self.note_number + 1
+      self.note_references.push({ note_type, note_id })
       let id = self.options.id_prefix + note_type + "-ref-" + note_id
       let href = "#" + self.options.id_prefix + note_type + "-" + note_id
       [
         html_element("sup", children=[
-          html_element("a", attributes={ "id": id, "href": href }, children=[
-            html_text("[" + note_id + "]"),
+          html_element("a", attributes={ "href": href, "id": id }, children=[
+            html_text("[" + label + "]"),
           ]),
         ]),
       ]
@@ -314,24 +335,88 @@ fn DocumentConverter::convert_image(
 }
 
 ///|
-fn DocumentConverter::convert_notes(
+fn DocumentConverter::convert_referenced_notes(
   self : DocumentConverter,
   notes : Array[Note],
 ) -> Array[HtmlNode] {
-  let nodes : Array[HtmlNode] = []
-  for note in notes {
-    nodes.push(
-      html_element(
-        "p",
-        attributes={
-          "id": self.options.id_prefix + note.note_type + "-" + note.note_id,
-        },
-        children=[html_text("[" + note.note_id + "] ")] +
-          self.convert_children(note.body),
-      ),
-    )
+  if self.note_references.is_empty() {
+    return []
   }
-  nodes
+  let items : Array[HtmlNode] = []
+  for reference in self.note_references {
+    match find_note(notes, reference.note_type, reference.note_id) {
+      Some(note) => items.push(self.convert_note(note, reference))
+      None => ()
+    }
+  }
+  if items.is_empty() {
+    []
+  } else {
+    [html_element("ol", children=items, fresh=true)]
+  }
+}
+
+///|
+fn find_note(
+  notes : Array[Note],
+  note_type : String,
+  note_id : String,
+) -> Note? {
+  for note in notes {
+    if note.note_type == note_type && note.note_id == note_id {
+      return Some(note)
+    }
+  }
+  None
+}
+
+///|
+fn DocumentConverter::convert_note(
+  self : DocumentConverter,
+  note : Note,
+  _reference : NoteReferenceInfo,
+) -> HtmlNode {
+  let body = self.convert_children(note.body)
+  let backlink = html_element(
+    "a",
+    attributes={
+      "href": "#" +
+      self.options.id_prefix +
+      note.note_type +
+      "-ref-" +
+      note.note_id,
+    },
+    children=[html_text("↑")],
+    fresh=true,
+  )
+  append_note_backlink(body, backlink)
+  html_element(
+    "li",
+    attributes={
+      "id": self.options.id_prefix + note.note_type + "-" + note.note_id,
+    },
+    children=body,
+    fresh=true,
+  )
+}
+
+///|
+fn append_note_backlink(nodes : Array[HtmlNode], backlink : HtmlNode) -> Unit {
+  if nodes.length() == 0 {
+    nodes.push(html_element("p", children=[html_text(" "), backlink]))
+  } else {
+    let last_index = nodes.length() - 1
+    match nodes[last_index] {
+      Element(tag="p", attributes~, children~, fresh~) =>
+        nodes[last_index] = Element(
+          tag="p",
+          attributes~,
+          children=children + [html_text(" "), backlink],
+          fresh~,
+        )
+      _ => nodes.push(html_element("p", children=[html_text(" "), backlink]))
+    }
+  }
 }
 
 ///|
