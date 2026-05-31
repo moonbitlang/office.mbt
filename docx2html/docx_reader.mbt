@@ -194,8 +194,17 @@ fn read_docx_zip_with_messages(
     relationships_path_for_part(main_document_path),
   )
   let content_types = read_content_types(zip)
-  let styles = read_styles(zip, "word/styles.xml")
   let base_path = split_zip_path(main_document_path).0
+  let styles = read_styles(
+    zip,
+    find_part_path(
+      zip,
+      relationships,
+      relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+      base_path~,
+      fallback_path="word/styles.xml",
+    ),
+  )
   let numbering = read_numbering_for_document(
     zip, relationships, styles, base_path,
   )
@@ -253,30 +262,19 @@ fn office_namespace_map() -> Map[String, String] {
 ///|
 fn find_main_document_path(zip : ZipArchive) -> String raise DocxError {
   let relationships = read_relationships(zip, "_rels/.rels")
-  match
-    relationships.find_target_by_type(
-      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
-    ) {
-    Some(target) => {
-      let normalized = strip_leading_slash(join_zip_path(["", target]))
-      if zip.exists(normalized) {
-        normalized
-      } else if zip.exists("word/document.xml") {
-        "word/document.xml"
-      } else {
-        raise MissingPart(
-          message="Could not find main document part. Are you sure this is a valid .docx file?",
-        )
-      }
-    }
-    None =>
-      if zip.exists("word/document.xml") {
-        "word/document.xml"
-      } else {
-        raise MissingPart(
-          message="Could not find main document part. Are you sure this is a valid .docx file?",
-        )
-      }
+  let path = find_part_path(
+    zip,
+    relationships,
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    base_path="",
+    fallback_path="word/document.xml",
+  )
+  if zip.exists(path) {
+    path
+  } else {
+    raise MissingPart(
+      message="Could not find main document part. Are you sure this is a valid .docx file?",
+    )
   }
 }
 
@@ -318,16 +316,34 @@ fn read_relationships_xml(root : XmlElement) -> Relationships {
 }
 
 ///|
-fn Relationships::find_target_by_type(
+fn Relationships::find_targets_by_type(
   self : Relationships,
   relationship_type : String,
-) -> String? {
+) -> Array[String] {
+  let targets : Array[String] = []
   for rel in self.relationships {
     if rel.relationship_type == relationship_type {
-      return Some(rel.target)
+      targets.push(rel.target)
     }
   }
-  None
+  targets
+}
+
+///|
+fn find_part_path(
+  zip : ZipArchive,
+  relationships : Relationships,
+  relationship_type~ : String,
+  base_path~ : String,
+  fallback_path~ : String,
+) -> String {
+  for target in relationships.find_targets_by_type(relationship_type) {
+    let path = resolve_part_target(base_path, target)
+    if zip.exists(path) {
+      return path
+    }
+  }
+  fallback_path
 }
 
 ///|
@@ -413,13 +429,13 @@ fn read_numbering_for_document(
   styles : Map[String, StyleInfo],
   base_path : String,
 ) -> NumberingMap raise DocxError {
-  let path = match
-    document_relationships.find_target_by_type(
-      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
-    ) {
-    Some(target) => resolve_part_target(base_path, target)
-    None => join_zip_path([base_path, "numbering.xml"])
-  }
+  let path = find_part_path(
+    zip,
+    document_relationships,
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
+    base_path~,
+    fallback_path="word/numbering.xml",
+  )
   if zip.exists(path) {
     read_numbering_xml(read_xml_part(zip, path), styles)
   } else {
@@ -605,7 +621,7 @@ fn read_notes_for_document(
     zip,
     note_type="footnote",
     relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
-    fallback_path=join_zip_path([base_path, "footnotes.xml"]),
+    fallback_path="word/footnotes.xml",
     styles~,
     numbering~,
     content_types~,
@@ -618,7 +634,7 @@ fn read_notes_for_document(
     zip,
     note_type="endnote",
     relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
-    fallback_path=join_zip_path([base_path, "endnotes.xml"]),
+    fallback_path="word/endnotes.xml",
     styles~,
     numbering~,
     content_types~,
@@ -642,11 +658,13 @@ fn read_note_part(
   document_relationships~ : Relationships,
   base_path~ : String,
 ) -> NotesReadResult raise DocxError {
-  let path = match
-    document_relationships.find_target_by_type(relationship_type) {
-    Some(target) => resolve_part_target(base_path, target)
-    None => fallback_path
-  }
+  let path = find_part_path(
+    zip,
+    document_relationships,
+    relationship_type~,
+    base_path~,
+    fallback_path~,
+  )
   if !zip.exists(path) {
     return { notes: [], messages: [] }
   }
@@ -688,13 +706,13 @@ fn read_comments_for_document(
   document_relationships : Relationships,
   base_path : String,
 ) -> CommentsReadResult raise DocxError {
-  let path = match
-    document_relationships.find_target_by_type(
-      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-    ) {
-    Some(target) => resolve_part_target(base_path, target)
-    None => join_zip_path([base_path, "comments.xml"])
-  }
+  let path = find_part_path(
+    zip,
+    document_relationships,
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    base_path~,
+    fallback_path="word/comments.xml",
+  )
   if !zip.exists(path) {
     return { comments: [], messages: [] }
   }

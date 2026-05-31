@@ -55,6 +55,15 @@ fn styles_from_xml(xml : String) -> Map[String, StyleInfo] raise DocxError {
 }
 
 ///|
+fn relationship_part(relationship_type : String, target : String) -> String {
+  "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rPart\" Type=\"" +
+  relationship_type +
+  "\" Target=\"" +
+  target +
+  "\" /></Relationships>"
+}
+
+///|
 fn empty_docx_zip() -> ZipArchive {
   let xml =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body /></w:document>
@@ -210,6 +219,31 @@ test "docx styles are keyed by type and keep first duplicate" {
 }
 
 ///|
+test "docx reader resolves styles from document relationships" {
+  let document_xml =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="Custom" /></w:pPr></w:p></w:body></w:document>
+  let styles_xml =
+    #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Custom"><w:name w:val="Custom Style" /></w:style></w:styles>
+  let zip = zip_with_text("word/document.xml", document_xml)
+  zip.entries["word/_rels/document.xml.rels"] = @utf8.encode(
+    relationship_part(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+      "custom-styles.xml",
+    ),
+  )
+  zip.entries["word/custom-styles.xml"] = @utf8.encode(styles_xml)
+  match read_docx_zip_with_messages(zip).document {
+    Document(children~, ..) =>
+      match children[0] {
+        Paragraph(properties~, ..) =>
+          debug_inspect(properties.style_name, content="Some(\"Custom Style\")")
+        _ => fail("expected paragraph")
+      }
+    _ => fail("expected document")
+  }
+}
+
+///|
 test "docx body reader records Mammoth-compatible warnings" {
   let paragraph_xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="Heading1" /></w:pPr></w:p>
@@ -315,6 +349,37 @@ test "docx note and comment reader warnings are preserved" {
       #|[Warning("An unrecognised element was ignored: w:not-an-element")]
     ),
   )
+}
+
+///|
+test "docx related parts fall back when relationship target is missing" {
+  let footnotes_xml =
+    #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:id="1"><w:p /></w:footnote></w:footnotes>
+  let styles : Map[String, StyleInfo] = {}
+  let numbering = NumberingMap::empty()
+  let content_types = ContentTypes::{ defaults: {}, overrides: {} }
+  let document_relationships = Relationships::{
+    relationships: [
+      {
+        id: "rFootnotes",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+        target: "missing-footnotes.xml",
+        target_mode: None,
+      },
+    ],
+  }
+  let footnotes = read_note_part(
+    zip_with_text("word/footnotes.xml", footnotes_xml),
+    note_type="footnote",
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+    fallback_path="word/footnotes.xml",
+    styles~,
+    numbering~,
+    content_types~,
+    document_relationships~,
+    base_path="word",
+  )
+  inspect(footnotes.notes.length(), content="1")
 }
 
 ///|
