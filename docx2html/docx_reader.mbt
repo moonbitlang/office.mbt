@@ -73,9 +73,12 @@ pub fn read_docx(docx : BytesView) -> DocumentElement raise DocxError {
   let notes = read_notes_for_document(
     zip, styles, content_types, relationships, base_path,
   )
+  let comments = read_comments_for_document(
+    zip, styles, content_types, relationships, base_path,
+  )
   let xml = read_xml_part(zip, main_document_path)
   read_document_xml(
-    xml, styles, zip, relationships, content_types, base_path, notes,
+    xml, styles, zip, relationships, content_types, base_path, notes, comments,
   )
 }
 
@@ -343,6 +346,63 @@ fn read_note_part(
 }
 
 ///|
+fn read_comments_for_document(
+  zip : ZipArchive,
+  styles : Map[String, StyleInfo],
+  content_types : ContentTypes,
+  document_relationships : Relationships,
+  base_path : String,
+) -> Array[Comment] raise DocxError {
+  let path = match
+    document_relationships.find_target_by_type(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    ) {
+    Some(target) => resolve_part_target(base_path, target)
+    None => join_zip_path([base_path, "comments.xml"])
+  }
+  if !zip.exists(path) {
+    return []
+  }
+  let part_relationships = read_relationships(
+    zip,
+    relationships_path_for_part(path),
+  )
+  let reader = BodyReader::{
+    styles,
+    zip,
+    relationships: part_relationships,
+    content_types,
+    base_path: split_zip_path(path).0,
+  }
+  let root = read_xml_part(zip, path)
+  let comments : Array[Comment] = []
+  for comment_element in root.elements_by_tag_name("w:comment") {
+    comments.push({
+      comment_id: comment_element.attributes.get_or_default("w:id", ""),
+      body: reader.read_children(comment_element.children),
+      author_name: read_optional_attribute(comment_element, "w:author"),
+      author_initials: read_optional_attribute(comment_element, "w:initials"),
+    })
+  }
+  comments
+}
+
+///|
+fn read_optional_attribute(element : XmlElement, name : String) -> String {
+  match element.attributes.get(name) {
+    Some(value) => {
+      let trimmed = value.trim()
+      if trimmed.is_empty() {
+        ""
+      } else {
+        trimmed.to_owned()
+      }
+    }
+    None => ""
+  }
+}
+
+///|
 fn read_styles(
   zip : ZipArchive,
   path : String,
@@ -378,6 +438,7 @@ fn read_document_xml(
   content_types : ContentTypes,
   base_path : String,
   notes : Array[Note],
+  comments : Array[Comment],
 ) -> DocumentElement raise DocxError {
   let body = root.first_or_empty("w:body")
   let reader = BodyReader::{
@@ -387,7 +448,7 @@ fn read_document_xml(
     content_types,
     base_path,
   }
-  document(reader.read_children(body.children), notes~)
+  document(reader.read_children(body.children), notes~, comments~)
 }
 
 ///|
@@ -441,6 +502,8 @@ fn BodyReader::read_element(
         ),
       ]
     "w:footnoteRef" | "w:endnoteRef" => []
+    "w:commentReference" =>
+      [CommentReference(element.attributes.get_or_default("w:id", ""))]
     "w:br" => [self.read_break(element)]
     "w:bookmarkStart" =>
       match element.attributes.get("w:name") {

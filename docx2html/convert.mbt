@@ -44,6 +44,9 @@ pub fn convert_document_to_html(
     messages: [],
     note_references: [],
     note_number: 1,
+    comments: document_comments(document),
+    comment_references: [],
+    comment_number: 1,
   }
   let nodes = converter.convert_element(document)
   {
@@ -69,6 +72,9 @@ pub fn convert_document_to_markdown(
     messages: [],
     note_references: [],
     note_number: 1,
+    comments: document_comments(document),
+    comment_references: [],
+    comment_number: 1,
   }
   let nodes = converter.convert_element(document)
   { value: write_markdown(simplify_html(nodes)), messages: result.messages }
@@ -80,12 +86,29 @@ priv struct DocumentConverter {
   messages : Array[Message]
   note_references : Array[NoteReferenceInfo]
   mut note_number : Int
+  comments : Array[Comment]
+  comment_references : Array[CommentReferenceInfo]
+  mut comment_number : Int
+}
+
+///|
+fn document_comments(document : DocumentElement) -> Array[Comment] {
+  match document {
+    Document(comments~, ..) => comments
+    _ => []
+  }
 }
 
 ///|
 priv struct NoteReferenceInfo {
   note_type : String
   note_id : String
+}
+
+///|
+priv struct CommentReferenceInfo {
+  comment_id : String
+  label : String
 }
 
 ///|
@@ -178,9 +201,7 @@ fn DocumentConverter::convert_element(
       ]
     }
     CommentReference(comment_id) =>
-      self.wrap_with_style_or_default(element, [
-        html_text("[" + comment_id + "]"),
-      ])
+      self.convert_comment_reference(element, comment_id)
   }
 }
 
@@ -420,26 +441,108 @@ fn append_note_backlink(nodes : Array[HtmlNode], backlink : HtmlNode) -> Unit {
 }
 
 ///|
+fn DocumentConverter::convert_comment_reference(
+  self : DocumentConverter,
+  element : DocumentElement,
+  comment_id : String,
+) -> Array[HtmlNode] {
+  match find_style_mapping(element, self.options.style_map) {
+    Some(mapping) =>
+      match self.find_comment(comment_id) {
+        Some(comment) => {
+          let label = "[" +
+            comment_author_label(comment) +
+            self.comment_number.to_string() +
+            "]"
+          self.comment_number = self.comment_number + 1
+          self.comment_references.push({ comment_id, label })
+          let id = self.options.id_prefix + "comment-ref-" + comment_id
+          let href = "#" + self.options.id_prefix + "comment-" + comment_id
+          wrap_html_path(mapping.to, [
+            html_element("a", attributes={ "href": href, "id": id }, children=[
+              html_text(label),
+            ]),
+          ])
+        }
+        None => []
+      }
+    None => []
+  }
+}
+
+///|
+fn comment_author_label(comment : Comment) -> String {
+  comment.author_initials
+}
+
+///|
+fn DocumentConverter::find_comment(
+  self : DocumentConverter,
+  comment_id : String,
+) -> Comment? {
+  for comment in self.comments {
+    if comment.comment_id == comment_id {
+      return Some(comment)
+    }
+  }
+  None
+}
+
+///|
 fn DocumentConverter::convert_comments(
   self : DocumentConverter,
   comments : Array[Comment],
 ) -> Array[HtmlNode] {
-  let nodes : Array[HtmlNode] = []
-  for comment in comments {
-    nodes.push(
-      html_element("dl", children=[
-        html_element(
-          "dt",
-          attributes={
-            "id": self.options.id_prefix + "comment-" + comment.comment_id,
-          },
-          children=[html_text("Comment [" + comment.comment_id + "]")],
-        ),
-        html_element("dd", children=self.convert_children(comment.body)),
-      ]),
-    )
+  if self.comment_references.is_empty() {
+    return []
   }
-  nodes
+  let nodes : Array[HtmlNode] = []
+  for reference in self.comment_references {
+    match find_comment(comments, reference.comment_id) {
+      Some(comment) => {
+        let body = self.convert_children(comment.body)
+        let backlink = html_element(
+          "a",
+          attributes={
+            "href": "#" +
+            self.options.id_prefix +
+            "comment-ref-" +
+            comment.comment_id,
+          },
+          children=[html_text("↑")],
+          fresh=true,
+        )
+        append_note_backlink(body, backlink)
+        nodes.append([
+          html_element(
+            "dt",
+            attributes={
+              "id": self.options.id_prefix + "comment-" + comment.comment_id,
+            },
+            children=[html_text("Comment " + reference.label)],
+            fresh=true,
+          ),
+          html_element("dd", children=body, fresh=true),
+        ])
+      }
+      None => ()
+    }
+  }
+  if nodes.is_empty() {
+    []
+  } else {
+    [html_element("dl", children=nodes, fresh=true)]
+  }
+}
+
+///|
+fn find_comment(comments : Array[Comment], comment_id : String) -> Comment? {
+  for comment in comments {
+    if comment.comment_id == comment_id {
+      return Some(comment)
+    }
+  }
+  None
 }
 
 ///|

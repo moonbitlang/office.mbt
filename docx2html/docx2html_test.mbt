@@ -167,3 +167,34 @@ test "document converter emits data uri images" {
     content="<p><img alt=\"alt\" src=\"data:image/jpeg;base64,YWJj\" /></p>",
   )
 }
+
+///|
+test "document converter ignores comments unless style mapped" {
+  let comment = @docx2html.Comment::{
+    comment_id: "4",
+    body: [@docx2html.paragraph([@docx2html.text("Who's there?")])],
+    author_name: "The Piemaker",
+    author_initials: "TP",
+  }
+  let doc = @docx2html.document(
+    [
+      @docx2html.paragraph([
+        @docx2html.text("Knock knock"),
+        CommentReference("4"),
+      ]),
+    ],
+    comments=[comment],
+  )
+  inspect(
+    @docx2html.convert_document_to_html(doc).value,
+    content="<p>Knock knock</p>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      doc,
+      style_map=["comment-reference => sup"],
+      id_prefix="doc-42-",
+    ).value,
+    content="<p>Knock knock<sup><a href=\"#doc-42-comment-4\" id=\"doc-42-comment-ref-4\">[TP1]</a></sup></p><dl><dt id=\"doc-42-comment-4\">Comment [TP1]</dt><dd><p>Who's there? <a href=\"#doc-42-comment-ref-4\">↑</a></p></dd></dl>",
+  )
+}
