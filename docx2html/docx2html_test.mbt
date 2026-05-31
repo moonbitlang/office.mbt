@@ -744,6 +744,102 @@ test "document converter renders checkboxes like Mammoth" {
 }
 
 ///|
+fn table_cell(
+  children : Array[@docx2html.DocumentElement],
+  col_span? : Int = 1,
+  row_span? : Int = 1,
+) -> @docx2html.DocumentElement {
+  TableCell(children~, col_span~, row_span~)
+}
+
+///|
+fn table_row(
+  children : Array[@docx2html.DocumentElement],
+  is_header? : Bool = false,
+) -> @docx2html.DocumentElement {
+  TableRow(children~, is_header~)
+}
+
+///|
+fn test_table(
+  children : Array[@docx2html.DocumentElement],
+) -> @docx2html.DocumentElement {
+  Table(children~, properties=@docx2html.TableProperties::default())
+}
+
+///|
+fn paragraph_of_text(text : String) -> @docx2html.DocumentElement {
+  @docx2html.paragraph([@docx2html.text(text)])
+}
+
+///|
+test "document converter renders table structure like Mammoth" {
+  let table = test_table([
+    table_row([
+      table_cell([paragraph_of_text("Top left")]),
+      table_cell([paragraph_of_text("Top right")]),
+    ]),
+    table_row([
+      table_cell([paragraph_of_text("Bottom left")]),
+      table_cell([paragraph_of_text("Bottom right")]),
+    ]),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(table).value,
+    content="<table><tr><td><p>Top left</p></td><td><p>Top right</p></td></tr><tr><td><p>Bottom left</p></td><td><p>Bottom right</p></td></tr></table>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(test_table([@docx2html.tab()])).value,
+    content="<table>\t</table>",
+  )
+}
+
+///|
+test "document converter preserves empty table rows and cells" {
+  inspect(
+    @docx2html.convert_document_to_html(
+      test_table([
+        table_row([
+          table_cell([paragraph_of_text("")]),
+          table_cell([paragraph_of_text("Top right")]),
+        ]),
+      ]),
+    ).value,
+    content="<table><tr><td></td><td><p>Top right</p></td></tr></table>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      test_table([
+        table_row([table_cell([paragraph_of_text("Row 1")])]),
+        table_row([]),
+      ]),
+    ).value,
+    content="<table><tr><td><p>Row 1</p></td></tr><tr></tr></table>",
+  )
+}
+
+///|
+test "document converter writes table cell spans" {
+  inspect(
+    @docx2html.convert_document_to_html(
+      test_table([
+        table_row([
+          table_cell([paragraph_of_text("Top left")], col_span=2),
+          table_cell([paragraph_of_text("Top right")]),
+        ]),
+      ]),
+    ).value,
+    content="<table><tr><td colspan=\"2\"><p>Top left</p></td><td><p>Top right</p></td></tr></table>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      test_table([table_row([table_cell([], row_span=2)])]),
+    ).value,
+    content="<table><tr><td rowspan=\"2\"></td></tr></table>",
+  )
+}
+
+///|
 test "document converter groups leading header table rows" {
   let table = @docx2html.Table(
     children=[
