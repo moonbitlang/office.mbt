@@ -523,8 +523,7 @@ fn read_html_path(value : String) -> Array[HtmlPathElement] {
   if value == "" {
     return elements
   }
-  for part_view in value.split(">") {
-    let part = part_view.trim().to_owned()
+  for part in split_html_path_parts(value) {
     if part != "" {
       elements.push(read_html_path_element(part))
     }
@@ -1030,7 +1029,7 @@ fn write_style_escape(
 
 ///|
 fn split_html_path_options(value : String) -> (String, String) {
-  match find_unescaped_char(value, ':') {
+  match find_unescaped_char_outside_style_string(value, ':') {
     Some(index) =>
       (value[:index].trim().to_owned(), value[index + 1:].trim().to_owned())
     None => (value.trim().to_owned(), "")
@@ -1038,14 +1037,48 @@ fn split_html_path_options(value : String) -> (String, String) {
 }
 
 ///|
+fn split_html_path_parts(value : String) -> Array[String] {
+  let parts : Array[String] = []
+  let mut start = 0
+  let mut index = 0
+  let mut in_string = false
+  while index < value.length() {
+    let char = value[index]
+    if char == '\\' {
+      index = index + 2
+    } else if char == '\'' {
+      in_string = !in_string
+      index = index + 1
+    } else if !in_string && char == '>' {
+      let part = value[start:index].trim().to_owned()
+      if part != "" {
+        parts.push(part)
+      }
+      start = index + 1
+      index = index + 1
+    } else {
+      index = index + 1
+    }
+  }
+  let part = value[start:].trim().to_owned()
+  if part != "" {
+    parts.push(part)
+  }
+  parts
+}
+
+///|
 fn read_html_tag_choices(value : String) -> String {
   let mut index = 0
   while index < value.length() {
     let char = value[index]
-    if char == '.' || char == '[' {
+    if char == '\\' {
+      index = index + 2
+    } else if char == '.' || char == '[' {
       return value[:index].to_owned()
+    } else {
+      index = index + 1
     }
-    index = index + 1
   }
   value
 }
@@ -1128,12 +1161,19 @@ fn read_html_attribute(value : String, start : Int) -> (String, String, Int) {
 }
 
 ///|
-fn find_unescaped_char(value : String, needle : UInt16) -> Int? {
+fn find_unescaped_char_outside_style_string(
+  value : String,
+  needle : UInt16,
+) -> Int? {
   let mut index = 0
+  let mut in_string = false
   while index < value.length() {
     if value[index] == '\\' {
       index = index + 2
-    } else if value[index] == needle {
+    } else if value[index] == '\'' {
+      in_string = !in_string
+      index = index + 1
+    } else if !in_string && value[index] == needle {
       return Some(index)
     } else {
       index = index + 1
