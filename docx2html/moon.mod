@@ -25,4 +25,5 @@ description = "Native MoonBit DOCX to HTML/Markdown converter ported from Mammot
 
 import {
   "hustcer/fzip@0.5.8",
+  "moonbitlang/x@0.4.43",
 }

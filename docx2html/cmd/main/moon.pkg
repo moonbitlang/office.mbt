@@ -1,7 +1,13 @@
-// import {
-//   "bobzhang/docx2html" @lib,
-// }
+import {
+  "bobzhang/docx2html",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+}
+
+supported_targets = "native"
 
 options(
   "is-main": true,
+  "native-stub": [ "console_native.c" ],
 )
