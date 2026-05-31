@@ -188,6 +188,7 @@ test "docx content types include Mammoth image fallbacks" {
     content="image/tiff",
   )
   inspect(content_types.find_content_type("word/media/hat"), content="")
+  inspect(content_types.find_content_type("word/media/hat.emf"), content="")
   let with_default = ContentTypes::{
     defaults: { "png": "image/custom-png" },
     overrides: { "word/media/hat.png": "image/hat" },
@@ -276,6 +277,17 @@ test "docx main document path follows package relationships and fallback" {
   )
   let fallback = zip_with_text("word/document.xml", " ")
   inspect(find_main_document_path(fallback), content="word/document.xml")
+}
+
+///|
+test "docx xml part reader reports missing parts" {
+  try read_xml_part({ entries: {} }, "word/missing.xml") catch {
+    MissingPart(message~) =>
+      inspect(message, content="missing DOCX part: word/missing.xml")
+    _ => fail("expected MissingPart")
+  } noraise {
+    _ => fail("expected missing part failure")
+  }
 }
 
 ///|
@@ -679,6 +691,30 @@ test "docx structured document tag checkbox replaces content character" {
 }
 
 ///|
+test "docx structured document tag checkbox keeps trailing content" {
+  let xml =
+    #|<w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:sdtPr><wordml:checkbox><wordml:checked wordml:val="1" /></wordml:checkbox></w:sdtPr><w:sdtContent><w:p><w:r><w:t>\u{2610}</w:t></w:r></w:p><w:p><w:r><w:t>After</w:t></w:r></w:p></w:sdtContent></w:sdt>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<p><input type=\"checkbox\" checked=\"checked\" /></p><p>After</p>",
+  )
+}
+
+///|
+test "docx structured document tag checkbox falls back for empty text" {
+  let xml =
+    #|<w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:sdtPr><wordml:checkbox /></w:sdtPr><w:sdtContent><w:p><w:r><w:t></w:t></w:r></w:p></w:sdtContent></w:sdt>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<input type=\"checkbox\" />",
+  )
+}
+
+///|
 test "docx structured document tag checkbox ignores deleted content" {
   let xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:tr><w:sdt><w:sdtPr><wordml:checkbox><wordml:checked wordml:val="1" /></wordml:checkbox></w:sdtPr><w:sdtContent><w:tc><w:p><w:r><w:t>\u{2610}</w:t></w:r><w:del><w:r><w:t>\u{2610}</w:t></w:r></w:del></w:p></w:tc></w:sdtContent></w:sdt></w:tr></w:tbl>
@@ -762,6 +798,7 @@ test "docx styles are keyed by type and keep first duplicate" {
     Some(style) => inspect(style.name, content="Normal Table")
     None => fail("expected table style")
   }
+  debug_inspect(styles.find_style("paragraph", "TableNormal"), content="None")
   let paragraph_xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="Shared" /></w:pPr></w:p>
   let paragraph = read_xml_string(
@@ -1111,6 +1148,16 @@ test "docx numbering xml maps explicit and style-based list levels" {
 
 ///|
 test "docx numbering xml handles missing references and level defaults" {
+  let ignored_abstract = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum><w:lvl w:ilvl="0"><w:numFmt w:val="decimal" /></w:lvl></w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  debug_inspect(ignored_abstract.find_level("47", "0"), content="None")
   let missing_reference = numbering_from_xml(
     (
       #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -1183,6 +1230,19 @@ test "docx numbering xml handles missing references and level defaults" {
     Some(level) => inspect(level.is_ordered, content="true")
     None => fail("expected ordered default")
   }
+  let malformed_level_index = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42"><w:lvl w:ilvl="abc"><w:numFmt w:val="decimal" /></w:lvl></w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  match malformed_level_index.find_level("47", "abc") {
+    Some(level) => inspect(level.level, content="1")
+    None => fail("expected malformed level index fallback")
+  }
 }
 
 ///|
@@ -1240,6 +1300,18 @@ test "docx paragraph numbering uses numbering xml semantics" {
         None => fail("expected explicit numbering")
       }
     _ => fail("expected paragraph")
+  }
+  match
+    paragraph_numbering_from_xml(
+      "<w:pStyle w:val=\"NoStyle\" /><w:numPr><w:numId w:val=\"47\" /></w:numPr>",
+      {},
+      numbering,
+    ) {
+    Some(level) => {
+      inspect(level.is_ordered, content="false")
+      inspect(level.level, content="1")
+    }
+    None => fail("expected numId-only fallback numbering")
   }
   let style_xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="ListBullet" /></w:pPr></w:p>
@@ -1409,6 +1481,31 @@ test "docx table deleted rows are ignored" {
 }
 
 ///|
+test "docx table cells default malformed grid spans to one" {
+  let xml =
+    #|<w:tc xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tcPr><w:gridSpan w:val="abc" /></w:tcPr><w:p /></w:tc>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  match empty_body_reader({ relationships: [] }).read_element(root)[0] {
+    TableCell(col_span~, row_span~, ..) => {
+      inspect(col_span, content="1")
+      inspect(row_span, content="1")
+    }
+    _ => fail("expected table cell")
+  }
+}
+
+///|
+test "docx deleted paragraph read directly is ignored" {
+  let xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:rPr><w:del /></w:rPr></w:pPr><w:r><w:t>Deleted</w:t></w:r></w:p>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  debug_inspect(
+    empty_body_reader({ relationships: [] }).read_element(root),
+    content="[]",
+  )
+}
+
+///|
 test "docx deleted paragraph content is prepended to next paragraph" {
   let xml =
     #|<w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:rPr><w:del /></w:rPr></w:pPr><w:r><w:t>One</w:t></w:r></w:p><w:p><w:r><w:t>Two</w:t></w:r></w:p><w:p><w:r><w:t>Three</w:t></w:r></w:p></w:body>
@@ -1466,6 +1563,46 @@ test "docx complex field hyperlinks are read" {
     complex_field_paragraph_html(" HYPERLINK \\l InternalLink"),
     content="<p><a href=\"#InternalLink\">Hello</a></p>",
   )
+  inspect(
+    complex_field_paragraph_html(" HYPERLINK \"http://example.com"),
+    content="<p><a href=\"http://example.com\">Hello</a></p>",
+  )
+}
+
+///|
+test "docx malformed complex field boundaries fail open" {
+  inspect(
+    body_elements_html_from_xml(
+      "<w:p><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:t>Hello</w:t></w:r></w:p>",
+    ),
+    content="<p>Hello</p>",
+  )
+  inspect(
+    body_elements_html_from_xml(
+      "<w:p><w:r><w:fldChar w:fldCharType=\"end\" /></w:r><w:r><w:t>Hello</w:t></w:r></w:p>",
+    ),
+    content="<p>Hello</p>",
+  )
+  inspect(
+    body_elements_html_from_xml("<w:p>ignored<w:r><w:t>Hello</w:t></w:r></w:p>"),
+    content="<p>Hello</p>",
+  )
+  inspect(
+    body_elements_html_from_xml(
+      "<w:p><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> UNKNOWN </w:instrText><w:r><w:fldChar w:fldCharType=\"end\" /></w:r><w:r><w:t>Hello</w:t></w:r></w:p>",
+    ),
+    content="<p>Hello</p>",
+  )
+}
+
+///|
+test "docx complex field hyperlinks can wrap non-run elements" {
+  inspect(
+    body_elements_html_from_xml(
+      "<w:p><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> HYPERLINK \"http://example.com\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:tab /><w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>",
+    ),
+    content="<p><a href=\"http://example.com\">\t</a></p>",
+  )
 }
 
 ///|
@@ -1499,6 +1636,18 @@ test "docx complex field hyperlink scope follows field boundaries" {
       "<w:p><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> HYPERLINK \"http://example.com\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:fldChar w:fldCharType=\"begin\" /></w:r><w:instrText> AUTHOR \"John Doe\"</w:instrText><w:r><w:fldChar w:fldCharType=\"separate\" /></w:r><w:r><w:t>John Doe</w:t></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r><w:r><w:fldChar w:fldCharType=\"end\" /></w:r></w:p>",
     ),
     content="<p><a href=\"http://example.com\">John Doe</a></p>",
+  )
+}
+
+///|
+test "docx text boxes read alternate content fallback" {
+  let xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:Choice Requires="wps"><w:txbxContent><w:p><w:r><w:t>Choice</w:t></w:r></w:p></w:txbxContent></mc:Choice><mc:Fallback><w:txbxContent><w:p><w:r><w:t>Fallback</w:t></w:r></w:p></w:txbxContent></mc:Fallback></mc:AlternateContent></w:p>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<p>Fallback</p>",
   )
 }
 
@@ -1739,6 +1888,34 @@ test "docx drawing image reader follows Mammoth picture chain" {
     ).value,
     content="<img src=\"data:image/png;base64,YWJj\" />",
   )
+  let missing_link_relationship_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture"><a:hlinkClick r:id="missing" /></wp:docPr><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let missing_link_relationship = read_xml_string(
+    missing_link_relationship_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let missing_link_relationship_reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(
+      document(
+        missing_link_relationship_reader.read_element(missing_link_relationship),
+      ),
+    ).value,
+    content="<img src=\"data:image/png;base64,YWJj\" />",
+  )
+  let link_without_id_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture"><a:hlinkClick /></wp:docPr><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let link_without_id = read_xml_string(
+    link_without_id_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let link_without_id_reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(
+      document(link_without_id_reader.read_element(link_without_id)),
+    ).value,
+    content="<img src=\"data:image/png;base64,YWJj\" />",
+  )
 }
 
 ///|
@@ -1820,6 +1997,15 @@ test "docx image reader records Mammoth-compatible warnings" {
       #|[Warning("A v:imagedata element without a relationship ID was ignored")]
     ),
   )
+  let vml_missing_relationship =
+    #|<v:imagedata xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rMissing" />
+  let missing_vml = read_xml_string(
+    vml_missing_relationship,
+    namespace_map=office_namespace_map(),
+  )
+  let missing_vml_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(missing_vml_reader.read_element(missing_vml), content="[]")
+  debug_inspect(missing_vml_reader.messages, content="[]")
   let external_image_xml =
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rExternal" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let external_image = read_xml_string(
