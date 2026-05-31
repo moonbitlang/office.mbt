@@ -1101,6 +1101,27 @@ test "docx numbering xml handles missing references and level defaults" {
     {},
   )
   debug_inspect(missing_reference.find_level("47", "0"), content="None")
+  debug_inspect(missing_reference.find_level("missing", "0"), content="None")
+  let missing_level = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42"><w:lvl w:ilvl="1"><w:numFmt w:val="decimal" /></w:lvl></w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  debug_inspect(missing_level.find_level("47", "0"), content="None")
+  let missing_style_link = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42"><w:numStyleLink w:val="List1" /></w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  debug_inspect(missing_style_link.find_level("47", "0"), content="None")
   let missing_level_index = numbering_from_xml(
     (
       #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
