@@ -1234,6 +1234,32 @@ test "style map malformed suffix diagnostics match Mammoth" {
 }
 
 ///|
+test "style map malformed html option diagnostics match Mammoth" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
+  ])
+  let result = @docx2html.convert_document_to_html(doc, style_map=[
+    "p => span:separator", "p => span:separator(x)", "p => span:separator('x'", "p => span:separator('x'):fresh",
+    "p => span[=]", "p => span[data-x]", "p => span[data-x='abc",
+  ])
+  inspect(result.value, content="<p>Walking on imported air</p>")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span:separator\nError was at character number 10: Expected end but got colon"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span:separator(x)\nError was at character number 10: Expected end but got colon"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span:separator('x'\nError was at character number 10: Expected end but got colon"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span:separator('x'):fresh\nError was at character number 25: Expected end but got colon"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span[=]\nError was at character number 11: Expected identifier but got equals"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x]\nError was at character number 17: Expected equals but got close-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x='abc\nError was at character number 18: Expected string but got unterminated-string \"abc\""),
+      #|]
+    ),
+  )
+}
+
+///|
 test "style map style-name prefix matchers are honored" {
   let heading_properties = @docx2html.ParagraphProperties::{
     style_id: None,

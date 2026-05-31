@@ -655,11 +655,8 @@ fn parse_style_html_path_element(
   if consumed {
     index = next
   }
-  let (next, consumed, error) = consume_style_separator_option(line, index, end)
-  match error {
-    Some(error) => (next, Some(error))
-    None => (if consumed { next } else { index }, None)
-  }
+  let (next, consumed) = consume_style_separator_option(line, index, end)
+  (if consumed { next } else { index }, None)
 }
 
 ///|
@@ -761,29 +758,25 @@ fn consume_style_separator_option(
   line : String,
   index : Int,
   end : Int,
-) -> (Int, Bool, String?) {
+) -> (Int, Bool) {
   let (next, consumed) = consume_style_option_identifier(
     line, index, end, "separator",
   )
   if !consumed {
-    return (index, false, None)
+    return (index, false)
   }
   if next >= end || line[next] != '(' {
-    return (next, true, Some(style_parse_error(line, next, end, "open-paren")))
+    return (index, false)
   }
   let (_, value_end, error) = parse_style_string(line, next + 1, end)
   match error {
-    Some(error) => return (value_end, true, Some(error))
+    Some(_) => return (index, false)
     None => ()
   }
   if value_end >= end || line[value_end] != ')' {
-    return (
-      value_end,
-      true,
-      Some(style_parse_error(line, value_end, end, "close-paren")),
-    )
+    return (index, false)
   }
-  (value_end + 1, true, None)
+  (value_end + 1, true)
 }
 
 ///|
