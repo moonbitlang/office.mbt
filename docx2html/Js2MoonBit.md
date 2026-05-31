@@ -49,6 +49,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - For `w:hyperlink`, a relationship target plus `w:anchor` becomes one external `href` with the URL fragment replaced. An anchor without a relationship remains an internal anchor and receives `id_prefix` during HTML conversion.
 - `w:hyperlink` without `r:id` or `w:anchor` is transparent and contributes only its converted children. `w:tgtFrame` is optional metadata; blank values are ignored instead of becoming an empty `target`.
 - `w:hyperlink` with an unresolved `r:id` is also non-fatal: preserve its converted children inside an unaddressed hyperlink node so HTML conversion can collapse it without warnings.
+- Hyperlink parity needs both direct body-reader tests and ZIP-level tests with `word/_rels/document.xml.rels`; injecting relationships into a helper skips the part-path lookup that real DOCX files depend on.
 - Adjacent hyperlinks with identical generated attributes collapse through HTML simplification. Do not mark ordinary converted `<a>` nodes as fresh, or Mammoth-compatible link merging is lost.
 - Converter warnings for unrecognised styles should be emitted after style-map lookup fails, not while reading DOCX XML. Mammoth's default style map includes empty mappings for note/comment reference styles to suppress false warnings.
 - Structured document tag checkboxes use the Word 2010 `wordml` namespace. When content is present, replace the first non-empty text node with `Checkbox` and drop the placeholder glyph; when no text is present, emit the checkbox itself.

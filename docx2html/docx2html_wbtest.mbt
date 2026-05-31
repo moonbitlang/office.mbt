@@ -1059,6 +1059,42 @@ test "docx styles reader extracts numbering style num ids" {
 }
 
 ///|
+test "docx reader resolves hyperlink relationships from document part" {
+  let document_xml =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    #|  <w:body>
+    #|    <w:p><w:hyperlink r:id="rId6"><w:r><w:t>coconuts</w:t></w:r></w:hyperlink></w:p>
+    #|  </w:body>
+    #|</w:document>
+  let relationships_xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    #|  <Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="http://www.example.com" TargetMode="External" />
+    #|</Relationships>
+  let zip = zip_with_text("word/document.xml", document_xml)
+  zip.entries["word/_rels/document.xml.rels"] = @utf8.encode(relationships_xml)
+  let result = read_docx_zip_with_messages(zip)
+  match result.document {
+    Document(children~, ..) =>
+      match children[0] {
+        Paragraph(children=paragraph_children, ..) =>
+          match paragraph_children[0] {
+            Hyperlink(href=Some(href), children=link_children, ..) => {
+              inspect(href, content="http://www.example.com")
+              inspect(link_children.length(), content="1")
+            }
+            _ => fail("expected hyperlink")
+          }
+        _ => fail("expected paragraph")
+      }
+    _ => fail("expected document")
+  }
+  inspect(
+    convert_document_to_html(result.document).value,
+    content="<p><a href=\"http://www.example.com\">coconuts</a></p>",
+  )
+}
+
+///|
 test "docx reader resolves styles from document relationships" {
   let document_xml =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="Custom" /></w:pPr></w:p></w:body></w:document>
