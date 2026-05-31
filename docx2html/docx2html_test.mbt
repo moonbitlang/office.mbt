@@ -202,6 +202,39 @@ test "style map separator is inserted only when html elements collapse" {
 }
 
 ///|
+test "html simplifier removes empty nodes before collapsing" {
+  inspect(
+    @docx2html.write_html(@docx2html.simplify_html([@docx2html.html_text("")])),
+    content="",
+  )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([@docx2html.html_element("p")]),
+    ),
+    content="",
+  )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([@docx2html.html_element("br")]),
+    ),
+    content="<br />",
+  )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.simplify_html([
+        @docx2html.html_element("blockquote", children=[
+          @docx2html.html_element("p", children=[@docx2html.html_text("Hello")]),
+        ]),
+        @docx2html.html_element("blockquote", children=[
+          @docx2html.html_element("p", children=[@docx2html.html_text("there")]),
+        ]),
+      ]),
+    ),
+    content="<blockquote><p>Hellothere</p></blockquote>",
+  )
+}
+
+///|
 test "invalid style maps warn and keep valid mappings" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
@@ -433,7 +466,7 @@ test "document converter maps break types through style maps" {
     @docx2html.convert_document_to_html(run, style_map=[
       "br[type='page'] => hr:fresh", "br[type='line'] => br.line-break", "br[type='column'] => span.column-break",
     ]).value,
-    content="<hr /><br class=\"line-break\" /><span class=\"column-break\"></span>",
+    content="<hr /><br class=\"line-break\" />",
   )
 }
 

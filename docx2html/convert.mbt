@@ -172,13 +172,12 @@ fn DocumentConverter::convert_element(
       self.convert_table(element, children, properties)
     TableRow(children~, is_header~) => {
       let cells = self.convert_children(children)
-      [
-        html_element(
-          "tr",
-          children=if is_header { table_cells_to_header(cells) } else { cells },
-          fresh=true,
-        ),
-      ]
+      let children = if is_header {
+        table_cells_to_header(cells)
+      } else {
+        cells
+      }
+      [html_element("tr", children=force_write_nodes(children), fresh=true)]
     }
     TableCell(children~, col_span~, row_span~) => {
       let attrs : Map[String, String] = {}
@@ -192,7 +191,7 @@ fn DocumentConverter::convert_element(
         html_element(
           "td",
           attributes=attrs,
-          children=self.convert_children(children),
+          children=force_write_nodes(self.convert_children(children)),
           fresh=true,
         ),
       ]
@@ -289,6 +288,11 @@ fn DocumentConverter::convert_paragraph(
         properties.style_id,
         properties.style_name,
       )
+    }
+    let content = if self.options.ignore_empty_paragraphs {
+      content
+    } else {
+      force_write_nodes(content)
     }
     self.wrap_with_style(element, content, default_path)
   }
@@ -425,7 +429,7 @@ fn DocumentConverter::convert_table(
   children : Array[DocumentElement],
   properties : TableProperties,
 ) -> Array[HtmlNode] {
-  let rows = self.convert_children(children)
+  let rows = force_write_nodes(self.convert_children(children))
   let default_path = [
     { tag: "table", attributes: {}, fresh: true, separator: None },
   ]
@@ -437,6 +441,13 @@ fn DocumentConverter::convert_table(
     )
   }
   self.wrap_with_style(element, rows, default_path)
+}
+
+///|
+fn force_write_nodes(children : Array[HtmlNode]) -> Array[HtmlNode] {
+  let nodes = [ForceWrite]
+  nodes.append(children)
+  nodes
 }
 
 ///|
@@ -706,24 +717,27 @@ fn html_nodes_are_empty(nodes : Array[HtmlNode]) -> Bool {
 pub fn simplify_html(nodes : Array[HtmlNode]) -> Array[HtmlNode] {
   let result : Array[HtmlNode] = []
   for node in nodes {
-    let simplified = simplify_html_node(node)
-    append_simplified(result, simplified)
+    match simplify_html_node(node) {
+      Some(simplified) => append_simplified(result, simplified)
+      None => ()
+    }
   }
   result
 }
 
 ///|
-fn simplify_html_node(node : HtmlNode) -> HtmlNode {
+fn simplify_html_node(node : HtmlNode) -> HtmlNode? {
   match node {
-    Element(tag~, attributes~, children~, fresh~, separator~) =>
-      Element(
-        tag~,
-        attributes~,
-        children=simplify_html(children),
-        fresh~,
-        separator~,
-      )
-    _ => node
+    TextNode("") => None
+    Element(tag~, attributes~, children~, fresh~, separator~) => {
+      let children = simplify_html(children)
+      if children.is_empty() && !is_void_html_tag(tag) {
+        None
+      } else {
+        Some(Element(tag~, attributes~, children~, fresh~, separator~))
+      }
+    }
+    _ => Some(node)
   }
 }
 
