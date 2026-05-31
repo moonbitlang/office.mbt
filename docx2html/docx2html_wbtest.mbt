@@ -624,6 +624,26 @@ test "docx styles are keyed by type and keep first duplicate" {
 }
 
 ///|
+test "docx styles reader extracts numbering style num ids" {
+  let styles = styles_from_xml(
+    (
+      #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:style w:type="numbering" w:styleId="List1" />
+      #|  <w:style w:type="numbering" w:styleId="List2"><w:pPr><w:numPr><w:numId w:val="42" /></w:numPr></w:pPr></w:style>
+      #|</w:styles>
+    ),
+  )
+  match styles.find_style("numbering", "List1") {
+    Some(style) => inspect(style.name, content="")
+    None => fail("expected numbering style without num id")
+  }
+  match styles.find_style("numbering", "List2") {
+    Some(style) => inspect(style.name, content="42")
+    None => fail("expected numbering style with num id")
+  }
+}
+
+///|
 test "docx reader resolves styles from document relationships" {
   let document_xml =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="Custom" /></w:pPr></w:p></w:body></w:document>
@@ -908,6 +928,61 @@ test "docx numbering xml maps explicit and style-based list levels" {
       inspect(level.level, content="1")
     }
     None => fail("expected paragraph style numbering level")
+  }
+}
+
+///|
+test "docx numbering xml handles missing references and level defaults" {
+  let missing_reference = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  debug_inspect(missing_reference.find_level("47", "0"), content="None")
+  let missing_level_index = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42"><w:lvl><w:numFmt w:val="decimal" /></w:lvl></w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  match missing_level_index.find_level("47", "0") {
+    Some(level) => {
+      inspect(level.is_ordered, content="true")
+      inspect(level.level, content="1")
+    }
+    None => fail("expected fallback level")
+  }
+  let explicit_level_wins = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42"><w:lvl><w:numFmt w:val="decimal" /></w:lvl><w:lvl w:ilvl="0"><w:numFmt w:val="bullet" /></w:lvl></w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  match explicit_level_wins.find_level("47", "0") {
+    Some(level) => inspect(level.is_ordered, content="false")
+    None => fail("expected explicit level")
+  }
+  let missing_num_format = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42"><w:lvl w:ilvl="0" /></w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  match missing_num_format.find_level("47", "0") {
+    Some(level) => inspect(level.is_ordered, content="true")
+    None => fail("expected ordered default")
   }
 }
 
