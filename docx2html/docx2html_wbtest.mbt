@@ -2327,7 +2327,7 @@ test "docx transparent wrappers pass through children" {
 }
 
 ///|
-fn drawing_image_reader() -> BodyReader {
+fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
   {
     styles: {},
     zip: { entries: { "word/media/tiny.png": b"abc" } },
@@ -2352,8 +2352,38 @@ fn drawing_image_reader() -> BodyReader {
     numbering: NumberingMap::empty(),
     messages: [],
     external_files: default_external_file_access(),
-    read_images: true,
+    read_images,
   }
+}
+
+///|
+fn drawing_image_reader() -> BodyReader {
+  drawing_image_reader_with_images(true)
+}
+
+///|
+test "docx image reader skips DrawingML and VML reads when disabled" {
+  let drawing_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let drawing = read_xml_string(
+    drawing_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let drawing_reader = drawing_image_reader_with_images(false)
+  debug_inspect(drawing_reader.read_element(drawing), content="[]")
+  debug_inspect(drawing_reader.messages, content="[]")
+  let vml_xml =
+    #|<v:imagedata xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rImage" />
+  let vml = read_xml_string(vml_xml, namespace_map=office_namespace_map())
+  let vml_reader = drawing_image_reader_with_images(false)
+  debug_inspect(vml_reader.read_element(vml), content="[]")
+  debug_inspect(vml_reader.messages, content="[]")
+  let direct_reader = drawing_image_reader_with_images(false)
+  debug_inspect(
+    direct_reader.read_image_by_relationship("rImage", alt_text=None),
+    content="None",
+  )
+  debug_inspect(direct_reader.messages, content="[]")
 }
 
 ///|
