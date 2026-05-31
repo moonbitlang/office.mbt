@@ -6,6 +6,16 @@ test "convert_to_html reads single paragraph docx fixture" {
 }
 
 ///|
+test "pretty printing expands element content" {
+  let result = @docx2html.convert_to_html(
+    single_paragraph_docx()[:],
+    pretty_print=true,
+  )
+  inspect(result.value, content="<p>\n  Walking on imported air\n</p>")
+  debug_inspect(result.messages, content="[]")
+}
+
+///|
 test "convert_to_html reads XML with UTF-8 byte order mark" {
   let result = @docx2html.convert_to_html(utf8_bom_docx()[:])
   inspect(result.value, content="<p>This XML has a byte order mark.</p>")

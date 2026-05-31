@@ -38,3 +38,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Comment references are ignored unless a `comment-reference` style mapping exists. When mapped, labels use the comment initials plus a document-order counter (`[MW1]`), not the raw Word comment ID.
 - Embedded style maps live at `mammoth/style-map` as raw text. Conversion style-map precedence is explicit options first, embedded map second, default map last.
 - For text boxes, `w:txbxContent` is extra content: read it with the normal body reader and append it after the containing paragraph. In `mc:AlternateContent`, prefer `mc:Fallback`, matching Mammoth's conservative compatibility behavior.
+- Pretty HTML output should trim the final writer newline after emitting indented nodes, since Mammoth's public output has internal newlines but no trailing newline.

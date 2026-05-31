@@ -41,7 +41,12 @@ pub fn write_html(
 ) -> String {
   let writer = HtmlWriter::{ pretty_print, buffer: StringBuilder(), indent: 0 }
   writer.write_nodes(nodes)
-  writer.buffer.to_string()
+  let result = writer.buffer.to_string()
+  if pretty_print && result.has_suffix("\n") {
+    result[:result.length() - 1].to_owned()
+  } else {
+    result
+  }
 }
 
 ///|
@@ -61,7 +66,15 @@ fn HtmlWriter::write_nodes(self : HtmlWriter, nodes : Array[HtmlNode]) -> Unit {
 ///|
 fn HtmlWriter::write_node(self : HtmlWriter, node : HtmlNode) -> Unit {
   match node {
-    TextNode(value) => self.buffer.write_string(escape_html(value))
+    TextNode(value) => {
+      if self.pretty_print {
+        self.write_indent()
+      }
+      self.buffer.write_string(escape_html(value))
+      if self.pretty_print {
+        self.buffer.write_string("\n")
+      }
+    }
     ForceWrite => ()
     Element(tag~, attributes~, children~, ..) => {
       if self.pretty_print {
@@ -74,9 +87,15 @@ fn HtmlWriter::write_node(self : HtmlWriter, node : HtmlNode) -> Unit {
         self.buffer.write_string(" />")
       } else {
         self.buffer.write_string(">")
+        if self.pretty_print {
+          self.buffer.write_string("\n")
+        }
         self.indent = self.indent + 1
         self.write_nodes(children)
         self.indent = self.indent - 1
+        if self.pretty_print {
+          self.write_indent()
+        }
         self.buffer.write_string("</")
         self.buffer.write_string(tag)
         self.buffer.write_string(">")
