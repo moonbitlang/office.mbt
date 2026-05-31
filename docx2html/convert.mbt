@@ -125,7 +125,7 @@ fn DocumentConverter::convert_element(
     TableRow(children~, is_header~) => {
       let tag = if is_header { "th" } else { "td" }
       ignore(tag)
-      [html_element("tr", children=self.convert_children(children))]
+      [html_element("tr", children=self.convert_children(children), fresh=true)]
     }
     TableCell(children~, col_span~, row_span~) => {
       let attrs : Map[String, String] = {}
@@ -140,6 +140,7 @@ fn DocumentConverter::convert_element(
           "td",
           attributes=attrs,
           children=self.convert_children(children),
+          fresh=true,
         ),
       ]
     }
@@ -236,7 +237,7 @@ fn DocumentConverter::convert_run(
   if properties.is_bold {
     paths.push(path_for_property(self, element, "bold", Some("strong")))
   }
-  match find_style_mapping(element, self.options.style_map) {
+  match find_run_style_mapping(element, self.options.style_map) {
     Some(mapping) => paths.push(mapping.to)
     None => ()
   }
@@ -263,6 +264,23 @@ fn path_for_property(
     Some(tag) => [{ tag, attributes: {}, fresh: false }]
     None => []
   }
+}
+
+///|
+fn find_run_style_mapping(
+  element : DocumentElement,
+  style_map : Array[StyleMapping],
+) -> StyleMapping? {
+  for mapping in style_map {
+    match mapping.from {
+      RunMatcher(..) =>
+        if mapping.from.matches(element) {
+          return Some(mapping)
+        }
+      _ => ()
+    }
+  }
+  None
 }
 
 ///|
