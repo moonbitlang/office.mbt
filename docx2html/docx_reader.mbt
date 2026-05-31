@@ -1346,23 +1346,20 @@ fn parse_complex_field_instruction(
   instruction_text : String,
   checkbox_checked : Bool?,
 ) -> ComplexField {
+  match parse_hyperlink_field_instruction(instruction_text) {
+    Some(field) => field
+    None =>
+      parse_non_hyperlink_field_instruction(instruction_text, checkbox_checked)
+  }
+}
+
+///|
+fn parse_non_hyperlink_field_instruction(
+  instruction_text : String,
+  checkbox_checked : Bool?,
+) -> ComplexField {
   let text = instruction_text.trim().to_owned()
-  let keyword = "HYPERLINK"
-  if text.has_prefix(keyword) {
-    let mut rest = text[keyword.length():].trim().to_owned()
-    if rest.has_prefix("\\l") {
-      rest = rest[2:].trim().to_owned()
-      match read_field_location(rest) {
-        Some(anchor) => ComplexHyperlink(href=None, anchor=Some(anchor))
-        None => ComplexFieldUnknown
-      }
-    } else {
-      match read_field_location(rest) {
-        Some(href) => ComplexHyperlink(href=Some(href), anchor=None)
-        None => ComplexFieldUnknown
-      }
-    }
-  } else if text.has_prefix("FORMCHECKBOX") {
+  if text.has_prefix("FORMCHECKBOX") {
     ComplexCheckbox(checkbox_checked.unwrap_or(false))
   } else {
     ComplexFieldUnknown
@@ -1370,31 +1367,97 @@ fn parse_complex_field_instruction(
 }
 
 ///|
-fn read_field_location(value : String) -> String? {
-  let text = value.trim().to_owned()
-  if text == "" {
+fn parse_hyperlink_field_instruction(
+  instruction_text : String,
+) -> ComplexField? {
+  let keyword = "HYPERLINK"
+  let mut index = skip_field_whitespace(instruction_text, 0)
+  if !field_starts_with_at(instruction_text, index, keyword) {
     None
-  } else if text.has_prefix("\"") {
-    match text[1:].find("\"") {
-      Some(index) => Some(text[1:1 + index].to_owned())
-      None => Some(text[1:].to_owned())
-    }
   } else {
-    Some(read_until_whitespace(text))
+    index = index + keyword.length()
+    if index >= instruction_text.length() ||
+      !is_field_whitespace(instruction_text[index]) {
+      return None
+    }
+    index = skip_field_whitespace(instruction_text, index)
+    let mut is_internal_link = false
+    if field_starts_with_at(instruction_text, index, "\\l") {
+      let after_switch = index + "\\l".length()
+      if after_switch < instruction_text.length() &&
+        is_field_whitespace(instruction_text[after_switch]) {
+        is_internal_link = true
+        index = skip_field_whitespace(instruction_text, after_switch)
+      }
+    }
+    match read_field_location(instruction_text, index) {
+      Some(location) =>
+        if is_internal_link {
+          Some(ComplexHyperlink(href=None, anchor=Some(location)))
+        } else {
+          Some(ComplexHyperlink(href=Some(location), anchor=None))
+        }
+      None => None
+    }
   }
 }
 
 ///|
-fn read_until_whitespace(value : String) -> String {
-  let mut index = 0
+fn read_field_location(value : String, index : Int) -> String? {
+  if index >= value.length() {
+    None
+  } else if value[index] == '"' {
+    let tail = value[index + 1:]
+    match tail.rev_find("\"") {
+      Some(last_quote) =>
+        Some(value[index + 1:index + 1 + last_quote].to_owned())
+      None => read_unquoted_field_location(value, index)
+    }
+  } else {
+    read_unquoted_field_location(value, index)
+  }
+}
+
+///|
+fn read_unquoted_field_location(value : String, index : Int) -> String? {
+  if index >= value.length() || value[index] == '\\' {
+    None
+  } else {
+    Some(read_until_field_whitespace(value, index))
+  }
+}
+
+///|
+fn read_until_field_whitespace(value : String, start : Int) -> String {
+  let mut index = start
   while index < value.length() {
     let char = value[index]
-    if char == ' ' || char == '\t' || char == '\n' || char == '\r' {
-      return value[:index].to_owned()
+    if is_field_whitespace(char) {
+      return value[start:index].to_owned()
     }
     index = index + 1
   }
-  value
+  value[start:].to_owned()
+}
+
+///|
+fn skip_field_whitespace(value : String, start : Int) -> Int {
+  let mut index = start
+  while index < value.length() && is_field_whitespace(value[index]) {
+    index = index + 1
+  }
+  index
+}
+
+///|
+fn is_field_whitespace(char : UInt16) -> Bool {
+  char == ' ' || char == '\t' || char == '\n' || char == '\r'
+}
+
+///|
+fn field_starts_with_at(value : String, index : Int, prefix : String) -> Bool {
+  index + prefix.length() <= value.length() &&
+  value[index:index + prefix.length()].to_owned() == prefix
 }
 
 ///|
