@@ -502,6 +502,78 @@ test "docx hyperlink reader replaces external URL fragment when anchor is set" {
 }
 
 ///|
+test "docx hyperlink reader follows Mammoth target forms" {
+  let external_xml =
+    #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="r42"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
+  let external = read_xml_string(
+    external_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let reader = empty_body_reader({
+    relationships: [
+      {
+        id: "r42",
+        relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        target: "http://example.com",
+        target_mode: Some("External"),
+      },
+    ],
+  })
+  match reader.read_element(external)[0] {
+    Hyperlink(href~, anchor~, target_frame~, children~) => {
+      debug_inspect(href, content="Some(\"http://example.com\")")
+      debug_inspect(anchor, content="None")
+      debug_inspect(target_frame, content="None")
+      match children[0] {
+        Run(..) => ()
+        _ => fail("expected run child")
+      }
+    }
+    _ => fail("expected hyperlink")
+  }
+  let internal_xml =
+    #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:anchor="_Peter"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
+  let internal = read_xml_string(
+    internal_xml,
+    namespace_map=office_namespace_map(),
+  )
+  match empty_body_reader({ relationships: [] }).read_element(internal)[0] {
+    Hyperlink(href~, anchor~, target_frame~, children~) => {
+      debug_inspect(href, content="None")
+      debug_inspect(anchor, content="Some(\"_Peter\")")
+      debug_inspect(target_frame, content="None")
+      match children[0] {
+        Run(..) => ()
+        _ => fail("expected run child")
+      }
+    }
+    _ => fail("expected hyperlink")
+  }
+  let target_frame_xml =
+    #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:anchor="Introduction" w:tgtFrame="_blank" />
+  let target_frame = read_xml_string(
+    target_frame_xml,
+    namespace_map=office_namespace_map(),
+  )
+  match empty_body_reader({ relationships: [] }).read_element(target_frame)[0] {
+    Hyperlink(target_frame~, ..) =>
+      debug_inspect(target_frame, content="Some(\"_blank\")")
+    _ => fail("expected hyperlink")
+  }
+  let empty_target_frame_xml =
+    #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:anchor="Introduction" w:tgtFrame="" />
+  let empty_target_frame = read_xml_string(
+    empty_target_frame_xml,
+    namespace_map=office_namespace_map(),
+  )
+  match
+    empty_body_reader({ relationships: [] }).read_element(empty_target_frame)[0] {
+    Hyperlink(target_frame~, ..) => debug_inspect(target_frame, content="None")
+    _ => fail("expected hyperlink")
+  }
+}
+
+///|
 test "docx hyperlink reader preserves children when no target is present" {
   let xml =
     #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
