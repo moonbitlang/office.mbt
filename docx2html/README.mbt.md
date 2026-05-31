@@ -31,13 +31,14 @@ when the source document is allowed to read sibling files.
 
 ## Native CLI
 
-The native executable mirrors the common Mammoth CLI paths:
+From this repository checkout, the native executable mirrors the common Mammoth
+CLI paths:
 
 ```bash
-moon run bobzhang/docx2html/cmd/main -- input.docx
-moon run bobzhang/docx2html/cmd/main -- --output-format=markdown input.docx
-moon run bobzhang/docx2html/cmd/main -- --style-map style-map input.docx output.html
-moon run bobzhang/docx2html/cmd/main -- --output-dir out input.docx
+moon run --target native cmd/main -- input.docx
+moon run --target native cmd/main -- --output-format=markdown input.docx
+moon run --target native cmd/main -- --style-map style-map input.docx output.html
+moon run --target native cmd/main -- --output-dir out input.docx
 ```
 
 ## Image Conversion
