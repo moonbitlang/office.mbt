@@ -89,6 +89,18 @@ test "pretty html writer follows Mammoth indentation rules" {
   inspect(
     @docx2html.write_html(
       [
+        @docx2html.html_element("ul", children=[
+          @docx2html.html_element("li", children=[@docx2html.html_text("One")]),
+          @docx2html.html_element("li", children=[@docx2html.html_text("Two")]),
+        ]),
+      ],
+      pretty_print=true,
+    ),
+    content="<ul>\n  <li>\n    One\n  </li>\n  <li>\n    Two\n  </li>\n</ul>",
+  )
+  inspect(
+    @docx2html.write_html(
+      [
         @docx2html.html_element("pre", children=[
           @docx2html.html_element("p", children=[
             @docx2html.html_text("One\nTwo"),
@@ -102,6 +114,15 @@ test "pretty html writer follows Mammoth indentation rules" {
   inspect(
     @docx2html.write_html(
       [
+        @docx2html.html_element("p", children=[@docx2html.html_text("One\nTwo")]),
+      ],
+      pretty_print=true,
+    ),
+    content="<p>\n  One\n  Two\n</p>",
+  )
+  inspect(
+    @docx2html.write_html(
+      [
         @docx2html.html_element("p", children=[
           @docx2html.html_text("One"),
           @docx2html.html_text("Two"),
@@ -110,6 +131,13 @@ test "pretty html writer follows Mammoth indentation rules" {
       pretty_print=true,
     ),
     content="<p>\n  OneTwo\n</p>",
+  )
+  inspect(
+    @docx2html.write_html(
+      [@docx2html.html_element("p", children=[@docx2html.html_element("br")])],
+      pretty_print=true,
+    ),
+    content="<p>\n  <br />\n</p>",
   )
 }
 
