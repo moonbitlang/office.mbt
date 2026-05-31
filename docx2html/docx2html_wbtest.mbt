@@ -818,6 +818,30 @@ test "docx table vertical merges account for column spans" {
 }
 
 ///|
+test "docx table vertical merges do not cross misaligned cells" {
+  let xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:tc><w:tcPr><w:gridSpan w:val="2" /><w:vMerge w:val="restart" /></w:tcPr><w:p /></w:tc></w:tr><w:tr><w:tc><w:p /></w:tc><w:tc><w:tcPr><w:vMerge w:val="continue" /></w:tcPr><w:p /></w:tc></w:tr></w:tbl>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<table><tr><td colspan=\"2\"></td></tr><tr><td></td><td></td></tr></table>",
+  )
+}
+
+///|
+test "docx table row header property marks leading header rows" {
+  let xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:trPr><w:tblHeader /></w:trPr></w:tr><w:tr /></w:tbl>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<table><thead><tr></tr></thead><tbody><tr></tr></tbody></table>",
+  )
+}
+
+///|
 test "docx table reader warns when row span calculation is unreliable" {
   let non_row_xml =
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tr><w:tc><w:p /></w:tc></w:tr><w:p><w:r><w:t>Between</w:t></w:r></w:p><w:tr><w:tc><w:p /></w:tc></w:tr></w:tbl>
