@@ -1207,6 +1207,33 @@ test "style map named matcher diagnostics match Mammoth" {
 }
 
 ///|
+test "style map malformed suffix diagnostics match Mammoth" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
+  ])
+  let result = @docx2html.convert_document_to_html(doc, style_map=[
+    "p. => h1", "p[style-name] => h1", "p[style-name='Heading' => h1", "p:foo(1) => p",
+    "p:ordered-list => p", "br => br", "p => ul>li", "p => span.",
+  ])
+  inspect(result.value, content="<p>Walking on imported air</p>")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[
+      #|  Warning("Did not understand this style mapping, so ignored it: p. => h1\nError was at character number 3: Expected identifier but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p[style-name] => h1\nError was at character number 13: Expected style name matcher but got close-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p[style-name='Heading' => h1\nError was at character number 23: Expected close-square-bracket but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p:foo(1) => p\nError was at character number 2: Expected whitespace but got colon"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p:ordered-list => p\nError was at character number 15: Expected open-paren but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: br => br\nError was at character number 3: Expected open-square-bracket but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => ul>li\nError was at character number 8: Expected end but got gt"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span.\nError was at character number 11: Expected identifier but got end"),
+      #|]
+    ),
+  )
+}
+
+///|
 test "style map style-name prefix matchers are honored" {
   let heading_properties = @docx2html.ParagraphProperties::{
     style_id: None,
