@@ -109,6 +109,73 @@ test "convert_to_markdown reads docx list structure" {
 }
 
 ///|
+test "convert_to_markdown matches Mammoth fixture outputs" {
+  inspect(
+    @docx2html.convert_to_markdown(tables_docx()[:]).value,
+    content="Above\n\nTop left\n\nTop right\n\nBottom left\n\nBottom right\n\nBelow\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(underline_docx()[:]).value,
+    content="__The Sunset Tree__\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(strikethrough_docx()[:]).value,
+    content="Today's Special: Salmon Sold out\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(strict_format_docx()[:]).value,
+    content="Test\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(tiny_picture_docx()[:]).value,
+    content="![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=)\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(tiny_picture_target_base_relative_docx()[:]).value,
+    content="![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=)\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(endnotes_docx()[:]).value,
+    content=(
+      #|Ouch<a id="endnote-ref-2"></a>[\[1\]](#endnote-2)\.<a id="endnote-ref-3"></a>[\[2\]](#endnote-3)
+      #|
+      #|1. <a id="endnote-2"></a> A tachyon walks into a bar\. [↑](#endnote-ref-2)
+      #|
+      #|
+      #|2. <a id="endnote-3"></a> Fin\. [↑](#endnote-ref-3)
+      #|
+      #|
+      #|
+      #|
+    ),
+  )
+  inspect(
+    @docx2html.convert_to_markdown(footnote_hyperlink_docx()[:]).value,
+    content=(
+      #|<a id="footnote-ref-1"></a>[\[1\]](#footnote-1)
+      #|
+      #|1. <a id="footnote-1"></a> [Example](http://www.example.com) [↑](#footnote-ref-1)
+      #|
+      #|
+      #|
+      #|
+    ),
+  )
+  inspect(
+    @docx2html.convert_to_markdown(comments_docx()[:]).value,
+    content="Ouch\\.\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(text_box_docx()[:]).value,
+    content="Datum plane\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(embedded_style_map_docx()[:]).value,
+    content="# Walking on imported air\n\n",
+  )
+}
+
+///|
 test "convert_to_markdown preserves empty paragraphs when requested" {
   let result = @docx2html.convert_to_markdown(
     empty_docx()[:],
