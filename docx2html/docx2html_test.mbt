@@ -324,6 +324,69 @@ test "style map bang html path ignores matched content" {
 }
 
 ///|
+fn expect_style_mapping(line : String) -> @docx2html.StyleMapping {
+  match @docx2html.read_style_mapping(line) {
+    Some(mapping) => mapping
+    None => abort("expected style mapping")
+  }
+}
+
+///|
+test "style map parser reads upstream html path forms" {
+  let path_mapping = expect_style_mapping(
+    "p => div.tip.help[lang='fr'][data-x='y']:fresh",
+  )
+  match path_mapping.from {
+    ParagraphMatcher(style_id=None, style_name=None, numbering=None) => ()
+    _ => fail("expected plain paragraph matcher")
+  }
+  let path = path_mapping.to[0]
+  inspect(path.tag, content="div")
+  inspect(path.attributes.get_or_default("class", ""), content="tip help")
+  inspect(path.attributes.get_or_default("lang", ""), content="fr")
+  inspect(path.attributes.get_or_default("data-x", ""), content="y")
+  debug_inspect(path.fresh, content="true")
+  let choice = expect_style_mapping("p => ul|ol > li")
+  inspect(choice.to[0].tag, content="ul|ol")
+  inspect(choice.to[1].tag, content="li")
+  debug_inspect(expect_style_mapping("r =>").to, content="[]")
+}
+
+///|
+test "style map parser reads upstream document matcher forms" {
+  match expect_style_mapping("p.Heading1 => h1").from {
+    ParagraphMatcher(style_id=Some("Heading1"), style_name=None, numbering=None) =>
+      ()
+    _ => fail("expected paragraph style ID matcher")
+  }
+  match expect_style_mapping("p[style-name^='Heading'] => h1").from {
+    ParagraphMatcher(
+      style_id=None,
+      style_name=Some(PrefixStyleName("Heading")),
+      numbering=None
+    ) => ()
+    _ => fail("expected paragraph style-name prefix matcher")
+  }
+  match expect_style_mapping("p:ordered-list(1) => ol > li").from {
+    ParagraphMatcher(numbering=Some(numbering), ..) =>
+      debug_inspect(numbering, content="{ is_ordered: true, level: 1 }")
+    _ => fail("expected ordered list matcher")
+  }
+  match expect_style_mapping("table.TableNormal => table").from {
+    TableMatcher(style_id=Some("TableNormal"), style_name=None) => ()
+    _ => fail("expected table style ID matcher")
+  }
+  match expect_style_mapping("highlight[color='yellow'] => mark").from {
+    HighlightMatcher(Some("yellow")) => ()
+    _ => fail("expected highlight color matcher")
+  }
+  match expect_style_mapping("br[type='column'] => span").from {
+    BreakMatcher(Column) => ()
+    _ => fail("expected column break matcher")
+  }
+}
+
+///|
 test "style map separator is inserted only when html elements collapse" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("One")]),
