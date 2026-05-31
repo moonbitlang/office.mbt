@@ -53,3 +53,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Complex fields are paragraph-local state: collect `w:instrText` across direct or run-nested nodes between `w:fldChar begin` and `separate`, then wrap displayed runs while the parsed hyperlink field is active.
 - `FORMCHECKBOX` complex fields read their checked state from the begin `w:fldChar`'s `w:ffData/w:checkBox`; `w:checked` overrides `w:default`, and fields without `separate` still emit a checkbox on `end`.
 - `w:sym` needs font-specific dingbat mapping. Mammoth also treats private-use `F0xx` codes as `xx` for supported fonts, so normalize before lookup.
+- Style-name prefix matchers (`style-name^='Heading'`) must be represented distinctly from exact style-name matches; otherwise they can accidentally become broad paragraph/run/table matchers.

@@ -1,14 +1,20 @@
 ///|
+pub(all) enum StyleNameMatcher {
+  ExactStyleName(String)
+  PrefixStyleName(String)
+} derive(Debug, Eq)
+
+///|
 pub(all) enum DocumentMatcher {
   ParagraphMatcher(
     style_id~ : String?,
-    style_name~ : String?,
+    style_name~ : StyleNameMatcher?,
     numbering~ : Numbering?
   )
-  RunMatcher(style_id~ : String?, style_name~ : String?)
+  RunMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
   RunPropertyMatcher(String)
   HighlightMatcher(String?)
-  TableMatcher(style_id~ : String?, style_name~ : String?)
+  TableMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
   BreakMatcher(BreakType)
   CommentReferenceMatcher
 } derive(Debug, Eq)
@@ -83,8 +89,8 @@ fn read_document_matcher(value : String) -> DocumentMatcher? {
     Some(HighlightMatcher(None))
   } else if value.has_prefix("highlight[") {
     Some(HighlightMatcher(read_attribute_value(value, "color")))
-  } else if value == "table" {
-    Some(TableMatcher(style_id=None, style_name=None))
+  } else if value.has_prefix("table") {
+    Some(read_table_matcher(value))
   } else if value.has_prefix("br") {
     Some(BreakMatcher(read_break_matcher_type(value)))
   } else if value == "comment-reference" {
@@ -110,7 +116,7 @@ fn read_break_matcher_type(value : String) -> BreakType {
 ///|
 fn read_paragraph_matcher(value : String) -> DocumentMatcher {
   let style_id = read_style_id(value, "p")
-  let style_name = read_attribute_value(value, "style-name")
+  let style_name = read_style_name_matcher(value)
   let numbering = if value.contains(":ordered-list(") {
     Some({ is_ordered: true, level: read_list_level(value) })
   } else if value.contains(":unordered-list(") {
@@ -125,7 +131,15 @@ fn read_paragraph_matcher(value : String) -> DocumentMatcher {
 fn read_run_matcher(value : String) -> DocumentMatcher {
   RunMatcher(
     style_id=read_style_id(value, "r"),
-    style_name=read_attribute_value(value, "style-name"),
+    style_name=read_style_name_matcher(value),
+  )
+}
+
+///|
+fn read_table_matcher(value : String) -> DocumentMatcher {
+  TableMatcher(
+    style_id=read_style_id(value, "table"),
+    style_name=read_style_name_matcher(value),
   )
 }
 
@@ -146,6 +160,33 @@ fn read_style_id(value : String, prefix : String) -> String? {
 ///|
 fn read_attribute_value(value : String, name : String) -> String? {
   let needle = name + "='"
+  match value.find(needle) {
+    Some(start) => {
+      let value_start = start + needle.length()
+      match value[value_start:].find("'") {
+        Some(length) => Some(value[value_start:value_start + length].to_owned())
+        None => None
+      }
+    }
+    None => None
+  }
+}
+
+///|
+fn read_style_name_matcher(value : String) -> StyleNameMatcher? {
+  match read_attribute_value(value, "style-name") {
+    Some(name) => Some(ExactStyleName(name))
+    None =>
+      match read_prefix_attribute_value(value, "style-name") {
+        Some(prefix) => Some(PrefixStyleName(prefix))
+        None => None
+      }
+  }
+}
+
+///|
+fn read_prefix_attribute_value(value : String, name : String) -> String? {
+  let needle = name + "^='"
   match value.find(needle) {
     Some(start) => {
       let value_start = start + needle.length()
@@ -342,14 +383,14 @@ fn DocumentMatcher::matches(
       Paragraph(properties~, ..),
     ) =>
       option_matches(style_id, properties.style_id) &&
-      option_matches_ci(style_name, properties.style_name) &&
+      style_name_matches(style_name, properties.style_name) &&
       option_matches(numbering, properties.numbering)
     (RunMatcher(style_id~, style_name~), Run(properties~, ..)) =>
       option_matches(style_id, properties.style_id) &&
-      option_matches_ci(style_name, properties.style_name)
+      style_name_matches(style_name, properties.style_name)
     (TableMatcher(style_id~, style_name~), Table(properties~, ..)) =>
       option_matches(style_id, properties.style_id) &&
-      option_matches_ci(style_name, properties.style_name)
+      style_name_matches(style_name, properties.style_name)
     (RunPropertyMatcher("bold"), Run(properties~, ..)) => properties.is_bold
     (RunPropertyMatcher("italic"), Run(properties~, ..)) => properties.is_italic
     (RunPropertyMatcher("underline"), Run(properties~, ..)) =>
@@ -379,9 +420,10 @@ fn[T : Eq] option_matches(expected : T?, actual : T?) -> Bool {
 }
 
 ///|
-fn option_matches_ci(expected : String?, actual : String?) -> Bool {
+fn style_name_matches(expected : StyleNameMatcher?, actual : String?) -> Bool {
   match (expected, actual) {
-    (Some(a), Some(b)) => a.to_lower() == b.to_lower()
+    (Some(ExactStyleName(a)), Some(b)) => a.to_lower() == b.to_lower()
+    (Some(PrefixStyleName(a)), Some(b)) => b.to_lower().has_prefix(a.to_lower())
     (Some(_), None) => false
     (None, _) => true
   }

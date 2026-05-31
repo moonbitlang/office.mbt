@@ -188,6 +188,57 @@ test "style map bang html path ignores matched content" {
 }
 
 ///|
+test "style map style-name prefix matchers are honored" {
+  let heading_properties = @docx2html.ParagraphProperties::{
+    style_id: None,
+    style_name: Some("Heading Special"),
+    numbering: None,
+    alignment: None,
+    indent: @docx2html.Indent::default(),
+  }
+  let doc = @docx2html.document([
+    @docx2html.paragraph(
+      [@docx2html.text("Title")],
+      properties=heading_properties,
+    ),
+    @docx2html.paragraph([@docx2html.text("Body")]),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(doc, style_map=[
+      "p[style-name^='Heading'] => h1:fresh",
+    ]).value,
+    content="<h1>Title</h1><p>Body</p>",
+  )
+  let caret_properties = @docx2html.ParagraphProperties::{
+    style_id: None,
+    style_name: Some("^Heading"),
+    numbering: None,
+    alignment: None,
+    indent: @docx2html.Indent::default(),
+  }
+  inspect(
+    @docx2html.convert_document_to_html(
+      @docx2html.paragraph(
+        [@docx2html.text("Caret")],
+        properties=caret_properties,
+      ),
+      style_map=["p[style-name='^Heading'] => h2:fresh"],
+    ).value,
+    content="<h2>Caret</h2>",
+  )
+  let table = @docx2html.Table(children=[], properties={
+    style_id: None,
+    style_name: Some("Normal Table"),
+  })
+  inspect(
+    @docx2html.convert_document_to_html(table, style_map=[
+      "table[style-name^='Normal'] => table.normal-table:fresh",
+    ]).value,
+    content="<table class=\"normal-table\"></table>",
+  )
+}
+
+///|
 test "document converter warns for unrecognised styles" {
   let paragraph_properties = @docx2html.ParagraphProperties::{
     style_id: Some("MysteryParagraph"),

@@ -143,11 +143,11 @@ pub(all) enum DocumentElement {
 pub fn DocumentElement::to_raw_text(Self) -> String
 
 pub(all) enum DocumentMatcher {
-  ParagraphMatcher(style_id~ : String?, style_name~ : String?, numbering~ : Numbering?)
-  RunMatcher(style_id~ : String?, style_name~ : String?)
+  ParagraphMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?, numbering~ : Numbering?)
+  RunMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
   RunPropertyMatcher(String)
   HighlightMatcher(String?)
-  TableMatcher(style_id~ : String?, style_name~ : String?)
+  TableMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
   BreakMatcher(BreakType)
   CommentReferenceMatcher
 } derive(Eq, @debug.Debug)
@@ -239,6 +239,11 @@ pub(all) struct StyleInfo {
 pub(all) struct StyleMapping {
   from : DocumentMatcher
   to : Array[HtmlPathElement]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum StyleNameMatcher {
+  ExactStyleName(String)
+  PrefixStyleName(String)
 } derive(Eq, @debug.Debug)
 
 pub(all) struct TableProperties {
