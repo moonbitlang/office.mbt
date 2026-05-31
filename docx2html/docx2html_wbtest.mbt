@@ -1481,6 +1481,13 @@ test "docx vml containers pass through children" {
 }
 
 ///|
+test "docx transparent wrappers pass through children" {
+  inspect(read_vml_wrapper_html("w:ins"), content="Hello")
+  inspect(read_vml_wrapper_html("w:object"), content="Hello")
+  inspect(read_vml_wrapper_html("w:smartTag"), content="Hello")
+}
+
+///|
 fn drawing_image_reader() -> BodyReader {
   {
     styles: {},
