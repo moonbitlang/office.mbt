@@ -1448,6 +1448,25 @@ test "document converter renders footnote references like Mammoth" {
 }
 
 ///|
+test "document converter tolerates missing note and comment bodies" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([
+      @docx2html.text("Knock knock"),
+      @docx2html.run([NoteReference(note_type="footnote", note_id="missing")]),
+      CommentReference("missing"),
+    ]),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(
+      doc,
+      style_map=["comment-reference => sup"],
+      id_prefix="doc-42-",
+    ).value,
+    content="<p>Knock knock<sup><a href=\"#doc-42-footnote-missing\" id=\"doc-42-footnote-ref-missing\">[1]</a></sup></p>",
+  )
+}
+
+///|
 test "document converter emits data uri images" {
   let image = @docx2html.Image::{
     content_type: "image/jpeg",
