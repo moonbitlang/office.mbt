@@ -138,6 +138,23 @@ test "document converter uses style mappings before defaults" {
 }
 
 ///|
+test "style map html paths preserve classes and attributes" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Hello.")]),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(doc, style_map=[
+      "p => div.aside.note[lang='fr'] > h2:fresh",
+    ]).value,
+    content="<div class=\"aside note\" lang=\"fr\"><h2>Hello.</h2></div>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(doc, style_map=["p => p.a\\:b"]).value,
+    content="<p class=\"a:b\">Hello.</p>",
+  )
+}
+
+///|
 test "document converter warns for unrecognised styles" {
   let paragraph_properties = @docx2html.ParagraphProperties::{
     style_id: Some("MysteryParagraph"),

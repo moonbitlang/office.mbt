@@ -181,15 +181,145 @@ fn read_html_path(value : String) -> Array[HtmlPathElement] {
 
 ///|
 fn read_html_path_element(value : String) -> HtmlPathElement {
-  let segments = value.split(":").collect()
-  let tag_choices = segments[0].trim().to_owned()
+  let (element_text, options_text) = split_html_path_options(value)
+  let tag_choices = read_html_tag_choices(element_text)
   let tag = match tag_choices.split("|").next() {
-    Some(first) => first.trim().to_owned()
-    None => tag_choices
+    Some(first) => decode_style_escapes(first.trim().to_owned())
+    None => decode_style_escapes(tag_choices)
   }
-  let fresh = value.contains(":fresh")
-  let attributes : Map[String, String] = {}
+  let fresh = options_text.contains("fresh")
+  let attributes = read_html_path_attributes(element_text)
   { tag, attributes, fresh }
+}
+
+///|
+fn split_html_path_options(value : String) -> (String, String) {
+  match find_unescaped_char(value, ':') {
+    Some(index) =>
+      (value[:index].trim().to_owned(), value[index + 1:].trim().to_owned())
+    None => (value.trim().to_owned(), "")
+  }
+}
+
+///|
+fn read_html_tag_choices(value : String) -> String {
+  let mut index = 0
+  while index < value.length() {
+    let char = value[index]
+    if char == '.' || char == '[' {
+      return value[:index].to_owned()
+    }
+    index = index + 1
+  }
+  value
+}
+
+///|
+fn read_html_path_attributes(value : String) -> Map[String, String] {
+  let attributes : Map[String, String] = {}
+  let mut index = read_html_tag_choices(value).length()
+  while index < value.length() {
+    if value[index] == '.' {
+      let (class_name, next_index) = read_html_class(value, index + 1)
+      if class_name != "" {
+        match attributes.get("class") {
+          Some(existing) => attributes["class"] = existing + " " + class_name
+          None => attributes["class"] = class_name
+        }
+      }
+      index = next_index
+    } else if value[index] == '[' {
+      let (name, attr_value, next_index) = read_html_attribute(value, index + 1)
+      if name != "" {
+        attributes[name] = attr_value
+      }
+      index = next_index
+    } else {
+      index = index + 1
+    }
+  }
+  attributes
+}
+
+///|
+fn read_html_class(value : String, start : Int) -> (String, Int) {
+  let mut index = start
+  let builder = StringBuilder()
+  while index < value.length() {
+    let char = value[index]
+    if char == '\\' && index + 1 < value.length() {
+      builder.write_string(value[index + 1:index + 2].to_owned())
+      index = index + 2
+    } else if char == '.' || char == '[' {
+      return (builder.to_string(), index)
+    } else {
+      builder.write_string(value[index:index + 1].to_owned())
+      index = index + 1
+    }
+  }
+  (builder.to_string(), index)
+}
+
+///|
+fn read_html_attribute(value : String, start : Int) -> (String, String, Int) {
+  match value[start:].find("='") {
+    Some(equals_index) => {
+      let name = value[start:start + equals_index].to_owned()
+      let value_start = start + equals_index + 2
+      let mut index = value_start
+      let builder = StringBuilder()
+      while index < value.length() {
+        let char = value[index]
+        if char == '\\' && index + 1 < value.length() {
+          builder.write_string(value[index + 1:index + 2].to_owned())
+          index = index + 2
+        } else if char == '\'' {
+          let close = if index + 1 < value.length() && value[index + 1] == ']' {
+            index + 2
+          } else {
+            index + 1
+          }
+          return (name, builder.to_string(), close)
+        } else {
+          builder.write_string(value[index:index + 1].to_owned())
+          index = index + 1
+        }
+      }
+      (name, builder.to_string(), index)
+    }
+    None => ("", "", value.length())
+  }
+}
+
+///|
+fn find_unescaped_char(value : String, needle : UInt16) -> Int? {
+  let mut index = 0
+  while index < value.length() {
+    if value[index] == '\\' {
+      index = index + 2
+    } else if value[index] == needle {
+      return Some(index)
+    } else {
+      index = index + 1
+    }
+  }
+  None
+}
+
+///|
+fn decode_style_escapes(value : String) -> String {
+  let builder = StringBuilder()
+  let mut index = 0
+  while index < value.length() {
+    if value[index] == '\\' && index + 1 < value.length() {
+      builder.write_string(value[index + 1:index + 2].to_owned())
+      index = index + 2
+    } else {
+      builder.write_string(value[index:index + 1].to_owned())
+      index = index + 1
+    }
+  }
+  builder.to_string()
 }
 
 ///|

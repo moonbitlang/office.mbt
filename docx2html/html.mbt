@@ -161,14 +161,15 @@ fn HtmlWriter::write_attributes(
 ///|
 fn html_attribute_rank(key : String) -> Int {
   match key {
-    "href" => 0
-    "alt" => 0
-    "type" => 0
-    "id" => 1
-    "src" => 1
-    "checked" => 1
-    "target" => 2
-    "disabled" => 2
+    "class" => 0
+    "href" => 1
+    "alt" => 1
+    "type" => 1
+    "id" => 2
+    "src" => 2
+    "checked" => 2
+    "target" => 3
+    "disabled" => 3
     _ => 10
   }
 }
