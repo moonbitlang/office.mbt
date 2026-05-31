@@ -536,9 +536,11 @@ fn index_numbering_style_num_ids(
 ) -> Map[String, String] {
   let style_num_ids : Map[String, String] = {}
   for item in styles.to_array() {
-    let (style_id, style) = item
+    let (_, style) = item
     if style.style_type == "numbering" {
-      style_num_ids[style_id] = style.name
+      if style.name != "" {
+        style_num_ids[style.style_id] = style.name
+      }
     }
   }
   style_num_ids
@@ -749,13 +751,43 @@ fn read_styles(
       for style in root.elements_by_tag_name("w:style") {
         let style_id = style.attributes.get_or_default("w:styleId", "")
         if style_id != "" {
-          styles[style_id] = read_style_info(style, style_id)
+          let style_info = read_style_info(style, style_id)
+          let key = style_lookup_key(style_info.style_type, style_id)
+          if !styles.contains(key) {
+            styles[key] = style_info
+          }
         }
       }
     }
     None => ()
   }
   styles
+}
+
+///|
+fn style_lookup_key(style_type : String, style_id : String) -> String {
+  style_type + ":" + style_id
+}
+
+///|
+fn Map::find_style(
+  self : Map[String, StyleInfo],
+  style_type : String,
+  style_id : String,
+) -> StyleInfo? {
+  match self.get(style_lookup_key(style_type, style_id)) {
+    Some(style) => Some(style)
+    None =>
+      match self.get(style_id) {
+        Some(style) =>
+          if style.style_type == style_type {
+            Some(style)
+          } else {
+            None
+          }
+        None => None
+      }
+  }
 }
 
 ///|
@@ -1511,14 +1543,8 @@ fn BodyReader::style_name(
 ) -> String? {
   match style_id {
     Some(id) =>
-      match self.styles.get(id) {
-        Some(style) =>
-          if style.style_type == style_type {
-            Some(style.name)
-          } else {
-            self.warn_undefined_style(style_type, id)
-            None
-          }
+      match self.styles.find_style(style_type, id) {
+        Some(style) => if style.name == "" { None } else { Some(style.name) }
         None => {
           self.warn_undefined_style(style_type, id)
           None

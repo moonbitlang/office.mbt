@@ -50,6 +50,11 @@ fn zip_with_text(path : String, text : String) -> ZipArchive {
 }
 
 ///|
+fn styles_from_xml(xml : String) -> Map[String, StyleInfo] raise DocxError {
+  read_styles(zip_with_text("word/styles.xml", xml), "word/styles.xml")
+}
+
+///|
 fn empty_docx_zip() -> ZipArchive {
   let xml =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body /></w:document>
@@ -146,6 +151,62 @@ test "docx table properties include table style name" {
       #|]
     ),
   )
+}
+
+///|
+test "docx styles are keyed by type and keep first duplicate" {
+  let styles = styles_from_xml(
+    (
+      #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:style w:type="table" w:styleId="TableNormal"><w:name w:val="Normal Table" /></w:style>
+      #|  <w:style w:type="table" w:styleId="TableNormal"><w:name w:val="Table Normal" /></w:style>
+      #|  <w:style w:type="paragraph" w:styleId="Shared"><w:name w:val="Shared Paragraph" /></w:style>
+      #|  <w:style w:type="character" w:styleId="Shared"><w:name w:val="Shared Character" /></w:style>
+      #|  <w:style w:type="paragraph" w:styleId="NoName" />
+      #|</w:styles>
+    ),
+  )
+  match styles.find_style("table", "TableNormal") {
+    Some(style) => inspect(style.name, content="Normal Table")
+    None => fail("expected table style")
+  }
+  let paragraph_xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="Shared" /></w:pPr></w:p>
+  let paragraph = read_xml_string(
+    paragraph_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let paragraph_reader = body_reader_with_numbering(
+    styles,
+    NumberingMap::empty(),
+  )
+  match paragraph_reader.read_element(paragraph)[0] {
+    Paragraph(properties~, ..) =>
+      debug_inspect(properties.style_name, content="Some(\"Shared Paragraph\")")
+    _ => fail("expected paragraph")
+  }
+  let run_xml =
+    #|<w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:rPr><w:rStyle w:val="Shared" /></w:rPr></w:r>
+  let run = read_xml_string(run_xml, namespace_map=office_namespace_map())
+  let run_reader = body_reader_with_numbering(styles, NumberingMap::empty())
+  match run_reader.read_element(run)[0] {
+    Run(properties~, ..) =>
+      debug_inspect(properties.style_name, content="Some(\"Shared Character\")")
+    _ => fail("expected run")
+  }
+  let no_name_xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="NoName" /></w:pPr></w:p>
+  let no_name = read_xml_string(
+    no_name_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let no_name_reader = body_reader_with_numbering(styles, NumberingMap::empty())
+  match no_name_reader.read_element(no_name)[0] {
+    Paragraph(properties~, ..) =>
+      debug_inspect(properties.style_name, content="None")
+    _ => fail("expected no-name paragraph")
+  }
+  debug_inspect(no_name_reader.messages, content="[]")
 }
 
 ///|
