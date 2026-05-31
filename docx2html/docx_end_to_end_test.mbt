@@ -234,6 +234,20 @@ test "embedded style maps are combined after explicit mappings" {
 }
 
 ///|
+test "invalid explicit style maps warn while valid mappings still apply" {
+  let result = @docx2html.convert_to_html(single_paragraph_docx()[:], style_map=[
+    "????", "p => h1",
+  ])
+  inspect(result.value, content="<h1>Walking on imported air</h1>")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[Warning("Did not understand this style mapping, so ignored it: ????\nError was at character number 1: Expected element type but got unrecognisedCharacter \"?\"")]
+    ),
+  )
+}
+
+///|
 test "text boxes are appended after their containing paragraph" {
   let result = @docx2html.convert_to_html(text_box_docx()[:])
   inspect(result.value, content="<p>Datum plane</p>")
