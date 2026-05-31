@@ -157,6 +157,125 @@ fn comments_from_xml(xml : String) -> CommentsReadResult raise DocxError {
 }
 
 ///|
+test "style document matchers follow Mammoth predicate semantics" {
+  let plain = paragraph([])
+  let styled = paragraph([], properties={
+    style_id: Some("Heading1"),
+    style_name: Some("Heading 1"),
+    numbering: None,
+    alignment: None,
+    indent: Indent::default(),
+  })
+  let ordered_level_one = paragraph([], properties={
+    style_id: None,
+    style_name: None,
+    numbering: Some({ is_ordered: true, level: 1 }),
+    alignment: None,
+    indent: Indent::default(),
+  })
+  let ordered_level_zero = paragraph([], properties={
+    style_id: None,
+    style_name: None,
+    numbering: Some({ is_ordered: true, level: 0 }),
+    alignment: None,
+    indent: Indent::default(),
+  })
+  let unordered_level_one = paragraph([], properties={
+    style_id: None,
+    style_name: None,
+    numbering: Some({ is_ordered: false, level: 1 }),
+    alignment: None,
+    indent: Indent::default(),
+  })
+  let highlighted = run(
+    [text("mark")],
+    properties=run_properties_from_xml("<w:highlight w:val=\"yellow\" />"),
+  )
+  let red_highlighted = run(
+    [text("mark")],
+    properties=run_properties_from_xml("<w:highlight w:val=\"red\" />"),
+  )
+  debug_inspect(
+    [
+      ParagraphMatcher(style_id=None, style_name=None, numbering=None).matches(
+        plain,
+      ),
+      ParagraphMatcher(style_id=None, style_name=None, numbering=None).matches(
+        styled,
+      ),
+      ParagraphMatcher(
+        style_id=Some("Heading1"),
+        style_name=None,
+        numbering=None,
+      ).matches(plain),
+      ParagraphMatcher(
+        style_id=Some("Heading1"),
+        style_name=None,
+        numbering=None,
+      ).matches(styled),
+      ParagraphMatcher(
+        style_id=Some("Heading2"),
+        style_name=None,
+        numbering=None,
+      ).matches(styled),
+      ParagraphMatcher(
+        style_id=None,
+        style_name=Some(ExactStyleName("heading 1")),
+        numbering=None,
+      ).matches(styled),
+      ParagraphMatcher(
+        style_id=None,
+        style_name=Some(PrefixStyleName("Head")),
+        numbering=None,
+      ).matches(styled),
+      ParagraphMatcher(
+        style_id=None,
+        style_name=None,
+        numbering=Some({ is_ordered: true, level: 1 }),
+      ).matches(plain),
+      ParagraphMatcher(
+        style_id=None,
+        style_name=None,
+        numbering=Some({ is_ordered: true, level: 1 }),
+      ).matches(ordered_level_one),
+      ParagraphMatcher(
+        style_id=None,
+        style_name=None,
+        numbering=Some({ is_ordered: true, level: 1 }),
+      ).matches(ordered_level_zero),
+      ParagraphMatcher(
+        style_id=None,
+        style_name=None,
+        numbering=Some({ is_ordered: true, level: 1 }),
+      ).matches(unordered_level_one),
+      HighlightMatcher(None).matches(plain),
+      HighlightMatcher(None).matches(highlighted),
+      HighlightMatcher(Some("yellow")).matches(highlighted),
+      HighlightMatcher(Some("yellow")).matches(red_highlighted),
+    ],
+    content=(
+      #|[
+      #|  true,
+      #|  true,
+      #|  false,
+      #|  true,
+      #|  false,
+      #|  true,
+      #|  true,
+      #|  false,
+      #|  true,
+      #|  false,
+      #|  false,
+      #|  false,
+      #|  true,
+      #|  true,
+      #|  false,
+      #|]
+    ),
+  )
+}
+
+///|
 test "docx content types include Mammoth image fallbacks" {
   let content_types = ContentTypes::{ defaults: {}, overrides: {} }
   inspect(
