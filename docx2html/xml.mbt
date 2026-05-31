@@ -185,7 +185,12 @@ fn XmlParser::parse_children(
     } else if self.starts_with("<!") {
       self.skip_until(">")
     } else if self.starts_with("<") {
-      children.push(XmlElement(self.parse_element()))
+      let element = self.parse_element()
+      if element.name == "mc:AlternateContent" {
+        children.append(element.first_or_empty("mc:Fallback").children)
+      } else {
+        children.push(XmlElement(element))
+      }
     } else {
       let text = self.read_text()
       if text != "" {

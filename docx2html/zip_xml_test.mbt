@@ -48,6 +48,30 @@ test "xml reads elements attributes text and namespaces" {
 }
 
 ///|
+test "xml reader uses mc fallback content like Mammoth" {
+  let namespaces : Map[String, String] = {
+    "http://schemas.openxmlformats.org/markup-compatibility/2006": "mc",
+  }
+  let root = @docx2html.read_xml_string(
+    (
+      #|<numbering xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:Choice Requires="w14"><choice /></mc:Choice><mc:Fallback><fallback /></mc:Fallback></mc:AlternateContent></numbering>
+    ),
+    namespace_map=namespaces,
+  )
+  debug_inspect(
+    root.children,
+    content="[XmlElement({ name: \"fallback\", attributes: {}, children: [] })]",
+  )
+  let ignored = @docx2html.read_xml_string(
+    (
+      #|<numbering xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:Choice Requires="w14"><choice /></mc:Choice></mc:AlternateContent></numbering>
+    ),
+    namespace_map=namespaces,
+  )
+  debug_inspect(ignored.children, content="[]")
+}
+
+///|
 test "xml reports malformed documents" {
   try @docx2html.read_xml_string("<body><p></body>") catch {
     InvalidXml(message~) =>
