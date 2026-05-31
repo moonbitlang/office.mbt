@@ -28,6 +28,8 @@ pub fn document_descendants(DocumentElement) -> Array[DocumentElement]
 
 pub fn document_descendants_where(DocumentElement, (DocumentElement) -> Bool) -> Array[DocumentElement]
 
+pub fn embed_style_map(BytesView, String) -> Bytes raise DocxError
+
 pub fn escape_html(String) -> String
 
 pub fn escape_html_attribute(String) -> String
