@@ -693,6 +693,19 @@ test "docx reader reads Mammoth run boolean properties" {
     ],
     content="[true, true, true, true, true]",
   )
+  let explicit_true = run_properties_from_xml(
+    "<w:b w:val=\"true\" /><w:i w:val=\"1\" /><w:strike w:val=\"true\" /><w:caps w:val=\"1\" /><w:smallCaps w:val=\"true\" />",
+  )
+  debug_inspect(
+    [
+      explicit_true.is_bold,
+      explicit_true.is_italic,
+      explicit_true.is_strikethrough,
+      explicit_true.is_all_caps,
+      explicit_true.is_small_caps,
+    ],
+    content="[true, true, true, true, true]",
+  )
   let disabled = run_properties_from_xml(
     "<w:b w:val=\"false\" /><w:i w:val=\"0\" /><w:strike w:val=\"false\" /><w:caps w:val=\"0\" /><w:smallCaps w:val=\"false\" />",
   )
@@ -716,9 +729,14 @@ test "docx reader reads underline with Mammoth special cases" {
   let zero_value = run_properties_from_xml("<w:u w:val=\"0\" />").is_underline
   let none_value = run_properties_from_xml("<w:u w:val=\"none\" />").is_underline
   let single_value = run_properties_from_xml("<w:u w:val=\"single\" />").is_underline
+  let true_value = run_properties_from_xml("<w:u w:val=\"true\" />").is_underline
+  let one_value = run_properties_from_xml("<w:u w:val=\"1\" />").is_underline
   debug_inspect(
-    [missing, empty_value, false_value, zero_value, none_value, single_value],
-    content="[false, false, false, false, false, true]",
+    [
+      missing, empty_value, false_value, zero_value, none_value, single_value, true_value,
+      one_value,
+    ],
+    content="[false, false, false, false, false, true, true, true]",
   )
 }
 

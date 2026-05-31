@@ -34,6 +34,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Mammoth's HTML simplifier merges adjacent inline wrappers but must not merge structural table tags. Mark generated `tr`/`td` nodes as fresh to preserve row/cell boundaries.
 - Run property style mappings such as `u => em` and `strike => del` are applied through property-specific lookup only. Do not also treat them as ordinary run-style mappings, or wrappers are duplicated.
 - Mammoth's `readHighlightValue` uses JavaScript truthiness: missing, empty, and `"none"` `w:highlight/@w:val` all mean no highlight. In MoonBit, normalize `Some("")` explicitly.
+- Word boolean run properties treat a missing element as false and a present element as true unless `w:val` is `"false"` or `"0"`. Underline is special: `<w:u />`, `"false"`, `"0"`, and `"none"` are false, while `"true"`, `"1"`, and named underline styles such as `"single"` are true.
 - Mammoth's font-size reader uses `/^[0-9]+$/` before `parseInt`, so signs, whitespace, empty strings, and partial numeric prefixes are invalid. MoonBit's `parse_int` needs an explicit ASCII digit guard to match it.
 - When a MoonBit guard proves parsing safe, the checked-error fallback can remain as defensive code even if coverage cannot hit it. The `w:sz` font-size path is one such case: after `is_ascii_decimal_string`, `parse_int` should not fail for supported inputs.
 - DOCX fixture tests should be added before broadening parser support; upstream outputs expose small semantic gaps faster than isolated unit ports.
