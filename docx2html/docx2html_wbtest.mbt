@@ -128,6 +128,33 @@ fn paragraph_numbering_from_xml(
 }
 
 ///|
+fn footnotes_from_xml(xml : String) -> NotesReadResult raise DocxError {
+  read_note_part(
+    zip_with_text("word/footnotes.xml", xml),
+    note_type="footnote",
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+    fallback_path="word/footnotes.xml",
+    styles={},
+    numbering=NumberingMap::empty(),
+    content_types={ defaults: {}, overrides: {} },
+    document_relationships={ relationships: [] },
+    base_path="word",
+  )
+}
+
+///|
+fn comments_from_xml(xml : String) -> CommentsReadResult raise DocxError {
+  read_comments_for_document(
+    zip_with_text("word/comments.xml", xml),
+    {},
+    NumberingMap::empty(),
+    { defaults: {}, overrides: {} },
+    { relationships: [] },
+    "word",
+  )
+}
+
+///|
 test "docx content types include Mammoth image fallbacks" {
   let content_types = ContentTypes::{ defaults: {}, overrides: {} }
   inspect(
@@ -695,6 +722,50 @@ test "docx reader messages are deduplicated when prepended" {
       #|[Warning("same"), Warning("read"), Warning("converted")]
     ),
   )
+}
+
+///|
+test "docx notes reader reads bodies and ignores separators" {
+  let footnotes = footnotes_from_xml(
+    (
+      #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:footnote w:id="1"><w:p><w:r><w:t>Body</w:t></w:r></w:p></w:footnote>
+      #|  <w:footnote w:id="2" w:type="separator"><w:p><w:r><w:t>Separator</w:t></w:r></w:p></w:footnote>
+      #|  <w:footnote w:id="3" w:type="continuationSeparator"><w:p><w:r><w:t>Continuation</w:t></w:r></w:p></w:footnote>
+      #|</w:footnotes>
+    ),
+  )
+  inspect(footnotes.notes.length(), content="1")
+  inspect(footnotes.notes[0].note_id, content="1")
+  inspect(
+    convert_document_to_html(document(footnotes.notes[0].body)).value,
+    content="<p>Body</p>",
+  )
+}
+
+///|
+test "docx comments reader reads ids bodies and optional attributes" {
+  let comments = comments_from_xml(
+    (
+      #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:comment w:id="1"><w:p><w:r><w:t>Missing</w:t></w:r></w:p></w:comment>
+      #|  <w:comment w:id="2" w:author=" " w:initials=" "><w:p><w:r><w:t>Blank</w:t></w:r></w:p></w:comment>
+      #|  <w:comment w:id="3" w:author="The Piemaker" w:initials="TP"><w:p><w:r><w:t>Present</w:t></w:r></w:p></w:comment>
+      #|</w:comments>
+    ),
+  )
+  inspect(comments.comments.length(), content="3")
+  inspect(comments.comments[0].comment_id, content="1")
+  inspect(
+    convert_document_to_html(document(comments.comments[0].body)).value,
+    content="<p>Missing</p>",
+  )
+  inspect(comments.comments[0].author_name, content="")
+  inspect(comments.comments[0].author_initials, content="")
+  inspect(comments.comments[1].author_name, content="")
+  inspect(comments.comments[1].author_initials, content="")
+  inspect(comments.comments[2].author_name, content="The Piemaker")
+  inspect(comments.comments[2].author_initials, content="TP")
 }
 
 ///|
