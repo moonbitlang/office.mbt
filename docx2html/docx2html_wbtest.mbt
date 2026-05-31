@@ -1446,6 +1446,42 @@ test "docx numbering xml handles missing references and level defaults" {
 }
 
 ///|
+test "docx numbering xml ignores missing level index when explicit zero exists" {
+  let explicit_before_missing = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42">
+      #|    <w:lvl w:ilvl="0"><w:numFmt w:val="bullet" /></w:lvl>
+      #|    <w:lvl><w:numFmt w:val="decimal" /></w:lvl>
+      #|  </w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  match explicit_before_missing.find_level("47", "0") {
+    Some(level) => inspect(level.is_ordered, content="false")
+    None => fail("expected explicit level")
+  }
+  let explicit_after_missing = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="42">
+      #|    <w:lvl><w:numFmt w:val="decimal" /></w:lvl>
+      #|    <w:lvl w:ilvl="0"><w:numFmt w:val="bullet" /></w:lvl>
+      #|  </w:abstractNum>
+      #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
+      #|</w:numbering>
+    ),
+    {},
+  )
+  match explicit_after_missing.find_level("47", "0") {
+    Some(level) => inspect(level.is_ordered, content="false")
+    None => fail("expected explicit level")
+  }
+}
+
+///|
 test "docx numbering xml follows numbering style links" {
   let numbering = numbering_from_xml(
     (
