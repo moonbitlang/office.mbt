@@ -484,6 +484,66 @@ test "docx xml part reader reports missing parts" {
 }
 
 ///|
+test "xml reader follows Mammoth basic parsing semantics" {
+  let empty = read_xml_string("<body/>")
+  inspect(empty.name, content="body")
+  inspect(empty.children.length(), content="0")
+  let separate_close = read_xml_string("<body></body>")
+  inspect(separate_close.children.length(), content="0")
+  let attrs = read_xml_string("<body name=\"bob\"/>")
+  inspect(attrs.attributes.get_or_default("name", ""), content="bob")
+  match read_xml_string("<body>Hello!</body>").children[0] {
+    XmlText(value) => inspect(value, content="Hello!")
+    _ => fail("expected text")
+  }
+  let children = read_xml_string(
+    "<body><a/><b index=\"1\"/><b index=\"2\"/></body>",
+  )
+  inspect(children.children.length(), content="3")
+  inspect(
+    children.first("b").unwrap().attributes.get_or_default("index", ""),
+    content="1",
+  )
+  inspect(
+    read_xml_string("<w:body xmlns:w=\"word\"/>").name,
+    content="{word}body",
+  )
+  let mapped = read_xml_string("<w:body xmlns:w=\"word\" w:val=\"Hello!\"/>", namespace_map={
+    "word": "x",
+  })
+  inspect(mapped.name, content="x:body")
+  inspect(mapped.attributes.get_or_default("x:val", ""), content="Hello!")
+  inspect(
+    read_xml_string("<?xml version=\"1.0\" ?>\n<body/>").name,
+    content="body",
+  )
+  let fallback_xml =
+    #|<numbering xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:Choice Requires="w14"><choice /></mc:Choice><mc:Fallback><fallback /></mc:Fallback></mc:AlternateContent></numbering>
+  let fallback = read_xml_string(
+    fallback_xml,
+    namespace_map=office_namespace_map(),
+  )
+  inspect(fallback.children.length(), content="1")
+  match fallback.children[0] {
+    XmlElement(element) => inspect(element.name, content="fallback")
+    _ => fail("expected fallback element")
+  }
+  let no_fallback_xml =
+    #|<numbering xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:AlternateContent><mc:Choice Requires="w14"><choice /></mc:Choice></mc:AlternateContent></numbering>
+  let no_fallback = read_xml_string(
+    no_fallback_xml,
+    namespace_map=office_namespace_map(),
+  )
+  inspect(no_fallback.children.length(), content="0")
+  try read_xml_string("<bo") catch {
+    InvalidXml(..) => ()
+    _ => fail("expected invalid XML error")
+  } noraise {
+    _ => fail("expected invalid XML error")
+  }
+}
+
+///|
 test "docx reader reads paragraph style alignment and indent properties" {
   let styles : Map[String, StyleInfo] = {
     "paragraph:Heading1": {

@@ -22,6 +22,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Node `TextDecoder("utf8")` maps to `@utf8.decode(bytes[:], ignore_bom=true)` so DOCX XML parts with a UTF-8 BOM match Mammoth behavior.
 - Mammoth's XML DOM adapter normalizes namespace URIs into short names (`w:p`) using a caller-provided URI map, falling back to `{uri}local`. The MoonBit XML parser preserves that rule directly.
 - XML namespace declarations update parser scope but are not retained as normal attributes; DOCX readers depend on semantic names, not `xmlns` attributes.
+- Carry parser-level XML tests separately from body-reader tests. Namespace translation, direct-child lookup, XML declarations, malformed XML, and `mc:AlternateContent` fallback splicing can all regress before DOCX element readers run.
 - Parser code that is written in JS as a permissive loop often becomes structurally total in MoonBit. For example, an XML `while true` parser whose branches all return or raise may leave only an `abort("unreachable")` after the loop; do not invent malformed inputs to hit that branch.
 - Some standard-library shapes are total even when the ported JS code treated them defensively. `String::split(...).next()` on an existing string has a first segment, so a `None` fallback after it is not a meaningful parity target.
 
