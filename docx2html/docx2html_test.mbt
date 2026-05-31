@@ -923,6 +923,54 @@ test "style map style-name prefix matchers are honored" {
 }
 
 ///|
+test "style map style-name matchers are case-insensitive" {
+  let paragraph_properties = @docx2html.ParagraphProperties::{
+    style_id: Some("MixedHeading"),
+    style_name: Some("heaDING 1"),
+    numbering: None,
+    alignment: None,
+    indent: @docx2html.Indent::default(),
+  }
+  let run_properties = @docx2html.RunProperties::{
+    style_id: Some("MixedRun"),
+    style_name: Some("stRoNg"),
+    is_bold: false,
+    is_underline: false,
+    is_italic: false,
+    is_strikethrough: false,
+    is_all_caps: false,
+    is_small_caps: false,
+    vertical_alignment: Baseline,
+    font: None,
+    font_size: None,
+    highlight: None,
+  }
+  let table_properties = @docx2html.TableProperties::{
+    style_id: Some("MixedTable"),
+    style_name: Some("normal table"),
+  }
+  let doc = @docx2html.document([
+    @docx2html.paragraph(
+      [@docx2html.text("Title")],
+      properties=paragraph_properties,
+    ),
+    @docx2html.paragraph([
+      @docx2html.run([@docx2html.text("Run")], properties=run_properties),
+    ]),
+    Table(children=[], properties=table_properties),
+  ])
+  let result = @docx2html.convert_document_to_html(doc, style_map=[
+    "p[style-name='Heading 1'] => h1:fresh", "r[style-name='Strong'] => strong",
+    "table[style-name^='Normal'] => table.normal-table:fresh",
+  ])
+  inspect(
+    result.value,
+    content="<h1>Title</h1><p><strong>Run</strong></p><table class=\"normal-table\"></table>",
+  )
+  debug_inspect(result.messages, content="[]")
+}
+
+///|
 test "document converter warns for unrecognised styles" {
   let paragraph_properties = @docx2html.ParagraphProperties::{
     style_id: Some("MysteryParagraph"),
