@@ -1686,7 +1686,7 @@ fn BodyReader::read_drawing_element(
   element : XmlElement,
 ) -> Array[DocumentElement] {
   let results : Array[DocumentElement] = []
-  for blip in element.descendants_by_tag_name("a:blip") {
+  for blip in element.drawing_blips() {
     match self.read_blip(element, blip) {
       Some(image) =>
         results.push(self.wrap_image_with_drawing_hyperlink(element, image))
@@ -1694,6 +1694,21 @@ fn BodyReader::read_drawing_element(
     }
   }
   results
+}
+
+///|
+fn XmlElement::drawing_blips(self : XmlElement) -> Array[XmlElement] {
+  let blips : Array[XmlElement] = []
+  for graphic in self.elements_by_tag_name("a:graphic") {
+    for graphic_data in graphic.elements_by_tag_name("a:graphicData") {
+      for picture in graphic_data.elements_by_tag_name("pic:pic") {
+        for fill in picture.elements_by_tag_name("pic:blipFill") {
+          blips.append(fill.elements_by_tag_name("a:blip"))
+        }
+      }
+    }
+  }
+  blips
 }
 
 ///|
@@ -1719,7 +1734,10 @@ fn BodyReader::read_drawing_hyperlink(
   self : BodyReader,
   drawing_element : XmlElement,
 ) -> String? {
-  for link in drawing_element.descendants_by_tag_name("a:hlinkClick") {
+  for
+    link in drawing_element
+    .first_or_empty("wp:docPr")
+    .elements_by_tag_name("a:hlinkClick") {
     match link.attributes.get("r:id") {
       Some(id) =>
         match self.relationships.find_target_by_id(id) {

@@ -604,11 +604,8 @@ test "docx vml containers pass through children" {
 }
 
 ///|
-test "docx drawing image hyperlink wraps image" {
-  let xml =
-    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture"><a:hlinkClick r:id="rLink" /></wp:docPr><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
-  let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  let reader = BodyReader::{
+fn drawing_image_reader() -> BodyReader {
+  {
     styles: {},
     zip: { entries: { "word/media/tiny.png": b"abc" } },
     relationships: {
@@ -632,9 +629,43 @@ test "docx drawing image hyperlink wraps image" {
     numbering: NumberingMap::empty(),
     messages: [],
   }
+}
+
+///|
+test "docx drawing image hyperlink wraps image" {
+  let xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture"><a:hlinkClick r:id="rLink" /></wp:docPr><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = drawing_image_reader()
   inspect(
     convert_document_to_html(document(reader.read_element(root))).value,
     content="<a href=\"http://example.com\"><img src=\"data:image/png;base64,YWJj\" /></a>",
+  )
+}
+
+///|
+test "docx drawing image reader follows Mammoth picture chain" {
+  let loose_blip_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:blip r:embed="rImage" /></wp:inline>
+  let loose_blip = read_xml_string(
+    loose_blip_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let loose_blip_reader = drawing_image_reader()
+  debug_inspect(loose_blip_reader.read_element(loose_blip), content="[]")
+  debug_inspect(loose_blip_reader.messages, content="[]")
+  let loose_link_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:hlinkClick r:id="rLink" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let loose_link = read_xml_string(
+    loose_link_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let loose_link_reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(
+      document(loose_link_reader.read_element(loose_link)),
+    ).value,
+    content="<img src=\"data:image/png;base64,YWJj\" />",
   )
 }
 
