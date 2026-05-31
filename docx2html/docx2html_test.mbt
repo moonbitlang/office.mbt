@@ -118,6 +118,45 @@ test "markdown writer handles common inline elements" {
     @docx2html.write_markdown(nodes),
     content="Hello __bold__ and *em*\n\n",
   )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("blah", children=[@docx2html.html_text("Hello")]),
+    ]),
+    content="Hello",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("p", children=[
+        @docx2html.html_text("Hello "),
+        @docx2html.html_element("strong", children=[
+          @docx2html.html_text("ipsum "),
+          @docx2html.html_element("em", children=[@docx2html.html_text("dolor")]),
+        ]),
+      ]),
+    ]),
+    content="Hello __ipsum *dolor*__\n\n",
+  )
+}
+
+///|
+test "markdown writer escapes text and handles breaks and headings" {
+  inspect(
+    @docx2html.write_markdown([@docx2html.html_text("\\*")]),
+    content="\\\\\\*",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_text("Hello World"),
+      @docx2html.html_element("br"),
+    ]),
+    content="Hello World  \n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("h6", children=[@docx2html.html_text("Hello")]),
+    ]),
+    content="###### Hello\n\n",
+  )
 }
 
 ///|
@@ -244,6 +283,26 @@ test "markdown writer follows Mammoth list rules" {
       ]),
     ]),
     content="- Outer One\n\t- Nested One\n\t- Nested Two\n- Outer Two\n\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("ol", children=[
+        @docx2html.html_element("li", children=[
+          @docx2html.html_text("Outer One"),
+          @docx2html.html_element("ol", children=[
+            @docx2html.html_element("li", children=[
+              @docx2html.html_text("Nested One"),
+              @docx2html.html_element("ol", children=[
+                @docx2html.html_element("li", children=[
+                  @docx2html.html_text("Inner One"),
+                ]),
+              ]),
+            ]),
+          ]),
+        ]),
+      ]),
+    ]),
+    content="1. Outer One\n\t1. Nested One\n\t\t1. Inner One\n\n",
   )
   inspect(
     @docx2html.write_markdown([
