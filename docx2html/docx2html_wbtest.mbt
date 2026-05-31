@@ -280,6 +280,15 @@ test "docx main document path follows package relationships and fallback" {
 }
 
 ///|
+test "docx part targets match Mammoth URI resolution" {
+  inspect(
+    resolve_part_target("one/two", "three/four"),
+    content="one/two/three/four",
+  )
+  inspect(resolve_part_target("one/two", "/three/four"), content="three/four")
+}
+
+///|
 test "docx xml part reader reports missing parts" {
   try read_xml_part({ entries: {} }, "word/missing.xml") catch {
     MissingPart(message~) =>
