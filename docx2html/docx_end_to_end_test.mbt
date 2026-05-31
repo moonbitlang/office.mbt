@@ -184,3 +184,10 @@ test "embedded style maps are combined after explicit mappings" {
     content="<p>Walking on imported air</p>",
   )
 }
+
+///|
+test "text boxes are appended after their containing paragraph" {
+  let result = @docx2html.convert_to_html(text_box_docx()[:])
+  inspect(result.value, content="<p>Datum plane</p>")
+  debug_inspect(result.messages, content="[]")
+}

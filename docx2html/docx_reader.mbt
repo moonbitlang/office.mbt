@@ -528,7 +528,7 @@ fn BodyReader::read_element(
   element : XmlElement,
 ) -> Array[DocumentElement] raise DocxError {
   match element.name {
-    "w:p" => [self.read_paragraph(element)]
+    "w:p" => self.read_paragraph_elements(element)
     "w:r" => [self.read_run(element)]
     "w:t" => [text(element.text())]
     "w:tab" => [tab()]
@@ -559,6 +559,8 @@ fn BodyReader::read_element(
       }
     "w:hyperlink" => [self.read_hyperlink(element)]
     "w:drawing" | "w:pict" | "w:object" => self.read_children(element.children)
+    "mc:AlternateContent" =>
+      self.read_children(element.first_or_empty("mc:Fallback").children)
     "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
     "v:imagedata" => self.read_vml_image_data(element)
     "w:tbl" => [self.read_table(element)]
@@ -573,14 +575,39 @@ fn BodyReader::read_element(
 }
 
 ///|
-fn BodyReader::read_paragraph(
+fn BodyReader::read_paragraph_elements(
   self : BodyReader,
   element : XmlElement,
-) -> DocumentElement raise DocxError {
+) -> Array[DocumentElement] raise DocxError {
   let properties = self.read_paragraph_properties(
     element.first_or_empty("w:pPr"),
   )
-  paragraph(self.read_children(element.children), properties~)
+  let elements = [paragraph(self.read_children(element.children), properties~)]
+  elements.append(self.read_text_box_elements(element))
+  elements
+}
+
+///|
+fn BodyReader::read_text_box_elements(
+  self : BodyReader,
+  element : XmlElement,
+) -> Array[DocumentElement] raise DocxError {
+  match element.name {
+    "mc:AlternateContent" =>
+      self.read_text_box_elements(element.first_or_empty("mc:Fallback"))
+    "w:txbxContent" => self.read_children(element.children)
+    _ => {
+      let elements : Array[DocumentElement] = []
+      for child in element.children {
+        match child {
+          XmlElement(child_element) =>
+            elements.append(self.read_text_box_elements(child_element))
+          XmlText(_) => ()
+        }
+      }
+      elements
+    }
+  }
 }
 
 ///|

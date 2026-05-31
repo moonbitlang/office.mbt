@@ -37,3 +37,4 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Mammoth's HTML fixtures are sensitive to attribute order. MoonBit's `String::compare` is shortlex, so do not rely on it to mimic JavaScript/Mammoth output; use an explicit HTML attribute rank and then compare equal-rank keys.
 - Comment references are ignored unless a `comment-reference` style mapping exists. When mapped, labels use the comment initials plus a document-order counter (`[MW1]`), not the raw Word comment ID.
 - Embedded style maps live at `mammoth/style-map` as raw text. Conversion style-map precedence is explicit options first, embedded map second, default map last.
+- For text boxes, `w:txbxContent` is extra content: read it with the normal body reader and append it after the containing paragraph. In `mc:AlternateContent`, prefer `mc:Fallback`, matching Mammoth's conservative compatibility behavior.
