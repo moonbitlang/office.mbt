@@ -304,6 +304,22 @@ test "document converter renders header table rows with th cells" {
 }
 
 ///|
+test "document converter maps break types through style maps" {
+  let run = @docx2html.run([
+    @docx2html.page_break(),
+    @docx2html.line_break(),
+    @docx2html.column_break(),
+  ])
+  inspect(@docx2html.convert_document_to_html(run).value, content="<br />")
+  inspect(
+    @docx2html.convert_document_to_html(run, style_map=[
+      "br[type='page'] => hr:fresh", "br[type='line'] => br.line-break", "br[type='column'] => span.column-break",
+    ]).value,
+    content="<hr /><br class=\"line-break\" /><span class=\"column-break\"></span>",
+  )
+}
+
+///|
 test "document converter emits data uri images" {
   let image = @docx2html.Image::{
     content_type: "image/jpeg",

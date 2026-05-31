@@ -163,9 +163,7 @@ fn DocumentConverter::convert_element(
         [html_element("a", attributes=attrs, children=converted_children)]
       }
     }
-    Break(Line) =>
-      self.wrap_with_style_or_default(element, [html_element("br")])
-    Break(_) => []
+    Break(break_type) => self.convert_break(element, break_type)
     BookmarkStart(name) =>
       [html_element("a", attributes={ "id": self.options.id_prefix + name })]
     Table(children~, properties~) =>
@@ -214,6 +212,22 @@ fn DocumentConverter::convert_element(
     }
     CommentReference(comment_id) =>
       self.convert_comment_reference(element, comment_id)
+  }
+}
+
+///|
+fn DocumentConverter::convert_break(
+  self : DocumentConverter,
+  element : DocumentElement,
+  break_type : BreakType,
+) -> Array[HtmlNode] {
+  match find_style_mapping(element, self.options.style_map) {
+    Some(mapping) => wrap_html_path(mapping.to, [])
+    None =>
+      match break_type {
+        Line => [html_element("br")]
+        Page | Column => []
+      }
   }
 }
 
@@ -622,15 +636,6 @@ fn find_comment(comments : Array[Comment], comment_id : String) -> Comment? {
     }
   }
   None
-}
-
-///|
-fn DocumentConverter::wrap_with_style_or_default(
-  self : DocumentConverter,
-  element : DocumentElement,
-  default_nodes : Array[HtmlNode],
-) -> Array[HtmlNode] {
-  self.wrap_with_style(element, default_nodes, [])
 }
 
 ///|

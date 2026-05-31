@@ -148,7 +148,7 @@ pub(all) enum DocumentMatcher {
   RunPropertyMatcher(String)
   HighlightMatcher(String?)
   TableMatcher(style_id~ : String?, style_name~ : String?)
-  BreakMatcher
+  BreakMatcher(BreakType)
   CommentReferenceMatcher
 } derive(Eq, @debug.Debug)
 

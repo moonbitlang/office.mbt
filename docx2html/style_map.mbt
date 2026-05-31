@@ -9,7 +9,7 @@ pub(all) enum DocumentMatcher {
   RunPropertyMatcher(String)
   HighlightMatcher(String?)
   TableMatcher(style_id~ : String?, style_name~ : String?)
-  BreakMatcher
+  BreakMatcher(BreakType)
   CommentReferenceMatcher
 } derive(Debug, Eq)
 
@@ -85,8 +85,8 @@ fn read_document_matcher(value : String) -> DocumentMatcher? {
     Some(HighlightMatcher(read_attribute_value(value, "color")))
   } else if value == "table" {
     Some(TableMatcher(style_id=None, style_name=None))
-  } else if value == "br" {
-    Some(BreakMatcher)
+  } else if value.has_prefix("br") {
+    Some(BreakMatcher(read_break_matcher_type(value)))
   } else if value == "comment-reference" {
     Some(CommentReferenceMatcher)
   } else if value.has_prefix("p") {
@@ -95,6 +95,15 @@ fn read_document_matcher(value : String) -> DocumentMatcher? {
     Some(read_run_matcher(value))
   } else {
     None
+  }
+}
+
+///|
+fn read_break_matcher_type(value : String) -> BreakType {
+  match read_attribute_value(value, "type") {
+    Some("page") => Page
+    Some("column") => Column
+    _ => Line
   }
 }
 
@@ -355,7 +364,7 @@ fn DocumentMatcher::matches(
       properties.highlight != None
     (HighlightMatcher(Some(color)), Run(properties~, ..)) =>
       properties.highlight == Some(color)
-    (BreakMatcher, Break(Line)) => true
+    (BreakMatcher(expected), Break(actual)) => expected == actual
     (CommentReferenceMatcher, CommentReference(_)) => true
     _ => false
   }
