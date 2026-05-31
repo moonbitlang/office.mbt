@@ -582,6 +582,8 @@ fn BodyReader::read_element(
     "mc:AlternateContent" =>
       self.read_children(element.first_or_empty("mc:Fallback").children)
     "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
+    "v:roundrect" | "v:shape" | "v:textbox" | "v:group" | "v:rect" =>
+      self.read_children(element.children)
     "v:imagedata" => self.read_vml_image_data(element)
     "w:tbl" => [self.read_table(element)]
     "w:tr" => self.read_table_row(element)

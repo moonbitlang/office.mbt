@@ -152,3 +152,22 @@ test "docx deleted paragraph content is prepended to next paragraph" {
     content="<p>OneTwo</p><p>Three</p>",
   )
 }
+
+///|
+fn read_vml_wrapper_html(tag : String) -> String raise DocxError {
+  let xml = "<" +
+    tag +
+    " xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Hello</w:t></w:r></" +
+    tag +
+    ">"
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  convert_document_to_html(document(elements)).value
+}
+
+///|
+test "docx vml containers pass through children" {
+  inspect(read_vml_wrapper_html("v:shape"), content="Hello")
+  inspect(read_vml_wrapper_html("v:group"), content="Hello")
+  inspect(read_vml_wrapper_html("v:rect"), content="Hello")
+}
