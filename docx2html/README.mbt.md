@@ -27,6 +27,17 @@ For DOCX bytes, use `convert_to_html`, `convert_to_markdown`, or
 `extract_raw_text`. The native API accepts `BytesView`, so callers can decide
 how to load files.
 
+## Native CLI
+
+The native executable mirrors the common Mammoth CLI paths:
+
+```bash
+moon run bobzhang/docx2html/cmd/main -- input.docx
+moon run bobzhang/docx2html/cmd/main -- --output-format=markdown input.docx
+moon run bobzhang/docx2html/cmd/main -- --style-map style-map input.docx output.html
+moon run bobzhang/docx2html/cmd/main -- --output-dir out input.docx
+```
+
 ## Image Conversion
 
 Images are emitted as data URIs by default. Pass `convert_image` to override
