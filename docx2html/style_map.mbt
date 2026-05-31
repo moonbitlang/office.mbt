@@ -390,7 +390,7 @@ fn parse_style_list_suffix(
   )
   let mut next = first_next
   match error {
-    Some(error) => return (None, next, true, Some(error))
+    Some(_) => return (None, index, false, None)
     None => ()
   }
   let is_ordered = match name {
@@ -941,7 +941,7 @@ fn describe_style_token(line : String, index : Int, end : Int) -> String {
     '(' => "open-paren"
     ')' => "close-paren"
     '|' => "choice"
-    '!' => "bang"
+    '!' => "bang \"!\""
     '\'' => describe_unterminated_style_string(line, index, end)
     _ =>
       if is_style_identifier_start(line, index, end) {

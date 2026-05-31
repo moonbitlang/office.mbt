@@ -756,6 +756,7 @@ test "style map parser reads upstream html path forms" {
   debug_inspect(expect_style_mapping("r =>   ").to, content="[]")
   let separator = expect_style_mapping("p => p:separator('\\r\\n\\t\\'\\\\')").to[0].separator
   inspect(separator.unwrap(), content="\r\n\t'\\")
+  inspect(expect_style_mapping("p => \\:x").to[0].tag, content=":x")
 }
 
 ///|
@@ -1214,7 +1215,7 @@ test "style map malformed suffix diagnostics match Mammoth" {
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
     "p. => h1", "p[style-name] => h1", "p[style-name='Heading' => h1", "p:foo(1) => p",
-    "p:ordered-list => p", "br => br", "p => ul>li", "p => span.",
+    "p: => p", "p:ordered-list => p", "br => br", "p => ul>li", "p => span.",
   ])
   inspect(result.value, content="<p>Walking on imported air</p>")
   debug_inspect(
@@ -1225,6 +1226,7 @@ test "style map malformed suffix diagnostics match Mammoth" {
       #|  Warning("Did not understand this style mapping, so ignored it: p[style-name] => h1\nError was at character number 13: Expected style name matcher but got close-square-bracket"),
       #|  Warning("Did not understand this style mapping, so ignored it: p[style-name='Heading' => h1\nError was at character number 23: Expected close-square-bracket but got whitespace"),
       #|  Warning("Did not understand this style mapping, so ignored it: p:foo(1) => p\nError was at character number 2: Expected whitespace but got colon"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p: => p\nError was at character number 2: Expected whitespace but got colon"),
       #|  Warning("Did not understand this style mapping, so ignored it: p:ordered-list => p\nError was at character number 15: Expected open-paren but got whitespace"),
       #|  Warning("Did not understand this style mapping, so ignored it: br => br\nError was at character number 3: Expected open-square-bracket but got whitespace"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => ul>li\nError was at character number 8: Expected end but got gt"),
@@ -1241,7 +1243,7 @@ test "style map malformed html path diagnostics match Mammoth" {
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
     "p => span:separator", "p => span:separator(x)", "p => span:separator('x'", "p => span:separator('x'):fresh",
-    "p => span[=]", "p => span[data-x]", "p => span[data-x='abc", "p => ul| > li",
+    "p => span:", "p => span[=]", "p => span[data-x]", "p => span[data-x='abc", "p => ul| > li",
     "p => ul > !", "p => >", "p => |li",
   ])
   inspect(result.value, content="<p>Walking on imported air</p>")
@@ -1253,6 +1255,7 @@ test "style map malformed html path diagnostics match Mammoth" {
       #|  Warning("Did not understand this style mapping, so ignored it: p => span:separator(x)\nError was at character number 10: Expected end but got colon"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span:separator('x'\nError was at character number 10: Expected end but got colon"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span:separator('x'):fresh\nError was at character number 25: Expected end but got colon"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span:\nError was at character number 10: Expected end but got colon"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[=]\nError was at character number 11: Expected identifier but got equals"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x]\nError was at character number 17: Expected equals but got close-square-bracket"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x='abc\nError was at character number 18: Expected string but got unterminated-string \"abc\""),
@@ -1260,6 +1263,30 @@ test "style map malformed html path diagnostics match Mammoth" {
       #|  Warning("Did not understand this style mapping, so ignored it: p => ul > !\nError was at character number 8: Expected end but got whitespace"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => >\nError was at character number 6: Expected end but got gt"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => |li\nError was at character number 6: Expected end but got choice"),
+      #|]
+    ),
+  )
+}
+
+///|
+test "style map delimiter token diagnostics match Mammoth" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
+  ])
+  let result = @docx2html.convert_document_to_html(doc, style_map=[
+    "p ^= h1", "p [] => h1", "p () => h1", "p ! => h1", "p 123 => h1", "p 'abc => h1",
+  ])
+  inspect(result.value, content="<p>Walking on imported air</p>")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[
+      #|  Warning("Did not understand this style mapping, so ignored it: p ^= h1\nError was at character number 3: Expected arrow but got startsWith"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p [] => h1\nError was at character number 3: Expected arrow but got open-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p () => h1\nError was at character number 3: Expected arrow but got open-paren"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p ! => h1\nError was at character number 3: Expected arrow but got bang \"!\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: p 123 => h1\nError was at character number 3: Expected arrow but got integer \"123\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: p 'abc => h1\nError was at character number 3: Expected arrow but got unterminated-string \"abc => h1\""),
       #|]
     ),
   )
