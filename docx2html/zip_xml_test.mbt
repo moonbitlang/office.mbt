@@ -16,6 +16,26 @@ test "zip archive reads vendored fixture bytes" {
 }
 
 ///|
+test "zip archive reports invalid zip and invalid UTF-8 parts" {
+  try @docx2html.open_zip(b"not a zip") catch {
+    InvalidZip(message~) =>
+      inspect(message.has_prefix("invalid ZIP archive:"), content="true")
+    _ => fail("expected InvalidZip")
+  } noraise {
+    _ => fail("expected invalid ZIP failure")
+  }
+  let entries : Map[String, Bytes] = { "bad.xml": Bytes::from_array([b'\xFF']) }
+  let zip = @docx2html.ZipArchive::{ entries, }
+  try zip.read_text("bad.xml") catch {
+    InvalidXml(message~) =>
+      inspect(message, content="part is not valid UTF-8: bad.xml")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected invalid UTF-8 failure")
+  }
+}
+
+///|
 test "zip path helpers match Mammoth behavior" {
   let (dir, base) = @docx2html.split_zip_path("a/b/c")
   inspect(dir, content="a/b")
@@ -142,6 +162,19 @@ test "xml reports malformed documents" {
   try @docx2html.read_xml_string("<root attr=>") catch {
     InvalidXml(message~) =>
       inspect(message, content="expected quoted attribute value")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected XML parse failure")
+  }
+  try @docx2html.read_xml_string("<root attr=") catch {
+    InvalidXml(message~) =>
+      inspect(message, content="expected quoted attribute value")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected XML parse failure")
+  }
+  try @docx2html.read_xml_string("<root attr\"value\" />") catch {
+    InvalidXml(message~) => inspect(message, content="expected `=`")
     _ => fail("expected InvalidXml")
   } noraise {
     _ => fail("expected XML parse failure")

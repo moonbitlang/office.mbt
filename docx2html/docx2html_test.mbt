@@ -176,6 +176,30 @@ test "pretty html writer follows Mammoth indentation rules" {
     ),
     content="<p>\n  <br />\n</p>",
   )
+  inspect(
+    @docx2html.write_html(
+      [@docx2html.html_element("br"), @docx2html.html_text("After")],
+      pretty_print=true,
+    ),
+    content="<br />\nAfter",
+  )
+  inspect(
+    @docx2html.write_html(
+      [@docx2html.html_text("After\n\n")],
+      pretty_print=true,
+    ),
+    content="After\n  ",
+  )
+  inspect(
+    @docx2html.write_html([
+      @docx2html.html_element("input", attributes={
+        "z": "1",
+        "disabled": "disabled",
+        "checked": "checked",
+      }),
+    ]),
+    content="<input checked=\"checked\" disabled=\"disabled\" z=\"1\" />",
+  )
 }
 
 ///|
@@ -441,6 +465,15 @@ test "markdown writer follows Mammoth list rules" {
       ]),
     ]),
     content="1. First\n\nHello\n\n1. Second\n\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("ul", children=[
+        @docx2html.html_text("Intro"),
+        @docx2html.html_element("li", children=[@docx2html.html_text("Item")]),
+      ]),
+    ]),
+    content="Intro- Item\n\n",
   )
 }
 
