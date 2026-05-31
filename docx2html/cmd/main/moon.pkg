@@ -1,5 +1,6 @@
 import {
   "bobzhang/docx2html",
+  "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/x/fs",
