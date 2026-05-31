@@ -58,6 +58,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Style-name prefix matchers (`style-name^='Heading'`) must be represented distinctly from exact style-name matches; otherwise they can accidentally become broad paragraph/run/table matchers.
 - Invalid style-map lines should produce converter warnings while preserving the valid mappings that follow; a silent `None` parse result loses Mammoth-visible diagnostics.
 - HTML path separators are metadata on the generated element, not eager text children: `:separator('\n')` is emitted only when simplification collapses a later matching element into an earlier one.
+- Raw-text extraction follows Mammoth's document model, not rendered text: text and tabs are emitted, paragraphs add two newlines, and line/page/column break elements contribute no text.
 - DOCX reader warnings need a message pipeline into conversion results. Elements that are handled through a secondary pass, such as `w:txbxContent`, may need to be quiet in the normal child traversal to avoid false unrecognised-element warnings.
 - Image-reader failures are non-fatal diagnostics in Mammoth: missing `a:blip` image files and VML image IDs emit warnings and no element, while unsupported-but-readable content types still produce an image plus a warning.
 - Table row-span normalization should fail open with Mammoth warnings when unexpected non-row or non-cell children appear; in those cases keep the original table children rather than trying to merge `vMerge` cells.

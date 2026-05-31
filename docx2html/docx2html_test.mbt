@@ -33,6 +33,22 @@ test "raw text recursively extracts text and tabs" {
 }
 
 ///|
+test "raw text converts individual upstream element cases" {
+  inspect(@docx2html.text("Hello.").to_raw_text(), content="Hello.")
+  inspect(@docx2html.tab().to_raw_text(), content="\t")
+  inspect(@docx2html.line_break().to_raw_text(), content="")
+}
+
+///|
+test "raw text terminates paragraphs with blank lines" {
+  let element = @docx2html.paragraph([
+    @docx2html.text("Hello "),
+    @docx2html.text("world."),
+  ])
+  inspect(element.to_raw_text(), content="Hello world.\n\n")
+}
+
+///|
 test "html writer escapes text and attributes" {
   let attrs : Map[String, String] = { "title": "\"quoted\" & <tag>" }
   let nodes = [
@@ -350,6 +366,8 @@ test "style map parser reads upstream html path forms" {
   inspect(choice.to[0].tag, content="ul|ol")
   inspect(choice.to[1].tag, content="li")
   debug_inspect(expect_style_mapping("r =>").to, content="[]")
+  let separator = expect_style_mapping("p => p:separator('\\r\\n\\t\\'\\\\')").to[0].separator
+  inspect(separator.unwrap(), content="\r\n\t'\\")
 }
 
 ///|

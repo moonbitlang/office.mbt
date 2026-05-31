@@ -206,6 +206,16 @@ test "docx reader reads inline control elements like Mammoth" {
 }
 
 ///|
+test "docx reader maps break types like Mammoth" {
+  debug_inspect(
+    body_elements_from_xml(
+      "<w:br /><w:br w:type=\"textWrapping\" /><w:br w:type=\"page\" /><w:br w:type=\"column\" />",
+    ),
+    content="[Break(Line), Break(Line), Break(Page), Break(Column)]",
+  )
+}
+
+///|
 test "docx reader reads references and bookmarks like Mammoth" {
   debug_inspect(
     body_elements_from_xml(
