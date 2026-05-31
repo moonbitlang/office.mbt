@@ -1227,6 +1227,13 @@ test "document converter renders bookmarks and tabs like Mammoth" {
     content="<a id=\"doc-42-_Peter\"></a>",
   )
   inspect(
+    @docx2html.convert_document_to_html(
+      @docx2html.paragraph([BookmarkStart("_Peter")]),
+      id_prefix="doc-42-",
+    ).value,
+    content="<p><a id=\"doc-42-_Peter\"></a></p>",
+  )
+  inspect(
     @docx2html.convert_document_to_html(@docx2html.tab()).value,
     content="\t",
   )
@@ -1338,6 +1345,12 @@ test "document converter writes table cell spans" {
     ).value,
     content="<table><tr><td rowspan=\"2\"></td></tr></table>",
   )
+  inspect(
+    @docx2html.convert_document_to_html(
+      table_cell([paragraph_of_text("Cell")], col_span=2, row_span=3),
+    ).value,
+    content="<td colspan=\"2\" rowspan=\"3\"><p>Cell</p></td>",
+  )
 }
 
 ///|
@@ -1399,6 +1412,21 @@ test "document converter groups leading header table rows" {
   inspect(
     @docx2html.convert_document_to_html(mixed_table).value,
     content="<table><thead><tr><th><p>H1</p></th></tr><tr><th><p>H2</p></th></tr></thead><tbody><tr><td><p>Body</p></td></tr></tbody></table>",
+  )
+}
+
+///|
+test "document converter preserves unexpected table children" {
+  let table = test_table([
+    table_row(
+      [table_cell([paragraph_of_text("Head")]), @docx2html.tab()],
+      is_header=true,
+    ),
+    @docx2html.tab(),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(table).value,
+    content="<table><thead><tr><th><p>Head</p></th>\t</tr></thead><tbody>\t</tbody></table>",
   )
 }
 
