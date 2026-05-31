@@ -608,7 +608,11 @@ fn parse_style_html_path(
         }
         let (next_index, error) = parse_style_html_path_element(line, next, end)
         match error {
-          Some(error) => return (next_index, Some(error))
+          Some(_) =>
+            return (
+              next_index,
+              Some(style_parse_error(line, next_index, end, "end")),
+            )
           None => index = next_index
         }
       } else {

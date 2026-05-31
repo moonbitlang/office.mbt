@@ -1266,6 +1266,31 @@ test "style map malformed html path diagnostics match Mammoth" {
 }
 
 ///|
+test "style map malformed nested html path diagnostics match Mammoth" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
+  ])
+  let result = @docx2html.convert_document_to_html(doc, style_map=[
+    "p => ul >li", "p => ul >", "p => ul > span[=]", "p => ul > span[data-x]", "p => ul > span[data-x=]",
+    "p => ul > span:separator('x'):fresh", "p => ul > span:fresh:separator('x')",
+  ])
+  inspect(result.value, content="<ul><span>Walking on imported air</span></ul>")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[
+      #|  Warning("Did not understand this style mapping, so ignored it: p => ul >li\nError was at character number 8: Expected end but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => ul >\nError was at character number 8: Expected end but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => ul > span[=]\nError was at character number 16: Expected end but got equals"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => ul > span[data-x]\nError was at character number 22: Expected end but got close-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => ul > span[data-x=]\nError was at character number 23: Expected end but got close-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => ul > span:separator('x'):fresh\nError was at character number 30: Expected end but got colon"),
+      #|]
+    ),
+  )
+}
+
+///|
 test "style map malformed named value diagnostics match Mammoth" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
