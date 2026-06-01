@@ -1925,17 +1925,17 @@ test "docx numbering xml follows numbering style links" {
   let numbering = numbering_from_xml(
     (
       #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-      #|  <w:abstractNum w:abstractNumId="100"><w:numStyleLink w:val="List1" /></w:abstractNum>
-      #|  <w:abstractNum w:abstractNumId="101">
+      #|  <w:abstractNum w:abstractNumId="100">
       #|    <w:lvl w:ilvl="0"><w:numFmt w:val="decimal" /></w:lvl>
       #|  </w:abstractNum>
+      #|  <w:abstractNum w:abstractNumId="101"><w:numStyleLink w:val="List1" /></w:abstractNum>
       #|  <w:num w:numId="200"><w:abstractNumId w:val="100" /></w:num>
       #|  <w:num w:numId="201"><w:abstractNumId w:val="101" /></w:num>
       #|</w:numbering>
     ),
-    { "List1": { style_id: "List1", style_type: "numbering", name: "201" } },
+    { "List1": { style_id: "List1", style_type: "numbering", name: "200" } },
   )
-  match numbering.find_level("200", "0") {
+  match numbering.find_level("201", "0") {
     Some(level) => {
       inspect(level.is_ordered, content="true")
       inspect(level.level, content="1")
