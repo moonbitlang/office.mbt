@@ -45,7 +45,22 @@ test "conversion defaults and result mapping preserve messages" {
     @docx2html.convert_document_to_html(@docx2html.paragraph([])).value,
     content="",
   )
-  inspect(@docx2html.default_style_map_lines().length() > 0, content="true")
+  let default_style_map = @docx2html.default_style_map_lines()
+  inspect(default_style_map.length(), content="45")
+  inspect(default_style_map[0], content="p.Heading1 => h1:fresh")
+  inspect(default_style_map[20], content="r[style-name='Strong'] => strong")
+  inspect(
+    default_style_map[22],
+    content="r[style-name='footnote reference'] =>",
+  )
+  inspect(
+    default_style_map[35],
+    content="p:unordered-list(5) => ul|ol > li > ul|ol > li > ul|ol > li > ul|ol > li > ul > li:fresh",
+  )
+  inspect(default_style_map[44], content="p[style-name='Body'] => p:fresh")
+  let parsed_default_style_map = @docx2html.parse_style_map(default_style_map)
+  inspect(parsed_default_style_map.mappings.length(), content="45")
+  debug_inspect(parsed_default_style_map.messages, content="[]")
   let result = @docx2html.ConversionResult::{
     value: "walking",
     messages: [@docx2html.warning("same")],
