@@ -2214,6 +2214,19 @@ test "document converter groups leading header table rows" {
     @docx2html.convert_document_to_html(mixed_table).value,
     content="<table><thead><tr><th><p>H1</p></th></tr><tr><th><p>H2</p></th></tr></thead><tbody><tr><td><p>Body</p></td></tr></tbody></table>",
   )
+  let all_header_table = @docx2html.Table(
+    children=[
+      TableRow(
+        children=[TableCell(children=[], col_span=1, row_span=1)],
+        is_header=true,
+      ),
+    ],
+    properties=@docx2html.TableProperties::default(),
+  )
+  inspect(
+    @docx2html.convert_document_to_html(all_header_table).value,
+    content="<table><thead><tr><th></th></tr></thead></table>",
+  )
 }
 
 ///|
