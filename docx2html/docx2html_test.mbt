@@ -612,6 +612,20 @@ test "document converter maps paragraphs and escapes text" {
 }
 
 ///|
+test "document converter handles long documents without stack growth" {
+  let paragraphs : Array[@docx2html.DocumentElement] = []
+  let expected = StringBuilder()
+  for _ in 0..<1000 {
+    paragraphs.push(@docx2html.paragraph([@docx2html.text("Hello.")]))
+    expected.write_string("<p>Hello.</p>")
+  }
+  assert_eq(
+    @docx2html.convert_document_to_html(@docx2html.document(paragraphs)).value,
+    expected.to_string(),
+  )
+}
+
+///|
 test "document transforms are applied before conversion" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("Hello.")]),
