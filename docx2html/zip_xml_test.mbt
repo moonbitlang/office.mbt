@@ -262,10 +262,37 @@ test "xml writer follows Mammoth element and namespace output" {
     content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root><album title=\"&quot;&lt;&amp;&gt;\">Everything &lt;&amp;&gt; Transit</album></root>",
   )
   inspect(
+    @docx2html.write_xml_string(
+      @docx2html.xml_element("root", children=[
+        XmlElement(
+          @docx2html.xml_element("album", attributes={
+            "z": "last",
+            "a": "first",
+          }),
+        ),
+      ]),
+    ),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root><album a=\"first\" z=\"last\"/></root>",
+  )
+  inspect(
     @docx2html.write_xml_string(@docx2html.xml_element("{music}root"), namespaces={
       "m": "music",
     }),
     content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><m:root xmlns:m=\"music\"/>",
+  )
+  inspect(
+    @docx2html.write_xml_string(@docx2html.xml_element("{music}root"), namespaces={
+      "z": "zoo",
+      "": "default",
+      "m": "music",
+    }),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><m:root xmlns=\"default\" xmlns:m=\"music\" xmlns:z=\"zoo\"/>",
+  )
+  inspect(
+    @docx2html.write_xml_string(@docx2html.xml_element("{unknown}root"), namespaces={
+      "m": "music",
+    }),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><{unknown}root xmlns:m=\"music\"/>",
   )
   inspect(
     @docx2html.write_xml_string(
