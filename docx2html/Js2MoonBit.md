@@ -138,6 +138,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Node filesystem calls in the CLI map cleanly to `moonbitlang/x/fs` on native. Keep the library bytes-first; put path/argv concerns in `cmd/main` so package APIs remain target-independent.
 - CLI `--style-map PATH` should read the file as UTF-8 text and then reuse the public `read_style_map_string` helper. This keeps comment/blank-line filtering identical between string options, embedded maps, and CLI style-map files.
 - Mammoth's `--output-dir` is just a custom image converter with side effects: increment an image counter, write the image bytes to disk, and return an `<img src="N.ext">`. MoonBit image converters are non-raising, so catch filesystem errors inside the converter and return an `ImageConversion` diagnostic instead of throwing through the callback type.
+- Mammoth names `--output-dir` conversion output as `<input-basename>.html` even when `--output-format=markdown`. Keep this CLI quirk for parity: the filename extension is HTML, while the file contents still follow the selected output format.
 
 ## Testing and Coverage
 

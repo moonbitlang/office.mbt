@@ -227,20 +227,11 @@ fn output_path(options : CliOptions) -> String? {
           Some(
             join_path(
               dir,
-              input_basename_without_docx(options.input_path) +
-              output_extension(options.output_format),
+              input_basename_without_docx(options.input_path) + ".html",
             ),
           )
         None => None
       }
-  }
-}
-
-///|
-fn output_extension(format : CliOutputFormat) -> String {
-  match format {
-    Html => ".html"
-    Markdown => ".md"
   }
 }
 

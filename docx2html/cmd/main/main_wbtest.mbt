@@ -141,6 +141,11 @@ test "CLI output-dir helpers match Mammoth naming" {
     output_path(options),
     content="Some(\"out/single-paragraph.html\")",
   )
+  let markdown_options = CliOptions::{ ..options, output_format: Markdown }
+  debug_inspect(
+    output_path(markdown_options),
+    content="Some(\"out/single-paragraph.html\")",
+  )
   inspect(image_extension("image/png"), content="png")
   inspect(input_basename_without_docx("C:\\tmp\\sample.docx"), content="sample")
 }
@@ -183,7 +188,7 @@ test "CLI conversion writes markdown output inside output dir" {
     pretty_print: false,
   })
   inspect(
-    @fs.read_file_to_string(join_path(dir, "input.md")),
+    @fs.read_file_to_string(join_path(dir, "input.html")),
     content="Walking on imported air\n\n",
   )
 }
