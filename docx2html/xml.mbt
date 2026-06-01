@@ -239,11 +239,30 @@ fn write_serialized_xml_attributes(
   items.sort_by(fn(a, b) {
     let (key_a, _) = a
     let (key_b, _) = b
-    key_a.compare(key_b)
+    let rank_diff = xml_attribute_rank(key_a) - xml_attribute_rank(key_b)
+    if rank_diff != 0 {
+      rank_diff
+    } else {
+      key_a.compare(key_b)
+    }
   })
   for item in items {
     let (key, value) = item
     write_serialized_xml_attribute(builder, key, value)
+  }
+}
+
+///|
+fn xml_attribute_rank(key : String) -> Int {
+  match key {
+    "Id" => 0
+    "Extension" => 0
+    "PartName" => 0
+    "Type" => 1
+    "ContentType" => 1
+    "Target" => 2
+    "TargetMode" => 3
+    _ => 10
   }
 }
 

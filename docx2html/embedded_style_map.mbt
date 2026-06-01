@@ -132,27 +132,22 @@ fn embedded_style_map_relationship() -> Relationship {
 
 ///|
 fn write_relationships_xml(relationships : Array[Relationship]) -> String {
-  let builder = StringBuilder()
-  builder.write_string(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>",
-  )
-  builder.write_string(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
-  )
+  let children : Array[XmlNode] = []
   for relationship in relationships {
-    builder.write_string("<Relationship")
-    write_xml_attribute(builder, "Id", relationship.id)
-    write_xml_attribute(builder, "Type", relationship.relationship_type)
-    write_xml_attribute(builder, "Target", relationship.target)
+    let attributes : Map[String, String] = {
+      "Id": relationship.id,
+      "Type": relationship.relationship_type,
+      "Target": relationship.target,
+    }
     match relationship.target_mode {
-      Some(target_mode) =>
-        write_xml_attribute(builder, "TargetMode", target_mode)
+      Some(target_mode) => attributes["TargetMode"] = target_mode
       None => ()
     }
-    builder.write_string("/>")
+    children.push(XmlElement(xml_element("Relationship", attributes~)))
   }
-  builder.write_string("</Relationships>")
-  builder.to_string()
+  write_xml_string(xml_element("Relationships", children~), namespaces={
+    "": "http://schemas.openxmlformats.org/package/2006/relationships",
+  })
 }
 
 ///|
@@ -234,31 +229,32 @@ fn embedded_style_map_content_type() -> ContentTypeXmlEntry {
 
 ///|
 fn write_content_types_xml(entries : Array[ContentTypeXmlEntry]) -> String {
-  let builder = StringBuilder()
-  builder.write_string(
-    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>",
-  )
-  builder.write_string(
-    "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">",
-  )
+  let children : Array[XmlNode] = []
   for entry in entries {
     match entry {
-      DefaultContentType(extension~, content_type~) => {
-        builder.write_string("<Default")
-        write_xml_attribute(builder, "Extension", extension)
-        write_xml_attribute(builder, "ContentType", content_type)
-        builder.write_string("/>")
-      }
-      OverrideContentType(part_name~, content_type~) => {
-        builder.write_string("<Override")
-        write_xml_attribute(builder, "PartName", part_name)
-        write_xml_attribute(builder, "ContentType", content_type)
-        builder.write_string("/>")
-      }
+      DefaultContentType(extension~, content_type~) =>
+        children.push(
+          XmlElement(
+            xml_element("Default", attributes={
+              "Extension": extension,
+              "ContentType": content_type,
+            }),
+          ),
+        )
+      OverrideContentType(part_name~, content_type~) =>
+        children.push(
+          XmlElement(
+            xml_element("Override", attributes={
+              "PartName": part_name,
+              "ContentType": content_type,
+            }),
+          ),
+        )
     }
   }
-  builder.write_string("</Types>")
-  builder.to_string()
+  write_xml_string(xml_element("Types", children~), namespaces={
+    "": "http://schemas.openxmlformats.org/package/2006/content-types",
+  })
 }
 
 ///|
@@ -270,17 +266,4 @@ fn read_required_zip_text(
     Some(text) => text
     None => raise MissingPart(message="missing DOCX part: " + path)
   }
-}
-
-///|
-fn write_xml_attribute(
-  builder : StringBuilder,
-  name : String,
-  value : String,
-) -> Unit {
-  builder.write_string(" ")
-  builder.write_string(name)
-  builder.write_string("=\"")
-  builder.write_string(escape_html_attribute(value))
-  builder.write_string("\"")
 }
