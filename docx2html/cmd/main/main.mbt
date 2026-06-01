@@ -164,6 +164,18 @@ fn parse_output_format(value : String) -> CliOutputFormat raise CliError {
 
 ///|
 fn run_conversion(options : CliOptions) -> Unit raise {
+  let result = render_conversion(options)
+  for message in result.messages {
+    write_stderr(format_message(message) + "\n")
+  }
+  match output_path(options) {
+    Some(path) => @fs.write_string_to_file(path, result.value)
+    None => write_stdout(result.value)
+  }
+}
+
+///|
+fn render_conversion(options : CliOptions) -> @docx2html.ConversionResult raise {
   let style_map = match options.style_map_path {
     Some(path) =>
       @docx2html.read_style_map_string(@fs.read_file_to_string(path))
@@ -185,13 +197,7 @@ fn run_conversion(options : CliOptions) -> Unit raise {
     Markdown =>
       @docx2html.convert_to_markdown(docx[:], style_map~, convert_image~)
   }
-  for message in result.messages {
-    write_stderr(format_message(message) + "\n")
-  }
-  match output_path(options) {
-    Some(path) => @fs.write_string_to_file(path, result.value)
-    None => write_stdout(result.value)
-  }
+  result
 }
 
 ///|
