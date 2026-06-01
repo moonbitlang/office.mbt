@@ -229,7 +229,6 @@ test "combine conversion results" {
 This is an active native-first port. The verified scope covers the core
 `docx -> html`, `docx -> markdown`, and raw-text paths, plus embedded style
 maps, external-image loader callbacks, notes, comments, tables, hyperlinks,
-complex fields, XML/ZIP helpers, and the native CLI. The broader Mammoth public
-surface is still being expanded; JavaScript-specific conveniences such as
-path-based async input objects and the deprecated `styleMapping()` shim are not
-part of the MoonBit API.
+complex fields, XML/ZIP helpers, and the native CLI. See
+[MammothParity.md](MammothParity.md) for the current parity ledger and the
+intentional API differences from Mammoth's JavaScript surface.
