@@ -29,6 +29,31 @@ how to load files. External linked images stay disabled by default, matching
 Mammoth; pass `external_file_access=true` and a `read_external_file` callback
 when the source document is allowed to read sibling files.
 
+## Style Maps
+
+Pass explicit style-map lines with `style_map`. If you already have a
+Mammoth-style multi-line string, normalize it with `read_style_map_string` so
+comments, blank lines, and trimming follow Mammoth's option parser:
+
+```mbt check
+///|
+test "parse mammoth style map strings" {
+  let style_map_text =
+    #|# ignored
+    #|
+    #|p[style-name='Heading 1'] => h2
+  let style_map = @docx2html.read_style_map_string(style_map_text)
+  let doc = @docx2html.document([
+    @docx2html.paragraph(
+      [@docx2html.text("Title")],
+      properties=@docx2html.paragraph_properties(style_name=Some("Heading 1")),
+    ),
+  ])
+  let result = @docx2html.convert_document_to_html(doc, style_map~)
+  inspect(result.value, content="<h2>Title</h2>")
+}
+```
+
 ## Document Model
 
 The document model exposes enum constructors for pattern matching and
