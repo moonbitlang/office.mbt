@@ -2974,6 +2974,86 @@ test "docx embedded DrawingML images ignore relationship target mode" {
 }
 
 ///|
+test "docx DrawingML image relationship ids follow Mammoth truthiness" {
+  let blank_embed_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="" r:link="rLinkedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let blank_embed = read_xml_string(
+    blank_embed_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let linked_reader = BodyReader::{
+    styles: {},
+    zip: { entries: {} },
+    relationships: {
+      relationships: [
+        {
+          id: "rLinkedImage",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "file:///media/hat.png",
+          target_mode: Some("External"),
+        },
+      ],
+    },
+    content_types: { defaults: {}, overrides: {} },
+    base_path: "word",
+    numbering: NumberingMap::empty(),
+    messages: [],
+    external_files: external_file_access_options(true, fn(path) {
+      if path == "file:///media/hat.png" {
+        Some(b"abc")
+      } else {
+        None
+      }
+    }),
+    read_images: true,
+  }
+  inspect(
+    convert_document_to_html(document(linked_reader.read_element(blank_embed))).value,
+    content="<img src=\"data:image/png;base64,YWJj\" />",
+  )
+  debug_inspect(linked_reader.messages, content="[]")
+  let blank_drawing_link_xml =
+    #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture"><a:hlinkClick r:id="" /></wp:docPr><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let blank_drawing_link = read_xml_string(
+    blank_drawing_link_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let blank_link_reader = BodyReader::{
+    styles: {},
+    zip: { entries: { "word/media/tiny.png": b"abc" } },
+    relationships: {
+      relationships: [
+        {
+          id: "rImage",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+          target: "media/tiny.png",
+          target_mode: None,
+        },
+        {
+          id: "",
+          relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+          target: "http://example.com/blank",
+          target_mode: Some("External"),
+        },
+      ],
+    },
+    content_types: { defaults: { "png": "image/png" }, overrides: {} },
+    base_path: "word",
+    numbering: NumberingMap::empty(),
+    messages: [],
+    external_files: default_external_file_access(),
+    read_images: true,
+  }
+  inspect(
+    convert_document_to_html(
+      document(blank_link_reader.read_element(blank_drawing_link)),
+    ).value,
+    content="<img src=\"data:image/png;base64,YWJj\" />",
+  )
+  debug_inspect(blank_link_reader.messages, content="[]")
+}
+
+///|
 test "docx drawing image alt text follows Mammoth precedence" {
   let description_and_title =
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" title="hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
@@ -3161,6 +3241,20 @@ test "docx image reader records Mammoth-compatible warnings" {
   debug_inspect(vml_reader.read_element(vml), content="[]")
   debug_inspect(
     vml_reader.messages,
+    content=(
+      #|[Warning("A v:imagedata element without a relationship ID was ignored")]
+    ),
+  )
+  let vml_with_empty_id =
+    #|<v:imagedata xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="" />
+  let empty_vml = read_xml_string(
+    vml_with_empty_id,
+    namespace_map=office_namespace_map(),
+  )
+  let empty_vml_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(empty_vml_reader.read_element(empty_vml), content="[]")
+  debug_inspect(
+    empty_vml_reader.messages,
     content=(
       #|[Warning("A v:imagedata element without a relationship ID was ignored")]
     ),

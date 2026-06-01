@@ -2089,7 +2089,7 @@ fn BodyReader::read_drawing_hyperlink(
     link in drawing_element
     .first_or_empty("wp:docPr")
     .elements_by_tag_name("a:hlinkClick") {
-    match link.attributes.get("r:id") {
+    match non_empty_attribute(link, "r:id") {
       Some(id) =>
         match self.relationships.find_target_by_id(id) {
           Some(target) => return Some(target)
@@ -2111,14 +2111,14 @@ fn BodyReader::read_blip(
     return None
   }
   let message_count = self.messages.length()
-  let image = match blip.attributes.get("r:embed") {
+  let image = match non_empty_attribute(blip, "r:embed") {
     Some(id) =>
       self.read_image_by_relationship(
         id,
         alt_text=read_drawing_alt_text(drawing_element),
       )
     None =>
-      match blip.attributes.get("r:link") {
+      match non_empty_attribute(blip, "r:link") {
         Some(id) =>
           self.read_linked_image_by_relationship(
             id,
@@ -2146,7 +2146,7 @@ fn BodyReader::read_vml_image_data(
   if !self.read_images {
     return []
   }
-  match element.attributes.get("r:id") {
+  match non_empty_attribute(element, "r:id") {
     Some(id) =>
       match
         self.read_image_by_relationship(
