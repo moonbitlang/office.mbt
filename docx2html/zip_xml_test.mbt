@@ -331,6 +331,12 @@ test "xml writer follows Mammoth element and namespace output" {
     content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><{unknown}root xmlns:m=\"music\"/>",
   )
   inspect(
+    @docx2html.write_xml_string(@docx2html.xml_element("{broken"), namespaces={
+      "m": "music",
+    }),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><{broken xmlns:m=\"music\"/>",
+  )
+  inspect(
     @docx2html.write_xml_string(
       @docx2html.xml_element("root", children=[
         XmlElement(@docx2html.xml_element("{music}album")),
