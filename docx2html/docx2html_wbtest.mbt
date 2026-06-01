@@ -2301,7 +2301,7 @@ test "style map matcher helpers cover run property predicates" {
 ///|
 test "docx symbols are mapped from supported dingbat fonts" {
   let ascii_xml =
-    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Wingdings" w:char="28" />,
+    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Wingdings" w:char="28" />
   let ascii = read_xml_string(ascii_xml, namespace_map=office_namespace_map())
   inspect(
     convert_document_to_html(
@@ -2310,7 +2310,7 @@ test "docx symbols are mapped from supported dingbat fonts" {
     content="\u{1F57F}",
   )
   let private_use_xml =
-    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Wingdings" w:char="F028" />,
+    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Wingdings" w:char="F028" />
   let private_use = read_xml_string(
     private_use_xml,
     namespace_map=office_namespace_map(),
@@ -2328,7 +2328,7 @@ test "docx symbols are mapped from supported dingbat fonts" {
 ///|
 test "docx symbols warn when unsupported like Mammoth" {
   let xml =
-    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Dingwings" w:char="28" />,
+    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Dingwings" w:char="28" />
   let element = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = empty_body_reader({ relationships: [] })
   debug_inspect(reader.read_element(element), content="[]")

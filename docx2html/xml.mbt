@@ -103,7 +103,12 @@ pub fn read_xml_string(
 ) -> XmlElement raise DocxError {
   let parser = XmlParser::{ source, pos: 0, namespace_map, namespaces: {} }
   parser.skip_misc()
-  parser.parse_element()
+  let root = parser.parse_element()
+  parser.skip_misc()
+  if parser.pos < parser.source.length() {
+    raise InvalidXml(message="unexpected content after document element")
+  }
+  root
 }
 
 ///|

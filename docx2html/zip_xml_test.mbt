@@ -312,4 +312,15 @@ test "xml reports malformed documents" {
   } noraise {
     _ => fail("expected XML parse failure")
   }
+  try @docx2html.read_xml_string("<body/><other/>") catch {
+    InvalidXml(message~) =>
+      inspect(message, content="unexpected content after document element")
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected XML parse failure")
+  }
+  let with_trailing_misc = @docx2html.read_xml_string(
+    "<body/>   <!-- trailing --><?ok?>",
+  )
+  inspect(with_trailing_misc.name, content="body")
 }
