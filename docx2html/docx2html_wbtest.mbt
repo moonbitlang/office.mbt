@@ -2227,6 +2227,20 @@ test "docx text box helper handles alternate content root" {
 }
 
 ///|
+test "docx w:pict images are appended after their containing paragraph" {
+  let xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:r><w:t>Before</w:t></w:r><w:r><w:pict><v:shape><v:imagedata r:id="rImage" /></v:shape></w:pict></w:r><w:r><w:t>After</w:t></w:r></w:p>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = drawing_image_reader()
+  let elements = reader.read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<p>BeforeAfter</p><img src=\"data:image/png;base64,YWJj\" />",
+  )
+  debug_inspect(reader.messages, content="[]")
+}
+
+///|
 test "docx structured checkbox replacement recurses through containers" {
   let nested = Document(
     children=[

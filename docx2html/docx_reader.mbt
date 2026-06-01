@@ -1073,7 +1073,8 @@ fn BodyReader::read_element(
         Some(name) => [BookmarkStart(name)]
       }
     "w:hyperlink" => self.read_hyperlink(element)
-    "w:drawing" | "w:pict" | "w:object" => self.read_children(element.children)
+    "w:drawing" | "w:object" => self.read_children(element.children)
+    "w:pict" => []
     "mc:AlternateContent" =>
       self.read_children(element.first_or_empty("mc:Fallback").children)
     "wp:inline" | "wp:anchor" => self.read_drawing_element(element)
@@ -1219,7 +1220,7 @@ fn BodyReader::read_paragraph_elements_with_prefix(
       properties~,
     ),
   ]
-  elements.append(self.read_text_box_elements(element))
+  elements.append(self.read_paragraph_extra_elements(element))
   elements
 }
 
@@ -1553,6 +1554,64 @@ fn BodyReader::read_text_box_elements(
       elements
     }
   }
+}
+
+///|
+fn BodyReader::read_paragraph_extra_elements(
+  self : BodyReader,
+  element : XmlElement,
+) -> Array[DocumentElement] raise DocxError {
+  let elements : Array[DocumentElement] = []
+  for child in element.children {
+    match child {
+      XmlElement(child_element) =>
+        match child_element.name {
+          "w:pict" =>
+            elements.append(self.read_pict_extra_elements(child_element))
+          "mc:AlternateContent" =>
+            elements.append(self.read_text_box_elements(child_element))
+          "w:txbxContent" =>
+            elements.append(self.read_text_box_elements(child_element))
+          _ =>
+            elements.append(self.read_paragraph_extra_elements(child_element))
+        }
+      XmlText(_) => ()
+    }
+  }
+  elements
+}
+
+///|
+fn BodyReader::read_pict_extra_elements(
+  self : BodyReader,
+  element : XmlElement,
+) -> Array[DocumentElement] raise DocxError {
+  let elements : Array[DocumentElement] = []
+  for child in element.children {
+    match child {
+      XmlElement(child_element) =>
+        match child_element.name {
+          "mc:AlternateContent" =>
+            elements.append(
+              self.read_pict_extra_elements(
+                child_element.first_or_empty("mc:Fallback"),
+              ),
+            )
+          "w:txbxContent" =>
+            elements.append(self.read_children(child_element.children))
+          "w:pict"
+          | "v:roundrect"
+          | "v:shape"
+          | "v:textbox"
+          | "v:group"
+          | "v:rect" =>
+            elements.append(self.read_pict_extra_elements(child_element))
+          _ => elements.append(self.read_element(child_element))
+        }
+      XmlText(_) => ()
+    }
+  }
+  elements
 }
 
 ///|
