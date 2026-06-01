@@ -129,6 +129,28 @@ test "CLI parser accepts Mammoth-style options" {
 }
 
 ///|
+test "CLI parser accepts alternate option value forms" {
+  debug_inspect(
+    parse_cli_args([
+      "docx2html", "--style-map=style-map", "--output-format", "markdown", "--output-dir=out",
+      "input.docx",
+    ]),
+    content=(
+      #|Run(
+      #|  {
+      #|    input_path: "input.docx",
+      #|    output_path: None,
+      #|    output_dir: Some("out"),
+      #|    style_map_path: Some("style-map"),
+      #|    output_format: Markdown,
+      #|    pretty_print: false,
+      #|  },
+      #|)
+    ),
+  )
+}
+
+///|
 test "CLI parser rejects malformed arguments" {
   expect_cli_error(["docx2html"], "Usage: docx2html")
   expect_cli_error(
@@ -138,6 +160,10 @@ test "CLI parser rejects malformed arguments" {
   expect_cli_error(
     ["docx2html", "--output-dir"],
     "Missing value for --output-dir",
+  )
+  expect_cli_error(
+    ["docx2html", "--output-format"],
+    "Missing value for --output-format",
   )
   expect_cli_error(
     ["docx2html", "--output-format=pdf", "input.docx"],

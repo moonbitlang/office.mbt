@@ -152,6 +152,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - CLI `--pretty-print` is an HTML writer option. Thread it through the HTML conversion branch and keep Markdown output byte-compatible with Mammoth's normal Markdown writer.
 - Mammoth's `--output-dir` is just a custom image converter with side effects: increment an image counter, write the image bytes to disk, and return an `<img src="N.ext">`. MoonBit image converters are non-raising, so catch filesystem errors inside the converter and return an `ImageConversion` diagnostic instead of throwing through the callback type.
 - Mammoth names `--output-dir` conversion output as `<input-basename>.html` even when `--output-format=markdown`. Keep this CLI quirk for parity: the filename extension is HTML, while the file contents still follow the selected output format.
+- Mammoth's CLI gets `--flag value` and `--flag=value` parsing from Node's argument parser. A native MoonBit CLI with a hand-written parser should test both forms explicitly, including `--help` before any required positional argument and missing-value errors for every value-taking flag.
 
 ## Testing and Coverage
 
