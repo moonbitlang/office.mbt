@@ -87,6 +87,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Nested complex fields require a stack. Ending an inner unknown field must not clear an outer active hyperlink field, or following displayed runs lose their hyperlink wrapper. A nested field without a `separate` marker is ignored for display wrapping and should leave the outer field active.
 - `FORMCHECKBOX` complex fields read their checked state from the begin `w:fldChar`'s `w:ffData/w:checkBox`; `w:checked` overrides `w:default`, and fields without `separate` still emit a checkbox on `end`.
 - `w:sym` needs font-specific dingbat mapping. Mammoth also treats private-use `F0xx` codes as `xx` for supported fonts, so normalize before lookup.
+- For vendored dependency tables such as `dingbat-to-unicode`, carry representative tests across each supported font and code range rather than trying to encode the table generation itself in tests. The behavioral contract is lookup coverage plus unsupported-character diagnostics.
 - Style-name prefix matchers (`style-name^='Heading'`) must be represented distinctly from exact style-name matches; otherwise they can accidentally become broad paragraph/run/table matchers.
 - Mammoth style-name equality and prefix matchers are case-insensitive. MoonBit string comparison is exact, so lower both operands before matching paragraph/run/table style names.
 - Invalid style-map lines should produce converter warnings while preserving the valid mappings that follow; a silent `None` parse result loses Mammoth-visible diagnostics.
