@@ -170,6 +170,20 @@ test "style document matchers follow Mammoth predicate semantics" {
     alignment: None,
     indent: Indent::default(),
   })
+  let infix_heading = paragraph([], properties={
+    style_id: None,
+    style_name: Some("Custom Heading"),
+    numbering: None,
+    alignment: None,
+    indent: Indent::default(),
+  })
+  let short_heading = paragraph([], properties={
+    style_id: None,
+    style_name: Some("Head"),
+    numbering: None,
+    alignment: None,
+    indent: Indent::default(),
+  })
   let ordered_level_one = paragraph([], properties={
     style_id: None,
     style_name: None,
@@ -234,6 +248,16 @@ test "style document matchers follow Mammoth predicate semantics" {
       ).matches(styled),
       ParagraphMatcher(
         style_id=None,
+        style_name=Some(PrefixStyleName("Heading")),
+        numbering=None,
+      ).matches(infix_heading),
+      ParagraphMatcher(
+        style_id=None,
+        style_name=Some(PrefixStyleName("Heading")),
+        numbering=None,
+      ).matches(short_heading),
+      ParagraphMatcher(
+        style_id=None,
         style_name=None,
         numbering=Some({ is_ordered: true, level: 1 }),
       ).matches(plain),
@@ -266,6 +290,8 @@ test "style document matchers follow Mammoth predicate semantics" {
       #|  false,
       #|  true,
       #|  true,
+      #|  false,
+      #|  false,
       #|  false,
       #|  true,
       #|  false,
