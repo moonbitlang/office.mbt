@@ -231,9 +231,9 @@ fn indent_first_text_newline(value : String) -> String {
 
 ///|
 fn html_primary_tag(tag : String) -> String {
-  match tag.split("|").next() {
-    Some(first) => first.trim().to_owned()
-    None => tag
+  match tag.find("|") {
+    Some(index) => tag[:index].trim().to_owned()
+    None => tag.trim().to_owned()
   }
 }
 
