@@ -47,6 +47,12 @@ priv struct ParsedMatcherSuffixes {
 }
 
 ///|
+priv enum ParsedDocumentMatcher {
+  ParsedDocumentMatcherOk(DocumentMatcher, Int)
+  ParsedDocumentMatcherError(String)
+}
+
+///|
 pub fn read_style_mapping(line : String) -> StyleMapping? {
   read_style_mapping_with_message(line).0
 }
@@ -82,25 +88,12 @@ fn read_style_map_with_messages(lines : Array[String]) -> StyleMapParseResult {
 ///|
 fn read_style_mapping_with_message(line : String) -> (StyleMapping?, Message?) {
   let end = line.length()
-  let (from, first_index, error) = parse_style_document_matcher(line, 0, end)
+  let (from, first_index) = match parse_style_document_matcher(line, 0, end) {
+    ParsedDocumentMatcherOk(from, index) => (from, index)
+    ParsedDocumentMatcherError(error) =>
+      return (None, Some(style_mapping_warning(line, error)))
+  }
   let mut index = first_index
-  match error {
-    Some(error) => return (None, Some(style_mapping_warning(line, error)))
-    None => ()
-  }
-  let from = match from {
-    Some(from) => from
-    None =>
-      return (
-        None,
-        Some(
-          style_mapping_warning(
-            line,
-            style_parse_error(line, index, end, "element type"),
-          ),
-        ),
-      )
-  }
   if index >= end || !is_style_whitespace(line[index]) {
     return (
       None,
@@ -167,12 +160,12 @@ fn parse_style_document_matcher(
   line : String,
   index : Int,
   end : Int,
-) -> (DocumentMatcher?, Int, String?) {
+) -> ParsedDocumentMatcher {
   let (name, next, error) = parse_style_identifier(
     line, index, end, "element type",
   )
   match error {
-    Some(error) => return (None, next, Some(error))
+    Some(error) => return ParsedDocumentMatcherError(error)
     None => ()
   }
   match name {
@@ -184,18 +177,15 @@ fn parse_style_document_matcher(
         allow_list=true,
       )
       match error {
-        Some(error) => (None, next, Some(error))
+        Some(error) => ParsedDocumentMatcherError(error)
         None =>
-          (
-            Some(
-              ParagraphMatcher(
-                style_id=suffixes.style_id,
-                style_name=suffixes.style_name,
-                numbering=suffixes.numbering,
-              ),
+          ParsedDocumentMatcherOk(
+            ParagraphMatcher(
+              style_id=suffixes.style_id,
+              style_name=suffixes.style_name,
+              numbering=suffixes.numbering,
             ),
             next,
-            None,
           )
       }
     }
@@ -207,32 +197,34 @@ fn parse_style_document_matcher(
         allow_list=false,
       )
       match error {
-        Some(error) => (None, next, Some(error))
+        Some(error) => ParsedDocumentMatcherError(error)
         None =>
-          (
-            Some(
-              RunMatcher(
-                style_id=suffixes.style_id,
-                style_name=suffixes.style_name,
-              ),
+          ParsedDocumentMatcherOk(
+            RunMatcher(
+              style_id=suffixes.style_id,
+              style_name=suffixes.style_name,
             ),
             next,
-            None,
           )
       }
     }
     "table" => parse_style_table_matcher(line, next, end)
-    "b" => (Some(RunPropertyMatcher("bold")), next, None)
-    "i" => (Some(RunPropertyMatcher("italic")), next, None)
-    "u" => (Some(RunPropertyMatcher("underline")), next, None)
-    "strike" => (Some(RunPropertyMatcher("strikethrough")), next, None)
-    "all-caps" => (Some(RunPropertyMatcher("allCaps")), next, None)
-    "small-caps" => (Some(RunPropertyMatcher("smallCaps")), next, None)
+    "b" => ParsedDocumentMatcherOk(RunPropertyMatcher("bold"), next)
+    "i" => ParsedDocumentMatcherOk(RunPropertyMatcher("italic"), next)
+    "u" => ParsedDocumentMatcherOk(RunPropertyMatcher("underline"), next)
+    "strike" =>
+      ParsedDocumentMatcherOk(RunPropertyMatcher("strikethrough"), next)
+    "all-caps" => ParsedDocumentMatcherOk(RunPropertyMatcher("allCaps"), next)
+    "small-caps" =>
+      ParsedDocumentMatcherOk(RunPropertyMatcher("smallCaps"), next)
     "highlight" => parse_style_highlight_matcher(line, next, end)
-    "comment-reference" => (Some(CommentReferenceMatcher), next, None)
+    "comment-reference" =>
+      ParsedDocumentMatcherOk(CommentReferenceMatcher, next)
     "br" => parse_style_break_matcher(line, next, end)
     _ =>
-      (None, index, Some(style_parse_error(line, index, end, "element type")))
+      ParsedDocumentMatcherError(
+        style_parse_error(line, index, end, "element type"),
+      )
   }
 }
 
@@ -303,7 +295,7 @@ fn parse_style_table_matcher(
   line : String,
   index : Int,
   end : Int,
-) -> (DocumentMatcher?, Int, String?) {
+) -> ParsedDocumentMatcher {
   let (suffixes, next, error) = parse_style_matcher_suffixes(
     line,
     index,
@@ -311,17 +303,11 @@ fn parse_style_table_matcher(
     allow_list=false,
   )
   match error {
-    Some(error) => (None, next, Some(error))
+    Some(error) => ParsedDocumentMatcherError(error)
     None =>
-      (
-        Some(
-          TableMatcher(
-            style_id=suffixes.style_id,
-            style_name=suffixes.style_name,
-          ),
-        ),
+      ParsedDocumentMatcherOk(
+        TableMatcher(style_id=suffixes.style_id, style_name=suffixes.style_name),
         next,
-        None,
       )
   }
 }
@@ -434,9 +420,9 @@ fn parse_style_highlight_matcher(
   line : String,
   index : Int,
   end : Int,
-) -> (DocumentMatcher?, Int, String?) {
+) -> ParsedDocumentMatcher {
   if index >= end || line[index] != '[' {
-    return (Some(HighlightMatcher(None)), index, None)
+    return ParsedDocumentMatcherOk(HighlightMatcher(None), index)
   }
   let name_start = index + 1
   let (name, first_index, error) = parse_style_identifier(
@@ -444,32 +430,30 @@ fn parse_style_highlight_matcher(
   )
   let mut index = first_index
   match error {
-    Some(error) => return (None, index, Some(error))
+    Some(error) => return ParsedDocumentMatcherError(error)
     None => ()
   }
   if name != "color" {
-    return (
-      None,
-      name_start,
-      Some(style_parse_error(line, name_start, end, "identifier \"color\"")),
+    return ParsedDocumentMatcherError(
+      style_parse_error(line, name_start, end, "identifier \"color\""),
     )
   }
   if index >= end || line[index] != '=' {
-    return (None, index, Some(style_parse_error(line, index, end, "equals")))
+    return ParsedDocumentMatcherError(
+      style_parse_error(line, index, end, "equals"),
+    )
   }
   let (color, next, error) = parse_style_string(line, index + 1, end)
   match error {
-    Some(error) => return (None, next, Some(error))
+    Some(error) => return ParsedDocumentMatcherError(error)
     None => index = next
   }
   if index >= end || line[index] != ']' {
-    return (
-      None,
-      index,
-      Some(style_parse_error(line, index, end, "close-square-bracket")),
+    return ParsedDocumentMatcherError(
+      style_parse_error(line, index, end, "close-square-bracket"),
     )
   }
-  (Some(HighlightMatcher(Some(color))), index + 1, None)
+  ParsedDocumentMatcherOk(HighlightMatcher(Some(color)), index + 1)
 }
 
 ///|
@@ -477,12 +461,10 @@ fn parse_style_break_matcher(
   line : String,
   index : Int,
   end : Int,
-) -> (DocumentMatcher?, Int, String?) {
+) -> ParsedDocumentMatcher {
   if index >= end || line[index] != '[' {
-    return (
-      None,
-      index,
-      Some(style_parse_error(line, index, end, "open-square-bracket")),
+    return ParsedDocumentMatcherError(
+      style_parse_error(line, index, end, "open-square-bracket"),
     )
   }
   let name_start = index + 1
@@ -491,30 +473,28 @@ fn parse_style_break_matcher(
   )
   let mut index = first_index
   match error {
-    Some(error) => return (None, index, Some(error))
+    Some(error) => return ParsedDocumentMatcherError(error)
     None => ()
   }
   if name != "type" {
-    return (
-      None,
-      name_start,
-      Some(style_parse_error(line, name_start, end, "identifier \"type\"")),
+    return ParsedDocumentMatcherError(
+      style_parse_error(line, name_start, end, "identifier \"type\""),
     )
   }
   if index >= end || line[index] != '=' {
-    return (None, index, Some(style_parse_error(line, index, end, "equals")))
+    return ParsedDocumentMatcherError(
+      style_parse_error(line, index, end, "equals"),
+    )
   }
   let (break_type, next, error) = parse_style_string(line, index + 1, end)
   let break_type_start = index + 2
   match error {
-    Some(error) => return (None, next, Some(error))
+    Some(error) => return ParsedDocumentMatcherError(error)
     None => index = next
   }
   if index >= end || line[index] != ']' {
-    return (
-      None,
-      index,
-      Some(style_parse_error(line, index, end, "close-square-bracket")),
+    return ParsedDocumentMatcherError(
+      style_parse_error(line, index, end, "close-square-bracket"),
     )
   }
   let break_type = match break_type {
@@ -522,13 +502,11 @@ fn parse_style_break_matcher(
     "page" => Page
     "column" => Column
     _ =>
-      return (
-        None,
-        break_type_start,
-        Some(style_parse_error(line, break_type_start, end, "break type")),
+      return ParsedDocumentMatcherError(
+        style_parse_error(line, break_type_start, end, "break type"),
       )
   }
-  (Some(BreakMatcher(break_type)), index + 1, None)
+  ParsedDocumentMatcherOk(BreakMatcher(break_type), index + 1)
 }
 
 ///|
