@@ -1069,7 +1069,8 @@ fn BodyReader::read_element(
     "w:br" => self.read_break(element)
     "w:bookmarkStart" =>
       match element.attributes.get("w:name") {
-        Some("_GoBack") | None => []
+        Some("_GoBack") => []
+        None => [BookmarkStart("undefined")]
         Some(name) => [BookmarkStart(name)]
       }
     "w:hyperlink" => self.read_hyperlink(element)

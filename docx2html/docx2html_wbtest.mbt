@@ -839,6 +839,10 @@ test "docx reader reads references and bookmarks like Mammoth" {
     ),
     content="[]",
   )
+  debug_inspect(
+    body_elements_from_xml("<w:bookmarkStart />"),
+    content="[BookmarkStart(\"undefined\")]",
+  )
 }
 
 ///|
