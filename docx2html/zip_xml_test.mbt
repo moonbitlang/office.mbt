@@ -173,7 +173,7 @@ test "xml parser handles comments cdata declarations and entities" {
 ///|
 test "xml parser follows xmldom numeric entity edge cases" {
   let root = @docx2html.read_xml_string(
-    "<root attr=\"&#xG;&#12a;&#X41;\">&#xG;&#12a;&#X41;&#55296;&#-1;</root>",
+    "<root attr=\"&#xG;&#12a;&#X41;\">&#xG;&#12a;&#X41;&#55296;&#999999999999999999999;&#-1;</root>",
   )
   let attr = root.attributes.get_or_default("attr", "")
   inspect(attr.length(), content="3")
@@ -187,6 +187,10 @@ test "xml parser follows xmldom numeric entity edge cases" {
   match text.find("&#55296;") {
     Some(_) => ()
     None => fail("expected surrogate entity to remain raw")
+  }
+  match text.find("&#999999999999999999999;") {
+    Some(_) => ()
+    None => fail("expected out-of-range entity to remain raw")
   }
   match text.find("&#-1;") {
     Some(_) => ()
