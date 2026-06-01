@@ -141,6 +141,20 @@ test "convert_to_markdown reads docx list structure" {
 }
 
 ///|
+test "convert_to_markdown applies custom image converter to docx images" {
+  let convert_image = @docx2html.img_element(fn(image) {
+    let encoded = @base64.encode(image.data[:])
+    { "alt": image.content_type, "src": encoded[:2].to_owned() }
+  })
+  let result = @docx2html.convert_to_markdown(
+    tiny_picture_docx()[:],
+    convert_image~,
+  )
+  inspect(result.value, content="![image/png](iV)\n\n")
+  debug_inspect(result.messages, content="[]")
+}
+
+///|
 test "convert_to_markdown matches Mammoth fixture outputs" {
   inspect(
     @docx2html.convert_to_markdown(utf8_bom_docx()[:]).value,
