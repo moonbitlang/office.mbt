@@ -155,6 +155,24 @@ test "convert_to_markdown applies custom image converter to docx images" {
 }
 
 ///|
+test "convert_to_markdown preserves custom image converter diagnostics" {
+  let convert_image = fn(image : @docx2html.Image) {
+    let converted = @docx2html.img_element(fn(doc_image) {
+      { "src": "custom:" + doc_image.content_type }
+    })(image)
+    @docx2html.image_conversion(converted.nodes, messages=[
+      Warning("custom image warning"),
+    ])
+  }
+  let result = @docx2html.convert_to_markdown(
+    tiny_picture_docx()[:],
+    convert_image~,
+  )
+  inspect(result.value, content="![](custom:image/png)\n\n")
+  debug_inspect(result.messages, content="[Warning(\"custom image warning\")]")
+}
+
+///|
 test "convert_to_markdown matches Mammoth fixture outputs" {
   inspect(
     @docx2html.convert_to_markdown(utf8_bom_docx()[:]).value,
