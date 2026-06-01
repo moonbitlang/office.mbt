@@ -296,6 +296,20 @@ test "markdown writer handles common inline elements" {
     ]),
     content="Hello __ipsum *dolor*__\n\n",
   )
+  inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("p", children=[
+        @docx2html.html_text("Lorem "),
+        @docx2html.html_element("strong", children=[
+          @docx2html.html_text("ipsum "),
+          @docx2html.html_element("em", children=[@docx2html.html_text("dolor")]),
+          @docx2html.html_text(" sit"),
+        ]),
+        @docx2html.html_text(" amet"),
+      ]),
+    ]),
+    content="Lorem __ipsum *dolor* sit__ amet\n\n",
+  )
 }
 
 ///|
