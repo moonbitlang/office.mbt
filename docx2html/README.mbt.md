@@ -69,6 +69,29 @@ mutable ZIP object. Use `read_embedded_style_map(docx[:])` to read the raw
 new DOCX archive with the style map, relationship entry, and content-type
 override updated.
 
+## Transforms
+
+Document transforms run before conversion and recurse through child-bearing
+nodes. Use the typed helpers instead of Mammoth's JavaScript string type names:
+
+```mbt check
+///|
+test "transform runs before conversion" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Hello.")])]),
+  ])
+  let transform_document = @docx2html.transform_runs(fn(_run) {
+    @docx2html.run([@docx2html.text("Goodbye.")])
+  })
+  let result = @docx2html.convert_document_to_html(doc, transform_document~)
+  inspect(result.value, content="<p>Goodbye.</p>")
+  let runs = @docx2html.document_descendants_where(doc, fn(element) {
+    element is Run(..)
+  })
+  inspect(runs.length(), content="1")
+}
+```
+
 ## Native CLI
 
 From this repository checkout, the native executable mirrors the common Mammoth
