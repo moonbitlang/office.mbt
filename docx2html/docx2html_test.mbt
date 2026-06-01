@@ -17,6 +17,23 @@ test "result messages are deduplicated when combined" {
       #|}
     ),
   )
+  debug_inspect(
+    @docx2html.combine_results([
+      first,
+      second,
+      { value: "c", messages: [Error("bad"), Warning("last")] },
+    ]),
+    content=(
+      #|{
+      #|  value: "abc",
+      #|  messages: [Warning("same"), Warning("first"), Error("bad"), Warning("last")],
+      #|}
+    ),
+  )
+  debug_inspect(
+    @docx2html.combine_results([]),
+    content="{ value: \"\", messages: [] }",
+  )
 }
 
 ///|

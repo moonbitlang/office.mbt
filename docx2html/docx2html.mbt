@@ -47,8 +47,16 @@ pub fn ConversionResult::combine(
   self : ConversionResult,
   other : ConversionResult,
 ) -> ConversionResult {
-  let messages = []
-  messages.append(self.messages)
-  messages.append(other.messages)
-  { value: self.value + other.value, messages: dedupe_messages(messages) }
+  combine_results([self, other])
+}
+
+///|
+pub fn combine_results(results : Array[ConversionResult]) -> ConversionResult {
+  let value = StringBuilder()
+  let messages : Array[Message] = []
+  for result in results {
+    value.write_string(result.value)
+    messages.append(result.messages)
+  }
+  { value: value.to_string(), messages: dedupe_messages(messages) }
 }
