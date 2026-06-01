@@ -178,6 +178,93 @@ test "xml reader uses mc fallback content like Mammoth" {
 }
 
 ///|
+test "xml writer follows Mammoth element and namespace output" {
+  inspect(
+    @docx2html.write_xml_string(@docx2html.xml_element("root")),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root/>",
+  )
+  inspect(
+    @docx2html.write_xml_string(
+      @docx2html.xml_element("root", children=[
+        XmlElement(@docx2html.xml_element("album")),
+        XmlElement(@docx2html.xml_element("single")),
+      ]),
+    ),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root><album/><single/></root>",
+  )
+  inspect(
+    @docx2html.write_xml_string(
+      @docx2html.xml_element("root", children=[
+        XmlElement(
+          @docx2html.xml_element("album", children=[
+            XmlElement(@docx2html.xml_element("year")),
+            XmlElement(@docx2html.xml_element("song")),
+          ]),
+        ),
+      ]),
+    ),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root><album><year/><song/></album></root>",
+  )
+  inspect(
+    @docx2html.write_xml_string(
+      @docx2html.xml_element("root", children=[
+        XmlElement(
+          @docx2html.xml_element("album", attributes={
+            "title": "Everything in Transit",
+          }),
+        ),
+      ]),
+    ),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root><album title=\"Everything in Transit\"/></root>",
+  )
+  inspect(
+    @docx2html.write_xml_string(
+      @docx2html.xml_element("root", children=[
+        XmlElement(
+          @docx2html.xml_element("album", attributes={ "title": "\"<&>" }, children=[
+            @docx2html.xml_text("Everything <&> Transit"),
+          ]),
+        ),
+      ]),
+    ),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root><album title=\"&quot;&lt;&amp;&gt;\">Everything &lt;&amp;&gt; Transit</album></root>",
+  )
+  inspect(
+    @docx2html.write_xml_string(@docx2html.xml_element("{music}root"), namespaces={
+      "m": "music",
+    }),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><m:root xmlns:m=\"music\"/>",
+  )
+  inspect(
+    @docx2html.write_xml_string(
+      @docx2html.xml_element("root", children=[
+        XmlElement(@docx2html.xml_element("{music}album")),
+      ]),
+      namespaces={ "m": "music" },
+    ),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root xmlns:m=\"music\"><m:album/></root>",
+  )
+  inspect(
+    @docx2html.write_xml_string(
+      @docx2html.xml_element("root", children=[
+        XmlElement(@docx2html.xml_element("m:album")),
+      ]),
+      namespaces={ "m": "music" },
+    ),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root xmlns:m=\"music\"><m:album/></root>",
+  )
+  inspect(
+    @docx2html.write_xml_string(
+      @docx2html.xml_element("root", children=[
+        XmlElement(@docx2html.xml_element("{music}album")),
+      ]),
+      namespaces={ "": "music" },
+    ),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root xmlns=\"music\"><album/></root>",
+  )
+}
+
+///|
 test "xml reports malformed documents" {
   try @docx2html.read_xml_string("<body><p></body>") catch {
     InvalidXml(message~) =>

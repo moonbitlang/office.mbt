@@ -107,6 +107,160 @@ pub fn read_xml_string(
 }
 
 ///|
+pub fn write_xml_string(
+  root : XmlElement,
+  namespaces? : Map[String, String] = {},
+) -> String {
+  let writer = XmlWriter::{ namespaces, uri_to_prefix: invert_map(namespaces) }
+  let builder = StringBuilder()
+  builder.write_string(
+    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>",
+  )
+  writer.write_element(builder, root, is_root=true)
+  builder.to_string()
+}
+
+///|
+priv struct XmlWriter {
+  namespaces : Map[String, String]
+  uri_to_prefix : Map[String, String]
+}
+
+///|
+fn invert_map(map : Map[String, String]) -> Map[String, String] {
+  let inverse : Map[String, String] = {}
+  for item in map {
+    let (key, value) = item
+    inverse[value] = key
+  }
+  inverse
+}
+
+///|
+fn XmlWriter::write_node(
+  self : XmlWriter,
+  builder : StringBuilder,
+  node : XmlNode,
+) -> Unit {
+  match node {
+    XmlElement(element) => self.write_element(builder, element)
+    XmlText(value) => builder.write_string(escape_xml_text(value))
+  }
+}
+
+///|
+fn XmlWriter::write_element(
+  self : XmlWriter,
+  builder : StringBuilder,
+  element : XmlElement,
+  is_root? : Bool = false,
+) -> Unit {
+  builder.write_string("<")
+  builder.write_string(self.map_element_name(element.name))
+  if is_root {
+    self.write_namespace_attributes(builder)
+  }
+  write_serialized_xml_attributes(builder, element.attributes)
+  if element.children.is_empty() {
+    builder.write_string("/>")
+  } else {
+    builder.write_string(">")
+    for child in element.children {
+      self.write_node(builder, child)
+    }
+    builder.write_string("</")
+    builder.write_string(self.map_element_name(element.name))
+    builder.write_string(">")
+  }
+}
+
+///|
+fn XmlWriter::map_element_name(self : XmlWriter, name : String) -> String {
+  if name.has_prefix("{") {
+    match name.find("}") {
+      Some(close) => {
+        let uri = name[1:close].to_owned()
+        let local_name = name[close + 1:].to_owned()
+        match self.uri_to_prefix.get(uri) {
+          Some(prefix) =>
+            if prefix == "" {
+              local_name
+            } else {
+              prefix + ":" + local_name
+            }
+          None => name
+        }
+      }
+      None => name
+    }
+  } else {
+    name
+  }
+}
+
+///|
+fn XmlWriter::write_namespace_attributes(
+  self : XmlWriter,
+  builder : StringBuilder,
+) -> Unit {
+  let namespaces = self.namespaces.to_array()
+  namespaces.sort_by(fn(a, b) {
+    let (prefix_a, _) = a
+    let (prefix_b, _) = b
+    xml_namespace_attribute_name(prefix_a).compare(
+      xml_namespace_attribute_name(prefix_b),
+    )
+  })
+  for item in namespaces {
+    let (prefix, uri) = item
+    write_serialized_xml_attribute(
+      builder,
+      xml_namespace_attribute_name(prefix),
+      uri,
+    )
+  }
+}
+
+///|
+fn xml_namespace_attribute_name(prefix : String) -> String {
+  if prefix == "" {
+    "xmlns"
+  } else {
+    "xmlns:" + prefix
+  }
+}
+
+///|
+fn write_serialized_xml_attributes(
+  builder : StringBuilder,
+  attributes : Map[String, String],
+) -> Unit {
+  let items = attributes.to_array()
+  items.sort_by(fn(a, b) {
+    let (key_a, _) = a
+    let (key_b, _) = b
+    key_a.compare(key_b)
+  })
+  for item in items {
+    let (key, value) = item
+    write_serialized_xml_attribute(builder, key, value)
+  }
+}
+
+///|
+fn write_serialized_xml_attribute(
+  builder : StringBuilder,
+  name : String,
+  value : String,
+) -> Unit {
+  builder.write_string(" ")
+  builder.write_string(name)
+  builder.write_string("=\"")
+  builder.write_string(escape_xml_attribute(value))
+  builder.write_string("\"")
+}
+
+///|
 priv struct XmlParser {
   source : String
   mut pos : Int
@@ -417,4 +571,33 @@ fn decode_xml_entity(entity : String) -> String {
     "apos" => "'"
     _ => "&" + entity + ";"
   }
+}
+
+///|
+fn escape_xml_text(value : String) -> String {
+  let builder = StringBuilder()
+  for char in value {
+    match char {
+      '&' => builder.write_string("&amp;")
+      '<' => builder.write_string("&lt;")
+      '>' => builder.write_string("&gt;")
+      _ => builder.write_char(char)
+    }
+  }
+  builder.to_string()
+}
+
+///|
+fn escape_xml_attribute(value : String) -> String {
+  let builder = StringBuilder()
+  for char in value {
+    match char {
+      '&' => builder.write_string("&amp;")
+      '<' => builder.write_string("&lt;")
+      '>' => builder.write_string("&gt;")
+      '"' => builder.write_string("&quot;")
+      _ => builder.write_char(char)
+    }
+  }
+  builder.to_string()
 }
