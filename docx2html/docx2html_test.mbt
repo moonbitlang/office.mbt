@@ -1873,6 +1873,16 @@ test "document converter renders table structure like Mammoth" {
     @docx2html.convert_document_to_html(test_table([@docx2html.tab()])).value,
     content="<table>\t</table>",
   )
+  let styled_table = @docx2html.Table(children=[], properties={
+    style_id: None,
+    style_name: Some("Normal Table"),
+  })
+  inspect(
+    @docx2html.convert_document_to_html(styled_table, style_map=[
+      "table[style-name='Normal Table'] => table.normal-table",
+    ]).value,
+    content="<table class=\"normal-table\"></table>",
+  )
 }
 
 ///|
