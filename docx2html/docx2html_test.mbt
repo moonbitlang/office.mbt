@@ -680,6 +680,33 @@ test "document transform helpers can target runs and descendants" {
 }
 
 ///|
+test "document descendants can be filtered like Mammoth getDescendantsOfType" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([
+      @docx2html.run([@docx2html.text("first")]),
+      @docx2html.hyperlink(
+        [@docx2html.run([@docx2html.text("linked")])],
+        href=Some("https://example.test"),
+      ),
+    ]),
+    @docx2html.paragraph([@docx2html.text("second")]),
+  ])
+  let runs = @docx2html.document_descendants_where(doc, fn(element) {
+    element is Run(..)
+  })
+  inspect(runs.length(), content="2")
+  inspect(@docx2html.document(runs).to_raw_text(), content="firstlinked")
+  let paragraphs = @docx2html.document_descendants_where(doc, fn(element) {
+    element is Paragraph(..)
+  })
+  inspect(paragraphs.length(), content="2")
+  inspect(
+    @docx2html.document(paragraphs).to_raw_text(),
+    content="firstlinked\n\nsecond\n\n",
+  )
+}
+
+///|
 test "document transforms recurse through hyperlinks and tables" {
   let link = @docx2html.Hyperlink(
     children=[@docx2html.text("Link")],
