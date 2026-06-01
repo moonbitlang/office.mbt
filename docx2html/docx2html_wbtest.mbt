@@ -405,8 +405,20 @@ test "docx external file URI paths follow Mammoth local URI rules" {
     content="Some(\"/\")",
   )
   debug_inspect(
+    external_uri_to_path("file://localhost?x", platform="linux"),
+    content="Some(\"/?x\")",
+  )
+  debug_inspect(
     external_uri_to_path("file://", platform="linux"),
     content="Some(\"null\")",
+  )
+  debug_inspect(
+    external_uri_to_path("file://?x", platform="linux"),
+    content="Some(\"?x\")",
+  )
+  debug_inspect(
+    external_uri_to_path("file://?#frag", platform="linux"),
+    content="Some(\"?\")",
   )
   debug_inspect(
     external_uri_to_path("file://example/a/b/c", platform="linux"),

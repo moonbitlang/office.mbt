@@ -2203,6 +2203,10 @@ fn local_file_uri_path(uri : String) -> String? {
   let rest = strip_uri_fragment(uri)["file://".length():]
   if rest.has_prefix("/") {
     Some(rest.to_owned())
+  } else if rest.has_prefix("?") {
+    Some(rest.to_owned())
+  } else if rest.has_prefix("localhost?") {
+    Some("/" + rest["localhost".length():].to_owned())
   } else {
     match rest.find("/") {
       Some(slash) => {
