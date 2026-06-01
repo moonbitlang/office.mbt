@@ -266,6 +266,27 @@ test "CLI conversion writes output file and applies style map" {
 }
 
 ///|
+test "CLI conversion writes markdown output file" {
+  let dir = "_build/cli-main-markdown-output-file"
+  ensure_test_dir(dir)
+  let input_path = join_path(dir, "input.docx")
+  let output_file = join_path(dir, "output.md")
+  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
+  run_conversion({
+    input_path,
+    output_path: Some(output_file),
+    output_dir: None,
+    style_map_path: None,
+    output_format: Markdown,
+    pretty_print: false,
+  })
+  inspect(
+    @fs.read_file_to_string(output_file),
+    content="Walking on imported air\n\n",
+  )
+}
+
+///|
 test "CLI conversion threads pretty print to HTML output" {
   let dir = "_build/cli-main-pretty-print"
   ensure_test_dir(dir)
