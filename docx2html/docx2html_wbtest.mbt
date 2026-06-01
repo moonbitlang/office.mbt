@@ -1364,6 +1364,15 @@ test "docx body reader records Mammoth-compatible warnings" {
       #|[Warning("An unrecognised element was ignored: w:not-an-element")]
     ),
   )
+  let office_word_wrap_xml =
+    #|<w10:wrap xmlns:w10="urn:schemas-microsoft-com:office:word" />
+  let office_word_wrap = read_xml_string(
+    office_word_wrap_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let office_word_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(office_word_reader.read_element(office_word_wrap), content="[]")
+  debug_inspect(office_word_reader.messages, content="[]")
 }
 
 ///|
@@ -2455,6 +2464,19 @@ test "docx drawing image hyperlink wraps image" {
   inspect(
     convert_document_to_html(document(reader.read_element(root))).value,
     content="<a href=\"http://example.com\"><img src=\"data:image/png;base64,YWJj\" /></a>",
+  )
+}
+
+///|
+test "docx strict DrawingML image namespaces are read" {
+  let xml =
+    #|<wp:inline xmlns:wp="http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing" xmlns:a="http://purl.oclc.org/ooxml/drawingml/main" xmlns:pic="http://purl.oclc.org/ooxml/drawingml/picture" xmlns:r="http://purl.oclc.org/ooxml/officeDocument/relationships"><wp:docPr id="1" name="Picture" descr="Strict image" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  inspect(root.name, content="wp:inline")
+  let reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(document(reader.read_element(root))).value,
+    content="<img alt=\"Strict image\" src=\"data:image/png;base64,YWJj\" />",
   )
 }
 

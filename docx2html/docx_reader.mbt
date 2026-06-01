@@ -338,6 +338,9 @@ fn office_namespace_map() -> Map[String, String] {
     "http://purl.oclc.org/ooxml/wordprocessingml/main": "w",
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships": "r",
     "http://purl.oclc.org/ooxml/officeDocument/relationships": "r",
+    "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing": "wp",
+    "http://purl.oclc.org/ooxml/drawingml/main": "a",
+    "http://purl.oclc.org/ooxml/drawingml/picture": "pic",
     "http://schemas.openxmlformats.org/package/2006/relationships": "relationships",
     "http://schemas.openxmlformats.org/package/2006/content-types": "content-types",
     "http://schemas.openxmlformats.org/markup-compatibility/2006": "mc",
@@ -346,6 +349,7 @@ fn office_namespace_map() -> Map[String, String] {
     "http://schemas.openxmlformats.org/drawingml/2006/picture": "pic",
     "http://schemas.microsoft.com/office/word/2010/wordml": "wordml",
     "urn:schemas-microsoft-com:office:office": "o",
+    "urn:schemas-microsoft-com:office:word": "office-word",
     "urn:schemas-microsoft-com:vml": "v",
   }
 }
