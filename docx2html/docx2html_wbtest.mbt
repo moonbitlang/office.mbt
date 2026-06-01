@@ -2969,6 +2969,24 @@ test "docx image reader skips DrawingML and VML reads when disabled" {
 }
 
 ///|
+test "docx drawing image reader ignores empty drawing containers" {
+  let empty_drawing = read_xml_string(
+    "<w:drawing xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />",
+    namespace_map=office_namespace_map(),
+  )
+  let drawing_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(drawing_reader.read_element(empty_drawing), content="[]")
+  debug_inspect(drawing_reader.messages, content="[]")
+  let empty_inline = read_xml_string(
+    "<wp:inline xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" />",
+    namespace_map=office_namespace_map(),
+  )
+  let inline_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(inline_reader.read_element(empty_inline), content="[]")
+  debug_inspect(inline_reader.messages, content="[]")
+}
+
+///|
 test "docx drawing image hyperlink wraps image" {
   let xml =
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture"><a:hlinkClick r:id="rLink" /></wp:docPr><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
