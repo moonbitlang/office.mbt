@@ -278,7 +278,7 @@ fn parse_style_matcher_suffixes(
         }
       }
     } else if allow_list && line[index] == ':' {
-      let (numbering, next, consumed, error) = parse_style_list_suffix(
+      let (numbering, next, consumed, error) = parse_style_list_suffix_after_colon(
         line, index, end,
       )
       match error {
@@ -384,14 +384,11 @@ fn parse_style_name_suffix(
 }
 
 ///|
-fn parse_style_list_suffix(
+fn parse_style_list_suffix_after_colon(
   line : String,
   index : Int,
   end : Int,
 ) -> (Numbering?, Int, Bool, String?) {
-  if index >= end || line[index] != ':' {
-    return (None, index, false, None)
-  }
   let (name, first_next, error) = parse_style_identifier(
     line,
     index + 1,
