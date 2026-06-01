@@ -138,6 +138,17 @@ test "convert_to_markdown reads docx text" {
 test "convert_to_markdown reads docx list structure" {
   let result = @docx2html.convert_to_markdown(simple_list_docx()[:])
   inspect(result.value, content="- Apple\n- Banana\n\n")
+  let without_default_style_map = @docx2html.convert_to_markdown(
+    simple_list_docx()[:],
+    include_default_style_map=false,
+  )
+  inspect(without_default_style_map.value, content="Apple\n\nBanana\n\n")
+  debug_inspect(
+    without_default_style_map.messages,
+    content=(
+      #|[Warning("Unrecognised paragraph style: 'List Paragraph' (Style ID: ListParagraph)")]
+    ),
+  )
 }
 
 ///|
