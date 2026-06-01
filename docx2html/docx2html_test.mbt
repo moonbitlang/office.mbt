@@ -626,6 +626,18 @@ test "document transforms are applied before markdown conversion" {
 }
 
 ///|
+test "document transform type helpers leave non-matching roots unchanged" {
+  let run = @docx2html.run([])
+  let paragraph_transform = @docx2html.transform_paragraphs(fn(_) {
+    @docx2html.tab()
+  })
+  inspect(paragraph_transform(run).to_raw_text(), content="")
+  let paragraph = @docx2html.paragraph([])
+  let run_transform = @docx2html.transform_runs(fn(_) { @docx2html.tab() })
+  inspect(run_transform(paragraph).to_raw_text(), content="\n\n")
+}
+
+///|
 test "document transform helpers follow Mammoth post-order traversal" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.run([@docx2html.text("x")])]),
