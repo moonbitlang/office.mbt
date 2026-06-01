@@ -2273,6 +2273,18 @@ test "docx w:pict preserves mixed extra element order after paragraphs" {
 }
 
 ///|
+test "docx w:pict extra content uses alternate fallback" {
+  let xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><w:r><w:t>Before</w:t></w:r><w:r><w:pict>ignored<mc:AlternateContent><mc:Choice Requires="wps"><v:shape><w:txbxContent><w:p><w:r><w:t>Choice</w:t></w:r></w:p></w:txbxContent></v:shape></mc:Choice><mc:Fallback><v:shape><w:txbxContent><w:p><w:r><w:t>Fallback</w:t></w:r></w:p></w:txbxContent></v:shape></mc:Fallback></mc:AlternateContent>ignored</w:pict></w:r><w:r><w:t>After</w:t></w:r></w:p>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let elements = empty_body_reader({ relationships: [] }).read_element(root)
+  inspect(
+    convert_document_to_html(document(elements)).value,
+    content="<p>BeforeAfter</p><p>Fallback</p>",
+  )
+}
+
+///|
 test "docx structured checkbox replacement recurses through containers" {
   let nested = Document(
     children=[
