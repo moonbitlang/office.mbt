@@ -2336,6 +2336,7 @@ fn symbol_html(font : String, char : String) -> String raise DocxError {
 ///|
 test "docx symbols are mapped from supported dingbat fonts" {
   inspect(symbol_html("Wingdings", "28"), content="\u{1F57F}")
+  inspect(symbol_html("Wingdings", " 28"), content="\u{1F57F}")
   inspect(symbol_html("Wingdings", "0028"), content="\u{1F57F}")
   inspect(symbol_html("Wingdings", "28zz"), content="\u{1F57F}")
   inspect(symbol_html("Wingdings", "F028"), content="\u{1F57F}")
@@ -2373,6 +2374,33 @@ test "docx symbols warn when unsupported like Mammoth" {
     lowercase_reader.messages,
     content=(
       #|[Warning("A w:sym element with an unsupported character was ignored: char f028 in font Wingdings")]
+    ),
+  )
+  let invalid_hex = read_xml_string(
+    "<w:sym xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" w:font=\"Wingdings\" w:char=\"zz\" />",
+    namespace_map=office_namespace_map(),
+  )
+  let invalid_hex_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(invalid_hex_reader.read_element(invalid_hex), content="[]")
+  debug_inspect(
+    invalid_hex_reader.messages,
+    content=(
+      #|[Warning("A w:sym element with an unsupported character was ignored: char zz in font Wingdings")]
+    ),
+  )
+  let invalid_private_use = read_xml_string(
+    "<w:sym xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" w:font=\"Dingwings\" w:char=\"F0zz\" />",
+    namespace_map=office_namespace_map(),
+  )
+  let invalid_private_use_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(
+    invalid_private_use_reader.read_element(invalid_private_use),
+    content="[]",
+  )
+  debug_inspect(
+    invalid_private_use_reader.messages,
+    content=(
+      #|[Warning("A w:sym element with an unsupported character was ignored: char F0zz in font Dingwings")]
     ),
   )
 }
