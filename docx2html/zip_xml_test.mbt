@@ -173,13 +173,17 @@ test "xml parser handles comments cdata declarations and entities" {
 ///|
 test "xml parser follows xmldom numeric entity edge cases" {
   let root = @docx2html.read_xml_string(
-    "<root attr=\"&#xG;&#12a;&#X41;\">&#xG;&#12a;&#X41;&#55296;&#999999999999999999999;&#-1;</root>",
+    "<root attr=\"&#xG;&#12a;&#X41;&#;\">&#xG;&#12a;&#X41;&#55296;&#999999999999999999999;&#-1;&#;</root>",
   )
   let attr = root.attributes.get_or_default("attr", "")
-  inspect(attr.length(), content="3")
+  inspect(attr.length(), content="6")
   inspect(attr[0].to_int(), content="0")
   inspect(attr[1].to_int(), content="12")
   inspect(attr[2].to_int(), content="0")
+  match attr.find("&#;") {
+    Some(_) => ()
+    None => fail("expected empty numeric entity to remain raw in attribute")
+  }
   let text = root.text()
   inspect(text[0].to_int(), content="0")
   inspect(text[1].to_int(), content="12")
@@ -195,6 +199,10 @@ test "xml parser follows xmldom numeric entity edge cases" {
   match text.find("&#-1;") {
     Some(_) => ()
     None => fail("expected non-word numeric entity to remain raw")
+  }
+  match text.find("&#;") {
+    Some(_) => ()
+    None => fail("expected empty numeric entity to remain raw")
   }
 }
 
