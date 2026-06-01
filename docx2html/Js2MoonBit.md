@@ -5,6 +5,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 ## Baseline Decisions
 
 - Mammoth's Promise-returning API becomes synchronous native MoonBit functions with checked `raise` errors at IO/parse boundaries.
+- Mammoth's `{path}`, `{buffer}`, and JSZip-like input objects should not be recreated in the core library. Keep public DOCX conversion bytes-first, put filesystem paths in the native CLI, and expose focused helpers for archive-level operations.
 - JavaScript `Buffer`, `ArrayBuffer`, and `Uint8Array` become `BytesView` at public read boundaries and `FixedArray[Byte]` only where a dependency requires a mutable fixed buffer.
 - JavaScript option objects become labeled optional parameters or explicit MoonBit structs. Avoid a single bag-of-options record unless it is passed through many internal layers.
 - Mammoth's string `outputFormat` option becomes a typed `OutputFormat` enum on generic `convert`/`convert_document`; keep `convert_to_html` and `convert_to_markdown` as convenience wrappers for the common call sites.
@@ -22,6 +23,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 ## ZIP and XML
 
 - JSZip's async object API maps to a small `ZipArchive` wrapper over `hustcer/fzip`. Convert public `BytesView` input to `FixedArray[Byte]` only at the `@fzip.unzip_sync` boundary.
+- Keep the general ZIP wrapper read-only for docx-to-output conversion. Do not port JSZip's mutable `write()` surface unless a public feature needs it; `embed_style_map` is the model for a focused archive rewrite API that accepts DOCX bytes and returns new DOCX bytes.
 - Node `TextDecoder("utf8")` maps to `@utf8.decode(bytes[:], ignore_bom=true)` so DOCX XML parts with a UTF-8 BOM match Mammoth behavior.
 - Mammoth's XML DOM adapter normalizes namespace URIs into short names (`w:p`) using a caller-provided URI map, falling back to `{uri}local`. An empty mapped prefix is falsy in the JS reader and therefore still falls back to `{uri}local`; reserve empty-prefix namespace behavior for XML writing.
 - Mammoth's shared Office XML reader maps package relationships and content types to `relationships:*` and `content-types:*`; do not simplify those reader names to unprefixed defaults just because the source XML uses a default namespace.
