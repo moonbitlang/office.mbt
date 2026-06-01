@@ -1741,7 +1741,10 @@ fn BodyReader::read_paragraph_properties(
   self : BodyReader,
   element : XmlElement,
 ) -> ParagraphProperties {
-  let style_id = element.first_or_empty("w:pStyle").attributes.get("w:val")
+  let style_id = non_empty_attribute(
+    element.first_or_empty("w:pStyle"),
+    "w:val",
+  )
   let style_name = self.style_name(style_id, "paragraph")
   {
     style_id,
@@ -1813,7 +1816,10 @@ fn BodyReader::read_run_properties(
   self : BodyReader,
   element : XmlElement,
 ) -> RunProperties {
-  let style_id = element.first_or_empty("w:rStyle").attributes.get("w:val")
+  let style_id = non_empty_attribute(
+    element.first_or_empty("w:rStyle"),
+    "w:val",
+  )
   let style_name = self.style_name(style_id, "character")
   {
     style_id,
@@ -2451,7 +2457,10 @@ fn BodyReader::read_table_properties(
   self : BodyReader,
   element : XmlElement,
 ) -> TableProperties {
-  let style_id = element.first_or_empty("w:tblStyle").attributes.get("w:val")
+  let style_id = non_empty_attribute(
+    element.first_or_empty("w:tblStyle"),
+    "w:val",
+  )
   { style_id, style_name: self.style_name(style_id, "table") }
 }
 

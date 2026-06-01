@@ -708,6 +708,51 @@ test "docx reader leaves missing paragraph properties empty" {
 }
 
 ///|
+test "docx reader treats empty style references as missing like Mammoth" {
+  let reader = empty_body_reader({ relationships: [] })
+  let paragraph_xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:pStyle w:val="" /></w:pPr></w:p>
+  match
+    reader.read_element(
+      read_xml_string(paragraph_xml, namespace_map=office_namespace_map()),
+    )[0] {
+    Paragraph(properties~, ..) =>
+      debug_inspect(
+        [properties.style_id, properties.style_name],
+        content="[None, None]",
+      )
+    _ => fail("expected paragraph")
+  }
+  let run_xml =
+    #|<w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:rPr><w:rStyle w:val="" /></w:rPr></w:r>
+  match
+    reader.read_element(
+      read_xml_string(run_xml, namespace_map=office_namespace_map()),
+    )[0] {
+    Run(properties~, ..) =>
+      debug_inspect(
+        [properties.style_id, properties.style_name],
+        content="[None, None]",
+      )
+    _ => fail("expected run")
+  }
+  let table_xml =
+    #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tblPr><w:tblStyle w:val="" /></w:tblPr></w:tbl>
+  match
+    reader.read_element(
+      read_xml_string(table_xml, namespace_map=office_namespace_map()),
+    )[0] {
+    Table(properties~, ..) =>
+      debug_inspect(
+        [properties.style_id, properties.style_name],
+        content="[None, None]",
+      )
+    _ => fail("expected table")
+  }
+  debug_inspect(reader.messages, content="[]")
+}
+
+///|
 test "docx reader reads run style id and name like Mammoth" {
   let unstyled = run_properties_from_xml("")
   debug_inspect(
