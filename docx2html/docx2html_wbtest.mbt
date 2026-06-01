@@ -2716,6 +2716,8 @@ test "docx symbols are mapped from supported dingbat fonts" {
   inspect(symbol_html("Symbol", "65"), content="\u{3B5}")
   inspect(symbol_html("Symbol", "66"), content="\u{3C6}")
   inspect(symbol_html("Symbol", "67"), content="\u{3B3}")
+  inspect(symbol_html("Symbol", "68"), content="\u{3B7}")
+  inspect(symbol_html("Symbol", "27"), content="\u{220D}")
   inspect(symbol_html("Webdings", "61"), content="\u{2714}")
   inspect(symbol_html("Webdings", "62"), content="\u{1F6B2}")
   inspect(symbol_html("Webdings", "63"), content="\u{2B1C}")
@@ -2726,10 +2728,15 @@ test "docx symbols are mapped from supported dingbat fonts" {
   inspect(symbol_html("Wingdings 2", "65"), content="\u{1F65A}")
   inspect(symbol_html("Wingdings 2", "66"), content="\u{1F658}")
   inspect(symbol_html("Wingdings 2", "67"), content="\u{1F659}")
+  inspect(symbol_html("Wingdings 2", "68"), content="\u{1F65B}")
+  inspect(symbol_html("Wingdings 2", "55"), content="\u{2BBE}")
   inspect(symbol_html("Wingdings 3", "21"), content="\u{2B60}")
   inspect(symbol_html("Wingdings 3", "22"), content="\u{2B62}")
   inspect(symbol_html("Wingdings 3", "23"), content="\u{2B61}")
   inspect(symbol_html("Wingdings 3", "24"), content="\u{2B63}")
+  inspect(symbol_html("Wingdings 3", "25"), content="\u{2B66}")
+  inspect(symbol_html("Wingdings", "2d"), content="\u{1F4EB}")
+  inspect(symbol_html("Wingdings", "43"), content="\u{1F44D}")
 }
 
 ///|
