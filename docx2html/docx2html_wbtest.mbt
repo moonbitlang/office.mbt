@@ -170,6 +170,13 @@ test "style document matchers follow Mammoth predicate semantics" {
     alignment: None,
     indent: Indent::default(),
   })
+  let other_styled = paragraph([], properties={
+    style_id: Some("Heading2"),
+    style_name: Some("Heading 2"),
+    numbering: None,
+    alignment: None,
+    indent: Indent::default(),
+  })
   let infix_heading = paragraph([], properties={
     style_id: None,
     style_name: Some("Custom Heading"),
@@ -180,6 +187,13 @@ test "style document matchers follow Mammoth predicate semantics" {
   let short_heading = paragraph([], properties={
     style_id: None,
     style_name: Some("Head"),
+    numbering: None,
+    alignment: None,
+    indent: Indent::default(),
+  })
+  let near_prefix_heading = paragraph([], properties={
+    style_id: None,
+    style_name: Some("Header 2"),
     numbering: None,
     alignment: None,
     indent: Indent::default(),
@@ -243,6 +257,11 @@ test "style document matchers follow Mammoth predicate semantics" {
       ).matches(styled),
       ParagraphMatcher(
         style_id=None,
+        style_name=Some(ExactStyleName("heading 1")),
+        numbering=None,
+      ).matches(other_styled),
+      ParagraphMatcher(
+        style_id=None,
         style_name=Some(PrefixStyleName("Head")),
         numbering=None,
       ).matches(styled),
@@ -256,6 +275,11 @@ test "style document matchers follow Mammoth predicate semantics" {
         style_name=Some(PrefixStyleName("Heading")),
         numbering=None,
       ).matches(short_heading),
+      ParagraphMatcher(
+        style_id=None,
+        style_name=Some(PrefixStyleName("Heading")),
+        numbering=None,
+      ).matches(near_prefix_heading),
       ParagraphMatcher(
         style_id=None,
         style_name=None,
@@ -289,7 +313,9 @@ test "style document matchers follow Mammoth predicate semantics" {
       #|  true,
       #|  false,
       #|  true,
+      #|  false,
       #|  true,
+      #|  false,
       #|  false,
       #|  false,
       #|  false,
