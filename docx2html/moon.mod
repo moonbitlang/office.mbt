@@ -11,7 +11,7 @@
 
 name = "bobzhang/docx2html"
 
-version = "0.1.33"
+version = "0.1.34"
 
 readme = "README.mbt.md"
 
