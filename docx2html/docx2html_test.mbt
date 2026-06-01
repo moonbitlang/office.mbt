@@ -2,11 +2,11 @@
 test "result messages are deduplicated when combined" {
   let first = @docx2html.ConversionResult::{
     value: "a",
-    messages: [Warning("same"), Warning("first")],
+    messages: [@docx2html.warning("same"), @docx2html.warning("first")],
   }
   let second = @docx2html.ConversionResult::{
     value: "b",
-    messages: [Warning("same"), Error("bad")],
+    messages: [@docx2html.warning("same"), @docx2html.error("bad")],
   }
   debug_inspect(
     first.combine(second),
@@ -21,7 +21,10 @@ test "result messages are deduplicated when combined" {
     @docx2html.combine_results([
       first,
       second,
-      { value: "c", messages: [Error("bad"), Warning("last")] },
+      {
+        value: "c",
+        messages: [@docx2html.error("bad"), @docx2html.warning("last")],
+      },
     ]),
     content=(
       #|{
@@ -45,7 +48,7 @@ test "conversion defaults and result mapping preserve messages" {
   inspect(@docx2html.default_style_map_lines().length() > 0, content="true")
   let result = @docx2html.ConversionResult::{
     value: "walking",
-    messages: [Warning("same")],
+    messages: [@docx2html.warning("same")],
   }
   debug_inspect(
     result.map(fn(value) { value + " on imported air" }),
@@ -53,7 +56,10 @@ test "conversion defaults and result mapping preserve messages" {
   )
   debug_inspect(
     result.flat_map(fn(value) {
-      { value: value + " home", messages: [Warning("same"), Error("late")] }
+      {
+        value: value + " home",
+        messages: [@docx2html.warning("same"), @docx2html.error("late")],
+      }
     }),
     content="{ value: \"walking home\", messages: [Warning(\"same\"), Error(\"late\")] }",
   )
@@ -2285,6 +2291,10 @@ test "image helper follows Mammoth alt attribute merging" {
       @docx2html.inline_image(fn(_image) { { "src": "<src>" } })(with_alt).nodes,
     ),
     content="<img alt=\"&lt;alt&gt;\" src=\"&lt;src&gt;\" />",
+  )
+  inspect(
+    @docx2html.write_html(@docx2html.data_uri_image(with_alt).nodes),
+    content="<img alt=\"&lt;alt&gt;\" src=\"data:image/jpeg;base64,YWJj\" />",
   )
 }
 

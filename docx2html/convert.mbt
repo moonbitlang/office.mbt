@@ -561,6 +561,11 @@ pub fn data_uri_image_converter(image : Image) -> ImageConversion {
 }
 
 ///|
+pub fn data_uri_image(image : Image) -> ImageConversion {
+  data_uri_image_converter(image)
+}
+
+///|
 pub fn img_element(
   read_attributes : (Image) -> Map[String, String],
 ) -> (Image) -> ImageConversion {

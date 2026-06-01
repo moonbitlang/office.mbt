@@ -5,6 +5,16 @@ pub(all) enum Message {
 } derive(Debug, Eq)
 
 ///|
+pub fn warning(message : String) -> Message {
+  Warning(message)
+}
+
+///|
+pub fn error(message : String) -> Message {
+  Error(message)
+}
+
+///|
 pub(all) suberror DocxError {
   InvalidZip(message~ : String)
   InvalidXml(message~ : String)

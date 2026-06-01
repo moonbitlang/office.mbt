@@ -26,6 +26,8 @@ pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_st
 
 pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
 
+pub fn data_uri_image(Image) -> ImageConversion
+
 pub fn data_uri_image_converter(Image) -> ImageConversion
 
 pub fn default_style_map_lines() -> Array[String]
@@ -37,6 +39,8 @@ pub fn document_descendants(DocumentElement) -> Array[DocumentElement]
 pub fn document_descendants_where(DocumentElement, (DocumentElement) -> Bool) -> Array[DocumentElement]
 
 pub fn embed_style_map(BytesView, String) -> Bytes raise DocxError
+
+pub fn error(String) -> Message
 
 pub fn escape_html(String) -> String
 
@@ -125,6 +129,8 @@ pub fn transform_elements(DocumentElement, (DocumentElement) -> DocumentElement)
 pub fn transform_paragraphs((DocumentElement) -> DocumentElement) -> (DocumentElement) -> DocumentElement
 
 pub fn transform_runs((DocumentElement) -> DocumentElement) -> (DocumentElement) -> DocumentElement
+
+pub fn warning(String) -> Message
 
 pub fn write_html(Array[HtmlNode], pretty_print? : Bool) -> String
 

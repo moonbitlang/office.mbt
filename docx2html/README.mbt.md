@@ -45,22 +45,17 @@ test "build document model with helpers" {
           href=Some("https://www.moonbitlang.com"),
         ),
       ],
-      properties=@docx2html.paragraph_properties(
-        style_name=Some("Heading 1"),
-      ),
+      properties=@docx2html.paragraph_properties(style_name=Some("Heading 1")),
     ),
     @docx2html.table([
       @docx2html.table_row([
-        @docx2html.table_cell([
-          @docx2html.paragraph([@docx2html.text("Cell")]),
-        ]),
+        @docx2html.table_cell([@docx2html.paragraph([@docx2html.text("Cell")])]),
       ]),
     ]),
   ])
-  let result = @docx2html.convert_document_to_html(
-    doc,
-    style_map=["p[style-name='Heading 1'] => h2"],
-  )
+  let result = @docx2html.convert_document_to_html(doc, style_map=[
+    "p[style-name='Heading 1'] => h2",
+  ])
   inspect(
     result.value,
     content="<h2><a href=\"https://www.moonbitlang.com\">MoonBit</a></h2><table><tr><td><p>Cell</p></td></tr></table>",
@@ -89,7 +84,8 @@ moon run --target native cmd/main -- --output-dir out input.docx
 ## Image Conversion
 
 Images are emitted as data URIs by default. Pass `convert_image` to override
-that behavior. `inline_image` is the MoonBit name for Mammoth's
+that behavior. `data_uri_image` is the default converter, and `inline_image`
+is the MoonBit name for Mammoth's
 `images.inline`/`images.imgElement` helper:
 
 ```mbt check
