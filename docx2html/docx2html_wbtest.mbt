@@ -2440,11 +2440,18 @@ test "docx symbols are mapped from supported dingbat fonts" {
   inspect(symbol_html("Wingdings", "28zz"), content="\u{1F57F}")
   inspect(symbol_html("Wingdings", "F028"), content="\u{1F57F}")
   inspect(symbol_html("Wingdings", "29"), content="\u{2706}")
+  inspect(symbol_html("Wingdings", "2a"), content="\u{1F582}")
   inspect(symbol_html("Wingdings", "3e"), content="\u{2707}")
+  inspect(symbol_html("Wingdings", "3f"), content="\u{270D}")
   inspect(symbol_html("Symbol", "22"), content="\u{2200}")
+  inspect(symbol_html("Symbol", "23"), content="#")
+  inspect(symbol_html("Symbol", "64"), content="\u{3B4}")
   inspect(symbol_html("Webdings", "61"), content="\u{2714}")
+  inspect(symbol_html("Webdings", "62"), content="\u{1F6B2}")
   inspect(symbol_html("Wingdings 2", "52"), content="\u{2611}")
+  inspect(symbol_html("Wingdings 2", "64"), content="\u{1F667}")
   inspect(symbol_html("Wingdings 3", "21"), content="\u{2B60}")
+  inspect(symbol_html("Wingdings 3", "22"), content="\u{2B62}")
 }
 
 ///|
