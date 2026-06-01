@@ -557,6 +557,19 @@ test "xml reader follows Mammoth basic parsing semantics" {
   })
   inspect(mapped.name, content="x:body")
   inspect(mapped.attributes.get_or_default("x:val", ""), content="Hello!")
+  let package_relationships_xml =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" /></Relationships>
+  let package_relationships = read_xml_string(
+    package_relationships_xml,
+    namespace_map=office_namespace_map(),
+  )
+  inspect(package_relationships.name, content="relationships:Relationships")
+  inspect(
+    package_relationships.first_or_empty("relationships:Relationship").attributes.get_or_default(
+      "Id", "",
+    ),
+    content="rId1",
+  )
   inspect(
     read_xml_string("<?xml version=\"1.0\" ?>\n<body/>").name,
     content="body",

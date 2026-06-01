@@ -338,8 +338,8 @@ fn office_namespace_map() -> Map[String, String] {
     "http://purl.oclc.org/ooxml/wordprocessingml/main": "w",
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships": "r",
     "http://purl.oclc.org/ooxml/officeDocument/relationships": "r",
-    "http://schemas.openxmlformats.org/package/2006/relationships": "",
-    "http://schemas.openxmlformats.org/package/2006/content-types": "",
+    "http://schemas.openxmlformats.org/package/2006/relationships": "relationships",
+    "http://schemas.openxmlformats.org/package/2006/content-types": "content-types",
     "http://schemas.openxmlformats.org/markup-compatibility/2006": "mc",
     "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing": "wp",
     "http://schemas.openxmlformats.org/drawingml/2006/main": "a",
@@ -395,7 +395,7 @@ fn read_relationships(
 ///|
 fn read_relationships_xml(root : XmlElement) -> Relationships {
   let relationships : Array[Relationship] = []
-  for rel in root.elements_by_tag_name("Relationship") {
+  for rel in root.elements_by_tag_name("relationships:Relationship") {
     relationships.push({
       id: rel.attributes.get_or_default("Id", ""),
       relationship_type: rel.attributes.get_or_default("Type", ""),
@@ -476,14 +476,14 @@ fn read_content_types(zip : ZipArchive) -> ContentTypes raise DocxError {
   match zip.read_text("[Content_Types].xml") {
     Some(text) => {
       let root = read_xml_string(text, namespace_map=office_namespace_map())
-      for element in root.elements_by_tag_name("Default") {
+      for element in root.elements_by_tag_name("content-types:Default") {
         let extension = element.attributes.get_or_default("Extension", "")
         let content_type = element.attributes.get_or_default("ContentType", "")
         if extension != "" && content_type != "" {
           defaults[extension] = content_type
         }
       }
-      for element in root.elements_by_tag_name("Override") {
+      for element in root.elements_by_tag_name("content-types:Override") {
         let part_name = element.attributes.get_or_default("PartName", "")
         let content_type = element.attributes.get_or_default("ContentType", "")
         if part_name != "" && content_type != "" {

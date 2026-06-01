@@ -90,6 +90,20 @@ test "xml namespace mapping follows Mammoth reader behavior" {
   )
   inspect(mapped.name, content="x:body")
   inspect(mapped.attributes.get_or_default("x:val", ""), content="Hello!")
+  let empty_prefix = @docx2html.read_xml_string(
+    "<w:body xmlns:w=\"word\" w:val=\"Hello!\" />",
+    namespace_map={ "word": "" },
+  )
+  inspect(empty_prefix.name, content="{word}body")
+  inspect(
+    empty_prefix.attributes.get_or_default("{word}val", ""),
+    content="Hello!",
+  )
+  let default_namespace = @docx2html.read_xml_string(
+    "<body xmlns=\"music\" />",
+    namespace_map={ "music": "" },
+  )
+  inspect(default_namespace.name, content="{music}body")
   let root = @docx2html.read_xml_string(
     "<body><a /><b index=\"1\" /><b index=\"2\" /></body>",
   )

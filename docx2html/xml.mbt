@@ -432,7 +432,7 @@ fn XmlParser::map_uri_name(
   match self.namespace_map.get(uri) {
     Some(prefix) =>
       if prefix == "" {
-        local_name
+        "{" + uri + "}" + local_name
       } else {
         prefix + ":" + local_name
       }

@@ -172,7 +172,7 @@ fn read_content_type_xml_entries(
     match node {
       XmlElement(element) =>
         match element.name {
-          "Default" => {
+          "content-types:Default" => {
             let extension = element.attributes.get_or_default("Extension", "")
             let content_type = element.attributes.get_or_default(
               "ContentType", "",
@@ -181,7 +181,7 @@ fn read_content_type_xml_entries(
               entries.push(DefaultContentType(extension~, content_type~))
             }
           }
-          "Override" => {
+          "content-types:Override" => {
             let part_name = element.attributes.get_or_default("PartName", "")
             let content_type = element.attributes.get_or_default(
               "ContentType", "",
