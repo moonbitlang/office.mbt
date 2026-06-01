@@ -1162,10 +1162,14 @@ test "style map string reader follows Mammoth option rules" {
     ),
     content="[\"p.SectionTitle => h2\"]",
   )
+  debug_inspect(
+    @docx2html.read_style_map_string("\n\n  # p.SectionTitle => h4\n"),
+    content="[]",
+  )
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("Title")], properties={
       style_id: Some("Heading1"),
-      style_name: None,
+      style_name: Some("Heading 1"),
       numbering: None,
       alignment: None,
       indent: @docx2html.Indent::default(),
@@ -1193,6 +1197,24 @@ test "style map string reader follows Mammoth option rules" {
       include_default_style_map=false,
     ).value,
     content="<h2>Title</h2>",
+  )
+  let without_defaults = @docx2html.convert_document_to_html(
+    doc,
+    include_default_style_map=false,
+  )
+  inspect(without_defaults.value, content="<p>Title</p>")
+  debug_inspect(
+    without_defaults.messages,
+    content=(
+      #|[Warning("Unrecognised paragraph style: 'Heading 1' (Style ID: Heading1)")]
+    ),
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      doc,
+      style_map=@docx2html.read_style_map_string("\n\n"),
+    ).value,
+    content="<h1>Title</h1>",
   )
 }
 
