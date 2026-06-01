@@ -1212,6 +1212,26 @@ test "docx structured document tag checkbox without content is read" {
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let elements = empty_body_reader({ relationships: [] }).read_element(root)
   debug_inspect(elements, content="[Checkbox(false)]")
+  let unchecked_xml =
+    #|<w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:sdtPr><wordml:checkbox><wordml:checked wordml:val="0" /></wordml:checkbox></w:sdtPr></w:sdt>
+  let unchecked = read_xml_string(
+    unchecked_xml,
+    namespace_map=office_namespace_map(),
+  )
+  debug_inspect(
+    empty_body_reader({ relationships: [] }).read_element(unchecked),
+    content="[Checkbox(false)]",
+  )
+  let checked_xml =
+    #|<w:sdt xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wordml="http://schemas.microsoft.com/office/word/2010/wordml"><w:sdtPr><wordml:checkbox><wordml:checked wordml:val="1" /></wordml:checkbox></w:sdtPr></w:sdt>
+  let checked = read_xml_string(
+    checked_xml,
+    namespace_map=office_namespace_map(),
+  )
+  debug_inspect(
+    empty_body_reader({ relationships: [] }).read_element(checked),
+    content="[Checkbox(true)]",
+  )
 }
 
 ///|
@@ -2620,6 +2640,10 @@ test "docx complex field checkboxes are read" {
   inspect(
     complex_field_checkbox_html("<w:default w:val=\"1\" />", separate=false),
     content="<p><input type=\"checkbox\" checked=\"checked\" /></p>",
+  )
+  inspect(
+    complex_field_checkbox_html("<w:default w:val=\"0\" />", separate=false),
+    content="<p><input type=\"checkbox\" /></p>",
   )
   inspect(
     complex_field_checkbox_html(
