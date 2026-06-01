@@ -1010,6 +1010,7 @@ test "docx reader treats empty highlight as no highlight" {
 
 ///|
 test "docx reader reads font size with Mammoth unsigned decimal semantics" {
+  let overflowing_decimal = "999999999999999999999999999999999999999999999999999999999999"
   debug_inspect(
     [
       read_font_size(None),
@@ -1019,8 +1020,9 @@ test "docx reader reads font size with Mammoth unsigned decimal semantics" {
       read_font_size(Some("+2")),
       read_font_size(Some(" 28")),
       read_font_size(Some("")),
+      read_font_size(Some(overflowing_decimal)),
     ],
-    content="[None, Some(14), None, None, None, None, None]",
+    content="[None, Some(14), None, None, None, None, None, None]",
   )
 }
 
