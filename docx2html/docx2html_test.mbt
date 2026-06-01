@@ -2514,6 +2514,30 @@ test "document converter accepts custom image converters" {
 }
 
 ///|
+test "custom image converters inspect eager image bytes" {
+  let image = @docx2html.Image::{
+    content_type: "image/png",
+    alt_text: None,
+    data: b"Not an image at all!",
+  }
+  let doc = @docx2html.document([@docx2html.paragraph([Image(image)])])
+  let convert_image = fn(image : @docx2html.Image) {
+    let alt = try @utf8.decode(image.data[:]) catch {
+      _ => ""
+    } noraise {
+      text => text
+    }
+    @docx2html.image_conversion([
+      @docx2html.fresh_html_element("img", attributes={ "alt": alt }),
+    ])
+  }
+  inspect(
+    @docx2html.convert_document_to_html(doc, convert_image~).value,
+    content="<p><img alt=\"Not an image at all!\" /></p>",
+  )
+}
+
+///|
 test "document converter records custom image converter messages" {
   let image = @docx2html.Image::{
     content_type: "image/jpeg",
