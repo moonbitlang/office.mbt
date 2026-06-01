@@ -27,6 +27,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - XML namespace declarations update parser scope but are not retained as normal attributes; DOCX readers depend on semantic names, not `xmlns` attributes.
 - Carry parser-level XML tests separately from body-reader tests. Namespace translation, direct-child lookup, XML declarations, malformed XML, and `mc:AlternateContent` fallback splicing can all regress before DOCX element readers run.
 - Mammoth's XML reader rejects multiple document elements. After parsing the root element, skip only trailing whitespace/comments/processing instructions; any later element or text is malformed XML.
+- DOM parsing decodes decimal and hexadecimal numeric character references in both text and attributes before Mammoth sees XML nodes. A MoonBit hand parser must explicitly handle `&#...;` and `&#x...;`, while preserving the existing unknown-entity fallback for non-numeric names.
 - Parser code that is written in JS as a permissive loop often becomes structurally total in MoonBit. For example, an XML `while true` parser whose branches all return or raise may leave only an `abort("unreachable")` after the loop; do not invent malformed inputs to hit that branch.
 - Some standard-library shapes are total even when the ported JS code treated them defensively. `String::split(...).next()` on an existing string has a first segment, so a `None` fallback after it is not a meaningful parity target.
 

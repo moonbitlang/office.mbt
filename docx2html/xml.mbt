@@ -595,7 +595,69 @@ fn decode_xml_entity(entity : String) -> String {
     "gt" => ">"
     "quot" => "\""
     "apos" => "'"
-    _ => "&" + entity + ";"
+    _ =>
+      match decode_numeric_xml_entity(entity) {
+        Some(value) => value
+        None => "&" + entity + ";"
+      }
+  }
+}
+
+///|
+fn decode_numeric_xml_entity(entity : String) -> String? {
+  if entity.length() < 2 || entity[0] != '#' {
+    return None
+  }
+  let mut start = 1
+  let mut radix = 10
+  if entity.length() >= 3 && (entity[1] == 'x' || entity[1] == 'X') {
+    start = 2
+    radix = 16
+  }
+  match parse_xml_entity_number(entity, start, radix) {
+    Some(codepoint) =>
+      match Int::to_char(codepoint) {
+        Some(char) => Some(char.to_string())
+        None => None
+      }
+    None => None
+  }
+}
+
+///|
+fn parse_xml_entity_number(entity : String, start : Int, radix : Int) -> Int? {
+  if start >= entity.length() {
+    return None
+  }
+  let mut value = 0
+  for index in start..<entity.length() {
+    match xml_entity_digit_value(entity[index], radix) {
+      Some(digit) => {
+        if value > (0x10FFFF - digit) / radix {
+          return None
+        }
+        value = value * radix + digit
+      }
+      None => return None
+    }
+  }
+  Some(value)
+}
+
+///|
+fn xml_entity_digit_value(char : UInt16, radix : Int) -> Int? {
+  let value = if char >= '0' && char <= '9' {
+    Some(char.to_int() - '0'.to_int())
+  } else if char >= 'A' && char <= 'F' {
+    Some(char.to_int() - 'A'.to_int() + 10)
+  } else if char >= 'a' && char <= 'f' {
+    Some(char.to_int() - 'a'.to_int() + 10)
+  } else {
+    None
+  }
+  match value {
+    Some(digit) => if digit < radix { Some(digit) } else { None }
+    None => None
   }
 }
 
