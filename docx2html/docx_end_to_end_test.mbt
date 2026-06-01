@@ -6,6 +6,19 @@ test "convert_to_html reads single paragraph docx fixture" {
 }
 
 ///|
+test "generic convert reads docx fixture with typed output format" {
+  let html = @docx2html.convert(single_paragraph_docx()[:])
+  inspect(html.value, content="<p>Walking on imported air</p>")
+  debug_inspect(html.messages, content="[]")
+  let markdown = @docx2html.convert(
+    single_paragraph_docx()[:],
+    output_format=Markdown,
+  )
+  inspect(markdown.value, content="Walking on imported air\n\n")
+  debug_inspect(markdown.messages, content="[]")
+}
+
+///|
 test "read_docx reads single paragraph docx fixture" {
   match @docx2html.read_docx(single_paragraph_docx()[:]) {
     Document(children~, notes~, comments~) => {

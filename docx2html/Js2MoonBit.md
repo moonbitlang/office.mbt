@@ -7,6 +7,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 - Mammoth's Promise-returning API becomes synchronous native MoonBit functions with checked `raise` errors at IO/parse boundaries.
 - JavaScript `Buffer`, `ArrayBuffer`, and `Uint8Array` become `BytesView` at public read boundaries and `FixedArray[Byte]` only where a dependency requires a mutable fixed buffer.
 - JavaScript option objects become labeled optional parameters or explicit MoonBit structs. Avoid a single bag-of-options record unless it is passed through many internal layers.
+- Mammoth's string `outputFormat` option becomes a typed `OutputFormat` enum on generic `convert`/`convert_document`; keep `convert_to_html` and `convert_to_markdown` as convenience wrappers for the common call sites.
 - JavaScript truthiness is never ported directly. `null`/`undefined` become `Option`; empty arrays, empty strings, and `false` are handled explicitly.
 - JavaScript object maps become `Map[String, T]`. When output order is user-visible, sort keys before writing.
 

@@ -66,6 +66,22 @@ test "conversion defaults and result mapping preserve messages" {
 }
 
 ///|
+test "generic document conversion selects typed output format" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Hello.")]),
+  ])
+  inspect(@docx2html.convert_document(doc).value, content="<p>Hello.</p>")
+  inspect(
+    @docx2html.convert_document(doc, output_format=Markdown).value,
+    content="Hello\\.\n\n",
+  )
+  inspect(
+    @docx2html.convert_document(doc, output_format=Html, pretty_print=true).value,
+    content="<p>\n  Hello.\n</p>",
+  )
+}
+
+///|
 test "raw text recursively extracts text and tabs" {
   let element = @docx2html.document([
     @docx2html.paragraph([

@@ -111,29 +111,20 @@ pub fn convert_to_html(
   external_file_access? : Bool = false,
   read_external_file? : (String) -> Bytes? = no_external_file_reader,
 ) -> ConversionResult raise DocxError {
-  let zip = open_zip(docx)
-  let read_result = read_docx_zip_with_messages(
-    zip,
-    external_files=external_file_access_options(
-      external_file_access, read_external_file,
-    ),
-  )
-  let style_map = combine_docx_style_maps_from_zip(
-    zip,
-    style_map,
-    include_embedded_style_map~,
-  )
-  let result = convert_document_to_html(
-    read_result.document,
+  convert(
+    docx,
+    output_format=Html,
     style_map~,
     include_default_style_map~,
+    include_embedded_style_map~,
     ignore_empty_paragraphs~,
     id_prefix~,
     pretty_print~,
     convert_image~,
     transform_document~,
+    external_file_access~,
+    read_external_file~,
   )
-  prepend_messages(result, read_result.messages)
 }
 
 ///|
@@ -144,6 +135,36 @@ pub fn convert_to_markdown(
   include_embedded_style_map? : Bool = true,
   ignore_empty_paragraphs? : Bool = true,
   id_prefix? : String = "",
+  convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
+  transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+) -> ConversionResult raise DocxError {
+  convert(
+    docx,
+    output_format=Markdown,
+    style_map~,
+    include_default_style_map~,
+    include_embedded_style_map~,
+    ignore_empty_paragraphs~,
+    id_prefix~,
+    convert_image~,
+    transform_document~,
+    external_file_access~,
+    read_external_file~,
+  )
+}
+
+///|
+pub fn convert(
+  docx : BytesView,
+  output_format? : OutputFormat = Html,
+  style_map? : Array[String] = [],
+  include_default_style_map? : Bool = true,
+  include_embedded_style_map? : Bool = true,
+  ignore_empty_paragraphs? : Bool = true,
+  id_prefix? : String = "",
+  pretty_print? : Bool = false,
   convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
   transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
   external_file_access? : Bool = false,
@@ -161,12 +182,14 @@ pub fn convert_to_markdown(
     style_map,
     include_embedded_style_map~,
   )
-  let result = convert_document_to_markdown(
+  let result = convert_document(
     read_result.document,
+    output_format~,
     style_map~,
     include_default_style_map~,
     ignore_empty_paragraphs~,
     id_prefix~,
+    pretty_print~,
     convert_image~,
     transform_document~,
   )

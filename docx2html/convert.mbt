@@ -1,8 +1,20 @@
 ///|
+pub(all) enum OutputFormat {
+  Html
+  Markdown
+} derive(Debug, Eq)
+
+///|
 priv struct ConvertOptions {
   style_map : Array[StyleMapping]
   ignore_empty_paragraphs : Bool
   id_prefix : String
+}
+
+///|
+priv struct ConvertedNodes {
+  nodes : Array[HtmlNode]
+  messages : Array[Message]
 }
 
 ///|
@@ -30,33 +42,17 @@ pub fn convert_document_to_html(
   convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
   transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
 ) -> ConversionResult {
-  let document = transform_document(document)
-  let all_style_lines : Array[String] = []
-  all_style_lines.append(style_map)
-  if include_default_style_map {
-    all_style_lines.append(default_style_map_lines())
-  }
-  let parsed_style_map = read_style_map_with_messages(all_style_lines)
-  let options = ConvertOptions::{
-    style_map: parsed_style_map.mappings,
-    ignore_empty_paragraphs,
-    id_prefix,
-  }
-  let converter = DocumentConverter::{
-    options,
-    messages: parsed_style_map.messages,
-    note_references: [],
-    note_number: 1,
-    comments: document_comments(document),
-    comment_references: [],
-    comment_number: 1,
-    image_converter: convert_image,
-  }
-  let nodes = converter.convert_element(document)
-  {
-    value: write_html(simplify_html(nodes), pretty_print~),
-    messages: dedupe_messages(converter.messages),
-  }
+  convert_document(
+    document,
+    output_format=Html,
+    style_map~,
+    include_default_style_map~,
+    ignore_empty_paragraphs~,
+    id_prefix~,
+    pretty_print~,
+    convert_image~,
+    transform_document~,
+  )
 }
 
 ///|
@@ -69,6 +65,57 @@ pub fn convert_document_to_markdown(
   convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
   transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
 ) -> ConversionResult {
+  convert_document(
+    document,
+    output_format=Markdown,
+    style_map~,
+    include_default_style_map~,
+    ignore_empty_paragraphs~,
+    id_prefix~,
+    convert_image~,
+    transform_document~,
+  )
+}
+
+///|
+pub fn convert_document(
+  document : DocumentElement,
+  output_format? : OutputFormat = Html,
+  style_map? : Array[String] = [],
+  include_default_style_map? : Bool = true,
+  ignore_empty_paragraphs? : Bool = true,
+  id_prefix? : String = "",
+  pretty_print? : Bool = false,
+  convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
+  transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
+) -> ConversionResult {
+  let converted = convert_document_to_nodes(
+    document,
+    style_map~,
+    include_default_style_map~,
+    ignore_empty_paragraphs~,
+    id_prefix~,
+    convert_image~,
+    transform_document~,
+  )
+  let nodes = simplify_html(converted.nodes)
+  let value = match output_format {
+    Html => write_html(nodes, pretty_print~)
+    Markdown => write_markdown(nodes)
+  }
+  { value, messages: converted.messages }
+}
+
+///|
+fn convert_document_to_nodes(
+  document : DocumentElement,
+  style_map? : Array[String] = [],
+  include_default_style_map? : Bool = true,
+  ignore_empty_paragraphs? : Bool = true,
+  id_prefix? : String = "",
+  convert_image? : (Image) -> ImageConversion = data_uri_image_converter,
+  transform_document? : (DocumentElement) -> DocumentElement = identity_document_transform,
+) -> ConvertedNodes {
   let document = transform_document(document)
   let all_style_lines : Array[String] = []
   all_style_lines.append(style_map)
@@ -92,10 +139,7 @@ pub fn convert_document_to_markdown(
     image_converter: convert_image,
   }
   let nodes = converter.convert_element(document)
-  {
-    value: write_markdown(simplify_html(nodes)),
-    messages: dedupe_messages(converter.messages),
-  }
+  { nodes, messages: dedupe_messages(converter.messages) }
 }
 
 ///|

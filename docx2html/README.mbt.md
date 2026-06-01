@@ -23,11 +23,25 @@ test "convert document model to html" {
 }
 ```
 
-For DOCX bytes, use `convert_to_html`, `convert_to_markdown`, or
-`extract_raw_text`. The native API accepts `BytesView`, so callers can decide
-how to load files. External linked images stay disabled by default, matching
-Mammoth; pass `external_file_access=true` and a `read_external_file` callback
-when the source document is allowed to read sibling files.
+Use `convert` or `convert_document` with `output_format=Markdown` when the
+format is chosen dynamically:
+
+```mbt check
+///|
+test "choose markdown output" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph([@docx2html.text("Hello.")]),
+  ])
+  let result = @docx2html.convert_document(doc, output_format=Markdown)
+  inspect(result.value, content="Hello\\.\n\n")
+}
+```
+
+For DOCX bytes, use `convert`, `convert_to_html`, `convert_to_markdown`, or
+`extract_raw_text`. The native API accepts `BytesView`, so callers can decide how
+to load files. External linked images stay disabled by default, matching Mammoth;
+pass `external_file_access=true` and a `read_external_file` callback when the
+source document is allowed to read sibling files.
 
 ## Style Maps
 
