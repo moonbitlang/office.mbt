@@ -1567,20 +1567,16 @@ fn run_properties(
   vertical_alignment? : @docx2html.VerticalAlignment = Baseline,
   highlight? : String? = None,
 ) -> @docx2html.RunProperties {
-  {
-    style_id: None,
-    style_name: None,
-    is_bold,
-    is_underline,
-    is_italic,
-    is_strikethrough,
-    is_all_caps,
-    is_small_caps,
-    vertical_alignment,
-    font: None,
-    font_size: None,
-    highlight,
-  }
+  @docx2html.run_properties(
+    is_bold~,
+    is_underline~,
+    is_italic~,
+    is_strikethrough~,
+    is_all_caps~,
+    is_small_caps~,
+    vertical_alignment~,
+    highlight~,
+  )
 }
 
 ///|
@@ -1898,6 +1894,53 @@ test "document helper constructors cover common Mammoth nodes" {
       id_prefix="doc-42-",
     ).value,
     content="<p>Knock knock<sup><a href=\"#doc-42-footnote-4\" id=\"doc-42-footnote-ref-4\">[1]</a><a href=\"#doc-42-comment-7\" id=\"doc-42-comment-ref-7\">[TP1]</a></sup></p><ol><li id=\"doc-42-footnote-4\"><p>Who's there? <a href=\"#doc-42-footnote-ref-4\">↑</a></p></li></ol><dl><dt id=\"doc-42-comment-7\">Comment [TP1]</dt><dd><p>Comment body <a href=\"#doc-42-comment-ref-7\">↑</a></p></dd></dl>",
+  )
+}
+
+///|
+test "document property helpers mirror Mammoth option defaults" {
+  let blank_paragraph = @docx2html.paragraph_properties(
+    style_name=Some(""),
+    alignment=Some(""),
+    indent=@docx2html.indent(start=Some("720"), end=Some("")),
+    numbering=Some(@docx2html.numbering(true, 1)),
+  )
+  debug_inspect(blank_paragraph.style_name, content="None")
+  debug_inspect(blank_paragraph.alignment, content="None")
+  debug_inspect(blank_paragraph.indent.start, content="Some(\"720\")")
+  debug_inspect(blank_paragraph.indent.end, content="None")
+  let blank_run = @docx2html.run_properties(
+    style_name=Some(""),
+    font=Some(""),
+    highlight=Some(""),
+  )
+  debug_inspect(blank_run.style_name, content="None")
+  debug_inspect(blank_run.font, content="None")
+  debug_inspect(blank_run.highlight, content="None")
+  let doc = @docx2html.document([
+    @docx2html.paragraph(
+      [@docx2html.text("Title")],
+      properties=@docx2html.paragraph_properties(style_name=Some("Heading 1")),
+    ),
+    @docx2html.paragraph([
+      @docx2html.run(
+        [@docx2html.text("Marked")],
+        properties=@docx2html.run_properties(
+          is_bold=true,
+          highlight=Some("yellow"),
+        ),
+      ),
+    ]),
+    @docx2html.table(
+      [],
+      properties=@docx2html.table_properties(style_name=Some("Normal Table")),
+    ),
+  ])
+  inspect(
+    @docx2html.convert_document_to_html(doc, style_map=[
+      "p[style-name='Heading 1'] => h2", "highlight[color='yellow'] => mark", "table[style-name='Normal Table'] => table.normal-table",
+    ]).value,
+    content="<h2>Title</h2><p><strong><mark>Marked</mark></strong></p><table class=\"normal-table\"></table>",
   )
 }
 

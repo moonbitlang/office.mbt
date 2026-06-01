@@ -64,6 +64,8 @@ pub fn image_conversion(Array[HtmlNode], messages? : Array[Message]) -> ImageCon
 
 pub fn img_element((Image) -> Map[String, String]) -> (Image) -> ImageConversion
 
+pub fn indent(start? : String?, end? : String?, first_line? : String?, hanging? : String?) -> Indent
+
 pub fn inline_image((Image) -> Map[String, String]) -> (Image) -> ImageConversion
 
 pub fn join_zip_path(Array[String]) -> String
@@ -74,11 +76,15 @@ pub fn note(String, String, Array[DocumentElement]) -> Note
 
 pub fn note_reference(String, String) -> DocumentElement
 
+pub fn numbering(Bool, Int) -> Numbering
+
 pub fn open_zip(BytesView) -> ZipArchive raise DocxError
 
 pub fn page_break() -> DocumentElement
 
 pub fn paragraph(Array[DocumentElement], properties? : ParagraphProperties) -> DocumentElement
+
+pub fn paragraph_properties(style_id? : String?, style_name? : String?, numbering? : Numbering?, alignment? : String?, indent? : Indent) -> ParagraphProperties
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocumentElement raise DocxError
 
@@ -94,6 +100,8 @@ pub fn read_xml_string(String, namespace_map? : Map[String, String]) -> XmlEleme
 
 pub fn run(Array[DocumentElement], properties? : RunProperties) -> DocumentElement
 
+pub fn run_properties(style_id? : String?, style_name? : String?, is_bold? : Bool, is_underline? : Bool, is_italic? : Bool, is_strikethrough? : Bool, is_all_caps? : Bool, is_small_caps? : Bool, vertical_alignment? : VerticalAlignment, font? : String?, font_size? : Int?, highlight? : String?) -> RunProperties
+
 pub fn simplify_html(Array[HtmlNode]) -> Array[HtmlNode]
 
 pub fn split_zip_path(String) -> (String, String)
@@ -105,6 +113,8 @@ pub fn tab() -> DocumentElement
 pub fn table(Array[DocumentElement], properties? : TableProperties) -> DocumentElement
 
 pub fn table_cell(Array[DocumentElement], col_span? : Int, row_span? : Int) -> DocumentElement
+
+pub fn table_properties(style_id? : String?, style_name? : String?) -> TableProperties
 
 pub fn table_row(Array[DocumentElement], is_header? : Bool) -> DocumentElement
 

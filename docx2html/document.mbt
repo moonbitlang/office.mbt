@@ -19,6 +19,11 @@ pub(all) struct Numbering {
 } derive(Debug, Eq)
 
 ///|
+pub fn numbering(is_ordered : Bool, level : Int) -> Numbering {
+  { is_ordered, level }
+}
+
+///|
 pub(all) struct Indent {
   start : String?
   end : String?
@@ -27,8 +32,31 @@ pub(all) struct Indent {
 } derive(Debug, Eq)
 
 ///|
+fn none_if_empty(value : String?) -> String? {
+  match value {
+    Some(text) => if text == "" { None } else { Some(text) }
+    None => None
+  }
+}
+
+///|
+pub fn indent(
+  start? : String? = None,
+  end? : String? = None,
+  first_line? : String? = None,
+  hanging? : String? = None,
+) -> Indent {
+  {
+    start: none_if_empty(start),
+    end: none_if_empty(end),
+    first_line: none_if_empty(first_line),
+    hanging: none_if_empty(hanging),
+  }
+}
+
+///|
 pub fn Indent::default() -> Indent {
-  { start: None, end: None, first_line: None, hanging: None }
+  indent()
 }
 
 ///|
@@ -41,14 +69,25 @@ pub(all) struct ParagraphProperties {
 } derive(Debug, Eq)
 
 ///|
-pub fn ParagraphProperties::default() -> ParagraphProperties {
+pub fn paragraph_properties(
+  style_id? : String? = None,
+  style_name? : String? = None,
+  numbering? : Numbering? = None,
+  alignment? : String? = None,
+  indent? : Indent = Indent::default(),
+) -> ParagraphProperties {
   {
-    style_id: None,
-    style_name: None,
-    numbering: None,
-    alignment: None,
-    indent: Indent::default(),
+    style_id: none_if_empty(style_id),
+    style_name: none_if_empty(style_name),
+    numbering,
+    alignment: none_if_empty(alignment),
+    indent,
   }
+}
+
+///|
+pub fn ParagraphProperties::default() -> ParagraphProperties {
+  paragraph_properties()
 }
 
 ///|
@@ -68,21 +107,39 @@ pub(all) struct RunProperties {
 } derive(Debug, Eq)
 
 ///|
-pub fn RunProperties::default() -> RunProperties {
+pub fn run_properties(
+  style_id? : String? = None,
+  style_name? : String? = None,
+  is_bold? : Bool = false,
+  is_underline? : Bool = false,
+  is_italic? : Bool = false,
+  is_strikethrough? : Bool = false,
+  is_all_caps? : Bool = false,
+  is_small_caps? : Bool = false,
+  vertical_alignment? : VerticalAlignment = Baseline,
+  font? : String? = None,
+  font_size? : Int? = None,
+  highlight? : String? = None,
+) -> RunProperties {
   {
-    style_id: None,
-    style_name: None,
-    is_bold: false,
-    is_underline: false,
-    is_italic: false,
-    is_strikethrough: false,
-    is_all_caps: false,
-    is_small_caps: false,
-    vertical_alignment: Baseline,
-    font: None,
-    font_size: None,
-    highlight: None,
+    style_id: none_if_empty(style_id),
+    style_name: none_if_empty(style_name),
+    is_bold,
+    is_underline,
+    is_italic,
+    is_strikethrough,
+    is_all_caps,
+    is_small_caps,
+    vertical_alignment,
+    font: none_if_empty(font),
+    font_size,
+    highlight: none_if_empty(highlight),
   }
+}
+
+///|
+pub fn RunProperties::default() -> RunProperties {
+  run_properties()
 }
 
 ///|
@@ -92,8 +149,16 @@ pub(all) struct TableProperties {
 } derive(Debug, Eq)
 
 ///|
+pub fn table_properties(
+  style_id? : String? = None,
+  style_name? : String? = None,
+) -> TableProperties {
+  { style_id: none_if_empty(style_id), style_name: none_if_empty(style_name) }
+}
+
+///|
 pub fn TableProperties::default() -> TableProperties {
-  { style_id: None, style_name: None }
+  table_properties()
 }
 
 ///|
