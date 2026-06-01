@@ -1032,6 +1032,20 @@ test "docx hyperlink reader replaces external URL fragment when anchor is set" {
     }
     _ => fail("expected hyperlink")
   }
+  let empty_anchor_xml =
+    #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="r42" w:anchor=""><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
+  let empty_anchor = read_xml_string(
+    empty_anchor_xml,
+    namespace_map=office_namespace_map(),
+  )
+  match reader.read_element(empty_anchor)[0] {
+    Hyperlink(href~, anchor~, target_frame~, ..) => {
+      debug_inspect(href, content="Some(\"http://example.com/#previous\")")
+      debug_inspect(anchor, content="None")
+      debug_inspect(target_frame, content="None")
+    }
+    _ => fail("expected hyperlink")
+  }
 }
 
 ///|
@@ -1103,6 +1117,35 @@ test "docx hyperlink reader follows Mammoth target forms" {
     empty_body_reader({ relationships: [] }).read_element(empty_target_frame)[0] {
     Hyperlink(target_frame~, ..) => debug_inspect(target_frame, content="None")
     _ => fail("expected hyperlink")
+  }
+  let empty_relationship_id_xml =
+    #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="" w:anchor="Introduction"><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
+  let empty_relationship_id = read_xml_string(
+    empty_relationship_id_xml,
+    namespace_map=office_namespace_map(),
+  )
+  match
+    empty_body_reader({ relationships: [] }).read_element(empty_relationship_id)[0] {
+    Hyperlink(href~, anchor~, target_frame~, children~) => {
+      debug_inspect(href, content="None")
+      debug_inspect(anchor, content="Some(\"Introduction\")")
+      debug_inspect(target_frame, content="None")
+      match children[0] {
+        Run(..) => ()
+        _ => fail("expected run child")
+      }
+    }
+    _ => fail("expected internal hyperlink")
+  }
+  let empty_anchor_xml =
+    #|<w:hyperlink xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:anchor=""><w:r><w:t>Hello</w:t></w:r></w:hyperlink>
+  let empty_anchor = read_xml_string(
+    empty_anchor_xml,
+    namespace_map=office_namespace_map(),
+  )
+  match empty_body_reader({ relationships: [] }).read_element(empty_anchor)[0] {
+    Run(..) => ()
+    _ => fail("expected transparent hyperlink children")
   }
 }
 

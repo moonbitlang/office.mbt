@@ -1987,11 +1987,12 @@ fn BodyReader::read_hyperlink(
   element : XmlElement,
 ) -> Array[DocumentElement] raise DocxError {
   let target_frame = non_empty_attribute(element, "w:tgtFrame")
-  match element.attributes.get("r:id") {
+  let anchor = non_empty_attribute(element, "w:anchor")
+  match non_empty_attribute(element, "r:id") {
     Some(id) => {
       let href = match self.relationships.find_target_by_id(id) {
         Some(target) =>
-          match element.attributes.get("w:anchor") {
+          match anchor {
             Some(anchor) => Some(replace_url_fragment(target, anchor))
             None => Some(target)
           }
@@ -2007,7 +2008,7 @@ fn BodyReader::read_hyperlink(
       ]
     }
     None =>
-      match element.attributes.get("w:anchor") {
+      match anchor {
         Some(anchor) =>
           [
             Hyperlink(
