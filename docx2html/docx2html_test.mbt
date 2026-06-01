@@ -1232,7 +1232,8 @@ test "style map malformed suffix diagnostics match Mammoth" {
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
     "p. => h1", "p[style-name] => h1", "p[style-name='Heading' => h1", "p:foo(1) => p",
-    "p: => p", "p:ordered-list => p", "br => br", "p => ul>li", "p => span.",
+    "p: => p", "p:ordered-list => p", "r:ordered-list(1) => span", "br => br", "p => ul>li",
+    "p => span.",
   ])
   inspect(result.value, content="<p>Walking on imported air</p>")
   debug_inspect(
@@ -1245,6 +1246,7 @@ test "style map malformed suffix diagnostics match Mammoth" {
       #|  Warning("Did not understand this style mapping, so ignored it: p:foo(1) => p\nError was at character number 2: Expected whitespace but got colon"),
       #|  Warning("Did not understand this style mapping, so ignored it: p: => p\nError was at character number 2: Expected whitespace but got colon"),
       #|  Warning("Did not understand this style mapping, so ignored it: p:ordered-list => p\nError was at character number 15: Expected open-paren but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: r:ordered-list(1) => span\nError was at character number 2: Expected whitespace but got colon"),
       #|  Warning("Did not understand this style mapping, so ignored it: br => br\nError was at character number 3: Expected open-square-bracket but got whitespace"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => ul>li\nError was at character number 8: Expected end but got gt"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span.\nError was at character number 11: Expected identifier but got end"),
@@ -1647,6 +1649,17 @@ test "document converter follows Mammoth run property style-map overrides" {
       style_map=["i => strong"],
     ).value,
     content="<strong>Hello.</strong>",
+  )
+  let impossible_run_list = @docx2html.convert_document_to_html(
+    run_text("Hello.", run_properties()),
+    style_map=["r:ordered-list(1) => span"],
+  )
+  inspect(impossible_run_list.value, content="Hello.")
+  debug_inspect(
+    impossible_run_list.messages,
+    content=(
+      #|[Warning("Did not understand this style mapping, so ignored it: r:ordered-list(1) => span\nError was at character number 2: Expected whitespace but got colon")]
+    ),
   )
 }
 

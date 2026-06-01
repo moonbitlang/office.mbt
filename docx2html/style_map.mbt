@@ -194,7 +194,7 @@ fn parse_style_document_matcher(
         line,
         next,
         end,
-        allow_list=true,
+        allow_list=false,
       )
       match error {
         Some(error) => (None, next, Some(error))
