@@ -847,9 +847,8 @@ fn parse_style_string(
     Some(
       "Error was at character number " +
       (index + 1).to_string() +
-      ": Expected string but got unterminated-string \"" +
-      read_unterminated_style_string_token(line, index, end) +
-      "\"",
+      ": Expected string but got " +
+      describe_unterminated_style_string(line, index, end),
     ),
   )
 }
@@ -963,9 +962,12 @@ fn describe_unterminated_style_string(
   index : Int,
   end : Int,
 ) -> String {
-  "unterminated-string \"" +
-  read_unterminated_style_string_token(line, index, end) +
-  "\""
+  let token = read_unterminated_style_string_token(line, index, end)
+  if token == "" {
+    "unterminated-string"
+  } else {
+    "unterminated-string \"" + token + "\""
+  }
 }
 
 ///|

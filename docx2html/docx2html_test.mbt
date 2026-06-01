@@ -1264,8 +1264,9 @@ test "style map malformed html path diagnostics match Mammoth" {
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
     "p => span:separator", "p => span:separator(x)", "p => span:separator('x'", "p => span:separator('x'):fresh",
-    "p => span:", "p => span[=]", "p => span[data-x]", "p => span[data-x='abc", "p => span[data-x='a\\\\b",
-    "p => ul| > li", "p => ul > !", "p => >", "p => |", "p => |li",
+    "p => span:", "p => .tip", "p => span[=]", "p => span[data-x]", "p => span[data-x='",
+    "p => span[data-x='abc", "p => span[data-x='a\\\\b", "p => ul| > li", "p => ul > !",
+    "p => >", "p => |", "p => |li",
   ])
   inspect(result.value, content="<p>Walking on imported air</p>")
   debug_inspect(
@@ -1277,8 +1278,10 @@ test "style map malformed html path diagnostics match Mammoth" {
       #|  Warning("Did not understand this style mapping, so ignored it: p => span:separator('x'\nError was at character number 10: Expected end but got colon"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span:separator('x'):fresh\nError was at character number 25: Expected end but got colon"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span:\nError was at character number 10: Expected end but got colon"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => .tip\nError was at character number 6: Expected end but got dot"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[=]\nError was at character number 11: Expected identifier but got equals"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x]\nError was at character number 17: Expected equals but got close-square-bracket"),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x='\nError was at character number 18: Expected string but got unterminated-string"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x='abc\nError was at character number 18: Expected string but got unterminated-string \"abc\""),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x='a\\\\b\nError was at character number 18: Expected string but got unterminated-string \"a\\\\b\""),
       #|  Warning("Did not understand this style mapping, so ignored it: p => ul| > li\nError was at character number 8: Expected end but got choice"),
@@ -1348,9 +1351,9 @@ test "style map malformed named value diagnostics match Mammoth" {
     @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
-    "p[=] => h1", "p[style-name^] => h1", "highlight[=] => mark", "highlight[color] => mark",
-    "highlight[color=] => mark", "highlight[color='yellow' => mark", "br[=] => br",
-    "br[type] => br", "br[type=] => br", "br[type='page' => hr", "br[type='weird'] => hr",
+    "p[=] => h1", "p[style-name^] => h1", "p[style-name='", "highlight[=] => mark",
+    "highlight[color] => mark", "highlight[color=] => mark", "highlight[color='yellow' => mark",
+    "br[=] => br", "br[type] => br", "br[type=] => br", "br[type='page' => hr", "br[type='weird'] => hr",
     "p:ordered-list() => p", "p:ordered-list(1 => p",
   ])
   inspect(result.value, content="<p>Walking on imported air</p>")
@@ -1360,6 +1363,7 @@ test "style map malformed named value diagnostics match Mammoth" {
       #|[
       #|  Warning("Did not understand this style mapping, so ignored it: p[=] => h1\nError was at character number 3: Expected identifier \"style-name\" but got equals"),
       #|  Warning("Did not understand this style mapping, so ignored it: p[style-name^] => h1\nError was at character number 13: Expected style name matcher but got unrecognisedCharacter \"^\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: p[style-name='\nError was at character number 14: Expected string but got unterminated-string"),
       #|  Warning("Did not understand this style mapping, so ignored it: highlight[=] => mark\nError was at character number 11: Expected identifier \"color\" but got equals"),
       #|  Warning("Did not understand this style mapping, so ignored it: highlight[color] => mark\nError was at character number 16: Expected equals but got close-square-bracket"),
       #|  Warning("Did not understand this style mapping, so ignored it: highlight[color=] => mark\nError was at character number 17: Expected string but got close-square-bracket"),
