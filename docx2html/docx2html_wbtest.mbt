@@ -677,6 +677,19 @@ test "docx reader reads paragraph style alignment and indent properties" {
     "<w:ind w:end=\"720\" w:right=\"40\" />",
   )
   debug_inspect(end_precedence.indent.end, content="Some(\"720\")")
+  let blank_values = paragraph_properties_from_xml(
+    "<w:jc w:val=\"\" /><w:ind w:start=\"\" w:left=\"720\" w:end=\"\" w:right=\"1440\" w:firstLine=\"\" w:hanging=\"\" />",
+  )
+  debug_inspect(blank_values.alignment, content="None")
+  debug_inspect(
+    [
+      blank_values.indent.start,
+      blank_values.indent.end,
+      blank_values.indent.first_line,
+      blank_values.indent.hanging,
+    ],
+    content="[Some(\"720\"), Some(\"1440\"), None, None]",
+  )
 }
 
 ///|
@@ -951,6 +964,8 @@ test "docx reader reads run font vertical alignment and highlight properties" {
   debug_inspect(properties.highlight, content="Some(\"yellow\")")
   let subscript = run_properties_from_xml("<w:vertAlign w:val=\"subscript\" />")
   debug_inspect(subscript.vertical_alignment, content="Subscript")
+  let blank_font = run_properties_from_xml("<w:rFonts w:ascii=\"\" />")
+  debug_inspect(blank_font.font, content="None")
 }
 
 ///|

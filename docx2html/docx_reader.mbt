@@ -1751,7 +1751,7 @@ fn BodyReader::read_paragraph_properties(
     style_id,
     style_name,
     numbering: self.read_numbering(style_id, element.first_or_empty("w:numPr")),
-    alignment: element.first_or_empty("w:jc").attributes.get("w:val"),
+    alignment: non_empty_attribute(element.first_or_empty("w:jc"), "w:val"),
     indent: self.read_indent(element.first_or_empty("w:ind")),
   }
 }
@@ -1761,15 +1761,15 @@ fn BodyReader::read_indent(self : BodyReader, element : XmlElement) -> Indent {
   ignore(self)
   {
     start: first_some(
-      element.attributes.get("w:start"),
-      element.attributes.get("w:left"),
+      non_empty_attribute(element, "w:start"),
+      non_empty_attribute(element, "w:left"),
     ),
     end: first_some(
-      element.attributes.get("w:end"),
-      element.attributes.get("w:right"),
+      non_empty_attribute(element, "w:end"),
+      non_empty_attribute(element, "w:right"),
     ),
-    first_line: element.attributes.get("w:firstLine"),
-    hanging: element.attributes.get("w:hanging"),
+    first_line: non_empty_attribute(element, "w:firstLine"),
+    hanging: non_empty_attribute(element, "w:hanging"),
   }
 }
 
@@ -1834,7 +1834,7 @@ fn BodyReader::read_run_properties(
     vertical_alignment: read_vertical_alignment(
       element.first_or_empty("w:vertAlign").attributes.get("w:val"),
     ),
-    font: element.first_or_empty("w:rFonts").attributes.get("w:ascii"),
+    font: non_empty_attribute(element.first_or_empty("w:rFonts"), "w:ascii"),
     font_size: read_font_size(
       element.first_or_empty("w:sz").attributes.get("w:val"),
     ),
