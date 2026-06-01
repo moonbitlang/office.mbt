@@ -98,6 +98,19 @@ priv struct CommentsReadResult {
 }
 
 ///|
+priv struct TableRowForSpan {
+  cells : Array[TableCellForSpan]
+  is_header : Bool
+}
+
+///|
+priv struct TableCellForSpan {
+  children : Array[DocumentElement]
+  col_span : Int
+  row_span : Int
+}
+
+///|
 pub fn convert_to_html(
   docx : BytesView,
   style_map? : Array[String] = [],
@@ -2603,108 +2616,94 @@ fn BodyReader::calculate_table_row_spans(
   self : BodyReader,
   elements : Array[DocumentElement],
 ) -> Array[DocumentElement] {
-  let mut unexpected_non_row = false
-  for row in elements {
-    match row {
-      TableRow(..) => ()
-      _ => unexpected_non_row = true
+  let rows : Array[(Array[DocumentElement], Bool)] = []
+  for element in elements {
+    match element {
+      TableRow(children~, is_header~) => rows.push((children, is_header))
+      _ => {
+        self.warn(
+          "unexpected non-row element in table, cell merging may be incorrect",
+        )
+        return elements
+      }
     }
   }
-  if unexpected_non_row {
-    self.warn(
-      "unexpected non-row element in table, cell merging may be incorrect",
-    )
-    return elements
-  }
-  let mut unexpected_non_cell = false
-  for row in elements {
-    match row {
-      TableRow(children~, ..) =>
-        for cell in children {
-          match cell {
-            TableCell(..) => ()
-            _ => unexpected_non_cell = true
-          }
+  let typed_rows : Array[TableRowForSpan] = []
+  for row in rows {
+    let (children, is_header) = row
+    let cells : Array[TableCellForSpan] = []
+    for child in children {
+      match child {
+        TableCell(children=cell_children, col_span~, row_span~) =>
+          cells.push({ children: cell_children, col_span, row_span })
+        _ => {
+          self.warn(
+            "unexpected non-cell element in table row, cell merging may be incorrect",
+          )
+          return elements
         }
-      _ => ()
+      }
     }
+    typed_rows.push({ cells, is_header })
   }
-  if unexpected_non_cell {
-    self.warn(
-      "unexpected non-cell element in table row, cell merging may be incorrect",
-    )
-    return elements
-  }
+  self.calculate_typed_table_row_spans(typed_rows)
+}
+
+///|
+fn BodyReader::calculate_typed_table_row_spans(
+  _self : BodyReader,
+  elements : Array[TableRowForSpan],
+) -> Array[DocumentElement] {
   let row_spans : Array[Array[Int]] = []
   let skip_cells : Array[Array[Bool]] = []
   for row in elements {
-    match row {
-      TableRow(children~, ..) => {
-        let spans : Array[Int] = []
-        let skips : Array[Bool] = []
-        for _ in children {
-          spans.push(1)
-          skips.push(false)
-        }
-        row_spans.push(spans)
-        skip_cells.push(skips)
-      }
-      _ => ()
+    let spans : Array[Int] = []
+    let skips : Array[Bool] = []
+    for _ in row.cells {
+      spans.push(1)
+      skips.push(false)
     }
+    row_spans.push(spans)
+    skip_cells.push(skips)
   }
   let open_cells : Map[Int, (Int, Int)] = {}
   for row_index in 0..<elements.length() {
-    match elements[row_index] {
-      TableRow(children~, ..) => {
-        let mut column_index = 0
-        for cell_index in 0..<children.length() {
-          match children[cell_index] {
-            TableCell(col_span~, row_span~, ..) => {
-              if row_span == 0 {
-                match open_cells.get(column_index) {
-                  Some((origin_row, origin_cell)) => {
-                    row_spans[origin_row][origin_cell] = row_spans[origin_row][origin_cell] +
-                      1
-                    skip_cells[row_index][cell_index] = true
-                  }
-                  None => open_cells[column_index] = (row_index, cell_index)
-                }
-              } else {
-                open_cells[column_index] = (row_index, cell_index)
-              }
-              column_index = column_index + col_span
-            }
-            _ => ()
+    let mut column_index = 0
+    for cell_index in 0..<elements[row_index].cells.length() {
+      let cell = elements[row_index].cells[cell_index]
+      if cell.row_span == 0 {
+        match open_cells.get(column_index) {
+          Some((origin_row, origin_cell)) => {
+            row_spans[origin_row][origin_cell] = row_spans[origin_row][origin_cell] +
+              1
+            skip_cells[row_index][cell_index] = true
           }
+          None => open_cells[column_index] = (row_index, cell_index)
         }
+      } else {
+        open_cells[column_index] = (row_index, cell_index)
       }
-      _ => ()
+      column_index = column_index + cell.col_span
     }
   }
   let rows : Array[DocumentElement] = []
   for row_index in 0..<elements.length() {
-    match elements[row_index] {
-      TableRow(children~, is_header~) => {
-        let new_children : Array[DocumentElement] = []
-        for cell_index in 0..<children.length() {
-          if !skip_cells[row_index][cell_index] {
-            match children[cell_index] {
-              TableCell(children=cell_children, col_span~, ..) =>
-                new_children.push(
-                  TableCell(
-                    children=cell_children,
-                    col_span~,
-                    row_span=row_spans[row_index][cell_index],
-                  ),
-                )
-              _ => new_children.push(children[cell_index])
-            }
-          }
-        }
-        rows.push(TableRow(children=new_children, is_header~))
+    let new_children : Array[DocumentElement] = []
+    for cell_index in 0..<elements[row_index].cells.length() {
+      if !skip_cells[row_index][cell_index] {
+        let cell = elements[row_index].cells[cell_index]
+        new_children.push(
+          TableCell(
+            children=cell.children,
+            col_span=cell.col_span,
+            row_span=row_spans[row_index][cell_index],
+          ),
+        )
       }
-      _ => rows.push(elements[row_index])
     }
+    rows.push(
+      TableRow(children=new_children, is_header=elements[row_index].is_header),
+    )
   }
   rows
 }
