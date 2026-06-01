@@ -585,6 +585,29 @@ test "document markdown conversion uses style maps" {
 
 ///|
 test "document markdown conversion honors common converter options" {
+  let heading = @docx2html.document([
+    @docx2html.paragraph(
+      [@docx2html.text("Title")],
+      properties=@docx2html.paragraph_properties(
+        style_id=Some("Heading1"),
+        style_name=Some("Heading 1"),
+      ),
+    ),
+  ])
+  let default_heading = @docx2html.convert_document_to_markdown(heading)
+  inspect(default_heading.value, content="# Title\n\n")
+  debug_inspect(default_heading.messages, content="[]")
+  let without_default_style_map = @docx2html.convert_document_to_markdown(
+    heading,
+    include_default_style_map=false,
+  )
+  inspect(without_default_style_map.value, content="Title\n\n")
+  debug_inspect(
+    without_default_style_map.messages,
+    content=(
+      #|[Warning("Unrecognised paragraph style: 'Heading 1' (Style ID: Heading1)")]
+    ),
+  )
   inspect(
     @docx2html.convert_document_to_markdown(
       @docx2html.paragraph([]),
