@@ -2321,30 +2321,30 @@ test "style map matcher helpers cover run property predicates" {
 }
 
 ///|
+fn symbol_html(font : String, char : String) -> String raise DocxError {
+  let xml = "<w:sym xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" w:font=\"" +
+    font +
+    "\" w:char=\"" +
+    char +
+    "\" />"
+  let element = read_xml_string(xml, namespace_map=office_namespace_map())
+  convert_document_to_html(
+    document(empty_body_reader({ relationships: [] }).read_element(element)),
+  ).value
+}
+
+///|
 test "docx symbols are mapped from supported dingbat fonts" {
-  let ascii_xml =
-    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Wingdings" w:char="28" />
-  let ascii = read_xml_string(ascii_xml, namespace_map=office_namespace_map())
-  inspect(
-    convert_document_to_html(
-      document(empty_body_reader({ relationships: [] }).read_element(ascii)),
-    ).value,
-    content="\u{1F57F}",
-  )
-  let private_use_xml =
-    #|<w:sym xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:font="Wingdings" w:char="F028" />
-  let private_use = read_xml_string(
-    private_use_xml,
-    namespace_map=office_namespace_map(),
-  )
-  inspect(
-    convert_document_to_html(
-      document(
-        empty_body_reader({ relationships: [] }).read_element(private_use),
-      ),
-    ).value,
-    content="\u{1F57F}",
-  )
+  inspect(symbol_html("Wingdings", "28"), content="\u{1F57F}")
+  inspect(symbol_html("Wingdings", "0028"), content="\u{1F57F}")
+  inspect(symbol_html("Wingdings", "28zz"), content="\u{1F57F}")
+  inspect(symbol_html("Wingdings", "F028"), content="\u{1F57F}")
+  inspect(symbol_html("Wingdings", "29"), content="\u{2706}")
+  inspect(symbol_html("Wingdings", "3e"), content="\u{2707}")
+  inspect(symbol_html("Symbol", "22"), content="\u{2200}")
+  inspect(symbol_html("Webdings", "61"), content="\u{2714}")
+  inspect(symbol_html("Wingdings 2", "52"), content="\u{2611}")
+  inspect(symbol_html("Wingdings 3", "21"), content="\u{2B60}")
 }
 
 ///|
@@ -2358,6 +2358,21 @@ test "docx symbols warn when unsupported like Mammoth" {
     reader.messages,
     content=(
       #|[Warning("A w:sym element with an unsupported character was ignored: char 28 in font Dingwings")]
+    ),
+  )
+  let lowercase_private_use = read_xml_string(
+    "<w:sym xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" w:font=\"Wingdings\" w:char=\"f028\" />",
+    namespace_map=office_namespace_map(),
+  )
+  let lowercase_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(
+    lowercase_reader.read_element(lowercase_private_use),
+    content="[]",
+  )
+  debug_inspect(
+    lowercase_reader.messages,
+    content=(
+      #|[Warning("A w:sym element with an unsupported character was ignored: char f028 in font Wingdings")]
     ),
   )
 }

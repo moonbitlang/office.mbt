@@ -1149,20 +1149,45 @@ fn BodyReader::read_symbol(
 
 ///|
 fn symbol_to_unicode(font : String, char : String) -> String? {
-  let normalized_char = normalize_symbol_char(char)
-  match (font, normalized_char) {
-    ("Wingdings", "28") => Some("\u{1F57F}")
-    _ => None
+  match parse_dingbat_hex(char) {
+    Some(code) =>
+      match dingbat_to_unicode(font, code) {
+        Some(value) => Some(value)
+        None =>
+          if char.length() == 4 && char.has_prefix("F0") {
+            match parse_dingbat_hex(char[2:].to_owned()) {
+              Some(shifted_code) => dingbat_to_unicode(font, shifted_code)
+              None => None
+            }
+          } else {
+            None
+          }
+      }
+    None => None
   }
 }
 
 ///|
-fn normalize_symbol_char(char : String) -> String {
-  let upper = char.to_upper()
-  if upper.length() == 4 && upper.has_prefix("F0") {
-    upper[2:].to_owned()
+fn parse_dingbat_hex(value : String) -> Int? {
+  let mut index = 0
+  while index < value.length() && is_field_whitespace(value[index]) {
+    index += 1
+  }
+  let start = index
+  let mut result = 0
+  while index < value.length() {
+    match hex_value(value[index]) {
+      Some(digit) => {
+        result = result * 16 + digit
+        index += 1
+      }
+      None => break
+    }
+  }
+  if index == start {
+    None
   } else {
-    upper
+    Some(result)
   }
 }
 
