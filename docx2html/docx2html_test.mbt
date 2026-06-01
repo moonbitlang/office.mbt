@@ -952,7 +952,7 @@ test "style map parser handles malformed and escaped edge cases" {
 test "style map string reader follows Mammoth option rules" {
   debug_inspect(
     @docx2html.read_style_map_string(
-      "\n# p.SectionTitle => h3\np.SectionTitle => h2\n\n",
+      "\n# p.SectionTitle => h3\n  # p.SectionTitle => h4\n  p.SectionTitle => h2  \n\n",
     ),
     content="[\"p.SectionTitle => h2\"]",
   )
