@@ -165,7 +165,9 @@ fn XmlWriter::write_element(
   if is_root {
     self.write_namespace_attributes(builder)
   }
-  write_serialized_xml_attributes(builder, element.attributes)
+  if !is_root {
+    write_serialized_xml_attributes(builder, element.attributes)
+  }
   if element.children.is_empty() {
     builder.write_string("/>")
   } else {
