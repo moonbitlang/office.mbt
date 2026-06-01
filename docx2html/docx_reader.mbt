@@ -2179,26 +2179,28 @@ fn external_uri_to_path(uri : String, platform? : String = "") -> String? {
   let raw_path = if uri.has_prefix("file://") {
     local_file_uri_path(uri)
   } else if is_relative_uri(uri) {
-    Some(uri)
+    Some(strip_uri_fragment(uri))
   } else {
     None
   }
   match raw_path {
-    Some(path) => {
-      let decoded = percent_decode_uri_path(path)
-      if platform == "win32" && is_windows_file_uri_path(decoded) {
-        Some(decoded[1:].to_owned())
-      } else {
-        Some(decoded)
+    Some(path) =>
+      match percent_decode_uri_path(path) {
+        Some(decoded) =>
+          if platform == "win32" && is_windows_file_uri_path(decoded) {
+            Some(decoded[1:].to_owned())
+          } else {
+            Some(decoded)
+          }
+        None => None
       }
-    }
     None => None
   }
 }
 
 ///|
 fn local_file_uri_path(uri : String) -> String? {
-  let rest = uri["file://".length():]
+  let rest = strip_uri_fragment(uri)["file://".length():]
   if rest.has_prefix("/") {
     Some(rest.to_owned())
   } else {
@@ -2211,14 +2213,29 @@ fn local_file_uri_path(uri : String) -> String? {
           None
         }
       }
-      None => if rest == "" || rest == "localhost" { Some("") } else { None }
+      None =>
+        if rest == "" {
+          Some("null")
+        } else if rest == "localhost" {
+          Some("/")
+        } else {
+          None
+        }
     }
   }
 }
 
 ///|
 fn is_relative_uri(uri : String) -> Bool {
-  !uri.has_prefix("//") && find_uri_scheme_colon(uri) == None
+  find_uri_scheme_colon(uri) == None
+}
+
+///|
+fn strip_uri_fragment(uri : String) -> String {
+  match uri.find("#") {
+    Some(index) => uri[:index].to_owned()
+    None => uri
+  }
 }
 
 ///|
@@ -2262,7 +2279,7 @@ fn is_windows_file_uri_path(path : String) -> Bool {
 }
 
 ///|
-fn percent_decode_uri_path(path : String) -> String {
+fn percent_decode_uri_path(path : String) -> String? {
   let bytes : Array[Byte] = []
   let mut index = 0
   while index < path.length() {
@@ -2273,14 +2290,18 @@ fn percent_decode_uri_path(path : String) -> String {
           index += 3
           continue
         }
-        _ => ()
+        _ => return None
       }
+    } else if path[index] == '%' {
+      return None
     }
     bytes.push(path[index].to_int().to_byte())
     index += 1
   }
-  @utf8.decode(Bytes::from_array(bytes)[:]) catch {
-    _ => path
+  try @utf8.decode(Bytes::from_array(bytes)[:]) catch {
+    _ => None
+  } noraise {
+    value => Some(value)
   }
 }
 

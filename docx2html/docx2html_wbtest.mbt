@@ -401,6 +401,14 @@ test "docx external file URI paths follow Mammoth local URI rules" {
     content="Some(\"/a/b/c\")",
   )
   debug_inspect(
+    external_uri_to_path("file://localhost", platform="linux"),
+    content="Some(\"/\")",
+  )
+  debug_inspect(
+    external_uri_to_path("file://", platform="linux"),
+    content="Some(\"null\")",
+  )
+  debug_inspect(
     external_uri_to_path("file://example/a/b/c", platform="linux"),
     content="None",
   )
@@ -417,9 +425,23 @@ test "docx external file URI paths follow Mammoth local URI rules" {
     content="Some(\"a b/c\")",
   )
   debug_inspect(
+    external_uri_to_path("//host/path", platform="linux"),
+    content="Some(\"//host/path\")",
+  )
+  debug_inspect(
+    external_uri_to_path("a#b:c", platform="linux"),
+    content="Some(\"a\")",
+  )
+  debug_inspect(external_uri_to_path("a%zz", platform="linux"), content="None")
+  debug_inspect(
     external_file_candidate_paths("a%20b/c"),
     content="[\"a%20b/c\", \"a b/c\"]",
   )
+  debug_inspect(
+    external_file_candidate_paths("a#frag"),
+    content="[\"a#frag\", \"a\"]",
+  )
+  debug_inspect(external_file_candidate_paths("a%zz"), content="[\"a%zz\"]")
   debug_inspect(
     external_file_candidate_paths("http://example.com/a.png"),
     content="[\"http://example.com/a.png\"]",
