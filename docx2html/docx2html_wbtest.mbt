@@ -2760,6 +2760,18 @@ test "docx symbols warn when unsupported like Mammoth" {
       #|[Warning("A w:sym element with an unsupported character was ignored: char F0zz in font Dingwings")]
     ),
   )
+  let missing_char = read_xml_string(
+    "<w:sym xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" w:font=\"Wingdings\" />",
+    namespace_map=office_namespace_map(),
+  )
+  let missing_char_reader = empty_body_reader({ relationships: [] })
+  debug_inspect(missing_char_reader.read_element(missing_char), content="[]")
+  debug_inspect(
+    missing_char_reader.messages,
+    content=(
+      #|[Warning("A w:sym element with an unsupported character was ignored: char undefined in font Wingdings")]
+    ),
+  )
 }
 
 ///|

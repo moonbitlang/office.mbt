@@ -1133,19 +1133,37 @@ fn BodyReader::read_symbol(
   element : XmlElement,
 ) -> Array[DocumentElement] {
   ignore(self)
-  let font = element.attributes.get_or_default("w:font", "")
-  let char = element.attributes.get_or_default("w:char", "")
+  let font_attribute = element.attributes.get("w:font")
+  let char_attribute = element.attributes.get("w:char")
+  let font = attribute_or_empty(font_attribute)
+  let char = attribute_or_empty(char_attribute)
   match symbol_to_unicode(font, char) {
     Some(value) => [text(value)]
     None => {
       self.warn(
         "A w:sym element with an unsupported character was ignored: char " +
-        char +
+        attribute_or_js_undefined(char_attribute) +
         " in font " +
-        font,
+        attribute_or_js_undefined(font_attribute),
       )
       []
     }
+  }
+}
+
+///|
+fn attribute_or_empty(value : String?) -> String {
+  match value {
+    Some(value) => value
+    None => ""
+  }
+}
+
+///|
+fn attribute_or_js_undefined(value : String?) -> String {
+  match value {
+    Some(value) => value
+    None => "undefined"
   }
 }
 
