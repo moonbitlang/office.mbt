@@ -43,6 +43,18 @@ pub fn ConversionResult::map(
 }
 
 ///|
+pub fn ConversionResult::flat_map(
+  self : ConversionResult,
+  f : (String) -> ConversionResult raise?,
+) -> ConversionResult raise? {
+  let next = f(self.value)
+  let messages = []
+  messages.append(self.messages)
+  messages.append(next.messages)
+  { value: next.value, messages: dedupe_messages(messages) }
+}
+
+///|
 pub fn ConversionResult::combine(
   self : ConversionResult,
   other : ConversionResult,

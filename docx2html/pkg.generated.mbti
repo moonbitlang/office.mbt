@@ -133,6 +133,7 @@ pub(all) struct ConversionResult {
   messages : Array[Message]
 } derive(Eq, @debug.Debug)
 pub fn ConversionResult::combine(Self, Self) -> Self
+pub fn ConversionResult::flat_map(Self, (String) -> Self raise?) -> Self raise?
 pub fn ConversionResult::map(Self, (String) -> String raise?) -> Self raise?
 
 pub(all) enum DocumentElement {

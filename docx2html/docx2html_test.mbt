@@ -51,6 +51,12 @@ test "conversion defaults and result mapping preserve messages" {
     result.map(fn(value) { value + " on imported air" }),
     content="{ value: \"walking on imported air\", messages: [Warning(\"same\")] }",
   )
+  debug_inspect(
+    result.flat_map(fn(value) {
+      { value: value + " home", messages: [Warning("same"), Error("late")] }
+    }),
+    content="{ value: \"walking home\", messages: [Warning(\"same\"), Error(\"late\")] }",
+  )
 }
 
 ///|
