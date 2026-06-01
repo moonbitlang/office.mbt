@@ -644,6 +644,16 @@ test "invalid explicit style maps warn while valid mappings still apply" {
       #|[Warning("Did not understand this style mapping, so ignored it: ????\nError was at character number 1: Expected element type but got unrecognisedCharacter \"?\"")]
     ),
   )
+  let markdown = @docx2html.convert_to_markdown(single_paragraph_docx()[:], style_map=[
+    "????", "p => h1",
+  ])
+  inspect(markdown.value, content="# Walking on imported air\n\n")
+  debug_inspect(
+    markdown.messages,
+    content=(
+      #|[Warning("Did not understand this style mapping, so ignored it: ????\nError was at character number 1: Expected element type but got unrecognisedCharacter \"?\"")]
+    ),
+  )
 }
 
 ///|
