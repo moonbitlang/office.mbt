@@ -1056,6 +1056,17 @@ test "style map string reader follows Mammoth option rules" {
     content="<h1>Title</h1>",
   )
   inspect(
+    @docx2html.convert_document_to_html(doc, style_map=["p.Heading1 => h2"]).value,
+    content="<h2>Title</h2>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      doc,
+      style_map=@docx2html.read_style_map_string("p.Heading1 => h3"),
+    ).value,
+    content="<h3>Title</h3>",
+  )
+  inspect(
     @docx2html.convert_document_to_html(
       doc,
       style_map=["p.Heading1 => h2"],
