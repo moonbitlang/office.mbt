@@ -50,7 +50,8 @@ moon run --target native cmd/main -- --output-dir out input.docx
 ## Image Conversion
 
 Images are emitted as data URIs by default. Pass `convert_image` to override
-that behavior:
+that behavior. `inline_image` is the MoonBit name for Mammoth's
+`images.inline`/`images.imgElement` helper:
 
 ```mbt check
 ///|
@@ -61,7 +62,7 @@ test "custom image conversion" {
     data: b"abc",
   }
   let doc = @docx2html.document([@docx2html.paragraph([Image(image)])])
-  let convert_image = @docx2html.img_element(fn(_image) {
+  let convert_image = @docx2html.inline_image(fn(_image) {
     { "src": "/assets/chart.png" }
   })
   let result = @docx2html.convert_document_to_html(doc, convert_image~)
@@ -69,6 +70,24 @@ test "custom image conversion" {
     result.value,
     content="<p><img alt=\"chart\" src=\"/assets/chart.png\" /></p>",
   )
+}
+```
+
+## Results
+
+Conversion results carry rendered text plus diagnostics. Use `combine_results`
+when stitching several conversion fragments together:
+
+```mbt check
+///|
+test "combine conversion results" {
+  let combined = @docx2html.combine_results([
+    @docx2html.success("One"),
+    { value: "Two", messages: [Warning("same")] },
+    { value: "Three", messages: [Warning("same")] },
+  ])
+  inspect(combined.value, content="OneTwoThree")
+  debug_inspect(combined.messages, content="[Warning(\"same\")]")
 }
 ```
 
