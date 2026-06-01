@@ -469,3 +469,33 @@ test "CLI conversion writes images inside output dir" {
     content=cli_tiny_picture_base64(),
   )
 }
+
+///|
+test "CLI conversion reports output-dir image write failures" {
+  let dir = "_build/cli-main-output-dir-image-write-error"
+  ensure_test_dir(dir)
+  let input_path = join_path(dir, "tiny-picture.docx")
+  let output_dir = join_path(dir, "not-a-dir")
+  @fs.write_bytes_to_file(input_path, cli_tiny_picture_docx())
+  @fs.write_string_to_file(output_dir, "file, not directory")
+  let result = render_conversion({
+    input_path,
+    output_path: None,
+    output_dir: Some(output_dir),
+    style_map_path: None,
+    output_format: Html,
+    pretty_print: false,
+  })
+  inspect(result.value, content="")
+  inspect(result.messages.length(), content="1")
+  match result.messages[0] {
+    Error(message) =>
+      inspect(
+        message.has_prefix(
+          "could not write image file '" + output_dir + "/1.png': ",
+        ),
+        content="true",
+      )
+    _ => fail("expected image write error")
+  }
+}
