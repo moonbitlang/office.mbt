@@ -1129,6 +1129,11 @@ test "style map parser handles malformed and escaped edge cases" {
   let fresh_separator = expect_style_mapping("p => span:fresh:separator('x')").to[0]
   inspect(fresh_separator.separator.unwrap(), content="x")
   debug_inspect(fresh_separator.fresh, content="true")
+  let separator_named_fresh = expect_style_mapping(
+      "p => span:separator('fresh')",
+    ).to[0]
+  inspect(separator_named_fresh.separator.unwrap(), content="fresh")
+  debug_inspect(separator_named_fresh.fresh, content="false")
   let escaped_attr = expect_style_mapping("p => span[data-x='a\\'b']").to[0]
   inspect(escaped_attr.attributes.get_or_default("data-x", ""), content="a'b")
   let attr_with_delimiters = expect_style_mapping("p => span[data-x='a>b:c']").to[0]

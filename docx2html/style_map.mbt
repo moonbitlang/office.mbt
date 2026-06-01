@@ -53,6 +53,12 @@ priv enum ParsedDocumentMatcher {
 }
 
 ///|
+priv enum ParsedHtmlPathElement {
+  ParsedHtmlPathElementOk(HtmlPathElement, Int)
+  ParsedHtmlPathElementError(Int, String)
+}
+
+///|
 pub fn read_style_mapping(line : String) -> StyleMapping? {
   read_style_mapping_with_message(line).0
 }
@@ -121,10 +127,10 @@ fn read_style_mapping_with_message(line : String) -> (StyleMapping?, Message?) {
   }
   let after_arrow = index + 2
   let to_raw = line[after_arrow:].to_owned()
-  let to_text = to_raw.trim().to_owned()
-  match validate_html_path_text(line, to_raw, after_arrow) {
+  let (to, error) = read_html_path_text(line, to_raw, after_arrow)
+  match error {
     Some(error) => (None, Some(style_mapping_warning(line, error)))
-    None => (Some({ from, to: read_html_path(to_text) }), None)
+    None => (Some({ from, to }), None)
   }
 }
 
@@ -510,47 +516,33 @@ fn parse_style_break_matcher(
 }
 
 ///|
-fn read_html_path(value : String) -> Array[HtmlPathElement] {
-  let elements : Array[HtmlPathElement] = []
-  if value == "" {
-    return elements
-  }
-  for part in split_html_path_parts(value) {
-    if part != "" {
-      elements.push(read_html_path_element(part))
-    }
-  }
-  elements
-}
-
-///|
-fn validate_html_path_text(
+fn read_html_path_text(
   line : String,
   to_raw : String,
   after_arrow : Int,
-) -> String? {
+) -> (Array[HtmlPathElement], String?) {
   let end = after_arrow + to_raw.length()
   if after_arrow >= end {
-    return None
+    return ([], None)
   }
   if !is_style_whitespace(line[after_arrow]) {
-    return Some(style_parse_error(line, after_arrow, end, "end"))
+    return ([], Some(style_parse_error(line, after_arrow, end, "end")))
   }
   let mut index = after_arrow
   while index < end && is_style_whitespace(line[index]) {
     index = index + 1
   }
   if index >= end {
-    return None
+    return ([], None)
   }
-  let (index, error) = parse_style_html_path(line, index, end)
+  let (elements, index, error) = parse_style_html_path(line, index, end)
   match error {
-    Some(error) => Some(error)
+    Some(error) => ([], Some(error))
     None =>
       if index == end {
-        None
+        (elements, None)
       } else {
-        Some(style_parse_error(line, index, end, "end"))
+        ([], Some(style_parse_error(line, index, end, "end")))
       }
   }
 }
@@ -560,18 +552,24 @@ fn parse_style_html_path(
   line : String,
   index : Int,
   end : Int,
-) -> (Int, String?) {
+) -> (Array[HtmlPathElement], Int, String?) {
   if line[index] == '!' {
-    return (index + 1, None)
+    return (
+      [{ tag: "!", attributes: {}, fresh: false, separator: None }],
+      index + 1,
+      None,
+    )
   }
   if !is_style_identifier_start(line, index, end) {
-    return (index, None)
+    return ([], index, None)
   }
-  let (first_index, error) = parse_style_html_path_element(line, index, end)
-  let mut index = first_index
-  match error {
-    Some(error) => return (index, Some(error))
-    None => ()
+  let elements : Array[HtmlPathElement] = []
+  let mut index = match parse_style_html_path_element(line, index, end) {
+    ParsedHtmlPathElementOk(element, next) => {
+      elements.push(element)
+      next
+    }
+    ParsedHtmlPathElementError(next, error) => return ([], next, Some(error))
   }
   while index < end {
     let separator_start = index
@@ -580,7 +578,7 @@ fn parse_style_html_path(
       after_space = after_space + 1
     }
     if after_space == index {
-      return (index, None)
+      return (elements, index, None)
     }
     if after_space < end && line[after_space] == '>' {
       let mut next = after_space + 1
@@ -589,25 +587,28 @@ fn parse_style_html_path(
           next = next + 1
         }
         if next >= end || !is_style_identifier_start(line, next, end) {
-          return (separator_start, None)
+          return (elements, separator_start, None)
         }
-        let (next_index, error) = parse_style_html_path_element(line, next, end)
-        match error {
-          Some(_) =>
+        match parse_style_html_path_element(line, next, end) {
+          ParsedHtmlPathElementError(next_index, _) =>
             return (
+              elements,
               next_index,
               Some(style_parse_error(line, next_index, end, "end")),
             )
-          None => index = next_index
+          ParsedHtmlPathElementOk(element, next_index) => {
+            elements.push(element)
+            index = next_index
+          }
         }
       } else {
-        return (separator_start, None)
+        return (elements, separator_start, None)
       }
     } else {
-      return (separator_start, None)
+      return (elements, separator_start, None)
     }
   }
-  (index, None)
+  (elements, index, None)
 }
 
 ///|
@@ -615,30 +616,40 @@ fn parse_style_html_path_element(
   line : String,
   index : Int,
   end : Int,
-) -> (Int, String?) {
-  let (_, first_index, error) = parse_style_tag_choices(line, index, end)
+) -> ParsedHtmlPathElement {
+  let (tag, first_index) = parse_style_tag_choices_after_start(line, index, end)
   let mut index = first_index
-  match error {
-    Some(error) => return (index, Some(error))
-    None => ()
-  }
+  let attributes : Map[String, String] = {}
   while index < end {
     if line[index] == '.' {
-      let (_, next, error) = parse_style_identifier(
+      let (class_name, next, error) = parse_style_identifier(
         line,
         index + 1,
         end,
         "identifier",
       )
       match error {
-        Some(error) => return (next, Some(error))
-        None => index = next
+        Some(error) => return ParsedHtmlPathElementError(next, error)
+        None => {
+          match attributes.get("class") {
+            Some(existing) => attributes["class"] = existing + " " + class_name
+            None => attributes["class"] = class_name
+          }
+          index = next
+        }
       }
     } else if line[index] == '[' {
-      let (_, next, error) = parse_style_attribute(line, index + 1, end)
+      let (name, value, next, error) = parse_style_attribute(
+        line,
+        index + 1,
+        end,
+      )
       match error {
-        Some(error) => return (next, Some(error))
-        None => index = next
+        Some(error) => return ParsedHtmlPathElementError(next, error)
+        None => {
+          attributes[name] = value
+          index = next
+        }
       }
     } else {
       break
@@ -647,49 +658,40 @@ fn parse_style_html_path_element(
   let (next, consumed) = consume_style_option_identifier(
     line, index, end, "fresh",
   )
+  let fresh = consumed
   if consumed {
     index = next
   }
-  let (next, consumed) = consume_style_separator_option(line, index, end)
-  (if consumed { next } else { index }, None)
+  let (separator, next, consumed) = consume_style_separator_option(
+    line, index, end,
+  )
+  if consumed {
+    index = next
+  }
+  ParsedHtmlPathElementOk({ tag, attributes, fresh, separator }, index)
 }
 
 ///|
-fn parse_style_tag_choices(
+fn parse_style_tag_choices_after_start(
   line : String,
   index : Int,
   end : Int,
-) -> (String, Int, String?) {
+) -> (String, Int) {
   let builder = StringBuilder()
-  let (tag, first_index, error) = parse_style_identifier(
-    line, index, end, "identifier",
-  )
+  let (tag, first_index) = read_style_identifier_after_start(line, index, end)
+  builder.write_string(tag)
   let mut index = first_index
-  match error {
-    Some(error) => return ("", index, Some(error))
-    None => builder.write_string(tag)
-  }
   while index < end && line[index] == '|' {
     let choice_index = index
     if !is_style_identifier_start(line, index + 1, end) {
-      return (builder.to_string(), choice_index, None)
+      return (builder.to_string(), choice_index)
     }
     builder.write_string("|")
-    let (tag, next, error) = parse_style_identifier(
-      line,
-      index + 1,
-      end,
-      "identifier",
-    )
-    match error {
-      Some(error) => return (builder.to_string(), next, Some(error))
-      None => {
-        builder.write_string(tag)
-        index = next
-      }
-    }
+    let (tag, next) = read_style_identifier_after_start(line, index + 1, end)
+    builder.write_string(tag)
+    index = next
   }
-  (builder.to_string(), index, None)
+  (builder.to_string(), index)
 }
 
 ///|
@@ -702,32 +704,38 @@ fn parse_style_attribute(
   line : String,
   index : Int,
   end : Int,
-) -> (String, Int, String?) {
+) -> (String, String, Int, String?) {
   let (name, first_index, error) = parse_style_identifier(
     line, index, end, "identifier",
   )
   let mut index = first_index
   match error {
-    Some(error) => return ("", index, Some(error))
+    Some(error) => return ("", "", index, Some(error))
     None => ()
   }
   if index >= end || line[index] != '=' {
-    return (name, index, Some(style_parse_error(line, index, end, "equals")))
+    return (
+      name,
+      "",
+      index,
+      Some(style_parse_error(line, index, end, "equals")),
+    )
   }
   index = index + 1
-  let (_, next, error) = parse_style_string(line, index, end)
+  let (value, next, error) = parse_style_string(line, index, end)
   match error {
-    Some(error) => return (name, next, Some(error))
+    Some(error) => return (name, "", next, Some(error))
     None => index = next
   }
   if index >= end || line[index] != ']' {
     return (
       name,
+      value,
       index,
       Some(style_parse_error(line, index, end, "close-square-bracket")),
     )
   }
-  (name, index + 1, None)
+  (name, value, index + 1, None)
 }
 
 ///|
@@ -757,25 +765,25 @@ fn consume_style_separator_option(
   line : String,
   index : Int,
   end : Int,
-) -> (Int, Bool) {
+) -> (String?, Int, Bool) {
   let (next, consumed) = consume_style_option_identifier(
     line, index, end, "separator",
   )
   if !consumed {
-    return (index, false)
+    return (None, index, false)
   }
   if next >= end || line[next] != '(' {
-    return (index, false)
+    return (None, index, false)
   }
-  let (_, value_end, error) = parse_style_string(line, next + 1, end)
+  let (separator, value_end, error) = parse_style_string(line, next + 1, end)
   match error {
-    Some(_) => return (index, false)
+    Some(_) => return (None, index, false)
     None => ()
   }
   if value_end >= end || line[value_end] != ')' {
-    return (index, false)
+    return (None, index, false)
   }
-  (value_end + 1, true)
+  (Some(separator), value_end + 1, true)
 }
 
 ///|
@@ -788,6 +796,16 @@ fn parse_style_identifier(
   if !is_style_identifier_start(line, index, end) {
     return ("", index, Some(style_parse_error(line, index, end, expected)))
   }
+  let (identifier, next) = read_style_identifier_after_start(line, index, end)
+  (identifier, next, None)
+}
+
+///|
+fn read_style_identifier_after_start(
+  line : String,
+  index : Int,
+  end : Int,
+) -> (String, Int) {
   let builder = StringBuilder()
   let mut index = index
   while index < end {
@@ -801,7 +819,7 @@ fn parse_style_identifier(
       break
     }
   }
-  (builder.to_string(), index, None)
+  (builder.to_string(), index)
 }
 
 ///|
@@ -978,46 +996,6 @@ fn read_style_integer_token(line : String, index : Int, end : Int) -> String {
 }
 
 ///|
-fn read_html_path_element(value : String) -> HtmlPathElement {
-  let (element_text, options_text) = split_html_path_options(value)
-  let tag_choices = read_html_tag_choices(element_text)
-  let tag = decode_style_escapes(tag_choices)
-  let fresh = options_text.contains("fresh")
-  let separator = read_html_path_separator(options_text)
-  let attributes = read_html_path_attributes(element_text)
-  { tag, attributes, fresh, separator }
-}
-
-///|
-fn read_html_path_separator(options_text : String) -> String? {
-  let marker = "separator('"
-  match options_text.find(marker) {
-    Some(start) =>
-      read_style_string_value(options_text, start + marker.length())
-    None => None
-  }
-}
-
-///|
-fn read_style_string_value(value : String, start : Int) -> String? {
-  let builder = StringBuilder()
-  let mut index = start
-  while index < value.length() {
-    let char = value[index]
-    if char == '\\' && index + 1 < value.length() {
-      write_style_escape(builder, value, index + 1)
-      index = index + 2
-    } else if char == '\'' {
-      return Some(builder.to_string())
-    } else {
-      builder.write_string(value[index:index + 1].to_owned())
-      index = index + 1
-    }
-  }
-  None
-}
-
-///|
 fn write_style_escape(
   builder : StringBuilder,
   value : String,
@@ -1030,179 +1008,6 @@ fn write_style_escape(
     't' => builder.write_string("\t")
     _ => builder.write_string(value[index:index + 1].to_owned())
   }
-}
-
-///|
-fn split_html_path_options(value : String) -> (String, String) {
-  match find_unescaped_char_outside_style_string(value, ':') {
-    Some(index) =>
-      (value[:index].trim().to_owned(), value[index + 1:].trim().to_owned())
-    None => (value.trim().to_owned(), "")
-  }
-}
-
-///|
-fn split_html_path_parts(value : String) -> Array[String] {
-  let parts : Array[String] = []
-  let mut start = 0
-  let mut index = 0
-  let mut in_string = false
-  while index < value.length() {
-    let char = value[index]
-    if char == '\\' {
-      index = index + 2
-    } else if char == '\'' {
-      in_string = !in_string
-      index = index + 1
-    } else if !in_string && char == '>' {
-      let part = value[start:index].trim().to_owned()
-      if part != "" {
-        parts.push(part)
-      }
-      start = index + 1
-      index = index + 1
-    } else {
-      index = index + 1
-    }
-  }
-  let part = value[start:].trim().to_owned()
-  if part != "" {
-    parts.push(part)
-  }
-  parts
-}
-
-///|
-fn read_html_tag_choices(value : String) -> String {
-  let mut index = 0
-  while index < value.length() {
-    let char = value[index]
-    if char == '\\' {
-      index = index + 2
-    } else if char == '.' || char == '[' {
-      return value[:index].to_owned()
-    } else {
-      index = index + 1
-    }
-  }
-  value
-}
-
-///|
-fn read_html_path_attributes(value : String) -> Map[String, String] {
-  let attributes : Map[String, String] = {}
-  let mut index = read_html_tag_choices(value).length()
-  while index < value.length() {
-    if value[index] == '.' {
-      let (class_name, next_index) = read_html_class(value, index + 1)
-      if class_name != "" {
-        match attributes.get("class") {
-          Some(existing) => attributes["class"] = existing + " " + class_name
-          None => attributes["class"] = class_name
-        }
-      }
-      index = next_index
-    } else if value[index] == '[' {
-      let (name, attr_value, next_index) = read_html_attribute(value, index + 1)
-      if name != "" {
-        attributes[name] = attr_value
-      }
-      index = next_index
-    } else {
-      index = index + 1
-    }
-  }
-  attributes
-}
-
-///|
-fn read_html_class(value : String, start : Int) -> (String, Int) {
-  let mut index = start
-  let builder = StringBuilder()
-  while index < value.length() {
-    let char = value[index]
-    if char == '\\' && index + 1 < value.length() {
-      builder.write_string(value[index + 1:index + 2].to_owned())
-      index = index + 2
-    } else if char == '.' || char == '[' {
-      return (builder.to_string(), index)
-    } else {
-      builder.write_string(value[index:index + 1].to_owned())
-      index = index + 1
-    }
-  }
-  (builder.to_string(), index)
-}
-
-///|
-fn read_html_attribute(value : String, start : Int) -> (String, String, Int) {
-  match value[start:].find("='") {
-    Some(equals_index) => {
-      let name = decode_style_escapes(
-        value[start:start + equals_index].to_owned(),
-      )
-      let value_start = start + equals_index + 2
-      let mut index = value_start
-      let builder = StringBuilder()
-      while index < value.length() {
-        let char = value[index]
-        if char == '\\' && index + 1 < value.length() {
-          builder.write_string(value[index + 1:index + 2].to_owned())
-          index = index + 2
-        } else if char == '\'' {
-          let close = if index + 1 < value.length() && value[index + 1] == ']' {
-            index + 2
-          } else {
-            index + 1
-          }
-          return (name, builder.to_string(), close)
-        } else {
-          builder.write_string(value[index:index + 1].to_owned())
-          index = index + 1
-        }
-      }
-      (name, builder.to_string(), index)
-    }
-    None => ("", "", value.length())
-  }
-}
-
-///|
-fn find_unescaped_char_outside_style_string(
-  value : String,
-  needle : UInt16,
-) -> Int? {
-  let mut index = 0
-  let mut in_string = false
-  while index < value.length() {
-    if value[index] == '\\' {
-      index = index + 2
-    } else if value[index] == '\'' {
-      in_string = !in_string
-      index = index + 1
-    } else if !in_string && value[index] == needle {
-      return Some(index)
-    } else {
-      index = index + 1
-    }
-  }
-  None
-}
-
-///|
-fn decode_style_escapes(value : String) -> String {
-  let builder = StringBuilder()
-  let mut index = 0
-  while index < value.length() {
-    if value[index] == '\\' && index + 1 < value.length() {
-      builder.write_string(value[index + 1:index + 2].to_owned())
-      index = index + 2
-    } else {
-      builder.write_string(value[index:index + 1].to_owned())
-      index = index + 1
-    }
-  }
-  builder.to_string()
 }
 
 ///|
