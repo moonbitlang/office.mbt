@@ -224,6 +224,40 @@ test "convert_to_markdown matches Mammoth fixture outputs" {
     @docx2html.convert_to_markdown(embedded_style_map_docx()[:]).value,
     content="# Walking on imported air\n\n",
   )
+  inspect(
+    @docx2html.convert_to_markdown(embedded_style_map_docx()[:], style_map=[
+      "p => p",
+    ]).value,
+    content="Walking on imported air\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(embedded_style_map_docx()[:], style_map=[
+      "r => strong",
+    ]).value,
+    content="# __Walking on imported air__\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(
+      embedded_style_map_docx()[:],
+      include_embedded_style_map=false,
+    ).value,
+    content="Walking on imported air\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(
+      embedded_style_map_docx()[:],
+      include_default_style_map=false,
+    ).value,
+    content="# Walking on imported air\n\n",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(
+      embedded_style_map_docx()[:],
+      include_default_style_map=false,
+      include_embedded_style_map=false,
+    ).value,
+    content="Walking on imported air\n\n",
+  )
   let external_picture = @docx2html.convert_to_markdown(
     external_picture_docx()[:],
   )
