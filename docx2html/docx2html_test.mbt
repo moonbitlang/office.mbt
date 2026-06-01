@@ -1262,8 +1262,8 @@ test "style map malformed html path diagnostics match Mammoth" {
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
     "p => span:separator", "p => span:separator(x)", "p => span:separator('x'", "p => span:separator('x'):fresh",
-    "p => span:", "p => span[=]", "p => span[data-x]", "p => span[data-x='abc", "p => ul| > li",
-    "p => ul > !", "p => >", "p => |li",
+    "p => span:", "p => span[=]", "p => span[data-x]", "p => span[data-x='abc", "p => span[data-x='a\\\\b",
+    "p => ul| > li", "p => ul > !", "p => >", "p => |li",
   ])
   inspect(result.value, content="<p>Walking on imported air</p>")
   debug_inspect(
@@ -1278,6 +1278,7 @@ test "style map malformed html path diagnostics match Mammoth" {
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[=]\nError was at character number 11: Expected identifier but got equals"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x]\nError was at character number 17: Expected equals but got close-square-bracket"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x='abc\nError was at character number 18: Expected string but got unterminated-string \"abc\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: p => span[data-x='a\\\\b\nError was at character number 18: Expected string but got unterminated-string \"a\\\\b\""),
       #|  Warning("Did not understand this style mapping, so ignored it: p => ul| > li\nError was at character number 8: Expected end but got choice"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => ul > !\nError was at character number 8: Expected end but got whitespace"),
       #|  Warning("Did not understand this style mapping, so ignored it: p => >\nError was at character number 6: Expected end but got gt"),
@@ -1294,6 +1295,7 @@ test "style map delimiter token diagnostics match Mammoth" {
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
     "p ^= h1", "p [] => h1", "p () => h1", "p ! => h1", "p 123 => h1", "p 'abc => h1",
+    "p 'a\\\\b => h1",
   ])
   inspect(result.value, content="<p>Walking on imported air</p>")
   debug_inspect(
@@ -1306,6 +1308,7 @@ test "style map delimiter token diagnostics match Mammoth" {
       #|  Warning("Did not understand this style mapping, so ignored it: p ! => h1\nError was at character number 3: Expected arrow but got bang \"!\""),
       #|  Warning("Did not understand this style mapping, so ignored it: p 123 => h1\nError was at character number 3: Expected arrow but got integer \"123\""),
       #|  Warning("Did not understand this style mapping, so ignored it: p 'abc => h1\nError was at character number 3: Expected arrow but got unterminated-string \"abc => h1\""),
+      #|  Warning("Did not understand this style mapping, so ignored it: p 'a\\\\b => h1\nError was at character number 3: Expected arrow but got unterminated-string \"a\\\\b => h1\""),
       #|]
     ),
   )

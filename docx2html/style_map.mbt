@@ -848,7 +848,7 @@ fn parse_style_string(
       "Error was at character number " +
       (index + 1).to_string() +
       ": Expected string but got unterminated-string \"" +
-      builder.to_string() +
+      read_unterminated_style_string_token(line, index, end) +
       "\"",
     ),
   )
@@ -963,18 +963,22 @@ fn describe_unterminated_style_string(
   index : Int,
   end : Int,
 ) -> String {
-  let builder = StringBuilder()
-  let mut cursor = index + 1
-  while cursor < end {
-    if line[cursor] == '\\' && cursor + 1 < end {
-      builder.write_string(line[cursor + 1:cursor + 2].to_owned())
-      cursor = cursor + 2
-    } else {
-      builder.write_string(line[cursor:cursor + 1].to_owned())
-      cursor = cursor + 1
-    }
+  "unterminated-string \"" +
+  read_unterminated_style_string_token(line, index, end) +
+  "\""
+}
+
+///|
+fn read_unterminated_style_string_token(
+  line : String,
+  index : Int,
+  end : Int,
+) -> String {
+  if index + 1 >= end {
+    ""
+  } else {
+    line[index + 1:end].to_owned()
   }
-  "unterminated-string \"" + builder.to_string() + "\""
 }
 
 ///|
