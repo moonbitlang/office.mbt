@@ -455,22 +455,33 @@ fn tiny_picture_png() -> Bytes {
 
 ///|
 test "external linked images can be loaded when explicitly enabled" {
+  let read_external_file = fn(path) {
+    if path == "tiny-picture.png" {
+      Some(tiny_picture_png())
+    } else {
+      None
+    }
+  }
   let result = @docx2html.convert_to_html(
     external_picture_docx()[:],
     external_file_access=true,
-    read_external_file=fn(path) {
-      if path == "tiny-picture.png" {
-        Some(tiny_picture_png())
-      } else {
-        None
-      }
-    },
+    read_external_file~,
   )
   inspect(
     result.value,
     content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
   )
   debug_inspect(result.messages, content="[]")
+  let markdown = @docx2html.convert_to_markdown(
+    external_picture_docx()[:],
+    external_file_access=true,
+    read_external_file~,
+  )
+  inspect(
+    markdown.value,
+    content="![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=)\n\n",
+  )
+  debug_inspect(markdown.messages, content="[]")
 }
 
 ///|
@@ -482,6 +493,17 @@ test "external linked images report unknown path without a loader" {
   inspect(result.value, content="")
   debug_inspect(
     result.messages,
+    content=(
+      #|[Error("could not find external image 'tiny-picture.png', path of input document is unknown")]
+    ),
+  )
+  let markdown = @docx2html.convert_to_markdown(
+    external_picture_docx()[:],
+    external_file_access=true,
+  )
+  inspect(markdown.value, content="")
+  debug_inspect(
+    markdown.messages,
     content=(
       #|[Error("could not find external image 'tiny-picture.png', path of input document is unknown")]
     ),
