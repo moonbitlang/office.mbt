@@ -1283,6 +1283,14 @@ test "style map separator is inserted only when html elements collapse" {
 ///|
 test "html path matching follows Mammoth tag choice and attribute rules" {
   inspect(
+    @docx2html.write_html([
+      @docx2html.html_element("section|article", children=[
+        @docx2html.html_text("One"),
+      ]),
+    ]),
+    content="<section>One</section>",
+  )
+  inspect(
     @docx2html.write_html(
       @docx2html.simplify_html([
         @docx2html.html_element("ol", children=[@docx2html.html_text("One")]),
