@@ -295,6 +295,10 @@ test "docx content types include Mammoth image fallbacks" {
     content="image/jpeg",
   )
   inspect(
+    content_types.find_content_type("word/media/hat.jpg"),
+    content="image/jpeg",
+  )
+  inspect(
     content_types.find_content_type("word/media/hat.gif"),
     content="image/gif",
   )
