@@ -1968,6 +1968,16 @@ test "docx numbering xml follows numbering style links" {
     }
     None => fail("expected linked numbering level")
   }
+  let missing_num_id_style = numbering_from_xml(
+    (
+      #|<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|  <w:abstractNum w:abstractNumId="101"><w:numStyleLink w:val="List1" /></w:abstractNum>
+      #|  <w:num w:numId="201"><w:abstractNumId w:val="101" /></w:num>
+      #|</w:numbering>
+    ),
+    { "List1": { style_id: "List1", style_type: "numbering", name: "" } },
+  )
+  debug_inspect(missing_num_id_style.find_level("201", "0"), content="None")
 }
 
 ///|
