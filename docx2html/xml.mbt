@@ -605,43 +605,86 @@ fn decode_xml_entity(entity : String) -> String {
 
 ///|
 fn decode_numeric_xml_entity(entity : String) -> String? {
-  if entity.length() < 2 || entity[0] != '#' {
+  if entity.length() < 2 ||
+    entity[0] != '#' ||
+    !is_xmldom_entity_word(entity, 1) {
     return None
   }
-  let mut start = 1
-  let mut radix = 10
-  if entity.length() >= 3 && (entity[1] == 'x' || entity[1] == 'X') {
-    start = 2
-    radix = 16
-  }
-  match parse_xml_entity_number(entity, start, radix) {
+  match parse_xmldom_numeric_entity(entity[1:].to_owned()) {
+    None => Some("\u{0}")
     Some(codepoint) =>
       match Int::to_char(codepoint) {
         Some(char) => Some(char.to_string())
         None => None
       }
-    None => None
   }
 }
 
 ///|
-fn parse_xml_entity_number(entity : String, start : Int, radix : Int) -> Int? {
+fn is_xmldom_entity_word(entity : String, start : Int) -> Bool {
   if start >= entity.length() {
-    return None
+    return false
   }
-  let mut value = 0
   for index in start..<entity.length() {
-    match xml_entity_digit_value(entity[index], radix) {
-      Some(digit) => {
-        if value > (0x10FFFF - digit) / radix {
-          return None
-        }
-        value = value * radix + digit
-      }
-      None => return None
+    let char = entity[index]
+    if !((char >= '0' && char <= '9') ||
+      (char >= 'A' && char <= 'Z') ||
+      (char >= 'a' && char <= 'z') ||
+      char == '_') {
+      return false
     }
   }
-  Some(value)
+  true
+}
+
+///|
+fn parse_xmldom_numeric_entity(text : String) -> Int? {
+  js_parse_int(replace_first_lower_x_with_hex_prefix(text))
+}
+
+///|
+fn replace_first_lower_x_with_hex_prefix(text : String) -> String {
+  let builder = StringBuilder()
+  let mut replaced = false
+  for index in 0..<text.length() {
+    if !replaced && text[index] == 'x' {
+      builder.write_string("0x")
+      replaced = true
+    } else {
+      builder.write_string(text[index:index + 1].to_owned())
+    }
+  }
+  builder.to_string()
+}
+
+///|
+fn js_parse_int(text : String) -> Int? {
+  let mut index = 0
+  let mut radix = 10
+  if text.length() >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+    radix = 16
+    index = 2
+  }
+  let mut value = 0
+  let mut saw_digit = false
+  while index < text.length() {
+    match xml_entity_digit_value(text[index], radix) {
+      Some(digit) => {
+        saw_digit = true
+        if value > (0x10FFFF - digit) / radix {
+          return Some(0x110000)
+        }
+        value = value * radix + digit
+        index += 1
+      }
+      None => break
+    }
+  }
+  if saw_digit {
+    Some(value)
+  } else {
+    None
+  }
 }
 
 ///|

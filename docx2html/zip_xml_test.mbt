@@ -154,7 +154,7 @@ test "xml helpers expose text edge cases and recursive descendants" {
 test "xml parser handles comments cdata declarations and entities" {
   let root = @docx2html.read_xml_string(
     (
-      #|<?xml version="1.0"?><!--before--><root><!--ignored--><![CDATA[A < B]]><?inside?><!DOCTYPE ignored><child attr="&quot;&apos;&gt;&#169;&#x1F600;&#X41;">x &#169;&#x1f600;&#x41; &gt; &quot; &apos; &unknown; &</child></root>
+      #|<?xml version="1.0"?><!--before--><root><!--ignored--><![CDATA[A < B]]><?inside?><!DOCTYPE ignored><child attr="&quot;&apos;&gt;&#169;&#x1F600;&#x41;">x &#169;&#x1f600;&#x41; &gt; &quot; &apos; &unknown; &</child></root>
     ),
   )
   inspect(root.children.length(), content="2")
@@ -168,6 +168,30 @@ test "xml parser handles comments cdata declarations and entities" {
     content="\"'>\u{A9}\u{1F600}A",
   )
   inspect(child.text(), content="x \u{A9}\u{1F600}A > \" ' &unknown; &")
+}
+
+///|
+test "xml parser follows xmldom numeric entity edge cases" {
+  let root = @docx2html.read_xml_string(
+    "<root attr=\"&#xG;&#12a;&#X41;\">&#xG;&#12a;&#X41;&#55296;&#-1;</root>",
+  )
+  let attr = root.attributes.get_or_default("attr", "")
+  inspect(attr.length(), content="3")
+  inspect(attr[0].to_int(), content="0")
+  inspect(attr[1].to_int(), content="12")
+  inspect(attr[2].to_int(), content="0")
+  let text = root.text()
+  inspect(text[0].to_int(), content="0")
+  inspect(text[1].to_int(), content="12")
+  inspect(text[2].to_int(), content="0")
+  match text.find("&#55296;") {
+    Some(_) => ()
+    None => fail("expected surrogate entity to remain raw")
+  }
+  match text.find("&#-1;") {
+    Some(_) => ()
+    None => fail("expected non-word numeric entity to remain raw")
+  }
 }
 
 ///|
