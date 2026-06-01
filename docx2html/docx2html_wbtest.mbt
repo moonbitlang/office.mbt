@@ -856,6 +856,18 @@ test "docx reader reads references and bookmarks like Mammoth" {
     body_elements_from_xml("<w:bookmarkStart />"),
     content="[BookmarkStart(\"undefined\")]",
   )
+  debug_inspect(
+    body_elements_from_xml(
+      "<w:footnoteReference /><w:endnoteReference /><w:commentReference />",
+    ),
+    content=(
+      #|[
+      #|  NoteReference(note_type="footnote", note_id="undefined"),
+      #|  NoteReference(note_type="endnote", note_id="undefined"),
+      #|  CommentReference("undefined"),
+      #|]
+    ),
+  )
 }
 
 ///|
@@ -1668,17 +1680,19 @@ test "docx notes reader reads bodies and ignores separators" {
     (
       #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
       #|  <w:footnote w:id="1"><w:p><w:r><w:t>Body</w:t></w:r></w:p></w:footnote>
+      #|  <w:footnote><w:p><w:r><w:t>Missing ID</w:t></w:r></w:p></w:footnote>
       #|  <w:footnote w:id="2" w:type="separator"><w:p><w:r><w:t>Separator</w:t></w:r></w:p></w:footnote>
       #|  <w:footnote w:id="3" w:type="continuationSeparator"><w:p><w:r><w:t>Continuation</w:t></w:r></w:p></w:footnote>
       #|</w:footnotes>
     ),
   )
-  inspect(footnotes.notes.length(), content="1")
+  inspect(footnotes.notes.length(), content="2")
   inspect(footnotes.notes[0].note_id, content="1")
   inspect(
     convert_document_to_html(document(footnotes.notes[0].body)).value,
     content="<p>Body</p>",
   )
+  inspect(footnotes.notes[1].note_id, content="undefined")
 }
 
 ///|
@@ -1689,10 +1703,11 @@ test "docx comments reader reads ids bodies and optional attributes" {
       #|  <w:comment w:id="1"><w:p><w:r><w:t>Missing</w:t></w:r></w:p></w:comment>
       #|  <w:comment w:id="2" w:author=" " w:initials=" "><w:p><w:r><w:t>Blank</w:t></w:r></w:p></w:comment>
       #|  <w:comment w:id="3" w:author="The Piemaker" w:initials="TP"><w:p><w:r><w:t>Present</w:t></w:r></w:p></w:comment>
+      #|  <w:comment><w:p><w:r><w:t>Missing ID</w:t></w:r></w:p></w:comment>
       #|</w:comments>
     ),
   )
-  inspect(comments.comments.length(), content="3")
+  inspect(comments.comments.length(), content="4")
   inspect(comments.comments[0].comment_id, content="1")
   inspect(
     convert_document_to_html(document(comments.comments[0].body)).value,
@@ -1704,6 +1719,7 @@ test "docx comments reader reads ids bodies and optional attributes" {
   inspect(comments.comments[1].author_initials, content="")
   inspect(comments.comments[2].author_name, content="The Piemaker")
   inspect(comments.comments[2].author_initials, content="TP")
+  inspect(comments.comments[3].comment_id, content="undefined")
 }
 
 ///|

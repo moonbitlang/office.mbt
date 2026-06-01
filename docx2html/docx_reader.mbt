@@ -811,7 +811,7 @@ fn read_note_part(
       note_kind != Some("continuationSeparator") {
       notes.push({
         note_type,
-        note_id: note_element.attributes.get_or_default("w:id", ""),
+        note_id: attribute_or_js_undefined(note_element.attributes.get("w:id")),
         body: reader.read_children(note_element.children),
       })
     }
@@ -859,7 +859,9 @@ fn read_comments_for_document(
   let comments : Array[Comment] = []
   for comment_element in root.elements_by_tag_name("w:comment") {
     comments.push({
-      comment_id: comment_element.attributes.get_or_default("w:id", ""),
+      comment_id: attribute_or_js_undefined(
+        comment_element.attributes.get("w:id"),
+      ),
       body: reader.read_children(comment_element.children),
       author_name: read_optional_attribute(comment_element, "w:author"),
       author_initials: read_optional_attribute(comment_element, "w:initials"),
@@ -1053,19 +1055,23 @@ fn BodyReader::read_element(
       [
         NoteReference(
           note_type="footnote",
-          note_id=element.attributes.get_or_default("w:id", ""),
+          note_id=attribute_or_js_undefined(element.attributes.get("w:id")),
         ),
       ]
     "w:endnoteReference" =>
       [
         NoteReference(
           note_type="endnote",
-          note_id=element.attributes.get_or_default("w:id", ""),
+          note_id=attribute_or_js_undefined(element.attributes.get("w:id")),
         ),
       ]
     "w:footnoteRef" | "w:endnoteRef" => []
     "w:commentReference" =>
-      [CommentReference(element.attributes.get_or_default("w:id", ""))]
+      [
+        CommentReference(
+          attribute_or_js_undefined(element.attributes.get("w:id")),
+        ),
+      ]
     "w:br" => self.read_break(element)
     "w:bookmarkStart" =>
       match element.attributes.get("w:name") {
