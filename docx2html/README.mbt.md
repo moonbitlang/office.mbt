@@ -29,6 +29,45 @@ how to load files. External linked images stay disabled by default, matching
 Mammoth; pass `external_file_access=true` and a `read_external_file` callback
 when the source document is allowed to read sibling files.
 
+## Document Model
+
+The document model exposes enum constructors for pattern matching and
+lower-snake helpers for building nodes and property records:
+
+```mbt check
+///|
+test "build document model with helpers" {
+  let doc = @docx2html.document([
+    @docx2html.paragraph(
+      [
+        @docx2html.hyperlink(
+          [@docx2html.text("MoonBit")],
+          href=Some("https://www.moonbitlang.com"),
+        ),
+      ],
+      properties=@docx2html.paragraph_properties(
+        style_name=Some("Heading 1"),
+      ),
+    ),
+    @docx2html.table([
+      @docx2html.table_row([
+        @docx2html.table_cell([
+          @docx2html.paragraph([@docx2html.text("Cell")]),
+        ]),
+      ]),
+    ]),
+  ])
+  let result = @docx2html.convert_document_to_html(
+    doc,
+    style_map=["p[style-name='Heading 1'] => h2"],
+  )
+  inspect(
+    result.value,
+    content="<h2><a href=\"https://www.moonbitlang.com\">MoonBit</a></h2><table><tr><td><p>Cell</p></td></tr></table>",
+  )
+}
+```
+
 Embedded style maps can be inspected or rewritten without a JavaScript-style
 mutable ZIP object. Use `read_embedded_style_map(docx[:])` to read the raw
 `mammoth/style-map` part, and `embed_style_map(docx[:], "p => h1")` to return a
