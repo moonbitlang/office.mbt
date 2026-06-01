@@ -56,10 +56,10 @@ priv struct ContentTypes {
 }
 
 ///|
-priv struct DocxReadResult {
+pub(all) struct DocxReadResult {
   document : DocumentElement
   messages : Array[Message]
-}
+} derive(Debug, Eq)
 
 ///|
 priv struct ExternalFileAccess {
@@ -263,20 +263,21 @@ pub fn read_docx(
   external_file_access? : Bool = false,
   read_external_file? : (String) -> Bytes? = no_external_file_reader,
 ) -> DocumentElement raise DocxError {
-  read_docx_zip(
+  read_docx_with_messages(docx, external_file_access~, read_external_file~).document
+}
+
+///|
+pub fn read_docx_with_messages(
+  docx : BytesView,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+) -> DocxReadResult raise DocxError {
+  read_docx_zip_with_messages(
     open_zip(docx),
     external_files=external_file_access_options(
       external_file_access, read_external_file,
     ),
   )
-}
-
-///|
-fn read_docx_zip(
-  zip : ZipArchive,
-  external_files? : ExternalFileAccess = default_external_file_access(),
-) -> DocumentElement raise DocxError {
-  read_docx_zip_with_messages(zip, external_files~).document
 }
 
 ///|

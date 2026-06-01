@@ -100,6 +100,8 @@ pub fn parse_style_map_string(String) -> StyleMapParseResult
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocumentElement raise DocxError
 
+pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxReadResult raise DocxError
+
 pub fn read_embedded_style_map(BytesView) -> String? raise DocxError
 
 pub fn read_style_map(Array[String]) -> Array[StyleMapping]
@@ -207,6 +209,11 @@ pub(all) enum DocumentMatcher {
   TableMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
   BreakMatcher(BreakType)
   CommentReferenceMatcher
+} derive(Eq, @debug.Debug)
+
+pub(all) struct DocxReadResult {
+  document : DocumentElement
+  messages : Array[Message]
 } derive(Eq, @debug.Debug)
 
 pub(all) enum HtmlNode {

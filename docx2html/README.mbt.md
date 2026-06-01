@@ -41,7 +41,9 @@ For DOCX bytes, use `convert`, `convert_to_html`, `convert_to_markdown`, or
 `extract_raw_text`. The native API accepts `BytesView`, so callers can decide how
 to load files. External linked images stay disabled by default, matching Mammoth;
 pass `external_file_access=true` and a `read_external_file` callback when the
-source document is allowed to read sibling files.
+source document is allowed to read sibling files. Use `read_docx_with_messages`
+when you need the parsed document model together with DOCX reader diagnostics;
+`read_docx` is the document-only convenience wrapper.
 
 ## Style Maps
 

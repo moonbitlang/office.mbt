@@ -44,6 +44,42 @@ test "read_docx reads single paragraph docx fixture" {
 }
 
 ///|
+test "read_docx_with_messages exposes reader diagnostics" {
+  let result = @docx2html.read_docx_with_messages(external_picture_docx()[:])
+  match result.document {
+    Document(children~, notes~, comments~) => {
+      inspect(children.length(), content="1")
+      inspect(notes.length(), content="0")
+      inspect(comments.length(), content="0")
+    }
+    _ => fail("expected document")
+  }
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[Error("could not read external image 'tiny-picture.png', external file access is disabled")]
+    ),
+  )
+  let read_external_file = fn(path) {
+    if path == "tiny-picture.png" {
+      Some(tiny_picture_png())
+    } else {
+      None
+    }
+  }
+  let loaded = @docx2html.read_docx_with_messages(
+    external_picture_docx()[:],
+    external_file_access=true,
+    read_external_file~,
+  )
+  debug_inspect(loaded.messages, content="[]")
+  inspect(
+    @docx2html.convert_document_to_html(loaded.document).value,
+    content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
+  )
+}
+
+///|
 test "pretty printing expands element content" {
   let result = @docx2html.convert_to_html(
     single_paragraph_docx()[:],
