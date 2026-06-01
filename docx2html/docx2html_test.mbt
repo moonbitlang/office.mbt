@@ -1342,8 +1342,8 @@ test "style map malformed named value diagnostics match Mammoth" {
   let result = @docx2html.convert_document_to_html(doc, style_map=[
     "p[=] => h1", "p[style-name^] => h1", "highlight[=] => mark", "highlight[color] => mark",
     "highlight[color=] => mark", "highlight[color='yellow' => mark", "br[=] => br",
-    "br[type] => br", "br[type=] => br", "br[type='page' => hr", "p:ordered-list() => p",
-    "p:ordered-list(1 => p",
+    "br[type] => br", "br[type=] => br", "br[type='page' => hr", "br[type='weird'] => hr",
+    "p:ordered-list() => p", "p:ordered-list(1 => p",
   ])
   inspect(result.value, content="<p>Walking on imported air</p>")
   debug_inspect(
@@ -1360,6 +1360,7 @@ test "style map malformed named value diagnostics match Mammoth" {
       #|  Warning("Did not understand this style mapping, so ignored it: br[type] => br\nError was at character number 8: Expected equals but got close-square-bracket"),
       #|  Warning("Did not understand this style mapping, so ignored it: br[type=] => br\nError was at character number 9: Expected string but got close-square-bracket"),
       #|  Warning("Did not understand this style mapping, so ignored it: br[type='page' => hr\nError was at character number 15: Expected close-square-bracket but got whitespace"),
+      #|  Warning("Did not understand this style mapping, so ignored it: br[type='weird'] => hr\nError was at character number 10: Expected break type but got identifier \"weird\""),
       #|  Warning("Did not understand this style mapping, so ignored it: p:ordered-list() => p\nError was at character number 16: Expected integer but got close-paren"),
       #|  Warning("Did not understand this style mapping, so ignored it: p:ordered-list(1 => p\nError was at character number 17: Expected close-paren but got whitespace"),
       #|]
@@ -1992,6 +1993,16 @@ test "document converter maps break types through style maps" {
       "br[type='page'] => hr:fresh", "br[type='line'] => br.line-break", "br[type='column'] => span.column-break",
     ]).value,
     content="<hr /><br class=\"line-break\" />",
+  )
+  let unknown = @docx2html.convert_document_to_html(@docx2html.line_break(), style_map=[
+    "br[type='weird'] => hr",
+  ])
+  inspect(unknown.value, content="<br />")
+  debug_inspect(
+    unknown.messages,
+    content=(
+      #|[Warning("Did not understand this style mapping, so ignored it: br[type='weird'] => hr\nError was at character number 10: Expected break type but got identifier \"weird\"")]
+    ),
   )
 }
 

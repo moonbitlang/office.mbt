@@ -498,6 +498,7 @@ fn parse_style_break_matcher(
     return (None, index, Some(style_parse_error(line, index, end, "equals")))
   }
   let (break_type, next, error) = parse_style_string(line, index + 1, end)
+  let break_type_start = index + 2
   match error {
     Some(error) => return (None, next, Some(error))
     None => index = next
@@ -509,19 +510,18 @@ fn parse_style_break_matcher(
       Some(style_parse_error(line, index, end, "close-square-bracket")),
     )
   }
-  (
-    Some(
-      BreakMatcher(
-        match break_type {
-          "page" => Page
-          "column" => Column
-          _ => Line
-        },
-      ),
-    ),
-    index + 1,
-    None,
-  )
+  let break_type = match break_type {
+    "line" => Line
+    "page" => Page
+    "column" => Column
+    _ =>
+      return (
+        None,
+        break_type_start,
+        Some(style_parse_error(line, break_type_start, end, "break type")),
+      )
+  }
+  (Some(BreakMatcher(break_type)), index + 1, None)
 }
 
 ///|
