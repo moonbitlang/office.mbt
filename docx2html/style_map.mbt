@@ -34,10 +34,10 @@ pub(all) struct StyleMapping {
 } derive(Debug, Eq)
 
 ///|
-priv struct StyleMapReadResult {
+pub(all) struct StyleMapParseResult {
   mappings : Array[StyleMapping]
   messages : Array[Message]
-}
+} derive(Debug, Eq)
 
 ///|
 priv struct ParsedMatcherSuffixes {
@@ -57,7 +57,12 @@ pub fn read_style_map(lines : Array[String]) -> Array[StyleMapping] {
 }
 
 ///|
-fn read_style_map_with_messages(lines : Array[String]) -> StyleMapReadResult {
+pub fn parse_style_map(lines : Array[String]) -> StyleMapParseResult {
+  read_style_map_with_messages(lines)
+}
+
+///|
+fn read_style_map_with_messages(lines : Array[String]) -> StyleMapParseResult {
   let mappings : Array[StyleMapping] = []
   let messages : Array[Message] = []
   for line in lines {
@@ -150,6 +155,11 @@ pub fn read_style_map_string(style_map : String) -> Array[String] {
     }
   }
   lines
+}
+
+///|
+pub fn parse_style_map_string(style_map : String) -> StyleMapParseResult {
+  parse_style_map(read_style_map_string(style_map))
 }
 
 ///|

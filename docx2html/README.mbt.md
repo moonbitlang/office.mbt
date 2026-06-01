@@ -68,6 +68,25 @@ test "parse mammoth style map strings" {
 }
 ```
 
+Use `parse_style_map` or `parse_style_map_string` when you want to validate a
+style map before conversion while preserving the valid mappings:
+
+```mbt check
+///|
+test "preflight style map diagnostics" {
+  let parsed = @docx2html.parse_style_map_string(
+    "p.SectionTitle => h2\np => span#",
+  )
+  inspect(parsed.mappings.length(), content="1")
+  debug_inspect(
+    parsed.messages,
+    content=(
+      #|[Warning("Did not understand this style mapping, so ignored it: p => span#\nError was at character number 10: Expected end but got unrecognisedCharacter \"#\"")]
+    ),
+  )
+}
+```
+
 ## Document Model
 
 The document model exposes enum constructors for pattern matching and

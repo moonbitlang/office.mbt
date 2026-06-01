@@ -1197,6 +1197,39 @@ test "style map string reader follows Mammoth option rules" {
 }
 
 ///|
+test "style map parser exposes Mammoth diagnostics for preflight validation" {
+  let parsed = @docx2html.parse_style_map([
+    "p.Heading1 => h1", "????", "r => strong",
+  ])
+  inspect(parsed.mappings.length(), content="2")
+  match parsed.mappings[0].from {
+    ParagraphMatcher(style_id=Some("Heading1"), style_name=None, numbering=None) =>
+      ()
+    _ => fail("expected paragraph style mapping")
+  }
+  match parsed.mappings[1].from {
+    RunMatcher(style_id=None, style_name=None) => ()
+    _ => fail("expected run mapping")
+  }
+  debug_inspect(
+    parsed.messages,
+    content=(
+      #|[Warning("Did not understand this style mapping, so ignored it: ????\nError was at character number 1: Expected element type but got unrecognisedCharacter \"?\"")]
+    ),
+  )
+  let parsed_string = @docx2html.parse_style_map_string(
+    "\n# ignored\np.SectionTitle => h2\np => span#\n",
+  )
+  inspect(parsed_string.mappings.length(), content="1")
+  debug_inspect(
+    parsed_string.messages,
+    content=(
+      #|[Warning("Did not understand this style mapping, so ignored it: p => span#\nError was at character number 10: Expected end but got unrecognisedCharacter \"#\"")]
+    ),
+  )
+}
+
+///|
 test "style map separator is inserted only when html elements collapse" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("One")]),
