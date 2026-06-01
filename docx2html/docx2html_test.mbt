@@ -1166,6 +1166,14 @@ test "html simplifier removes empty nodes before collapsing" {
   )
   inspect(
     @docx2html.write_html(
+      @docx2html.simplify_html([
+        @docx2html.html_element("p", children=[@docx2html.html_text("")]),
+      ]),
+    ),
+    content="",
+  )
+  inspect(
+    @docx2html.write_html(
       @docx2html.simplify_html([@docx2html.html_element("br")]),
     ),
     content="<br />",
