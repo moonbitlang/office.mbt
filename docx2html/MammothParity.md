@@ -69,3 +69,18 @@ git diff --check
 
 When public APIs change, inspect `pkg.generated.mbti` after `moon info` and
 bump `moon.mod` before publishing because Mooncakes versions are immutable.
+
+## Coverage Notes
+
+After the native suite, `moon coverage analyze` currently leaves 11 uncovered
+lines:
+
+- 10 vendored `dingbat_to_unicode.mbt` lookup arms. Representative behavior is
+  covered through supported font/code lookups and unsupported-symbol warnings;
+  chasing every match arm just moves the uncovered line to another table entry.
+- 1 `xml.mbt` structural `abort("unreachable")` after the parser loop. All loop
+  exits return or raise, so this is an invariant marker rather than a reachable
+  malformed XML case.
+
+Style-map parsing is covered by the current suite, including Mammoth-compatible
+diagnostics, escaped target paths, tag choices, `:fresh`, and `:separator(...)`.
