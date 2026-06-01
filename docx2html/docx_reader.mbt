@@ -2412,18 +2412,56 @@ fn BodyReader::read_table_cell(
   element : XmlElement,
 ) -> DocumentElement raise DocxError {
   let properties = element.first_or_empty("w:tcPr")
-  let col_span = @string.parse_int(
+  let col_span = parse_grid_span(
     properties.first_or_empty("w:gridSpan").attributes.get_or_default(
       "w:val", "1",
     ),
-  ) catch {
-    _ => 1
-  }
+  )
   TableCell(
     children=self.read_children(element.children),
     col_span~,
     row_span=if read_vertical_merge_continue(properties) { 0 } else { 1 },
   )
+}
+
+///|
+fn parse_grid_span(value : String) -> Int {
+  let mut index = 0
+  while index < value.length() && is_field_whitespace(value[index]) {
+    index += 1
+  }
+  let mut sign = 1
+  if index < value.length() && (value[index] == '+' || value[index] == '-') {
+    if value[index] == '-' {
+      sign = -1
+    }
+    index += 1
+  }
+  let start = index
+  let mut result = 0
+  while index < value.length() {
+    match decimal_digit_value(value[index]) {
+      Some(digit) => {
+        result = result * 10 + digit
+        index += 1
+      }
+      None => break
+    }
+  }
+  if index == start {
+    1
+  } else {
+    sign * result
+  }
+}
+
+///|
+fn decimal_digit_value(char : UInt16) -> Int? {
+  if char >= '0' && char <= '9' {
+    Some(char.to_int() - '0'.to_int())
+  } else {
+    None
+  }
 }
 
 ///|

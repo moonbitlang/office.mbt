@@ -1978,16 +1978,28 @@ test "docx table deleted rows are ignored" {
 }
 
 ///|
-test "docx table cells default malformed grid spans to one" {
-  let xml =
-    #|<w:tc xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tcPr><w:gridSpan w:val="abc" /></w:tcPr><w:p /></w:tc>
-  let root = read_xml_string(xml, namespace_map=office_namespace_map())
-  match empty_body_reader({ relationships: [] }).read_element(root)[0] {
-    TableCell(col_span~, row_span~, ..) => {
-      inspect(col_span, content="1")
-      inspect(row_span, content="1")
+test "docx table grid spans follow Mammoth parseInt behavior" {
+  let cases = [
+    ("2abc", 2),
+    (" 3", 3),
+    ("+4", 4),
+    ("-2", -2),
+    ("", 1),
+    ("abc", 1),
+  ]
+  for item in cases {
+    let (value, expected) = item
+    let xml = "<w:tc xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tcPr><w:gridSpan w:val=\"" +
+      value +
+      "\" /></w:tcPr><w:p /></w:tc>"
+    let root = read_xml_string(xml, namespace_map=office_namespace_map())
+    match empty_body_reader({ relationships: [] }).read_element(root)[0] {
+      TableCell(col_span~, row_span~, ..) => {
+        inspect(col_span, content=expected.to_string())
+        inspect(row_span, content="1")
+      }
+      _ => fail("expected table cell")
     }
-    _ => fail("expected table cell")
   }
 }
 
