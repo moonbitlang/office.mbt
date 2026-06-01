@@ -61,6 +61,11 @@ fn cli_tiny_picture_docx() -> Bytes {
 }
 
 ///|
+fn cli_tiny_picture_base64() -> String {
+  "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII="
+}
+
+///|
 fn ensure_test_dir(path : String) -> Unit {
   @fs.create_dir(path) catch {
     IOError(_) => ()
@@ -151,6 +156,27 @@ test "CLI output-dir helpers match Mammoth naming" {
 }
 
 ///|
+test "CLI conversion writes default HTML output file" {
+  let dir = "_build/cli-main-default-output-file"
+  ensure_test_dir(dir)
+  let input_path = join_path(dir, "input.docx")
+  let output_file = join_path(dir, "output.html")
+  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
+  run_conversion({
+    input_path,
+    output_path: Some(output_file),
+    output_dir: None,
+    style_map_path: None,
+    output_format: Html,
+    pretty_print: false,
+  })
+  inspect(
+    @fs.read_file_to_string(output_file),
+    content="<p>Walking on imported air</p>",
+  )
+}
+
+///|
 test "CLI conversion writes output file and applies style map" {
   let dir = "_build/cli-main-output-file"
   ensure_test_dir(dir)
@@ -195,6 +221,27 @@ test "CLI conversion threads pretty print to HTML output" {
 }
 
 ///|
+test "CLI conversion keeps inline images in single-file output" {
+  let dir = "_build/cli-main-single-file-images"
+  ensure_test_dir(dir)
+  let input_path = join_path(dir, "tiny-picture.docx")
+  let output_file = join_path(dir, "tiny-picture.html")
+  @fs.write_bytes_to_file(input_path, cli_tiny_picture_docx())
+  run_conversion({
+    input_path,
+    output_path: Some(output_file),
+    output_dir: None,
+    style_map_path: None,
+    output_format: Html,
+    pretty_print: false,
+  })
+  inspect(
+    @fs.read_file_to_string(output_file),
+    content="<p><img src=\"data:image/png;base64,\{cli_tiny_picture_base64()}\" /></p>",
+  )
+}
+
+///|
 test "CLI conversion writes markdown output inside output dir" {
   let dir = "_build/cli-main-output-dir-markdown"
   ensure_test_dir(dir)
@@ -234,6 +281,6 @@ test "CLI conversion writes images inside output dir" {
   )
   inspect(
     @base64.encode(@fs.read_file_to_bytes(join_path(dir, "1.png"))[:]),
-    content="iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=",
+    content=cli_tiny_picture_base64(),
   )
 }
