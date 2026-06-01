@@ -2063,6 +2063,39 @@ fn body_elements_html_from_xml(element_xml : String) -> String raise DocxError {
 }
 
 ///|
+fn manual_word_text_element(value : String) -> XmlElement {
+  xml_element("w:t", children=[xml_text(value)])
+}
+
+///|
+fn manual_word_run_element(value : String) -> XmlElement {
+  xml_element("w:r", children=[XmlElement(manual_word_text_element(value))])
+}
+
+///|
+fn manual_word_paragraph_element(value : String) -> XmlElement {
+  xml_element("w:p", children=[XmlElement(manual_word_run_element(value))])
+}
+
+///|
+fn manual_word_text_box_element(value : String) -> XmlElement {
+  xml_element("w:txbxContent", children=[
+    XmlElement(manual_word_paragraph_element(value)),
+  ])
+}
+
+///|
+fn manual_alternate_content(
+  choice : XmlElement,
+  fallback : XmlElement,
+) -> XmlElement {
+  xml_element("mc:AlternateContent", children=[
+    XmlElement(xml_element("mc:Choice", children=[XmlElement(choice)])),
+    XmlElement(xml_element("mc:Fallback", children=[XmlElement(fallback)])),
+  ])
+}
+
+///|
 test "docx complex field hyperlinks are read" {
   inspect(
     complex_field_paragraph_html(" HYPERLINK \"http://example.com\""),
@@ -2223,6 +2256,72 @@ test "docx text box helper handles alternate content root" {
   inspect(
     convert_document_to_html(document(elements)).value,
     content="<p>Fallback</p>",
+  )
+}
+
+///|
+test "docx body reader handles unspliced alternate content nodes" {
+  let direct_alternate = manual_alternate_content(
+    manual_word_text_element("Choice"),
+    manual_word_text_element("Fallback"),
+  )
+  inspect(
+    convert_document_to_html(
+      document(
+        empty_body_reader({ relationships: [] }).read_element(direct_alternate),
+      ),
+    ).value,
+    content="Fallback",
+  )
+  let paragraph_alternate = xml_element("w:p", children=[
+    XmlElement(
+      manual_alternate_content(
+        manual_word_text_box_element("Choice"),
+        manual_word_text_box_element("Fallback"),
+      ),
+    ),
+  ])
+  inspect(
+    convert_document_to_html(
+      document(
+        empty_body_reader({ relationships: [] }).read_element(
+          paragraph_alternate,
+        ),
+      ),
+    ).value,
+    content="<p>Fallback</p>",
+  )
+  let pict_alternate = xml_element("w:p", children=[
+    XmlElement(
+      xml_element("w:r", children=[
+        XmlElement(manual_word_text_element("Before")),
+        XmlElement(
+          xml_element("w:pict", children=[
+            xml_text("ignored"),
+            XmlElement(
+              manual_alternate_content(
+                xml_element("v:shape", children=[
+                  XmlElement(manual_word_text_box_element("Choice")),
+                ]),
+                xml_element("v:shape", children=[
+                  XmlElement(manual_word_text_box_element("Fallback")),
+                ]),
+              ),
+            ),
+            xml_text("ignored"),
+          ]),
+        ),
+        XmlElement(manual_word_text_element("After")),
+      ]),
+    ),
+  ])
+  inspect(
+    convert_document_to_html(
+      document(
+        empty_body_reader({ relationships: [] }).read_element(pict_alternate),
+      ),
+    ).value,
+    content="<p>BeforeAfter</p><p>Fallback</p>",
   )
 }
 
