@@ -2342,6 +2342,12 @@ test "document converter maps break types through style maps" {
     ]).value,
     content="<hr /><br class=\"line-break\" />",
   )
+  inspect(
+    @docx2html.convert_document_to_html(@docx2html.column_break(), style_map=[
+      "br[type='column'] => hr",
+    ]).value,
+    content="<hr />",
+  )
   let unknown = @docx2html.convert_document_to_html(@docx2html.line_break(), style_map=[
     "br[type='weird'] => hr",
   ])
