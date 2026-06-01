@@ -73,6 +73,15 @@ fn ensure_test_dir(path : String) -> Unit {
 }
 
 ///|
+fn expect_cli_error(args : Array[String], prefix : String) -> Unit raise {
+  try parse_cli_args(args) catch {
+    CliError(message) => inspect(message.has_prefix(prefix), content="true")
+  } noraise {
+    _ => fail("expected CLI error")
+  }
+}
+
+///|
 test "CLI parser accepts default stdout HTML conversion" {
   debug_inspect(
     parse_cli_args(["docx2html", "input.docx"]),
@@ -89,6 +98,12 @@ test "CLI parser accepts default stdout HTML conversion" {
       #|)
     ),
   )
+}
+
+///|
+test "CLI parser accepts help without input path" {
+  debug_inspect(parse_cli_args(["docx2html", "--help"]), content="Help")
+  debug_inspect(parse_cli_args(["docx2html", "-h"]), content="Help")
 }
 
 ///|
@@ -110,6 +125,31 @@ test "CLI parser accepts Mammoth-style options" {
       #|  },
       #|)
     ),
+  )
+}
+
+///|
+test "CLI parser rejects malformed arguments" {
+  expect_cli_error(["docx2html"], "Usage: docx2html")
+  expect_cli_error(
+    ["docx2html", "--style-map"],
+    "Missing value for --style-map",
+  )
+  expect_cli_error(
+    ["docx2html", "--output-dir"],
+    "Missing value for --output-dir",
+  )
+  expect_cli_error(
+    ["docx2html", "--output-format=pdf", "input.docx"],
+    "Unsupported output format: pdf",
+  )
+  expect_cli_error(
+    ["docx2html", "--wat", "input.docx"],
+    "Unknown option: --wat",
+  )
+  expect_cli_error(
+    ["docx2html", "input.docx", "one.html", "two.html"],
+    "Too many positional arguments",
   )
 }
 
