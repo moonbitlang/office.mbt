@@ -349,6 +349,30 @@ test "CLI conversion writes markdown output inside output dir" {
 }
 
 ///|
+test "CLI conversion writes markdown image output inside output dir" {
+  let dir = "_build/cli-main-output-dir-markdown-images"
+  ensure_test_dir(dir)
+  let input_path = join_path(dir, "tiny-picture.docx")
+  @fs.write_bytes_to_file(input_path, cli_tiny_picture_docx())
+  run_conversion({
+    input_path,
+    output_path: None,
+    output_dir: Some(dir),
+    style_map_path: None,
+    output_format: Markdown,
+    pretty_print: false,
+  })
+  inspect(
+    @fs.read_file_to_string(join_path(dir, "tiny-picture.html")),
+    content="![](1.png)\n\n",
+  )
+  inspect(
+    @base64.encode(@fs.read_file_to_bytes(join_path(dir, "1.png"))[:]),
+    content=cli_tiny_picture_base64(),
+  )
+}
+
+///|
 test "CLI conversion writes images inside output dir" {
   let dir = "_build/cli-main-output-dir-images"
   ensure_test_dir(dir)
