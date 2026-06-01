@@ -352,6 +352,14 @@ test "markdown writer preserves element ids as anchors" {
   )
   inspect(
     @docx2html.write_markdown([
+      @docx2html.html_element("h1", attributes={ "id": "a&\"b" }, children=[
+        @docx2html.html_text("Hello"),
+      ]),
+    ]),
+    content="# <a id=\"a&\"b\"></a>Hello\n\n",
+  )
+  inspect(
+    @docx2html.write_markdown([
       @docx2html.html_element(
         "a",
         attributes={ "href": "http://example.com", "id": "start" },

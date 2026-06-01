@@ -73,7 +73,7 @@ fn MarkdownWriter::write_id_anchor(
   match attributes.get("id") {
     Some(id) => {
       self.buffer.write_string("<a id=\"")
-      self.buffer.write_string(escape_html_attribute(id))
+      self.buffer.write_string(id)
       self.buffer.write_string("\"></a>")
     }
     None => ()
