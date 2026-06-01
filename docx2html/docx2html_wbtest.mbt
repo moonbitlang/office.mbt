@@ -2241,6 +2241,38 @@ test "docx w:pict images are appended after their containing paragraph" {
 }
 
 ///|
+test "docx w:pict preserves mixed extra element order after paragraphs" {
+  let image_first_xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:r><w:t>Before</w:t></w:r><w:r><w:pict><v:shape><v:imagedata r:id="rImage" /><v:textbox><w:txbxContent><w:p><w:r><w:t>Box</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r><w:r><w:t>After</w:t></w:r></w:p>
+  let image_first = read_xml_string(
+    image_first_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let image_first_reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(
+      document(image_first_reader.read_element(image_first)),
+    ).value,
+    content="<p>BeforeAfter</p><img src=\"data:image/png;base64,YWJj\" /><p>Box</p>",
+  )
+  debug_inspect(image_first_reader.messages, content="[]")
+  let textbox_first_xml =
+    #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:r><w:t>Before</w:t></w:r><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>Box</w:t></w:r></w:p></w:txbxContent></v:textbox><v:imagedata r:id="rImage" /></v:shape></w:pict></w:r><w:r><w:t>After</w:t></w:r></w:p>
+  let textbox_first = read_xml_string(
+    textbox_first_xml,
+    namespace_map=office_namespace_map(),
+  )
+  let textbox_first_reader = drawing_image_reader()
+  inspect(
+    convert_document_to_html(
+      document(textbox_first_reader.read_element(textbox_first)),
+    ).value,
+    content="<p>BeforeAfter</p><p>Box</p><img src=\"data:image/png;base64,YWJj\" />",
+  )
+  debug_inspect(textbox_first_reader.messages, content="[]")
+}
+
+///|
 test "docx structured checkbox replacement recurses through containers" {
   let nested = Document(
     children=[
