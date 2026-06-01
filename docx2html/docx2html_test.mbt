@@ -1290,13 +1290,15 @@ test "invalid style maps warn and keep valid mappings" {
     @docx2html.paragraph([@docx2html.text("Walking on imported air")]),
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
-    " => p", "=> p", "????", "p h1", "p => h1", "r => span a", "p => span#", "p:ordered-list(x) => ol > li",
+    "", " => p", "=> p", "????", "p h1", "p => h1", "r => span a", "p => span#",
+    "p:ordered-list(x) => ol > li",
   ])
   inspect(result.value, content="<h1>Walking on imported air</h1>")
   debug_inspect(
     result.messages,
     content=(
       #|[
+      #|  Warning("Did not understand this style mapping, so ignored it: \nError was at character number 1: Expected element type but got end"),
       #|  Warning("Did not understand this style mapping, so ignored it:  => p\nError was at character number 1: Expected element type but got whitespace"),
       #|  Warning("Did not understand this style mapping, so ignored it: => p\nError was at character number 1: Expected element type but got arrow"),
       #|  Warning("Did not understand this style mapping, so ignored it: ????\nError was at character number 1: Expected element type but got unrecognisedCharacter \"?\""),

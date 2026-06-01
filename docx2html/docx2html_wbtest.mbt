@@ -463,6 +463,10 @@ test "docx external file URI paths follow Mammoth local URI rules" {
     content="Some(\"/c:/a\")",
   )
   debug_inspect(
+    external_uri_to_path("file:///a/b/c", platform="win32"),
+    content="Some(\"/a/b/c\")",
+  )
+  debug_inspect(
     external_uri_to_path("file:///C:/a", platform="win32"),
     content="Some(\"C:/a\")",
   )
