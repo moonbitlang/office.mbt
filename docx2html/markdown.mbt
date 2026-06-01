@@ -108,7 +108,7 @@ fn MarkdownWriter::write_image(
   let alt = attributes.get_or_default("alt", "")
   if src != "" || alt != "" {
     self.buffer.write_string("![")
-    self.buffer.write_string(escape_markdown_text(alt))
+    self.buffer.write_string(alt)
     self.buffer.write_string("](")
     self.buffer.write_string(src)
     self.buffer.write_string(")")

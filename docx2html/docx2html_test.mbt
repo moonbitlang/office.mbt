@@ -335,6 +335,15 @@ test "markdown writer follows Mammoth image edge cases" {
     content="![Alt Text]()",
   )
   inspect(
+    @docx2html.write_markdown([
+      @docx2html.html_element("img", attributes={
+        "src": "http://example.com/image.jpg",
+        "alt": "A*B",
+      }),
+    ]),
+    content="![A*B](http://example.com/image.jpg)",
+  )
+  inspect(
     @docx2html.write_markdown([@docx2html.html_element("img")]),
     content="",
   )
