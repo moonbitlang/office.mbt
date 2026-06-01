@@ -2160,6 +2160,12 @@ test "image helper follows Mammoth alt attribute merging" {
     ),
     content="<img alt=\"&lt;alt override&gt;\" src=\"&lt;src&gt;\" />",
   )
+  inspect(
+    @docx2html.write_html(
+      @docx2html.inline_image(fn(_image) { { "src": "<src>" } })(with_alt).nodes,
+    ),
+    content="<img alt=\"&lt;alt&gt;\" src=\"&lt;src&gt;\" />",
+  )
 }
 
 ///|

@@ -52,6 +52,8 @@ pub fn image_conversion(Array[HtmlNode], messages? : Array[Message]) -> ImageCon
 
 pub fn img_element((Image) -> Map[String, String]) -> (Image) -> ImageConversion
 
+pub fn inline_image((Image) -> Map[String, String]) -> (Image) -> ImageConversion
+
 pub fn join_zip_path(Array[String]) -> String
 
 pub fn line_break() -> DocumentElement

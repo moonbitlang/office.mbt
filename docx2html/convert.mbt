@@ -579,6 +579,13 @@ pub fn img_element(
 }
 
 ///|
+pub fn inline_image(
+  read_attributes : (Image) -> Map[String, String],
+) -> (Image) -> ImageConversion {
+  img_element(read_attributes)
+}
+
+///|
 fn DocumentConverter::convert_referenced_notes(
   self : DocumentConverter,
   notes : Array[Note],
