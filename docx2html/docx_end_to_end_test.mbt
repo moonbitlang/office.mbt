@@ -665,10 +665,18 @@ test "embedded style maps written into docx affect conversion" {
     @docx2html.convert_to_html(rewritten[:]).value,
     content="<h2>Walking on imported air</h2>",
   )
+  inspect(
+    @docx2html.convert_to_markdown(rewritten[:]).value,
+    content="## Walking on imported air\n\n",
+  )
   let replaced = @docx2html.embed_style_map(rewritten[:], "p => p")
   inspect(
     @docx2html.convert_to_html(replaced[:]).value,
     content="<p>Walking on imported air</p>",
+  )
+  inspect(
+    @docx2html.convert_to_markdown(replaced[:]).value,
+    content="Walking on imported air\n\n",
   )
 }
 
