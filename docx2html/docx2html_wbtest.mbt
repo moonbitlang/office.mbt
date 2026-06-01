@@ -797,6 +797,16 @@ test "docx reader reads references and bookmarks like Mammoth" {
 }
 
 ///|
+test "docx reader ignores Mammoth ignored body elements without warnings" {
+  let xml =
+    #|<w:root xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:annotationRef /><w:bookmarkEnd /><w:sectPr /><w:proofErr /><w:lastRenderedPageBreak /><w:commentRangeStart /><w:commentRangeEnd /><w:del /><w:footnoteRef /><w:endnoteRef /><w:txbxContent /><w:pPr /><w:rPr /><w:tblPr /><w:tblGrid /><w:trPr /></w:root>
+  let root = read_xml_string(xml, namespace_map=office_namespace_map())
+  let reader = empty_body_reader({ relationships: [] })
+  debug_inspect(reader.read_children(root.children), content="[]")
+  debug_inspect(reader.messages, content="[]")
+}
+
+///|
 test "docx reader uses structured document tag content without checkbox" {
   debug_inspect(
     body_elements_from_xml(
