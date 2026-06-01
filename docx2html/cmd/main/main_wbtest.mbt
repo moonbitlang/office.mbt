@@ -276,6 +276,26 @@ test "CLI conversion renders stdout-mode markdown with style map" {
 }
 
 ///|
+test "CLI conversion renders stdout-mode HTML with style map" {
+  let dir = "_build/cli-main-stdout-html-style-map"
+  ensure_test_dir(dir)
+  let input_path = join_path(dir, "input.docx")
+  let style_map_path = join_path(dir, "style-map")
+  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
+  @fs.write_string_to_file(style_map_path, "p => span:fresh")
+  let html = render_conversion({
+    input_path,
+    output_path: None,
+    output_dir: None,
+    style_map_path: Some(style_map_path),
+    output_format: Html,
+    pretty_print: false,
+  })
+  inspect(html.value, content="<span>Walking on imported air</span>")
+  debug_inspect(html.messages, content="[]")
+}
+
+///|
 test "CLI conversion writes default HTML output file" {
   let dir = "_build/cli-main-default-output-file"
   ensure_test_dir(dir)
