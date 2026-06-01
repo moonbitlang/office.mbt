@@ -605,9 +605,7 @@ fn decode_xml_entity(entity : String) -> String {
 
 ///|
 fn decode_numeric_xml_entity(entity : String) -> String? {
-  if entity.length() < 2 ||
-    entity[0] != '#' ||
-    !is_xmldom_entity_word(entity, 1) {
+  if entity.length() < 2 || entity[0] != '#' || !is_xmldom_entity_word(entity) {
     return None
   }
   match parse_xmldom_numeric_entity(entity[1:].to_owned()) {
@@ -621,11 +619,8 @@ fn decode_numeric_xml_entity(entity : String) -> String? {
 }
 
 ///|
-fn is_xmldom_entity_word(entity : String, start : Int) -> Bool {
-  if start >= entity.length() {
-    return false
-  }
-  for index in start..<entity.length() {
+fn is_xmldom_entity_word(entity : String) -> Bool {
+  for index in 1..<entity.length() {
     let char = entity[index]
     if !((char >= '0' && char <= '9') ||
       (char >= 'A' && char <= 'Z') ||
