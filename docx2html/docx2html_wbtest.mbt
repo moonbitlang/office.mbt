@@ -2323,6 +2323,21 @@ test "docx body reader handles unspliced alternate content nodes" {
     ).value,
     content="<p>BeforeAfter</p><p>Fallback</p>",
   )
+  let text_box_with_raw_text = xml_element("v:textbox", children=[
+    xml_text("ignored"),
+    XmlElement(manual_word_text_box_element("Visible")),
+    xml_text("ignored"),
+  ])
+  inspect(
+    convert_document_to_html(
+      document(
+        empty_body_reader({ relationships: [] }).read_text_box_elements(
+          text_box_with_raw_text,
+        ),
+      ),
+    ).value,
+    content="<p>Visible</p>",
+  )
 }
 
 ///|
