@@ -154,7 +154,7 @@ test "xml helpers expose text edge cases and recursive descendants" {
 test "xml parser handles comments cdata declarations and entities" {
   let root = @docx2html.read_xml_string(
     (
-      #|<?xml version="1.0"?><!--before--><root><!--ignored--><![CDATA[A < B]]><?inside?><!DOCTYPE ignored><child attr="&quot;&apos;&gt;&#169;&#x1F600;">x &#169;&#x1F600; &gt; &quot; &apos; &unknown; &</child></root>
+      #|<?xml version="1.0"?><!--before--><root><!--ignored--><![CDATA[A < B]]><?inside?><!DOCTYPE ignored><child attr="&quot;&apos;&gt;&#169;&#x1F600;&#X41;">x &#169;&#x1f600;&#x41; &gt; &quot; &apos; &unknown; &</child></root>
     ),
   )
   inspect(root.children.length(), content="2")
@@ -165,9 +165,9 @@ test "xml parser handles comments cdata declarations and entities" {
   let child = root.first_or_empty("child")
   inspect(
     child.attributes.get_or_default("attr", ""),
-    content="\"'>\u{A9}\u{1F600}",
+    content="\"'>\u{A9}\u{1F600}A",
   )
-  inspect(child.text(), content="x \u{A9}\u{1F600} > \" ' &unknown; &")
+  inspect(child.text(), content="x \u{A9}\u{1F600}A > \" ' &unknown; &")
 }
 
 ///|
