@@ -876,6 +876,10 @@ test "style map parser reads upstream document matcher forms" {
     RunMatcher(style_id=None, style_name=Some(ExactStyleName("Code"))) => ()
     _ => fail("expected run style-name matcher")
   }
+  match expect_style_mapping("table => table").from {
+    TableMatcher(style_id=None, style_name=None) => ()
+    _ => fail("expected plain table matcher")
+  }
   match expect_style_mapping("table.TableNormal => table").from {
     TableMatcher(style_id=Some("TableNormal"), style_name=None) => ()
     _ => fail("expected table style ID matcher")
