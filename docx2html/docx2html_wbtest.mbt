@@ -2803,9 +2803,11 @@ test "docx symbols are mapped from supported dingbat fonts" {
   inspect(symbol_html("Symbol", "69"), content="\u{3B9}")
   inspect(symbol_html("Symbol", "6a"), content="\u{3D5}")
   inspect(symbol_html("Symbol", "6b"), content="\u{3BA}")
+  inspect(symbol_html("Symbol", "6c"), content="\u{3BB}")
   inspect(symbol_html("Symbol", "28"), content="(")
   inspect(symbol_html("Symbol", "29"), content=")")
   inspect(symbol_html("Symbol", "2a"), content="*")
+  inspect(symbol_html("Symbol", "2b"), content="+")
   inspect(symbol_html("Symbol", "27"), content="\u{220D}")
   inspect(symbol_html("Webdings", "61"), content="\u{2714}")
   inspect(symbol_html("Webdings", "62"), content="\u{1F6B2}")
@@ -2825,6 +2827,8 @@ test "docx symbols are mapped from supported dingbat fonts" {
   inspect(symbol_html("Wingdings 2", "69"), content="\u{24EA}")
   inspect(symbol_html("Wingdings 2", "6a"), content="\u{2460}")
   inspect(symbol_html("Wingdings 2", "6b"), content="\u{2461}")
+  inspect(symbol_html("Wingdings 2", "71"), content="\u{2467}")
+  inspect(symbol_html("Wingdings 2", "5f"), content="\u{1F67A}")
   inspect(symbol_html("Wingdings 3", "21"), content="\u{2B60}")
   inspect(symbol_html("Wingdings 3", "22"), content="\u{2B62}")
   inspect(symbol_html("Wingdings 3", "23"), content="\u{2B61}")
@@ -2833,6 +2837,7 @@ test "docx symbols are mapped from supported dingbat fonts" {
   inspect(symbol_html("Wingdings 3", "26"), content="\u{2B67}")
   inspect(symbol_html("Wingdings 3", "27"), content="\u{2B69}")
   inspect(symbol_html("Wingdings 3", "28"), content="\u{2B68}")
+  inspect(symbol_html("Wingdings 3", "30"), content="\u{2B7D}")
   inspect(symbol_html("Wingdings", "2d"), content="\u{1F4EB}")
   inspect(symbol_html("Wingdings", "2e"), content="\u{1F4EC}")
   inspect(symbol_html("Wingdings", "30"), content="\u{1F5C0}")
@@ -2840,6 +2845,8 @@ test "docx symbols are mapped from supported dingbat fonts" {
   inspect(symbol_html("Wingdings", "44"), content="\u{1F44E}")
   inspect(symbol_html("Wingdings", "45"), content="\u{261C}")
   inspect(symbol_html("Wingdings", "46"), content="\u{261E}")
+  inspect(symbol_html("Wingdings", "39"), content="\u{1F5B2}")
+  inspect(symbol_html("Wingdings", "50"), content="\u{1F3F1}")
 }
 
 ///|
