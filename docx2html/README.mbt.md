@@ -156,6 +156,21 @@ test "custom image conversion" {
 }
 ```
 
+Image converters return diagnostics explicitly instead of throwing:
+
+```mbt check
+///|
+test "custom image conversion diagnostics" {
+  let image = @docx2html.image("image/png", b"abc", alt_text=Some("chart"))
+  let convert_image = fn(_image : @docx2html.Image) {
+    @docx2html.image_conversion([], messages=[@docx2html.error("image omitted")])
+  }
+  let result = @docx2html.convert_document_to_html(image, convert_image~)
+  inspect(result.value, content="")
+  debug_inspect(result.messages, content="[Error(\"image omitted\")]")
+}
+```
+
 ## Results
 
 Conversion results carry rendered text plus diagnostics. Use `combine_results`
