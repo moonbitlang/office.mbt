@@ -2094,7 +2094,10 @@ test "docx table reader warns when row span calculation is unreliable" {
     namespace_map=office_namespace_map(),
   )
   let non_row_reader = empty_body_reader({ relationships: [] })
-  ignore(non_row_reader.read_element(non_row))
+  inspect(
+    convert_document_to_html(document(non_row_reader.read_element(non_row))).value,
+    content="<table><tr><td></td></tr><p>Between</p><tr><td></td></tr></table>",
+  )
   debug_inspect(
     non_row_reader.messages,
     content=(
@@ -2108,7 +2111,10 @@ test "docx table reader warns when row span calculation is unreliable" {
     namespace_map=office_namespace_map(),
   )
   let non_cell_reader = empty_body_reader({ relationships: [] })
-  ignore(non_cell_reader.read_element(non_cell))
+  inspect(
+    convert_document_to_html(document(non_cell_reader.read_element(non_cell))).value,
+    content="<table><tr><td></td><p>Between</p><td></td></tr></table>",
+  )
   debug_inspect(
     non_cell_reader.messages,
     content=(
