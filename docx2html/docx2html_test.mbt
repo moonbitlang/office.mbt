@@ -315,6 +315,12 @@ test "markdown writer handles common inline elements" {
 ///|
 test "markdown writer escapes text and handles breaks and headings" {
   inspect(
+    @docx2html.escape_markdown_text("\\`*_{}[]()#+-.!"),
+    content=(
+      #|\\\`\*\_\{\}\[\]\(\)\#\+\-\.\!
+    ),
+  )
+  inspect(
     @docx2html.write_markdown([@docx2html.html_text("\\*")]),
     content="\\\\\\*",
   )
