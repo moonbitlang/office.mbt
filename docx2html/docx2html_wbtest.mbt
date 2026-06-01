@@ -2196,6 +2196,16 @@ fn body_elements_html_from_xml(element_xml : String) -> String raise DocxError {
 }
 
 ///|
+test "docx complex field instruction text is not emitted" {
+  debug_inspect(
+    body_elements_from_xml(
+      "<w:instrText> HYPERLINK \"http://example.com\"</w:instrText>",
+    ),
+    content="[]",
+  )
+}
+
+///|
 fn manual_word_text_element(value : String) -> XmlElement {
   xml_element("w:t", children=[xml_text(value)])
 }
