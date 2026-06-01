@@ -625,6 +625,67 @@ test "document markdown conversion honors common converter options" {
 }
 
 ///|
+test "document markdown conversion renders images comments and diagnostics" {
+  let image = @docx2html.Image::{
+    content_type: "image/png",
+    alt_text: Some("chart"),
+    data: b"abc",
+  }
+  inspect(
+    @docx2html.convert_document_to_markdown(
+      @docx2html.paragraph([Image(image)]),
+    ).value,
+    content="![chart](data:image/png;base64,YWJj)\n\n",
+  )
+  let convert_image = fn(_image : @docx2html.Image) {
+    @docx2html.image_conversion(
+      [@docx2html.html_element("img", attributes={ "src": "custom:image/png" })],
+      messages=[Warning("custom markdown image warning")],
+    )
+  }
+  let custom_image = @docx2html.convert_document_to_markdown(
+    @docx2html.paragraph([Image(image)]),
+    convert_image~,
+  )
+  inspect(custom_image.value, content="![](custom:image/png)\n\n")
+  debug_inspect(
+    custom_image.messages,
+    content="[Warning(\"custom markdown image warning\")]",
+  )
+  let comment = @docx2html.Comment::{
+    comment_id: "4",
+    body: [@docx2html.paragraph([@docx2html.text("Who's there?")])],
+    author_name: "The Piemaker",
+    author_initials: "TP",
+  }
+  let doc = @docx2html.document(
+    [
+      @docx2html.paragraph([
+        @docx2html.text("Knock knock"),
+        CommentReference("4"),
+      ]),
+    ],
+    comments=[comment],
+  )
+  let markdown = @docx2html.convert_document_to_markdown(
+    doc,
+    style_map=["comment-reference => sup"],
+    id_prefix="doc-42-",
+  )
+  inspect(
+    markdown.value,
+    content=(
+      #|Knock knock<a id="doc-42-comment-ref-4"></a>[\[TP1\]](#doc-42-comment-4)
+      #|
+      #|<a id="doc-42-comment-4"></a>Comment \[TP1\]Who's there? [↑](#doc-42-comment-ref-4)
+      #|
+      #|
+    ),
+  )
+  debug_inspect(markdown.messages, content="[]")
+}
+
+///|
 test "document converter maps paragraphs and escapes text" {
   let doc = @docx2html.document([
     @docx2html.paragraph([@docx2html.text("A < B")]),
