@@ -13,6 +13,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 ## First Slice
 
 - Mammoth's dynamic document nodes are represented as a recursive `DocumentElement` enum. This makes unsupported nodes explicit instead of relying on missing object properties.
+- Mammoth's document constructor namespace maps to lower-snake MoonBit helpers (`hyperlink`, `table_cell`, `note_reference`, and similar) while keeping enum constructors public for pattern matching and precise tests.
 - HTML nodes are separate from document nodes. Writers consume `HtmlNode`, which keeps DOCX semantics out of the string emitters.
 - Snapshot-style tests should use `inspect` for stable string output and `debug_inspect` for structured values.
 

@@ -1848,12 +1848,66 @@ test "document converter renders checkboxes like Mammoth" {
 }
 
 ///|
+test "document helper constructors cover common Mammoth nodes" {
+  let linked = @docx2html.hyperlink(
+    [@docx2html.run([@docx2html.text("Hello.")])],
+    href=Some("http://example.com/#old"),
+    anchor=Some("new"),
+    target_frame=Some("_blank"),
+  )
+  inspect(
+    @docx2html.convert_document_to_html(linked).value,
+    content="<a href=\"http://example.com/#new\" target=\"_blank\">Hello.</a>",
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      @docx2html.document([@docx2html.bookmark_start("_Peter")]),
+      id_prefix="doc-42-",
+    ).value,
+    content="<a id=\"doc-42-_Peter\"></a>",
+  )
+  let media = @docx2html.image("image/png", b"abc", alt_text=Some("pic"))
+  inspect(
+    @docx2html.convert_document_to_html(media).value,
+    content="<img alt=\"pic\" src=\"data:image/png;base64,YWJj\" />",
+  )
+  let note = @docx2html.note("footnote", "4", [
+    @docx2html.paragraph([@docx2html.text("Who's there?")]),
+  ])
+  let comment = @docx2html.comment(
+    "7",
+    [@docx2html.paragraph([@docx2html.text("Comment body")])],
+    author_name="The Piemaker",
+    author_initials="TP",
+  )
+  let doc = @docx2html.document(
+    [
+      @docx2html.paragraph([
+        @docx2html.text("Knock knock"),
+        @docx2html.run([@docx2html.note_reference("footnote", "4")]),
+        @docx2html.comment_reference("7"),
+      ]),
+    ],
+    notes=[note],
+    comments=[comment],
+  )
+  inspect(
+    @docx2html.convert_document_to_html(
+      doc,
+      style_map=["comment-reference => sup"],
+      id_prefix="doc-42-",
+    ).value,
+    content="<p>Knock knock<sup><a href=\"#doc-42-footnote-4\" id=\"doc-42-footnote-ref-4\">[1]</a><a href=\"#doc-42-comment-7\" id=\"doc-42-comment-ref-7\">[TP1]</a></sup></p><ol><li id=\"doc-42-footnote-4\"><p>Who's there? <a href=\"#doc-42-footnote-ref-4\">↑</a></p></li></ol><dl><dt id=\"doc-42-comment-7\">Comment [TP1]</dt><dd><p>Comment body <a href=\"#doc-42-comment-ref-7\">↑</a></p></dd></dl>",
+  )
+}
+
+///|
 fn table_cell(
   children : Array[@docx2html.DocumentElement],
   col_span? : Int = 1,
   row_span? : Int = 1,
 ) -> @docx2html.DocumentElement {
-  TableCell(children~, col_span~, row_span~)
+  @docx2html.table_cell(children, col_span~, row_span~)
 }
 
 ///|
@@ -1861,14 +1915,14 @@ fn table_row(
   children : Array[@docx2html.DocumentElement],
   is_header? : Bool = false,
 ) -> @docx2html.DocumentElement {
-  TableRow(children~, is_header~)
+  @docx2html.table_row(children, is_header~)
 }
 
 ///|
 fn test_table(
   children : Array[@docx2html.DocumentElement],
 ) -> @docx2html.DocumentElement {
-  Table(children~, properties=@docx2html.TableProperties::default())
+  @docx2html.table(children)
 }
 
 ///|

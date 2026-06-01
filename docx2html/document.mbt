@@ -194,6 +194,84 @@ pub fn checkbox(checked : Bool) -> DocumentElement {
 }
 
 ///|
+pub fn hyperlink(
+  children : Array[DocumentElement],
+  href? : String? = None,
+  anchor? : String? = None,
+  target_frame? : String? = None,
+) -> DocumentElement {
+  Hyperlink(children~, href~, anchor~, target_frame~)
+}
+
+///|
+pub fn note_reference(note_type : String, note_id : String) -> DocumentElement {
+  NoteReference(note_type~, note_id~)
+}
+
+///|
+pub fn comment_reference(comment_id : String) -> DocumentElement {
+  CommentReference(comment_id)
+}
+
+///|
+pub fn image(
+  content_type : String,
+  data : Bytes,
+  alt_text? : String? = None,
+) -> DocumentElement {
+  Image({ content_type, alt_text, data })
+}
+
+///|
+pub fn table(
+  children : Array[DocumentElement],
+  properties? : TableProperties = TableProperties::default(),
+) -> DocumentElement {
+  Table(children~, properties~)
+}
+
+///|
+pub fn table_row(
+  children : Array[DocumentElement],
+  is_header? : Bool = false,
+) -> DocumentElement {
+  TableRow(children~, is_header~)
+}
+
+///|
+pub fn table_cell(
+  children : Array[DocumentElement],
+  col_span? : Int = 1,
+  row_span? : Int = 1,
+) -> DocumentElement {
+  TableCell(children~, col_span~, row_span~)
+}
+
+///|
+pub fn bookmark_start(name : String) -> DocumentElement {
+  BookmarkStart(name)
+}
+
+///|
+pub fn note(
+  note_type : String,
+  note_id : String,
+  body : Array[DocumentElement],
+) -> Note {
+  { note_type, note_id, body }
+}
+
+///|
+pub fn comment(
+  comment_id : String,
+  body : Array[DocumentElement],
+  author_name? : String = "",
+  author_initials? : String = "",
+) -> Comment {
+  { comment_id, body, author_name, author_initials }
+}
+
+///|
 pub fn line_break() -> DocumentElement {
   Break(Line)
 }
