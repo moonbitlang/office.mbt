@@ -104,6 +104,10 @@ test "CLI parser accepts default stdout HTML conversion" {
 test "CLI parser accepts help without input path" {
   debug_inspect(parse_cli_args(["docx2html", "--help"]), content="Help")
   debug_inspect(parse_cli_args(["docx2html", "-h"]), content="Help")
+  debug_inspect(
+    parse_cli_args(["docx2html", "input.docx", "--help"]),
+    content="Help",
+  )
 }
 
 ///|
@@ -152,18 +156,22 @@ test "CLI parser accepts alternate option value forms" {
 
 ///|
 test "CLI parser rejects malformed arguments" {
-  expect_cli_error(["docx2html"], "Usage: docx2html")
+  expect_cli_error(["docx2html"], "error: 'input' requires at least 1 values")
   expect_cli_error(
     ["docx2html", "--style-map"],
-    "Missing value for --style-map",
+    "error: a value is required for '--style-map'",
+  )
+  expect_cli_error(
+    ["docx2html", "--style-map", "--help", "input.docx"],
+    "error: a value is required for '--style-map'",
   )
   expect_cli_error(
     ["docx2html", "--output-dir"],
-    "Missing value for --output-dir",
+    "error: a value is required for '--output-dir'",
   )
   expect_cli_error(
     ["docx2html", "--output-format"],
-    "Missing value for --output-format",
+    "error: a value is required for '--output-format'",
   )
   expect_cli_error(
     ["docx2html", "--output-format=pdf", "input.docx"],
@@ -171,11 +179,11 @@ test "CLI parser rejects malformed arguments" {
   )
   expect_cli_error(
     ["docx2html", "--wat", "input.docx"],
-    "Unknown option: --wat",
+    "error: unexpected argument '--wat' found",
   )
   expect_cli_error(
     ["docx2html", "input.docx", "one.html", "two.html"],
-    "Too many positional arguments",
+    "error: unexpected value 'two.html' for '<output>' found",
   )
 }
 
@@ -189,7 +197,7 @@ test "CLI parser rejects output path with output dir" {
     CliError(message) =>
       inspect(
         message.has_prefix(
-          "output path and --output-dir are mutually exclusive",
+          "error: output path and --output-dir are mutually exclusive",
         ),
         content="true",
       )

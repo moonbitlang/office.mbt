@@ -158,10 +158,16 @@ From this repository checkout, the native executable mirrors the common Mammoth
 CLI paths:
 
 ```bash
-moon run --target native cmd/main -- input.docx
-moon run --target native cmd/main -- --output-format=markdown input.docx
-moon run --target native cmd/main -- --style-map style-map input.docx output.html
-moon run --target native cmd/main -- --output-dir out input.docx
+moon run --target native cmd/docx2html -- input.docx
+moon run --target native cmd/docx2html -- --output-format=markdown input.docx
+moon run --target native cmd/docx2html -- --style-map style-map input.docx output.html
+moon run --target native cmd/docx2html -- --output-dir out input.docx
+```
+
+The executable examples in `tests/cram/cli.md` are verified by:
+
+```bash
+moon cram test tests/cram
 ```
 
 ## Image Conversion
