@@ -122,7 +122,9 @@ fn convert_document_to_nodes(
   if include_default_style_map {
     all_style_lines.append(default_style_map_lines())
   }
-  let parsed_style_map = @style_map.read_style_map_with_messages(all_style_lines)
+  let parsed_style_map = @style_map.read_style_map_with_messages(
+    all_style_lines,
+  )
   let options = ConvertOptions::{
     style_map: parsed_style_map.mappings,
     ignore_empty_paragraphs,
@@ -832,7 +834,8 @@ fn DocumentConverter::wrap_with_style(
   content : Array[HtmlNode],
   default_path : Array[HtmlPathElement],
 ) -> Array[HtmlNode] {
-  let path = match @style_map.find_style_mapping(element, self.options.style_map) {
+  let path = match
+    @style_map.find_style_mapping(element, self.options.style_map) {
     Some(mapping) => mapping.to
     None => default_path
   }

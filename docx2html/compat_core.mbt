@@ -28,14 +28,14 @@ pub fn success(value : String) -> ConversionResult {
 }
 
 ///|
-pub fn combine_results(
-  results : Array[ConversionResult],
-) -> ConversionResult {
+pub fn combine_results(results : Array[ConversionResult]) -> ConversionResult {
   @core.combine_results(results)
 }
 
 ///|
-fn[T] bridge_core_error(action : () -> T raise @core.DocxError) -> T raise DocxError {
+fn[T] bridge_core_error(
+  action : () -> T raise @core.DocxError,
+) -> T raise DocxError {
   action() catch {
     InvalidZip(message~) => raise InvalidZip(message~)
     InvalidXml(message~) => raise InvalidXml(message~)

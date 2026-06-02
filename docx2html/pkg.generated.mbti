@@ -2,49 +2,57 @@
 package "bobzhang/docx2html"
 
 import {
+  "bobzhang/docx2html/converter",
+  "bobzhang/docx2html/core",
+  "bobzhang/docx2html/document",
+  "bobzhang/docx2html/docx",
+  "bobzhang/docx2html/html",
+  "bobzhang/docx2html/style_map",
+  "bobzhang/docx2html/xml",
+  "bobzhang/docx2html/zip",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn bookmark_start(String) -> DocumentElement
+pub fn bookmark_start(String) -> @document.DocumentElement
 
-pub fn checkbox(Bool) -> DocumentElement
+pub fn checkbox(Bool) -> @document.DocumentElement
 
-pub fn column_break() -> DocumentElement
+pub fn column_break() -> @document.DocumentElement
 
-pub fn combine_results(Array[ConversionResult]) -> ConversionResult
+pub fn combine_results(Array[@core.ConversionResult]) -> @core.ConversionResult
 
-pub fn comment(String, Array[DocumentElement], author_name? : String, author_initials? : String) -> Comment
+pub fn comment(String, Array[@document.DocumentElement], author_name? : String, author_initials? : String) -> @document.Comment
 
-pub fn comment_reference(String) -> DocumentElement
+pub fn comment_reference(String) -> @document.DocumentElement
 
-pub fn convert(BytesView, output_format? : OutputFormat, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
+pub fn convert(BytesView, output_format? : @converter.OutputFormat, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise DocxError
 
-pub fn convert_document(DocumentElement, output_format? : OutputFormat, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement) -> ConversionResult
+pub fn convert_document(@document.DocumentElement, output_format? : @converter.OutputFormat, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement) -> @core.ConversionResult
 
-pub fn convert_document_to_html(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement) -> ConversionResult
+pub fn convert_document_to_html(@document.DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement) -> @core.ConversionResult
 
-pub fn convert_document_to_markdown(DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement) -> ConversionResult
+pub fn convert_document_to_markdown(@document.DocumentElement, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement) -> @core.ConversionResult
 
-pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
+pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise DocxError
 
-pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (Image) -> ImageConversion, transform_document? : (DocumentElement) -> DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
+pub fn convert_to_markdown(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise DocxError
 
-pub fn data_uri_image(Image) -> ImageConversion
+pub fn data_uri_image(@document.Image) -> @converter.ImageConversion
 
-pub fn data_uri_image_converter(Image) -> ImageConversion
+pub fn data_uri_image_converter(@document.Image) -> @converter.ImageConversion
 
 pub fn default_style_map_lines() -> Array[String]
 
-pub fn document(Array[DocumentElement], notes? : Array[Note], comments? : Array[Comment]) -> DocumentElement
+pub fn document(Array[@document.DocumentElement], notes? : Array[@document.Note], comments? : Array[@document.Comment]) -> @document.DocumentElement
 
-pub fn document_descendants(DocumentElement) -> Array[DocumentElement]
+pub fn document_descendants(@document.DocumentElement) -> Array[@document.DocumentElement]
 
-pub fn document_descendants_where(DocumentElement, (DocumentElement) -> Bool) -> Array[DocumentElement]
+pub fn document_descendants_where(@document.DocumentElement, (@document.DocumentElement) -> Bool) -> Array[@document.DocumentElement]
 
 pub fn embed_style_map(BytesView, String) -> Bytes raise DocxError
 
-pub fn error(String) -> Message
+pub fn error(String) -> @core.Message
 
 pub fn escape_html(String) -> String
 
@@ -52,105 +60,105 @@ pub fn escape_html_attribute(String) -> String
 
 pub fn escape_markdown_text(String) -> String
 
-pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> ConversionResult raise DocxError
+pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise DocxError
 
-pub fn extract_raw_text_from_document(DocumentElement) -> ConversionResult
+pub fn extract_raw_text_from_document(@document.DocumentElement) -> @core.ConversionResult
 
-pub fn fresh_html_element(String, attributes? : Map[String, String], children? : Array[HtmlNode], separator? : String) -> HtmlNode
+pub fn fresh_html_element(String, attributes? : Map[String, String], children? : Array[@html.HtmlNode], separator? : String) -> @html.HtmlNode
 
-pub fn html_element(String, attributes? : Map[String, String], children? : Array[HtmlNode], fresh? : Bool, separator? : String) -> HtmlNode
+pub fn html_element(String, attributes? : Map[String, String], children? : Array[@html.HtmlNode], fresh? : Bool, separator? : String) -> @html.HtmlNode
 
-pub fn html_text(String) -> HtmlNode
+pub fn html_text(String) -> @html.HtmlNode
 
-pub fn hyperlink(Array[DocumentElement], href? : String?, anchor? : String?, target_frame? : String?) -> DocumentElement
+pub fn hyperlink(Array[@document.DocumentElement], href? : String?, anchor? : String?, target_frame? : String?) -> @document.DocumentElement
 
-pub fn identity_document_transform(DocumentElement) -> DocumentElement
+pub fn identity_document_transform(@document.DocumentElement) -> @document.DocumentElement
 
-pub fn image(String, Bytes, alt_text? : String?) -> DocumentElement
+pub fn image(String, Bytes, alt_text? : String?) -> @document.DocumentElement
 
-pub fn image_conversion(Array[HtmlNode], messages? : Array[Message]) -> ImageConversion
+pub fn image_conversion(Array[@html.HtmlNode], messages? : Array[@core.Message]) -> @converter.ImageConversion
 
-pub fn img_element((Image) -> Map[String, String]) -> (Image) -> ImageConversion
+pub fn img_element((@document.Image) -> Map[String, String]) -> (@document.Image) -> @converter.ImageConversion
 
-pub fn indent(start? : String?, end? : String?, first_line? : String?, hanging? : String?) -> Indent
+pub fn indent(start? : String?, end? : String?, first_line? : String?, hanging? : String?) -> @document.Indent
 
-pub fn inline_image((Image) -> Map[String, String]) -> (Image) -> ImageConversion
+pub fn inline_image((@document.Image) -> Map[String, String]) -> (@document.Image) -> @converter.ImageConversion
 
 pub fn join_zip_path(Array[String]) -> String
 
-pub fn line_break() -> DocumentElement
+pub fn line_break() -> @document.DocumentElement
 
-pub fn note(String, String, Array[DocumentElement]) -> Note
+pub fn note(String, String, Array[@document.DocumentElement]) -> @document.Note
 
-pub fn note_reference(String, String) -> DocumentElement
+pub fn note_reference(String, String) -> @document.DocumentElement
 
-pub fn numbering(Bool, Int) -> Numbering
+pub fn numbering(Bool, Int) -> @document.Numbering
 
-pub fn open_zip(BytesView) -> ZipArchive raise DocxError
+pub fn open_zip(BytesView) -> @zip.ZipArchive raise DocxError
 
-pub fn page_break() -> DocumentElement
+pub fn page_break() -> @document.DocumentElement
 
-pub fn paragraph(Array[DocumentElement], properties? : ParagraphProperties) -> DocumentElement
+pub fn paragraph(Array[@document.DocumentElement], properties? : @document.ParagraphProperties) -> @document.DocumentElement
 
-pub fn paragraph_properties(style_id? : String?, style_name? : String?, numbering? : Numbering?, alignment? : String?, indent? : Indent) -> ParagraphProperties
+pub fn paragraph_properties(style_id? : String?, style_name? : String?, numbering? : @document.Numbering?, alignment? : String?, indent? : @document.Indent) -> @document.ParagraphProperties
 
-pub fn parse_style_map(Array[String]) -> StyleMapParseResult
+pub fn parse_style_map(Array[String]) -> @style_map.StyleMapParseResult
 
-pub fn parse_style_map_string(String) -> StyleMapParseResult
+pub fn parse_style_map_string(String) -> @style_map.StyleMapParseResult
 
-pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocumentElement raise DocxError
+pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise DocxError
 
-pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxReadResult raise DocxError
+pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @docx.DocxReadResult raise DocxError
 
 pub fn read_embedded_style_map(BytesView) -> String? raise DocxError
 
-pub fn read_style_map(Array[String]) -> Array[StyleMapping]
+pub fn read_style_map(Array[String]) -> Array[@style_map.StyleMapping]
 
 pub fn read_style_map_string(String) -> Array[String]
 
-pub fn read_style_mapping(String) -> StyleMapping?
+pub fn read_style_mapping(String) -> @style_map.StyleMapping?
 
-pub fn read_xml_string(String, namespace_map? : Map[String, String]) -> XmlElement raise DocxError
+pub fn read_xml_string(String, namespace_map? : Map[String, String]) -> @xml.XmlElement raise DocxError
 
-pub fn run(Array[DocumentElement], properties? : RunProperties) -> DocumentElement
+pub fn run(Array[@document.DocumentElement], properties? : @document.RunProperties) -> @document.DocumentElement
 
-pub fn run_properties(style_id? : String?, style_name? : String?, is_bold? : Bool, is_underline? : Bool, is_italic? : Bool, is_strikethrough? : Bool, is_all_caps? : Bool, is_small_caps? : Bool, vertical_alignment? : VerticalAlignment, font? : String?, font_size? : Int?, highlight? : String?) -> RunProperties
+pub fn run_properties(style_id? : String?, style_name? : String?, is_bold? : Bool, is_underline? : Bool, is_italic? : Bool, is_strikethrough? : Bool, is_all_caps? : Bool, is_small_caps? : Bool, vertical_alignment? : @document.VerticalAlignment, font? : String?, font_size? : Int?, highlight? : String?) -> @document.RunProperties
 
-pub fn simplify_html(Array[HtmlNode]) -> Array[HtmlNode]
+pub fn simplify_html(Array[@html.HtmlNode]) -> Array[@html.HtmlNode]
 
 pub fn split_zip_path(String) -> (String, String)
 
-pub fn success(String) -> ConversionResult
+pub fn success(String) -> @core.ConversionResult
 
-pub fn tab() -> DocumentElement
+pub fn tab() -> @document.DocumentElement
 
-pub fn table(Array[DocumentElement], properties? : TableProperties) -> DocumentElement
+pub fn table(Array[@document.DocumentElement], properties? : @document.TableProperties) -> @document.DocumentElement
 
-pub fn table_cell(Array[DocumentElement], col_span? : Int, row_span? : Int) -> DocumentElement
+pub fn table_cell(Array[@document.DocumentElement], col_span? : Int, row_span? : Int) -> @document.DocumentElement
 
-pub fn table_properties(style_id? : String?, style_name? : String?) -> TableProperties
+pub fn table_properties(style_id? : String?, style_name? : String?) -> @document.TableProperties
 
-pub fn table_row(Array[DocumentElement], is_header? : Bool) -> DocumentElement
+pub fn table_row(Array[@document.DocumentElement], is_header? : Bool) -> @document.DocumentElement
 
-pub fn text(String) -> DocumentElement
+pub fn text(String) -> @document.DocumentElement
 
-pub fn transform_elements(DocumentElement, (DocumentElement) -> DocumentElement) -> DocumentElement
+pub fn transform_elements(@document.DocumentElement, (@document.DocumentElement) -> @document.DocumentElement) -> @document.DocumentElement
 
-pub fn transform_paragraphs((DocumentElement) -> DocumentElement) -> (DocumentElement) -> DocumentElement
+pub fn transform_paragraphs((@document.DocumentElement) -> @document.DocumentElement) -> (@document.DocumentElement) -> @document.DocumentElement
 
-pub fn transform_runs((DocumentElement) -> DocumentElement) -> (DocumentElement) -> DocumentElement
+pub fn transform_runs((@document.DocumentElement) -> @document.DocumentElement) -> (@document.DocumentElement) -> @document.DocumentElement
 
-pub fn warning(String) -> Message
+pub fn warning(String) -> @core.Message
 
-pub fn write_html(Array[HtmlNode], pretty_print? : Bool) -> String
+pub fn write_html(Array[@html.HtmlNode], pretty_print? : Bool) -> String
 
-pub fn write_markdown(Array[HtmlNode]) -> String
+pub fn write_markdown(Array[@html.HtmlNode]) -> String
 
-pub fn write_xml_string(XmlElement, namespaces? : Map[String, String]) -> String
+pub fn write_xml_string(@xml.XmlElement, namespaces? : Map[String, String]) -> String
 
-pub fn xml_element(String, attributes? : Map[String, String], children? : Array[XmlNode]) -> XmlElement
+pub fn xml_element(String, attributes? : Map[String, String], children? : Array[@xml.XmlNode]) -> @xml.XmlElement
 
-pub fn xml_text(String) -> XmlNode
+pub fn xml_text(String) -> @xml.XmlNode
 
 // Errors
 pub(all) suberror DocxError {
@@ -161,190 +169,57 @@ pub(all) suberror DocxError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
-pub(all) enum BreakType {
-  Line
-  Page
-  Column
-} derive(Eq, @debug.Debug)
-
-pub(all) struct Comment {
-  comment_id : String
-  body : Array[DocumentElement]
-  author_name : String
-  author_initials : String
-} derive(Eq, @debug.Debug)
-
-pub(all) struct ConversionResult {
-  value : String
-  messages : Array[Message]
-} derive(Eq, @debug.Debug)
-pub fn ConversionResult::combine(Self, Self) -> Self
-pub fn ConversionResult::flat_map(Self, (String) -> Self raise?) -> Self raise?
-pub fn ConversionResult::map(Self, (String) -> String raise?) -> Self raise?
-
-pub(all) enum DocumentElement {
-  Document(children~ : Array[DocumentElement], notes~ : Array[Note], comments~ : Array[Comment])
-  Paragraph(children~ : Array[DocumentElement], properties~ : ParagraphProperties)
-  Run(children~ : Array[DocumentElement], properties~ : RunProperties)
-  Text(String)
-  Tab
-  Checkbox(Bool)
-  Hyperlink(children~ : Array[DocumentElement], href~ : String?, anchor~ : String?, target_frame~ : String?)
-  NoteReference(note_type~ : String, note_id~ : String)
-  CommentReference(String)
-  Image(Image)
-  Table(children~ : Array[DocumentElement], properties~ : TableProperties)
-  TableRow(children~ : Array[DocumentElement], is_header~ : Bool)
-  TableCell(children~ : Array[DocumentElement], col_span~ : Int, row_span~ : Int)
-  Break(BreakType)
-  BookmarkStart(String)
-} derive(Eq, @debug.Debug)
-pub fn DocumentElement::to_raw_text(Self) -> String
-
-pub(all) enum DocumentMatcher {
-  ParagraphMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?, numbering~ : Numbering?)
-  RunMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
-  RunPropertyMatcher(String)
-  HighlightMatcher(String?)
-  TableMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
-  BreakMatcher(BreakType)
-  CommentReferenceMatcher
-} derive(Eq, @debug.Debug)
-
-pub(all) struct DocxReadResult {
-  document : DocumentElement
-  messages : Array[Message]
-} derive(Eq, @debug.Debug)
-
-pub(all) enum HtmlNode {
-  Element(tag~ : String, attributes~ : Map[String, String], children~ : Array[HtmlNode], fresh~ : Bool, separator~ : String?)
-  TextNode(String)
-  ForceWrite
-} derive(Eq, @debug.Debug)
-
-pub(all) struct HtmlPathElement {
-  tag : String
-  attributes : Map[String, String]
-  fresh : Bool
-  separator : String?
-} derive(Eq, @debug.Debug)
-
-pub(all) struct Image {
-  content_type : String
-  alt_text : String?
-  data : Bytes
-} derive(Eq, @debug.Debug)
-
-pub(all) struct ImageConversion {
-  nodes : Array[HtmlNode]
-  messages : Array[Message]
-} derive(Eq, @debug.Debug)
-
-pub(all) struct Indent {
-  start : String?
-  end : String?
-  first_line : String?
-  hanging : String?
-} derive(Eq, @debug.Debug)
-pub fn Indent::default() -> Self
-
-pub(all) enum Message {
-  Warning(String)
-  Error(String)
-} derive(Eq, @debug.Debug)
-
-pub(all) struct Note {
-  note_type : String
-  note_id : String
-  body : Array[DocumentElement]
-} derive(Eq, @debug.Debug)
-
-pub(all) struct Numbering {
-  is_ordered : Bool
-  level : Int
-} derive(Eq, @debug.Debug)
-
-pub(all) enum OutputFormat {
-  Html
-  Markdown
-} derive(Eq, @debug.Debug)
-
-pub(all) struct ParagraphProperties {
-  style_id : String?
-  style_name : String?
-  numbering : Numbering?
-  alignment : String?
-  indent : Indent
-} derive(Eq, @debug.Debug)
-pub fn ParagraphProperties::default() -> Self
-
-pub(all) struct RunProperties {
-  style_id : String?
-  style_name : String?
-  is_bold : Bool
-  is_underline : Bool
-  is_italic : Bool
-  is_strikethrough : Bool
-  is_all_caps : Bool
-  is_small_caps : Bool
-  vertical_alignment : VerticalAlignment
-  font : String?
-  font_size : Int?
-  highlight : String?
-} derive(Eq, @debug.Debug)
-pub fn RunProperties::default() -> Self
-
-pub(all) struct StyleMapParseResult {
-  mappings : Array[StyleMapping]
-  messages : Array[Message]
-} derive(Eq, @debug.Debug)
-
-pub(all) struct StyleMapping {
-  from : DocumentMatcher
-  to : Array[HtmlPathElement]
-} derive(Eq, @debug.Debug)
-
-pub(all) enum StyleNameMatcher {
-  ExactStyleName(String)
-  PrefixStyleName(String)
-} derive(Eq, @debug.Debug)
-
-pub(all) struct TableProperties {
-  style_id : String?
-  style_name : String?
-} derive(Eq, @debug.Debug)
-pub fn TableProperties::default() -> Self
-
-pub(all) enum VerticalAlignment {
-  Baseline
-  Superscript
-  Subscript
-} derive(Eq, @debug.Debug)
-
-pub(all) struct XmlElement {
-  name : String
-  attributes : Map[String, String]
-  children : Array[XmlNode]
-} derive(Eq, @debug.Debug)
-pub fn XmlElement::descendants_by_tag_name(Self, String) -> Array[Self]
-pub fn XmlElement::elements_by_tag_name(Self, String) -> Array[Self]
-pub fn XmlElement::first(Self, String) -> Self?
-pub fn XmlElement::first_or_empty(Self, String) -> Self
-pub fn XmlElement::text(Self) -> String raise DocxError
-
-pub(all) enum XmlNode {
-  XmlElement(XmlElement)
-  XmlText(String)
-} derive(Eq, @debug.Debug)
-
-pub(all) struct ZipArchive {
-  entries : Map[String, Bytes]
-} derive(Eq, @debug.Debug)
-pub fn ZipArchive::exists(Self, String) -> Bool
-pub fn ZipArchive::read_bytes(Self, String) -> Bytes?
-pub fn ZipArchive::read_text(Self, String) -> String? raise DocxError
 
 // Type aliases
+pub using @document {type BreakType}
+
+pub using @document {type Comment}
+
+pub using @core {type ConversionResult}
+
+pub using @document {type DocumentElement}
+
+pub using @style_map {type DocumentMatcher}
+
+pub using @docx {type DocxReadResult}
+
+pub using @html {type HtmlNode}
+
+pub using @style_map {type HtmlPathElement}
+
+pub using @document {type Image}
+
+pub using @converter {type ImageConversion}
+
+pub using @document {type Indent}
+
+pub using @core {type Message}
+
+pub using @document {type Note}
+
+pub using @document {type Numbering}
+
+pub using @converter {type OutputFormat}
+
+pub using @document {type ParagraphProperties}
+
+pub using @document {type RunProperties}
+
+pub using @style_map {type StyleMapParseResult}
+
+pub using @style_map {type StyleMapping}
+
+pub using @style_map {type StyleNameMatcher}
+
+pub using @document {type TableProperties}
+
+pub using @document {type VerticalAlignment}
+
+pub using @xml {type XmlElement}
+
+pub using @xml {type XmlNode}
+
+pub using @zip {type ZipArchive}
 
 // Traits
 

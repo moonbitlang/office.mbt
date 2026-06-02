@@ -357,7 +357,10 @@ fn read_docx_zip_with_messages(
   messages.append(notes_result.messages)
   messages.append(comments_result.messages)
   messages.append(document_result.messages)
-  { document: document_result.document, messages: @core.dedupe_messages(messages) }
+  {
+    document: document_result.document,
+    messages: @core.dedupe_messages(messages),
+  }
 }
 
 ///|

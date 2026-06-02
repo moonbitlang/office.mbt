@@ -1,5 +1,5 @@
 import {
-  "bobzhang/docx2html/core" @core,
-  "bobzhang/docx2html/document" @document,
+  "bobzhang/docx2html/core",
+  "bobzhang/docx2html/document",
   "moonbitlang/core/string",
 }

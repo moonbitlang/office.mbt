@@ -1,7 +1,7 @@
 import {
-  "bobzhang/docx2html/core" @core,
-  "bobzhang/docx2html/document" @document,
-  "bobzhang/docx2html/html" @html,
-  "bobzhang/docx2html/style_map" @style_map,
+  "bobzhang/docx2html/core",
+  "bobzhang/docx2html/document",
+  "bobzhang/docx2html/html",
+  "bobzhang/docx2html/style_map",
   "moonbitlang/core/encoding/base64",
 }

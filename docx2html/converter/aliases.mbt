@@ -38,9 +38,7 @@ type HtmlPathElement = @style_map.HtmlPathElement
 type StyleMapping = @style_map.StyleMapping
 
 ///|
-fn identity_document_transform(
-  element : DocumentElement,
-) -> DocumentElement {
+fn identity_document_transform(element : DocumentElement) -> DocumentElement {
   @document.identity_document_transform(element)
 }
 
@@ -55,10 +53,7 @@ fn simplify_html(nodes : Array[HtmlNode]) -> Array[HtmlNode] {
 }
 
 ///|
-fn write_html(
-  nodes : Array[HtmlNode],
-  pretty_print? : Bool = false,
-) -> String {
+fn write_html(nodes : Array[HtmlNode], pretty_print? : Bool = false) -> String {
   @html.write_html(nodes, pretty_print~)
 }
 

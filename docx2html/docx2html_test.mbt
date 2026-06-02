@@ -136,9 +136,7 @@ test "raw text terminates paragraphs with blank lines" {
 test "raw text and descendants recurse through table nodes" {
   let table = @docx2html.table([
     @docx2html.table_row([
-      @docx2html.table_cell([
-        @docx2html.paragraph([@docx2html.text("Cell")]),
-      ]),
+      @docx2html.table_cell([@docx2html.paragraph([@docx2html.text("Cell")])]),
     ]),
   ])
   inspect(table.to_raw_text(), content="Cell\n\n")
@@ -864,9 +862,7 @@ test "document transforms recurse through hyperlinks and tables" {
     href=Some("http://example.com"),
   )
   let table = @docx2html.table([
-    @docx2html.table_row([
-      @docx2html.table_cell([@docx2html.text("Cell")]),
-    ]),
+    @docx2html.table_row([@docx2html.table_cell([@docx2html.text("Cell")])]),
   ])
   let doc = @docx2html.document([link, table])
   let transformed = @docx2html.transform_elements(doc, fn(element) {
@@ -2333,9 +2329,7 @@ test "document converter groups leading header table rows" {
       [table_cell([@docx2html.paragraph([@docx2html.text("H2")])])],
       is_header=true,
     ),
-    table_row([table_cell([
-      @docx2html.paragraph([@docx2html.text("Body")]),
-    ])]),
+    table_row([table_cell([@docx2html.paragraph([@docx2html.text("Body")])])]),
   ])
   inspect(
     @docx2html.convert_document_to_html(mixed_table).value,
@@ -2653,7 +2647,8 @@ test "document converter resolves nested comment references against root comment
   }
   let nested = @docx2html.document([
     @docx2html.paragraph([
-      @docx2html.text("Nested"), @docx2html.comment_reference("4"),
+      @docx2html.text("Nested"),
+      @docx2html.comment_reference("4"),
     ]),
   ])
   let doc = @docx2html.document([nested], comments=[comment])

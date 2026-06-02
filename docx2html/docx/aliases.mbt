@@ -10,6 +10,7 @@ type ConversionResult = @core.ConversionResult
 ///|
 type VerticalAlignment = @document.VerticalAlignment
 
+///|
 type Numbering = @document.Numbering
 
 ///|
@@ -92,11 +93,6 @@ fn xml_element(
 }
 
 ///|
-pub fn xml_text(value : String) -> XmlNode {
-  @xml.xml_text(value)
-}
-
-///|
 fn convert_document(
   document : DocumentElement,
   output_format? : OutputFormat = Html,
@@ -111,29 +107,6 @@ fn convert_document(
   @converter.convert_document(
     document,
     output_format~,
-    style_map~,
-    include_default_style_map~,
-    ignore_empty_paragraphs~,
-    id_prefix~,
-    pretty_print~,
-    convert_image~,
-    transform_document~,
-  )
-}
-
-///|
-pub fn convert_document_to_html(
-  document : DocumentElement,
-  style_map? : Array[String] = [],
-  include_default_style_map? : Bool = true,
-  ignore_empty_paragraphs? : Bool = true,
-  id_prefix? : String = "",
-  pretty_print? : Bool = false,
-  convert_image? : (Image) -> ImageConversion = @converter.data_uri_image_converter,
-  transform_document? : (DocumentElement) -> DocumentElement = @document.identity_document_transform,
-) -> ConversionResult {
-  @converter.convert_document_to_html(
-    document,
     style_map~,
     include_default_style_map~,
     ignore_empty_paragraphs~,
@@ -162,9 +135,7 @@ fn data_uri_image_converter(image : Image) -> ImageConversion {
 }
 
 ///|
-fn identity_document_transform(
-  element : DocumentElement,
-) -> DocumentElement {
+fn identity_document_transform(element : DocumentElement) -> DocumentElement {
   @document.identity_document_transform(element)
 }
 
@@ -208,6 +179,7 @@ fn checkbox(checked : Bool) -> DocumentElement {
   @document.checkbox(checked)
 }
 
+///|
 fn line_break() -> DocumentElement {
   @document.line_break()
 }

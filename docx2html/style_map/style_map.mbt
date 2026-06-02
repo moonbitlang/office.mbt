@@ -74,7 +74,9 @@ pub fn parse_style_map(lines : Array[String]) -> StyleMapParseResult {
 }
 
 ///|
-pub fn read_style_map_with_messages(lines : Array[String]) -> StyleMapParseResult {
+pub fn read_style_map_with_messages(
+  lines : Array[String],
+) -> StyleMapParseResult {
   let mappings : Array[StyleMapping] = []
   let messages : Array[Message] = []
   for line in lines {

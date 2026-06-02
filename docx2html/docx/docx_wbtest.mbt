@@ -41,6 +41,34 @@ fn table_cell(
 }
 
 ///|
+fn xml_text(value : String) -> XmlNode {
+  @xml.xml_text(value)
+}
+
+///|
+fn convert_document_to_html(
+  document : DocumentElement,
+  style_map? : Array[String] = [],
+  include_default_style_map? : Bool = true,
+  ignore_empty_paragraphs? : Bool = true,
+  id_prefix? : String = "",
+  pretty_print? : Bool = false,
+  convert_image? : (Image) -> ImageConversion = @converter.data_uri_image_converter,
+  transform_document? : (DocumentElement) -> DocumentElement = @document.identity_document_transform,
+) -> ConversionResult {
+  @converter.convert_document_to_html(
+    document,
+    style_map~,
+    include_default_style_map~,
+    ignore_empty_paragraphs~,
+    id_prefix~,
+    pretty_print~,
+    convert_image~,
+    transform_document~,
+  )
+}
+
+///|
 fn empty_body_reader(relationships : Relationships) -> BodyReader {
   {
     styles: {},
@@ -267,12 +295,16 @@ test "style document matchers follow Mammoth predicate semantics" {
   )
   debug_inspect(
     [
-      @style_map.ParagraphMatcher(style_id=None, style_name=None, numbering=None).matches(
-        plain,
-      ),
-      @style_map.ParagraphMatcher(style_id=None, style_name=None, numbering=None).matches(
-        styled,
-      ),
+      @style_map.ParagraphMatcher(
+        style_id=None,
+        style_name=None,
+        numbering=None,
+      ).matches(plain),
+      @style_map.ParagraphMatcher(
+        style_id=None,
+        style_name=None,
+        numbering=None,
+      ).matches(styled),
       @style_map.ParagraphMatcher(
         style_id=Some("Heading1"),
         style_name=None,
@@ -2695,13 +2727,7 @@ test "docx w:pict extra content uses alternate fallback" {
 ///|
 test "docx structured checkbox replacement recurses through containers" {
   let nested = document([
-    hyperlink([
-      table([
-        table_row([
-          table_cell([text("placeholder")]),
-        ]),
-      ]),
-    ]),
+    hyperlink([table([table_row([table_cell([text("placeholder")])])])]),
   ])
   let (replaced, found) = replace_first_text_in_element(nested, true)
   inspect(found, content="true")

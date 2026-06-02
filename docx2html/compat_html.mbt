@@ -14,13 +14,7 @@ pub fn html_element(
   fresh? : Bool = false,
   separator? : String = "",
 ) -> HtmlNode {
-  @html.html_element(
-    tag,
-    attributes~,
-    children~,
-    fresh~,
-    separator~,
-  )
+  @html.html_element(tag, attributes~, children~, fresh~, separator~)
 }
 
 ///|
