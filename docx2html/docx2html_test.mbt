@@ -2553,7 +2553,7 @@ test "custom image converters inspect eager image bytes" {
   }
   let doc = @docx2html.document([@docx2html.paragraph([Image(image)])])
   let convert_image = fn(image : @docx2html.Image) {
-    let alt = try @utf8.decode(image.data[:]) catch {
+    let alt = try @utf8.decode(image.data) catch {
       _ => ""
     } noraise {
       text => text

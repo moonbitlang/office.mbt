@@ -36,7 +36,7 @@ pub fn ZipArchive::read_text(
   match self.read_bytes(path) {
     Some(bytes) =>
       Some(
-        @utf8.decode(bytes[:], ignore_bom=true) catch {
+        @utf8.decode(bytes, ignore_bom=true) catch {
           _ => raise InvalidXml(message="part is not valid UTF-8: " + path)
         },
       )

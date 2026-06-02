@@ -601,7 +601,7 @@ pub fn data_uri_image_converter(image : Image) -> ImageConversion {
       "src": "data:" +
       image.content_type +
       ";base64," +
-      @base64.encode(image.data[:]),
+      @base64.encode(image.data),
     }
   })(image)
 }

@@ -7,7 +7,7 @@ fn hello_zip_bytes() -> Bytes {
 
 ///|
 test "zip archive reads vendored fixture bytes" {
-  let zip = @docx2html.open_zip(hello_zip_bytes()[:])
+  let zip = @docx2html.open_zip(hello_zip_bytes())
   assert_true(zip.exists("hello"))
   match zip.read_text("hello") {
     Some(text) => inspect(text, content="Hello world\n")

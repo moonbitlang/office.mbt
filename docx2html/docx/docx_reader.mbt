@@ -2444,7 +2444,7 @@ fn percent_decode_uri_path(path : String) -> String? {
     bytes.push(path[index].to_int().to_byte())
     index += 1
   }
-  try @utf8.decode(Bytes::from_array(bytes)[:]) catch {
+  try @utf8.decode(Bytes::from_array(bytes)) catch {
     _ => None
   } noraise {
     value => Some(value)
