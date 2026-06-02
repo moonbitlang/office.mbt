@@ -171,6 +171,17 @@ test "xml parser handles comments cdata declarations and entities" {
 }
 
 ///|
+test "xml parser scans skipped content containing surrogate pairs" {
+  let root = @docx2html.read_xml_string(
+    "<root><!-- skip \u{1F600} safely --><child /></root>",
+  )
+  inspect(root.children.length(), content="1")
+  inspect(root.first_or_empty("child").name, content="child")
+  let text = @docx2html.read_xml_string("<root>x \u{1F600} &amp; y</root>")
+  inspect(text.text(), content="x \u{1F600} & y")
+}
+
+///|
 test "xml parser follows xmldom numeric entity edge cases" {
   let root = @docx2html.read_xml_string(
     "<root attr=\"&#xG;&#12a;&#X41;&#x;&#;\">&#xG;&#12a;&#X41;&#x;&#55296;&#999999999999999999999;&#-1;&#;</root>",

@@ -534,8 +534,16 @@ fn XmlParser::expect(self : XmlParser, value : String) -> Unit raise DocxError {
 
 ///|
 fn XmlParser::starts_with(self : XmlParser, value : String) -> Bool {
-  self.pos + value.length() <= self.source.length() &&
-  self.source[self.pos:self.pos + value.length()] == value
+  let value_length = value.length()
+  if self.pos + value_length > self.source.length() {
+    return false
+  }
+  for index in 0..<value_length {
+    if self.source[self.pos + index] != value[index] {
+      return false
+    }
+  }
+  true
 }
 
 ///|
@@ -580,8 +588,9 @@ fn decode_xml_entities(value : String) -> String {
         }
       }
     } else {
-      builder.write_char(value.get_char(index).unwrap())
-      index = index + 1
+      let char = value.get_char(index).unwrap()
+      builder.write_char(char)
+      index = index + char.utf16_len()
     }
   }
   builder.to_string()

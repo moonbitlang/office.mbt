@@ -20,6 +20,7 @@ Mammoth's dynamic JS surface.
 | XML/ZIP helpers | Covered | Includes namespace mapping, `mc:AlternateContent`, XML writing quirks, path helpers, content types, relationships, and ZIP reads. |
 | Native CLI | Covered | Supports stdout, output file, output dir image extraction, markdown output, style-map files, pretty HTML, and Mammoth-style option forms. |
 | Upstream fixtures | Covered | All `.docx` fixtures under `.repos/mammoth/test/test-data` are vendored into tests; `empty.zip` is used for invalid-docx coverage. |
+| Large DOCX stress comparison | Covered | `scripts/stress_compare.mjs` samples public docx-corpus manifests, downloads large files into `_build/stress`, and compares CLI output hashes against `.repos/mammoth`. |
 
 ## Carried Fixtures
 
@@ -64,6 +65,7 @@ moon info && moon fmt
 moon test --target native
 moon check --target native --warn-list +73
 moon check --target all --warn-list +73
+node scripts/stress_compare.mjs
 git diff --check
 ```
 

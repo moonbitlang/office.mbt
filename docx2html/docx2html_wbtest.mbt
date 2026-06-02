@@ -2304,6 +2304,21 @@ test "docx complex field instruction text is not emitted" {
 }
 
 ///|
+test "docx complex field marker elements do not warn" {
+  for
+    xml in [
+      "<w:fldChar xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" w:fldCharType=\"begin\" />",
+      "<w:r xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:fldChar w:fldCharType=\"begin\" /></w:r>",
+      "<w:r xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:instrText> HYPERLINK \"http://example.com\"</w:instrText></w:r>",
+    ] {
+    let element = read_xml_string(xml, namespace_map=office_namespace_map())
+    let reader = empty_body_reader({ relationships: [] })
+    ignore(reader.read_element(element))
+    debug_inspect(reader.messages, content="[]")
+  }
+}
+
+///|
 fn manual_word_text_element(value : String) -> XmlElement {
   xml_element("w:t", children=[xml_text(value)])
 }

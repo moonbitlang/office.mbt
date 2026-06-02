@@ -236,5 +236,6 @@ This is an active native-first port. The verified scope covers the core
 `docx -> html`, `docx -> markdown`, and raw-text paths, plus embedded style
 maps, external-image loader callbacks, notes, comments, tables, hyperlinks,
 complex fields, XML/ZIP helpers, and the native CLI. See
-[MammothParity.md](MammothParity.md) for the current parity ledger and the
+[MammothParity.md](MammothParity.md) for the current parity ledger,
+[StressTesting.md](StressTesting.md) for large-file comparison notes, and the
 intentional API differences from Mammoth's JavaScript surface.

@@ -1159,8 +1159,10 @@ fn is_ignored_body_element(name : String) -> Bool {
   name == "w:commentRangeStart" ||
   name == "w:commentRangeEnd" ||
   name == "w:del" ||
+  name == "w:fldChar" ||
   name == "w:footnoteRef" ||
   name == "w:endnoteRef" ||
+  name == "w:instrText" ||
   name == "w:txbxContent" ||
   name == "w:pPr" ||
   name == "w:rPr" ||
