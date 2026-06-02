@@ -624,14 +624,14 @@ test "docx part targets match Mammoth URI resolution" {
 
 ///|
 test "docx related part paths use existing relationship targets before fallbacks" {
-  let relationship_types = [
+  let relationship_types : ReadOnlyArray[String] = [
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
   ]
-  let fallback_paths = [
+  let fallback_paths : ReadOnlyArray[String] = [
     "word/comments.xml", "word/endnotes.xml", "word/footnotes.xml", "word/numbering.xml",
     "word/styles.xml",
   ]
