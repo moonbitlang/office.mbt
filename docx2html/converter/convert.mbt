@@ -122,7 +122,7 @@ fn convert_document_to_nodes(
   if include_default_style_map {
     all_style_lines.append(default_style_map_lines())
   }
-  let parsed_style_map = read_style_map_with_messages(all_style_lines)
+  let parsed_style_map = @style_map.read_style_map_with_messages(all_style_lines)
   let options = ConvertOptions::{
     style_map: parsed_style_map.mappings,
     ignore_empty_paragraphs,
@@ -139,7 +139,7 @@ fn convert_document_to_nodes(
     image_converter: convert_image,
   }
   let nodes = converter.convert_element(document)
-  { nodes, messages: dedupe_messages(converter.messages) }
+  { nodes, messages: @core.dedupe_messages(converter.messages) }
 }
 
 ///|
@@ -262,7 +262,7 @@ fn DocumentConverter::convert_break(
   element : DocumentElement,
   break_type : BreakType,
 ) -> Array[HtmlNode] {
-  match find_style_mapping(element, self.options.style_map) {
+  match @style_map.find_style_mapping(element, self.options.style_map) {
     Some(mapping) => wrap_html_path(mapping.to, [])
     None =>
       match break_type {
@@ -304,10 +304,10 @@ fn DocumentConverter::convert_paragraph(
   if self.options.ignore_empty_paragraphs && html_nodes_are_empty(content) {
     []
   } else {
-    let default_path = [
+    let default_path : Array[HtmlPathElement] = [
       { tag: "p", attributes: {}, fresh: true, separator: None },
     ]
-    if find_style_mapping(element, self.options.style_map) == None {
+    if @style_map.find_style_mapping(element, self.options.style_map) == None {
       self.warn_unrecognised_style(
         "paragraph",
         properties.style_id,
@@ -335,7 +335,7 @@ fn DocumentConverter::convert_run(
   match properties.highlight {
     Some(_) =>
       match
-        find_style_mapping(
+        @style_map.find_style_mapping(
           Run(children~, properties~),
           [
             for mapping in self.options.style_map if mapping.from
@@ -418,7 +418,7 @@ fn path_for_property(
   property : String,
   default_tag : String?,
 ) -> Array[HtmlPathElement] {
-  let matcher = RunPropertyMatcher(property)
+  let matcher = @style_map.RunPropertyMatcher(property)
   for mapping in converter.options.style_map {
     if mapping.from == matcher {
       return mapping.to
@@ -455,7 +455,7 @@ fn DocumentConverter::convert_table(
   properties : TableProperties,
 ) -> Array[HtmlNode] {
   let rows = force_write_nodes(self.convert_table_children(children))
-  let default_path = [
+  let default_path : Array[HtmlPathElement] = [
     { tag: "table", attributes: {}, fresh: true, separator: None },
   ]
   ignore(properties)
@@ -577,7 +577,7 @@ fn DocumentConverter::convert_table_cell(
 
 ///|
 fn force_write_nodes(children : Array[HtmlNode]) -> Array[HtmlNode] {
-  let nodes = [ForceWrite]
+  let nodes = [@html.ForceWrite]
   nodes.append(children)
   nodes
 }
@@ -726,7 +726,7 @@ fn DocumentConverter::convert_comment_reference(
   element : DocumentElement,
   comment_id : String,
 ) -> Array[HtmlNode] {
-  match find_style_mapping(element, self.options.style_map) {
+  match @style_map.find_style_mapping(element, self.options.style_map) {
     Some(mapping) =>
       match self.find_comment(comment_id) {
         Some(comment) => {
@@ -832,7 +832,7 @@ fn DocumentConverter::wrap_with_style(
   content : Array[HtmlNode],
   default_path : Array[HtmlPathElement],
 ) -> Array[HtmlNode] {
-  let path = match find_style_mapping(element, self.options.style_map) {
+  let path = match @style_map.find_style_mapping(element, self.options.style_map) {
     Some(mapping) => mapping.to
     None => default_path
   }
@@ -870,96 +870,10 @@ fn html_nodes_are_empty(nodes : Array[HtmlNode]) -> Bool {
       TextNode(value) => if value != "" { return false }
       ForceWrite => return false
       Element(tag~, children~, ..) =>
-        if is_void_html_tag(tag) || !html_nodes_are_empty(children) {
+        if @html.is_void_html_tag(tag) || !html_nodes_are_empty(children) {
           return false
         }
     }
   }
   true
-}
-
-///|
-pub fn simplify_html(nodes : Array[HtmlNode]) -> Array[HtmlNode] {
-  let result : Array[HtmlNode] = []
-  for node in nodes {
-    match simplify_html_node(node) {
-      Some(simplified) => append_simplified(result, simplified)
-      None => ()
-    }
-  }
-  result
-}
-
-///|
-fn simplify_html_node(node : HtmlNode) -> HtmlNode? {
-  match node {
-    TextNode("") => None
-    Element(tag~, attributes~, children~, fresh~, separator~) => {
-      let children = simplify_html(children)
-      if children.is_empty() && !is_void_html_tag(tag) {
-        None
-      } else {
-        Some(Element(tag~, attributes~, children~, fresh~, separator~))
-      }
-    }
-    _ => Some(node)
-  }
-}
-
-///|
-fn append_simplified(result : Array[HtmlNode], node : HtmlNode) -> Unit {
-  if result.length() == 0 {
-    result.push(node)
-  } else {
-    let last_index = result.length() - 1
-    match (result[last_index], node) {
-      (
-        Element(
-          tag=tag_a,
-          attributes=attrs_a,
-          children=children_a,
-          fresh=fresh_a,
-          separator=separator_a
-        ),
-        Element(
-          tag=tag_b,
-          attributes=attrs_b,
-          children=children_b,
-          fresh=false,
-          separator=separator_b
-        ),
-      ) =>
-        if html_tag_matches(tag_b, tag_a) && attrs_a == attrs_b {
-          let merged = merge_html_children(children_a, children_b, separator_b)
-          result[last_index] = Element(
-            tag=tag_a,
-            attributes=attrs_a,
-            children=merged,
-            fresh=fresh_a,
-            separator=separator_a,
-          )
-        } else {
-          result.push(node)
-        }
-      _ => result.push(node)
-    }
-  }
-}
-
-///|
-fn merge_html_children(
-  left : Array[HtmlNode],
-  right : Array[HtmlNode],
-  separator : String?,
-) -> Array[HtmlNode] {
-  let merged : Array[HtmlNode] = []
-  merged.append(left)
-  match separator {
-    Some(value) => append_simplified(merged, html_text(value))
-    None => ()
-  }
-  for child in right {
-    append_simplified(merged, child)
-  }
-  merged
 }

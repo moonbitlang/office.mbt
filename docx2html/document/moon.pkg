@@ -1,0 +1,3 @@
+import {
+  "bobzhang/docx2html/core" @core,
+}

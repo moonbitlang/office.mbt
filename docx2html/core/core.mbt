@@ -34,7 +34,7 @@ pub fn success(value : String) -> ConversionResult {
 }
 
 ///|
-fn dedupe_messages(messages : Array[Message]) -> Array[Message] {
+pub fn dedupe_messages(messages : Array[Message]) -> Array[Message] {
   let result : Array[Message] = []
   for message in messages {
     if !result.contains(message) {

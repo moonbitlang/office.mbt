@@ -1,0 +1,5 @@
+import {
+  "bobzhang/docx2html/core" @core,
+  "hustcer/fzip",
+  "moonbitlang/core/encoding/utf8",
+}

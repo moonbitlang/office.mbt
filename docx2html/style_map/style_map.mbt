@@ -74,7 +74,7 @@ pub fn parse_style_map(lines : Array[String]) -> StyleMapParseResult {
 }
 
 ///|
-fn read_style_map_with_messages(lines : Array[String]) -> StyleMapParseResult {
+pub fn read_style_map_with_messages(lines : Array[String]) -> StyleMapParseResult {
   let mappings : Array[StyleMapping] = []
   let messages : Array[Message] = []
   for line in lines {
@@ -503,7 +503,7 @@ fn parse_style_break_matcher(
       style_parse_error(line, index, end, "close-square-bracket"),
     )
   }
-  let break_type = match break_type {
+  let break_type : BreakType = match break_type {
     "line" => Line
     "page" => Page
     "column" => Column
@@ -1011,7 +1011,7 @@ fn write_style_escape(
 }
 
 ///|
-fn DocumentMatcher::matches(
+pub fn DocumentMatcher::matches(
   self : DocumentMatcher,
   element : DocumentElement,
 ) -> Bool {
@@ -1068,7 +1068,7 @@ fn style_name_matches(expected : StyleNameMatcher?, actual : String?) -> Bool {
 }
 
 ///|
-fn find_style_mapping(
+pub fn find_style_mapping(
   element : DocumentElement,
   style_map : Array[StyleMapping],
 ) -> StyleMapping? {

@@ -26,6 +26,6 @@ fn children_to_raw_text(children : Array[DocumentElement]) -> String {
 ///|
 pub fn extract_raw_text_from_document(
   document : DocumentElement,
-) -> ConversionResult {
-  success(document.to_raw_text())
+) -> @core.ConversionResult {
+  @core.success(document.to_raw_text())
 }

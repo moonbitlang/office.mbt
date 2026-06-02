@@ -3,6 +3,44 @@
 // Keep them focused; public behavior belongs in `_test.mbt`.
 
 ///|
+type DocumentMatcher = @style_map.DocumentMatcher
+
+///|
+fn hyperlink(
+  children : Array[DocumentElement],
+  href? : String? = None,
+  anchor? : String? = None,
+  target_frame? : String? = None,
+) -> DocumentElement {
+  @document.hyperlink(children, href~, anchor~, target_frame~)
+}
+
+///|
+fn table(
+  children : Array[DocumentElement],
+  properties? : TableProperties = @document.TableProperties::default(),
+) -> DocumentElement {
+  @document.table(children, properties~)
+}
+
+///|
+fn table_row(
+  children : Array[DocumentElement],
+  is_header? : Bool = false,
+) -> DocumentElement {
+  @document.table_row(children, is_header~)
+}
+
+///|
+fn table_cell(
+  children : Array[DocumentElement],
+  col_span? : Int = 1,
+  row_span? : Int = 1,
+) -> DocumentElement {
+  @document.table_cell(children, col_span~, row_span~)
+}
+
+///|
 fn empty_body_reader(relationships : Relationships) -> BodyReader {
   {
     styles: {},
@@ -229,81 +267,81 @@ test "style document matchers follow Mammoth predicate semantics" {
   )
   debug_inspect(
     [
-      ParagraphMatcher(style_id=None, style_name=None, numbering=None).matches(
+      @style_map.ParagraphMatcher(style_id=None, style_name=None, numbering=None).matches(
         plain,
       ),
-      ParagraphMatcher(style_id=None, style_name=None, numbering=None).matches(
+      @style_map.ParagraphMatcher(style_id=None, style_name=None, numbering=None).matches(
         styled,
       ),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=Some("Heading1"),
         style_name=None,
         numbering=None,
       ).matches(plain),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=Some("Heading1"),
         style_name=None,
         numbering=None,
       ).matches(styled),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=Some("Heading2"),
         style_name=None,
         numbering=None,
       ).matches(styled),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=Some(ExactStyleName("heading 1")),
         numbering=None,
       ).matches(styled),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=Some(ExactStyleName("heading 1")),
         numbering=None,
       ).matches(other_styled),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=Some(PrefixStyleName("Head")),
         numbering=None,
       ).matches(styled),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=Some(PrefixStyleName("Heading")),
         numbering=None,
       ).matches(infix_heading),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=Some(PrefixStyleName("Heading")),
         numbering=None,
       ).matches(short_heading),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=Some(PrefixStyleName("Heading")),
         numbering=None,
       ).matches(near_prefix_heading),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=None,
         numbering=Some({ is_ordered: true, level: 1 }),
       ).matches(plain),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=None,
         numbering=Some({ is_ordered: true, level: 1 }),
       ).matches(ordered_level_one),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=None,
         numbering=Some({ is_ordered: true, level: 1 }),
       ).matches(ordered_level_zero),
-      ParagraphMatcher(
+      @style_map.ParagraphMatcher(
         style_id=None,
         style_name=None,
         numbering=Some({ is_ordered: true, level: 1 }),
       ).matches(unordered_level_one),
-      HighlightMatcher(None).matches(plain),
-      HighlightMatcher(None).matches(highlighted),
-      HighlightMatcher(Some("yellow")).matches(highlighted),
-      HighlightMatcher(Some("yellow")).matches(red_highlighted),
+      @style_map.HighlightMatcher(None).matches(plain),
+      @style_map.HighlightMatcher(None).matches(highlighted),
+      @style_map.HighlightMatcher(Some("yellow")).matches(highlighted),
+      @style_map.HighlightMatcher(Some("yellow")).matches(red_highlighted),
     ],
     content=(
       #|[
@@ -2656,34 +2694,15 @@ test "docx w:pict extra content uses alternate fallback" {
 
 ///|
 test "docx structured checkbox replacement recurses through containers" {
-  let nested = Document(
-    children=[
-      Hyperlink(
-        children=[
-          Table(
-            children=[
-              TableRow(
-                children=[
-                  TableCell(
-                    children=[text("placeholder")],
-                    col_span=1,
-                    row_span=1,
-                  ),
-                ],
-                is_header=false,
-              ),
-            ],
-            properties=TableProperties::default(),
-          ),
-        ],
-        href=None,
-        anchor=None,
-        target_frame=None,
-      ),
-    ],
-    notes=[],
-    comments=[],
-  )
+  let nested = document([
+    hyperlink([
+      table([
+        table_row([
+          table_cell([text("placeholder")]),
+        ]),
+      ]),
+    ]),
+  ])
   let (replaced, found) = replace_first_text_in_element(nested, true)
   inspect(found, content="true")
   inspect(

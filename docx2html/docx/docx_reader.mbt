@@ -237,7 +237,7 @@ fn prepend_messages(
     let combined : Array[Message] = []
     combined.append(messages)
     combined.append(result.messages)
-    { value: result.value, messages: dedupe_messages(combined) }
+    { value: result.value, messages: @core.dedupe_messages(combined) }
   }
 }
 
@@ -357,7 +357,7 @@ fn read_docx_zip_with_messages(
   messages.append(notes_result.messages)
   messages.append(comments_result.messages)
   messages.append(document_result.messages)
-  { document: document_result.document, messages: dedupe_messages(messages) }
+  { document: document_result.document, messages: @core.dedupe_messages(messages) }
 }
 
 ///|
@@ -798,7 +798,7 @@ fn read_notes_for_document(
   )
   notes.append(endnotes.notes)
   messages.append(endnotes.messages)
-  { notes, messages: dedupe_messages(messages) }
+  { notes, messages: @core.dedupe_messages(messages) }
 }
 
 ///|
@@ -2084,6 +2084,15 @@ fn BodyReader::read_hyperlink(
         None => self.read_children(element.children)
       }
   }
+}
+
+///|
+fn replace_url_fragment(href : String, fragment : String) -> String {
+  let base = match href.find("#") {
+    Some(index) => href[:index].to_owned()
+    None => href
+  }
+  base + "#" + fragment
 }
 
 ///|

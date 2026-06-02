@@ -249,7 +249,7 @@ fn html_tag_matches(candidate : String, actual : String) -> Bool {
 }
 
 ///|
-fn is_void_html_tag(tag : String) -> Bool {
+pub fn is_void_html_tag(tag : String) -> Bool {
   let tag = html_primary_tag(tag)
   tag == "area" ||
   tag == "base" ||
