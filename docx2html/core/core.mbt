@@ -1,20 +1,24 @@
 ///|
+/// Diagnostic emitted while reading or converting a document.
 pub(all) enum Message {
   Warning(String)
   Error(String)
 } derive(Debug, Eq)
 
 ///|
+/// Creates a warning diagnostic.
 pub fn warning(message : String) -> Message {
   Warning(message)
 }
 
 ///|
+/// Creates an error diagnostic.
 pub fn error(message : String) -> Message {
   Error(message)
 }
 
 ///|
+/// Errors raised for invalid archives, invalid XML, missing parts, or unsupported input.
 pub(all) suberror DocxError {
   InvalidZip(message~ : String)
   InvalidXml(message~ : String)
@@ -23,17 +27,20 @@ pub(all) suberror DocxError {
 } derive(Debug, Eq)
 
 ///|
+/// Converted value together with accumulated diagnostics.
 pub(all) struct ConversionResult {
   value : String
   messages : Array[Message]
 } derive(Debug, Eq)
 
 ///|
+/// Creates a successful conversion result with no diagnostics.
 pub fn success(value : String) -> ConversionResult {
   { value, messages: [] }
 }
 
 ///|
+/// Removes duplicate diagnostics while preserving order.
 pub fn dedupe_messages(messages : Array[Message]) -> Array[Message] {
   let result : Array[Message] = []
   for message in messages {
@@ -45,6 +52,7 @@ pub fn dedupe_messages(messages : Array[Message]) -> Array[Message] {
 }
 
 ///|
+/// Maps the converted value while preserving diagnostics.
 pub fn ConversionResult::map(
   self : ConversionResult,
   f : (String) -> String raise?,
@@ -53,6 +61,7 @@ pub fn ConversionResult::map(
 }
 
 ///|
+/// Flat-maps the converted value while preserving diagnostics.
 pub fn ConversionResult::flat_map(
   self : ConversionResult,
   f : (String) -> ConversionResult raise?,
@@ -65,6 +74,7 @@ pub fn ConversionResult::flat_map(
 }
 
 ///|
+/// Combines two conversion results.
 pub fn ConversionResult::combine(
   self : ConversionResult,
   other : ConversionResult,
@@ -73,6 +83,7 @@ pub fn ConversionResult::combine(
 }
 
 ///|
+/// Combines conversion results, preserving values and diagnostics.
 pub fn combine_results(results : Array[ConversionResult]) -> ConversionResult {
   let value = StringBuilder()
   let messages : Array[Message] = []

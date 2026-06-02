@@ -1,4 +1,5 @@
 ///|
+/// Returns a document element unchanged.
 pub fn identity_document_transform(
   element : DocumentElement,
 ) -> DocumentElement {
@@ -6,6 +7,7 @@ pub fn identity_document_transform(
 }
 
 ///|
+/// Applies a transform recursively to document elements.
 pub fn transform_elements(
   element : DocumentElement,
   transform : (DocumentElement) -> DocumentElement,
@@ -57,6 +59,7 @@ fn transform_children(
 }
 
 ///|
+/// Builds a transform that targets paragraph elements.
 pub fn transform_paragraphs(
   transform : (DocumentElement) -> DocumentElement,
 ) -> (DocumentElement) -> DocumentElement {
@@ -71,6 +74,7 @@ pub fn transform_paragraphs(
 }
 
 ///|
+/// Builds a transform that targets run elements.
 pub fn transform_runs(
   transform : (DocumentElement) -> DocumentElement,
 ) -> (DocumentElement) -> DocumentElement {
@@ -85,6 +89,7 @@ pub fn transform_runs(
 }
 
 ///|
+/// Returns all descendants of a document element.
 pub fn document_descendants(
   element : DocumentElement,
 ) -> Array[DocumentElement] {
@@ -92,6 +97,7 @@ pub fn document_descendants(
 }
 
 ///|
+/// Returns descendants that satisfy a predicate.
 pub fn document_descendants_where(
   element : DocumentElement,
   predicate : (DocumentElement) -> Bool,

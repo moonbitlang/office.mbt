@@ -1,12 +1,15 @@
 ///|
+/// Node in the intermediate HTML tree.
 pub type HtmlNode = @html.HtmlNode
 
 ///|
+/// Builds an HTML text node.
 pub fn html_text(value : String) -> HtmlNode {
   @html.html_text(value)
 }
 
 ///|
+/// Builds an HTML element node.
 pub fn html_element(
   tag : String,
   attributes? : Map[String, String] = {},
@@ -18,6 +21,7 @@ pub fn html_element(
 }
 
 ///|
+/// Builds an HTML element with a fresh generated id.
 pub fn fresh_html_element(
   tag : String,
   attributes? : Map[String, String] = {},
@@ -28,6 +32,7 @@ pub fn fresh_html_element(
 }
 
 ///|
+/// Serializes HTML nodes to a string.
 pub fn write_html(
   nodes : Array[HtmlNode],
   pretty_print? : Bool = false,
@@ -36,26 +41,31 @@ pub fn write_html(
 }
 
 ///|
+/// Escapes text for HTML content.
 pub fn escape_html(value : String) -> String {
   @html.escape_html(value)
 }
 
 ///|
+/// Escapes text for an HTML attribute value.
 pub fn escape_html_attribute(value : String) -> String {
   @html.escape_html_attribute(value)
 }
 
 ///|
+/// Serializes HTML nodes to Markdown.
 pub fn write_markdown(nodes : Array[HtmlNode]) -> String {
   @html.write_markdown(nodes)
 }
 
 ///|
+/// Escapes text for Markdown output.
 pub fn escape_markdown_text(value : String) -> String {
   @html.escape_markdown_text(value)
 }
 
 ///|
+/// Simplifies adjacent and redundant HTML nodes.
 pub fn simplify_html(nodes : Array[HtmlNode]) -> Array[HtmlNode] {
   @html.simplify_html(nodes)
 }

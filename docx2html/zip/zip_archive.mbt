@@ -1,9 +1,11 @@
 ///|
+/// In-memory ZIP archive used to read DOCX parts.
 pub(all) struct ZipArchive {
   entries : Map[String, Bytes]
 } derive(Debug, Eq)
 
 ///|
+/// Opens ZIP bytes into an in-memory archive.
 pub fn open_zip(data : BytesView) -> ZipArchive raise DocxError {
   let fixed = FixedArray::from_array(data.to_array())
   let entries = @fzip.unzip_sync(fixed) catch {
@@ -19,16 +21,19 @@ pub fn open_zip(data : BytesView) -> ZipArchive raise DocxError {
 }
 
 ///|
+/// Returns whether a ZIP entry exists.
 pub fn ZipArchive::exists(self : ZipArchive, path : String) -> Bool {
   self.entries.contains(path)
 }
 
 ///|
+/// Reads a ZIP entry as bytes.
 pub fn ZipArchive::read_bytes(self : ZipArchive, path : String) -> Bytes? {
   self.entries.get(path)
 }
 
 ///|
+/// Reads a ZIP entry as UTF-8 text.
 pub fn ZipArchive::read_text(
   self : ZipArchive,
   path : String,
@@ -45,6 +50,7 @@ pub fn ZipArchive::read_text(
 }
 
 ///|
+/// Splits a ZIP path into directory and filename.
 pub fn split_zip_path(path : String) -> (String, String) {
   let mut index = path.length() - 1
   while index >= 0 {
@@ -57,6 +63,7 @@ pub fn split_zip_path(path : String) -> (String, String) {
 }
 
 ///|
+/// Joins ZIP path components with normalized separators.
 pub fn join_zip_path(parts : Array[String]) -> String {
   let relevant : Array[String] = []
   for part in parts {

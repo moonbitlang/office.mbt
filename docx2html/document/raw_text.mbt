@@ -1,4 +1,5 @@
 ///|
+/// Converts a document element to raw text.
 pub fn DocumentElement::to_raw_text(self : DocumentElement) -> String {
   match self {
     Text(value) => value
@@ -24,6 +25,7 @@ fn children_to_raw_text(children : Array[DocumentElement]) -> String {
 }
 
 ///|
+/// Extracts raw text from a document tree.
 pub fn extract_raw_text_from_document(
   document : DocumentElement,
 ) -> @core.ConversionResult {

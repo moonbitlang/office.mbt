@@ -1,4 +1,5 @@
 ///|
+/// Node in the intermediate HTML tree.
 pub(all) enum HtmlNode {
   Element(
     tag~ : String,
@@ -12,11 +13,13 @@ pub(all) enum HtmlNode {
 } derive(Debug, Eq)
 
 ///|
+/// Builds an HTML text node.
 pub fn html_text(value : String) -> HtmlNode {
   TextNode(value)
 }
 
 ///|
+/// Builds an HTML element node.
 pub fn html_element(
   tag : String,
   attributes? : Map[String, String] = {},
@@ -34,6 +37,7 @@ pub fn html_element(
 }
 
 ///|
+/// Builds an HTML element with a fresh generated id.
 pub fn fresh_html_element(
   tag : String,
   attributes? : Map[String, String] = {},
@@ -59,6 +63,7 @@ fn separator_option(value : String) -> String? {
 }
 
 ///|
+/// Serializes HTML nodes to a string.
 pub fn write_html(
   nodes : Array[HtmlNode],
   pretty_print? : Bool = false,
@@ -249,6 +254,7 @@ fn html_tag_matches(candidate : String, actual : String) -> Bool {
 }
 
 ///|
+/// Returns whether a tag is serialized without an end tag.
 pub fn is_void_html_tag(tag : String) -> Bool {
   let tag = html_primary_tag(tag)
   tag == "area" ||
@@ -310,6 +316,7 @@ fn html_attribute_rank(key : String) -> Int {
 }
 
 ///|
+/// Escapes text for HTML content.
 pub fn escape_html(value : String) -> String {
   let builder = StringBuilder()
   for char in value {
@@ -324,6 +331,7 @@ pub fn escape_html(value : String) -> String {
 }
 
 ///|
+/// Escapes text for an HTML attribute value.
 pub fn escape_html_attribute(value : String) -> String {
   let builder = StringBuilder()
   for char in value {

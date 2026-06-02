@@ -1,4 +1,5 @@
 ///|
+/// Vertical positioning for text within a run.
 pub(all) enum VerticalAlignment {
   Baseline
   Superscript
@@ -6,6 +7,7 @@ pub(all) enum VerticalAlignment {
 } derive(Debug, Eq)
 
 ///|
+/// Kind of break represented in the document model.
 pub(all) enum BreakType {
   Line
   Page
@@ -13,17 +15,20 @@ pub(all) enum BreakType {
 } derive(Debug, Eq)
 
 ///|
+/// List numbering metadata attached to a paragraph.
 pub(all) struct Numbering {
   is_ordered : Bool
   level : Int
 } derive(Debug, Eq)
 
 ///|
+/// Builds paragraph numbering metadata.
 pub fn numbering(is_ordered : Bool, level : Int) -> Numbering {
   { is_ordered, level }
 }
 
 ///|
+/// Paragraph indentation values from WordprocessingML.
 pub(all) struct Indent {
   start : String?
   end : String?
@@ -40,6 +45,7 @@ fn none_if_empty(value : String?) -> String? {
 }
 
 ///|
+/// Builds paragraph indentation metadata.
 pub fn indent(
   start? : String? = None,
   end? : String? = None,
@@ -55,11 +61,13 @@ pub fn indent(
 }
 
 ///|
+/// Returns empty indentation metadata.
 pub fn Indent::default() -> Indent {
   indent()
 }
 
 ///|
+/// Formatting metadata attached to a paragraph.
 pub(all) struct ParagraphProperties {
   style_id : String?
   style_name : String?
@@ -69,6 +77,7 @@ pub(all) struct ParagraphProperties {
 } derive(Debug, Eq)
 
 ///|
+/// Builds paragraph formatting metadata.
 pub fn paragraph_properties(
   style_id? : String? = None,
   style_name? : String? = None,
@@ -86,11 +95,13 @@ pub fn paragraph_properties(
 }
 
 ///|
+/// Returns default paragraph formatting metadata.
 pub fn ParagraphProperties::default() -> ParagraphProperties {
   paragraph_properties()
 }
 
 ///|
+/// Formatting metadata attached to a run.
 pub(all) struct RunProperties {
   style_id : String?
   style_name : String?
@@ -107,6 +118,7 @@ pub(all) struct RunProperties {
 } derive(Debug, Eq)
 
 ///|
+/// Builds run formatting metadata.
 pub fn run_properties(
   style_id? : String? = None,
   style_name? : String? = None,
@@ -138,17 +150,20 @@ pub fn run_properties(
 }
 
 ///|
+/// Returns default run formatting metadata.
 pub fn RunProperties::default() -> RunProperties {
   run_properties()
 }
 
 ///|
+/// Formatting metadata attached to a table.
 pub(all) struct TableProperties {
   style_id : String?
   style_name : String?
 } derive(Debug, Eq)
 
 ///|
+/// Builds table formatting metadata.
 pub fn table_properties(
   style_id? : String? = None,
   style_name? : String? = None,
@@ -157,11 +172,13 @@ pub fn table_properties(
 }
 
 ///|
+/// Returns default table formatting metadata.
 pub fn TableProperties::default() -> TableProperties {
   table_properties()
 }
 
 ///|
+/// Footnote or endnote content in the document model.
 pub(all) struct Note {
   note_type : String
   note_id : String
@@ -169,6 +186,7 @@ pub(all) struct Note {
 } derive(Debug, Eq)
 
 ///|
+/// Word comment metadata and body content.
 pub(all) struct Comment {
   comment_id : String
   body : Array[DocumentElement]
@@ -177,6 +195,7 @@ pub(all) struct Comment {
 } derive(Debug, Eq)
 
 ///|
+/// Image payload and metadata read from a DOCX package.
 pub(all) struct Image {
   content_type : String
   alt_text : String?
@@ -184,6 +203,7 @@ pub(all) struct Image {
 } derive(Debug, Eq)
 
 ///|
+/// Node in the Mammoth-style document tree.
 pub(all) enum DocumentElement {
   Document(
     children~ : Array[DocumentElement],
@@ -219,6 +239,7 @@ pub(all) enum DocumentElement {
 } derive(Debug, Eq)
 
 ///|
+/// Builds a document element.
 pub fn document(
   children : Array[DocumentElement],
   notes? : Array[Note] = [],
@@ -228,6 +249,7 @@ pub fn document(
 }
 
 ///|
+/// Builds a paragraph element.
 pub fn paragraph(
   children : Array[DocumentElement],
   properties? : ParagraphProperties = ParagraphProperties::default(),
@@ -236,6 +258,7 @@ pub fn paragraph(
 }
 
 ///|
+/// Builds a run element.
 pub fn run(
   children : Array[DocumentElement],
   properties? : RunProperties = RunProperties::default(),
@@ -244,21 +267,25 @@ pub fn run(
 }
 
 ///|
+/// Builds a text element.
 pub fn text(value : String) -> DocumentElement {
   Text(value)
 }
 
 ///|
+/// Builds a tab element.
 pub fn tab() -> DocumentElement {
   Tab
 }
 
 ///|
+/// Builds a checkbox element.
 pub fn checkbox(checked : Bool) -> DocumentElement {
   Checkbox(checked)
 }
 
 ///|
+/// Builds a hyperlink element.
 pub fn hyperlink(
   children : Array[DocumentElement],
   href? : String? = None,
@@ -269,16 +296,19 @@ pub fn hyperlink(
 }
 
 ///|
+/// Builds a note-reference element.
 pub fn note_reference(note_type : String, note_id : String) -> DocumentElement {
   NoteReference(note_type~, note_id~)
 }
 
 ///|
+/// Builds a comment-reference element.
 pub fn comment_reference(comment_id : String) -> DocumentElement {
   CommentReference(comment_id)
 }
 
 ///|
+/// Builds an image element.
 pub fn image(
   content_type : String,
   data : Bytes,
@@ -288,6 +318,7 @@ pub fn image(
 }
 
 ///|
+/// Builds a table element.
 pub fn table(
   children : Array[DocumentElement],
   properties? : TableProperties = TableProperties::default(),
@@ -296,6 +327,7 @@ pub fn table(
 }
 
 ///|
+/// Builds a table-row element.
 pub fn table_row(
   children : Array[DocumentElement],
   is_header? : Bool = false,
@@ -304,6 +336,7 @@ pub fn table_row(
 }
 
 ///|
+/// Builds a table-cell element.
 pub fn table_cell(
   children : Array[DocumentElement],
   col_span? : Int = 1,
@@ -313,11 +346,13 @@ pub fn table_cell(
 }
 
 ///|
+/// Builds a bookmark-start element.
 pub fn bookmark_start(name : String) -> DocumentElement {
   BookmarkStart(name)
 }
 
 ///|
+/// Builds a footnote or endnote.
 pub fn note(
   note_type : String,
   note_id : String,
@@ -327,6 +362,7 @@ pub fn note(
 }
 
 ///|
+/// Builds a document comment.
 pub fn comment(
   comment_id : String,
   body : Array[DocumentElement],
@@ -337,16 +373,19 @@ pub fn comment(
 }
 
 ///|
+/// Builds a line-break element.
 pub fn line_break() -> DocumentElement {
   Break(Line)
 }
 
 ///|
+/// Builds a page-break element.
 pub fn page_break() -> DocumentElement {
   Break(Page)
 }
 
 ///|
+/// Builds a column-break element.
 pub fn column_break() -> DocumentElement {
   Break(Column)
 }

@@ -1,4 +1,5 @@
 ///|
+/// Simplifies adjacent and redundant HTML nodes.
 pub fn simplify_html(nodes : Array[HtmlNode]) -> Array[HtmlNode] {
   let result : Array[HtmlNode] = []
   for node in nodes {

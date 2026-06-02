@@ -56,6 +56,7 @@ priv struct ContentTypes {
 }
 
 ///|
+/// Document tree plus diagnostics produced while reading a DOCX package.
 pub(all) struct DocxReadResult {
   document : DocumentElement
   messages : Array[Message]
@@ -111,6 +112,7 @@ priv struct TableCellForSpan {
 }
 
 ///|
+/// Converts DOCX bytes to HTML.
 pub fn convert_to_html(
   docx : BytesView,
   style_map? : Array[String] = [],
@@ -141,6 +143,7 @@ pub fn convert_to_html(
 }
 
 ///|
+/// Converts DOCX bytes to Markdown.
 pub fn convert_to_markdown(
   docx : BytesView,
   style_map? : Array[String] = [],
@@ -169,6 +172,7 @@ pub fn convert_to_markdown(
 }
 
 ///|
+/// Converts DOCX bytes using the requested output format.
 pub fn convert(
   docx : BytesView,
   output_format? : OutputFormat = Html,
@@ -210,6 +214,7 @@ pub fn convert(
 }
 
 ///|
+/// Extracts raw text from DOCX bytes.
 pub fn extract_raw_text(
   docx : BytesView,
   external_file_access? : Bool = false,
@@ -242,6 +247,7 @@ fn prepend_messages(
 }
 
 ///|
+/// Reads the embedded style map from DOCX bytes, if present.
 pub fn read_embedded_style_map(docx : BytesView) -> String? raise DocxError {
   read_embedded_style_map_from_zip(open_zip(docx))
 }
@@ -271,6 +277,7 @@ fn read_embedded_style_map_from_zip(
 }
 
 ///|
+/// Reads DOCX bytes into a document tree.
 pub fn read_docx(
   docx : BytesView,
   external_file_access? : Bool = false,
@@ -280,6 +287,7 @@ pub fn read_docx(
 }
 
 ///|
+/// Reads DOCX bytes into a document tree and diagnostics.
 pub fn read_docx_with_messages(
   docx : BytesView,
   external_file_access? : Bool = false,

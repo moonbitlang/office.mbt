@@ -1,42 +1,55 @@
 ///|
+/// Vertical positioning for text within a run.
 pub type VerticalAlignment = @document.VerticalAlignment
 
 ///|
+/// Kind of break represented in the document model.
 pub type BreakType = @document.BreakType
 
 ///|
+/// List numbering metadata attached to a paragraph.
 pub type Numbering = @document.Numbering
 
 ///|
+/// Paragraph indentation values from WordprocessingML.
 pub type Indent = @document.Indent
 
 ///|
+/// Formatting metadata attached to a paragraph.
 pub type ParagraphProperties = @document.ParagraphProperties
 
 ///|
+/// Formatting metadata attached to a run.
 pub type RunProperties = @document.RunProperties
 
 ///|
+/// Formatting metadata attached to a table.
 pub type TableProperties = @document.TableProperties
 
 ///|
+/// Footnote or endnote content in the document model.
 pub type Note = @document.Note
 
 ///|
+/// Word comment metadata and body content.
 pub type Comment = @document.Comment
 
 ///|
+/// Image payload and metadata read from a DOCX package.
 pub type Image = @document.Image
 
 ///|
+/// Node in the Mammoth-style document tree.
 pub type DocumentElement = @document.DocumentElement
 
 ///|
+/// Builds paragraph numbering metadata.
 pub fn numbering(is_ordered : Bool, level : Int) -> Numbering {
   @document.numbering(is_ordered, level)
 }
 
 ///|
+/// Builds paragraph indentation metadata.
 pub fn indent(
   start? : String? = None,
   end? : String? = None,
@@ -47,6 +60,7 @@ pub fn indent(
 }
 
 ///|
+/// Builds paragraph formatting metadata.
 pub fn paragraph_properties(
   style_id? : String? = None,
   style_name? : String? = None,
@@ -64,6 +78,7 @@ pub fn paragraph_properties(
 }
 
 ///|
+/// Builds run formatting metadata.
 pub fn run_properties(
   style_id? : String? = None,
   style_name? : String? = None,
@@ -95,6 +110,7 @@ pub fn run_properties(
 }
 
 ///|
+/// Builds table formatting metadata.
 pub fn table_properties(
   style_id? : String? = None,
   style_name? : String? = None,
@@ -103,6 +119,7 @@ pub fn table_properties(
 }
 
 ///|
+/// Builds a document element.
 pub fn document(
   children : Array[DocumentElement],
   notes? : Array[Note] = [],
@@ -112,6 +129,7 @@ pub fn document(
 }
 
 ///|
+/// Builds a paragraph element.
 pub fn paragraph(
   children : Array[DocumentElement],
   properties? : ParagraphProperties = @document.ParagraphProperties::default(),
@@ -120,6 +138,7 @@ pub fn paragraph(
 }
 
 ///|
+/// Builds a run element.
 pub fn run(
   children : Array[DocumentElement],
   properties? : RunProperties = @document.RunProperties::default(),
@@ -128,21 +147,25 @@ pub fn run(
 }
 
 ///|
+/// Builds a text element.
 pub fn text(value : String) -> DocumentElement {
   @document.text(value)
 }
 
 ///|
+/// Builds a tab element.
 pub fn tab() -> DocumentElement {
   @document.tab()
 }
 
 ///|
+/// Builds a checkbox element.
 pub fn checkbox(checked : Bool) -> DocumentElement {
   @document.checkbox(checked)
 }
 
 ///|
+/// Builds a hyperlink element.
 pub fn hyperlink(
   children : Array[DocumentElement],
   href? : String? = None,
@@ -153,16 +176,19 @@ pub fn hyperlink(
 }
 
 ///|
+/// Builds a note-reference element.
 pub fn note_reference(note_type : String, note_id : String) -> DocumentElement {
   @document.note_reference(note_type, note_id)
 }
 
 ///|
+/// Builds a comment-reference element.
 pub fn comment_reference(comment_id : String) -> DocumentElement {
   @document.comment_reference(comment_id)
 }
 
 ///|
+/// Builds an image element.
 pub fn image(
   content_type : String,
   data : Bytes,
@@ -172,6 +198,7 @@ pub fn image(
 }
 
 ///|
+/// Builds a table element.
 pub fn table(
   children : Array[DocumentElement],
   properties? : TableProperties = @document.TableProperties::default(),
@@ -180,6 +207,7 @@ pub fn table(
 }
 
 ///|
+/// Builds a table-row element.
 pub fn table_row(
   children : Array[DocumentElement],
   is_header? : Bool = false,
@@ -188,6 +216,7 @@ pub fn table_row(
 }
 
 ///|
+/// Builds a table-cell element.
 pub fn table_cell(
   children : Array[DocumentElement],
   col_span? : Int = 1,
@@ -197,11 +226,13 @@ pub fn table_cell(
 }
 
 ///|
+/// Builds a bookmark-start element.
 pub fn bookmark_start(name : String) -> DocumentElement {
   @document.bookmark_start(name)
 }
 
 ///|
+/// Builds a footnote or endnote.
 pub fn note(
   note_type : String,
   note_id : String,
@@ -211,6 +242,7 @@ pub fn note(
 }
 
 ///|
+/// Builds a document comment.
 pub fn comment(
   comment_id : String,
   body : Array[DocumentElement],
@@ -221,16 +253,19 @@ pub fn comment(
 }
 
 ///|
+/// Builds a line-break element.
 pub fn line_break() -> DocumentElement {
   @document.line_break()
 }
 
 ///|
+/// Builds a page-break element.
 pub fn page_break() -> DocumentElement {
   @document.page_break()
 }
 
 ///|
+/// Builds a column-break element.
 pub fn column_break() -> DocumentElement {
   @document.column_break()
 }
