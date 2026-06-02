@@ -230,7 +230,7 @@ test "CLI output-dir helpers match Mammoth naming" {
 }
 
 ///|
-test "CLI conversion renders stdout-mode HTML and inline images" {
+async test "CLI conversion renders stdout-mode HTML and inline images" {
   let dir = "_build/cli-main-stdout-html"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
@@ -264,7 +264,7 @@ test "CLI conversion renders stdout-mode HTML and inline images" {
 }
 
 ///|
-test "CLI conversion renders stdout-mode markdown with style map" {
+async test "CLI conversion renders stdout-mode markdown with style map" {
   let dir = "_build/cli-main-stdout-markdown-style-map"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
@@ -284,7 +284,7 @@ test "CLI conversion renders stdout-mode markdown with style map" {
 }
 
 ///|
-test "CLI conversion renders stdout-mode HTML with style map" {
+async test "CLI conversion renders stdout-mode HTML with style map" {
   let dir = "_build/cli-main-stdout-html-style-map"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
@@ -304,7 +304,7 @@ test "CLI conversion renders stdout-mode HTML with style map" {
 }
 
 ///|
-test "CLI conversion writes default HTML output file" {
+async test "CLI conversion writes default HTML output file" {
   let dir = "_build/cli-main-default-output-file"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
@@ -325,7 +325,7 @@ test "CLI conversion writes default HTML output file" {
 }
 
 ///|
-test "CLI conversion writes output file and applies style map" {
+async test "CLI conversion writes output file and applies style map" {
   let dir = "_build/cli-main-output-file"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
@@ -348,7 +348,7 @@ test "CLI conversion writes output file and applies style map" {
 }
 
 ///|
-test "CLI conversion writes markdown output file" {
+async test "CLI conversion writes markdown output file" {
   let dir = "_build/cli-main-markdown-output-file"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
@@ -369,7 +369,7 @@ test "CLI conversion writes markdown output file" {
 }
 
 ///|
-test "CLI conversion threads pretty print to HTML output" {
+async test "CLI conversion threads pretty print to HTML output" {
   let dir = "_build/cli-main-pretty-print"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
@@ -390,7 +390,7 @@ test "CLI conversion threads pretty print to HTML output" {
 }
 
 ///|
-test "CLI conversion keeps inline images in single-file output" {
+async test "CLI conversion keeps inline images in single-file output" {
   let dir = "_build/cli-main-single-file-images"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "tiny-picture.docx")
@@ -411,7 +411,7 @@ test "CLI conversion keeps inline images in single-file output" {
 }
 
 ///|
-test "CLI conversion writes markdown output inside output dir" {
+async test "CLI conversion writes markdown output inside output dir" {
   let dir = "_build/cli-main-output-dir-markdown"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
@@ -431,7 +431,7 @@ test "CLI conversion writes markdown output inside output dir" {
 }
 
 ///|
-test "CLI conversion writes markdown image output inside output dir" {
+async test "CLI conversion writes markdown image output inside output dir" {
   let dir = "_build/cli-main-output-dir-markdown-images"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "tiny-picture.docx")
@@ -455,7 +455,7 @@ test "CLI conversion writes markdown image output inside output dir" {
 }
 
 ///|
-test "CLI conversion writes images inside output dir" {
+async test "CLI conversion writes images inside output dir" {
   let dir = "_build/cli-main-output-dir-images"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "tiny-picture.docx")
@@ -479,7 +479,7 @@ test "CLI conversion writes images inside output dir" {
 }
 
 ///|
-test "CLI conversion reports output-dir image write failures" {
+async test "CLI conversion reports output-dir image write failures" {
   let dir = "_build/cli-main-output-dir-image-write-error"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "tiny-picture.docx")

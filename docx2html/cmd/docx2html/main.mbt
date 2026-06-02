@@ -26,25 +26,17 @@ suberror CliError {
 } derive(Debug, Eq)
 
 ///|
-#borrow(content)
-extern "C" fn write_stdout_bytes(content : Bytes) -> Int = "docx2html_write_stdout"
+extern "C" fn exit_process(status : Int) -> Unit = "exit"
 
 ///|
-#borrow(content)
-extern "C" fn write_stderr_bytes(content : Bytes) -> Int = "docx2html_write_stderr"
-
-///|
-extern "C" fn exit_process(status : Int) -> Unit = "docx2html_exit"
-
-///|
-fn main {
+async fn main {
   run_main() catch {
     CliError(message) => {
       write_stderr(message + "\n")
       exit_process(1)
     }
-    @fs.IOError(message) => {
-      write_stderr("docx2html: " + message + "\n")
+    @os_error.OSError(_) as err => {
+      write_stderr("docx2html: " + err.to_string() + "\n")
       exit_process(1)
     }
     @docx.InvalidZip(message~)
@@ -62,7 +54,7 @@ fn main {
 }
 
 ///|
-fn run_main() -> Unit raise {
+async fn run_main() -> Unit {
   match parse_cli_args(@env.args()) {
     Help => write_stdout(ensure_trailing_newline(render_cli_help()))
     Run(options) => run_conversion(options)
@@ -183,24 +175,25 @@ fn parse_output_format(value : String) -> CliOutputFormat raise CliError {
 }
 
 ///|
-fn run_conversion(options : CliOptions) -> Unit raise {
+async fn run_conversion(options : CliOptions) -> Unit {
   let result = render_conversion(options)
   for message in result.messages {
     write_stderr(format_message(message) + "\n")
   }
   match output_path(options) {
-    Some(path) => @fs.write_string_to_file(path, result.value)
+    Some(path) =>
+      @afs.write_file(path, result.value, create_mode=CreateOrTruncate)
     None => write_stdout(result.value)
   }
 }
 
 ///|
-fn render_conversion(options : CliOptions) -> @docx.ConversionResult raise {
+async fn render_conversion(options : CliOptions) -> @docx.ConversionResult {
   let style_map = match options.style_map_path {
-    Some(path) => @docx.read_style_map_string(@fs.read_file_to_string(path))
+    Some(path) => @docx.read_style_map_string(@afs.read_file(path).text())
     None => []
   }
-  let docx = @fs.read_file_to_bytes(options.input_path)
+  let docx = @afs.read_file(options.input_path).binary()
   let convert_image = match options.output_dir {
     Some(output_dir) => output_dir_image_converter(output_dir)
     None => @docx.data_uri_image_converter
@@ -311,13 +304,13 @@ fn format_message(message : @docx.Message) -> String {
 }
 
 ///|
-fn write_stdout(content : String) -> Unit {
-  ignore(write_stdout_bytes(@utf8.encode(content)))
+async fn write_stdout(content : String) -> Unit {
+  @stdio.stdout.write(content)
 }
 
 ///|
-fn write_stderr(content : String) -> Unit {
-  ignore(write_stderr_bytes(@utf8.encode(content)))
+async fn write_stderr(content : String) -> Unit {
+  @stdio.stderr.write(content)
 }
 
 ///|
