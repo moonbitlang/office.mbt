@@ -30,3 +30,15 @@ import {
 }
 
 preferred_target = "native"
+
+// Warning policy:
+// - Enabled: all optional compiler warnings, so new warning categories surface by default.
+// - Active baseline for review: unnecessary_view_op (75), 119 warnings.
+// - Ignored for now:
+//   missing_doc (74), 219 warnings; public API docs need a separate documentation pass.
+//   unused_optional_argument (31), 17 warnings; optional facade/helper defaults need API review.
+//   unused_default_value (32), 30 warnings; same optional-argument API review bucket.
+//   prefer_readonly_array (65), 2 warnings; low-priority test style suggestions.
+//   missing_invariant (38) and missing_reasoning (39); proof-loop warnings are not relevant here.
+
+warnings = "+a-unused_optional_argument-unused_default_value-missing_invariant-missing_reasoning-prefer_readonly_array-missing_doc"
