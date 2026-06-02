@@ -11,11 +11,11 @@
 
 name = "bobzhang/docx2html"
 
-version = "0.1.39"
+version = "0.1.40"
 
 readme = "README.mbt.md"
 
-repository = ""
+repository = "https://github.com/bobzhang/docx2html"
 
 license = "Apache-2.0"
 

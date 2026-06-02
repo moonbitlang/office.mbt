@@ -11,7 +11,8 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workDir = join(root, "_build", "stress");
-const fixtureDir = join(workDir, "fixtures");
+const vendoredFixtureDir = join(root, "tests", "stress", "fixtures");
+const downloadedFixtureDir = join(workDir, "fixtures");
 const outputDir = join(workDir, "outputs");
 const reportPath = join(workDir, "report.md");
 const moonBinary = join(
@@ -41,17 +42,35 @@ const sourceManifests = [
   },
 ];
 
+const vendoredFixtures = [
+  {
+    label: "docxcorp-reports-en-004f20c73314",
+    url: "https://docxcorp.us/documents/004f20c733147e38eda02ebcc052e4649682e7416d315d7764f5feef4ee74f66.docx",
+  },
+  {
+    label: "docxcorp-reports-en-015012bf8890",
+    url: "https://docxcorp.us/documents/015012bf8890aa22cd2c16558d341e488894e95baf99850f714dff8cdb5629fc.docx",
+  },
+  {
+    label: "docxcorp-technical-en-028db84b4b91",
+    url: "https://docxcorp.us/documents/028db84b4b91867f1fcce8b7a5bcad1403ed47fc143e566b4040c47d90c85346.docx",
+  },
+];
+
 const options = parseArgs(process.argv.slice(2));
 
 await main();
 
 async function main() {
-  await mkdir(fixtureDir, { recursive: true });
+  if (options.refreshCorpus) {
+    await mkdir(downloadedFixtureDir, { recursive: true });
+  }
   await mkdir(outputDir, { recursive: true });
   await ensureOriginalMammoth();
   await buildMoonBitCli();
-  const candidates = await collectCandidates();
-  const fixtures = await downloadFixtures(candidates);
+  const fixtures = options.refreshCorpus
+    ? await downloadFixtures(await collectCandidates())
+    : await loadVendoredFixtures();
   const results = [];
   for (const fixture of fixtures) {
     console.error(
@@ -70,6 +89,7 @@ function parseArgs(args) {
     minSize: 250_000,
     concurrency: 8,
     timeoutMs: 120_000,
+    refreshCorpus: false,
   };
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -88,6 +108,9 @@ function parseArgs(args) {
         break;
       case "--timeout-ms":
         parsed.timeoutMs = parsePositiveInt(args[++index], "--timeout-ms");
+        break;
+      case "--refresh-corpus":
+        parsed.refreshCorpus = true;
         break;
       case "--help":
         printUsage();
@@ -111,10 +134,11 @@ function printUsage() {
   console.log(`Usage: node scripts/stress_compare.mjs [options]
 
 Options:
-  --count <n>        Number of DOCX fixtures to download and compare. [default: 3]
-  --max-probe <n>    Number of URLs to size-probe from each manifest. [default: 80]
-  --min-size <n>     Preferred minimum DOCX byte size. [default: 250000]
-  --concurrency <n>  Concurrent HEAD/download probes. [default: 8]
+  --refresh-corpus   Probe public manifests and download sampled fixtures into _build.
+  --count <n>        Number of corpus fixtures to download with --refresh-corpus. [default: 3]
+  --max-probe <n>    Number of corpus URLs to size-probe per manifest. [default: 80]
+  --min-size <n>     Preferred minimum corpus DOCX byte size. [default: 250000]
+  --concurrency <n>  Concurrent corpus HEAD/download probes. [default: 8]
   --timeout-ms <n>   Timeout per converter run. [default: 120000]
 `);
 }
@@ -172,6 +196,16 @@ async function collectCandidates() {
   return selected;
 }
 
+async function loadVendoredFixtures() {
+  const fixtures = [];
+  for (const fixture of vendoredFixtures) {
+    const path = join(vendoredFixtureDir, `${fixture.label}.docx`);
+    const sizeBytes = (await stat(path)).size;
+    fixtures.push({ ...fixture, id: basename(fixture.url, ".docx"), path, sizeBytes });
+  }
+  return fixtures;
+}
+
 async function fetchText(url) {
   const response = await fetch(url, {
     signal: AbortSignal.timeout(30_000),
@@ -203,7 +237,7 @@ async function downloadFixtures(candidates) {
   for (const candidate of candidates) {
     const id = basename(candidate.url, ".docx");
     const label = `${candidate.source}-${id.slice(0, 12)}`;
-    const path = join(fixtureDir, `${label}.docx`);
+    const path = join(downloadedFixtureDir, `${label}.docx`);
     let currentSize = 0;
     try {
       currentSize = (await stat(path)).size;
@@ -306,9 +340,13 @@ async function writeReport(results) {
   lines.push("");
   lines.push(`Generated: ${new Date().toISOString()}`);
   lines.push("");
-  lines.push("Fixtures are downloaded into `_build/stress/fixtures` from:");
-  for (const source of sourceManifests) {
-    lines.push(`- ${source.name}: ${source.url}`);
+  if (options.refreshCorpus) {
+    lines.push("Fixtures were downloaded into `_build/stress/fixtures` from:");
+    for (const source of sourceManifests) {
+      lines.push(`- ${source.name}: ${source.url}`);
+    }
+  } else {
+    lines.push("Fixtures are vendored under `tests/stress/fixtures`.");
   }
   lines.push("");
   lines.push(
