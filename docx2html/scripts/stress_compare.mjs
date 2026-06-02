@@ -25,7 +25,8 @@ const moonBinary = join(
   "docx2html",
   "docx2html.exe",
 );
-const mammothBin = join(root, ".repos", "mammoth", "bin", "mammoth");
+let mammothBin = join(root, ".repos", "mammoth", "bin", "mammoth");
+const mammothJsBin = join(root, ".repos", "mammoth.js", "bin", "mammoth");
 
 const sourceManifests = [
   {
@@ -147,7 +148,14 @@ async function ensureOriginalMammoth() {
   try {
     await stat(mammothBin);
   } catch {
-    throw new Error(`Original Mammoth CLI not found at ${relative(mammothBin)}`);
+    try {
+      await stat(mammothJsBin);
+      mammothBin = mammothJsBin;
+    } catch {
+      throw new Error(
+        `Original Mammoth CLI not found at ${relative(mammothBin)} or ${relative(mammothJsBin)}`,
+      );
+    }
   }
 }
 
