@@ -1,10 +1,12 @@
 ///|
+/// Matcher for style names in style-map rules.
 pub(all) enum StyleNameMatcher {
   ExactStyleName(String)
   PrefixStyleName(String)
 } derive(Debug, Eq)
 
 ///|
+/// Matcher for document elements in style-map rules.
 pub(all) enum DocumentMatcher {
   ParagraphMatcher(
     style_id~ : String?,
@@ -20,6 +22,7 @@ pub(all) enum DocumentMatcher {
 } derive(Debug, Eq)
 
 ///|
+/// One element in a parsed style-map HTML path.
 pub(all) struct HtmlPathElement {
   tag : String
   attributes : Map[String, String]
@@ -28,12 +31,14 @@ pub(all) struct HtmlPathElement {
 } derive(Debug, Eq)
 
 ///|
+/// Parsed mapping from a document matcher to an HTML path.
 pub(all) struct StyleMapping {
   from : DocumentMatcher
   to : Array[HtmlPathElement]
 } derive(Debug, Eq)
 
 ///|
+/// Parsed style mappings together with style-map diagnostics.
 pub(all) struct StyleMapParseResult {
   mappings : Array[StyleMapping]
   messages : Array[Message]
@@ -59,22 +64,28 @@ priv enum ParsedHtmlPathElement {
 }
 
 ///|
+/// Parses one style-map line into a mapping, if valid.
 pub fn read_style_mapping(line : String) -> StyleMapping? {
   read_style_mapping_with_message(line).0
 }
 
 ///|
+/// Parses style-map lines and returns valid mappings.
 pub fn read_style_map(lines : Array[String]) -> Array[StyleMapping] {
   read_style_map_with_messages(lines).mappings
 }
 
 ///|
+/// Parses style-map lines and preserves diagnostics.
 pub fn parse_style_map(lines : Array[String]) -> StyleMapParseResult {
   read_style_map_with_messages(lines)
 }
 
 ///|
-fn read_style_map_with_messages(lines : Array[String]) -> StyleMapParseResult {
+/// Parses style-map lines with diagnostics.
+pub fn read_style_map_with_messages(
+  lines : Array[String],
+) -> StyleMapParseResult {
   let mappings : Array[StyleMapping] = []
   let messages : Array[Message] = []
   for line in lines {
@@ -145,6 +156,7 @@ fn style_mapping_warning(line : String, error : String) -> Message {
 }
 
 ///|
+/// Splits a style-map string into meaningful lines.
 pub fn read_style_map_string(style_map : String) -> Array[String] {
   let lines : Array[String] = []
   for line_view in style_map.split("\n") {
@@ -157,6 +169,7 @@ pub fn read_style_map_string(style_map : String) -> Array[String] {
 }
 
 ///|
+/// Parses a style-map string and preserves diagnostics.
 pub fn parse_style_map_string(style_map : String) -> StyleMapParseResult {
   parse_style_map(read_style_map_string(style_map))
 }
@@ -503,7 +516,7 @@ fn parse_style_break_matcher(
       style_parse_error(line, index, end, "close-square-bracket"),
     )
   }
-  let break_type = match break_type {
+  let break_type : BreakType = match break_type {
     "line" => Line
     "page" => Page
     "column" => Column
@@ -1011,7 +1024,8 @@ fn write_style_escape(
 }
 
 ///|
-fn DocumentMatcher::matches(
+/// Returns whether this matcher accepts the document element.
+pub fn DocumentMatcher::matches(
   self : DocumentMatcher,
   element : DocumentElement,
 ) -> Bool {
@@ -1068,7 +1082,8 @@ fn style_name_matches(expected : StyleNameMatcher?, actual : String?) -> Bool {
 }
 
 ///|
-fn find_style_mapping(
+/// Finds the first style mapping that matches an element.
+pub fn find_style_mapping(
   element : DocumentElement,
   style_map : Array[StyleMapping],
 ) -> StyleMapping? {
@@ -1081,6 +1096,7 @@ fn find_style_mapping(
 }
 
 ///|
+/// Returns Mammoth-compatible default style-map lines.
 pub fn default_style_map_lines() -> Array[String] {
   [
     "p.Heading1 => h1:fresh", "p.Heading2 => h2:fresh", "p.Heading3 => h3:fresh",

@@ -1,4 +1,5 @@
 ///|
+/// Serializes HTML nodes to Markdown.
 pub fn write_markdown(nodes : Array[HtmlNode]) -> String {
   let writer = MarkdownWriter::{ buffer: StringBuilder() }
   writer.write_nodes(nodes)
@@ -228,6 +229,7 @@ fn MarkdownWriter::write_list_item_children(
 }
 
 ///|
+/// Escapes text for Markdown output.
 pub fn escape_markdown_text(value : String) -> String {
   let builder = StringBuilder()
   for char in value {

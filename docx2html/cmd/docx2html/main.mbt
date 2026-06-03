@@ -201,12 +201,12 @@ async fn render_conversion(options : CliOptions) -> @docx.ConversionResult {
   let result = match options.output_format {
     Html =>
       @docx.convert_to_html(
-        docx[:],
+        docx,
         style_map~,
         pretty_print=options.pretty_print,
         convert_image~,
       )
-    Markdown => @docx.convert_to_markdown(docx[:], style_map~, convert_image~)
+    Markdown => @docx.convert_to_markdown(docx, style_map~, convert_image~)
   }
   result
 }

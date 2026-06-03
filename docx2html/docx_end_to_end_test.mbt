@@ -1,17 +1,17 @@
 ///|
 test "convert_to_html reads single paragraph docx fixture" {
-  let result = @docx2html.convert_to_html(single_paragraph_docx()[:])
+  let result = @docx2html.convert_to_html(single_paragraph_docx())
   inspect(result.value, content="<p>Walking on imported air</p>")
   debug_inspect(result.messages, content="[]")
 }
 
 ///|
 test "generic convert reads docx fixture with typed output format" {
-  let html = @docx2html.convert(single_paragraph_docx()[:])
+  let html = @docx2html.convert(single_paragraph_docx())
   inspect(html.value, content="<p>Walking on imported air</p>")
   debug_inspect(html.messages, content="[]")
   let markdown = @docx2html.convert(
-    single_paragraph_docx()[:],
+    single_paragraph_docx(),
     output_format=Markdown,
   )
   inspect(markdown.value, content="Walking on imported air\n\n")
@@ -20,7 +20,7 @@ test "generic convert reads docx fixture with typed output format" {
 
 ///|
 test "read_docx reads single paragraph docx fixture" {
-  match @docx2html.read_docx(single_paragraph_docx()[:]) {
+  match @docx2html.read_docx(single_paragraph_docx()) {
     Document(children~, notes~, comments~) => {
       inspect(notes.length(), content="0")
       inspect(comments.length(), content="0")
@@ -45,7 +45,7 @@ test "read_docx reads single paragraph docx fixture" {
 
 ///|
 test "read_docx_with_messages exposes reader diagnostics" {
-  let result = @docx2html.read_docx_with_messages(external_picture_docx()[:])
+  let result = @docx2html.read_docx_with_messages(external_picture_docx())
   match result.document {
     Document(children~, notes~, comments~) => {
       inspect(children.length(), content="1")
@@ -68,7 +68,7 @@ test "read_docx_with_messages exposes reader diagnostics" {
     }
   }
   let loaded = @docx2html.read_docx_with_messages(
-    external_picture_docx()[:],
+    external_picture_docx(),
     external_file_access=true,
     read_external_file~,
   )
@@ -82,7 +82,7 @@ test "read_docx_with_messages exposes reader diagnostics" {
 ///|
 test "pretty printing expands element content" {
   let result = @docx2html.convert_to_html(
-    single_paragraph_docx()[:],
+    single_paragraph_docx(),
     pretty_print=true,
   )
   inspect(result.value, content="<p>\n  Walking on imported air\n</p>")
@@ -91,104 +91,104 @@ test "pretty printing expands element content" {
 
 ///|
 test "convert_to_html reads XML with UTF-8 byte order mark" {
-  let result = @docx2html.convert_to_html(utf8_bom_docx()[:])
+  let result = @docx2html.convert_to_html(utf8_bom_docx())
   inspect(result.value, content="<p>This XML has a byte order mark.</p>")
   debug_inspect(result.messages, content="[]")
 }
 
 ///|
 test "empty paragraphs are ignored unless requested" {
-  inspect(@docx2html.convert_to_html(empty_docx()[:]).value, content="")
+  inspect(@docx2html.convert_to_html(empty_docx()).value, content="")
   inspect(
-    @docx2html.convert_to_html(empty_docx()[:], ignore_empty_paragraphs=false).value,
+    @docx2html.convert_to_html(empty_docx(), ignore_empty_paragraphs=false).value,
     content="<p></p>",
   )
 }
 
 ///|
 test "extract_raw_text reads docx text" {
-  let result = @docx2html.extract_raw_text(single_paragraph_docx()[:])
+  let result = @docx2html.extract_raw_text(single_paragraph_docx())
   inspect(result.value, content="Walking on imported air\n\n")
 }
 
 ///|
 test "extract_raw_text reads list docx text" {
-  let result = @docx2html.extract_raw_text(simple_list_docx()[:])
+  let result = @docx2html.extract_raw_text(simple_list_docx())
   inspect(result.value, content="Apple\n\nBanana\n\n")
 }
 
 ///|
 test "extract_raw_text matches Mammoth fixture outputs" {
   inspect(
-    @docx2html.extract_raw_text(utf8_bom_docx()[:]).value,
+    @docx2html.extract_raw_text(utf8_bom_docx()).value,
     content="This XML has a byte order mark.\n\n",
   )
-  inspect(@docx2html.extract_raw_text(empty_docx()[:]).value, content="\n\n")
+  inspect(@docx2html.extract_raw_text(empty_docx()).value, content="\n\n")
   inspect(
-    @docx2html.extract_raw_text(tables_docx()[:]).value,
+    @docx2html.extract_raw_text(tables_docx()).value,
     content="Above\n\nTop left\n\nTop right\n\nBottom left\n\nBottom right\n\nBelow\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(underline_docx()[:]).value,
+    @docx2html.extract_raw_text(underline_docx()).value,
     content="The Sunset Tree\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(strikethrough_docx()[:]).value,
+    @docx2html.extract_raw_text(strikethrough_docx()).value,
     content="Today's Special: Salmon Sold out\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(strict_format_docx()[:]).value,
+    @docx2html.extract_raw_text(strict_format_docx()).value,
     content="Test\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(footnotes_docx()[:]).value,
+    @docx2html.extract_raw_text(footnotes_docx()).value,
     content="Ouch.\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(endnotes_docx()[:]).value,
+    @docx2html.extract_raw_text(endnotes_docx()).value,
     content="Ouch.\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(comments_docx()[:]).value,
+    @docx2html.extract_raw_text(comments_docx()).value,
     content="Ouch.\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(text_box_docx()[:]).value,
+    @docx2html.extract_raw_text(text_box_docx()).value,
     content="\n\nDatum plane\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(tiny_picture_docx()[:]).value,
+    @docx2html.extract_raw_text(tiny_picture_docx()).value,
     content="\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(tiny_picture_target_base_relative_docx()[:]).value,
+    @docx2html.extract_raw_text(tiny_picture_target_base_relative_docx()).value,
     content="\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(footnote_hyperlink_docx()[:]).value,
+    @docx2html.extract_raw_text(footnote_hyperlink_docx()).value,
     content="\n\n",
   )
   inspect(
-    @docx2html.extract_raw_text(embedded_style_map_docx()[:]).value,
+    @docx2html.extract_raw_text(embedded_style_map_docx()).value,
     content="Walking on imported air\n\n",
   )
-  let external_picture = @docx2html.extract_raw_text(external_picture_docx()[:])
+  let external_picture = @docx2html.extract_raw_text(external_picture_docx())
   inspect(external_picture.value, content="\n\n")
   debug_inspect(external_picture.messages, content="[]")
 }
 
 ///|
 test "convert_to_markdown reads docx text" {
-  let result = @docx2html.convert_to_markdown(single_paragraph_docx()[:])
+  let result = @docx2html.convert_to_markdown(single_paragraph_docx())
   inspect(result.value, content="Walking on imported air\n\n")
 }
 
 ///|
 test "convert_to_markdown reads docx list structure" {
-  let result = @docx2html.convert_to_markdown(simple_list_docx()[:])
+  let result = @docx2html.convert_to_markdown(simple_list_docx())
   inspect(result.value, content="- Apple\n- Banana\n\n")
   let without_default_style_map = @docx2html.convert_to_markdown(
-    simple_list_docx()[:],
+    simple_list_docx(),
     include_default_style_map=false,
   )
   inspect(without_default_style_map.value, content="Apple\n\nBanana\n\n")
@@ -203,11 +203,11 @@ test "convert_to_markdown reads docx list structure" {
 ///|
 test "convert_to_markdown applies custom image converter to docx images" {
   let convert_image = @docx2html.img_element(fn(image) {
-    let encoded = @base64.encode(image.data[:])
+    let encoded = @base64.encode(image.data)
     { "alt": image.content_type, "src": encoded[:2].to_owned() }
   })
   let result = @docx2html.convert_to_markdown(
-    tiny_picture_docx()[:],
+    tiny_picture_docx(),
     convert_image~,
   )
   inspect(result.value, content="![image/png](iV)\n\n")
@@ -225,7 +225,7 @@ test "convert_to_markdown preserves custom image converter diagnostics" {
     ])
   }
   let result = @docx2html.convert_to_markdown(
-    tiny_picture_docx()[:],
+    tiny_picture_docx(),
     convert_image~,
   )
   inspect(result.value, content="![](custom:image/png)\n\n")
@@ -235,36 +235,36 @@ test "convert_to_markdown preserves custom image converter diagnostics" {
 ///|
 test "convert_to_markdown matches Mammoth fixture outputs" {
   inspect(
-    @docx2html.convert_to_markdown(utf8_bom_docx()[:]).value,
+    @docx2html.convert_to_markdown(utf8_bom_docx()).value,
     content="This XML has a byte order mark\\.\n\n",
   )
-  inspect(@docx2html.convert_to_markdown(empty_docx()[:]).value, content="")
+  inspect(@docx2html.convert_to_markdown(empty_docx()).value, content="")
   inspect(
-    @docx2html.convert_to_markdown(tables_docx()[:]).value,
+    @docx2html.convert_to_markdown(tables_docx()).value,
     content="Above\n\nTop left\n\nTop right\n\nBottom left\n\nBottom right\n\nBelow\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(underline_docx()[:]).value,
+    @docx2html.convert_to_markdown(underline_docx()).value,
     content="__The Sunset Tree__\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(strikethrough_docx()[:]).value,
+    @docx2html.convert_to_markdown(strikethrough_docx()).value,
     content="Today's Special: Salmon Sold out\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(strict_format_docx()[:]).value,
+    @docx2html.convert_to_markdown(strict_format_docx()).value,
     content="Test\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(tiny_picture_docx()[:]).value,
+    @docx2html.convert_to_markdown(tiny_picture_docx()).value,
     content="![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=)\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(tiny_picture_target_base_relative_docx()[:]).value,
+    @docx2html.convert_to_markdown(tiny_picture_target_base_relative_docx()).value,
     content="![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=)\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(endnotes_docx()[:]).value,
+    @docx2html.convert_to_markdown(endnotes_docx()).value,
     content=(
       #|Ouch<a id="endnote-ref-2"></a>[\[1\]](#endnote-2)\.<a id="endnote-ref-3"></a>[\[2\]](#endnote-3)
       #|
@@ -279,7 +279,7 @@ test "convert_to_markdown matches Mammoth fixture outputs" {
     ),
   )
   inspect(
-    @docx2html.convert_to_markdown(footnote_hyperlink_docx()[:]).value,
+    @docx2html.convert_to_markdown(footnote_hyperlink_docx()).value,
     content=(
       #|<a id="footnote-ref-1"></a>[\[1\]](#footnote-1)
       #|
@@ -291,11 +291,11 @@ test "convert_to_markdown matches Mammoth fixture outputs" {
     ),
   )
   inspect(
-    @docx2html.convert_to_markdown(comments_docx()[:]).value,
+    @docx2html.convert_to_markdown(comments_docx()).value,
     content="Ouch\\.\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(comments_docx()[:], id_prefix="doc-42-", style_map=[
+    @docx2html.convert_to_markdown(comments_docx(), id_prefix="doc-42-", style_map=[
       "comment-reference => sup",
     ]).value,
     content=(
@@ -309,50 +309,48 @@ test "convert_to_markdown matches Mammoth fixture outputs" {
     ),
   )
   inspect(
-    @docx2html.convert_to_markdown(text_box_docx()[:]).value,
+    @docx2html.convert_to_markdown(text_box_docx()).value,
     content="Datum plane\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(embedded_style_map_docx()[:]).value,
+    @docx2html.convert_to_markdown(embedded_style_map_docx()).value,
     content="# Walking on imported air\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(embedded_style_map_docx()[:], style_map=[
+    @docx2html.convert_to_markdown(embedded_style_map_docx(), style_map=[
       "p => p",
     ]).value,
     content="Walking on imported air\n\n",
   )
   inspect(
-    @docx2html.convert_to_markdown(embedded_style_map_docx()[:], style_map=[
+    @docx2html.convert_to_markdown(embedded_style_map_docx(), style_map=[
       "r => strong",
     ]).value,
     content="# __Walking on imported air__\n\n",
   )
   inspect(
     @docx2html.convert_to_markdown(
-      embedded_style_map_docx()[:],
+      embedded_style_map_docx(),
       include_embedded_style_map=false,
     ).value,
     content="Walking on imported air\n\n",
   )
   inspect(
     @docx2html.convert_to_markdown(
-      embedded_style_map_docx()[:],
+      embedded_style_map_docx(),
       include_default_style_map=false,
     ).value,
     content="# Walking on imported air\n\n",
   )
   inspect(
     @docx2html.convert_to_markdown(
-      embedded_style_map_docx()[:],
+      embedded_style_map_docx(),
       include_default_style_map=false,
       include_embedded_style_map=false,
     ).value,
     content="Walking on imported air\n\n",
   )
-  let external_picture = @docx2html.convert_to_markdown(
-    external_picture_docx()[:],
-  )
+  let external_picture = @docx2html.convert_to_markdown(external_picture_docx())
   inspect(external_picture.value, content="")
   debug_inspect(
     external_picture.messages,
@@ -365,7 +363,7 @@ test "convert_to_markdown matches Mammoth fixture outputs" {
 ///|
 test "convert_to_markdown preserves empty paragraphs when requested" {
   let result = @docx2html.convert_to_markdown(
-    empty_docx()[:],
+    empty_docx(),
     ignore_empty_paragraphs=false,
   )
   inspect(result.value, content="\n\n")
@@ -377,7 +375,7 @@ test "convert_to_html applies document transform option" {
     @docx2html.paragraph([@docx2html.text("Goodbye.")])
   })
   let result = @docx2html.convert_to_html(
-    single_paragraph_docx()[:],
+    single_paragraph_docx(),
     transform_document~,
   )
   inspect(result.value, content="<p>Goodbye.</p>")
@@ -389,7 +387,7 @@ test "convert_to_markdown applies document transform option" {
     @docx2html.paragraph([@docx2html.text("Goodbye.")])
   })
   let result = @docx2html.convert_to_markdown(
-    single_paragraph_docx()[:],
+    single_paragraph_docx(),
     transform_document~,
   )
   inspect(result.value, content="Goodbye\\.\n\n")
@@ -397,10 +395,10 @@ test "convert_to_markdown applies document transform option" {
 
 ///|
 test "simple list is converted to list elements" {
-  let result = @docx2html.convert_to_html(simple_list_docx()[:])
+  let result = @docx2html.convert_to_html(simple_list_docx())
   inspect(result.value, content="<ul><li>Apple</li><li>Banana</li></ul>")
   let without_default_style_map = @docx2html.convert_to_html(
-    simple_list_docx()[:],
+    simple_list_docx(),
     include_default_style_map=false,
   )
   inspect(without_default_style_map.value, content="<p>Apple</p><p>Banana</p>")
@@ -414,7 +412,7 @@ test "simple list is converted to list elements" {
 
 ///|
 test "word tables are converted to html tables" {
-  let result = @docx2html.convert_to_html(tables_docx()[:])
+  let result = @docx2html.convert_to_html(tables_docx())
   inspect(
     result.value,
     content="<p>Above</p><table><tr><td><p>Top left</p></td><td><p>Top right</p></td></tr><tr><td><p>Bottom left</p></td><td><p>Bottom right</p></td></tr></table><p>Below</p>",
@@ -425,11 +423,11 @@ test "word tables are converted to html tables" {
 ///|
 test "underline is ignored by default and configurable" {
   inspect(
-    @docx2html.convert_to_html(underline_docx()[:]).value,
+    @docx2html.convert_to_html(underline_docx()).value,
     content="<p><strong>The Sunset Tree</strong></p>",
   )
   inspect(
-    @docx2html.convert_to_html(underline_docx()[:], style_map=["u => em"]).value,
+    @docx2html.convert_to_html(underline_docx(), style_map=["u => em"]).value,
     content="<p><strong>The <em>Sunset</em> Tree</strong></p>",
   )
 }
@@ -437,27 +435,25 @@ test "underline is ignored by default and configurable" {
 ///|
 test "strikethrough uses default and custom mappings" {
   inspect(
-    @docx2html.convert_to_html(strikethrough_docx()[:]).value,
+    @docx2html.convert_to_html(strikethrough_docx()).value,
     content="<p><s>Today's Special: Salmon</s> Sold out</p>",
   )
   inspect(
-    @docx2html.convert_to_html(strikethrough_docx()[:], style_map=[
-      "strike => del",
-    ]).value,
+    @docx2html.convert_to_html(strikethrough_docx(), style_map=["strike => del"]).value,
     content="<p><del>Today's Special: Salmon</del> Sold out</p>",
   )
 }
 
 ///|
 test "strict docx format is read" {
-  let result = @docx2html.convert_to_html(strict_format_docx()[:])
+  let result = @docx2html.convert_to_html(strict_format_docx())
   inspect(result.value, content="<p>Test</p>")
   debug_inspect(result.messages, content="[]")
 }
 
 ///|
 test "invalid docx without main document raises Mammoth-compatible error" {
-  try @docx2html.convert_to_html(empty_zip()[:]) catch {
+  try @docx2html.convert_to_html(empty_zip()) catch {
     MissingPart(message~) =>
       inspect(
         message,
@@ -471,7 +467,7 @@ test "invalid docx without main document raises Mammoth-compatible error" {
 
 ///|
 test "inline images referenced relative to document part are included" {
-  let result = @docx2html.convert_to_html(tiny_picture_docx()[:])
+  let result = @docx2html.convert_to_html(tiny_picture_docx())
   inspect(
     result.value,
     content="<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=\" /></p>",
@@ -483,17 +479,14 @@ test "convert_to_html applies custom image converter to docx images" {
   let convert_image = @docx2html.img_element(fn(image) {
     { "src": image.content_type }
   })
-  let result = @docx2html.convert_to_html(
-    tiny_picture_docx()[:],
-    convert_image~,
-  )
+  let result = @docx2html.convert_to_html(tiny_picture_docx(), convert_image~)
   inspect(result.value, content="<p><img src=\"image/png\" /></p>")
   let convert_image_from_data = @docx2html.img_element(fn(image) {
-    let encoded = @base64.encode(image.data[:])
+    let encoded = @base64.encode(image.data)
     { "src": encoded[:2].to_owned() + "," + image.content_type }
   })
   let data_result = @docx2html.convert_to_html(
-    tiny_picture_docx()[:],
+    tiny_picture_docx(),
     convert_image=convert_image_from_data,
   )
   inspect(data_result.value, content="<p><img src=\"iV,image/png\" /></p>")
@@ -503,7 +496,7 @@ test "convert_to_html applies custom image converter to docx images" {
 ///|
 test "inline images referenced relative to package base are included" {
   let result = @docx2html.convert_to_html(
-    tiny_picture_target_base_relative_docx()[:],
+    tiny_picture_target_base_relative_docx(),
   )
   inspect(
     result.value,
@@ -513,7 +506,7 @@ test "inline images referenced relative to package base are included" {
 
 ///|
 test "external linked images produce Mammoth-compatible error messages" {
-  let result = @docx2html.convert_to_html(external_picture_docx()[:])
+  let result = @docx2html.convert_to_html(external_picture_docx())
   inspect(result.value, content="")
   debug_inspect(
     result.messages,
@@ -541,7 +534,7 @@ test "external linked images can be loaded when explicitly enabled" {
     }
   }
   let result = @docx2html.convert_to_html(
-    external_picture_docx()[:],
+    external_picture_docx(),
     external_file_access=true,
     read_external_file~,
   )
@@ -551,7 +544,7 @@ test "external linked images can be loaded when explicitly enabled" {
   )
   debug_inspect(result.messages, content="[]")
   let markdown = @docx2html.convert_to_markdown(
-    external_picture_docx()[:],
+    external_picture_docx(),
     external_file_access=true,
     read_external_file~,
   )
@@ -565,7 +558,7 @@ test "external linked images can be loaded when explicitly enabled" {
 ///|
 test "external linked images report unknown path without a loader" {
   let result = @docx2html.convert_to_html(
-    external_picture_docx()[:],
+    external_picture_docx(),
     external_file_access=true,
   )
   inspect(result.value, content="")
@@ -576,7 +569,7 @@ test "external linked images report unknown path without a loader" {
     ),
   )
   let markdown = @docx2html.convert_to_markdown(
-    external_picture_docx()[:],
+    external_picture_docx(),
     external_file_access=true,
   )
   inspect(markdown.value, content="")
@@ -590,16 +583,13 @@ test "external linked images report unknown path without a loader" {
 
 ///|
 test "footnotes are appended to text" {
-  let result = @docx2html.convert_to_html(
-    footnotes_docx()[:],
-    id_prefix="doc-42-",
-  )
+  let result = @docx2html.convert_to_html(footnotes_docx(), id_prefix="doc-42-")
   inspect(
     result.value,
     content="<p>Ouch<sup><a href=\"#doc-42-footnote-1\" id=\"doc-42-footnote-ref-1\">[1]</a></sup>.<sup><a href=\"#doc-42-footnote-2\" id=\"doc-42-footnote-ref-2\">[2]</a></sup></p><ol><li id=\"doc-42-footnote-1\"><p> A tachyon walks into a bar. <a href=\"#doc-42-footnote-ref-1\">↑</a></p></li><li id=\"doc-42-footnote-2\"><p> Fin. <a href=\"#doc-42-footnote-ref-2\">↑</a></p></li></ol>",
   )
   debug_inspect(result.messages, content="[]")
-  let markdown = @docx2html.convert_to_markdown(footnotes_docx()[:])
+  let markdown = @docx2html.convert_to_markdown(footnotes_docx())
   inspect(
     markdown.value,
     content=(
@@ -619,10 +609,7 @@ test "footnotes are appended to text" {
 
 ///|
 test "endnotes are appended to text" {
-  let result = @docx2html.convert_to_html(
-    endnotes_docx()[:],
-    id_prefix="doc-42-",
-  )
+  let result = @docx2html.convert_to_html(endnotes_docx(), id_prefix="doc-42-")
   inspect(
     result.value,
     content="<p>Ouch<sup><a href=\"#doc-42-endnote-2\" id=\"doc-42-endnote-ref-2\">[1]</a></sup>.<sup><a href=\"#doc-42-endnote-3\" id=\"doc-42-endnote-ref-3\">[2]</a></sup></p><ol><li id=\"doc-42-endnote-2\"><p> A tachyon walks into a bar. <a href=\"#doc-42-endnote-ref-2\">↑</a></p></li><li id=\"doc-42-endnote-3\"><p> Fin. <a href=\"#doc-42-endnote-ref-3\">↑</a></p></li></ol>",
@@ -633,7 +620,7 @@ test "endnotes are appended to text" {
 ///|
 test "relationships are handled inside footnotes" {
   let result = @docx2html.convert_to_html(
-    footnote_hyperlink_docx()[:],
+    footnote_hyperlink_docx(),
     id_prefix="doc-42-",
   )
   inspect(
@@ -646,11 +633,11 @@ test "relationships are handled inside footnotes" {
 ///|
 test "comments are appended when comment references are style mapped" {
   inspect(
-    @docx2html.convert_to_html(comments_docx()[:]).value,
+    @docx2html.convert_to_html(comments_docx()).value,
     content="<p>Ouch.</p>",
   )
   let result = @docx2html.convert_to_html(
-    comments_docx()[:],
+    comments_docx(),
     id_prefix="doc-42-",
     style_map=["comment-reference => sup"],
   )
@@ -664,46 +651,44 @@ test "comments are appended when comment references are style mapped" {
 ///|
 test "embedded style maps are combined after explicit mappings" {
   debug_inspect(
-    @docx2html.read_embedded_style_map(single_paragraph_docx()[:]),
+    @docx2html.read_embedded_style_map(single_paragraph_docx()),
     content="None",
   )
   debug_inspect(
-    @docx2html.read_embedded_style_map(embedded_style_map_docx()[:]),
+    @docx2html.read_embedded_style_map(embedded_style_map_docx()),
     content="Some(\"p => h1\")",
   )
   inspect(
-    @docx2html.convert_to_html(embedded_style_map_docx()[:]).value,
+    @docx2html.convert_to_html(embedded_style_map_docx()).value,
     content="<h1>Walking on imported air</h1>",
   )
   inspect(
-    @docx2html.convert_to_html(embedded_style_map_docx()[:], style_map=[
-      "p => p",
-    ]).value,
+    @docx2html.convert_to_html(embedded_style_map_docx(), style_map=["p => p"]).value,
     content="<p>Walking on imported air</p>",
   )
   inspect(
-    @docx2html.convert_to_html(embedded_style_map_docx()[:], style_map=[
+    @docx2html.convert_to_html(embedded_style_map_docx(), style_map=[
       "r => strong",
     ]).value,
     content="<h1><strong>Walking on imported air</strong></h1>",
   )
   inspect(
     @docx2html.convert_to_html(
-      embedded_style_map_docx()[:],
+      embedded_style_map_docx(),
       include_embedded_style_map=false,
     ).value,
     content="<p>Walking on imported air</p>",
   )
   inspect(
     @docx2html.convert_to_html(
-      embedded_style_map_docx()[:],
+      embedded_style_map_docx(),
       include_default_style_map=false,
     ).value,
     content="<h1>Walking on imported air</h1>",
   )
   inspect(
     @docx2html.convert_to_html(
-      embedded_style_map_docx()[:],
+      embedded_style_map_docx(),
       include_default_style_map=false,
       include_embedded_style_map=false,
     ).value,
@@ -713,36 +698,33 @@ test "embedded style maps are combined after explicit mappings" {
 
 ///|
 test "embedded style maps written into docx affect conversion" {
-  let rewritten = @docx2html.embed_style_map(
-    single_paragraph_docx()[:],
-    "p => h2",
-  )
+  let rewritten = @docx2html.embed_style_map(single_paragraph_docx(), "p => h2")
   debug_inspect(
-    @docx2html.read_embedded_style_map(rewritten[:]),
+    @docx2html.read_embedded_style_map(rewritten),
     content="Some(\"p => h2\")",
   )
   inspect(
-    @docx2html.convert_to_html(rewritten[:]).value,
+    @docx2html.convert_to_html(rewritten).value,
     content="<h2>Walking on imported air</h2>",
   )
   inspect(
-    @docx2html.convert_to_markdown(rewritten[:]).value,
+    @docx2html.convert_to_markdown(rewritten).value,
     content="## Walking on imported air\n\n",
   )
-  let replaced = @docx2html.embed_style_map(rewritten[:], "p => p")
+  let replaced = @docx2html.embed_style_map(rewritten, "p => p")
   inspect(
-    @docx2html.convert_to_html(replaced[:]).value,
+    @docx2html.convert_to_html(replaced).value,
     content="<p>Walking on imported air</p>",
   )
   inspect(
-    @docx2html.convert_to_markdown(replaced[:]).value,
+    @docx2html.convert_to_markdown(replaced).value,
     content="Walking on imported air\n\n",
   )
 }
 
 ///|
 test "invalid explicit style maps warn while valid mappings still apply" {
-  let result = @docx2html.convert_to_html(single_paragraph_docx()[:], style_map=[
+  let result = @docx2html.convert_to_html(single_paragraph_docx(), style_map=[
     "????", "p => h1",
   ])
   inspect(result.value, content="<h1>Walking on imported air</h1>")
@@ -752,7 +734,7 @@ test "invalid explicit style maps warn while valid mappings still apply" {
       #|[Warning("Did not understand this style mapping, so ignored it: ????\nError was at character number 1: Expected element type but got unrecognisedCharacter \"?\"")]
     ),
   )
-  let markdown = @docx2html.convert_to_markdown(single_paragraph_docx()[:], style_map=[
+  let markdown = @docx2html.convert_to_markdown(single_paragraph_docx(), style_map=[
     "????", "p => h1",
   ])
   inspect(markdown.value, content="# Walking on imported air\n\n")
@@ -766,7 +748,7 @@ test "invalid explicit style maps warn while valid mappings still apply" {
 
 ///|
 test "text boxes are appended after their containing paragraph" {
-  let result = @docx2html.convert_to_html(text_box_docx()[:])
+  let result = @docx2html.convert_to_html(text_box_docx())
   inspect(result.value, content="<p>Datum plane</p>")
   debug_inspect(result.messages, content="[]")
 }

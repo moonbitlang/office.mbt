@@ -449,7 +449,7 @@ async test "CLI conversion writes markdown image output inside output dir" {
     content="![](1.png)\n\n",
   )
   inspect(
-    @base64.encode(@fs.read_file_to_bytes(join_path(dir, "1.png"))[:]),
+    @base64.encode(@fs.read_file_to_bytes(join_path(dir, "1.png"))),
     content=cli_tiny_picture_base64(),
   )
 }
@@ -473,7 +473,7 @@ async test "CLI conversion writes images inside output dir" {
     content="<p><img src=\"1.png\" /></p>",
   )
   inspect(
-    @base64.encode(@fs.read_file_to_bytes(join_path(dir, "1.png"))[:]),
+    @base64.encode(@fs.read_file_to_bytes(join_path(dir, "1.png"))),
     content=cli_tiny_picture_base64(),
   )
 }

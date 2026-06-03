@@ -38,6 +38,9 @@ jobs:
       - name: Run native tests
         run: moon test --target native
 
+      - name: Run cram tests
+        run: moon cram test tests/cram
+
       - name: Check native target
         run: moon check --target native --warn-list +73
 

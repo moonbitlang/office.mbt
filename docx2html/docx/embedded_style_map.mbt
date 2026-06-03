@@ -11,6 +11,7 @@ priv enum ContentTypeXmlEntry {
 }
 
 ///|
+/// Embeds or replaces the DOCX style map part.
 pub fn embed_style_map(
   docx : BytesView,
   style_map : String,

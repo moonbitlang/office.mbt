@@ -115,11 +115,9 @@ test "raw text converts individual upstream element cases" {
   inspect(@docx2html.tab().to_raw_text(), content="\t")
   inspect(@docx2html.line_break().to_raw_text(), content="")
   inspect(
-    @docx2html.Hyperlink(
-      children=[@docx2html.text("linked")],
+    @docx2html.hyperlink(
+      [@docx2html.text("linked")],
       href=Some("http://example.com"),
-      anchor=None,
-      target_frame=None,
     ).to_raw_text(),
     content="linked",
   )
@@ -136,21 +134,11 @@ test "raw text terminates paragraphs with blank lines" {
 
 ///|
 test "raw text and descendants recurse through table nodes" {
-  let table = @docx2html.Table(
-    children=[
-      TableRow(
-        children=[
-          TableCell(
-            children=[@docx2html.paragraph([@docx2html.text("Cell")])],
-            col_span=1,
-            row_span=1,
-          ),
-        ],
-        is_header=false,
-      ),
-    ],
-    properties=@docx2html.TableProperties::default(),
-  )
+  let table = @docx2html.table([
+    @docx2html.table_row([
+      @docx2html.table_cell([@docx2html.paragraph([@docx2html.text("Cell")])]),
+    ]),
+  ])
   inspect(table.to_raw_text(), content="Cell\n\n")
   inspect(@docx2html.document_descendants(table).length(), content="4")
 }
@@ -869,23 +857,13 @@ test "document descendants can be filtered like Mammoth getDescendantsOfType" {
 
 ///|
 test "document transforms recurse through hyperlinks and tables" {
-  let link = @docx2html.Hyperlink(
-    children=[@docx2html.text("Link")],
+  let link = @docx2html.hyperlink(
+    [@docx2html.text("Link")],
     href=Some("http://example.com"),
-    anchor=None,
-    target_frame=None,
   )
-  let table = @docx2html.Table(
-    children=[
-      TableRow(
-        children=[
-          TableCell(children=[@docx2html.text("Cell")], col_span=1, row_span=1),
-        ],
-        is_header=false,
-      ),
-    ],
-    properties=@docx2html.TableProperties::default(),
-  )
+  let table = @docx2html.table([
+    @docx2html.table_row([@docx2html.table_cell([@docx2html.text("Cell")])]),
+  ])
   let doc = @docx2html.document([link, table])
   let transformed = @docx2html.transform_elements(doc, fn(element) {
     match element {
@@ -1729,10 +1707,10 @@ test "style map style-name prefix matchers are honored" {
     ).value,
     content="<h2>Caret</h2>",
   )
-  let table = @docx2html.Table(children=[], properties={
-    style_id: None,
-    style_name: Some("Normal Table"),
-  })
+  let table = @docx2html.table(
+    [],
+    properties=@docx2html.table_properties(style_name=Some("Normal Table")),
+  )
   inspect(
     @docx2html.convert_document_to_html(table, style_map=[
       "table[style-name^='Normal'] => table.normal-table:fresh",
@@ -1776,7 +1754,7 @@ test "style map style-name matchers are case-insensitive" {
     @docx2html.paragraph([
       @docx2html.run([@docx2html.text("Run")], properties=run_properties),
     ]),
-    Table(children=[], properties=table_properties),
+    @docx2html.table([], properties=table_properties),
   ])
   let result = @docx2html.convert_document_to_html(doc, style_map=[
     "p[style-name='Heading 1'] => h1:fresh", "r[style-name='Strong'] => strong",
@@ -1837,7 +1815,7 @@ test "document converter warns for unrecognised styles" {
     style_name: Some("Mystery Table"),
   }
   let table_result = @docx2html.convert_document_to_html(
-    Table(children=[], properties=table_properties),
+    @docx2html.table([], properties=table_properties),
   )
   inspect(table_result.value, content="<table></table>")
   debug_inspect(table_result.messages, content="[]")
@@ -2024,11 +2002,10 @@ test "document converter maps caps and highlight run properties" {
 ///|
 test "document converter renders hyperlink anchors and targets" {
   let external_with_anchor = @docx2html.document([
-    Hyperlink(
-      children=[@docx2html.run([@docx2html.text("Hello.")])],
+    @docx2html.hyperlink(
+      [@docx2html.run([@docx2html.text("Hello.")])],
       href=Some("http://example.com/#old"),
       anchor=Some("new"),
-      target_frame=None,
     ),
   ])
   inspect(
@@ -2036,11 +2013,9 @@ test "document converter renders hyperlink anchors and targets" {
     content="<a href=\"http://example.com/#new\">Hello.</a>",
   )
   let anchor_doc = @docx2html.document([
-    Hyperlink(
-      children=[@docx2html.run([@docx2html.text("Hello.")])],
-      href=None,
+    @docx2html.hyperlink(
+      [@docx2html.run([@docx2html.text("Hello.")])],
       anchor=Some("_Peter"),
-      target_frame=None,
     ),
   ])
   inspect(
@@ -2048,9 +2023,8 @@ test "document converter renders hyperlink anchors and targets" {
     content="<a href=\"#doc-42-_Peter\">Hello.</a>",
   )
   let target_doc = @docx2html.document([
-    Hyperlink(
-      children=[@docx2html.run([@docx2html.text("Hello.")])],
-      href=None,
+    @docx2html.hyperlink(
+      [@docx2html.run([@docx2html.text("Hello.")])],
       anchor=Some("start"),
       target_frame=Some("_blank"),
     ),
@@ -2064,17 +2038,13 @@ test "document converter renders hyperlink anchors and targets" {
 ///|
 test "document converter collapses adjacent hyperlinks with the same target" {
   let doc = @docx2html.document([
-    Hyperlink(
-      children=[@docx2html.run([@docx2html.text("Hello ")])],
+    @docx2html.hyperlink(
+      [@docx2html.run([@docx2html.text("Hello ")])],
       href=Some("http://www.example.com"),
-      anchor=None,
-      target_frame=None,
     ),
-    Hyperlink(
-      children=[@docx2html.run([@docx2html.text("world")])],
+    @docx2html.hyperlink(
+      [@docx2html.run([@docx2html.text("world")])],
       href=Some("http://www.example.com"),
-      anchor=None,
-      target_frame=None,
     ),
   ])
   inspect(
@@ -2086,12 +2056,7 @@ test "document converter collapses adjacent hyperlinks with the same target" {
 ///|
 test "document converter collapses unaddressed hyperlinks to children" {
   let doc = @docx2html.document([
-    Hyperlink(
-      children=[@docx2html.run([@docx2html.text("Plain")])],
-      href=None,
-      anchor=None,
-      target_frame=None,
-    ),
+    @docx2html.hyperlink([@docx2html.run([@docx2html.text("Plain")])]),
   ])
   inspect(@docx2html.convert_document_to_html(doc).value, content="Plain")
 }
@@ -2280,10 +2245,10 @@ test "document converter renders table structure like Mammoth" {
     @docx2html.convert_document_to_html(test_table([@docx2html.tab()])).value,
     content="<table>\t</table>",
   )
-  let styled_table = @docx2html.Table(children=[], properties={
-    style_id: None,
-    style_name: Some("Normal Table"),
-  })
+  let styled_table = @docx2html.table(
+    [],
+    properties=@docx2html.table_properties(style_name=Some("Normal Table")),
+  )
   inspect(
     @docx2html.convert_document_to_html(styled_table, style_map=[
       "table[style-name='Normal Table'] => table.normal-table",
@@ -2345,73 +2310,34 @@ test "document converter writes table cell spans" {
 
 ///|
 test "document converter groups leading header table rows" {
-  let table = @docx2html.Table(
-    children=[
-      TableRow(
-        children=[
-          TableCell(
-            children=[@docx2html.paragraph([@docx2html.text("Head")])],
-            col_span=1,
-            row_span=1,
-          ),
-        ],
-        is_header=true,
-      ),
-    ],
-    properties=@docx2html.TableProperties::default(),
-  )
+  let table = @docx2html.table([
+    table_row(
+      [table_cell([@docx2html.paragraph([@docx2html.text("Head")])])],
+      is_header=true,
+    ),
+  ])
   inspect(
     @docx2html.convert_document_to_html(table).value,
     content="<table><thead><tr><th><p>Head</p></th></tr></thead></table>",
   )
-  let mixed_table = @docx2html.Table(
-    children=[
-      TableRow(
-        children=[
-          TableCell(
-            children=[@docx2html.paragraph([@docx2html.text("H1")])],
-            col_span=1,
-            row_span=1,
-          ),
-        ],
-        is_header=true,
-      ),
-      TableRow(
-        children=[
-          TableCell(
-            children=[@docx2html.paragraph([@docx2html.text("H2")])],
-            col_span=1,
-            row_span=1,
-          ),
-        ],
-        is_header=true,
-      ),
-      TableRow(
-        children=[
-          TableCell(
-            children=[@docx2html.paragraph([@docx2html.text("Body")])],
-            col_span=1,
-            row_span=1,
-          ),
-        ],
-        is_header=false,
-      ),
-    ],
-    properties=@docx2html.TableProperties::default(),
-  )
+  let mixed_table = @docx2html.table([
+    table_row(
+      [table_cell([@docx2html.paragraph([@docx2html.text("H1")])])],
+      is_header=true,
+    ),
+    table_row(
+      [table_cell([@docx2html.paragraph([@docx2html.text("H2")])])],
+      is_header=true,
+    ),
+    table_row([table_cell([@docx2html.paragraph([@docx2html.text("Body")])])]),
+  ])
   inspect(
     @docx2html.convert_document_to_html(mixed_table).value,
     content="<table><thead><tr><th><p>H1</p></th></tr><tr><th><p>H2</p></th></tr></thead><tbody><tr><td><p>Body</p></td></tr></tbody></table>",
   )
-  let all_header_table = @docx2html.Table(
-    children=[
-      TableRow(
-        children=[TableCell(children=[], col_span=1, row_span=1)],
-        is_header=true,
-      ),
-    ],
-    properties=@docx2html.TableProperties::default(),
-  )
+  let all_header_table = @docx2html.table([
+    table_row([table_cell([])], is_header=true),
+  ])
   inspect(
     @docx2html.convert_document_to_html(all_header_table).value,
     content="<table><thead><tr><th></th></tr></thead></table>",
@@ -2627,7 +2553,7 @@ test "custom image converters inspect eager image bytes" {
   }
   let doc = @docx2html.document([@docx2html.paragraph([Image(image)])])
   let convert_image = fn(image : @docx2html.Image) {
-    let alt = try @utf8.decode(image.data[:]) catch {
+    let alt = try @utf8.decode(image.data) catch {
       _ => ""
     } noraise {
       text => text
@@ -2719,13 +2645,12 @@ test "document converter resolves nested comment references against root comment
     author_name: "The Piemaker",
     author_initials: "TP",
   }
-  let nested = @docx2html.Document(
-    children=[
-      @docx2html.paragraph([@docx2html.text("Nested"), CommentReference("4")]),
-    ],
-    notes=[],
-    comments=[],
-  )
+  let nested = @docx2html.document([
+    @docx2html.paragraph([
+      @docx2html.text("Nested"),
+      @docx2html.comment_reference("4"),
+    ]),
+  ])
   let doc = @docx2html.document([nested], comments=[comment])
   inspect(
     @docx2html.convert_document_to_html(

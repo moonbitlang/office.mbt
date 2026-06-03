@@ -1,10 +1,12 @@
 ///|
+/// Node in the lightweight XML tree.
 pub(all) enum XmlNode {
   XmlElement(XmlElement)
   XmlText(String)
 } derive(Debug, Eq)
 
 ///|
+/// XML element with a name, attributes, and child nodes.
 pub(all) struct XmlElement {
   name : String
   attributes : Map[String, String]
@@ -12,6 +14,7 @@ pub(all) struct XmlElement {
 } derive(Debug, Eq)
 
 ///|
+/// Builds an XML element.
 pub fn xml_element(
   name : String,
   attributes? : Map[String, String] = {},
@@ -21,11 +24,13 @@ pub fn xml_element(
 }
 
 ///|
+/// Builds an XML text node.
 pub fn xml_text(value : String) -> XmlNode {
   XmlText(value)
 }
 
 ///|
+/// Returns the first child element with the requested tag.
 pub fn XmlElement::first(self : XmlElement, name : String) -> XmlElement? {
   for child in self.children {
     match child {
@@ -37,6 +42,7 @@ pub fn XmlElement::first(self : XmlElement, name : String) -> XmlElement? {
 }
 
 ///|
+/// Returns the first matching child text, or an empty string.
 pub fn XmlElement::first_or_empty(
   self : XmlElement,
   name : String,
@@ -48,6 +54,7 @@ pub fn XmlElement::first_or_empty(
 }
 
 ///|
+/// Returns direct child elements with the requested tag.
 pub fn XmlElement::elements_by_tag_name(
   self : XmlElement,
   name : String,
@@ -63,6 +70,7 @@ pub fn XmlElement::elements_by_tag_name(
 }
 
 ///|
+/// Returns descendant elements with the requested tag.
 pub fn XmlElement::descendants_by_tag_name(
   self : XmlElement,
   name : String,
@@ -83,6 +91,7 @@ pub fn XmlElement::descendants_by_tag_name(
 }
 
 ///|
+/// Returns concatenated text content for the XML element.
 pub fn XmlElement::text(self : XmlElement) -> String raise DocxError {
   if self.children.length() == 0 {
     ""
@@ -97,6 +106,7 @@ pub fn XmlElement::text(self : XmlElement) -> String raise DocxError {
 }
 
 ///|
+/// Parses XML text into an element.
 pub fn read_xml_string(
   source : String,
   namespace_map? : Map[String, String] = {},
@@ -112,6 +122,7 @@ pub fn read_xml_string(
 }
 
 ///|
+/// Serializes an XML element to text.
 pub fn write_xml_string(
   root : XmlElement,
   namespaces? : Map[String, String] = {},

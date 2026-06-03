@@ -56,6 +56,7 @@ priv struct ContentTypes {
 }
 
 ///|
+/// Document tree plus diagnostics produced while reading a DOCX package.
 pub(all) struct DocxReadResult {
   document : DocumentElement
   messages : Array[Message]
@@ -111,6 +112,7 @@ priv struct TableCellForSpan {
 }
 
 ///|
+/// Converts DOCX bytes to HTML.
 pub fn convert_to_html(
   docx : BytesView,
   style_map? : Array[String] = [],
@@ -141,6 +143,7 @@ pub fn convert_to_html(
 }
 
 ///|
+/// Converts DOCX bytes to Markdown.
 pub fn convert_to_markdown(
   docx : BytesView,
   style_map? : Array[String] = [],
@@ -169,6 +172,7 @@ pub fn convert_to_markdown(
 }
 
 ///|
+/// Converts DOCX bytes using the requested output format.
 pub fn convert(
   docx : BytesView,
   output_format? : OutputFormat = Html,
@@ -210,6 +214,7 @@ pub fn convert(
 }
 
 ///|
+/// Extracts raw text from DOCX bytes.
 pub fn extract_raw_text(
   docx : BytesView,
   external_file_access? : Bool = false,
@@ -237,11 +242,12 @@ fn prepend_messages(
     let combined : Array[Message] = []
     combined.append(messages)
     combined.append(result.messages)
-    { value: result.value, messages: dedupe_messages(combined) }
+    { value: result.value, messages: @core.dedupe_messages(combined) }
   }
 }
 
 ///|
+/// Reads the embedded style map from DOCX bytes, if present.
 pub fn read_embedded_style_map(docx : BytesView) -> String? raise DocxError {
   read_embedded_style_map_from_zip(open_zip(docx))
 }
@@ -271,6 +277,7 @@ fn read_embedded_style_map_from_zip(
 }
 
 ///|
+/// Reads DOCX bytes into a document tree.
 pub fn read_docx(
   docx : BytesView,
   external_file_access? : Bool = false,
@@ -280,6 +287,7 @@ pub fn read_docx(
 }
 
 ///|
+/// Reads DOCX bytes into a document tree and diagnostics.
 pub fn read_docx_with_messages(
   docx : BytesView,
   external_file_access? : Bool = false,
@@ -357,7 +365,10 @@ fn read_docx_zip_with_messages(
   messages.append(notes_result.messages)
   messages.append(comments_result.messages)
   messages.append(document_result.messages)
-  { document: document_result.document, messages: dedupe_messages(messages) }
+  {
+    document: document_result.document,
+    messages: @core.dedupe_messages(messages),
+  }
 }
 
 ///|
@@ -798,7 +809,7 @@ fn read_notes_for_document(
   )
   notes.append(endnotes.notes)
   messages.append(endnotes.messages)
-  { notes, messages: dedupe_messages(messages) }
+  { notes, messages: @core.dedupe_messages(messages) }
 }
 
 ///|
@@ -2087,6 +2098,15 @@ fn BodyReader::read_hyperlink(
 }
 
 ///|
+fn replace_url_fragment(href : String, fragment : String) -> String {
+  let base = match href.find("#") {
+    Some(index) => href[:index].to_owned()
+    None => href
+  }
+  base + "#" + fragment
+}
+
+///|
 fn non_empty_attribute(element : XmlElement, name : String) -> String? {
   match element.attributes.get(name) {
     Some(value) => if value == "" { None } else { Some(value) }
@@ -2432,7 +2452,7 @@ fn percent_decode_uri_path(path : String) -> String? {
     bytes.push(path[index].to_int().to_byte())
     index += 1
   }
-  try @utf8.decode(Bytes::from_array(bytes)[:]) catch {
+  try @utf8.decode(Bytes::from_array(bytes)) catch {
     _ => None
   } noraise {
     value => Some(value)

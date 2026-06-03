@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/core"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn combine_results(Array[ConversionResult]) -> ConversionResult
+
+pub fn dedupe_messages(Array[Message]) -> Array[Message]
+
+pub fn error(String) -> Message
+
+pub fn success(String) -> ConversionResult
+
+pub fn warning(String) -> Message
+
+// Errors
+pub(all) suberror DocxError {
+  InvalidZip(message~ : String)
+  InvalidXml(message~ : String)
+  MissingPart(message~ : String)
+  Unsupported(message~ : String)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) struct ConversionResult {
+  value : String
+  messages : Array[Message]
+} derive(Eq, @debug.Debug)
+pub fn ConversionResult::combine(Self, Self) -> Self
+pub fn ConversionResult::flat_map(Self, (String) -> Self raise?) -> Self raise?
+pub fn ConversionResult::map(Self, (String) -> String raise?) -> Self raise?
+
+pub(all) enum Message {
+  Warning(String)
+  Error(String)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

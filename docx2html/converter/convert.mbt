@@ -1,4 +1,5 @@
 ///|
+/// Selects whether conversion renders HTML or Markdown.
 pub(all) enum OutputFormat {
   Html
   Markdown
@@ -18,12 +19,14 @@ priv struct ConvertedNodes {
 }
 
 ///|
+/// Rendered image nodes plus any diagnostics from image conversion.
 pub(all) struct ImageConversion {
   nodes : Array[HtmlNode]
   messages : Array[Message]
 } derive(Debug, Eq)
 
 ///|
+/// Builds an image conversion result from rendered nodes and diagnostics.
 pub fn image_conversion(
   nodes : Array[HtmlNode],
   messages? : Array[Message] = [],
@@ -32,6 +35,7 @@ pub fn image_conversion(
 }
 
 ///|
+/// Converts a document tree to HTML.
 pub fn convert_document_to_html(
   document : DocumentElement,
   style_map? : Array[String] = [],
@@ -56,6 +60,7 @@ pub fn convert_document_to_html(
 }
 
 ///|
+/// Converts a document tree to Markdown.
 pub fn convert_document_to_markdown(
   document : DocumentElement,
   style_map? : Array[String] = [],
@@ -78,6 +83,7 @@ pub fn convert_document_to_markdown(
 }
 
 ///|
+/// Converts a document tree using the requested output format.
 pub fn convert_document(
   document : DocumentElement,
   output_format? : OutputFormat = Html,
@@ -122,7 +128,9 @@ fn convert_document_to_nodes(
   if include_default_style_map {
     all_style_lines.append(default_style_map_lines())
   }
-  let parsed_style_map = read_style_map_with_messages(all_style_lines)
+  let parsed_style_map = @style_map.read_style_map_with_messages(
+    all_style_lines,
+  )
   let options = ConvertOptions::{
     style_map: parsed_style_map.mappings,
     ignore_empty_paragraphs,
@@ -139,7 +147,7 @@ fn convert_document_to_nodes(
     image_converter: convert_image,
   }
   let nodes = converter.convert_element(document)
-  { nodes, messages: dedupe_messages(converter.messages) }
+  { nodes, messages: @core.dedupe_messages(converter.messages) }
 }
 
 ///|
@@ -262,7 +270,7 @@ fn DocumentConverter::convert_break(
   element : DocumentElement,
   break_type : BreakType,
 ) -> Array[HtmlNode] {
-  match find_style_mapping(element, self.options.style_map) {
+  match @style_map.find_style_mapping(element, self.options.style_map) {
     Some(mapping) => wrap_html_path(mapping.to, [])
     None =>
       match break_type {
@@ -304,10 +312,10 @@ fn DocumentConverter::convert_paragraph(
   if self.options.ignore_empty_paragraphs && html_nodes_are_empty(content) {
     []
   } else {
-    let default_path = [
+    let default_path : Array[HtmlPathElement] = [
       { tag: "p", attributes: {}, fresh: true, separator: None },
     ]
-    if find_style_mapping(element, self.options.style_map) == None {
+    if @style_map.find_style_mapping(element, self.options.style_map) == None {
       self.warn_unrecognised_style(
         "paragraph",
         properties.style_id,
@@ -335,7 +343,7 @@ fn DocumentConverter::convert_run(
   match properties.highlight {
     Some(_) =>
       match
-        find_style_mapping(
+        @style_map.find_style_mapping(
           Run(children~, properties~),
           [
             for mapping in self.options.style_map if mapping.from
@@ -418,7 +426,7 @@ fn path_for_property(
   property : String,
   default_tag : String?,
 ) -> Array[HtmlPathElement] {
-  let matcher = RunPropertyMatcher(property)
+  let matcher = @style_map.RunPropertyMatcher(property)
   for mapping in converter.options.style_map {
     if mapping.from == matcher {
       return mapping.to
@@ -455,7 +463,7 @@ fn DocumentConverter::convert_table(
   properties : TableProperties,
 ) -> Array[HtmlNode] {
   let rows = force_write_nodes(self.convert_table_children(children))
-  let default_path = [
+  let default_path : Array[HtmlPathElement] = [
     { tag: "table", attributes: {}, fresh: true, separator: None },
   ]
   ignore(properties)
@@ -577,7 +585,7 @@ fn DocumentConverter::convert_table_cell(
 
 ///|
 fn force_write_nodes(children : Array[HtmlNode]) -> Array[HtmlNode] {
-  let nodes = [ForceWrite]
+  let nodes = [@html.ForceWrite]
   nodes.append(children)
   nodes
 }
@@ -593,23 +601,26 @@ fn DocumentConverter::convert_image(
 }
 
 ///|
+/// Converts images to inline data URI image nodes.
 pub fn data_uri_image_converter(image : Image) -> ImageConversion {
   img_element(fn(image) {
     {
       "src": "data:" +
       image.content_type +
       ";base64," +
-      @base64.encode(image.data[:]),
+      @base64.encode(image.data),
     }
   })(image)
 }
 
 ///|
+/// Converts one image to an inline data URI image result.
 pub fn data_uri_image(image : Image) -> ImageConversion {
   data_uri_image_converter(image)
 }
 
 ///|
+/// Creates an image converter that emits an `img` element.
 pub fn img_element(
   read_attributes : (Image) -> Map[String, String],
 ) -> (Image) -> ImageConversion {
@@ -628,6 +639,7 @@ pub fn img_element(
 }
 
 ///|
+/// Alias for `img_element` matching Mammoth image API style.
 pub fn inline_image(
   read_attributes : (Image) -> Map[String, String],
 ) -> (Image) -> ImageConversion {
@@ -726,7 +738,7 @@ fn DocumentConverter::convert_comment_reference(
   element : DocumentElement,
   comment_id : String,
 ) -> Array[HtmlNode] {
-  match find_style_mapping(element, self.options.style_map) {
+  match @style_map.find_style_mapping(element, self.options.style_map) {
     Some(mapping) =>
       match self.find_comment(comment_id) {
         Some(comment) => {
@@ -832,7 +844,8 @@ fn DocumentConverter::wrap_with_style(
   content : Array[HtmlNode],
   default_path : Array[HtmlPathElement],
 ) -> Array[HtmlNode] {
-  let path = match find_style_mapping(element, self.options.style_map) {
+  let path = match
+    @style_map.find_style_mapping(element, self.options.style_map) {
     Some(mapping) => mapping.to
     None => default_path
   }
@@ -870,96 +883,10 @@ fn html_nodes_are_empty(nodes : Array[HtmlNode]) -> Bool {
       TextNode(value) => if value != "" { return false }
       ForceWrite => return false
       Element(tag~, children~, ..) =>
-        if is_void_html_tag(tag) || !html_nodes_are_empty(children) {
+        if @html.is_void_html_tag(tag) || !html_nodes_are_empty(children) {
           return false
         }
     }
   }
   true
-}
-
-///|
-pub fn simplify_html(nodes : Array[HtmlNode]) -> Array[HtmlNode] {
-  let result : Array[HtmlNode] = []
-  for node in nodes {
-    match simplify_html_node(node) {
-      Some(simplified) => append_simplified(result, simplified)
-      None => ()
-    }
-  }
-  result
-}
-
-///|
-fn simplify_html_node(node : HtmlNode) -> HtmlNode? {
-  match node {
-    TextNode("") => None
-    Element(tag~, attributes~, children~, fresh~, separator~) => {
-      let children = simplify_html(children)
-      if children.is_empty() && !is_void_html_tag(tag) {
-        None
-      } else {
-        Some(Element(tag~, attributes~, children~, fresh~, separator~))
-      }
-    }
-    _ => Some(node)
-  }
-}
-
-///|
-fn append_simplified(result : Array[HtmlNode], node : HtmlNode) -> Unit {
-  if result.length() == 0 {
-    result.push(node)
-  } else {
-    let last_index = result.length() - 1
-    match (result[last_index], node) {
-      (
-        Element(
-          tag=tag_a,
-          attributes=attrs_a,
-          children=children_a,
-          fresh=fresh_a,
-          separator=separator_a
-        ),
-        Element(
-          tag=tag_b,
-          attributes=attrs_b,
-          children=children_b,
-          fresh=false,
-          separator=separator_b
-        ),
-      ) =>
-        if html_tag_matches(tag_b, tag_a) && attrs_a == attrs_b {
-          let merged = merge_html_children(children_a, children_b, separator_b)
-          result[last_index] = Element(
-            tag=tag_a,
-            attributes=attrs_a,
-            children=merged,
-            fresh=fresh_a,
-            separator=separator_a,
-          )
-        } else {
-          result.push(node)
-        }
-      _ => result.push(node)
-    }
-  }
-}
-
-///|
-fn merge_html_children(
-  left : Array[HtmlNode],
-  right : Array[HtmlNode],
-  separator : String?,
-) -> Array[HtmlNode] {
-  let merged : Array[HtmlNode] = []
-  merged.append(left)
-  match separator {
-    Some(value) => append_simplified(merged, html_text(value))
-    None => ()
-  }
-  for child in right {
-    append_simplified(merged, child)
-  }
-  merged
 }
