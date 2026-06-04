@@ -124,11 +124,13 @@ test "pdf_texttopdf_of_utf8_with_newlines rejects invalid charcodes" {
     fonts: [font],
     entries: [{ codepoint: 65, font_index: 0, charcode: 300 }],
   }
-  let result : Result[Array[@pdflite.PdfTypeElement], Error] = try? @pdflite.pdf_texttopdf_of_utf8_with_newlines(
-    pack,
-    10.0,
-    @ascii.encode("A"),
-  )
+  let result : Result[Array[@pdflite.PdfTypeElement], Error] = try
+    @pdflite.pdf_texttopdf_of_utf8_with_newlines(pack, 10.0, @ascii.encode("A"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::BadText) else {
     fail("expected invalid charcode to raise BadText")
   }
@@ -309,9 +311,13 @@ test "pdf_ua_subformat_of_string parses CamlPDF PDF/UA names" {
   @test.assert_eq(try! @pdflite.pdf_ua_subformat_of_string("PDF/UA-2"), PdfUA2)
   @test.assert_eq(try! @pdflite.pdf_subformat_of_string("PDF/UA-1"), PdfUA1)
   @test.assert_eq(try! @pdflite.pdf_subformat_of_string("PDF/UA-2"), PdfUA2)
-  let unknown : Result[@pdflite.PdfUASubformat, Error] = try? @pdflite.pdf_ua_subformat_of_string(
-    "PDF/A-1",
-  )
+  let unknown : Result[@pdflite.PdfUASubformat, Error] = try
+    @pdflite.pdf_ua_subformat_of_string("PDF/A-1")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unknown is Err(@core.PdfError::BadText) else {
     fail("expected unknown PDF/UA subformat to raise BadText")
   }
@@ -320,13 +326,19 @@ test "pdf_ua_subformat_of_string parses CamlPDF PDF/UA names" {
 ///|
 test "pdf_texttopdf_typeset requires title when subformat is requested" {
   let paper = @geometry.paper_size_make(PdfPoint, 100.0, 100.0)
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_texttopdf_typeset(
-    texttopdf_standard_pack_for_test(),
-    10.0,
-    paper,
-    @ascii.encode("Hi"),
-    subformat=Some(PdfUA1),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_texttopdf_typeset(
+      texttopdf_standard_pack_for_test(),
+      10.0,
+      paper,
+      @ascii.encode("Hi"),
+      subformat=Some(PdfUA1),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::TitleExpected) else {
     fail("expected PDF/UA text-to-PDF without title to raise TitleExpected")
   }

@@ -33,16 +33,28 @@ test "cursor reads classic trailer dictionary" {
 
 ///|
 test "cursor trailer dictionary rejects malformed input" {
-  let missing_marker : Result[@syntax.PdfObject, Error] = try? @reader.pdf_cursor_read_trailer_dictionary(
-    @core.byte_cursor_of_bytes(@ascii.encode("xref")),
-  )
+  let missing_marker : Result[@syntax.PdfObject, Error] = try
+    @reader.pdf_cursor_read_trailer_dictionary(
+      @core.byte_cursor_of_bytes(@ascii.encode("xref")),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_marker is Err(@core.PdfError::TrailerExpected) else {
     fail("expected TrailerExpected")
   }
 
-  let not_dictionary : Result[@syntax.PdfObject, Error] = try? @reader.pdf_cursor_read_trailer_dictionary(
-    @core.byte_cursor_of_bytes(@ascii.encode("trailer 7")),
-  )
+  let not_dictionary : Result[@syntax.PdfObject, Error] = try
+    @reader.pdf_cursor_read_trailer_dictionary(
+      @core.byte_cursor_of_bytes(@ascii.encode("trailer 7")),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard not_dictionary is Err(@core.PdfError::TrailerExpected) else {
     fail("expected TrailerExpected")
   }
@@ -67,32 +79,50 @@ test "trailer helpers parse prev and xref stream offsets" {
 
 ///|
 test "trailer helpers reject malformed offsets" {
-  let negative_prev : Result[Int?, Error] = try? @reader.pdf_trailer_prev_position(
-    test_trailer_dictionary([
-      (@reader.pdf_reader_prev_name(), test_trailer_integer(-1)),
-    ]),
-  )
+  let negative_prev : Result[Int?, Error] = try
+    @reader.pdf_trailer_prev_position(
+      test_trailer_dictionary([
+        (@reader.pdf_reader_prev_name(), test_trailer_integer(-1)),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard negative_prev is Err(@core.PdfError::TrailerExpected) else {
     fail("expected TrailerExpected")
   }
 
-  let non_integer_prev : Result[Int?, Error] = try? @reader.pdf_trailer_prev_position(
-    test_trailer_dictionary([
-      (
-        @reader.pdf_reader_prev_name(),
-        test_trailer_name(@reader.pdf_reader_name("/Bad")),
-      ),
-    ]),
-  )
+  let non_integer_prev : Result[Int?, Error] = try
+    @reader.pdf_trailer_prev_position(
+      test_trailer_dictionary([
+        (
+          @reader.pdf_reader_prev_name(),
+          test_trailer_name(@reader.pdf_reader_name("/Bad")),
+        ),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_integer_prev is Err(@core.PdfError::TrailerExpected) else {
     fail("expected TrailerExpected")
   }
 
-  let negative_xrefstm : Result[Int?, Error] = try? @reader.pdf_trailer_xref_stream_position(
-    test_trailer_dictionary([
-      (@reader.pdf_reader_xrefstm_name(), test_trailer_integer(-1)),
-    ]),
-  )
+  let negative_xrefstm : Result[Int?, Error] = try
+    @reader.pdf_trailer_xref_stream_position(
+      test_trailer_dictionary([
+        (@reader.pdf_reader_xrefstm_name(), test_trailer_integer(-1)),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard negative_xrefstm is Err(@core.PdfError::XRefExpected) else {
     fail("expected XRefExpected")
   }

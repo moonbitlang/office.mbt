@@ -198,17 +198,26 @@ test "pdf_type_font_widths scales simple font metrics" {
 
 ///|
 test "pdf_type helpers reject unsupported fonts and short width tables" {
-  let missing_metrics : Result[Array[Double], Error] = try? @pdflite.pdf_type_font_widths(
-    type_simple_font_without_metrics_for_test(),
-    12.0,
-  )
+  let missing_metrics : Result[Array[Double], Error] = try
+    @pdflite.pdf_type_font_widths(
+      type_simple_font_without_metrics_for_test(),
+      12.0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_metrics is Err(@core.PdfError::FontWidthExpected) else {
     fail("expected missing simple font metrics to fail")
   }
-  let short_widths : Result[Double, Error] = try? @pdflite.pdf_type_width_of_bytes(
-    [1.0, 2.0],
-    type_bytes_for_test([0, 2]),
-  )
+  let short_widths : Result[Double, Error] = try
+    @pdflite.pdf_type_width_of_bytes([1.0, 2.0], type_bytes_for_test([0, 2]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_widths is Err(@core.PdfError::FontWidthExpected) else {
     fail("expected short width table to fail")
   }

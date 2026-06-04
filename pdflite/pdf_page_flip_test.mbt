@@ -207,10 +207,13 @@ test "PdfDocument flip_pages_horizontally transforms selected pages and wrapper"
 ///|
 test "PdfDocument flip pages validate selected pages" {
   let document = page_flip_document_for_test([page_flip_page_for_test([Op_S])])
-  let bad_vertical : Result[@pdflite.PdfDocument, Error] = try? document.flip_pages_vertically([
-      2,
-    ],
-  )
+  let bad_vertical : Result[@pdflite.PdfDocument, Error] = try
+    document.flip_pages_vertically([2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_vertical
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -220,10 +223,13 @@ test "PdfDocument flip pages validate selected pages" {
     fail("expected vertical flip page range validation")
   }
 
-  let bad_horizontal : Result[@pdflite.PdfDocument, Error] = try? document.flip_pages_horizontally([
-      2,
-    ],
-  )
+  let bad_horizontal : Result[@pdflite.PdfDocument, Error] = try
+    document.flip_pages_horizontally([2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_horizontal
     is Err(
       @core.PdfError::BadPageSpecification(

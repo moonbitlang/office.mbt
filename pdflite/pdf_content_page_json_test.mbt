@@ -175,7 +175,13 @@ test "cpdfcontent page JSON serializes selected page contents" {
     ]),
   )
   @test.assert_eq(try! document.page_content_json([]), Json::array([]))
-  let bad_page : Result[Json, Error] = try? document.page_content_json([3])
+  let bad_page : Result[Json, Error] = try
+    document.page_content_json([3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected @core.PdfError::BadPageSpecification")
   }
@@ -194,7 +200,13 @@ test "cpdfcontent test text extraction follows selected pages" {
   )
   @test.assert_eq(try! document.test_extract_text([2]), @utf8.encode("\n\nB"))
   @test.assert_eq(try! document.test_extract_text([]), @utf8.encode("\n\n"))
-  let bad_page : Result[Bytes, Error] = try? document.test_extract_text([3])
+  let bad_page : Result[Bytes, Error] = try
+    document.test_extract_text([3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected @core.PdfError::BadPageSpecification")
   }

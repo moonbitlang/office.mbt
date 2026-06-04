@@ -672,7 +672,11 @@ test "PdfDocument parse_function rejects float operands for integer operators" {
     StreamGot(calculator),
   )
   let function = try! doc.parse_function(function_object)
-  let result : Result[Array[Double], Error] = try? function.eval([])
+  let result : Result[Array[Double], Error] = try function.eval([]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail(
       "expected @core.PdfError::BadFunctionEvaluation for float bitwise operand",
@@ -714,21 +718,33 @@ test "PdfFunction eval clamps domain inputs and output range" {
 ///|
 test "PdfDocument parse_function reports unsupported or malformed functions" {
   let doc = @pdflite.pdf_document_empty()
-  let unsupported : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_dictionary([
-      (fun_name_for_test("/FunctionType"), PdfInteger(5)),
-      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-    ]),
-  )
+  let unsupported : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_dictionary([
+        (fun_name_for_test("/FunctionType"), PdfInteger(5)),
+        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported is Err(@core.PdfError::FunctionNotSupported(5)) else {
     fail("expected @core.PdfError::FunctionNotSupported")
   }
-  let missing_domain : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_dictionary([
-      (fun_name_for_test("/FunctionType"), PdfInteger(2)),
-      (fun_name_for_test("/N"), PdfInteger(1)),
-    ]),
-  )
+  let missing_domain : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_dictionary([
+        (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+        (fun_name_for_test("/N"), PdfInteger(1)),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_domain is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/Domain") else {
     fail("expected missing /Domain")
@@ -779,93 +795,147 @@ test "PdfDocument parse_function covers sampled function options and errors" {
   }
   @test.assert_eq(fallback_sampled.encode, [0.0, 1.0])
 
-  let bad_size_item : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_stream(
-      @syntax.pdf_dictionary([
-        (fun_name_for_test("/Length"), PdfInteger(samples.length())),
-        (fun_name_for_test("/FunctionType"), PdfInteger(0)),
-        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-        (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-        (
-          fun_name_for_test("/Size"),
-          PdfArray([PdfNameObject(fun_name_for_test("/Bad"))]),
-        ),
-        (fun_name_for_test("/BitsPerSample"), PdfInteger(4)),
-      ]),
-      StreamGot(samples),
-    ),
-  )
+  let bad_size_item : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
+          (fun_name_for_test("/Length"), PdfInteger(samples.length())),
+          (fun_name_for_test("/FunctionType"), PdfInteger(0)),
+          (
+            fun_name_for_test("/Domain"),
+            PdfArray([PdfInteger(0), PdfInteger(1)]),
+          ),
+          (
+            fun_name_for_test("/Range"),
+            PdfArray([PdfInteger(0), PdfInteger(1)]),
+          ),
+          (
+            fun_name_for_test("/Size"),
+            PdfArray([PdfNameObject(fun_name_for_test("/Bad"))]),
+          ),
+          (fun_name_for_test("/BitsPerSample"), PdfInteger(4)),
+        ]),
+        StreamGot(samples),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_size_item is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed sampled size item")
   }
 
-  let bad_size_array : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_stream(
-      @syntax.pdf_dictionary([
-        (fun_name_for_test("/Length"), PdfInteger(samples.length())),
-        (fun_name_for_test("/FunctionType"), PdfInteger(0)),
-        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-        (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-        (fun_name_for_test("/Size"), PdfInteger(2)),
-        (fun_name_for_test("/BitsPerSample"), PdfInteger(4)),
-      ]),
-      StreamGot(samples),
-    ),
-  )
+  let bad_size_array : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
+          (fun_name_for_test("/Length"), PdfInteger(samples.length())),
+          (fun_name_for_test("/FunctionType"), PdfInteger(0)),
+          (
+            fun_name_for_test("/Domain"),
+            PdfArray([PdfInteger(0), PdfInteger(1)]),
+          ),
+          (
+            fun_name_for_test("/Range"),
+            PdfArray([PdfInteger(0), PdfInteger(1)]),
+          ),
+          (fun_name_for_test("/Size"), PdfInteger(2)),
+          (fun_name_for_test("/BitsPerSample"), PdfInteger(4)),
+        ]),
+        StreamGot(samples),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_size_array is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed sampled size array")
   }
 
-  let missing_range : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_stream(
-      @syntax.pdf_dictionary([
-        (fun_name_for_test("/Length"), PdfInteger(samples.length())),
-        (fun_name_for_test("/FunctionType"), PdfInteger(0)),
-        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-        (fun_name_for_test("/Size"), PdfArray([PdfInteger(2)])),
-        (fun_name_for_test("/BitsPerSample"), PdfInteger(4)),
-      ]),
-      StreamGot(samples),
-    ),
-  )
+  let missing_range : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
+          (fun_name_for_test("/Length"), PdfInteger(samples.length())),
+          (fun_name_for_test("/FunctionType"), PdfInteger(0)),
+          (
+            fun_name_for_test("/Domain"),
+            PdfArray([PdfInteger(0), PdfInteger(1)]),
+          ),
+          (fun_name_for_test("/Size"), PdfArray([PdfInteger(2)])),
+          (fun_name_for_test("/BitsPerSample"), PdfInteger(4)),
+        ]),
+        StreamGot(samples),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_range is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/Range") else {
     fail("expected sampled range or decode")
   }
 
-  let odd_decode : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_stream(
-      @syntax.pdf_dictionary([
-        (fun_name_for_test("/Length"), PdfInteger(samples.length())),
-        (fun_name_for_test("/FunctionType"), PdfInteger(0)),
-        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-        (fun_name_for_test("/Size"), PdfArray([PdfInteger(2)])),
-        (fun_name_for_test("/Decode"), PdfArray([PdfInteger(0)])),
-        (fun_name_for_test("/BitsPerSample"), PdfInteger(4)),
-      ]),
-      StreamGot(samples),
-    ),
-  )
+  let odd_decode : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
+          (fun_name_for_test("/Length"), PdfInteger(samples.length())),
+          (fun_name_for_test("/FunctionType"), PdfInteger(0)),
+          (
+            fun_name_for_test("/Domain"),
+            PdfArray([PdfInteger(0), PdfInteger(1)]),
+          ),
+          (fun_name_for_test("/Size"), PdfArray([PdfInteger(2)])),
+          (fun_name_for_test("/Decode"), PdfArray([PdfInteger(0)])),
+          (fun_name_for_test("/BitsPerSample"), PdfInteger(4)),
+        ]),
+        StreamGot(samples),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard odd_decode is Err(@core.PdfError::FunctionExpected) else {
     fail("expected malformed sampled decode")
   }
 
-  let bad_bits : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_stream(
-      @syntax.pdf_dictionary([
-        (fun_name_for_test("/Length"), PdfInteger(samples.length())),
-        (fun_name_for_test("/FunctionType"), PdfInteger(0)),
-        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-        (fun_name_for_test("/Range"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-        (fun_name_for_test("/Size"), PdfArray([PdfInteger(2)])),
-        (
-          fun_name_for_test("/BitsPerSample"),
-          PdfNameObject(fun_name_for_test("/Bad")),
-        ),
-      ]),
-      StreamGot(samples),
-    ),
-  )
+  let bad_bits : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
+          (fun_name_for_test("/Length"), PdfInteger(samples.length())),
+          (fun_name_for_test("/FunctionType"), PdfInteger(0)),
+          (
+            fun_name_for_test("/Domain"),
+            PdfArray([PdfInteger(0), PdfInteger(1)]),
+          ),
+          (
+            fun_name_for_test("/Range"),
+            PdfArray([PdfInteger(0), PdfInteger(1)]),
+          ),
+          (fun_name_for_test("/Size"), PdfArray([PdfInteger(2)])),
+          (
+            fun_name_for_test("/BitsPerSample"),
+            PdfNameObject(fun_name_for_test("/Bad")),
+          ),
+        ]),
+        StreamGot(samples),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_bits is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed bits per sample")
   }
@@ -883,39 +953,57 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
   )
   @test.assert_eq(try! default_c0_c1.eval([1.0]), [1.0])
 
-  let bad_function_type : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_dictionary([
-      (
-        fun_name_for_test("/FunctionType"),
-        PdfNameObject(fun_name_for_test("/Bad")),
-      ),
-      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-    ]),
-  )
+  let bad_function_type : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_dictionary([
+        (
+          fun_name_for_test("/FunctionType"),
+          PdfNameObject(fun_name_for_test("/Bad")),
+        ),
+        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_function_type is Err(@core.PdfError::NumberExpected) else {
     fail("expected malformed function type")
   }
 
-  let missing_n : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_dictionary([
-      (fun_name_for_test("/FunctionType"), PdfInteger(2)),
-      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-    ]),
-  )
+  let missing_n : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_dictionary([
+        (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_n is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/N") else {
     fail("expected missing interpolation exponent")
   }
 
-  let mismatched_c_arrays : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_dictionary([
-      (fun_name_for_test("/FunctionType"), PdfInteger(2)),
-      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-      (fun_name_for_test("/C0"), PdfArray([PdfInteger(0), PdfInteger(0)])),
-      (fun_name_for_test("/C1"), PdfArray([PdfInteger(1)])),
-      (fun_name_for_test("/N"), PdfInteger(1)),
-    ]),
-  )
+  let mismatched_c_arrays : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_dictionary([
+        (fun_name_for_test("/FunctionType"), PdfInteger(2)),
+        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+        (fun_name_for_test("/C0"), PdfArray([PdfInteger(0), PdfInteger(0)])),
+        (fun_name_for_test("/C1"), PdfArray([PdfInteger(1)])),
+        (fun_name_for_test("/N"), PdfInteger(1)),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatched_c_arrays is Err(@core.PdfError::FunctionExpected) else {
     fail("expected mismatched interpolation arrays")
   }
@@ -925,54 +1013,78 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
     (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
     (fun_name_for_test("/N"), PdfInteger(1)),
   ])
-  let malformed_functions : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_dictionary([
-      (fun_name_for_test("/FunctionType"), PdfInteger(3)),
-      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-      (fun_name_for_test("/Functions"), PdfInteger(1)),
-      (fun_name_for_test("/Bounds"), PdfArray([])),
-      (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-    ]),
-  )
+  let malformed_functions : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_dictionary([
+        (fun_name_for_test("/FunctionType"), PdfInteger(3)),
+        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+        (fun_name_for_test("/Functions"), PdfInteger(1)),
+        (fun_name_for_test("/Bounds"), PdfArray([])),
+        (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed_functions is Err(@core.PdfError::FunctionExpected) else {
     fail("expected malformed stitching function array")
   }
 
-  let missing_functions : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_dictionary([
-      (fun_name_for_test("/FunctionType"), PdfInteger(3)),
-      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-      (fun_name_for_test("/Bounds"), PdfArray([])),
-      (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-    ]),
-  )
+  let missing_functions : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_dictionary([
+        (fun_name_for_test("/FunctionType"), PdfInteger(3)),
+        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+        (fun_name_for_test("/Bounds"), PdfArray([])),
+        (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_functions is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/Functions") else {
     fail("expected missing stitching functions")
   }
 
-  let missing_bounds : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_dictionary([
-      (fun_name_for_test("/FunctionType"), PdfInteger(3)),
-      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-      (fun_name_for_test("/Functions"), PdfArray([first])),
-      (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-    ]),
-  )
+  let missing_bounds : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_dictionary([
+        (fun_name_for_test("/FunctionType"), PdfInteger(3)),
+        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+        (fun_name_for_test("/Functions"), PdfArray([first])),
+        (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_bounds is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == fun_name_for_test("/Bounds") else {
     fail("expected missing stitching bounds")
   }
 
-  let inconsistent_stitching : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-    @syntax.pdf_dictionary([
-      (fun_name_for_test("/FunctionType"), PdfInteger(3)),
-      (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-      (fun_name_for_test("/Functions"), PdfArray([first])),
-      (fun_name_for_test("/Bounds"), PdfArray([PdfReal(0.5)])),
-      (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
-    ]),
-  )
+  let inconsistent_stitching : Result[@pdflite.PdfFunction, Error] = try
+    doc.parse_function(
+      @syntax.pdf_dictionary([
+        (fun_name_for_test("/FunctionType"), PdfInteger(3)),
+        (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+        (fun_name_for_test("/Functions"), PdfArray([first])),
+        (fun_name_for_test("/Bounds"), PdfArray([PdfReal(0.5)])),
+        (fun_name_for_test("/Encode"), PdfArray([PdfInteger(0), PdfInteger(1)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard inconsistent_stitching is Err(@core.PdfError::FunctionExpected) else {
     fail("expected inconsistent stitching arrays")
   }
@@ -997,9 +1109,13 @@ test "PdfDocument parse_function rejects malformed calculator syntax" {
     @ascii.encode("{ 1 } 2"),
   ]
   for calculator in bad_cases {
-    let parsed : Result[@pdflite.PdfFunction, Error] = try? doc.parse_function(
-      fun_type4_for_test(calculator),
-    )
+    let parsed : Result[@pdflite.PdfFunction, Error] = try
+      doc.parse_function(fun_type4_for_test(calculator))
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     guard parsed is Err(@core.PdfError::FunctionExpected) else {
       fail("expected malformed calculator syntax")
     }
@@ -1067,7 +1183,11 @@ test "PdfFunction calculator evaluator reports stack and type errors" {
   ]
   for calculator in bad_cases {
     let function = try! doc.parse_function(fun_type4_for_test(calculator))
-    let result : Result[Array[Double], Error] = try? function.eval([])
+    let result : Result[Array[Double], Error] = try function.eval([]) catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     guard result is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
       fail("expected calculator evaluation failure")
     }
@@ -1083,7 +1203,13 @@ test "PdfFunction calculator evaluator reports stack and type errors" {
       StreamGot(@ascii.encode("{ 1 add }")),
     ),
   )
-  let arity : Result[Array[Double], Error] = try? domain_function.eval([])
+  let arity : Result[Array[Double], Error] = try
+    domain_function.eval([])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard arity is Err(@core.PdfError::BadFunctionEvaluation(_)) else {
     fail("expected domain arity failure")
   }

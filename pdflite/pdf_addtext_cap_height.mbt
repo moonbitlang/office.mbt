@@ -14,7 +14,11 @@ fn pdf_addtext_afm_header_value(
 
 ///|
 fn pdf_addtext_parse_double(text : String) -> Double? {
-  let parsed : Result[Double, Error] = try? @strconv.from_str(text)
+  let parsed : Result[Double, Error] = try @strconv.from_str(text) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match parsed {
     Ok(value) => Some(value)
     Err(_) => None

@@ -38,9 +38,13 @@ fn pdf_reader_xref_metadata_error_allows_reconstruction(
   data : BytesView,
   error : @core.PdfError,
 ) -> Bool {
-  let result : Result[Unit, Error] = try? pdf_reader_validate_xref_metadata_for_reconstruction(
-    data,
-  )
+  let result : Result[Unit, Error] = try
+    pdf_reader_validate_xref_metadata_for_reconstruction(data)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match (result, error) {
     (Err(@core.PdfError::XRefEntryExpected), XRefEntryExpected) => true
     (

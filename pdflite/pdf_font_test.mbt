@@ -534,10 +534,13 @@ test "PdfDocument list_fonts walks page and XObject resources" {
   @test.assert_eq(fonts[2].encoding, "")
   @test.assert_eq(fonts[2].font, doc.lookup_object_or_null(22))
   @test.assert_eq(try! doc.list_fonts([2]), [])
-  let bad_page : Result[Array[@font.PdfFontListEntry], Error] = try? doc.list_fonts([
-      3,
-    ],
-  )
+  let bad_page : Result[Array[@font.PdfFontListEntry], Error] = try
+    doc.list_fonts([3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }
@@ -648,10 +651,13 @@ test "PdfDocument missing_fonts reports page and descendant fonts" {
   @test.assert_eq(doc.is_missing_font(doc.lookup_object_or_null(41)), false)
   @test.assert_eq(doc.is_missing_font(doc.lookup_object_or_null(42)), false)
   @test.assert_eq(doc.is_missing_font(doc.lookup_object_or_null(44)), true)
-  let bad_page : Result[Array[@font.PdfMissingFontEntry], Error] = try? doc.missing_fonts([
-      3,
-    ],
-  )
+  let bad_page : Result[Array[@font.PdfMissingFontEntry], Error] = try
+    doc.missing_fonts([3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }
@@ -685,9 +691,13 @@ test "PdfDocument font_from_name resolves page and XObject paths" {
   )
   @test.assert_eq(try! doc.font_from_name("/Missing", 1), PdfNull)
   @test.assert_eq(try! doc.font_from_name("/Fm/Missing", 1), PdfNull)
-  let bad_page : Result[@syntax.PdfObject, Error] = try? doc.font_from_name(
-    "/F1", 2,
-  )
+  let bad_page : Result[@syntax.PdfObject, Error] = try
+    doc.font_from_name("/F1", 2)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }
@@ -721,9 +731,13 @@ test "PdfDocument font_table renders Helvetica encoding rows" {
     true,
   )
   @test.assert_eq(rendered.contains(".notdef"), false)
-  let bad_page : Result[Array[@font.PdfFontTableEntry], Error] = try? doc.font_table(
-    "/F1", 3,
-  )
+  let bad_page : Result[Array[@font.PdfFontTableEntry], Error] = try
+    doc.font_table("/F1", 3)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }
@@ -794,12 +808,13 @@ test "PdfDocument copy_font_from adds source font to selected target pages" {
     None,
     true,
   )
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? target.copy_font_from(
-    source,
-    "/FSrc",
-    1,
-    [3],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    target.copy_font_from(source, "/FSrc", 1, [3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification")
   }

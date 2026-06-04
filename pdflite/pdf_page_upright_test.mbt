@@ -235,10 +235,13 @@ test "PdfDocument upright_pages validates page range" {
       page_upright_rect_for_test(0.0, 0.0, 100.0, 100.0),
     ),
   ])
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.upright_pages([
-      2,
-    ],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.upright_pages([2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(

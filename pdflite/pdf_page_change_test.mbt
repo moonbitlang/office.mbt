@@ -1336,19 +1336,31 @@ test "PdfDocument change_pages accepts explicit serial reference changes" {
     Some(PdfArray([PdfIndirect(new_numbers[0]), PdfNameObject(type_fit)])),
   )
 
-  let bad_old : Result[@pdflite.PdfDocument, Error] = try? doc.change_pages(
-    [page_change_indexed_blank_for_test(9)],
-    change_references=true,
-    changes=[(3, 1)],
-  )
+  let bad_old : Result[@pdflite.PdfDocument, Error] = try
+    doc.change_pages(
+      [page_change_indexed_blank_for_test(9)],
+      change_references=true,
+      changes=[(3, 1)],
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_old is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected for bad old serial")
   }
-  let bad_new : Result[@pdflite.PdfDocument, Error] = try? doc.change_pages(
-    [page_change_indexed_blank_for_test(9)],
-    change_references=true,
-    changes=[(1, 2)],
-  )
+  let bad_new : Result[@pdflite.PdfDocument, Error] = try
+    doc.change_pages(
+      [page_change_indexed_blank_for_test(9)],
+      change_references=true,
+      changes=[(1, 2)],
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_new is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected for bad new serial")
   }

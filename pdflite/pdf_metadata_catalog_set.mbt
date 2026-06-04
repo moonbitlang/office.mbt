@@ -120,9 +120,13 @@ fn PdfDocument::pdf_metadata_rewrite_destination_page(
 fn pdf_metadata_parse_open_action_destination(
   destination : String,
 ) -> @syntax.PdfObject raise @core.PdfError {
-  let parsed : Result[@syntax.PdfObject, Error] = try? @syntax.pdf_parse_object_from_bytes(
-    @ascii.encode(destination),
-  )
+  let parsed : Result[@syntax.PdfObject, Error] = try
+    @syntax.pdf_parse_object_from_bytes(@ascii.encode(destination))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match parsed {
     Ok(object) =>
       match object {

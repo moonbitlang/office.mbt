@@ -69,10 +69,13 @@ fn pdf_read_reconstruction_validation_document(
   owner_password : BytesView?,
 ) -> PdfDocument {
   if document.is_encrypted() {
-    let decrypted : Result[PdfDecryptionResult?, Error] = try? document.decrypt_with_passwords(
-      user_password~,
-      owner_password~,
-    )
+    let decrypted : Result[PdfDecryptionResult?, Error] = try
+      document.decrypt_with_passwords(user_password~, owner_password~)
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     match decrypted {
       Ok(Some(result)) => result.document
       _ => document

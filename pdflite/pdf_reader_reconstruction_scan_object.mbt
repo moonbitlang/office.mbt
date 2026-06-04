@@ -25,9 +25,13 @@ fn pdf_cursor_lex_reconstructed_indirect_object_tokens_at_current(
     let segment = @core.byte_cursor_of_view(
       cursor.view_at_absolute(start, end - start),
     )
-    let tokens : Result[Array[@syntax.PdfLexeme], Error] = try? @syntax.pdf_cursor_lex_tokens(
-      segment,
-    )
+    let tokens : Result[Array[@syntax.PdfLexeme], Error] = try
+      @syntax.pdf_cursor_lex_tokens(segment)
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     match tokens {
       Ok(tokens) => {
         output = tokens
@@ -69,12 +73,18 @@ fn pdf_cursor_read_reconstructed_indirect_scan_candidate_at_current(
   if complete {
     (object, Some(cursor.absolute_position()))
   } else if pdf_cursor_stopped_at_stream_candidate(cursor) {
-    let length_result : Result[Int, Error] = try? pdf_cursor_resolve_classic_stream_length(
-      cursor,
-      object.object,
-      xrefs,
-      xref_index,
-    )
+    let length_result : Result[Int, Error] = try
+      pdf_cursor_resolve_classic_stream_length(
+        cursor,
+        object.object,
+        xrefs,
+        xref_index,
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     let stream = match length_result {
       Ok(length) =>
         pdf_cursor_finish_stream_object_with_length(

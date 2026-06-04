@@ -708,16 +708,23 @@ test "PdfDocument pdf_of_pages rejects empty and invalid ranges" {
   let page_root = try! doc.add_pagetree([page_extract_indexed_blank_for_test(0)])
   ignore(try! doc.add_root(page_root, []))
   let empty_page_numbers : Array[Int] = []
-  let empty_result : Result[@pdflite.PdfDocument, Error] = try? doc.pdf_of_pages(
-    empty_page_numbers,
-  )
+  let empty_result : Result[@pdflite.PdfDocument, Error] = try
+    doc.pdf_of_pages(empty_page_numbers)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty_result is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected for empty range")
   }
-  let invalid_result : Result[@pdflite.PdfDocument, Error] = try? doc.pdf_of_pages([
-      2,
-    ],
-  )
+  let invalid_result : Result[@pdflite.PdfDocument, Error] = try
+    doc.pdf_of_pages([2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid_result is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected for invalid range")
   }
@@ -881,7 +888,13 @@ test "PdfDocument remove_unreferenced nullifies deleted page references" {
 test "PdfDocument page_reference_numbers reports missing catalog object" {
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(99)
-  let result : Result[Array[Int], Error] = try? doc.page_reference_numbers()
+  let result : Result[Array[Int], Error] = try
+    doc.page_reference_numbers()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }

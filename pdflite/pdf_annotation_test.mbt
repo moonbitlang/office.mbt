@@ -180,10 +180,13 @@ test "PdfDocument list_annotations renders selected non-empty old-style lines" {
     try! document.list_annotations([2], encoding=PdfMetadataRaw),
     @ascii.encode("Page 2: second\n"),
   )
-  let bad_page : Result[@core.PdfBytes, Error] = try? document.list_annotations(
-    [3],
-    encoding=PdfMetadataRaw,
-  )
+  let bad_page : Result[@core.PdfBytes, Error] = try
+    document.list_annotations([3], encoding=PdfMetadataRaw)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected @core.PdfError::BadPageSpecification")
   }
@@ -257,7 +260,13 @@ test "PdfDocument annotations_json exports cpdf annotation rows" {
     try! document.annotations_json([1]),
     Json::array([annotation_json_header_for_test()]),
   )
-  let bad_page : Result[Json, Error] = try? document.annotations_json([3])
+  let bad_page : Result[Json, Error] = try
+    document.annotations_json([3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected @core.PdfError::BadPageSpecification")
   }
@@ -358,15 +367,25 @@ test "PdfDocument set_annotations_json imports cpdf annotation rows" {
 ///|
 test "PdfDocument set_annotations_json reports malformed annotation JSON" {
   let target = try! annotation_cpdf_helper_document_for_test()
-  let bad_top_level : Result[@pdflite.PdfDocument, Error] = try? target.set_annotations_json(
-    Json::object(Map([])),
-  )
+  let bad_top_level : Result[@pdflite.PdfDocument, Error] = try
+    target.set_annotations_json(Json::object(Map([])))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_top_level is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for annotation JSON top level")
   }
-  let malformed_row : Result[@pdflite.PdfDocument, Error] = try? target.set_annotations_json(
-    Json::array([Json::array([Json::string("bad")])]),
-  )
+  let malformed_row : Result[@pdflite.PdfDocument, Error] = try
+    target.set_annotations_json(
+      Json::array([Json::array([Json::string("bad")])]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed_row is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for annotation JSON row")
   }
@@ -395,10 +414,13 @@ test "PdfDocument remove_annotations removes selected page arrays" {
     fail("expected first page annotations")
   }
   @test.assert_eq(pages[1].rest.lookup_immediate(key_annots), None)
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.remove_annotations([
-      3,
-    ],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.remove_annotations([3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected @core.PdfError::BadPageSpecification")
   }
@@ -573,9 +595,13 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
     try! doc.annotations_of_page(@page.pdf_page_blank(@geometry.paper_a4)),
     [],
   )
-  let missing_rect : Result[@annotation.PdfAnnotation, Error] = try? doc.read_annotation(
-    PdfDictionary([]),
-  )
+  let missing_rect : Result[@annotation.PdfAnnotation, Error] = try
+    doc.read_annotation(PdfDictionary([]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_rect is Err(@core.PdfError::RectangleExpected) else {
     fail("expected @core.PdfError::RectangleExpected")
   }
@@ -583,20 +609,29 @@ test "PdfDocument annotation APIs report malformed annotation dictionaries" {
     ..@annotation.pdf_annotation_make(AnnotationText),
     rest: PdfInteger(1),
   }
-  let bad_rest_result : Result[@page.PdfPage, Error] = try? doc.add_annotation(
-    @page.pdf_page_blank(@geometry.paper_a4),
-    bad_rest,
-  )
+  let bad_rest_result : Result[@page.PdfPage, Error] = try
+    doc.add_annotation(@page.pdf_page_blank(@geometry.paper_a4), bad_rest)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_rest_result is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected")
   }
-  let bad_annots_result : Result[@page.PdfPage, Error] = try? doc.add_annotation(
-    {
-      ..@page.pdf_page_blank(@geometry.paper_a4),
-      rest: PdfDictionary([(key_annots, PdfInteger(1))]),
-    },
-    @annotation.pdf_annotation_make(AnnotationText),
-  )
+  let bad_annots_result : Result[@page.PdfPage, Error] = try
+    doc.add_annotation(
+      {
+        ..@page.pdf_page_blank(@geometry.paper_a4),
+        rest: PdfDictionary([(key_annots, PdfInteger(1))]),
+      },
+      @annotation.pdf_annotation_make(AnnotationText),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_annots_result is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected")
   }

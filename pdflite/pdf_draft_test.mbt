@@ -484,10 +484,13 @@ test "PdfDocument draft rejects malformed xobject resources" {
     ]),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_Do(image_name)])],
   }
-  let result : Result[@pdflite.PdfDocument, Error] = try? draft_document_for_test(
-    doc,
-    [page],
-  ).draft(None, true, [1])
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    draft_document_for_test(doc, [page]).draft(None, true, [1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected DictionaryExpected")
   }
@@ -506,10 +509,13 @@ test "PdfDocument draft rejects non-stream form xobjects" {
     resources: draft_resources_for_test([(form_name, PdfIndirect(8))]),
     content: [try! @pdflite.pdf_content_stream_of_ops([Op_Do(form_name)])],
   }
-  let result : Result[@pdflite.PdfDocument, Error] = try? draft_document_for_test(
-    doc,
-    [page],
-  ).draft(None, true, [1])
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    draft_document_for_test(doc, [page]).draft(None, true, [1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected ParseStreamExpected")
   }
@@ -517,11 +523,13 @@ test "PdfDocument draft rejects non-stream form xobjects" {
 
 ///|
 test "PdfDocument draft rejects page ranges outside the document" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_minimum_valid_pdf().draft(
-    None,
-    false,
-    [2],
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_minimum_valid_pdf().draft(None, false, [2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result
     is Err(
       @core.PdfError::BadPageSpecification(

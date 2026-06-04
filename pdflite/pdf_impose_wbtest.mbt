@@ -253,14 +253,20 @@ test "pdf_impose_layout calculates fit sheets and spacing" {
   @test.assert_eq(layout.fit_extra_hspace, 20.0 / 3.0)
   @test.assert_eq(layout.fit_extra_vspace, 20.0 / 3.0)
 
-  let too_small : Result[PdfImposeLayout, Error] = try? pdf_document_empty().pdf_impose_layout(
-    true,
-    99.0,
-    120.0,
-    0.0,
-    5,
-    impose_box_for_test(100.0, 50.0),
-  )
+  let too_small : Result[PdfImposeLayout, Error] = try
+    pdf_document_empty().pdf_impose_layout(
+      true,
+      99.0,
+      120.0,
+      0.0,
+      5,
+      impose_box_for_test(100.0, 50.0),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard too_small
     is Err(
       @core.PdfError::BadNumberArgument(
@@ -312,14 +318,20 @@ test "pdf_impose_layout calculates non-fit stacks and output boxes" {
   @test.assert_eq(grid.y_slots, 3)
   @test.assert_eq(grid.output_mediabox, impose_box_for_test(210.0, 160.0))
 
-  let bad_zero : Result[PdfImposeLayout, Error] = try? pdf_document_empty().pdf_impose_layout(
-    false,
-    0.0,
-    0.0,
-    0.0,
-    3,
-    impose_box_for_test(100.0, 50.0),
-  )
+  let bad_zero : Result[PdfImposeLayout, Error] = try
+    pdf_document_empty().pdf_impose_layout(
+      false,
+      0.0,
+      0.0,
+      0.0,
+      3,
+      impose_box_for_test(100.0, 50.0),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_zero
     is Err(
       @core.PdfError::BadNumberArgument(
@@ -528,7 +540,13 @@ test "PdfDocument twoup scales imposed sheets back to first page size" {
 ///|
 test "PdfDocument impose rejects empty input" {
   let document = try! pdf_blank_document(10.0, 10.0, 0)
-  let result : Result[PdfDocument, Error] = try? document.impose(1.0, 1.0)
+  let result : Result[PdfDocument, Error] = try
+    document.impose(1.0, 1.0)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result
     is Err(@core.PdfError::BadNumberArgument("impose: pages must not be empty")) else {
     fail("expected impose to reject empty documents")
@@ -608,9 +626,13 @@ test "pdf_impose_transforms applies fit spacing and margin transforms" {
 
 ///|
 test "pdf_impose_transforms rejects invalid grids and margins" {
-  let bad_grid : Result[Array[@geometry.TransformMatrix], Error] = try? impose_transforms_for_test(
-    x=0,
-  )
+  let bad_grid : Result[Array[@geometry.TransformMatrix], Error] = try
+    impose_transforms_for_test(x=0)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_grid
     is Err(
       @core.PdfError::BadNumberArgument("impose: x and y must be positive")
@@ -618,15 +640,21 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
     fail("expected BadNumberArgument for non-positive imposition grid")
   }
 
-  let bad_margin : Result[Array[@geometry.TransformMatrix], Error] = try? impose_transforms_for_test(
-    fit=true,
-    x=1,
-    y=1,
-    margin=60.0,
-    output_width=200.0,
-    output_height=100.0,
-    count=1,
-  )
+  let bad_margin : Result[Array[@geometry.TransformMatrix], Error] = try
+    impose_transforms_for_test(
+      fit=true,
+      x=1,
+      y=1,
+      margin=60.0,
+      output_width=200.0,
+      output_height=100.0,
+      count=1,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_margin
     is Err(
       @core.PdfError::BadNumberArgument("impose: margin would fill whole page")
@@ -968,21 +996,27 @@ test "pdf_impose pattern matrix rewrite descends into form xobjects" {
 
 ///|
 test "pdf_impose_pages_core rejects empty page sets" {
-  let result : Result[@page.PdfPage, Error] = try? pdf_document_empty().pdf_impose_pages_core(
-    [],
-    false,
-    1,
-    1,
-    false,
-    false,
-    false,
-    false,
-    0.0,
-    impose_box_for_test(100.0, 100.0),
-    false,
-    0.0,
-    0.0,
-  )
+  let result : Result[@page.PdfPage, Error] = try
+    pdf_document_empty().pdf_impose_pages_core(
+      [],
+      false,
+      1,
+      1,
+      false,
+      false,
+      false,
+      false,
+      0.0,
+      impose_box_for_test(100.0, 100.0),
+      false,
+      0.0,
+      0.0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result
     is Err(@core.PdfError::BadNumberArgument("impose: pages must not be empty")) else {
     fail("expected BadNumberArgument for empty imposition page set")

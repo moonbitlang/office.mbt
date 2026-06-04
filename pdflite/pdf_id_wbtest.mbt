@@ -32,9 +32,13 @@ test "private current ID generation honors env and time source" {
 test "private current ID copy rejects malformed trailer dictionaries" {
   let bad = pdf_document_empty()
   bad.set_trailer_dict(PdfNull)
-  let result : Result[PdfDocument, Error] = try? bad.copy_with_current_id(
-    "bad.pdf",
-  )
+  let result : Result[PdfDocument, Error] = try
+    bad.copy_with_current_id("bad.pdf")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected")
   }

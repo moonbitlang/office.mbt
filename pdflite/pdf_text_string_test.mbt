@@ -20,21 +20,35 @@ test "pdf_utf16be_of_codepoints writes PDF Unicode strings as bytes" {
 
 ///|
 test "pdf_codepoints_of_utf16be rejects malformed UTF16BE bytes" {
-  let odd = try? @pdflite.pdf_codepoints_of_utf16be(
-    text_string_bytes_for_test([0x00]),
-  )
+  let odd = try
+    @pdflite.pdf_codepoints_of_utf16be(text_string_bytes_for_test([0x00]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard odd is Err(InvalidUTF16BE) else {
     fail("expected @core.PdfError::InvalidUTF16BE for odd byte length")
   }
-  let unpaired_high = try? @pdflite.pdf_codepoints_of_utf16be(
-    text_string_bytes_for_test([0xD8, 0x34, 0x00, 0x41]),
-  )
+  let unpaired_high = try
+    @pdflite.pdf_codepoints_of_utf16be(
+      text_string_bytes_for_test([0xD8, 0x34, 0x00, 0x41]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unpaired_high is Err(InvalidUTF16BE) else {
     fail("expected @core.PdfError::InvalidUTF16BE for unpaired high surrogate")
   }
-  let isolated_low = try? @pdflite.pdf_codepoints_of_utf16be(
-    text_string_bytes_for_test([0xDD, 0x1E]),
-  )
+  let isolated_low = try
+    @pdflite.pdf_codepoints_of_utf16be(text_string_bytes_for_test([0xDD, 0x1E]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard isolated_low is Err(InvalidUTF16BE) else {
     fail("expected @core.PdfError::InvalidUTF16BE for isolated low surrogate")
   }
@@ -42,13 +56,21 @@ test "pdf_codepoints_of_utf16be rejects malformed UTF16BE bytes" {
 
 ///|
 test "pdf_utf16be_of_codepoints rejects invalid Unicode scalar values" {
-  let surrogate = try? @pdflite.pdf_utf16be_of_codepoints([0xD800])
+  let surrogate = try @pdflite.pdf_utf16be_of_codepoints([0xD800]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard surrogate is Err(InvalidUnicodeCodepoint(0xD800)) else {
     fail(
       "expected @core.PdfError::InvalidUnicodeCodepoint for surrogate scalar",
     )
   }
-  let too_large = try? @pdflite.pdf_utf16be_of_codepoints([0x110000])
+  let too_large = try @pdflite.pdf_utf16be_of_codepoints([0x110000]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard too_large is Err(InvalidUnicodeCodepoint(0x110000)) else {
     fail(
       "expected @core.PdfError::InvalidUnicodeCodepoint for out-of-range scalar",
@@ -74,41 +96,71 @@ test "pdf_utf8_of_codepoints writes UTF8 bytes and roundtrips" {
 
 ///|
 test "pdf_codepoints_of_utf8 rejects malformed UTF8 bytes" {
-  let truncated = try? @pdflite.pdf_codepoints_of_utf8(
-    text_string_bytes_for_test([0xE2, 0x82]),
-  )
+  let truncated = try
+    @pdflite.pdf_codepoints_of_utf8(text_string_bytes_for_test([0xE2, 0x82]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard truncated is Err(InvalidUTF8) else {
     fail("expected @core.PdfError::InvalidUTF8 for truncated sequence")
   }
-  let bad_continuation = try? @pdflite.pdf_codepoints_of_utf8(
-    text_string_bytes_for_test([0xE2, 0x28, 0xAC]),
-  )
+  let bad_continuation = try
+    @pdflite.pdf_codepoints_of_utf8(
+      text_string_bytes_for_test([0xE2, 0x28, 0xAC]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_continuation is Err(InvalidUTF8) else {
     fail("expected @core.PdfError::InvalidUTF8 for bad continuation")
   }
-  let overlong = try? @pdflite.pdf_codepoints_of_utf8(
-    text_string_bytes_for_test([0xC0, 0x80]),
-  )
+  let overlong = try
+    @pdflite.pdf_codepoints_of_utf8(text_string_bytes_for_test([0xC0, 0x80]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard overlong is Err(InvalidUTF8) else {
     fail("expected @core.PdfError::InvalidUTF8 for overlong sequence")
   }
-  let surrogate = try? @pdflite.pdf_codepoints_of_utf8(
-    text_string_bytes_for_test([0xED, 0xA0, 0x80]),
-  )
+  let surrogate = try
+    @pdflite.pdf_codepoints_of_utf8(
+      text_string_bytes_for_test([0xED, 0xA0, 0x80]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard surrogate is Err(InvalidUnicodeCodepoint(0xD800)) else {
     fail(
       "expected @core.PdfError::InvalidUnicodeCodepoint for decoded surrogate",
     )
   }
-  let bad_four_byte_continuation = try? @pdflite.pdf_codepoints_of_utf8(
-    text_string_bytes_for_test([0xF0, 0x9D, 0x28, 0x9E]),
-  )
+  let bad_four_byte_continuation = try
+    @pdflite.pdf_codepoints_of_utf8(
+      text_string_bytes_for_test([0xF0, 0x9D, 0x28, 0x9E]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_four_byte_continuation is Err(InvalidUTF8) else {
     fail("expected @core.PdfError::InvalidUTF8 for bad four-byte continuation")
   }
-  let invalid_leading_byte = try? @pdflite.pdf_codepoints_of_utf8(
-    text_string_bytes_for_test([0xFF]),
-  )
+  let invalid_leading_byte = try
+    @pdflite.pdf_codepoints_of_utf8(text_string_bytes_for_test([0xFF]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid_leading_byte is Err(InvalidUTF8) else {
     fail("expected @core.PdfError::InvalidUTF8 for invalid leading byte")
   }
@@ -132,9 +184,13 @@ test "PDFDocEncoding decodes CamlPDF byte mappings" {
     try! @pdflite.pdf_codepoint_of_pdfdocencoding_byte(0x93),
     0xFB02,
   )
-  let undefined_byte_result = try? @pdflite.pdf_codepoint_of_pdfdocencoding_byte(
-    0x94,
-  )
+  let undefined_byte_result = try
+    @pdflite.pdf_codepoint_of_pdfdocencoding_byte(0x94)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard undefined_byte_result is Err(InvalidPDFDocEncoding(0x94)) else {
     fail("expected @core.PdfError::InvalidPDFDocEncoding for undefined byte")
   }

@@ -15,7 +15,13 @@ async fn markdown_fixture_markdown_for_test(path : String) -> String {
 
 ///|
 async fn markdown_optional_fixture_markdown_for_test(path : String) -> String? {
-  let read_result = try? @fs.read_file(markdown_fixture_path_for_test(path))
+  let read_result = try
+    @fs.read_file(markdown_fixture_path_for_test(path))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(@markdown.pdf_bytes_to_markdown(data.binary()))
     Err(_) => None
@@ -24,7 +30,13 @@ async fn markdown_optional_fixture_markdown_for_test(path : String) -> String? {
 
 ///|
 async fn markdown_optional_fixture_bytes_for_test(path : String) -> Bytes? {
-  let read_result = try? @fs.read_file(markdown_fixture_path_for_test(path))
+  let read_result = try
+    @fs.read_file(markdown_fixture_path_for_test(path))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(data.binary())
     Err(_) => None
@@ -1154,9 +1166,13 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source top-level cl
             ),
             markdown_fixture_corrupt_first_xref_subsection_count_for_test(bytes),
           ] {
-          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-            corrupted,
-          )
+          let strict : Result[@pdflite.PdfDocument, Error] = try
+            @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+          catch {
+            err => Err(err)
+          } noraise {
+            value => Ok(value)
+          }
           guard strict is Err(_) else {
             fail(
               "expected malformed classic xref data to require malformed reconstruction for " +
@@ -1242,9 +1258,13 @@ async test "pdf_bytes_to_markdown compares optional cpdf source manual image tex
         let corrupted = markdown_fixture_corrupt_startxref_pointer_for_test(
           compressed,
         )
-        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-          corrupted,
-        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try
+          @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         guard strict is Err(_) else {
           fail(
             "expected compressed manual image text fixture to require reconstruction for " +
@@ -1285,9 +1305,13 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual image
             markdown_fixture_corrupt_startxref_xref_header_for_test(bytes),
             markdown_fixture_corrupt_startxref_trailer_keyword_for_test(bytes),
           ] {
-          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-            corrupted,
-          )
+          let strict : Result[@pdflite.PdfDocument, Error] = try
+            @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+          catch {
+            err => Err(err)
+          } noraise {
+            value => Ok(value)
+          }
           guard strict is Err(_) else {
             fail(
               "expected damaged classic xref metadata to require malformed reconstruction for " +
@@ -1340,9 +1364,13 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual image
             ),
             markdown_fixture_corrupt_first_xref_subsection_count_for_test(bytes),
           ] {
-          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-            corrupted,
-          )
+          let strict : Result[@pdflite.PdfDocument, Error] = try
+            @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+          catch {
+            err => Err(err)
+          } noraise {
+            value => Ok(value)
+          }
           guard strict is Err(_) else {
             fail(
               "expected malformed classic xref row to require malformed reconstruction for " +
@@ -1442,9 +1470,13 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
           markdown_fixture_corrupt_startxref_xref_stream_type_for_test(bytes),
           markdown_fixture_corrupt_startxref_xref_stream_marker_for_test(bytes),
         ] {
-        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-          corrupted,
-        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try
+          @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         guard strict is Err(_) else {
           fail(
             "expected malformed xref stream metadata to require reconstruction",
@@ -1497,9 +1529,13 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
           ),
           markdown_fixture_corrupt_startxref_xref_stream_endobj_for_test(bytes),
         ] {
-        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-          corrupted,
-        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try
+          @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         guard strict is Err(_) else {
           fail(
             "expected malformed xref stream terminator to require reconstruction",
@@ -1562,9 +1598,13 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
           ),
           markdown_fixture_corrupt_xref_stream_filter_for_test(bytes),
         ] {
-        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-          corrupted,
-        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try
+          @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         guard strict is Err(_) else {
           fail(
             "expected malformed xref stream dictionary entry to require reconstruction",
@@ -1618,9 +1658,13 @@ async test "pdf_bytes_to_markdown reconstructs optional cpdf source manual fixtu
           markdown_fixture_corrupt_first_object_stream_marker_for_test(bytes),
           markdown_fixture_corrupt_first_object_stream_endobj_for_test(bytes),
         ] {
-        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-          corrupted,
-        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try
+          @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         guard strict is Err(_) else {
           fail(
             "expected malformed object stream entry to require reconstruction",

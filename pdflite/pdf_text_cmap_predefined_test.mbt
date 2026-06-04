@@ -66,9 +66,13 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
   )
   @test.assert_eq(extractor.charcode_of_codepoint(0x41), None)
   @test.assert_eq(extractor.charcode_of_codepoint(0xF6E6), None)
-  let odd = try? extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x00]),
-  )
+  let odd = try
+    extractor.codepoints_of_text(text_cmap_predefined_bytes_for_test([0x00]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard odd is Err(BadText) else { fail("expected @core.PdfError::BadText") }
   let cid_font_v_data : @pdflite.PdfCIDKeyedFont = {
     basefont: text_cmap_predefined_name_for_test("/TopVertical"),
@@ -96,9 +100,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     ),
     [text_cmap_predefined_name_for_test(".notdef")],
   )
-  let vertical_odd = try? vertical_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x4E]),
-  )
+  let vertical_odd = try
+    vertical_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x4E]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard vertical_odd is Err(BadText) else {
     fail("expected @core.PdfError::BadText")
   }
@@ -120,9 +130,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     [0x41, 0x4E00],
   )
   @test.assert_eq(ucs2_h_extractor.charcode_of_codepoint(0x4E00), Some(0x4E00))
-  let ucs2_odd = try? ucs2_h_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x00, 0x41, 0x4E]),
-  )
+  let ucs2_odd = try
+    ucs2_h_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x00, 0x41, 0x4E]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard ucs2_odd is Err(_) else { fail("expected malformed UCS2 text error") }
   let ucs2_cmap_font_v : @pdflite.PdfFont = PdfFontCIDKeyed({
     basefont: text_cmap_predefined_name_for_test("/TopUCS2Vertical"),
@@ -172,11 +188,17 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     utf16_cmap_font_h.text_extractor().charcode_of_codepoint(0x1D11E),
     Some(0xD834DD1E),
   )
-  let utf16_unpaired = try? utf16_cmap_font_h
+  let utf16_unpaired = try
+    utf16_cmap_font_h
     .text_extractor()
     .codepoints_of_text(
       text_cmap_predefined_bytes_for_test([0xD8, 0x34, 0x30, 0x42]),
     )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard utf16_unpaired is Err(_) else {
     fail("expected malformed UTF16 predefined CMap text error")
   }
@@ -222,9 +244,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     utf8_cmap_font_h.text_extractor().charcode_of_codepoint(0x1D11E),
     Some(0xF09D849E),
   )
-  let utf8_bad = try? utf8_cmap_font_h
+  let utf8_bad = try
+    utf8_cmap_font_h
     .text_extractor()
     .codepoints_of_text(text_cmap_predefined_bytes_for_test([0xE3, 0x81]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard utf8_bad is Err(_) else {
     fail("expected malformed UTF8 predefined CMap text error")
   }
@@ -281,11 +309,17 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     utf32_cmap_font_v.text_extractor().charcode_of_codepoint(0x1D11E),
     Some(0x1D11E),
   )
-  let utf32_bad = try? utf32_cmap_font_v
+  let utf32_bad = try
+    utf32_cmap_font_v
     .text_extractor()
     .codepoints_of_text(
       text_cmap_predefined_bytes_for_test([0x00, 0x00, 0xD8, 0x00]),
     )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard utf32_bad is Err(_) else {
     fail("expected malformed UTF32 predefined CMap text error")
   }
@@ -358,9 +392,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     .codepoints_of_text(text_cmap_predefined_bytes_for_test([0x41, 0x81, 0x40])),
     [0x41, 0x4E00],
   )
-  let gb_euc_truncated = try? gb_euc_tounicode_font
+  let gb_euc_truncated = try
+    gb_euc_tounicode_font
     .text_extractor()
     .codepoints_of_text(text_cmap_predefined_bytes_for_test([0x81]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard gb_euc_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated GB-EUC charcode")
   }
@@ -461,9 +501,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     gbpc_euc_builtin_extractor.charcode_of_codepoint(0x0300),
     None,
   )
-  let gbpc_euc_truncated = try? gbpc_euc_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0xA1]),
-  )
+  let gbpc_euc_truncated = try
+    gbpc_euc_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0xA1]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard gbpc_euc_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated GBpc-EUC charcode")
   }
@@ -506,9 +552,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xA140),
   )
   @test.assert_eq(big5_builtin_extractor.charcode_of_codepoint(0x20AC), None)
-  let big5_truncated = try? big5_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0xA7]),
-  )
+  let big5_truncated = try
+    big5_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0xA7]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard big5_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated Big5 charcode")
   }
@@ -569,9 +621,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xA66E),
   )
   @test.assert_eq(b5pc_builtin_extractor.charcode_of_codepoint(0x20AC), None)
-  let b5pc_truncated = try? b5pc_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0xA1]),
-  )
+  let b5pc_truncated = try
+    b5pc_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0xA1]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard b5pc_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated B5pc charcode")
   }
@@ -637,9 +695,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xFEFE),
   )
   @test.assert_eq(hkscs_builtin_extractor.charcode_of_codepoint(0x1F600), None)
-  let hkscs_truncated = try? hkscs_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x87]),
-  )
+  let hkscs_truncated = try
+    hkscs_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x87]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard hkscs_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated HKSCS charcode")
   }
@@ -681,9 +745,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     etenms_b5_builtin_extractor.charcode_of_codepoint(0x1F600),
     None,
   )
-  let etenms_b5_truncated = try? etenms_b5_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0xA1]),
-  )
+  let etenms_b5_truncated = try
+    etenms_b5_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0xA1]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard etenms_b5_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated ETenms-B5 charcode")
   }
@@ -757,9 +827,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     hkgccs_b5_builtin_extractor.charcode_of_codepoint(0x1F600),
     None,
   )
-  let hkgccs_b5_truncated = try? hkgccs_b5_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x8A]),
-  )
+  let hkgccs_b5_truncated = try
+    hkgccs_b5_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x8A]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard hkgccs_b5_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated HKgccs-B5 charcode")
   }
@@ -817,9 +893,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     cns_euc_vertical_extractor.charcode_of_codepoint(0xFE19),
     Some(0xA1AC),
   )
-  let cns_euc_truncated = try? cns_euc_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x8E, 0xA1, 0xA1]),
-  )
+  let cns_euc_truncated = try
+    cns_euc_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x8E, 0xA1, 0xA1]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard cns_euc_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated CNS-EUC charcode")
   }
@@ -863,9 +945,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xA4D4),
   )
   @test.assert_eq(uhc_builtin_extractor.charcode_of_codepoint(0x1F600), None)
-  let uhc_truncated = try? uhc_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x81]),
-  )
+  let uhc_truncated = try
+    uhc_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x81]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard uhc_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated UHC charcode")
   }
@@ -948,9 +1036,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xFF),
   )
   @test.assert_eq(gbk_builtin_extractor.charcode_of_codepoint(0x1F600), None)
-  let gbk_truncated = try? gbk_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x81]),
-  )
+  let gbk_truncated = try
+    gbk_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x81]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard gbk_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated GBK charcode")
   }
@@ -983,9 +1077,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xFF),
   )
   @test.assert_eq(gbkp_builtin_extractor.charcode_of_codepoint(0x1F600), None)
-  let gbkp_truncated = try? gbkp_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x81]),
-  )
+  let gbkp_truncated = try
+    gbkp_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x81]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard gbkp_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated GBKp charcode")
   }
@@ -1045,9 +1145,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0x82369435),
   )
   @test.assert_eq(gbk2k_builtin_extractor.charcode_of_codepoint(0x1F600), None)
-  let gbk2k_truncated = try? gbk2k_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x81, 0x30, 0x81]),
-  )
+  let gbk2k_truncated = try
+    gbk2k_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x81, 0x30, 0x81]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard gbk2k_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated GBK2K charcode")
   }
@@ -1098,9 +1204,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     Some(0xDCF4),
   )
   @test.assert_eq(ksc_euc_builtin_extractor.charcode_of_codepoint(0x3164), None)
-  let ksc_euc_truncated = try? ksc_euc_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0xA1]),
-  )
+  let ksc_euc_truncated = try
+    ksc_euc_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0xA1]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard ksc_euc_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated KSC-EUC charcode")
   }
@@ -1162,9 +1274,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     kscpc_euc_builtin_extractor.charcode_of_codepoint(0x20DE),
     None,
   )
-  let kscpc_euc_truncated = try? kscpc_euc_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0xA1]),
-  )
+  let kscpc_euc_truncated = try
+    kscpc_euc_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0xA1]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard kscpc_euc_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated KSCpc-EUC charcode")
   }
@@ -1261,9 +1379,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     rksj_builtin_extractor.charcode_of_codepoint(0x4E8C),
     Some(0x93F1),
   )
-  let rksj_truncated = try? rksj_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x81]),
-  )
+  let rksj_truncated = try
+    rksj_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x81]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard rksj_truncated is Err(_) else {
     fail("expected malformed RKSJ charcode")
   }
@@ -1313,9 +1437,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     jis_builtin_extractor.charcode_of_codepoint(0x3042),
     Some(0x2422),
   )
-  let jis_truncated = try? jis_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x21]),
-  )
+  let jis_truncated = try
+    jis_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x21]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard jis_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated JIS charcode")
   }
@@ -1353,9 +1483,15 @@ test "PdfTextExtractor reads identity CMap text as two-byte character codes" {
     hojo_euc_builtin_extractor.charcode_of_codepoint(0x4EDD),
     Some(0x8FB4AE),
   )
-  let hojo_euc_truncated = try? hojo_euc_builtin_extractor.codepoints_of_text(
-    text_cmap_predefined_bytes_for_test([0x8F, 0xB4]),
-  )
+  let hojo_euc_truncated = try
+    hojo_euc_builtin_extractor.codepoints_of_text(
+      text_cmap_predefined_bytes_for_test([0x8F, 0xB4]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard hojo_euc_truncated is Err(BadText) else {
     fail("expected @core.PdfError::BadText for truncated Hojo-EUC charcode")
   }

@@ -25,9 +25,15 @@ test "pdf_read_document_from_bytes reads default-index xref streams" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs xref streams with malformed stream markers" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_malformed_stream_marker(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_malformed_stream_marker(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected strict @core.PdfError::ParseStreamExpected")
   }
@@ -49,9 +55,15 @@ test "pdf_read_document_from_bytes reconstructs xref streams with malformed stre
 
 ///|
 test "pdf_read_document_from_bytes reconstructs xref streams with malformed endstream markers" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_malformed_endstream_marker(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_malformed_endstream_marker(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected strict @core.PdfError::ParseEndStreamExpected")
   }
@@ -73,9 +85,15 @@ test "pdf_read_document_from_bytes reconstructs xref streams with malformed ends
 
 ///|
 test "pdf_read_document_from_bytes reconstructs xref streams with malformed endobj markers" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_malformed_endobj_marker(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_malformed_endobj_marker(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::ParseEndObjectExpected) else {
     fail("expected strict @core.PdfError::ParseEndObjectExpected")
   }
@@ -131,9 +149,15 @@ test "pdf_read_document_from_bytes reads xref stream Index ranges" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs xref stream Index ranges" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_index_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_index_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -169,9 +193,15 @@ test "pdf_read_document_from_bytes reads xref streams with omitted type fields" 
 
 ///|
 test "pdf_read_document_from_bytes reconstructs xref streams with omitted type fields" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_default_in_use_width_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_default_in_use_width_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -196,9 +226,15 @@ test "pdf_read_document_from_bytes skips unknown xref stream entry types" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs unknown xref stream entry types" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_unknown_entry_type_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_unknown_entry_type_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -238,9 +274,15 @@ test "pdf_read_document_from_bytes decodes filtered xref streams" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs filtered xref streams" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_ascii_hex_filter_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_ascii_hex_filter_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -275,9 +317,15 @@ test "pdf_read_document_from_bytes decodes Flate xref streams" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs Flate xref streams" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_flate_filter_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_flate_filter_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -313,9 +361,15 @@ test "pdf_read_document_from_bytes decodes Flate predictor xref streams" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs Flate predictor xref streams" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_flate_predictor_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_flate_predictor_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -351,9 +405,15 @@ test "pdf_read_document_from_bytes decodes short-name Flate predictor xref strea
 
 ///|
 test "pdf_read_document_from_bytes reconstructs short-name Flate predictor xref streams" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_short_flate_predictor_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_short_flate_predictor_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -389,9 +449,15 @@ test "pdf_read_document_from_bytes decodes xref stream filter arrays" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs xref stream filter arrays" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_filter_array_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_filter_array_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -427,9 +493,15 @@ test "pdf_read_document_from_bytes decodes xref stream filter arrays with predic
 
 ///|
 test "pdf_read_document_from_bytes reconstructs xref stream filter arrays with predictor params" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_filter_array_predictor_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_filter_array_predictor_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -472,9 +544,13 @@ test "pdf_read_document_from_bytes follows classic trailer XRefStm" {
 ///|
 test "pdf_read_document_from_bytes reconstructs hybrid XRefStm with bad startxref" {
   let payload = reader_hybrid_xref_stream_pdf_with_bad_startxref()
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    payload,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(payload)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail("expected strict hybrid bad-startxref read to fail")
   }
@@ -523,9 +599,13 @@ test "pdf_read_document_from_bytes follows compressed classic trailer XRefStm" {
 ///|
 test "pdf_read_document_from_bytes reconstructs compressed hybrid XRefStm with bad startxref" {
   let payload = reader_hybrid_compressed_xref_stream_pdf_with_bad_startxref()
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    payload,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(payload)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail("expected strict compressed hybrid bad-startxref read to fail")
   }

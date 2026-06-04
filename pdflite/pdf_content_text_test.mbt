@@ -372,15 +372,23 @@ test "cpdfcontent charcode bytes mirror glyph JSON byte construction" {
     @core.pdf_int_array_of_bytes(try! cid.content_bytes_of_charcode(0x20AC)),
     [0x20, 0xAC],
   )
-  let one_byte_overflow : Result[@core.PdfBytes, Error] = try? standard.content_bytes_of_charcode(
-    256,
-  )
+  let one_byte_overflow : Result[@core.PdfBytes, Error] = try
+    standard.content_bytes_of_charcode(256)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard one_byte_overflow is Err(@core.PdfError::InvalidByte(256)) else {
     fail("expected @core.PdfError::InvalidByte for one-byte charcode")
   }
-  let cid_overflow : Result[@core.PdfBytes, Error] = try? cid.content_bytes_of_charcode(
-    0x10000,
-  )
+  let cid_overflow : Result[@core.PdfBytes, Error] = try
+    cid.content_bytes_of_charcode(0x10000)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard cid_overflow is Err(@core.PdfError::InvalidByte(256)) else {
     fail("expected @core.PdfError::InvalidByte for CID high byte")
   }

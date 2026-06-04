@@ -344,7 +344,11 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
       ]),
     ),
   ])
-  let differences_result = try? doc.read_encoding(bad_differences)
+  let differences_result = try doc.read_encoding(bad_differences) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard differences_result is Err(EncodingDifferencesMalformed) else {
     fail("expected @core.PdfError::EncodingDifferencesMalformed")
   }
@@ -360,7 +364,11 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
       ]),
     ),
   ])
-  let base_result = try? doc.read_encoding(bad_base)
+  let base_result = try doc.read_encoding(bad_base) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard base_result is Err(EncodingExpected) else {
     fail("expected @core.PdfError::EncodingExpected")
   }
@@ -379,7 +387,11 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
       ]),
     ),
   ])
-  let unknown_base_result = try? doc.read_encoding(unknown_base)
+  let unknown_base_result = try doc.read_encoding(unknown_base) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unknown_base_result is Err(EncodingExpected) else {
     fail("expected @core.PdfError::EncodingExpected for unknown base")
   }
@@ -398,9 +410,13 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
       ]),
     ),
   ])
-  let bad_difference_object_result = try? doc.read_encoding(
-    bad_difference_object,
-  )
+  let bad_difference_object_result = try
+    doc.read_encoding(bad_difference_object)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_difference_object_result is Err(EncodingDifferencesMalformed) else {
     fail(
       "expected @core.PdfError::EncodingDifferencesMalformed for bad difference object",
@@ -418,7 +434,11 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
       ]),
     ),
   ])
-  let non_array_result = try? doc.read_encoding(non_array_differences)
+  let non_array_result = try doc.read_encoding(non_array_differences) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_array_result is Err(EncodingDifferencesMalformed) else {
     fail(
       "expected @core.PdfError::EncodingDifferencesMalformed for non-array differences",
@@ -432,14 +452,22 @@ test "PdfDocument read_encoding rejects malformed encoding dictionaries" {
     (text_encoding_name_for_test("/Encoding"), @syntax.pdf_dictionary([])),
     (text_encoding_name_for_test("/FontDescriptor"), @syntax.pdf_dictionary([])),
   ])
-  let missing_flags_result = try? doc.read_encoding(missing_flags)
+  let missing_flags_result = try doc.read_encoding(missing_flags) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_flags_result is Err(FontFlagsExpected) else {
     fail("expected @core.PdfError::FontFlagsExpected")
   }
   let bad_subtype = @syntax.pdf_dictionary([
     (text_encoding_name_for_test("/Encoding"), @syntax.pdf_dictionary([])),
   ])
-  let subtype_result = try? doc.read_encoding(bad_subtype)
+  let subtype_result = try doc.read_encoding(bad_subtype) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard subtype_result is Err(FontSubtypeExpected) else {
     fail("expected @core.PdfError::FontSubtypeExpected")
   }

@@ -890,15 +890,27 @@ test "pdf_parse_content_ops_from_bytes recovers junk before inline image end" {
 
 ///|
 test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
-  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
-    content_inline_bytes_for_test("BI /W 1 ID abc"),
-  )
+  let result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      content_inline_bytes_for_test("BI /W 1 ID abc"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected @core.PdfError::ParseEndStreamExpected")
   }
-  let sized_result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
-    content_inline_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 ID A"),
-  )
+  let sized_result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      content_inline_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 ID A"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard sized_result is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected sized @core.PdfError::ParseEndStreamExpected")
   }
@@ -907,23 +919,41 @@ test "pdf_parse_content_ops_from_bytes reports unterminated inline images" {
     try! @core.pdf_bytes_of_int_array([0, 65]),
     content_inline_bytes_for_test(" EI"),
   ])
-  let run_length_result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
-    run_length_data,
-  )
+  let run_length_result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_parse_content_ops_from_bytes(run_length_data)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard run_length_result is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected RunLength @core.PdfError::ParseEndStreamExpected")
   }
-  let ascii85_result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
-    content_inline_bytes_for_test(
-      "BI /W 1 /H 1 /CS /G /BPC 8 /F /A85 ID !!!! EI",
-    ),
-  )
+  let ascii85_result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      content_inline_bytes_for_test(
+        "BI /W 1 /H 1 /CS /G /BPC 8 /F /A85 ID !!!! EI",
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard ascii85_result is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected ASCII85 @core.PdfError::ParseEndStreamExpected")
   }
-  let ascii_hex_result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_parse_content_ops_from_bytes(
-    content_inline_bytes_for_test("BI /W 1 /H 1 /CS /G /BPC 8 /F /AHx ID 41 EI"),
-  )
+  let ascii_hex_result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_parse_content_ops_from_bytes(
+      content_inline_bytes_for_test(
+        "BI /W 1 /H 1 /CS /G /BPC 8 /F /AHx ID 41 EI",
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard ascii_hex_result is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected ASCIIHex @core.PdfError::ParseEndStreamExpected")
   }

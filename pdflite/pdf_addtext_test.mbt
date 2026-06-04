@@ -1210,22 +1210,28 @@ test "PdfDocument addtext_pages_with_font stamps selected pages with replacement
 ///|
 test "pdf_addtext_pages_with_font wrapper validates selected pages" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_addtext_pages_with_font(
-    document,
-    [2],
-    ["A"],
-    addtext_process_time_for_test(),
-    [],
-    Some(addtext_standard_font_for_test()),
-    None,
-    addtext_name_for_test("/Helvetica"),
-    Some(PdfIndirect(10)),
-    [],
-    10.0,
-    1.0,
-    PdfContentGrey(0.0),
-    PdfPositionBottomLeft(0.0, 0.0),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_addtext_pages_with_font(
+      document,
+      [2],
+      ["A"],
+      addtext_process_time_for_test(),
+      [],
+      Some(addtext_standard_font_for_test()),
+      None,
+      addtext_name_for_test("/Helvetica"),
+      Some(PdfIndirect(10)),
+      [],
+      10.0,
+      1.0,
+      PdfContentGrey(0.0),
+      PdfPositionBottomLeft(0.0, 0.0),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -1437,19 +1443,25 @@ test "pdf_addtexts_with_source skips empty visible text before resolving sources
 test "pdf_addtexts_with_source rejects empty premade fontpacks" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
   let empty_pack : @pdflite.PdfFontPack = { fonts: [], entries: [] }
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_addtexts_with_source(
-    document,
-    [1],
-    "A",
-    addtext_process_time_for_test(),
-    [],
-    PdfAddTextPreMadeFontPack(empty_pack),
-    addtext_name_for_test("/Helvetica"),
-    10.0,
-    1.0,
-    PdfContentGrey(0.0),
-    PdfPositionBottomLeft(1.0, 2.0),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_addtexts_with_source(
+      document,
+      [1],
+      "A",
+      addtext_process_time_for_test(),
+      [],
+      PdfAddTextPreMadeFontPack(empty_pack),
+      addtext_name_for_test("/Helvetica"),
+      10.0,
+      1.0,
+      PdfContentGrey(0.0),
+      PdfPositionBottomLeft(1.0, 2.0),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError("addtexts: fontpack is empty")) else {
     fail("expected empty premade fontpack diagnostic")
   }
@@ -1510,10 +1522,16 @@ test "PdfDocument addtext_existing_font_resource falls back to BaseFont names" {
 test "PdfDocument addtext_existing_font_resource reports missing fonts" {
   let document = @pdflite.pdf_document_empty()
   let basefont = addtext_name_for_test("/Helvetica")
-  let missing_dictionary : Result[(@core.PdfName, @syntax.PdfObject), Error] = try? document.addtext_existing_font_resource(
-    @page.pdf_page_blank(@geometry.paper_a4),
-    basefont,
-  )
+  let missing_dictionary : Result[(@core.PdfName, @syntax.PdfObject), Error] = try
+    document.addtext_existing_font_resource(
+      @page.pdf_page_blank(@geometry.paper_a4),
+      basefont,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_dictionary
     is Err(@core.PdfError::SoftError("addtext: font dictionary not present")) else {
     fail("expected missing font dictionary error")
@@ -1524,9 +1542,13 @@ test "PdfDocument addtext_existing_font_resource reports missing fonts" {
       (addtext_name_for_test("/Font"), PdfDictionary([])),
     ]),
   }
-  let missing_font : Result[(@core.PdfName, @syntax.PdfObject), Error] = try? document.addtext_existing_font_resource(
-    page, basefont,
-  )
+  let missing_font : Result[(@core.PdfName, @syntax.PdfObject), Error] = try
+    document.addtext_existing_font_resource(page, basefont)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_font
     is Err(@core.PdfError::SoftError("addtext: font /Helvetica not found")) else {
     fail("expected missing font error")

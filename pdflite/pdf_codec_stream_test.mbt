@@ -426,21 +426,27 @@ test "PdfDocument pdf_decode_stream reports unsupported CCITT two dimensional K"
   let length = codec_stream_name_for_test("/Length")
   let filter = codec_stream_name_for_test("/Filter")
   let decodeparms = codec_stream_name_for_test("/DecodeParms")
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
-    @syntax.pdf_stream(
-      @syntax.pdf_dictionary([
-        (length, PdfInteger(1)),
-        (filter, PdfNameObject(codec_stream_name_for_test("/CCITTFaxDecode"))),
-        (
-          decodeparms,
-          @syntax.pdf_dictionary([
-            (codec_stream_name_for_test("/K"), PdfInteger(1)),
-          ]),
-        ),
-      ]),
-      StreamGot(codec_stream_bytes_for_test([0])),
-    ),
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_decode_stream(
+      @syntax.pdf_stream(
+        @syntax.pdf_dictionary([
+          (length, PdfInteger(1)),
+          (filter, PdfNameObject(codec_stream_name_for_test("/CCITTFaxDecode"))),
+          (
+            decodeparms,
+            @syntax.pdf_dictionary([
+              (codec_stream_name_for_test("/K"), PdfInteger(1)),
+            ]),
+          ),
+        ]),
+        StreamGot(codec_stream_bytes_for_test([0])),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::CCITTNotSupported(_)) else {
     fail("expected unsupported CCITT K")
   }
@@ -532,9 +538,13 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
   let decodeparms = codec_stream_name_for_test("/DecodeParms")
   let predictor = codec_stream_name_for_test("/Predictor")
   let doc = @pdflite.pdf_document_empty()
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
-    PdfNull,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream(PdfNull)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }
@@ -544,9 +554,13 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::StreamLengthExpected) else {
     fail("expected @core.PdfError::StreamLengthExpected")
   }
@@ -554,9 +568,13 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     @syntax.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FilterExpected) else {
     fail("expected @core.PdfError::FilterExpected")
   }
@@ -567,9 +585,13 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     ]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FilterExpected) else {
     fail("expected @core.PdfError::FilterExpected")
   }
@@ -587,9 +609,13 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorExpected) else {
     fail("expected @core.PdfError::PredictorExpected")
   }
@@ -601,9 +627,13 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorExpected) else {
     fail("expected @core.PdfError::PredictorExpected")
   }
@@ -615,9 +645,13 @@ test "PdfDocument pdf_decode_stream reports malformed document-aware metadata" {
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorExpected) else {
     fail("expected @core.PdfError::PredictorExpected")
   }
@@ -644,9 +678,13 @@ test "PdfDocument pdf_decode_stream bounds excessive filter stages" {
     ]),
     StreamGot(codec_stream_ascii_for_test("x")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FilterExpected) else {
     fail("expected @core.PdfError::FilterExpected")
   }
@@ -872,9 +910,13 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
     decoded_stream.dictionary.lookup_immediate(filter),
     Some(unsupported),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
-    PdfNull,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream_until_unknown(PdfNull)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }
@@ -885,9 +927,13 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
     ]),
     StreamGot(codec_stream_ascii_for_test("6Z>")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream_until_unknown(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidHexEscape) else {
     fail("expected @core.PdfError::InvalidHexEscape")
   }
@@ -907,9 +953,13 @@ test "PdfDocument pdf_decode_stream_until_unknown handles raw and malformed inpu
     ]),
     StreamGot(codec_stream_ascii_for_test("x")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? doc.pdf_decode_stream_until_unknown(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    doc.pdf_decode_stream_until_unknown(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FilterExpected) else {
     fail("expected @core.PdfError::FilterExpected")
   }
@@ -1147,9 +1197,13 @@ test "pdf_decode_stream bounds excessive filter stages" {
     ]),
     StreamGot(codec_stream_ascii_for_test("x")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_decode_stream(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FilterExpected) else {
     fail("expected @core.PdfError::FilterExpected")
   }
@@ -1163,9 +1217,13 @@ test "pdf_decode_stream_onestage reports malformed stream filters and materializ
     @syntax.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_decode_stream_onestage(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FilterExpected) else {
     fail("expected @core.PdfError::FilterExpected")
   }
@@ -1173,21 +1231,33 @@ test "pdf_decode_stream_onestage reports malformed stream filters and materializ
     @syntax.pdf_dictionary([]),
     StreamGot(codec_stream_ascii_for_test("Hi")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_decode_stream_onestage(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::StreamLengthExpected) else {
     fail("expected @core.PdfError::StreamLengthExpected")
   }
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
-    PdfNull,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_decode_stream_onestage(PdfNull)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream(
-    PdfNull,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_decode_stream(PdfNull)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }
@@ -1227,9 +1297,13 @@ test "pdf_decode_stream_onestage reports malformed stream filters and materializ
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_decode_stream_onestage(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorExpected) else {
     fail("expected @core.PdfError::PredictorExpected")
   }
@@ -1241,9 +1315,13 @@ test "pdf_decode_stream_onestage reports malformed stream filters and materializ
     ]),
     StreamGot(codec_stream_ascii_for_test("4869>")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_decode_stream_onestage(
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_decode_stream_onestage(stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorExpected) else {
     fail("expected @core.PdfError::PredictorExpected")
   }

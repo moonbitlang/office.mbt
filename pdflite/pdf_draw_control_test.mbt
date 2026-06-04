@@ -155,7 +155,11 @@ test "pdf draw control collects main text push and xobject frames in order" {
 ///|
 test "pdf draw control reports mismatched section closures" {
   let text = @pdflite.pdf_draw_control_new()
-  let text_result : Result[Unit, Error] = try? text.end_text_section()
+  let text_result : Result[Unit, Error] = try text.end_text_section() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard text_result
     is Err(@core.PdfError::SoftError("not in a text section at -et")) else {
     fail("expected text-section close error")
@@ -163,7 +167,11 @@ test "pdf draw control reports mismatched section closures" {
   @test.assert_eq(text.depth(), 1)
 
   let group = @pdflite.pdf_draw_control_new()
-  let group_result : Result[Unit, Error] = try? group.pop_group()
+  let group_result : Result[Unit, Error] = try group.pop_group() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard group_result
     is Err(@core.PdfError::SoftError("not in a pushed section at -pop")) else {
     fail("expected pushed-section close error")
@@ -184,9 +192,13 @@ test "pdf draw control parses XObject bbox strings" {
     PdfDrawFormXObject(1.0, 2.0, 30.0, 40.0, "XO", [PdfDrawLine(3.0, 4.0)]),
   ])
 
-  let bad : Result[Unit, Error] = try? control.set_xobject_bbox_from_string(
-    document, "1 2 3",
-  )
+  let bad : Result[Unit, Error] = try
+    control.set_xobject_bbox_from_string(document, "1 2 3")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad is Err(@core.PdfError::BadRectangleSpecification("1 2 3")) else {
     fail("expected BadRectangleSpecification")
   }
@@ -412,52 +424,88 @@ test "pdf draw control image data helpers append image XObjects" {
 test "pdf draw control image data helpers propagate parser errors" {
   let document = @pdflite.pdf_document_empty()
   let control = @pdflite.pdf_draw_control_new()
-  let bad_jpeg : Result[Unit, Error] = try? control.add_jpeg_data(
-    "Bad",
-    draw_control_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
-  )
+  let bad_jpeg : Result[Unit, Error] = try
+    control.add_jpeg_data(
+      "Bad",
+      draw_control_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_jpeg is Err(@core.PdfError::BadJPEGHeader) else {
     fail("expected BadJPEGHeader")
   }
-  let bad_png : Result[Unit, Error] = try? control.add_png_data(
-    document,
-    "Bad",
-    draw_control_bytes_for_test([0x89, 0x50]),
-  )
+  let bad_png : Result[Unit, Error] = try
+    control.add_png_data(
+      document,
+      "Bad",
+      draw_control_bytes_for_test([0x89, 0x50]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_png is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected BadPNG")
   }
-  let bad_jp2 : Result[Unit, Error] = try? control.add_jpeg2000_data(
-    "Bad",
-    draw_control_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A]),
-  )
+  let bad_jp2 : Result[Unit, Error] = try
+    control.add_jpeg2000_data(
+      "Bad",
+      draw_control_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_jp2 is Err(@core.PdfError::BadJPEG2000Header) else {
     fail("expected BadJPEG2000Header")
   }
 
   let alias_control = @pdflite.pdf_draw_control_new()
-  let bad_alias_jpeg : Result[Unit, Error] = try? @pdflite.pdf_addjpeg(
-    alias_control,
-    "Bad",
-    draw_control_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
-  )
+  let bad_alias_jpeg : Result[Unit, Error] = try
+    @pdflite.pdf_addjpeg(
+      alias_control,
+      "Bad",
+      draw_control_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_alias_jpeg is Err(@core.PdfError::BadJPEGHeader) else {
     fail("expected BadJPEGHeader through addjpeg wrapper")
   }
-  let bad_alias_png : Result[Unit, Error] = try? @pdflite.pdf_addpng(
-    alias_control,
-    document,
-    "Bad",
-    draw_control_bytes_for_test([0x89, 0x50]),
-  )
+  let bad_alias_png : Result[Unit, Error] = try
+    @pdflite.pdf_addpng(
+      alias_control,
+      document,
+      "Bad",
+      draw_control_bytes_for_test([0x89, 0x50]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_alias_png is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected BadPNG through addpng wrapper")
   }
-  let bad_alias_jp2 : Result[Unit, Error] = try? @pdflite.pdf_addjpeg2000(
-    alias_control,
-    "Bad",
-    draw_control_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A]),
-  )
+  let bad_alias_jp2 : Result[Unit, Error] = try
+    @pdflite.pdf_addjpeg2000(
+      alias_control,
+      "Bad",
+      draw_control_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_alias_jp2 is Err(@core.PdfError::BadJPEG2000Header) else {
     fail("expected BadJPEG2000Header through addjpeg2000 wrapper")
   }
@@ -608,51 +656,99 @@ fn draw_control_assert_soft_error_for_test(
 test "pdf draw control command helpers report cpdf parse errors" {
   let control = @pdflite.pdf_draw_control_new()
   draw_control_assert_soft_error_for_test(
-    try? control.set_line_thickness("x"),
+    try control.set_line_thickness("x") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "Thickness must be a number",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.set_line_cap("flat"),
+    try control.set_line_cap("flat") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "Unknown cap type",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.set_line_join("flat"),
+    try control.set_line_join("flat") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "Unknown join type",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.set_miter_limit("x"),
+    try control.set_miter_limit("x") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "Miter limit must be a number",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.set_dash_pattern("1 x"),
+    try control.set_dash_pattern("1 x") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "Dash pattern elements must one or more numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.set_matrix("1 2"),
+    try control.set_matrix("1 2") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "Matrix must have six numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.set_matrix("1 x 3 4 5 6"),
+    try control.set_matrix("1 x 3 4 5 6") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "Matrix elements must be numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.matrix_translate("1"),
+    try control.matrix_translate("1") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-mtrans takes two numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.matrix_rotate("0 0"),
+    try control.matrix_rotate("0 0") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-mrot takes three numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.matrix_scale("1 2 3"),
+    try control.matrix_scale("1 2 3") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-mscale takes four numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.matrix_shear_x("1 2"),
+    try control.matrix_shear_x("1 2") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-mshearx takes three numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.matrix_shear_y("1 2"),
+    try control.matrix_shear_y("1 2") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-msheary takes three numbers",
   )
 }
@@ -661,30 +757,58 @@ test "pdf draw control command helpers report cpdf parse errors" {
 test "pdf draw control text helpers report cpdf parse errors" {
   let document = @pdflite.pdf_document_empty()
   draw_control_assert_soft_error_for_test(
-    try? @pdflite.pdf_draw_control_new().add_text("outside"),
+    try @pdflite.pdf_draw_control_new().add_text("outside") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-text must be in a -bt / -et section",
   )
   draw_control_assert_soft_error_for_test(
-    try? @pdflite.pdf_draw_control_new().add_special_text("outside"),
+    try @pdflite.pdf_draw_control_new().add_special_text("outside") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-stext must be in a -bt / -et section",
   )
   draw_control_assert_soft_error_for_test(
-    try? @pdflite.pdf_draw_control_new().add_para(document, "L100=outside"),
+    try
+      @pdflite.pdf_draw_control_new().add_para(document, "L100=outside")
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-para must be in a -bt / -et section",
   )
   draw_control_assert_soft_error_for_test(
-    try? @pdflite.pdf_draw_control_new().add_paras(document, "L100=outside"),
+    try
+      @pdflite.pdf_draw_control_new().add_paras(document, "L100=outside")
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-paras must be in a -bt / -et section",
   )
 
   let control = @pdflite.pdf_draw_control_new()
   control.begin_text_section()
   draw_control_assert_soft_error_for_test(
-    try? control.add_para(document, "X100=bad"),
+    try control.add_para(document, "X100=bad") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "Unknown justification specification",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.add_para(document, "L100=bad=extra"),
+    try control.add_para(document, "L100=bad=extra") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "addjpeg: bad file specification",
   )
 }
@@ -763,35 +887,67 @@ test "pdf draw control circle helper expands to move and bezier ops" {
 test "pdf draw control path helpers report cpdf parse errors" {
   let control = @pdflite.pdf_draw_control_new()
   draw_control_assert_soft_error_for_test(
-    try? control.add_bezier("1 2 3"),
+    try control.add_bezier("1 2 3") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-bez requires six numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.add_bezier("1 x 3 4 5 6"),
+    try control.add_bezier("1 x 3 4 5 6") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "malformed -bez",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.add_bezier23("1 2 3"),
+    try control.add_bezier23("1 2 3") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-bez23 requires four numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.add_bezier23("1 x 3 4"),
+    try control.add_bezier23("1 x 3 4") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "malformed -bez23",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.add_bezier13("1 2 3"),
+    try control.add_bezier13("1 2 3") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-bez13 requires four numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.add_bezier13("1 x 3 4"),
+    try control.add_bezier13("1 x 3 4") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "malformed -bez13",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.add_circle("1 2"),
+    try control.add_circle("1 2") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "-circle requires three numbers",
   )
   draw_control_assert_soft_error_for_test(
-    try? control.add_circle("1 x 3"),
+    try control.add_circle("1 x 3") catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
     "malformed -circle",
   )
 }

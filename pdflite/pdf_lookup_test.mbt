@@ -60,27 +60,33 @@ test "PdfDocument lookup_required mirrors CamlPDF lookup_exception" {
     try! doc.lookup_required(key_type, stream, RootExpected),
     PdfInteger(7),
   )
-  let missing : Result[@syntax.PdfObject, Error] = try? doc.lookup_required(
-    key_missing,
-    dict,
-    RootExpected,
-  )
+  let missing : Result[@syntax.PdfObject, Error] = try
+    doc.lookup_required(key_missing, dict, RootExpected)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected for missing key")
   }
-  let null_value : Result[@syntax.PdfObject, Error] = try? doc.lookup_required(
-    key_null,
-    dict,
-    RootExpected,
-  )
+  let null_value : Result[@syntax.PdfObject, Error] = try
+    doc.lookup_required(key_null, dict, RootExpected)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard null_value is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected for null value")
   }
-  let not_dictionary : Result[@syntax.PdfObject, Error] = try? doc.lookup_required(
-    key_type,
-    PdfInteger(1),
-    DictionaryExpected,
-  )
+  let not_dictionary : Result[@syntax.PdfObject, Error] = try
+    doc.lookup_required(key_type, PdfInteger(1), DictionaryExpected)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard not_dictionary is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected caller-provided error for non-dictionary")
   }
@@ -258,10 +264,13 @@ test "PdfDocument replace_chain updates array chain entries" {
     doc.lookup_chain(doc.trailer_dict(), [key_items, index_1]),
     Some(PdfInteger(99)),
   )
-  let final_out_of_range : Result[Unit, Error] = try? doc.replace_chain(
-    [key_items, index_2],
-    PdfInteger(0),
-  )
+  let final_out_of_range : Result[Unit, Error] = try
+    doc.replace_chain([key_items, index_2], PdfInteger(0))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard final_out_of_range
     is Err(@core.PdfError::DictionaryKeyNotFound(missing)) &&
     missing == index_2 else {
@@ -269,20 +278,26 @@ test "PdfDocument replace_chain updates array chain entries" {
       "expected @core.PdfError::DictionaryKeyNotFound for final out-of-range array chain",
     )
   }
-  let out_of_range : Result[Unit, Error] = try? doc.replace_chain(
-    [key_items, index_2, key_value],
-    PdfInteger(0),
-  )
+  let out_of_range : Result[Unit, Error] = try
+    doc.replace_chain([key_items, index_2, key_value], PdfInteger(0))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard out_of_range is Err(@core.PdfError::DictionaryKeyNotFound(missing)) &&
     missing == index_2 else {
     fail(
       "expected @core.PdfError::DictionaryKeyNotFound for out-of-range array chain",
     )
   }
-  let malformed : Result[Unit, Error] = try? doc.replace_chain(
-    [key_items, bad_index],
-    PdfInteger(0),
-  )
+  let malformed : Result[Unit, Error] = try
+    doc.replace_chain([key_items, bad_index], PdfInteger(0))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed is Err(@core.PdfError::DictionaryKeyNotFound(missing)) &&
     missing == bad_index else {
     fail(
@@ -295,15 +310,24 @@ test "PdfDocument replace_chain updates array chain entries" {
 test "PdfDocument replace_chain reports malformed chains" {
   let doc = @pdflite.pdf_document_empty()
   let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
-  let empty : Result[Unit, Error] = try? doc.replace_chain([], PdfInteger(1))
+  let empty : Result[Unit, Error] = try
+    doc.replace_chain([], PdfInteger(1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected for empty chain")
   }
   doc.set_trailer_dict(PdfInteger(1))
-  let not_dictionary : Result[Unit, Error] = try? doc.replace_chain(
-    [key_root],
-    PdfInteger(2),
-  )
+  let not_dictionary : Result[Unit, Error] = try
+    doc.replace_chain([key_root], PdfInteger(2))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard not_dictionary is Err(@core.PdfError::DictionaryExpected) else {
     fail(
       "expected @core.PdfError::DictionaryExpected for non-dictionary trailer",
@@ -423,15 +447,23 @@ test "PdfDocument remove_chain updates array chain entries" {
   )
   @test.assert_eq(try! doc.remove_chain([key_items, index_1, key_value]), false)
   @test.assert_eq(try! doc.remove_chain([key_items, index_2, key_value]), false)
-  let remove_array_slot : Result[Bool, Error] = try? doc.remove_chain([
-    key_items, index_1,
-  ])
+  let remove_array_slot : Result[Bool, Error] = try
+    doc.remove_chain([key_items, index_1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard remove_array_slot is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected for array slot removal")
   }
-  let malformed : Result[Bool, Error] = try? doc.remove_chain([
-    key_items, bad_index, key_value,
-  ])
+  let malformed : Result[Bool, Error] = try
+    doc.remove_chain([key_items, bad_index, key_value])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed is Err(@core.PdfError::DictionaryKeyNotFound(missing)) &&
     missing == bad_index else {
     fail(
@@ -445,21 +477,35 @@ test "PdfDocument remove_chain reports malformed short chains" {
   let doc = @pdflite.pdf_document_empty()
   let key_root = lookup_name_for_test([47, 82, 111, 111, 116])
   let key_child = lookup_name_for_test([47, 67, 104, 105, 108, 100])
-  let empty : Result[Bool, Error] = try? doc.remove_chain([])
+  let empty : Result[Bool, Error] = try doc.remove_chain([]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected for empty chain")
   }
   @test.assert_eq(try! doc.remove_chain([key_root]), false)
   doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfInteger(1))]))
-  let existing_single : Result[Bool, Error] = try? doc.remove_chain([key_root])
+  let existing_single : Result[Bool, Error] = try
+    doc.remove_chain([key_root])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard existing_single is Err(@core.PdfError::DictionaryExpected) else {
     fail(
       "expected @core.PdfError::DictionaryExpected for existing single-entry chain",
     )
   }
-  let non_dictionary : Result[Bool, Error] = try? doc.remove_chain([
-    key_root, key_child,
-  ])
+  let non_dictionary : Result[Bool, Error] = try
+    doc.remove_chain([key_root, key_child])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_dictionary is Err(@core.PdfError::DictionaryExpected) else {
     fail(
       "expected @core.PdfError::DictionaryExpected for non-dictionary chain parent",
@@ -480,19 +526,33 @@ test "PdfDocument get_number and parse_rectangle mirror Pdf helpers" {
   @test.assert_eq(rect.min_y, 5.0)
   @test.assert_eq(rect.max_x, 10.0)
   @test.assert_eq(rect.max_y, 20.0)
-  let bad_number : Result[Double, Error] = try? doc.get_number(PdfNull)
+  let bad_number : Result[Double, Error] = try doc.get_number(PdfNull) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_number is Err(@core.PdfError::NumberExpected) else {
     fail("expected @core.PdfError::NumberExpected")
   }
-  let bad_rect : Result[@geometry.PdfRectangle, Error] = try? doc.parse_rectangle(
-    PdfArray([PdfInteger(1)]),
-  )
+  let bad_rect : Result[@geometry.PdfRectangle, Error] = try
+    doc.parse_rectangle(PdfArray([PdfInteger(1)]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_rect is Err(@core.PdfError::RectangleExpected) else {
     fail("expected @core.PdfError::RectangleExpected")
   }
-  let bad_number_rect : Result[@geometry.PdfRectangle, Error] = try? doc.parse_rectangle(
-    PdfArray([PdfInteger(1), PdfNull, PdfInteger(3), PdfInteger(4)]),
-  )
+  let bad_number_rect : Result[@geometry.PdfRectangle, Error] = try
+    doc.parse_rectangle(
+      PdfArray([PdfInteger(1), PdfNull, PdfInteger(3), PdfInteger(4)]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_number_rect is Err(@core.PdfError::BadRectangle) else {
     fail("expected @core.PdfError::BadRectangle")
   }
@@ -551,10 +611,13 @@ test "PdfDocument transform_rect and transform_quadpoints update geometry" {
     doc.transform_quadpoints(matrix, PdfInteger(1)),
     PdfInteger(1),
   )
-  let bad_rect : Result[@syntax.PdfObject, Error] = try? doc.transform_rect(
-    matrix,
-    PdfInteger(1),
-  )
+  let bad_rect : Result[@syntax.PdfObject, Error] = try
+    doc.transform_rect(matrix, PdfInteger(1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_rect is Err(@core.PdfError::RectangleExpected) else {
     fail("expected @core.PdfError::RectangleExpected")
   }
@@ -574,9 +637,13 @@ test "PdfDocument parse_matrix and pdf_object_of_matrix round trip matrices" {
     @geometry.transform_identity_matrix,
   )
   let bad = @syntax.pdf_dictionary([(key_matrix, PdfArray([PdfInteger(1)]))])
-  let bad_matrix : Result[@geometry.TransformMatrix, Error] = try? doc.parse_matrix(
-    key_matrix, bad,
-  )
+  let bad_matrix : Result[@geometry.TransformMatrix, Error] = try
+    doc.parse_matrix(key_matrix, bad)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_matrix is Err(@core.PdfError::MatrixMalformed) else {
     fail("expected @core.PdfError::MatrixMalformed")
   }

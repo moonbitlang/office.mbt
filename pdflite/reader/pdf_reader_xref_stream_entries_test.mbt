@@ -9,20 +9,24 @@ test "xref stream field reader handles zero-width and bounds" {
     (24930, 2),
   )
 
-  let short_field : Result[(Int, Int), Error] = try? @reader.pdf_xref_stream_read_field(
-    @ascii.encode("a"),
-    0,
-    2,
-  )
+  let short_field : Result[(Int, Int), Error] = try
+    @reader.pdf_xref_stream_read_field(@ascii.encode("a"), 0, 2)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_field is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
 
-  let negative_width : Result[(Int, Int), Error] = try? @reader.pdf_xref_stream_read_field(
-    @ascii.encode("a"),
-    0,
-    -1,
-  )
+  let negative_width : Result[(Int, Int), Error] = try
+    @reader.pdf_xref_stream_read_field(@ascii.encode("a"), 0, -1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard negative_width is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
@@ -58,20 +62,24 @@ test "xref stream entries decode normal, object stream, and unknown kinds" {
     object_stream: None,
   })
 
-  let invalid_pairs : Result[Array[@reader.PdfClassicXRefEntry], Error] = try? @reader.pdf_xref_stream_entries(
-    Bytes::from_array([]),
-    (1, 1, 1),
-    [(0, -1)],
-  )
+  let invalid_pairs : Result[Array[@reader.PdfClassicXRefEntry], Error] = try
+    @reader.pdf_xref_stream_entries(Bytes::from_array([]), (1, 1, 1), [(0, -1)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid_pairs is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
 
-  let invalid_widths : Result[Array[@reader.PdfClassicXRefEntry], Error] = try? @reader.pdf_xref_stream_entries(
-    Bytes::from_array([]),
-    (0, 0, 0),
-    [],
-  )
+  let invalid_widths : Result[Array[@reader.PdfClassicXRefEntry], Error] = try
+    @reader.pdf_xref_stream_entries(Bytes::from_array([]), (0, 0, 0), [])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid_widths is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }

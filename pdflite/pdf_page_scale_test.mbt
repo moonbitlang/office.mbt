@@ -205,11 +205,13 @@ test "PdfDocument scale_contents transforms open-action destinations" {
 ///|
 test "PdfDocument scale_contents validates page range" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.scale_contents(
-    [2],
-    PdfPositionBottomLeft(0.0, 0.0),
-    1.0,
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.scale_contents([2], PdfPositionBottomLeft(0.0, 0.0), 1.0)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -324,10 +326,13 @@ test "cpdf scale_pdf wrapper uses absolute page-indexed scales" {
 ///|
 test "PdfDocument scale_pages validates scale counts and page range" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
-  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.scale_pages(
-    [1],
-    [],
-  )
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try
+    document.scale_pages([1], [])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -336,10 +341,13 @@ test "PdfDocument scale_pages validates scale counts and page range" {
     ) else {
     fail("expected scale_pages to reject scale count mismatch")
   }
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.scale_pages(
-    [2],
-    [(1.0, 1.0)],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.scale_pages([2], [(1.0, 1.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -349,11 +357,13 @@ test "PdfDocument scale_pages validates scale counts and page range" {
     fail("expected scale_pages to reject invalid pages")
   }
 
-  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_scale_pdf(
-    [],
-    document,
-    [1],
-  )
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_scale_pdf([], document, [1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard cpdf_mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -467,10 +477,13 @@ test "cpdf stretch wrapper uses absolute page-indexed sizes" {
 ///|
 test "PdfDocument stretch_pages validates size counts page range and zero boxes" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
-  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.stretch_pages(
-    [1],
-    [],
-  )
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try
+    document.stretch_pages([1], [])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -479,10 +492,13 @@ test "PdfDocument stretch_pages validates size counts page range and zero boxes"
     ) else {
     fail("expected stretch_pages to reject size count mismatch")
   }
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.stretch_pages(
-    [2],
-    [(100.0, 100.0)],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.stretch_pages([2], [(100.0, 100.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -494,10 +510,13 @@ test "PdfDocument stretch_pages validates size counts page range and zero boxes"
   let zero = page_scale_document_for_test([
     page_scale_page_for_test([Op_S], width=0.0, height=10.0),
   ])
-  let bad_size : Result[@pdflite.PdfDocument, Error] = try? zero.stretch_pages(
-    [1],
-    [(100.0, 100.0)],
-  )
+  let bad_size : Result[@pdflite.PdfDocument, Error] = try
+    zero.stretch_pages([1], [(100.0, 100.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_size
     is Err(
       @core.PdfError::BadNumberArgument(
@@ -507,11 +526,13 @@ test "PdfDocument stretch_pages validates size counts page range and zero boxes"
     fail("expected stretch_pages to reject zero-sized pages")
   }
 
-  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_stretch(
-    [],
-    document,
-    [1],
-  )
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_stretch([], document, [1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard cpdf_mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -604,10 +625,13 @@ test "cpdf scale_to_fit_pdf wrapper uses absolute page-indexed sizes" {
 ///|
 test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
-  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.scale_to_fit_pages(
-    [1],
-    [],
-  )
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try
+    document.scale_to_fit_pages([1], [])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -619,10 +643,13 @@ test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
   let zero = page_scale_document_for_test([
     page_scale_page_for_test([Op_S], width=0.0, height=10.0),
   ])
-  let bad_size : Result[@pdflite.PdfDocument, Error] = try? zero.scale_to_fit_pages(
-    [1],
-    [(100.0, 100.0)],
-  )
+  let bad_size : Result[@pdflite.PdfDocument, Error] = try
+    zero.scale_to_fit_pages([1], [(100.0, 100.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_size
     is Err(
       @core.PdfError::BadNumberArgument(
@@ -632,14 +659,13 @@ test "PdfDocument scale_to_fit_pages validates size counts and zero boxes" {
     fail("expected scale_to_fit_pages to reject zero-sized pages")
   }
 
-  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_scale_to_fit_pdf(
-    PdfPositionCentre,
-    1.0,
-    [],
-    (),
-    document,
-    [1],
-  )
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_scale_to_fit_pdf(PdfPositionCentre, 1.0, [], (), document, [1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard cpdf_mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -729,11 +755,13 @@ test "cpdf scale_to_fit_rotate wrapper uses absolute page-indexed sizes" {
 ///|
 test "PdfDocument scale_to_fit_rotate_pages validates page range and size count" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
-  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.scale_to_fit_rotate_pages(
-    [1],
-    [],
-    90,
-  )
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try
+    document.scale_to_fit_rotate_pages([1], [], 90)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -743,11 +771,13 @@ test "PdfDocument scale_to_fit_rotate_pages validates page range and size count"
     fail("expected scale_to_fit_rotate_pages to reject size count mismatch")
   }
 
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.scale_to_fit_rotate_pages(
-    [2],
-    [(100.0, 200.0)],
-    90,
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.scale_to_fit_rotate_pages([2], [(100.0, 200.0)], 90)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -757,12 +787,13 @@ test "PdfDocument scale_to_fit_rotate_pages validates page range and size count"
     fail("expected scale_to_fit_rotate_pages to reject an out-of-range page")
   }
 
-  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_scale_to_fit_rotate(
-    [],
-    90,
-    document,
-    [1],
-  )
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_scale_to_fit_rotate([], 90, document, [1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard cpdf_mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -858,10 +889,13 @@ test "PdfDocument center_to_fit_pages wrapper uses first target for all offsets"
 ///|
 test "PdfDocument center_to_fit_pages validates page range and size count" {
   let document = page_scale_document_for_test([page_scale_page_for_test([Op_S])])
-  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.center_to_fit_pages(
-    [1],
-    [],
-  )
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try
+    document.center_to_fit_pages([1], [])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -871,10 +905,13 @@ test "PdfDocument center_to_fit_pages validates page range and size count" {
     fail("expected center_to_fit_pages to reject size count mismatch")
   }
 
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.center_to_fit_pages(
-    [2],
-    [(100.0, 200.0)],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.center_to_fit_pages([2], [(100.0, 200.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(

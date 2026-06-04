@@ -938,9 +938,15 @@ test "pdf_document_to_markdown decrypts blank user password PDFs" {
 
 ///|
 test "pdf_document_to_markdown raises when encrypted PDF needs a password" {
-  let result : Result[String, Error] = try? @markdown.pdf_document_to_markdown(
-    markdown_password_required_document_for_test(),
-  )
+  let result : Result[String, Error] = try
+    @markdown.pdf_document_to_markdown(
+      markdown_password_required_document_for_test(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   @test.assert_eq(result is Err(_), true)
 }
 

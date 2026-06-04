@@ -114,9 +114,13 @@ fn PdfDocument::pdf_util_replace_entry_transform(
   fn(object) {
     match search {
       None => {
-        let replaced : Result[@syntax.PdfObject, Error] = try? object.replace_dict_entry(
-          key, value,
-        )
+        let replaced : Result[@syntax.PdfObject, Error] = try
+          object.replace_dict_entry(key, value)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         match replaced {
           Ok(updated) => updated
           Err(_) => object

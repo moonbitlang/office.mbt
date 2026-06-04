@@ -260,7 +260,11 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     (text_font_read_name_for_test("/LastChar"), PdfInteger(66)),
     (text_font_read_name_for_test("/Widths"), PdfArray([PdfInteger(600)])),
   ])
-  let malformed_result = try? doc.read_font_metrics(malformed)
+  let malformed_result = try doc.read_font_metrics(malformed) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed_result is Err(FontWidthsExpected) else {
     fail("expected @core.PdfError::FontWidthsExpected")
   }
@@ -277,7 +281,11 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
       PdfArray([PdfNameObject(text_font_read_name_for_test("/Bad"))]),
     ),
   ])
-  let bad_width_result = try? doc.read_font_metrics(bad_width)
+  let bad_width_result = try doc.read_font_metrics(bad_width) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_width_result is Err(FontWidthExpected) else {
     fail("expected @core.PdfError::FontWidthExpected")
   }
@@ -291,7 +299,11 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     (text_font_read_name_for_test("/LastChar"), PdfInteger(65)),
     (text_font_read_name_for_test("/Widths"), PdfArray([PdfInteger(600)])),
   ])
-  let bad_firstchar_result = try? doc.read_font_metrics(bad_firstchar)
+  let bad_firstchar_result = try doc.read_font_metrics(bad_firstchar) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_firstchar_result is Err(FontFirstCharExpected) else {
     fail("expected @core.PdfError::FontFirstCharExpected")
   }
@@ -304,7 +316,11 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     (text_font_read_name_for_test("/FirstChar"), PdfInteger(65)),
     (text_font_read_name_for_test("/LastChar"), PdfInteger(65)),
   ])
-  let missing_widths_result = try? doc.read_font_metrics(missing_widths)
+  let missing_widths_result = try doc.read_font_metrics(missing_widths) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_widths_result is Err(FontWidthsExpected) else {
     fail("expected @core.PdfError::FontWidthsExpected for missing widths")
   }
@@ -318,7 +334,13 @@ test "PdfDocument read_font_metrics handles Type3 fonts and malformed widths" {
     (text_font_read_name_for_test("/LastChar"), PdfInteger(65)),
     (text_font_read_name_for_test("/Widths"), PdfArray([])),
   ])
-  let inverted_bounds_result = try? doc.read_font_metrics(inverted_bounds)
+  let inverted_bounds_result = try
+    doc.read_font_metrics(inverted_bounds)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard inverted_bounds_result is Err(FontWidthsExpected) else {
     fail("expected @core.PdfError::FontWidthsExpected for inverted bounds")
   }
@@ -553,29 +575,47 @@ test "PdfDocument read_simple_font covers MMType1 TrueType and Type3 resources" 
 ///|
 test "PdfDocument read_simple_font rejects malformed simple fonts" {
   let doc = @pdflite.pdf_document_empty()
-  let missing_subtype = try? doc.read_simple_font(@syntax.pdf_dictionary([]))
+  let missing_subtype = try
+    doc.read_simple_font(@syntax.pdf_dictionary([]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_subtype is Err(FontSubtypeExpected) else {
     fail("expected @core.PdfError::FontSubtypeExpected for missing subtype")
   }
-  let unknown_subtype = try? doc.read_simple_font(
-    @syntax.pdf_dictionary([
-      (
-        text_font_read_name_for_test("/Subtype"),
-        PdfNameObject(text_font_read_name_for_test("/CIDFontType2")),
-      ),
-    ]),
-  )
+  let unknown_subtype = try
+    doc.read_simple_font(
+      @syntax.pdf_dictionary([
+        (
+          text_font_read_name_for_test("/Subtype"),
+          PdfNameObject(text_font_read_name_for_test("/CIDFontType2")),
+        ),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unknown_subtype is Err(FontSubtypeExpected) else {
     fail("expected @core.PdfError::FontSubtypeExpected for unknown subtype")
   }
-  let missing_charprocs = try? doc.read_simple_font(
-    @syntax.pdf_dictionary([
-      (
-        text_font_read_name_for_test("/Subtype"),
-        PdfNameObject(text_font_read_name_for_test("/Type3")),
-      ),
-    ]),
-  )
+  let missing_charprocs = try
+    doc.read_simple_font(
+      @syntax.pdf_dictionary([
+        (
+          text_font_read_name_for_test("/Subtype"),
+          PdfNameObject(text_font_read_name_for_test("/Type3")),
+        ),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_charprocs is Err(FontCharProcsExpected) else {
     fail("expected @core.PdfError::FontCharProcsExpected")
   }
@@ -664,11 +704,21 @@ test "PdfDocument read_standard14_font rejects bad base fonts" {
       PdfNameObject(text_font_read_name_for_test("/NotStandard")),
     ),
   ])
-  let unknown_result = try? doc.read_standard14_font(unknown)
+  let unknown_result = try doc.read_standard14_font(unknown) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unknown_result is Err(StandardFontExpected) else {
     fail("expected @core.PdfError::StandardFontExpected")
   }
-  let missing_result = try? doc.read_standard14_font(@syntax.pdf_dictionary([]))
+  let missing_result = try
+    doc.read_standard14_font(@syntax.pdf_dictionary([]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_result is Err(BaseFontExpected) else {
     fail("expected @core.PdfError::BaseFontExpected")
   }
@@ -747,7 +797,11 @@ test "PdfDocument read_font rejects unknown fonts" {
       PdfNameObject(text_font_read_name_for_test("/CIDFontType2")),
     ),
   ])
-  let unknown_result = try? doc.read_font(unknown)
+  let unknown_result = try doc.read_font(unknown) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unknown_result is Err(FontTypeExpected) else {
     fail("expected @core.PdfError::FontTypeExpected")
   }
@@ -1041,34 +1095,52 @@ test "PdfDocument read_cidkeyed_font supports indirect CMap streams" {
 ///|
 test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   let doc = @pdflite.pdf_document_empty()
-  let missing_basefont = try? doc.read_cidkeyed_font(@syntax.pdf_dictionary([]))
+  let missing_basefont = try
+    doc.read_cidkeyed_font(@syntax.pdf_dictionary([]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_basefont is Err(BaseFontExpected) else {
     fail("expected @core.PdfError::BaseFontExpected")
   }
-  let missing_descendant = try? doc.read_cidkeyed_font(
-    @syntax.pdf_dictionary([
-      (
-        text_font_read_name_for_test("/BaseFont"),
-        PdfNameObject(text_font_read_name_for_test("/T")),
-      ),
-    ]),
-  )
+  let missing_descendant = try
+    doc.read_cidkeyed_font(
+      @syntax.pdf_dictionary([
+        (
+          text_font_read_name_for_test("/BaseFont"),
+          PdfNameObject(text_font_read_name_for_test("/T")),
+        ),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_descendant is Err(DescendantFontExpected) else {
     fail("expected @core.PdfError::DescendantFontExpected")
   }
 
-  let bad_supplement = try? doc.read_cid_system_info(
-    @syntax.pdf_dictionary([
-      (
-        text_font_read_name_for_test("/Registry"),
-        PdfString(text_font_read_bytes_for_test([82])),
-      ),
-      (
-        text_font_read_name_for_test("/Ordering"),
-        PdfString(text_font_read_bytes_for_test([79])),
-      ),
-    ]),
-  )
+  let bad_supplement = try
+    doc.read_cid_system_info(
+      @syntax.pdf_dictionary([
+        (
+          text_font_read_name_for_test("/Registry"),
+          PdfString(text_font_read_bytes_for_test([82])),
+        ),
+        (
+          text_font_read_name_for_test("/Ordering"),
+          PdfString(text_font_read_bytes_for_test([79])),
+        ),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_supplement is Err(CIDSupplementExpected) else {
     fail("expected @core.PdfError::CIDSupplementExpected")
   }
@@ -1108,7 +1180,11 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       PdfNameObject(text_font_read_name_for_test("/Identity-H")),
     ),
   ])
-  let system_result = try? doc.read_cidkeyed_font(bad_system_font)
+  let system_result = try doc.read_cidkeyed_font(bad_system_font) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard system_result is Err(CIDRegistryExpected) else {
     fail("expected @core.PdfError::CIDRegistryExpected")
   }
@@ -1126,12 +1202,18 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       ),
     ]),
   )
-  let missing_system_result = try? doc.read_cidkeyed_font(
-    text_font_read_cid_top_font_for_test(
-      10,
-      PdfNameObject(text_font_read_name_for_test("/Identity-H")),
-    ),
-  )
+  let missing_system_result = try
+    doc.read_cidkeyed_font(
+      text_font_read_cid_top_font_for_test(
+        10,
+        PdfNameObject(text_font_read_name_for_test("/Identity-H")),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_system_result is Err(CIDSystemInfoExpected) else {
     fail("expected @core.PdfError::CIDSystemInfoExpected")
   }
@@ -1149,12 +1231,18 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       ),
     ]),
   )
-  let missing_cid_basefont_result = try? doc.read_cidkeyed_font(
-    text_font_read_cid_top_font_for_test(
-      11,
-      PdfNameObject(text_font_read_name_for_test("/Identity-H")),
-    ),
-  )
+  let missing_cid_basefont_result = try
+    doc.read_cidkeyed_font(
+      text_font_read_cid_top_font_for_test(
+        11,
+        PdfNameObject(text_font_read_name_for_test("/Identity-H")),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_cid_basefont_result is Err(CIDBaseFontExpected) else {
     fail("expected @core.PdfError::CIDBaseFontExpected")
   }
@@ -1172,12 +1260,18 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       ),
     ]),
   )
-  let missing_descriptor_result = try? doc.read_cidkeyed_font(
-    text_font_read_cid_top_font_for_test(
-      12,
-      PdfNameObject(text_font_read_name_for_test("/Identity-H")),
-    ),
-  )
+  let missing_descriptor_result = try
+    doc.read_cidkeyed_font(
+      text_font_read_cid_top_font_for_test(
+        12,
+        PdfNameObject(text_font_read_name_for_test("/Identity-H")),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_descriptor_result is Err(CIDFontDescriptorExpected) else {
     fail("expected @core.PdfError::CIDFontDescriptorExpected")
   }
@@ -1225,7 +1319,11 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       PdfNameObject(text_font_read_name_for_test("/Identity-H")),
     ),
   ])
-  let widths_result = try? doc.read_cidkeyed_font(bad_widths_font)
+  let widths_result = try doc.read_cidkeyed_font(bad_widths_font) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard widths_result is Err(CIDWidthsExpected) else {
     fail("expected @core.PdfError::CIDWidthsExpected")
   }
@@ -1258,12 +1356,18 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   ]
   for index in 0..<malformed_widths.length() {
     doc.add_object_given_number(13 + index, malformed_widths[index])
-    let result = try? doc.read_cidkeyed_font(
-      text_font_read_cid_top_font_for_test(
-        13 + index,
-        PdfNameObject(text_font_read_name_for_test("/Identity-H")),
-      ),
-    )
+    let result = try
+      doc.read_cidkeyed_font(
+        text_font_read_cid_top_font_for_test(
+          13 + index,
+          PdfNameObject(text_font_read_name_for_test("/Identity-H")),
+        ),
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     guard result is Err(CIDWidthsExpected) else {
       fail("expected @core.PdfError::CIDWidthsExpected for malformed widths")
     }
@@ -1312,7 +1416,11 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       PdfNameObject(text_font_read_name_for_test("/Identity-H")),
     ),
   ])
-  let widths2_result = try? doc.read_cidkeyed_font(bad_widths2_font)
+  let widths2_result = try doc.read_cidkeyed_font(bad_widths2_font) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard widths2_result is Err(CIDWidths2Expected) else {
     fail("expected @core.PdfError::CIDWidths2Expected")
   }
@@ -1348,12 +1456,18 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
   ]
   for index in 0..<malformed_widths2.length() {
     doc.add_object_given_number(16 + index, malformed_widths2[index])
-    let result = try? doc.read_cidkeyed_font(
-      text_font_read_cid_top_font_for_test(
-        16 + index,
-        PdfNameObject(text_font_read_name_for_test("/Identity-H")),
-      ),
-    )
+    let result = try
+      doc.read_cidkeyed_font(
+        text_font_read_cid_top_font_for_test(
+          16 + index,
+          PdfNameObject(text_font_read_name_for_test("/Identity-H")),
+        ),
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     guard result is Err(CIDWidths2Expected) else {
       fail(
         "expected @core.PdfError::CIDWidths2Expected for malformed vertical widths",
@@ -1400,13 +1514,23 @@ test "PdfDocument read_cidkeyed_font rejects malformed CID data" {
       @syntax.pdf_stream(@syntax.pdf_dictionary([]), StreamGot([])),
     ),
   ])
-  let direct_cmap_result = try? doc.read_cidkeyed_font(direct_cmap)
+  let direct_cmap_result = try doc.read_cidkeyed_font(direct_cmap) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard direct_cmap_result is Err(CMapEncodingExpected) else {
     fail("expected @core.PdfError::CMapEncodingExpected")
   }
-  let bad_cmap = try? doc.read_cidkeyed_font(
-    text_font_read_cid_top_font_for_test(9, PdfInteger(1)),
-  )
+  let bad_cmap = try
+    doc.read_cidkeyed_font(
+      text_font_read_cid_top_font_for_test(9, PdfInteger(1)),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_cmap is Err(CMapEncodingExpected) else {
     fail("expected @core.PdfError::CMapEncodingExpected for non-name encoding")
   }

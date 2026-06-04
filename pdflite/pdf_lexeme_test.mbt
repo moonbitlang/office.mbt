@@ -192,9 +192,13 @@ test "@core.ByteCursor reports malformed PDF name hex escapes" {
   let cursor = @core.byte_cursor_of_bytes(
     lexeme_bytes_for_test([47, 65, 35, 90, 90]),
   )
-  let result : Result[@syntax.PdfLexeme, Error] = try? @syntax.pdf_cursor_lex_name(
-    cursor,
-  )
+  let result : Result[@syntax.PdfLexeme, Error] = try
+    @syntax.pdf_cursor_lex_name(cursor)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidHexEscape) else {
     fail("expected @core.PdfError::InvalidHexEscape")
   }
@@ -284,18 +288,26 @@ test "@syntax.pdf_cursor_lex_literal_string treats backslash newline as continua
   let missing_escaped_cursor = @core.byte_cursor_of_bytes(
     lexeme_bytes_for_test([40, 65, 92]),
   )
-  let missing_escaped : Result[@syntax.PdfLexeme, Error] = try? @syntax.pdf_cursor_lex_literal_string(
-    missing_escaped_cursor,
-  )
+  let missing_escaped : Result[@syntax.PdfLexeme, Error] = try
+    @syntax.pdf_cursor_lex_literal_string(missing_escaped_cursor)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_escaped is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput")
   }
   let unterminated_cursor = @core.byte_cursor_of_bytes(
     lexeme_bytes_for_test([40, 65]),
   )
-  let unterminated : Result[@syntax.PdfLexeme, Error] = try? @syntax.pdf_cursor_lex_literal_string(
-    unterminated_cursor,
-  )
+  let unterminated : Result[@syntax.PdfLexeme, Error] = try
+    @syntax.pdf_cursor_lex_literal_string(unterminated_cursor)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unterminated is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput")
   }
@@ -313,9 +325,13 @@ test "@core.ByteCursor lexes PDF hex strings and rejects malformed hex" {
   let malformed = @core.byte_cursor_of_bytes(
     lexeme_bytes_for_test([60, 52, 90, 62]),
   )
-  let result : Result[@syntax.PdfLexeme, Error] = try? @syntax.pdf_cursor_lex_hex_string(
-    malformed,
-  )
+  let result : Result[@syntax.PdfLexeme, Error] = try
+    @syntax.pdf_cursor_lex_hex_string(malformed)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidHexEscape) else {
     fail("expected @core.PdfError::InvalidHexEscape")
   }
@@ -335,9 +351,13 @@ test "@core.ByteCursor lexes PDF hex strings and rejects malformed hex" {
     LexString(lexeme_bytes_for_test([])),
   )
   let bad_high = @core.byte_cursor_of_bytes(lexeme_bytes_for_test([60, 90, 62]))
-  let result : Result[@syntax.PdfLexeme, Error] = try? @syntax.pdf_cursor_lex_hex_string(
-    bad_high,
-  )
+  let result : Result[@syntax.PdfLexeme, Error] = try
+    @syntax.pdf_cursor_lex_hex_string(bad_high)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidHexEscape) else {
     fail("expected @core.PdfError::InvalidHexEscape")
   }

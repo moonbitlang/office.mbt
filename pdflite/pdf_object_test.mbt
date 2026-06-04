@@ -125,7 +125,13 @@ test "@syntax.PdfObject find_indirect reads immediate dictionary references" {
     @syntax.pdf_dictionary([(name_a, PdfIndirect(9))]),
     StreamGot(try! @core.pdf_bytes_of_int_array([65])),
   )
-  let stream_result : Result[Int?, Error] = try? stream.find_indirect(name_a)
+  let stream_result : Result[Int?, Error] = try
+    stream.find_indirect(name_a)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard stream_result is Err(@core.PdfError::DictionaryExpected) else {
     fail(
       "expected @core.PdfError::DictionaryExpected for non-dictionary object",
@@ -152,7 +158,13 @@ test "@syntax.PdfObject stream_bytes materializes owned and deferred stream data
     try! deferred_stream.stream_bytes(),
     try! @core.pdf_bytes_of_int_array([71, 72]),
   )
-  let non_stream : Result[@core.PdfBytes, Error] = try? @syntax.PdfInteger(1).stream_bytes()
+  let non_stream : Result[@core.PdfBytes, Error] = try
+    @syntax.PdfInteger(1).stream_bytes()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }
@@ -206,7 +218,13 @@ test "@syntax.PdfObject get_stream materializes deferred streams and corrects le
     try! @core.pdf_bytes_of_int_array([68]),
   )
   let non_stream_object : @syntax.PdfObject = PdfInteger(1)
-  let non_stream : Result[Unit, Error] = try? non_stream_object.get_stream()
+  let non_stream : Result[Unit, Error] = try
+    non_stream_object.get_stream()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }
@@ -247,9 +265,13 @@ test "@syntax.PdfObject unique_key reads stream dictionaries" {
 
 ///|
 test "@syntax.PdfObject unique_key reports non-dictionary objects" {
-  let result : Result[@core.PdfName, Error] = try? @syntax.PdfInteger(1).unique_key(
-    "gs",
-  )
+  let result : Result[@core.PdfName, Error] = try
+    @syntax.PdfInteger(1).unique_key("gs")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected")
   }
@@ -262,17 +284,24 @@ test "@syntax.PdfObject dictionary replace and remove report checked errors" {
   let dict = @syntax.pdf_dictionary([(name_a, PdfInteger(1))])
   let replaced = try! dict.replace_dict_entry(name_a, PdfInteger(10))
   @test.assert_eq(replaced.lookup_immediate(name_a), Some(PdfInteger(10)))
-  let missing : Result[@syntax.PdfObject, Error] = try? dict.replace_dict_entry(
-    name_b,
-    PdfInteger(2),
-  )
+  let missing : Result[@syntax.PdfObject, Error] = try
+    dict.replace_dict_entry(name_b, PdfInteger(2))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing is Err(@core.PdfError::DictionaryKeyNotFound(missing_key)) &&
     missing_key == name_b else {
     fail("expected @core.PdfError::DictionaryKeyNotFound")
   }
-  let not_dict_replace : Result[@syntax.PdfObject, Error] = try? @syntax.PdfInteger(
-    1,
-  ).replace_dict_entry(name_a, PdfInteger(2))
+  let not_dict_replace : Result[@syntax.PdfObject, Error] = try
+    @syntax.PdfInteger(1).replace_dict_entry(name_a, PdfInteger(2))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard not_dict_replace
     is Err(@core.PdfError::DictionaryKeyNotFound(missing_key)) &&
     missing_key == name_a else {
@@ -280,15 +309,23 @@ test "@syntax.PdfObject dictionary replace and remove report checked errors" {
   }
   let removed = try! dict.remove_dict_entry(name_a)
   @test.assert_eq(removed.lookup_immediate(name_a), None)
-  let not_dict_add : Result[@syntax.PdfObject, Error] = try? @syntax.PdfInteger(
-    1,
-  ).add_dict_entry(name_a, PdfInteger(2))
+  let not_dict_add : Result[@syntax.PdfObject, Error] = try
+    @syntax.PdfInteger(1).add_dict_entry(name_a, PdfInteger(2))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard not_dict_add is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected")
   }
-  let not_dict : Result[@syntax.PdfObject, Error] = try? @syntax.PdfInteger(1).remove_dict_entry(
-    name_a,
-  )
+  let not_dict : Result[@syntax.PdfObject, Error] = try
+    @syntax.PdfInteger(1).remove_dict_entry(name_a)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard not_dict is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected")
   }

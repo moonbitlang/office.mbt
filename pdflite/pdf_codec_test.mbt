@@ -151,9 +151,13 @@ test "@codec.pdf_ascii_hex_decode pads odd final nibble before terminator" {
 
 ///|
 test "@codec.pdf_ascii_hex_decode reports invalid hex data" {
-  let result : Result[@core.PdfBytes, Error] = try? @codec.pdf_ascii_hex_decode(
-    codec_ascii_for_test("6Z>"),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @codec.pdf_ascii_hex_decode(codec_ascii_for_test("6Z>"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidHexEscape) else {
     fail("expected @core.PdfError::InvalidHexEscape")
   }
@@ -224,33 +228,53 @@ test "pdf_ascii85 view codecs read borrowed slices" {
 
 ///|
 test "@codec.pdf_ascii85_decode reports malformed data" {
-  let bad_char : Result[@core.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
-    codec_ascii_for_test("9jqo{~>"),
-  )
+  let bad_char : Result[@core.PdfBytes, Error] = try
+    @codec.pdf_ascii85_decode(codec_ascii_for_test("9jqo{~>"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_char is Err(@core.PdfError::InvalidASCII85Data) else {
     fail("expected @core.PdfError::InvalidASCII85Data")
   }
-  let bad_zero : Result[@core.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
-    codec_ascii_for_test("!z~>"),
-  )
+  let bad_zero : Result[@core.PdfBytes, Error] = try
+    @codec.pdf_ascii85_decode(codec_ascii_for_test("!z~>"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_zero is Err(@core.PdfError::InvalidASCII85Data) else {
     fail("expected @core.PdfError::InvalidASCII85Data")
   }
-  let one_digit : Result[@core.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
-    codec_ascii_for_test("!~>"),
-  )
+  let one_digit : Result[@core.PdfBytes, Error] = try
+    @codec.pdf_ascii85_decode(codec_ascii_for_test("!~>"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard one_digit is Err(@core.PdfError::InvalidASCII85Data) else {
     fail("expected @core.PdfError::InvalidASCII85Data")
   }
-  let overflowing_group : Result[@core.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
-    codec_ascii_for_test("uuuuu~>"),
-  )
+  let overflowing_group : Result[@core.PdfBytes, Error] = try
+    @codec.pdf_ascii85_decode(codec_ascii_for_test("uuuuu~>"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard overflowing_group is Err(@core.PdfError::InvalidASCII85Data) else {
     fail("expected @core.PdfError::InvalidASCII85Data")
   }
-  let unterminated : Result[@core.PdfBytes, Error] = try? @codec.pdf_ascii85_decode(
-    codec_ascii_for_test("9jqo"),
-  )
+  let unterminated : Result[@core.PdfBytes, Error] = try
+    @codec.pdf_ascii85_decode(codec_ascii_for_test("9jqo"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unterminated is Err(@core.PdfError::InvalidASCII85Data) else {
     fail("expected @core.PdfError::InvalidASCII85Data")
   }
@@ -318,15 +342,23 @@ test "@codec.pdf_lzw_decode_view reads borrowed compressed slices" {
 
 ///|
 test "@codec.pdf_lzw_decode reports malformed input codes" {
-  let result : Result[@core.PdfBytes, Error] = try? @codec.pdf_lzw_decode(
-    codec_bytes_for_test([128, 75, 32, 32]),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @codec.pdf_lzw_decode(codec_bytes_for_test([128, 75, 32, 32]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
-  let result : Result[@core.PdfBytes, Error] = try? @codec.pdf_lzw_decode(
-    codec_lzw_codes_for_test([65, 300], 1),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @codec.pdf_lzw_decode(codec_lzw_codes_for_test([65, 300], 1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
@@ -371,33 +403,59 @@ test "@flate.pdf_flate_encode roundtrips an empty payload" {
 ///|
 test "@flate.pdf_flate_decode reports malformed zlib data" {
   @test.assert_eq(try! @flate.pdf_flate_decode(codec_bytes_for_test([])), [])
-  let short_data : Result[@core.PdfBytes, Error] = try? @flate.pdf_flate_decode(
-    codec_bytes_for_test([120, 1, 0]),
-  )
+  let short_data : Result[@core.PdfBytes, Error] = try
+    @flate.pdf_flate_decode(codec_bytes_for_test([120, 1, 0]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_data is Err(@core.PdfError::InvalidFlateData) else {
     fail("expected @core.PdfError::InvalidFlateData")
   }
-  let bad_header : Result[@core.PdfBytes, Error] = try? @flate.pdf_flate_decode(
-    codec_bytes_for_test([120, 2, 1, 0, 0, 255, 255, 0, 0, 0, 1]),
-  )
+  let bad_header : Result[@core.PdfBytes, Error] = try
+    @flate.pdf_flate_decode(
+      codec_bytes_for_test([120, 2, 1, 0, 0, 255, 255, 0, 0, 0, 1]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_header is Err(@core.PdfError::InvalidFlateData) else {
     fail("expected @core.PdfError::InvalidFlateData")
   }
-  let bad_stored_length : Result[@core.PdfBytes, Error] = try? @flate.pdf_flate_decode(
-    codec_bytes_for_test([120, 1, 1, 1, 0, 0, 0, 65, 0, 66, 0, 66]),
-  )
+  let bad_stored_length : Result[@core.PdfBytes, Error] = try
+    @flate.pdf_flate_decode(
+      codec_bytes_for_test([120, 1, 1, 1, 0, 0, 0, 65, 0, 66, 0, 66]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_stored_length is Err(@core.PdfError::InvalidFlateData) else {
     fail("expected @core.PdfError::InvalidFlateData")
   }
-  let bad_block_type : Result[@core.PdfBytes, Error] = try? @flate.pdf_flate_decode(
-    codec_bytes_for_test([120, 1, 7, 0, 1, 0, 0]),
-  )
+  let bad_block_type : Result[@core.PdfBytes, Error] = try
+    @flate.pdf_flate_decode(codec_bytes_for_test([120, 1, 7, 0, 1, 0, 0]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_block_type is Err(@core.PdfError::InvalidFlateData) else {
     fail("expected @core.PdfError::InvalidFlateData")
   }
-  let bad_checksum : Result[@core.PdfBytes, Error] = try? @flate.pdf_flate_decode(
-    codec_bytes_for_test([120, 1, 1, 1, 0, 254, 255, 65, 0, 0, 0, 0]),
-  )
+  let bad_checksum : Result[@core.PdfBytes, Error] = try
+    @flate.pdf_flate_decode(
+      codec_bytes_for_test([120, 1, 1, 1, 0, 254, 255, 65, 0, 0, 0, 0]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_checksum is Err(@core.PdfError::InvalidFlateData) else {
     fail("expected @core.PdfError::InvalidFlateData")
   }
@@ -522,9 +580,13 @@ test "@flate.pdf_flate_encode_with_level exposes zlib level choices" {
   @test.assert_eq(best[1].to_int(), 218)
   @test.assert_eq(@flate.pdf_flate_decode(best), repeated)
 
-  let invalid : Result[@core.PdfBytes, Error] = try? @flate.pdf_flate_encode_with_level(
-    repeated, 10,
-  )
+  let invalid : Result[@core.PdfBytes, Error] = try
+    @flate.pdf_flate_encode_with_level(repeated, 10)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(_) else { fail("expected invalid Flate level to raise") }
 }
 
@@ -847,18 +909,24 @@ test "pdf encode filter and stream APIs accept explicit Flate levels" {
 ///|
 test "pdf filter dispatch reports unsupported filters" {
   let flate = codec_name_for_test("/DCTDecode")
-  let result : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_decode_filter_bytes(
-    flate,
-    codec_ascii_for_test("data"),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_decode_filter_bytes(flate, codec_ascii_for_test("data"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FilterNotSupported(filter)) &&
     filter == flate else {
     fail("expected @core.PdfError::FilterNotSupported")
   }
-  let result : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_encode_filter_bytes(
-    flate,
-    codec_ascii_for_test("data"),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_encode_filter_bytes(flate, codec_ascii_for_test("data"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FilterNotSupported(filter)) &&
     filter == flate else {
     fail("expected @core.PdfError::FilterNotSupported")
@@ -971,43 +1039,43 @@ test "pdf_decode_predictor covers png paeth and short rows" {
 
 ///|
 test "pdf_decode_predictor reports unsupported predictor" {
-  let result : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
-    9,
-    1,
-    8,
-    1,
-    codec_bytes_for_test([0]),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_decode_predictor(9, 1, 8, 1, codec_bytes_for_test([0]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorNotSupported(9)) else {
     fail("expected @core.PdfError::PredictorNotSupported")
   }
-  let result : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
-    15,
-    1,
-    8,
-    1,
-    codec_bytes_for_test([9, 0]),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_decode_predictor(15, 1, 8, 1, codec_bytes_for_test([9, 0]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorNotSupported(9)) else {
     fail("expected @core.PdfError::PredictorNotSupported")
   }
-  let result : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
-    2,
-    1,
-    1,
-    1,
-    codec_bytes_for_test([0]),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_decode_predictor(2, 1, 1, 1, codec_bytes_for_test([0]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorNotSupported(2)) else {
     fail("expected @core.PdfError::PredictorNotSupported")
   }
-  let result : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_decode_predictor(
-    2,
-    0,
-    8,
-    1,
-    codec_bytes_for_test([0]),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_decode_predictor(2, 0, 8, 1, codec_bytes_for_test([0]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorExpected) else {
     fail("expected @core.PdfError::PredictorExpected")
   }
@@ -1027,33 +1095,33 @@ test "pdf predictors keep identity data and reject bad encode parameters" {
   )
   @test.assert_eq(encoded_identity, raw_encode)
   @test.assert_eq(physical_equal(raw_encode, encoded_identity), true)
-  let unsupported_tiff : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
-    2,
-    1,
-    1,
-    1,
-    codec_bytes_for_test([0]),
-  )
+  let unsupported_tiff : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_encode_predictor(2, 1, 1, 1, codec_bytes_for_test([0]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported_tiff is Err(@core.PdfError::PredictorNotSupported(2)) else {
     fail("expected @core.PdfError::PredictorNotSupported")
   }
-  let unsupported : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
-    9,
-    1,
-    8,
-    1,
-    codec_ascii_for_test("raw"),
-  )
+  let unsupported : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_encode_predictor(9, 1, 8, 1, codec_ascii_for_test("raw"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported is Err(@core.PdfError::PredictorNotSupported(9)) else {
     fail("expected @core.PdfError::PredictorNotSupported")
   }
-  let bad_dimensions : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_encode_predictor(
-    11,
-    1,
-    0,
-    1,
-    codec_ascii_for_test("raw"),
-  )
+  let bad_dimensions : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_encode_predictor(11, 1, 0, 1, codec_ascii_for_test("raw"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_dimensions is Err(@core.PdfError::PredictorExpected) else {
     fail("expected @core.PdfError::PredictorExpected")
   }

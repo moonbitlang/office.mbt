@@ -211,9 +211,13 @@ test "pdf_addtext_width_of_fontpack sums mapped codepoint widths" {
     fonts: [addtext_layout_simple_font_with_metrics_for_test(None)],
     entries: [{ codepoint: 65, font_index: 0, charcode: 65 }],
   }
-  let result : Result[Double, Error] = try? @pdflite.pdf_addtext_width_of_fontpack(
-    bad_pack, 10.0, "A",
-  )
+  let result : Result[Double, Error] = try
+    @pdflite.pdf_addtext_width_of_fontpack(bad_pack, 10.0, "A")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FontWidthExpected) else {
     fail("expected FontWidthExpected for fontpack font without metrics")
   }
@@ -264,14 +268,20 @@ test "PdfDocument addtext_calc_textwidth measures fontpacks from UTF-8" {
     ),
     12.77,
   )
-  let bad : Result[Double, Error] = try? document.addtext_calc_textwidth(
-    page,
-    None,
-    Some(pack),
-    addtext_layout_name_for_test("/F0"),
-    10.0,
-    [0xFF],
-  )
+  let bad : Result[Double, Error] = try
+    document.addtext_calc_textwidth(
+      page,
+      None,
+      Some(pack),
+      addtext_layout_name_for_test("/F0"),
+      10.0,
+      [0xFF],
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad is Err(@core.PdfError::InvalidUTF8) else {
     fail("expected InvalidUTF8 for malformed fontpack text")
   }
@@ -373,15 +383,21 @@ test "pdf_addtext_line_widths wrapper handles fontpacks" {
 test "PdfDocument addtext_line_widths reports empty expanded lines" {
   let document = @pdflite.pdf_document_empty()
   let page = @page.pdf_page_blank(@geometry.paper_a4)
-  let result : Result[@addtext.PdfAddTextLineWidths, Error] = try? document.addtext_line_widths(
-    page,
-    Some(addtext_layout_standard_font_for_test()),
-    None,
-    addtext_layout_name_for_test("/F0"),
-    10.0,
-    @ascii.encode("A"),
-    [],
-  )
+  let result : Result[@addtext.PdfAddTextLineWidths, Error] = try
+    document.addtext_line_widths(
+      page,
+      Some(addtext_layout_standard_font_for_test()),
+      None,
+      addtext_layout_name_for_test("/F0"),
+      10.0,
+      @ascii.encode("A"),
+      [],
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError("empty add-text width list")) else {
     fail("expected empty add-text width list error")
   }
@@ -524,7 +540,13 @@ test "pdf_addtext_prepare_line wrapper honors relative boxes" {
 test "pdf_addtext_longest_width selects widest expanded line" {
   @test.assert_eq(@pdflite.pdf_addtext_longest_width([12.0, 7.0, 19.0]), 19.0)
   @test.assert_eq(@pdflite.pdf_addtext_longest_width([-3.0, -1.0]), -1.0)
-  let result : Result[Double, Error] = try? @pdflite.pdf_addtext_longest_width([])
+  let result : Result[Double, Error] = try
+    @pdflite.pdf_addtext_longest_width([])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError("empty add-text width list")) else {
     fail("expected SoftError for empty add-text width list")
   }
@@ -811,15 +833,23 @@ test "pdf_addtext_get_urls_line uses byte offsets for UTF-8 text" {
 
 ///|
 test "pdf_addtext_get_urls_line reports malformed URL markers" {
-  let missing_pipe : Result[@addtext.PdfAddTextUrlLine, Error] = try? @addtext.pdf_addtext_get_urls_line(
-    "%URL[text]",
-  )
+  let missing_pipe : Result[@addtext.PdfAddTextUrlLine, Error] = try
+    @addtext.pdf_addtext_get_urls_line("%URL[text]")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_pipe is Err(@core.PdfError::SoftError("bad URL syntax in text")) else {
     fail("expected SoftError for URL marker without pipe")
   }
-  let missing_close : Result[@addtext.PdfAddTextUrlLine, Error] = try? @addtext.pdf_addtext_get_urls_line(
-    "%URL[text|https://example.test",
-  )
+  let missing_close : Result[@addtext.PdfAddTextUrlLine, Error] = try
+    @addtext.pdf_addtext_get_urls_line("%URL[text|https://example.test")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_close
     is Err(@core.PdfError::SoftError("bad URL syntax in text")) else {
     fail("expected SoftError for URL marker without closing bracket")
@@ -956,9 +986,13 @@ test "pdf_addtext_unescape_string decodes cpdf add-text escapes" {
 
 ///|
 test "pdf_addtext_unescape_string reports octal escapes outside byte range" {
-  let result : Result[String, Error] = try? @pdflite.pdf_addtext_unescape_string(
-    "\\777",
-  )
+  let result : Result[String, Error] = try
+    @pdflite.pdf_addtext_unescape_string("\\777")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError("bad add-text octal escape")) else {
     fail("expected SoftError for octal escape outside byte range")
   }
@@ -1022,11 +1056,17 @@ test "pdf_addtext_expand_lines_with_time expands replacements and strips URLs" {
 
 ///|
 test "pdf_addtext_expand_lines_with_time reports malformed URL lines" {
-  let result : Result[Array[String], Error] = try? @pdflite.pdf_addtext_expand_lines_with_time(
-    addtext_layout_process_time_for_test(),
-    ["ok", "%URL[broken"],
-    [],
-  )
+  let result : Result[Array[String], Error] = try
+    @pdflite.pdf_addtext_expand_lines_with_time(
+      addtext_layout_process_time_for_test(),
+      ["ok", "%URL[broken"],
+      [],
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError("bad URL syntax in text")) else {
     fail("expected SoftError for malformed URL marker during line expansion")
   }

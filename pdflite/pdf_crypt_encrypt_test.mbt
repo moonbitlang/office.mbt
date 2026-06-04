@@ -609,16 +609,22 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
       _ => crypt_encrypt_aesv3_r5_random_for_test(field, length)
     }
   }
-  let bad_provider : Result[@pdflite.PdfDocument, Error] = try? doc.encrypt_256bit_aesv3_with_providers(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
-    denied_permissions,
-    bad_random,
-    fn(object_number, generation, index) {
-      crypt_encrypt_aes_document_iv_for_test(object_number, generation, index)
-    },
-    file_id=@ascii.encode("doc-id"),
-  )
+  let bad_provider : Result[@pdflite.PdfDocument, Error] = try
+    doc.encrypt_256bit_aesv3_with_providers(
+      @ascii.encode("user"),
+      @ascii.encode("owner"),
+      denied_permissions,
+      bad_random,
+      fn(object_number, generation, index) {
+        crypt_encrypt_aes_document_iv_for_test(object_number, generation, index)
+      },
+      file_id=@ascii.encode("doc-id"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_provider
     is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_encrypt_name_for_test("/UserKeySalt") else {

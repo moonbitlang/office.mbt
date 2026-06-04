@@ -119,9 +119,13 @@ test "PdfDocument pad_before can insert another document before each unique sele
 ///|
 test "PdfDocument pad_before rejects missing pages" {
   let document = pad_doc_for_test([10.0, 20.0])
-  let result : Result[@pdflite.PdfDocument, Error] = try? document.pad_before([
-    0, 3,
-  ])
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    document.pad_before([0, 3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -149,9 +153,13 @@ test "PdfDocument pad_to_multiple appends or prepends blanks" {
 ///|
 test "pdf_pad_to_multiple rejects zero" {
   let document = pad_doc_for_test([10.0])
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_pad_to_multiple(
-    document, 0,
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_pad_to_multiple(document, 0)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result
     is Err(@core.PdfError::BadNumberArgument("pad_to_multiple: zero multiple")) else {
     fail("expected zero multiple error")

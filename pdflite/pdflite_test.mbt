@@ -48,16 +48,25 @@ test "@core.PdfBytes make immutable filled byte data" {
     [0x7E, 0x7E, 0x7E, 0x7E],
   )
   @test.assert_eq(try! @core.pdf_bytes_make(0), Bytes::new(0))
-  let bad_length : Result[@core.PdfBytes, Error] = try? @core.pdf_bytes_make(-1)
+  let bad_length : Result[@core.PdfBytes, Error] = try
+    @core.pdf_bytes_make(-1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_length is Err(@core.PdfError::InvalidReadLength(-1)) else {
     fail(
       "expected @core.PdfError::InvalidReadLength for negative byte allocation",
     )
   }
-  let bad_value : Result[@core.PdfBytes, Error] = try? @core.pdf_bytes_make(
-    1,
-    value=256,
-  )
+  let bad_value : Result[@core.PdfBytes, Error] = try
+    @core.pdf_bytes_make(1, value=256)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_value is Err(@core.PdfError::InvalidByte(256)) else {
     fail("expected @core.PdfError::InvalidByte for filled byte allocation")
   }
@@ -90,10 +99,13 @@ test "@core.PdfBytes expose CamlPDF int-array compatibility conversions" {
     try! @core.pdf_string_of_int_arrays([first, second]),
     combined,
   )
-  let invalid : Result[@core.PdfBytes, Error] = try? @core.pdf_bytes_of_int_arrays([
-      [256],
-    ],
-  )
+  let invalid : Result[@core.PdfBytes, Error] = try
+    @core.pdf_bytes_of_int_arrays([[256]])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(@core.PdfError::InvalidByte(256)) else {
     fail("expected @core.PdfError::InvalidByte for nested int arrays")
   }
@@ -105,10 +117,13 @@ test "@core.PdfBytes map byte values without mutating the source" {
   let mapped = try! @core.pdf_bytes_map_int(source[1:3], value => 255 - value)
   @test.assert_eq(@core.pdf_int_array_of_bytes(mapped), [254, 0])
   @test.assert_eq(@core.pdf_int_array_of_bytes(source), [0, 1, 255, 7])
-  let invalid : Result[@core.PdfBytes, Error] = try? @core.pdf_bytes_map_int(
-    source[2:3],
-    value => value + 1,
-  )
+  let invalid : Result[@core.PdfBytes, Error] = try
+    @core.pdf_bytes_map_int(source[2:3], value => value + 1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(@core.PdfError::InvalidByte(256)) else {
     fail("expected @core.PdfError::InvalidByte for mapped byte")
   }
@@ -116,11 +131,19 @@ test "@core.PdfBytes map byte values without mutating the source" {
 
 ///|
 test "@core.PdfBytes reject out-of-range integers" {
-  let too_large : Result[Byte, Error] = try? @core.pdf_byte_of_int(256)
+  let too_large : Result[Byte, Error] = try @core.pdf_byte_of_int(256) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard too_large is Err(@core.PdfError::InvalidByte(256)) else {
     fail("expected @core.PdfError::InvalidByte for 256")
   }
-  let negative : Result[Byte, Error] = try? @core.pdf_byte_of_int(-1)
+  let negative : Result[Byte, Error] = try @core.pdf_byte_of_int(-1) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard negative is Err(@core.PdfError::InvalidByte(-1)) else {
     fail("expected @core.PdfError::InvalidByte for -1")
   }

@@ -143,11 +143,19 @@ test "PdfDocument page_info handles empty and invalid ranges" {
   let document = try! page_info_document_for_test()
   @test.assert_eq(try! document.page_info_json([]), Json::array([]))
   @test.assert_eq(try! document.page_info_text([]), b"")
-  let bad_json : Result[Json, Error] = try? document.page_info_json([3])
+  let bad_json : Result[Json, Error] = try document.page_info_json([3]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_json is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for page info JSON")
   }
-  let bad_text : Result[Bytes, Error] = try? document.page_info_text([3])
+  let bad_text : Result[Bytes, Error] = try document.page_info_text([3]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_text is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected BadPageSpecification for page info text")
   }

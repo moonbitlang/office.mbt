@@ -454,13 +454,13 @@ test "pdf_merge_pdfs exposes CamlPDF-shaped merge wrapper" {
     try! merged.read_page_labels(),
     try! @pdflite.pdf_page_label_merge([first, second], [[1], [1]]),
   )
-  let bad_names : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_merge_pdfs(
-    false,
-    false,
-    ["a.pdf"],
-    [first, second],
-    [[1], [1]],
-  )
+  let bad_names : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_merge_pdfs(false, false, ["a.pdf"], [first, second], [[1], [1]])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_names is Err(_) else {
     fail("expected name/document length mismatch to raise")
   }
@@ -1217,17 +1217,23 @@ test "pdf_merge_documents rewrites named OpenAction destinations" {
 ///|
 test "pdf_merge_documents rejects empty and mismatched inputs" {
   let doc = merge_one_page_doc_for_test(1, 4)
-  let empty : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_merge_documents(
-    [],
-    [],
-  )
+  let empty : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_merge_documents([], [])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected for empty merge")
   }
-  let mismatched : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_merge_documents(
-    [doc],
-    [],
-  )
+  let mismatched : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_merge_documents([doc], [])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatched is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected for mismatched merge")
   }

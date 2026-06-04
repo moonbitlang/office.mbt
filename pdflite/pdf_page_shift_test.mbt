@@ -261,10 +261,13 @@ test "cpdf shift_pdf wrapper uses absolute page-indexed offsets" {
 ///|
 test "PdfDocument shift_pages rejects invalid offset lists" {
   let document = page_shift_document_for_test([page_shift_page_for_test([Op_S])])
-  let mismatch : Result[@pdflite.PdfDocument, Error] = try? document.shift_pages(
-    [1],
-    [],
-  )
+  let mismatch : Result[@pdflite.PdfDocument, Error] = try
+    document.shift_pages([1], [])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -273,10 +276,13 @@ test "PdfDocument shift_pages rejects invalid offset lists" {
     ) else {
     fail("expected offset count validation")
   }
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.shift_pages(
-    [2],
-    [(0.0, 0.0)],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.shift_pages([2], [(0.0, 0.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -286,11 +292,13 @@ test "PdfDocument shift_pages rejects invalid offset lists" {
     fail("expected page range validation")
   }
 
-  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_shift_pdf(
-    [],
-    document,
-    [1],
-  )
+  let cpdf_mismatch : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_shift_pdf([], document, [1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard cpdf_mismatch
     is Err(
       @core.PdfError::BadPageSpecification(

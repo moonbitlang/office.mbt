@@ -583,10 +583,16 @@ test "pdf_write_document_incremental_update writes only changed classic objects"
 ///|
 test "pdf_write_document_incremental_update rejects originals without startxref" {
   let document = @pdflite.pdf_document_empty()
-  let result : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_write_document_incremental_update(
-    writer_ascii_for_test("%PDF-1.4\n%%EOF\n"),
-    document,
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_write_document_incremental_update(
+      writer_ascii_for_test("%PDF-1.4\n%%EOF\n"),
+      document,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::StartXRefExpected) else {
     fail("expected @core.PdfError::StartXRefExpected")
   }
@@ -1148,27 +1154,39 @@ test "pdf_write_document_options dispatches encryption methods" {
 test "pdf_write_document_options reports missing AES providers" {
   let user = writer_ascii_for_test("user")
   let owner = writer_ascii_for_test("owner")
-  let aesv2_missing_iv : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
-    try! writer_secret_document_for_test("options-missing-iv"),
-    encryption=Some(
-      @writer.pdf_write_encryption(PdfEncryptionAES128(true), user, owner, []),
-    ),
-  )
+  let aesv2_missing_iv : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_write_document_options(
+      try! writer_secret_document_for_test("options-missing-iv"),
+      encryption=Some(
+        @writer.pdf_write_encryption(PdfEncryptionAES128(true), user, owner, []),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard aesv2_missing_iv is Err(_) else {
     fail("expected missing AES IV provider to raise")
   }
 
-  let aesv3_missing_random : Result[@core.PdfBytes, Error] = try? @pdflite.pdf_write_document_options(
-    try! writer_secret_document_for_test("options-missing-random"),
-    encryption=Some(
-      @writer.pdf_write_encryption(PdfEncryptionAES256(true), user, owner, []),
-    ),
-    aes_iv_provider=Some(
-      @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-        writer_ascii_for_test("options-missing-random-iv"),
+  let aesv3_missing_random : Result[@core.PdfBytes, Error] = try
+    @pdflite.pdf_write_document_options(
+      try! writer_secret_document_for_test("options-missing-random"),
+      encryption=Some(
+        @writer.pdf_write_encryption(PdfEncryptionAES256(true), user, owner, []),
       ),
-    ),
-  )
+      aes_iv_provider=Some(
+        @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+          writer_ascii_for_test("options-missing-random-iv"),
+        ),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard aesv3_missing_random is Err(_) else {
     fail("expected missing AESV3 random provider to raise")
   }

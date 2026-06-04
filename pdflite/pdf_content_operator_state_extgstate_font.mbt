@@ -8,7 +8,13 @@ pub fn PdfDocument::content_apply_extgstate_font_op(
   match self.lookup_direct(pdf_content_extgstate_font_name, extgstate) {
     Some(PdfArray([PdfIndirect(font_number), size])) => {
       let font = self.read_font(PdfIndirect(font_number))
-      let size_result : Result[Double, Error] = try? self.get_number(size)
+      let size_result : Result[Double, Error] = try
+        self.get_number(size)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       let text_state = match size_result {
         Ok(value) => { ..state.text_state, font_size: value }
         Err(_) => state.text_state

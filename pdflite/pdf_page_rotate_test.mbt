@@ -100,17 +100,23 @@ test "PdfDocument rotate_pages_by adds to existing page rotation" {
 ///|
 test "PdfDocument rotate_pages validates rotation and page range" {
   let document = try! rotate_document_for_test([rotate_page_for_test()])
-  let bad_rotation : Result[@pdflite.PdfDocument, Error] = try? document.rotate_pages(
-    45,
-    [1],
-  )
+  let bad_rotation : Result[@pdflite.PdfDocument, Error] = try
+    document.rotate_pages(45, [1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_rotation is Err(@core.PdfError::PageRotationExpected(45)) else {
     fail("expected PageRotationExpected for non-right-angle rotation")
   }
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.rotate_pages_by(
-    90,
-    [2],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.rotate_pages_by(90, [2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -262,10 +268,13 @@ test "PdfDocument rotate_contents validates selected pages" {
   let document = try! rotate_document_for_test([
     rotate_content_page_for_test([Op_S]),
   ])
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.rotate_contents(
-    90.0,
-    [2],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.rotate_contents(90.0, [2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(

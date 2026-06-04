@@ -285,10 +285,13 @@ test "PdfDocument stamp_pages can mark processed overlay content as artifact" {
 ///|
 test "PdfDocument stamp_pages rejects invalid page ranges and empty overlays" {
   let base = stamp_document_for_test([stamp_page_for_test([Op_S])])
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? base.stamp_pages(
-    [2],
-    stamp_overlay_document_for_test(),
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    base.stamp_pages([2], stamp_overlay_document_for_test())
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -297,10 +300,13 @@ test "PdfDocument stamp_pages rejects invalid page ranges and empty overlays" {
     ) else {
     fail("expected stamp_pages to reject invalid pages")
   }
-  let empty_overlay : Result[@pdflite.PdfDocument, Error] = try? base.stamp_pages(
-    [1],
-    @pdflite.pdf_document_empty(),
-  )
+  let empty_overlay : Result[@pdflite.PdfDocument, Error] = try
+    base.stamp_pages([1], @pdflite.pdf_document_empty())
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty_overlay is Err(_) else {
     fail("expected stamp_pages to reject an empty overlay")
   }

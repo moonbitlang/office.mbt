@@ -18,11 +18,13 @@ test "cursor consume ascii advances only on match" {
   )
   @test.assert_eq(cursor.absolute_position(), 4)
 
-  let mismatch : Result[Unit, Error] = try? @reader.pdf_cursor_consume_ascii(
-    cursor,
-    [120],
-    XRefExpected,
-  )
+  let mismatch : Result[Unit, Error] = try
+    @reader.pdf_cursor_consume_ascii(cursor, [120], XRefExpected)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatch is Err(@core.PdfError::XRefExpected) else {
     fail("expected XRefExpected")
   }

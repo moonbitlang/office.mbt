@@ -10,21 +10,33 @@ test "byte view ascii search helpers cover boundaries" {
 
 ///|
 test "byte view ascii integer parser rejects malformed input" {
-  let empty_number : Result[Int, Error] = try? @core.pdf_parse_ascii_int_view(
-    Bytes::new(0),
-  )
+  let empty_number : Result[Int, Error] = try
+    @core.pdf_parse_ascii_int_view(Bytes::new(0))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty_number is Err(@core.PdfError::NumberExpected) else {
     fail("expected PdfError::NumberExpected")
   }
-  let bad_number : Result[Int, Error] = try? @core.pdf_parse_ascii_int_view(
-    @ascii.encode("12a"),
-  )
+  let bad_number : Result[Int, Error] = try
+    @core.pdf_parse_ascii_int_view(@ascii.encode("12a"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_number is Err(@core.PdfError::NumberExpected) else {
     fail("expected PdfError::NumberExpected")
   }
-  let overflow_number : Result[Int, Error] = try? @core.pdf_parse_ascii_int_view(
-    @ascii.encode("2147483648"),
-  )
+  let overflow_number : Result[Int, Error] = try
+    @core.pdf_parse_ascii_int_view(@ascii.encode("2147483648"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard overflow_number is Err(@core.PdfError::NumberExpected) else {
     fail("expected PdfError::NumberExpected")
   }

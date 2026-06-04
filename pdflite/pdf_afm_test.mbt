@@ -77,18 +77,26 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
   let bad_metric = afm_ascii_for_test(
     "StartCharMetrics 1\nC 65 ; BAD 600 ; N A ;\nEndCharMetrics\n",
   )
-  let metric_result : Result[@afm.PdfAfmData, Error] = try? @afm.pdf_read_afm(
-    bad_metric,
-  )
+  let metric_result : Result[@afm.PdfAfmData, Error] = try
+    @afm.pdf_read_afm(bad_metric)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard metric_result is Err(@core.PdfError::AfmExpected) else {
     fail("expected @core.PdfError::AfmExpected for bad metric row")
   }
   let missing_name = afm_ascii_for_test(
     "StartCharMetrics 1\nC 65 ; WX 600 ; N\nEndCharMetrics\n",
   )
-  let missing_name_result : Result[@afm.PdfAfmData, Error] = try? @afm.pdf_read_afm(
-    missing_name,
-  )
+  let missing_name_result : Result[@afm.PdfAfmData, Error] = try
+    @afm.pdf_read_afm(missing_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_name_result is Err(@core.PdfError::AfmExpected) else {
     fail("expected @core.PdfError::AfmExpected for incomplete metric row")
   }
@@ -101,9 +109,13 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     "KPX A Missing -20\n" +
     "EndKernPairs\n",
   )
-  let kern_result : Result[@afm.PdfAfmData, Error] = try? @afm.pdf_read_afm(
-    bad_kern,
-  )
+  let kern_result : Result[@afm.PdfAfmData, Error] = try
+    @afm.pdf_read_afm(bad_kern)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard kern_result is Err(@core.PdfError::AfmExpected) else {
     fail("expected @core.PdfError::AfmExpected for bad kern row")
   }
@@ -116,9 +128,13 @@ test "pdf_read_afm rejects malformed metric and kern rows" {
     "BAD A A -20\n" +
     "EndKernPairs\n",
   )
-  let kern_operator_result : Result[@afm.PdfAfmData, Error] = try? @afm.pdf_read_afm(
-    bad_kern_operator,
-  )
+  let kern_operator_result : Result[@afm.PdfAfmData, Error] = try
+    @afm.pdf_read_afm(bad_kern_operator)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard kern_operator_result is Err(@core.PdfError::AfmExpected) else {
     fail("expected @core.PdfError::AfmExpected for bad kern operator")
   }

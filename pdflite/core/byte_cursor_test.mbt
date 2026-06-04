@@ -82,11 +82,19 @@ test "ByteCursor peeks byte slices without advancing" {
     [66],
   )
   @test.assert_eq(cursor.position(), 1)
-  let bad_length : Result[BytesView, Error] = try? cursor.peek_view(-1)
+  let bad_length : Result[BytesView, Error] = try cursor.peek_view(-1) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_length is Err(@core.PdfError::InvalidReadLength(-1)) else {
     fail("expected @core.PdfError::InvalidReadLength for negative peek")
   }
-  let too_long : Result[BytesView, Error] = try? cursor.peek_view(3)
+  let too_long : Result[BytesView, Error] = try cursor.peek_view(3) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard too_long is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput for oversized peek")
   }
@@ -110,11 +118,19 @@ test "ByteCursor supports rewind nudge and reading behind" {
 test "ByteCursor reports checked offset and rewind errors" {
   let bytes = pdf_bytes_for_cursor_test([65, 66])
   let cursor = @core.byte_cursor_of_bytes(bytes)
-  let bad_offset : Result[Unit, Error] = try? cursor.set_offset(-1)
+  let bad_offset : Result[Unit, Error] = try cursor.set_offset(-1) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_offset is Err(@core.PdfError::InvalidCursorPosition(-1)) else {
     fail("expected @core.PdfError::InvalidCursorPosition for negative offset")
   }
-  let bad_rewind : Result[Unit, Error] = try? cursor.rewind()
+  let bad_rewind : Result[Unit, Error] = try cursor.rewind() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_rewind is Err(@core.PdfError::InvalidCursorPosition(-1)) else {
     fail(
       "expected @core.PdfError::InvalidCursorPosition for rewind before start",
@@ -209,10 +225,13 @@ test "ByteCursor read_until_view handles EOF policy" {
   @test.assert_eq(cursor.position(), 2)
 
   let strict = @core.byte_cursor_of_bytes(bytes)
-  let missing : Result[BytesView, Error] = try? strict.read_until_view(
-    byte => byte == 44,
-    eof_is_delimiter=false,
-  )
+  let missing : Result[BytesView, Error] = try
+    strict.read_until_view(byte => byte == 44, eof_is_delimiter=false)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput when EOF is not a delimiter")
   }
@@ -227,10 +246,13 @@ test "ByteCursor ignore_until stops before matching byte" {
   @test.assert_eq(cursor.position(), 2)
   @test.assert_eq(cursor.peek_byte(), 44)
   cursor.nudge()
-  let missing : Result[Unit, Error] = try? cursor.ignore_until(
-    byte => byte == 90,
-    eof_is_delimiter=false,
-  )
+  let missing : Result[Unit, Error] = try
+    cursor.ignore_until(byte => byte == 90, eof_is_delimiter=false)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput for strict ignore_until")
   }
@@ -253,7 +275,11 @@ test "ByteCursor reads lines as byte data" {
     bytes_view_to_ints_for_cursor_test(try! cursor.read_line_view()),
     [66],
   )
-  let result : Result[BytesView, Error] = try? cursor.read_line_view()
+  let result : Result[BytesView, Error] = try cursor.read_line_view() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput after all lines are consumed")
   }
@@ -313,23 +339,39 @@ test "ByteCursor read_lines allocates owned lines" {
 test "ByteCursor reports checked cursor errors" {
   let bytes = pdf_bytes_for_cursor_test([65, 66])
   let cursor = @core.byte_cursor_of_bytes(bytes)
-  let bad_seek : Result[Unit, Error] = try? cursor.seek(-1)
+  let bad_seek : Result[Unit, Error] = try cursor.seek(-1) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_seek is Err(@core.PdfError::InvalidCursorPosition(-1)) else {
     fail("expected @core.PdfError::InvalidCursorPosition for negative seek")
   }
-  let bad_read_position : Result[BytesView, Error] = try? cursor.read_view_at(
-    -1, 1,
-  )
+  let bad_read_position : Result[BytesView, Error] = try
+    cursor.read_view_at(-1, 1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_read_position is Err(@core.PdfError::InvalidCursorPosition(-1)) else {
     fail(
       "expected @core.PdfError::InvalidCursorPosition for negative read position",
     )
   }
-  let bad_length : Result[BytesView, Error] = try? cursor.read_view(-1)
+  let bad_length : Result[BytesView, Error] = try cursor.read_view(-1) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_length is Err(@core.PdfError::InvalidReadLength(-1)) else {
     fail("expected @core.PdfError::InvalidReadLength for negative read")
   }
-  let too_long : Result[BytesView, Error] = try? cursor.read_view(3)
+  let too_long : Result[BytesView, Error] = try cursor.read_view(3) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard too_long is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput for oversized read")
   }

@@ -65,17 +65,29 @@ fn pdf_flate_encode_shortest_view_with_header(
   let stored = pdf_flate_encode_stored_view_with_header(data, header)
   let fixed = pdf_flate_encode_fixed_literal_view_with_header(data, header)
   let mut shortest = pdf_flate_shortest(stored, fixed)
-  let repeat : Result[@core.PdfBytes, Error] = try? pdf_flate_encode_fixed_repeat_view_with_header(
-    data, header,
-  )
+  let repeat : Result[@core.PdfBytes, Error] = try
+    pdf_flate_encode_fixed_repeat_view_with_header(data, header)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   shortest = pdf_flate_shortest_result(shortest, repeat)
-  let matched : Result[@core.PdfBytes, Error] = try? pdf_flate_encode_fixed_match_view_with_header(
-    data, header, max_probes,
-  )
+  let matched : Result[@core.PdfBytes, Error] = try
+    pdf_flate_encode_fixed_match_view_with_header(data, header, max_probes)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   shortest = pdf_flate_shortest_result(shortest, matched)
-  let dynamic : Result[@core.PdfBytes, Error] = try? pdf_flate_encode_dynamic_match_view_with_header(
-    data, header, max_probes,
-  )
+  let dynamic : Result[@core.PdfBytes, Error] = try
+    pdf_flate_encode_dynamic_match_view_with_header(data, header, max_probes)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   pdf_flate_shortest_result(shortest, dynamic)
 }
 
@@ -86,9 +98,13 @@ fn pdf_flate_encode_fast_view_with_header(
   max_probes : Int,
 ) -> @core.PdfBytes {
   let stored = pdf_flate_encode_stored_view_with_header(data, header)
-  let matched : Result[@core.PdfBytes, Error] = try? pdf_flate_encode_fixed_match_view_with_header(
-    data, header, max_probes,
-  )
+  let matched : Result[@core.PdfBytes, Error] = try
+    pdf_flate_encode_fixed_match_view_with_header(data, header, max_probes)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   pdf_flate_shortest_result(stored, matched)
 }
 

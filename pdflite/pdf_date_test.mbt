@@ -64,9 +64,15 @@ test "pdf_date object APIs bridge PDF strings and typed dates" {
     try! @pdflite.pdf_object_of_date(expected),
     PdfString(@ascii.encode("D:20240203040506+08'30'")),
   )
-  let non_string : Result[@date.PdfDate, Error] = try? @pdflite.pdf_date_of_object(
-    PdfNameObject(@core.pdf_name_of_bytes(@ascii.encode("/Date"))),
-  )
+  let non_string : Result[@date.PdfDate, Error] = try
+    @pdflite.pdf_date_of_object(
+      PdfNameObject(@core.pdf_name_of_bytes(@ascii.encode("/Date"))),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_string is Err(@core.PdfError::BadDate) else {
     fail("expected @core.PdfError::BadDate for non-string date object")
   }
@@ -222,27 +228,43 @@ test "pdf_string_of_date renders checked PDF date syntax" {
 
 ///|
 test "pdf_date_of_string rejects malformed dates" {
-  let bad_month : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
-    "D:20241301",
-  )
+  let bad_month : Result[@date.PdfDate, Error] = try
+    @date.pdf_date_of_string("D:20241301")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_month is Err(@core.PdfError::BadDate) else {
     fail("expected @core.PdfError::BadDate for month")
   }
-  let short : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
-    "D:20",
-  )
+  let short : Result[@date.PdfDate, Error] = try
+    @date.pdf_date_of_string("D:20")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short is Err(@core.PdfError::BadDate) else {
     fail("expected @core.PdfError::BadDate for short date")
   }
-  let bad_year_digit : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
-    "D:20A4",
-  )
+  let bad_year_digit : Result[@date.PdfDate, Error] = try
+    @date.pdf_date_of_string("D:20A4")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_year_digit is Err(@core.PdfError::BadDate) else {
     fail("expected @core.PdfError::BadDate for year")
   }
-  let bad_month_digit : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
-    "D:2024AA",
-  )
+  let bad_month_digit : Result[@date.PdfDate, Error] = try
+    @date.pdf_date_of_string("D:2024AA")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_month_digit is Err(@core.PdfError::BadDate) else {
     fail("expected @core.PdfError::BadDate for month digits")
   }

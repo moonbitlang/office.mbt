@@ -201,19 +201,31 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
     None,
   )
 
-  let ccitt_bad_predictor : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
-    PdfStreamCCITT(8, 2),
-    ccitt_stream,
-    predictor=Some(PdfStreamPredictorPNGUp),
-  )
+  let ccitt_bad_predictor : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_encode_stream_with_encoding(
+      PdfStreamCCITT(8, 2),
+      ccitt_stream,
+      predictor=Some(PdfStreamPredictorPNGUp),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard ccitt_bad_predictor is Err(_) else {
     fail("expected CCITT predictor encoding to raise")
   }
 
-  let ccitt_bad_object : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
-    PdfStreamCCITT(8, 2),
-    PdfInteger(0),
-  )
+  let ccitt_bad_object : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_encode_stream_with_encoding(
+      PdfStreamCCITT(8, 2),
+      PdfInteger(0),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard ccitt_bad_object is Err(_) else {
     fail("expected CCITT encoding of a non-stream to raise")
   }
@@ -265,11 +277,17 @@ test "pdf_encode_stream_with_encoding wraps filter and predictor APIs" {
   )
   @test.assert_eq(skipped_g4_stream.dictionary.lookup_immediate(filter), None)
 
-  let ccitt_g4_bad_predictor : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_encoding(
-    PdfStreamCCITTG4(4, 3),
-    ccitt_g4_stream,
-    predictor=Some(PdfStreamPredictorPNGUp),
-  )
+  let ccitt_g4_bad_predictor : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_encode_stream_with_encoding(
+      PdfStreamCCITTG4(4, 3),
+      ccitt_g4_stream,
+      predictor=Some(PdfStreamPredictorPNGUp),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard ccitt_g4_bad_predictor is Err(_) else {
     fail("expected CCITT G4 predictor encoding to raise")
   }
@@ -535,10 +553,16 @@ test "pdf_encode_stream_with_filter_and_predictor prepends decodeparms" {
 test "pdf stream encoding reports malformed objects and materializes deferred data" {
   let length = codec_stream_encode_name_for_test("/Length")
   let filter = codec_stream_encode_name_for_test("/Filter")
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
-    codec_stream_encode_name_for_test("/ASCIIHexDecode"),
-    PdfNull,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_encode_stream_with_filter(
+      codec_stream_encode_name_for_test("/ASCIIHexDecode"),
+      PdfNull,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }
@@ -567,10 +591,16 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     @syntax.pdf_dictionary([(length, PdfInteger(2)), (filter, PdfInteger(1))]),
     StreamGot(codec_stream_encode_ascii_for_test("Hi")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter(
-    codec_stream_encode_name_for_test("/ASCIIHexDecode"),
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_encode_stream_with_filter(
+      codec_stream_encode_name_for_test("/ASCIIHexDecode"),
+      stream,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FilterExpected) else {
     fail("expected @core.PdfError::FilterExpected")
   }
@@ -582,25 +612,37 @@ test "pdf stream encoding reports malformed objects and materializes deferred da
     ]),
     StreamGot(codec_stream_encode_ascii_for_test("Hi")),
   )
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
-    codec_stream_encode_name_for_test("/ASCIIHexDecode"),
-    11,
-    1,
-    8,
-    2,
-    stream,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_encode_stream_with_filter_and_predictor(
+      codec_stream_encode_name_for_test("/ASCIIHexDecode"),
+      11,
+      1,
+      8,
+      2,
+      stream,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorExpected) else {
     fail("expected @core.PdfError::PredictorExpected")
   }
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_encode_stream_with_filter_and_predictor(
-    codec_stream_encode_name_for_test("/ASCIIHexDecode"),
-    11,
-    1,
-    8,
-    2,
-    PdfNull,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_encode_stream_with_filter_and_predictor(
+      codec_stream_encode_name_for_test("/ASCIIHexDecode"),
+      11,
+      1,
+      8,
+      2,
+      PdfNull,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }

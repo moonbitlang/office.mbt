@@ -194,7 +194,11 @@ test "PdfDocument empty document mirrors CamlPDF defaults" {
 ///|
 test "PdfDocument catalog reads the root object or reports @core.PdfError::RootExpected" {
   let doc = @pdflite.pdf_document_empty()
-  let missing : Result[@syntax.PdfObject, Error] = try? doc.catalog()
+  let missing : Result[@syntax.PdfObject, Error] = try doc.catalog() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected for missing catalog")
   }
@@ -202,7 +206,11 @@ test "PdfDocument catalog reads the root object or reports @core.PdfError::RootE
   doc.add_object_given_number(4, @syntax.pdf_dictionary([]))
   @test.assert_eq(try! doc.catalog(), @syntax.pdf_dictionary([]))
   doc.add_object_given_number(4, PdfNull)
-  let null_root : Result[@syntax.PdfObject, Error] = try? doc.catalog()
+  let null_root : Result[@syntax.PdfObject, Error] = try doc.catalog() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard null_root is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected for null catalog")
   }
@@ -235,7 +243,11 @@ test "PdfDocument catalog prefers trailer Root over stale root number" {
   )
 
   doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(99))]))
-  let missing : Result[@syntax.PdfObject, Error] = try? doc.catalog()
+  let missing : Result[@syntax.PdfObject, Error] = try doc.catalog() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected for unresolved trailer root")
   }
@@ -318,9 +330,13 @@ test "PdfDocument object iteration visits sorted parsed objects" {
     (1, 3, PdfInteger(10)),
     (4, 2, PdfInteger(40)),
   ])
-  let failed : Result[Unit, Error] = try? doc.iter_objects(fn(_, _) raise {
-    fail("stop")
-  })
+  let failed : Result[Unit, Error] = try
+    doc.iter_objects(fn(_, _) raise { fail("stop") })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard failed is Err(_) else { fail("expected callback failure") }
 }
 
@@ -356,9 +372,13 @@ test "PdfDocument iter_stream visits stream objects with raising callback" {
   let seen : Array[@syntax.PdfObject] = []
   try! doc.iter_stream(fn(object) { seen.push(object) })
   @test.assert_eq(seen, [second, first])
-  let failed : Result[Unit, Error] = try? doc.iter_stream(fn(_) raise {
-    fail("stop")
-  })
+  let failed : Result[Unit, Error] = try
+    doc.iter_stream(fn(_) raise { fail("stop") })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard failed is Err(_) else { fail("expected callback failure") }
 }
 
@@ -530,11 +550,13 @@ test "PdfDocument renumber_objects applies explicit change table" {
     renumbered.lookup_object_or_null(6),
     PdfArray([PdfIndirect(5), PdfIndirect(99)]),
   )
-  let duplicate : Result[@pdflite.PdfDocument, Error] = try? doc.renumber_objects([
-      (10, 5),
-      (20, 5),
-    ],
-  )
+  let duplicate : Result[@pdflite.PdfDocument, Error] = try
+    doc.renumber_objects([(10, 5), (20, 5)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard duplicate is Err(@core.PdfError::InvalidObjectNumber(5)) else {
     fail("expected duplicate target to be rejected")
   }
@@ -581,9 +603,13 @@ test "pdf_renumber_documents gives documents disjoint compact ranges" {
 ///|
 test "PdfDocument renumber_objects_by_offset rejects negative offsets" {
   let doc = @pdflite.pdf_document_empty()
-  let result : Result[@pdflite.PdfDocument, Error] = try? doc.renumber_objects_by_offset(
-    -1,
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    doc.renumber_objects_by_offset(-1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidObjectNumber(-1)) else {
     fail("expected @core.PdfError::InvalidObjectNumber")
   }

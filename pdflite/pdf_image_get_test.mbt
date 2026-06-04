@@ -518,9 +518,13 @@ test "PdfDocument get_image_24bpp handles filter arrays and deferred image data"
     ]),
     StreamGot(image_get_bytes_for_test([10, 20, 30])),
   )
-  let malformed : Result[@pdflite.PdfImage, Error] = try? doc.get_image_24bpp(
-    empty_resources, malformed_filter,
-  )
+  let malformed : Result[@pdflite.PdfImage, Error] = try
+    doc.get_image_24bpp(empty_resources, malformed_filter)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed is Err(@core.PdfError::FilterExpected) else {
     fail("expected malformed filter")
   }
@@ -569,23 +573,35 @@ test "PdfDocument image_colour_space treats image masks as DeviceGray" {
 ///|
 test "PdfDocument image_colour_space reports missing colour spaces" {
   let doc = @pdflite.pdf_document_empty()
-  let missing : Result[@pdflite.PdfColourSpace, Error] = try? doc.image_colour_space(
-    @syntax.pdf_dictionary([]),
-    @syntax.pdf_dictionary([]),
-  )
+  let missing : Result[@pdflite.PdfColourSpace, Error] = try
+    doc.image_colour_space(
+      @syntax.pdf_dictionary([]),
+      @syntax.pdf_dictionary([]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == image_get_name_for_test("/ColorSpace") else {
     fail("expected missing image colour space")
   }
-  let unknown : Result[@pdflite.PdfColourSpace, Error] = try? doc.image_colour_space(
-    @syntax.pdf_dictionary([
-      (
-        image_get_name_for_test("/ColorSpace"),
-        PdfNameObject(image_get_name_for_test("/CS1")),
-      ),
-    ]),
-    @syntax.pdf_dictionary([]),
-  )
+  let unknown : Result[@pdflite.PdfColourSpace, Error] = try
+    doc.image_colour_space(
+      @syntax.pdf_dictionary([
+        (
+          image_get_name_for_test("/ColorSpace"),
+          PdfNameObject(image_get_name_for_test("/CS1")),
+        ),
+      ]),
+      @syntax.pdf_dictionary([]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unknown is Err(@core.PdfError::DictionaryKeyNotFound(name)) &&
     name == image_get_name_for_test("/ColorSpace") else {
     fail("expected unknown image colour space")

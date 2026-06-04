@@ -497,9 +497,13 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
       -3904,
     ),
   )
-  let missing_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? missing_perms_doc.decrypt_with_user_password(
-    @ascii.encode("user"),
-  )
+  let missing_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try
+    missing_perms_doc.decrypt_with_user_password(@ascii.encode("user"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_perms_result
     is Err(@core.PdfError::EncryptionDictionaryEntryExpected(name)) &&
     name == crypt_name_for_test("/Perms") else {
@@ -540,9 +544,13 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
       -3904,
     ),
   )
-  let short_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? short_perms_doc.decrypt_with_user_password(
-    @ascii.encode("user"),
-  )
+  let short_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try
+    short_perms_doc.decrypt_with_user_password(@ascii.encode("user"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_perms_result
     is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_name_for_test("/Perms") else {
@@ -583,9 +591,13 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
       -3904,
     ),
   )
-  let corrupt_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? corrupt_perms_doc.decrypt_with_user_password(
-    @ascii.encode("user"),
-  )
+  let corrupt_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try
+    corrupt_perms_doc.decrypt_with_user_password(@ascii.encode("user"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard corrupt_perms_result
     is Err(@core.PdfError::EncryptionPermissionsCorrupt) else {
     fail("expected corrupt AESV3 /Perms")
@@ -628,9 +640,13 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
       -3904,
     ),
   )
-  let mismatched_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? mismatched_perms_doc.decrypt_with_owner_password(
-    @ascii.encode("owner"),
-  )
+  let mismatched_perms_result : Result[@pdflite.PdfDecryptionResult?, Error] = try
+    mismatched_perms_doc.decrypt_with_owner_password(@ascii.encode("owner"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard mismatched_perms_result
     is Err(@core.PdfError::EncryptionPermissionsMismatch(-4, -3904)) else {
     fail("expected mismatched AESV3 /Perms")
@@ -665,9 +681,13 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
       -3904,
     ),
   )
-  let missing_ue_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? missing_ue_doc.decrypt_with_user_password(
-    @ascii.encode("user"),
-  )
+  let missing_ue_result : Result[@pdflite.PdfDecryptionResult?, Error] = try
+    missing_ue_doc.decrypt_with_user_password(@ascii.encode("user"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_ue_result
     is Err(@core.PdfError::EncryptionDictionaryEntryExpected(name)) &&
     name == crypt_name_for_test("/UE") else {
@@ -707,9 +727,13 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
       -3904,
     ),
   )
-  let short_oe_result : Result[@pdflite.PdfDecryptionResult?, Error] = try? short_oe_doc.decrypt_with_owner_password(
-    @ascii.encode("owner"),
-  )
+  let short_oe_result : Result[@pdflite.PdfDecryptionResult?, Error] = try
+    short_oe_doc.decrypt_with_owner_password(@ascii.encode("owner"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_oe_result
     is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_name_for_test("/OE") else {
@@ -1007,12 +1031,18 @@ test "PdfDocument provider methods cover AES encrypt and recrypt" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(1, original_object)
   let denied : Array[@crypt_core.PdfPermission] = [PdfNoCopy]
-  let no_saved : Result[@pdflite.PdfDocument, Error] = try? doc.recrypt_with_password_aesv2_with_iv_provider(
-    @ascii.encode("user"),
-    @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      @ascii.encode("aes-wrapper-missing-saved"),
-    ),
-  )
+  let no_saved : Result[@pdflite.PdfDocument, Error] = try
+    doc.recrypt_with_password_aesv2_with_iv_provider(
+      @ascii.encode("user"),
+      @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
+        @ascii.encode("aes-wrapper-missing-saved"),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard no_saved is Err(_) else {
     fail("expected missing saved encryption to raise")
   }

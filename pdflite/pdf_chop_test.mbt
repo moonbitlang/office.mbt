@@ -169,24 +169,24 @@ test "PdfDocument chop validates grid and page range" {
   let document = chop_document_for_test([
     chop_page_for_test(0.0, 0.0, 10.0, 10.0),
   ])
-  let bad_grid : Result[@pdflite.PdfDocument, Error] = try? document.chop(
-    0,
-    2,
-    false,
-    false,
-    false,
-    [1],
-  )
+  let bad_grid : Result[@pdflite.PdfDocument, Error] = try
+    document.chop(0, 2, false, false, false, [1])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_grid
     is Err(@core.PdfError::BadNumberArgument("chop: x and y must be positive")) else {
     fail("expected bad chop grid")
   }
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.chop_hv(
-    false,
-    5.0,
-    false,
-    [2],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.chop_hv(false, 5.0, false, [2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(

@@ -92,7 +92,13 @@ fn crypt_wb_expect_encryption_method_error_for_test(
   encrypt_dictionary : @syntax.PdfObject,
 ) -> Unit raise {
   let doc = crypt_wb_doc_with_encrypt_for_test(encrypt_dictionary)
-  let result : Result[PdfEncryptionValues, Error] = try? doc.encryption_values()
+  let result : Result[PdfEncryptionValues, Error] = try
+    doc.encryption_values()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::EncryptionMethodExpected) else {
     fail("expected @core.PdfError::EncryptionMethodExpected")
   }
@@ -226,7 +232,13 @@ test "private encryption password settings reject AESV3" {
     user_encryption_key: None,
     owner_encryption_key: None,
   }
-  let result : Result[(Int, Int), Error] = try? values.password_settings()
+  let result : Result[(Int, Int), Error] = try
+    values.password_settings()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result
     is Err(
       @core.PdfError::EncryptionAuthenticationUnsupported(PdfCryptAESV3(false))
@@ -435,7 +447,13 @@ test "private encryption values parse crypt filter methods" {
 
 ///|
 test "private encryption values report malformed encryption dictionaries" {
-  let no_encrypt : Result[PdfEncryptionValues, Error] = try? pdf_document_empty().encryption_values()
+  let no_encrypt : Result[PdfEncryptionValues, Error] = try
+    pdf_document_empty().encryption_values()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard no_encrypt is Err(@core.PdfError::EncryptionExpected) else {
     fail("expected @core.PdfError::EncryptionExpected")
   }
@@ -536,7 +554,13 @@ test "private encryption values report malformed encryption dictionaries" {
       (crypt_wb_name_for_test("/P"), PdfInteger(-4)),
     ]),
   )
-  let missing_o_result : Result[PdfEncryptionValues, Error] = try? missing_o.encryption_values()
+  let missing_o_result : Result[PdfEncryptionValues, Error] = try
+    missing_o.encryption_values()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_o_result
     is Err(@core.PdfError::EncryptionDictionaryEntryExpected(name)) &&
     name == crypt_wb_name_for_test("/O") else {
@@ -561,7 +585,13 @@ test "private encryption values report malformed encryption dictionaries" {
       ),
     ]),
   )
-  let missing_p_result : Result[PdfEncryptionValues, Error] = try? missing_p.encryption_values()
+  let missing_p_result : Result[PdfEncryptionValues, Error] = try
+    missing_p.encryption_values()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_p_result
     is Err(@core.PdfError::EncryptionDictionaryEntryExpected(name)) &&
     name == crypt_wb_name_for_test("/P") else {
@@ -577,7 +607,13 @@ test "private encryption values report malformed encryption dictionaries" {
       user_length=31,
     ),
   )
-  let short_u_result : Result[PdfEncryptionValues, Error] = try? short_u.encryption_values()
+  let short_u_result : Result[PdfEncryptionValues, Error] = try
+    short_u.encryption_values()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_u_result
     is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_wb_name_for_test("/U") else {
@@ -596,7 +632,13 @@ test "private encryption values report malformed encryption dictionaries" {
       ),
     ]),
   )
-  let bad_id_result : Result[PdfEncryptionValues, Error] = try? bad_id.encryption_values()
+  let bad_id_result : Result[PdfEncryptionValues, Error] = try
+    bad_id.encryption_values()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_id_result is Err(@core.PdfError::EncryptionIDExpected) else {
     fail("expected @core.PdfError::EncryptionIDExpected")
   }
@@ -751,9 +793,13 @@ test "private AESV3 password authentication validates R5 SHA-256 entries" {
   let short_user_values = crypt_wb_aesv3_values_for_test(
     short_user, owner_entry,
   )
-  let short_user_result : Result[Bool, Error] = try? short_user_values.authenticate_user_password(
-    @ascii.encode("user"),
-  )
+  let short_user_result : Result[Bool, Error] = try
+    short_user_values.authenticate_user_password(@ascii.encode("user"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_user_result
     is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_wb_name_for_test("/U") else {
@@ -764,9 +810,13 @@ test "private AESV3 password authentication validates R5 SHA-256 entries" {
   let short_owner_values = crypt_wb_aesv3_values_for_test(
     user_entry, short_owner,
   )
-  let short_owner_result : Result[Bool, Error] = try? short_owner_values.authenticate_owner_password(
-    @ascii.encode("owner"),
-  )
+  let short_owner_result : Result[Bool, Error] = try
+    short_owner_values.authenticate_owner_password(@ascii.encode("owner"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_owner_result
     is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_wb_name_for_test("/O") else {
@@ -776,9 +826,13 @@ test "private AESV3 password authentication validates R5 SHA-256 entries" {
   let short_owner_user_values = crypt_wb_aesv3_values_for_test(
     short_user, owner_entry,
   )
-  let short_owner_user_result : Result[Bool, Error] = try? short_owner_user_values.authenticate_owner_password(
-    @ascii.encode("owner"),
-  )
+  let short_owner_user_result : Result[Bool, Error] = try
+    short_owner_user_values.authenticate_owner_password(@ascii.encode("owner"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_owner_user_result
     is Err(@core.PdfError::EncryptionDictionaryEntryTooShort(name)) &&
     name == crypt_wb_name_for_test("/U") else {
@@ -964,9 +1018,13 @@ test "private AESV3 saved dictionary requires permissions entry" {
     user_encryption_key: Some(Bytes::new(32)),
     owner_encryption_key: Some(Bytes::new(32)),
   }
-  let result : Result[@syntax.PdfObject, Error] = try? pdf_crypt_saved_aesv3_dictionary(
-    values,
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    pdf_crypt_saved_aesv3_dictionary(values)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match result {
     Err(@core.PdfError::EncryptionDictionaryEntryExpected(key)) =>
       @test.assert_eq(key, pdf_aesv3_permissions_key())
@@ -977,10 +1035,13 @@ test "private AESV3 saved dictionary requires permissions entry" {
 ///|
 test "private AESV3 CBC no-padding encryption rejects partial blocks" {
   let key = crypt_wb_bytes_for_test([ for value in 0..<32 => value ])
-  let result : Result[@core.PdfBytes, Error] = try? pdf_aesv3_cbc_encrypt_no_padding(
-    key,
-    @ascii.encode("x"),
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    pdf_aesv3_cbc_encrypt_no_padding(key, @ascii.encode("x"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidCryptoDataLength(1)) else {
     fail("expected invalid AESV3 CBC data length")
   }

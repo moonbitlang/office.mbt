@@ -12,9 +12,13 @@ fn pdf_read_linearized_marker(
 
 ///|
 fn pdf_read_was_linearized(data : BytesView) -> Bool {
-  let result : Result[Bool, Error] = try? pdf_read_linearized_marker(
-    @core.byte_cursor_of_view(data),
-  )
+  let result : Result[Bool, Error] = try
+    pdf_read_linearized_marker(@core.byte_cursor_of_view(data))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match result {
     Ok(value) => value
     Err(_) => false

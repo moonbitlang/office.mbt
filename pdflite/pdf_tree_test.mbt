@@ -395,9 +395,15 @@ test "pdftree top-level wrappers expose CamlPDF tree API shape" {
 
   let bad_number_keys : Array[String] = ["", "+", "2147483648", "not-number"]
   for key in bad_number_keys {
-    let malformed_number_key = try? @pdflite.pdf_build_name_tree(true, doc, [
-      (tree_bytes_for_test(key), PdfNull),
-    ])
+    let malformed_number_key = try
+      @pdflite.pdf_build_name_tree(true, doc, [
+        (tree_bytes_for_test(key), PdfNull),
+      ])
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     guard malformed_number_key is Err(_) else {
       fail("expected malformed number-tree key to raise")
     }

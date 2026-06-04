@@ -15,9 +15,13 @@ fn image_external_name_for_test(text : String) -> @core.PdfName {
 async fn image_external_fixture_document_for_test(
   path : String,
 ) -> @pdflite.PdfDocument? {
-  let read_result = try? @fs.read_file(
-    image_external_fixture_path_for_test(path),
-  )
+  let read_result = try
+    @fs.read_file(image_external_fixture_path_for_test(path))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(@pdflite.pdf_read_document_from_bytes(data.binary()))
     Err(_) => None
@@ -26,9 +30,13 @@ async fn image_external_fixture_document_for_test(
 
 ///|
 async fn image_external_fixture_bytes_for_test(path : String) -> Bytes? {
-  let read_result = try? @fs.read_file(
-    image_external_fixture_path_for_test(path),
-  )
+  let read_result = try
+    @fs.read_file(image_external_fixture_path_for_test(path))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(data.binary())
     Err(_) => None
@@ -1077,9 +1085,13 @@ async test "external DCT image fixture reconstructs xref stream with bad startxr
     None => ()
     Some(bytes) => {
       let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -1144,9 +1156,13 @@ async test "external CCITT image fixture reconstructs malformed startxref" {
     None => ()
     Some(bytes) => {
       let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -1242,9 +1258,13 @@ async test "cpdf source manual image PDF corpus reconstructs malformed startxref
       Some(bytes) => {
         checked += 1
         let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
-        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-          corrupted,
-        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try
+          @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         guard strict is Err(_) else {
           fail(
             "expected bad startxref to require malformed reconstruction for " +
@@ -1282,9 +1302,13 @@ async test "cpdf source manual image PDF corpus reconstructs damaged classic xre
             image_external_corrupt_startxref_xref_header_for_test(bytes),
             image_external_corrupt_startxref_trailer_keyword_for_test(bytes),
           ] {
-          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-            corrupted,
-          )
+          let strict : Result[@pdflite.PdfDocument, Error] = try
+            @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+          catch {
+            err => Err(err)
+          } noraise {
+            value => Ok(value)
+          }
           guard strict is Err(_) else {
             fail(
               "expected damaged classic xref metadata to require malformed reconstruction for " +
@@ -1326,9 +1350,13 @@ async test "cpdf source manual image PDF corpus reconstructs malformed classic x
             image_external_corrupt_first_xref_subsection_object_for_test(bytes),
             image_external_corrupt_first_xref_subsection_count_for_test(bytes),
           ] {
-          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-            corrupted,
-          )
+          let strict : Result[@pdflite.PdfDocument, Error] = try
+            @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+          catch {
+            err => Err(err)
+          } noraise {
+            value => Ok(value)
+          }
           guard strict is Err(_) else {
             fail(
               "expected malformed classic xref row to require reconstruction for " +
@@ -1389,9 +1417,13 @@ async test "cpdf source PNG manual image fixture reconstructs malformed startxre
     None => ()
     Some(bytes) => {
       let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -1442,9 +1474,13 @@ async test "cpdf source PNG manual image fixture drafts replacement boxes" {
       let corrupted = image_external_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -1489,9 +1525,13 @@ async test "cpdf source manual fixture reconstructs embedded RGB24 image" {
     None => ()
     Some(bytes) => {
       let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -1528,9 +1568,13 @@ async test "cpdf source manual fixture reports embedded image metadata" {
         image_external_reparse_compressed_for_test(document),
       )
       let corrupted = image_external_corrupt_startxref_pointer_for_test(bytes)
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -1566,9 +1610,13 @@ async test "cpdf source hello fixture reports inline image metadata" {
       let corrupted = image_external_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -1602,9 +1650,13 @@ async test "cpdf source hello fixture reports nested form image metadata" {
       let corrupted = image_external_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }

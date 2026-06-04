@@ -123,9 +123,13 @@ test "private OCG usage reader covers partial dictionaries" {
 ///|
 test "private OCG individual and public reader guard malformed roots" {
   let doc = pdf_document_empty()
-  let missing_name : Result[@ocg.PdfOcg, Error] = try? doc.pdf_ocg_read_individual(
-    PdfDictionary([]),
-  )
+  let missing_name : Result[@ocg.PdfOcg, Error] = try
+    doc.pdf_ocg_read_individual(PdfDictionary([]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_name is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected missing name")
   }
@@ -147,7 +151,13 @@ test "private OCG individual and public reader guard malformed roots" {
       ),
     ]),
   )
-  let missing_default : Result[@ocg.PdfOptionalContent?, Error] = try? root_doc.read_optional_content_groups()
+  let missing_default : Result[@ocg.PdfOptionalContent?, Error] = try
+    root_doc.read_optional_content_groups()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_default is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected missing default config")
   }

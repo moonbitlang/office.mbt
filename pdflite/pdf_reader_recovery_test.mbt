@@ -49,7 +49,11 @@ test "pdf_read_document_from_bytes reconstructs page trees missing from xref" {
   let strict = try! @pdflite.pdf_read_classic_document_from_bytes(payload)
   @test.assert_eq(strict.root(), 1)
   @test.assert_eq(strict.object_numbers(), [1])
-  let strict_pages : Result[Int, Error] = try? strict.endpage()
+  let strict_pages : Result[Int, Error] = try strict.endpage() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_pages is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected")
   }
@@ -67,7 +71,13 @@ test "pdf_read_document_from_bytes reconstructs catalog missing from xref" {
   let strict = try! @pdflite.pdf_read_classic_document_from_bytes(payload)
   @test.assert_eq(strict.root(), 1)
   @test.assert_eq(strict.object_numbers(), [])
-  let strict_catalog : Result[@syntax.PdfObject, Error] = try? strict.catalog()
+  let strict_catalog : Result[@syntax.PdfObject, Error] = try
+    strict.catalog()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_catalog is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
@@ -107,9 +117,15 @@ test "pdf_read_document_from_bytes reconstructs bad startxref PDFs" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs classic xref free entries with bad startxref" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_classic_xref_deleted_payload_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_classic_xref_deleted_payload_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail("expected strict classic bad-startxref read to fail")
   }
@@ -137,9 +153,13 @@ test "pdf_read_document_from_bytes keeps later physical objects after classic fr
 ///|
 test "pdf_read_document_from_bytes reconstructs classic Prev chains with bad startxref" {
   let payload = reader_classic_catalog_pdf_with_prev_xref_bad_startxref()
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    payload,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(payload)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail("expected strict classic Prev bad-startxref read to fail")
   }
@@ -166,9 +186,15 @@ test "pdf_read_document_from_bytes reconstructs classic Prev chains with bad sta
 
 ///|
 test "pdf_read_document_from_bytes reconstructs malformed startxref numbers" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_malformed_pdf_with_malformed_startxref_number(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_malformed_pdf_with_malformed_startxref_number(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::NumberExpected) else {
     fail("expected strict @core.PdfError::NumberExpected")
   }
@@ -180,9 +206,15 @@ test "pdf_read_document_from_bytes reconstructs malformed startxref numbers" {
   @test.assert_eq(parsed.root(), 1)
   @test.assert_eq(parsed.object_numbers(), [1])
 
-  let strict_overflow : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_malformed_pdf_with_overflow_startxref_number(),
-  )
+  let strict_overflow : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_malformed_pdf_with_overflow_startxref_number(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_overflow is Err(@core.PdfError::NumberExpected) else {
     fail("expected strict @core.PdfError::NumberExpected")
   }
@@ -196,9 +228,15 @@ test "pdf_read_document_from_bytes reconstructs malformed startxref numbers" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs xref stream trailers" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -255,9 +293,15 @@ test "pdf_read_document_from_bytes reconstructs xref stream trailers without Typ
 
 ///|
 test "pdf_read_document_from_bytes reconstructs xref stream object-stream roots" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_pdf_with_object_stream_root_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_pdf_with_object_stream_root_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -291,9 +335,15 @@ test "pdf_read_document_from_bytes reconstructs xref stream object-stream roots"
 
 ///|
 test "pdf_read_document_from_bytes does not reconstruct unsupported object-stream filters" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
-    reader_xref_stream_pdf_with_bad_filtered_object_stream_root(),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_document_from_bytes(
+      reader_xref_stream_pdf_with_bad_filtered_object_stream_root(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   let filter = match result {
     Err(@core.PdfError::FilterNotSupported(filter)) => filter
     Err(@core.PdfError::RootExpected) =>
@@ -318,9 +368,15 @@ test "pdf_read_document_from_bytes does not reconstruct unsupported object-strea
 
 ///|
 test "pdf_read_document_from_bytes does not reconstruct malformed object-stream decodeparms" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
-    reader_xref_stream_pdf_with_bad_decodeparms_object_stream_root(),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_document_from_bytes(
+      reader_xref_stream_pdf_with_bad_decodeparms_object_stream_root(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorExpected) else {
     fail("expected malformed object stream DecodeParms")
   }
@@ -328,9 +384,15 @@ test "pdf_read_document_from_bytes does not reconstruct malformed object-stream 
 
 ///|
 test "pdf_read_document_from_bytes does not reconstruct unsupported object-stream predictors" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
-    reader_xref_stream_pdf_with_unsupported_predictor_object_stream_root(),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_document_from_bytes(
+      reader_xref_stream_pdf_with_unsupported_predictor_object_stream_root(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PredictorNotSupported(predictor)) else {
     fail("expected unsupported object stream predictor")
   }
@@ -339,9 +401,15 @@ test "pdf_read_document_from_bytes does not reconstruct unsupported object-strea
 
 ///|
 test "pdf_read_document_from_bytes reconstructs multi-revision xref stream object-stream roots" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_xref_stream_prev_update_with_object_stream_root_bad_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_xref_stream_prev_update_with_object_stream_root_bad_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected strict @core.PdfError::XRefExpected")
   }
@@ -375,9 +443,15 @@ test "pdf_read_document_from_bytes reconstructs multi-revision xref stream objec
 
 ///|
 test "pdf_read_document_from_bytes rejects truncated xref stream data" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
-    reader_xref_stream_pdf_with_short_entry_data(),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_document_from_bytes(
+      reader_xref_stream_pdf_with_short_entry_data(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected @core.PdfError::XRefEntryExpected")
   }
@@ -385,9 +459,15 @@ test "pdf_read_document_from_bytes rejects truncated xref stream data" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs out-of-range startxref PDFs" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_malformed_pdf_with_out_of_range_startxref(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_malformed_pdf_with_out_of_range_startxref(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::InvalidCursorPosition(999999)) else {
     fail("expected strict @core.PdfError::InvalidCursorPosition")
   }
@@ -402,9 +482,15 @@ test "pdf_read_document_from_bytes reconstructs out-of-range startxref PDFs" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs bad xref rows" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_malformed_pdf_with_bad_xref_entry(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_malformed_pdf_with_bad_xref_entry(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected strict @core.PdfError::XRefEntryExpected")
   }
@@ -419,9 +505,15 @@ test "pdf_read_document_from_bytes reconstructs bad xref rows" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs bad xref subsection metadata" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_malformed_pdf_with_bad_xref_subsection_count(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_malformed_pdf_with_bad_xref_subsection_count(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::NumberExpected) else {
     fail("expected strict @core.PdfError::NumberExpected")
   }
@@ -436,9 +528,15 @@ test "pdf_read_document_from_bytes reconstructs bad xref subsection metadata" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs malformed trailers" {
-  let strict_bad_trailer : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_malformed_pdf_with_bad_trailer_object(),
-  )
+  let strict_bad_trailer : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_malformed_pdf_with_bad_trailer_object(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_bad_trailer is Err(@core.PdfError::TrailerExpected) else {
     fail("expected strict @core.PdfError::TrailerExpected")
   }
@@ -450,9 +548,15 @@ test "pdf_read_document_from_bytes reconstructs malformed trailers" {
   @test.assert_eq(bad_trailer.root(), 1)
   @test.assert_eq(bad_trailer.object_numbers(), [1])
 
-  let strict_missing_root : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_malformed_pdf_with_missing_root_trailer(),
-  )
+  let strict_missing_root : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_malformed_pdf_with_missing_root_trailer(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_missing_root is Err(@core.PdfError::RootExpected) else {
     fail("expected strict @core.PdfError::RootExpected")
   }
@@ -474,9 +578,15 @@ test "pdf_read_document_from_bytes reconstructs malformed trailers" {
 
 ///|
 test "pdf_read_document_from_bytes reconstructs bad object offsets" {
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    reader_malformed_pdf_with_bad_object_offset(),
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(
+      reader_malformed_pdf_with_bad_object_offset(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::ParseIndirectObjectExpected) else {
     fail("expected strict @core.PdfError::ParseIndirectObjectExpected")
   }
@@ -626,9 +736,13 @@ test "pdf_read_document_from_bytes reconstructs around malformed stream markers"
   let bad_stream = reader_classic_pdf_with_malformed_stream_and_catalog(
     "<< /Length 5 >>\nstram\nHello\nendstream",
   )
-  let strict_stream : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    bad_stream,
-  )
+  let strict_stream : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(bad_stream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected strict @core.PdfError::ParseStreamExpected")
   }
@@ -637,9 +751,13 @@ test "pdf_read_document_from_bytes reconstructs around malformed stream markers"
   let bad_endstream = reader_classic_pdf_with_malformed_stream_and_catalog(
     "<< /Length 5 >>\nstream\nHello\nnot_a_stream_end",
   )
-  let strict_endstream : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    bad_endstream,
-  )
+  let strict_endstream : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(bad_endstream)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_endstream is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected strict @core.PdfError::ParseEndStreamExpected")
   }
@@ -648,9 +766,13 @@ test "pdf_read_document_from_bytes reconstructs around malformed stream markers"
   let bad_endobj = reader_classic_pdf_with_malformed_stream_and_catalog(
     "<< /Length 5 >>\nstream\nHello\nendstream\nnotendobj",
   )
-  let strict_endobj : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    bad_endobj,
-  )
+  let strict_endobj : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(bad_endobj)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_endobj is Err(@core.PdfError::ParseEndObjectExpected) else {
     fail("expected strict @core.PdfError::ParseEndObjectExpected")
   }
@@ -660,9 +782,13 @@ test "pdf_read_document_from_bytes reconstructs around malformed stream markers"
 ///|
 test "pdf_read_document_from_bytes reconstructs around truncated stream data" {
   let data = reader_classic_pdf_with_truncated_stream_before_catalog()
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    data,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(data)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::EndOfInput) else {
     fail("expected strict @core.PdfError::EndOfInput")
   }
@@ -676,9 +802,13 @@ test "pdf_read_document_from_bytes reconstructs around truncated stream data" {
 ///|
 test "pdf_read_document_from_bytes reconstructs around malformed objects" {
   let bad_object = reader_classic_pdf_with_malformed_object_before_catalog("]")
-  let strict_object : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    bad_object,
-  )
+  let strict_object : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(bad_object)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_object is Err(@core.PdfError::ParseObjectExpected) else {
     fail("expected strict @core.PdfError::ParseObjectExpected")
   }
@@ -690,9 +820,13 @@ test "pdf_read_document_from_bytes reconstructs around malformed objects" {
   let bad_name = reader_classic_pdf_with_malformed_object_before_catalog(
     "/Bad#zz",
   )
-  let strict_name : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    bad_name,
-  )
+  let strict_name : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(bad_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict_name is Err(@core.PdfError::InvalidHexEscape) else {
     fail("expected strict @core.PdfError::InvalidHexEscape")
   }
@@ -704,9 +838,15 @@ test "pdf_read_document_from_bytes reconstructs around malformed objects" {
 
 ///|
 test "pdf_read_document_from_bytes reports missing reconstructed root" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
-    reader_pdf_ascii("%PDF-1.4\n1 0 obj\n1\nendobj\n"),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_document_from_bytes(
+      reader_pdf_ascii("%PDF-1.4\n1 0 obj\n1\nendobj\n"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
@@ -714,9 +854,15 @@ test "pdf_read_document_from_bytes reports missing reconstructed root" {
 
 ///|
 test "pdf_read_document_from_bytes propagates unreconstructable errors" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_document_from_bytes(
-    reader_pdf_ascii("%PDF-1.4\nstartxref\nabc\n%%EOF\n"),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_document_from_bytes(
+      reader_pdf_ascii("%PDF-1.4\nstartxref\nabc\n%%EOF\n"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::NumberExpected) else {
     fail("expected @core.PdfError::NumberExpected")
   }

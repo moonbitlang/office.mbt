@@ -389,7 +389,11 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
     try! doc.images_json_blob([1]),
     @utf8.encode(expected.stringify()),
   )
-  let bad_page : Result[Json, Error] = try? doc.images_json([2])
+  let bad_page : Result[Json, Error] = try doc.images_json([2]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected images_json invalid page to raise BadPageSpecification")
   }
@@ -762,15 +766,23 @@ test "pdf_read_png reads IHDR and concatenated IDAT chunks" {
 
 ///|
 test "pdf_read_png rejects unsupported palette and interlaced inputs" {
-  let palette : Result[@pdflite.PdfPNG, Error] = try? @pdflite.pdf_read_png(
-    image_png_for_test(1, 1, 8, 3, 0, []),
-  )
+  let palette : Result[@pdflite.PdfPNG, Error] = try
+    @pdflite.pdf_read_png(image_png_for_test(1, 1, 8, 3, 0, []))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard palette is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected palette PNG to raise BadPNG")
   }
-  let interlaced : Result[@pdflite.PdfPNG, Error] = try? @pdflite.pdf_read_png(
-    image_png_for_test(1, 1, 8, 2, 1, []),
-  )
+  let interlaced : Result[@pdflite.PdfPNG, Error] = try
+    @pdflite.pdf_read_png(image_png_for_test(1, 1, 8, 2, 1, []))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard interlaced is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected interlaced PNG to raise BadPNG")
   }
@@ -962,10 +974,16 @@ test "pdf_image_document_of_png_data preserves alpha mask in image document" {
 ///|
 test "pdf_image_object_of_png_data rejects 16-bit alpha PNGs" {
   let document = @pdflite.pdf_document_empty()
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_image_object_of_png_data(
-    document,
-    image_png_for_test(1, 1, 16, 6, 0, []),
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_image_object_of_png_data(
+      document,
+      image_png_for_test(1, 1, 16, 6, 0, []),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::BadPNG(_)) else {
     fail("expected 16-bit alpha PNG to raise BadPNG")
   }
@@ -1112,9 +1130,13 @@ test "pdf_image_object_of_jbig2_data reports short data" {
   let result : Result[
     (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]),
     Error,
-  ] = try? @pdflite.pdf_image_object_of_jbig2_data(
-    image_bytes_for_test([0, 1, 2]),
-  )
+  ] = try
+    @pdflite.pdf_image_object_of_jbig2_data(image_bytes_for_test([0, 1, 2]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::EndOfInput) else {
     fail("expected short JBIG2 data to raise EndOfInput")
   }
@@ -1320,10 +1342,16 @@ test "pdf_image_document_of_jpeg_data creates PDF/UA-2 document wrapper" {
 
 ///|
 test "pdf_image_document_of_jpeg_data requires title for PDF/UA subformat" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_image_document_of_jpeg_data(
-    image_jpeg_for_document_test(),
-    subformat=Some(PdfUA1),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_image_document_of_jpeg_data(
+      image_jpeg_for_document_test(),
+      subformat=Some(PdfUA1),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::TitleExpected) else {
     fail("expected missing PDF/UA image title to raise TitleExpected")
   }

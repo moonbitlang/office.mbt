@@ -322,9 +322,13 @@ async test "cpdf source hello fixture composes ToUnicode UseCMap chain" {
       let corrupted = text_fixture_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -566,9 +570,13 @@ async test "cpdf source hello fixture composes ToUnicode UseCMap variation chain
       let corrupted = text_fixture_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -803,9 +811,13 @@ async test "cpdf source hello fixture extracts ToUnicode parser corners" {
       let corrupted = text_fixture_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }

@@ -562,9 +562,13 @@ async test "optional cpdf source hello fixture imposes two-up sheets" {
       let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected imposed sheet to require malformed reconstruction")
       }
@@ -640,9 +644,13 @@ async test "optional cpdf source fixtures stamp logo as Form XObject" {
       let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected Form XObject stamp to require reconstruction")
       }
@@ -2900,9 +2908,13 @@ async test "optional cpdf source manual fixture dumps debug objects" {
       let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -3023,9 +3035,13 @@ async test "optional cpdf source manual fixture extracts retained pages" {
       let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected retained page extraction to require reconstruction")
       }
@@ -3056,9 +3072,13 @@ async test "optional cpdf source manual fixture stamps addtext replacements" {
       let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -3096,9 +3116,13 @@ async test "optional cpdf source manual fixture removes stamped addtext" {
       let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }

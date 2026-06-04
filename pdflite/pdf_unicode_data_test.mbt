@@ -75,9 +75,15 @@ test "pdf_unicode_data exposes cpdf embedded UnicodeData table" {
 
 ///|
 test "pdf_parse_unicode_data rejects malformed rows" {
-  let missing_fields : Result[Array[@unicodedata.PdfUnicodeDataEntry], Error] = try? @pdflite.pdf_parse_unicode_data(
-    @ascii.encode("0041;LATIN CAPITAL LETTER A;Lu\n"),
-  )
+  let missing_fields : Result[Array[@unicodedata.PdfUnicodeDataEntry], Error] = try
+    @pdflite.pdf_parse_unicode_data(
+      @ascii.encode("0041;LATIN CAPITAL LETTER A;Lu\n"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_fields is Err(@core.PdfError::SoftError(_)) else {
     fail("expected SoftError for missing UnicodeData fields")
   }

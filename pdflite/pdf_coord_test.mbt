@@ -263,21 +263,33 @@ test "cpdf coord parses coordinates across document pages" {
 ///|
 test "cpdf coord reports arity errors" {
   let document = @pdflite.pdf_document_empty()
-  let bad_rect : Result[@geometry.PdfCoordRectangle, Error] = try? document.parse_coordinate_rectangle(
-    "10 20 30",
-  )
+  let bad_rect : Result[@geometry.PdfCoordRectangle, Error] = try
+    document.parse_coordinate_rectangle("10 20 30")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_rect is Err(@core.PdfError::BadRectangleSpecification("10 20 30")) else {
     fail("expected BadRectangleSpecification for three rectangle numbers")
   }
-  let bad_coord : Result[@geometry.Point2, Error] = try? document.parse_coordinate(
-    "10 20 30",
-  )
+  let bad_coord : Result[@geometry.Point2, Error] = try
+    document.parse_coordinate("10 20 30")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_coord is Err(@core.PdfError::BadCoordinateSpecification("10 20 30")) else {
     fail("expected BadCoordinateSpecification for three coordinate numbers")
   }
-  let bad_number : Result[Double, Error] = try? document.parse_single_number(
-    "10 20",
-  )
+  let bad_number : Result[Double, Error] = try
+    document.parse_single_number("10 20")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_number is Err(@core.PdfError::BadNumberArgument("10 20")) else {
     fail("expected BadNumberArgument for two numbers")
   }

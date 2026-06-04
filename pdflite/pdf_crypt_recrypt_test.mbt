@@ -321,9 +321,13 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
     @ascii.encode("owner"),
   )
   @test.assert_eq(recrypted.is_encrypted(), true)
-  let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try? recrypted.recrypt_with_password(
-    @ascii.encode("owner"),
-  )
+  let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try
+    recrypted.recrypt_with_password(@ascii.encode("owner"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard repeated_recrypt is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected consumed ARC4 saved encryption")
   }
@@ -335,16 +339,24 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
   @test.assert_eq(roundtrip.document.lookup_object_or_null(2), added_object)
   @test.assert_eq(roundtrip.denied_permissions, [PdfNoPrint])
 
-  let bad_password : Result[@pdflite.PdfDocument, Error] = try? decrypted.document.recrypt_with_password(
-    @ascii.encode("bad"),
-  )
+  let bad_password : Result[@pdflite.PdfDocument, Error] = try
+    decrypted.document.recrypt_with_password(@ascii.encode("bad"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_password is Err(@core.PdfError::EncryptionRecryptFailed) else {
     fail("expected failed recrypt")
   }
 
-  let no_saved : Result[@pdflite.PdfDocument, Error] = try? doc.recrypt_with_password(
-    @ascii.encode("user"),
-  )
+  let no_saved : Result[@pdflite.PdfDocument, Error] = try
+    doc.recrypt_with_password(@ascii.encode("user"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard no_saved is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected missing saved encryption")
   }
@@ -361,9 +373,13 @@ test "PdfDocument recrypt_with_password restores saved ARC4 encryption" {
   let aes_decrypted = crypt_recrypt_unwrap_decryption_result_for_test(
     try! aes_encrypted.decrypt_with_user_password(@ascii.encode("user")),
   )
-  let unsupported : Result[@pdflite.PdfDocument, Error] = try? aes_decrypted.document.recrypt_with_password(
-    @ascii.encode("user"),
-  )
+  let unsupported : Result[@pdflite.PdfDocument, Error] = try
+    aes_decrypted.document.recrypt_with_password(@ascii.encode("user"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported is Err(@core.PdfError::EncryptionRecryptUnsupported(_)) else {
     fail("expected unsupported AES recrypt")
   }
@@ -460,16 +476,22 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
     },
   )
   @test.assert_eq(recrypted.is_encrypted(), true)
-  let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try? recrypted.recrypt_with_password_aesv2_with_iv_provider(
-    @ascii.encode("owner"),
-    fn(object_number, generation, index) {
-      crypt_recrypt_aes_document_iv_for_test(
-        object_number,
-        generation,
-        index + 8,
-      )
-    },
-  )
+  let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try
+    recrypted.recrypt_with_password_aesv2_with_iv_provider(
+      @ascii.encode("owner"),
+      fn(object_number, generation, index) {
+        crypt_recrypt_aes_document_iv_for_test(
+          object_number,
+          generation,
+          index + 8,
+        )
+      },
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard repeated_recrypt is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected consumed AESV2 saved encryption")
   }
@@ -503,22 +525,35 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
     added_object,
   )
 
-  let bad_password : Result[@pdflite.PdfDocument, Error] = try? decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
-    @ascii.encode("bad"),
-    fn(object_number, generation, index) {
-      crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
-    },
-  )
+  let bad_password : Result[@pdflite.PdfDocument, Error] = try
+    decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+      @ascii.encode("bad"),
+      fn(object_number, generation, index) {
+        crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
+      },
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_password is Err(@core.PdfError::EncryptionRecryptFailed) else {
     fail("expected failed AESV2 recrypt")
   }
 
-  let no_saved : Result[@pdflite.PdfDocument, Error] = try? doc.recrypt_with_password_aesv2_with_iv_provider(
-    @ascii.encode("user"),
-    fn(object_number, generation, index) {
+  let no_saved : Result[@pdflite.PdfDocument, Error] = try
+    doc.recrypt_with_password_aesv2_with_iv_provider(@ascii.encode("user"), fn(
+      object_number,
+      generation,
+      index,
+    ) {
       crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
-    },
-  )
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard no_saved is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected missing saved encryption")
   }
@@ -532,12 +567,18 @@ test "PdfDocument recrypt_with_password_aesv2_with_iv_provider restores saved AE
   let arc4_decrypted = crypt_recrypt_unwrap_decryption_result_for_test(
     try! arc4.decrypt_with_user_password(@ascii.encode("user")),
   )
-  let unsupported : Result[@pdflite.PdfDocument, Error] = try? arc4_decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
-    @ascii.encode("user"),
-    fn(object_number, generation, index) {
-      crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
-    },
-  )
+  let unsupported : Result[@pdflite.PdfDocument, Error] = try
+    arc4_decrypted.document.recrypt_with_password_aesv2_with_iv_provider(
+      @ascii.encode("user"),
+      fn(object_number, generation, index) {
+        crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
+      },
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported is Err(@core.PdfError::EncryptionRecryptUnsupported(_)) else {
     fail("expected unsupported non-AESV2 recrypt")
   }
@@ -589,16 +630,22 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
     },
   )
   @test.assert_eq(recrypted.is_encrypted(), true)
-  let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try? recrypted.recrypt_with_password_aesv3_with_iv_provider(
-    @ascii.encode("owner"),
-    fn(object_number, generation, index) {
-      crypt_recrypt_aes_document_iv_for_test(
-        object_number,
-        generation,
-        index + 6,
-      )
-    },
-  )
+  let repeated_recrypt : Result[@pdflite.PdfDocument, Error] = try
+    recrypted.recrypt_with_password_aesv3_with_iv_provider(
+      @ascii.encode("owner"),
+      fn(object_number, generation, index) {
+        crypt_recrypt_aes_document_iv_for_test(
+          object_number,
+          generation,
+          index + 6,
+        )
+      },
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard repeated_recrypt is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected consumed AESV3 saved encryption")
   }
@@ -635,25 +682,34 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
     added_object,
   )
 
-  let bad_password : Result[@pdflite.PdfDocument, Error] = try? decrypted.document.recrypt_with_password_aesv3_with_iv_provider(
-    @ascii.encode("bad"),
-    fn(object_number, generation, index) {
-      crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
-    },
-  )
+  let bad_password : Result[@pdflite.PdfDocument, Error] = try
+    decrypted.document.recrypt_with_password_aesv3_with_iv_provider(
+      @ascii.encode("bad"),
+      fn(object_number, generation, index) {
+        crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
+      },
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_password is Err(@core.PdfError::EncryptionRecryptFailed) else {
     fail("expected failed AESV3 recrypt")
   }
 
-  let no_saved : Result[@pdflite.PdfDocument, Error] = try? crypt_recrypt_minimal_catalog_document_for_test(
-    1, 7,
-  ).recrypt_with_password_aesv3_with_iv_provider(@ascii.encode("user"), fn(
-    object_number,
-    generation,
-    index,
-  ) {
-    crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
-  })
+  let no_saved : Result[@pdflite.PdfDocument, Error] = try
+    crypt_recrypt_minimal_catalog_document_for_test(1, 7).recrypt_with_password_aesv3_with_iv_provider(
+      @ascii.encode("user"),
+      fn(object_number, generation, index) {
+        crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
+      },
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard no_saved is Err(@core.PdfError::EncryptionSavedStateExpected) else {
     fail("expected missing AESV3 saved encryption")
   }
@@ -671,12 +727,18 @@ test "PdfDocument recrypt_with_password_aesv3_with_iv_provider restores saved AE
   let wrong_decrypted = crypt_recrypt_unwrap_decryption_result_for_test(
     try! wrong_encrypted.decrypt_with_user_password(@ascii.encode("user")),
   )
-  let wrong_method : Result[@pdflite.PdfDocument, Error] = try? wrong_decrypted.document.recrypt_with_password_aesv3_with_iv_provider(
-    @ascii.encode("user"),
-    fn(object_number, generation, index) {
-      crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
-    },
-  )
+  let wrong_method : Result[@pdflite.PdfDocument, Error] = try
+    wrong_decrypted.document.recrypt_with_password_aesv3_with_iv_provider(
+      @ascii.encode("user"),
+      fn(object_number, generation, index) {
+        crypt_recrypt_aes_document_iv_for_test(object_number, generation, index)
+      },
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard wrong_method is Err(@core.PdfError::EncryptionRecryptUnsupported(_)) else {
     fail("expected non-AESV3 saved encryption rejection")
   }

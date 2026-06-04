@@ -135,9 +135,13 @@ test "pdf_toc_width_of_runs sums alternating font text runs" {
     try! @pdflite.pdf_toc_width_of_runs(runs),
     try! @pdflite.pdf_type_width_of_bytes(widths, toc_bytes_for_test("A.")),
   )
-  let malformed : Result[Double, Error] = try? @pdflite.pdf_toc_width_of_runs([
-    PdfTypeText(toc_bytes_for_test("A")),
-  ])
+  let malformed : Result[Double, Error] = try
+    @pdflite.pdf_toc_width_of_runs([PdfTypeText(toc_bytes_for_test("A"))])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed is Err(@core.PdfError::SoftError("width_of_runs")) else {
     fail("expected width_of_runs SoftError")
   }
@@ -689,11 +693,13 @@ test "PdfDocument toc_with_source handles cpdftoc font-source dispatch" {
     (try! wrapped.pages_of_pagetree()).length(),
     2 + toc_page_count,
   )
-  let rejected : Result[@pdflite.PdfDocument, Error] = try? document.toc_with_source(
-    PdfTocExistingNamedFont,
-    10.0,
-    title,
-  )
+  let rejected : Result[@pdflite.PdfDocument, Error] = try
+    document.toc_with_source(PdfTocExistingNamedFont, 10.0, title)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard rejected
     is Err(
       @core.PdfError::SoftError(
@@ -753,14 +759,20 @@ test "pdf_typeset_table_of_contents preserves cpdftoc argument order" {
     try! from_method.page_number_of_target(method_bookmarks[1].target),
   )
 
-  let structured : Result[@pdflite.PdfDocument, Error] = try? document.typeset_table_of_contents(
-    PdfTocPreMadeFontPack(pack),
-    10.0,
-    title,
-    false,
-    false,
-    true,
-  )
+  let structured : Result[@pdflite.PdfDocument, Error] = try
+    document.typeset_table_of_contents(
+      PdfTocPreMadeFontPack(pack),
+      10.0,
+      title,
+      false,
+      false,
+      true,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard structured
     is Err(
       @core.PdfError::SoftError(
@@ -769,16 +781,22 @@ test "pdf_typeset_table_of_contents preserves cpdftoc argument order" {
     ) else {
     fail("expected structured TOC rejection")
   }
-  let pdfua : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_typeset_table_of_contents(
-    PdfTocPreMadeFontPack(pack),
-    10.0,
-    title,
-    false,
-    false,
-    false,
-    document,
-    subformat=Some(PdfUA1),
-  )
+  let pdfua : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_typeset_table_of_contents(
+      PdfTocPreMadeFontPack(pack),
+      10.0,
+      title,
+      false,
+      false,
+      false,
+      document,
+      subformat=Some(PdfUA1),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard pdfua
     is Err(
       @core.PdfError::SoftError(

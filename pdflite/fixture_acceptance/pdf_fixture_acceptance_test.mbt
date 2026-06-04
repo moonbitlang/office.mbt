@@ -13,7 +13,13 @@ async fn fixture_acceptance_bytes_for_test(path : String) -> Bytes {
 
 ///|
 async fn fixture_acceptance_optional_bytes_for_test(path : String) -> Bytes? {
-  let read_result = try? @fs.read_file(fixture_acceptance_path_for_test(path))
+  let read_result = try
+    @fs.read_file(fixture_acceptance_path_for_test(path))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(data.binary())
     Err(_) => None
@@ -1113,9 +1119,13 @@ fn fixture_acceptance_assert_reconstructs_for_test(
   expected_pages : Int,
 ) -> Unit raise {
   let corrupted = fixture_acceptance_corrupt_startxref_pointer_for_test(bytes)
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail("expected malformed startxref to require reconstruction")
   }
@@ -1134,9 +1144,13 @@ fn fixture_acceptance_assert_xref_header_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_startxref_xref_header_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected malformed xref header to require reconstruction")
   }
@@ -1155,9 +1169,13 @@ fn fixture_acceptance_assert_trailer_keyword_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_startxref_trailer_keyword_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
@@ -1180,9 +1198,13 @@ fn fixture_acceptance_assert_classic_xref_marker_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_in_use_xref_marker_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail("expected malformed classic xref marker to require reconstruction")
   }
@@ -1201,9 +1223,13 @@ fn fixture_acceptance_assert_classic_xref_offset_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_in_use_xref_offset_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail("expected malformed classic xref offset to require reconstruction")
   }
@@ -1222,9 +1248,13 @@ fn fixture_acceptance_assert_classic_xref_generation_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_in_use_xref_generation_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail("expected malformed classic xref generation to require reconstruction")
   }
@@ -1243,9 +1273,13 @@ fn fixture_acceptance_assert_classic_xref_object_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_xref_subsection_object_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail(
       "expected malformed classic xref object number to require reconstruction",
@@ -1266,9 +1300,13 @@ fn fixture_acceptance_assert_classic_xref_count_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_xref_subsection_count_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(_) else {
     fail("expected malformed classic xref count to require reconstruction")
   }
@@ -1307,9 +1345,13 @@ fn fixture_acceptance_assert_xref_stream_widths_reconstructs_for_test(
   expected_pages : Int,
 ) -> Unit raise {
   let corrupted = fixture_acceptance_corrupt_xref_stream_widths_for_test(bytes)
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream widths to require reconstruction")
   }
@@ -1328,9 +1370,13 @@ fn fixture_acceptance_assert_bare_xref_stream_widths_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_bare_xref_stream_widths_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed bare xref stream widths to require reconstruction")
   }
@@ -1350,9 +1396,13 @@ fn fixture_acceptance_assert_xref_stream_index_entry_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_xref_stream_index_entry_for_test(
     bytes, index_entry,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected malformed xref stream index to require reconstruction")
   }
@@ -1404,9 +1454,13 @@ fn fixture_acceptance_assert_xref_stream_index_and_size_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_xref_stream_index_and_size_for_test(
     bytes, index_entry, size_entry,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     fail(
       "expected malformed xref stream index and size to require reconstruction",
@@ -1427,9 +1481,13 @@ fn fixture_acceptance_assert_xref_stream_type_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_startxref_xref_stream_type_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefExpected) else {
     fail("expected malformed xref stream type to require reconstruction")
   }
@@ -1448,9 +1506,13 @@ fn fixture_acceptance_assert_xref_stream_marker_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_startxref_xref_stream_marker_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected malformed xref stream marker to require reconstruction")
   }
@@ -1469,9 +1531,13 @@ fn fixture_acceptance_assert_xref_stream_endstream_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_startxref_xref_stream_endstream_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected malformed xref stream endstream to require reconstruction")
   }
@@ -1490,9 +1556,13 @@ fn fixture_acceptance_assert_xref_stream_endobj_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_startxref_xref_stream_endobj_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::ParseEndObjectExpected) else {
     fail("expected malformed xref stream endobj to require reconstruction")
   }
@@ -1512,9 +1582,13 @@ fn fixture_acceptance_assert_xref_stream_root_entry_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_xref_stream_root_entry_for_test(
     bytes, root_entry,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::RootExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
@@ -1537,9 +1611,13 @@ fn fixture_acceptance_assert_object_stream_count_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_object_stream_count_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
@@ -1562,9 +1640,13 @@ fn fixture_acceptance_assert_object_stream_first_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_object_stream_first_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::XRefEntryExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
@@ -1602,9 +1684,13 @@ fn fixture_acceptance_assert_object_stream_filter_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_object_stream_filter_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::FilterNotSupported(_)) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
@@ -1629,9 +1715,13 @@ fn fixture_acceptance_assert_object_stream_decodeparms_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_object_stream_decodeparms_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::PredictorExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
@@ -1656,9 +1746,13 @@ fn fixture_acceptance_assert_object_stream_decodeparms_predictor_reconstructs_fo
   let corrupted = fixture_acceptance_corrupt_first_object_stream_decodeparms_predictor_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::PredictorNotSupported(predictor)) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
@@ -1684,9 +1778,13 @@ fn fixture_acceptance_assert_object_stream_marker_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_object_stream_marker_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::ParseStreamExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
@@ -1725,9 +1823,13 @@ fn fixture_acceptance_assert_object_stream_endobj_reconstructs_for_test(
   let corrupted = fixture_acceptance_corrupt_first_object_stream_endobj_for_test(
     bytes,
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::ParseEndObjectExpected) else {
     match strict {
       Err(error) => fail(error.to_json().stringify())
@@ -1783,9 +1885,13 @@ fn fixture_acceptance_assert_xref_stream_decodeparms_entry_reconstructs_for_test
   let corrupted = fixture_acceptance_corrupt_xref_stream_decodeparms_entry_for_test(
     bytes, metadata_entry, "/DecodeParms /Bad",
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::PredictorExpected) else {
     fail("expected malformed xref stream DecodeParms to require reconstruction")
   }
@@ -1819,9 +1925,13 @@ fn fixture_acceptance_assert_xref_stream_decodeparms_predictor_entry_reconstruct
   let corrupted = fixture_acceptance_corrupt_xref_stream_decodeparms_entry_for_test(
     bytes, metadata_entry, "/DecodeParms << /Predictor 9 >>",
   )
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::PredictorNotSupported(predictor)) else {
     fail("expected unsupported xref stream DecodeParms predictor")
   }
@@ -1839,9 +1949,13 @@ fn fixture_acceptance_assert_xref_stream_filter_reconstructs_for_test(
   expected_pages : Int,
 ) -> Unit raise {
   let corrupted = fixture_acceptance_corrupt_xref_stream_filter_for_test(bytes)
-  let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-    corrupted,
-  )
+  let strict : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard strict is Err(@core.PdfError::FilterNotSupported(_)) else {
     fail("expected malformed xref stream filter to require reconstruction")
   }
@@ -8040,13 +8154,21 @@ fn fixture_acceptance_assert_cpdf_source_unijis_utf8_cpdfcontent_boundary_for_te
     false,
     false,
   )
-  let extracted_result = try? document.test_extract_text([1])
+  let extracted_result = try document.test_extract_text([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard extracted_result is Err(InvalidUTF8) else {
     fail(
       "expected cpdfcontent-style UniJIS UTF8 extraction to fail on split bytes",
     )
   }
-  let json_result = try? document.page_content_json([1])
+  let json_result = try document.page_content_json([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard json_result is Err(InvalidUTF8) else {
     fail("expected cpdfcontent-style UniJIS UTF8 JSON to fail on split bytes")
   }
@@ -8079,13 +8201,21 @@ fn fixture_acceptance_assert_cpdf_source_unijis_utf16_cpdfcontent_boundary_for_t
     true,
     false,
   )
-  let extracted_result = try? document.test_extract_text([1])
+  let extracted_result = try document.test_extract_text([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard extracted_result is Err(InvalidUTF16BE) else {
     fail(
       "expected cpdfcontent-style UniJIS UTF16 extraction to fail on split surrogate",
     )
   }
-  let json_result = try? document.page_content_json([1])
+  let json_result = try document.page_content_json([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard json_result is Err(InvalidUTF16BE) else {
     fail(
       "expected cpdfcontent-style UniJIS UTF16 JSON to fail on split surrogate",
@@ -8310,13 +8440,21 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_utf8_cpdfcontent_boundary_for_te
     0xEB8298,
     false,
   )
-  let extracted_result = try? document.test_extract_text([1])
+  let extracted_result = try document.test_extract_text([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard extracted_result is Err(InvalidUTF8) else {
     fail(
       "expected cpdfcontent-style UniAKR UTF8 extraction to fail on split bytes",
     )
   }
-  let json_result = try? document.page_content_json([1])
+  let json_result = try document.page_content_json([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard json_result is Err(InvalidUTF8) else {
     fail("expected cpdfcontent-style UniAKR UTF8 JSON to fail on split bytes")
   }
@@ -8348,13 +8486,21 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_utf32_cpdfcontent_boundary_for_t
     0xB098,
     false,
   )
-  let extracted_result = try? document.test_extract_text([1])
+  let extracted_result = try document.test_extract_text([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard extracted_result is Err(BadText) else {
     fail(
       "expected cpdfcontent-style UniAKR UTF32 extraction to fail on split bytes",
     )
   }
-  let json_result = try? document.page_content_json([1])
+  let json_result = try document.page_content_json([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard json_result is Err(BadText) else {
     fail("expected cpdfcontent-style UniAKR UTF32 JSON to fail on split bytes")
   }
@@ -9986,13 +10132,21 @@ fn fixture_acceptance_assert_cpdf_source_gb_ucs32_cpdfcontent_boundary_for_test(
     0x4E00,
     false,
   )
-  let extracted_result = try? document.test_extract_text([1])
+  let extracted_result = try document.test_extract_text([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard extracted_result is Err(BadText) else {
     fail(
       "expected cpdfcontent-style UniGB UCS32 extraction to fail on split bytes",
     )
   }
-  let json_result = try? document.page_content_json([1])
+  let json_result = try document.page_content_json([1]) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard json_result is Err(BadText) else {
     fail("expected cpdfcontent-style UniGB UCS32 JSON to fail on split bytes")
   }

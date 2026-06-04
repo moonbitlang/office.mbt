@@ -8,7 +8,13 @@ fn metadata_fixture_path_for_test(path : String) -> String {
 
 ///|
 async fn metadata_fixture_bytes_for_test(path : String) -> Bytes? {
-  let read_result = try? @fs.read_file(metadata_fixture_path_for_test(path))
+  let read_result = try
+    @fs.read_file(metadata_fixture_path_for_test(path))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(data.binary())
     Err(_) => None
@@ -546,9 +552,13 @@ async test "cpdf source manual fixture mutates catalog view and open action" {
       let corrupted = metadata_fixture_corrupt_startxref_pointer_for_test(
         compressed,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail(
           "expected cpdf manual catalog view recovery to require reconstruction",

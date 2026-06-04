@@ -120,25 +120,41 @@ test "pdf_revisions_from_view reads borrowed revision metadata slices" {
 
 ///|
 test "pdf_revisions_from_bytes reports malformed revision metadata" {
-  let missing_startxref : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
-    reader_pdf_ascii("%PDF-1.4\nxref\n0 1\n0000000000 65535 f \n%%EOF\n"),
-  )
+  let missing_startxref : Result[Int, Error] = try
+    @pdflite.pdf_revisions_from_bytes(
+      reader_pdf_ascii("%PDF-1.4\nxref\n0 1\n0000000000 65535 f \n%%EOF\n"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_startxref is Err(@core.PdfError::StartXRefExpected) else {
     fail("expected @core.PdfError::StartXRefExpected")
   }
 
-  let malformed_prev : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
-    reader_classic_pdf_with_xref_body(
-      "0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 /Prev /Bad >>",
-    ),
-  )
+  let malformed_prev : Result[Int, Error] = try
+    @pdflite.pdf_revisions_from_bytes(
+      reader_classic_pdf_with_xref_body(
+        "0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 /Prev /Bad >>",
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed_prev is Err(@core.PdfError::TrailerExpected) else {
     fail("expected @core.PdfError::TrailerExpected")
   }
 
-  let cyclic_prev : Result[Int, Error] = try? @pdflite.pdf_revisions_from_bytes(
-    reader_classic_pdf_with_self_prev_xref(),
-  )
+  let cyclic_prev : Result[Int, Error] = try
+    @pdflite.pdf_revisions_from_bytes(reader_classic_pdf_with_self_prev_xref())
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard cyclic_prev is Err(@core.PdfError::XRefExpected) else {
     fail("expected @core.PdfError::XRefExpected")
   }

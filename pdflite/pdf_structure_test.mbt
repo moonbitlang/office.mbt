@@ -285,9 +285,13 @@ test "PdfDocument replace_struct_tree imports new negative objects" {
     replaced.lookup_object_or_null(31).lookup_immediate(key_label),
     Some(PdfString(@ascii.encode("new"))),
   )
-  let bad : Result[@pdflite.PdfDocument, Error] = try? doc.replace_struct_tree(
-    Json::null(),
-  )
+  let bad : Result[@pdflite.PdfDocument, Error] = try
+    doc.replace_struct_tree(Json::null())
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad is Err(@core.PdfError::SoftError(_)) else {
     fail("expected malformed structure-tree JSON to raise SoftError")
   }

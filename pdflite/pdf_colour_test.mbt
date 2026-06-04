@@ -43,21 +43,33 @@ test "cpdf colour parser reads CSS names and numeric forms" {
 
 ///|
 test "cpdf colour parser rejects bad arities and non-numeric tokens" {
-  let bad_count : Result[@colour.PdfContentColour, Error] = try? @colour.pdf_parse_content_colour(
-    "0 1",
-  )
+  let bad_count : Result[@colour.PdfContentColour, Error] = try
+    @colour.pdf_parse_content_colour("0 1")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_count is Err(@core.PdfError::BadNumberArgument("Bad color")) else {
     fail("expected BadNumberArgument for two colour components")
   }
-  let bad_token : Result[@colour.PdfContentColour, Error] = try? @colour.pdf_parse_content_colour(
-    "1 nope",
-  )
+  let bad_token : Result[@colour.PdfContentColour, Error] = try
+    @colour.pdf_parse_content_colour("1 nope")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_token is Err(@core.PdfError::BadNumberArgument("Bad color")) else {
     fail("expected BadNumberArgument for non-numeric colour token")
   }
-  let unknown_css : Result[@colour.PdfContentColour, Error] = try? @colour.pdf_parse_content_colour(
-    "not-a-colour",
-  )
+  let unknown_css : Result[@colour.PdfContentColour, Error] = try
+    @colour.pdf_parse_content_colour("not-a-colour")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unknown_css is Err(@core.PdfError::BadNumberArgument("Bad color")) else {
     fail("expected BadNumberArgument for unknown CSS colour")
   }

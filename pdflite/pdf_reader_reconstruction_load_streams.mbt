@@ -12,9 +12,13 @@ fn PdfDocument::load_reconstructed_object_stream_entries_from_context(
     let xref = entry.0
     let reference = entry.1
     if reference.object_stream_number == object_stream_number {
-      let loaded : Result[(Int, @syntax.PdfObject), Error] = try? context.read_reference(
-        reference,
-      )
+      let loaded : Result[(Int, @syntax.PdfObject), Error] = try
+        context.read_reference(reference)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       match loaded {
         Ok((object_number, object)) =>
           if object_number == xref.object_number {
@@ -40,9 +44,13 @@ fn PdfDocument::load_reconstructed_xref_stream_embedded_objects(
 ) -> Unit {
   for group in @reader.pdf_reader_object_stream_groups(xrefs) {
     let object_stream_number = group.0
-    let context_result : Result[PdfObjectStreamContext, Error] = try? self.read_object_stream_context(
-      object_stream_number,
-    )
+    let context_result : Result[PdfObjectStreamContext, Error] = try
+      self.read_object_stream_context(object_stream_number)
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     match context_result {
       Ok(context) =>
         self.load_reconstructed_object_stream_entries_from_context(
@@ -61,17 +69,23 @@ fn PdfDocument::load_reconstructed_physical_object_stream_members(
   self : PdfDocument,
 ) -> Unit {
   for object_stream_number in self.object_numbers() {
-    let context_result : Result[PdfObjectStreamContext, Error] = try? self.read_object_stream_context(
-      object_stream_number,
-    )
+    let context_result : Result[PdfObjectStreamContext, Error] = try
+      self.read_object_stream_context(object_stream_number)
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     match context_result {
       Ok(context) =>
         for index in 0..<context.pairs.length() {
-          let loaded_member : Result[(Int, @syntax.PdfObject), Error] = try? context.read_reference({
-              object_stream_number,
-              index,
-            },
-          )
+          let loaded_member : Result[(Int, @syntax.PdfObject), Error] = try
+            context.read_reference({ object_stream_number, index })
+          catch {
+            err => Err(err)
+          } noraise {
+            value => Ok(value)
+          }
           match loaded_member {
             Ok((object_number, object)) =>
               if self.lookup_object_or_null(object_number) is PdfNull {
@@ -94,9 +108,15 @@ fn PdfDocument::load_reconstructed_xref_stream_embedded_objects_with_passwords(
 ) -> Unit {
   for group in @reader.pdf_reader_object_stream_groups(xrefs) {
     let object_stream_number = group.0
-    let context_result : Result[(PdfObjectStreamContext, Bool), Error] = try? self.read_object_stream_context_with_passwords(
-      object_stream_number, user_password, owner_password,
-    )
+    let context_result : Result[(PdfObjectStreamContext, Bool), Error] = try
+      self.read_object_stream_context_with_passwords(
+        object_stream_number, user_password, owner_password,
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     match context_result {
       Ok((context, already_decrypted)) =>
         self.load_reconstructed_object_stream_entries_from_context(

@@ -43,7 +43,11 @@ fn pdf_attach_relationship_name(relationship : String) -> @core.PdfName {
 
 ///|
 fn pdf_attach_relationship_text(name : @core.PdfName) -> String? {
-  let decoded : Result[String, Error] = try? @ascii.decode(name.view())
+  let decoded : Result[String, Error] = try @ascii.decode(name.view()) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match decoded {
     Ok(text) => Some(text)
     Err(_) => None

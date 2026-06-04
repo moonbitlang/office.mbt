@@ -1,6 +1,10 @@
 ///|
 test "pdf_error raises cpdf soft error" {
-  let result : Result[Unit, Error] = try? @core.pdf_error("soft")
+  let result : Result[Unit, Error] = try @core.pdf_error("soft") catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError("soft")) else {
     fail("expected SoftError")
   }
@@ -8,11 +12,21 @@ test "pdf_error raises cpdf soft error" {
 
 ///|
 test "pdf_soft_error and pdf_hard_error raise distinct cpdf errors" {
-  let soft : Result[Unit, Error] = try? @core.pdf_soft_error("recoverable")
+  let soft : Result[Unit, Error] = try
+    @core.pdf_soft_error("recoverable")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard soft is Err(@core.PdfError::SoftError("recoverable")) else {
     fail("expected SoftError")
   }
-  let hard : Result[Unit, Error] = try? @core.pdf_hard_error("fatal")
+  let hard : Result[Unit, Error] = try @core.pdf_hard_error("fatal") catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard hard is Err(@core.PdfError::HardError("fatal")) else {
     fail("expected HardError")
   }

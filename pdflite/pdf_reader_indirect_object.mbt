@@ -80,9 +80,13 @@ fn pdf_cursor_resolve_classic_stream_length(
           let parsed_result : Result[
             (@syntax.PdfParsedIndirectObject, Bool),
             Error,
-          ] = try? pdf_cursor_read_first_indirect_object_segment_at_current(
-            cursor,
-          )
+          ] = try
+            pdf_cursor_read_first_indirect_object_segment_at_current(cursor)
+          catch {
+            err => Err(err)
+          } noraise {
+            value => Ok(value)
+          }
           cursor.seek_absolute(saved_position)
           let (parsed, complete) = match parsed_result {
             Ok(parsed) => parsed
@@ -121,12 +125,18 @@ fn pdf_cursor_read_first_indirect_object_at_current(
   } else if !pdf_cursor_stopped_at_stream_candidate(cursor) {
     object
   } else {
-    let length_result : Result[Int, Error] = try? pdf_cursor_resolve_classic_stream_length(
-      cursor,
-      object.object,
-      xrefs,
-      xref_index,
-    )
+    let length_result : Result[Int, Error] = try
+      pdf_cursor_resolve_classic_stream_length(
+        cursor,
+        object.object,
+        xrefs,
+        xref_index,
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     match length_result {
       Ok(length) =>
         pdf_cursor_finish_stream_object_with_length(

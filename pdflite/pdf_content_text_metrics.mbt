@@ -30,7 +30,11 @@ fn pdf_content_afm_header_value(
 
 ///|
 fn pdf_content_afm_parse_int(value : BytesView) -> Int? {
-  let parsed : Result[Int, Error] = try? @afm.pdf_afm_parse_int(value)
+  let parsed : Result[Int, Error] = try @afm.pdf_afm_parse_int(value) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match parsed {
     Ok(number) => Some(number)
     Err(_) => None
@@ -46,9 +50,13 @@ fn pdf_content_afm_header_number(
     Some(value) => {
       let tokens = @core.pdf_split_whitespace_tokens(value)
       if tokens.length() == 1 {
-        let parsed : Result[Double, Error] = try? @strconv.from_str(
-          @ascii.decode_lossy(tokens[0]),
-        )
+        let parsed : Result[Double, Error] = try
+          @strconv.from_str(@ascii.decode_lossy(tokens[0]))
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         match parsed {
           Ok(number) => number
           Err(_) => 0.0

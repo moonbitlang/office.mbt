@@ -41,26 +41,44 @@ test "pdf_jpeg2000_dimensions scans for unaligned image header box" {
 
 ///|
 test "pdf_jpeg2000_dimensions reports malformed JPEG2000 inputs" {
-  let bad_header : Result[(Int, Int), Error] = try? @pdflite.pdf_jpeg2000_dimensions(
-    jpeg2000_bytes_for_test([
-      0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x21, 0x0D, 0x0A, 0x87, 0x0A,
-    ]),
-  )
+  let bad_header : Result[(Int, Int), Error] = try
+    @pdflite.pdf_jpeg2000_dimensions(
+      jpeg2000_bytes_for_test([
+        0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x21, 0x0D, 0x0A, 0x87, 0x0A,
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_header is Err(@core.PdfError::BadJPEG2000Header) else {
     fail("expected BadJPEG2000Header")
   }
-  let missing_header : Result[(Int, Int), Error] = try? @pdflite.pdf_jpeg2000_dimensions(
-    jpeg2000_bytes_for_test([
-      0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A, 0x66,
-      0x72, 0x65, 0x65,
-    ]),
-  )
+  let missing_header : Result[(Int, Int), Error] = try
+    @pdflite.pdf_jpeg2000_dimensions(
+      jpeg2000_bytes_for_test([
+        0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A, 0x66,
+        0x72, 0x65, 0x65,
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_header is Err(@core.PdfError::JPEG2000DimensionsExpected) else {
     fail("expected JPEG2000DimensionsExpected")
   }
-  let truncated : Result[(Int, Int), Error] = try? @pdflite.pdf_jpeg2000_dimensions(
-    jpeg2000_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50]),
-  )
+  let truncated : Result[(Int, Int), Error] = try
+    @pdflite.pdf_jpeg2000_dimensions(
+      jpeg2000_bytes_for_test([0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard truncated is Err(@core.PdfError::BadJPEG2000Header) else {
     fail("expected BadJPEG2000Header for truncated signature")
   }

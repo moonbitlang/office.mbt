@@ -1,6 +1,12 @@
 ///|
 test "private merge helpers cover guards and membership branches" {
-  let empty_version : Result[(Int, Int), Error] = try? pdf_merge_max_version([])
+  let empty_version : Result[(Int, Int), Error] = try
+    pdf_merge_max_version([])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty_version is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected")
   }
@@ -288,16 +294,23 @@ test "private merge structure helpers cover direct variants" {
 test "private merge catalog and AcroForm helpers cover malformed roots" {
   let key = pdf_merge_name("/ViewerPreferences")
   let empty = pdf_document_empty()
-  let read_missing_root : Result[@syntax.PdfObject?, Error] = try? empty.pdf_merge_catalog_entry(
-    key,
-  )
+  let read_missing_root : Result[@syntax.PdfObject?, Error] = try
+    empty.pdf_merge_catalog_entry(key)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard read_missing_root is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
-  let add_missing_root : Result[PdfDocument, Error] = try? empty.pdf_merge_add_catalog_entry(
-    key,
-    PdfInteger(1),
-  )
+  let add_missing_root : Result[PdfDocument, Error] = try
+    empty.pdf_merge_add_catalog_entry(key, PdfInteger(1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard add_missing_root is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
@@ -360,9 +373,13 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
   unresolved.set_trailer_dict(
     PdfDictionary([(pdf_merge_root_key(), PdfIndirect(99))]),
   )
-  let unresolved_result : Result[@syntax.PdfObject?, Error] = try? unresolved.pdf_merge_catalog_entry(
-    key,
-  )
+  let unresolved_result : Result[@syntax.PdfObject?, Error] = try
+    unresolved.pdf_merge_catalog_entry(key)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unresolved_result is Err(@core.PdfError::RootExpected) else {
     fail("expected unresolved trailer root")
   }

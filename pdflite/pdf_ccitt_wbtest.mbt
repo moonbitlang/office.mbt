@@ -31,12 +31,13 @@ test "CCITT private helpers handle EOL spans and reference lookups" {
   let eol = @core.bitstream_of_bytes(ccitt_wb_bytes([0x00, 0x10]))
   @test.assert_eq(pdf_ccitt_read_run(eol, true), -1)
 
-  let bad_span : Result[Int, Error] = try? pdf_ccitt_output_span(
-    [1, 1],
-    1,
-    2,
-    0,
-  )
+  let bad_span : Result[Int, Error] = try
+    pdf_ccitt_output_span([1, 1], 1, 2, 0)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_span is Err(@core.PdfError::InvalidCCITTData) else {
     fail("expected invalid CCITT span")
   }
@@ -69,29 +70,48 @@ test "CCITT Group 3 covers alignment EOL padding EOF and invalid params" {
   })
   @test.assert_eq(eof, ccitt_wb_bytes([]))
 
-  let invalid : Result[@core.PdfBytes, Error] = try? pdf_ccitt_decode_view(
-    ccitt_wb_bytes([]),
-    { ..pdf_ccitt_default_params(), columns: 0 },
-  )
+  let invalid : Result[@core.PdfBytes, Error] = try
+    pdf_ccitt_decode_view(ccitt_wb_bytes([]), {
+      ..pdf_ccitt_default_params(),
+      columns: 0,
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(@core.PdfError::InvalidCCITTData) else {
     fail("expected invalid CCITT params")
   }
 
-  let bad_run : Result[@core.PdfBytes, Error] = try? pdf_ccitt_decode_view(
-    ccitt_wb_bits([1, 1, 0, 0]),
-    { ..pdf_ccitt_default_params(), columns: 4, rows: 1 },
-  )
+  let bad_run : Result[@core.PdfBytes, Error] = try
+    pdf_ccitt_decode_view(ccitt_wb_bits([1, 1, 0, 0]), {
+      ..pdf_ccitt_default_params(),
+      columns: 4,
+      rows: 1,
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_run is Err(@core.PdfError::InvalidCCITTData) else {
     fail("expected invalid CCITT run")
   }
 
-  let bad_output = try? pdf_ccitt_decode_g3_1d(
-    @core.bitstream_of_bytes(ccitt_wb_bits([1, 0, 1, 1])),
-    @core.bit_writer_new(),
-    { ..pdf_ccitt_default_params(), columns: 4, rows: 1 },
-    2,
-    0,
-  )
+  let bad_output = try
+    pdf_ccitt_decode_g3_1d(
+      @core.bitstream_of_bytes(ccitt_wb_bits([1, 0, 1, 1])),
+      @core.bit_writer_new(),
+      { ..pdf_ccitt_default_params(), columns: 4, rows: 1 },
+      2,
+      0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_output is Err(InvalidCCITTData) else {
     fail("expected normalized invalid CCITT output")
   }
@@ -127,33 +147,45 @@ test "CCITT Group 3 encoder covers white black long runs and malformed input" {
   let empty = pdf_ccitt_encode_g3_1d_view(ccitt_wb_bytes([]), 8, 0)
   @test.assert_eq(empty, ccitt_wb_bytes([0x00, 0x10, 0x01]))
 
-  let short : Result[@core.PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
-    ccitt_wb_bytes([]),
-    8,
-    1,
-  )
+  let short : Result[@core.PdfBytes, Error] = try
+    pdf_ccitt_encode_g3_1d_view(ccitt_wb_bytes([]), 8, 1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short is Err(_) else { fail("expected not enough CCITT source data") }
 
-  let invalid : Result[@core.PdfBytes, Error] = try? pdf_ccitt_encode_g3_1d_view(
-    ccitt_wb_bytes([]),
-    0,
-    1,
-  )
+  let invalid : Result[@core.PdfBytes, Error] = try
+    pdf_ccitt_encode_g3_1d_view(ccitt_wb_bytes([]), 0, 1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(_) else { fail("expected invalid CCITT encode params") }
 
-  let bad_write : Result[Unit, Error] = try? pdf_ccitt_write_run(
-    @core.bit_writer_new(),
-    true,
-    -1,
-  )
+  let bad_write : Result[Unit, Error] = try
+    pdf_ccitt_write_run(@core.bit_writer_new(), true, -1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_write is Err(_) else {
     fail("expected invalid private CCITT run length")
   }
 
-  let bad_read : Result[(Bool, Int), Error] = try? pdf_ccitt_encode_read_run(
-    @core.bitstream_of_bytes(ccitt_wb_bytes([0xFF])),
-    0,
-  )
+  let bad_read : Result[(Bool, Int), Error] = try
+    pdf_ccitt_encode_read_run(
+      @core.bitstream_of_bytes(ccitt_wb_bytes([0xFF])),
+      0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_read is Err(_) else {
     fail("expected invalid private CCITT read columns")
   }
@@ -233,29 +265,50 @@ test "CCITT Group 4 covers pass vertical horizontal black EOFB and unsupported m
   })
   @test.assert_eq(eof, ccitt_wb_bytes([]))
 
-  let unsupported : Result[@core.PdfBytes, Error] = try? pdf_ccitt_decode_view(
-    ccitt_wb_bytes([0x00, 0xF0]),
-    { ..pdf_ccitt_default_params(), k: -1, columns: 4 },
-  )
+  let unsupported : Result[@core.PdfBytes, Error] = try
+    pdf_ccitt_decode_view(ccitt_wb_bytes([0x00, 0xF0]), {
+      ..pdf_ccitt_default_params(),
+      k: -1,
+      columns: 4,
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported is Err(@core.PdfError::CCITTNotSupported(_)) else {
     fail("expected unsupported CCITT uncompressed mode")
   }
 
-  let invalid : Result[@core.PdfBytes, Error] = try? pdf_ccitt_decode_view(
-    ccitt_wb_bits([0, 1, 1]),
-    { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 1 },
-  )
+  let invalid : Result[@core.PdfBytes, Error] = try
+    pdf_ccitt_decode_view(ccitt_wb_bits([0, 1, 1]), {
+      ..pdf_ccitt_default_params(),
+      k: -1,
+      columns: 4,
+      rows: 1,
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(@core.PdfError::InvalidCCITTData) else {
     fail("expected invalid CCITT Group 4 span")
   }
 
-  let bad_output = try? pdf_ccitt_decode_g4(
-    @core.bitstream_of_bytes(ccitt_wb_bits([1])),
-    @core.bit_writer_new(),
-    { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 1 },
-    2,
-    0,
-  )
+  let bad_output = try
+    pdf_ccitt_decode_g4(
+      @core.bitstream_of_bytes(ccitt_wb_bits([1])),
+      @core.bit_writer_new(),
+      { ..pdf_ccitt_default_params(), k: -1, columns: 4, rows: 1 },
+      2,
+      0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_output is Err(InvalidCCITTData) else {
     fail("expected normalized invalid CCITT Group 4 output")
   }
@@ -308,20 +361,24 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
     ccitt_wb_bytes([]),
   )
 
-  let short : Result[@core.PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
-    ccitt_wb_bytes([]),
-    4,
-    1,
-  )
+  let short : Result[@core.PdfBytes, Error] = try
+    pdf_ccitt_encode_g4_view(ccitt_wb_bytes([]), 4, 1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short is Err(_) else {
     fail("expected not enough CCITT Group 4 source data")
   }
 
-  let invalid : Result[@core.PdfBytes, Error] = try? pdf_ccitt_encode_g4_view(
-    ccitt_wb_bytes([]),
-    0,
-    1,
-  )
+  let invalid : Result[@core.PdfBytes, Error] = try
+    pdf_ccitt_encode_g4_view(ccitt_wb_bytes([]), 0, 1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(_) else {
     fail("expected invalid CCITT Group 4 encode params")
   }
@@ -336,27 +393,35 @@ test "CCITT Group 4 encoder roundtrips mixed rows and malformed input" {
   pdf_ccitt_write_mode(right_three, CCITTVertical(3))
   @test.assert_eq(right_three.to_bytes(), ccitt_wb_bytes([0x04]))
 
-  let unsupported_mode : Result[Unit, Error] = try? pdf_ccitt_write_mode(
-    @core.bit_writer_new(),
-    CCITTUncompressed,
-  )
+  let unsupported_mode : Result[Unit, Error] = try
+    pdf_ccitt_write_mode(@core.bit_writer_new(), CCITTUncompressed)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported_mode is Err(_) else {
     fail("expected unsupported Group 4 uncompressed write mode")
   }
 
-  let invalid_mode : Result[Unit, Error] = try? pdf_ccitt_write_mode(
-    @core.bit_writer_new(),
-    CCITTVertical(4),
-  )
+  let invalid_mode : Result[Unit, Error] = try
+    pdf_ccitt_write_mode(@core.bit_writer_new(), CCITTVertical(4))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid_mode is Err(_) else {
     fail("expected invalid Group 4 vertical write mode")
   }
 
-  let missing_row : Result[Array[Int], Error] = try? pdf_ccitt_line_from_data(
-    ccitt_wb_bytes([]),
-    4,
-    0,
-  )
+  let missing_row : Result[Array[Int], Error] = try
+    pdf_ccitt_line_from_data(ccitt_wb_bytes([]), 4, 0)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_row is Err(_) else {
     fail("expected missing CCITT Group 4 source row")
   }
@@ -395,29 +460,49 @@ test "CCITT decode parameter parsing covers defaults arrays direct entries and m
   @test.assert_eq(array_params.end_of_line, true)
 
   assert_ccitt_decodeparms_expected(
-    try? pdf_ccitt_params(
-      @syntax.pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfInteger(1))]),
-    ),
+    try
+      pdf_ccitt_params(
+        @syntax.pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfInteger(1))]),
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
   )
   assert_ccitt_decodeparms_expected(
-    try? pdf_ccitt_params(
-      @syntax.pdf_dictionary([
-        (
-          ccitt_wb_name("/DecodeParms"),
-          @syntax.pdf_dictionary([(ccitt_wb_name("/K"), PdfBoolean(true))]),
-        ),
-      ]),
-    ),
+    try
+      pdf_ccitt_params(
+        @syntax.pdf_dictionary([
+          (
+            ccitt_wb_name("/DecodeParms"),
+            @syntax.pdf_dictionary([(ccitt_wb_name("/K"), PdfBoolean(true))]),
+          ),
+        ]),
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
   )
   assert_ccitt_decodeparms_expected(
-    try? pdf_ccitt_params(
-      @syntax.pdf_dictionary([
-        (
-          ccitt_wb_name("/DecodeParms"),
-          @syntax.pdf_dictionary([(ccitt_wb_name("/EndOfLine"), PdfInteger(1))]),
-        ),
-      ]),
-    ),
+    try
+      pdf_ccitt_params(
+        @syntax.pdf_dictionary([
+          (
+            ccitt_wb_name("/DecodeParms"),
+            @syntax.pdf_dictionary([
+              (ccitt_wb_name("/EndOfLine"), PdfInteger(1)),
+            ]),
+          ),
+        ]),
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
   )
 
   let doc = pdf_document_empty()
@@ -444,35 +529,61 @@ test "CCITT decode parameter parsing covers defaults arrays direct entries and m
   @test.assert_eq(indirect_direct.columns, 5)
   @test.assert_eq(indirect_direct.black_is_1, true)
   assert_ccitt_decodeparms_expected(
-    try? doc.pdf_ccitt_params_direct(
-      @syntax.pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfInteger(1))]),
-    ),
+    try
+      doc.pdf_ccitt_params_direct(
+        @syntax.pdf_dictionary([(ccitt_wb_name("/DecodeParms"), PdfInteger(1))]),
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
   )
   assert_ccitt_decodeparms_expected(
-    try? doc.pdf_ccitt_params_direct(
-      @syntax.pdf_dictionary([
-        (ccitt_wb_name("/DecodeParms"), PdfArray([PdfIndirect(2)])),
-      ]),
-    ),
+    try
+      doc.pdf_ccitt_params_direct(
+        @syntax.pdf_dictionary([
+          (ccitt_wb_name("/DecodeParms"), PdfArray([PdfIndirect(2)])),
+        ]),
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
   )
   assert_ccitt_decodeparms_expected(
-    try? doc.pdf_ccitt_params_direct(
-      @syntax.pdf_dictionary([
-        (
-          ccitt_wb_name("/DecodeParms"),
-          @syntax.pdf_dictionary([(ccitt_wb_name("/Columns"), PdfBoolean(true))]),
-        ),
-      ]),
-    ),
+    try
+      doc.pdf_ccitt_params_direct(
+        @syntax.pdf_dictionary([
+          (
+            ccitt_wb_name("/DecodeParms"),
+            @syntax.pdf_dictionary([
+              (ccitt_wb_name("/Columns"), PdfBoolean(true)),
+            ]),
+          ),
+        ]),
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
   )
   assert_ccitt_decodeparms_expected(
-    try? doc.pdf_ccitt_params_direct(
-      @syntax.pdf_dictionary([
-        (
-          ccitt_wb_name("/DecodeParms"),
-          @syntax.pdf_dictionary([(ccitt_wb_name("/BlackIs1"), PdfInteger(1))]),
-        ),
-      ]),
-    ),
+    try
+      doc.pdf_ccitt_params_direct(
+        @syntax.pdf_dictionary([
+          (
+            ccitt_wb_name("/DecodeParms"),
+            @syntax.pdf_dictionary([(ccitt_wb_name("/BlackIs1"), PdfInteger(1))]),
+          ),
+        ]),
+      )
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    },
   )
 }

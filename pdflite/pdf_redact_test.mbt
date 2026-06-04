@@ -142,10 +142,13 @@ test "PdfDocument redact_path preserves content and validates selected pages" {
     Op_BT,
     Op_ET,
   ])
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.redact_path(
-    path,
-    [3],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.redact_path(path, [3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected @core.PdfError::BadPageSpecification")
   }

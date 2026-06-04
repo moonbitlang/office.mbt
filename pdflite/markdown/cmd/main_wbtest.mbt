@@ -1511,9 +1511,13 @@ async test "markdown command reconstructs optional cpdf source manual image PDF 
           markdown_cmd_corrupt_first_xref_subsection_count_for_test(input_bytes),
         ] {
         case_index += 1
-        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-          corrupted,
-        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try
+          @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         guard strict is Err(_) else {
           fail(
             "expected malformed classic xref data to require malformed reconstruction for " +
@@ -1628,9 +1632,13 @@ async test "markdown command reconstructs optional cpdf source top-level classic
           markdown_cmd_corrupt_first_xref_subsection_count_for_test(input_bytes),
         ] {
         case_index += 1
-        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-          corrupted,
-        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try
+          @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         guard strict is Err(_) else {
           fail(
             "expected malformed classic xref data to require malformed reconstruction for " +

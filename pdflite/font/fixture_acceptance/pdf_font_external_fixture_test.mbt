@@ -38,9 +38,13 @@ fn font_external_inline_image_op_for_test(
 async fn font_external_fixture_document_for_test(
   path : String,
 ) -> @pdflite.PdfDocument? {
-  let read_result = try? @fs.read_file(
-    font_external_fixture_path_for_test(path),
-  )
+  let read_result = try
+    @fs.read_file(font_external_fixture_path_for_test(path))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(@pdflite.pdf_read_document_from_bytes(data.binary()))
     Err(_) => None
@@ -49,9 +53,13 @@ async fn font_external_fixture_document_for_test(
 
 ///|
 async fn font_external_fixture_bytes_for_test(path : String) -> Bytes? {
-  let read_result = try? @fs.read_file(
-    font_external_fixture_path_for_test(path),
-  )
+  let read_result = try
+    @fs.read_file(font_external_fixture_path_for_test(path))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(data.binary())
     Err(_) => None
@@ -563,9 +571,13 @@ async test "external Type3 resource fixture reconstructs malformed startxref" {
     None => ()
     Some(bytes) => {
       let corrupted = font_external_corrupt_startxref_pointer_for_test(bytes)
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -953,9 +965,13 @@ async test "cpdf source manual fixture reports embedded fonts" {
         font_external_reparse_compressed_for_test(document),
       )
       let corrupted = font_external_corrupt_startxref_pointer_for_test(bytes)
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -1004,9 +1020,13 @@ async test "cpdf source manual font fixture reconstructs malformed classic xref 
           font_external_corrupt_first_xref_subsection_object_for_test(bytes),
           font_external_corrupt_first_xref_subsection_count_for_test(bytes),
         ] {
-        let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-          corrupted,
-        )
+        let strict : Result[@pdflite.PdfDocument, Error] = try
+          @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         guard strict is Err(_) else {
           fail("expected malformed classic xref data to require reconstruction")
         }
@@ -1040,9 +1060,13 @@ async test "external Type3 font fixture reconstructs malformed startxref" {
     None => ()
     Some(bytes) => {
       let corrupted = font_external_corrupt_startxref_pointer_for_test(bytes)
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }

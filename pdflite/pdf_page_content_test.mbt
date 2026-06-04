@@ -253,7 +253,11 @@ test "PdfDocument merge_content_streams rejects non-stream content arrays" {
     ]),
   )
   doc.add_object_given_number(2, page_content_raw_stream_for_test("BT ET"))
-  let result : Result[Unit, Error] = try? doc.merge_content_streams()
+  let result : Result[Unit, Error] = try doc.merge_content_streams() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }

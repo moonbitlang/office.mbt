@@ -86,7 +86,11 @@ test "cpdf clip make polygon preserves hole flags and copies vertices" {
 
 ///|
 test "cpdf clip make polygon rejects mismatched inputs" {
-  let result = try? @pdflite.pdf_clip_make_polygon([true], [])
+  let result = try @pdflite.pdf_clip_make_polygon([true], []) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(BadNumberArgument(_)) else {
     fail("expected BadNumberArgument for mismatched clip polygon inputs")
   }

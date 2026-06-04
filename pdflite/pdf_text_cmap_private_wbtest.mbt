@@ -165,10 +165,16 @@ test "private external CMap helpers cover malformed and compact sections" {
     ),
     [0x1234],
   )
-  let truncated_ucs2 : Result[Array[Int], Error] = try? pdf_text_parsed_cmap_charcodes_of_text(
-    ucs2_base_parsed,
-    cmap_wbtest_text_bytes([0x12]),
-  )
+  let truncated_ucs2 : Result[Array[Int], Error] = try
+    pdf_text_parsed_cmap_charcodes_of_text(
+      ucs2_base_parsed,
+      cmap_wbtest_text_bytes([0x12]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard truncated_ucs2 is Err(_) else {
     fail("expected truncated external UCS2 UseCMap text to raise")
   }
@@ -179,10 +185,16 @@ test "private external CMap helpers cover malformed and compact sections" {
     ),
     [0x0102],
   )
-  let odd_identity : Result[Array[Int], Error] = try? pdf_text_parsed_cmap_charcodes_of_text(
-    identity_base_parsed,
-    cmap_wbtest_text_bytes([1]),
-  )
+  let odd_identity : Result[Array[Int], Error] = try
+    pdf_text_parsed_cmap_charcodes_of_text(
+      identity_base_parsed,
+      cmap_wbtest_text_bytes([1]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard odd_identity is Err(_) else {
     fail("expected odd identity CMap text to raise")
   }
@@ -494,24 +506,42 @@ test "private direct Unicode predefined CMap helpers cover malformed scalars" {
   @test.assert_eq(pdf_text_predefined_utf8_charcode(0x41), Some(0x41))
   @test.assert_eq(pdf_text_predefined_utf8_charcode(0xA2), Some(0xC2A2))
   @test.assert_eq(pdf_text_predefined_utf8_charcode(0xD800), None)
-  let truncated_utf8 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
-    utf8_name,
-    cmap_wbtest_text_bytes([0xC2]),
-  )
+  let truncated_utf8 : Result[Array[Int], Error] = try
+    pdf_text_predefined_cmap_charcodes_of_text(
+      utf8_name,
+      cmap_wbtest_text_bytes([0xC2]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard truncated_utf8 is Err(_) else {
     fail("expected truncated UTF8 predefined CMap text to raise")
   }
-  let invalid_lead_utf8 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
-    utf8_name,
-    cmap_wbtest_text_bytes([0xFF]),
-  )
+  let invalid_lead_utf8 : Result[Array[Int], Error] = try
+    pdf_text_predefined_cmap_charcodes_of_text(
+      utf8_name,
+      cmap_wbtest_text_bytes([0xFF]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid_lead_utf8 is Err(_) else {
     fail("expected invalid leading UTF8 predefined CMap text to raise")
   }
-  let invalid_continuation_utf8 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
-    utf8_name,
-    cmap_wbtest_text_bytes([0xC2, 0x41]),
-  )
+  let invalid_continuation_utf8 : Result[Array[Int], Error] = try
+    pdf_text_predefined_cmap_charcodes_of_text(
+      utf8_name,
+      cmap_wbtest_text_bytes([0xC2, 0x41]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid_continuation_utf8 is Err(_) else {
     fail("expected invalid UTF8 predefined CMap text to raise")
   }
@@ -524,10 +554,16 @@ test "private direct Unicode predefined CMap helpers cover malformed scalars" {
     None,
   )
   @test.assert_eq(pdf_text_predefined_utf16_codepoints(0x123456), None)
-  let low_surrogate_utf16 : Result[Array[Int], Error] = try? pdf_text_predefined_cmap_charcodes_of_text(
-    cmap_wbtest_text_name("/UniJIS-UTF16-H"),
-    cmap_wbtest_text_bytes([0xDC, 0x00]),
-  )
+  let low_surrogate_utf16 : Result[Array[Int], Error] = try
+    pdf_text_predefined_cmap_charcodes_of_text(
+      cmap_wbtest_text_name("/UniJIS-UTF16-H"),
+      cmap_wbtest_text_bytes([0xDC, 0x00]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard low_surrogate_utf16 is Err(_) else {
     fail("expected low-surrogate UTF16 predefined CMap text to raise")
   }
@@ -566,9 +602,15 @@ test "private direct Unicode predefined CMap helpers cover malformed scalars" {
     ),
     [0x41],
   )
-  let odd_fixed : Result[Array[Int], Error] = try? two_byte_font.pdf_text_fixed_or_single_byte_charcodes_of_text(
-    cmap_wbtest_text_bytes([0]),
-  )
+  let odd_fixed : Result[Array[Int], Error] = try
+    two_byte_font.pdf_text_fixed_or_single_byte_charcodes_of_text(
+      cmap_wbtest_text_bytes([0]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard odd_fixed is Err(_) else {
     fail("expected odd fixed-width CID text to raise")
   }
@@ -591,9 +633,13 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
       ),
     ),
   )
-  let bad_deferred_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(
-    bad_deferred,
-  )
+  let bad_deferred_result : Result[PdfParsedCMap, Error] = try
+    helper_doc.parse_cmap(bad_deferred)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_deferred_result is Err(_) else {
     fail("expected malformed deferred stream CMap to raise")
   }
@@ -601,9 +647,13 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
     PdfDictionary([(cmap_wbtest_text_name("/Filter"), PdfInteger(1))]),
     StreamGot(@ascii.encode("x")),
   )
-  let bad_filter_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(
-    bad_filter,
-  )
+  let bad_filter_result : Result[PdfParsedCMap, Error] = try
+    helper_doc.parse_cmap(bad_filter)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_filter_result is Err(_) else {
     fail("expected malformed filter CMap to raise")
   }
@@ -617,15 +667,23 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
     ]),
     StreamGot(@ascii.encode("x")),
   )
-  let unsupported_filter_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(
-    unsupported_filter,
-  )
+  let unsupported_filter_result : Result[PdfParsedCMap, Error] = try
+    helper_doc.parse_cmap(unsupported_filter)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported_filter_result is Err(_) else {
     fail("expected unsupported filter CMap to raise")
   }
-  let non_stream_result : Result[PdfParsedCMap, Error] = try? helper_doc.parse_cmap(
-    PdfInteger(1),
-  )
+  let non_stream_result : Result[PdfParsedCMap, Error] = try
+    helper_doc.parse_cmap(PdfInteger(1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_stream_result is Err(_) else {
     fail("expected non-stream CMap to raise")
   }

@@ -12,9 +12,13 @@ pub fn pdf_reader_reconstruction_classic_xref_sections(
   let mut position = 0
   while position < data.length() {
     if @core.pdf_view_matches_ascii_at(data, position, [120, 114, 101, 102]) {
-      let parsed : Result[(PdfXRefSection, Int), Error] = try? read_section_at(
-        cursor, position,
-      )
+      let parsed : Result[(PdfXRefSection, Int), Error] = try
+        read_section_at(cursor, position)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       match parsed {
         Ok((section, next_position)) => {
           sections.push((position, section))
@@ -43,9 +47,13 @@ pub fn pdf_reader_reconstruction_xref_stream_sections(
   let mut position = 0
   while position < data.length() {
     if pdf_reader_reconstruction_indirect_header_at(data, position) {
-      let parsed : Result[(PdfXRefSection, Int), Error] = try? read_section_at(
-        cursor, position,
-      )
+      let parsed : Result[(PdfXRefSection, Int), Error] = try
+        read_section_at(cursor, position)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       match parsed {
         Ok((section, next_position)) => {
           sections.push(section)

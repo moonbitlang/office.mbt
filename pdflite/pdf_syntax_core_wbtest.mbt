@@ -5,23 +5,41 @@
 ///|
 test "private stream data materialization reports invalid deferred slices" {
   let cursor = @core.byte_cursor_of_bytes(@ascii.encode("abc"))
-  let bad_position : Result[BytesView, Error] = try? @syntax.pdf_stream_data_view(
-    StreamToGet(@syntax.stream_to_get(cursor, -1, 1)),
-  )
+  let bad_position : Result[BytesView, Error] = try
+    @syntax.pdf_stream_data_view(
+      StreamToGet(@syntax.stream_to_get(cursor, -1, 1)),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_position is Err(@core.PdfError::InvalidCursorPosition(-1)) else {
     fail("expected @core.PdfError::InvalidCursorPosition")
   }
 
-  let bad_length : Result[BytesView, Error] = try? @syntax.pdf_stream_data_view(
-    StreamToGet(@syntax.stream_to_get(cursor, 0, -1)),
-  )
+  let bad_length : Result[BytesView, Error] = try
+    @syntax.pdf_stream_data_view(
+      StreamToGet(@syntax.stream_to_get(cursor, 0, -1)),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_length is Err(@core.PdfError::InvalidReadLength(-1)) else {
     fail("expected @core.PdfError::InvalidReadLength")
   }
 
-  let too_long : Result[BytesView, Error] = try? @syntax.pdf_stream_data_view(
-    StreamToGet(@syntax.stream_to_get(cursor, 2, 2)),
-  )
+  let too_long : Result[BytesView, Error] = try
+    @syntax.pdf_stream_data_view(
+      StreamToGet(@syntax.stream_to_get(cursor, 2, 2)),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard too_long is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput")
   }
@@ -50,20 +68,27 @@ test "parser prefix helper reports malformed indirect prefixes" {
     ),
     false,
   )
-  let too_short : Result[@syntax.PdfParsedIndirectObject, Error] = try? @syntax.pdf_parse_indirect_object_prefix_lexemes([
-      LexInt(1),
-      LexInt(0),
-    ],
-  )
+  let too_short : Result[@syntax.PdfParsedIndirectObject, Error] = try
+    @syntax.pdf_parse_indirect_object_prefix_lexemes([LexInt(1), LexInt(0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard too_short is Err(@core.PdfError::ParseIndirectObjectExpected) else {
     fail("expected @core.PdfError::ParseIndirectObjectExpected")
   }
-  let bad_header : Result[@syntax.PdfParsedIndirectObject, Error] = try? @syntax.pdf_parse_indirect_object_prefix_lexemes([
+  let bad_header : Result[@syntax.PdfParsedIndirectObject, Error] = try
+    @syntax.pdf_parse_indirect_object_prefix_lexemes([
       LexInt(1),
       LexInt(0),
       LexNull,
-    ],
-  )
+    ])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_header is Err(@core.PdfError::ParseIndirectObjectExpected) else {
     fail("expected @core.PdfError::ParseIndirectObjectExpected")
   }
@@ -81,7 +106,11 @@ test "parser prefix helper reports malformed indirect prefixes" {
 ///|
 test "core byte-view helpers cover boundary cases through root facade" {
   let cursor = @core.byte_cursor_of_bytes(@ascii.encode("abc"))
-  let bad_seek : Result[Unit, Error] = try? cursor.seek_absolute(-1)
+  let bad_seek : Result[Unit, Error] = try cursor.seek_absolute(-1) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_seek is Err(@core.PdfError::InvalidCursorPosition(-1)) else {
     fail("expected @core.PdfError::InvalidCursorPosition")
   }
@@ -93,21 +122,33 @@ test "core byte-view helpers cover boundary cases through root facade" {
   @test.assert_eq(@core.pdf_find_last_ascii(view[:1], [97, 98]), -1)
   @test.assert_eq(@core.pdf_find_last_ascii(view, [120]), -1)
 
-  let empty_number : Result[Int, Error] = try? @core.pdf_parse_ascii_int_view(
-    Bytes::new(0),
-  )
+  let empty_number : Result[Int, Error] = try
+    @core.pdf_parse_ascii_int_view(Bytes::new(0))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty_number is Err(@core.PdfError::NumberExpected) else {
     fail("expected @core.PdfError::NumberExpected")
   }
-  let bad_number : Result[Int, Error] = try? @core.pdf_parse_ascii_int_view(
-    @ascii.encode("12a"),
-  )
+  let bad_number : Result[Int, Error] = try
+    @core.pdf_parse_ascii_int_view(@ascii.encode("12a"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_number is Err(@core.PdfError::NumberExpected) else {
     fail("expected @core.PdfError::NumberExpected")
   }
-  let overflow_number : Result[Int, Error] = try? @core.pdf_parse_ascii_int_view(
-    @ascii.encode("2147483648"),
-  )
+  let overflow_number : Result[Int, Error] = try
+    @core.pdf_parse_ascii_int_view(@ascii.encode("2147483648"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard overflow_number is Err(@core.PdfError::NumberExpected) else {
     fail("expected @core.PdfError::NumberExpected")
   }

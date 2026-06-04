@@ -8,7 +8,11 @@ fn draw_fixture_path_for_test(path : String) -> String {
 
 ///|
 async fn draw_fixture_document_for_test(path : String) -> @pdflite.PdfDocument? {
-  let read_result = try? @fs.read_file(draw_fixture_path_for_test(path))
+  let read_result = try @fs.read_file(draw_fixture_path_for_test(path)) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(@pdflite.pdf_read_document_from_bytes(data.binary()))
     Err(_) => None
@@ -17,7 +21,11 @@ async fn draw_fixture_document_for_test(path : String) -> @pdflite.PdfDocument? 
 
 ///|
 async fn draw_fixture_bytes_for_test(path : String) -> Bytes? {
-  let read_result = try? @fs.read_file(draw_fixture_path_for_test(path))
+  let read_result = try @fs.read_file(draw_fixture_path_for_test(path)) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(data.binary())
     Err(_) => None
@@ -1037,9 +1045,13 @@ async test "cpdf source manual image PDF corpus reconstructs malformed xref data
             draw_fixture_corrupt_first_xref_subsection_object_for_test(bytes),
             draw_fixture_corrupt_first_xref_subsection_count_for_test(bytes),
           ] {
-          let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-            corrupted,
-          )
+          let strict : Result[@pdflite.PdfDocument, Error] = try
+            @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+          catch {
+            err => Err(err)
+          } noraise {
+            value => Ok(value)
+          }
           guard strict is Err(_) else {
             fail(
               "expected malformed xref data to require reconstruction for " +

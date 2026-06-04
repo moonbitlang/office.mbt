@@ -99,9 +99,13 @@ pub fn pdf_reader_reconstruction_object_xrefs(
   while position < data.length() {
     if pdf_reader_reconstruction_indirect_header_at(data, position) {
       cursor.seek_absolute(position)
-      let parsed : Result[(PdfClassicXRefEntry?, Int?), Error] = try? read_xref_at_current(
-        cursor, position, xrefs, xref_index,
-      )
+      let parsed : Result[(PdfClassicXRefEntry?, Int?), Error] = try
+        read_xref_at_current(cursor, position, xrefs, xref_index)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       match parsed {
         Ok((xref, next_position)) => {
           match xref {

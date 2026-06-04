@@ -132,91 +132,121 @@ test "PdfTextExtractor codepoints_of_text keeps ToUnicode first match and fallba
 ///|
 test "PdfDocument write_font rejects unsupported font variants" {
   let doc = @pdflite.pdf_document_empty()
-  let unsupported = try? doc.write_font(
-    PdfFontSimple({
-      fonttype: PdfType1,
-      basefont: Some(text_core_name_for_test("/CustomFont")),
-      firstchar: 0,
-      lastchar: 0,
-      widths: [],
-      fontdescriptor: None,
-      fontmetrics: None,
-      encoding: PdfWinAnsiEncoding,
-    }),
-  )
+  let unsupported = try
+    doc.write_font(
+      PdfFontSimple({
+        fonttype: PdfType1,
+        basefont: Some(text_core_name_for_test("/CustomFont")),
+        firstchar: 0,
+        lastchar: 0,
+        widths: [],
+        fontdescriptor: None,
+        fontmetrics: None,
+        encoding: PdfWinAnsiEncoding,
+      }),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported is Err(FontWriteUnsupported) else {
     fail("expected @core.PdfError::FontWriteUnsupported")
   }
-  let unsupported_type3 = try? doc.write_font(
-    PdfFontSimple({
-      fonttype: PdfType3({
-        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
-        fontmatrix: @geometry.transform_identity_matrix,
-        charprocs: [],
-        resources: @syntax.pdf_dictionary([]),
+  let unsupported_type3 = try
+    doc.write_font(
+      PdfFontSimple({
+        fonttype: PdfType3({
+          fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+          fontmatrix: @geometry.transform_identity_matrix,
+          charprocs: [],
+          resources: @syntax.pdf_dictionary([]),
+        }),
+        basefont: None,
+        firstchar: 0,
+        lastchar: 0,
+        widths: [],
+        fontdescriptor: None,
+        fontmetrics: None,
+        encoding: PdfImplicitInFontFile,
       }),
-      basefont: None,
-      firstchar: 0,
-      lastchar: 0,
-      widths: [],
-      fontdescriptor: None,
-      fontmetrics: None,
-      encoding: PdfImplicitInFontFile,
-    }),
-  )
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported_type3 is Err(FontWriteUnsupported) else {
     fail("expected @core.PdfError::FontWriteUnsupported")
   }
-  let unsupported_encoding = try? doc.write_font(
-    PdfFontSimple({
-      fonttype: PdfType3({
-        fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
-        fontmatrix: @geometry.transform_identity_matrix,
-        charprocs: [],
-        resources: @syntax.pdf_dictionary([]),
+  let unsupported_encoding = try
+    doc.write_font(
+      PdfFontSimple({
+        fonttype: PdfType3({
+          fontbbox: { min_x: 0.0, min_y: 0.0, max_x: 0.0, max_y: 0.0 },
+          fontmatrix: @geometry.transform_identity_matrix,
+          charprocs: [],
+          resources: @syntax.pdf_dictionary([]),
+        }),
+        basefont: None,
+        firstchar: 0,
+        lastchar: 0,
+        widths: [],
+        fontdescriptor: Some(text_core_font_descriptor_for_test()),
+        fontmetrics: None,
+        encoding: PdfWinAnsiEncoding,
       }),
-      basefont: None,
-      firstchar: 0,
-      lastchar: 0,
-      widths: [],
-      fontdescriptor: Some(text_core_font_descriptor_for_test()),
-      fontmetrics: None,
-      encoding: PdfWinAnsiEncoding,
-    }),
-  )
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported_encoding is Err(EncodingWriteUnsupported) else {
     fail("expected @core.PdfError::EncodingWriteUnsupported")
   }
-  let unsupported_truetype = try? doc.write_font(
-    PdfFontSimple({
-      fonttype: PdfTrueType,
-      basefont: Some(text_core_name_for_test("/MissingFontFile2")),
-      firstchar: 0,
-      lastchar: 0,
-      widths: [],
-      fontdescriptor: Some(text_core_font_descriptor_for_test()),
-      fontmetrics: None,
-      encoding: PdfWinAnsiEncoding,
-    }),
-  )
+  let unsupported_truetype = try
+    doc.write_font(
+      PdfFontSimple({
+        fonttype: PdfTrueType,
+        basefont: Some(text_core_name_for_test("/MissingFontFile2")),
+        firstchar: 0,
+        lastchar: 0,
+        widths: [],
+        fontdescriptor: Some(text_core_font_descriptor_for_test()),
+        fontmetrics: None,
+        encoding: PdfWinAnsiEncoding,
+      }),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported_truetype is Err(FontWriteUnsupported) else {
     fail("expected @core.PdfError::FontWriteUnsupported")
   }
-  let unsupported_truetype_encoding = try? doc.write_font(
-    PdfFontSimple({
-      fonttype: PdfTrueType,
-      basefont: Some(text_core_name_for_test("/CustomEncoding")),
-      firstchar: 0,
-      lastchar: 0,
-      widths: [],
-      fontdescriptor: Some({
-        ..text_core_font_descriptor_for_test(),
-        fontfile: Some(PdfFontFile2(7)),
+  let unsupported_truetype_encoding = try
+    doc.write_font(
+      PdfFontSimple({
+        fonttype: PdfTrueType,
+        basefont: Some(text_core_name_for_test("/CustomEncoding")),
+        firstchar: 0,
+        lastchar: 0,
+        widths: [],
+        fontdescriptor: Some({
+          ..text_core_font_descriptor_for_test(),
+          fontfile: Some(PdfFontFile2(7)),
+        }),
+        fontmetrics: None,
+        encoding: PdfCustomEncoding(PdfImplicitInFontFile, []),
       }),
-      fontmetrics: None,
-      encoding: PdfCustomEncoding(PdfImplicitInFontFile, []),
-    }),
-  )
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported_truetype_encoding is Err(EncodingWriteUnsupported) else {
     fail("expected @core.PdfError::EncodingWriteUnsupported")
   }

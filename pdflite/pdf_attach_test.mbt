@@ -363,11 +363,13 @@ test "PdfDocument attach_file rejects non-array page Annots" {
     rest: PdfDictionary([(attach_name_for_test("/Annots"), PdfInteger(1))]),
   }
   let document = attach_document_for_test([page])
-  let result : Result[@pdflite.PdfDocument, Error] = try? document.attach_file(
-    "bad.txt",
-    @ascii.encode("bad"),
-    page_number=Some(1),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    document.attach_file("bad.txt", @ascii.encode("bad"), page_number=Some(1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected non-array annots to fail")
   }
@@ -393,20 +395,24 @@ test "pdf_attachment_remove_unsafe_characters mirrors cpdf filtering" {
 ///|
 test "PdfDocument attach_file rejects missing page numbers" {
   let document = attach_blank_document_for_test()
-  let low : Result[@pdflite.PdfDocument, Error] = try? document.attach_file(
-    "bad.txt",
-    @ascii.encode("bad"),
-    page_number=Some(0),
-  )
+  let low : Result[@pdflite.PdfDocument, Error] = try
+    document.attach_file("bad.txt", @ascii.encode("bad"), page_number=Some(0))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard low
     is Err(@core.PdfError::BadPageSpecification("attach_file: Page not found")) else {
     fail("expected low page error")
   }
-  let high : Result[@pdflite.PdfDocument, Error] = try? document.attach_file(
-    "bad.txt",
-    @ascii.encode("bad"),
-    page_number=Some(2),
-  )
+  let high : Result[@pdflite.PdfDocument, Error] = try
+    document.attach_file("bad.txt", @ascii.encode("bad"), page_number=Some(2))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard high
     is Err(@core.PdfError::BadPageSpecification("attach_file: Page not found")) else {
     fail("expected high page error")
@@ -461,7 +467,13 @@ test "PdfDocument list_attached_files keeps malformed page attachment without da
       relationship: None,
     },
   ])
-  let size_result : Result[Int, Error] = try? document.size_attached_files()
+  let size_result : Result[Int, Error] = try
+    document.size_attached_files()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard size_result is Err(_) else {
     fail("expected missing attachment stream to fail size calculation")
   }
@@ -531,7 +543,13 @@ test "PdfDocument list_attached_files rejects malformed document attachment data
     ],
     PdfIndirect(tree_number),
   )
-  let result : Result[Array[@attachment.PdfAttachment], Error] = try? document.list_attached_files()
+  let result : Result[Array[@attachment.PdfAttachment], Error] = try
+    document.list_attached_files()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected malformed document attachment to fail")
   }
@@ -556,11 +574,23 @@ test "PdfDocument list and size reject file specs with EF but no F stream" {
     rest: PdfDictionary([(key_annots, PdfArray([annotation]))]),
   }
   let document = attach_document_for_test([page])
-  let list_result : Result[Array[@attachment.PdfAttachment], Error] = try? document.list_attached_files()
+  let list_result : Result[Array[@attachment.PdfAttachment], Error] = try
+    document.list_attached_files()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard list_result is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected missing /F to fail listing")
   }
-  let size_result : Result[Int, Error] = try? document.size_attached_files()
+  let size_result : Result[Int, Error] = try
+    document.size_attached_files()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard size_result is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected missing /F to fail sizing")
   }

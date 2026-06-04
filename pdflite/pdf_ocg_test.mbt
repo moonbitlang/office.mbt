@@ -488,21 +488,31 @@ test "PdfDocument ocg_replace_json writes parsed optional content" {
 
 ///|
 test "pdf_ocg_read_json rejects malformed optional content JSON" {
-  let top_level : Result[@ocg.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
-    Json::array([]),
-  )
+  let top_level : Result[@ocg.PdfOptionalContent?, Error] = try
+    @pdflite.pdf_ocg_read_json(Json::array([]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard top_level is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for top-level array")
   }
-  let bad_default : Result[@ocg.PdfOptionalContent?, Error] = try? @pdflite.pdf_ocg_read_json(
-    Json::object(
-      Map([
-        ("OCGs", Json::object(Map([]))),
-        ("Default", Json::object(Map([]))),
-        ("Configs", Json::array([])),
-      ]),
-    ),
-  )
+  let bad_default : Result[@ocg.PdfOptionalContent?, Error] = try
+    @pdflite.pdf_ocg_read_json(
+      Json::object(
+        Map([
+          ("OCGs", Json::object(Map([]))),
+          ("Default", Json::object(Map([]))),
+          ("Configs", Json::array([])),
+        ]),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_default is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for malformed config")
   }
@@ -649,7 +659,13 @@ test "PdfDocument read_optional_content_groups rejects unresolved trailer root" 
     1,
     PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
   )
-  let result : Result[@ocg.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
+  let result : Result[@ocg.PdfOptionalContent?, Error] = try
+    doc.read_optional_content_groups()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
@@ -868,17 +884,33 @@ test "PdfDocument optional content helpers require a root catalog" {
     default_config: @ocg.pdf_ocg_default_config(),
     configs: [],
   }
-  let read_result : Result[@ocg.PdfOptionalContent?, Error] = try? doc.read_optional_content_groups()
+  let read_result : Result[@ocg.PdfOptionalContent?, Error] = try
+    doc.read_optional_content_groups()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard read_result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
-  let write_result : Result[@pdflite.PdfDocument, Error] = try? doc.write_optional_content_groups(
-    content,
-  )
+  let write_result : Result[@pdflite.PdfDocument, Error] = try
+    doc.write_optional_content_groups(content)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard write_result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
-  let remove_result : Result[@pdflite.PdfDocument, Error] = try? doc.remove_optional_content_groups()
+  let remove_result : Result[@pdflite.PdfDocument, Error] = try
+    doc.remove_optional_content_groups()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard remove_result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }

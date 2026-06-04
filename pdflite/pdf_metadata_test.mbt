@@ -201,9 +201,13 @@ test "PdfDocument viewer preferences and catalog items use cpdf strings" {
     tuple_alias.viewer_preference_item_string("/HideMenubar"),
     "true",
   )
-  let invalid : Result[@pdflite.PdfDocument, Error] = try? doc.set_page_layout(
-    "Rows",
-  )
+  let invalid : Result[@pdflite.PdfDocument, Error] = try
+    doc.set_page_layout("Rows")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(@core.PdfError::BadNumberArgument(_)) else {
     fail("expected bad page layout")
   }
@@ -331,16 +335,23 @@ test "PdfDocument set_open_action writes fit xyz and custom destinations" {
       PdfInteger(12),
     ]),
   )
-  let bad_destination : Result[@pdflite.PdfDocument, Error] = try? doc.set_open_action_string_destination(
-    1,
-    destination=Some("/Fit"),
-  )
+  let bad_destination : Result[@pdflite.PdfDocument, Error] = try
+    doc.set_open_action_string_destination(1, destination=Some("/Fit"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_destination is Err(@core.PdfError::BadNumberArgument(_)) else {
     fail("expected bad open-action destination syntax")
   }
-  let invalid : Result[@pdflite.PdfDocument, Error] = try? doc.set_open_action(
-    3,
-  )
+  let invalid : Result[@pdflite.PdfDocument, Error] = try
+    doc.set_open_action(3)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected bad open-action page")
   }
@@ -1315,12 +1326,13 @@ test "PdfDocument set_info_entry can synchronize XMP metadata" {
     ),
     true,
   )
-  let bad : Result[@pdflite.PdfDocument, Error] = try? with_metadata.set_info_entry(
-    key_title,
-    PdfInteger(1),
-    4,
-    xmp_also=true,
-  )
+  let bad : Result[@pdflite.PdfDocument, Error] = try
+    with_metadata.set_info_entry(key_title, PdfInteger(1), 4, xmp_also=true)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad is Err(@core.PdfError::BadNumberArgument(_)) else {
     fail("expected bad XMP info value")
   }

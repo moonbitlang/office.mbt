@@ -135,7 +135,11 @@ fn pdf_draw_control_read_floats(
   let parts = pdf_draw_control_split_on_spaces(text)
   let output : Array[Double] = Array::new(capacity=parts.length())
   for part in parts {
-    let parsed : Result[Double, Error] = try? @strconv.from_str(part)
+    let parsed : Result[Double, Error] = try @strconv.from_str(part) catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     match parsed {
       Ok(value) => output.push(value)
       Err(_) => raise SoftError(message)

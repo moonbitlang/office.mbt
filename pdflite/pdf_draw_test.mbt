@@ -527,10 +527,16 @@ test "pdf draw structure metadata ops are content-empty" {
 ///|
 test "pdf draw font selection reports missing fontpack" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
-    state,
-    PdfDrawFont("Missing", 12.0),
-  )
+  let result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_drawop_to_content_ops_with_state(
+      state,
+      PdfDrawFont("Missing", 12.0),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for missing fontpack")
   }
@@ -540,10 +546,13 @@ test "pdf draw font selection reports missing fontpack" {
 ///|
 test "pdf draw text reports missing selected fontpack" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
-    state,
-    PdfDrawText("hello"),
-  )
+  let result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_drawop_to_content_ops_with_state(state, PdfDrawText("hello"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for unselected fontpack")
   }
@@ -553,10 +562,16 @@ test "pdf draw text reports missing selected fontpack" {
 ///|
 test "pdf draw special text requires replacement context" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
-    state,
-    PdfDrawSpecialText("%Page"),
-  )
+  let result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_drawop_to_content_ops_with_state(
+      state,
+      PdfDrawSpecialText("%Page"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for missing special-text context")
   }
@@ -666,10 +681,16 @@ test "pdf draw image XObject replacement follows latest source mapping" {
 ///|
 test "pdf draw image use reports missing image name" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
-    state,
-    PdfDrawImage("missing"),
-  )
+  let result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_drawop_to_content_ops_with_state(
+      state,
+      PdfDrawImage("missing"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for missing image")
   }
@@ -782,10 +803,13 @@ test "pdf draw form XObjects carry nested image resources" {
 ///|
 test "pdf draw form use reports missing form name" {
   let state = @pdflite.pdf_draw_render_state_new()
-  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops_with_state(
-    state,
-    PdfDrawUse("missing"),
-  )
+  let result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_drawop_to_content_ops_with_state(state, PdfDrawUse("missing"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for missing form XObject")
   }
@@ -1221,9 +1245,13 @@ test "PdfDocument draw structure-tree mode without placeholder artifacts content
 
 ///|
 test "pdf draw unsupported content op returns cpdf-style soft error" {
-  let result : Result[Array[@content.PdfContentOp], Error] = try? @pdflite.pdf_drawop_to_content_ops(
-    PdfDrawText("hello"),
-  )
+  let result : Result[Array[@content.PdfContentOp], Error] = try
+    @pdflite.pdf_drawop_to_content_ops(PdfDrawText("hello"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError(message)) else {
     fail("expected SoftError for unsupported draw text rendering")
   }

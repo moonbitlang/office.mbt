@@ -4953,7 +4953,11 @@ fn acceptance_assert_bad_predefined_text_for_test(
   text : @core.PdfBytes,
   message : String,
 ) -> Unit raise {
-  let result = try? extractor.codepoints_of_text(text)
+  let result = try extractor.codepoints_of_text(text) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(_) else { fail(message) }
 }
 

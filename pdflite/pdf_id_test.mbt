@@ -98,7 +98,13 @@ test "PdfDocument change_id installs trailer ID" {
   let updated = doc.trailer_dict()
   let bad = @pdflite.pdf_document_empty()
   bad.set_trailer_dict(PdfNull)
-  let bad_result : Result[Unit, Error] = try? bad.change_id("bad", fn() { 0 })
+  let bad_result : Result[Unit, Error] = try
+    bad.change_id("bad", fn() { 0 })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   id_restore_env_for_test(previous)
   @test.assert_eq(
     updated.lookup_immediate(key_id),

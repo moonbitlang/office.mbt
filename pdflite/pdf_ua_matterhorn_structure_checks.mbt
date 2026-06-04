@@ -4,9 +4,13 @@ fn pdf_ua_matterhorn_is_hnum(name : @core.PdfName) -> Bool {
   if text == "/H" || !text.has_prefix("/H") {
     false
   } else {
-    let result : Result[Int, Error] = try? @strconv.from_str(
-      text[2:].to_owned(),
-    )
+    let result : Result[Int, Error] = try
+      @strconv.from_str(text[2:].to_owned())
+    catch {
+      err => Err(err)
+    } noraise {
+      value => Ok(value)
+    }
     result is Ok(_)
   }
 }

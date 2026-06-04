@@ -370,9 +370,13 @@ test "PdfDocument read_destination resolves named catalog destinations" {
     DestNamed(dest_name_for_test("/Missing")),
   )
   let no_root = @pdflite.pdf_document_empty()
-  let result : Result[@destination.PdfDestination, Error] = try? no_root.read_destination(
-    PdfNameObject(name_chapter),
-  )
+  let result : Result[@destination.PdfDestination, Error] = try
+    no_root.read_destination(PdfNameObject(name_chapter))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
@@ -478,9 +482,13 @@ test "PdfDocument read_destination rejects unresolved trailer root for named des
     ]),
   )
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
-  let result : Result[@destination.PdfDestination, Error] = try? doc.read_destination(
-    PdfNameObject(name_chapter),
-  )
+  let result : Result[@destination.PdfDestination, Error] = try
+    doc.read_destination(PdfNameObject(name_chapter))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
@@ -603,9 +611,13 @@ test "PdfDocument read_destination rejects unresolved trailer root for string de
     ]),
   )
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(99))]))
-  let result : Result[@destination.PdfDestination, Error] = try? doc.read_destination(
-    PdfString(dest_bytes_for_test("intro")),
-  )
+  let result : Result[@destination.PdfDestination, Error] = try
+    doc.read_destination(PdfString(dest_bytes_for_test("intro")))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }

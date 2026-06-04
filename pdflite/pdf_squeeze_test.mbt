@@ -666,7 +666,13 @@ test "squeeze reports malformed xobject resource entries" {
   }
   let document = squeeze_document_with_pages_for_test([page])
 
-  let result : Result[@pdflite.PdfDocument, Error] = try? document.squeeze()
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    document.squeeze()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
 
   guard result is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected malformed XObject resource entry")
@@ -692,7 +698,13 @@ test "squeeze reports non-stream form xobjects" {
   let page_root = try! document.add_pagetree([page])
   ignore(try! document.add_root(page_root, []))
 
-  let result : Result[@pdflite.PdfDocument, Error] = try? document.squeeze()
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    document.squeeze()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
 
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected non-stream form XObject failure")

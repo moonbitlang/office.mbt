@@ -244,10 +244,13 @@ test "PdfDocument trim_marks appends cpdf trim marks and skips missing trim boxe
 ///|
 test "PdfDocument page mark overlays validate selected pages" {
   let document = page_marks_document_for_test([page_marks_page_for_test([Op_S])])
-  let bad_show : Result[@pdflite.PdfDocument, Error] = try? document.show_page_boxes([
-      2,
-    ],
-  )
+  let bad_show : Result[@pdflite.PdfDocument, Error] = try
+    document.show_page_boxes([2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_show
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -257,10 +260,13 @@ test "PdfDocument page mark overlays validate selected pages" {
     fail("expected show_page_boxes to reject an out-of-range page")
   }
 
-  let bad_trim : Result[@pdflite.PdfDocument, Error] = try? document.trim_marks([
-      2,
-    ],
-  )
+  let bad_trim : Result[@pdflite.PdfDocument, Error] = try
+    document.trim_marks([2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_trim
     is Err(
       @core.PdfError::BadPageSpecification(

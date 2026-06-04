@@ -236,10 +236,13 @@ test "pdf_parse_cmap decodes stream objects" {
     cmap_type: None,
     cid_system_info: None,
   })
-  let non_stream : Result[@pdflite.PdfParsedCMap, Error] = try? @pdflite.pdf_parse_cmap(
-    doc,
-    PdfInteger(1),
-  )
+  let non_stream : Result[@pdflite.PdfParsedCMap, Error] = try
+    @pdflite.pdf_parse_cmap(doc, PdfInteger(1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_stream is Err(@core.PdfError::CMapEncodingExpected) else {
     fail("expected @core.PdfError::CMapEncodingExpected")
   }
@@ -1564,9 +1567,13 @@ test "PdfDocument applies indirect external CMap text segmentation and CID mappi
   )
   @test.assert_eq(extractor.charcode_of_codepoint(202), Some(0x8142))
   @test.assert_eq(extractor.charcode_of_codepoint(0x30), None)
-  let truncated : Result[Array[Int], Error] = try? extractor.codepoints_of_text(
-    text_cmap_bytes_for_test([0x81]),
-  )
+  let truncated : Result[Array[Int], Error] = try
+    extractor.codepoints_of_text(text_cmap_bytes_for_test([0x81]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard truncated is Err(_) else {
     fail("expected malformed external CMap code")
   }

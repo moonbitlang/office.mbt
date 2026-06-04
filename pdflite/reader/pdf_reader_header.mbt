@@ -13,9 +13,13 @@ pub let pdf_default_version : PdfVersion = { major: 2, minor: 0 }
 
 ///|
 fn pdf_header_at(cursor : @core.ByteCursor, position : Int) -> PdfVersion? {
-  let header : Result[BytesView, Error] = try? cursor.view_at_absolute(
-    position, 8,
-  )
+  let header : Result[BytesView, Error] = try
+    cursor.view_at_absolute(position, 8)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match header {
     Ok(header) =>
       if header[0].to_int() == 37 &&

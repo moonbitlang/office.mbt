@@ -8,7 +8,13 @@ fn annotation_fixture_path_for_test(path : String) -> String {
 
 ///|
 async fn annotation_fixture_bytes_for_test(path : String) -> Bytes? {
-  let read_result = try? @fs.read_file(annotation_fixture_path_for_test(path))
+  let read_result = try
+    @fs.read_file(annotation_fixture_path_for_test(path))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(data.binary())
     Err(_) => None
@@ -207,9 +213,13 @@ async test "cpdf source manual fixture exports annotation JSON" {
       let corrupted = annotation_fixture_corrupt_startxref_pointer_for_test(
         bytes,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }
@@ -273,9 +283,13 @@ async test "cpdf source manual fixture imports annotation JSON" {
       let corrupted = annotation_fixture_corrupt_startxref_pointer_for_test(
         imported_bytes,
       )
-      let strict : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_from_bytes(
-        corrupted,
-      )
+      let strict : Result[@pdflite.PdfDocument, Error] = try
+        @pdflite.pdf_read_classic_document_from_bytes(corrupted)
+      catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       guard strict is Err(_) else {
         fail("expected bad startxref to require malformed reconstruction")
       }

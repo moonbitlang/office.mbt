@@ -322,12 +322,18 @@ test "cpdfcontent operator state applies resource font lookup and cache" {
       ]),
     ),
   ])
-  let bad_font : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_font_resource_op(
-    initial,
-    bad_resources,
-    content_operator_name_for_test("/Bad"),
-    12.0,
-  )
+  let bad_font : Result[@pdflite.PdfContentOperatorState, Error] = try
+    doc.content_apply_font_resource_op(
+      initial,
+      bad_resources,
+      content_operator_name_for_test("/Bad"),
+      12.0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_font is Err(@core.PdfError::FontTypeExpected) else {
     fail("expected FontTypeExpected for malformed resource font")
   }
@@ -940,9 +946,13 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
       ]),
     ),
   ])
-  let image_result : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
-    state, resources, image_name,
-  )
+  let image_result : Result[@pdflite.PdfContentJsonEntry?, Error] = try
+    doc.content_image_entry_from_resources(state, resources, image_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard image_result is Ok(Some(image_entry)) else {
     fail("expected image XObject entry")
   }
@@ -957,45 +967,75 @@ test "cpdfcontent operator state reads image entries from XObject resources" {
     x3: 6.0,
     y3: 6.0,
   })
-  let form_result : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
-    state, resources, form_name,
-  )
+  let form_result : Result[@pdflite.PdfContentJsonEntry?, Error] = try
+    doc.content_image_entry_from_resources(state, resources, form_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard form_result is Ok(None) else {
     fail("expected form XObject to emit no image entry")
   }
-  let wrapper_result : Result[@pdflite.PdfContentJsonEntry?, Error] = try? @pdflite.pdf_content_image_entry_from_resources(
-    doc, state, resources, image_name,
-  )
+  let wrapper_result : Result[@pdflite.PdfContentJsonEntry?, Error] = try
+    @pdflite.pdf_content_image_entry_from_resources(
+      doc, state, resources, image_name,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard wrapper_result is Ok(Some(wrapper_entry)) else {
     fail("expected wrapper image XObject entry")
   }
   @test.assert_eq(wrapper_entry, image_entry)
-  let missing_resources : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
-    state,
-    @syntax.pdf_dictionary([]),
-    image_name,
-  )
+  let missing_resources : Result[@pdflite.PdfContentJsonEntry?, Error] = try
+    doc.content_image_entry_from_resources(
+      state,
+      @syntax.pdf_dictionary([]),
+      image_name,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_resources is Err(@core.PdfError::SoftError("xobject not found")) else {
     fail("expected missing /XObject resource error")
   }
-  let missing_name : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
-    state,
-    resources,
-    content_operator_name_for_test("/Missing"),
-  )
+  let missing_name : Result[@pdflite.PdfContentJsonEntry?, Error] = try
+    doc.content_image_entry_from_resources(
+      state,
+      resources,
+      content_operator_name_for_test("/Missing"),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_name is Err(@core.PdfError::SoftError("Unknown xobject")) else {
     fail("expected missing named XObject error")
   }
-  let unknown_kind : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
-    state, resources, unknown_name,
-  )
+  let unknown_kind : Result[@pdflite.PdfContentJsonEntry?, Error] = try
+    doc.content_image_entry_from_resources(state, resources, unknown_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unknown_kind
     is Err(@core.PdfError::SoftError("Unknown kind of xobject")) else {
     fail("expected unknown XObject kind error")
   }
-  let missing_subtype : Result[@pdflite.PdfContentJsonEntry?, Error] = try? doc.content_image_entry_from_resources(
-    state, resources, no_subtype_name,
-  )
+  let missing_subtype : Result[@pdflite.PdfContentJsonEntry?, Error] = try
+    doc.content_image_entry_from_resources(state, resources, no_subtype_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_subtype
     is Err(@core.PdfError::SoftError("Unknown kind of xobject")) else {
     fail("expected missing XObject subtype error")
@@ -1076,9 +1116,13 @@ test "cpdfcontent operator state prepares Form XObject resources" {
       ]),
     ),
   ])
-  let form_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? doc.content_form_xobject_enter_state(
-    state, resources, form_name,
-  )
+  let form_result : Result[@pdflite.PdfContentOperatorState?, Error] = try
+    doc.content_form_xobject_enter_state(state, resources, form_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard form_result is Ok(Some(form_state)) else {
     fail("expected Form XObject entry state")
   }
@@ -1123,22 +1167,36 @@ test "cpdfcontent operator state prepares Form XObject resources" {
     1.0,
     6.0,
   )
-  let wrapper_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? @pdflite.pdf_content_form_xobject_enter_state(
-    doc, state, resources, form_name,
-  )
+  let wrapper_result : Result[@pdflite.PdfContentOperatorState?, Error] = try
+    @pdflite.pdf_content_form_xobject_enter_state(
+      doc, state, resources, form_name,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard wrapper_result is Ok(Some(wrapper_state)) else {
     fail("expected wrapper Form XObject entry state")
   }
   @test.assert_eq(wrapper_state, form_state)
-  let image_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? doc.content_form_xobject_enter_state(
-    state, resources, image_name,
-  )
+  let image_result : Result[@pdflite.PdfContentOperatorState?, Error] = try
+    doc.content_form_xobject_enter_state(state, resources, image_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard image_result is Ok(None) else {
     fail("expected image XObject to emit no Form entry state")
   }
-  let bad_bbox_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? doc.content_form_xobject_enter_state(
-    state, resources, bad_bbox_name,
-  )
+  let bad_bbox_result : Result[@pdflite.PdfContentOperatorState?, Error] = try
+    doc.content_form_xobject_enter_state(state, resources, bad_bbox_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_bbox_result is Ok(Some(bad_bbox_state)) else {
     fail("expected malformed Form BBox to use fallback bounds")
   }
@@ -1146,9 +1204,13 @@ test "cpdfcontent operator state prepares Form XObject resources" {
     bad_bbox_state.state_stack.length(),
     state.state_stack.length() + 1,
   )
-  let bad_matrix_result : Result[@pdflite.PdfContentOperatorState?, Error] = try? doc.content_form_xobject_enter_state(
-    state, resources, bad_matrix_name,
-  )
+  let bad_matrix_result : Result[@pdflite.PdfContentOperatorState?, Error] = try
+    doc.content_form_xobject_enter_state(state, resources, bad_matrix_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_matrix_result is Err(@core.PdfError::MatrixMalformed) else {
     fail("expected malformed Form Matrix error")
   }
@@ -1207,9 +1269,13 @@ test "cpdfcontent operator state merges Form XObject resources" {
     ),
     (custom_key, PdfInteger(7)),
   ])
-  let result : Result[@syntax.PdfObject?, Error] = try? doc.content_form_xobject_resources(
-    page_resources, form_name,
-  )
+  let result : Result[@syntax.PdfObject?, Error] = try
+    doc.content_form_xobject_resources(page_resources, form_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Ok(Some(total_resources)) else {
     fail("expected merged Form XObject resources")
   }
@@ -1233,16 +1299,24 @@ test "cpdfcontent operator state merges Form XObject resources" {
     doc.lookup_direct(custom_key, total_resources),
     Some(PdfInteger(9)),
   )
-  let wrapper_result : Result[@syntax.PdfObject?, Error] = try? @pdflite.pdf_content_form_xobject_resources(
-    doc, page_resources, form_name,
-  )
+  let wrapper_result : Result[@syntax.PdfObject?, Error] = try
+    @pdflite.pdf_content_form_xobject_resources(doc, page_resources, form_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard wrapper_result is Ok(Some(wrapper_resources)) else {
     fail("expected wrapper merged Form XObject resources")
   }
   @test.assert_eq(wrapper_resources, total_resources)
-  let image_result : Result[@syntax.PdfObject?, Error] = try? doc.content_form_xobject_resources(
-    page_resources, image_name,
-  )
+  let image_result : Result[@syntax.PdfObject?, Error] = try
+    doc.content_form_xobject_resources(page_resources, image_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard image_result is Ok(None) else {
     fail("expected image XObject to emit no Form resources")
   }
@@ -1295,9 +1369,13 @@ test "cpdfcontent operator state parses Form XObject ops with merged resources" 
       ]),
     ),
   ])
-  let result : Result[Array[@content.PdfContentOp]?, Error] = try? doc.content_form_xobject_ops(
-    page_resources, form_name,
-  )
+  let result : Result[Array[@content.PdfContentOp]?, Error] = try
+    doc.content_form_xobject_ops(page_resources, form_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Ok(Some(ops)) else {
     fail("expected parsed Form XObject operators")
   }
@@ -1314,16 +1392,24 @@ test "cpdfcontent operator state parses Form XObject ops with merged resources" 
     ),
     Op_Q,
   ])
-  let wrapper_result : Result[Array[@content.PdfContentOp]?, Error] = try? @pdflite.pdf_content_form_xobject_ops(
-    doc, page_resources, form_name,
-  )
+  let wrapper_result : Result[Array[@content.PdfContentOp]?, Error] = try
+    @pdflite.pdf_content_form_xobject_ops(doc, page_resources, form_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard wrapper_result is Ok(Some(wrapper_ops)) else {
     fail("expected wrapper parsed Form XObject operators")
   }
   @test.assert_eq(wrapper_ops, ops)
-  let image_result : Result[Array[@content.PdfContentOp]?, Error] = try? doc.content_form_xobject_ops(
-    page_resources, image_name,
-  )
+  let image_result : Result[Array[@content.PdfContentOp]?, Error] = try
+    doc.content_form_xobject_ops(page_resources, image_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard image_result is Ok(None) else {
     fail("expected image XObject to emit no Form operators")
   }

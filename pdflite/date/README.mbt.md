@@ -27,9 +27,13 @@ test "date strings round trip" {
 ```moonbit check
 ///|
 test "bad date syntax raises shared PdfError" {
-  let result : Result[@date.PdfDate, Error] = try? @date.pdf_date_of_string(
-    "not a date",
-  )
+  let result : Result[@date.PdfDate, Error] = try
+    @date.pdf_date_of_string("not a date")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::BadDate) else {
     fail("expected BadDate for malformed PDF date text")
   }

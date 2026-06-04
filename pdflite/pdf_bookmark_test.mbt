@@ -234,10 +234,13 @@ test "PdfDocument list_bookmarks renders selected cpdf bookmark lines" {
     ),
     expected,
   )
-  let bad_page : Result[@core.PdfBytes, Error] = try? document.list_bookmarks(
-    [3],
-    encoding=PdfMetadataUTF8,
-  )
+  let bad_page : Result[@core.PdfBytes, Error] = try
+    document.list_bookmarks([3], encoding=PdfMetadataUTF8)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page is Err(@core.PdfError::BadPageSpecification(_)) else {
     fail("expected @core.PdfError::BadPageSpecification")
   }
@@ -445,29 +448,41 @@ test "PdfDocument bookmark_name_of_spec expands cpdf filename fields" {
     ),
     "plain-3",
   )
-  let broad : Result[String, Error] = try? document.bookmark_name_of_spec(
-    PdfMetadataUTF8,
-    bookmarks,
-    0,
-    "@Nxxxxxxxxx@",
-    7,
-    "base",
-    1,
-    2,
-  )
+  let broad : Result[String, Error] = try
+    document.bookmark_name_of_spec(
+      PdfMetadataUTF8,
+      bookmarks,
+      0,
+      "@Nxxxxxxxxx@",
+      7,
+      "base",
+      1,
+      2,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard broad is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError")
   }
-  let bad_prefix : Result[String, Error] = try? document.bookmark_name_of_spec(
-    PdfMetadataUTF8,
-    bookmarks,
-    0,
-    "@b@",
-    7,
-    "base",
-    1,
-    2,
-  )
+  let bad_prefix : Result[String, Error] = try
+    document.bookmark_name_of_spec(
+      PdfMetadataUTF8,
+      bookmarks,
+      0,
+      "@b@",
+      7,
+      "base",
+      1,
+      2,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_prefix is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError")
   }
@@ -531,27 +546,43 @@ test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
 ///|
 test "PdfDocument parse_bookmark_text validates plain text structure" {
   let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
-  let bad_first_level : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_text(
-    @ascii.encode("1 \"Bad\" 1\n"),
-  )
+  let bad_first_level : Result[Array[@bookmark.PdfBookmark], Error] = try
+    document.parse_bookmark_text(@ascii.encode("1 \"Bad\" 1\n"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_first_level is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for first level")
   }
-  let bad_jump : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_text(
-    @ascii.encode("0 \"Top\" 1\n2 \"Bad\" 1\n"),
-  )
+  let bad_jump : Result[Array[@bookmark.PdfBookmark], Error] = try
+    document.parse_bookmark_text(@ascii.encode("0 \"Top\" 1\n2 \"Bad\" 1\n"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_jump is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for level jump")
   }
-  let malformed : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_text(
-    @ascii.encode("0 not-a-string 1\n"),
-  )
+  let malformed : Result[Array[@bookmark.PdfBookmark], Error] = try
+    document.parse_bookmark_text(@ascii.encode("0 not-a-string 1\n"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for malformed line")
   }
-  let unterminated : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_text(
-    @ascii.encode("0 \"Missing end 1\n"),
-  )
+  let unterminated : Result[Array[@bookmark.PdfBookmark], Error] = try
+    document.parse_bookmark_text(@ascii.encode("0 \"Missing end 1\n"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unterminated is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for unterminated string")
   }
@@ -673,15 +704,27 @@ test "PdfDocument parse_bookmark_json reads cpdf bookmark rows" {
 ///|
 test "PdfDocument parse_bookmark_json rejects malformed rows" {
   let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
-  let top_level : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_json(
-    Json::object(Map([])),
-  )
+  let top_level : Result[Array[@bookmark.PdfBookmark], Error] = try
+    document.parse_bookmark_json(Json::object(Map([])))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard top_level is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for top-level object")
   }
-  let malformed_row : Result[Array[@bookmark.PdfBookmark], Error] = try? document.parse_bookmark_json(
-    Json::array([Json::object(Map([("level", bookmark_json_int_for_test(0))]))]),
-  )
+  let malformed_row : Result[Array[@bookmark.PdfBookmark], Error] = try
+    document.parse_bookmark_json(
+      Json::array([
+        Json::object(Map([("level", bookmark_json_int_for_test(0))])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed_row is Err(@core.PdfError::SoftError(_)) else {
     fail("expected @core.PdfError::SoftError for malformed row")
   }
@@ -855,7 +898,13 @@ test "PdfDocument read_bookmarks prefers trailer root over document root" {
 ///|
 test "PdfDocument read_bookmarks requires a root catalog" {
   let doc = @pdflite.pdf_document_empty()
-  let result : Result[Array[@bookmark.PdfBookmark], Error] = try? doc.read_bookmarks()
+  let result : Result[Array[@bookmark.PdfBookmark], Error] = try
+    doc.read_bookmarks()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
@@ -873,7 +922,13 @@ test "PdfDocument read_bookmarks rejects unresolved trailer root" {
     1,
     PdfDictionary([(key_type, PdfNameObject(type_catalog))]),
   )
-  let result : Result[Array[@bookmark.PdfBookmark], Error] = try? doc.read_bookmarks()
+  let result : Result[Array[@bookmark.PdfBookmark], Error] = try
+    doc.read_bookmarks()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
@@ -955,7 +1010,13 @@ test "PdfDocument remove_bookmarks preserves trailer-root catalog entries" {
 ///|
 test "PdfDocument remove_bookmarks requires a root catalog" {
   let doc = @pdflite.pdf_document_empty()
-  let result : Result[@pdflite.PdfDocument, Error] = try? doc.remove_bookmarks()
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    doc.remove_bookmarks()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }
@@ -1126,9 +1187,13 @@ test "PdfDocument add_bookmarks requires a root catalog" {
       flags: 0,
     },
   ]
-  let result : Result[@pdflite.PdfDocument, Error] = try? doc.add_bookmarks(
-    bookmarks,
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    doc.add_bookmarks(bookmarks)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::RootExpected) else {
     fail("expected @core.PdfError::RootExpected")
   }

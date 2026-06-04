@@ -43,10 +43,26 @@ pub fn PdfDocument::parse_rectangle(
 ) -> @geometry.PdfRectangle raise @core.PdfError {
   match self.direct(object) {
     PdfArray(values) if values.length() == 4 => {
-      let x0 = try? self.get_number(values[0])
-      let y0 = try? self.get_number(values[1])
-      let x1 = try? self.get_number(values[2])
-      let y1 = try? self.get_number(values[3])
+      let x0 = try self.get_number(values[0]) catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
+      let y0 = try self.get_number(values[1]) catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
+      let x1 = try self.get_number(values[2]) catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
+      let y1 = try self.get_number(values[3]) catch {
+        err => Err(err)
+      } noraise {
+        value => Ok(value)
+      }
       match (x0, y0, x1, y1) {
         (Ok(x0), Ok(y0), Ok(x1), Ok(y1)) =>
           {

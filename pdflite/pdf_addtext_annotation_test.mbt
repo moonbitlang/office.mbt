@@ -239,11 +239,17 @@ test "pdf_addtext_url_annotation_widths uses UTF-8 byte offsets" {
     }),
     (2.0, 3.0),
   )
-  let bad : Result[(Double, Double), Error] = try? @pdflite.pdf_addtext_url_annotation_widths(
-    "é",
-    { url: "u", start: 1, end: 2 },
-    fn(prefix) { prefix.length().to_double() },
-  )
+  let bad : Result[(Double, Double), Error] = try
+    @pdflite.pdf_addtext_url_annotation_widths(
+      "é",
+      { url: "u", start: 1, end: 2 },
+      fn(prefix) { prefix.length().to_double() },
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad is Err(@core.PdfError::SoftError("bad add-text URL byte offset")) else {
     fail("expected invalid UTF-8 span offset to raise SoftError")
   }
@@ -317,28 +323,34 @@ test "pdf_addtext_url_annotation_references wrapper propagates measure errors" {
   let urls : Array[@addtext.PdfAddTextUrl] = [
     { url: "https://a.test", start: 0, end: 2 },
   ]
-  let result : Result[Array[@syntax.PdfObject], Error] = try? @pdflite.pdf_addtext_url_annotation_references(
-    document,
-    "ab",
-    urls,
-    fn(prefix) raise @core.PdfError {
-      if prefix.length() == 2 {
-        raise SoftError("measure failed")
-      }
-      prefix.length().to_double()
-    },
-    @geometry.point2(0.0, 0.0),
-    0.0,
-    0.0,
-    0.0,
-    0.0,
-    @geometry.point2(0.0, 0.0),
-    0.0,
-    Some(addtext_annot_simple_font_for_test(500.0)),
-    "Ignored",
-    10.0,
-    false,
-  )
+  let result : Result[Array[@syntax.PdfObject], Error] = try
+    @pdflite.pdf_addtext_url_annotation_references(
+      document,
+      "ab",
+      urls,
+      fn(prefix) raise @core.PdfError {
+        if prefix.length() == 2 {
+          raise SoftError("measure failed")
+        }
+        prefix.length().to_double()
+      },
+      @geometry.point2(0.0, 0.0),
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      @geometry.point2(0.0, 0.0),
+      0.0,
+      Some(addtext_annot_simple_font_for_test(500.0)),
+      "Ignored",
+      10.0,
+      false,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError("measure failed")) else {
     fail("expected measure error")
   }
@@ -569,12 +581,18 @@ test "PdfDocument addtext_rectangle handles relative box opacity and underneath 
 ///|
 test "PdfDocument addtext_rectangle reports bad coordinate specifications" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
-  let result : Result[@pdflite.PdfDocument, Error] = try? document.addtext_rectangle(
-    [1],
-    "10 20 30",
-    PdfContentGrey(0.0),
-    PdfPositionBottomLeft(0.0, 0.0),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    document.addtext_rectangle(
+      [1],
+      "10 20 30",
+      PdfContentGrey(0.0),
+      PdfPositionBottomLeft(0.0, 0.0),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError("bad coordinate specification")) else {
     fail("expected SoftError for addtext rectangle coordinate arity")
   }
@@ -583,12 +601,18 @@ test "PdfDocument addtext_rectangle reports bad coordinate specifications" {
 ///|
 test "PdfDocument addtext_rectangle validates selected pages" {
   let document = try! @pdflite.pdf_blank_document(100.0, 50.0, 1)
-  let result : Result[@pdflite.PdfDocument, Error] = try? document.addtext_rectangle(
-    [2],
-    "10 20",
-    PdfContentGrey(0.0),
-    PdfPositionBottomLeft(0.0, 0.0),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    document.addtext_rectangle(
+      [2],
+      "10 20",
+      PdfContentGrey(0.0),
+      PdfPositionBottomLeft(0.0, 0.0),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result
     is Err(
       @core.PdfError::BadPageSpecification(

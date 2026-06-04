@@ -11,16 +11,22 @@ fn random_native_fill_incrementing_for_test(
 
 ///|
 test "private native secure random bytes wrapper reports raises" {
-  let negative : Result[@core.PdfBytes, Error] = try? pdf_secure_random_bytes_with_provider(
-    -1,
-    fn(_, _) { 1 },
-  )
+  let negative : Result[@core.PdfBytes, Error] = try
+    pdf_secure_random_bytes_with_provider(-1, fn(_, _) { 1 })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard negative is Err(_) else { fail("expected negative length to raise") }
 
-  let unavailable : Result[@core.PdfBytes, Error] = try? pdf_secure_random_bytes_with_provider(
-    4,
-    fn(_, _) { 0 },
-  )
+  let unavailable : Result[@core.PdfBytes, Error] = try
+    pdf_secure_random_bytes_with_provider(4, fn(_, _) { 0 })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unavailable is Err(_) else {
     fail("expected provider failure to raise")
   }

@@ -83,7 +83,11 @@ test "PdfDocument write_encoding writes custom differences" {
       ),
     ]),
   )
-  let unsupported = try? doc.write_encoding(PdfWinAnsiEncoding)
+  let unsupported = try doc.write_encoding(PdfWinAnsiEncoding) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported is Err(EncodingWriteUnsupported) else {
     fail("expected @core.PdfError::EncodingWriteUnsupported")
   }
@@ -115,10 +119,16 @@ test "pdf_make_font builds Type1 font dictionaries" {
       ),
     ]),
   )
-  let custom = try? @pdflite.pdf_make_font(
-    text_font_write_name_for_test("/Custom"),
-    PdfCustomEncoding(PdfImplicitInFontFile, []),
-  )
+  let custom = try
+    @pdflite.pdf_make_font(
+      text_font_write_name_for_test("/Custom"),
+      PdfCustomEncoding(PdfImplicitInFontFile, []),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard custom is Err(EncodingWriteUnsupported) else {
     fail("expected @core.PdfError::EncodingWriteUnsupported")
   }

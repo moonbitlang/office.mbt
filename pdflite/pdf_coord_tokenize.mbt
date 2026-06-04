@@ -118,7 +118,13 @@ fn pdf_coord_tokenize(text : String) -> Array[PdfCoordToken] {
       let end = pdf_coord_number_end(bytes, index)
       if end > index {
         let number_text = @ascii.decode_lossy(bytes[index:end])
-        let parsed : Result[Double, Error] = try? @strconv.from_str(number_text)
+        let parsed : Result[Double, Error] = try
+          @strconv.from_str(number_text)
+        catch {
+          err => Err(err)
+        } noraise {
+          value => Ok(value)
+        }
         match parsed {
           Ok(number) => {
             tokens.push(CoordNumber(number))

@@ -31,7 +31,11 @@ test "byte helpers preserve raw PDF bytes" {
 ```moonbit check
 ///|
 test "byte validation raises PdfError" {
-  let result : Result[Byte, Error] = try? @core.pdf_byte_of_int(300)
+  let result : Result[Byte, Error] = try @core.pdf_byte_of_int(300) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::InvalidByte(300)) else {
     fail("expected InvalidByte for values outside 0..=255")
   }

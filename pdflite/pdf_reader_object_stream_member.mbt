@@ -79,7 +79,13 @@ fn pdf_cursor_finish_object_stream_member(
   prefix : @syntax.PdfParsedIndirectObject,
 ) -> @syntax.PdfParsedIndirectObject raise @core.PdfError {
   let stream_position = cursor.absolute_position()
-  let length_result : Result[Int, Error] = try? pdf_stream_length(prefix.object)
+  let length_result : Result[Int, Error] = try
+    pdf_stream_length(prefix.object)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match length_result {
     Ok(length) =>
       pdf_cursor_finish_object_stream_member_with_length(cursor, prefix, length) catch {

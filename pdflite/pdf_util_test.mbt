@@ -940,18 +940,24 @@ test "pdf_object_of_json decodes parsed content-stream operation arrays" {
 
 ///|
 test "pdf_object_of_json rejects malformed parsed content operations" {
-  let bad_number : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_object_of_json({
-      "S": [{}, [[{ "I": 2.0 }, "w"]]],
-    },
-  )
+  let bad_number : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_object_of_json({ "S": [{}, [[{ "I": 2.0 }, "w"]]] })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_number is Err(@core.PdfError::NumberExpected) else {
     fail("expected NumberExpected for malformed parsed content number")
   }
 
-  let bad_shape : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_object_of_json({
-      "S": [{}, [["q", "bad"]]],
-    },
-  )
+  let bad_shape : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_object_of_json({ "S": [{}, [["q", "bad"]]] })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_shape is Err(@core.PdfError::BadText) else {
     fail("expected BadText for malformed parsed content operator")
   }
@@ -1172,16 +1178,26 @@ test "pdf_document_of_json_blob imports UTF-8 CPDFJSON bytes" {
     Op_ET,
   ])
 
-  let invalid_utf8 : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json_blob(
-    try! @core.pdf_bytes_of_int_array([0xFF]),
-  )
+  let invalid_utf8 : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_document_of_json_blob(
+      try! @core.pdf_bytes_of_int_array([0xFF]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid_utf8 is Err(@core.PdfError::BadText) else {
     fail("expected BadText for non-UTF8 CPDFJSON bytes")
   }
 
-  let malformed_json : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json_blob(
-    @utf8.encode("["),
-  )
+  let malformed_json : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_document_of_json_blob(@utf8.encode("["))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed_json is Err(@core.PdfError::BadText) else {
     fail("expected BadText for malformed CPDFJSON bytes")
   }
@@ -1347,7 +1363,8 @@ test "PdfDocument json_of_document precombines split content before parsing" {
 
 ///|
 test "pdf_document_of_json rejects malformed cpdf document arrays" {
-  let no_stream_data : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json([
+  let no_stream_data : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_document_of_json([
       [
         -1.0,
         {
@@ -1357,13 +1374,18 @@ test "pdf_document_of_json rejects malformed cpdf document arrays" {
         },
       ],
       [0.0, { "/Root": 1.0 }],
-    ],
-  )
+    ])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard no_stream_data is Err(@core.PdfError::BadText) else {
     fail("expected BadText when CPDFJSON stream data is omitted")
   }
 
-  let missing_root : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json([
+  let missing_root : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_document_of_json([
       [
         -1.0,
         {
@@ -1372,14 +1394,23 @@ test "pdf_document_of_json rejects malformed cpdf document arrays" {
         },
       ],
       [0.0, {}],
-    ],
-  )
+    ])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_root is Err(@core.PdfError::RootExpected) else {
     fail("expected RootExpected when CPDFJSON trailer omits /Root")
   }
 
-  let bad_top : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_of_json({},
-  )
+  let bad_top : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_document_of_json({})
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_top is Err(@core.PdfError::BadText) else {
     fail("expected BadText for non-array CPDFJSON top level")
   }
@@ -1470,15 +1501,23 @@ test "pdf_remove_dict_entry skips malformed stream dictionaries" {
 ///|
 test "pdf_check_injectible reports cpdf shell metacharacters" {
   try! @pdflite.pdf_check_injectible("safe/名前.pdf")
-  let ampersand : Result[Unit, Error] = try? @pdflite.pdf_check_injectible(
-    "a&b.pdf",
-  )
+  let ampersand : Result[Unit, Error] = try
+    @pdflite.pdf_check_injectible("a&b.pdf")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard ampersand is Err(@core.PdfError::InsecurePathName("a&b.pdf")) else {
     fail("expected InsecurePathName for ampersand")
   }
-  let newline : Result[Unit, Error] = try? @pdflite.pdf_check_injectible(
-    "a\nb.pdf",
-  )
+  let newline : Result[Unit, Error] = try
+    @pdflite.pdf_check_injectible("a\nb.pdf")
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard newline is Err(@core.PdfError::InsecurePathName("a\nb.pdf")) else {
     fail("expected InsecurePathName for newline")
   }

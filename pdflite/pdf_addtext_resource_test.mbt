@@ -181,11 +181,13 @@ test "pdf_addtext_fontpack_resource_dictionary installs embedded font references
   @test.assert_eq(updated.lookup_immediate(f0), Some(PdfInteger(1)))
   @test.assert_eq(updated.lookup_immediate(f1), Some(PdfIndirect(10)))
   @test.assert_eq(updated.lookup_immediate(f2), Some(PdfIndirect(11)))
-  let result : Result[@syntax.PdfObject, Error] = try? @pdflite.pdf_addtext_fontpack_resource_dictionary(
-    fontdict,
-    [f1],
-    [10, 11],
-  )
+  let result : Result[@syntax.PdfObject, Error] = try
+    @pdflite.pdf_addtext_fontpack_resource_dictionary(fontdict, [f1], [10, 11])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result
     is Err(@core.PdfError::SoftError("bad add-text fontpack resource list")) else {
     fail("expected SoftError for mismatched fontpack resource lists")
@@ -271,9 +273,15 @@ test "pdf_addtext_selected_font_object preserves existing-font mode" {
 ///|
 test "PdfDocument addtext_selected_font_object propagates writer errors" {
   let document = @pdflite.pdf_document_empty()
-  let result : Result[@syntax.PdfObject?, Error] = try? document.addtext_selected_font_object(
-    Some(addtext_resource_simple_font_for_test(700.0)),
-  )
+  let result : Result[@syntax.PdfObject?, Error] = try
+    document.addtext_selected_font_object(
+      Some(addtext_resource_simple_font_for_test(700.0)),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::FontWriteUnsupported) else {
     fail("expected unsupported selected font error")
   }

@@ -102,10 +102,13 @@ test "PdfDocument hard_box prepends crop clipping operators" {
 ///|
 test "PdfDocument hard_box handles missing boxes like cpdf" {
   let document = page_box_document_for_test()
-  let missing : Result[@pdflite.PdfDocument, Error] = try? document.hard_box(
-    [2],
-    page_box_name_for_test("/TrimBox"),
-  )
+  let missing : Result[@pdflite.PdfDocument, Error] = try
+    document.hard_box([2], page_box_name_for_test("/TrimBox"))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing
     is Err(
       @core.PdfError::BadPageSpecification("hard_box: box /TrimBox not found")
@@ -143,7 +146,13 @@ test "PdfDocument has_page_box mirrors cpdf hasbox" {
   )
   @test.assert_eq(try! document.has_page_box(1, key_media), false)
 
-  let bad_page : Result[Bool, Error] = try? document.has_page_box(3, key_crop)
+  let bad_page : Result[Bool, Error] = try
+    document.has_page_box(3, key_crop)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(@core.PdfError::BadPageSpecification("hasbox: bad page")) else {
     fail("expected hasbox to reject an invalid page")
@@ -230,11 +239,13 @@ test "PdfDocument copy_page_box handles missing sources like cpdf" {
     Some(page_box_rect_for_test(0.0, 0.0, 100.0, 200.0)),
   )
 
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.copy_page_box(
-    [3],
-    key_trim,
-    key_bleed,
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.copy_page_box([3], key_trim, key_bleed)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -396,10 +407,13 @@ test "PdfDocument set_mediaboxes uses page-indexed xywh boxes" {
 ///|
 test "PdfDocument set_mediaboxes validates page range and box count" {
   let document = page_box_document_for_test()
-  let bad_count : Result[@pdflite.PdfDocument, Error] = try? document.set_mediaboxes(
-    [1],
-    [(1.0, 2.0, 3.0, 4.0)],
-  )
+  let bad_count : Result[@pdflite.PdfDocument, Error] = try
+    document.set_mediaboxes([1], [(1.0, 2.0, 3.0, 4.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_count
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -409,10 +423,13 @@ test "PdfDocument set_mediaboxes validates page range and box count" {
     fail("expected set_mediaboxes to reject a partial page-indexed box list")
   }
 
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.set_mediaboxes(
-    [3],
-    [(1.0, 2.0, 3.0, 4.0), (5.0, 6.0, 7.0, 8.0)],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.set_mediaboxes([3], [(1.0, 2.0, 3.0, 4.0), (5.0, 6.0, 7.0, 8.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -471,10 +488,13 @@ test "PdfDocument crop_pages sets selected page-indexed boxes" {
 ///|
 test "PdfDocument crop_pages validates page range and box count" {
   let document = page_box_document_for_test()
-  let bad_count : Result[@pdflite.PdfDocument, Error] = try? document.crop_pages(
-    [1],
-    [(1.0, 2.0, 3.0, 4.0)],
-  )
+  let bad_count : Result[@pdflite.PdfDocument, Error] = try
+    document.crop_pages([1], [(1.0, 2.0, 3.0, 4.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_count
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -484,10 +504,13 @@ test "PdfDocument crop_pages validates page range and box count" {
     fail("expected crop_pages to reject a partial page-indexed box list")
   }
 
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.crop_pages(
-    [3],
-    [(1.0, 2.0, 3.0, 4.0), (5.0, 6.0, 7.0, 8.0)],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.crop_pages([3], [(1.0, 2.0, 3.0, 4.0), (5.0, 6.0, 7.0, 8.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -546,14 +569,20 @@ test "PdfDocument set_page_box sets fixed named page box" {
 ///|
 test "PdfDocument set_page_box validates selected pages" {
   let document = page_box_document_for_test()
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.set_page_box(
-    [3],
-    page_box_name_for_test("/ArtBox"),
-    1.0,
-    2.0,
-    3.0,
-    4.0,
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.set_page_box(
+      [3],
+      page_box_name_for_test("/ArtBox"),
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -621,10 +650,13 @@ test "PdfDocument shift_boxes shifts only selected page boxes" {
 ///|
 test "PdfDocument shift_boxes validates selected pages and offset count" {
   let document = page_box_document_for_test()
-  let bad_count : Result[@pdflite.PdfDocument, Error] = try? document.shift_boxes(
-    [1],
-    [(1.0, 2.0)],
-  )
+  let bad_count : Result[@pdflite.PdfDocument, Error] = try
+    document.shift_boxes([1], [(1.0, 2.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_count
     is Err(
       @core.PdfError::BadPageSpecification(
@@ -634,10 +666,13 @@ test "PdfDocument shift_boxes validates selected pages and offset count" {
     fail("expected shift_boxes to reject a partial page-indexed offset list")
   }
 
-  let bad_page : Result[@pdflite.PdfDocument, Error] = try? document.shift_boxes(
-    [3],
-    [(1.0, 2.0), (3.0, 4.0)],
-  )
+  let bad_page : Result[@pdflite.PdfDocument, Error] = try
+    document.shift_boxes([3], [(1.0, 2.0), (3.0, 4.0)])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(

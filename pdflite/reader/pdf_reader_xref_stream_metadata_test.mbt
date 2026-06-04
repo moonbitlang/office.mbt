@@ -118,33 +118,51 @@ test "xref stream metadata parses widths and indexes" {
 
 ///|
 test "xref stream metadata rejects malformed arrays" {
-  let malformed_array_value : Result[Array[Int]?, Error] = try? @reader.pdf_xref_stream_int_array(
-    test_dictionary([
-      (
-        @reader.pdf_reader_w_name(),
-        test_array([test_name(@reader.pdf_reader_name("/Name"))]),
-      ),
-    ]),
-    @reader.pdf_reader_w_name(),
-  )
+  let malformed_array_value : Result[Array[Int]?, Error] = try
+    @reader.pdf_xref_stream_int_array(
+      test_dictionary([
+        (
+          @reader.pdf_reader_w_name(),
+          test_array([test_name(@reader.pdf_reader_name("/Name"))]),
+        ),
+      ]),
+      @reader.pdf_reader_w_name(),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed_array_value is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
 
-  let malformed_widths : Result[(Int, Int, Int), Error] = try? @reader.pdf_xref_stream_widths(
-    test_dictionary([
-      (@reader.pdf_reader_w_name(), test_array([test_integer(0)])),
-    ]),
-  )
+  let malformed_widths : Result[(Int, Int, Int), Error] = try
+    @reader.pdf_xref_stream_widths(
+      test_dictionary([
+        (@reader.pdf_reader_w_name(), test_array([test_integer(0)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed_widths is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
 
-  let odd_index : Result[Array[(Int, Int)], Error] = try? @reader.pdf_xref_stream_index_pairs(
-    test_dictionary([
-      (@reader.pdf_reader_index_name(), test_array([test_integer(0)])),
-    ]),
-  )
+  let odd_index : Result[Array[(Int, Int)], Error] = try
+    @reader.pdf_xref_stream_index_pairs(
+      test_dictionary([
+        (@reader.pdf_reader_index_name(), test_array([test_integer(0)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard odd_index is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }

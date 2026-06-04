@@ -392,7 +392,11 @@ test "PdfDocument pages_of_pagetree_quick rejects malformed kids" {
       (key_kids, PdfArray([PdfInteger(1)])),
     ]),
   )
-  let result : Result[Int, Error] = try? doc.pages_of_pagetree_quick()
+  let result : Result[Int, Error] = try doc.pages_of_pagetree_quick() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected")
   }
@@ -453,7 +457,13 @@ test "PdfDocument page_reference_numbers reports missing page root" {
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(1)
   doc.add_object_given_number(1, @syntax.pdf_dictionary([]))
-  let result : Result[Array[Int], Error] = try? doc.page_reference_numbers()
+  let result : Result[Array[Int], Error] = try
+    doc.page_reference_numbers()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PageTreeExpected) else {
     fail("expected @core.PdfError::PageTreeExpected")
   }
@@ -482,9 +492,13 @@ test "@page.pdf_page_rotation_of_int preserves CamlPDF rotation cases" {
   @test.assert_eq(try! @page.pdf_page_rotation_of_int(90), Rotate90)
   @test.assert_eq(try! @page.pdf_page_rotation_of_int(-180), Rotate180)
   @test.assert_eq(try! @page.pdf_page_rotation_of_int(-90), Rotate270)
-  let result : Result[@page.PdfPageRotation, Error] = try? @page.pdf_page_rotation_of_int(
-    45,
-  )
+  let result : Result[@page.PdfPageRotation, Error] = try
+    @page.pdf_page_rotation_of_int(45)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::PageRotationExpected(45)) else {
     fail("expected @core.PdfError::PageRotationExpected")
   }
@@ -834,16 +848,22 @@ test "pdf_page_process_stub returns identity page matrix" {
 
 ///|
 test "pdf_page_process_stub propagates callback errors" {
-  let result : Result[(Int, Int, @geometry.TransformMatrix), Error] = try? @pdflite.pdf_page_process_stub(
-    fn(n, p) raise {
-      if p == 0 {
-        fail("bad page")
-      }
-      n / p
-    },
-    6,
-    0,
-  )
+  let result : Result[(Int, Int, @geometry.TransformMatrix), Error] = try
+    @pdflite.pdf_page_process_stub(
+      fn(n, p) raise {
+        if p == 0 {
+          fail("bad page")
+        }
+        n / p
+      },
+      6,
+      0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(_) else { fail("expected callback failure") }
 }
 
@@ -1148,15 +1168,22 @@ test "PdfDocument process_xobjects validates xobject resources" {
       (page_name_for_test("/Inline"), PdfDictionary([])),
     ]),
   }
-  let non_indirect : Result[Unit, Error] = try? doc.process_xobjects(
-    non_indirect_page,
-    fn(_, _, streams) raise @core.PdfError {
+  let non_indirect : Result[Unit, Error] = try
+    doc.process_xobjects(non_indirect_page, fn(
+      _,
+      _,
+      streams,
+    ) raise @core.PdfError {
       if streams.length() < 0 {
         raise ParseStreamExpected
       }
       []
-    },
-  )
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_indirect is Err(@core.PdfError::DictionaryExpected) else {
     fail("expected @core.PdfError::DictionaryExpected")
   }
@@ -1167,15 +1194,22 @@ test "PdfDocument process_xobjects validates xobject resources" {
       (page_name_for_test("/MissingSubtype"), PdfIndirect(22)),
     ]),
   }
-  let missing_subtype : Result[Unit, Error] = try? doc.process_xobjects(
-    missing_subtype_page,
-    fn(_, _, streams) raise @core.PdfError {
+  let missing_subtype : Result[Unit, Error] = try
+    doc.process_xobjects(missing_subtype_page, fn(
+      _,
+      _,
+      streams,
+    ) raise @core.PdfError {
       if streams.length() < 0 {
         raise ParseStreamExpected
       }
       []
-    },
-  )
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_subtype is Err(@core.PdfError::DictionaryKeyNotFound(_)) else {
     fail("expected @core.PdfError::DictionaryKeyNotFound")
   }
@@ -1194,39 +1228,60 @@ test "PdfDocument process_xobjects validates xobject resources" {
       (page_name_for_test("/Bad"), PdfIndirect(23)),
     ]),
   }
-  let bad_result : Result[Unit, Error] = try? doc.process_xobjects(
-    bad_result_page,
-    fn(_, _, streams) raise @core.PdfError {
+  let bad_result : Result[Unit, Error] = try
+    doc.process_xobjects(bad_result_page, fn(
+      _,
+      _,
+      streams,
+    ) raise @core.PdfError {
       if streams.length() < 0 {
         raise ParseStreamExpected
       }
       [PdfDictionary([])]
-    },
-  )
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }
-  let bad_length : Result[Unit, Error] = try? doc.process_xobjects(
-    bad_result_page,
-    fn(_, _, streams) raise @core.PdfError {
+  let bad_length : Result[Unit, Error] = try
+    doc.process_xobjects(bad_result_page, fn(
+      _,
+      _,
+      streams,
+    ) raise @core.PdfError {
       if streams.length() < 0 {
         raise ParseStreamExpected
       }
       []
-    },
-  )
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_length is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected for bad callback length")
   }
-  let bad_dictionary : Result[Unit, Error] = try? doc.process_xobjects(
-    bad_result_page,
-    fn(_, _, streams) raise @core.PdfError {
+  let bad_dictionary : Result[Unit, Error] = try
+    doc.process_xobjects(bad_result_page, fn(
+      _,
+      _,
+      streams,
+    ) raise @core.PdfError {
       if streams.length() < 0 {
         raise ParseStreamExpected
       }
       [@syntax.pdf_stream(PdfInteger(1), StreamGot(@ascii.encode("bad")))]
-    },
-  )
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_dictionary is Err(@core.PdfError::DictionaryExpected) else {
     fail(
       "expected @core.PdfError::DictionaryExpected for bad stream dictionary",
@@ -1244,15 +1299,22 @@ test "PdfDocument process_xobjects validates xobject resources" {
       (page_name_for_test("/NonStream"), PdfIndirect(24)),
     ]),
   }
-  let non_stream : Result[Unit, Error] = try? doc.process_xobjects(
-    non_stream_page,
-    fn(_, _, streams) raise @core.PdfError {
+  let non_stream : Result[Unit, Error] = try
+    doc.process_xobjects(non_stream_page, fn(
+      _,
+      _,
+      streams,
+    ) raise @core.PdfError {
       if streams.length() < 0 {
         raise ParseStreamExpected
       }
       []
-    },
-  )
+    })
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard non_stream is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected for non-stream form")
   }
@@ -1553,9 +1615,13 @@ test "PdfDocument prepend_operators propagates non-colour parse errors" {
       ),
     ],
   }
-  let result : Result[@page.PdfPage, Error] = try? doc.prepend_operators(page, [
-    Op_q,
-  ])
+  let result : Result[@page.PdfPage, Error] = try
+    doc.prepend_operators(page, [Op_q])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ContentOperatorExpected) else {
     fail("expected @core.PdfError::ContentOperatorExpected")
   }

@@ -278,11 +278,17 @@ test "pdf_parse_stream_object_from_bytes recovers missing stream length" {
 
 ///|
 test "pdf_parse_stream_object_from_bytes reports malformed stream keyword" {
-  let result : Result[@syntax.PdfParsedIndirectObject, Error] = try? @pdflite.pdf_parse_stream_object_from_bytes(
-    reader_pdf_ascii(
-      "7 0 obj\n<< /Length 5 >>\nstram\nHello\nendstream\nendobj",
-    ),
-  )
+  let result : Result[@syntax.PdfParsedIndirectObject, Error] = try
+    @pdflite.pdf_parse_stream_object_from_bytes(
+      reader_pdf_ascii(
+        "7 0 obj\n<< /Length 5 >>\nstram\nHello\nendstream\nendobj",
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::ParseStreamExpected) else {
     fail("expected @core.PdfError::ParseStreamExpected")
   }

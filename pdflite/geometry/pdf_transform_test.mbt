@@ -266,7 +266,13 @@ test "TransformMatrix inversion reports non-invertable matrices" {
     e: 0.0,
     f: 0.0,
   }
-  let result : Result[@geometry.TransformMatrix, Error] = try? matrix.invert()
+  let result : Result[@geometry.TransformMatrix, Error] = try
+    matrix.invert()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@geometry.PdfError::MatrixNotInvertable) else {
     fail("expected PdfError::MatrixNotInvertable")
   }
@@ -282,7 +288,13 @@ test "TransformMatrix inversion rejects overflow-scaled matrices" {
     e: 0.0,
     f: 0.0,
   }
-  let result : Result[@geometry.TransformMatrix, Error] = try? matrix.invert()
+  let result : Result[@geometry.TransformMatrix, Error] = try
+    matrix.invert()
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@geometry.PdfError::MatrixNotInvertable) else {
     fail("expected PdfError::MatrixNotInvertable")
   }

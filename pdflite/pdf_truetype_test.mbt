@@ -478,13 +478,19 @@ test "pdf_truetype_metrics reads cpdftruetype table prerequisites" {
     advance_widths: [500, 750, 1000],
     max_width: 488,
   })
-  let missing_hmtx : Result[@truetype.PdfTrueTypeMetrics, Error] = try? @pdflite.pdf_truetype_metrics(
-    truetype_table_font_for_test([
-      ("head", truetype_head_table_for_test(1000, 0, 0, 10, 10, 0)),
-      ("maxp", truetype_maxp_table_for_test(1)),
-      ("hhea", truetype_hhea_table_for_test(1)),
-    ]),
-  )
+  let missing_hmtx : Result[@truetype.PdfTrueTypeMetrics, Error] = try
+    @pdflite.pdf_truetype_metrics(
+      truetype_table_font_for_test([
+        ("head", truetype_head_table_for_test(1000, 0, 0, 10, 10, 0)),
+        ("maxp", truetype_maxp_table_for_test(1)),
+        ("hhea", truetype_hhea_table_for_test(1)),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_hmtx
     is Err(@core.PdfError::SoftError("No hmtx table found in TrueType font")) else {
     fail("expected missing hmtx table to fail")
@@ -527,13 +533,13 @@ test "pdf_truetype_widths maps encoding codes through cmap and hmtx" {
     try! @pdflite.pdf_truetype_widths(font, PdfWinAnsiEncoding, 67, 67, [67]),
     [1000],
   )
-  let reversed : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_widths(
-    font,
-    PdfWinAnsiEncoding,
-    68,
-    67,
-    [68],
-  )
+  let reversed : Result[Array[Int], Error] = try
+    @pdflite.pdf_truetype_widths(font, PdfWinAnsiEncoding, 68, 67, [68])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard reversed is Err(@core.PdfError::SoftError("lastchar < firstchar")) else {
     fail("expected reversed character range to fail")
   }
@@ -634,11 +640,17 @@ test "pdf_truetype_parse builds main and higher subset records" {
 
 ///|
 test "pdf_truetype_parse refuses subsets with no main encoding characters" {
-  let parsed : Result[Array[@truetype.PdfTrueTypeParsedSubset], Error] = try? @pdflite.pdf_truetype_parse(
-    truetype_parse_font_for_test(),
-    PdfImplicitInFontFile,
-    [0x0100],
-  )
+  let parsed : Result[Array[@truetype.PdfTrueTypeParsedSubset], Error] = try
+    @pdflite.pdf_truetype_parse(
+      truetype_parse_font_for_test(),
+      PdfImplicitInFontFile,
+      [0x0100],
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard parsed
     is Err(
       @core.PdfError::SoftError(
@@ -685,11 +697,17 @@ test "pdf_truetype_descriptor_metrics reads OS2 and post tables" {
 
 ///|
 test "pdf_truetype_descriptor_metrics requires OS2 like source parser" {
-  let missing_os2 : Result[@truetype.PdfTrueTypeDescriptorMetrics, Error] = try? @pdflite.pdf_truetype_descriptor_metrics(
-    truetype_table_font_for_test([
-      ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
-    ]),
-  )
+  let missing_os2 : Result[@truetype.PdfTrueTypeDescriptorMetrics, Error] = try
+    @pdflite.pdf_truetype_descriptor_metrics(
+      truetype_table_font_for_test([
+        ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_os2
     is Err(@core.PdfError::SoftError("No os/2 table found in truetype font")) else {
     fail("expected missing OS/2 table to fail")
@@ -717,13 +735,19 @@ test "pdf_truetype_loca_offsets decodes short and long formats" {
 
 ///|
 test "pdf_truetype_loca_offsets reports source errors" {
-  let unknown_format : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_loca_offsets(
-    truetype_table_font_for_test([
-      ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 2)),
-      ("maxp", truetype_maxp_table_for_test(1)),
-      ("loca", truetype_loca_short_table_for_test([0, 2])),
-    ]),
-  )
+  let unknown_format : Result[Array[Int], Error] = try
+    @pdflite.pdf_truetype_loca_offsets(
+      truetype_table_font_for_test([
+        ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 2)),
+        ("maxp", truetype_maxp_table_for_test(1)),
+        ("loca", truetype_loca_short_table_for_test([0, 2])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unknown_format
     is Err(
       @core.PdfError::SoftError("Unknown indexToLocFormat in read_loca_table")
@@ -731,12 +755,18 @@ test "pdf_truetype_loca_offsets reports source errors" {
     fail("expected unknown indexToLocFormat to fail")
   }
 
-  let missing_loca : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_loca_offsets(
-    truetype_table_font_for_test([
-      ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
-      ("maxp", truetype_maxp_table_for_test(1)),
-    ]),
-  )
+  let missing_loca : Result[Array[Int], Error] = try
+    @pdflite.pdf_truetype_loca_offsets(
+      truetype_table_font_for_test([
+        ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 0)),
+        ("maxp", truetype_maxp_table_for_test(1)),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_loca
     is Err(@core.PdfError::SoftError("No loca table found in TrueType font")) else {
     fail("expected missing loca table to fail")
@@ -792,10 +822,13 @@ test "pdf_truetype_expand_composite_glyphs sorts and validates glyph indices" {
     try! @pdflite.pdf_truetype_expand_composite_glyphs(font, [2, 0, 2]),
     [0, 2],
   )
-  let invalid : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_expand_composite_glyphs(
-    font,
-    [3],
-  )
+  let invalid : Result[Array[Int], Error] = try
+    @pdflite.pdf_truetype_expand_composite_glyphs(font, [3])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid
     is Err(@core.PdfError::SoftError("Invalid TrueType glyph index")) else {
     fail("expected invalid glyph index to fail")
@@ -804,14 +837,20 @@ test "pdf_truetype_expand_composite_glyphs sorts and validates glyph indices" {
 
 ///|
 test "pdf_truetype_expand_composite_glyphs requires glyf table" {
-  let missing_glyf : Result[Array[Int], Error] = try? @pdflite.pdf_truetype_expand_composite_glyphs(
-    truetype_table_font_for_test([
-      ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 1)),
-      ("maxp", truetype_maxp_table_for_test(1)),
-      ("loca", truetype_loca_long_table_for_test([0, 10])),
-    ]),
-    [0],
-  )
+  let missing_glyf : Result[Array[Int], Error] = try
+    @pdflite.pdf_truetype_expand_composite_glyphs(
+      truetype_table_font_for_test([
+        ("head", truetype_head_table_for_test(1000, 0, 0, 1000, 1000, 1)),
+        ("maxp", truetype_maxp_table_for_test(1)),
+        ("loca", truetype_loca_long_table_for_test([0, 10])),
+      ]),
+      [0],
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_glyf
     is Err(@core.PdfError::SoftError("No glyf table found in TrueType font")) else {
     fail("expected missing glyf table to fail")

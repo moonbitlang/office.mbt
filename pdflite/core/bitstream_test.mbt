@@ -27,7 +27,11 @@ test "BitStream reads 32-bit values into Int64" {
   let stream = @core.bitstream_of_bytes(bytes)
   @test.assert_eq(try! stream.get_value_int64(32), 0x8000_0001)
   @test.assert_eq(stream.bits_read(), 32)
-  let bad_count : Result[Int64, Error] = try? stream.get_value_int64(33)
+  let bad_count : Result[Int64, Error] = try stream.get_value_int64(33) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_count is Err(@core.PdfError::InvalidBitCount(33)) else {
     fail("expected @core.PdfError::InvalidBitCount for oversized 32-bit read")
   }
@@ -59,11 +63,19 @@ test "BitStream reports checked read errors" {
   let bytes = pdf_bytes_for_bitstream_test([0b0000_0000])
   let stream = @core.bitstream_of_bytes(bytes)
   @test.assert_eq(try! stream.get_value_int(8), 0)
-  let eof : Result[Bool, Error] = try? stream.get_bit()
+  let eof : Result[Bool, Error] = try stream.get_bit() catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard eof is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput after all bits are consumed")
   }
-  let bad_count : Result[Int, Error] = try? stream.get_value_int(32)
+  let bad_count : Result[Int, Error] = try stream.get_value_int(32) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_count is Err(@core.PdfError::InvalidBitCount(32)) else {
     fail("expected @core.PdfError::InvalidBitCount for oversized read width")
   }
@@ -102,7 +114,13 @@ test "BitWriter writes 32-bit Int64 values" {
   @test.assert_eq(pdf_bytes_to_ints_for_bitstream_test(writer.to_bytes()), [
     0x80, 0x00, 0x00, 0x01,
   ])
-  let bad_count : Result[Unit, Error] = try? writer.put_value_int64(33, 0)
+  let bad_count : Result[Unit, Error] = try
+    writer.put_value_int64(33, 0)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_count is Err(@core.PdfError::InvalidBitCount(33)) else {
     fail("expected @core.PdfError::InvalidBitCount for oversized 32-bit write")
   }
@@ -153,11 +171,19 @@ test "BitWriter append_aligned copies complete bytes from second stream" {
 ///|
 test "BitWriter reports checked write errors" {
   let writer = @core.bit_writer_new()
-  let bad_bit : Result[Unit, Error] = try? writer.put_bit(2)
+  let bad_bit : Result[Unit, Error] = try writer.put_bit(2) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_bit is Err(@core.PdfError::InvalidBit(2)) else {
     fail("expected @core.PdfError::InvalidBit for values outside 0 or 1")
   }
-  let bad_count : Result[Unit, Error] = try? writer.put_value_int(32, 0)
+  let bad_count : Result[Unit, Error] = try writer.put_value_int(32, 0) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_count is Err(@core.PdfError::InvalidBitCount(32)) else {
     fail("expected @core.PdfError::InvalidBitCount for oversized write width")
   }

@@ -104,35 +104,47 @@ test "cpdfcontent operator state applies ExtGState dash parameters" {
     ),
     state,
   )
-  let bad_phase : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_dash_op(
-    initial,
-    @syntax.pdf_dictionary([
-      (
-        dash,
-        PdfArray([
-          PdfArray([PdfInteger(1)]),
-          PdfNameObject(content_operator_ext_name_for_test("/BadPhase")),
-        ]),
-      ),
-    ]),
-  )
+  let bad_phase : Result[@pdflite.PdfContentOperatorState, Error] = try
+    doc.content_apply_extgstate_dash_op(
+      initial,
+      @syntax.pdf_dictionary([
+        (
+          dash,
+          PdfArray([
+            PdfArray([PdfInteger(1)]),
+            PdfNameObject(content_operator_ext_name_for_test("/BadPhase")),
+          ]),
+        ),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_phase is Err(@core.PdfError::NumberExpected) else {
     fail("expected NumberExpected for malformed ExtGState dash phase")
   }
-  let bad_dash : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_dash_op(
-    initial,
-    @syntax.pdf_dictionary([
-      (
-        dash,
-        PdfArray([
+  let bad_dash : Result[@pdflite.PdfContentOperatorState, Error] = try
+    doc.content_apply_extgstate_dash_op(
+      initial,
+      @syntax.pdf_dictionary([
+        (
+          dash,
           PdfArray([
-            PdfNameObject(content_operator_ext_name_for_test("/BadDash")),
+            PdfArray([
+              PdfNameObject(content_operator_ext_name_for_test("/BadDash")),
+            ]),
+            PdfInteger(0),
           ]),
-          PdfInteger(0),
-        ]),
-      ),
-    ]),
-  )
+        ),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_dash is Err(@core.PdfError::NumberExpected) else {
     fail("expected NumberExpected for malformed ExtGState dash array")
   }
@@ -198,12 +210,18 @@ test "cpdfcontent operator state applies ExtGState font parameters" {
     initial,
   )
   doc.add_object_given_number(9, @syntax.pdf_dictionary([]))
-  let bad_font : Result[@pdflite.PdfContentOperatorState, Error] = try? doc.content_apply_extgstate_font_op(
-    initial,
-    @syntax.pdf_dictionary([
-      (font_key, PdfArray([PdfIndirect(9), PdfInteger(10)])),
-    ]),
-  )
+  let bad_font : Result[@pdflite.PdfContentOperatorState, Error] = try
+    doc.content_apply_extgstate_font_op(
+      initial,
+      @syntax.pdf_dictionary([
+        (font_key, PdfArray([PdfIndirect(9), PdfInteger(10)])),
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_font is Err(@core.PdfError::FontTypeExpected) else {
     fail("expected FontTypeExpected for malformed ExtGState font object")
   }

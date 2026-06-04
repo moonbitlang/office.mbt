@@ -8,7 +8,11 @@ fn text_fixture_path_for_test(path : String) -> String {
 
 ///|
 async fn text_fixture_bytes_for_test(path : String) -> Bytes? {
-  let read_result = try? @fs.read_file(text_fixture_path_for_test(path))
+  let read_result = try @fs.read_file(text_fixture_path_for_test(path)) catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match read_result {
     Ok(data) => Some(data.binary())
     Err(_) => None

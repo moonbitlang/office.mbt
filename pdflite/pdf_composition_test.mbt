@@ -258,9 +258,13 @@ test "PdfDocument composition_json_blob uses cpdf row shape" {
 ///|
 test "PdfDocument composition rejects non-positive file sizes" {
   let doc = composition_minimal_document_for_test()
-  let result : Result[Array[@composition.PdfCompositionEntry], Error] = try? doc.composition(
-    0,
-  )
+  let result : Result[Array[@composition.PdfCompositionEntry], Error] = try
+    doc.composition(0)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::BadNumberArgument(_)) else {
     fail("expected BadNumberArgument for zero file size")
   }

@@ -234,9 +234,13 @@ test "cpdfcontent pattern reader handles tiling shading missing resources" {
     ),
     None,
   )
-  let missing_shading = try? doc.content_read_pattern(
-    resources, missing_shading_name,
-  )
+  let missing_shading = try
+    doc.content_read_pattern(resources, missing_shading_name)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_shading is Err(SoftError("No shading dictionary")) else {
     fail("expected SoftError for missing shading dictionary")
   }

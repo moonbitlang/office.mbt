@@ -12,29 +12,35 @@ test "object stream number offsets parse header pairs" {
 
 ///|
 test "object stream number offsets reject malformed headers" {
-  let bad_first : Result[Array[(Int, Int)], Error] = try? @reader.pdf_object_stream_number_offsets(
-    @ascii.encode("1 0"),
-    4,
-    1,
-  )
+  let bad_first : Result[Array[(Int, Int)], Error] = try
+    @reader.pdf_object_stream_number_offsets(@ascii.encode("1 0"), 4, 1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_first is Err(@core.PdfError::StreamDataExpected) else {
     fail("expected StreamDataExpected")
   }
 
-  let short_header : Result[Array[(Int, Int)], Error] = try? @reader.pdf_object_stream_number_offsets(
-    @ascii.encode("2 "),
-    2,
-    1,
-  )
+  let short_header : Result[Array[(Int, Int)], Error] = try
+    @reader.pdf_object_stream_number_offsets(@ascii.encode("2 "), 2, 1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_header is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }
 
-  let malformed_pair : Result[Array[(Int, Int)], Error] = try? @reader.pdf_object_stream_number_offsets(
-    @ascii.encode("/Name 0 "),
-    8,
-    1,
-  )
+  let malformed_pair : Result[Array[(Int, Int)], Error] = try
+    @reader.pdf_object_stream_number_offsets(@ascii.encode("/Name 0 "), 8, 1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard malformed_pair is Err(@core.PdfError::XRefEntryExpected) else {
     fail("expected XRefEntryExpected")
   }

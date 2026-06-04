@@ -46,9 +46,13 @@ test "@codec.pdf_cursor_read_jpeg_data reports missing JPEG EOI marker" {
   let cursor = @core.byte_cursor_of_bytes(
     jpeg_bytes_for_test([0xFF, 0xD8, 1, 2, 0xFF]),
   )
-  let result : Result[@core.PdfBytes, Error] = try? @codec.pdf_cursor_read_jpeg_data(
-    cursor,
-  )
+  let result : Result[@core.PdfBytes, Error] = try
+    @codec.pdf_cursor_read_jpeg_data(cursor)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::EndOfInput) else {
     fail("expected @core.PdfError::EndOfInput for missing JPEG EOI marker")
   }
@@ -125,9 +129,13 @@ test "@codec.pdf_jpeg_dimensions scans over non-SOF JPEG segments" {
 
 ///|
 test "@codec.pdf_jpeg_dimensions rejects progressive or missing SOF0 dimensions" {
-  let progressive : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
-    jpeg_jfif_for_test(0xC2),
-  )
+  let progressive : Result[(Int, Int), Error] = try
+    @codec.pdf_jpeg_dimensions(jpeg_jfif_for_test(0xC2))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard progressive is Err(@core.PdfError::JPEGDimensionsExpected) else {
     fail("expected JPEGDimensionsExpected for progressive JPEG")
   }
@@ -149,34 +157,56 @@ test "@codec.pdf_jpeg_backup_dimensions reads progressive and generic SOF marker
 
 ///|
 test "@codec.pdf_jpeg_dimensions reports malformed JPEG inputs" {
-  let bad_header : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
-    jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]),
-  )
+  let bad_header : Result[(Int, Int), Error] = try
+    @codec.pdf_jpeg_dimensions(jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_header is Err(@core.PdfError::BadJPEGHeader) else {
     fail("expected BadJPEGHeader")
   }
-  let bad_string : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
-    jpeg_bytes_for_test([
-      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4E, 0x4F, 0x50, 0x45, 0x00,
-    ]),
-  )
+  let bad_string : Result[(Int, Int), Error] = try
+    @codec.pdf_jpeg_dimensions(
+      jpeg_bytes_for_test([
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4E, 0x4F, 0x50, 0x45, 0x00,
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_string is Err(@core.PdfError::BadJPEGString) else {
     fail("expected BadJPEGString")
   }
-  let bad_block : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
-    jpeg_bytes_for_test([
-      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
-      0x00, 0xC0,
-    ]),
-  )
+  let bad_block : Result[(Int, Int), Error] = try
+    @codec.pdf_jpeg_dimensions(
+      jpeg_bytes_for_test([
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA, 0xBB,
+        0x00, 0xC0,
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_block is Err(@core.PdfError::InvalidJPEGBlock) else {
     fail("expected InvalidJPEGBlock")
   }
-  let truncated : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_dimensions(
-    jpeg_bytes_for_test([
-      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA,
-    ]),
-  )
+  let truncated : Result[(Int, Int), Error] = try
+    @codec.pdf_jpeg_dimensions(
+      jpeg_bytes_for_test([
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x09, 0x4A, 0x46, 0x49, 0x46, 0x00, 0xAA,
+      ]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard truncated is Err(@core.PdfError::JPEGDimensionsExpected) else {
     fail("expected JPEGDimensionsExpected for truncated JPEG")
   }
@@ -184,21 +214,37 @@ test "@codec.pdf_jpeg_dimensions reports malformed JPEG inputs" {
 
 ///|
 test "@codec.pdf_jpeg_backup_dimensions reports malformed SOF scanning inputs" {
-  let bad_header : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_backup_dimensions(
-    jpeg_bytes_for_test([0x00, 0xD8]),
-  )
+  let bad_header : Result[(Int, Int), Error] = try
+    @codec.pdf_jpeg_backup_dimensions(jpeg_bytes_for_test([0x00, 0xD8]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_header is Err(@core.PdfError::BadJPEGHeader) else {
     fail("expected BadJPEGHeader")
   }
-  let bad_block : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_backup_dimensions(
-    jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB, 0x00, 0x01]),
-  )
+  let bad_block : Result[(Int, Int), Error] = try
+    @codec.pdf_jpeg_backup_dimensions(
+      jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xDB, 0x00, 0x01]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_block is Err(@core.PdfError::InvalidJPEGBlock) else {
     fail("expected InvalidJPEGBlock")
   }
-  let no_dimensions : Result[(Int, Int), Error] = try? @codec.pdf_jpeg_backup_dimensions(
-    jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xD9]),
-  )
+  let no_dimensions : Result[(Int, Int), Error] = try
+    @codec.pdf_jpeg_backup_dimensions(
+      jpeg_bytes_for_test([0xFF, 0xD8, 0xFF, 0xD9]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard no_dimensions is Err(@core.PdfError::JPEGDimensionsExpected) else {
     fail("expected JPEGDimensionsExpected")
   }

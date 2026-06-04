@@ -314,15 +314,21 @@ test "PdfDocument presentation supports no transition name" {
 
 ///|
 test "PdfDocument presentation rejects unknown transition names" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? presentation_document_for_test().presentation(
-    [1],
-    Some("Zoom"),
-    None,
-    true,
-    true,
-    0,
-    1.0,
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    presentation_document_for_test().presentation(
+      [1],
+      Some("Zoom"),
+      None,
+      true,
+      true,
+      0,
+      1.0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(@core.PdfError::SoftError("Unknown presentation type")) else {
     fail("expected Unknown presentation type SoftError")
   }

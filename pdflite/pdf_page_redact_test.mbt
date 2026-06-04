@@ -160,7 +160,13 @@ test "PdfDocument redact_pages validates selected pages" {
   let document = page_redact_document_for_test([
     page_redact_page_for_test([Op_S]),
   ])
-  let bad : Result[@pdflite.PdfDocument, Error] = try? document.redact_pages([2])
+  let bad : Result[@pdflite.PdfDocument, Error] = try
+    document.redact_pages([2])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad
     is Err(
       @core.PdfError::BadPageSpecification(

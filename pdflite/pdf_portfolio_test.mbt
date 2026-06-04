@@ -204,10 +204,16 @@ test "PdfDocument portfolio handles empty entries" {
 
 ///|
 test "PdfDocument portfolio rejects documents without a catalog" {
-  let result : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_document_empty().portfolio(
-    [@portfolio.pdf_portfolio_entry("file.txt", @ascii.encode("payload"))],
-    mod_date=Some(@ascii.encode("D:20240102030405")),
-  )
+  let result : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_document_empty().portfolio(
+      [@portfolio.pdf_portfolio_entry("file.txt", @ascii.encode("payload"))],
+      mod_date=Some(@ascii.encode("D:20240102030405")),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard result is Err(_) else {
     fail("expected portfolio on malformed document to fail")
   }

@@ -16,10 +16,13 @@ pub fn pdf_cursor_matches_ascii_at(
   position : Int,
   values : ArrayView[Int],
 ) -> Bool {
-  let view_result : Result[BytesView, Error] = try? cursor.view_at_absolute(
-    position,
-    values.length(),
-  )
+  let view_result : Result[BytesView, Error] = try
+    cursor.view_at_absolute(position, values.length())
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   match view_result {
     Ok(view) =>
       for i in 0..<values.length() {

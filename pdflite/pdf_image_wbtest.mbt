@@ -4,7 +4,13 @@
 ///|
 test "private image decode helpers cover scalar edge behavior" {
   @test.assert_eq(pdf_image_decode_is_identity([]), true)
-  let odd_decode : Result[Bool, Error] = try? pdf_image_decode_is_identity([0.0])
+  let odd_decode : Result[Bool, Error] = try
+    pdf_image_decode_is_identity([0.0])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard odd_decode is Err(@core.PdfError::FilterExpected) else {
     fail("expected malformed decode values")
   }
@@ -20,11 +26,13 @@ test "private image decode helpers cover scalar edge behavior" {
     try! pdf_image_apply_decode(sample, Some(16), Some([1.0, 0.0])),
     sample,
   )
-  let missing_bpc : Result[@core.PdfBytes, Error] = try? pdf_image_apply_decode(
-    sample,
-    None,
-    Some([1.0, 0.0]),
-  )
+  let missing_bpc : Result[@core.PdfBytes, Error] = try
+    pdf_image_apply_decode(sample, None, Some([1.0, 0.0]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_bpc is Err(@core.PdfError::FilterExpected) else {
     fail("expected missing bpc for non-identity decode")
   }
@@ -66,11 +74,13 @@ test "private image decode helpers cover scalar edge behavior" {
     ),
     try! @core.pdf_bytes_of_int_array([0, 255]),
   )
-  let borrowed_missing_bpc : Result[@core.PdfBytes, Error] = try? pdf_image_apply_decode_borrowed(
-    wrapped[2:4],
-    None,
-    Some([1.0, 0.0]),
-  )
+  let borrowed_missing_bpc : Result[@core.PdfBytes, Error] = try
+    pdf_image_apply_decode_borrowed(wrapped[2:4], None, Some([1.0, 0.0]))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard borrowed_missing_bpc is Err(@core.PdfError::FilterExpected) else {
     fail("expected borrowed missing bpc for non-identity decode")
   }
@@ -88,43 +98,67 @@ test "private image decode helpers cover scalar edge behavior" {
     try! @core.pdf_bytes_of_int_array([1, 2, 3, 4, 5, 6]),
   )
   let unsupported_indexed = PdfIndexed(PdfDeviceGray, [(0, [7])])
-  let unsupported8 : Result[@core.PdfBytes, Error] = try? doc.pdf_image_raw_colour_space_as_rgb24(
-    1,
-    1,
-    unsupported_indexed,
-    Some(8),
-    sample,
-  )
+  let unsupported8 : Result[@core.PdfBytes, Error] = try
+    doc.pdf_image_raw_colour_space_as_rgb24(
+      1,
+      1,
+      unsupported_indexed,
+      Some(8),
+      sample,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported8 is Err(@core.PdfError::FilterExpected) else {
     fail("expected unsupported indexed 8bpp base")
   }
-  let unsupported4 : Result[@core.PdfBytes, Error] = try? doc.pdf_image_raw_colour_space_as_rgb24(
-    1,
-    1,
-    unsupported_indexed,
-    Some(4),
-    sample,
-  )
+  let unsupported4 : Result[@core.PdfBytes, Error] = try
+    doc.pdf_image_raw_colour_space_as_rgb24(
+      1,
+      1,
+      unsupported_indexed,
+      Some(4),
+      sample,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported4 is Err(@core.PdfError::FilterExpected) else {
     fail("expected unsupported indexed 4bpp base")
   }
-  let unsupported2 : Result[@core.PdfBytes, Error] = try? doc.pdf_image_raw_colour_space_as_rgb24(
-    1,
-    1,
-    unsupported_indexed,
-    Some(2),
-    sample,
-  )
+  let unsupported2 : Result[@core.PdfBytes, Error] = try
+    doc.pdf_image_raw_colour_space_as_rgb24(
+      1,
+      1,
+      unsupported_indexed,
+      Some(2),
+      sample,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported2 is Err(@core.PdfError::FilterExpected) else {
     fail("expected unsupported indexed 2bpp base")
   }
-  let unsupported1 : Result[@core.PdfBytes, Error] = try? doc.pdf_image_raw_colour_space_as_rgb24(
-    1,
-    1,
-    unsupported_indexed,
-    Some(1),
-    sample,
-  )
+  let unsupported1 : Result[@core.PdfBytes, Error] = try
+    doc.pdf_image_raw_colour_space_as_rgb24(
+      1,
+      1,
+      unsupported_indexed,
+      Some(1),
+      sample,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard unsupported1 is Err(@core.PdfError::FilterExpected) else {
     fail("expected unsupported indexed 1bpp base")
   }
@@ -145,9 +179,13 @@ test "private image decode helpers cover scalar edge behavior" {
     ]),
     StreamGot(sample),
   )
-  let stage_limit : Result[PdfImageDecodedStream, Error] = try? doc.pdf_image_decode_to_image(
-    too_many_stages,
-  )
+  let stage_limit : Result[PdfImageDecodedStream, Error] = try
+    doc.pdf_image_decode_to_image(too_many_stages)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard stage_limit is Err(@core.PdfError::FilterExpected) else {
     fail("expected image decode stage limit")
   }

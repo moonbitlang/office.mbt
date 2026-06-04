@@ -36,19 +36,26 @@ fn wbtest_lzw_codes(
 
 ///|
 test "private LZW code expansion rejects malformed tables" {
-  let bad_next_code : Result[Int?, Error] = try? pdf_lzw_next_code(
-    @core.bitstream_of_bytes(Bytes::new(0)),
-    32,
-  )
+  let bad_next_code : Result[Int?, Error] = try
+    pdf_lzw_next_code(@core.bitstream_of_bytes(Bytes::new(0)), 32)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_next_code is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
 
   let short_prefix = Array::make(4, 0)
   let short_append = Array::make(4, 0)
-  let out_of_range : Result[Array[Int], Error] = try? pdf_lzw_decode_code(
-    4, short_prefix, short_append, 4,
-  )
+  let out_of_range : Result[Array[Int], Error] = try
+    pdf_lzw_decode_code(4, short_prefix, short_append, 4)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard out_of_range is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
@@ -56,9 +63,13 @@ test "private LZW code expansion rejects malformed tables" {
   let looping_prefix = Array::make(300, 0)
   let looping_append = Array::make(300, 0)
   looping_prefix[256] = 300
-  let bad_chain : Result[Array[Int], Error] = try? pdf_lzw_decode_code(
-    256, looping_prefix, looping_append, 300,
-  )
+  let bad_chain : Result[Array[Int], Error] = try
+    pdf_lzw_decode_code(256, looping_prefix, looping_append, 300)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_chain is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
@@ -66,9 +77,13 @@ test "private LZW code expansion rejects malformed tables" {
   let negative_prefix = Array::make(300, 0)
   let negative_append = Array::make(300, 0)
   negative_prefix[256] = -1
-  let bad_terminal : Result[Array[Int], Error] = try? pdf_lzw_decode_code(
-    256, negative_prefix, negative_append, 300,
-  )
+  let bad_terminal : Result[Array[Int], Error] = try
+    pdf_lzw_decode_code(256, negative_prefix, negative_append, 300)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_terminal is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
@@ -106,9 +121,13 @@ test "private LZW code expansion rejects malformed tables" {
     try! pdf_lzw_decode_view_prefix(clear_then_eod_encoded),
     (@ascii.encode("A"), clear_then_eod_encoded.length()),
   )
-  let clear_then_eof : Result[(@core.PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    wbtest_lzw_codes([65, 256], 1),
-  )
+  let clear_then_eof : Result[(@core.PdfBytes, Int), Error] = try
+    pdf_lzw_decode_view_prefix(wbtest_lzw_codes([65, 256], 1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard clear_then_eof is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
@@ -123,27 +142,43 @@ test "private LZW code expansion rejects malformed tables" {
   }
   bump_codes.push(257)
   let bump_encoded = wbtest_lzw_codes(bump_codes, 0)
-  let bump_result : Result[(@core.PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    bump_encoded,
-  )
+  let bump_result : Result[(@core.PdfBytes, Int), Error] = try
+    pdf_lzw_decode_view_prefix(bump_encoded)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bump_result is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
-  let bad_forward_code : Result[(@core.PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    wbtest_lzw_codes([65, 300], 1),
-  )
+  let bad_forward_code : Result[(@core.PdfBytes, Int), Error] = try
+    pdf_lzw_decode_view_prefix(wbtest_lzw_codes([65, 300], 1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_forward_code is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
-  let missing_eod : Result[(@core.PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    wbtest_lzw_codes([65], 1),
-  )
+  let missing_eod : Result[(@core.PdfBytes, Int), Error] = try
+    pdf_lzw_decode_view_prefix(wbtest_lzw_codes([65], 1))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_eod is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }
-  let empty_prefix : Result[(@core.PdfBytes, Int), Error] = try? pdf_lzw_decode_view_prefix(
-    Bytes::new(0),
-  )
+  let empty_prefix : Result[(@core.PdfBytes, Int), Error] = try
+    pdf_lzw_decode_view_prefix(Bytes::new(0))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty_prefix is Err(@core.PdfError::InvalidLZWData) else {
     fail("expected @core.PdfError::InvalidLZWData")
   }

@@ -58,9 +58,13 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     PdfInteger(7),
   )
-  let empty_object : Result[@syntax.PdfObject, Error] = try? pdf_content_read_object(
-    @core.byte_cursor_of_bytes(Bytes::new(0)),
-  )
+  let empty_object : Result[@syntax.PdfObject, Error] = try
+    pdf_content_read_object(@core.byte_cursor_of_bytes(Bytes::new(0)))
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard empty_object is Err(@core.PdfError::ParseObjectExpected) else {
     fail("expected @core.PdfError::ParseObjectExpected")
   }
@@ -120,17 +124,29 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     @ascii.encode("AB"),
   )
-  let short_sized_inline : Result[@core.PdfBytes, Error] = try? pdf_content_read_sized_inline_image_data(
-    @core.byte_cursor_of_bytes(@ascii.encode("A")),
-    2,
-  )
+  let short_sized_inline : Result[@core.PdfBytes, Error] = try
+    pdf_content_read_sized_inline_image_data(
+      @core.byte_cursor_of_bytes(@ascii.encode("A")),
+      2,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_sized_inline is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected @core.PdfError::ParseEndStreamExpected")
   }
-  let bad_sized_length : Result[@core.PdfBytes, Error] = try? pdf_content_read_sized_inline_image_data(
-    @core.byte_cursor_of_bytes(@ascii.encode(" EI")),
-    -1,
-  )
+  let bad_sized_length : Result[@core.PdfBytes, Error] = try
+    pdf_content_read_sized_inline_image_data(
+      @core.byte_cursor_of_bytes(@ascii.encode(" EI")),
+      -1,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_sized_length is Err(@core.PdfError::InvalidReadLength(-1)) else {
     fail("expected @core.PdfError::InvalidReadLength")
   }
@@ -205,10 +221,16 @@ test "private content helpers cover malformed operand fallbacks" {
     ),
     @ascii.encode("616263>"),
   )
-  let missing_text_encoded_end : Result[@core.PdfBytes, Error] = try? pdf_content_read_text_encoded_inline_image_data(
-    @core.byte_cursor_of_bytes(@ascii.encode("616263 EI")),
-    PdfContentInlineAsciiHex,
-  )
+  let missing_text_encoded_end : Result[@core.PdfBytes, Error] = try
+    pdf_content_read_text_encoded_inline_image_data(
+      @core.byte_cursor_of_bytes(@ascii.encode("616263 EI")),
+      PdfContentInlineAsciiHex,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_text_encoded_end is Err(_) else {
     fail("expected missing text inline image end to raise")
   }
@@ -424,21 +446,39 @@ test "private content helpers cover malformed operand fallbacks" {
     decoded_run_length_cursor.remaining_view(),
     @ascii.encode(" next"),
   )
-  let missing_run_length_eod : Result[@core.PdfBytes, Error] = try? pdf_content_read_run_length_inline_image_decoded(
-    @core.byte_cursor_of_bytes(try! @core.pdf_bytes_of_int_array([253, 90])),
-  )
+  let missing_run_length_eod : Result[@core.PdfBytes, Error] = try
+    pdf_content_read_run_length_inline_image_decoded(
+      @core.byte_cursor_of_bytes(try! @core.pdf_bytes_of_int_array([253, 90])),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_run_length_eod is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected @core.PdfError::ParseEndStreamExpected")
   }
-  let missing_encoded_run_length_eod : Result[@core.PdfBytes, Error] = try? pdf_content_read_run_length_inline_image_data(
-    @core.byte_cursor_of_bytes(try! @core.pdf_bytes_of_int_array([253, 90])),
-  )
+  let missing_encoded_run_length_eod : Result[@core.PdfBytes, Error] = try
+    pdf_content_read_run_length_inline_image_data(
+      @core.byte_cursor_of_bytes(try! @core.pdf_bytes_of_int_array([253, 90])),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing_encoded_run_length_eod is Err(_) else {
     fail("expected missing encoded run length EOD to raise")
   }
-  let short_run_length_prefix : Result[(@core.PdfBytes, Int), Error] = try? pdf_content_run_length_decode_view_prefix(
-    try! @core.pdf_bytes_of_int_array([253]),
-  )
+  let short_run_length_prefix : Result[(@core.PdfBytes, Int), Error] = try
+    pdf_content_run_length_decode_view_prefix(
+      try! @core.pdf_bytes_of_int_array([253]),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard short_run_length_prefix is Err(_) else {
     fail("expected short run length prefix to raise")
   }
@@ -490,18 +530,30 @@ test "private content helpers cover malformed operand fallbacks" {
       @ascii.encode("A"),
     ),
   )
-  let bad_dct_end : Result[@core.PdfBytes, Error] = try? pdf_content_read_dct_inline_image_data(
-    @core.byte_cursor_of_bytes(
-      try! @core.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9, 32, 88, 88]),
-    ),
-  )
+  let bad_dct_end : Result[@core.PdfBytes, Error] = try
+    pdf_content_read_dct_inline_image_data(
+      @core.byte_cursor_of_bytes(
+        try! @core.pdf_bytes_of_int_array([0xFF, 0xD8, 0xFF, 0xD9, 32, 88, 88]),
+      ),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_dct_end is Err(@core.PdfError::ParseEndStreamExpected) else {
     fail("expected @core.PdfError::ParseEndStreamExpected")
   }
-  let bad_inline : Result[@content.PdfContentOp, Error] = try? pdf_content_read_inline_image(
-    @core.byte_cursor_of_bytes(@ascii.encode("1 ID data EI")),
-    pdf_content_parse_context(None),
-  )
+  let bad_inline : Result[@content.PdfContentOp, Error] = try
+    pdf_content_read_inline_image(
+      @core.byte_cursor_of_bytes(@ascii.encode("1 ID data EI")),
+      pdf_content_parse_context(None),
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard bad_inline is Err(@core.PdfError::ContentOperandExpected) else {
     fail("expected @core.PdfError::ContentOperandExpected")
   }

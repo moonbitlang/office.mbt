@@ -141,18 +141,30 @@ test "pdf_read_document_revision_with_passwords reads older revisions" {
 
 ///|
 test "pdf_read_classic_document_revision_from_bytes reports bad revisions" {
-  let invalid : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_revision_from_bytes(
-    reader_classic_pdf_with_prev_xref(),
-    0,
-  )
+  let invalid : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_revision_from_bytes(
+      reader_classic_pdf_with_prev_xref(),
+      0,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard invalid is Err(@core.PdfError::BadRevision) else {
     fail("expected @core.PdfError::BadRevision")
   }
 
-  let missing : Result[@pdflite.PdfDocument, Error] = try? @pdflite.pdf_read_classic_document_revision_from_bytes(
-    reader_classic_pdf_with_prev_xref(),
-    3,
-  )
+  let missing : Result[@pdflite.PdfDocument, Error] = try
+    @pdflite.pdf_read_classic_document_revision_from_bytes(
+      reader_classic_pdf_with_prev_xref(),
+      3,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
   guard missing is Err(@core.PdfError::BadRevision) else {
     fail("expected @core.PdfError::BadRevision")
   }
