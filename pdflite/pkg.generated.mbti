@@ -28,6 +28,7 @@ import {
   "bobzhang/pdflite/syntax",
   "bobzhang/pdflite/text/unicodedata",
   "bobzhang/pdflite/writer",
+  "bobzhang/pdflite/xref_model",
   "moonbitlang/core/buffer",
   "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
@@ -2980,7 +2981,7 @@ pub(all) enum PdfObjectData {
   ObjectParsed(@syntax.PdfObject)
   ObjectParsedAlreadyDecrypted(@syntax.PdfObject)
   ObjectToParse
-  ObjectToParseFromObjectStream(@reader.ObjectStreamReference)
+  ObjectToParseFromObjectStream(@xref_model.ObjectStreamReference)
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfObjectEntry {

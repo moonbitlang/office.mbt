@@ -2,7 +2,7 @@
 fn PdfDocument::load_reconstructed_object_stream_entries_from_context(
   self : PdfDocument,
   entries : ArrayView[
-    (@reader.PdfClassicXRefEntry, @reader.ObjectStreamReference),
+    (@reader.PdfClassicXRefEntry, @xref_model.ObjectStreamReference),
   ],
   object_stream_number : Int,
   context : PdfObjectStreamContext,

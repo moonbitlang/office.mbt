@@ -4,6 +4,7 @@ package "bobzhang/pdflite/reader"
 import {
   "bobzhang/pdflite/core",
   "bobzhang/pdflite/syntax",
+  "bobzhang/pdflite/xref_model",
   "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
 }
@@ -53,7 +54,7 @@ pub fn pdf_reader_name(String) -> @core.PdfName
 
 pub fn pdf_reader_object_is_xref_stream(@syntax.PdfObject) -> Bool
 
-pub fn pdf_reader_object_stream_groups(ArrayView[PdfClassicXRefEntry]) -> Array[(Int, Array[(PdfClassicXRefEntry, ObjectStreamReference)])]
+pub fn pdf_reader_object_stream_groups(ArrayView[PdfClassicXRefEntry]) -> Array[(Int, Array[(PdfClassicXRefEntry, @xref_model.ObjectStreamReference)])]
 
 pub fn pdf_reader_objstm_name() -> @core.PdfName
 
@@ -128,17 +129,12 @@ pub fn pdf_xref_token_in_use(BytesView) -> Bool raise @core.PdfError
 // Errors
 
 // Types and methods
-pub(all) struct ObjectStreamReference {
-  object_stream_number : Int
-  index : Int
-} derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfClassicXRefEntry {
   object_number : Int
   offset : Int
   generation : Int
   in_use : Bool
-  object_stream : ObjectStreamReference?
+  object_stream : @xref_model.ObjectStreamReference?
 } derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfClassicXRefIndex {
