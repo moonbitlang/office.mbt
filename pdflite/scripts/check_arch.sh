@@ -30,7 +30,7 @@ is_allowed_importer() {
 while IFS= read -r pkgfile; do
   pkg="${pkgfile%/moon.pkg}"
   pkg="${pkg#./}"
-  [ "$pkg" = "moon.pkg" ] && continue # root package (path was ".")
+  { [ "$pkg" = "." ] || [ -z "$pkg" ]; } && continue # root package (path was ".")
   # Match the exact root import "bobzhang/pdflite" (not a subpackage path).
   if grep -qE '"bobzhang/pdflite"[[:space:]]*,?' "$pkgfile"; then
     if ! is_allowed_importer "$pkg"; then
