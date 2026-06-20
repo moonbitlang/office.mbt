@@ -1,16 +1,59 @@
 # pdflite Architecture Improvement Proposal
 
-Status: revised after codex (gpt-5.5) review
+Status: REVISED 2026-06-20 — the keystone (`document` extraction) approach is
+abandoned; see §0. Earlier sections (4 "Document core", 5 Slice 0.5/1, 8) are kept
+for history but are SUPERSEDED by §0.
 Date: 2026-06-20
 Scope: maintainability & comprehensibility of the library, not behavior change
 
-> Revision note: Section 3a, the revised Slice 0.5/1, the corrected slice
-> ordering, and the CI guard in Section 6 incorporate an external engineering
-> review. Key corrections: the monolith is *method*-shaped (446 public
+## 0. Status & corrected strategy (supersedes the keystone plan)
+
+**The central idea of this proposal — extracting `PdfDocument` into a mid-level
+`document` package (the "keystone", Slice 1 / Phase C / C1) — was attempted and is
+INFEASIBLE in MoonBit. Do not retry it.**
+
+What was actually done and merged (the *right* kind of work):
+
+- **Phase A** — hygiene + guardrails (doc archive, rule-based target matrix,
+  `scripts/check_arch.sh` CI ratchet). Merged (PR #12).
+- **Phase B** — leaf extraction below root: `xref_model` package
+  (`ObjectStreamReference`), `crypt_core` security state
+  (`PdfEncryptionValues`/`PdfSavedEncryption`), plus an async-dep upgrade and a
+  `derive(ToJson)` cleanup. Merged (PR #13).
+
+Why the keystone fails (verified empirically + `moon explain --diagnostic 4059`):
+
+- MoonBit **forbids `pub` methods on a foreign type**: `pub fn @document.PdfDocument::m`
+  is rejected ([4059]). Only the package that *defines* a type may define its
+  public methods.
+- `PdfDocument` has **1157 methods (450 `pub`)** and a **~445-method public API**.
+  Moving the struct to a thin `document` package forces the entire public method
+  surface (and its transitive private helpers) down with it — i.e. it just renames
+  root. Non-`pub` `fn @document.PdfDocument::m` *extension* methods work, but
+  cannot carry a public API.
+- Of the 450 `pub` methods, only **11** are used by real external packages
+  (markdown, async_io, cmd, README); **386** are `pub` only for blackbox tests.
+
+**Corrected strategy (this is the plan going forward):** keep `PdfDocument` in the
+ROOT package as the public facade. Decompose by extracting **leaf packages BELOW
+root** — pure models, state, and algorithms that do NOT depend on `PdfDocument`
+(exactly what Phase B did). Root methods orchestrate those leaf packages. Do not
+move `PdfDocument`; do not pursue a `document` layer. Lower-risk follow-on:
+per-domain public-API boundary cleanup (demote test-only `pub` methods to non-pub,
+move those tests to whitebox, keep blackbox coverage for the genuine public API).
+
+Everything below predates this finding and is retained for context only.
+
+---
+
+> Original revision note (pre-C1): Section 3a, the revised Slice 0.5/1, the
+> corrected slice ordering, and the CI guard in Section 6 incorporate an external
+> engineering review. Key corrections: the monolith is *method*-shaped (446 public
 > `PdfDocument::` methods), not just file-shaped; the `document` keystone has two
 > hidden upward dependencies (`PdfSavedEncryption`, `ObjectStreamReference`) that
 > must be resolved *before* it can be extracted; and ownership of those 446
 > methods must be decided per domain or the coupling just moves to new packages.
+> (This keystone framing is now abandoned — see §0.)
 
 ## 1. Executive summary
 
@@ -136,19 +179,22 @@ cycle.
 
 ## 4. Target architecture
 
+> SUPERSEDED by §0: Layer 2 ("Document core" / a `document` package) does NOT
+> exist and cannot — `PdfDocument` stays in root as the facade (Layer 4/5 collapse
+> into root). The foundation/syntax/leaf layers below are still the right target.
+
 Keep the layer model already written in `ARCHITECTURE.md`, but make it real and
 name the missing middle layer:
 
 ```
 Layer 0  Foundation        core, geometry, (data: text/*data)
-Layer 1  Syntax/object     syntax, reader, crypt_core
-Layer 2  Document core     document   <-- NEW: PdfDocument, PdfObjects,
-                                            object map, accessors, event log
+Layer 1  Syntax/object     syntax, reader, crypt_core, xref_model
+Layer 2  Document core     [ABANDONED] PdfDocument stays in root (facade);
+                           MoonBit forbids pub methods on a foreign type, so its
+                           ~445-method public API cannot leave root
 Layer 3  Codecs/filters    flate, codec, (image codecs), crypt stream policy
-Layer 4  Feature domains   page, content, text, font, image, annotation,
-                            bookmark, metadata, ocg, draw, merge, crypt,
-                            addtext, ua (accessibility), fun, attachment,
-                            portfolio, composition, impose, redact, tweak
+Layer 4  Feature domains   leaf models/algorithms extracted BELOW root; the
+                           document-facing feature logic stays in root as methods
 Layer 5  Entry points      cmd/main, markdown/cmd, async_io, fixture_acceptance
 ```
 
@@ -194,7 +240,10 @@ This must land before any `document` extraction, or the keystone move stalls.
   not all 446 up front (consistent with §10). This table is the running contract
   that prevents the coupling from silently re-forming.
 
-### Slice 1 — Extract the `document` package (the keystone)
+### Slice 1 — Extract the `document` package (the keystone) — ABANDONED (see §0)
+> This slice is INFEASIBLE: MoonBit forbids `pub` methods on a foreign type, so
+> PdfDocument's ~445-method public API cannot live in root once the type moves to
+> `document`. The text below is retained only to document what was tried.
 - Create `document/` containing `PdfDocument`, `PdfObjects`, `PdfObjectMap`,
   `PdfObjectEntry`, `PdfObjectData`, `PdfObjectEvent`, plus a **deliberate set of
   public accessor/mutation APIs** (e.g. object-table get/set/allocate, event-log
@@ -277,11 +326,16 @@ given there are few external users.
 
 ## 8. Success metrics
 
-- Root non-test source files: 637 -> < 50 (target: facade only).
-- No domain has a "stub package + bulk-in-root" split.
-- `document` package exists; no feature package depends on root.
-- `moon.pkg` target matrix is rule-based, not per-file enumerated.
-- New contributor can find a feature's code by opening its package directory.
+> SUPERSEDED by §0: "root -> < 50 files" and "`document` package exists" are NOT
+> goals — `PdfDocument` and its ~445-method API stay in root by design. Realistic
+> metrics: leaf packages keep growing below root; root's `.mbti` shrinks toward the
+> genuine ~11-method external surface; no feature/leaf package imports root.
+
+- ~~Root non-test source files: 637 -> < 50 (target: facade only).~~ (not a goal)
+- No domain has a "stub package + bulk-in-root" split *for the leaf parts*.
+- ~~`document` package exists~~; no leaf/feature package depends on root.
+- `moon.pkg` target matrix is rule-based, not per-file enumerated. (done, A3)
+- New contributor can find a *leaf* domain's pure code by opening its package.
 
 ## 9. Open questions for review
 
