@@ -56,10 +56,11 @@ namespace with no encapsulation. The largest prefix groups (non-test file
 counts):
 
 ```
-page 68   content 54   text 52   ua 35   draw 33   reader 32
-image 29  metadata 28  bookmark 21  addtext 21  ocg 19  crypt 17
-codec 15  util 13  merge 13  tweak 12  writer 10  fun 8  truetype 7
+page 68   content 55   text 52   ua 36   draw 33   reader 32
+image 29  metadata 29  bookmark 21  addtext 21  ocg 19  crypt 17
+codec 16  util 13  merge 14  tweak 13  writer 10  fun 9  truetype 8
 ```
+(Counts match `docs/packages.md`, which is the canonical measured table.)
 
 Several of these already have a sibling package, but the package is a near-empty
 stub while the real code stays in root. Example — bookmarks:
@@ -212,21 +213,21 @@ dependents (note: `crypt` is deferred until its saved-state contract from Slice
 1. **Pure codec/filter split** — stream/image filters still in root
    (`pdf_codec_*`, `pdf_ccitt_*`, `pdf_jpeg*`) folded into existing `codec`.
    Self-contained, no document coupling.
-2. **`content` model** (54) — content-stream model & operators; depends on
+2. **`content` model** (55) — content-stream model & operators; depends on
    syntax/geometry/`document`. Must precede page and draw.
 3. **`page`** (68) + `merge`/`impose`/`chop`/`pad`/`squeeze` — biggest group;
    depends on `document` + `content`.
 4. **`image`** (29) — depends on codecs + `document`.
 5. **Finish started extractions**: `bookmark` (21), `annotation`, `ocg` (19),
-   `metadata` (28), `attachment`, `portfolio`, `destination` — delete the
+   `metadata` (29), `attachment`, `portfolio`, `destination` — delete the
    stub-vs-root split for each.
-6. **`text`** (52) + `font`/`truetype` (root parts) — depends on `text/*data` and
-   `document`; move predefined CMap tables to data packages first.
-7. **`draw`** (33) + **`addtext`** (21) + `fun` (functions/shading) — depend on
+6. **`text`** (52) + `font`/`truetype` (root parts, 8 each) — depends on
+   `text/*data` and `document`; move predefined CMap tables to data packages first.
+7. **`draw`** (33) + **`addtext`** (21) + `fun` (functions/shading, 9) — depend on
    content/page.
 8. **`crypt`** (17) — only after Slice 0.5 fixed where `PdfSavedEncryption` lives;
    it also touches writer/recrypt flows, so it is not the freebie it first looks.
-9. **`ua`** (35, accessibility/Matterhorn) + `structure`/`tree` — depend on page +
+9. **`ua`** (36, accessibility/Matterhorn) + `structure`/`tree` — depend on page +
    content; do last. `tweak`, `redact` mop-up.
 
 For each domain slice:

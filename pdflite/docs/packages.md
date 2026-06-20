@@ -30,6 +30,10 @@ These are the model layers the refactor builds on; they are NOT monolithic.
 Legend for **State**:
 - `stub` — a sibling package exists but holds a fraction of the domain; the bulk
   is still in root.
+- `split` — a real low-level/data package exists and carries meaningful code, but
+  a separate document/feature-level slice of the same domain still lives in root
+  (e.g. low-level `reader`/`writer` vs the doc-level reader/writer code in root;
+  `font`/`font/truetype` data vs root font logic).
 - `dir-only` — a directory exists but only for fixture/data subpackages; no
   domain package yet.
 - `none` — no package; the whole domain lives in root.
@@ -53,6 +57,7 @@ Legend for **State**:
 | `util` | 13 | 1961 | — | none |
 | `fun` (functions/shading) | 9 | 1808 | — | none |
 | `truetype` | 8 | 1699 | `font/truetype` (data) | split |
+| `font` | 8 | 1183 | `font/` (40) + `font/afm`, `font/standard14` | split |
 | `writer` (doc-level) | 10 | 1693 | `writer/` (48, low-level) | split |
 | `annotation` | 7 | 1567 | `annotation/` (144) | stub |
 | `tweak` | 13 | 1391 | — | none |
