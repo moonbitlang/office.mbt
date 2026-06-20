@@ -1110,7 +1110,8 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       markdown_cmd_corrupt_startxref_pointer_for_test(
         @fs.read_file(input_path).binary(),
       ),
-      create=0o644,
+      create_mode=CreateOrTruncate,
+      permission=0o644,
     )
     markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
     let clean_output = @utf8.decode_lossy(
@@ -1165,7 +1166,12 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       )
       markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
       markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
-      @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+      @fs.write_file(
+        corrupt_input_path,
+        corrupted,
+        create_mode=CreateOrTruncate,
+        permission=0o644,
+      )
       markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
@@ -1224,7 +1230,12 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       )
       markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
       markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
-      @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+      @fs.write_file(
+        corrupt_input_path,
+        corrupted,
+        create_mode=CreateOrTruncate,
+        permission=0o644,
+      )
       markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
@@ -1293,7 +1304,12 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       )
       markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
       markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
-      @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+      @fs.write_file(
+        corrupt_input_path,
+        corrupted,
+        create_mode=CreateOrTruncate,
+        permission=0o644,
+      )
       markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
@@ -1354,7 +1370,12 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       )
       markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
       markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
-      @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+      @fs.write_file(
+        corrupt_input_path,
+        corrupted,
+        create_mode=CreateOrTruncate,
+        permission=0o644,
+      )
       markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
@@ -1414,7 +1435,12 @@ async test "markdown command repairs optional cpdf source manual fixture with ma
       )
       markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
       markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
-      @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+      @fs.write_file(
+        corrupt_input_path,
+        corrupted,
+        create_mode=CreateOrTruncate,
+        permission=0o644,
+      )
       markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
       let corrupt_output = @utf8.decode_lossy(
         @fs.read_file(corrupt_output_path).binary(),
@@ -1538,7 +1564,12 @@ async test "markdown command reconstructs optional cpdf source manual image PDF 
         )
         markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
         markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
-        @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+        @fs.write_file(
+          corrupt_input_path,
+          corrupted,
+          create_mode=CreateOrTruncate,
+          permission=0o644,
+        )
         markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
         let corrupt_output = @utf8.decode_lossy(
           @fs.read_file(corrupt_output_path).binary(),
@@ -1659,7 +1690,12 @@ async test "markdown command reconstructs optional cpdf source top-level classic
         )
         markdown_cmd_remove_if_exists_for_test(corrupt_input_path)
         markdown_cmd_remove_if_exists_for_test(corrupt_output_path)
-        @fs.write_file(corrupt_input_path, corrupted, create=0o644)
+        @fs.write_file(
+          corrupt_input_path,
+          corrupted,
+          create_mode=CreateOrTruncate,
+          permission=0o644,
+        )
         markdown_cmd_convert_file(corrupt_input_path, corrupt_output_path)
         let corrupt_output = @utf8.decode_lossy(
           @fs.read_file(corrupt_output_path).binary(),

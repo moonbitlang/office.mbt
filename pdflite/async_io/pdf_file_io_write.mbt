@@ -7,7 +7,12 @@ pub async fn pdf_write_document_to_file(
   path : StringView,
   permission? : Int = 0o644,
 ) -> Unit {
-  @fs.write_file(path, @pdflite.pdf_write_document(document), create=permission)
+  @fs.write_file(
+    path,
+    @pdflite.pdf_write_document(document),
+    create_mode=CreateOrTruncate,
+    permission~,
+  )
 }
 
 ///|
@@ -20,7 +25,8 @@ pub async fn pdf_write_document_to_file_with_xref_stream(
   @fs.write_file(
     path,
     @pdflite.pdf_write_document_with_xref_stream(document),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -34,7 +40,8 @@ pub async fn pdf_write_document_to_file_with_compressed_xref_stream(
   @fs.write_file(
     path,
     @pdflite.pdf_write_document_with_compressed_xref_stream(document),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -49,7 +56,8 @@ pub async fn pdf_write_document_to_file_with_mode(
   @fs.write_file(
     path,
     @pdflite.pdf_write_document_with_mode(document, mode),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -70,7 +78,8 @@ pub async fn pdf_write_document_to_file_with_generated_id(
       path.to_owned(),
       mode~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -88,7 +97,8 @@ pub async fn pdf_write_document_incremental_update_to_file(
       @fs.read_file(original_path).binary(),
       document,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -106,7 +116,8 @@ pub async fn pdf_write_document_incremental_update_with_xref_stream_to_file(
       @fs.read_file(original_path).binary(),
       document,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -124,7 +135,8 @@ pub async fn pdf_write_document_incremental_update_with_compressed_xref_stream_t
       @fs.read_file(original_path).binary(),
       document,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -144,7 +156,8 @@ pub async fn pdf_write_document_incremental_update_to_file_with_mode(
       document,
       mode,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -167,6 +180,7 @@ pub async fn pdf_write_document_incremental_update_to_file_with_generated_id(
       path.to_owned(),
       mode~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }

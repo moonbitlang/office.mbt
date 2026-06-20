@@ -23,9 +23,19 @@ async test "async draw control image file wrappers read path specs" {
   let jpeg = pdf_async_io_jpeg_for_test()
   let (png, png_idat) = pdf_async_io_png_rgb_for_test()
   let jpeg2000 = pdf_async_io_jpeg2000_for_test()
-  @fs.write_file(jpeg_path, jpeg, create=0o644)
-  @fs.write_file(png_path, png, create=0o644)
-  @fs.write_file(jpeg2000_path, jpeg2000, create=0o644)
+  @fs.write_file(
+    jpeg_path,
+    jpeg,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
+  @fs.write_file(png_path, png, create_mode=CreateOrTruncate, permission=0o644)
+  @fs.write_file(
+    jpeg2000_path,
+    jpeg2000,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
 
   let document = @pdflite.pdf_document_empty()
   let control = @pdflite.pdf_draw_control_new()
@@ -94,7 +104,12 @@ async test "async draw control image file wrappers read path specs" {
 async test "async cpdfjpeg backup dimensions reads progressive JPEG files" {
   let path = pdf_async_io_test_path_for_test("backup_jpeg_dimensions")
   pdf_async_io_remove_if_exists_for_test(path)
-  @fs.write_file(path, pdf_async_io_progressive_jpeg_for_test(), create=0o644)
+  @fs.write_file(
+    path,
+    pdf_async_io_progressive_jpeg_for_test(),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   @test.assert_eq(
     try! pdf_backup_jpeg_dimensions(path, path_to_im="/usr/bin/convert"),
     (320, 240),
@@ -111,8 +126,18 @@ async test "async file wrappers load Standard 14 substitute font files" {
   pdf_async_io_remove_if_exists_for_test(times_path)
   let helvetica_bytes = @ascii.encode("fake helvetica substitute")
   let times_bytes = @ascii.encode("fake times substitute")
-  @fs.write_file(helvetica_path, helvetica_bytes, create=0o644)
-  @fs.write_file(times_path, times_bytes, create=0o644)
+  @fs.write_file(
+    helvetica_path,
+    helvetica_bytes,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
+  @fs.write_file(
+    times_path,
+    times_bytes,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let (loaded_helvetica, helvetica_name) = pdf_load_standard_font_substitute_file(
     directory,
     PdfHelvetica,
@@ -451,8 +476,18 @@ async test "async file wrappers build portfolios from file paths" {
   let second_path = pdf_async_io_test_path_for_test("portfolio_second")
   pdf_async_io_remove_if_exists_for_test(first_path)
   pdf_async_io_remove_if_exists_for_test(second_path)
-  @fs.write_file(first_path, @ascii.encode("alpha"), create=0o644)
-  @fs.write_file(second_path, @ascii.encode("beta"), create=0o644)
+  @fs.write_file(
+    first_path,
+    @ascii.encode("alpha"),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
+  @fs.write_file(
+    second_path,
+    @ascii.encode("beta"),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let portfolio = try! pdf_portfolio_from_files(
     try! @pdflite.pdf_minimum_valid_pdf(),
     [
@@ -521,7 +556,12 @@ async test "async file wrappers build portfolios from file paths" {
 async test "async file wrappers attach files from paths" {
   let path = pdf_async_io_test_path_for_test("attached_source")
   pdf_async_io_remove_if_exists_for_test(path)
-  @fs.write_file(path, @ascii.encode("attached bytes"), create=0o644)
+  @fs.write_file(
+    path,
+    @ascii.encode("attached bytes"),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let document = try! pdf_attach_file_from_path(
     try! @pdflite.pdf_minimum_valid_pdf(),
     path,
@@ -761,7 +801,8 @@ async test "async file wrappers attach and portfolio cpdf source files" {
       pdf_async_io_corrupt_final_startxref_pointer_for_test(
         @fs.read_file(portfolio_path).binary(),
       ),
-      create=0o644,
+      create_mode=CreateOrTruncate,
+      permission=0o644,
     )
     let recovered = pdf_read_document_from_file(recovered_path)
     @test.assert_eq(recovered.first_xref(), 0)
@@ -824,11 +865,21 @@ async test "async cpdfocg replace reads optional-content JSON files" {
   let source = try! pdf_async_io_ocg_catalog_for_test().write_optional_content_groups(
     content,
   )
-  @fs.write_file(path, try! source.ocg_list_json_blob(), create=0o644)
+  @fs.write_file(
+    path,
+    try! source.ocg_list_json_blob(),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let replaced = try! pdf_ocg_replace(path, pdf_async_io_ocg_catalog_for_test())
   @test.assert_eq(try! replaced.read_optional_content_groups(), Some(content))
 
-  @fs.write_file(null_path, @ascii.encode("null"), create=0o644)
+  @fs.write_file(
+    null_path,
+    @ascii.encode("null"),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let unchanged = try! pdf_ocg_replace(null_path, source)
   @test.assert_eq(try! unchanged.read_optional_content_groups(), Some(content))
   pdf_async_io_remove_if_exists_for_test(path)
@@ -846,7 +897,12 @@ async test "async metadata file wrappers set write and extract XML metadata" {
   pdf_async_io_remove_if_exists_for_test(input_path)
   pdf_async_io_remove_if_exists_for_test(output_path)
   pdf_async_io_remove_if_exists_for_test(main_path)
-  @fs.write_file(input_path, payload, create=0o644)
+  @fs.write_file(
+    input_path,
+    payload,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let document = try! pdf_set_metadata_from_file(
     false,
     input_path,
@@ -902,7 +958,7 @@ async test "async cpdftweak replace_stream reads replacement files" {
   let path = pdf_async_io_test_path_for_test("replace_stream_payload")
   pdf_async_io_remove_if_exists_for_test(path)
   let payload = @ascii.encode("new stream bytes")
-  @fs.write_file(path, payload, create=0o644)
+  @fs.write_file(path, payload, create_mode=CreateOrTruncate, permission=0o644)
   let key_length = pdf_async_io_name_for_test("/Length")
   let key_filter = pdf_async_io_name_for_test("/Filter")
   let filter_name = pdf_async_io_name_for_test("/Dummy")
@@ -1170,7 +1226,12 @@ async test "async file wrappers reconstruct malformed incremental CamlPDF intro 
   let corrupted = pdf_async_io_corrupt_final_startxref_pointer_for_test(
     @fs.read_file(updated_path).binary(),
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let recovered = pdf_read_document_from_file(corrupted_path)
   @test.assert_eq(recovered.first_xref(), 0)
   @test.assert_eq(recovered.lookup_object_or_null(added_number), added_object)
@@ -1212,7 +1273,12 @@ async test "async file wrappers reconstruct checked-in CamlPDF logo fixture with
   let corrupted = pdf_async_io_corrupt_startxref_pointer_for_test(
     @fs.read_file(logo_path).binary(),
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let recovered = pdf_read_document_from_file(corrupted_path)
   @test.assert_eq(recovered.version(), (1, 4))
   @test.assert_eq(recovered.first_xref(), 0)
@@ -1246,7 +1312,12 @@ async test "async file wrappers reconstruct checked-in CamlPDF intro fixture wit
   let corrupted = pdf_async_io_corrupt_startxref_pointer_for_test(
     @fs.read_file(intro_path).binary(),
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let recovered = pdf_read_document_from_file(corrupted_path)
   @test.assert_eq(recovered.version(), (1, 5))
   @test.assert_eq(recovered.first_xref(), 0)
@@ -1306,7 +1377,12 @@ async test "async file wrappers reconstruct physical page trees when object-stre
   )
   pdf_async_io_remove_if_exists_for_test(malformed_path)
   let malformed = pdf_async_io_bad_first_object_stream_physical_page_tree_pdf_for_test()
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -1336,7 +1412,8 @@ async test "async file wrappers do not reconstruct mismatched object-stream root
   @fs.write_file(
     path,
     pdf_async_io_mismatched_object_stream_root_physical_catalog_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
   let strict : Result[@pdflite.PdfDocument, Error] = try
@@ -1369,7 +1446,8 @@ async test "async file wrappers reject invalid object-stream data slices" {
   @fs.write_file(
     path,
     pdf_async_io_bad_first_object_stream_payload_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
   let result : Result[@pdflite.PdfDocument, Error] = try
@@ -1405,24 +1483,28 @@ async test "async file wrappers reject non-xref startxref objects" {
   @fs.write_file(
     non_stream_path,
     pdf_async_io_startxref_object_pdf_for_test("7"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     wrong_stream_type_path,
     pdf_async_io_startxref_object_pdf_for_test(
       "<< /Length 0 >>\nstream\n\nendstream",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     explicit_wrong_type_path,
     pdf_async_io_xref_stream_with_type_for_test("/Catalog"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     non_name_type_path,
     pdf_async_io_xref_stream_with_type_for_test("99"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
 
   let non_stream : Result[@pdflite.PdfDocument, Error] = try
@@ -1489,22 +1571,26 @@ async test "async file wrappers preserve linearized first-object markers" {
   @fs.write_file(
     integer_path,
     pdf_async_io_linearized_classic_pdf_for_test("1"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     real_path,
     pdf_async_io_linearized_classic_pdf_for_test("1.0"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     non_numeric_path,
     pdf_async_io_linearized_classic_pdf_for_test("/Name"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     prev_path,
     pdf_async_io_linearized_classic_pdf_with_prev_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let integer_doc = pdf_read_document_from_file(integer_path)
   let real_doc = pdf_read_document_from_file(real_path)
@@ -1540,22 +1626,26 @@ async test "async file wrappers reconstruct hybrid XRefStm trailers" {
   @fs.write_file(
     valid_path,
     pdf_async_io_hybrid_xref_stream_pdf_for_test(None, false),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_path,
     pdf_async_io_hybrid_xref_stream_pdf_for_test(Some(0), false),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     compressed_path,
     pdf_async_io_hybrid_xref_stream_pdf_for_test(None, true),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     compressed_bad_path,
     pdf_async_io_hybrid_xref_stream_pdf_for_test(Some(0), true),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let valid = pdf_read_document_from_file(valid_path)
   let compressed = pdf_read_document_from_file(compressed_path)
@@ -1631,7 +1721,8 @@ async test "async file wrappers reject truncated xref stream data" {
   @fs.write_file(
     path,
     pdf_async_io_xref_stream_pdf_with_short_entry_data_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
   let result : Result[@pdflite.PdfDocument, Error] = try
@@ -1658,7 +1749,8 @@ async test "async file wrappers reconstruct missing startxref PDFs" {
   @fs.write_file(
     path,
     pdf_async_io_malformed_pdf_without_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
   let strict : Result[@pdflite.PdfDocument, Error] = try
@@ -1715,7 +1807,8 @@ async test "async file wrappers reconstruct literal endobj text in strings" {
   @fs.write_file(
     path,
     pdf_async_io_malformed_pdf_with_endobj_text_in_string_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
   let strict : Result[@pdflite.PdfDocument, Error] = try
@@ -1748,7 +1841,8 @@ async test "async file wrappers reconstruct glued trailer markers" {
   @fs.write_file(
     path,
     pdf_async_io_malformed_pdf_with_glued_reconstruction_trailers_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
@@ -1782,12 +1876,14 @@ async test "async file wrappers reconstruct classic objects missing from xref" {
   @fs.write_file(
     pages_path,
     pdf_async_io_classic_pdf_with_page_tree_missing_from_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     catalog_path,
     pdf_async_io_classic_pdf_with_catalog_missing_from_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict_pages = @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(pages_path).binary(),
@@ -1849,19 +1945,22 @@ async test "async file wrappers report malformed revision metadata" {
   @fs.write_file(
     missing_startxref_path,
     @ascii.encode("%PDF-1.4\nxref\n0 1\n0000000000 65535 f \n%%EOF\n"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     malformed_prev_path,
     pdf_async_io_classic_pdf_with_xref_body_for_test(
       "0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 /Prev /Bad >>",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     cyclic_prev_path,
     pdf_async_io_classic_pdf_with_self_prev_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
 
   let missing_startxref : Result[Int, Error] = try
@@ -1907,7 +2006,8 @@ async test "async file wrappers stop cyclic Prev chains" {
   @fs.write_file(
     path,
     pdf_async_io_classic_pdf_with_self_prev_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
   let result : Result[@pdflite.PdfDocument, Error] = try
@@ -1930,7 +2030,8 @@ async test "async file wrappers read classic Prev revisions" {
   @fs.write_file(
     path,
     pdf_async_io_classic_pdf_with_prev_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
   @test.assert_eq(pdf_revisions_from_file(path), 2)
@@ -1977,12 +2078,14 @@ async test "async file wrappers read xref stream Prev revisions" {
   @fs.write_file(
     updated_path,
     pdf_async_io_xref_stream_pdf_with_prev_update_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     deleted_path,
     pdf_async_io_xref_stream_pdf_with_prev_deleted_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(updated_path), {
     major: 1,
@@ -2024,12 +2127,14 @@ async test "async file wrappers read compressed xref stream Prev revisions" {
   @fs.write_file(
     path,
     pdf_async_io_compressed_xref_stream_pdf_with_prev_update_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_startxref_path,
     pdf_async_io_compressed_xref_stream_pdf_with_prev_update_bad_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
   @test.assert_eq(pdf_revisions_from_file(path), 2)
@@ -2087,7 +2192,8 @@ async test "async file wrappers report bad revision numbers" {
   @fs.write_file(
     path,
     pdf_async_io_classic_pdf_with_prev_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_revisions_from_file(path), 2)
   let invalid : Result[@pdflite.PdfDocument, Error] = try
@@ -2154,28 +2260,32 @@ async test "async file wrappers accept classic xref row variants" {
     pdf_async_io_classic_pdf_with_xref_body_for_test(
       "0 1\n\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 >>",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     zero_offset_path,
     pdf_async_io_classic_pdf_with_xref_body_for_test(
       "0 1\n0000000000 abcde n \n", "<< /Root 1 0 R /Size 1 >>",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     marker_suffix_path,
     pdf_async_io_classic_pdf_with_xref_body_for_test(
       "0 1\n0000000000 abcde nJunk\n", "<< /Root 1 0 R /Size 1 >>",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     repeated_marker_path,
     pdf_async_io_classic_pdf_with_xref_body_for_test(
       "xref\nxref 0 1\n0000000000 65535 f \n", "<< /Root 1 0 R /Size 1 >>",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let blank = pdf_read_document_from_file(blank_path)
   let zero_offset = pdf_read_document_from_file(zero_offset_path)
@@ -2223,50 +2333,58 @@ async test "async file wrappers accept classic xref layout variants" {
   @fs.write_file(
     fixed_path,
     pdf_async_io_classic_pdf_with_fixed_width_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     cr_only_path,
     pdf_async_io_cr_line_endings_for_test(
       pdf_async_io_classic_pdf_with_fixed_width_xref_for_test(),
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     mixed_first_path,
     pdf_async_io_classic_pdf_with_xref_body_for_test(
       "0 1\n0000000000_65535 f \n", "<< /Root 1 0 R /Size 1 >>",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     mixed_second_path,
     pdf_async_io_classic_pdf_with_xref_body_for_test(
       "0 1\n0000000000 65535_f \n", "<< /Root 1 0 R /Size 1 >>",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     tokenized_path,
     pdf_async_io_classic_pdf_with_unpadded_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     tokenized_free_path,
     pdf_async_io_classic_pdf_with_xref_body_for_test(
       "0 1\n0 0 f\n", "<< /Root 1 0 R /Size 1 >>",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     inline_header_path,
     pdf_async_io_classic_pdf_with_inline_xref_header_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     glued_trailer_path,
     pdf_async_io_classic_pdf_with_glued_trailer_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let fixed = pdf_read_document_from_file(fixed_path)
   let cr_only = pdf_read_document_from_file(cr_only_path)
@@ -2307,7 +2425,8 @@ async test "async file wrappers accept missing plain endobj" {
   @fs.write_file(
     path,
     pdf_async_io_classic_pdf_with_missing_endobj_catalog_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict = try! @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
@@ -2334,7 +2453,8 @@ async test "async file wrappers continue after missing plain endobj" {
   @fs.write_file(
     path,
     pdf_async_io_classic_pdf_with_missing_endobj_before_object_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict = try! @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
@@ -2362,7 +2482,8 @@ async test "async file wrappers keep direct streams from swallowing following ob
   @fs.write_file(
     path,
     pdf_async_io_classic_pdf_with_direct_stream_before_object_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict = try! @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(path).binary(),
@@ -2409,28 +2530,32 @@ async test "async file wrappers accept direct stream line breaks and padding" {
     pdf_async_io_classic_pdf_with_stream_body_for_test(
       @ascii.encode("<< /Length 5 >>\nstream\rHello\rendstream"),
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     crlf_path,
     pdf_async_io_classic_pdf_with_stream_body_for_test(
       @ascii.encode("<< /Length 5 >>\nstream\r\nWorld\r\nendstream"),
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     padded_path,
     pdf_async_io_classic_pdf_with_stream_body_for_test(
       pdf_async_io_padded_stream_body_for_test("Space\n", true),
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     inline_padding_path,
     pdf_async_io_classic_pdf_with_stream_body_for_test(
       pdf_async_io_padded_stream_body_for_test("Hello", false),
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict_cr = try! @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(cr_path).binary(),
@@ -2514,17 +2639,20 @@ async test "async file wrappers accept classic startxref pointer variants" {
   @fs.write_file(
     trailing_path,
     pdf_async_io_classic_pdf_with_trailing_startxref_junk_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     prefixed_path,
     pdf_async_io_classic_pdf_with_prefixed_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     inline_path,
     pdf_async_io_classic_pdf_with_inline_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let trailing_revisions = pdf_revisions_from_file(trailing_path)
   let prefixed_revisions = pdf_revisions_from_file(prefixed_path)
@@ -2556,7 +2684,8 @@ async test "async file wrappers reconstruct out-of-range startxref PDFs" {
   @fs.write_file(
     path,
     pdf_async_io_malformed_pdf_with_out_of_range_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
   let strict : Result[@pdflite.PdfDocument, Error] = try
@@ -2587,7 +2716,8 @@ async test "async file wrappers reconstruct in-range bad startxref PDFs" {
   @fs.write_file(
     path,
     pdf_async_io_malformed_pdf_with_bad_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 4 })
   let strict : Result[@pdflite.PdfDocument, Error] = try
@@ -2624,12 +2754,14 @@ async test "async file wrappers reconstruct malformed startxref numbers" {
   @fs.write_file(
     malformed_path,
     pdf_async_io_malformed_pdf_with_startxref_number_for_test("abc"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     overflow_path,
     pdf_async_io_malformed_pdf_with_startxref_number_for_test("2147483648"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict_malformed : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
@@ -2683,12 +2815,14 @@ async test "async file wrappers preserve classic free entries during reconstruct
   @fs.write_file(
     deleted_path,
     pdf_async_io_classic_xref_deleted_payload_bad_startxref_for_test(false),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     later_path,
     pdf_async_io_classic_xref_deleted_payload_bad_startxref_for_test(true),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict_deleted : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
@@ -2724,7 +2858,8 @@ async test "async file wrappers reconstruct classic Prev chains with bad startxr
   @fs.write_file(
     path,
     pdf_async_io_classic_catalog_pdf_with_prev_xref_bad_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
@@ -2782,27 +2917,32 @@ async test "async file wrappers reconstruct malformed classic xref metadata" {
   @fs.write_file(
     bad_entry_path,
     pdf_async_io_malformed_pdf_with_bad_xref_entry_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_count_path,
     pdf_async_io_malformed_pdf_with_bad_xref_count_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_trailer_path,
     pdf_async_io_malformed_pdf_with_bad_trailer_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     missing_root_path,
     pdf_async_io_malformed_pdf_with_missing_root_trailer_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_offset_path,
     pdf_async_io_malformed_pdf_with_bad_object_offset_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict_bad_entry : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
@@ -2894,12 +3034,14 @@ async test "async file wrappers preserve strict malformed Prev trailer errors" {
   @fs.write_file(
     negative_path,
     pdf_async_io_malformed_pdf_with_bad_prev_trailer_for_test("-1"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     named_path,
     pdf_async_io_malformed_pdf_with_bad_prev_trailer_for_test("/Bad"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let negative_strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
@@ -2961,26 +3103,30 @@ async test "async file wrappers preserve strict malformed xref row variants" {
     pdf_async_io_classic_pdf_with_malformed_xref_row_for_test(
       "0 1\n0000000000 00000 q \n",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     short_row_path,
     pdf_async_io_classic_pdf_with_malformed_xref_row_for_test("0\n"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_digit_path,
     pdf_async_io_classic_pdf_with_malformed_xref_row_for_test(
       "0 1\n0000000000_65x35_f \n",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_marker_path,
     pdf_async_io_classic_pdf_with_malformed_xref_row_for_test(
       "0 1\n0000000000_65535_q \n",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let bad_token : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
@@ -3065,12 +3211,14 @@ async test "async file wrappers preserve strict xref object mismatch errors" {
   @fs.write_file(
     mismatched_path,
     pdf_async_io_classic_pdf_with_mismatched_object_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     unparseable_path,
     pdf_async_io_classic_pdf_with_unparseable_xref_object_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let mismatched : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
@@ -3113,12 +3261,14 @@ async test "async file wrappers preserve strict missing xref and trailer errors"
   @fs.write_file(
     missing_xref_path,
     @ascii.encode("%PDF-1.4\nstartxref\n9\n%%EOF\n"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     trailerless_path,
     pdf_async_io_classic_pdf_without_trailer_after_xref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let missing_xref : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
@@ -3171,27 +3321,32 @@ async test "async file wrappers recover unreadable stream lengths" {
   @fs.write_file(
     missing_path,
     pdf_async_io_classic_pdf_with_missing_indirect_stream_length_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     non_integer_path,
     pdf_async_io_classic_pdf_with_non_integer_stream_length_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     stream_object_path,
     pdf_async_io_classic_pdf_with_stream_length_object_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     negative_path,
     pdf_async_io_classic_pdf_with_negative_stream_length_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     unparseable_path,
     pdf_async_io_classic_pdf_with_unparseable_stream_length_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let missing = pdf_read_document_from_file(missing_path)
   let non_integer = pdf_read_document_from_file(non_integer_path)
@@ -3231,7 +3386,8 @@ async test "async file wrappers resolve commented indirect stream lengths" {
   @fs.write_file(
     path,
     pdf_async_io_classic_pdf_with_commented_indirect_stream_length_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let parsed = pdf_read_document_from_file(path)
   pdf_async_io_remove_if_exists_for_test(path)
@@ -3261,7 +3417,8 @@ async test "async file wrappers reconstruct indirect stream lengths" {
   @fs.write_file(
     path,
     pdf_async_io_malformed_pdf_with_indirect_stream_length_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(@fs.read_file(path).binary())
@@ -3323,26 +3480,30 @@ async test "async file wrappers reconstruct malformed stream markers" {
     pdf_async_io_classic_pdf_with_malformed_stream_for_test(
       "<< /Length 5 >>\nstram\nHello\nendstream",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_endstream_path,
     pdf_async_io_classic_pdf_with_malformed_stream_for_test(
       "<< /Length 5 >>\nstream\nHello\nnot_a_stream_end",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_endobj_path,
     pdf_async_io_classic_pdf_with_malformed_stream_for_test(
       "<< /Length 5 >>\nstream\nHello\nendstream\nnotendobj",
     ),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     truncated_path,
     pdf_async_io_classic_pdf_with_truncated_stream_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict_bad_stream : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
@@ -3435,22 +3596,26 @@ async test "async file wrappers reconstruct malformed objects" {
   @fs.write_file(
     object_in_stream_path,
     pdf_async_io_malformed_pdf_with_object_header_inside_stream_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     nested_object_path,
     pdf_async_io_malformed_pdf_with_nested_object_header_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_object_path,
     pdf_async_io_classic_pdf_with_malformed_object_for_test("]"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     bad_name_path,
     pdf_async_io_classic_pdf_with_malformed_object_for_test("/Bad#zz"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let strict_bad_object : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
@@ -3532,12 +3697,14 @@ async test "async file wrappers preserve unreconstructable malformed read errors
   @fs.write_file(
     rootless_path,
     @ascii.encode("%PDF-1.4\n1 0 obj\n1\nendobj\n"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     malformed_startxref_path,
     @ascii.encode("%PDF-1.4\nstartxref\nabc\n%%EOF\n"),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   let rootless : Result[@pdflite.PdfDocument, Error] = try
     pdf_read_document_from_file(rootless_path)
@@ -3582,12 +3749,14 @@ async test "async file wrappers load object-stream entries from disk" {
   @fs.write_file(
     entries_path,
     pdf_async_io_xref_stream_pdf_with_two_object_stream_entries_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     stream_path,
     pdf_async_io_xref_stream_pdf_with_stream_object_in_object_stream_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(entries_path), {
     major: 1,
@@ -3688,7 +3857,8 @@ async test "async file wrappers reconstruct multi-revision object-stream roots" 
   @fs.write_file(
     path,
     pdf_async_io_xref_stream_prev_update_with_object_stream_root_bad_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
   let strict : Result[@pdflite.PdfDocument, Error] = try
@@ -3767,17 +3937,20 @@ async test "async file wrappers do not reconstruct object-stream decode failures
   @fs.write_file(
     filter_path,
     pdf_async_io_xref_stream_pdf_with_bad_filtered_object_stream_root_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     decodeparms_path,
     pdf_async_io_xref_stream_pdf_with_bad_decodeparms_object_stream_root_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @fs.write_file(
     predictor_path,
     pdf_async_io_xref_stream_pdf_with_unsupported_predictor_object_stream_root_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(filter_path), { major: 1, minor: 5 })
   let filter_result : Result[@pdflite.PdfDocument, Error] = try
@@ -3830,7 +4003,8 @@ async test "async file wrappers reconstruct indirect object-stream bounds" {
   @fs.write_file(
     path,
     pdf_async_io_indirect_object_stream_bounds_bad_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
   let strict : Result[@pdflite.PdfDocument, Error] = try
@@ -3874,7 +4048,8 @@ async test "async file wrappers reconstruct object streams with indirect filters
   @fs.write_file(
     path,
     pdf_async_io_indirect_object_stream_filter_bad_startxref_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
   let strict : Result[@pdflite.PdfDocument, Error] = try
@@ -3932,7 +4107,12 @@ async test "async file wrappers read encrypted object streams and recover bad st
     @ascii.encode("owner"),
     denied,
   )
-  @fs.write_file(encrypted_path, encrypted, create=0o644)
+  @fs.write_file(
+    encrypted_path,
+    encrypted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let decrypted = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       encrypted_path,
@@ -3944,7 +4124,12 @@ async test "async file wrappers read encrypted object streams and recover bad st
   let corrupted = pdf_async_io_corrupt_final_startxref_pointer_for_test(
     encrypted,
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let partial = pdf_read_document_from_file(corrupted_path)
   @test.assert_eq(partial.first_xref(), 0)
   @test.assert_eq(partial.lookup_object_or_null(2), PdfNull)
@@ -3962,7 +4147,12 @@ async test "async file wrappers read encrypted object streams and recover bad st
     @ascii.encode("owner"),
     denied,
   )
-  @fs.write_file(blank_path, blank, create=0o644)
+  @fs.write_file(
+    blank_path,
+    blank,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let blank_decrypted = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(blank_path),
   )
@@ -3981,7 +4171,8 @@ async test "async file wrappers reject encrypted xref streams with missing objec
   @fs.write_file(
     path,
     pdf_async_io_encrypted_xref_stream_missing_object_stream_for_test(),
-    create=0o644,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
   )
   @test.assert_eq(pdf_read_header_from_file(path), { major: 1, minor: 5 })
   let result : Result[@pdflite.PdfDecryptionResult?, Error] = try
@@ -4011,7 +4202,12 @@ async test "async file wrappers recrypt encrypted object-stream payloads" {
   let encrypted = try! pdf_async_io_encrypted_object_stream_pdf_for_test(
     user_password, owner_password, denied,
   )
-  @fs.write_file(source_path, encrypted, create=0o644)
+  @fs.write_file(
+    source_path,
+    encrypted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let decrypted = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       source_path,
@@ -4288,7 +4484,12 @@ async test "async file wrappers reconstruct compressed ARC4 encrypted documents 
   let corrupted = pdf_async_io_corrupt_final_startxref_pointer_for_test(
     @fs.read_file(encrypted_path).binary(),
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let recovered = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       corrupted_path,
@@ -4378,7 +4579,12 @@ async fn pdf_async_io_assert_legacy_arc4_recovery_for_test(
   let corrupted = pdf_async_io_corrupt_final_startxref_pointer_for_test(
     @fs.read_file(encrypted_path).binary(),
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let recovered = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       corrupted_path,
@@ -4471,7 +4677,12 @@ async test "async file wrappers reconstruct compressed encrypted documents with 
   let corrupted = pdf_async_io_corrupt_final_startxref_pointer_for_test(
     @fs.read_file(encrypted_path).binary(),
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let recovered = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       corrupted_path,
@@ -4553,7 +4764,12 @@ async test "async file wrappers reconstruct encrypted malformed classic xref off
   let malformed = pdf_async_io_corrupt_first_in_use_xref_offset_for_test(
     @fs.read_file(encrypted_path).binary(),
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -4657,7 +4873,12 @@ async test "async file wrappers reconstruct encrypted malformed classic xref mar
   let malformed = pdf_async_io_corrupt_first_in_use_xref_marker_for_test(
     @fs.read_file(encrypted_path).binary(),
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -4761,7 +4982,12 @@ async test "async file wrappers reconstruct encrypted malformed classic xref sub
   let malformed = pdf_async_io_corrupt_first_xref_subsection_count_for_test(
     @fs.read_file(encrypted_path).binary(),
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -4867,7 +5093,12 @@ async test "async file wrappers reconstruct encrypted malformed classic trailers
     @ascii.encode("trailer\n"),
     "trailer\n1\n",
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -4973,7 +5204,12 @@ async test "async file wrappers reconstruct encrypted missing-root classic trail
     @ascii.encode("trailer\n"),
     "trailer\n<< /Size 999 >>\n",
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -5079,7 +5315,12 @@ async test "async file wrappers reconstruct encrypted catalogs missing from clas
     @fs.read_file(encrypted_path).binary(),
     root_number,
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict = @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
@@ -5239,7 +5480,12 @@ async test "async file wrappers reconstruct encrypted page trees missing from cl
     @fs.read_file(encrypted_path).binary(),
     encrypt_object_number,
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict = @pdflite.pdf_read_classic_document_from_bytes(
     @fs.read_file(malformed_path).binary(),
   )
@@ -5348,7 +5594,12 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream meta
     @ascii.encode("/W ["),
     "/Index [0] ",
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -5445,7 +5696,12 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream widt
     @ascii.encode("/W ["),
     "/W [1 4] ",
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -5542,7 +5798,12 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream size
     @ascii.encode("/Size "),
     "/Size /Bad ",
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -5639,7 +5900,12 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream filt
     @ascii.encode("/Filter "),
     "/Filter /BadXRefFilter ",
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -5737,7 +6003,12 @@ async test "async file wrappers reconstruct encrypted malformed xref-stream deco
     @ascii.encode("/Filter "),
     "/DecodeParms /Bad ",
   )
-  @fs.write_file(malformed_path, malformed, create=0o644)
+  @fs.write_file(
+    malformed_path,
+    malformed,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let strict : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_read_classic_document_from_bytes(
       @fs.read_file(malformed_path).binary(),
@@ -5843,7 +6114,12 @@ async test "async file wrappers reconstruct compressed AESV3 encrypted documents
   let corrupted = pdf_async_io_corrupt_final_startxref_pointer_for_test(
     @fs.read_file(encrypted_path).binary(),
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let recovered = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       corrupted_path,
@@ -5929,7 +6205,12 @@ async test "async file wrappers reconstruct compressed AESV3 ISO encrypted docum
   let corrupted = pdf_async_io_corrupt_final_startxref_pointer_for_test(
     @fs.read_file(encrypted_path).binary(),
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let recovered = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       corrupted_path,
@@ -6202,7 +6483,12 @@ async test "async file wrappers reconstruct encrypted incremental revisions with
   let corrupted = pdf_async_io_corrupt_final_startxref_pointer_for_test(
     @fs.read_file(updated_path).binary(),
   )
-  @fs.write_file(corrupted_path, corrupted, create=0o644)
+  @fs.write_file(
+    corrupted_path,
+    corrupted,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
   let recovered = pdf_async_io_decryption_result_for_test(
     pdf_read_document_from_file_with_passwords(
       corrupted_path,

@@ -114,7 +114,8 @@ pub async fn pdf_write_metadata_to_file(
   permission? : Int = 0o644,
 ) -> Unit {
   match document.metadata() {
-    Some(metadata) => @fs.write_file(path, metadata, create=permission)
+    Some(metadata) =>
+      @fs.write_file(path, metadata, create_mode=CreateOrTruncate, permission~)
     None => ()
   }
 }
@@ -139,7 +140,8 @@ pub async fn pdf_extract_all_metadata_to_directory(
           document,
           document.lookup_object_or_null(number),
         ),
-        create=permission,
+        create_mode=CreateOrTruncate,
+        permission~,
       )
     None => ()
   }
@@ -149,7 +151,8 @@ pub async fn pdf_extract_all_metadata_to_directory(
       @fs.write_file(
         pdf_async_io_join_path(directory, "obj" + entry.0.to_string() + ".xml"),
         pdf_async_io_metadata_stream_bytes(document, entry.2),
-        create=permission,
+        create_mode=CreateOrTruncate,
+        permission~,
       )
     }
   }
@@ -183,7 +186,8 @@ pub async fn pdf_dump_attached_files_to_directory(
     @fs.write_file(
       pdf_async_io_join_path(directory, filename),
       pdf_async_io_attachment_data(attachment),
-      create=permission,
+      create_mode=CreateOrTruncate,
+      permission~,
     )
   }
 }
