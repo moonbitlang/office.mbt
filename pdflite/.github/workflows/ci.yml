@@ -118,3 +118,13 @@ jobs:
 
       - name: Check all supported targets
         run: moon check --target all --warn-list "$MOON_WARN_LIST"
+
+  arch-guard:
+    name: Architecture Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Enforce architecture ratchets
+        run: bash scripts/check_arch.sh
