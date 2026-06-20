@@ -56,7 +56,8 @@ pub async fn pdf_extract_fontfile_to_file(
   permission? : Int = 0o644,
 ) -> Unit {
   match document.extract_fontfile_bytes(page_number, font_name) {
-    Some(data) => @fs.write_file(path, data, create=permission)
+    Some(data) =>
+      @fs.write_file(path, data, create_mode=CreateOrTruncate, permission~)
     None => @core.pdf_error("extract_fontfile: unsupported or unfound font")
   }
 }

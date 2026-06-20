@@ -1,14 +1,4 @@
 ///|
-/// Location of an object stored inside a PDF object stream.
-///
-/// `object_stream_number` is the containing object stream number, and `index`
-/// is the zero-based entry index inside that stream.
-pub(all) struct ObjectStreamReference {
-  object_stream_number : Int
-  index : Int
-} derive(Debug, Eq, ToJson)
-
-///|
 /// One classic or xref-stream object-table entry.
 ///
 /// Entries are stored newest first by the document reader. `object_stream`
@@ -18,8 +8,8 @@ pub(all) struct PdfClassicXRefEntry {
   offset : Int
   generation : Int
   in_use : Bool
-  object_stream : ObjectStreamReference?
-} derive(Debug, Eq, ToJson)
+  object_stream : @xref_model.ObjectStreamReference?
+} derive(Debug, Eq)
 
 ///|
 /// Parsed xref section and associated trailer.

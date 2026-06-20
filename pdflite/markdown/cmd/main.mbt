@@ -51,5 +51,10 @@ async fn markdown_cmd_convert_file(
   let markdown = @markdown.pdf_bytes_to_markdown(
     @fs.read_file(input_path).binary(),
   )
-  @fs.write_file(output_path, @utf8.encode(markdown), create=0o644)
+  @fs.write_file(
+    output_path,
+    @utf8.encode(markdown),
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  )
 }

@@ -32,6 +32,7 @@ import {
   "bobzhang/pdflite/text/glyphdata",
   "bobzhang/pdflite/text/unicodedata",
   "bobzhang/pdflite/writer",
+  "bobzhang/pdflite/xref_model",
   "moonbitlang/core/env",
   "moonbitlang/core/buffer",
   "moonbitlang/core/debug",

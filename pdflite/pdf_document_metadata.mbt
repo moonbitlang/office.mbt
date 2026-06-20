@@ -15,7 +15,9 @@ pub fn PdfDocument::set_was_linearized(
 
 ///|
 /// Return saved encryption metadata, if the document is encrypted.
-fn PdfDocument::saved_encryption(self : PdfDocument) -> PdfSavedEncryption? {
+fn PdfDocument::saved_encryption(
+  self : PdfDocument,
+) -> @crypt_core.PdfSavedEncryption? {
   self.saved_encryption
 }
 
@@ -23,7 +25,7 @@ fn PdfDocument::saved_encryption(self : PdfDocument) -> PdfSavedEncryption? {
 /// Set saved encryption metadata for the document.
 fn PdfDocument::set_saved_encryption(
   self : PdfDocument,
-  saved_encryption : PdfSavedEncryption?,
+  saved_encryption : @crypt_core.PdfSavedEncryption?,
 ) -> Unit {
   self.saved_encryption = saved_encryption
 }

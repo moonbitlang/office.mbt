@@ -86,11 +86,13 @@ fn pdf_reader_object_stream_group_counts(
 /// Group active compressed xrefs by their containing object stream.
 pub fn pdf_reader_object_stream_groups(
   xrefs : ArrayView[PdfClassicXRefEntry],
-) -> Array[(Int, Array[(PdfClassicXRefEntry, ObjectStreamReference)])] {
+) -> Array[
+  (Int, Array[(PdfClassicXRefEntry, @xref_model.ObjectStreamReference)]),
+] {
   let (counts, group_count) = pdf_reader_object_stream_group_counts(xrefs)
-  let groups : Array[(Int, Array[(PdfClassicXRefEntry, ObjectStreamReference)])] = Array::new(
-    capacity=group_count,
-  )
+  let groups : Array[
+    (Int, Array[(PdfClassicXRefEntry, @xref_model.ObjectStreamReference)]),
+  ] = Array::new(capacity=group_count)
   let indexes : @hashmap.HashMap[Int, Int] = HashMap([])
   for xref in xrefs {
     match xref.object_stream {
@@ -100,7 +102,9 @@ pub fn pdf_reader_object_stream_groups(
             Some(index) => groups[index].1.push((xref, reference))
             None => {
               indexes[reference.object_stream_number] = groups.length()
-              let entries : Array[(PdfClassicXRefEntry, ObjectStreamReference)] = Array::new(
+              let entries : Array[
+                (PdfClassicXRefEntry, @xref_model.ObjectStreamReference),
+              ] = Array::new(
                 capacity=match counts.get(reference.object_stream_number) {
                   Some(count) => count
                   None => 1

@@ -20,7 +20,8 @@ pub async fn pdf_write_encrypted_40bit_document_to_file(
       mode~,
       file_id~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -57,7 +58,8 @@ pub async fn pdf_write_encrypted_128bit_document_to_file(
       mode~,
       file_id~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -87,7 +89,8 @@ pub async fn pdf_write_encrypted_128bit_r4_document_to_file(
       mode~,
       file_id~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -117,7 +120,8 @@ pub async fn pdf_write_encrypted_aesv2_document_to_file_with_iv_provider(
       mode~,
       file_id~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -147,7 +151,8 @@ pub async fn pdf_write_encrypted_aesv2_document_to_file(
       mode~,
       file_id~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -184,7 +189,8 @@ pub async fn pdf_write_encrypted_aesv3_document_to_file_with_providers(
       mode~,
       file_id~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -216,7 +222,8 @@ pub async fn pdf_write_encrypted_aesv3_document_to_file(
       mode~,
       file_id~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -248,7 +255,8 @@ pub async fn pdf_write_encrypted_aesv3_iso_document_to_file_with_providers(
       mode~,
       file_id~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }
 
@@ -276,6 +284,7 @@ pub async fn pdf_write_encrypted_aesv3_iso_document_to_file(
       mode~,
       file_id~,
     ),
-    create=permission,
+    create_mode=CreateOrTruncate,
+    permission~,
   )
 }

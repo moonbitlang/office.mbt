@@ -119,12 +119,15 @@ So extraction must decide, per method, one of: **(a)** root-owned facade method,
 or **(c)** drop/deprecate (old CamlPDF/cpdf compatibility shims). This decision,
 not the file move, is the real work.
 
-Two concrete upward dependencies make `PdfDocument` non-trivial to lift out today:
+Two concrete upward dependencies made `PdfDocument` non-trivial to lift out.
+Both are now RESOLVED (Slice 0.5 / commits B1, B2):
 
-- `PdfObjectData::ObjectToParseFromObjectStream` references
-  `@reader.ObjectStreamReference` (`reader/pdf_reader_xref_model.mbt`).
-- `PdfDocument.saved_encryption : PdfSavedEncryption?`, and
-  `PdfSavedEncryption` is defined in root crypt code (`pdf_crypt_model.mbt`).
+- `PdfObjectData::ObjectToParseFromObjectStream` referenced
+  `@reader.ObjectStreamReference`; the type was moved to the new `xref_model`
+  package (B1), so it is now `@xref_model.ObjectStreamReference`.
+- `PdfDocument.saved_encryption` referenced `PdfSavedEncryption`, defined in root
+  crypt code; `PdfSavedEncryption`/`PdfEncryptionValues` were moved into
+  `crypt_core` (B2), so the field is now `@crypt_core.PdfSavedEncryption?`.
 
 A naive `document -> reader, syntax, core` is therefore wrong: it omits the crypt
 state dependency, and pinning `document` *above* `reader` blocks later moving the

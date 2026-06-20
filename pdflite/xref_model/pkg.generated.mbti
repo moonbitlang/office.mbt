@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/xref_model"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct ObjectStreamReference {
+  object_stream_number : Int
+  index : Int
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

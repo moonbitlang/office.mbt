@@ -1,6 +1,6 @@
 ///|
-fn PdfEncryptionValues::file_key_for_recrypt_password(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::file_key_for_recrypt_password(
+  self : @crypt_core.PdfEncryptionValues,
   password : BytesView,
 ) -> @core.PdfBytes raise @core.PdfError {
   match self.file_key_for_user_password(password) {
@@ -32,7 +32,7 @@ fn PdfDocument::pdf_crypt_prepare_plaintext_for_recrypt(
 ///|
 fn PdfDocument::recrypt_arc4_with_file_key(
   self : PdfDocument,
-  values : PdfEncryptionValues,
+  values : @crypt_core.PdfEncryptionValues,
   file_key : BytesView,
   key_length_bits : Int,
   revision : Int,
@@ -62,7 +62,7 @@ fn PdfDocument::recrypt_arc4_with_file_key(
 ///|
 fn PdfDocument::recrypt_aesv2_with_file_key(
   self : PdfDocument,
-  values : PdfEncryptionValues,
+  values : @crypt_core.PdfEncryptionValues,
   file_key : BytesView,
   iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
 ) -> PdfDocument raise @core.PdfError {
@@ -89,7 +89,7 @@ fn PdfDocument::recrypt_aesv2_with_file_key(
 ///|
 fn PdfDocument::recrypt_aesv3_with_file_key(
   self : PdfDocument,
-  values : PdfEncryptionValues,
+  values : @crypt_core.PdfEncryptionValues,
   file_key : BytesView,
   iv_provider : (Int, Int, Int) -> @core.PdfBytes raise @core.PdfError,
 ) -> PdfDocument raise @core.PdfError {

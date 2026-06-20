@@ -66,6 +66,11 @@ These carry near-zero behavior risk and unblock everything else.
 
 ## Phase B — Keystone prep (Slice 0.5) — resolve upward deps
 
+> Progress: a prerequisite `deps` commit upgraded moonbitlang/async 0.17.0 ->
+> 0.19.4 (restoring local native validation). **B1 DONE** (xref_model package).
+> **B2 DONE** (crypt state in crypt_core). Both upward deps now point downward;
+> C1 (document extraction) is unblocked.
+
 `document` cannot be extracted until these two type dependencies point downward.
 
 ### Commit B1 — Lower the xref model types

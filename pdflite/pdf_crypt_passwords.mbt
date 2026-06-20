@@ -1,14 +1,14 @@
 ///|
-fn PdfEncryptionValues::effective_no_encrypt_metadata(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::effective_no_encrypt_metadata(
+  self : @crypt_core.PdfEncryptionValues,
   no_encrypt_metadata : Bool,
 ) -> Bool {
   no_encrypt_metadata || !self.encrypt_metadata
 }
 
 ///|
-fn PdfEncryptionValues::password_settings(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::password_settings(
+  self : @crypt_core.PdfEncryptionValues,
 ) -> (Int, Int) raise @core.PdfError {
   match self.crypt_type {
     PdfCryptARC4(key_length_bits, revision) => (revision, key_length_bits)
@@ -24,8 +24,8 @@ fn PdfEncryptionValues::password_settings(
 /// `password` is the raw PDF password byte sequence. AESV3 and earlier
 /// revisions use their respective standard-security algorithms.
 #warnings("-unused_value")
-fn PdfEncryptionValues::authenticate_user_password(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::authenticate_user_password(
+  self : @crypt_core.PdfEncryptionValues,
   password : BytesView,
 ) -> Bool raise @core.PdfError {
   let no_encrypt_metadata = self.effective_no_encrypt_metadata(false)
@@ -53,8 +53,8 @@ fn PdfEncryptionValues::authenticate_user_password(
 ///
 /// A wrong password returns `None`; malformed encryption values or corrupt
 /// AESV3 permission entries raise `@core.PdfError`.
-fn PdfEncryptionValues::file_key_for_user_password(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::file_key_for_user_password(
+  self : @crypt_core.PdfEncryptionValues,
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
 ) -> @core.PdfBytes? raise @core.PdfError {
@@ -112,8 +112,8 @@ fn PdfEncryptionValues::file_key_for_user_password(
 /// For pre-AESV3 handlers this first recovers the padded user password from
 /// the owner entry, then authenticates it as a user password.
 #warnings("-unused_value")
-fn PdfEncryptionValues::authenticate_owner_password(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::authenticate_owner_password(
+  self : @crypt_core.PdfEncryptionValues,
   password : BytesView,
 ) -> Bool raise @core.PdfError {
   let no_encrypt_metadata = self.effective_no_encrypt_metadata(false)
@@ -146,8 +146,8 @@ fn PdfEncryptionValues::authenticate_owner_password(
 ///
 /// A wrong password returns `None`; malformed encryption values or corrupt
 /// AESV3 permission entries raise `@core.PdfError`.
-fn PdfEncryptionValues::file_key_for_owner_password(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::file_key_for_owner_password(
+  self : @crypt_core.PdfEncryptionValues,
   password : BytesView,
   no_encrypt_metadata? : Bool = false,
 ) -> @core.PdfBytes? raise @core.PdfError {

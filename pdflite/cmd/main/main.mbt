@@ -298,7 +298,12 @@ async fn pdflite_cmd_rewrite_file(
     Ok(_) => ()
     Err(message) => return Err(message)
   }
-  @fs.write_file(output_path, output, create=0o644) catch {
+  @fs.write_file(
+    output_path,
+    output,
+    create_mode=CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => return Err("cannot write '" + output_path + "': " + err.to_string())
   }
   Ok(())

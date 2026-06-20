@@ -28,6 +28,7 @@ import {
   "bobzhang/pdflite/syntax",
   "bobzhang/pdflite/text/unicodedata",
   "bobzhang/pdflite/writer",
+  "bobzhang/pdflite/xref_model",
   "moonbitlang/core/buffer",
   "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
@@ -2176,7 +2177,7 @@ pub(all) struct PdfContentType3D1 {
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
   denied_permissions : Array[@crypt_core.PdfPermission]
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub struct PdfDocument {
   mut major : Int
@@ -2185,10 +2186,10 @@ pub struct PdfDocument {
   objects : PdfObjects
   mut trailer_dict : @syntax.PdfObject
   mut was_linearized : Bool
-  mut saved_encryption : PdfSavedEncryption?
+  mut saved_encryption : @crypt_core.PdfSavedEncryption?
   mut first_xref : Int
   mut revision_read : Int
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 pub fn PdfDocument::add_annotation(Self, @page.PdfPage, @annotation.PdfAnnotation) -> @page.PdfPage raise @core.PdfError
 pub fn PdfDocument::add_bookmark_title(Self, String, Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::add_bookmarks(Self, ArrayView[@bookmark.PdfBookmark]) -> Self raise @core.PdfError
@@ -2887,8 +2888,6 @@ pub(all) struct PdfEncodingDifference {
   code : Int
 } derive(Eq, ToJson, @debug.Debug)
 
-type PdfEncryptionValues derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfExtractedImageFile {
   path : String
   data : Bytes
@@ -2980,22 +2979,22 @@ pub(all) enum PdfObjectData {
   ObjectParsed(@syntax.PdfObject)
   ObjectParsedAlreadyDecrypted(@syntax.PdfObject)
   ObjectToParse
-  ObjectToParseFromObjectStream(@reader.ObjectStreamReference)
-} derive(Eq, ToJson, @debug.Debug)
+  ObjectToParseFromObjectStream(@xref_model.ObjectStreamReference)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct PdfObjectEntry {
   mut data : PdfObjectData
   generation : Int
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum PdfObjectEvent {
   ObjectAltered
   ObjectDeleted
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub struct PdfObjectMap {
   entries : @hashmap.HashMap[Int, PdfObjectEntry]
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 pub fn PdfObjectMap::contains(Self, Int) -> Bool
 pub fn PdfObjectMap::get_entry(Self, Int) -> PdfObjectEntry?
 pub fn PdfObjectMap::length(Self) -> Int
@@ -3009,7 +3008,7 @@ pub struct PdfObjects {
   object_map : PdfObjectMap
   object_stream_ids : @hashmap.HashMap[Int, Int]
   log : Array[(Int, PdfObjectEvent)]
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 pub fn PdfObjects::add_object(Self, @syntax.PdfObject, generation? : Int) -> Int
 pub fn PdfObjects::add_object_given_number(Self, Int, @syntax.PdfObject, generation? : Int) -> Unit
 pub fn PdfObjects::get_entry(Self, Int) -> PdfObjectEntry?
@@ -3059,8 +3058,6 @@ pub(all) struct PdfSampledFunction {
   bits_per_sample : Int
   samples : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
-
-type PdfSavedEncryption derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfSimpleFont {
   fonttype : PdfSimpleFontType

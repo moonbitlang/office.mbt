@@ -49,7 +49,12 @@ pub async fn pdf_extract_single_image_to_files(
   let files = document.extract_single_image_files(object_number, stem_text)
   let paths : Array[String] = []
   for file in files {
-    @fs.write_file(file.path, file.data, create=permission)
+    @fs.write_file(
+      file.path,
+      file.data,
+      create_mode=CreateOrTruncate,
+      permission~,
+    )
     paths.push(file.path)
   }
   if merge_masks && pdf_async_io_extracted_image_has_smask(stem_text, files) {
@@ -119,7 +124,12 @@ pub async fn pdf_extract_images_to_files(
   )
   let paths : Array[String] = []
   for file in files {
-    @fs.write_file(file.path, file.data, create=permission)
+    @fs.write_file(
+      file.path,
+      file.data,
+      create_mode=CreateOrTruncate,
+      permission~,
+    )
     paths.push(file.path)
   }
   if merge_masks && pdf_async_io_extracted_image_has_any_smask(files) {

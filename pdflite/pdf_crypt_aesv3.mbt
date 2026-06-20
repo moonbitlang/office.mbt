@@ -300,8 +300,8 @@ fn pdf_aesv3_permissions_from_entry(
 }
 
 ///|
-fn PdfEncryptionValues::validate_aesv3_permissions(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::validate_aesv3_permissions(
+  self : @crypt_core.PdfEncryptionValues,
   file_key : BytesView,
 ) -> Unit raise @core.PdfError {
   let permissions_entry = match self.permissions_entry {
