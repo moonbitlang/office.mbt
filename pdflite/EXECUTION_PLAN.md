@@ -74,14 +74,15 @@ These carry near-zero behavior risk and unblock everything else.
 - Wire it into `.github/workflows/ci.yml`.
 - Seed the allowlist with today's root files so it is green now and ratchets down.
 
-## Phase B — Keystone prep (Slice 0.5) — resolve upward deps
+## Phase B — leaf extraction below root (was framed as "keystone prep") — DONE & MERGED
 
-> Progress: a prerequisite `deps` commit upgraded moonbitlang/async 0.17.0 ->
-> 0.19.4 (restoring local native validation). **B1 DONE** (xref_model package).
-> **B2 DONE** (crypt state in crypt_core). Both upward deps now point downward;
-> C1 (document extraction) is unblocked.
-
-`document` cannot be extracted until these two type dependencies point downward.
+> Note: Phase B was originally framed as prep for the (now-abandoned) `document`
+> keystone. In hindsight its commits are valuable in their own right as **leaf
+> extractions below root**, independent of C1. **B1 DONE** (`xref_model` package),
+> **B2 DONE** (crypt security state in `crypt_core`), plus a prerequisite `deps`
+> commit (moonbitlang/async 0.17.0 -> 0.19.4, restoring local native validation)
+> and a `derive(ToJson)` cleanup. C1 itself was attempted afterward and abandoned
+> (see status block + Phase C below).
 
 ### Commit B1 — Lower the xref model types
 - DECISION (per review): create a small new `xref_model` package (depends on
@@ -107,7 +108,11 @@ These carry near-zero behavior risk and unblock everything else.
   the field-read volume makes accessors impractical, and note it in the commit.
 - Behavior-preserving.
 
-### Commit B3 — Method-ownership inventory (phased, not all-at-once)
+### Commit B3 — Method-ownership inventory (phased, not all-at-once) — NOT DONE / MOOT
+> This was prep for the abandoned C1 keystone (deciding which methods move to
+> `document`). Since `PdfDocument` stays in root, there is nothing to split out, so
+> B3 was never executed and is no longer needed. The "Revised Phase C+" tracks
+> (leaf extraction + API-boundary cleanup) replace it.
 - Generate `docs/document-method-inventory.md`: list all 446 public
   `PdfDocument::` methods, each assigned a `domain` (page/crypt/metadata/...).
 - For C1 it is ONLY required to decide the coarse split: which methods are
