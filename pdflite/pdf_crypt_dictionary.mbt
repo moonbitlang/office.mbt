@@ -73,7 +73,7 @@ fn pdf_crypt_type_from_encrypt_dictionary(
 /// `/ID` values raise `@core.PdfError`.
 fn PdfDocument::encryption_values(
   self : PdfDocument,
-) -> PdfEncryptionValues raise @core.PdfError {
+) -> @crypt_core.PdfEncryptionValues raise @core.PdfError {
   let encrypt_key = pdf_crypt_encrypt_name
   let encrypt_dictionary = match
     self.lookup_direct(encrypt_key, self.trailer_dict()) {

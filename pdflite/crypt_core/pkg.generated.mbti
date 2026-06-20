@@ -86,6 +86,18 @@ pub(all) enum PdfEncryptionMethod {
   PdfEncryptionAlreadyEncrypted
 } derive(Eq, ToJson, @debug.Debug)
 
+pub(all) struct PdfEncryptionValues {
+  crypt_type : @core.PdfCryptType
+  user_entry : Bytes
+  owner_entry : Bytes
+  permissions : Int
+  file_id : Bytes
+  encrypt_metadata : Bool
+  permissions_entry : Bytes?
+  user_encryption_key : Bytes?
+  owner_encryption_key : Bytes?
+} derive(Eq, ToJson, @debug.Debug)
+
 pub(all) enum PdfPermission {
   PdfNoEdit
   PdfNoPrint
@@ -95,6 +107,10 @@ pub(all) enum PdfPermission {
   PdfNoExtract
   PdfNoAssemble
   PdfNoHqPrint
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfSavedEncryption {
+  values : PdfEncryptionValues
 } derive(Eq, ToJson, @debug.Debug)
 
 // Type aliases

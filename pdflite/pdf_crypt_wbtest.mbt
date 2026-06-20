@@ -92,7 +92,7 @@ fn crypt_wb_expect_encryption_method_error_for_test(
   encrypt_dictionary : @syntax.PdfObject,
 ) -> Unit raise {
   let doc = crypt_wb_doc_with_encrypt_for_test(encrypt_dictionary)
-  let result : Result[PdfEncryptionValues, Error] = try
+  let result : Result[@crypt_core.PdfEncryptionValues, Error] = try
     doc.encryption_values()
   catch {
     err => Err(err)
@@ -168,7 +168,7 @@ fn crypt_wb_aesv3_r5_permissions_for_test() -> @core.PdfBytes {
 fn crypt_wb_aesv3_values_for_test(
   user_entry : BytesView,
   owner_entry : BytesView,
-) -> PdfEncryptionValues {
+) -> @crypt_core.PdfEncryptionValues {
   {
     crypt_type: PdfCryptAESV3(false),
     user_entry: user_entry.to_owned(),
@@ -183,7 +183,7 @@ fn crypt_wb_aesv3_values_for_test(
 }
 
 ///|
-fn crypt_wb_aesv3_r5_values_for_test() -> PdfEncryptionValues {
+fn crypt_wb_aesv3_r5_values_for_test() -> @crypt_core.PdfEncryptionValues {
   {
     crypt_type: PdfCryptAESV3(false),
     user_entry: crypt_wb_aesv3_r5_user_entry_for_test(),
@@ -221,7 +221,7 @@ fn crypt_wb_aesv3_r5_random_for_test(
 
 ///|
 test "private encryption password settings reject AESV3" {
-  let values : PdfEncryptionValues = {
+  let values : @crypt_core.PdfEncryptionValues = {
     crypt_type: PdfCryptAESV3(false),
     user_entry: Bytes::new(0),
     owner_entry: Bytes::new(0),
@@ -447,7 +447,7 @@ test "private encryption values parse crypt filter methods" {
 
 ///|
 test "private encryption values report malformed encryption dictionaries" {
-  let no_encrypt : Result[PdfEncryptionValues, Error] = try
+  let no_encrypt : Result[@crypt_core.PdfEncryptionValues, Error] = try
     pdf_document_empty().encryption_values()
   catch {
     err => Err(err)
@@ -554,7 +554,7 @@ test "private encryption values report malformed encryption dictionaries" {
       (crypt_wb_name_for_test("/P"), PdfInteger(-4)),
     ]),
   )
-  let missing_o_result : Result[PdfEncryptionValues, Error] = try
+  let missing_o_result : Result[@crypt_core.PdfEncryptionValues, Error] = try
     missing_o.encryption_values()
   catch {
     err => Err(err)
@@ -585,7 +585,7 @@ test "private encryption values report malformed encryption dictionaries" {
       ),
     ]),
   )
-  let missing_p_result : Result[PdfEncryptionValues, Error] = try
+  let missing_p_result : Result[@crypt_core.PdfEncryptionValues, Error] = try
     missing_p.encryption_values()
   catch {
     err => Err(err)
@@ -607,7 +607,7 @@ test "private encryption values report malformed encryption dictionaries" {
       user_length=31,
     ),
   )
-  let short_u_result : Result[PdfEncryptionValues, Error] = try
+  let short_u_result : Result[@crypt_core.PdfEncryptionValues, Error] = try
     short_u.encryption_values()
   catch {
     err => Err(err)
@@ -632,7 +632,7 @@ test "private encryption values report malformed encryption dictionaries" {
       ),
     ]),
   )
-  let bad_id_result : Result[PdfEncryptionValues, Error] = try
+  let bad_id_result : Result[@crypt_core.PdfEncryptionValues, Error] = try
     bad_id.encryption_values()
   catch {
     err => Err(err)
@@ -735,7 +735,7 @@ test "private encryption values authenticate R2 and R3 user entries" {
     file_id=@ascii.encode("doc-id"),
   )).encryption_values()
   let r3_entry = r3_values.user_entry
-  let r3_values_with_entry_prefix : PdfEncryptionValues = {
+  let r3_values_with_entry_prefix : @crypt_core.PdfEncryptionValues = {
     crypt_type: PdfCryptARC4(128, 3),
     user_entry: r3_entry[:16].to_owned(),
     owner_entry: r3_values.owner_entry,
@@ -750,7 +750,7 @@ test "private encryption values authenticate R2 and R3 user entries" {
     try! r3_values_with_entry_prefix.authenticate_user_password(Bytes::new(0)),
     true,
   )
-  let r3_values_with_short_entry : PdfEncryptionValues = {
+  let r3_values_with_short_entry : @crypt_core.PdfEncryptionValues = {
     crypt_type: PdfCryptARC4(128, 3),
     user_entry: r3_entry[:8].to_owned(),
     owner_entry: r3_values.owner_entry,
@@ -1007,7 +1007,7 @@ test "PdfDocument AESV3 decrypt preserves parser-private object states" {
 
 ///|
 test "private AESV3 saved dictionary requires permissions entry" {
-  let values : PdfEncryptionValues = {
+  let values : @crypt_core.PdfEncryptionValues = {
     crypt_type: PdfCryptAESV3(false),
     user_entry: Bytes::new(48),
     owner_entry: Bytes::new(48),
@@ -1049,7 +1049,7 @@ test "private AESV3 CBC no-padding encryption rejects partial blocks" {
 
 ///|
 test "private document decrypt supports ISO AESV3 object crypt with a file key" {
-  let values : PdfEncryptionValues = {
+  let values : @crypt_core.PdfEncryptionValues = {
     crypt_type: PdfCryptAESV3(true),
     user_entry: Bytes::new(0),
     owner_entry: Bytes::new(0),
@@ -1221,7 +1221,7 @@ test "private user password entry handles MD5 padding boundary file IDs" {
     ).length(),
     16,
   )
-  let values : PdfEncryptionValues = {
+  let values : @crypt_core.PdfEncryptionValues = {
     crypt_type: PdfCryptARC4(128, 4),
     user_entry,
     owner_entry: owner,

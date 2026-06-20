@@ -64,7 +64,7 @@ pub struct PdfDocument {
   objects : PdfObjects
   mut trailer_dict : @syntax.PdfObject
   mut was_linearized : Bool
-  mut saved_encryption : PdfSavedEncryption?
+  mut saved_encryption : @crypt_core.PdfSavedEncryption?
   mut first_xref : Int
   mut revision_read : Int
 } derive(Debug, Eq, ToJson)

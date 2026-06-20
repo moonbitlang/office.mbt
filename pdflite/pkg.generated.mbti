@@ -2186,7 +2186,7 @@ pub struct PdfDocument {
   objects : PdfObjects
   mut trailer_dict : @syntax.PdfObject
   mut was_linearized : Bool
-  mut saved_encryption : PdfSavedEncryption?
+  mut saved_encryption : @crypt_core.PdfSavedEncryption?
   mut first_xref : Int
   mut revision_read : Int
 } derive(Eq, ToJson, @debug.Debug)
@@ -2888,8 +2888,6 @@ pub(all) struct PdfEncodingDifference {
   code : Int
 } derive(Eq, ToJson, @debug.Debug)
 
-type PdfEncryptionValues derive(Eq, ToJson, @debug.Debug)
-
 pub(all) struct PdfExtractedImageFile {
   path : String
   data : Bytes
@@ -3060,8 +3058,6 @@ pub(all) struct PdfSampledFunction {
   bits_per_sample : Int
   samples : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
-
-type PdfSavedEncryption derive(Eq, ToJson, @debug.Debug)
 
 pub(all) struct PdfSimpleFont {
   fonttype : PdfSimpleFontType

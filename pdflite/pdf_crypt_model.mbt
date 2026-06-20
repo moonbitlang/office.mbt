@@ -1,31 +1,4 @@
 ///|
-/// Parsed standard-security-handler values from an encryption dictionary.
-///
-/// Password entries, permission masks, file IDs, and optional AESV3 wrapping
-/// entries are stored as PDF bytes. `crypt_type` describes the actual object
-/// encryption algorithm used for strings and streams.
-struct PdfEncryptionValues {
-  crypt_type : @core.PdfCryptType
-  user_entry : @core.PdfBytes
-  owner_entry : @core.PdfBytes
-  permissions : Int
-  file_id : @core.PdfBytes
-  encrypt_metadata : Bool
-  permissions_entry : @core.PdfBytes?
-  user_encryption_key : @core.PdfBytes?
-  owner_encryption_key : @core.PdfBytes?
-} derive(Debug, Eq, ToJson)
-
-///|
-/// Saved encryption state retained on a decrypted document.
-///
-/// Recrypt helpers use this to put a previously encrypted document back into
-/// its original security-handler shape after edits.
-struct PdfSavedEncryption {
-  values : PdfEncryptionValues
-} derive(Debug, Eq, ToJson)
-
-///|
 /// Result of successfully decrypting a document.
 ///
 /// `document` is a decrypted copy with encryption removed from the trailer and

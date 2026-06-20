@@ -1,7 +1,7 @@
 ///|
 fn PdfDocument::finish_decrypted_copy(
   self : PdfDocument,
-  values : PdfEncryptionValues,
+  values : @crypt_core.PdfEncryptionValues,
 ) -> Unit raise @core.PdfError {
   self.set_trailer_dict(
     self.trailer_dict().remove_dict_entry(pdf_crypt_encrypt_name),
@@ -12,7 +12,7 @@ fn PdfDocument::finish_decrypted_copy(
 ///|
 fn PdfDocument::decrypt_with_file_key(
   self : PdfDocument,
-  values : PdfEncryptionValues,
+  values : @crypt_core.PdfEncryptionValues,
   file_key : @core.PdfBytes,
   no_encrypt_metadata : Bool,
 ) -> PdfDecryptionResult raise @core.PdfError {
@@ -62,8 +62,8 @@ fn PdfDocument::decrypt_with_file_key(
 }
 
 ///|
-fn PdfEncryptionValues::file_key_for_available_password(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::file_key_for_available_password(
+  self : @crypt_core.PdfEncryptionValues,
   user_password : BytesView?,
   owner_password : BytesView?,
   no_encrypt_metadata : Bool,
@@ -89,8 +89,8 @@ fn PdfEncryptionValues::file_key_for_available_password(
 }
 
 ///|
-fn PdfEncryptionValues::decrypt_single_stream_with_file_key(
-  self : PdfEncryptionValues,
+fn @crypt_core.PdfEncryptionValues::decrypt_single_stream_with_file_key(
+  self : @crypt_core.PdfEncryptionValues,
   object_number : Int,
   generation : Int,
   stream : @syntax.PdfObject,
