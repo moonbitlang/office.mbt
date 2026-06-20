@@ -10,7 +10,7 @@ pub(all) enum PdfObjectData {
   ObjectParsedAlreadyDecrypted(@syntax.PdfObject)
   ObjectToParse
   ObjectToParseFromObjectStream(@xref_model.ObjectStreamReference)
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)
 
 ///|
 /// One object-table entry together with its generation number.
@@ -20,14 +20,14 @@ pub(all) enum PdfObjectData {
 pub(all) struct PdfObjectEntry {
   mut data : PdfObjectData
   generation : Int
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)
 
 ///|
 /// Mutation event recorded for incremental-write style bookkeeping.
 pub(all) enum PdfObjectEvent {
   ObjectAltered
   ObjectDeleted
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)
 
 ///|
 /// Sparse map from object number to object-table entry.
@@ -36,7 +36,7 @@ pub(all) enum PdfObjectEvent {
 /// number or mutation events; use `PdfObjects` for document-level bookkeeping.
 pub struct PdfObjectMap {
   entries : @hashmap.HashMap[Int, PdfObjectEntry]
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)
 
 ///|
 /// Document object table with allocation, object-stream, and mutation metadata.
@@ -49,7 +49,7 @@ pub struct PdfObjects {
   object_map : PdfObjectMap
   object_stream_ids : @hashmap.HashMap[Int, Int]
   log : Array[(Int, PdfObjectEvent)]
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)
 
 ///|
 /// In-memory representation of one PDF document.
@@ -67,4 +67,4 @@ pub struct PdfDocument {
   mut saved_encryption : @crypt_core.PdfSavedEncryption?
   mut first_xref : Int
   mut revision_read : Int
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)

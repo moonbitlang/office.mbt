@@ -7,7 +7,7 @@
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
   denied_permissions : Array[@crypt_core.PdfPermission]
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)
 
 ///|
 fn pdf_crypt_name(text : String) -> @core.PdfName {

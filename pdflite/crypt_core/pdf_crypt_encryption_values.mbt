@@ -20,7 +20,7 @@ pub(all) struct PdfEncryptionValues {
   permissions_entry : @core.PdfBytes?
   user_encryption_key : @core.PdfBytes?
   owner_encryption_key : @core.PdfBytes?
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)
 
 ///|
 /// Saved encryption state retained on a decrypted document.
@@ -29,4 +29,4 @@ pub(all) struct PdfEncryptionValues {
 /// its original security-handler shape after edits.
 pub(all) struct PdfSavedEncryption {
   values : PdfEncryptionValues
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)

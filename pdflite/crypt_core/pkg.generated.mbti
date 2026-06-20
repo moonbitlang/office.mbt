@@ -96,7 +96,7 @@ pub(all) struct PdfEncryptionValues {
   permissions_entry : Bytes?
   user_encryption_key : Bytes?
   owner_encryption_key : Bytes?
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum PdfPermission {
   PdfNoEdit
@@ -111,7 +111,7 @@ pub(all) enum PdfPermission {
 
 pub(all) struct PdfSavedEncryption {
   values : PdfEncryptionValues
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

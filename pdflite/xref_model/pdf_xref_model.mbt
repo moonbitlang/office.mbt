@@ -11,4 +11,4 @@
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int
   index : Int
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)

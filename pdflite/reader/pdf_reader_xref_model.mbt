@@ -9,7 +9,7 @@ pub(all) struct PdfClassicXRefEntry {
   generation : Int
   in_use : Bool
   object_stream : @xref_model.ObjectStreamReference?
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq)
 
 ///|
 /// Parsed xref section and associated trailer.

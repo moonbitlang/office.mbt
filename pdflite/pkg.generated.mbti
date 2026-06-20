@@ -2177,7 +2177,7 @@ pub(all) struct PdfContentType3D1 {
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
   denied_permissions : Array[@crypt_core.PdfPermission]
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub struct PdfDocument {
   mut major : Int
@@ -2189,7 +2189,7 @@ pub struct PdfDocument {
   mut saved_encryption : @crypt_core.PdfSavedEncryption?
   mut first_xref : Int
   mut revision_read : Int
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 pub fn PdfDocument::add_annotation(Self, @page.PdfPage, @annotation.PdfAnnotation) -> @page.PdfPage raise @core.PdfError
 pub fn PdfDocument::add_bookmark_title(Self, String, Bool) -> Self raise @core.PdfError
 pub fn PdfDocument::add_bookmarks(Self, ArrayView[@bookmark.PdfBookmark]) -> Self raise @core.PdfError
@@ -2980,21 +2980,21 @@ pub(all) enum PdfObjectData {
   ObjectParsedAlreadyDecrypted(@syntax.PdfObject)
   ObjectToParse
   ObjectToParseFromObjectStream(@xref_model.ObjectStreamReference)
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct PdfObjectEntry {
   mut data : PdfObjectData
   generation : Int
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum PdfObjectEvent {
   ObjectAltered
   ObjectDeleted
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub struct PdfObjectMap {
   entries : @hashmap.HashMap[Int, PdfObjectEntry]
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 pub fn PdfObjectMap::contains(Self, Int) -> Bool
 pub fn PdfObjectMap::get_entry(Self, Int) -> PdfObjectEntry?
 pub fn PdfObjectMap::length(Self) -> Int
@@ -3008,7 +3008,7 @@ pub struct PdfObjects {
   object_map : PdfObjectMap
   object_stream_ids : @hashmap.HashMap[Int, Int]
   log : Array[(Int, PdfObjectEvent)]
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 pub fn PdfObjects::add_object(Self, @syntax.PdfObject, generation? : Int) -> Int
 pub fn PdfObjects::add_object_given_number(Self, Int, @syntax.PdfObject, generation? : Int) -> Unit
 pub fn PdfObjects::get_entry(Self, Int) -> PdfObjectEntry?

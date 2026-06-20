@@ -135,7 +135,7 @@ pub(all) struct PdfClassicXRefEntry {
   generation : Int
   in_use : Bool
   object_stream : @xref_model.ObjectStreamReference?
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct PdfClassicXRefIndex {
   entries : @hashmap.HashMap[Int, PdfClassicXRefEntry]

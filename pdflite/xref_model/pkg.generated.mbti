@@ -13,7 +13,7 @@ import {
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int
   index : Int
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 
