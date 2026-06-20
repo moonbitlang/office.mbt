@@ -312,11 +312,14 @@ given there are few external users.
   package (the package name already namespaces it). e.g. `bookmark/write.mbt`,
   not `bookmark/pdf_bookmark_write.mbt`.
 - **Visibility:** prefer package-private; promote to `pub` only what the `.mbti`
-  review shows is a real cross-package need. Reach document internals through the
-  Slice-1 accessor API, never by widening fields to `pub(all)`.
-- **Method ownership:** feature logic is a domain free function taking
-  `PdfDocument`, not a `PdfDocument::` method defined from a feature package.
-  Reserve `PdfDocument::` methods for the (small) root facade.
+  review shows is a real cross-package need. (The old "reach document internals
+  through a Slice-1 accessor API" guidance is moot — there is no `document`
+  package; `PdfDocument` and its fields stay in root.)
+- **Method ownership (corrected per §0):** `PdfDocument`'s methods live in ROOT —
+  MoonBit forbids `pub` methods on a foreign type, so a feature/leaf package
+  CANNOT define `PdfDocument::` methods. Leaf packages contain only logic that does
+  NOT take `PdfDocument` (pure models/algorithms); anything operating on a
+  `PdfDocument` stays in root as a method.
 - **Tests travel with code:** a domain's tests live in its package.
 - **CI guard (dependency graph, not just counts):** fail the build if any feature
   package imports root, or if a new root `pdf_*.mbt` source file appears outside
@@ -329,8 +332,9 @@ given there are few external users.
   intra-package access into compile errors. Mitigation: do one prefix group at a
   time; let the compiler enumerate the boundary; widen minimally.
 - *Hidden cycles:* a domain may reach "sideways" into another domain's helper.
-  Mitigation: when found, push the shared helper *down* into `document` or
-  foundation, never sideways.
+  Mitigation: when found, push the shared helper *down* into a leaf or foundation
+  package (e.g. `core`, `syntax`, `xref_model`), never sideways. (Not `document` —
+  that layer does not exist; see §0.)
 - *Test target matrix regressions:* do Slice 0 first so test moves don't fight a
   hand-maintained matrix.
 - *Big-bang temptation:* explicitly avoid. Every slice is behavior-preserving and
