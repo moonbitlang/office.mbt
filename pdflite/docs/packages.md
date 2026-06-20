@@ -66,7 +66,7 @@ Legend for **State**:
 | `space` | 5 | 906 | — | none |
 | `ccitt` | 6 | 816 | (codec) | none |
 | `attach` | 6 | 801 | `attachment/` (13) | stub |
-| `document` (keystone) | 7 | 747 | — | none → Slice 1 |
+| `document` (stays in root) | 7 | 747 | — | root facade (NOT extracted — see proposal §0) |
 | `dest` | 5 | 583 | `destination/` | split |
 | `squeeze` | 5 | 552 | — | none |
 | `composition` | 4 | 450 | `composition/` (128) | stub |
@@ -77,9 +77,11 @@ Legend for **State**:
 ## How to read this during the refactor
 
 - A `stub` or `dir-only` row is a half-finished extraction: opening the directory
-  will mislead you about where the domain's code is. Until the matching Phase D
-  slice lands, search root `pdf_<prefix>_*.mbt` for the real logic.
-- `document` is the keystone (Slice 1): it must be extracted before the feature
-  domains can move down cleanly.
-- This table should shrink as Phase D progresses; when a domain's root file count
-  reaches ~0 it has been fully extracted.
+  will mislead you about where the domain's code is. Search root
+  `pdf_<prefix>_*.mbt` for the real logic.
+- `PdfDocument` and its method API STAY in root as the public facade — the
+  `document` extraction (old "keystone/Slice 1") was abandoned as infeasible in
+  MoonBit; see `../ARCHITECTURE_PROPOSAL.md` §0.
+- Going forward, only the *leaf* parts of a domain (pure models/algorithms that
+  don't reference `PdfDocument`) move into packages below root; the
+  document-facing feature logic remains in root by design.

@@ -1,16 +1,59 @@
 # pdflite Architecture Improvement Proposal
 
-Status: revised after codex (gpt-5.5) review
+Status: REVISED 2026-06-20 — the keystone (`document` extraction) approach is
+abandoned; see §0. Earlier sections (4 "Document core", 5 Slice 0.5/1, 8) are kept
+for history but are SUPERSEDED by §0.
 Date: 2026-06-20
 Scope: maintainability & comprehensibility of the library, not behavior change
 
-> Revision note: Section 3a, the revised Slice 0.5/1, the corrected slice
-> ordering, and the CI guard in Section 6 incorporate an external engineering
-> review. Key corrections: the monolith is *method*-shaped (446 public
+## 0. Status & corrected strategy (supersedes the keystone plan)
+
+**The central idea of this proposal — extracting `PdfDocument` into a mid-level
+`document` package (the "keystone", Slice 1 / Phase C / C1) — was attempted and is
+INFEASIBLE in MoonBit. Do not retry it.**
+
+What was actually done and merged (the *right* kind of work):
+
+- **Phase A** — hygiene + guardrails (doc archive, rule-based target matrix,
+  `scripts/check_arch.sh` CI ratchet). Merged (PR #12).
+- **Phase B** — leaf extraction below root: `xref_model` package
+  (`ObjectStreamReference`), `crypt_core` security state
+  (`PdfEncryptionValues`/`PdfSavedEncryption`), plus an async-dep upgrade and a
+  `derive(ToJson)` cleanup. Merged (PR #13).
+
+Why the keystone fails (verified empirically + `moon explain --diagnostic 4059`):
+
+- MoonBit **forbids `pub` methods on a foreign type**: `pub fn @document.PdfDocument::m`
+  is rejected ([4059]). Only the package that *defines* a type may define its
+  public methods.
+- `PdfDocument` has **1157 methods (450 `pub`)** and a **~445-method public API**.
+  Moving the struct to a thin `document` package forces the entire public method
+  surface (and its transitive private helpers) down with it — i.e. it just renames
+  root. Non-`pub` `fn @document.PdfDocument::m` *extension* methods work, but
+  cannot carry a public API.
+- Of the 450 `pub` methods, only **11** are used by real external packages
+  (markdown, async_io, cmd, README); **386** are `pub` only for blackbox tests.
+
+**Corrected strategy (this is the plan going forward):** keep `PdfDocument` in the
+ROOT package as the public facade. Decompose by extracting **leaf packages BELOW
+root** — pure models, state, and algorithms that do NOT depend on `PdfDocument`
+(exactly what Phase B did). Root methods orchestrate those leaf packages. Do not
+move `PdfDocument`; do not pursue a `document` layer. Lower-risk follow-on:
+per-domain public-API boundary cleanup (demote test-only `pub` methods to non-pub,
+move those tests to whitebox, keep blackbox coverage for the genuine public API).
+
+Everything below predates this finding and is retained for context only.
+
+---
+
+> Original revision note (pre-C1): Section 3a, the revised Slice 0.5/1, the
+> corrected slice ordering, and the CI guard in Section 6 incorporate an external
+> engineering review. Key corrections: the monolith is *method*-shaped (446 public
 > `PdfDocument::` methods), not just file-shaped; the `document` keystone has two
 > hidden upward dependencies (`PdfSavedEncryption`, `ObjectStreamReference`) that
 > must be resolved *before* it can be extracted; and ownership of those 446
 > methods must be decided per domain or the coupling just moves to new packages.
+> (This keystone framing is now abandoned — see §0.)
 
 ## 1. Executive summary
 
@@ -21,11 +64,15 @@ package** that still holds the overwhelming majority of feature logic. The
 directory tree suggests a layered design that the code does not actually have
 yet.
 
-This proposal recommends finishing the extraction the existing `ARCHITECTURE.md`
+~~This proposal recommends finishing the extraction the existing `ARCHITECTURE.md`
 already calls for, but adds the one structural change that currently blocks it:
 moving the central `PdfDocument` type out of the root into a mid-level
 `document` package. With that keystone moved, feature domains can be pulled out
-of root one prefix-group at a time, in behavior-preserving slices.
+of root one prefix-group at a time, in behavior-preserving slices.~~
+
+**SUPERSEDED by §0:** the `document`/keystone move is infeasible in MoonBit.
+`PdfDocument` stays in root as the public facade; decomposition happens by
+extracting *leaf* packages below root. See §0 for the corrected strategy.
 
 ## 2. Current state (measured 2026-06-20)
 
@@ -136,31 +183,42 @@ cycle.
 
 ## 4. Target architecture
 
+> SUPERSEDED by §0: Layer 2 ("Document core" / a `document` package) does NOT
+> exist and cannot — `PdfDocument` stays in root as the facade (Layer 4/5 collapse
+> into root). The foundation/syntax/leaf layers below are still the right target.
+
 Keep the layer model already written in `ARCHITECTURE.md`, but make it real and
 name the missing middle layer:
 
 ```
 Layer 0  Foundation        core, geometry, (data: text/*data)
-Layer 1  Syntax/object     syntax, reader, crypt_core
-Layer 2  Document core     document   <-- NEW: PdfDocument, PdfObjects,
-                                            object map, accessors, event log
+Layer 1  Syntax/object     syntax, reader, crypt_core, xref_model
+Layer 2  Document core     [ABANDONED] PdfDocument stays in root (facade);
+                           MoonBit forbids pub methods on a foreign type, so its
+                           ~445-method public API cannot leave root
 Layer 3  Codecs/filters    flate, codec, (image codecs), crypt stream policy
-Layer 4  Feature domains   page, content, text, font, image, annotation,
-                            bookmark, metadata, ocg, draw, merge, crypt,
-                            addtext, ua (accessibility), fun, attachment,
-                            portfolio, composition, impose, redact, tweak
+Layer 4  Feature domains   leaf models/algorithms extracted BELOW root; the
+                           document-facing feature logic stays in root as methods
 Layer 5  Entry points      cmd/main, markdown/cmd, async_io, fixture_acceptance
 ```
 
-Rules (unchanged in spirit, enforced going forward):
+Rules (CORRECTED per §0 — the original bullets assumed a `document` layer and a
+disappearing root, both wrong):
 
-- Dependencies point down only. A feature package may depend on `document`,
-  syntax/object, codecs, foundation — never on another feature package unless
-  that dependency is itself acyclic and intentional (e.g. `markdown -> page`).
-- The root package shrinks to a **thin facade**: re-exports + cross-domain glue
-  only. Ideally it eventually disappears or becomes a small `pdflite` umbrella.
+- Dependencies point down only. A **leaf** package may depend on syntax/object,
+  codecs, foundation — never on `PdfDocument`/root and never on another feature
+  package. There is NO `document` layer to depend on.
+- The root package does NOT shrink to near-nothing and does NOT disappear: it
+  permanently owns `PdfDocument` and its ~445-method public API (MoonBit requires
+  a type's public methods to live in its own package). Root sheds only the *leaf*
+  code that doesn't reference `PdfDocument`.
 
 ## 5. Migration plan (behavior-preserving slices)
+
+> SUPERSEDED by §0: the slice ordering below is built around the keystone and is
+> obsolete. The live plan is "Revised Phase C+" in EXECUTION_PLAN.md (leaf
+> extraction + per-domain API-boundary cleanup). Slice 0 (done, Phase A) and the
+> general gate/`.mbti`-review discipline still apply.
 
 The ordering matters because of the keystone. Each slice ends with
 `moon check && moon info && moon fmt && moon test` and an intentional review of
@@ -194,7 +252,10 @@ This must land before any `document` extraction, or the keystone move stalls.
   not all 446 up front (consistent with §10). This table is the running contract
   that prevents the coupling from silently re-forming.
 
-### Slice 1 — Extract the `document` package (the keystone)
+### Slice 1 — Extract the `document` package (the keystone) — ABANDONED (see §0)
+> This slice is INFEASIBLE: MoonBit forbids `pub` methods on a foreign type, so
+> PdfDocument's ~445-method public API cannot live in root once the type moves to
+> `document`. The text below is retained only to document what was tried.
 - Create `document/` containing `PdfDocument`, `PdfObjects`, `PdfObjectMap`,
   `PdfObjectEntry`, `PdfObjectData`, `PdfObjectEvent`, plus a **deliberate set of
   public accessor/mutation APIs** (e.g. object-table get/set/allocate, event-log
@@ -251,11 +312,14 @@ given there are few external users.
   package (the package name already namespaces it). e.g. `bookmark/write.mbt`,
   not `bookmark/pdf_bookmark_write.mbt`.
 - **Visibility:** prefer package-private; promote to `pub` only what the `.mbti`
-  review shows is a real cross-package need. Reach document internals through the
-  Slice-1 accessor API, never by widening fields to `pub(all)`.
-- **Method ownership:** feature logic is a domain free function taking
-  `PdfDocument`, not a `PdfDocument::` method defined from a feature package.
-  Reserve `PdfDocument::` methods for the (small) root facade.
+  review shows is a real cross-package need. (The old "reach document internals
+  through a Slice-1 accessor API" guidance is moot — there is no `document`
+  package; `PdfDocument` and its fields stay in root.)
+- **Method ownership (corrected per §0):** `PdfDocument`'s methods live in ROOT —
+  MoonBit forbids `pub` methods on a foreign type, so a feature/leaf package
+  CANNOT define `PdfDocument::` methods. Leaf packages contain only logic that does
+  NOT take `PdfDocument` (pure models/algorithms); anything operating on a
+  `PdfDocument` stays in root as a method.
 - **Tests travel with code:** a domain's tests live in its package.
 - **CI guard (dependency graph, not just counts):** fail the build if any feature
   package imports root, or if a new root `pdf_*.mbt` source file appears outside
@@ -268,8 +332,9 @@ given there are few external users.
   intra-package access into compile errors. Mitigation: do one prefix group at a
   time; let the compiler enumerate the boundary; widen minimally.
 - *Hidden cycles:* a domain may reach "sideways" into another domain's helper.
-  Mitigation: when found, push the shared helper *down* into `document` or
-  foundation, never sideways.
+  Mitigation: when found, push the shared helper *down* into a leaf or foundation
+  package (e.g. `core`, `syntax`, `xref_model`), never sideways. (Not `document` —
+  that layer does not exist; see §0.)
 - *Test target matrix regressions:* do Slice 0 first so test moves don't fight a
   hand-maintained matrix.
 - *Big-bang temptation:* explicitly avoid. Every slice is behavior-preserving and
@@ -277,13 +342,22 @@ given there are few external users.
 
 ## 8. Success metrics
 
-- Root non-test source files: 637 -> < 50 (target: facade only).
-- No domain has a "stub package + bulk-in-root" split.
-- `document` package exists; no feature package depends on root.
-- `moon.pkg` target matrix is rule-based, not per-file enumerated.
-- New contributor can find a feature's code by opening its package directory.
+> SUPERSEDED by §0: "root -> < 50 files" and "`document` package exists" are NOT
+> goals — `PdfDocument` and its ~445-method API stay in root by design. Realistic
+> metrics: leaf packages keep growing below root; root's `.mbti` shrinks toward the
+> genuine ~11-method external surface; no feature/leaf package imports root.
+
+- ~~Root non-test source files: 637 -> < 50 (target: facade only).~~ (not a goal)
+- No domain has a "stub package + bulk-in-root" split *for the leaf parts*.
+- ~~`document` package exists~~; no leaf/feature package depends on root.
+- `moon.pkg` target matrix is rule-based, not per-file enumerated. (done, A3)
+- New contributor can find a *leaf* domain's pure code by opening its package.
 
 ## 9. Open questions for review
+
+> SUPERSEDED by §0: these questions assume the keystone/`document` plan. Q2
+> (document owning catalog/trailer) is moot — there is no `document` package. The
+> still-relevant open question is which *leaf* domains to extract next.
 
 1. Is a final thin `pdflite` umbrella/facade worth keeping, or should consumers
    import domain packages directly (given few external users)?
@@ -296,16 +370,18 @@ given there are few external users.
 
 ## 10. Minimum viable improvement (if appetite is limited)
 
-If the full multi-slice extraction is too much to commit to now, the
-highest-value-per-effort subset is:
+> SUPERSEDED by §0: step 2 below (extract `document/`) is infeasible. The actual
+> minimum-viable work — Slice 0 hygiene + the CI guard + the leaf extractions of
+> Phase B — is already DONE and merged (PRs #12, #13). Further improvement = more
+> leaf extractions and per-domain API-boundary cleanup, per EXECUTION_PLAN.md.
+
+~~If the full multi-slice extraction is too much to commit to now, the
+highest-value-per-effort subset is:~~
 
 1. Slice 0 tooling/hygiene: rule-based `moon.pkg` target matrix, move `CamlPDF*.md`
-   to `docs/history/`, add `docs/packages.md`.
-2. Slice 0.5 + Slice 1 only: lower the two upward deps, then extract `document/`
-   with a minimal stable accessor API. Leave existing root feature methods in
-   place as facade wrappers for now.
-3. Add the dependency-graph CI guard so the monolith cannot regrow.
-
-This captures most of the comprehensibility win (a real document core + a guard
-rail) without forcing the per-method ownership decisions for all 446 methods up
-front — those can then happen lazily, one domain slice at a time.
+   to `docs/history/`, add `docs/packages.md`. (done, Phase A)
+2. ~~Slice 0.5 + Slice 1 only: lower the two upward deps, then extract `document/`~~
+   (extract `document/` is infeasible — see §0; the upward-dep lowering became the
+   Phase B leaf packages `xref_model` and `crypt_core` state, which are valuable on
+   their own.)
+3. Add the dependency-graph CI guard so the monolith cannot regrow. (done, A4)
