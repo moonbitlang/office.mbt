@@ -95,27 +95,35 @@ fn run_demo_bytes(
   args : ArrayView[String],
 ) -> (String, Bytes)? raise @xlsx.XlsxError {
   match demo {
-    "dashboard" => Some(("dashboard.xlsx", demo_dashboard_bytes()))
-    "invoice" => Some(("invoice.xlsx", demo_invoice_bytes()))
-    "pivot_slicer" => Some(("pivot_slicer.xlsx", demo_pivot_slicer_bytes()))
-    "sparklines" => Some(("sparklines.xlsx", demo_sparklines_bytes()))
+    "dashboard" => Some(("dashboard.xlsx", @demos_lib.demo_dashboard_bytes()))
+    "invoice" => Some(("invoice.xlsx", @demos_lib.demo_invoice_bytes()))
+    "pivot_slicer" =>
+      Some(("pivot_slicer.xlsx", @demos_lib.demo_pivot_slicer_bytes()))
+    "sparklines" =>
+      Some(("sparklines.xlsx", @demos_lib.demo_sparklines_bytes()))
     "tracker_heatmap" =>
-      Some(("tracker_heatmap.xlsx", demo_tracker_heatmap_bytes()))
+      Some(("tracker_heatmap.xlsx", @demos_lib.demo_tracker_heatmap_bytes()))
     "interactive_controls" =>
-      Some(("interactive_controls.xlsx", demo_interactive_controls_bytes()))
-    "combo_chart" => Some(("combo_chart.xlsx", demo_combo_chart_bytes()))
+      Some(
+        (
+          "interactive_controls.xlsx",
+          @demos_lib.demo_interactive_controls_bytes(),
+        ),
+      )
+    "combo_chart" =>
+      Some(("combo_chart.xlsx", @demos_lib.demo_combo_chart_bytes()))
     "ooxml_showcase" =>
-      Some(("ooxml_showcase.xlsx", demo_ooxml_showcase_bytes()))
+      Some(("ooxml_showcase.xlsx", @demos_lib.demo_ooxml_showcase_bytes()))
     "stream_big" => {
       let rows = demo_stream_big_rows_from_args(args)
-      Some(("stream_big_\{rows}.xlsx", demo_stream_big_bytes(rows~)))
+      Some(("stream_big_\{rows}.xlsx", @demos_lib.demo_stream_big_bytes(rows~)))
     }
     "secure" => {
       let password = match args {
         [] => "moonbit"
         [p, ..] => p
       }
-      Some(("secure_password.xlsx", demo_secure_bytes(password~)))
+      Some(("secure_password.xlsx", @demos_lib.demo_secure_bytes(password~)))
     }
     _ => None
   }

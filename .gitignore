@@ -11,7 +11,9 @@ excelize
 __pycache__/
 *.pyc
 .tools
+.openseek/
 demos*/
+!demos/
 !cmd/demos/
 !cmd/demos/moon.pkg
 _mbtexcel_check

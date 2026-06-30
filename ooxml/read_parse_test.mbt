@@ -34,8 +34,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|</Relationships>
     #|
   let result_missing_target = try? parse_relationship_targets(
-    missing_target,
-    "t1",
+    missing_target, "t1",
   )
   match result_missing_target {
     Err(ParseXmlError::InvalidXml(msg~)) =>

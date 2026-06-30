@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "bobzhang/mbtexcel/cmd/demos"
+package "bobzhang/mbtexcel/demos"
 
 import {
   "bobzhang/mbtexcel/xlsx",
@@ -7,6 +7,8 @@ import {
 
 // Values
 pub fn demo_combo_chart_bytes() -> Bytes raise @xlsx.XlsxError
+
+pub fn demo_dashboard_bytes() -> Bytes raise @xlsx.XlsxError
 
 pub fn demo_interactive_controls_bytes() -> Bytes raise @xlsx.XlsxError
 
@@ -19,6 +21,8 @@ pub fn demo_pivot_slicer_bytes() -> Bytes raise @xlsx.XlsxError
 pub fn demo_secure_bytes(password? : String) -> Bytes raise @xlsx.XlsxError
 
 pub fn demo_sparklines_bytes() -> Bytes raise @xlsx.XlsxError
+
+pub fn demo_stream_big_bytes(rows? : Int) -> Bytes raise @xlsx.XlsxError
 
 pub fn demo_tracker_heatmap_bytes() -> Bytes raise @xlsx.XlsxError
 

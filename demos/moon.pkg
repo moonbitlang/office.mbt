@@ -1,0 +1,8 @@
+import {
+  "bobzhang/mbtexcel" @excel,
+  "bobzhang/mbtexcel/xlsx",
+}
+
+warnings = "-a"
+
+supported_targets = "native+js"

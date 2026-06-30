@@ -53,7 +53,7 @@ async fn MemWriter::write_reader(
 }
 
 ///|
-impl @async/io.Writer for MemWriter with write_once(
+impl @async/io.Writer for MemWriter with fn write_once(
   self : MemWriter,
   bytes : Bytes,
   offset~ : Int,
@@ -63,7 +63,7 @@ impl @async/io.Writer for MemWriter with write_once(
 }
 
 ///|
-impl @async/io.Writer for MemWriter with write(
+impl @async/io.Writer for MemWriter with fn write(
   self : MemWriter,
   data : &@async/io.Data,
 ) {
@@ -71,7 +71,7 @@ impl @async/io.Writer for MemWriter with write(
 }
 
 ///|
-impl @async/io.Writer for MemWriter with write_reader(
+impl @async/io.Writer for MemWriter with fn write_reader(
   self : MemWriter,
   reader : &@async/io.Reader,
 ) {
