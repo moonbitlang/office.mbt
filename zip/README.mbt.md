@@ -64,13 +64,13 @@ test "create archive" {
   archive.add("data.txt", b"Large content here...", compression=Deflate)
 
   // List entries
-  inspect(
+  debug_inspect(
     archive.entries().map(entry => entry.name()),
     content="[\"hello.txt\", \"data.txt\"]",
   )
 
   // Get file content
-  inspect(archive.get("hello.txt"), content="Some(b\"Hello, World!\")")
+  inspect(archive.get("hello.txt") == Some(b"Hello, World!"), content="true")
 }
 ```
 
@@ -89,11 +89,11 @@ test "read archive" {
 
   // Read back
   let loaded = @zip.read(bytes)
-  inspect(
+  debug_inspect(
     loaded.entries().map(entry => entry.name()),
     content="[\"file1.txt\", \"file2.txt\"]",
   )
-  inspect(loaded.get("file1.txt"), content="Some(b\"Content 1\")")
+  inspect(loaded.get("file1.txt") == Some(b"Content 1"), content="true")
 }
 ```
 

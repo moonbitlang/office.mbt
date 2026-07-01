@@ -9,7 +9,9 @@ test "ooxml read_parse: parse_relationship_targets supports self-closing and exp
     #|</Relationships>
     #|
   let targets = parse_relationship_targets(xml, "t1")
-  inspect(targets, content="{\"rId1\": \"a.xml\", \"rId3\": \"c.xml\"}")
+  debug_inspect(targets, content=(
+    #|{ "rId1": "a.xml", "rId3": "c.xml" }
+  ))
 }
 
 ///|
@@ -68,7 +70,7 @@ test "ooxml read_parse: parse_content_type_overrides and find workbook part" {
     #|  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
     #|</Types>
     #|
-  inspect(
+  debug_inspect(
     find_override_part_by_content_types(xml, [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
       "application/vnd.ms-excel.sheet.macroEnabled.main+xml",

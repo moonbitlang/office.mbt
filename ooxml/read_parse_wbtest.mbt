@@ -1,12 +1,12 @@
 ///|
 test "ooxml read_parse wb: attr_value parser branches" {
-  inspect(attr_value("   ", "Id"), content="None")
-  inspect(
+  debug_inspect(attr_value("   ", "Id"), content="None")
+  debug_inspect(
     attr_value("= \"skip\" foo = \"bar\"", "foo"),
     content="Some(\"bar\")",
   )
-  inspect(attr_value("foo=bar", "foo"), content="None")
-  inspect(attr_value("bar=\"ok\"", "baz"), content="None")
+  debug_inspect(attr_value("foo=bar", "foo"), content="None")
+  debug_inspect(attr_value("bar=\"ok\"", "baz"), content="None")
 
   let bad_attr : Result[String?, Error] = try? attr_value(
     "foo=\"unterminated", "foo",
@@ -23,7 +23,7 @@ test "ooxml read_parse wb: relationship type-missing branch continues" {
     #|</Relationships>
     #|
   let targets = parse_relationship_targets(xml, "t1")
-  inspect(targets, content="{}")
+  debug_inspect(targets, content="{}")
 }
 
 ///|

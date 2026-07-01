@@ -5,24 +5,14 @@ test "zip store roundtrip" {
   archive.add("dir/b.txt", b"world")
   let bytes = write(archive)
   let parsed = read(bytes)
-  inspect(
+  debug_inspect(
     parsed.entries().map(entry => entry.name()),
     content=(
       #|["a.txt", "dir/b.txt"]
     ),
   )
-  inspect(
-    parsed.get("a.txt"),
-    content=(
-      #|Some(b"hello")
-    ),
-  )
-  inspect(
-    parsed.get("dir/b.txt"),
-    content=(
-      #|Some(b"world")
-    ),
-  )
+  inspect(parsed.get("a.txt") == Some(b"hello"), content="true")
+  inspect(parsed.get("dir/b.txt") == Some(b"world"), content="true")
 }
 
 ///|
@@ -38,12 +28,7 @@ test "zip deflate roundtrip" {
   archive.add("a.txt", b"hello", compression=Deflate)
   let bytes = write(archive)
   let parsed = read(bytes)
-  inspect(
-    parsed.get("a.txt"),
-    content=(
-      #|Some(b"hello")
-    ),
-  )
+  inspect(parsed.get("a.txt") == Some(b"hello"), content="true")
 }
 
 ///|
@@ -52,7 +37,7 @@ test "zip deflate roundtrip (data descriptor)" {
   archive.add("a.txt", b"hello", compression=Deflate, data_descriptor=true)
   let bytes = write(archive)
   let parsed = read(bytes)
-  inspect(parsed.get("a.txt"), content="Some(b\"hello\")")
+  inspect(parsed.get("a.txt") == Some(b"hello"), content="true")
 }
 
 ///|

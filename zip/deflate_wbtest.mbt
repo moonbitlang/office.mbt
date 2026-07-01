@@ -98,7 +98,7 @@ test "deflate wb: find_match distance cap branch" {
   let pos = 33000
   let h = hash3(bytes, pos)
   head[h] = 0
-  inspect(find_match(bytes, pos, head, prev), content="(0, 0)")
+  debug_inspect(find_match(bytes, pos, head, prev), content="(0, 0)")
 }
 
 ///|
