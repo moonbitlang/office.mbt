@@ -69,14 +69,21 @@ test "zip write zip64 structures" {
 ///|
 test "zip writer wb: helper guard and zip64 descriptor branches" {
   let out : Array[Byte] = []
-  let bad_u16 : Result[Unit, Error] = try? write_u16_le(out, -1)
-  inspect(bad_u16 is Err(ZipError::UnsupportedFeature(_)), content="true")
-
-  let bad_u32 : Result[UInt, Error] = try? to_u32(-1)
-  inspect(bad_u32 is Err(ZipError::UnsupportedFeature(_)), content="true")
-
-  let bad_u64 : Result[UInt64, Error] = try? to_u64(-1)
-  inspect(bad_u64 is Err(ZipError::UnsupportedFeature(_)), content="true")
+  try write_u16_le(out, -1) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected write_u16_le to raise")
+  }
+  try to_u32(-1) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected to_u32 to raise")
+  }
+  try to_u64(-1) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected to_u64 to raise")
+  }
 
   let offset_only = build_zip64_extra(uncomp=None, comp=None, offset=Some(7))
   inspect(offset_only.length(), content="12")

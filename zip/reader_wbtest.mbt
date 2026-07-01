@@ -163,24 +163,34 @@ test "zip read zip64 extra sizes" {
 ///|
 test "zip reader wb: direct guard error branches" {
   let reader = Reader::new(b"", 0)
-  let bad_read_bytes : Result[BytesView, Error] = try? reader.read_bytes(-1)
-  inspect(bad_read_bytes is Err(ZipError::OutOfBounds(_)), content="true")
-
-  let bad_skip : Result[Unit, Error] = try? reader.skip(-1)
-  inspect(bad_skip is Err(ZipError::OutOfBounds(_)), content="true")
-
-  let bad_u64_to_int : Result[Int, Error] = try? u64_to_int(0x1_0000_0000)
-  inspect(
-    bad_u64_to_int is Err(ZipError::UnsupportedFeature(_)),
-    content="true",
-  )
-
-  let bad_u16 : Result[Int, Error] = try? read_u16_le_at(b"\x00", 0)
-  inspect(bad_u16 is Err(ZipError::OutOfBounds(_)), content="true")
-
-  let bad_u32 : Result[UInt, Error] = try? read_u32_le_at_raw(b"\x00\x01", 0)
-  inspect(bad_u32 is Err(ZipError::OutOfBounds(_)), content="true")
-
-  let bad_u64 : Result[UInt64, Error] = try? read_u64_le_at(b"\x00\x01\x02", 0)
-  inspect(bad_u64 is Err(ZipError::OutOfBounds(_)), content="true")
+  try reader.read_bytes(-1) catch {
+    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+  } noraise {
+    _ => fail("expected read_bytes to raise")
+  }
+  try reader.skip(-1) catch {
+    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+  } noraise {
+    _ => fail("expected skip to raise")
+  }
+  try u64_to_int(0x1_0000_0000) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected u64_to_int to raise")
+  }
+  try read_u16_le_at(b"\x00", 0) catch {
+    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+  } noraise {
+    _ => fail("expected read_u16_le_at to raise")
+  }
+  try read_u32_le_at_raw(b"\x00\x01", 0) catch {
+    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+  } noraise {
+    _ => fail("expected read_u32_le_at_raw to raise")
+  }
+  try read_u64_le_at(b"\x00\x01\x02", 0) catch {
+    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+  } noraise {
+    _ => fail("expected read_u64_le_at to raise")
+  }
 }

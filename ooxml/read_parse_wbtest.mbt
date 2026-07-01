@@ -8,10 +8,11 @@ test "ooxml read_parse wb: attr_value parser branches" {
   inspect(attr_value("foo=bar", "foo"), content="None")
   inspect(attr_value("bar=\"ok\"", "baz"), content="None")
 
-  let bad_attr : Result[String?, Error] = try? attr_value(
-    "foo=\"unterminated", "foo",
-  )
-  inspect(bad_attr is Err(ParseXmlError::InvalidXml(_)), content="true")
+  try attr_value("foo=\"unterminated", "foo") catch {
+    e => inspect(e is ParseXmlError::InvalidXml(_), content="true")
+  } noraise {
+    _ => fail("expected attr_value to raise")
+  }
 }
 
 ///|
@@ -34,10 +35,11 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|  <Override ContentType="application/xml"/>
     #|</Types>
     #|
-  let result_missing_part = try? parse_content_type_overrides(missing_part)
-  match result_missing_part {
-    Err(ParseXmlError::InvalidXml(msg~)) =>
+  try parse_content_type_overrides(missing_part) catch {
+    ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="content type override part name missing")
+    _ => fail("expected content type override part name missing")
+  } noraise {
     _ => fail("expected content type override part name missing")
   }
 
@@ -47,12 +49,11 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|  <Override PartName="/xl/workbook.xml"/>
     #|</Types>
     #|
-  let result_missing_content = try? parse_content_type_overrides(
-    missing_content_type,
-  )
-  match result_missing_content {
-    Err(ParseXmlError::InvalidXml(msg~)) =>
+  try parse_content_type_overrides(missing_content_type) catch {
+    ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="content type override content type missing")
+    _ => fail("expected content type override content type missing")
+  } noraise {
     _ => fail("expected content type override content type missing")
   }
 }

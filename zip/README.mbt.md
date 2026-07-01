@@ -175,7 +175,10 @@ Example error handling:
 ///|
 test "error handling" {
   // Invalid ZIP data
-  let result : Result[@zip.Archive, Error] = try? @zip.read(b"not a zip file")
-  guard result is Err(_) else { return }
+  try @zip.read(b"not a zip file") catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected read to raise")
+  }
 }
 ```

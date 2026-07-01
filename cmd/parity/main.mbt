@@ -117,24 +117,24 @@ async fn main {
     [_, value, ..] => value
   }
 
-  let dashboard : Result[Bytes, Error] = try? @demos.demo_dashboard_bytes()
-  match dashboard {
-    Ok(bytes) => write_out(out_dir, "dashboard.xlsx", bytes)
-    Err(err) => println("dashboard generation failed: \{err}")
+  try @demos.demo_dashboard_bytes() catch {
+    err => println("dashboard generation failed: \{err}")
+  } noraise {
+    bytes => write_out(out_dir, "dashboard.xlsx", bytes)
   }
-  let controls : Result[Bytes, Error] = try? parity_controls_min_bytes()
-  match controls {
-    Ok(bytes) => write_out(out_dir, "controls.xlsx", bytes)
-    Err(err) => println("controls generation failed: \{err}")
+  try parity_controls_min_bytes() catch {
+    err => println("controls generation failed: \{err}")
+  } noraise {
+    bytes => write_out(out_dir, "controls.xlsx", bytes)
   }
-  let cf : Result[Bytes, Error] = try? parity_cf_min_bytes()
-  match cf {
-    Ok(bytes) => write_out(out_dir, "cf.xlsx", bytes)
-    Err(err) => println("cf generation failed: \{err}")
+  try parity_cf_min_bytes() catch {
+    err => println("cf generation failed: \{err}")
+  } noraise {
+    bytes => write_out(out_dir, "cf.xlsx", bytes)
   }
-  let shared_strings : Result[Bytes, Error] = try? parity_shared_strings_bytes()
-  match shared_strings {
-    Ok(bytes) => write_out(out_dir, "shared_strings.xlsx", bytes)
-    Err(err) => println("shared_strings generation failed: \{err}")
+  try parity_shared_strings_bytes() catch {
+    err => println("shared_strings generation failed: \{err}")
+  } noraise {
+    bytes => write_out(out_dir, "shared_strings.xlsx", bytes)
   }
 }

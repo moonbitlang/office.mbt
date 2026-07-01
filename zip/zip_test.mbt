@@ -28,8 +28,11 @@ test "zip store roundtrip" {
 ///|
 test "zip invalid bytes" {
   let bad : Bytes = b"not a zip"
-  let result : Result[Archive, ZipError] = try? read(bad)
-  inspect(result is Err(_), content="true")
+  try read(bad) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected read to raise")
+  }
 }
 
 ///|
@@ -77,6 +80,9 @@ test "zip write rejects too-long file names" {
     name = name + "a"
   }
   archive.add(name, b"hello")
-  let result : Result[Bytes, Error] = try? write(archive)
-  inspect(result is Err(ZipError::UnsupportedFeature(_)), content="true")
+  try write(archive) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected write to raise")
+  }
 }

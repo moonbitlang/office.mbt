@@ -57,32 +57,39 @@ test "gzip/gunzip roundtrip with optional header fields" {
 test "gunzip invalid and mismatch cases" {
   let raw = b"hello gzip"
   let gz = gzip(raw).to_array()
-  let too_short : Result[Bytes, Error] = try? gunzip(b"short")
-  inspect(too_short is Err(_), content="true")
+  try gunzip(b"short") catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected gunzip to raise")
+  }
   let bad_header = gz.copy()
   bad_header[0] = (0).to_byte()
-  let invalid_header : Result[Bytes, Error] = try? gunzip(
-    Bytes::from_array(bad_header),
-  )
-  inspect(invalid_header is Err(_), content="true")
+  try gunzip(Bytes::from_array(bad_header)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected gunzip to raise")
+  }
   let bad_method = gz.copy()
   bad_method[2] = (0).to_byte()
-  let unsupported_method : Result[Bytes, Error] = try? gunzip(
-    Bytes::from_array(bad_method),
-  )
-  inspect(unsupported_method is Err(_), content="true")
+  try gunzip(Bytes::from_array(bad_method)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected gunzip to raise")
+  }
   let bad_size = gz.copy()
   gzip_overwrite_u32_le(bad_size, bad_size.length() - 4, (0 : UInt))
-  let size_mismatch : Result[Bytes, Error] = try? gunzip(
-    Bytes::from_array(bad_size),
-  )
-  inspect(size_mismatch is Err(_), content="true")
+  try gunzip(Bytes::from_array(bad_size)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected gunzip to raise")
+  }
   let bad_crc = gz.copy()
   gzip_overwrite_u32_le(bad_crc, bad_crc.length() - 8, (0 : UInt))
-  let crc_mismatch : Result[Bytes, Error] = try? gunzip(
-    Bytes::from_array(bad_crc),
-  )
-  inspect(crc_mismatch is Err(_), content="true")
+  try gunzip(Bytes::from_array(bad_crc)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected gunzip to raise")
+  }
 }
 
 ///|
@@ -93,20 +100,22 @@ test "gunzip invalid name/comment and invalid data offset" {
   invalid_name[2] = (0x08).to_byte()
   invalid_name[3] = (0x08).to_byte()
   invalid_name[9] = (0xFF).to_byte()
-  let name_err : Result[Bytes, Error] = try? gunzip(
-    Bytes::from_array(invalid_name),
-  )
-  inspect(name_err is Err(_), content="true")
+  try gunzip(Bytes::from_array(invalid_name)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected gunzip to raise")
+  }
   let invalid_comment : Array[Byte] = Array::make(18, (1).to_byte())
   invalid_comment[0] = (0x1F).to_byte()
   invalid_comment[1] = (0x8B).to_byte()
   invalid_comment[2] = (0x08).to_byte()
   invalid_comment[3] = (0x10).to_byte()
   invalid_comment[9] = (0xFF).to_byte()
-  let comment_err : Result[Bytes, Error] = try? gunzip(
-    Bytes::from_array(invalid_comment),
-  )
-  inspect(comment_err is Err(_), content="true")
+  try gunzip(Bytes::from_array(invalid_comment)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected gunzip to raise")
+  }
   let invalid_data : Array[Byte] = Array::make(18, (0).to_byte())
   invalid_data[0] = (0x1F).to_byte()
   invalid_data[1] = (0x8B).to_byte()
@@ -116,8 +125,9 @@ test "gunzip invalid name/comment and invalid data offset" {
   // XLEN = 200 (push idx beyond end)
   invalid_data[10] = (200).to_byte()
   invalid_data[11] = (0).to_byte()
-  let data_err : Result[Bytes, Error] = try? gunzip(
-    Bytes::from_array(invalid_data),
-  )
-  inspect(data_err is Err(_), content="true")
+  try gunzip(Bytes::from_array(invalid_data)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected gunzip to raise")
+  }
 }

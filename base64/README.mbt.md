@@ -83,12 +83,18 @@ Common error cases:
 ///|
 test "error handling" {
   // Invalid character
-  let result1 : Result[Bytes, Error] = try? @base64.decode("Invalid!")
-  guard result1 is Err(_) else { return }
+  try @base64.decode("Invalid!") catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected decode to raise")
+  }
 
   // Invalid padding
-  let result2 : Result[Bytes, Error] = try? @base64.decode("A===")
-  guard result2 is Err(_) else { return }
+  try @base64.decode("A===") catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected decode to raise")
+  }
 }
 ```
 

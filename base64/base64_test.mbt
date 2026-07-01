@@ -4,8 +4,11 @@ test "encode/decode" {
   inspect(encode(input), content="aGVsbG8=")
   let decoded = decode("aGVsbG8=")
   inspect(@encoding/utf8.decode(decoded), content="hello")
-  let result : Result[Bytes, Error] = try? decode("!!")
-  inspect(result is Err(Base64Error::InvalidBase64(_)), content="true")
+  try decode("!!") catch {
+    e => inspect(e is Base64Error::InvalidBase64(_), content="true")
+  } noraise {
+    _ => fail("expected decode to raise")
+  }
 }
 
 ///|
@@ -17,16 +20,28 @@ test "encode padding variants" {
 
 ///|
 test "decode invalid length and padding" {
-  let bad_len : Result[Bytes, Error] = try? decode("a")
-  inspect(bad_len is Err(Base64Error::InvalidBase64(_)), content="true")
-  let bad_pad : Result[Bytes, Error] = try? decode("====")
-  inspect(bad_pad is Err(Base64Error::InvalidBase64(_)), content="true")
+  try decode("a") catch {
+    e => inspect(e is Base64Error::InvalidBase64(_), content="true")
+  } noraise {
+    _ => fail("expected decode to raise")
+  }
+  try decode("====") catch {
+    e => inspect(e is Base64Error::InvalidBase64(_), content="true")
+  } noraise {
+    _ => fail("expected decode to raise")
+  }
 }
 
 ///|
 test "decode rejects non-ascii and chars after padding" {
-  let after_pad : Result[Bytes, Error] = try? decode("Zg==A")
-  inspect(after_pad is Err(Base64Error::InvalidBase64(_)), content="true")
-  let non_ascii : Result[Bytes, Error] = try? decode("Zg==ÿ")
-  inspect(non_ascii is Err(Base64Error::InvalidBase64(_)), content="true")
+  try decode("Zg==A") catch {
+    e => inspect(e is Base64Error::InvalidBase64(_), content="true")
+  } noraise {
+    _ => fail("expected decode to raise")
+  }
+  try decode("Zg==ÿ") catch {
+    e => inspect(e is Base64Error::InvalidBase64(_), content="true")
+  } noraise {
+    _ => fail("expected decode to raise")
+  }
 }
