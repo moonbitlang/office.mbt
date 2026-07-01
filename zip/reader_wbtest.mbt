@@ -83,12 +83,7 @@ test "zip read data descriptor" {
   push_u32_le(buf, central_offset.reinterpret_as_uint())
   push_u16_le(buf, 0)
   let archive = read(Bytes::from_array(buf))
-  inspect(
-    archive.get("a.txt"),
-    content=(
-      #|Some(b"hi")
-    ),
-  )
+  inspect(archive.get("a.txt") == Some(b"hi"), content="true")
 }
 
 ///|
@@ -152,12 +147,7 @@ test "zip read zip64 extra sizes" {
   push_u32_le(buf, central_offset.reinterpret_as_uint())
   push_u16_le(buf, 0)
   let archive = read(Bytes::from_array(buf))
-  inspect(
-    archive.get("b.txt"),
-    content=(
-      #|Some(b"zip64")
-    ),
-  )
+  inspect(archive.get("b.txt") == Some(b"zip64"), content="true")
 }
 
 ///|

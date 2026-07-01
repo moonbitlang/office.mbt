@@ -28,7 +28,7 @@ test "zip write data descriptor" {
   inspect(comp_size == len_u32, content="true")
   inspect(uncomp_size == len_u32, content="true")
   let parsed = read(bytes)
-  inspect(parsed.get("a.txt"), content="Some(b\"hello\")")
+  inspect(parsed.get("a.txt") == Some(b"hello"), content="true")
 }
 
 ///|
@@ -37,7 +37,7 @@ test "zip write zip64 structures" {
   archive.add("a.txt", b"hello")
   let bytes = write_with_options(archive, force_zip64=true)
   let parsed = read(bytes)
-  inspect(parsed.get("a.txt"), content="Some(b\"hello\")")
+  inspect(parsed.get("a.txt") == Some(b"hello"), content="true")
   let name_len = read_u16_le_at(bytes, 26)
   let extra_len = read_u16_le_at(bytes, 28)
   let extra_offset = 30 + name_len
