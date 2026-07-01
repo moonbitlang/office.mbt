@@ -20,10 +20,11 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship Type="t1" Target="a.xml"/>
     #|</Relationships>
     #|
-  let result_missing_id = try? parse_relationship_targets(missing_id, "t1")
-  match result_missing_id {
-    Err(ParseXmlError::InvalidXml(msg~)) =>
+  try parse_relationship_targets(missing_id, "t1") catch {
+    ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="relationship id missing")
+    _ => fail("expected relationship id missing")
+  } noraise {
     _ => fail("expected relationship id missing")
   }
 
@@ -33,13 +34,11 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship Id="rId1" Type="t1"/>
     #|</Relationships>
     #|
-  let result_missing_target = try? parse_relationship_targets(
-    missing_target,
-    "t1",
-  )
-  match result_missing_target {
-    Err(ParseXmlError::InvalidXml(msg~)) =>
+  try parse_relationship_targets(missing_target, "t1") catch {
+    ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="relationship target missing")
+    _ => fail("expected relationship target missing")
+  } noraise {
     _ => fail("expected relationship target missing")
   }
 
@@ -49,10 +48,11 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship 
     #|</Relationships>
     #|
-  let result_malformed = try? parse_relationship_targets(malformed, "t1")
-  match result_malformed {
-    Err(ParseXmlError::InvalidXml(msg~)) =>
+  try parse_relationship_targets(malformed, "t1") catch {
+    ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="relationship tag not closed")
+    _ => fail("expected relationship tag not closed")
+  } noraise {
     _ => fail("expected relationship tag not closed")
   }
 }
@@ -85,12 +85,15 @@ test "ooxml read_parse: parse_content_type_overrides reports malformed override 
     #|  <Override PartName="/xl/workbook.xml" 
     #|</Types>
     #|
-  let result = try? find_override_part_by_content_types(malformed, [
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
-  ])
-  match result {
-    Err(ParseXmlError::InvalidXml(msg~)) =>
+  try
+    find_override_part_by_content_types(malformed, [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+    ])
+  catch {
+    ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="content type override tag not closed")
+    _ => fail("expected content type override tag not closed")
+  } noraise {
     _ => fail("expected content type override tag not closed")
   }
 }

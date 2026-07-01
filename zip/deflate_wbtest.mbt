@@ -69,24 +69,37 @@ fn wb_single_symbol_table(symbol : Int) -> HuffmanTable {
 ///|
 test "deflate wb: direct guard error branches" {
   let reader = BitReader::new(b"")
-  let bad_ensure : Result[Unit, Error] = try? reader.ensure_bits(-1)
-  inspect(bad_ensure is Err(ZipError::OutOfBounds(_)), content="true")
-
-  let bad_length : Result[(Int, Int, Int), Error] = try? length_to_symbol(2)
-  inspect(bad_length is Err(ZipError::UnsupportedFeature(_)), content="true")
-
-  let bad_dist : Result[(Int, Int, Int), Error] = try? distance_to_symbol(0)
-  inspect(bad_dist is Err(ZipError::UnsupportedFeature(_)), content="true")
-
-  let bad_huffman : Result[HuffmanTable, Error] = try? build_huffman([16])
-  inspect(bad_huffman is Err(ZipError::UnsupportedFeature(_)), content="true")
-
+  try reader.ensure_bits(-1) catch {
+    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+  } noraise {
+    _ => fail("expected ensure_bits to raise")
+  }
+  try length_to_symbol(2) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected length_to_symbol to raise")
+  }
+  try distance_to_symbol(0) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected distance_to_symbol to raise")
+  }
+  try build_huffman([16]) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected build_huffman to raise")
+  }
   let writer = BitWriter::new()
-  let bad_bits : Result[Unit, Error] = try? writer.write_bits(1, -1)
-  inspect(bad_bits is Err(ZipError::UnsupportedFeature(_)), content="true")
-
-  let bad_fixed : Result[(Int, Int), Error] = try? fixed_literal_code(288)
-  inspect(bad_fixed is Err(ZipError::UnsupportedFeature(_)), content="true")
+  try writer.write_bits(1, -1) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected write_bits to raise")
+  }
+  try fixed_literal_code(288) catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected fixed_literal_code to raise")
+  }
 }
 
 ///|
@@ -116,12 +129,11 @@ test "deflate wb: dynamic table repeat-without-previous branch" {
   // first decoded symbol from code-length table: 16
   ignore(writer.write_bits(0, 1))
   let reader = BitReader::new(writer.finish())
-  let result : Result[(HuffmanTable, HuffmanTable), Error] = try? read_dynamic_tables(
-    reader,
-  )
-  match result {
-    Err(ZipError::UnsupportedFeature(msg~)) =>
+  try read_dynamic_tables(reader) catch {
+    ZipError::UnsupportedFeature(msg~) =>
       inspect(msg, content="repeat with no previous length")
+    _ => fail("expected repeat-with-no-previous-length error")
+  } noraise {
     _ => fail("expected repeat-with-no-previous-length error")
   }
 }
@@ -130,36 +142,40 @@ test "deflate wb: dynamic table repeat-without-previous branch" {
 test "deflate wb: decode_huffman_block validation branches" {
   let zero_reader = BitReader::new(b"\x00")
 
-  let bad_length_result : Result[Unit, Error] = try? decode_huffman_block(
-    zero_reader,
-    wb_single_symbol_table(286),
-    wb_single_symbol_table(0),
-    [],
-  )
-  inspect(
-    bad_length_result is Err(ZipError::UnsupportedFeature(_)),
-    content="true",
-  )
-
-  let bad_dist_symbol_result : Result[Unit, Error] = try? decode_huffman_block(
-    BitReader::new(b"\x00"),
-    wb_single_symbol_table(257),
-    wb_single_symbol_table(30),
-    [],
-  )
-  inspect(
-    bad_dist_symbol_result is Err(ZipError::UnsupportedFeature(_)),
-    content="true",
-  )
-
-  let bad_backref_result : Result[Unit, Error] = try? decode_huffman_block(
-    BitReader::new(b"\x00"),
-    wb_single_symbol_table(257),
-    wb_single_symbol_table(0),
-    [],
-  )
-  inspect(
-    bad_backref_result is Err(ZipError::UnsupportedFeature(_)),
-    content="true",
-  )
+  try
+    decode_huffman_block(
+      zero_reader,
+      wb_single_symbol_table(286),
+      wb_single_symbol_table(0),
+      [],
+    )
+  catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected decode_huffman_block to raise")
+  }
+  try
+    decode_huffman_block(
+      BitReader::new(b"\x00"),
+      wb_single_symbol_table(257),
+      wb_single_symbol_table(30),
+      [],
+    )
+  catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected decode_huffman_block to raise")
+  }
+  try
+    decode_huffman_block(
+      BitReader::new(b"\x00"),
+      wb_single_symbol_table(257),
+      wb_single_symbol_table(0),
+      [],
+    )
+  catch {
+    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+  } noraise {
+    _ => fail("expected decode_huffman_block to raise")
+  }
 }

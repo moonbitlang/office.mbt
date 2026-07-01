@@ -24,20 +24,31 @@ test "crypto aes ecb roundtrip (192)" {
 test "crypto aes invalid key/iv/data lengths" {
   let key128 = b"0123456789abcdef"
   let data = b"0123456789abcdef0123456789abcdef"
-  let bad_key : Result[Bytes, Error] = try? aes_ecb_encrypt(b"short", data)
-  inspect(bad_key is Err(CryptoError::InvalidCrypto(_)), content="true")
-  let bad_len : Result[Bytes, Error] = try? aes_ecb_encrypt(key128, b"123")
-  inspect(bad_len is Err(CryptoError::InvalidCrypto(_)), content="true")
-  let bad_len_dec : Result[Bytes, Error] = try? aes_ecb_decrypt(key128, b"123")
-  inspect(bad_len_dec is Err(CryptoError::InvalidCrypto(_)), content="true")
-  let bad_iv_dec : Result[Bytes, Error] = try? aes_cbc_decrypt(
-    key128, b"iv", data,
-  )
-  inspect(bad_iv_dec is Err(CryptoError::InvalidCrypto(_)), content="true")
-  let bad_len_cbc_dec : Result[Bytes, Error] = try? aes_cbc_decrypt(
-    key128, b"0000000000000000", b"123",
-  )
-  inspect(bad_len_cbc_dec is Err(CryptoError::InvalidCrypto(_)), content="true")
+  try aes_ecb_encrypt(b"short", data) catch {
+    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+  } noraise {
+    _ => fail("expected aes_ecb_encrypt to raise")
+  }
+  try aes_ecb_encrypt(key128, b"123") catch {
+    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+  } noraise {
+    _ => fail("expected aes_ecb_encrypt to raise")
+  }
+  try aes_ecb_decrypt(key128, b"123") catch {
+    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+  } noraise {
+    _ => fail("expected aes_ecb_decrypt to raise")
+  }
+  try aes_cbc_decrypt(key128, b"iv", data) catch {
+    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+  } noraise {
+    _ => fail("expected aes_cbc_decrypt to raise")
+  }
+  try aes_cbc_decrypt(key128, b"0000000000000000", b"123") catch {
+    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+  } noraise {
+    _ => fail("expected aes_cbc_decrypt to raise")
+  }
 }
 
 ///|
