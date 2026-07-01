@@ -2,6 +2,8 @@ import {
   "bobzhang/mbtexcel" @lib,
 }
 
+supported_targets = "native+js"
+
 options(
   "is-main": true,
 )
