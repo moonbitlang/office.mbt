@@ -95,27 +95,28 @@ fn run_demo_bytes(
   args : ArrayView[String],
 ) -> (String, Bytes)? raise @xlsx.XlsxError {
   match demo {
-    "dashboard" => Some(("dashboard.xlsx", demo_dashboard_bytes()))
-    "invoice" => Some(("invoice.xlsx", demo_invoice_bytes()))
-    "pivot_slicer" => Some(("pivot_slicer.xlsx", demo_pivot_slicer_bytes()))
-    "sparklines" => Some(("sparklines.xlsx", demo_sparklines_bytes()))
+    "dashboard" => Some(("dashboard.xlsx", @demos.demo_dashboard_bytes()))
+    "invoice" => Some(("invoice.xlsx", @demos.demo_invoice_bytes()))
+    "pivot_slicer" =>
+      Some(("pivot_slicer.xlsx", @demos.demo_pivot_slicer_bytes()))
+    "sparklines" => Some(("sparklines.xlsx", @demos.demo_sparklines_bytes()))
     "tracker_heatmap" =>
-      Some(("tracker_heatmap.xlsx", demo_tracker_heatmap_bytes()))
+      Some(("tracker_heatmap.xlsx", @demos.demo_tracker_heatmap_bytes()))
     "interactive_controls" =>
-      Some(("interactive_controls.xlsx", demo_interactive_controls_bytes()))
-    "combo_chart" => Some(("combo_chart.xlsx", demo_combo_chart_bytes()))
+      Some(("interactive_controls.xlsx", @demos.demo_interactive_controls_bytes()))
+    "combo_chart" => Some(("combo_chart.xlsx", @demos.demo_combo_chart_bytes()))
     "ooxml_showcase" =>
-      Some(("ooxml_showcase.xlsx", demo_ooxml_showcase_bytes()))
+      Some(("ooxml_showcase.xlsx", @demos.demo_ooxml_showcase_bytes()))
     "stream_big" => {
-      let rows = demo_stream_big_rows_from_args(args)
-      Some(("stream_big_\{rows}.xlsx", demo_stream_big_bytes(rows~)))
+      let rows = @demos.demo_stream_big_rows_from_args(args)
+      Some(("stream_big_\{rows}.xlsx", @demos.demo_stream_big_bytes(rows~)))
     }
     "secure" => {
       let password = match args {
         [] => "moonbit"
         [p, ..] => p
       }
-      Some(("secure_password.xlsx", demo_secure_bytes(password~)))
+      Some(("secure_password.xlsx", @demos.demo_secure_bytes(password~)))
     }
     _ => None
   }
@@ -127,14 +128,14 @@ async fn run_one(
   out_dir : String,
   args : ArrayView[String],
 ) -> Unit {
-  let result : Result[(String, Bytes)?, Error] = try? run_demo_bytes(demo, args)
-  match result {
-    Ok(Some((name, bytes))) => write_out(out_dir, name, bytes)
-    Ok(None) => {
+  try run_demo_bytes(demo, args) catch {
+    err => println("\{demo.to_string()}: failed: \{err}")
+  } noraise {
+    Some((name, bytes)) => write_out(out_dir, name, bytes)
+    None => {
       println("unknown demo: \{demo.to_string()}")
       usage()
     }
-    Err(err) => println("\{demo.to_string()}: failed: \{err}")
   }
 }
 

@@ -99,7 +99,7 @@ pub fn demo_stream_big_bytes(
 }
 
 ///|
-fn demo_stream_big_rows_from_args(args : ArrayView[String]) -> Int {
+pub fn demo_stream_big_rows_from_args(args : ArrayView[String]) -> Int {
   match args {
     [] => 20000
     [value, ..] =>
