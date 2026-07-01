@@ -341,7 +341,7 @@ fn read_entry_data(bytes : BytesView, meta : EntryMeta) -> Bytes raise ZipError 
   }
   let compressed = reader.read_bytes(meta.compressed_size)
   match compression {
-    Store => compressed.to_bytes()
+    Store => compressed.to_owned()
     Deflate => deflate_decode(compressed)
   }
 }

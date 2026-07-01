@@ -66,7 +66,7 @@ fn attr_value(
         }
       }
       if matched {
-        let value = tag.to_string().unsafe_substring(start=value_start, end=i)
+        let value = tag.to_owned().unsafe_substring(start=value_start, end=i)
         return Some(value.to_string())
       }
     }
@@ -108,7 +108,7 @@ pub fn parse_relationship_targets(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match first_tag_end(text) {
       Some(pos) => pos
       None => raise InvalidXml(msg="relationship tag not closed")
@@ -118,7 +118,7 @@ pub fn parse_relationship_targets(
       Some(value) => value
       None => continue
     }
-    if rel != rel_type.to_string() {
+    if rel != rel_type.to_owned() {
       continue
     }
     let id = match attr_value(tag, "Id") {
@@ -145,7 +145,7 @@ fn parse_content_type_overrides(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match first_tag_end(text) {
       Some(pos) => pos
       None => raise InvalidXml(msg="content type override tag not closed")
