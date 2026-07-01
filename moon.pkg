@@ -7,7 +7,7 @@ import {
 import {
   // TODO(upstream): test deps should not impose on main deps  
   // test deps 
-  "bobzhang/mbtexcel/cmd/demos" @demos,
+  "bobzhang/mbtexcel/demos" @demos,
   "moonbitlang/async",
   "moonbitlang/async/fs" @async/fs,
   "moonbitlang/async/process" @process,
