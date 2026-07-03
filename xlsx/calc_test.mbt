@@ -7728,3 +7728,49 @@ test "calc depreciation functions db ddb vdb" {
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
 }
+
+///|
+test "calc text b functions use DBCS semantics without mojibake" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  // 你好World: two wide chars (2 DBCS bytes each) + 5 ASCII = 9 DBCS bytes
+  let cn = String::from_array([
+    Int::unsafe_to_char(0x4f60),
+    Int::unsafe_to_char(0x597d),
+    Int::unsafe_to_char('W'.to_int()),
+    Int::unsafe_to_char('o'.to_int()),
+    Int::unsafe_to_char('r'.to_int()),
+    Int::unsafe_to_char('l'.to_int()),
+    Int::unsafe_to_char('d'.to_int()),
+  ])
+  sheet.set_cell_value("C1", String(cn))
+  sheet.set_cell_formula("A1", "LENB(C1)")
+  inspect(workbook.calc_cell_value("Sheet1", "A1"), content="9")
+  // LEFTB 4 bytes = two wide chars, on a boundary (no mojibake)
+  sheet.set_cell_formula("A2", "LEFTB(C1,4)")
+  inspect(workbook.calc_cell_value("Sheet1", "A2"), content="你好")
+  // LEFTB 2 bytes = one wide char
+  sheet.set_cell_formula("A3", "LEFTB(C1,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A3"), content="你")
+  // RIGHTB 5 bytes = the ASCII tail
+  sheet.set_cell_formula("A4", "RIGHTB(C1,5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A4"), content="World")
+  // RIGHTB 7 bytes = one wide char (2 bytes) + ASCII tail (5 bytes)
+  sheet.set_cell_formula("A5", "RIGHTB(C1,7)")
+  inspect(workbook.calc_cell_value("Sheet1", "A5"), content="好World")
+  // count >= DBCS length returns the whole string unchanged
+  sheet.set_cell_formula("A6", "LEFTB(C1,99)")
+  inspect(workbook.calc_cell_value("Sheet1", "A6"), content="你好World")
+  // MIDB from byte 5 (start of ASCII) for 5 bytes
+  sheet.set_cell_formula("A7", "MIDB(C1,5,5)")
+  inspect(workbook.calc_cell_value("Sheet1", "A7"), content="World")
+  // MIDB spanning a wide char boundary
+  sheet.set_cell_formula("A8", "MIDB(C1,3,2)")
+  inspect(workbook.calc_cell_value("Sheet1", "A8"), content="好")
+  // REPLACEB replacing the two wide chars with ASCII
+  sheet.set_cell_formula("A9", "REPLACEB(C1,1,4,\"Hi\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A9"), content="HiWorld")
+  // REPLACEB replacing the ASCII tail keeps the wide prefix intact
+  sheet.set_cell_formula("A10", "REPLACEB(C1,5,5,\"!\")")
+  inspect(workbook.calc_cell_value("Sheet1", "A10"), content="你好!")
+}
