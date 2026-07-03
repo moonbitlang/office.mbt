@@ -193,6 +193,8 @@ pub struct Cell {
   style_id : Int
 }
 
+type CellImage
+
 pub(all) enum CellValue {
   String(String)
   Numeric(Double)
@@ -1453,6 +1455,7 @@ pub struct Workbook {
   options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
+  cell_images : Array[CellImage]
 }
 pub fn Workbook::active_sheet_index(Self) -> Int
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError

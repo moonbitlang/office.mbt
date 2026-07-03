@@ -2103,7 +2103,13 @@ pub fn Workbook::get_pictures(
   cell : StringView,
 ) -> Array[Image] raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
-  sheet.get_pictures(cell)
+  // Excelize's GetPictures returns embedded cell images (getCellImages)
+  // before the drawing-object pictures, so match that order.
+  let images = self.disp_images_for_cell(sheet, cell)
+  for image in sheet.get_pictures(cell) {
+    images.push(image)
+  }
+  images
 }
 
 ///|

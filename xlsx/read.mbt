@@ -3000,6 +3000,16 @@ fn read_zip_bytes(
   let calc_props = parse_calc_props(workbook_xml)
   let workbook_protection = parse_workbook_protection(workbook_xml)
   let style_count = styles.length()
+  let cell_images = match archive.get("xl/cellimages.xml") {
+    Some(value) => {
+      let rels_xml = match archive.get("xl/_rels/cellimages.xml.rels") {
+        Some(rels) => decode(rels)
+        None => ""
+      }
+      parse_cell_images(decode(value), rels_xml, archive)
+    }
+    None => []
+  }
   let workbook : Workbook = {
     sheets: [],
     chart_sheets: [],
@@ -3028,6 +3038,7 @@ fn read_zip_bytes(
     options: resolved_options,
     workbook_protection,
     active_sheet_index: safe_active_index,
+    cell_images,
   }
   let workbook_rels_path = rels_path_for_part(workbook_xml_part_path)
   let workbook_rels = match archive.get(workbook_rels_path) {
