@@ -27,9 +27,9 @@ well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
 - [x] Stream writer typed rows: `StreamWriter::new_time_cell` /
       `new_duration_cell` (feat/excelize-parity-round2); nil/blank stream
       cells skip via StreamCell::new_blank() (feat/parity-round3)
-- [ ] Default charset transcoding: Go XML decoders default to
-      `charset.NewReaderLabel`; MoonBit raises on declared non-UTF8 XML unless
-      a transcoder is supplied (`xlsx/read.mbt:57`, `mbtexcel.mbt:181`)
+- [x] Default charset transcoding: built-in Windows-1252/Latin-1/ASCII
+      and UTF-16 (BOM-aware) decoding, WHATWG/Go label folding
+      (feat/charset-transcoding); multi-byte CJK still needs the hook
 - [ ] GetPictures cell/embedded images: Go also returns rich-value cell
       images, `IMAGE()`, and WPS `DISPIMG` pictures; MoonBit only scans
       drawing objects (`.repos/excelize/picture.go:540,1077,1107`)
