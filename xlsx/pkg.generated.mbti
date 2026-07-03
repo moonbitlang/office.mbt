@@ -1329,6 +1329,7 @@ pub struct StreamCell {
   rich_text : Array[RichTextRun]?
   formula : String?
   style_id : Int
+  // private fields
 }
 pub fn StreamCell::new(String, formula? : String, style_id? : Int) -> Self
 pub fn StreamCell::new_rich_text(ArrayView[RichTextRun], formula? : String, style_id? : Int) -> Self raise XlsxError
@@ -1342,11 +1343,14 @@ pub struct StreamWriter {
   mut last_row : Int
   styles : Array[Style]
   mut closed : Bool
+  // private fields
 }
 pub fn StreamWriter::add_table(Self, String, String, ArrayView[String], display_name? : String, style_name? : String, show_first_column? : Bool, show_last_column? : Bool, show_row_stripes? : Bool, show_column_stripes? : Bool, show_header_row? : Bool) -> Table raise XlsxError
 pub fn StreamWriter::flush(Self) -> Unit raise XlsxError
 pub fn StreamWriter::insert_page_break(Self, StringView) -> Unit raise XlsxError
 pub fn StreamWriter::merge_cell(Self, StringView, StringView) -> Unit raise XlsxError
+pub fn StreamWriter::new_duration_cell(Self, @time.Duration, formula? : String, style_id? : Int) -> StreamCell
+pub fn StreamWriter::new_time_cell(Self, @time.ZonedDateTime, formula? : String, style_id? : Int) -> StreamCell
 pub fn StreamWriter::set_col_outline_level(Self, Int, Int) -> Unit raise XlsxError
 pub fn StreamWriter::set_col_style(Self, Int, Int, Int) -> Unit raise XlsxError
 pub fn StreamWriter::set_col_visible(Self, Int, Int, Bool) -> Unit raise XlsxError
