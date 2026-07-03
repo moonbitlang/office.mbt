@@ -360,3 +360,26 @@ test "rich value with a present local key never falls back to the web image" {
   // image, so no picture is returned
   inspect(parsed.get_pictures("Sheet1", "A1").length(), content="0")
 }
+
+///|
+test "rich-value image survives sheet rename and copy" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", Error("#VALUE!"))
+  let media : Bytes = b"\x89PNG\r\n\x1a\nrenamed"
+  let bytes = inject_rich_value_image(@xlsx.write(workbook), media)
+  let parsed = @xlsx.read(bytes)
+  // sanity: resolves before any lifecycle change
+  inspect(parsed.get_pictures("Sheet1", "A1").length(), content="1")
+  // rename must not orphan the vm map (it lives on the worksheet now)
+  parsed.set_sheet_name("Sheet1", "Renamed")
+  let after_rename = parsed.get_pictures("Renamed", "A1")
+  inspect(after_rename.length(), content="1")
+  inspect(after_rename[0].data == media, content="true")
+  // copy the sheet onto a second sheet; the copy keeps the image
+  ignore(parsed.add_sheet("Target"))
+  let target_index = parsed.sheet_index("Target")
+  let source_index = parsed.sheet_index("Renamed")
+  parsed.copy_sheet(source_index, target_index)
+  inspect(parsed.get_pictures("Target", "A1").length(), content="1")
+}

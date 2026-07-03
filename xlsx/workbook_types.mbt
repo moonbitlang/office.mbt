@@ -32,9 +32,6 @@ pub struct Workbook {
   rich_value_images : RichValueImages?
   /// Media parts referenced by rich-value images, keyed by archive path.
   rich_value_media : Map[String, Bytes]
-  /// Per-sheet cell `vm` (value-metadata) indices captured on read,
-  /// keyed by sheet name then canonical cell reference.
-  rich_value_vm : Map[String, Map[String, Int]]
 }
 
 ///|
@@ -189,6 +186,5 @@ pub fn Workbook::new(options? : Options = Options::new()) -> Workbook {
     cell_images: [],
     rich_value_images: None,
     rich_value_media: {},
-    rich_value_vm: {},
   }
 }

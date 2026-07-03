@@ -3031,7 +3031,6 @@ fn read_zip_bytes(
     }
     None => ()
   }
-  let rich_value_vm : Map[String, Map[String, Int]] = {}
   let workbook : Workbook = {
     sheets: [],
     chart_sheets: [],
@@ -3063,7 +3062,6 @@ fn read_zip_bytes(
     cell_images,
     rich_value_images,
     rich_value_media,
-    rich_value_vm,
   }
   let workbook_rels_path = rels_path_for_part(workbook_xml_part_path)
   let workbook_rels = match archive.get(workbook_rels_path) {
@@ -3529,6 +3527,11 @@ fn read_zip_bytes(
         col_dimensions,
         state,
         stream_state: Idle,
+        cell_vm: if rich_value_images is Some(_) {
+          parse_cell_vm_map(sheet_xml)
+        } else {
+          {}
+        },
       }
       let mut slicer_anchor_info : Map[String, SlicerAnchorInfo] = {}
       match drawing_rel_id {
@@ -3639,15 +3642,6 @@ fn read_zip_bytes(
       }
       workbook.sheets.push(sheet)
       workbook.sheet_order.push(Worksheet(workbook.sheets.length() - 1))
-      // Capture the cell value-metadata indices used by rich-value
-      // ("Place in cell") images; only present when the workbook has
-      // rich value data.
-      if rich_value_images is Some(_) {
-        let vm_map = parse_cell_vm_map(sheet_xml)
-        if vm_map.size() > 0 {
-          rich_value_vm[name] = vm_map
-        }
-      }
     } else {
       let target = match chartsheet_targets.get(rel_id) {
         Some(value) => value
