@@ -278,6 +278,15 @@ pub fn ChartDataPoint::new(Int, fill_color? : String) -> Self
 type ChartDimension derive(Show)
 pub fn ChartDimension::with_values(Int, Int) -> Self raise XlsxError
 
+pub(all) struct ChartFill {
+  mut typ : String
+  mut pattern : Int
+  mut color : Array[String]
+  mut shading : Int
+  mut transparency : Int
+} derive(Show)
+pub fn ChartFill::new(typ? : String, pattern? : Int, color? : Array[String], shading? : Int, transparency? : Int) -> Self
+
 pub(all) struct ChartLegend {
   mut position : String
   mut show_legend_key : Bool
@@ -361,6 +370,7 @@ pub(all) struct ChartSeries {
   mut sizes : String
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
   mut legend : ChartLegend
   mut line : ChartLine
   mut marker : ChartMarker

@@ -1268,3 +1268,70 @@ test "chart line type solid emits scheme color line fill" {
     content="true",
   )
 }
+
+///|
+test "chart series ChartFill override: solid, no-fill, and inert" {
+  // pattern fill index 1 with one color renders a solid fill
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(Col)
+  let series = ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="S1",
+  )
+  series.fill = Some(
+    ChartFill::new(typ="pattern", pattern=1, color=["#00FF00"], transparency=25),
+  )
+  opts.series.push(series)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let solid_chart = get_chart_xml(workbook)
+  inspect(
+    solid_chart.contains(
+      "<a:solidFill><a:srgbClr val=\"00FF00\"><a:alpha val=\"75000\"/></a:srgbClr></a:solidFill>",
+    ),
+    content="true",
+  )
+
+  // pattern index 1 with an empty color list renders an explicit no-fill
+  let wb2 = Workbook::new()
+  ignore(wb2.add_sheet("Sheet1"))
+  let opts2 = ChartOptions::new(Col)
+  let s2 = ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="S1")
+  s2.fill = Some(ChartFill::new(typ="pattern", pattern=1))
+  opts2.series.push(s2)
+  wb2.add_chart_with_options("Sheet1", "C3", opts2)
+  let nofill_chart = get_chart_xml(wb2)
+  inspect(
+    nofill_chart.contains("<c:spPr>\n            <a:noFill/>"),
+    content="true",
+  )
+
+  // a ChartFill that is not pattern-index-1 is inert and falls back to
+  // the flattened fill_color
+  let wb3 = Workbook::new()
+  ignore(wb3.add_sheet("Sheet1"))
+  let opts3 = ChartOptions::new(Col)
+  let s3 = ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="S1")
+  s3.fill = Some(ChartFill::new(typ="gradient", pattern=2, color=["#111111"]))
+  s3.fill_color = "#FF0000"
+  opts3.series.push(s3)
+  wb3.add_chart_with_options("Sheet1", "C3", opts3)
+  let inert_chart = get_chart_xml(wb3)
+  inspect(
+    inert_chart.contains(
+      "<a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill>",
+    ),
+    content="true",
+  )
+  inspect(inert_chart.contains("111111"), content="false")
+}
+
+///|
+fn get_chart_xml(workbook : Workbook) -> String raise {
+  let archive = @zip.read(write(workbook))
+  match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart1.xml")
+  }
+}
