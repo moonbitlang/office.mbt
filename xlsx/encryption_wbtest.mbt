@@ -562,3 +562,66 @@ test "write encrypted invalid password length" {
   )
   inspect(result is Err(InvalidPasswordLength(_)), content="true")
 }
+
+///|
+test "standard decryption accepts RC4-style verifier layout" {
+  // Excelize parses any non-AES AlgID as the RC4-style layout (20-byte
+  // verifier hash) and still decrypts the package with AES-ECB.
+  let password = "legacy-pass"
+  let salt : Array[Byte] = []
+  for i in 0..<16 {
+    salt.push(i.to_byte())
+  }
+  let salt_bytes = Bytes::from_array(salt)
+  // encryption info: version 3.2, flags, header size, 32-byte header
+  let info = ByteWriter::new()
+  info.write_u16_le(3) // version major
+  info.write_u16_le(2) // version minor
+  info.write_u32_le(0x0000_0024) // flags
+  info.write_u32_le(32) // header size
+  info.write_u32_le(0x0000_0024) // header flags
+  info.write_u32_le(0) // size extra
+  info.write_u32_le(0x0000_6801) // AlgID: RC4, not an AES id
+  info.write_u32_le(0x0000_8004) // AlgIDHash: SHA-1
+  info.write_u32_le(128) // key size bits
+  info.write_u32_le(1) // provider type
+  info.write_u32_le(0) // reserved1
+  info.write_u32_le(0) // reserved2
+  // RC4-style verifier: salt size + salt + verifier(16) + hash size + hash(20)
+  info.write_u32_le(16)
+  info.write_bytes(salt_bytes[:])
+  for _i in 0..<16 {
+    info.buf.push((0xaa).to_byte())
+  }
+  info.write_u32_le(20)
+  for _i in 0..<20 {
+    info.buf.push((0xbb).to_byte())
+  }
+  let info_buf = info.to_bytes()
+  // package encrypted with the key derived exactly like the reader will
+  let key = standard_convert_password_to_key(128, salt_bytes[:], password)
+  let plaintext : Bytes = b"legacy standard payload!\x00\x00\x00\x00\x00\x00\x00\x00"
+  let encrypted = aes_ecb_encrypt(key[:], plaintext[:])
+  let package_writer = ByteWriter::new()
+  package_writer.write_u64_le(24) // real payload length before padding
+  package_writer.write_bytes(encrypted[:])
+  let package_buf = package_writer.to_bytes()
+  let decrypted = standard_decrypt(info_buf[:], package_buf[:], password)
+  inspect(decrypted.length(), content="24")
+  debug_inspect(
+    @encoding/utf8.decode(decrypted[:24]),
+    content=(
+      #|"legacy standard payload!"
+    ),
+  )
+
+  // truncated RC4-style verifier still raises
+  let truncated = info_buf[:info_buf.length() - 4]
+  try standard_decrypt(truncated, package_buf[:], password) catch {
+    XlsxError::InvalidEncryptionInfo(msg~) =>
+      inspect(msg, content="invalid verifier block")
+    e => fail("unexpected error \{e}")
+  } noraise {
+    _ => fail("expected truncated verifier to fail")
+  }
+}
