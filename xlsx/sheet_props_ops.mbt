@@ -247,6 +247,39 @@ pub fn Worksheet::unprotect_sheet(
 }
 
 ///|
+/// Returns the protection options currently applied to the worksheet,
+/// mirroring Excelize's `GetSheetProtection`: stored restrictive flags are
+/// inverted back into permission options, the password is never returned,
+/// and an unprotected sheet yields all-default options.
+pub fn Worksheet::get_sheet_protection(
+  self : Worksheet,
+) -> SheetProtectionOptions {
+  let options = SheetProtectionOptions::new()
+  match self.sheet_protection {
+    Some(protection) => {
+      options.algorithm_name = protection.algorithm_name
+      options.auto_filter = !protection.auto_filter
+      options.delete_columns = !protection.delete_columns
+      options.delete_rows = !protection.delete_rows
+      options.edit_objects = !protection.objects
+      options.edit_scenarios = !protection.scenarios
+      options.format_cells = !protection.format_cells
+      options.format_columns = !protection.format_columns
+      options.format_rows = !protection.format_rows
+      options.insert_columns = !protection.insert_columns
+      options.insert_hyperlinks = !protection.insert_hyperlinks
+      options.insert_rows = !protection.insert_rows
+      options.pivot_tables = !protection.pivot_tables
+      options.select_locked_cells = !protection.select_locked_cells
+      options.select_unlocked_cells = !protection.select_unlocked_cells
+      options.sort = !protection.sort
+    }
+    None => ()
+  }
+  options
+}
+
+///|
 pub fn Worksheet::set_sheet_background(
   self : Worksheet,
   data : Bytes,

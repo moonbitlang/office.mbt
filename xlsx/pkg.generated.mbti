@@ -1516,6 +1516,8 @@ pub fn Workbook::get_doc_props(Self) -> CoreProperties
 pub fn Workbook::get_form_controls(Self, StringView) -> Array[FormControl] raise XlsxError
 pub fn Workbook::get_header_footer(Self, StringView) -> HeaderFooterOptions? raise XlsxError
 pub fn Workbook::get_header_footer_images(Self, StringView) -> Array[HeaderFooterImageOptions] raise XlsxError
+pub fn Workbook::get_hyper_link_cells(Self, StringView, link_type? : HyperlinkType) -> Array[String] raise XlsxError
+pub fn Workbook::get_hyperlink_cells(Self, StringView, link_type? : HyperlinkType) -> Array[String] raise XlsxError
 pub fn Workbook::get_merge_cells(Self, StringView) -> Array[String] raise XlsxError
 pub fn Workbook::get_merge_cells_info(Self, StringView, without_values? : Bool, options? : Options) -> Array[MergeCell] raise XlsxError
 pub fn Workbook::get_page_layout(Self, StringView) -> PageLayoutOptions raise XlsxError
@@ -1536,6 +1538,7 @@ pub fn Workbook::get_sheet_list(Self) -> Array[String]
 pub fn Workbook::get_sheet_map(Self) -> Map[Int, String]
 pub fn Workbook::get_sheet_name(Self, Int) -> String?
 pub fn Workbook::get_sheet_props(Self, StringView) -> SheetPropsOptions raise XlsxError
+pub fn Workbook::get_sheet_protection(Self, StringView) -> SheetProtectionOptions raise XlsxError
 pub fn Workbook::get_sheet_view(Self, StringView, Int) -> SheetViewOptions raise XlsxError
 pub fn Workbook::get_sheet_visible(Self, StringView) -> Bool raise XlsxError
 pub fn Workbook::get_slicers(Self, StringView) -> Array[Slicer] raise XlsxError
@@ -1762,10 +1765,12 @@ pub fn Worksheet::get_cols(Self) -> Array[Array[String]]
 pub fn Worksheet::get_conditional_formats(Self) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError
 pub fn Worksheet::get_data_validations(Self) -> Array[DataValidation] raise XlsxError
 pub fn Worksheet::get_header_footer_images(Self) -> Array[HeaderFooterImageOptions]
+pub fn Worksheet::get_hyperlink_cells(Self, link_type? : HyperlinkType) -> Array[String]
 pub fn Worksheet::get_panes(Self) -> Panes
 pub fn Worksheet::get_row(Self, Int) -> Array[String] raise XlsxError
 pub fn Worksheet::get_row_height(Self, Int) -> Double? raise XlsxError
 pub fn Worksheet::get_rows(Self) -> Array[Array[String]]
+pub fn Worksheet::get_sheet_protection(Self) -> SheetProtectionOptions
 pub fn Worksheet::ignored_errors(Self) -> ArrayView[IgnoredError]
 pub fn Worksheet::images(Self) -> ArrayView[Image]
 pub fn Worksheet::max_col(Self) -> Int

@@ -649,6 +649,32 @@ pub fn Worksheet::get_cell_hyperlink(
 }
 
 ///|
+/// Returns the cell references of hyperlinks in the worksheet, mirroring
+/// Excelize's `GetHyperLinkCells`. Omitting `link_type` returns every
+/// hyperlink; `External` and `Location` filter by hyperlink kind; `Unset`
+/// (Excelize's "None") returns no references.
+pub fn Worksheet::get_hyperlink_cells(
+  self : Worksheet,
+  link_type? : HyperlinkType,
+) -> Array[String] {
+  let references : Array[String] = []
+  match link_type {
+    None =>
+      for link in self.hyperlinks {
+        references.push(link.reference)
+      }
+    Some(Unset) => ()
+    Some(wanted) =>
+      for link in self.hyperlinks {
+        if link.link_type == wanted {
+          references.push(link.reference)
+        }
+      }
+  }
+  references
+}
+
+///|
 pub fn Worksheet::remove_cell_hyperlink(
   self : Worksheet,
   reference : StringView,
