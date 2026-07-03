@@ -196,8 +196,63 @@ fn pad_zero(data : BytesView, block_size : Int) -> Bytes {
 }
 
 ///|
+/// Lazily-initialized process-global generator behind `random_bytes`.
+/// A fresh `Rand::new()` per call would reuse ChaCha8's fixed default
+/// seed, making every salt/verifier identical across files and runs.
+let random_bytes_rng : Ref[@random.Rand?] = Ref::new(None)
+
+///|
+/// Optional user-supplied source of cryptographically secure bytes.
+let random_bytes_override : Ref[((Int) -> Bytes)?] = Ref::new(None)
+
+///|
+/// Installs a custom source for the random bytes used in workbook
+/// encryption and sheet-protection salts, verifiers, and keys. The
+/// function receives the byte count required and must return exactly
+/// that many bytes.
+///
+/// Use this to supply cryptographically secure entropy (Go excelize
+/// uses crypto/rand for these values). The built-in fallback is a
+/// ChaCha8 generator seeded from wall-clock entropy whitened through
+/// SHA-256: unique per process, but not a CSPRNG.
+pub fn set_random_source(source : (Int) -> Bytes) -> Unit {
+  random_bytes_override.val = Some(source)
+}
+
+///|
+fn seeded_random_rng() -> @random.Rand {
+  match random_bytes_rng.val {
+    Some(rng) => rng
+    None => {
+      let tag : Bytes = b"mbtexcel-random-bytes-seed"
+      let first = @crypto.hash_concat("sha256", [
+        u64_le_bytes(@env.now())[:],
+        tag[:],
+      ])
+      let seed = @crypto.hash_concat("sha256", [
+        first[:],
+        u64_le_bytes(@env.now())[:],
+      ])
+      let rng = @random.Rand::chacha8(seed~)
+      random_bytes_rng.val = Some(rng)
+      rng
+    }
+  }
+}
+
+///|
 fn random_bytes(count : Int) -> Bytes {
-  let rng = @random.Rand::new()
+  match random_bytes_override.val {
+    Some(source) => {
+      let bytes = source(count)
+      if bytes.length() != count {
+        abort("random source returned \{bytes.length()} bytes, need \{count}")
+      }
+      return bytes
+    }
+    None => ()
+  }
+  let rng = seeded_random_rng()
   let out : Array[Byte] = Array::make(count, (0).to_byte())
   for i in 0..<count {
     out[i] = rng.int(limit=256).to_byte()
