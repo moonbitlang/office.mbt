@@ -45,6 +45,8 @@ pub fn split_cell_name(StringView) -> (String, Int) raise XlsxError
 
 pub fn theme_color(String, Double) -> String
 
+pub fn time_to_excel_date(@time.ZonedDateTime, use_1904_format? : Bool) -> Double
+
 pub fn write(Workbook) -> Bytes raise XlsxError
 
 pub fn write_with_password(Workbook, String) -> Bytes raise XlsxError
@@ -1600,6 +1602,7 @@ pub fn Workbook::set_calc_props(Self, CalcPropsOptions?) -> Unit raise XlsxError
 pub fn Workbook::set_cell(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_bool(Self, StringView, String, Bool) -> Unit raise XlsxError
 pub fn Workbook::set_cell_default(Self, StringView, String, String) -> Unit raise XlsxError
+pub fn Workbook::set_cell_duration(Self, StringView, String, @time.Duration) -> Unit raise XlsxError
 pub fn Workbook::set_cell_float(Self, StringView, String, Double, precision? : Int, bit_size? : Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula(Self, StringView, String, String, value? : String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_formula_opts(Self, StringView, String, String, opts? : FormulaOpts, value? : String) -> Unit raise XlsxError
@@ -1613,6 +1616,7 @@ pub fn Workbook::set_cell_rich_text(Self, StringView, String, ArrayView[RichText
 pub fn Workbook::set_cell_str(Self, StringView, String, String) -> Unit raise XlsxError
 pub fn Workbook::set_cell_style(Self, StringView, String, Int) -> Unit raise XlsxError
 pub fn Workbook::set_cell_style_rc(Self, StringView, Int, Int, Int) -> Unit raise XlsxError
+pub fn Workbook::set_cell_time(Self, StringView, String, @time.ZonedDateTime) -> Unit raise XlsxError
 pub fn Workbook::set_cell_uint(Self, StringView, String, UInt) -> Unit raise XlsxError
 pub fn Workbook::set_cell_value(Self, StringView, String, CellValue) -> Unit raise XlsxError
 pub fn Workbook::set_cell_value_rc(Self, StringView, Int, Int, CellValue) -> Unit raise XlsxError
