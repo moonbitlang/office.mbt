@@ -58,16 +58,36 @@ fn decode_utf8(
   bytes : Bytes,
   transcoder : ((String, Bytes) -> String raise XlsxError)?,
 ) -> String raise XlsxError {
-  match xml_encoding(bytes) {
+  // A UTF-16 byte-order mark is authoritative: a UTF-16 document's
+  // <?xml?> declaration is itself UTF-16 bytes, so the ASCII scan below
+  // cannot detect it. Fall back to the declared encoding otherwise.
+  let declared = match utf16_bom_label(bytes) {
+    Some(label) => Some(label)
+    None =>
+      match xml_encoding(bytes) {
+        Some(encoding) =>
+          if is_utf8_encoding(encoding) {
+            None
+          } else {
+            Some(encoding)
+          }
+        None => None
+      }
+  }
+  match declared {
     Some(encoding) =>
-      if !is_utf8_encoding(encoding) {
-        match transcoder {
-          Some(value) => return value(encoding, bytes)
-          None =>
-            raise InvalidXml(
-              msg="xml encoding \{encoding} requires charset transcoder",
-            )
-        }
+      match transcoder {
+        // A caller-supplied transcoder replaces the default entirely,
+        // like Go's SetCharsetReader.
+        Some(value) => return value(encoding, bytes)
+        None =>
+          match builtin_charset_decode(encoding, bytes) {
+            Some(text) => return text
+            None =>
+              raise InvalidXml(
+                msg="xml encoding \{encoding} requires charset transcoder",
+              )
+          }
       }
     None => ()
   }
