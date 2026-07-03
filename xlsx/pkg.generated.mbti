@@ -39,6 +39,8 @@ pub async fn[R : @io.Reader] read_zip_reader(R, password? : String, options? : O
 
 pub fn rgb_to_hsl(Byte, Byte, Byte) -> (Double, Double, Double)
 
+pub fn set_random_source((Int) -> Bytes) -> Unit
+
 pub fn split_cell_name(StringView) -> (String, Int) raise XlsxError
 
 pub fn theme_color(String, Double) -> String
