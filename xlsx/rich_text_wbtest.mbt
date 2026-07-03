@@ -10,16 +10,16 @@ test "rich text truncate runs supports partial and exact limits" {
     { text: "AB", font: None },
     { text: "C", font: None },
   ]
-  inspect(
+  debug_inspect(
     rich_text_truncate_runs(runs[:], 1),
     content=(
-      #|[{text: "A", font: None}]
+      #|[{ text: "A", font: None }]
     ),
   )
-  inspect(
+  debug_inspect(
     rich_text_truncate_runs(runs[:], 2),
     content=(
-      #|[{text: "AB", font: None}]
+      #|[{ text: "AB", font: None }]
     ),
   )
 }

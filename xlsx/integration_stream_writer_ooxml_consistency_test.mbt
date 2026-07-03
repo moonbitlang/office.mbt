@@ -51,9 +51,12 @@ test "integration stream writer ooxml consistency under row volume" {
     Some(value) => value
     None => fail("missing parsed data sheet")
   }
-  inspect(data.get_row(1), content="[\"A\", \"B\", \"Total\"]")
-  inspect(data.get_cell_formula("C301"), content="Some(\"SUM(A301,B301)\")")
-  inspect(data.get_cell("C301"), content="Some(\"900\")")
+  debug_inspect(data.get_row(1), content="[\"A\", \"B\", \"Total\"]")
+  debug_inspect(
+    data.get_cell_formula("C301"),
+    content="Some(\"SUM(A301,B301)\")",
+  )
+  debug_inspect(data.get_cell("C301"), content="Some(\"900\")")
   let tables = parsed.get_tables("Data")
   inspect(tables.length(), content="1")
   inspect(tables[0].name, content="StreamTable")

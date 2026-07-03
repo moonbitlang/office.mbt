@@ -30,9 +30,9 @@ test "merge cells roundtrip" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  inspect(parsed_sheet.merged_cells(), content="[\"C3:D4\"]")
+  debug_inspect(parsed_sheet.merged_cells().to_array(), content="[\"C3:D4\"]")
   parsed_sheet.unmerge_cells("D4:C3")
-  inspect(parsed_sheet.merged_cells(), content="[]")
+  debug_inspect(parsed_sheet.merged_cells().to_array(), content="[]")
 }
 
 ///|
@@ -40,9 +40,9 @@ test "workbook merge cell wrappers" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.merge_cell("Sheet1", "B2", "A1")
-  inspect(workbook.get_merge_cells("Sheet1"), content="[\"A1:B2\"]")
+  debug_inspect(workbook.get_merge_cells("Sheet1"), content="[\"A1:B2\"]")
   workbook.unmerge_cell("Sheet1", "A1", "B2")
-  inspect(workbook.get_merge_cells("Sheet1"), content="[]")
+  debug_inspect(workbook.get_merge_cells("Sheet1"), content="[]")
 }
 
 ///|
@@ -95,5 +95,5 @@ test "merge cells duplicate is no-op" {
   let sheet = workbook.add_sheet("Sheet1")
   sheet.merge_cells("A1:B2")
   sheet.merge_cells("B2:A1")
-  inspect(sheet.merged_cells(), content="[\"A1:B2\"]")
+  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:B2\"]")
 }

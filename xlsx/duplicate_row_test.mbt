@@ -5,9 +5,9 @@ test "duplicate row basic" {
   sheet.set_row(1, ["A1", "B1"])
   sheet.set_row(2, ["A2", "B2"])
   workbook.duplicate_row("Sheet1", 1)
-  inspect(sheet.get_row(1), content="[\"A1\", \"B1\"]")
-  inspect(sheet.get_row(2), content="[\"A1\", \"B1\"]")
-  inspect(sheet.get_row(3), content="[\"A2\", \"B2\"]")
+  debug_inspect(sheet.get_row(1), content="[\"A1\", \"B1\"]")
+  debug_inspect(sheet.get_row(2), content="[\"A1\", \"B1\"]")
+  debug_inspect(sheet.get_row(3), content="[\"A2\", \"B2\"]")
 }
 
 ///|
@@ -18,10 +18,10 @@ test "duplicate row to target position" {
   sheet.set_row(2, ["A2"])
   sheet.set_row(3, ["A3"])
   workbook.duplicate_row_to("Sheet1", 1, 3)
-  inspect(sheet.get_row(1), content="[\"A1\"]")
-  inspect(sheet.get_row(2), content="[\"A2\"]")
-  inspect(sheet.get_row(3), content="[\"A1\"]")
-  inspect(sheet.get_row(4), content="[\"A3\"]")
+  debug_inspect(sheet.get_row(1), content="[\"A1\"]")
+  debug_inspect(sheet.get_row(2), content="[\"A2\"]")
+  debug_inspect(sheet.get_row(3), content="[\"A1\"]")
+  debug_inspect(sheet.get_row(4), content="[\"A3\"]")
 }
 
 ///|
@@ -36,7 +36,7 @@ test "duplicate row copies validations and merges" {
     "<conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\"><formula>1=1</formula></cfRule></conditionalFormatting>",
   )
   workbook.duplicate_row("Sheet1", 1)
-  inspect(sheet.get_row_height(2), content="Some(20)")
+  debug_inspect(sheet.get_row_height(2), content="Some(20)")
   inspect(sheet.merged_cells().contains("A2:B2"), content="true")
   let mut has_validation = false
   for xml in sheet.data_validations() {

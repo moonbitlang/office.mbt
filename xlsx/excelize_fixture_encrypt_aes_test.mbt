@@ -26,8 +26,11 @@ async test "excelize fixture encryptAES.xlsx opens with password" {
     ".repos/excelize/test/encryptAES.xlsx",
     password="password",
   )
-  inspect(workbook.search_sheet("Sheet1", "SECRET"), content="[\"A1\"]")
-  inspect(workbook.get_cell_value("Sheet1", "A1"), content="Some(\"SECRET\")")
+  debug_inspect(workbook.search_sheet("Sheet1", "SECRET"), content="[\"A1\"]")
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "A1"),
+    content="Some(\"SECRET\")",
+  )
 }
 
 ///|

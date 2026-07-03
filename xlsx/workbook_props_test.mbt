@@ -26,17 +26,17 @@ test "workbook and calc props roundtrip" {
   let bytes = write(workbook)
   let parsed = read(bytes)
   let parsed_wb = parsed.get_workbook_props()
-  inspect(parsed_wb.date_1904, content="Some(true)")
-  inspect(parsed_wb.filter_privacy, content="Some(true)")
-  inspect(parsed_wb.code_name, content="Some(\"CodeName\")")
+  debug_inspect(parsed_wb.date_1904, content="Some(true)")
+  debug_inspect(parsed_wb.filter_privacy, content="Some(true)")
+  debug_inspect(parsed_wb.code_name, content="Some(\"CodeName\")")
   let parsed_calc = parsed.get_calc_props()
-  inspect(parsed_calc.calc_id, content="Some(1)")
-  inspect(parsed_calc.calc_mode, content="Some(\"manual\")")
-  inspect(parsed_calc.ref_mode, content="Some(\"A1\")")
-  inspect(parsed_calc.iterate, content="Some(true)")
-  inspect(parsed_calc.iterate_count, content="Some(2)")
-  inspect(parsed_calc.iterate_delta, content="Some(0.01)")
-  inspect(parsed_calc.force_full_calc, content="Some(true)")
+  debug_inspect(parsed_calc.calc_id, content="Some(1)")
+  debug_inspect(parsed_calc.calc_mode, content="Some(\"manual\")")
+  debug_inspect(parsed_calc.ref_mode, content="Some(\"A1\")")
+  debug_inspect(parsed_calc.iterate, content="Some(true)")
+  debug_inspect(parsed_calc.iterate_count, content="Some(2)")
+  debug_inspect(parsed_calc.iterate_delta, content="Some(0.01)")
+  debug_inspect(parsed_calc.force_full_calc, content="Some(true)")
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{err}")
   }
@@ -57,7 +57,7 @@ test "invalid calc props" {
   let workbook = Workbook::new()
   let bad = CalcPropsOptions::with_values(calc_mode="bad")
   let result = try? workbook.set_calc_props(Some(bad))
-  inspect(
+  debug_inspect(
     result,
     content="Err(InvalidWorkbookProperty(msg=\"invalid calc mode\"))",
   )
@@ -74,8 +74,8 @@ test "calc props normalize auto + r1c1 variants" {
   let bytes = write(workbook)
   let parsed = read(bytes)
   let props = parsed.get_calc_props()
-  inspect(props.calc_mode, content="Some(\"auto\")")
-  inspect(props.ref_mode, content="Some(\"R1C1\")")
+  debug_inspect(props.calc_mode, content="Some(\"auto\")")
+  debug_inspect(props.ref_mode, content="Some(\"R1C1\")")
 }
 
 ///|
@@ -86,5 +86,5 @@ test "calc props normalize autonotable variant" {
   let bytes = write(workbook)
   let parsed = read(bytes)
   let props = parsed.get_calc_props()
-  inspect(props.calc_mode, content="Some(\"autoNoTable\")")
+  debug_inspect(props.calc_mode, content="Some(\"autoNoTable\")")
 }

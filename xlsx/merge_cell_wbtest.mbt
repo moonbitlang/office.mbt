@@ -6,7 +6,10 @@ test "merge cell wb: get_end_axis falls back to start when no colon is present" 
 
 ///|
 test "merge cell wb: rect_union covers min/max branch matrix" {
-  inspect(rect_union((5, 5, 10, 10), (3, 4, 8, 9)), content="(3, 4, 10, 10)")
+  debug_inspect(
+    rect_union((5, 5, 10, 10), (3, 4, 8, 9)),
+    content="(3, 4, 10, 10)",
+  )
 }
 
 ///|

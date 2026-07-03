@@ -4,6 +4,7 @@ package "bobzhang/mbtexcel"
 import {
   "bobzhang/mbtexcel/xlsx",
   "moonbitlang/async/io",
+  "moonbitlang/core/debug",
   "moonbitlang/x/time",
 }
 
@@ -65,7 +66,7 @@ pub suberror UtfIndexError {
   OutOfRange(index~ : Int, len~ : Int)
   InvalidBoundary(index~ : Int)
   InvalidUtf8(offset~ : Int)
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 // Types and methods
 

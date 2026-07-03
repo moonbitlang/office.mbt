@@ -24,9 +24,9 @@ test "worksheet delete table/pivot edge branches" {
   for table in sheet.tables() {
     table_names.push(table.name)
   }
-  inspect(table_names, content="[\"Table2\"]")
+  debug_inspect(table_names, content="[\"Table2\"]")
   let missing_table : Result[Unit, Error] = try? sheet.delete_table("Missing")
-  inspect(
+  debug_inspect(
     missing_table,
     content=(
       #|Err(TableNotFound(name="Missing"))
@@ -48,7 +48,7 @@ test "worksheet delete table/pivot edge branches" {
     ),
   )
   let empty_name : Result[Unit, Error] = try? sheet.delete_pivot_table("")
-  inspect(
+  debug_inspect(
     empty_name,
     content=(
       #|Err(InvalidSheetOperation(msg="pivot table name empty"))
@@ -57,7 +57,7 @@ test "worksheet delete table/pivot edge branches" {
   let missing_pivot : Result[Unit, Error] = try? sheet.delete_pivot_table(
     "Missing",
   )
-  inspect(
+  debug_inspect(
     missing_pivot,
     content=(
       #|Err(InvalidSheetOperation(msg="pivot table not found"))
@@ -68,5 +68,5 @@ test "worksheet delete table/pivot edge branches" {
   for pivot in sheet.pivot_tables() {
     pivot_names.push(pivot.name)
   }
-  inspect(pivot_names, content="[\"Pivot2\"]")
+  debug_inspect(pivot_names, content="[\"Pivot2\"]")
 }

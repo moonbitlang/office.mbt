@@ -74,7 +74,7 @@ async test "excelize Book1 iterators match get_rows/get_cols" {
   let total = workbook.get_cell_value("Sheet1", "A19") catch {
     err => fail("get_cell_value failed: \{err}")
   }
-  inspect(total, content="Some(\"Total:\")")
+  debug_inspect(total, content="Some(\"Total:\")")
   let sheet = "Sheet2"
   let rows = workbook.rows(sheet) catch { err => fail("rows failed: \{err}") }
   let collected_rows : Array[Array[String]] = []
@@ -96,7 +96,7 @@ async test "excelize Book1 iterators match get_rows/get_cols" {
   while cols.next() {
     collected_cols.push(trim_trailing_empty(cols.rows()))
   }
-  inspect(cols.error(), content="None")
+  debug_inspect(cols.error(), content="None")
   let returned_cols = workbook.get_cols(sheet) catch {
     err => fail("get_cols failed: \{err}")
   }

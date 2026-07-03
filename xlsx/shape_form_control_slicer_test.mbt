@@ -329,23 +329,23 @@ test "form control add/get/delete and vml" {
   match parsed_checkbox {
     Some(control) => {
       inspect(control.text, content="Agree")
-      inspect(control.macro_name, content="Some(\"DoThing\")")
-      inspect(control.cell_link, content="Some(\"A1\")")
-      inspect(control.checked, content="Some(true)")
+      debug_inspect(control.macro_name, content="Some(\"DoThing\")")
+      debug_inspect(control.cell_link, content="Some(\"A1\")")
+      debug_inspect(control.checked, content="Some(true)")
     }
     None => fail("missing parsed checkbox")
   }
   match parsed_scrollbar {
     Some(control) => {
-      inspect(control.cell_link, content="Some(\"A1\")")
-      inspect(control.current_val, content="Some(50)")
-      inspect(control.min_val, content="Some(10)")
-      inspect(control.max_val, content="Some(100)")
-      inspect(control.inc_change, content="Some(1)")
-      inspect(control.page_change, content="Some(1)")
-      inspect(control.horizontally, content="Some(true)")
-      inspect(control.format.print_object, content="Some(false)")
-      inspect(control.format.positioning, content="Some(Absolute)")
+      debug_inspect(control.cell_link, content="Some(\"A1\")")
+      debug_inspect(control.current_val, content="Some(50)")
+      debug_inspect(control.min_val, content="Some(10)")
+      debug_inspect(control.max_val, content="Some(100)")
+      debug_inspect(control.inc_change, content="Some(1)")
+      debug_inspect(control.page_change, content="Some(1)")
+      debug_inspect(control.horizontally, content="Some(true)")
+      debug_inspect(control.format.print_object, content="Some(false)")
+      debug_inspect(control.format.positioning, content="Some(Absolute)")
     }
     None => fail("missing parsed scrollbar")
   }
@@ -354,9 +354,32 @@ test "form control add/get/delete and vml" {
       inspect(control.text, content="Button 1")
       inspect(control.paragraph.length(), content="1")
       inspect(control.paragraph[0].text, content="C1=A1+B1")
-      inspect(
+      debug_inspect(
         control.paragraph[0].font,
-        content="Some({bold: true, italic: true, strike: false, outline: false, shadow: false, condense: false, extend: false, underline: Some(\"single\"), size: Some(14), color: Some(\"#777777\"), color_theme: None, color_indexed: None, color_tint: None, charset: None, family_number: None, scheme: None, vert_align: None, family: Some(\"Times New Roman\")})",
+        content=(
+          #|Some(
+          #|  {
+          #|    bold: true,
+          #|    italic: true,
+          #|    strike: false,
+          #|    outline: false,
+          #|    shadow: false,
+          #|    condense: false,
+          #|    extend: false,
+          #|    underline: Some("single"),
+          #|    size: Some(14),
+          #|    color: Some("#777777"),
+          #|    color_theme: None,
+          #|    color_indexed: None,
+          #|    color_tint: None,
+          #|    charset: None,
+          #|    family_number: None,
+          #|    scheme: None,
+          #|    vert_align: None,
+          #|    family: Some("Times New Roman"),
+          #|  },
+          #|)
+        ),
       )
     }
     None => fail("missing parsed rich button")

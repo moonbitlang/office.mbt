@@ -6,17 +6,20 @@ test "picture get and delete" {
   let img2 : Bytes = [4, 5, 6, 7]
   workbook.add_image("Sheet1", "a1", img1, "png", "image/png")
   workbook.add_image("Sheet1", "B2", img2, "jpg", "image/jpeg")
-  inspect(
+  debug_inspect(
     workbook.get_pictures("Sheet1", "A1").map(image => image.extension),
     content="[\"png\"]",
   )
-  inspect(workbook.get_picture_cells("Sheet1"), content="[\"A1\", \"B2\"]")
+  debug_inspect(
+    workbook.get_picture_cells("Sheet1"),
+    content="[\"A1\", \"B2\"]",
+  )
   workbook.delete_picture("Sheet1", "A1")
-  inspect(
+  debug_inspect(
     workbook.get_pictures("Sheet1", "A1").map(image => image.extension),
     content="[]",
   )
-  inspect(workbook.get_picture_cells("Sheet1"), content="[\"B2\"]")
+  debug_inspect(workbook.get_picture_cells("Sheet1"), content="[\"B2\"]")
 }
 
 ///|
@@ -24,7 +27,7 @@ test "picture delete empty cell" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.delete_picture("Sheet1", "C3")
-  inspect(workbook.get_picture_cells("Sheet1"), content="[]")
+  debug_inspect(workbook.get_picture_cells("Sheet1"), content="[]")
 }
 
 ///|
@@ -33,7 +36,7 @@ test "picture from bytes add and write" {
   ignore(workbook.add_sheet("Sheet1"))
   let img : Bytes = [9, 8, 7, 6]
   workbook.add_picture_from_bytes("Sheet1", "A1", img, ".png")
-  inspect(
+  debug_inspect(
     workbook.get_pictures("Sheet1", "A1").map(image => image.extension),
     content="[\"png\"]",
   )
@@ -203,7 +206,7 @@ test "picture from bytes invalid extension" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(UnsupportedFeature(msg="unsupported picture extension"))
@@ -222,7 +225,7 @@ test "picture from bytes extension requires dot" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(UnsupportedFeature(msg="unsupported picture extension"))
@@ -505,7 +508,7 @@ test "picture options validation" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(InvalidSheetOperation(msg="picture offset must be >= 0"))
@@ -524,7 +527,7 @@ test "picture options validation" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result2,
     content="Err(InvalidHyperlink(msg=\"picture hyperlink type missing\"))",
   )
@@ -581,7 +584,7 @@ async test "picture file path guards: missing extension and missing file" {
   let missing_extension : Result[Unit, Error] = try? workbook.add_picture(
     "Sheet1", "A1", "missing_extension",
   )
-  inspect(
+  debug_inspect(
     missing_extension,
     content=(
       #|Err(UnsupportedFeature(msg="image extension missing"))
@@ -607,7 +610,7 @@ async test "picture with options file path guards" {
     "missing_extension",
     GraphicOptions::new(),
   )
-  inspect(
+  debug_inspect(
     missing_extension,
     content=(
       #|Err(UnsupportedFeature(msg="image extension missing"))

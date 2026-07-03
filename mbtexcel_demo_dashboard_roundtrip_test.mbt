@@ -127,8 +127,8 @@ test "demo dashboard: writer output remains consistent after roundtrip" {
   assert_demo_dashboard_archive(bytes)
 
   let parsed = read(bytes)
-  inspect(parsed.sheet_name(0), content="Some(\"Data\")")
-  inspect(parsed.sheet_name(1), content="Some(\"Dashboard\")")
+  debug_inspect(parsed.sheet_name(0), content="Some(\"Data\")")
+  debug_inspect(parsed.sheet_name(1), content="Some(\"Dashboard\")")
 
   let roundtrip_bytes = write(parsed)
   assert_demo_dashboard_archive(roundtrip_bytes)

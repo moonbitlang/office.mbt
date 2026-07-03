@@ -19,19 +19,19 @@ test "page margins and layout roundtrip" {
   let bytes = write(workbook)
   let parsed = read(bytes)
   let parsed_margins = parsed.get_page_margins("Sheet1")
-  inspect(parsed_margins.top, content="Some(1.1)")
-  inspect(parsed_margins.bottom, content="Some(1.2)")
-  inspect(parsed_margins.left, content="Some(0.9)")
-  inspect(parsed_margins.horizontally, content="Some(true)")
+  debug_inspect(parsed_margins.top, content="Some(1.1)")
+  debug_inspect(parsed_margins.bottom, content="Some(1.2)")
+  debug_inspect(parsed_margins.left, content="Some(0.9)")
+  debug_inspect(parsed_margins.horizontally, content="Some(true)")
   let parsed_layout = parsed.get_page_layout("Sheet1")
-  inspect(
+  debug_inspect(
     parsed_layout.orientation,
     content=(
       #|Some("landscape")
     ),
   )
-  inspect(parsed_layout.adjust_to, content="Some(120)")
-  inspect(
+  debug_inspect(parsed_layout.adjust_to, content="Some(120)")
+  debug_inspect(
     parsed_layout.page_order,
     content=(
       #|Some("overThenDown")
@@ -84,7 +84,7 @@ test "header footer roundtrip and limits" {
   )
   inspect(result is Err(XlsxError::InvalidHeaderFooter(_)), content="true")
   workbook.set_header_footer("Sheet1", None)
-  inspect(workbook.get_header_footer("Sheet1"), content="None")
+  debug_inspect(workbook.get_header_footer("Sheet1"), content="None")
 }
 
 ///|
@@ -111,7 +111,7 @@ test "sheet protection xor and sha512" {
     content="true",
   )
   workbook.unprotect_sheet("Sheet1")
-  inspect(sheet.sheet_protection(), content="None")
+  debug_inspect(sheet.sheet_protection(), content="None")
   let sha_opts = SheetProtectionOptions::with_values(
     algorithm_name="SHA-512",
     password="secret",
@@ -127,7 +127,7 @@ test "sheet protection xor and sha512" {
   inspect(sha_protection.hash_value.length(), content="88")
   inspect(sha_protection.spin_count, content="100000")
   workbook.unprotect_sheet("Sheet1", password="secret")
-  inspect(sheet.sheet_protection(), content="None")
+  debug_inspect(sheet.sheet_protection(), content="None")
 }
 
 ///|
@@ -241,26 +241,26 @@ test "sheet props roundtrip" {
   let bytes = write(workbook)
   let parsed = read(bytes)
   let parsed_props = parsed.get_sheet_props("Sheet1")
-  inspect(parsed_props.code_name, content="Some(\"SheetCode\")")
-  inspect(
+  debug_inspect(parsed_props.code_name, content="Some(\"SheetCode\")")
+  debug_inspect(
     parsed_props.enable_format_conditions_calculation,
     content="Some(false)",
   )
-  inspect(parsed_props.published, content="Some(false)")
-  inspect(parsed_props.auto_page_breaks, content="Some(false)")
-  inspect(parsed_props.fit_to_page, content="Some(true)")
-  inspect(parsed_props.tab_color_rgb, content="Some(\"FF0000\")")
-  inspect(parsed_props.tab_color_theme, content="Some(3)")
-  inspect(parsed_props.tab_color_tint, content="Some(0.25)")
-  inspect(parsed_props.outline_summary_below, content="Some(false)")
-  inspect(parsed_props.outline_summary_right, content="Some(false)")
-  inspect(parsed_props.base_col_width, content="Some(9)")
-  inspect(parsed_props.default_col_width, content="Some(12.5)")
-  inspect(parsed_props.default_row_height, content="Some(18)")
-  inspect(parsed_props.custom_height, content="Some(true)")
-  inspect(parsed_props.zero_height, content="Some(true)")
-  inspect(parsed_props.thick_top, content="Some(true)")
-  inspect(parsed_props.thick_bottom, content="Some(false)")
+  debug_inspect(parsed_props.published, content="Some(false)")
+  debug_inspect(parsed_props.auto_page_breaks, content="Some(false)")
+  debug_inspect(parsed_props.fit_to_page, content="Some(true)")
+  debug_inspect(parsed_props.tab_color_rgb, content="Some(\"FF0000\")")
+  debug_inspect(parsed_props.tab_color_theme, content="Some(3)")
+  debug_inspect(parsed_props.tab_color_tint, content="Some(0.25)")
+  debug_inspect(parsed_props.outline_summary_below, content="Some(false)")
+  debug_inspect(parsed_props.outline_summary_right, content="Some(false)")
+  debug_inspect(parsed_props.base_col_width, content="Some(9)")
+  debug_inspect(parsed_props.default_col_width, content="Some(12.5)")
+  debug_inspect(parsed_props.default_row_height, content="Some(18)")
+  debug_inspect(parsed_props.custom_height, content="Some(true)")
+  debug_inspect(parsed_props.zero_height, content="Some(true)")
+  debug_inspect(parsed_props.thick_top, content="Some(true)")
+  debug_inspect(parsed_props.thick_bottom, content="Some(false)")
 }
 
 ///|
@@ -272,7 +272,7 @@ test "sheet props defaults on set" {
     Some(SheetPropsOptions::with_values(code_name="OnlyCode")),
   )
   let props = workbook.get_sheet_props("Sheet1")
-  inspect(props.code_name, content="Some(\"OnlyCode\")")
-  inspect(props.default_row_height, content="Some(15)")
-  inspect(props.base_col_width, content="Some(8)")
+  debug_inspect(props.code_name, content="Some(\"OnlyCode\")")
+  debug_inspect(props.default_row_height, content="Some(15)")
+  debug_inspect(props.base_col_width, content="Some(8)")
 }

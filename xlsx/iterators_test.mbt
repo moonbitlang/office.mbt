@@ -7,17 +7,17 @@ test "rows iterator includes dimension-only rows" {
   sheet.set_row(3, ["C"])
   let rows = workbook.rows("Sheet1")
   inspect(rows.next(), content="true")
-  inspect(rows.row_index(), content="Some(1)")
+  debug_inspect(rows.row_index(), content="Some(1)")
   let row1 = rows.columns() catch { err => fail("row1 columns failed: \{err}") }
-  inspect(row1, content="[\"A\"]")
+  debug_inspect(row1, content="[\"A\"]")
   inspect(rows.next(), content="true")
-  inspect(rows.row_index(), content="Some(2)")
+  debug_inspect(rows.row_index(), content="Some(2)")
   let row2 = rows.columns() catch { err => fail("row2 columns failed: \{err}") }
-  inspect(row2, content="[]")
+  debug_inspect(row2, content="[]")
   inspect(rows.next(), content="true")
-  inspect(rows.row_index(), content="Some(3)")
+  debug_inspect(rows.row_index(), content="Some(3)")
   let row3 = rows.columns() catch { err => fail("row3 columns failed: \{err}") }
-  inspect(row3, content="[\"C\"]")
+  debug_inspect(row3, content="[\"C\"]")
   inspect(rows.next(), content="false")
 }
 
@@ -32,14 +32,14 @@ test "rows get_row_opts reflects dimensions" {
   sheet.set_row_style(2, 3)
   let rows = sheet.rows()
   inspect(rows.next(), content="true")
-  inspect(rows.row_index(), content="Some(1)")
+  debug_inspect(rows.row_index(), content="Some(1)")
   let first_opts = rows.get_row_opts()
   inspect(first_opts.height, content="15")
   inspect(first_opts.hidden, content="false")
   inspect(first_opts.style_id, content="0")
   inspect(first_opts.outline_level, content="0")
   inspect(rows.next(), content="true")
-  inspect(rows.row_index(), content="Some(2)")
+  debug_inspect(rows.row_index(), content="Some(2)")
   let second_opts = rows.get_row_opts()
   inspect(second_opts.height, content="18.5")
   inspect(second_opts.hidden, content="true")
@@ -52,7 +52,7 @@ test "rows error and close are no-ops" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let rows = workbook.rows("Sheet1")
-  inspect(rows.error(), content="None")
+  debug_inspect(rows.error(), content="None")
   rows.close()
   inspect(rows.next(), content="false")
 }
@@ -69,12 +69,12 @@ test "rows columns honors options" {
   let formatted = rows.columns() catch {
     err => fail("formatted columns failed: \{err}")
   }
-  inspect(formatted, content="[\"1.00\"]")
+  debug_inspect(formatted, content="[\"1.00\"]")
   let raw_opts = Options::with_values(raw_cell_value=true)
   let raw_values = rows.columns(options=raw_opts) catch {
     err => fail("raw columns failed: \{err}")
   }
-  inspect(raw_values, content="[\"1\"]")
+  debug_inspect(raw_values, content="[\"1\"]")
 }
 
 ///|
@@ -85,14 +85,14 @@ test "cols iterator yields columns by max cell col" {
   sheet.set_cell("C2", "C")
   let cols = sheet.cols()
   inspect(cols.next(), content="true")
-  inspect(cols.col_index(), content="Some(1)")
-  inspect(cols.rows(), content="[\"A\", \"\"]")
+  debug_inspect(cols.col_index(), content="Some(1)")
+  debug_inspect(cols.rows(), content="[\"A\", \"\"]")
   inspect(cols.next(), content="true")
-  inspect(cols.col_index(), content="Some(2)")
-  inspect(cols.rows(), content="[\"\", \"\"]")
+  debug_inspect(cols.col_index(), content="Some(2)")
+  debug_inspect(cols.rows(), content="[\"\", \"\"]")
   inspect(cols.next(), content="true")
-  inspect(cols.col_index(), content="Some(3)")
-  inspect(cols.rows(), content="[\"\", \"C\"]")
+  debug_inspect(cols.col_index(), content="Some(3)")
+  debug_inspect(cols.rows(), content="[\"\", \"C\"]")
   inspect(cols.next(), content="false")
 }
 
@@ -103,7 +103,7 @@ test "get_rows and get_cols expand gaps" {
   sheet.set_row(1, ["A"])
   sheet.set_row(3, ["C"])
   let rows = sheet.get_rows()
-  inspect(rows, content="[[\"A\"], [], [\"C\"]]")
+  debug_inspect(rows, content="[[\"A\"], [], [\"C\"]]")
   let cols = sheet.get_cols()
-  inspect(cols, content="[[\"A\", \"\", \"C\"]]")
+  debug_inspect(cols, content="[[\"A\", \"\", \"C\"]]")
 }

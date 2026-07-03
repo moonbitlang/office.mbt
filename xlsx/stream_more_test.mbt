@@ -14,22 +14,22 @@ test "stream cell constructors cover rich text and values" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  inspect(
+  debug_inspect(
     sheet.get_cell_formula("A1"),
     content=(
       #|Some("SUM(1,2)")
     ),
   )
-  inspect(
+  debug_inspect(
     sheet.get_cell_value_raw("A1"),
     content=(
       #|Some(Numeric(3))
     ),
   )
-  inspect(
+  debug_inspect(
     sheet.get_cell_rich_text("B1"),
     content=(
-      #|Some([{text: "hi", font: None}])
+      #|Some([{ text: "hi", font: None }])
     ),
   )
 }
@@ -62,7 +62,7 @@ test "stream writer validation branches" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     bad_width,
     content=(
       #|Err(InvalidSheetOperation(msg="column width is negative"))
@@ -73,7 +73,7 @@ test "stream writer validation branches" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     bad_col,
     content=(
       #|Err(InvalidCellRef(value="0:0"))
@@ -84,7 +84,7 @@ test "stream writer validation branches" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     bad_outline,
     content=(
       #|Err(InvalidSheetOperation(msg="column outline level out of range"))
@@ -97,13 +97,13 @@ test "stream writer validation branches" {
   writer.set_row("A1", ["B"])
   writer.flush()
   let parsed = read(write(workbook))
-  inspect(
+  debug_inspect(
     parsed.get_col_width("Sheet1", 1),
     content=(
       #|Some(10)
     ),
   )
-  inspect(
+  debug_inspect(
     parsed.get_col_width("Sheet1", 2),
     content=(
       #|Some(10)
@@ -137,7 +137,7 @@ test "stream writer row opts validation" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     row_opts_result,
     content=(
       #|Err(InvalidSheetOperation(msg="row height is negative"))
@@ -156,7 +156,7 @@ test "stream writer set_row_cells invalid style id" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(InvalidStyleId(index=999))
@@ -175,7 +175,7 @@ test "stream writer column helpers validate invalid references" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     visible_result,
     content=(
       #|Err(InvalidCellRef(value="0:0"))
@@ -187,7 +187,7 @@ test "stream writer column helpers validate invalid references" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     outline_result,
     content=(
       #|Err(InvalidCellRef(value="0:0"))
@@ -199,7 +199,7 @@ test "stream writer column helpers validate invalid references" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     style_result,
     content=(
       #|Err(InvalidCellRef(value="0:0"))
@@ -217,7 +217,7 @@ test "stream writer set_col_style validates style id before apply" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(InvalidStyleId(index=777))
@@ -236,7 +236,7 @@ test "stream writer row opts validate outline range" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(InvalidSheetOperation(msg="row outline level out of range"))
@@ -255,7 +255,7 @@ test "stream writer insert_page_break requires open writer" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(StreamWriterClosed)

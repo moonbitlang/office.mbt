@@ -48,8 +48,8 @@ test "workbook roundtrip" {
   sheet.set_cell_formula("B1", "A1", value="hello")
   let bytes = write(workbook)
   let parsed = read(bytes)
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"hello\")")
-  inspect(parsed.get_cell_formula("Sheet1", "B1"), content="Some(\"A1\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"hello\")")
+  debug_inspect(parsed.get_cell_formula("Sheet1", "B1"), content="Some(\"A1\")")
 }
 ```
 
@@ -62,13 +62,13 @@ test "row and column helpers" {
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_row("Sheet1", 1, ["a", "b", "c"])
   workbook.set_col("Sheet1", 2, ["x", "y"])
-  inspect(
+  debug_inspect(
     workbook.get_row("Sheet1", 1),
     content=(
       #|["a", "x", "c"]
     ),
   )
-  inspect(workbook.get_col("Sheet1", 2), content="[\"x\", \"y\"]")
+  debug_inspect(workbook.get_col("Sheet1", 2), content="[\"x\", \"y\"]")
 }
 ```
 
@@ -78,13 +78,13 @@ test "row and column helpers" {
 ///|
 test "cell reference conversion" {
   // Split cell name into column and row
-  inspect(split_cell_name("AB123"), content="(\"AB\", 123)")
+  debug_inspect(split_cell_name("AB123"), content="(\"AB\", 123)")
 
   // Join column and row into cell name
   inspect(join_cell_name("AB", 123), content="AB123")
 
   // Convert between cell name and coordinates (1-indexed)
-  inspect(cell_name_to_coordinates("B3"), content="(2, 3)")
+  debug_inspect(cell_name_to_coordinates("B3"), content="(2, 3)")
   inspect(coordinates_to_cell_name(2, 3), content="B3")
 
   // Absolute references
@@ -107,7 +107,7 @@ test "multiple sheets" {
   ignore(workbook.add_sheet("Summary"))
 
   // Get list of all sheets
-  inspect(
+  debug_inspect(
     workbook.get_sheet_list(),
     content="[\"Sales\", \"Expenses\", \"Summary\"]",
   )
@@ -115,7 +115,7 @@ test "multiple sheets" {
   // Access sheet by name
   guard workbook.sheet("Sales") is Some(sales) else { return }
   sales.set_cell("A1", "Revenue")
-  inspect(sales.get_cell("A1"), content="Some(\"Revenue\")")
+  debug_inspect(sales.get_cell("A1"), content="Some(\"Revenue\")")
 }
 ```
 
@@ -140,10 +140,10 @@ test "cell value types" {
   sheet.set_cell_value("B3", Bool(true))
 
   // Read back values
-  inspect(sheet.get_cell("A1"), content="Some(\"Hello\")")
-  inspect(sheet.get_cell("A2"), content="Some(\"42\")")
-  inspect(sheet.get_cell_value_raw("B2"), content="Some(Numeric(100.5))")
-  inspect(sheet.get_cell_value_raw("B3"), content="Some(Bool(true))")
+  debug_inspect(sheet.get_cell("A1"), content="Some(\"Hello\")")
+  debug_inspect(sheet.get_cell("A2"), content="Some(\"42\")")
+  debug_inspect(sheet.get_cell_value_raw("B2"), content="Some(Numeric(100.5))")
+  debug_inspect(sheet.get_cell_value_raw("B3"), content="Some(Bool(true))")
 }
 ```
 
@@ -164,7 +164,7 @@ test "formulas" {
   sheet.set_cell_formula("A4", "SUM(A1:A3)", value="60")
 
   // Read formula back
-  inspect(sheet.get_cell_formula("A4"), content="Some(\"SUM(A1:A3)\")")
+  debug_inspect(sheet.get_cell_formula("A4"), content="Some(\"SUM(A1:A3)\")")
 
   // Calculate formula value
   inspect(workbook.calc_cell_value("Calc", "A4"), content="60")
@@ -186,7 +186,7 @@ test "merged cells" {
   sheet.merge_cells("A1:D1")
 
   // Get merged cell ranges
-  inspect(sheet.merged_cells(), content="[\"A1:D1\"]")
+  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:D1\"]")
 }
 ```
 

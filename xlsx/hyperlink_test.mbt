@@ -12,16 +12,32 @@ test "hyperlink roundtrip" {
   )
   workbook.set_cell_hyperlink("Sheet1", "B2", "Sheet1!C3", Location)
   let parsed = read(write(workbook))
-  inspect(
+  debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "A1"),
     content=(
-      #|Some({reference: "A1", target: "https://example.com", link_type: External, display: Some("Example"), tooltip: Some("Tip")})
+      #|Some(
+      #|  {
+      #|    reference: "A1",
+      #|    target: "https://example.com",
+      #|    link_type: External,
+      #|    display: Some("Example"),
+      #|    tooltip: Some("Tip"),
+      #|  },
+      #|)
     ),
   )
-  inspect(
+  debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "B2"),
     content=(
-      #|Some({reference: "B2", target: "Sheet1!C3", link_type: Location, display: None, tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "B2",
+      #|    target: "Sheet1!C3",
+      #|    link_type: Location,
+      #|    display: None,
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
 }
@@ -32,13 +48,21 @@ test "hyperlink resolves merged cell anchor" {
   let sheet = workbook.add_sheet("Sheet1")
   sheet.merge_cells("A1:C3")
   sheet.set_cell_hyperlink("B2", "https://example.com", External)
-  inspect(
+  debug_inspect(
     sheet.get_cell_hyperlink("A1"),
     content=(
-      #|Some({reference: "A1", target: "https://example.com", link_type: External, display: None, tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "A1",
+      #|    target: "https://example.com",
+      #|    link_type: External,
+      #|    display: None,
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
-  inspect(sheet.get_cell_hyperlink("B2"), content="None")
+  debug_inspect(sheet.get_cell_hyperlink("B2"), content="None")
 }
 
 ///|
@@ -48,11 +72,19 @@ test "hyperlink remove keeps other links" {
   sheet.set_cell_hyperlink("A1", "https://a.example", External)
   sheet.set_cell_hyperlink("B2", "https://b.example", External)
   sheet.remove_cell_hyperlink("A1")
-  inspect(sheet.get_cell_hyperlink("A1"), content="None")
-  inspect(
+  debug_inspect(sheet.get_cell_hyperlink("A1"), content="None")
+  debug_inspect(
     sheet.get_cell_hyperlink("B2"),
     content=(
-      #|Some({reference: "B2", target: "https://b.example", link_type: External, display: None, tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "B2",
+      #|    target: "https://b.example",
+      #|    link_type: External,
+      #|    display: None,
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
 }
@@ -63,19 +95,35 @@ test "hyperlink updates on insert" {
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_hyperlink("Sheet1", "B2", "https://example.com", External)
   workbook.insert_rows("Sheet1", 1, 1)
-  inspect(workbook.get_cell_hyperlink("Sheet1", "B2"), content="None")
-  inspect(
+  debug_inspect(workbook.get_cell_hyperlink("Sheet1", "B2"), content="None")
+  debug_inspect(
     workbook.get_cell_hyperlink("Sheet1", "B3"),
     content=(
-      #|Some({reference: "B3", target: "https://example.com", link_type: External, display: None, tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "B3",
+      #|    target: "https://example.com",
+      #|    link_type: External,
+      #|    display: None,
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
   workbook.insert_cols("Sheet1", 1, 1)
-  inspect(workbook.get_cell_hyperlink("Sheet1", "B3"), content="None")
-  inspect(
+  debug_inspect(workbook.get_cell_hyperlink("Sheet1", "B3"), content="None")
+  debug_inspect(
     workbook.get_cell_hyperlink("Sheet1", "C3"),
     content=(
-      #|Some({reference: "C3", target: "https://example.com", link_type: External, display: None, tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "C3",
+      #|    target: "https://example.com",
+      #|    link_type: External,
+      #|    display: None,
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
 }
@@ -85,10 +133,18 @@ test "hyperlink alias methods" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_hyper_link("Sheet1", "C3", "https://example.com", External)
-  inspect(
+  debug_inspect(
     workbook.get_cell_hyper_link("Sheet1", "C3"),
     content=(
-      #|Some({reference: "C3", target: "https://example.com", link_type: External, display: None, tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "C3",
+      #|    target: "https://example.com",
+      #|    link_type: External,
+      #|    display: None,
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
 }
@@ -119,10 +175,18 @@ test "hyperlink opts helper" {
   inspect(sheet_xml.contains("tooltip=\"Tip\""), content="true")
   inspect(sheet_xml.contains("display="), content="false")
   let parsed = read(bytes)
-  inspect(
+  debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "A1"),
     content=(
-      #|Some({reference: "A1", target: "https://example.com", link_type: External, display: None, tooltip: Some("Tip")})
+      #|Some(
+      #|  {
+      #|    reference: "A1",
+      #|    target: "https://example.com",
+      #|    link_type: External,
+      #|    display: None,
+      #|    tooltip: Some("Tip"),
+      #|  },
+      #|)
     ),
   )
 }
@@ -140,10 +204,18 @@ test "hyperlink opts helper (display only)" {
     opts~,
   )
   let parsed = read(write(workbook))
-  inspect(
+  debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "A1"),
     content=(
-      #|Some({reference: "A1", target: "https://example.com", link_type: External, display: Some("Shown"), tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "A1",
+      #|    target: "https://example.com",
+      #|    link_type: External,
+      #|    display: Some("Shown"),
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
 }
@@ -159,10 +231,18 @@ test "hyperlink update existing reference" {
     "https://github.com/xuri/excelize",
     External,
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_hyperlink("Sheet1", "A1"),
     content=(
-      #|Some({reference: "A1", target: "https://github.com/xuri/excelize", link_type: External, display: None, tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "A1",
+      #|    target: "https://github.com/xuri/excelize",
+      #|    link_type: External,
+      #|    display: None,
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
 }
@@ -232,15 +312,23 @@ test "hyperlink remove clears range reference" {
     err => fail("zip write failed: \{err}")
   }
   let parsed = read(updated_bytes)
-  inspect(
+  debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "B2"),
     content=(
-      #|Some({reference: "A1:D4", target: "https://github.com/xuri/excelize", link_type: External, display: None, tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "A1:D4",
+      #|    target: "https://github.com/xuri/excelize",
+      #|    link_type: External,
+      #|    display: None,
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
   parsed.remove_cell_hyperlink("Sheet1", "B2")
-  inspect(parsed.get_cell_hyperlink("Sheet1", "B2"), content="None")
-  inspect(parsed.get_cell_hyperlink("Sheet1", "A1"), content="None")
+  debug_inspect(parsed.get_cell_hyperlink("Sheet1", "B2"), content="None")
+  debug_inspect(parsed.get_cell_hyperlink("Sheet1", "A1"), content="None")
 }
 
 ///|

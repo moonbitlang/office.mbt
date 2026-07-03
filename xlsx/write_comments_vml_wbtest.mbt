@@ -177,19 +177,19 @@ test "write comments vml wb: vml writer and extraction branches" {
   inspect(vml.contains("<o:idmap v:ext=\"edit\" data=\"7\"/>"), content="true")
   inspect(vml.contains("_x0000_s1025"), content="true")
   inspect(extract_vml_shapetype(vml) is Some(_), content="true")
-  inspect(extract_vml_shapetype("<xml></xml>"), content="None")
-  inspect(
+  debug_inspect(extract_vml_shapetype("<xml></xml>"), content="None")
+  debug_inspect(
     extract_vml_shapetype("<xml><v:shapetype id=\"x\"></xml>"),
     content="None",
   )
 
   let shapes = extract_vml_shapes(vml)
   inspect(shapes.length(), content="1")
-  inspect(vml_shape_id(shapes[0]), content="Some(\"_x0000_s1025\")")
+  debug_inspect(vml_shape_id(shapes[0]), content="Some(\"_x0000_s1025\")")
   inspect(extract_vml_shapes("<xml><v:shape").length(), content="0")
   inspect(extract_vml_shapes("<xml><v:shape id=\"x\">").length(), content="0")
-  inspect(vml_shape_id("<v:shape id=\"x></v:shape>"), content="None")
-  inspect(vml_shape_id("<v:shape></v:shape>"), content="None")
+  debug_inspect(vml_shape_id("<v:shape id=\"x></v:shape>"), content="None")
+  debug_inspect(vml_shape_id("<v:shape></v:shape>"), content="None")
 }
 
 ///|

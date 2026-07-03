@@ -52,11 +52,11 @@ test "formula opts array writes typed formula" {
   inspect(calc_xml.contains("<c r=\"A1\" i=\"1\"/>"), content="true")
   inspect(calc_xml.contains("r=\"B2\""), content="false")
   let parsed = read(bytes)
-  inspect(
+  debug_inspect(
     parsed.get_cell_formula("Sheet1", "A1"),
     content="Some(\"{1,2;3,4}\")",
   )
-  inspect(parsed.get_cell_formula("Sheet1", "B2"), content="None")
+  debug_inspect(parsed.get_cell_formula("Sheet1", "B2"), content="None")
 }
 
 ///|
@@ -89,8 +89,11 @@ test "formula opts shared writes typed formula" {
   inspect(calc_xml.contains("<c r=\"C1\" i=\"1\"/>"), content="true")
   inspect(calc_xml.contains("r=\"C2\""), content="false")
   let parsed = read(bytes)
-  inspect(parsed.get_cell_formula("Sheet1", "C1"), content="Some(\"A1+B1\")")
-  inspect(parsed.get_cell_formula("Sheet1", "C2"), content="None")
+  debug_inspect(
+    parsed.get_cell_formula("Sheet1", "C1"),
+    content="Some(\"A1+B1\")",
+  )
+  debug_inspect(parsed.get_cell_formula("Sheet1", "C2"), content="None")
 }
 
 ///|
@@ -115,7 +118,10 @@ test "formula opts dataTable behaves like normal formula" {
   }
   inspect(sheet_xml.contains("t=\"dataTable\""), content="false")
   let parsed = read(bytes)
-  inspect(parsed.get_cell_formula("Sheet1", "A1"), content="Some(\"SUM(1,2)\")")
+  debug_inspect(
+    parsed.get_cell_formula("Sheet1", "A1"),
+    content="Some(\"SUM(1,2)\")",
+  )
 }
 
 ///|
@@ -139,7 +145,7 @@ test "formula opts: worksheet edge cases" {
     "{1}",
     opts=FormulaOpts::with_values(formula_type=Array),
   )
-  inspect(
+  debug_inspect(
     missing_array_ref,
     content=(
       #|Err(InvalidSheetOperation(msg="array formula ref missing"))
@@ -152,7 +158,7 @@ test "formula opts: worksheet edge cases" {
     "{1,2}",
     opts=FormulaOpts::array("B1:C1"),
   )
-  inspect(
+  debug_inspect(
     bad_array_master,
     content=(
       #|Err(InvalidSheetOperation(msg="array formula master must be top-left of ref"))
@@ -162,7 +168,7 @@ test "formula opts: worksheet edge cases" {
   // Array: update existing cells.
   sheet.set_cell("C1", "x")
   sheet.set_cell_formula_opts("C1", "{1,2}", opts=FormulaOpts::array("C1:D1"))
-  inspect(sheet.get_cell_formula("C1"), content="Some(\"{1,2}\")")
+  debug_inspect(sheet.get_cell_formula("C1"), content="Some(\"{1,2}\")")
 
   // Shared: missing range_ref.
   let missing_shared_ref : Result[Unit, Error] = try? sheet.set_cell_formula_opts(
@@ -170,7 +176,7 @@ test "formula opts: worksheet edge cases" {
     "A1",
     opts=FormulaOpts::with_values(formula_type=Shared),
   )
-  inspect(
+  debug_inspect(
     missing_shared_ref,
     content=(
       #|Err(InvalidSheetOperation(msg="shared formula ref missing"))
@@ -183,7 +189,7 @@ test "formula opts: worksheet edge cases" {
     "A1+B1",
     opts=FormulaOpts::shared("F2:F3"),
   )
-  inspect(
+  debug_inspect(
     bad_shared_master,
     content=(
       #|Err(InvalidSheetOperation(msg="shared formula master must be top-left of ref"))
@@ -194,6 +200,6 @@ test "formula opts: worksheet edge cases" {
   sheet.set_cell("G1", "x")
   sheet.set_cell_formula_opts("G1", "A1+B1", opts=FormulaOpts::shared("G1:G2"))
   sheet.set_cell_formula_opts("H1", "A1+B1", opts=FormulaOpts::shared("H1:H2"))
-  inspect(sheet.get_cell_formula("G2"), content="None")
-  inspect(sheet.get_cell_formula("H2"), content="None")
+  debug_inspect(sheet.get_cell_formula("G2"), content="None")
+  debug_inspect(sheet.get_cell_formula("H2"), content="None")
 }

@@ -1,6 +1,6 @@
 import {
   "bobzhang/mbtexcel" @excel,
-  "bobzhang/mbtexcel/xlsx" @xlsx,
+  "bobzhang/mbtexcel/xlsx",
 }
 
 warnings = "-a"

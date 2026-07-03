@@ -54,7 +54,10 @@ test "table roundtrip" {
   inspect(parsed_sheet.tables()[0].name, content="TableX")
   inspect(parsed_sheet.tables()[0].range, content="A1:C1")
   inspect(parsed_sheet.tables()[0].range_ref, content="A1:C1")
-  inspect(parsed_sheet.tables()[0].columns, content="[\"A\", \"B\", \"C\"]")
+  debug_inspect(
+    parsed_sheet.tables()[0].columns,
+    content="[\"A\", \"B\", \"C\"]",
+  )
 }
 
 ///|
@@ -66,7 +69,7 @@ test "table columns mismatch" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content="Err(InvalidTable(msg=\"table columns do not match range\"))",
   )

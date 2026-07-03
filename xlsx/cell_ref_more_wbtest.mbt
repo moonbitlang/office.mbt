@@ -1,6 +1,6 @@
 ///|
 test "cell ref conversions edge cases" {
-  inspect(
+  debug_inspect(
     cell_ref_to_rc("$A$1"),
     content=(
       #|(1, 1)
@@ -36,7 +36,7 @@ test "cell ref conversions edge cases" {
       #|AA
     ),
   )
-  inspect(
+  debug_inspect(
     split_cell_name("$b$12"),
     content=(
       #|("B", 12)
@@ -48,7 +48,7 @@ test "cell ref conversions edge cases" {
       #|B12
     ),
   )
-  inspect(
+  debug_inspect(
     cell_name_to_coordinates("$XFD$1048576"),
     content=(
       #|(16384, 1048576)

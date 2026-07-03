@@ -47,7 +47,7 @@ test "read uses transcoder for non-utf8 xml" {
 
   let parsed = read(bytes, transcoder=transcode)
   guard called.val else { fail("transcoder not called") }
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
 }
 
 ///|
@@ -74,5 +74,5 @@ async test "workbook read_zip_reader uses charset_transcoder" {
     builder.read_zip_reader(reader)
   })
   guard called.val else { fail("transcoder not called") }
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
 }

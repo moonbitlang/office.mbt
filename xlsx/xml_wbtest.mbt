@@ -6,11 +6,11 @@ test "xml wb: escape attr and attr-space branches" {
 
 ///|
 test "xml wb: attr_value parser edge branches" {
-  inspect(
+  debug_inspect(
     attr_value("= \"skip\" foo=   \"bar\"", "foo"),
     content="Some(\"bar\")",
   )
-  inspect(attr_value("foo=bar", "foo"), content="None")
+  debug_inspect(attr_value("foo=bar", "foo"), content="None")
 
   let invalid : Result[String?, Error] = try? attr_value(
     "foo=\"unterminated", "foo",

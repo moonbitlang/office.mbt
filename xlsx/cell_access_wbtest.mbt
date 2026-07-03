@@ -23,10 +23,10 @@ test "cell reference conversions" {
 test "worksheet cell access" {
   let sheet = Worksheet::new("Sheet1")
   sheet.set_cell_rc(2, 3, "value")
-  inspect(sheet.get_cell("C2"), content="Some(\"value\")")
-  inspect(sheet.get_cell_rc(2, 3), content="Some(\"value\")")
+  debug_inspect(sheet.get_cell("C2"), content="Some(\"value\")")
+  debug_inspect(sheet.get_cell_rc(2, 3), content="Some(\"value\")")
   sheet.set_cell("C2", "updated")
-  inspect(sheet.get_cell_rc(2, 3), content="Some(\"updated\")")
+  debug_inspect(sheet.get_cell_rc(2, 3), content="Some(\"updated\")")
 }
 
 ///|
@@ -34,9 +34,9 @@ test "workbook cell access" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "hello")
-  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"hello\")")
+  debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"hello\")")
   workbook.set_cell_rc("Sheet1", 2, 2, "world")
-  inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"world\")")
+  debug_inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"world\")")
   let missing : Result[String?, Error] = try? workbook.get_cell("Missing", "A1")
   inspect(missing is Err(_), content="true")
 }

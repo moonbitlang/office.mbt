@@ -5,7 +5,10 @@ async test "excelize fixture encryptSHA1.xlsx opens with password" {
     ".repos/excelize/test/encryptSHA1.xlsx",
     password="password",
   )
-  inspect(workbook.get_cell_value("Sheet1", "A1"), content="Some(\"SECRET\")")
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "A1"),
+    content="Some(\"SECRET\")",
+  )
 }
 
 ///|

@@ -22,7 +22,7 @@ test "column range setters" {
   workbook.set_col_style_range("Sheet1", "B:D", style_id)
   let bytes = write(workbook)
   let parsed = read(bytes)
-  inspect(
+  debug_inspect(
     [
       parsed.get_col_width("Sheet1", 2),
       parsed.get_col_width("Sheet1", 3),
@@ -30,7 +30,7 @@ test "column range setters" {
     ],
     content="[Some(11), Some(11), Some(11)]",
   )
-  inspect(
+  debug_inspect(
     [
       parsed.col_visible("Sheet1", 2),
       parsed.col_visible("Sheet1", 3),
@@ -38,7 +38,7 @@ test "column range setters" {
     ],
     content="[false, false, false]",
   )
-  inspect(
+  debug_inspect(
     [
       parsed.col_outline_level("Sheet1", 2),
       parsed.col_outline_level("Sheet1", 3),
@@ -46,7 +46,7 @@ test "column range setters" {
     ],
     content="[2, 2, 2]",
   )
-  inspect(
+  debug_inspect(
     [
       parsed.get_col_style("Sheet1", 2),
       parsed.get_col_style("Sheet1", 3),
@@ -61,7 +61,7 @@ test "column range parser edge branches" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_col_width_range("Sheet1", "C", 9.0)
-  inspect(workbook.get_col_width("Sheet1", 3), content="Some(9)")
+  debug_inspect(workbook.get_col_width("Sheet1", 3), content="Some(9)")
 
   let too_many_parts : Result[Unit, Error] = try? workbook.set_col_width_range(
     "Sheet1", "A:B:C", 10.0,

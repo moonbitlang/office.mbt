@@ -7,17 +7,51 @@ test "auto filter set and roundtrip" {
     { column: "C", expression: "x > 5" },
   ]
   workbook.set_auto_filter("Sheet1", "A1:C3", options)
-  inspect(
+  debug_inspect(
     workbook.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:C3", columns: [{col: 2, filters: Some(["10"]), custom_filters: None}, {col: 3, filters: None, custom_filters: Some({and_filter: false, filters: [{operator: "greaterThan", value: "5"}]})}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:C3",
+      #|    columns: [
+      #|      { col: 2, filters: Some(["10"]), custom_filters: None },
+      #|      {
+      #|        col: 3,
+      #|        filters: None,
+      #|        custom_filters: Some(
+      #|          {
+      #|            and_filter: false,
+      #|            filters: [{ operator: "greaterThan", value: "5" }],
+      #|          },
+      #|        ),
+      #|      },
+      #|    ],
+      #|  },
+      #|)
     ),
   )
   let parsed = read(write(workbook))
-  inspect(
+  debug_inspect(
     parsed.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:C3", columns: [{col: 2, filters: Some(["10"]), custom_filters: None}, {col: 3, filters: None, custom_filters: Some({and_filter: false, filters: [{operator: "greaterThan", value: "5"}]})}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:C3",
+      #|    columns: [
+      #|      { col: 2, filters: Some(["10"]), custom_filters: None },
+      #|      {
+      #|        col: 3,
+      #|        filters: None,
+      #|        custom_filters: Some(
+      #|          {
+      #|            and_filter: false,
+      #|            filters: [{ operator: "greaterThan", value: "5" }],
+      #|          },
+      #|        ),
+      #|      },
+      #|    ],
+      #|  },
+      #|)
     ),
   )
 }
@@ -30,10 +64,15 @@ test "auto filter or expression" {
     { column: "A", expression: "x == 1 or x == 3" },
   ]
   workbook.set_auto_filter("Sheet1", "A1:B5", options)
-  inspect(
+  debug_inspect(
     workbook.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:B5", columns: [{col: 1, filters: Some(["1", "3"]), custom_filters: None}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:B5",
+      #|    columns: [{ col: 1, filters: Some(["1", "3"]), custom_filters: None }],
+      #|  },
+      #|)
     ),
   )
 }
@@ -47,10 +86,26 @@ test "auto filter adjusts on insert" {
   ]
   workbook.set_auto_filter("Sheet1", "A1:C3", options)
   workbook.insert_cols("Sheet1", 2, 1)
-  inspect(
+  debug_inspect(
     workbook.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:D3", columns: [{col: 4, filters: None, custom_filters: Some({and_filter: false, filters: [{operator: "greaterThanOrEqual", value: "5"}]})}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:D3",
+      #|    columns: [
+      #|      {
+      #|        col: 4,
+      #|        filters: None,
+      #|        custom_filters: Some(
+      #|          {
+      #|            and_filter: false,
+      #|            filters: [{ operator: "greaterThanOrEqual", value: "5" }],
+      #|          },
+      #|        ),
+      #|      },
+      #|    ],
+      #|  },
+      #|)
     ),
   )
 }
@@ -65,7 +120,7 @@ test "auto filter invalid expression" {
   let result : Result[Unit, Error] = try? workbook.set_auto_filter(
     "Sheet1", "A1:A2", options,
   )
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(InvalidAutoFilter(msg="auto filter operator invalid"))
@@ -82,10 +137,15 @@ test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
   workbook.set_auto_filter("Sheet1", "A1:A2", [
     { column: "A", expression: "x == \"a\"\"b\"" },
   ])
-  inspect(
+  debug_inspect(
     workbook.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:A2", columns: [{col: 1, filters: Some(["\"a\"\"b\""]), custom_filters: None}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:A2",
+      #|    columns: [{ col: 1, filters: Some(["\"a\"\"b\""]), custom_filters: None }],
+      #|  },
+      #|)
     ),
   )
 
@@ -127,7 +187,7 @@ test "auto filter: invalid token count and blanks operator" {
     "A1:A2",
     [{ column: "A", expression: "x ==" }],
   )
-  inspect(
+  debug_inspect(
     bad_tokens,
     content=(
       #|Err(InvalidAutoFilter(msg="auto filter expression invalid"))
@@ -138,7 +198,7 @@ test "auto filter: invalid token count and blanks operator" {
     "A1:A2",
     [{ column: "A", expression: "x == 1 2" }],
   )
-  inspect(
+  debug_inspect(
     bad_tokens2,
     content=(
       #|Err(InvalidAutoFilter(msg="auto filter expression invalid"))
@@ -149,7 +209,7 @@ test "auto filter: invalid token count and blanks operator" {
     "A1:A2",
     [{ column: "A", expression: "x > blanks" }],
   )
-  inspect(
+  debug_inspect(
     bad_blanks_op,
     content=(
       #|Err(InvalidAutoFilter(msg="auto filter operator invalid"))
@@ -166,19 +226,46 @@ test "auto filter: custom operators, and-expression, and column validation" {
   workbook.set_auto_filter("Sheet1", "A1:A2", [
     { column: "A", expression: "x < 3" },
   ])
-  inspect(
+  debug_inspect(
     workbook.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:A2", columns: [{col: 1, filters: None, custom_filters: Some({and_filter: false, filters: [{operator: "lessThan", value: "3"}]})}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:A2",
+      #|    columns: [
+      #|      {
+      #|        col: 1,
+      #|        filters: None,
+      #|        custom_filters: Some({ and_filter: false, filters: [{ operator: "lessThan", value: "3" }] }),
+      #|      },
+      #|    ],
+      #|  },
+      #|)
     ),
   )
   workbook.set_auto_filter("Sheet1", "A1:A2", [
     { column: "A", expression: "x <= 3" },
   ])
-  inspect(
+  debug_inspect(
     workbook.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:A2", columns: [{col: 1, filters: None, custom_filters: Some({and_filter: false, filters: [{operator: "lessThanOrEqual", value: "3"}]})}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:A2",
+      #|    columns: [
+      #|      {
+      #|        col: 1,
+      #|        filters: None,
+      #|        custom_filters: Some(
+      #|          {
+      #|            and_filter: false,
+      #|            filters: [{ operator: "lessThanOrEqual", value: "3" }],
+      #|          },
+      #|        ),
+      #|      },
+      #|    ],
+      #|  },
+      #|)
     ),
   )
 
@@ -186,10 +273,15 @@ test "auto filter: custom operators, and-expression, and column validation" {
   workbook.set_auto_filter("Sheet1", "A1:A2", [
     { column: "A", expression: "x != nonblanks" },
   ])
-  inspect(
+  debug_inspect(
     workbook.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:A2", columns: [{col: 1, filters: Some(["blanks"]), custom_filters: None}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:A2",
+      #|    columns: [{ col: 1, filters: Some(["blanks"]), custom_filters: None }],
+      #|  },
+      #|)
     ),
   )
 
@@ -214,10 +306,15 @@ test "auto filter: custom operators, and-expression, and column validation" {
     { column: "A", expression: "" },
     { column: "A", expression: "x == 1" },
   ])
-  inspect(
+  debug_inspect(
     workbook.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:A2", columns: [{col: 1, filters: Some(["1"]), custom_filters: None}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:A2",
+      #|    columns: [{ col: 1, filters: Some(["1"]), custom_filters: None }],
+      #|  },
+      #|)
     ),
   )
 
@@ -227,7 +324,7 @@ test "auto filter: custom operators, and-expression, and column validation" {
     "A1:A2",
     [{ column: "1", expression: "x == 1" }],
   )
-  inspect(
+  debug_inspect(
     bad_col,
     content=(
       #|Err(InvalidAutoFilter(msg="auto filter column invalid"))
@@ -240,7 +337,7 @@ test "auto filter: custom operators, and-expression, and column validation" {
     "A1:A2",
     [{ column: "B", expression: "x == 1" }],
   )
-  inspect(
+  debug_inspect(
     out_of_range,
     content=(
       #|Err(InvalidAutoFilter(msg="auto filter column out of range"))
@@ -252,10 +349,15 @@ test "auto filter: custom operators, and-expression, and column validation" {
     { column: "A", expression: "x == 1" },
     { column: "A", expression: "x == 2" },
   ])
-  inspect(
+  debug_inspect(
     workbook.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:A2", columns: [{col: 1, filters: Some(["2"]), custom_filters: None}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:A2",
+      #|    columns: [{ col: 1, filters: Some(["2"]), custom_filters: None }],
+      #|  },
+      #|)
     ),
   )
 }
@@ -265,5 +367,5 @@ test "auto filter clear" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.clear_auto_filter()
-  inspect(sheet.auto_filter(), content="None")
+  debug_inspect(sheet.auto_filter(), content="None")
 }

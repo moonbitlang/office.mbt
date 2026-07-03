@@ -8,7 +8,7 @@ async test "excelize fixture MergeCell.xlsx merge-cells info parity" {
   }
   let merges = workbook.get_merge_cells_info(sheet_name)
   inspect(merges.length(), content="4")
-  inspect(
+  debug_inspect(
     (
       merges[0].get_cell_value(),
       merges[0].get_start_axis(),
@@ -16,7 +16,7 @@ async test "excelize fixture MergeCell.xlsx merge-cells info parity" {
     ),
     content="(\"A1\", \"A1\", \"B1\")",
   )
-  inspect(
+  debug_inspect(
     (
       merges[1].get_cell_value(),
       merges[1].get_start_axis(),
@@ -24,7 +24,7 @@ async test "excelize fixture MergeCell.xlsx merge-cells info parity" {
     ),
     content="(\"A2\", \"A2\", \"A3\")",
   )
-  inspect(
+  debug_inspect(
     (
       merges[2].get_cell_value(),
       merges[2].get_start_axis(),
@@ -32,7 +32,7 @@ async test "excelize fixture MergeCell.xlsx merge-cells info parity" {
     ),
     content="(\"A4\", \"A4\", \"B5\")",
   )
-  inspect(
+  debug_inspect(
     (
       merges[3].get_cell_value(),
       merges[3].get_start_axis(),

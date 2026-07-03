@@ -84,35 +84,35 @@ test "sparkline options roundtrip" {
   inspect(group.options.display_x_axis, content="true")
   inspect(group.options.right_to_left, content="true")
   match group.options.color_axis {
-    Some(color) => inspect(color.rgb, content="Some(\"FF000000\")")
+    Some(color) => debug_inspect(color.rgb, content="Some(\"FF000000\")")
     None => fail("missing colorAxis")
   }
   match group.options.color_series {
-    Some(color) => inspect(color.rgb, content="Some(\"FF00FF00\")")
+    Some(color) => debug_inspect(color.rgb, content="Some(\"FF00FF00\")")
     None => fail("missing colorSeries")
   }
   match group.options.color_negative {
-    Some(color) => inspect(color.rgb, content="Some(\"FFFF0000\")")
+    Some(color) => debug_inspect(color.rgb, content="Some(\"FFFF0000\")")
     None => fail("missing colorNegative")
   }
   match group.options.color_markers {
-    Some(color) => inspect(color.rgb, content="Some(\"FF0000FF\")")
+    Some(color) => debug_inspect(color.rgb, content="Some(\"FF0000FF\")")
     None => fail("missing colorMarkers")
   }
   match group.options.color_first {
-    Some(color) => inspect(color.rgb, content="Some(\"FF112233\")")
+    Some(color) => debug_inspect(color.rgb, content="Some(\"FF112233\")")
     None => fail("missing colorFirst")
   }
   match group.options.color_last {
-    Some(color) => inspect(color.rgb, content="Some(\"FF445566\")")
+    Some(color) => debug_inspect(color.rgb, content="Some(\"FF445566\")")
     None => fail("missing colorLast")
   }
   match group.options.color_high {
-    Some(color) => inspect(color.rgb, content="Some(\"FF778899\")")
+    Some(color) => debug_inspect(color.rgb, content="Some(\"FF778899\")")
     None => fail("missing colorHigh")
   }
   match group.options.color_low {
-    Some(color) => inspect(color.rgb, content="Some(\"FFAABBCC\")")
+    Some(color) => debug_inspect(color.rgb, content="Some(\"FFAABBCC\")")
     None => fail("missing colorLow")
   }
 }
@@ -128,7 +128,7 @@ test "sparkline options style out of range" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content="Err(InvalidSparkline(msg=\"sparkline style out of range\"))",
   )
@@ -171,30 +171,30 @@ test "sparkline options followups" {
   let group = parsed_sheet.sparkline_groups()[0]
   inspect(group.options.date_axis, content="true")
   inspect(group.options.display_hidden, content="true")
-  inspect(group.options.line_weight, content="Some(2)")
-  inspect(group.options.manual_min, content="Some(1)")
-  inspect(group.options.manual_max, content="Some(9)")
+  debug_inspect(group.options.line_weight, content="Some(2)")
+  debug_inspect(group.options.manual_min, content="Some(1)")
+  debug_inspect(group.options.manual_max, content="Some(9)")
   inspect(group.options.display_empty_cells_as, content="zero")
 }
 
 ///|
 test "sparkline options alias fields" {
   let opts = SparklineOptions::new(["B2"], ["A1:A3"])
-  inspect(opts.location, content="[\"B2\"]")
-  inspect(opts.range, content="[\"A1:A3\"]")
-  inspect(
+  debug_inspect(opts.location, content="[\"B2\"]")
+  debug_inspect(opts.range, content="[\"A1:A3\"]")
+  debug_inspect(
     (opts.max, opts.cust_max, opts.min, opts.cust_min),
     content="(0, 0, 0, 0)",
   )
   opts.set_manual_max(9)
   opts.set_manual_min(1)
-  inspect(
+  debug_inspect(
     (opts.max, opts.cust_max, opts.min, opts.cust_min),
     content="(9, 9, 1, 1)",
   )
   opts.clear_manual_max()
   opts.clear_manual_min()
-  inspect(
+  debug_inspect(
     (opts.max, opts.cust_max, opts.min, opts.cust_min),
     content="(0, 0, 0, 0)",
   )

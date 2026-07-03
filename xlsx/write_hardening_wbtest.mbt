@@ -416,7 +416,7 @@ test "write hardening wb: worksheet_dimension covers cell merge and table min/ma
   let dimension = worksheet_dimension(sheet) catch {
     err => fail("worksheet_dimension failed: \{err}")
   }
-  inspect(dimension, content="Some(\"A1:E6\")")
+  debug_inspect(dimension, content="Some(\"A1:E6\")")
 }
 
 ///|
@@ -427,7 +427,7 @@ test "write hardening wb: worksheet_dimension covers auto-filter expansion branc
   let dimension = worksheet_dimension(sheet) catch {
     err => fail("worksheet_dimension failed: \{err}")
   }
-  inspect(dimension, content="Some(\"B2:D4\")")
+  debug_inspect(dimension, content="Some(\"B2:D4\")")
 }
 
 ///|

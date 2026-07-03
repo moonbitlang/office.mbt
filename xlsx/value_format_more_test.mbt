@@ -68,67 +68,67 @@ test "value format builtin ids coverage" {
     "A11",
     workbook.add_style(Style::builtin_number_format(22)),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A1"),
     content=(
       #|Some("1234.5")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A2"),
     content=(
       #|Some("1,235")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A3"),
     content=(
       #|Some("1,234.50")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A4"),
     content=(
       #|Some("13%")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A5"),
     content=(
       #|Some("12.50%")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A6"),
     content=(
       #|Some("2-Jan")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A7"),
     content=(
       #|Some("Jan-00")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A8"),
     content=(
       #|Some("6:00 PM")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A9"),
     content=(
       #|Some("6:00:00 PM")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A10"),
     content=(
       #|Some("18:00")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A11"),
     content=(
       #|Some("12/31/99 18:00")
@@ -209,73 +209,73 @@ test "value format custom sections metadata and patterns" {
     "B12",
     workbook.add_style(Style::number_format("[H]:mm:ss")),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B1"),
     content=(
       #|Some("-1")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B2"),
     content=(
       #|Some("1")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B3"),
     content=(
       #|Some("ZERO")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B4"),
     content=(
       #|Some("PREabcSUF")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B5"),
     content=(
       #|Some("1 1/4")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B6"),
     content=(
       #|Some("50%")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B7"),
     content=(
       #|Some("0.00E+00")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B8"),
     content=(
       #|Some("1.0E+01")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B9"),
     content=(
       #|Some("$1900-01-02")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B10"),
     content=(
       #|Some("2")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B11"),
     content=(
       #|Some("1")
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "B12"),
     content=(
       #|Some("18:00:00")

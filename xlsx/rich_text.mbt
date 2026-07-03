@@ -18,13 +18,13 @@ pub(all) struct RichTextFont {
   scheme : String?
   vert_align : String?
   family : String?
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 pub(all) struct RichTextRun {
   text : String
   font : RichTextFont?
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 let max_cell_chars = 32767

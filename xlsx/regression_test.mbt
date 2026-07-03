@@ -10,5 +10,5 @@ test "large workbook regression snapshot" {
   let bytes = write(workbook)
   inspect(bytes.length(), content="72795")
   let parsed = read(bytes)
-  inspect(parsed.get_cell_rc("Sheet1", 50, 20), content="Some(\"50-20\")")
+  debug_inspect(parsed.get_cell_rc("Sheet1", 50, 20), content="Some(\"50-20\")")
 }

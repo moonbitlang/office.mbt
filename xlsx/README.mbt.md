@@ -59,7 +59,7 @@ test "create workbook" {
 
   // Add a sheet
   ignore(wb.add_sheet("Data"))
-  inspect(wb.get_sheet_list(), content="[\"Data\"]")
+  debug_inspect(wb.get_sheet_list(), content="[\"Data\"]")
 }
 ```
 
@@ -79,13 +79,13 @@ test "cell operations" {
   sheet.set_cell_rc(2, 1, "Row 2, Col 1")
 
   // Read cells
-  inspect(sheet.get_cell("A1"), content="Some(\"Hello\")")
-  inspect(sheet.get_cell_rc(2, 1), content="Some(\"Row 2, Col 1\")")
+  debug_inspect(sheet.get_cell("A1"), content="Some(\"Hello\")")
+  debug_inspect(sheet.get_cell_rc(2, 1), content="Some(\"Row 2, Col 1\")")
 
   // Set typed values
   sheet.set_cell_value("C1", Numeric(42.5))
   sheet.set_cell_value("D1", Bool(true))
-  inspect(sheet.get_cell_value_raw("C1"), content="Some(Numeric(42.5))")
+  debug_inspect(sheet.get_cell_value_raw("C1"), content="Some(Numeric(42.5))")
 }
 ```
 
@@ -104,8 +104,8 @@ test "row and column operations" {
   sheet.set_col(1, ["1", "2", "3"])
 
   // Read row/column
-  inspect(sheet.get_row(1), content="[\"1\", \"B\", \"C\", \"D\"]")
-  inspect(sheet.get_col(1), content="[\"1\", \"2\", \"3\"]")
+  debug_inspect(sheet.get_row(1), content="[\"1\", \"B\", \"C\", \"D\"]")
+  debug_inspect(sheet.get_col(1), content="[\"1\", \"2\", \"3\"]")
 
   // Row/column dimensions
   inspect(sheet.max_row(), content="3")
@@ -126,7 +126,7 @@ test "formulas" {
 
   // Formula with cached value
   sheet.set_cell_formula("A4", "SUM(A1:A3)", value="60")
-  inspect(sheet.get_cell_formula("A4"), content="Some(\"SUM(A1:A3)\")")
+  debug_inspect(sheet.get_cell_formula("A4"), content="Some(\"SUM(A1:A3)\")")
 
   // Calculate formula
   inspect(wb.calc_cell_value("Calc", "A4"), content="60")
@@ -185,8 +185,8 @@ test "font options" {
     underline="single",
     strike=true,
   )
-  inspect(font.bold, content="Some(true)")
-  inspect(font.size, content="Some(12)")
+  debug_inspect(font.bold, content="Some(true)")
+  debug_inspect(font.size, content="Some(12)")
 }
 ```
 
@@ -197,7 +197,7 @@ test "font options" {
 test "fill options" {
   // Solid fill
   let solid = Fill::solid("FF0000") // Red
-  inspect(solid.typ, content="Some(\"pattern\")")
+  debug_inspect(solid.typ, content="Some(\"pattern\")")
 
   // Pattern fill
   ignore(Fill::pattern(pattern=17, color="00FF00"))
@@ -220,7 +220,7 @@ test "border options" {
     Border::with_values("bottom", color="000000", style=2), // Thicker bottom
   ]
   let style = Style::border(borders)
-  inspect(style.border.map(fn(b) { b.length() }), content="Some(4)")
+  debug_inspect(style.border.map(fn(b) { b.length() }), content="Some(4)")
 }
 ```
 
@@ -355,11 +355,11 @@ test "merged cells" {
   sheet.merge_cells("A1:D1")
 
   // Get merged ranges
-  inspect(sheet.merged_cells(), content="[\"A1:D1\"]")
+  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:D1\"]")
 
   // Unmerge
   sheet.unmerge_cells("A1:D1")
-  inspect(sheet.merged_cells(), content="[]")
+  debug_inspect(sheet.merged_cells().to_array(), content="[]")
 }
 ```
 
@@ -403,7 +403,10 @@ test "sheet operations" {
 
   // Rename sheet
   wb.set_sheet_name("Sheet1", "Data")
-  inspect(wb.get_sheet_list(), content="[\"Data\", \"Sheet2\", \"Sheet3\"]")
+  debug_inspect(
+    wb.get_sheet_list(),
+    content="[\"Data\", \"Sheet2\", \"Sheet3\"]",
+  )
 
   // Hide sheet
   wb.set_sheet_visible("Sheet3", false)
@@ -411,7 +414,7 @@ test "sheet operations" {
 
   // Delete sheet
   wb.delete_sheet("Sheet2")
-  inspect(wb.get_sheet_list(), content="[\"Data\", \"Sheet3\"]")
+  debug_inspect(wb.get_sheet_list(), content="[\"Data\", \"Sheet3\"]")
 
   // Set active sheet
   wb.set_active_sheet(1)
@@ -429,11 +432,11 @@ test "row column dimensions" {
 
   // Set row height
   sheet.set_row_height(1, 30.0)
-  inspect(sheet.get_row_height(1), content="Some(30)")
+  debug_inspect(sheet.get_row_height(1), content="Some(30)")
 
   // Set column width
   sheet.set_col_width(1, 20.0)
-  inspect(sheet.get_col_width(1), content="Some(20)")
+  debug_inspect(sheet.get_col_width(1), content="Some(20)")
 
   // Hide row
   sheet.set_row_visible(2, false)
@@ -463,7 +466,10 @@ test "sheet protection" {
   sheet.protect_sheet(opts)
 
   // Check protection
-  inspect(sheet.sheet_protection().map(fn(p) { p.sheet }), content="Some(true)")
+  debug_inspect(
+    sheet.sheet_protection().map(fn(p) { p.sheet }),
+    content="Some(true)",
+  )
 
   // Unprotect
   sheet.unprotect_sheet(password="secret")
@@ -550,9 +556,9 @@ test "read workbook" {
 
   // Read it back
   let loaded = read(bytes)
-  inspect(loaded.get_sheet_list(), content="[\"Test\"]")
-  inspect(loaded.get_cell("Test", "A1"), content="Some(\"Hello\")")
-  inspect(loaded.get_cell("Test", "A2"), content="Some(\"World\")")
+  debug_inspect(loaded.get_sheet_list(), content="[\"Test\"]")
+  debug_inspect(loaded.get_cell("Test", "A1"), content="Some(\"Hello\")")
+  debug_inspect(loaded.get_cell("Test", "A2"), content="Some(\"World\")")
 }
 ```
 
@@ -567,7 +573,7 @@ test "error handling" {
 
   // Try to get non-existent sheet
   let result : Result[Int, Error] = try? wb.get_sheet_index("Missing")
-  inspect(result, content="Ok(-1)")
+  debug_inspect(result, content="Ok(-1)")
 
   // Invalid cell reference
   let sheet = wb.add_sheet("Test")
@@ -582,13 +588,13 @@ test "error handling" {
 ///|
 test "cell reference utilities" {
   // Split cell name
-  inspect(split_cell_name("AB123"), content="(\"AB\", 123)")
+  debug_inspect(split_cell_name("AB123"), content="(\"AB\", 123)")
 
   // Join cell name
   inspect(join_cell_name("AB", 123), content="AB123")
 
   // Coordinates (1-indexed)
-  inspect(cell_name_to_coordinates("C5"), content="(3, 5)")
+  debug_inspect(cell_name_to_coordinates("C5"), content="(3, 5)")
   inspect(coordinates_to_cell_name(3, 5), content="C5")
 
   // Absolute references
