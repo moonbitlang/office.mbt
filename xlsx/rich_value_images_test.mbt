@@ -1,0 +1,187 @@
+///|
+/// Rewrites a written workbook into a rich-value "Place in cell" image
+/// layout: injects a `vm` attribute onto the A1 cell and adds the
+/// metadata, richData, and media parts a modern embedded image needs.
+fn inject_rich_value_image(base : Bytes, media : Bytes) -> Bytes raise {
+  let archive = @zip.read(base)
+  let patched = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name() == "xl/worksheets/sheet1.xml" {
+      let xml = @encoding/utf8.decode(entry.data())
+      // give the #VALUE! cell its value-metadata index
+      let mutated = xml.replace(old="<c r=\"A1\"", new="<c r=\"A1\" vm=\"1\"")
+      patched.add(entry.name(), @encoding/utf8.encode(mutated))
+    } else {
+      patched.add(entry.name(), entry.data())
+    }
+  }
+  patched.add(
+    "xl/metadata.xml",
+    @encoding/utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8"?>
+        #|<metadata>
+        #|  <valueMetadata count="1">
+        #|    <bk><rc t="1" v="0"/></bk>
+        #|  </valueMetadata>
+        #|</metadata>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/rdrichvalue.xml",
+    @encoding/utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8"?>
+        #|<rvData count="1">
+        #|  <rv s="0"><v>0</v><v>a placed image</v></rv>
+        #|</rvData>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/rdrichvaluestructure.xml",
+    @encoding/utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8"?>
+        #|<rvStructures count="1">
+        #|  <s t="_localImage">
+        #|    <k n="_rvRel:LocalImageIdentifier" t="i"/>
+        #|    <k n="Text" t="s"/>
+        #|  </s>
+        #|</rvStructures>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/richValueRel.xml",
+    @encoding/utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8"?>
+        #|<richValueRels xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+        #|  <rel r:id="rId1"/>
+        #|</richValueRels>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/_rels/richValueRel.xml.rels",
+    @encoding/utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8"?>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        #|  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rv1.png"/>
+        #|</Relationships>
+      ),
+    ),
+  )
+  patched.add("xl/media/rv1.png", media)
+  @zip.write(patched)
+}
+
+///|
+test "get_pictures resolves a rich-value place-in-cell image" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", Error("#VALUE!"))
+  let media : Bytes = b"\x89PNG\r\n\x1a\nplaced-image"
+  let bytes = inject_rich_value_image(@xlsx.write(workbook), media)
+  let parsed = @xlsx.read(bytes)
+  let pics = parsed.get_pictures("Sheet1", "A1")
+  inspect(pics.length(), content="1")
+  let pic = pics[0]
+  inspect(pic.extension, content=".png")
+  inspect(pic.content_type, content="image/png")
+  inspect(pic.alt_text, content="a placed image")
+  inspect(pic.data == media, content="true")
+  // a cell without a vm/#VALUE! rich value returns nothing
+  inspect(parsed.get_pictures("Sheet1", "B2").length(), content="0")
+}
+
+///|
+test "rich-value image ignored when cell is not a #VALUE! error" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  // a plain value cell with a vm should not resolve to an image
+  sheet.set_cell_value("A1", String("hello"))
+  let bytes = inject_rich_value_image(
+    @xlsx.write(workbook),
+    b"\x89PNG\r\n\x1a\nx",
+  )
+  let parsed = @xlsx.read(bytes)
+  inspect(parsed.get_pictures("Sheet1", "A1").length(), content="0")
+}
+
+///|
+/// Injects a rich value whose structure keys and values have mismatched
+/// lengths, which Excelize refuses to resolve.
+fn inject_mismatched_rich_value(base : Bytes) -> Bytes raise {
+  let archive = @zip.read(base)
+  let patched = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name() == "xl/worksheets/sheet1.xml" {
+      let xml = @encoding/utf8.decode(entry.data())
+      patched.add(
+        entry.name(),
+        @encoding/utf8.encode(
+          xml.replace(old="<c r=\"A1\"", new="<c r=\"A1\" vm=\"1\""),
+        ),
+      )
+    } else {
+      patched.add(entry.name(), entry.data())
+    }
+  }
+  patched.add(
+    "xl/metadata.xml",
+    @encoding/utf8.encode(
+      (
+        #|<metadata><valueMetadata count="1"><bk><rc t="1" v="0"/></bk></valueMetadata></metadata>
+      ),
+    ),
+  )
+  // three keys but only one value: Excelize suppresses the image
+  patched.add(
+    "xl/richData/rdrichvalue.xml",
+    @encoding/utf8.encode(
+      (
+        #|<rvData count="1"><rv s="0"><v>0</v></rv></rvData>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/rdrichvaluestructure.xml",
+    @encoding/utf8.encode(
+      (
+        #|<rvStructures count="1"><s t="_localImage"><k n="_rvRel:LocalImageIdentifier" t="i"/><k n="CalcOrigin" t="i"/><k n="Text" t="s"/></s></rvStructures>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/richValueRel.xml",
+    @encoding/utf8.encode(
+      (
+        #|<richValueRels xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><rel r:id="rId1"/></richValueRels>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/_rels/richValueRel.xml.rels",
+    @encoding/utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rv1.png"/></Relationships>
+      ),
+    ),
+  )
+  patched.add("xl/media/rv1.png", b"png")
+  @zip.write(patched)
+}
+
+///|
+test "rich-value image suppressed when keys and values length mismatch" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", Error("#VALUE!"))
+  let bytes = inject_mismatched_rich_value(@xlsx.write(workbook))
+  let parsed = @xlsx.read(bytes)
+  inspect(parsed.get_pictures("Sheet1", "A1").length(), content="0")
+}

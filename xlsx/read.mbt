@@ -3010,6 +3010,20 @@ fn read_zip_bytes(
     }
     None => []
   }
+  let rich_value_images = parse_rich_value_images(archive, decode)
+  let rich_value_media : Map[String, Bytes] = {}
+  match rich_value_images {
+    Some(data) =>
+      for _, target in data.rel_targets {
+        let path = normalize_cell_image_target(target)
+        match archive.get(path) {
+          Some(bytes) => rich_value_media[path] = bytes
+          None => ()
+        }
+      }
+    None => ()
+  }
+  let rich_value_vm : Map[String, Map[String, Int]] = {}
   let workbook : Workbook = {
     sheets: [],
     chart_sheets: [],
@@ -3039,6 +3053,9 @@ fn read_zip_bytes(
     workbook_protection,
     active_sheet_index: safe_active_index,
     cell_images,
+    rich_value_images,
+    rich_value_media,
+    rich_value_vm,
   }
   let workbook_rels_path = rels_path_for_part(workbook_xml_part_path)
   let workbook_rels = match archive.get(workbook_rels_path) {
@@ -3614,6 +3631,15 @@ fn read_zip_bytes(
       }
       workbook.sheets.push(sheet)
       workbook.sheet_order.push(Worksheet(workbook.sheets.length() - 1))
+      // Capture the cell value-metadata indices used by rich-value
+      // ("Place in cell") images; only present when the workbook has
+      // rich value data.
+      if rich_value_images is Some(_) {
+        let vm_map = parse_cell_vm_map(sheet_xml)
+        if vm_map.size() > 0 {
+          rich_value_vm[name] = vm_map
+        }
+      }
     } else {
       let target = match chartsheet_targets.get(rel_id) {
         Some(value) => value

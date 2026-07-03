@@ -1025,6 +1025,8 @@ pub(all) struct RichTextRun {
   font : RichTextFont?
 } derive(Show, @debug.Debug)
 
+type RichValueImages
+
 type RowCells
 
 pub struct RowDimension {
@@ -1456,6 +1458,9 @@ pub struct Workbook {
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
   cell_images : Array[CellImage]
+  rich_value_images : RichValueImages?
+  rich_value_media : Map[String, Bytes]
+  rich_value_vm : Map[String, Map[String, Int]]
 }
 pub fn Workbook::active_sheet_index(Self) -> Int
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError

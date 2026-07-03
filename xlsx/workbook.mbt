@@ -2104,8 +2104,14 @@ pub fn Workbook::get_pictures(
 ) -> Array[Image] raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
   // Excelize's GetPictures returns embedded cell images (getCellImages)
-  // before the drawing-object pictures, so match that order.
+  // before the drawing-object pictures. getCellImages resolves the WPS
+  // DISPIMG images first, then the modern rich-value "Place in cell"
+  // image, then the drawing objects are appended.
   let images = self.disp_images_for_cell(sheet, cell)
+  match self.rich_value_image_for_cell(sheet, cell) {
+    Some(image) => images.push(image)
+    None => ()
+  }
   for image in sheet.get_pictures(cell) {
     images.push(image)
   }
