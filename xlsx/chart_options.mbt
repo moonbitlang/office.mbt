@@ -359,6 +359,93 @@ pub fn ChartDataPoint::new(
 }
 
 ///|
+/// Explicit fill override for a chart element, mirroring Excelize's
+/// `Fill` struct. Only `typ == "pattern"` with `pattern == 1` is acted
+/// on (like Go's `drawShapeFill`): a single `color` yields a solid fill
+/// with optional `transparency`, and any other color count yields an
+/// explicit no-fill. Other configurations are inert, matching Go.
+/// `shading` is accepted for API parity but, like Go's chart path, is
+/// not emitted.
+pub(all) struct ChartFill {
+  mut typ : String
+  mut pattern : Int
+  mut color : Array[String]
+  mut shading : Int
+  mut transparency : Int
+} derive(Show)
+
+///|
+pub fn ChartFill::new(
+  typ? : String = "",
+  pattern? : Int = 0,
+  color? : Array[String] = [],
+  shading? : Int = 0,
+  transparency? : Int = 0,
+) -> ChartFill {
+  { typ, pattern, color, shading, transparency }
+}
+
+///|
+/// Effective fill directive derived from an optional `ChartFill`
+/// override and the flattened `fill_color`/`fill_transparency` fields.
+priv enum ChartFillDirective {
+  SolidFill(color~ : String, transparency~ : Int)
+  NoFill
+  NoOverride
+}
+
+///|
+fn chart_fill_directive(
+  fill : ChartFill?,
+  fallback_color : String,
+  fallback_transparency : Int,
+) -> ChartFillDirective {
+  match fill {
+    // Excelize's drawShapeFill only acts on pattern fills with index 1.
+    Some(f) if f.typ == "pattern" && f.pattern == 1 =>
+      if f.color.length() == 1 {
+        SolidFill(color=f.color[0], transparency=f.transparency)
+      } else {
+        NoFill
+      }
+    _ =>
+      if fallback_color != "" {
+        SolidFill(color=fallback_color, transparency=fallback_transparency)
+      } else {
+        NoOverride
+      }
+  }
+}
+
+///|
+/// Emits a solid-fill element with an optional alpha channel, the shared
+/// shape used for series/marker/data-label/data-point/chart-area fills.
+fn write_solid_fill(
+  sb : StringBuilder,
+  indent : String,
+  color : String,
+  transparency : Int,
+) -> Unit {
+  let value = color.replace_all(old="#", new="").to_upper()
+  sb.write_view(indent)
+  sb.write_view("<a:solidFill><a:srgbClr val=\"")
+  sb.write_view(escape_xml_attr(value))
+  let clamped = if transparency < 0 {
+    0
+  } else if transparency > 100 {
+    100
+  } else {
+    transparency
+  }
+  if clamped > 0 {
+    let alpha = (100 - clamped) * 1000
+    sb.write_view("\"><a:alpha val=\"\{alpha}\"/></a:srgbClr></a:solidFill>\n")
+  } else {
+    sb.write_view("\"/></a:solidFill>\n")
+  }
+}
+
+///|
 pub(all) struct ChartSeries {
   name : String
   categories : String
@@ -367,6 +454,7 @@ pub(all) struct ChartSeries {
   mut sizes : String
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
   mut legend : ChartLegend
   mut line : ChartLine
   mut marker : ChartMarker
@@ -394,6 +482,7 @@ pub fn ChartSeries::new(
     sizes: "",
     fill_color: "",
     fill_transparency: 0,
+    fill: None,
     legend: ChartLegend::new(),
     line: ChartLine::new(),
     marker: ChartMarker::new(),
@@ -874,7 +963,12 @@ fn write_chart_series_sppr(
   global_idx : Int,
 ) -> Unit {
   let line = series.line
-  if series.fill_color == "" &&
+  let fill_dir = chart_fill_directive(
+    series.fill,
+    series.fill_color,
+    series.fill_transparency,
+  )
+  if fill_dir is NoOverride &&
     line.typ == Unset &&
     line.dash == Unset &&
     line.color == "" &&
@@ -883,20 +977,11 @@ fn write_chart_series_sppr(
     return
   }
   sb.write_view("          <c:spPr>\n")
-  if series.fill_color != "" {
-    let fill = series.fill_color.replace_all(old="#", new="").to_upper()
-    sb.write_view("            <a:solidFill><a:srgbClr val=\"")
-    sb.write_view(escape_xml_attr(fill))
-    let t = series.fill_transparency
-    let transparency = if t < 0 { 0 } else if t > 100 { 100 } else { t }
-    if transparency > 0 {
-      let alpha = (100 - transparency) * 1000
-      sb.write_view(
-        "\"><a:alpha val=\"\{alpha}\"/></a:srgbClr></a:solidFill>\n",
-      )
-    } else {
-      sb.write_view("\"/></a:solidFill>\n")
-    }
+  match fill_dir {
+    SolidFill(color~, transparency~) =>
+      write_solid_fill(sb, "            ", color, transparency)
+    NoFill => sb.write_view("            <a:noFill/>\n")
+    NoOverride => ()
   }
   if line.typ == NoLine {
     sb.write_view("            <a:ln><a:noFill/></a:ln>\n")
