@@ -259,6 +259,7 @@ pub(all) struct ChartDataLabel {
   mut alignment : Alignment
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
 } derive(Show)
 
 pub(all) enum ChartDataLabelPositionType {
@@ -273,7 +274,7 @@ pub(all) enum ChartDataLabelPositionType {
 } derive(Eq, Show)
 
 type ChartDataPoint derive(Show)
-pub fn ChartDataPoint::new(Int, fill_color? : String) -> Self
+pub fn ChartDataPoint::new(Int, fill_color? : String, fill? : ChartFill) -> Self
 
 type ChartDimension derive(Show)
 pub fn ChartDimension::with_values(Int, Int) -> Self raise XlsxError
@@ -314,6 +315,7 @@ pub(all) struct ChartMarker {
   mut size : Int
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
   mut border : ChartLine
 } derive(Show)
 
@@ -331,6 +333,7 @@ pub(all) struct ChartOptions {
   mut title_rich : Array[RichTextRun]?
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
   mut border : ChartLine
   mut vary_colors : Bool
   mut x_axis : ChartAxis
@@ -360,6 +363,7 @@ pub(all) struct ChartPlotArea {
   mut down_bars : ChartUpDownBar
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
 } derive(Show)
 
 pub(all) struct ChartSeries {
@@ -461,6 +465,7 @@ pub(all) enum ChartType {
 pub(all) struct ChartUpDownBar {
   mut fill_color : String
   mut border : ChartLine
+  mut fill : ChartFill?
 } derive(Show)
 
 pub struct ColDimension {
