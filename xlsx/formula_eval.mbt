@@ -3954,21 +3954,59 @@ fn wildcard_find(text : String, pattern : String, start : Int) -> Int? {
 }
 
 ///|
-fn bytes_to_string(bytes : BytesView) -> String {
-  let sb = StringBuilder::new()
-  for b in bytes {
-    sb.write_char(Int::unsafe_to_char(b.to_int()))
-  }
-  sb.to_string()
-}
-
-///|
 fn dbcs_byte_len_char(ch : Char) -> Int {
   if ch.to_int() <= 0x7f {
     1
   } else {
     2
   }
+}
+
+///|
+/// Extracts the DBCS byte range `[start_num, start_num + count)` (1-based,
+/// inclusive of `start_num`) from `text`, treating each non-ASCII
+/// character as two bytes and each ASCII character as one, the way Excel
+/// counts bytes for LEFTB/RIGHTB/MIDB/REPLACEB. When the range boundary
+/// splits a wide character, only that character's leading UTF-8 byte is
+/// emitted, matching Excel's single-byte remnant. This keeps every
+/// `*B` function on one consistent DBCS model instead of slicing raw
+/// UTF-8 bytes (which would mangle even boundary-aligned wide-character
+/// cuts into per-byte code points).
+fn dbcs_byte_range(text : String, start_num : Int, count : Int) -> String {
+  if count <= 0 {
+    return ""
+  }
+  let sb = StringBuilder::new()
+  let mut offset = 0
+  let mut taken = 0
+  for ch in text {
+    if taken == count {
+      break
+    }
+    offset = offset + 1
+    let mut dbcs = false
+    if dbcs_byte_len_char(ch) == 2 {
+      dbcs = true
+      offset = offset + 1
+    }
+    if offset + 1 > start_num {
+      if dbcs {
+        if taken + 2 > count {
+          let bytes = @encoding/utf8.encode(String::from_array([ch]))
+          if bytes.length() > 0 {
+            sb.write_char(Int::unsafe_to_char(bytes[0].to_int()))
+          }
+          break
+        }
+        sb.write_char(ch)
+        taken = taken + 2
+      } else {
+        sb.write_char(ch)
+        taken = taken + 1
+      }
+    }
+  }
+  sb.to_string()
 }
 
 ///|

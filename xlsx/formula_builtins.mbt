@@ -2835,12 +2835,11 @@ fn eval_function(
         if count < 0 {
           Error(formula_error_value)
         } else {
-          let bytes = @encoding/utf8.encode(text)
-          let len = bytes.length()
+          let len = dbcs_byte_length(text)
           if count >= len {
             String(text)
           } else {
-            String(bytes_to_string(bytes[0:count]))
+            String(dbcs_byte_range(text, 1, count))
           }
         }
       } else {
@@ -2888,13 +2887,11 @@ fn eval_function(
         if count < 0 {
           Error(formula_error_value)
         } else {
-          let bytes = @encoding/utf8.encode(text)
-          let len = bytes.length()
+          let len = dbcs_byte_length(text)
           if count >= len {
             String(text)
           } else {
-            let start = len - count
-            String(bytes_to_string(bytes[start:len]))
+            String(dbcs_byte_range(text, len - count + 1, count))
           }
         }
       } else {
@@ -2953,37 +2950,7 @@ fn eval_function(
         } else if start_num > dbcs_byte_length(text) {
           String("")
         } else {
-          let sb = StringBuilder::new()
-          let mut offset = 0
-          let mut taken = 0
-          for ch in text {
-            if taken == count {
-              break
-            }
-            offset = offset + 1
-            let mut dbcs = false
-            if dbcs_byte_len_char(ch) == 2 {
-              dbcs = true
-              offset = offset + 1
-            }
-            if offset + 1 > start_num {
-              if dbcs {
-                if taken + 2 > count {
-                  let bytes = @encoding/utf8.encode(String::from_array([ch]))
-                  if bytes.length() > 0 {
-                    sb.write_char(Int::unsafe_to_char(bytes[0].to_int()))
-                  }
-                  break
-                }
-                sb.write_char(ch)
-                taken = taken + 2
-              } else {
-                sb.write_char(ch)
-                taken = taken + 1
-              }
-            }
-          }
-          String(sb.to_string())
+          String(dbcs_byte_range(text, start_num, count))
         }
       } else {
         Error(formula_error_value)
@@ -3070,20 +3037,23 @@ fn eval_function(
         if start_num <= 0 || count < 0 {
           Error(formula_error_value)
         } else {
-          let bytes = @encoding/utf8.encode(text)
-          let len = bytes.length()
-          let mut start = start_num - 1
-          if start > len {
-            start = len
+          let len = dbcs_byte_length(text)
+          let prefix_count = if start_num - 1 < len {
+            start_num - 1
+          } else {
+            len
           }
-          let mut end = start + count
-          if end > len {
-            end = len
+          let removed_end = start_num + count - 1
+          let suffix_start = if removed_end < len {
+            removed_end + 1
+          } else {
+            len + 1
           }
           let sb = StringBuilder::new()
-          sb.write_view(bytes_to_string(bytes[0:start]))
+          sb.write_view(dbcs_byte_range(text, 1, prefix_count))
           sb.write_view(new_text)
-          sb.write_view(bytes_to_string(bytes[end:len]))
+          // suffix runs from just past the replaced range to end of string
+          sb.write_view(dbcs_byte_range(text, suffix_start, len))
           String(sb.to_string())
         }
       } else {
