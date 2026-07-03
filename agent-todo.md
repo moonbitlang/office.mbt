@@ -30,9 +30,9 @@ well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
 - [x] Default charset transcoding: built-in Windows-1252/Latin-1/ASCII
       and UTF-16 (BOM-aware) decoding, WHATWG/Go label folding
       (feat/charset-transcoding); multi-byte CJK still needs the hook
-- [ ] GetPictures cell/embedded images: Go also returns rich-value cell
-      images, `IMAGE()`, and WPS `DISPIMG` pictures; MoonBit only scans
-      drawing objects (`.repos/excelize/picture.go:540,1077,1107`)
+- [x] GetPictures embedded cell images: WPS DISPIMG, modern rich-value
+      Place-in-cell (_rvRel:LocalImageIdentifier), and IMAGE() web images
+      via xl/richData/* + metadata.xml (feat/embedded-cell-pictures)
 - [x] SECURITY: encryption salts were fully deterministic (ChaCha8 fixed
       default seed); now time-seeded per process + `set_random_source` hook
       for crypto-grade entropy (feat/excelize-parity-round2). Built-in
