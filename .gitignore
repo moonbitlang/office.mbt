@@ -17,5 +17,7 @@ demos*/
 !/demos/
 !/demos/**
 _mbtexcel_check
+/mbtexcel_*.xlsx
+.openseek/
 tools/**/bin/
 tools/**/obj/

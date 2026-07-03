@@ -95,28 +95,34 @@ fn run_demo_bytes(
   args : ArrayView[String],
 ) -> (String, Bytes)? raise @xlsx.XlsxError {
   match demo {
-    "dashboard" => Some(("dashboard.xlsx", @demos.demo_dashboard_bytes()))
-    "invoice" => Some(("invoice.xlsx", @demos.demo_invoice_bytes()))
+    "dashboard" => Some(("dashboard.xlsx", @demo_api.demo_dashboard_bytes()))
+    "invoice" => Some(("invoice.xlsx", @demo_api.demo_invoice_bytes()))
     "pivot_slicer" =>
-      Some(("pivot_slicer.xlsx", @demos.demo_pivot_slicer_bytes()))
-    "sparklines" => Some(("sparklines.xlsx", @demos.demo_sparklines_bytes()))
+      Some(("pivot_slicer.xlsx", @demo_api.demo_pivot_slicer_bytes()))
+    "sparklines" => Some(("sparklines.xlsx", @demo_api.demo_sparklines_bytes()))
     "tracker_heatmap" =>
-      Some(("tracker_heatmap.xlsx", @demos.demo_tracker_heatmap_bytes()))
+      Some(("tracker_heatmap.xlsx", @demo_api.demo_tracker_heatmap_bytes()))
     "interactive_controls" =>
-      Some(("interactive_controls.xlsx", @demos.demo_interactive_controls_bytes()))
-    "combo_chart" => Some(("combo_chart.xlsx", @demos.demo_combo_chart_bytes()))
+      Some(
+        (
+          "interactive_controls.xlsx",
+          @demo_api.demo_interactive_controls_bytes(),
+        ),
+      )
+    "combo_chart" =>
+      Some(("combo_chart.xlsx", @demo_api.demo_combo_chart_bytes()))
     "ooxml_showcase" =>
-      Some(("ooxml_showcase.xlsx", @demos.demo_ooxml_showcase_bytes()))
+      Some(("ooxml_showcase.xlsx", @demo_api.demo_ooxml_showcase_bytes()))
     "stream_big" => {
-      let rows = @demos.demo_stream_big_rows_from_args(args)
-      Some(("stream_big_\{rows}.xlsx", @demos.demo_stream_big_bytes(rows~)))
+      let rows = @demo_api.demo_stream_big_rows_from_args(args)
+      Some(("stream_big_\{rows}.xlsx", @demo_api.demo_stream_big_bytes(rows~)))
     }
     "secure" => {
       let password = match args {
         [] => "moonbit"
         [p, ..] => p
       }
-      Some(("secure_password.xlsx", @demos.demo_secure_bytes(password~)))
+      Some(("secure_password.xlsx", @demo_api.demo_secure_bytes(password~)))
     }
     _ => None
   }
