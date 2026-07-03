@@ -48,10 +48,9 @@ well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
 - [x] `culture_info` now resolves language builtin numFmt IDs 27-36/50-62/
       67-81 for en-US/ja-JP/ko-KR/zh-CN/zh-TW (feat/culture-num-fmt); era
       codes with [$-404]/[$-411] locale tokens still pass through raw
-- [ ] Hyperlinks carrying both `r:id` and `location` collapse to `External`
-      on read, so `get_hyperlink_cells(link_type=Location)` misses them and
-      the location fragment is dropped; Go keeps both attributes
-      independently (`xlsx/read.mbt:3199`)
+- [x] Hyperlinks with both `r:id` and `location` now keep the fragment
+      (Hyperlink.location field), match both filters, and survive write
+      roundtrips (fix/hyperlink-location-fidelity)
 
 Fixed in this pass: `get_hyperlink_cells`, `get_sheet_protection`,
 ChartAxis `drop_lines`/`high_low_lines`, public `ChartLineType` with `Solid`
