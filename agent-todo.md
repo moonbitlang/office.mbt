@@ -45,8 +45,9 @@ well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
       up-down bars; MoonBit flattens to fill_color/fill_transparency
 - [ ] LEFTB/RIGHTB/REPLACEB byte semantics differ from Go byte slicing for
       non-ASCII text (`xlsx/formula_builtins.mbt:2838,3073`)
-- [ ] `culture_info` option is stored but unused for localized builtin number
-      formats (Go `langNumFmt`, `.repos/excelize/numfmt.go:5034`)
+- [x] `culture_info` now resolves language builtin numFmt IDs 27-36/50-62/
+      67-81 for en-US/ja-JP/ko-KR/zh-CN/zh-TW (feat/culture-num-fmt); era
+      codes with [$-404]/[$-411] locale tokens still pass through raw
 - [ ] Hyperlinks carrying both `r:id` and `location` collapse to `External`
       on read, so `get_hyperlink_cells(link_type=Location)` misses them and
       the location fragment is dropped; Go keeps both attributes
