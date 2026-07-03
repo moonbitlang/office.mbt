@@ -3206,6 +3206,7 @@ fn read_zip_bytes(
                 reference: link.reference,
                 target,
                 link_type: External,
+                location: link.location,
                 display: link.display,
                 tooltip: link.tooltip,
               })
@@ -3217,6 +3218,7 @@ fn read_zip_bytes(
                     reference: link.reference,
                     target: location,
                     link_type: Location,
+                    location: Some(location),
                     display: link.display,
                     tooltip: link.tooltip,
                   })

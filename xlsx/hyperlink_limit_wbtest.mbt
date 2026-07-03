@@ -5,6 +5,7 @@ test "hyperlink limit exceeded" {
     reference: "Z1",
     target: "",
     link_type: External,
+    location: None,
     display: None,
     tooltip: None,
   }
