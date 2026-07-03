@@ -798,6 +798,15 @@ pub fn Workbook::unprotect_sheet(
 }
 
 ///|
+pub fn Workbook::get_sheet_protection(
+  self : Workbook,
+  sheet_name : StringView,
+) -> SheetProtectionOptions raise XlsxError {
+  let sheet = self.require_sheet(sheet_name)
+  sheet.get_sheet_protection()
+}
+
+///|
 pub fn Workbook::set_sheet_background(
   self : Workbook,
   sheet_name : StringView,
@@ -1625,6 +1634,25 @@ pub fn Workbook::get_cell_hyper_link(
   reference : StringView,
 ) -> Hyperlink? raise XlsxError {
   self.get_cell_hyperlink(sheet_name, reference)
+}
+
+///|
+pub fn Workbook::get_hyperlink_cells(
+  self : Workbook,
+  sheet_name : StringView,
+  link_type? : HyperlinkType,
+) -> Array[String] raise XlsxError {
+  let sheet = self.require_sheet(sheet_name)
+  sheet.get_hyperlink_cells(link_type?)
+}
+
+///|
+pub fn Workbook::get_hyper_link_cells(
+  self : Workbook,
+  sheet_name : StringView,
+  link_type? : HyperlinkType,
+) -> Array[String] raise XlsxError {
+  self.get_hyperlink_cells(sheet_name, link_type?)
 }
 
 ///|

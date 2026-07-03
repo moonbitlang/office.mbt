@@ -276,3 +276,43 @@ test "sheet props defaults on set" {
   debug_inspect(props.default_row_height, content="Some(15)")
   debug_inspect(props.base_col_width, content="Some(8)")
 }
+
+///|
+test "get_sheet_protection mirrors protect options" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let unprotected = workbook.get_sheet_protection("Sheet1")
+  inspect(unprotected.edit_objects, content="false")
+  inspect(unprotected.select_locked_cells, content="false")
+  inspect(unprotected.algorithm_name, content="")
+  let opts = @xlsx.SheetProtectionOptions::with_values(
+    algorithm_name="SHA-256",
+    password="secret",
+    edit_objects=true,
+    format_cells=true,
+    insert_rows=true,
+    select_locked_cells=true,
+    select_unlocked_cells=true,
+  )
+  workbook.protect_sheet("Sheet1", opts)
+  let read_back = workbook.get_sheet_protection("Sheet1")
+  inspect(read_back.algorithm_name, content="SHA-256")
+  inspect(read_back.password, content="")
+  inspect(read_back.edit_objects, content="true")
+  inspect(read_back.format_cells, content="true")
+  inspect(read_back.insert_rows, content="true")
+  inspect(read_back.select_locked_cells, content="true")
+  inspect(read_back.select_unlocked_cells, content="true")
+  inspect(read_back.auto_filter, content="false")
+  inspect(read_back.delete_columns, content="false")
+  inspect(read_back.edit_scenarios, content="false")
+  inspect(read_back.sort, content="false")
+  workbook.unprotect_sheet("Sheet1", password="secret")
+  let cleared = workbook.get_sheet_protection("Sheet1")
+  inspect(cleared.edit_objects, content="false")
+  inspect(cleared.algorithm_name, content="")
+  let missing : Result[@xlsx.SheetProtectionOptions, Error] = try? workbook.get_sheet_protection(
+    "Missing",
+  )
+  inspect(missing is Err(_), content="true")
+}

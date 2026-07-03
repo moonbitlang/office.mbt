@@ -387,3 +387,68 @@ test "hyperlink invalid ref tolerated on read" {
   )
   inspect(remove_result is Err(XlsxError::InvalidCellRef(_)), content="true")
 }
+
+///|
+test "get_hyperlink_cells filters by link type" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell_hyperlink(
+    "Sheet1",
+    "A1",
+    "https://example.com",
+    @xlsx.HyperlinkType::External,
+  )
+  workbook.set_cell_hyperlink(
+    "Sheet1",
+    "B2",
+    "https://example.org",
+    @xlsx.HyperlinkType::External,
+  )
+  workbook.set_cell_hyperlink(
+    "Sheet1",
+    "C3",
+    "Sheet1!D4",
+    @xlsx.HyperlinkType::Location,
+  )
+  debug_inspect(
+    workbook.get_hyperlink_cells("Sheet1"),
+    content=(
+      #|["A1", "B2", "C3"]
+    ),
+  )
+  debug_inspect(
+    workbook.get_hyperlink_cells(
+      "Sheet1",
+      link_type=@xlsx.HyperlinkType::External,
+    ),
+    content=(
+      #|["A1", "B2"]
+    ),
+  )
+  debug_inspect(
+    workbook.get_hyperlink_cells(
+      "Sheet1",
+      link_type=@xlsx.HyperlinkType::Location,
+    ),
+    content=(
+      #|["C3"]
+    ),
+  )
+  debug_inspect(
+    workbook.get_hyperlink_cells("Sheet1", link_type=@xlsx.HyperlinkType::Unset),
+    content="[]",
+  )
+  debug_inspect(
+    workbook.get_hyper_link_cells(
+      "Sheet1",
+      link_type=@xlsx.HyperlinkType::External,
+    ),
+    content=(
+      #|["A1", "B2"]
+    ),
+  )
+  let missing : Result[Array[String], Error] = try? workbook.get_hyperlink_cells(
+    "Missing",
+  )
+  inspect(missing is Err(_), content="true")
+}
