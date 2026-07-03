@@ -95,7 +95,7 @@ def _collect_moon_types(mbti_paths: list[pathlib.Path]) -> set[str]:
     for p in mbti_paths:
         txt = _read_text(p)
         for m in re.finditer(
-            r"^pub(?:\(all\))?\s+(?:struct|enum|trait|type)\s+([A-Za-z0-9_]+)\b",
+            r"^(?:pub(?:\(all\))?\s+)?(?:struct|enum|trait|type|suberror)\s+([A-Za-z0-9_]+)\b",
             txt,
             re.M,
         ):
