@@ -308,3 +308,76 @@ test "pivot table options name length and data range validation" {
   }
   inspect(range_result is Err(XlsxError::InvalidPivotTable(_)), content="true")
 }
+
+///|
+test "pivot data field options: numFmtId, subtotal normalization, name truncation" {
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", String("Region"))
+  sheet.set_cell_value("B1", String("Sales"))
+  sheet.set_cell_value("A2", String("East"))
+  sheet.set_cell_value("B2", Numeric(10.0))
+  sheet.set_cell_value("A3", String("West"))
+  sheet.set_cell_value("B3", Numeric(20.0))
+  let opts = PivotTableOptions::new("Sheet1!A1:B3", "Sheet1!D2:F10")
+  opts.rows.push(
+    PivotTableField::new("Region", compact=true, outline=true, show_all=true),
+  )
+  let mut long_name = ""
+  for _i in 0..<30 {
+    long_name = long_name + "0123456789"
+  }
+  opts.data.push(
+    PivotTableField::new("Sales", name=long_name, subtotal="StdDev", num_fmt=10),
+  )
+  ignore(workbook.add_pivot_table(opts))
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let pivot_xml = match archive.get("xl/pivotTables/pivotTable1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing pivotTable1.xml")
+  }
+  // canonical schema spelling, not lowercase
+  inspect(pivot_xml.contains("subtotal=\"stdDev\""), content="true")
+  // built-in number format id is emitted
+  inspect(pivot_xml.contains("numFmtId=\"10\""), content="true")
+  // display name is truncated to 255 UTF-16 units
+  inspect(pivot_xml.contains(long_name), content="false")
+  let mut expected_prefix = ""
+  for _i in 0..<25 {
+    expected_prefix = expected_prefix + "0123456789"
+  }
+  expected_prefix = expected_prefix + "01234"
+  inspect(
+    pivot_xml.contains("name=\"" + expected_prefix + "\""),
+    content="true",
+  )
+  // row field options flow through to pivotField attributes
+  inspect(
+    pivot_xml.contains(
+      "name=\"Region\" axis=\"axisRow\" compact=\"1\" outline=\"1\" showAll=\"1\"",
+    ),
+    content="true",
+  )
+
+  // custom number formats are dropped like Excelize
+  let workbook2 = Workbook::new()
+  let sheet2 = workbook2.add_sheet("Sheet1")
+  sheet2.set_cell_value("A1", String("Region"))
+  sheet2.set_cell_value("B1", String("Sales"))
+  sheet2.set_cell_value("A2", String("East"))
+  sheet2.set_cell_value("B2", Numeric(10.0))
+  let opts2 = PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!D2:F10")
+  opts2.rows.push(PivotTableField::new("Region"))
+  opts2.data.push(PivotTableField::new("Sales", num_fmt=164))
+  ignore(workbook2.add_pivot_table(opts2))
+  let bytes2 = write(workbook2)
+  let archive2 = @zip.read(bytes2)
+  let pivot_xml2 = match archive2.get("xl/pivotTables/pivotTable1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing pivotTable1.xml")
+  }
+  inspect(pivot_xml2.contains("numFmtId"), content="false")
+  // invalid subtotal falls back to sum
+  inspect(pivot_xml2.contains("subtotal=\"sum\""), content="true")
+}

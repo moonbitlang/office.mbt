@@ -103,3 +103,57 @@ test "typed setters and cell type" {
   )
   debug_inspect(workbook.get_cell("Sheet1", "F1"), content="Some(\"raw\")")
 }
+
+///|
+test "non-finite numeric cell values are written as strings" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  let nan : Double = @double.not_a_number
+  let pos_inf : Double = @double.infinity
+  let neg_inf : Double = @double.neg_infinity
+  sheet.set_cell_value("A1", Numeric(nan))
+  sheet.set_cell_value("A2", Numeric(pos_inf))
+  sheet.set_cell_value("A3", Numeric(neg_inf))
+  debug_inspect(
+    sheet.get_cell("A1"),
+    content=(
+      #|Some("NaN")
+    ),
+  )
+  debug_inspect(
+    sheet.get_cell("A2"),
+    content=(
+      #|Some("+Inf")
+    ),
+  )
+  debug_inspect(
+    sheet.get_cell("A3"),
+    content=(
+      #|Some("-Inf")
+    ),
+  )
+  // roundtrip stays a string cell, not an invalid numeric <v>
+  let parsed = @xlsx.read(@xlsx.write(workbook))
+  let parsed_sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing Sheet1")
+  }
+  debug_inspect(
+    parsed_sheet.get_cell_value_raw("A1"),
+    content=(
+      #|Some(String("NaN"))
+    ),
+  )
+  debug_inspect(
+    parsed_sheet.get_cell_value_raw("A2"),
+    content=(
+      #|Some(String("+Inf"))
+    ),
+  )
+  debug_inspect(
+    parsed_sheet.get_cell_value_raw("A3"),
+    content=(
+      #|Some(String("-Inf"))
+    ),
+  )
+}

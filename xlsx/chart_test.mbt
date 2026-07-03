@@ -1211,3 +1211,57 @@ test "chart axis drop lines and high low lines emission" {
   inspect(default_chart.contains("<c:dropLines/>"), content="false")
   inspect(default_chart.contains("<c:hiLowLines/>"), content="false")
 }
+
+///|
+test "chart line type solid emits scheme color line fill" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(Line)
+  let series = ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="Series1",
+  )
+  series.line.typ = ChartLineType::Solid
+  opts.series.push(series)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let chart_xml = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(
+    chart_xml.contains(
+      "<a:solidFill><a:schemeClr val=\"tx1\"><a:lumMod val=\"15000\"/><a:lumOff val=\"85000\"/></a:schemeClr></a:solidFill>",
+    ),
+    content="true",
+  )
+
+  // explicit color takes precedence over the scheme default
+  let workbook2 = Workbook::new()
+  ignore(workbook2.add_sheet("Sheet1"))
+  let opts2 = ChartOptions::new(Line)
+  let series2 = ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="Series1",
+  )
+  series2.line.typ = ChartLineType::Solid
+  series2.line.color = "#FF0000"
+  opts2.series.push(series2)
+  workbook2.add_chart_with_options("Sheet1", "C3", opts2)
+  let bytes2 = write(workbook2)
+  let archive2 = @zip.read(bytes2)
+  let chart_xml2 = match archive2.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing chart")
+  }
+  inspect(chart_xml2.contains("<a:schemeClr val=\"tx1\">"), content="false")
+  inspect(
+    chart_xml2.contains(
+      "<a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill>",
+    ),
+    content="true",
+  )
+}

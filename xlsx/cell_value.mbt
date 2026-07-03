@@ -21,9 +21,29 @@ pub(all) enum CellValue {
 fn cell_value_type(value : CellValue) -> CellValueType {
   match value {
     String(_) => String
-    Numeric(_) => Number
+    // NaN and infinities cannot be stored in a numeric <v> cell; Excelize
+    // writes them as string cells instead.
+    Numeric(value) =>
+      if value.is_nan() || value.is_inf() {
+        String
+      } else {
+        Number
+      }
     Bool(_) => Bool
     Error(_) => Error
+  }
+}
+
+///|
+/// Renders a non-finite double the way Go's fmt.Sprint does, which is the
+/// text Excelize stores for NaN/Inf cell values.
+fn non_finite_to_string(value : Double) -> String {
+  if value.is_nan() {
+    "NaN"
+  } else if value.is_pos_inf() {
+    "+Inf"
+  } else {
+    "-Inf"
   }
 }
 
@@ -31,7 +51,12 @@ fn cell_value_type(value : CellValue) -> CellValueType {
 fn cell_value_raw_string(value : CellValue) -> String {
   match value {
     String(text) => text
-    Numeric(value) => value.to_string()
+    Numeric(value) =>
+      if value.is_nan() || value.is_inf() {
+        non_finite_to_string(value)
+      } else {
+        value.to_string()
+      }
     Bool(value) => if value { "1" } else { "0" }
     Error(text) => text
   }

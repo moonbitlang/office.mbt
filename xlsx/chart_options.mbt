@@ -76,11 +76,23 @@ pub(all) enum ChartDashType {
 } derive(Eq, Show)
 
 ///|
-enum ChartLineType {
+pub(all) enum ChartLineType {
   Unset
+  Solid
   NoLine
   Automatic
 } derive(Eq, Show)
+
+///|
+/// Emits the default solid line fill Excelize uses for `ChartLineSolid`
+/// when no explicit line color is given: scheme color tx1 with
+/// lumMod 15000 / lumOff 85000.
+fn write_chart_line_solid_scheme(sb : StringBuilder, indent : String) -> Unit {
+  sb.write_view(indent)
+  sb.write_view(
+    "<a:solidFill><a:schemeClr val=\"tx1\"><a:lumMod val=\"15000\"/><a:lumOff val=\"85000\"/></a:schemeClr></a:solidFill>\n",
+  )
+}
 
 ///|
 pub(all) enum ChartTickLabelPositionType {
@@ -893,12 +905,15 @@ fn write_chart_series_sppr(sb : StringBuilder, series : ChartSeries) -> Unit {
     sb.write_view(" w=\"\{w}\"")
   }
   let dash = chart_dash_value(line.dash)
-  if line.color == "" && dash is None {
+  if line.typ != Solid && line.color == "" && dash is None {
     sb.write_view("/>\n")
     sb.write_view("          </c:spPr>\n")
     return
   }
   sb.write_view(">\n")
+  if line.typ == Solid && line.color == "" {
+    write_chart_line_solid_scheme(sb, "              ")
+  }
   if line.color != "" {
     let color = line.color.replace_all(old="#", new="").to_upper()
     sb.write_view("              <a:solidFill><a:srgbClr val=\"")
@@ -972,10 +987,13 @@ fn write_chart_series_marker(sb : StringBuilder, marker : ChartMarker) -> Unit {
           sb.write_view(" w=\"\{w}\"")
         }
         let dash = chart_dash_value(border.dash)
-        if border.color == "" && dash is None {
+        if border.typ != Solid && border.color == "" && dash is None {
           sb.write_view("/>\n")
         } else {
           sb.write_view(">\n")
+          if border.typ == Solid && border.color == "" {
+            write_chart_line_solid_scheme(sb, "                ")
+          }
           if border.color != "" {
             let color = border.color.replace_all(old="#", new="").to_upper()
             sb.write_view("                <a:solidFill><a:srgbClr val=\"")
@@ -1198,17 +1216,23 @@ fn write_chart_sppr(
   }
   if border.typ == NoLine {
     sb.write_view("              <a:ln><a:noFill/></a:ln>\n")
-  } else if border.color != "" || border.width != 0.0 || border.dash != Unset {
+  } else if border.typ == Solid ||
+    border.color != "" ||
+    border.width != 0.0 ||
+    border.dash != Unset {
     sb.write_view("              <a:ln")
     if border.width > 0.0 {
       let w = (border.width * 12700.0).round().to_int()
       sb.write_view(" w=\"\{w}\"")
     }
     let dash = chart_dash_value(border.dash)
-    if border.color == "" && dash is None {
+    if border.typ != Solid && border.color == "" && dash is None {
       sb.write_view("/>\n")
     } else {
       sb.write_view(">\n")
+      if border.typ == Solid && border.color == "" {
+        write_chart_line_solid_scheme(sb, "                ")
+      }
       if border.color != "" {
         let color = border.color.replace_all(old="#", new="").to_upper()
         sb.write_view("                <a:solidFill><a:srgbClr val=\"")

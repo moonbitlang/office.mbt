@@ -1,31 +1,84 @@
 ///|
-struct PivotTableField {
+pub struct PivotTableField {
   data : String
-  name : String
-  subtotal : String
-  num_fmt : Int
-  compact : Bool
-  outline : Bool
-  show_all : Bool
-  insert_blank_row : Bool
-  default_subtotal : Bool
+  mut name : String
+  mut subtotal : String
+  mut num_fmt : Int
+  mut compact : Bool
+  mut outline : Bool
+  mut show_all : Bool
+  mut insert_blank_row : Bool
+  mut default_subtotal : Bool
 } derive(Show)
 
 ///|
-pub fn PivotTableField::new(data : String) -> PivotTableField raise XlsxError {
+pub fn PivotTableField::new(
+  data : String,
+  name? : String = "",
+  subtotal? : String = "Sum",
+  num_fmt? : Int = 0,
+  compact? : Bool = false,
+  outline? : Bool = false,
+  show_all? : Bool = false,
+  insert_blank_row? : Bool = false,
+  default_subtotal? : Bool = false,
+) -> PivotTableField raise XlsxError {
   if data == "" {
     raise InvalidPivotTable(msg="pivot field data empty")
   }
   {
     data,
-    name: "",
-    subtotal: "Sum",
-    num_fmt: 0,
-    compact: false,
-    outline: false,
-    show_all: false,
-    insert_blank_row: false,
-    default_subtotal: false,
+    name,
+    subtotal,
+    num_fmt,
+    compact,
+    outline,
+    show_all,
+    insert_blank_row,
+    default_subtotal,
+  }
+}
+
+///|
+/// Canonical dataField subtotal enum values accepted by the OOXML schema.
+let pivot_subtotal_enums : Array[String] = [
+  "average", "count", "countNums", "max", "min", "product", "stdDev", "stdDevp",
+  "sum", "var", "varp",
+]
+
+///|
+/// Normalizes a user-provided subtotal to its canonical schema spelling via
+/// case-insensitive match, falling back to "sum" like Excelize.
+fn normalize_pivot_subtotal(value : String) -> String {
+  let lowered = value.to_lower()
+  for enum_value in pivot_subtotal_enums {
+    if enum_value.to_lower() == lowered {
+      return enum_value
+    }
+  }
+  "sum"
+}
+
+///|
+/// Returns the number format ID to emit for a pivot data field: built-in
+/// format IDs (including the language-specific 27-36 and 50-81 ranges) pass
+/// through, anything else maps to 0 and is omitted, mirroring Excelize.
+fn pivot_data_field_num_fmt_id(num_fmt : Int) -> Int {
+  match num_fmt {
+    0..=4 | 9..=22 | 37..=49 => num_fmt
+    27..=36 | 50..=81 => num_fmt
+    _ => 0
+  }
+}
+
+///|
+/// Truncates a pivot field display name to Excelize's MaxFieldLength of
+/// 255 UTF-16 code units.
+fn pivot_field_display_name(name : String) -> String {
+  if count_utf16_units(name) > max_field_length {
+    truncate_utf16_units(name, max_field_length)
+  } else {
+    name
   }
 }
 
@@ -210,7 +263,7 @@ fn write_pivot_table_definition_xml(
       Some(field) => {
         let pivot_name = if field.name == "" { field.data } else { field.name }
         sb.write_view(" name=\"")
-        sb.write_view(escape_xml_attr(pivot_name))
+        sb.write_view(escape_xml_attr(pivot_field_display_name(pivot_name)))
         sb.write_view("\" axis=\"axisRow\"")
         let compact = if opts.classic_layout { false } else { field.compact }
         let outline = if opts.classic_layout { false } else { field.outline }
@@ -245,7 +298,7 @@ fn write_pivot_table_definition_xml(
       Some(field) => {
         let pivot_name = if field.name == "" { field.data } else { field.name }
         sb.write_view(" name=\"")
-        sb.write_view(escape_xml_attr(pivot_name))
+        sb.write_view(escape_xml_attr(pivot_field_display_name(pivot_name)))
         sb.write_view("\" axis=\"axisCol\"")
         let compact = if opts.classic_layout { false } else { field.compact }
         let outline = if opts.classic_layout { false } else { field.outline }
@@ -280,7 +333,7 @@ fn write_pivot_table_definition_xml(
       Some(field) => {
         let pivot_name = if field.name == "" { field.data } else { field.name }
         sb.write_view(" name=\"")
-        sb.write_view(escape_xml_attr(pivot_name))
+        sb.write_view(escape_xml_attr(pivot_field_display_name(pivot_name)))
         sb.write_view("\" axis=\"axisPage\"")
         sb.write_view(" showAll=\"")
         sb.write_view(bool_attr(field.show_all))
@@ -345,10 +398,15 @@ fn write_pivot_table_definition_xml(
       sb.write_view("    <dataField fld=\"\{idx}\"")
       let data_name = if field.name == "" { field.data } else { field.name }
       sb.write_view(" name=\"")
-      sb.write_view(escape_xml_attr(data_name))
+      sb.write_view(escape_xml_attr(pivot_field_display_name(data_name)))
       sb.write_view("\" subtotal=\"")
-      sb.write_view(escape_xml_attr(field.subtotal.to_lower()))
-      sb.write_view("\"/>\n")
+      sb.write_view(escape_xml_attr(normalize_pivot_subtotal(field.subtotal)))
+      sb.write_view("\"")
+      let num_fmt_id = pivot_data_field_num_fmt_id(field.num_fmt)
+      if num_fmt_id != 0 {
+        sb.write_view(" numFmtId=\"\{num_fmt_id}\"")
+      }
+      sb.write_view("/>\n")
     }
     sb.write_view("  </dataFields>\n")
   }

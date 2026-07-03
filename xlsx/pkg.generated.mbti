@@ -289,7 +289,12 @@ pub(all) struct ChartLine {
   mut width : Double
 } derive(Show)
 
-type ChartLineType derive(Eq, Show)
+pub(all) enum ChartLineType {
+  Unset
+  Solid
+  NoLine
+  Automatic
+} derive(Eq, Show)
 
 pub(all) struct ChartMarker {
   mut symbol : String
@@ -925,8 +930,18 @@ pub struct PivotTable {
   cache_records_xml : String?
 }
 
-type PivotTableField derive(Show)
-pub fn PivotTableField::new(String) -> Self raise XlsxError
+pub struct PivotTableField {
+  data : String
+  mut name : String
+  mut subtotal : String
+  mut num_fmt : Int
+  mut compact : Bool
+  mut outline : Bool
+  mut show_all : Bool
+  mut insert_blank_row : Bool
+  mut default_subtotal : Bool
+} derive(Show)
+pub fn PivotTableField::new(String, name? : String, subtotal? : String, num_fmt? : Int, compact? : Bool, outline? : Bool, show_all? : Bool, insert_blank_row? : Bool, default_subtotal? : Bool) -> Self raise XlsxError
 
 pub(all) struct PivotTableOptions {
   data_range : String
