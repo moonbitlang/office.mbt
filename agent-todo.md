@@ -22,21 +22,21 @@ References:
 Verified gaps vs `.repos/excelize` found by a codex CLI cross-audit; the
 well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
 
-- [ ] Typed cell values: Go `SetCellValue` accepts time.Time/time.Duration and
-      writes date serials + builtin styles; `CellValue` has no date/duration
-      variants (`.repos/excelize/cell.go:129`)
-- [ ] Stream writer typed rows: Go stream rows accept typed values, nil,
-      time.Time/Duration, and rich text; `StreamCell` model is narrower
-      (`.repos/excelize/stream.go:593` vs `xlsx/stream.mbt`)
+- [x] Typed cell values: `Workbook::set_cell_time` / `set_cell_duration` +
+      `time_to_excel_date` (feat/excelize-parity-round2)
+- [x] Stream writer typed rows: `StreamWriter::new_time_cell` /
+      `new_duration_cell` (feat/excelize-parity-round2); nil/blank stream
+      cells still render as empty-string cells rather than bare `<c/>`
 - [ ] Default charset transcoding: Go XML decoders default to
       `charset.NewReaderLabel`; MoonBit raises on declared non-UTF8 XML unless
       a transcoder is supplied (`xlsx/read.mbt:57`, `mbtexcel.mbt:181`)
 - [ ] GetPictures cell/embedded images: Go also returns rich-value cell
       images, `IMAGE()`, and WPS `DISPIMG` pictures; MoonBit only scans
       drawing objects (`.repos/excelize/picture.go:540,1077,1107`)
-- [ ] SECURITY: encryption salts/verifiers use `@random.Rand::new()` (not
-      cryptographically random, possibly deterministic per process); Go uses
-      crypto/rand (`xlsx/encryption.mbt:198`)
+- [x] SECURITY: encryption salts were fully deterministic (ChaCha8 fixed
+      default seed); now time-seeded per process + `set_random_source` hook
+      for crypto-grade entropy (feat/excelize-parity-round2). Built-in
+      fallback is still not a CSPRNG.
 - [ ] RC4-style standard encryption variants: Go parses non-AES `AlgID`
       verifier layouts; MoonBit rejects anything but AES-128/192/256
       (`xlsx/encryption.mbt:591`)
