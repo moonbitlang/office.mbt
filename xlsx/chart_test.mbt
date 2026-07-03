@@ -1335,3 +1335,66 @@ fn get_chart_xml(workbook : Workbook) -> String raise {
     None => fail("missing chart1.xml")
   }
 }
+
+///|
+test "chart ChartFill no-fill override across marker, data label, point, areas" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(Col)
+  let no_fill = ChartFill::new(typ="pattern", pattern=1)
+  // chart area and plot area explicit no-fill
+  opts.fill = Some(no_fill)
+  opts.plot_area.fill = Some(no_fill)
+  let series = ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="S1",
+  )
+  // marker, data label, and a data point solid override via ChartFill
+  series.marker.symbol = "circle"
+  series.marker.size = 5
+  series.marker.fill = Some(no_fill)
+  series.data_label.fill = Some(
+    ChartFill::new(typ="pattern", pattern=1, color=["#0000FF"]),
+  )
+  series.data_point.push(
+    ChartDataPoint::new(0, fill=ChartFill::new(typ="pattern", pattern=1)),
+  )
+  opts.series.push(series)
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let xml = get_chart_xml(workbook)
+  // chart-area and plot-area no-fill (indents 6 and 6)
+  inspect(xml.contains("    <c:spPr>\n      <a:noFill/>"), content="true")
+  inspect(xml.contains("      <c:spPr>\n        <a:noFill/>"), content="true")
+  // marker no-fill and data-point no-fill (indent 14)
+  inspect(
+    xml.contains("            <c:spPr>\n              <a:noFill/>"),
+    content="true",
+  )
+  // data label solid blue
+  inspect(
+    xml.contains("<a:srgbClr val=\"0000FF\"/></a:solidFill>"),
+    content="true",
+  )
+}
+
+///|
+test "chart up-down bar ChartFill no-fill override" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let opts = ChartOptions::new(StockOpenHighLowClose)
+  for i in 0..<4 {
+    opts.series.push(
+      ChartSeries::new(
+        "Sheet1!$A$2:$A$4",
+        "Sheet1!$B$\{i + 2}:$B$4",
+        name="S\{i}",
+      ),
+    )
+  }
+  opts.plot_area.up_bars.fill = Some(ChartFill::new(typ="pattern", pattern=1))
+  workbook.add_chart_with_options("Sheet1", "C3", opts)
+  let xml = get_chart_xml(workbook)
+  inspect(xml.contains("<c:upBars>"), content="true")
+  inspect(xml.contains("<a:noFill/>"), content="true")
+}

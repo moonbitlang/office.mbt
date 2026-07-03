@@ -246,11 +246,12 @@ fn ChartLine::new() -> ChartLine {
 pub(all) struct ChartUpDownBar {
   mut fill_color : String
   mut border : ChartLine
+  mut fill : ChartFill?
 } derive(Show)
 
 ///|
 fn ChartUpDownBar::new() -> ChartUpDownBar {
-  { fill_color: "", border: ChartLine::new() }
+  { fill_color: "", border: ChartLine::new(), fill: None }
 }
 
 ///|
@@ -269,6 +270,7 @@ pub(all) struct ChartPlotArea {
   mut down_bars : ChartUpDownBar
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
 } derive(Show)
 
 ///|
@@ -288,6 +290,7 @@ fn ChartPlotArea::new() -> ChartPlotArea {
     down_bars: ChartUpDownBar::new(),
     fill_color: "",
     fill_transparency: 0,
+    fill: None,
   }
 }
 
@@ -312,6 +315,7 @@ pub(all) struct ChartMarker {
   mut size : Int
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
   mut border : ChartLine
 } derive(Show)
 
@@ -322,6 +326,7 @@ fn ChartMarker::new(symbol? : String = "", size? : Int = 0) -> ChartMarker {
     size,
     fill_color: "",
     fill_transparency: 0,
+    fill: None,
     border: ChartLine::new(),
   }
 }
@@ -332,6 +337,7 @@ pub(all) struct ChartDataLabel {
   mut alignment : Alignment
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
 } derive(Show)
 
 ///|
@@ -341,6 +347,7 @@ fn ChartDataLabel::new() -> ChartDataLabel {
     alignment: Alignment::new(),
     fill_color: "",
     fill_transparency: 0,
+    fill: None,
   }
 }
 
@@ -348,14 +355,16 @@ fn ChartDataLabel::new() -> ChartDataLabel {
 struct ChartDataPoint {
   index : Int
   fill_color : String
+  fill : ChartFill?
 } derive(Show)
 
 ///|
 pub fn ChartDataPoint::new(
   index : Int,
   fill_color? : String = "",
+  fill? : ChartFill,
 ) -> ChartDataPoint {
-  { index, fill_color }
+  { index, fill_color, fill }
 }
 
 ///|
@@ -524,6 +533,7 @@ pub(all) struct ChartOptions {
   mut title_rich : Array[RichTextRun]?
   mut fill_color : String
   mut fill_transparency : Int
+  mut fill : ChartFill?
   mut border : ChartLine
   mut vary_colors : Bool
   mut x_axis : ChartAxis
@@ -581,6 +591,7 @@ pub fn ChartOptions::new(typ : ChartType) -> ChartOptions {
     title_rich: None,
     fill_color: "",
     fill_transparency: 0,
+    fill: None,
     border: ChartLine::new(),
     vary_colors: true,
     x_axis: ChartAxis::new(),
@@ -1042,7 +1053,12 @@ fn write_chart_series_marker(sb : StringBuilder, marker : ChartMarker) -> Unit {
     border.dash != Unset ||
     border.color != "" ||
     border.width != 0.0
-  let has_fill = marker.fill_color != ""
+  let fill_dir = chart_fill_directive(
+    marker.fill,
+    marker.fill_color,
+    marker.fill_transparency,
+  )
+  let has_fill = !(fill_dir is NoOverride)
   if marker.symbol == "" && marker.size == 0 && !has_border && !has_fill {
     return
   }
@@ -1056,20 +1072,11 @@ fn write_chart_series_marker(sb : StringBuilder, marker : ChartMarker) -> Unit {
   }
   if has_border || has_fill {
     sb.write_view("            <c:spPr>\n")
-    if has_fill {
-      let fill = marker.fill_color.replace_all(old="#", new="").to_upper()
-      sb.write_view("              <a:solidFill><a:srgbClr val=\"")
-      sb.write_view(escape_xml_attr(fill))
-      let t = marker.fill_transparency
-      let transparency = if t < 0 { 0 } else if t > 100 { 100 } else { t }
-      if transparency > 0 {
-        let alpha = (100 - transparency) * 1000
-        sb.write_view(
-          "\"><a:alpha val=\"\{alpha}\"/></a:srgbClr></a:solidFill>\n",
-        )
-      } else {
-        sb.write_view("\"/></a:solidFill>\n")
-      }
+    match fill_dir {
+      SolidFill(color~, transparency~) =>
+        write_solid_fill(sb, "              ", color, transparency)
+      NoFill => sb.write_view("              <a:noFill/>\n")
+      NoOverride => ()
     }
     if has_border {
       if border.typ == NoLine {
@@ -1125,7 +1132,12 @@ fn write_chart_series_dlbls(sb : StringBuilder, series : ChartSeries) -> Unit {
   let pos_set = series.data_label_position != BestFit
   let has_font = series.data_label.font != Font::new()
   let has_alignment = series.data_label.alignment != Alignment::new()
-  let has_fill = series.data_label.fill_color != ""
+  let fill_dir = chart_fill_directive(
+    series.data_label.fill,
+    series.data_label.fill_color,
+    series.data_label.fill_transparency,
+  )
+  let has_fill = !(fill_dir is NoOverride)
   if !pos_set && !has_font && !has_alignment && !has_fill {
     return
   }
@@ -1138,21 +1150,12 @@ fn write_chart_series_dlbls(sb : StringBuilder, series : ChartSeries) -> Unit {
     sb.write_view("\"/>\n")
   }
   if has_fill {
-    let fill = series.data_label.fill_color
-      .replace_all(old="#", new="")
-      .to_upper()
     sb.write_view("            <c:spPr>\n")
-    sb.write_view("              <a:solidFill><a:srgbClr val=\"")
-    sb.write_view(escape_xml_attr(fill))
-    let t = series.data_label.fill_transparency
-    let transparency = if t < 0 { 0 } else if t > 100 { 100 } else { t }
-    if transparency > 0 {
-      let alpha = (100 - transparency) * 1000
-      sb.write_view(
-        "\"><a:alpha val=\"\{alpha}\"/></a:srgbClr></a:solidFill>\n",
-      )
-    } else {
-      sb.write_view("\"/></a:solidFill>\n")
+    match fill_dir {
+      SolidFill(color~, transparency~) =>
+        write_solid_fill(sb, "              ", color, transparency)
+      NoFill => sb.write_view("              <a:noFill/>\n")
+      NoOverride => ()
     }
     sb.write_view("            </c:spPr>\n")
   }
@@ -1169,16 +1172,19 @@ fn write_chart_series_dlbls(sb : StringBuilder, series : ChartSeries) -> Unit {
 
 ///|
 fn write_chart_series_dpt(sb : StringBuilder, point : ChartDataPoint) -> Unit {
-  if point.fill_color == "" {
+  let fill_dir = chart_fill_directive(point.fill, point.fill_color, 0)
+  if fill_dir is NoOverride {
     return
   }
-  let color = point.fill_color.replace_all(old="#", new="").to_upper()
   sb.write_view("          <c:dPt>\n")
   sb.write_view("            <c:idx val=\"\{point.index}\"/>\n")
   sb.write_view("            <c:spPr>\n")
-  sb.write_view("              <a:solidFill><a:srgbClr val=\"")
-  sb.write_view(escape_xml_attr(color))
-  sb.write_view("\"/></a:solidFill>\n")
+  match fill_dir {
+    SolidFill(color~, transparency~) =>
+      write_solid_fill(sb, "              ", color, transparency)
+    NoFill => sb.write_view("              <a:noFill/>\n")
+    NoOverride => ()
+  }
   sb.write_view("            </c:spPr>\n")
   sb.write_view("          </c:dPt>\n")
 }
@@ -1292,8 +1298,10 @@ fn write_chart_sppr(
   sb : StringBuilder,
   fill_color : String,
   border : ChartLine,
+  fill? : ChartFill,
 ) -> Unit {
-  if fill_color == "" &&
+  let fill_dir = chart_fill_directive(fill, fill_color, 0)
+  if fill_dir is NoOverride &&
     (border.typ == Unset || border.typ == Automatic) &&
     border.dash == Unset &&
     border.color == "" &&
@@ -1302,11 +1310,11 @@ fn write_chart_sppr(
     return
   }
   sb.write_view("            <c:spPr>\n")
-  if fill_color != "" {
-    let fill = fill_color.replace_all(old="#", new="").to_upper()
-    sb.write_view("              <a:solidFill><a:srgbClr val=\"")
-    sb.write_view(escape_xml_attr(fill))
-    sb.write_view("\"/></a:solidFill>\n")
+  match fill_dir {
+    SolidFill(color~, transparency~) =>
+      write_solid_fill(sb, "              ", color, transparency)
+    NoFill => sb.write_view("              <a:noFill/>\n")
+    NoOverride => ()
   }
   if border.typ == NoLine {
     sb.write_view("              <a:ln><a:noFill/></a:ln>\n")
@@ -1866,21 +1874,20 @@ fn write_chart_dlbls(
 
 ///|
 fn write_plot_area_sppr(sb : StringBuilder, opts : ChartOptions) -> Unit {
-  let fill_color = opts.plot_area.fill_color
-  if fill_color == "" {
+  let fill_dir = chart_fill_directive(
+    opts.plot_area.fill,
+    opts.plot_area.fill_color,
+    opts.plot_area.fill_transparency,
+  )
+  if fill_dir is NoOverride {
     return
   }
-  let fill = fill_color.replace_all(old="#", new="").to_upper()
   sb.write_view("      <c:spPr>\n")
-  sb.write_view("        <a:solidFill><a:srgbClr val=\"")
-  sb.write_view(escape_xml_attr(fill))
-  let t = opts.plot_area.fill_transparency
-  let transparency = if t < 0 { 0 } else if t > 100 { 100 } else { t }
-  if transparency > 0 {
-    let alpha = (100 - transparency) * 1000
-    sb.write_view("\"><a:alpha val=\"\{alpha}\"/></a:srgbClr></a:solidFill>\n")
-  } else {
-    sb.write_view("\"/></a:solidFill>\n")
+  match fill_dir {
+    SolidFill(color~, transparency~) =>
+      write_solid_fill(sb, "        ", color, transparency)
+    NoFill => sb.write_view("        <a:noFill/>\n")
+    NoOverride => ()
   }
   sb.write_view("      </c:spPr>\n")
 }
@@ -1916,7 +1923,12 @@ fn write_plot_area_d_table(
 
 ///|
 fn write_chart_sppr_root(sb : StringBuilder, opts : ChartOptions) -> Unit {
-  if opts.fill_color == "" &&
+  let fill_dir = chart_fill_directive(
+    opts.fill,
+    opts.fill_color,
+    opts.fill_transparency,
+  )
+  if fill_dir is NoOverride &&
     (opts.border.typ == Unset || opts.border.typ == Automatic) &&
     opts.border.dash == Unset &&
     opts.border.color == "" &&
@@ -1925,20 +1937,11 @@ fn write_chart_sppr_root(sb : StringBuilder, opts : ChartOptions) -> Unit {
     return
   }
   sb.write_view("    <c:spPr>\n")
-  if opts.fill_color != "" {
-    let fill = opts.fill_color.replace_all(old="#", new="").to_upper()
-    sb.write_view("      <a:solidFill><a:srgbClr val=\"")
-    sb.write_view(escape_xml_attr(fill))
-    let t = opts.fill_transparency
-    let transparency = if t < 0 { 0 } else if t > 100 { 100 } else { t }
-    if transparency > 0 {
-      let alpha = (100 - transparency) * 1000
-      sb.write_view(
-        "\"><a:alpha val=\"\{alpha}\"/></a:srgbClr></a:solidFill>\n",
-      )
-    } else {
-      sb.write_view("\"/></a:solidFill>\n")
-    }
+  match fill_dir {
+    SolidFill(color~, transparency~) =>
+      write_solid_fill(sb, "      ", color, transparency)
+    NoFill => sb.write_view("      <a:noFill/>\n")
+    NoOverride => ()
   }
   let border = opts.border
   if border.typ == NoLine {
@@ -2075,6 +2078,7 @@ fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
           sb,
           opts.plot_area.up_bars.fill_color,
           opts.plot_area.up_bars.border,
+          fill?=opts.plot_area.up_bars.fill,
         )
         sb.write_view("          </c:upBars>\n")
         sb.write_view("          <c:downBars>\n")
@@ -2082,6 +2086,7 @@ fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
           sb,
           opts.plot_area.down_bars.fill_color,
           opts.plot_area.down_bars.border,
+          fill?=opts.plot_area.down_bars.fill,
         )
         sb.write_view("          </c:downBars>\n")
         sb.write_view("        </c:upDownBars>\n")
@@ -2349,6 +2354,7 @@ fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
             sb,
             plot.plot_area.up_bars.fill_color,
             plot.plot_area.up_bars.border,
+            fill?=plot.plot_area.up_bars.fill,
           )
           sb.write_view("          </c:upBars>\n")
           sb.write_view("          <c:downBars>\n")
@@ -2356,6 +2362,7 @@ fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
             sb,
             plot.plot_area.down_bars.fill_color,
             plot.plot_area.down_bars.border,
+            fill?=plot.plot_area.down_bars.fill,
           )
           sb.write_view("          </c:downBars>\n")
           sb.write_view("        </c:upDownBars>\n")
