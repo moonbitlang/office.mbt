@@ -649,13 +649,17 @@ fn standard_decrypt(
   let key_bits = @crypto.u32_from_le(header_block, 16).to_uint64().to_int()
   let algorithm = match alg_id {
     0x0000_660e | 0x0000_660f | 0x0000_6610 => "AES"
-    _ => ""
-  }
-  if algorithm != "AES" {
-    raise UnsupportedEncryption(msg="unsupported standard algorithm")
+    // Excelize treats any other AlgID as the RC4-style layout: the
+    // verifier hash is 20 bytes instead of 32, but key derivation and
+    // package decryption still run SHA-1 + AES-ECB (crypt.go
+    // standardDecrypt/standardEncryptionVerifier).
+    _ => "RC4"
   }
   let verifier_block = encryption_info_buf[12 + header_size:]
-  if verifier_block.length() < 72 {
+  // salt size (4) + salt (16) + encrypted verifier (16) +
+  // verifier hash size (4) + encrypted verifier hash (20 or 32)
+  let min_verifier_len = if algorithm == "RC4" { 60 } else { 72 }
+  if verifier_block.length() < min_verifier_len {
     raise InvalidEncryptionInfo(msg="invalid verifier block")
   }
   let salt = verifier_block[4:4 + 16]
