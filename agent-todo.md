@@ -17,6 +17,44 @@ References:
 
 ## Feature worklist
 
+### Codex deep-audit gaps (2026-07-03)
+
+Verified gaps vs `.repos/excelize` found by a codex CLI cross-audit; the
+well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
+
+- [ ] Typed cell values: Go `SetCellValue` accepts time.Time/time.Duration and
+      writes date serials + builtin styles; `CellValue` has no date/duration
+      variants (`.repos/excelize/cell.go:129`)
+- [ ] Stream writer typed rows: Go stream rows accept typed values, nil,
+      time.Time/Duration, and rich text; `StreamCell` model is narrower
+      (`.repos/excelize/stream.go:593` vs `xlsx/stream.mbt`)
+- [ ] Default charset transcoding: Go XML decoders default to
+      `charset.NewReaderLabel`; MoonBit raises on declared non-UTF8 XML unless
+      a transcoder is supplied (`xlsx/read.mbt:57`, `mbtexcel.mbt:181`)
+- [ ] GetPictures cell/embedded images: Go also returns rich-value cell
+      images, `IMAGE()`, and WPS `DISPIMG` pictures; MoonBit only scans
+      drawing objects (`.repos/excelize/picture.go:540,1077,1107`)
+- [ ] SECURITY: encryption salts/verifiers use `@random.Rand::new()` (not
+      cryptographically random, possibly deterministic per process); Go uses
+      crypto/rand (`xlsx/encryption.mbt:198`)
+- [ ] RC4-style standard encryption variants: Go parses non-AES `AlgID`
+      verifier layouts; MoonBit rejects anything but AES-128/192/256
+      (`xlsx/encryption.mbt:591`)
+- [ ] Chart `Fill` semantics: Go supports Fill.Type/Pattern/color arrays via
+      `drawShapeFill` for chart/plot/series/marker/data-label/data-point/
+      up-down bars; MoonBit flattens to fill_color/fill_transparency
+- [ ] LEFTB/RIGHTB/REPLACEB byte semantics differ from Go byte slicing for
+      non-ASCII text (`xlsx/formula_builtins.mbt:2838,3073`)
+- [ ] `culture_info` option is stored but unused for localized builtin number
+      formats (Go `langNumFmt`, `.repos/excelize/numfmt.go:5034`)
+
+Fixed in this pass: `get_hyperlink_cells`, `get_sheet_protection`,
+ChartAxis `drop_lines`/`high_low_lines`, public `ChartLineType` with `Solid`
+scheme-color emission, public `PivotTableField` options + dataField
+`numFmtId`/subtotal normalization/255-unit name truncation, NaN/Inf cell
+values written as strings.
+
+
 ## Maintenance / Cleanup
 
 - [x] Remove `moon check` warnings + deprecated slice usage (commit `4a75627`)
