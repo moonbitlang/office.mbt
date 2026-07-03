@@ -1333,6 +1333,7 @@ pub struct StreamCell {
   // private fields
 }
 pub fn StreamCell::new(String, formula? : String, style_id? : Int) -> Self
+pub fn StreamCell::new_blank() -> Self
 pub fn StreamCell::new_rich_text(ArrayView[RichTextRun], formula? : String, style_id? : Int) -> Self raise XlsxError
 pub fn StreamCell::new_value(CellValue, formula? : String, style_id? : Int) -> Self
 

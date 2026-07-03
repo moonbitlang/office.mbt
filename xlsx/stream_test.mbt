@@ -339,3 +339,42 @@ test "stream row rejects style ids minted by lazy time-style registration" {
   ])
   inspect(result is Err(_), content="true")
 }
+
+///|
+test "stream blank cells advance the column without writing" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let stream = workbook.new_stream_writer("Sheet1")
+  stream.set_row_cells("A1", [
+    @xlsx.StreamCell::new("left"),
+    @xlsx.StreamCell::new_blank(),
+    @xlsx.StreamCell::new("right"),
+  ])
+  stream.flush()
+  let bytes = @xlsx.write(workbook)
+  let archive = @zip.read(bytes)
+  let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing sheet1.xml")
+  }
+  // no cell element is produced for the blank slot
+  inspect(sheet_xml.contains("r=\"B1\""), content="false")
+  let parsed = @xlsx.read(bytes)
+  let sheet = match parsed.sheet("Sheet1") {
+    Some(value) => value
+    None => fail("missing Sheet1")
+  }
+  debug_inspect(
+    sheet.get_cell("A1"),
+    content=(
+      #|Some("left")
+    ),
+  )
+  debug_inspect(sheet.get_cell("B1"), content="None")
+  debug_inspect(
+    sheet.get_cell("C1"),
+    content=(
+      #|Some("right")
+    ),
+  )
+}
