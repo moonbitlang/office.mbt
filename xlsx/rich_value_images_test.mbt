@@ -185,3 +185,178 @@ test "rich-value image suppressed when keys and values length mismatch" {
   let parsed = @xlsx.read(bytes)
   inspect(parsed.get_pictures("Sheet1", "A1").length(), content="0")
 }
+
+///|
+/// Injects a rich value that uses the IMAGE() web-image path
+/// (WebImageIdentifier) instead of a local place-in-cell image.
+fn inject_web_image(base : Bytes, media : Bytes) -> Bytes raise {
+  let archive = @zip.read(base)
+  let patched = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name() == "xl/worksheets/sheet1.xml" {
+      let xml = @encoding/utf8.decode(entry.data())
+      patched.add(
+        entry.name(),
+        @encoding/utf8.encode(
+          xml.replace(old="<c r=\"A1\"", new="<c r=\"A1\" vm=\"1\""),
+        ),
+      )
+    } else {
+      patched.add(entry.name(), entry.data())
+    }
+  }
+  patched.add(
+    "xl/metadata.xml",
+    @encoding/utf8.encode(
+      (
+        #|<metadata><valueMetadata count="1"><bk><rc t="1" v="0"/></bk></valueMetadata></metadata>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/rdrichvalue.xml",
+    @encoding/utf8.encode(
+      (
+        #|<rvData count="1"><rv s="0"><v>0</v><v>a web image</v></rv></rvData>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/rdrichvaluestructure.xml",
+    @encoding/utf8.encode(
+      (
+        #|<rvStructures count="1"><s t="_webImage"><k n="WebImageIdentifier" t="i"/><k n="Text" t="s"/></s></rvStructures>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/rdRichValueWebImage.xml",
+    @encoding/utf8.encode(
+      (
+        #|<webImagesSrd xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+        #|  <webImageSrd><address r:id=""/><blip r:id="rId1"/></webImageSrd>
+        #|</webImagesSrd>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/_rels/rdRichValueWebImage.xml.rels",
+    @encoding/utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/web1.png"/></Relationships>
+      ),
+    ),
+  )
+  patched.add("xl/media/web1.png", media)
+  @zip.write(patched)
+}
+
+///|
+test "get_pictures resolves an IMAGE() web image" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", Error("#VALUE!"))
+  let media : Bytes = b"\x89PNG\r\n\x1a\nweb-image-bytes"
+  let bytes = inject_web_image(@xlsx.write(workbook), media)
+  let parsed = @xlsx.read(bytes)
+  let pics = parsed.get_pictures("Sheet1", "A1")
+  inspect(pics.length(), content="1")
+  inspect(pics[0].extension, content=".png")
+  inspect(pics[0].content_type, content="image/png")
+  inspect(pics[0].alt_text, content="a web image")
+  inspect(pics[0].data == media, content="true")
+}
+
+///|
+/// Injects a rich value that has BOTH a (bad) LocalImageIdentifier and a
+/// valid WebImageIdentifier. Excelize commits to the local key once it
+/// is present, so no image resolves.
+fn inject_local_key_wins(base : Bytes, media : Bytes) -> Bytes raise {
+  let archive = @zip.read(base)
+  let patched = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name() == "xl/worksheets/sheet1.xml" {
+      let xml = @encoding/utf8.decode(entry.data())
+      patched.add(
+        entry.name(),
+        @encoding/utf8.encode(
+          xml.replace(old="<c r=\"A1\"", new="<c r=\"A1\" vm=\"1\""),
+        ),
+      )
+    } else {
+      patched.add(entry.name(), entry.data())
+    }
+  }
+  patched.add(
+    "xl/metadata.xml",
+    @encoding/utf8.encode(
+      (
+        #|<metadata><valueMetadata count="1"><bk><rc t="1" v="0"/></bk></valueMetadata></metadata>
+      ),
+    ),
+  )
+  // local id 9 is out of range; web id 0 is valid - Go still returns the
+  // local (nil) result and never uses the web image
+  patched.add(
+    "xl/richData/rdrichvalue.xml",
+    @encoding/utf8.encode(
+      (
+        #|<rvData count="1"><rv s="0"><v>9</v><v>0</v></rv></rvData>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/rdrichvaluestructure.xml",
+    @encoding/utf8.encode(
+      (
+        #|<rvStructures count="1"><s t="_mixed"><k n="_rvRel:LocalImageIdentifier" t="i"/><k n="WebImageIdentifier" t="i"/></s></rvStructures>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/richValueRel.xml",
+    @encoding/utf8.encode(
+      (
+        #|<richValueRels xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><rel r:id="rId1"/></richValueRels>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/_rels/richValueRel.xml.rels",
+    @encoding/utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rv1.png"/></Relationships>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/rdRichValueWebImage.xml",
+    @encoding/utf8.encode(
+      (
+        #|<webImagesSrd xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><webImageSrd><blip r:id="rId1"/></webImageSrd></webImagesSrd>
+      ),
+    ),
+  )
+  patched.add(
+    "xl/richData/_rels/rdRichValueWebImage.xml.rels",
+    @encoding/utf8.encode(
+      (
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/web1.png"/></Relationships>
+      ),
+    ),
+  )
+  patched.add("xl/media/web1.png", media)
+  @zip.write(patched)
+}
+
+///|
+test "rich value with a present local key never falls back to the web image" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Sheet1")
+  sheet.set_cell_value("A1", Error("#VALUE!"))
+  let bytes = inject_local_key_wins(@xlsx.write(workbook), b"\x89PNGweb")
+  let parsed = @xlsx.read(bytes)
+  // the local key is present but unresolvable; Go does not use the web
+  // image, so no picture is returned
+  inspect(parsed.get_pictures("Sheet1", "A1").length(), content="0")
+}

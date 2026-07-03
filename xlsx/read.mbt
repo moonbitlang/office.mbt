@@ -3013,7 +3013,7 @@ fn read_zip_bytes(
   let rich_value_images = parse_rich_value_images(archive, decode)
   let rich_value_media : Map[String, Bytes] = {}
   match rich_value_images {
-    Some(data) =>
+    Some(data) => {
       for _, target in data.rel_targets {
         let path = normalize_cell_image_target(target)
         match archive.get(path) {
@@ -3021,6 +3021,14 @@ fn read_zip_bytes(
           None => ()
         }
       }
+      for _, target in data.web_rel_targets {
+        let path = normalize_cell_image_target(target)
+        match archive.get(path) {
+          Some(bytes) => rich_value_media[path] = bytes
+          None => ()
+        }
+      }
+    }
     None => ()
   }
   let rich_value_vm : Map[String, Map[String, Int]] = {}

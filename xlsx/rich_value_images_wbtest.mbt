@@ -77,3 +77,18 @@ test "parse_rich_value_rel_ids reads ordered relationship ids" {
     ),
   )
 }
+
+///|
+test "parse_web_image_blip_ids reads ordered blip relationship ids" {
+  let xml =
+    #|<webImagesSrd xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    #|  <webImageSrd><address r:id=""/><blip r:id="rId5"/></webImageSrd>
+    #|  <webImageSrd><blip r:id="rId6"/></webImageSrd>
+    #|</webImagesSrd>
+  debug_inspect(
+    parse_web_image_blip_ids(xml),
+    content=(
+      #|["rId5", "rId6"]
+    ),
+  )
+}
