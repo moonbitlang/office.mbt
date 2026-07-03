@@ -213,6 +213,8 @@ pub struct Chart {
 
 pub(all) struct ChartAxis {
   mut none : Bool
+  mut drop_lines : Bool
+  mut high_low_lines : Bool
   mut major_grid_lines : Bool
   mut minor_grid_lines : Bool
   mut major_unit : Double

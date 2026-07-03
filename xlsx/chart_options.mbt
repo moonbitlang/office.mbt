@@ -119,6 +119,8 @@ pub fn ChartNumFmt::new(
 ///|
 pub(all) struct ChartAxis {
   mut none : Bool
+  mut drop_lines : Bool
+  mut high_low_lines : Bool
   mut major_grid_lines : Bool
   mut minor_grid_lines : Bool
   mut major_unit : Double
@@ -141,6 +143,8 @@ pub(all) struct ChartAxis {
 fn ChartAxis::new() -> ChartAxis {
   {
     none: false,
+    drop_lines: false,
+    high_low_lines: false,
     major_grid_lines: false,
     minor_grid_lines: false,
     major_unit: 0.0,
@@ -157,6 +161,28 @@ fn ChartAxis::new() -> ChartAxis {
     title: "",
     title_rich: None,
     ax_id: 0,
+  }
+}
+
+///|
+/// Emits `<c:dropLines/>` / `<c:hiLowLines/>` for chart groups that honor the
+/// Excelize `ChartAxis` DropLines/HighLowLines options: drop lines apply to
+/// area, 3D area, line, and 3D line charts; high-low lines apply to 2D line
+/// charts only (stock charts emit theirs unconditionally elsewhere).
+fn write_chart_axis_lines(
+  sb : StringBuilder,
+  plot_tag : String,
+  axis : ChartAxis,
+) -> Unit {
+  let supports_drop_lines = plot_tag == "lineChart" ||
+    plot_tag == "line3DChart" ||
+    plot_tag == "areaChart" ||
+    plot_tag == "area3DChart"
+  if supports_drop_lines && axis.drop_lines {
+    sb.write_view("        <c:dropLines/>\n")
+  }
+  if plot_tag == "lineChart" && axis.high_low_lines {
+    sb.write_view("        <c:hiLowLines/>\n")
   }
 }
 
@@ -1920,6 +1946,7 @@ fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
       write_chart_series_for_plot(sb, plot_tag, series, i, 0)
     }
     write_chart_dlbls(sb, plot_tag, opts.legend.show_legend_key, opts.plot_area)
+    write_chart_axis_lines(sb, plot_tag, opts.x_axis)
     if plot_tag == "stockChart" {
       sb.write_view("        <c:hiLowLines/>\n")
       if opts.typ == StockOpenHighLowClose {
@@ -2193,6 +2220,7 @@ fn chart_options_to_xml(opts : ChartOptions) -> String raise XlsxError {
         opts.legend.show_legend_key,
         plot.plot_area,
       )
+      write_chart_axis_lines(sb, plot_tag, plot.x_axis)
       if plot_tag == "stockChart" {
         sb.write_view("        <c:hiLowLines/>\n")
         if plot.typ == StockOpenHighLowClose {

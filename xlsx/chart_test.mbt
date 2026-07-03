@@ -1154,3 +1154,60 @@ test "chart options contour uses none tick labels and midCat crossBetween" {
     content="true",
   )
 }
+
+///|
+test "chart axis drop lines and high low lines emission" {
+  let workbook = Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  let line_opts = ChartOptions::new(Line)
+  line_opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  line_opts.x_axis.drop_lines = true
+  line_opts.x_axis.high_low_lines = true
+  workbook.add_chart_with_options("Sheet1", "C3", line_opts)
+  let bytes = write(workbook)
+  let archive = @zip.read(bytes)
+  let line_chart = match archive.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing line chart")
+  }
+  inspect(line_chart.contains("<c:dropLines/>"), content="true")
+  inspect(line_chart.contains("<c:hiLowLines/>"), content="true")
+
+  // high-low lines only apply to 2D line charts; area charts keep drop lines
+  let workbook2 = Workbook::new()
+  ignore(workbook2.add_sheet("Sheet1"))
+  let area_opts = ChartOptions::new(Area)
+  area_opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  area_opts.x_axis.drop_lines = true
+  area_opts.x_axis.high_low_lines = true
+  workbook2.add_chart_with_options("Sheet1", "C3", area_opts)
+  let bytes2 = write(workbook2)
+  let archive2 = @zip.read(bytes2)
+  let area_chart = match archive2.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing area chart")
+  }
+  inspect(area_chart.contains("<c:dropLines/>"), content="true")
+  inspect(area_chart.contains("<c:hiLowLines/>"), content="false")
+
+  // defaults stay off
+  let workbook3 = Workbook::new()
+  ignore(workbook3.add_sheet("Sheet1"))
+  let default_opts = ChartOptions::new(Line)
+  default_opts.series.push(
+    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+  )
+  workbook3.add_chart_with_options("Sheet1", "C3", default_opts)
+  let bytes3 = write(workbook3)
+  let archive3 = @zip.read(bytes3)
+  let default_chart = match archive3.get("xl/charts/chart1.xml") {
+    Some(value) => @encoding/utf8.decode(value)
+    None => fail("missing default chart")
+  }
+  inspect(default_chart.contains("<c:dropLines/>"), content="false")
+  inspect(default_chart.contains("<c:hiLowLines/>"), content="false")
+}
