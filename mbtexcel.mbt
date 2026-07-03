@@ -412,6 +412,27 @@ pub fn excel_date_to_time(
 }
 
 ///|
+/// Converts a datetime to an Excel date serial number, the reverse of
+/// `excel_date_to_time`. Mirrors Excelize's `timeToExcelTime`, including
+/// the intentional Lotus 1-2-3 leap-year bug in the 1900 date system;
+/// datetimes before the epoch return 0.
+///
+/// # Parameters
+/// - `value`: The datetime to convert (wall-clock fields are used)
+/// - `use_1904_format`: If true, use Mac Excel's 1904 date system (default: false)
+///
+/// # Example
+/// ```mbt nocheck
+/// let serial = time_to_excel_date(@time.date_time(2021, 1, 1, hour=12)) // 44197.5
+/// ```
+pub fn time_to_excel_date(
+  value : @time.ZonedDateTime,
+  use_1904_format? : Bool = false,
+) -> Double {
+  @xlsx.time_to_excel_date(value, use_1904_format~)
+}
+
+///|
 /// Opens an XLSX file from a file path asynchronously.
 ///
 /// # Parameters

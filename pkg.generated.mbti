@@ -49,6 +49,8 @@ pub fn split_cell_name(StringView) -> (String, Int) raise @xlsx.XlsxError
 
 pub fn theme_color(String, Double) -> String
 
+pub fn time_to_excel_date(@time.ZonedDateTime, use_1904_format? : Bool) -> Double
+
 pub fn utf16_index_to_utf8_offset(StringView, Int) -> Int raise UtfIndexError
 
 pub fn utf16_len(StringView) -> Int

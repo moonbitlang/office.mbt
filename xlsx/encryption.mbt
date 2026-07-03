@@ -214,7 +214,9 @@ let random_bytes_override : Ref[((Int) -> Bytes)?] = Ref::new(None)
 /// Use this to supply cryptographically secure entropy (Go excelize
 /// uses crypto/rand for these values). The built-in fallback is a
 /// ChaCha8 generator seeded from wall-clock entropy whitened through
-/// SHA-256: unique per process, but not a CSPRNG.
+/// SHA-256: best-effort unique per process (millisecond clock
+/// resolution means simultaneous process starts can collide), and not
+/// a CSPRNG.
 pub fn set_random_source(source : (Int) -> Bytes) -> Unit {
   random_bytes_override.val = Some(source)
 }
