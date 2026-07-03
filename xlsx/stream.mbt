@@ -15,6 +15,9 @@ pub struct StreamCell {
   /// Set only by StreamWriter::new_time_cell: the cell should receive the
   /// stream default date/time format unless a row/column style applies.
   priv needs_time_style : Bool
+  /// Set only by StreamCell::new_blank: the slot advances the column
+  /// without writing a cell, like a nil value in Go's stream SetRow.
+  priv blank : Bool
 }
 
 ///|
@@ -31,6 +34,23 @@ pub fn StreamCell::new(
     formula: formula_value,
     style_id,
     needs_time_style: false,
+    blank: false,
+  }
+}
+
+///|
+/// A blank slot in a stream row: the column position advances but no
+/// cell element is written, mirroring a nil value in Go's stream
+/// SetRow.
+pub fn StreamCell::new_blank() -> StreamCell {
+  {
+    value: "",
+    value_type: String,
+    rich_text: None,
+    formula: None,
+    style_id: 0,
+    needs_time_style: false,
+    blank: true,
   }
 }
 
@@ -48,6 +68,7 @@ pub fn StreamCell::new_value(
     formula: formula_value,
     style_id,
     needs_time_style: false,
+    blank: false,
   }
 }
 
@@ -73,6 +94,7 @@ pub fn StreamCell::new_rich_text(
     formula: formula_value,
     style_id,
     needs_time_style: false,
+    blank: false,
   }
 }
 
@@ -151,6 +173,7 @@ pub fn StreamWriter::new_time_cell(
       // Excelize applies numFmt 22 only when the effective style after
       // row/column inheritance is 0; that check happens in set_row_cells.
       needs_time_style: style_id == 0,
+      blank: false,
     }
   } else {
     StreamCell::new_value(
@@ -390,6 +413,10 @@ pub fn StreamWriter::set_row_cells(
   }
   let mut col = start_col
   for cell in values {
+    if cell.blank {
+      col = col + 1
+      continue
+    }
     let mut style_id = cell.style_id
     if cell.needs_time_style && style_id == 0 {
       // Excelize's prepareCellStyle precedence: an explicit row-opts or
