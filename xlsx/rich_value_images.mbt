@@ -17,6 +17,12 @@ struct RichValueImages {
   rel_ids : Array[String]
   /// relationship id -> media target (from richValueRel.xml.rels)
   rel_targets : Map[String, String]
+  /// ordered blip relationship ids of web images, from
+  /// rdRichValueWebImage.xml (used by the IMAGE() function)
+  web_blip_ids : Array[String]
+  /// blip relationship id -> media target (from
+  /// rdRichValueWebImage.xml.rels)
+  web_rel_targets : Map[String, String]
 }
 
 ///|
@@ -46,7 +52,58 @@ fn parse_rich_value_images(
     Some(value) => parse_relationship_targets(decode(value), rel_image)
     None => {}
   }
-  Some({ value_metadata, rich_values, structures, rel_ids, rel_targets })
+  let web_blip_ids = match archive.get("xl/richData/rdRichValueWebImage.xml") {
+    Some(value) => parse_web_image_blip_ids(decode(value))
+    None => []
+  }
+  let web_rel_targets = match
+    archive.get("xl/richData/_rels/rdRichValueWebImage.xml.rels") {
+    Some(value) => parse_relationship_targets(decode(value), rel_image)
+    None => {}
+  }
+  Some({
+    value_metadata,
+    rich_values,
+    structures,
+    rel_ids,
+    rel_targets,
+    web_blip_ids,
+    web_rel_targets,
+  })
+}
+
+///|
+/// Parses the ordered blip relationship ids from `<webImageSrd>`
+/// elements of `xl/richData/rdRichValueWebImage.xml`. Each web image's
+/// `<blip r:id="...">` names the relationship resolving to its media.
+fn parse_web_image_blip_ids(xml : String) -> Array[String] raise XlsxError {
+  let result : Array[String] = []
+  let mut first = true
+  for chunk in xml.split("<webImageSrd") {
+    if first {
+      first = false
+      continue
+    }
+    let text = chunk.to_string()
+    let end = match text.find("</webImageSrd>") {
+      Some(pos) => pos
+      None => text.length()
+    }
+    let srd_body = text[:end]
+    let blip_attrs = match tag_attributes_in(srd_body, "blip") {
+      Some(value) => value
+      None => continue
+    }
+    let id = match attr_value(blip_attrs, "r:id") {
+      Some(value) => Some(value)
+      None => attr_value(blip_attrs, "id")
+    }
+    match id {
+      Some(value) => result.push(value)
+      None => continue
+    }
+  }
+  result
 }
 
 ///|
@@ -241,6 +298,50 @@ fn parse_cell_vm_map(sheet_xml : String) -> Map[String, Int] raise XlsxError {
 }
 
 ///|
+/// Resolves a rich value's local ("Place in cell") image media target
+/// via the `_rvRel:LocalImageIdentifier` key, or `None` when the value
+/// is not a local image.
+fn rich_value_local_target(
+  data : RichValueImages,
+  keys : Array[String],
+  values : Array[String],
+) -> String? {
+  let local_idx = rich_value_key_index(keys, "_rvRel:LocalImageIdentifier")
+  if local_idx < 0 || local_idx >= values.length() {
+    return None
+  }
+  let rel_index = @strconv.parse_int(values[local_idx], base=10) catch {
+    _ => return None
+  }
+  if rel_index < 0 || rel_index >= data.rel_ids.length() {
+    return None
+  }
+  data.rel_targets.get(data.rel_ids[rel_index])
+}
+
+///|
+/// Resolves a rich value's web (IMAGE function) image media target via
+/// the `WebImageIdentifier` key, or `None` when the value is not a web
+/// image. Mirrors Excelize's getRichDataWebImagesRel.
+fn rich_value_web_target(
+  data : RichValueImages,
+  keys : Array[String],
+  values : Array[String],
+) -> String? {
+  let web_idx = rich_value_key_index(keys, "WebImageIdentifier")
+  if web_idx < 0 || web_idx >= values.length() {
+    return None
+  }
+  let web_index = @strconv.parse_int(values[web_idx], base=10) catch {
+    _ => return None
+  }
+  if web_index < 0 || web_index >= data.web_blip_ids.length() {
+    return None
+  }
+  data.web_rel_targets.get(data.web_blip_ids[web_index])
+}
+
+///|
 /// Returns the index of a key name within a rich value structure, or -1.
 fn rich_value_key_index(keys : Array[String], name : String) -> Int {
   for i, key in keys {
@@ -308,22 +409,21 @@ fn Workbook::rich_value_image_for_cell(
       ""
     }
   }
-  let local_idx = rich_value_key_index(keys, "_rvRel:LocalImageIdentifier")
-  if local_idx < 0 || local_idx >= values.length() {
-    return None
+  // A rich value carries either a local image (Place in cell) or a web
+  // image (IMAGE function). Excelize's getImageCellRel branches on which
+  // key is *present*: once a LocalImageIdentifier key exists it commits
+  // to the local path and never falls back to the web path, even if the
+  // local relationship fails to resolve.
+  let target = if rich_value_key_index(keys, "_rvRel:LocalImageIdentifier") !=
+    -1 {
+    rich_value_local_target(data, keys, values)
+  } else {
+    rich_value_web_target(data, keys, values)
   }
-  let rel_index = @strconv.parse_int(values[local_idx], base=10) catch {
-    _ => return None
-  }
-  if rel_index < 0 || rel_index >= data.rel_ids.length() {
-    return None
-  }
-  let rel_id = data.rel_ids[rel_index]
-  let target = match data.rel_targets.get(rel_id) {
-    Some(value) => value
+  let media_path = match target {
+    Some(value) => normalize_cell_image_target(value)
     None => return None
   }
-  let media_path = normalize_cell_image_target(target)
   match self.rich_value_media.get(media_path) {
     Some(bytes) => {
       let extension = cell_image_extension(media_path)
