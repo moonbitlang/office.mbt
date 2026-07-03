@@ -112,6 +112,10 @@ pub struct Worksheet {
   mut stream_state : StreamState
   mut vml_drawing_xml : String?
   mut vml_drawing_hf_xml : String?
+  /// Cell value-metadata (`vm`) indices captured on read, keyed by
+  /// canonical cell reference. Links a cell to its rich-value embedded
+  /// image; lives on the worksheet so it survives rename/copy/delete.
+  cell_vm : Map[String, Int]
 }
 
 ///|
@@ -156,6 +160,7 @@ pub fn Worksheet::new(name : String) -> Worksheet {
     stream_state: Idle,
     vml_drawing_xml: None,
     vml_drawing_hf_xml: None,
+    cell_vm: {},
   }
 }
 

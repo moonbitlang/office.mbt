@@ -1460,7 +1460,6 @@ pub struct Workbook {
   cell_images : Array[CellImage]
   rich_value_images : RichValueImages?
   rich_value_media : Map[String, Bytes]
-  rich_value_vm : Map[String, Map[String, Int]]
 }
 pub fn Workbook::active_sheet_index(Self) -> Int
 pub fn Workbook::add_chart(Self, StringView, String, String) -> Unit raise XlsxError
@@ -1767,6 +1766,7 @@ pub struct Worksheet {
   mut stream_state : StreamState
   mut vml_drawing_xml : String?
   mut vml_drawing_hf_xml : String?
+  cell_vm : Map[String, Int]
 }
 pub fn Worksheet::add_chart(Self, String, String) -> Unit raise XlsxError
 pub fn Worksheet::add_chart_with_options(Self, String, ChartOptions) -> Unit raise XlsxError

@@ -370,12 +370,8 @@ fn Workbook::rich_value_image_for_cell(
     let (row, col) = cell_ref_to_rc(reference)
     cell_ref_from(row, col)
   }
-  let vm = match self.rich_value_vm.get(sheet.name()) {
-    Some(sheet_map) =>
-      match sheet_map.get(canonical) {
-        Some(value) => value
-        None => return None
-      }
+  let vm = match sheet.cell_vm.get(canonical) {
+    Some(value) => value
     None => return None
   }
   // Only #VALUE! cells carry an embedded rich-value image.

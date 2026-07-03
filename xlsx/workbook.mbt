@@ -1317,6 +1317,13 @@ fn clone_worksheet(
     stream_state: Idle,
     vml_drawing_xml: sheet.vml_drawing_xml,
     vml_drawing_hf_xml: sheet.vml_drawing_hf_xml,
+    cell_vm: {
+      let copy : Map[String, Int] = {}
+      for reference, vm in sheet.cell_vm {
+        copy[reference] = vm
+      }
+      copy
+    },
   }
 }
 
