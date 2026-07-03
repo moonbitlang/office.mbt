@@ -868,7 +868,11 @@ fn data_label_pos_value(pos : ChartDataLabelPositionType) -> StringView {
 }
 
 ///|
-fn write_chart_series_sppr(sb : StringBuilder, series : ChartSeries) -> Unit {
+fn write_chart_series_sppr(
+  sb : StringBuilder,
+  series : ChartSeries,
+  global_idx : Int,
+) -> Unit {
   let line = series.line
   if series.fill_color == "" &&
     line.typ == Unset &&
@@ -912,7 +916,12 @@ fn write_chart_series_sppr(sb : StringBuilder, series : ChartSeries) -> Unit {
   }
   sb.write_view(">\n")
   if line.typ == Solid && line.color == "" {
-    write_chart_line_solid_scheme(sb, "              ")
+    // Excelize series lines cycle the theme accent palette
+    // (drawChartSeriesSpPr); tx1 is only used for border lines.
+    let accent = global_idx % 6 + 1
+    sb.write_view(
+      "              <a:solidFill><a:schemeClr val=\"accent\{accent}\"/></a:solidFill>\n",
+    )
   }
   if line.color != "" {
     let color = line.color.replace_all(old="#", new="").to_upper()
@@ -1101,7 +1110,7 @@ fn write_chart_series(
   sb.write_view("          <c:idx val=\"\{global_idx}\"/>\n")
   sb.write_view("          <c:order val=\"\{global_idx}\"/>\n")
   write_chart_series_tx(sb, series.name)
-  write_chart_series_sppr(sb, series)
+  write_chart_series_sppr(sb, series, global_idx)
   write_chart_series_marker(sb, series.marker)
   if series.line.smooth {
     sb.write_view("          <c:smooth val=\"1\"/>\n")
@@ -1131,7 +1140,7 @@ fn write_chart_series_scatter(
   sb.write_view("          <c:idx val=\"\{global_idx}\"/>\n")
   sb.write_view("          <c:order val=\"\{global_idx}\"/>\n")
   write_chart_series_tx(sb, series.name)
-  write_chart_series_sppr(sb, series)
+  write_chart_series_sppr(sb, series, global_idx)
   write_chart_series_marker(sb, series.marker)
   if series.line.smooth {
     sb.write_view("          <c:smooth val=\"1\"/>\n")
@@ -1169,7 +1178,7 @@ fn write_chart_series_for_plot(
     sb.write_view("          <c:idx val=\"\{global_idx}\"/>\n")
     sb.write_view("          <c:order val=\"\{global_idx}\"/>\n")
     write_chart_series_tx(sb, series.name)
-    write_chart_series_sppr(sb, series)
+    write_chart_series_sppr(sb, series, global_idx)
     write_chart_series_marker(sb, series.marker)
     if series.line.smooth {
       sb.write_view("          <c:smooth val=\"1\"/>\n")
