@@ -1793,6 +1793,14 @@ fn write_worksheet_xml(
           Some(rel_id) => sb.write_view(" r:id=\"rId\{rel_id}\"")
           None => raise InvalidHyperlink(msg="hyperlink relationship missing")
         }
+        match link.location {
+          Some(value) => {
+            sb.write_view(" location=\"")
+            sb.write_view(escape_xml_attr(value))
+            sb.write_view("\"")
+          }
+          None => ()
+        }
       } else {
         sb.write_view(" location=\"")
         sb.write_view(escape_xml_attr(link.target))

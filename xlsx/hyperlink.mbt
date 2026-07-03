@@ -10,6 +10,11 @@ pub struct Hyperlink {
   reference : String
   target : String
   link_type : HyperlinkType
+  /// Workbook-internal location fragment. Always set for `Location`
+  /// links; also set for `External` links whose XML carried both an
+  /// `r:id` and a `location` attribute, which Excelize tracks
+  /// independently.
+  location : String?
   display : String?
   tooltip : String?
 } derive(Show, Debug)

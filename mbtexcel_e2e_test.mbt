@@ -234,6 +234,7 @@ test "mbtexcel e2e tables sparklines hyperlinks" {
       #|    reference: "A2",
       #|    target: "https://example.com",
       #|    link_type: External,
+      #|    location: None,
       #|    display: Some("Example"),
       #|    tooltip: None,
       #|  },

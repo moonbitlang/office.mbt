@@ -784,6 +784,7 @@ pub struct Hyperlink {
   reference : String
   target : String
   link_type : HyperlinkType
+  location : String?
   display : String?
   tooltip : String?
 } derive(Show, @debug.Debug)

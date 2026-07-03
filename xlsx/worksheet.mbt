@@ -594,6 +594,11 @@ pub fn Worksheet::set_cell_hyperlink(
         reference: normalized_ref,
         target,
         link_type,
+        location: if link_type == Location {
+          Some(target)
+        } else {
+          None
+        },
         display: display_value,
         tooltip: tooltip_value,
       }
@@ -609,6 +614,11 @@ pub fn Worksheet::set_cell_hyperlink(
       reference: normalized_ref,
       target,
       link_type,
+      location: if link_type == Location {
+        Some(target)
+      } else {
+        None
+      },
       display: display_value,
       tooltip: tooltip_value,
     })
@@ -664,6 +674,15 @@ pub fn Worksheet::get_hyperlink_cells(
         references.push(link.reference)
       }
     Some(Unset) => ()
+    // Excelize filters External by r:id presence and Location by the
+    // location attribute independently, so an external link that also
+    // carries a location fragment matches both filters.
+    Some(Location) =>
+      for link in self.hyperlinks {
+        if link.link_type == Location || link.location is Some(_) {
+          references.push(link.reference)
+        }
+      }
     Some(wanted) =>
       for link in self.hyperlinks {
         if link.link_type == wanted {
@@ -2999,6 +3018,7 @@ fn Worksheet::insert_rows(
       reference,
       target: link.target,
       link_type: link.link_type,
+      location: link.location,
       display: link.display,
       tooltip: link.tooltip,
     })
@@ -3119,6 +3139,7 @@ fn Worksheet::remove_rows(
           reference,
           target: link.target,
           link_type: link.link_type,
+          location: link.location,
           display: link.display,
           tooltip: link.tooltip,
         })
@@ -3507,6 +3528,7 @@ fn Worksheet::insert_cols(
       reference,
       target: link.target,
       link_type: link.link_type,
+      location: link.location,
       display: link.display,
       tooltip: link.tooltip,
     })
@@ -3627,6 +3649,7 @@ fn Worksheet::remove_cols(
           reference,
           target: link.target,
           link_type: link.link_type,
+          location: link.location,
           display: link.display,
           tooltip: link.tooltip,
         })

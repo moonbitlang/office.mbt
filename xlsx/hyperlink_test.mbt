@@ -20,6 +20,7 @@ test "hyperlink roundtrip" {
       #|    reference: "A1",
       #|    target: "https://example.com",
       #|    link_type: External,
+      #|    location: None,
       #|    display: Some("Example"),
       #|    tooltip: Some("Tip"),
       #|  },
@@ -34,6 +35,7 @@ test "hyperlink roundtrip" {
       #|    reference: "B2",
       #|    target: "Sheet1!C3",
       #|    link_type: Location,
+      #|    location: Some("Sheet1!C3"),
       #|    display: None,
       #|    tooltip: None,
       #|  },
@@ -56,6 +58,7 @@ test "hyperlink resolves merged cell anchor" {
       #|    reference: "A1",
       #|    target: "https://example.com",
       #|    link_type: External,
+      #|    location: None,
       #|    display: None,
       #|    tooltip: None,
       #|  },
@@ -81,6 +84,7 @@ test "hyperlink remove keeps other links" {
       #|    reference: "B2",
       #|    target: "https://b.example",
       #|    link_type: External,
+      #|    location: None,
       #|    display: None,
       #|    tooltip: None,
       #|  },
@@ -104,6 +108,7 @@ test "hyperlink updates on insert" {
       #|    reference: "B3",
       #|    target: "https://example.com",
       #|    link_type: External,
+      #|    location: None,
       #|    display: None,
       #|    tooltip: None,
       #|  },
@@ -120,6 +125,7 @@ test "hyperlink updates on insert" {
       #|    reference: "C3",
       #|    target: "https://example.com",
       #|    link_type: External,
+      #|    location: None,
       #|    display: None,
       #|    tooltip: None,
       #|  },
@@ -141,6 +147,7 @@ test "hyperlink alias methods" {
       #|    reference: "C3",
       #|    target: "https://example.com",
       #|    link_type: External,
+      #|    location: None,
       #|    display: None,
       #|    tooltip: None,
       #|  },
@@ -183,6 +190,7 @@ test "hyperlink opts helper" {
       #|    reference: "A1",
       #|    target: "https://example.com",
       #|    link_type: External,
+      #|    location: None,
       #|    display: None,
       #|    tooltip: Some("Tip"),
       #|  },
@@ -212,6 +220,7 @@ test "hyperlink opts helper (display only)" {
       #|    reference: "A1",
       #|    target: "https://example.com",
       #|    link_type: External,
+      #|    location: None,
       #|    display: Some("Shown"),
       #|    tooltip: None,
       #|  },
@@ -239,6 +248,7 @@ test "hyperlink update existing reference" {
       #|    reference: "A1",
       #|    target: "https://github.com/xuri/excelize",
       #|    link_type: External,
+      #|    location: None,
       #|    display: None,
       #|    tooltip: None,
       #|  },
@@ -320,6 +330,7 @@ test "hyperlink remove clears range reference" {
       #|    reference: "A1:D4",
       #|    target: "https://github.com/xuri/excelize",
       #|    link_type: External,
+      #|    location: None,
       #|    display: None,
       #|    tooltip: None,
       #|  },
@@ -451,4 +462,84 @@ test "get_hyperlink_cells filters by link type" {
     "Missing",
   )
   inspect(missing is Err(_), content="true")
+}
+
+///|
+test "hyperlink with both r:id and location matches both filters" {
+  // Build a workbook with an external hyperlink, then inject a location
+  // attribute into the sheet XML the way another producer could
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell_hyperlink(
+    "Sheet1",
+    "A1",
+    "https://example.com",
+    @xlsx.HyperlinkType::External,
+  )
+  let bytes = @xlsx.write(workbook)
+  let archive = @zip.read(bytes)
+  let patched = @zip.Archive::new()
+  for entry in archive.entries() {
+    if entry.name() == "xl/worksheets/sheet1.xml" {
+      let xml = @encoding/utf8.decode(entry.data())
+      let mutated = xml.replace(
+        old="<hyperlink ref=\"A1\"",
+        new="<hyperlink ref=\"A1\" location=\"Sheet1!B2\"",
+      )
+      patched.add(entry.name(), @encoding/utf8.encode(mutated))
+    } else {
+      patched.add(entry.name(), entry.data())
+    }
+  }
+  let parsed = @xlsx.read(@zip.write(patched))
+  let link = match parsed.get_cell_hyperlink("Sheet1", "A1") {
+    Some(value) => value
+    None => fail("missing hyperlink")
+  }
+  debug_inspect(link.link_type, content="External")
+  debug_inspect(
+    link.location,
+    content=(
+      #|Some("Sheet1!B2")
+    ),
+  )
+  inspect(link.target, content="https://example.com")
+  // Excelize filters by attribute presence independently
+  debug_inspect(
+    parsed.get_hyperlink_cells("Sheet1"),
+    content=(
+      #|["A1"]
+    ),
+  )
+  debug_inspect(
+    parsed.get_hyperlink_cells(
+      "Sheet1",
+      link_type=@xlsx.HyperlinkType::External,
+    ),
+    content=(
+      #|["A1"]
+    ),
+  )
+  debug_inspect(
+    parsed.get_hyperlink_cells(
+      "Sheet1",
+      link_type=@xlsx.HyperlinkType::Location,
+    ),
+    content=(
+      #|["A1"]
+    ),
+  )
+  // and the location survives a write roundtrip
+  let rewritten = @xlsx.read(@xlsx.write(parsed))
+  let survived = match rewritten.get_cell_hyperlink("Sheet1", "A1") {
+    Some(value) => value
+    None => fail("missing rewritten hyperlink")
+  }
+  debug_inspect(
+    survived.location,
+    content=(
+      #|Some("Sheet1!B2")
+    ),
+  )
+  inspect(survived.target, content="https://example.com")
 }

@@ -825,6 +825,7 @@ test "worksheet wb: col insert/remove structural edge branches" {
     reference: "A1:C1",
     target: "https://example.com",
     link_type: External,
+    location: None,
     display: None,
     tooltip: None,
   })
@@ -856,6 +857,7 @@ test "worksheet wb: col insert/remove structural edge branches" {
     reference: "B1",
     target: "https://drop.example",
     link_type: External,
+    location: None,
     display: None,
     tooltip: None,
   })
@@ -863,6 +865,7 @@ test "worksheet wb: col insert/remove structural edge branches" {
     reference: "A1:C1",
     target: "https://range.example",
     link_type: External,
+    location: None,
     display: None,
     tooltip: None,
   })
@@ -946,6 +949,7 @@ test "worksheet wb: row remove residual drop and range-helper branches" {
     reference: "A1:A3",
     target: "https://rows.example",
     link_type: External,
+    location: None,
     display: None,
     tooltip: None,
   })
