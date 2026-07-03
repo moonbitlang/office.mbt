@@ -26,7 +26,7 @@ well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
       `time_to_excel_date` (feat/excelize-parity-round2)
 - [x] Stream writer typed rows: `StreamWriter::new_time_cell` /
       `new_duration_cell` (feat/excelize-parity-round2); nil/blank stream
-      cells still render as empty-string cells rather than bare `<c/>`
+      cells skip via StreamCell::new_blank() (feat/parity-round3)
 - [ ] Default charset transcoding: Go XML decoders default to
       `charset.NewReaderLabel`; MoonBit raises on declared non-UTF8 XML unless
       a transcoder is supplied (`xlsx/read.mbt:57`, `mbtexcel.mbt:181`)
@@ -40,11 +40,11 @@ well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
 - [x] RC4-style standard encryption verifier layout accepted (non-AES
       AlgID -> 20-byte verifier hash, decryption stays SHA-1 + AES-ECB
       exactly like Go) (feat/rc4-standard-layout)
-- [ ] Chart `Fill` semantics: Go supports Fill.Type/Pattern/color arrays via
-      `drawShapeFill` for chart/plot/series/marker/data-label/data-point/
-      up-down bars; MoonBit flattens to fill_color/fill_transparency
-- [ ] LEFTB/RIGHTB/REPLACEB byte semantics differ from Go byte slicing for
-      non-ASCII text (`xlsx/formula_builtins.mbt:2838,3073`)
+- [x] Chart `Fill` semantics: `ChartFill` override (typ/pattern/color/
+      shading/transparency) on all fill-bearing chart elements, faithful to
+      drawShapeFill (feat/parity-round3)
+- [x] LEFTB/RIGHTB/MIDB/REPLACEB unified on Excel DBCS byte semantics via a
+      shared dbcs_byte_range helper, no more mojibake (feat/parity-round3)
 - [x] `culture_info` now resolves language builtin numFmt IDs 27-36/50-62/
       67-81 for en-US/ja-JP/ko-KR/zh-CN/zh-TW (feat/culture-num-fmt); era
       codes with [$-404]/[$-411] locale tokens still pass through raw
