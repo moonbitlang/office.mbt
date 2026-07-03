@@ -47,6 +47,10 @@ well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
       non-ASCII text (`xlsx/formula_builtins.mbt:2838,3073`)
 - [ ] `culture_info` option is stored but unused for localized builtin number
       formats (Go `langNumFmt`, `.repos/excelize/numfmt.go:5034`)
+- [ ] Hyperlinks carrying both `r:id` and `location` collapse to `External`
+      on read, so `get_hyperlink_cells(link_type=Location)` misses them and
+      the location fragment is dropped; Go keeps both attributes
+      independently (`xlsx/read.mbt:3199`)
 
 Fixed in this pass: `get_hyperlink_cells`, `get_sheet_protection`,
 ChartAxis `drop_lines`/`high_low_lines`, public `ChartLineType` with `Solid`

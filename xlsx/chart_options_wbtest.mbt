@@ -402,7 +402,7 @@ test "chart options wb: series shape and data label writers" {
   sppr_no_line.fill_transparency = -1
   sppr_no_line.line.typ = NoLine
   let no_line_sb = StringBuilder::new()
-  write_chart_series_sppr(no_line_sb, sppr_no_line)
+  write_chart_series_sppr(no_line_sb, sppr_no_line, 0)
   inspect(no_line_sb.to_string().contains("<a:noFill/>"), content="true")
   inspect(no_line_sb.to_string().contains("<a:alpha"), content="false")
 
@@ -411,7 +411,7 @@ test "chart options wb: series shape and data label writers" {
   sppr_line.line.transparency = 200
   sppr_line.line.dash = Dot
   let line_sb = StringBuilder::new()
-  write_chart_series_sppr(line_sb, sppr_line)
+  write_chart_series_sppr(line_sb, sppr_line, 0)
   inspect(line_sb.to_string().contains("alpha val=\"0\""), content="true")
   inspect(line_sb.to_string().contains("prstDash val=\"dot\""), content="true")
 

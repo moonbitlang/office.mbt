@@ -1233,7 +1233,7 @@ test "chart line type solid emits scheme color line fill" {
   }
   inspect(
     chart_xml.contains(
-      "<a:solidFill><a:schemeClr val=\"tx1\"><a:lumMod val=\"15000\"/><a:lumOff val=\"85000\"/></a:schemeClr></a:solidFill>",
+      "<a:solidFill><a:schemeClr val=\"accent1\"/></a:solidFill>",
     ),
     content="true",
   )
@@ -1257,7 +1257,10 @@ test "chart line type solid emits scheme color line fill" {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing chart")
   }
-  inspect(chart_xml2.contains("<a:schemeClr val=\"tx1\">"), content="false")
+  inspect(
+    chart_xml2.contains("<a:schemeClr val=\"accent1\"/>"),
+    content="false",
+  )
   inspect(
     chart_xml2.contains(
       "<a:solidFill><a:srgbClr val=\"FF0000\"/></a:solidFill>",
