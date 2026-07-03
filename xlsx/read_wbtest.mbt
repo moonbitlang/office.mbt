@@ -104,7 +104,7 @@ test "read wb: xml encoding parser guard paths" {
 ///|
 test "read wb: decode_utf8 invalid paths" {
   let requires_transcoder = try? decode_utf8(
-    b"<?xml version=\"1.0\" encoding=\"UTF-16\"?><x/>",
+    b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><x/>",
     None,
   )
   inspect(
@@ -116,7 +116,7 @@ test "read wb: decode_utf8 invalid paths" {
     content="true",
   )
 
-  let invalid_utf8 = try? decode_utf8(b"\xFF\xFE\xFF", None)
+  let invalid_utf8 = try? decode_utf8(b"\xFF\xFF\xFF", None)
   inspect(
     match invalid_utf8 {
       Err(XlsxError::InvalidXml(msg~)) => msg == "invalid utf8"

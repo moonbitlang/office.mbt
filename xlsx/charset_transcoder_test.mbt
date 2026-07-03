@@ -76,3 +76,17 @@ async test "workbook read_zip_reader uses charset_transcoder" {
   guard called.val else { fail("transcoder not called") }
   debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
 }
+
+///|
+test "read handles builtin charset without a transcoder" {
+  // build_non_utf8_workbook_bytes declares ISO-8859-1, which the built-in
+  // decoder now handles - no transcoder needed
+  let bytes = build_non_utf8_workbook_bytes()
+  let parsed = read(bytes)
+  debug_inspect(
+    parsed.get_cell("Sheet1", "A1"),
+    content=(
+      #|Some("alpha")
+    ),
+  )
+}
