@@ -38,7 +38,6 @@ test "ooxml read_parse wb: content-type override required attrs" {
   try parse_content_type_overrides(missing_part) catch {
     ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="content type override part name missing")
-    _ => fail("expected content type override part name missing")
   } noraise {
     _ => fail("expected content type override part name missing")
   }
@@ -52,7 +51,6 @@ test "ooxml read_parse wb: content-type override required attrs" {
   try parse_content_type_overrides(missing_content_type) catch {
     ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="content type override content type missing")
-    _ => fail("expected content type override content type missing")
   } noraise {
     _ => fail("expected content type override content type missing")
   }

@@ -1,6 +1,6 @@
 import {
-  "bobzhang/mbtexcel/demos" @demos,
-  "bobzhang/mbtexcel/xlsx" @xlsx,
+  "bobzhang/mbtexcel/demos" @demo_api,
+  "bobzhang/mbtexcel/xlsx",
   "moonbitlang/async",
   "moonbitlang/async/fs" @async/fs,
   "moonbitlang/core/env",

@@ -9,9 +9,12 @@ test "ooxml read_parse: parse_relationship_targets supports self-closing and exp
     #|</Relationships>
     #|
   let targets = parse_relationship_targets(xml, "t1")
-  debug_inspect(targets, content=(
-    #|{ "rId1": "a.xml", "rId3": "c.xml" }
-  ))
+  debug_inspect(
+    targets,
+    content=(
+      #|{ "rId1": "a.xml", "rId3": "c.xml" }
+    ),
+  )
 }
 
 ///|
@@ -25,7 +28,6 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
   try parse_relationship_targets(missing_id, "t1") catch {
     ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="relationship id missing")
-    _ => fail("expected relationship id missing")
   } noraise {
     _ => fail("expected relationship id missing")
   }
@@ -39,7 +41,6 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
   try parse_relationship_targets(missing_target, "t1") catch {
     ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="relationship target missing")
-    _ => fail("expected relationship target missing")
   } noraise {
     _ => fail("expected relationship target missing")
   }
@@ -53,7 +54,6 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
   try parse_relationship_targets(malformed, "t1") catch {
     ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="relationship tag not closed")
-    _ => fail("expected relationship tag not closed")
   } noraise {
     _ => fail("expected relationship tag not closed")
   }
@@ -94,7 +94,6 @@ test "ooxml read_parse: parse_content_type_overrides reports malformed override 
   catch {
     ParseXmlError::InvalidXml(msg~) =>
       inspect(msg, content="content type override tag not closed")
-    _ => fail("expected content type override tag not closed")
   } noraise {
     _ => fail("expected content type override tag not closed")
   }
