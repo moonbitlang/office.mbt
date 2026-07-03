@@ -37,9 +37,9 @@ well-scoped ones were fixed on `feat/excelize-parity-gaps`. Remaining:
       default seed); now time-seeded per process + `set_random_source` hook
       for crypto-grade entropy (feat/excelize-parity-round2). Built-in
       fallback is still not a CSPRNG.
-- [ ] RC4-style standard encryption variants: Go parses non-AES `AlgID`
-      verifier layouts; MoonBit rejects anything but AES-128/192/256
-      (`xlsx/encryption.mbt:591`)
+- [x] RC4-style standard encryption verifier layout accepted (non-AES
+      AlgID -> 20-byte verifier hash, decryption stays SHA-1 + AES-ECB
+      exactly like Go) (feat/rc4-standard-layout)
 - [ ] Chart `Fill` semantics: Go supports Fill.Type/Pattern/color arrays via
       `drawShapeFill` for chart/plot/series/marker/data-label/data-point/
       up-down bars; MoonBit flattens to fill_color/fill_transparency
