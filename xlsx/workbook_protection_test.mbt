@@ -27,12 +27,12 @@ test "workbook protection roundtrip" {
   )
   let parsed = read(bytes)
   let bad = try? parsed.unprotect_workbook(password="bad")
-  inspect(
+  debug_inspect(
     bad,
     content="Err(InvalidWorkbookProtection(msg=\"workbook protection password mismatch\"))",
   )
   let ok = try? parsed.unprotect_workbook(password="secret")
-  inspect(ok, content="Ok(())")
+  debug_inspect(ok, content="Ok(())")
 }
 
 ///|
@@ -71,5 +71,5 @@ test "workbook protection with explicit algorithm option" {
   )
   let parsed = read(bytes)
   let ok = try? parsed.unprotect_workbook(password="secret")
-  inspect(ok, content="Ok(())")
+  debug_inspect(ok, content="Ok(())")
 }

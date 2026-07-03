@@ -35,6 +35,9 @@ test "formula roundtrip" {
   sheet.set_cell_formula_rc(2, 2, "A1*2", value="10")
   let bytes = write(workbook)
   let parsed = read(bytes)
-  inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"10\")")
-  inspect(parsed.get_cell_formula("Sheet1", "B2"), content="Some(\"A1*2\")")
+  debug_inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"10\")")
+  debug_inspect(
+    parsed.get_cell_formula("Sheet1", "B2"),
+    content="Some(\"A1*2\")",
+  )
 }

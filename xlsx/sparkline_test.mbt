@@ -62,7 +62,7 @@ test "sparkline inputs mismatch" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content="Err(InvalidSparkline(msg=\"sparkline inputs mismatch\"))",
   )

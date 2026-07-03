@@ -7,16 +7,19 @@ test "typed cell values roundtrip" {
   workbook.set_cell_value("Sheet1", "C1", Error("#DIV/0!"))
   let bytes = write(workbook)
   let parsed = read(bytes)
-  inspect(
+  debug_inspect(
     parsed.get_cell_value_raw("Sheet1", "A1"),
     content="Some(Numeric(1.5))",
   )
-  inspect(parsed.get_cell_value_raw("Sheet1", "B1"), content="Some(Bool(true))")
-  inspect(
+  debug_inspect(
+    parsed.get_cell_value_raw("Sheet1", "B1"),
+    content="Some(Bool(true))",
+  )
+  debug_inspect(
     parsed.get_cell_value_raw("Sheet1", "C1"),
     content="Some(Error(\"#DIV/0!\"))",
   )
-  inspect(parsed.get_cell("Sheet1", "B1"), content="Some(\"1\")")
+  debug_inspect(parsed.get_cell("Sheet1", "B1"), content="Some(\"1\")")
 }
 
 ///|
@@ -26,8 +29,11 @@ test "formatted cell value" {
   workbook.set_cell_value("Sheet1", "A1", Numeric(1.234))
   let style_id = workbook.add_style(Style::number_format("0.00"))
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  inspect(workbook.get_cell_value("Sheet1", "A1"), content="Some(\"1.23\")")
-  inspect(
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "A1"),
+    content="Some(\"1.23\")",
+  )
+  debug_inspect(
     workbook.get_cell_value("Sheet1", "A1", raw=true),
     content="Some(\"1.234\")",
   )
@@ -41,8 +47,11 @@ test "formatted cell value roundtrip" {
   let style_id = workbook.add_style(Style::number_format("#,##0.0"))
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let parsed = read(write(workbook))
-  inspect(parsed.get_cell_value("Sheet1", "A1"), content="Some(\"1,234.5\")")
-  inspect(
+  debug_inspect(
+    parsed.get_cell_value("Sheet1", "A1"),
+    content="Some(\"1,234.5\")",
+  )
+  debug_inspect(
     parsed.get_cell_value("Sheet1", "A1", raw=true),
     content="Some(\"1234.5\")",
   )
@@ -59,9 +68,18 @@ test "formatted percent and date" {
   let date_style = workbook.add_style(Style::builtin_number_format(14))
   workbook.set_cell_style("Sheet1", "B1", date_style)
   workbook.set_cell_value("Sheet1", "C1", Bool(true))
-  inspect(workbook.get_cell_value("Sheet1", "A1"), content="Some(\"26%\")")
-  inspect(workbook.get_cell_value("Sheet1", "B1"), content="Some(\"01-02-00\")")
-  inspect(workbook.get_cell_value("Sheet1", "C1"), content="Some(\"TRUE\")")
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "A1"),
+    content="Some(\"26%\")",
+  )
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "B1"),
+    content="Some(\"01-02-00\")",
+  )
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "C1"),
+    content="Some(\"TRUE\")",
+  )
 }
 
 ///|
@@ -75,13 +93,13 @@ test "typed setters and cell type" {
   workbook.set_cell_float("Sheet1", "D1", 1.234, precision=2)
   workbook.set_cell_str("Sheet1", "E1", "text")
   workbook.set_cell_default("Sheet1", "F1", "raw")
-  inspect(workbook.get_cell_type("Sheet1", "A1"), content="Some(Bool)")
-  inspect(workbook.get_cell_type("Sheet1", "B1"), content="Some(Number)")
-  inspect(workbook.get_cell_type("Sheet1", "E1"), content="Some(String)")
-  inspect(workbook.get_cell_type("Sheet1", "Z9"), content="None")
-  inspect(
+  debug_inspect(workbook.get_cell_type("Sheet1", "A1"), content="Some(Bool)")
+  debug_inspect(workbook.get_cell_type("Sheet1", "B1"), content="Some(Number)")
+  debug_inspect(workbook.get_cell_type("Sheet1", "E1"), content="Some(String)")
+  debug_inspect(workbook.get_cell_type("Sheet1", "Z9"), content="None")
+  debug_inspect(
     workbook.get_cell_value_raw("Sheet1", "D1"),
     content="Some(Numeric(1.23))",
   )
-  inspect(workbook.get_cell("Sheet1", "F1"), content="Some(\"raw\")")
+  debug_inspect(workbook.get_cell("Sheet1", "F1"), content="Some(\"raw\")")
 }

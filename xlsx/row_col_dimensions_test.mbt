@@ -13,14 +13,14 @@ test "row and column dimensions roundtrip" {
   workbook.set_col_style("Sheet1", 3, style_id)
   let bytes = write(workbook)
   let parsed = read(bytes)
-  inspect(parsed.get_row_height("Sheet1", 2), content="Some(18.5)")
+  debug_inspect(parsed.get_row_height("Sheet1", 2), content="Some(18.5)")
   inspect(parsed.row_visible("Sheet1", 2), content="false")
   inspect(parsed.row_outline_level("Sheet1", 2), content="3")
-  inspect(parsed.get_row_style("Sheet1", 2), content="Some(1)")
-  inspect(parsed.get_col_width("Sheet1", 3), content="Some(12.25)")
+  debug_inspect(parsed.get_row_style("Sheet1", 2), content="Some(1)")
+  debug_inspect(parsed.get_col_width("Sheet1", 3), content="Some(12.25)")
   inspect(parsed.col_visible("Sheet1", 3), content="false")
   inspect(parsed.col_outline_level("Sheet1", 3), content="2")
-  inspect(parsed.get_col_style("Sheet1", 3), content="Some(1)")
+  debug_inspect(parsed.get_col_style("Sheet1", 3), content="Some(1)")
 }
 
 ///|
@@ -46,9 +46,9 @@ test "remove_row alias shifts cells" {
   workbook.set_cell("Sheet1", "A2", "b")
   workbook.set_cell("Sheet1", "A3", "c")
   workbook.remove_row("Sheet1", 2)
-  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
-  inspect(workbook.get_cell("Sheet1", "A2"), content="Some(\"c\")")
-  inspect(workbook.get_cell("Sheet1", "A3"), content="None")
+  debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
+  debug_inspect(workbook.get_cell("Sheet1", "A2"), content="Some(\"c\")")
+  debug_inspect(workbook.get_cell("Sheet1", "A3"), content="None")
 }
 
 ///|
@@ -59,9 +59,9 @@ test "remove_col alias shifts cells" {
   workbook.set_cell("Sheet1", "B1", "b")
   workbook.set_cell("Sheet1", "C1", "c")
   workbook.remove_col("Sheet1", 2)
-  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
-  inspect(workbook.get_cell("Sheet1", "B1"), content="Some(\"c\")")
-  inspect(workbook.get_cell("Sheet1", "C1"), content="None")
+  debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
+  debug_inspect(workbook.get_cell("Sheet1", "B1"), content="Some(\"c\")")
+  debug_inspect(workbook.get_cell("Sheet1", "C1"), content="None")
 }
 
 ///|
@@ -78,8 +78,8 @@ test "insert and remove rows adjust ranges" {
   workbook.add_sparkline("Sheet1", spark_opts)
   workbook.set_row_height("Sheet1", 3, 15.0)
   workbook.insert_rows("Sheet1", 2, 1)
-  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
-  inspect(workbook.get_cell("Sheet1", "B4"), content="Some(\"b\")")
+  debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
+  debug_inspect(workbook.get_cell("Sheet1", "B4"), content="Some(\"b\")")
   let sheet = match workbook.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing Sheet1")
@@ -92,14 +92,14 @@ test "insert and remove rows adjust ranges" {
     Some(value) => value
     None => fail("missing sparkline group")
   }
-  inspect(sheet.merged_cells(), content="[\"A1:B3\"]")
+  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:B3\"]")
   inspect(table.range_ref, content="C1:D4")
   inspect(group.sparklines[0].range_ref, content="A1:A4")
   inspect(group.sparklines[0].location, content="E1")
-  inspect(workbook.get_row_height("Sheet1", 4), content="Some(15)")
+  debug_inspect(workbook.get_row_height("Sheet1", 4), content="Some(15)")
   workbook.remove_rows("Sheet1", 2, 1)
-  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
-  inspect(workbook.get_cell("Sheet1", "B3"), content="Some(\"b\")")
+  debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
+  debug_inspect(workbook.get_cell("Sheet1", "B3"), content="Some(\"b\")")
   let updated_table = match sheet.tables().get(0) {
     Some(value) => value
     None => fail("missing table")
@@ -108,10 +108,15 @@ test "insert and remove rows adjust ranges" {
     Some(value) => value
     None => fail("missing sparkline group")
   }
-  inspect(sheet.merged_cells(), content="[\"A1:B2\"]")
+  debug_inspect(
+    sheet.merged_cells(),
+    content=(
+      #|<ArrayView: ["A1:B2"]>
+    ),
+  )
   inspect(updated_table.range_ref, content="C1:D3")
   inspect(updated_group.sparklines[0].range_ref, content="A1:A3")
-  inspect(workbook.get_row_height("Sheet1", 3), content="Some(15)")
+  debug_inspect(workbook.get_row_height("Sheet1", 3), content="Some(15)")
 }
 
 ///|
@@ -128,8 +133,8 @@ test "insert and remove cols adjust ranges" {
   workbook.add_sparkline("Sheet1", spark_opts)
   workbook.set_col_width("Sheet1", 3, 11.0)
   workbook.insert_cols("Sheet1", 2, 1)
-  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
-  inspect(workbook.get_cell("Sheet1", "D1"), content="Some(\"c\")")
+  debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"a\")")
+  debug_inspect(workbook.get_cell("Sheet1", "D1"), content="Some(\"c\")")
   let sheet = match workbook.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing Sheet1")
@@ -142,14 +147,14 @@ test "insert and remove cols adjust ranges" {
     Some(value) => value
     None => fail("missing sparkline group")
   }
-  inspect(sheet.merged_cells(), content="[\"A1:D1\"]")
+  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:D1\"]")
   inspect(table.range_ref, content="C1:D3")
   inspect(group.sparklines[0].range_ref, content="A1:D1")
   inspect(group.sparklines[0].location, content="E1")
-  inspect(workbook.get_col_width("Sheet1", 4), content="Some(11)")
+  debug_inspect(workbook.get_col_width("Sheet1", 4), content="Some(11)")
   workbook.remove_cols("Sheet1", 1, 1)
-  inspect(workbook.get_cell("Sheet1", "A1"), content="None")
-  inspect(workbook.get_cell("Sheet1", "C1"), content="Some(\"c\")")
+  debug_inspect(workbook.get_cell("Sheet1", "A1"), content="None")
+  debug_inspect(workbook.get_cell("Sheet1", "C1"), content="Some(\"c\")")
   let updated_table = match sheet.tables().get(0) {
     Some(value) => value
     None => fail("missing table")
@@ -158,8 +163,13 @@ test "insert and remove cols adjust ranges" {
     Some(value) => value
     None => fail("missing sparkline group")
   }
-  inspect(sheet.merged_cells(), content="[\"A1:C1\"]")
+  debug_inspect(
+    sheet.merged_cells(),
+    content=(
+      #|<ArrayView: ["A1:C1"]>
+    ),
+  )
   inspect(updated_table.range_ref, content="B1:C3")
   inspect(updated_group.sparklines[0].range_ref, content="A1:C1")
-  inspect(workbook.get_col_width("Sheet1", 3), content="Some(11)")
+  debug_inspect(workbook.get_col_width("Sheet1", 3), content="Some(11)")
 }

@@ -54,7 +54,7 @@ async test "mbtexcel mutation-heavy workbook remains OpenXML-valid" {
 
   let bytes = write(workbook)
   let parsed = read(bytes)
-  inspect(parsed.get_cell("Data", "A1"), content="Some(\"ref\")")
+  debug_inspect(parsed.get_cell("Data", "A1"), content="Some(\"ref\")")
 
   let stamp = @env.now()
     .to_string()

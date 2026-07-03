@@ -155,7 +155,7 @@ test "ooxml rels: expanded Relationship tags still read" {
     @encoding/utf8.encode(expanded),
   )
   let parsed = read(updated)
-  inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
+  debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
 }
 
 ///|
@@ -180,7 +180,7 @@ test "ooxml rels: workbook targets with ../ prefix" {
     @encoding/utf8.encode(patched),
   )
   let parsed = read(updated)
-  inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
+  debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
 }
 
 ///|
@@ -205,7 +205,7 @@ test "ooxml rels: workbook targets with xl/ prefix" {
     @encoding/utf8.encode(patched),
   )
   let parsed = read(updated)
-  inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
+  debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
 }
 
 ///|
@@ -259,7 +259,7 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
     err => fail("zip write failed: \{err}")
   }
   let parsed = read(updated_bytes)
-  inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
+  debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
 }
 
 ///|

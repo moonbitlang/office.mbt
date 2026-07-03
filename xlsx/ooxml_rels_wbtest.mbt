@@ -9,10 +9,10 @@ test "ooxml_rels: parse_relationship_targets filters by Type and maps Id->Target
     #|</Relationships>
     #|
   let targets = parse_relationship_targets(xml[:], "t1")
-  inspect(
+  debug_inspect(
     targets,
     content=(
-      #|{"rId1": "a.xml", "rId3": "c.xml"}
+      #|{ "rId1": "a.xml", "rId3": "c.xml" }
     ),
   )
 }
@@ -21,7 +21,7 @@ test "ooxml_rels: parse_relationship_targets filters by Type and maps Id->Target
 test "ooxml_rels: first_relationship_target returns first map entry" {
   let targets : Map[String, String] = { "rId9": "x", "rId10": "y" }
   // Map iteration order is insertion-order; this should be stable.
-  inspect(first_relationship_target(targets), content="Some(\"x\")")
+  debug_inspect(first_relationship_target(targets), content="Some(\"x\")")
 }
 
 ///|

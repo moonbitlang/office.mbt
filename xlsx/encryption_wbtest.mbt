@@ -442,7 +442,7 @@ test "read encrypted agile workbook" {
     Some(value) => value
     None => fail("missing Sheet1")
   }
-  inspect(sheet.get_cell("A1"), content="Some(\"SECRET\")")
+  debug_inspect(sheet.get_cell("A1"), content="Some(\"SECRET\")")
 }
 
 ///|
@@ -519,7 +519,7 @@ test "read_with_password non-encrypted workbook accepts transcoder path" {
     Some(value) => value
     None => fail("missing Sheet1")
   }
-  inspect(parsed_sheet.get_cell("A1"), content="Some(\"Plain\")")
+  debug_inspect(parsed_sheet.get_cell("A1"), content="Some(\"Plain\")")
 }
 
 ///|
@@ -533,7 +533,10 @@ test "read_with_password non-encrypted workbook without transcoder" {
     Some(value) => value
     None => fail("missing Sheet1")
   }
-  inspect(parsed_sheet.get_cell("A1"), content="Some(\"PlainNoTranscoder\")")
+  debug_inspect(
+    parsed_sheet.get_cell("A1"),
+    content="Some(\"PlainNoTranscoder\")",
+  )
 }
 
 ///|
@@ -547,7 +550,7 @@ test "write encrypted roundtrip" {
     Some(value) => value
     None => fail("missing Sheet1")
   }
-  inspect(decoded_sheet.get_cell("A1"), content="Some(\"SECRET\")")
+  debug_inspect(decoded_sheet.get_cell("A1"), content="Some(\"SECRET\")")
 }
 
 ///|

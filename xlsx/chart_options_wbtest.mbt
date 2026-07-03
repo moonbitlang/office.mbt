@@ -36,60 +36,118 @@ fn wb_rich_font(
 
 ///|
 test "chart options wb: helper mappings" {
-  inspect(
+  debug_inspect(
     chart_type_to_plot(ColPercentStacked),
     content="(\"barChart\", Some(\"col\"))",
   )
-  inspect(
+  debug_inspect(
     chart_type_to_plot(BarStacked),
     content="(\"barChart\", Some(\"bar\"))",
   )
-  inspect(
+  debug_inspect(
     chart_type_to_plot(BarPercentStacked),
     content="(\"barChart\", Some(\"bar\"))",
   )
-  inspect(
+  debug_inspect(
     chart_type_to_plot(Bar3DCylinderPercentStacked),
     content="(\"bar3DChart\", Some(\"bar\"))",
   )
-  inspect(chart_type_to_plot(AreaStacked), content="(\"areaChart\", None)")
-  inspect(
+  debug_inspect(
+    chart_type_to_plot(AreaStacked),
+    content="(\"areaChart\", None)",
+  )
+  debug_inspect(
     chart_type_to_plot(AreaPercentStacked),
     content="(\"areaChart\", None)",
   )
-  inspect(chart_type_to_plot(Area3D), content="(\"area3DChart\", None)")
-  inspect(chart_type_to_plot(Area3DStacked), content="(\"area3DChart\", None)")
-  inspect(
+  debug_inspect(chart_type_to_plot(Area3D), content="(\"area3DChart\", None)")
+  debug_inspect(
+    chart_type_to_plot(Area3DStacked),
+    content="(\"area3DChart\", None)",
+  )
+  debug_inspect(
     chart_type_to_plot(Area3DPercentStacked),
     content="(\"area3DChart\", None)",
   )
 
-  inspect(chart_grouping(Col3D), content="Some(\"standard\")")
-  inspect(
+  debug_inspect(chart_grouping(Col3D), content="Some(\"standard\")")
+  debug_inspect(
     chart_grouping(Bar3DCylinderPercentStacked),
     content="Some(\"percentStacked\")",
   )
-  inspect(chart_grouping(Pie), content="None")
+  debug_inspect(chart_grouping(Pie), content="None")
 
-  inspect(legend_position_value("left"), content="Some(\"l\")")
-  inspect(legend_position_value("top-right"), content="Some(\"tr\")")
-  inspect(legend_position_value("custom"), content="Some(\"custom\")")
+  debug_inspect(legend_position_value("left"), content="Some(\"l\")")
+  debug_inspect(legend_position_value("top-right"), content="Some(\"tr\")")
+  debug_inspect(legend_position_value("custom"), content="Some(\"custom\")")
 
-  inspect(chart_shape(Col3DPyramidPercentStacked), content="Some(\"pyramid\")")
-  inspect(
+  debug_inspect(
+    chart_shape(Col3DPyramidPercentStacked),
+    content=(
+      #|Some("pyramid")
+    ),
+  )
+  debug_inspect(
     chart_shape(Col3DCylinderPercentStacked),
-    content="Some(\"cylinder\")",
+    content=(
+      #|Some("cylinder")
+    ),
   )
 
-  inspect(chart_dash_value(Solid), content="Some(\"solid\")")
-  inspect(chart_dash_value(LgDash), content="Some(\"lgDash\")")
-  inspect(chart_dash_value(LgDashDot), content="Some(\"lgDashDot\")")
-  inspect(chart_dash_value(SashDot), content="Some(\"dashDot\")")
-  inspect(chart_dash_value(LgDashDotDot), content="Some(\"lgDashDotDot\")")
-  inspect(chart_dash_value(SysDash), content="Some(\"sysDash\")")
-  inspect(chart_dash_value(SysDot), content="Some(\"sysDot\")")
-  inspect(chart_dash_value(SysDashDot), content="Some(\"sysDashDot\")")
-  inspect(chart_dash_value(SysDashDotDot), content="Some(\"sysDashDotDot\")")
+  debug_inspect(
+    chart_dash_value(Solid),
+    content=(
+      #|Some(<StringView: "solid">)
+    ),
+  )
+  debug_inspect(
+    chart_dash_value(LgDash),
+    content=(
+      #|Some(<StringView: "lgDash">)
+    ),
+  )
+  debug_inspect(
+    chart_dash_value(LgDashDot),
+    content=(
+      #|Some(<StringView: "lgDashDot">)
+    ),
+  )
+  debug_inspect(
+    chart_dash_value(SashDot),
+    content=(
+      #|Some(<StringView: "dashDot">)
+    ),
+  )
+  debug_inspect(
+    chart_dash_value(LgDashDotDot),
+    content=(
+      #|Some(<StringView: "lgDashDotDot">)
+    ),
+  )
+  debug_inspect(
+    chart_dash_value(SysDash),
+    content=(
+      #|Some(<StringView: "sysDash">)
+    ),
+  )
+  debug_inspect(
+    chart_dash_value(SysDot),
+    content=(
+      #|Some(<StringView: "sysDot">)
+    ),
+  )
+  debug_inspect(
+    chart_dash_value(SysDashDot),
+    content=(
+      #|Some(<StringView: "sysDashDot">)
+    ),
+  )
+  debug_inspect(
+    chart_dash_value(SysDashDotDot),
+    content=(
+      #|Some(<StringView: "sysDashDotDot">)
+    ),
+  )
 
   inspect(data_label_pos_value(Center), content="ctr")
   inspect(data_label_pos_value(Left), content="l")
@@ -100,65 +158,175 @@ test "chart options wb: helper mappings" {
   inspect(data_label_pos_value(OutEnd), content="outEnd")
   inspect(tick_label_pos_value(NoTickLabels), content="none")
 
-  inspect(drawingml_text_vertical_value("horz"), content="Some(\"horz\")")
-  inspect(drawingml_text_vertical_value("vert"), content="Some(\"vert\")")
-  inspect(
+  debug_inspect(
+    drawingml_text_vertical_value("horz"),
+    content=(
+      #|Some(<StringView: "horz">)
+    ),
+  )
+  debug_inspect(
+    drawingml_text_vertical_value("vert"),
+    content=(
+      #|Some(<StringView: "vert">)
+    ),
+  )
+  debug_inspect(
     drawingml_text_vertical_value("wordArtVert"),
-    content="Some(\"wordArtVert\")",
+    content=(
+      #|Some(<StringView: "wordArtVert">)
+    ),
   )
-  inspect(drawingml_text_vertical_value("eaVert"), content="Some(\"eaVert\")")
-  inspect(
+  debug_inspect(
+    drawingml_text_vertical_value("eaVert"),
+    content=(
+      #|Some(<StringView: "eaVert">)
+    ),
+  )
+  debug_inspect(
     drawingml_text_vertical_value("mongolianVert"),
-    content="Some(\"mongolianVert\")",
+    content=(
+      #|Some(<StringView: "mongolianVert">)
+    ),
   )
-  inspect(
+  debug_inspect(
     drawingml_text_vertical_value("wordArtVertRtl"),
-    content="Some(\"wordArtVertRtl\")",
+    content=(
+      #|Some(<StringView: "wordArtVertRtl">)
+    ),
   )
-  inspect(drawingml_paragraph_align_value("left"), content="Some(\"l\")")
-  inspect(drawingml_paragraph_align_value("right"), content="Some(\"r\")")
-  inspect(drawingml_paragraph_align_value("justify"), content="Some(\"just\")")
-  inspect(
+  debug_inspect(
+    drawingml_paragraph_align_value("left"),
+    content=(
+      #|Some(<StringView: "l">)
+    ),
+  )
+  debug_inspect(
+    drawingml_paragraph_align_value("right"),
+    content=(
+      #|Some(<StringView: "r">)
+    ),
+  )
+  debug_inspect(
+    drawingml_paragraph_align_value("justify"),
+    content=(
+      #|Some(<StringView: "just">)
+    ),
+  )
+  debug_inspect(
     drawingml_paragraph_align_value("distributed"),
-    content="Some(\"dist\")",
+    content=(
+      #|Some(<StringView: "dist">)
+    ),
   )
-  inspect(
+  debug_inspect(
     drawingml_paragraph_align_value("centerContinuous"),
-    content="Some(\"ctr\")",
+    content=(
+      #|Some(<StringView: "ctr">)
+    ),
   )
-  inspect(drawingml_paragraph_align_value("unknown"), content="None")
-  inspect(drawingml_underline_value("none"), content="Some(\"none\")")
-  inspect(drawingml_underline_value("words"), content="Some(\"words\")")
-  inspect(drawingml_underline_value("dbl"), content="Some(\"dbl\")")
-  inspect(drawingml_underline_value("heavy"), content="Some(\"heavy\")")
-  inspect(drawingml_underline_value("dotted"), content="Some(\"dotted\")")
-  inspect(
+  debug_inspect(drawingml_paragraph_align_value("unknown"), content="None")
+  debug_inspect(
+    drawingml_underline_value("none"),
+    content=(
+      #|Some(<StringView: "none">)
+    ),
+  )
+  debug_inspect(
+    drawingml_underline_value("words"),
+    content=(
+      #|Some(<StringView: "words">)
+    ),
+  )
+  debug_inspect(
+    drawingml_underline_value("dbl"),
+    content=(
+      #|Some(<StringView: "dbl">)
+    ),
+  )
+  debug_inspect(
+    drawingml_underline_value("heavy"),
+    content=(
+      #|Some(<StringView: "heavy">)
+    ),
+  )
+  debug_inspect(
+    drawingml_underline_value("dotted"),
+    content=(
+      #|Some(<StringView: "dotted">)
+    ),
+  )
+  debug_inspect(
     drawingml_underline_value("dottedHeavy"),
-    content="Some(\"dottedHeavy\")",
+    content=(
+      #|Some(<StringView: "dottedHeavy">)
+    ),
   )
-  inspect(drawingml_underline_value("dash"), content="Some(\"dash\")")
-  inspect(drawingml_underline_value("dashHeavy"), content="Some(\"dashHeavy\")")
-  inspect(drawingml_underline_value("dashLong"), content="Some(\"dashLong\")")
-  inspect(
+  debug_inspect(
+    drawingml_underline_value("dash"),
+    content=(
+      #|Some(<StringView: "dash">)
+    ),
+  )
+  debug_inspect(
+    drawingml_underline_value("dashHeavy"),
+    content=(
+      #|Some(<StringView: "dashHeavy">)
+    ),
+  )
+  debug_inspect(
+    drawingml_underline_value("dashLong"),
+    content=(
+      #|Some(<StringView: "dashLong">)
+    ),
+  )
+  debug_inspect(
     drawingml_underline_value("dashLongHeavy"),
-    content="Some(\"dashLongHeavy\")",
+    content=(
+      #|Some(<StringView: "dashLongHeavy">)
+    ),
   )
-  inspect(drawingml_underline_value("dotDash"), content="Some(\"dotDash\")")
-  inspect(
+  debug_inspect(
+    drawingml_underline_value("dotDash"),
+    content=(
+      #|Some(<StringView: "dotDash">)
+    ),
+  )
+  debug_inspect(
     drawingml_underline_value("dotDashHeavy"),
-    content="Some(\"dotDashHeavy\")",
+    content=(
+      #|Some(<StringView: "dotDashHeavy">)
+    ),
   )
-  inspect(
+  debug_inspect(
     drawingml_underline_value("dotDotDash"),
-    content="Some(\"dotDotDash\")",
+    content=(
+      #|Some(<StringView: "dotDotDash">)
+    ),
   )
-  inspect(
+  debug_inspect(
     drawingml_underline_value("dotDotDashHeavy"),
-    content="Some(\"dotDotDashHeavy\")",
+    content=(
+      #|Some(<StringView: "dotDotDashHeavy">)
+    ),
   )
-  inspect(drawingml_underline_value("wavy"), content="Some(\"wavy\")")
-  inspect(drawingml_underline_value("wavyHeavy"), content="Some(\"wavyHeavy\")")
-  inspect(drawingml_underline_value("wavyDbl"), content="Some(\"wavyDbl\")")
+  debug_inspect(
+    drawingml_underline_value("wavy"),
+    content=(
+      #|Some(<StringView: "wavy">)
+    ),
+  )
+  debug_inspect(
+    drawingml_underline_value("wavyHeavy"),
+    content=(
+      #|Some(<StringView: "wavyHeavy">)
+    ),
+  )
+  debug_inspect(
+    drawingml_underline_value("wavyDbl"),
+    content=(
+      #|Some(<StringView: "wavyDbl">)
+    ),
+  )
 }
 
 ///|

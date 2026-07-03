@@ -7,7 +7,7 @@ pub(all) struct Comment {
   paragraph : Array[RichTextRun]
   width : Int?
   height : Int?
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 let max_comment_author_chars = 255

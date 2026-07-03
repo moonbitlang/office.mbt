@@ -13,13 +13,13 @@ test "xlsx roundtrip strings" {
     Some(value) => value
     None => fail("missing Sheet1")
   }
-  inspect(parsed_sheet1.get_cell("A1"), content="Some(\"hello\")")
-  inspect(parsed_sheet1.get_cell("B2"), content="Some(\"world\")")
+  debug_inspect(parsed_sheet1.get_cell("A1"), content="Some(\"hello\")")
+  debug_inspect(parsed_sheet1.get_cell("B2"), content="Some(\"world\")")
   let parsed_sheet2 = match parsed.sheet("Data") {
     Some(value) => value
     None => fail("missing Data")
   }
-  inspect(parsed_sheet2.get_cell("A1"), content="Some(\"hello\")")
+  debug_inspect(parsed_sheet2.get_cell("A1"), content="Some(\"hello\")")
 }
 
 ///|

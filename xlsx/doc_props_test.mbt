@@ -29,10 +29,10 @@ test "doc properties roundtrip" {
   let parsed_app = parsed.app_properties()
   inspect(parsed_app.application, content="MyApp")
   inspect(parsed_app.company, content="Acme")
-  inspect(parsed_app.doc_security, content="Some(2)")
-  inspect(parsed_app.scale_crop, content="Some(true)")
-  inspect(parsed_app.links_up_to_date, content="Some(false)")
-  inspect(parsed_app.hyperlinks_changed, content="Some(true)")
+  debug_inspect(parsed_app.doc_security, content="Some(2)")
+  debug_inspect(parsed_app.scale_crop, content="Some(true)")
+  debug_inspect(parsed_app.links_up_to_date, content="Some(false)")
+  debug_inspect(parsed_app.hyperlinks_changed, content="Some(true)")
   inspect(parsed_app.app_version, content="16.0000")
 }
 
@@ -60,15 +60,18 @@ test "custom properties roundtrip" {
   workbook.set_custom_props(CustomProperty::new("Remove", None))
   let parsed = read(write(workbook))
   let props = parsed.get_custom_props()
-  inspect(
+  debug_inspect(
     props.map(prop => prop.name),
     content="[\"Text\", \"Bool\", \"Number\", \"Int\", \"Date\"]",
   )
-  inspect(props[0].value, content="Some(Text(\"hello\"))")
-  inspect(props[1].value, content="Some(Boolean(true))")
-  inspect(props[2].value, content="Some(Float(12.5))")
-  inspect(props[3].value, content="Some(Integer(-7))")
-  inspect(props[4].value, content="Some(DateTime(\"2024-01-01T00:00:00Z\"))")
+  debug_inspect(props[0].value, content="Some(Text(\"hello\"))")
+  debug_inspect(props[1].value, content="Some(Boolean(true))")
+  debug_inspect(props[2].value, content="Some(Float(12.5))")
+  debug_inspect(props[3].value, content="Some(Integer(-7))")
+  debug_inspect(
+    props[4].value,
+    content="Some(DateTime(\"2024-01-01T00:00:00Z\"))",
+  )
 }
 
 ///|
@@ -106,9 +109,9 @@ test "app props get/set aliases" {
   let got = workbook.get_app_props()
   inspect(got.application, content="MyApp")
   inspect(got.company, content="Acme")
-  inspect(got.doc_security, content="Some(2)")
-  inspect(got.scale_crop, content="Some(true)")
-  inspect(got.links_up_to_date, content="Some(false)")
-  inspect(got.hyperlinks_changed, content="Some(true)")
+  debug_inspect(got.doc_security, content="Some(2)")
+  debug_inspect(got.scale_crop, content="Some(true)")
+  debug_inspect(got.links_up_to_date, content="Some(false)")
+  debug_inspect(got.hyperlinks_changed, content="Some(true)")
   inspect(got.app_version, content="16.0000")
 }

@@ -4,6 +4,7 @@ package "bobzhang/mbtexcel/xlsx"
 import {
   "bobzhang/mbtexcel/zip",
   "moonbitlang/async/io",
+  "moonbitlang/core/debug",
   "moonbitlang/x/time",
 }
 
@@ -95,7 +96,7 @@ pub suberror XlsxError {
   InvalidPasswordLength(len~ : Int)
   UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 // Types and methods
 pub struct Alignment {
@@ -125,29 +126,29 @@ pub fn AppProperties::with_values(application? : String, doc_security? : Int, sc
 pub struct AutoFilter {
   range_ref : String
   columns : Array[AutoFilterColumn]
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct AutoFilterColumn {
   col : Int
   filters : Array[String]?
   custom_filters : AutoFilterCustomFilters?
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct AutoFilterCustomFilter {
   operator : String
   value : String
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct AutoFilterCustomFilters {
   and_filter : Bool
   filters : Array[AutoFilterCustomFilter]
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 #alias(AutoFilterOptions)
 pub(all) struct AutoFilterOption {
   column : String
   expression : String
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct Border {
   typ : String
@@ -170,7 +171,7 @@ pub struct CalcPropsOptions {
   mut concurrent_calc : Bool?
   mut concurrent_manual_count : UInt?
   mut force_full_calc : Bool?
-} derive(Eq, Show)
+} derive(Eq, Show, @debug.Debug)
 pub fn CalcPropsOptions::new() -> Self
 pub fn CalcPropsOptions::with_values(calc_id? : UInt, calc_mode? : String, full_calc_on_load? : Bool, ref_mode? : String, iterate? : Bool, iterate_count? : UInt, iterate_delta? : Double, full_precision? : Bool, calc_completed? : Bool, calc_on_save? : Bool, concurrent_calc? : Bool, concurrent_manual_count? : UInt, force_full_calc? : Bool) -> Self
 
@@ -193,10 +194,10 @@ pub(all) enum CellValue {
   Numeric(Double)
   Bool(Bool)
   Error(String)
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 #alias(CellType)
-type CellValueType derive(Eq, Show)
+type CellValueType derive(Eq, Show, @debug.Debug)
 
 pub struct Chart {
   reference : String
@@ -470,7 +471,7 @@ pub(all) struct Comment {
   paragraph : Array[RichTextRun]
   width : Int?
   height : Int?
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub(all) struct ConditionalFormatOptions {
   mut format_type : String
@@ -544,7 +545,7 @@ pub fn CoreProperties::with_values(title? : String, subject? : String, creator? 
 pub struct CustomProperty {
   name : String
   value : CustomPropertyValue?
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn CustomProperty::new(String, CustomPropertyValue?) -> Self
 
 pub(all) enum CustomPropertyValue {
@@ -553,7 +554,7 @@ pub(all) enum CustomPropertyValue {
   Boolean(Bool)
   Text(String)
   DateTime(String)
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct DataValidation {
   allow_blank : Bool
@@ -702,7 +703,7 @@ type FormControlVmlPreset derive(Show)
 pub struct FormulaOpts {
   mut formula_type : FormulaType?
   mut range_ref : String?
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn FormulaOpts::array(String) -> Self
 pub fn FormulaOpts::shared(String) -> Self
 pub fn FormulaOpts::with_values(formula_type? : FormulaType, range_ref? : String) -> Self
@@ -712,7 +713,7 @@ pub(all) enum FormulaType {
   Array
   Shared
   DataTable
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct GraphicOptions {
   mut offset_x : Int?
@@ -729,7 +730,7 @@ pub struct GraphicOptions {
   mut print_object : Bool?
   mut locked : Bool?
   mut positioning : PicturePositioning?
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn GraphicOptions::new() -> Self
 pub fn GraphicOptions::with_values(offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self
 
@@ -744,7 +745,7 @@ pub struct HeaderFooterImageOptions {
   first_page : Bool
   width : String
   height : String
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn HeaderFooterImageOptions::from_file(HeaderFooterImagePosition, String, is_footer? : Bool, first_page? : Bool, width? : String, height? : String) -> Self raise XlsxError
 pub fn HeaderFooterImageOptions::new(HeaderFooterImagePosition, Bytes, String, is_footer? : Bool, first_page? : Bool, width? : String, height? : String) -> Self
 
@@ -752,7 +753,7 @@ pub(all) enum HeaderFooterImagePosition {
   Left
   Center
   Right
-} derive(Eq, Show)
+} derive(Eq, Show, @debug.Debug)
 
 pub struct HeaderFooterOptions {
   mut align_with_margins : Bool?
@@ -765,7 +766,7 @@ pub struct HeaderFooterOptions {
   mut even_footer : String
   mut first_header : String
   mut first_footer : String
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn HeaderFooterOptions::with_values(align_with_margins? : Bool, different_first? : Bool, different_odd_even? : Bool, scale_with_doc? : Bool, odd_header? : String, odd_footer? : String, even_header? : String, even_footer? : String, first_header? : String, first_footer? : String) -> Self
 
 pub struct Hyperlink {
@@ -774,12 +775,12 @@ pub struct Hyperlink {
   link_type : HyperlinkType
   display : String?
   tooltip : String?
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct HyperlinkOpts {
   mut display : String?
   mut tooltip : String?
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn HyperlinkOpts::new() -> Self
 pub fn HyperlinkOpts::with_values(display? : String, tooltip? : String) -> Self
 
@@ -787,7 +788,7 @@ pub(all) enum HyperlinkType {
   External
   Location
   Unset
-} derive(Eq, Show)
+} derive(Eq, Show, @debug.Debug)
 
 pub struct IgnoredError {
   sqref : String
@@ -869,7 +870,7 @@ pub struct PageBreak {
   min : Int
   max : Int
   manual : Bool
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct PageLayoutMarginsOptions {
   mut top : Double?
@@ -880,7 +881,7 @@ pub struct PageLayoutMarginsOptions {
   mut footer : Double?
   mut horizontally : Bool?
   mut vertically : Bool?
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn PageLayoutMarginsOptions::with_values(top? : Double, bottom? : Double, left? : Double, right? : Double, header? : Double, footer? : Double, horizontally? : Bool, vertically? : Bool) -> Self
 
 pub struct PageLayoutOptions {
@@ -892,7 +893,7 @@ pub struct PageLayoutOptions {
   mut fit_to_width : Int?
   mut black_and_white : Bool?
   mut page_order : String?
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn PageLayoutOptions::with_values(size? : Int, orientation? : String, first_page_number? : Int, adjust_to? : Int, fit_to_height? : Int, fit_to_width? : Int, black_and_white? : Bool, page_order? : String) -> Self
 
 pub struct Panes {
@@ -911,7 +912,7 @@ pub(all) enum PicturePositioning {
   OneCell
   TwoCell
   Absolute
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct PivotTable {
   name : String
@@ -978,12 +979,12 @@ pub(all) struct RichTextFont {
   scheme : String?
   vert_align : String?
   family : String?
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub(all) struct RichTextRun {
   text : String
   font : RichTextFont?
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 type RowCells
 
@@ -1072,7 +1073,7 @@ pub struct SheetBackground {
   data : Bytes
   extension : String
   content_type : String
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 type SheetEntry derive(Show)
 
@@ -1097,7 +1098,7 @@ pub struct SheetPropsOptions {
   mut zero_height : Bool?
   mut thick_top : Bool?
   mut thick_bottom : Bool?
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn SheetPropsOptions::with_values(code_name? : String, enable_format_conditions_calculation? : Bool, published? : Bool, auto_page_breaks? : Bool, fit_to_page? : Bool, tab_color_indexed? : Int, tab_color_rgb? : String, tab_color_theme? : Int, tab_color_tint? : Double, outline_summary_below? : Bool, outline_summary_right? : Bool, base_col_width? : Int, default_col_width? : Double, default_row_height? : Double, custom_height? : Bool, zero_height? : Bool, thick_top? : Bool, thick_bottom? : Bool) -> Self
 
 pub struct SheetProtection {
@@ -1122,7 +1123,7 @@ pub struct SheetProtection {
   auto_filter : Bool
   pivot_tables : Bool
   select_unlocked_cells : Bool
-} derive(Show)
+} derive(Show, @debug.Debug)
 
 pub struct SheetProtectionOptions {
   mut algorithm_name : String
@@ -1142,7 +1143,7 @@ pub struct SheetProtectionOptions {
   mut select_locked_cells : Bool
   mut select_unlocked_cells : Bool
   mut sort : Bool
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn SheetProtectionOptions::new() -> Self
 pub fn SheetProtectionOptions::with_values(algorithm_name? : String, password? : String, auto_filter? : Bool, delete_columns? : Bool, delete_rows? : Bool, edit_objects? : Bool, edit_scenarios? : Bool, format_cells? : Bool, format_columns? : Bool, format_rows? : Bool, insert_columns? : Bool, insert_hyperlinks? : Bool, insert_rows? : Bool, pivot_tables? : Bool, select_locked_cells? : Bool, select_unlocked_cells? : Bool, sort? : Bool) -> Self
 
@@ -1658,17 +1659,17 @@ pub struct WorkbookPropsOptions {
   mut date_1904 : Bool?
   mut filter_privacy : Bool?
   mut code_name : String?
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn WorkbookPropsOptions::with_values(date_1904? : Bool, filter_privacy? : Bool, code_name? : String) -> Self
 
-type WorkbookProtection derive(Show)
+type WorkbookProtection derive(Show, @debug.Debug)
 
 pub struct WorkbookProtectionOptions {
   algorithm_name : String
   password : String
   lock_structure : Bool
   lock_windows : Bool
-} derive(Show)
+} derive(Show, @debug.Debug)
 pub fn WorkbookProtectionOptions::with_values(algorithm_name? : String, password? : String, lock_structure? : Bool, lock_windows? : Bool) -> Self
 
 pub struct Worksheet {

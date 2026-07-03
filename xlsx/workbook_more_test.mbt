@@ -54,10 +54,10 @@ test "workbook: properties + custom properties replace/remove" {
   // add + replace.
   workbook.set_custom_props(CustomProperty::new("k", Some(Text("v1"))))
   workbook.set_custom_props(CustomProperty::new("k", Some(Text("v2"))))
-  inspect(
+  debug_inspect(
     workbook.get_custom_props(),
     content=(
-      #|[{name: "k", value: Some(Text("v2"))}]
+      #|[{ name: "k", value: Some(Text("v2")) }]
     ),
   )
 
@@ -197,11 +197,14 @@ test "workbook: delete/move edge cases (chart sheets + active fallback)" {
 
   // Delete a worksheet while chart sheets exist -> hits ChartSheet pass-through branch.
   workbook.delete_sheet("S2")
-  inspect(workbook.get_sheet_list(), content="[\"S1\", \"C1\", \"C2\", \"C3\"]")
+  debug_inspect(
+    workbook.get_sheet_list(),
+    content="[\"S1\", \"C1\", \"C2\", \"C3\"]",
+  )
 
   // Delete middle chart sheet -> hits both value>idx and value<=idx adjustment branches.
   workbook.delete_sheet("C2")
-  inspect(workbook.get_sheet_list(), content="[\"S1\", \"C1\", \"C3\"]")
+  debug_inspect(workbook.get_sheet_list(), content="[\"S1\", \"C1\", \"C3\"]")
 
   // move_sheet: active == source branch.
   let m = Workbook::new()
@@ -210,7 +213,7 @@ test "workbook: delete/move edge cases (chart sheets + active fallback)" {
   ignore(m.add_sheet("C"))
   m.set_active_sheet(0)
   m.move_sheet("A", "C")
-  inspect(m.get_sheet_list(), content="[\"B\", \"A\", \"C\"]")
+  debug_inspect(m.get_sheet_list(), content="[\"B\", \"A\", \"C\"]")
   inspect(m.active_sheet_index(), content="1")
 
   // set_sheet_visible: visible==true branch.
@@ -246,7 +249,7 @@ test "workbook: delete/move edge cases (chart sheets + active fallback)" {
   ignore(mid.add_sheet("C"))
   mid.set_active_sheet(1)
   mid.delete_sheet("B")
-  inspect(mid.get_sheet_list(), content="[\"A\", \"C\"]")
+  debug_inspect(mid.get_sheet_list(), content="[\"A\", \"C\"]")
   inspect(mid.active_sheet_index(), content="1")
 
   // copy_sheet: invalid entry kind combination (worksheet -> chart sheet).
@@ -470,8 +473,8 @@ test "workbook: copy_sheet clones complex worksheet state" {
     Some(value) => value
     None => fail("missing Dst")
   }
-  inspect(dst.get_cell("A1"), content="Some(\"v\")")
-  inspect(dst.merged_cells(), content="[\"A1:B2\"]")
+  debug_inspect(dst.get_cell("A1"), content="Some(\"v\")")
+  debug_inspect(dst.merged_cells().to_array(), content="[\"A1:B2\"]")
   inspect(dst.get_cell_hyperlink("A1") is Some(_), content="true")
   inspect(workbook.get_tables("Dst").length(), content="1")
   inspect(dst.sparkline_groups().length(), content="1")
@@ -865,7 +868,7 @@ test "workbook: validation merge sparkline and rc/style wrapper coverage" {
     content="true",
   )
   workbook.set_cell_style_rc("Sheet1", 2, 2, 0)
-  inspect(workbook.get_cell_style_rc("Sheet1", 2, 2), content="Some(0)")
+  debug_inspect(workbook.get_cell_style_rc("Sheet1", 2, 2), content="Some(0)")
   workbook.set_cell_formula_rc("Sheet1", 3, 1, "1+1")
   workbook.set_row_style_range("Sheet1", 1, 1, 0)
   workbook.set_col_style("Sheet1", 1, 0)

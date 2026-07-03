@@ -8,39 +8,42 @@ test "search_sheet: regex basics (anchors, escapes, classes, repeats)" {
   sheet.set_cell("A4", "abc$")
   sheet.set_cell("A5", "abbbc")
   sheet.set_cell("A6", "a1Z")
-  inspect(workbook.search_sheet("Sheet1", "abc123"), content="[\"A1\"]")
-  inspect(
+  debug_inspect(workbook.search_sheet("Sheet1", "abc123"), content="[\"A1\"]")
+  debug_inspect(
     workbook.search_sheet("Sheet1", "^abc", reg=true),
     content="[\"A1\", \"A4\"]",
   )
-  inspect(workbook.search_sheet("Sheet1", "123$", reg=true), content="[\"A1\"]")
-  inspect(
+  debug_inspect(
+    workbook.search_sheet("Sheet1", "123$", reg=true),
+    content="[\"A1\"]",
+  )
+  debug_inspect(
     workbook.search_sheet("Sheet1", "^a\\^b$", reg=true),
     content="[\"A3\"]",
   )
 
   // Escaped '$' should not be treated as an end anchor.
-  inspect(
+  debug_inspect(
     workbook.search_sheet("Sheet1", "abc\\$", reg=true),
     content="[\"A4\"]",
   )
 
   // Any char + repeat.
-  inspect(
+  debug_inspect(
     workbook.search_sheet("Sheet1", "h.llo.*", reg=true),
     content="[\"A2\"]",
   )
-  inspect(
+  debug_inspect(
     workbook.search_sheet("Sheet1", "^ab*c$", reg=true),
     content="[\"A5\"]",
   )
 
   // Character classes (with range).
-  inspect(
+  debug_inspect(
     workbook.search_sheet("Sheet1", "^[a-z][0-9][A-Z]$", reg=true),
     content="[\"A6\"]",
   )
 
   // Unclosed class is treated as literal '['.
-  inspect(workbook.search_sheet("Sheet1", "[", reg=true), content="[]")
+  debug_inspect(workbook.search_sheet("Sheet1", "[", reg=true), content="[]")
 }

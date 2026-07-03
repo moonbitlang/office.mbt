@@ -6,7 +6,7 @@ test "row style range setters" {
   workbook.set_row_style_range("Sheet1", 2, 4, style_id)
   let bytes = write(workbook)
   let parsed = read(bytes)
-  inspect(
+  debug_inspect(
     [
       parsed.get_row_style("Sheet1", 2),
       parsed.get_row_style("Sheet1", 3),

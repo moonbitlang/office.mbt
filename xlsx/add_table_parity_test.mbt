@@ -6,9 +6,15 @@ test "add_table options auto name and columns" {
   let table = workbook.add_table("Sheet1", opts)
   inspect(table.name, content="Table1")
   inspect(table.range_ref, content="A21:B26")
-  inspect(table.columns, content="[\"Column1\", \"Column2\"]")
-  inspect(workbook.get_cell_value("Sheet1", "A21"), content="Some(\"Column1\")")
-  inspect(workbook.get_cell_value("Sheet1", "B21"), content="Some(\"Column2\")")
+  debug_inspect(table.columns, content="[\"Column1\", \"Column2\"]")
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "A21"),
+    content="Some(\"Column1\")",
+  )
+  debug_inspect(
+    workbook.get_cell_value("Sheet1", "B21"),
+    content="Some(\"Column2\")",
+  )
 }
 
 ///|
@@ -27,13 +33,13 @@ test "add_table options style and header row hidden" {
   let t1 = workbook.add_table("Sheet2", opts)
   inspect(t1.name, content="table")
   inspect(t1.style_name, content="TableStyleMedium2")
-  inspect(t1.columns, content="[\"Date\", \"Values\"]")
+  debug_inspect(t1.columns, content="[\"Date\", \"Values\"]")
   let opts2 = TableOptions::new("D1:D11")
   opts2.set_show_header_row(Some(false))
   let t2 = workbook.add_table("Sheet2", opts2)
   inspect(t2.show_header_row, content="false")
   inspect(t2.range_ref, content="D2:D11")
-  inspect(workbook.get_cell_value("Sheet2", "D2"), content="None")
+  debug_inspect(workbook.get_cell_value("Sheet2", "D2"), content="None")
 }
 
 ///|
@@ -43,7 +49,7 @@ test "add_table options single cell range expands" {
   let opts = TableOptions::new("F1:F1")
   let table = workbook.add_table("Sheet1", opts)
   inspect(table.range_ref, content="F1:F2")
-  inspect(table.columns, content="[\"Column1\"]")
+  debug_inspect(table.columns, content="[\"Column1\"]")
 }
 
 ///|

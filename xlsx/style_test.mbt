@@ -66,7 +66,7 @@ test "excelize custom num fmt empty rejects" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content="Err(InvalidOptions(msg=\"custom number format can not be empty\"))",
   )
@@ -82,7 +82,7 @@ test "style roundtrip" {
   workbook.set_cell_style("Sheet1", "B2", style_id)
   let parsed = read(write(workbook))
   inspect(parsed.styles().length(), content="2")
-  inspect(parsed.get_cell_style("Sheet1", "B2"), content="Some(1)")
+  debug_inspect(parsed.get_cell_style("Sheet1", "B2"), content="Some(1)")
 }
 
 ///|
@@ -90,7 +90,7 @@ test "invalid style id" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result = try? workbook.set_cell_style("Sheet1", "A1", 1)
-  inspect(result, content="Err(InvalidStyleId(index=1))")
+  debug_inspect(result, content="Err(InvalidStyleId(index=1))")
 }
 
 ///|
@@ -100,7 +100,7 @@ test "worksheet set_cell_style and set_cell_style_rc" {
 
   // set_cell_style on an empty cell creates it.
   sheet.set_cell_style("A1", 0)
-  inspect(sheet.get_cell_style("A1"), content="Some(0)")
+  debug_inspect(sheet.get_cell_style("A1"), content="Some(0)")
 
   // Negative style ids reject.
   let neg1 : Result[Unit, Error] = try? sheet.set_cell_style("A1", -1)
@@ -111,7 +111,7 @@ test "worksheet set_cell_style and set_cell_style_rc" {
   // set_cell_style_rc creates + updates existing.
   sheet.set_cell_style_rc(1, 2, 0)
   sheet.set_cell_style_rc(1, 2, 2)
-  inspect(sheet.get_cell_style_rc(1, 2), content="Some(2)")
+  debug_inspect(sheet.get_cell_style_rc(1, 2), content="Some(2)")
 
   // get_cell_style_rc validates row/col.
   let bad_rc : Result[Int?, Error] = try? sheet.get_cell_style_rc(0, 1)

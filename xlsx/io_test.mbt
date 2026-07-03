@@ -53,7 +53,7 @@ async fn MemWriter::write_reader(
 }
 
 ///|
-impl @async/io.Writer for MemWriter with write_once(
+impl @async/io.Writer for MemWriter with fn write_once(
   self : MemWriter,
   bytes : Bytes,
   offset~ : Int,
@@ -63,7 +63,7 @@ impl @async/io.Writer for MemWriter with write_once(
 }
 
 ///|
-impl @async/io.Writer for MemWriter with write(
+impl @async/io.Writer for MemWriter with fn write(
   self : MemWriter,
   data : &@async/io.Data,
 ) {
@@ -71,7 +71,7 @@ impl @async/io.Writer for MemWriter with write(
 }
 
 ///|
-impl @async/io.Writer for MemWriter with write_reader(
+impl @async/io.Writer for MemWriter with fn write_reader(
   self : MemWriter,
   reader : &@async/io.Reader,
 ) {
@@ -88,11 +88,11 @@ async test "open file save and save_as" {
   let path = "mbtexcel_io_\{stamp}.xlsx"
   workbook.save_as(path)
   let parsed = open_file(path)
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
   parsed.set_cell("Sheet1", "A1", "beta")
   parsed.save()
   let parsed2 = open_file(path)
-  inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"beta\")")
+  debug_inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"beta\")")
   @async/fs.remove(path) catch {
     err => fail("remove file failed: \{err}")
   }
@@ -247,7 +247,7 @@ async test "open_reader from pipe" {
     })
     open_reader(reader)
   })
-  inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"gamma\")")
+  debug_inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"gamma\")")
 }
 
 ///|
@@ -264,7 +264,7 @@ async test "read_zip_reader from pipe" {
     })
     read_zip_reader(reader)
   })
-  inspect(parsed.get_cell("Sheet1", "E5"), content="Some(\"reader\")")
+  debug_inspect(parsed.get_cell("Sheet1", "E5"), content="Some(\"reader\")")
 }
 
 ///|
@@ -274,7 +274,7 @@ test "write_to_buffer roundtrip" {
   workbook.set_cell("Sheet1", "C3", "pipe")
   let bytes = workbook.write_to_buffer()
   let parsed = read(bytes)
-  inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"pipe\")")
+  debug_inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"pipe\")")
 }
 
 ///|
@@ -290,7 +290,7 @@ test "custom zip writer used" {
   let bytes = workbook.write_to_buffer()
   guard called.val else { fail("zip writer was not called") }
   let parsed = read(bytes)
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
 }
 
 ///|
@@ -302,7 +302,7 @@ async test "write wrapper" {
   workbook.write(writer)
   let bytes = Bytes::from_array(writer.data)
   let parsed = read(bytes)
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
 }
 
 ///|

@@ -60,7 +60,7 @@ test "theme color samples" {
     theme_color("000000", 1.0),
     theme_color("!!!!!!", 1.0),
   ]
-  inspect(
+  debug_inspect(
     results,
     content="[\"FF000000\", \"FF000000\", \"FF33FF33\", \"FFFFFFFF\", \"FFFFFFFF\"]",
   )

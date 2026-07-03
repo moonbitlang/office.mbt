@@ -10,9 +10,9 @@ test "sheet view wb: Selection::with_values defaults cover none branches" {
 test "sheet view wb: invalid view mode is ignored and defaults are preserved" {
   let view = SheetView::new()
   apply_sheet_view_options(view, SheetViewOptions::with_values(view="unknown"))
-  inspect(view.view, content="None")
+  debug_inspect(view.view, content="None")
   let merged = sheet_view_options_with_defaults(view)
-  inspect(merged.top_left_cell, content="Some(\"A1\")")
+  debug_inspect(merged.top_left_cell, content="Some(\"A1\")")
 }
 
 ///|

@@ -44,7 +44,10 @@ test "vml drawing roundtrip" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  inspect(parsed_sheet.vml_drawing_xml(), content="Some(\"<xml>vml</xml>\")")
+  debug_inspect(
+    parsed_sheet.vml_drawing_xml(),
+    content="Some(\"<xml>vml</xml>\")",
+  )
 }
 
 ///|
@@ -57,7 +60,10 @@ test "vml drawing hf roundtrip" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  inspect(parsed_sheet.vml_drawing_hf_xml(), content="Some(\"<xml>hf</xml>\")")
+  debug_inspect(
+    parsed_sheet.vml_drawing_hf_xml(),
+    content="Some(\"<xml>hf</xml>\")",
+  )
 }
 
 ///|
@@ -69,7 +75,7 @@ test "vml drawing validation" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content="Err(InvalidVmlDrawing(msg=\"vml drawing xml empty\"))",
   )

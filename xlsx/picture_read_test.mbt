@@ -5,7 +5,7 @@ test "picture parsed on read" {
   let img : Bytes = [9, 8, 7, 6]
   workbook.add_picture_from_bytes("Sheet1", "A1", img, ".png")
   let parsed = read(write(workbook))
-  inspect(
+  debug_inspect(
     parsed.get_pictures("Sheet1", "A1").map(image => image.extension),
     content="[\"png\"]",
   )

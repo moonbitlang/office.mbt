@@ -157,9 +157,9 @@ test "formula eval wb: matrix and trend helper guards" {
   )
 
   let minor = matrix_minor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], 1)
-  inspect(minor, content="[[3], [5]]")
+  debug_inspect(minor, content="[[3], [5]]")
 
-  inspect(new_matrix(0, 2), content="[]")
+  debug_inspect(new_matrix(0, 2), content="[]")
 
   let trend_x_bad = prepare_trend_growth_mtx_x([[0.0]])
   inspect(
@@ -798,19 +798,19 @@ test "formula eval wb: shape helper branches part 3" {
   )
   inspect(wb_shape_none(array_shape_binary(None, Some((1, 1)))), content="true")
 
-  inspect(
+  debug_inspect(
     effective_range_bounds(workbook, "Sheet1", 3, 1, 1, 1),
     content="(3, 1, 1, 1)",
   )
-  inspect(
+  debug_inspect(
     effective_range_bounds(workbook, "Missing", 1, 5000, 1, 4),
     content="(1, 5000, 1, 4)",
   )
-  inspect(
+  debug_inspect(
     effective_range_bounds(workbook, "Sheet1", 1, 5000, 1, 4),
     content="(1, 2500, 1, 4)",
   )
-  inspect(
+  debug_inspect(
     effective_range_bounds(workbook, "Sheet1", 1, 4, 1, 5000),
     content="(1, 4, 1, 2500)",
   )

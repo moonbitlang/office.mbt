@@ -9,5 +9,5 @@ test "image types wb: normalize image extension rejects dot-only and empty" {
 
 ///|
 test "image types wb: content type recognizes tif alias" {
-  inspect(image_content_type("tif"), content="Some(\"image/tiff\")")
+  debug_inspect(image_content_type("tif"), content="Some(\"image/tiff\")")
 }

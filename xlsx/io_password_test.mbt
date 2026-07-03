@@ -15,9 +15,9 @@ async test "open file and reader with password" {
   }
   let parsed = open_reader(file, password="pass")
   file.close()
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
   let parsed2 = open_file(path, password="pass")
-  inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
+  debug_inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
   @async/fs.remove(path) catch {
     err => fail("remove file failed: \{err}")
   }
@@ -38,12 +38,12 @@ async test "options password used for write_to_buffer and save_as" {
     Ok(_) => fail("expected encrypted package error")
   }
   let parsed = read_with_password(bytes, "pass")
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
   let stamp = @env.now().to_string()
   let path = "mbtexcel_password_opts_\{stamp}.xlsx"
   workbook.save_as(path, options=opts)
   let parsed2 = open_file(path, password="pass")
-  inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
+  debug_inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
   @async/fs.remove(path) catch {
     err => fail("remove file failed: \{err}")
   }

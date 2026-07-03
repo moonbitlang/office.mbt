@@ -117,7 +117,7 @@ test "pivot table roundtrip" {
     pivot.cache_definition_xml,
     content="<pivotCacheDefinition cacheId=\"2\"/>",
   )
-  inspect(
+  debug_inspect(
     pivot.cache_records_xml,
     content="Some(\"<pivotCacheRecords count=\\\"0\\\"/>\")",
   )
@@ -134,7 +134,7 @@ test "pivot table validation" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(InvalidPivotTable(msg="pivot table xml empty"))
@@ -147,7 +147,7 @@ test "pivot table validation" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result2,
     content=(
       #|Err(InvalidPivotTable(msg="pivot cache definition empty"))
@@ -247,7 +247,7 @@ test "pivot table options compactData classic layout invalid" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(InvalidPivotTable(msg="pivot compactData is incompatible with classic layout"))

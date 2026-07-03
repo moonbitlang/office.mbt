@@ -70,5 +70,5 @@ test "calc: builtins dispatch (no-arg calls are recognized)" {
       missing.push(name)
     }
   }
-  inspect(missing, content="[]")
+  debug_inspect(missing, content="[]")
 }

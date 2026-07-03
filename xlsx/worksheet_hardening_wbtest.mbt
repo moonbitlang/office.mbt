@@ -1,10 +1,10 @@
 ///|
 test "worksheet wb: missing-cell getters return None" {
   let sheet = Worksheet::new("Sheet1")
-  inspect(sheet.get_cell_rich_text("Z99"), content="None")
-  inspect(sheet.get_cell_formula("Z99"), content="None")
-  inspect(sheet.get_cell_style("Z99"), content="None")
-  inspect(sheet.get_cell_style_rc(99, 26), content="None")
+  debug_inspect(sheet.get_cell_rich_text("Z99"), content="None")
+  debug_inspect(sheet.get_cell_formula("Z99"), content="None")
+  debug_inspect(sheet.get_cell_style("Z99"), content="None")
+  debug_inspect(sheet.get_cell_style_rc(99, 26), content="None")
 }
 
 ///|
@@ -21,7 +21,7 @@ test "worksheet wb: set_state updates worksheet visibility state" {
 test "worksheet wb: sparkline and validation guard errors" {
   let sheet = Worksheet::new("Sheet1")
   let empty_inputs : Result[Unit, Error] = try? sheet.add_sparkline_group([], [])
-  inspect(
+  debug_inspect(
     empty_inputs,
     content=(
       #|Err(InvalidSparkline(msg="sparkline inputs empty"))
@@ -31,7 +31,7 @@ test "worksheet wb: sparkline and validation guard errors" {
     "A1",
     [],
   )
-  inspect(
+  debug_inspect(
     empty_list,
     content=(
       #|Err(UnsupportedFeature(msg="empty validation list"))
@@ -43,14 +43,14 @@ test "worksheet wb: sparkline and validation guard errors" {
 test "worksheet wb: delete_slicer empty/missing/remove branches" {
   let sheet = Worksheet::new("Sheet1")
   let empty_name : Result[Unit, Error] = try? sheet.delete_slicer("")
-  inspect(
+  debug_inspect(
     empty_name,
     content=(
       #|Err(InvalidSheetOperation(msg="slicer name empty"))
     ),
   )
   let missing : Result[Unit, Error] = try? sheet.delete_slicer("Missing")
-  inspect(
+  debug_inspect(
     missing,
     content=(
       #|Err(InvalidSheetOperation(msg="slicer not found"))
@@ -96,7 +96,7 @@ test "worksheet wb: data validation append/clear/error branches" {
       "A1",
     ],
   )
-  inspect(
+  debug_inspect(
     missing_tag_result,
     content=(
       #|Err(InvalidXml(msg="data validation tag missing"))
@@ -111,7 +111,7 @@ test "worksheet wb: data validation append/clear/error branches" {
       "A1",
     ],
   )
-  inspect(
+  debug_inspect(
     missing_sqref_result,
     content=(
       #|Err(InvalidXml(msg="data validation sqref missing"))
@@ -140,7 +140,7 @@ test "worksheet wb: pivot-table wrapper and picture/header-footer guards" {
     ".",
     "image/png",
   )
-  inspect(
+  debug_inspect(
     dot_extension,
     content=(
       #|Err(UnsupportedFeature(msg="image extension missing"))
@@ -152,7 +152,7 @@ test "worksheet wb: pivot-table wrapper and picture/header-footer guards" {
     "",
     "image/png",
   )
-  inspect(
+  debug_inspect(
     empty_extension,
     content=(
       #|Err(UnsupportedFeature(msg="image extension missing"))
@@ -165,7 +165,7 @@ test "worksheet wb: pivot-table wrapper and picture/header-footer guards" {
     "image/png",
     scale_x=0.0,
   )
-  inspect(
+  debug_inspect(
     invalid_scale,
     content=(
       #|Err(InvalidSheetOperation(msg="picture scale must be > 0"))
@@ -175,7 +175,7 @@ test "worksheet wb: pivot-table wrapper and picture/header-footer guards" {
   let missing_width : Result[Unit, Error] = try? sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(Left, [1], ".png", width="", height="8pt"),
   )
-  inspect(
+  debug_inspect(
     missing_width,
     content=(
       #|Err(InvalidHeaderFooter(msg="header/footer width empty"))
@@ -184,7 +184,7 @@ test "worksheet wb: pivot-table wrapper and picture/header-footer guards" {
   let missing_height : Result[Unit, Error] = try? sheet.add_header_footer_image(
     HeaderFooterImageOptions::new(Left, [1], ".png", width="9pt", height=""),
   )
-  inspect(
+  debug_inspect(
     missing_height,
     content=(
       #|Err(InvalidHeaderFooter(msg="header/footer height empty"))
@@ -229,7 +229,7 @@ test "worksheet wb: picture option Some branches and guard errors" {
   inspect(sheet.get_pictures("C3").length(), content="1")
 
   let empty_vml : Result[Unit, Error] = try? sheet.add_vml_drawing_hf_xml("")
-  inspect(
+  debug_inspect(
     empty_vml,
     content=(
       #|Err(InvalidVmlDrawing(msg="vml drawing hf xml empty"))
@@ -239,7 +239,7 @@ test "worksheet wb: picture option Some branches and guard errors" {
     "A1",
     [],
   )
-  inspect(
+  debug_inspect(
     empty_options,
     content=(
       #|Err(InvalidConditionalFormat(msg="options empty"))
@@ -340,7 +340,7 @@ test "worksheet wb: chart option guards and reference helper copies" {
   let bad_offset : Result[Unit, Error] = try? sheet.add_chart_with_options(
     "C3", bad_offset_opts,
   )
-  inspect(
+  debug_inspect(
     bad_offset,
     content=(
       #|Err(InvalidSheetOperation(msg="chart offset must be >= 0"))
@@ -352,7 +352,7 @@ test "worksheet wb: chart option guards and reference helper copies" {
   let bad_scale : Result[Unit, Error] = try? sheet.add_chart_with_options(
     "C3", bad_scale_opts,
   )
-  inspect(
+  debug_inspect(
     bad_scale,
     content=(
       #|Err(InvalidSheetOperation(msg="chart scale must be > 0"))
@@ -364,14 +364,16 @@ test "worksheet wb: chart option guards and reference helper copies" {
 test "worksheet wb: conditional format helper edge branches" {
   inspect(pad_left_dec(1234, 2), content="1234")
   let existing_ext = "<cfRule type=\"expression\"><extLst></extLst></cfRule>"
-  inspect(
+  debug_inspect(
     inject_x14_id_ext_lst_into_cf_rule(existing_ext, "id1"),
-    content=existing_ext,
+    content=(
+      #|"<cfRule type=\"expression\"><extLst></extLst></cfRule>"
+    ),
   )
   let invalid_rule : Result[String, Error] = try? inject_x14_id_ext_lst_into_cf_rule(
     "<cfRule/>", "id1",
   )
-  inspect(
+  debug_inspect(
     invalid_rule,
     content=(
       #|Err(InvalidXml(msg="cfRule tag invalid"))
@@ -389,7 +391,7 @@ test "worksheet wb: conditional/data-validation update-failure and x14 fallback 
       "A2",
     ],
   )
-  inspect(
+  debug_inspect(
     dv_update_result,
     content=(
       #|Err(InvalidXml(msg="data validation sqref update failed"))
@@ -415,7 +417,7 @@ test "worksheet wb: conditional/data-validation update-failure and x14 fallback 
   let missing_tag_result : Result[Unit, Error] = try? cf_missing_tag.unset_conditional_format(
     "A1",
   )
-  inspect(
+  debug_inspect(
     missing_tag_result,
     content=(
       #|Err(InvalidXml(msg="conditionalFormatting tag missing"))
@@ -429,7 +431,7 @@ test "worksheet wb: conditional/data-validation update-failure and x14 fallback 
   let missing_sqref_result : Result[Unit, Error] = try? cf_missing_sqref.unset_conditional_format(
     "A1",
   )
-  inspect(
+  debug_inspect(
     missing_sqref_result,
     content=(
       #|Err(InvalidXml(msg="conditionalFormatting sqref missing"))
@@ -443,7 +445,7 @@ test "worksheet wb: conditional/data-validation update-failure and x14 fallback 
   let update_fail_result : Result[Unit, Error] = try? cf_update_fail.unset_conditional_format(
     "A2",
   )
-  inspect(
+  debug_inspect(
     update_fail_result,
     content=(
       #|Err(InvalidXml(msg="conditionalFormatting sqref update failed"))
@@ -474,11 +476,11 @@ test "worksheet wb: rc cell api update branches and row/col basic guards" {
   sheet.set_cell_value_rc(2, 2, Numeric(7.0))
   sheet.set_cell_value_rc(2, 2, String("txt"))
   sheet.set_cell_formula_rc(2, 2, "1+1", value="2")
-  inspect(sheet.get_cell_rc(2, 2), content="Some(\"2\")")
-  inspect(sheet.get_cell_formula("B2"), content="Some(\"1+1\")")
+  debug_inspect(sheet.get_cell_rc(2, 2), content="Some(\"2\")")
+  debug_inspect(sheet.get_cell_formula("B2"), content="Some(\"1+1\")")
   inspect(sheet.get_cell_value_raw_rc(2, 2) is Some(_), content="true")
-  inspect(sheet.get_cell_rc(9, 9), content="None")
-  inspect(sheet.get_cell_value_raw_rc(9, 9), content="None")
+  debug_inspect(sheet.get_cell_rc(9, 9), content="None")
+  debug_inspect(sheet.get_cell_value_raw_rc(9, 9), content="None")
 
   let bad_get_rc : Result[String?, Error] = try? sheet.get_cell_rc(0, 1)
   inspect(bad_get_rc is Err(XlsxError::InvalidCellRef(_)), content="true")
@@ -499,14 +501,14 @@ test "worksheet wb: rc cell api update branches and row/col basic guards" {
 test "worksheet wb: row/col dimension guard and default branches" {
   let sheet = Worksheet::new("Sheet1")
 
-  inspect(sheet.get_row_height(5), content="None")
+  debug_inspect(sheet.get_row_height(5), content="None")
   inspect(sheet.row_visible(5), content="true")
   inspect(sheet.row_outline_level(5), content="0")
-  inspect(sheet.get_row_style(5), content="None")
-  inspect(sheet.get_col_width(5), content="None")
+  debug_inspect(sheet.get_row_style(5), content="None")
+  debug_inspect(sheet.get_col_width(5), content="None")
   inspect(sheet.col_visible(5), content="true")
   inspect(sheet.col_outline_level(5), content="0")
-  inspect(sheet.get_col_style(5), content="None")
+  debug_inspect(sheet.get_col_style(5), content="None")
 
   let bad_set_row_height_rc : Result[Unit, Error] = try? sheet.set_row_height(
     0, 1.0,
@@ -638,13 +640,13 @@ test "worksheet wb: row/col dimension guard and default branches" {
   )
 
   sheet.set_row_style(2, 1)
-  inspect(sheet.get_row_style(2), content="Some(1)")
+  debug_inspect(sheet.get_row_style(2), content="Some(1)")
   sheet.set_row_style(2, 0)
-  inspect(sheet.get_row_style(2), content="None")
+  debug_inspect(sheet.get_row_style(2), content="None")
   sheet.set_col_style(2, 1)
-  inspect(sheet.get_col_style(2), content="Some(1)")
+  debug_inspect(sheet.get_col_style(2), content="Some(1)")
   sheet.set_col_style(2, 0)
-  inspect(sheet.get_col_style(2), content="None")
+  debug_inspect(sheet.get_col_style(2), content="None")
 
   let defaults = Worksheet::new("Defaults")
   defaults.set_sheet_props(
@@ -706,7 +708,7 @@ test "worksheet wb: row insert/remove structural guard and adjustment branches" 
   sheet.remove_rows(2, 1)
   inspect(sheet.get_pictures("C3").length(), content="1")
   inspect(sheet.charts()[0].reference, content="D3")
-  inspect(sheet.get_row_height(1), content="Some(12)")
+  debug_inspect(sheet.get_row_height(1), content="Some(12)")
   match sheet.auto_filter {
     Some(filter) => inspect(filter.range_ref, content="A1:B4")
     None => fail("missing auto filter after row remove")
@@ -721,7 +723,7 @@ test "worksheet wb: row insert/remove structural guard and adjustment branches" 
 
   sheet.set_cell("A5", "tail")
   sheet.remove_rows(5, 1)
-  inspect(sheet.get_cell("A5"), content="None")
+  debug_inspect(sheet.get_cell("A5"), content="None")
 }
 
 ///|
@@ -755,10 +757,10 @@ test "worksheet wb: duplicate-row helper edge branches" {
   inspect(bad_format is Err(XlsxError::InvalidCellRef(_)), content="true")
 
   let refs = duplicate_sqref_for_row(1, 2, "  A1:A1   B1:B2  ")
-  inspect(refs, content="[\"A2:A2\"]")
+  debug_inspect(refs, content="[\"A2:A2\"]")
 
-  inspect(duplicate_xml_sqref("<foo/>", 1, 2), content="None")
-  inspect(
+  debug_inspect(duplicate_xml_sqref("<foo/>", 1, 2), content="None")
+  debug_inspect(
     duplicate_xml_sqref("<dataValidation type=\"list\"></dataValidation>", 1, 2),
     content="None",
   )
@@ -781,7 +783,7 @@ test "worksheet wb: duplicate-row helper edge branches" {
   let duplicate = Worksheet::new("Duplicate")
   duplicate.set_row(1, ["A"][:])
   duplicate.duplicate_row_to(1, 2)
-  inspect(duplicate.get_row(2), content="[\"A\"]")
+  debug_inspect(duplicate.get_row(2), content="[\"A\"]")
   let bad_target : Result[Unit, Error] = try? duplicate.duplicate_row_to(1, 1)
   inspect(
     bad_target is Err(XlsxError::InvalidSheetOperation(_)),
@@ -912,8 +914,8 @@ test "worksheet wb: col insert/remove structural edge branches" {
   inspect(remove.get_pictures("B1").length(), content="0")
   inspect(remove.charts().length(), content="1")
   inspect(remove.charts()[0].reference, content="A1")
-  inspect(remove.get_col_width(1), content="Some(9)")
-  inspect(remove.get_col_width(3), content="Some(11)")
+  debug_inspect(remove.get_col_width(1), content="Some(9)")
+  debug_inspect(remove.get_col_width(3), content="Some(11)")
   inspect(remove.col_breaks.length(), content="2")
   inspect(remove.col_breaks[0].id, content="0")
   inspect(remove.col_breaks[1].id, content="3")
@@ -924,16 +926,16 @@ test "worksheet wb: col insert/remove structural edge branches" {
     columns: [{ col: 2, filters: Some(["x"]), custom_filters: None }],
   })
   filter_drop.remove_cols(2, 1)
-  inspect(filter_drop.auto_filter, content="None")
+  debug_inspect(filter_drop.auto_filter, content="None")
 
   let alias_sheet = Worksheet::new("Alias")
   alias_sheet.set_cell("A1", "a")
   alias_sheet.set_cell("B1", "b")
   alias_sheet.set_cell("C1", "c")
   alias_sheet.remove_cols(2, 1)
-  inspect(alias_sheet.get_cell("A1"), content="Some(\"a\")")
-  inspect(alias_sheet.get_cell("B1"), content="Some(\"c\")")
-  inspect(alias_sheet.get_cell("C1"), content="None")
+  debug_inspect(alias_sheet.get_cell("A1"), content="Some(\"a\")")
+  debug_inspect(alias_sheet.get_cell("B1"), content="Some(\"c\")")
+  debug_inspect(alias_sheet.get_cell("C1"), content="None")
 }
 
 ///|
@@ -967,7 +969,7 @@ test "worksheet wb: row remove residual drop and range-helper branches" {
   inspect(sheet.hyperlinks()[0].reference, content="A1:A3")
 
   sheet.remove_rows(2, 1)
-  inspect(sheet.auto_filter, content="None")
+  debug_inspect(sheet.auto_filter, content="None")
   inspect(sheet.hyperlinks()[0].reference, content="A1:A2")
   inspect(sheet.get_pictures("A1").length(), content="1")
   inspect(sheet.get_pictures("A2").length(), content="0")

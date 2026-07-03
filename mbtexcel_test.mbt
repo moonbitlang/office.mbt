@@ -5,7 +5,7 @@ test "mbtexcel roundtrip" {
   sheet.set_cell("A1", "hello")
   let bytes = write(workbook)
   let parsed = read(bytes)
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"hello\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"hello\")")
 }
 
 ///|
@@ -22,7 +22,7 @@ test "mbtexcel read wrappers with transcoder branch" {
       _ => ""
     }
   })
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"t\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"t\")")
   let encrypted = write_with_password(workbook, "pass")
   let parsed2 = read_with_password(encrypted, "pass", transcoder=fn(
     _charset : String,
@@ -32,7 +32,7 @@ test "mbtexcel read wrappers with transcoder branch" {
       _ => ""
     }
   })
-  inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"t\")")
+  debug_inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"t\")")
 }
 
 ///|
@@ -40,15 +40,15 @@ test "mbtexcel expose workbook" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "B2", "world")
-  inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"world\")")
+  debug_inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"world\")")
 }
 
 ///|
 test "mbtexcel new_file and helpers" {
   let workbook = new_file()
-  inspect(workbook.sheet_name(0), content="Some(\"Sheet1\")")
+  debug_inspect(workbook.sheet_name(0), content="Some(\"Sheet1\")")
   let (col, row) = cell_name_to_coordinates("$C$3")
-  inspect((col, row), content="(3, 3)")
+  debug_inspect((col, row), content="(3, 3)")
   inspect(coordinates_to_cell_name(3, 3, abs=true), content="$C$3")
 }
 
@@ -70,7 +70,7 @@ test "mbtexcel encrypt decrypt roundtrip" {
 ///|
 test "mbtexcel excel_date_to_time wrapper" {
   let t0 = excel_date_to_time(1.0)
-  inspect((t0.year(), t0.month(), t0.day()), content="(1900, 1, 1)")
+  debug_inspect((t0.year(), t0.month(), t0.day()), content="(1900, 1, 1)")
 }
 
 ///|
@@ -90,7 +90,7 @@ test "mbtexcel acronym color helpers" {
   assert_eq(g2, (0).to_byte())
   assert_eq(b2, (0).to_byte())
   let (h2, s2, l2) = rgb_to_hsl((255).to_byte(), (255).to_byte(), (0).to_byte())
-  inspect((h2, s2, l2), content="(0.16666666666666666, 1, 0.5)")
+  debug_inspect((h2, s2, l2), content="(0.16666666666666666, 1, 0.5)")
 }
 
 ///|
@@ -98,7 +98,7 @@ test "mbtexcel sheet management helpers" {
   let workbook = new_file()
   ignore(workbook.add_sheet("Data"))
   workbook.set_sheet_name("Sheet1", "Main")
-  inspect(workbook.sheet_name(0), content="Some(\"Main\")")
+  debug_inspect(workbook.sheet_name(0), content="Some(\"Main\")")
   inspect(workbook.sheet_index("Data"), content="1")
   let list = workbook.get_sheet_list()
   inspect(list.contains("Main"), content="true")
@@ -115,7 +115,7 @@ test "mbtexcel sheet management helpers" {
 ///|
 test "mbtexcel excel_date_to_time 1904 and invalid" {
   let t0 = excel_date_to_time(0.0, use_1904_format=true)
-  inspect((t0.year(), t0.month(), t0.day()), content="(1904, 1, 1)")
+  debug_inspect((t0.year(), t0.month(), t0.day()), content="(1904, 1, 1)")
   let invalid : Result[@time.ZonedDateTime, Error] = try? excel_date_to_time(
     -1.0,
   )
@@ -138,8 +138,8 @@ test "mbtexcel row/col visibility and style ranges" {
   workbook.set_col_style_range("Sheet1", "B:C", style_id)
   workbook.set_row_visible("Sheet1", 2, false)
   workbook.set_col_visible("Sheet1", 3, false)
-  inspect(workbook.get_row_style("Sheet1", 2), content="Some(1)")
-  inspect(workbook.get_col_style("Sheet1", 3), content="Some(1)")
+  debug_inspect(workbook.get_row_style("Sheet1", 2), content="Some(1)")
+  debug_inspect(workbook.get_col_style("Sheet1", 3), content="Some(1)")
   inspect(workbook.row_visible("Sheet1", 2), content="false")
   inspect(workbook.col_visible("Sheet1", 3), content="false")
 }
@@ -163,7 +163,7 @@ test "mbtexcel calc props validation" {
   let result1 : Result[Unit, Error] = try? workbook.set_calc_props(
     Some(bad_mode),
   )
-  inspect(
+  debug_inspect(
     result1,
     content="Err(InvalidWorkbookProperty(msg=\"invalid calc mode\"))",
   )
@@ -171,7 +171,7 @@ test "mbtexcel calc props validation" {
   let result2 : Result[Unit, Error] = try? workbook.set_calc_props(
     Some(bad_ref),
   )
-  inspect(
+  debug_inspect(
     result2,
     content="Err(InvalidWorkbookProperty(msg=\"invalid reference mode\"))",
   )

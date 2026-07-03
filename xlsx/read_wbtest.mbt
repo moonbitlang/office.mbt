@@ -162,17 +162,17 @@ test "read wb: parse_font_entry attributes and invalid numerics" {
   inspect(font.shadow is Some(true), content="true")
   inspect(font.condense is Some(true), content="true")
   inspect(font.extend is Some(true), content="true")
-  inspect(font.underline, content="Some(\"double\")")
-  inspect(font.size, content="Some(11)")
-  inspect(font.charset, content="Some(1)")
-  inspect(font.family, content="Some(\"Aptos\")")
-  inspect(font.family_number, content="Some(3)")
-  inspect(font.vert_align, content="Some(\"superscript\")")
-  inspect(font.scheme, content="Some(\"minor\")")
-  inspect(font.color, content="Some(\"ABCDEF12\")")
-  inspect(font.color_theme, content="Some(1)")
-  inspect(font.color_indexed, content="Some(2)")
-  inspect(font.color_tint, content="Some(0.5)")
+  debug_inspect(font.underline, content="Some(\"double\")")
+  debug_inspect(font.size, content="Some(11)")
+  debug_inspect(font.charset, content="Some(1)")
+  debug_inspect(font.family, content="Some(\"Aptos\")")
+  debug_inspect(font.family_number, content="Some(3)")
+  debug_inspect(font.vert_align, content="Some(\"superscript\")")
+  debug_inspect(font.scheme, content="Some(\"minor\")")
+  debug_inspect(font.color, content="Some(\"ABCDEF12\")")
+  debug_inspect(font.color_theme, content="Some(1)")
+  debug_inspect(font.color_indexed, content="Some(2)")
+  debug_inspect(font.color_tint, content="Some(0.5)")
 
   inspect(
     is_invalid_xml_error(
@@ -248,13 +248,13 @@ test "read wb: parse_font_entry implicit default and none-attr branches" {
   inspect(font.outline is Some(true), content="true")
   inspect(font.condense is Some(true), content="true")
   inspect(font.extend is Some(true), content="true")
-  inspect(font.underline, content="Some(\"single\")")
-  inspect(font.size, content="None")
-  inspect(font.charset, content="None")
-  inspect(font.family, content="None")
-  inspect(font.family_number, content="None")
-  inspect(font.vert_align, content="None")
-  inspect(font.scheme, content="None")
+  debug_inspect(font.underline, content="Some(\"single\")")
+  debug_inspect(font.size, content="None")
+  debug_inspect(font.charset, content="None")
+  debug_inspect(font.family, content="None")
+  debug_inspect(font.family_number, content="None")
+  debug_inspect(font.vert_align, content="None")
+  debug_inspect(font.scheme, content="None")
 }
 
 ///|
@@ -313,7 +313,7 @@ test "read wb: parse_fill_entry gradient and pattern guard branches" {
       #|,
     ),
   )
-  inspect(gradient.typ, content="Some(\"gradient\")")
+  debug_inspect(gradient.typ, content="Some(\"gradient\")")
   inspect(gradient.shading is Some(_), content="true")
   inspect(gradient.colors is Some(_), content="true")
   inspect(gradient.transparency is Some(_), content="true")
@@ -321,20 +321,20 @@ test "read wb: parse_fill_entry gradient and pattern guard branches" {
   let gradient_single_stop = parse_fill_entry(
     "<gradientFill><stop position=\"0\"><color rgb=\"FF112233\"/></stop></gradientFill>",
   )
-  inspect(gradient_single_stop.colors, content="None")
-  inspect(gradient_single_stop.transparency, content="None")
+  debug_inspect(gradient_single_stop.colors, content="None")
+  debug_inspect(gradient_single_stop.transparency, content="None")
 
   let pattern_default = parse_fill_entry(
     "<patternFill><fgColor rgb=\"112233\"/></patternFill>",
   )
-  inspect(pattern_default.typ, content="Some(\"pattern\")")
-  inspect(pattern_default.pattern, content="Some(0)")
+  debug_inspect(pattern_default.typ, content="Some(\"pattern\")")
+  debug_inspect(pattern_default.pattern, content="Some(0)")
   inspect(pattern_default.colors is Some(_), content="true")
 
   let pattern_unknown = parse_fill_entry(
     "<patternFill patternType=\"unknown\"><fgColor rgb=\"112233\"/></patternFill>",
   )
-  inspect(pattern_unknown.pattern, content="Some(0)")
+  debug_inspect(pattern_unknown.pattern, content="Some(0)")
 
   inspect(
     is_invalid_xml_fill_error(
@@ -407,7 +407,7 @@ test "read wb: parse_fills and borders structural guard branches" {
     ),
   )
   inspect(parsed_fill.length(), content="1")
-  inspect(parsed_fill[0].typ, content="Some(\"pattern\")")
+  debug_inspect(parsed_fill[0].typ, content="Some(\"pattern\")")
 
   let no_borders = parse_borders("<styleSheet/>")
   inspect(no_borders.length(), content="1")
@@ -454,7 +454,7 @@ test "read wb: parse_fills and borders structural guard branches" {
   inspect(has_border_type(parsed_borders[0], "vertical"), content="true")
   inspect(has_border_type(parsed_borders[0], "horizontal"), content="true")
   inspect(has_border_type(parsed_borders[1], "diagonal"), content="true")
-  inspect(
+  debug_inspect(
     border_color_by_type(parsed_borders[0], "right"),
     content="Some(\"80112233\")",
   )
@@ -711,13 +711,13 @@ test "read wb: x14 validation and icon-set helper guard branches" {
   inspect(color_text_from_rgb_x14("FF112233"), content="#112233")
   inspect(color_text_from_rgb_x14("00112233"), content="#00112233")
 
-  inspect(
+  debug_inspect(
     parse_sheet_dimension(
       "<worksheet><dimension ref=\"A1:B2\"></dimension></worksheet>",
     ),
     content="Some(\"A1:B2\")",
   )
-  inspect(
+  debug_inspect(
     parse_sheet_dimension("<worksheet><dimension/></worksheet>"),
     content="None",
   )

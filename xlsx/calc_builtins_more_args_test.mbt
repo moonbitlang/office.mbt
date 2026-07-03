@@ -51,5 +51,5 @@ test "calc: builtins smoke (valid-arg calls are recognized)" {
       missing.push(formula)
     }
   }
-  inspect(missing, content="[]")
+  debug_inspect(missing, content="[]")
 }

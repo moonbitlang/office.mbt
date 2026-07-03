@@ -21,14 +21,24 @@ test "comment add/delete" {
     height: None,
   }
   workbook.add_comment("Sheet1", comment)
-  inspect(
+  debug_inspect(
     workbook.get_comments("Sheet1"),
     content=(
-      #|[{cell: "A1", author: "Alice", author_id: None, text: "Hello", paragraph: [], width: None, height: None}]
+      #|[
+      #|  {
+      #|    cell: "A1",
+      #|    author: "Alice",
+      #|    author_id: None,
+      #|    text: "Hello",
+      #|    paragraph: [],
+      #|    width: None,
+      #|    height: None,
+      #|  },
+      #|]
     ),
   )
   workbook.delete_comment("Sheet1", "A1")
-  inspect(workbook.get_comments("Sheet1"), content="[]")
+  debug_inspect(workbook.get_comments("Sheet1"), content="[]")
 }
 
 ///|
@@ -54,10 +64,20 @@ test "comment delete keeps other comments" {
     height: None,
   })
   sheet.delete_comment("A1")
-  inspect(
-    sheet.comments(),
+  debug_inspect(
+    sheet.comments().to_array(),
     content=(
-      #|[{cell: "B2", author: "B", author_id: None, text: "two", paragraph: [], width: None, height: None}]
+      #|[
+      #|  {
+      #|    cell: "B2",
+      #|    author: "B",
+      #|    author_id: None,
+      #|    text: "two",
+      #|    paragraph: [],
+      #|    width: None,
+      #|    height: None,
+      #|  },
+      #|]
     ),
   )
 }
@@ -101,10 +121,47 @@ test "comment roundtrip" {
   }
   workbook.add_comment("Sheet1", comment)
   let parsed = read(write(workbook))
-  inspect(
+  debug_inspect(
     parsed.get_comments("Sheet1"),
     content=(
-      #|[{cell: "B2", author: "Bob", author_id: Some(0), text: "Note 1", paragraph: [{text: "Note", font: Some({bold: true, italic: false, strike: false, outline: false, shadow: false, condense: false, extend: false, underline: None, size: Some(11), color: None, color_theme: None, color_indexed: None, color_tint: None, charset: None, family_number: None, scheme: None, vert_align: None, family: None})}, {text: " 1", font: None}], width: None, height: None}]
+      #|[
+      #|  {
+      #|    cell: "B2",
+      #|    author: "Bob",
+      #|    author_id: Some(0),
+      #|    text: "Note 1",
+      #|    paragraph: [
+      #|      {
+      #|        text: "Note",
+      #|        font: Some(
+      #|          {
+      #|            bold: true,
+      #|            italic: false,
+      #|            strike: false,
+      #|            outline: false,
+      #|            shadow: false,
+      #|            condense: false,
+      #|            extend: false,
+      #|            underline: None,
+      #|            size: Some(11),
+      #|            color: None,
+      #|            color_theme: None,
+      #|            color_indexed: None,
+      #|            color_tint: None,
+      #|            charset: None,
+      #|            family_number: None,
+      #|            scheme: None,
+      #|            vert_align: None,
+      #|            family: None,
+      #|          },
+      #|        ),
+      #|      },
+      #|      { text: " 1", font: None },
+      #|    ],
+      #|    width: None,
+      #|    height: None,
+      #|  },
+      #|]
     ),
   )
 }

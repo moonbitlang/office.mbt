@@ -1,6 +1,6 @@
 ///|
 test "read_sheet_rel_parts wb: parse_comment_authors handles missing and malformed entries" {
-  inspect(parse_comment_authors("<comments/>"), content="[]")
+  debug_inspect(parse_comment_authors("<comments/>"), content="[]")
   let xml =
     #|<comments>
     #|  <authors>
@@ -8,7 +8,7 @@ test "read_sheet_rel_parts wb: parse_comment_authors handles missing and malform
     #|    <author>Bob</author>
     #|  </authors>
     #|</comments>
-  inspect(parse_comment_authors(xml), content="[\"Bob\"]")
+  debug_inspect(parse_comment_authors(xml), content="[\"Bob\"]")
 }
 
 ///|
@@ -73,7 +73,7 @@ test "read_sheet_rel_parts wb: parse_table_part_ids supports expanded tags and v
     #|    <tablePart r:id="rIdTable"></tablePart>
     #|  </tableParts>
     #|</worksheet>
-  inspect(parse_table_part_ids(xml), content="[\"rIdTable\"]")
+  debug_inspect(parse_table_part_ids(xml), content="[\"rIdTable\"]")
 
   let missing_id =
     #|<worksheet>
@@ -99,7 +99,7 @@ test "read_sheet_rel_parts wb: parse_pivot_table_part_ids supports expanded tags
     #|    <pivotTablePart r:id="rIdPivot"></pivotTablePart>
     #|  </pivotTableParts>
     #|</worksheet>
-  inspect(parse_pivot_table_part_ids(xml), content="[\"rIdPivot\"]")
+  debug_inspect(parse_pivot_table_part_ids(xml), content="[\"rIdPivot\"]")
 
   let missing_id =
     #|<worksheet>

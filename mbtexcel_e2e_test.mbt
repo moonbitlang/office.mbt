@@ -1,7 +1,7 @@
 ///|
 test "mbtexcel cell reference helpers" {
   let (col, row) = split_cell_name("BC12")
-  inspect((col, row), content="(\"BC\", 12)")
+  debug_inspect((col, row), content="(\"BC\", 12)")
   inspect(join_cell_name("BC", 12), content="BC12")
   let abs = coordinates_to_cell_name(27, 12, abs=true)
   inspect(abs, content="$AA$12")
@@ -18,7 +18,7 @@ test "mbtexcel password wrappers" {
   workbook.set_cell("Sheet1", "A1", "secret")
   let bytes = write_with_password(workbook, "pass")
   let parsed = read_with_password(bytes, "pass")
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
   let bad : Result[@xlsx.Workbook, Error] = try? read_with_password(
     bytes, "wrong",
   )
@@ -41,7 +41,7 @@ async test "mbtexcel open_reader wrapper" {
     })
     open_reader(reader)
   })
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"reader\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"reader\")")
 }
 
 ///|
@@ -62,7 +62,7 @@ async test "mbtexcel open_reader wrapper with transcoder branch" {
       }
     })
   })
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"reader\")")
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"reader\")")
 }
 
 ///|
@@ -79,7 +79,7 @@ async test "mbtexcel read_zip_reader wrapper" {
     })
     read_zip_reader(reader)
   })
-  inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"zip\")")
+  debug_inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"zip\")")
 }
 
 ///|
@@ -103,7 +103,7 @@ async test "mbtexcel read_zip_reader wrapper with transcoder branch" {
       }
     })
   })
-  inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"zip\")")
+  debug_inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"zip\")")
 }
 
 ///|
@@ -119,7 +119,7 @@ async test "mbtexcel open_file wrapper" {
     err => fail("write file failed: \{err}")
   }
   let parsed = open_file(path)
-  inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"file\")")
+  debug_inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"file\")")
   @async/fs.remove(path) catch {
     err => fail("remove file failed: \{err}")
   }
@@ -145,7 +145,7 @@ async test "mbtexcel open_file wrapper with transcoder branch" {
       _ => ""
     }
   })
-  inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"file\")")
+  debug_inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"file\")")
   @async/fs.remove(path) catch {
     err => fail("remove file failed: \{err}")
   }
@@ -174,22 +174,22 @@ test "mbtexcel e2e multi-feature roundtrip" {
   workbook.add_data_validation("Summary", dv)
   let bytes = write(workbook)
   let parsed = read(bytes)
-  inspect(parsed.sheet_name(0), content="Some(\"Summary\")")
-  inspect(parsed.sheet_name(1), content="Some(\"Data\")")
-  inspect(parsed.get_cell("Summary", "A2"), content="Some(\"Apples\")")
-  inspect(
+  debug_inspect(parsed.sheet_name(0), content="Some(\"Summary\")")
+  debug_inspect(parsed.sheet_name(1), content="Some(\"Data\")")
+  debug_inspect(parsed.get_cell("Summary", "A2"), content="Some(\"Apples\")")
+  debug_inspect(
     parsed.get_cell_value_raw("Summary", "B2"),
     content="Some(Numeric(10))",
   )
-  inspect(
+  debug_inspect(
     parsed.get_cell_value_raw("Summary", "D2"),
     content="Some(Bool(true))",
   )
-  inspect(
+  debug_inspect(
     parsed.get_cell_formula("Summary", "C2"),
     content="Some(\"SUM(B2:B3)\")",
   )
-  inspect(parsed.get_cell_style("Summary", "E2"), content="Some(1)")
+  debug_inspect(parsed.get_cell_style("Summary", "E2"), content="Some(1)")
   let merged = parsed.get_merge_cells("Summary")
   inspect(merged.contains("A4:B4"), content="true")
   let validations = parsed.get_data_validations("Summary")
@@ -226,10 +226,18 @@ test "mbtexcel e2e tables sparklines hyperlinks" {
     None => fail("missing sheet")
   }
   inspect(sheet.sparkline_groups().length(), content="1")
-  inspect(
+  debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "A2"),
     content=(
-      #|Some({reference: "A2", target: "https://example.com", link_type: External, display: Some("Example"), tooltip: None})
+      #|Some(
+      #|  {
+      #|    reference: "A2",
+      #|    target: "https://example.com",
+      #|    link_type: External,
+      #|    display: Some("Example"),
+      #|    tooltip: None,
+      #|  },
+      #|)
     ),
   )
 }
@@ -246,8 +254,8 @@ test "mbtexcel e2e stream writer" {
   ])
   writer.flush()
   let parsed = read(write(workbook))
-  inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"A\")")
-  inspect(
+  debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"A\")")
+  debug_inspect(
     parsed.get_cell_formula("Sheet1", "A2"),
     content="Some(\"SUM(A1,B1)\")",
   )
@@ -276,7 +284,7 @@ test "mbtexcel e2e header footer images" {
   let images = parsed.get_header_footer_images("Sheet1")
   inspect(images.length(), content="1")
   let first = images[0]
-  inspect(
+  debug_inspect(
     (
       first.position,
       first.is_footer,
@@ -321,10 +329,27 @@ test "mbtexcel e2e auto filter roundtrip" {
   ]
   workbook.set_auto_filter("Sheet1", "A1:C3", options)
   let parsed = read(write(workbook))
-  inspect(
+  debug_inspect(
     parsed.get_auto_filter("Sheet1"),
     content=(
-      #|Some({range_ref: "A1:C3", columns: [{col: 2, filters: Some(["10"]), custom_filters: None}, {col: 3, filters: None, custom_filters: Some({and_filter: false, filters: [{operator: "greaterThan", value: "5"}]})}]})
+      #|Some(
+      #|  {
+      #|    range_ref: "A1:C3",
+      #|    columns: [
+      #|      { col: 2, filters: Some(["10"]), custom_filters: None },
+      #|      {
+      #|        col: 3,
+      #|        filters: None,
+      #|        custom_filters: Some(
+      #|          {
+      #|            and_filter: false,
+      #|            filters: [{ operator: "greaterThan", value: "5" }],
+      #|          },
+      #|        ),
+      #|      },
+      #|    ],
+      #|  },
+      #|)
     ),
   )
 }
@@ -355,7 +380,7 @@ test "mbtexcel e2e defined names" {
   let parsed = read(write(workbook))
   let names = parsed.get_defined_names()
   inspect(names.length(), content="1")
-  inspect(
+  debug_inspect(
     (names[0].name, names[0].refers_to),
     content="(\"MyName\", \"Sheet1!$A$1\")",
   )
@@ -369,12 +394,12 @@ test "mbtexcel e2e row/col insert remove shifts" {
   workbook.set_cell("Sheet1", "B2", "beta")
   workbook.insert_rows("Sheet1", 1, 1)
   workbook.insert_cols("Sheet1", 1, 1)
-  inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"alpha\")")
-  inspect(workbook.get_cell("Sheet1", "C3"), content="Some(\"beta\")")
+  debug_inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"alpha\")")
+  debug_inspect(workbook.get_cell("Sheet1", "C3"), content="Some(\"beta\")")
   workbook.remove_rows("Sheet1", 1, 1)
   workbook.remove_cols("Sheet1", 1, 1)
-  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
-  inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"beta\")")
+  debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
+  debug_inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"beta\")")
 }
 
 ///|
@@ -394,7 +419,7 @@ test "mbtexcel e2e comments" {
   let parsed = read(write(workbook))
   let comments = parsed.get_comments("Sheet1")
   inspect(comments.length(), content="1")
-  inspect(
+  debug_inspect(
     (comments[0].cell, comments[0].author, comments[0].text),
     content="(\"A1\", \"tester\", \"note\")",
   )
@@ -431,9 +456,9 @@ test "mbtexcel e2e sheet props roundtrip" {
   workbook.set_sheet_props("Sheet1", Some(props))
   let parsed = read(write(workbook))
   let parsed_props = parsed.get_sheet_props("Sheet1")
-  inspect(parsed_props.code_name, content="Some(\"SheetCode\")")
-  inspect(parsed_props.fit_to_page, content="Some(true)")
-  inspect(parsed_props.tab_color_rgb, content="Some(\"FF0000\")")
+  debug_inspect(parsed_props.code_name, content="Some(\"SheetCode\")")
+  debug_inspect(parsed_props.fit_to_page, content="Some(true)")
+  debug_inspect(parsed_props.tab_color_rgb, content="Some(\"FF0000\")")
 }
 
 ///|
@@ -447,9 +472,9 @@ test "mbtexcel e2e workbook props roundtrip" {
   workbook.set_workbook_props(Some(props))
   let parsed = read(write(workbook))
   let parsed_props = parsed.get_workbook_props()
-  inspect(parsed_props.date_1904, content="Some(true)")
-  inspect(parsed_props.filter_privacy, content="Some(true)")
-  inspect(parsed_props.code_name, content="Some(\"BookCode\")")
+  debug_inspect(parsed_props.date_1904, content="Some(true)")
+  debug_inspect(parsed_props.filter_privacy, content="Some(true)")
+  debug_inspect(parsed_props.code_name, content="Some(\"BookCode\")")
 }
 
 ///|
@@ -496,7 +521,7 @@ test "mbtexcel e2e custom properties" {
   let parsed = read(write(workbook))
   let props = parsed.get_custom_props()
   inspect(props.length(), content="2")
-  inspect((props[0].name, props[1].name), content="(\"Text\", \"Count\")")
+  debug_inspect((props[0].name, props[1].name), content="(\"Text\", \"Count\")")
 }
 
 ///|
@@ -543,12 +568,12 @@ test "mbtexcel e2e page layout and margins" {
   let parsed = read(write(workbook))
   let parsed_margins = parsed.get_page_margins("Sheet1")
   let parsed_layout = parsed.get_page_layout("Sheet1")
-  inspect(parsed_margins.top, content="Some(0.5)")
-  inspect(parsed_margins.footer, content="Some(1)")
-  inspect(parsed_margins.horizontally, content="Some(true)")
-  inspect(parsed_layout.orientation, content="Some(\"landscape\")")
-  inspect(parsed_layout.fit_to_width, content="Some(2)")
-  inspect(parsed_layout.black_and_white, content="Some(true)")
+  debug_inspect(parsed_margins.top, content="Some(0.5)")
+  debug_inspect(parsed_margins.footer, content="Some(1)")
+  debug_inspect(parsed_margins.horizontally, content="Some(true)")
+  debug_inspect(parsed_layout.orientation, content="Some(\"landscape\")")
+  debug_inspect(parsed_layout.fit_to_width, content="Some(2)")
+  debug_inspect(parsed_layout.black_and_white, content="Some(true)")
 }
 
 ///|
@@ -711,7 +736,7 @@ test "mbtexcel e2e pivot table roundtrip" {
     pivots[0].cache_definition_xml,
     content="<pivotCacheDefinition cacheId=\"1\"/>",
   )
-  inspect(
+  debug_inspect(
     pivots[0].cache_records_xml,
     content="Some(\"<pivotCacheRecords count=\\\"0\\\"/>\")",
   )
@@ -728,8 +753,8 @@ test "mbtexcel e2e vml drawing roundtrip" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  inspect(sheet.vml_drawing_xml(), content="Some(\"<xml>vml</xml>\")")
-  inspect(sheet.vml_drawing_hf_xml(), content="Some(\"<xml>hf</xml>\")")
+  debug_inspect(sheet.vml_drawing_xml(), content="Some(\"<xml>vml</xml>\")")
+  debug_inspect(sheet.vml_drawing_hf_xml(), content="Some(\"<xml>hf</xml>\")")
 }
 
 ///|
@@ -828,8 +853,8 @@ test "mbtexcel e2e row and col helpers" {
   workbook.set_row("Sheet1", 1, ["A", "B", "C"])
   workbook.set_col("Sheet1", 2, ["X", "Y"])
   let parsed = read(write(workbook))
-  inspect(parsed.get_row("Sheet1", 1), content="[\"A\", \"X\", \"C\"]")
-  inspect(parsed.get_col("Sheet1", 2), content="[\"X\", \"Y\"]")
+  debug_inspect(parsed.get_row("Sheet1", 1), content="[\"A\", \"X\", \"C\"]")
+  debug_inspect(parsed.get_col("Sheet1", 2), content="[\"X\", \"Y\"]")
 }
 
 ///|
@@ -842,7 +867,10 @@ test "mbtexcel e2e merge cells info and calc" {
   workbook.merge_cells("Sheet1", "A1:B1")
   let merges = workbook.get_merge_cells_info("Sheet1")
   inspect(merges.length(), content="1")
-  inspect((merges[0].range_ref, merges[0].value), content="(\"A1:B1\", \"10\")")
+  debug_inspect(
+    (merges[0].range_ref, merges[0].value),
+    content="(\"A1:B1\", \"10\")",
+  )
   let merges_wo = workbook.get_merge_cells_info("Sheet1", without_values=true)
   inspect(merges_wo[0].value, content="")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="15")

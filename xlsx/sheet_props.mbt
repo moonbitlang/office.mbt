@@ -8,7 +8,7 @@ pub struct PageLayoutMarginsOptions {
   mut footer : Double?
   mut horizontally : Bool?
   mut vertically : Bool?
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 fn PageLayoutMarginsOptions::new() -> PageLayoutMarginsOptions {
@@ -81,7 +81,7 @@ pub struct PageLayoutOptions {
   mut fit_to_width : Int?
   mut black_and_white : Bool?
   mut page_order : String?
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 fn PageLayoutOptions::new() -> PageLayoutOptions {
@@ -164,7 +164,7 @@ pub struct SheetPropsOptions {
   mut zero_height : Bool?
   mut thick_top : Bool?
   mut thick_bottom : Bool?
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 fn SheetPropsOptions::new() -> SheetPropsOptions {
@@ -299,7 +299,7 @@ pub struct HeaderFooterOptions {
   mut even_footer : String
   mut first_header : String
   mut first_footer : String
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 fn HeaderFooterOptions::new() -> HeaderFooterOptions {
@@ -393,7 +393,7 @@ pub struct SheetProtectionOptions {
   mut select_locked_cells : Bool
   mut select_unlocked_cells : Bool
   mut sort : Bool
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 pub fn SheetProtectionOptions::new() -> SheetProtectionOptions {
@@ -533,14 +533,14 @@ pub struct SheetProtection {
   auto_filter : Bool
   pivot_tables : Bool
   select_unlocked_cells : Bool
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 pub struct SheetBackground {
   data : Bytes
   extension : String
   content_type : String
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 pub struct PageBreak {
@@ -548,7 +548,7 @@ pub struct PageBreak {
   min : Int
   max : Int
   manual : Bool
-} derive(Show)
+} derive(Show, Debug)
 
 ///|
 let default_page_margins : PageLayoutMarginsOptions = PageLayoutMarginsOptions::with_values(

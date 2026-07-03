@@ -4,7 +4,7 @@ test "sheet rename and index lookup" {
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   workbook.set_sheet_name("Sheet1", "Main")
-  inspect(workbook.sheet_name(0), content="Some(\"Main\")")
+  debug_inspect(workbook.sheet_name(0), content="Some(\"Main\")")
   inspect(workbook.sheet_index("Main"), content="0")
 }
 
@@ -37,7 +37,7 @@ test "sheet delete updates active index" {
   ignore(workbook.add_sheet("Sheet2"))
   workbook.set_active_sheet(1)
   workbook.delete_sheet("Sheet1")
-  inspect(workbook.sheet_name(0), content="Some(\"Sheet2\")")
+  debug_inspect(workbook.sheet_name(0), content="Some(\"Sheet2\")")
   inspect(workbook.active_sheet_index(), content="0")
 }
 
@@ -47,7 +47,7 @@ test "delete last sheet is no-op" {
   ignore(workbook.add_sheet("Only"))
   let result : Result[Unit, Error] = try? workbook.delete_sheet("Only")
   inspect(result is Ok(_), content="true")
-  inspect(workbook.sheet_name(0), content="Some(\"Only\")")
+  debug_inspect(workbook.sheet_name(0), content="Some(\"Only\")")
 }
 
 ///|
@@ -57,8 +57,8 @@ test "sheet move reorders" {
   ignore(workbook.add_sheet("B"))
   ignore(workbook.add_sheet("C"))
   workbook.move_sheet("C", "A")
-  inspect(workbook.sheet_name(0), content="Some(\"C\")")
-  inspect(workbook.sheet_name(1), content="Some(\"A\")")
+  debug_inspect(workbook.sheet_name(0), content="Some(\"C\")")
+  debug_inspect(workbook.sheet_name(1), content="Some(\"A\")")
 }
 
 ///|
@@ -73,7 +73,7 @@ test "sheet copy replaces target contents" {
     Some(value) => value
     None => fail("missing Sheet2")
   }
-  inspect(copied.get_cell("A1"), content="Some(\"one\")")
+  debug_inspect(copied.get_cell("A1"), content="Some(\"one\")")
   inspect(copied.name(), content="Sheet2")
 }
 
@@ -104,7 +104,7 @@ test "sheet list and map" {
     #|</c:chartSpace>
   ignore(workbook.add_chart_sheet("Chart1", chart_xml))
   ignore(workbook.add_sheet("Sheet2"))
-  inspect(
+  debug_inspect(
     workbook.get_sheet_list(),
     content="[\"Sheet1\", \"Chart1\", \"Sheet2\"]",
   )

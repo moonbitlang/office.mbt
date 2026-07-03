@@ -14,9 +14,9 @@ test "stream writer basic" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  inspect(sheet.get_row(1), content="[\"A\", \"B\"]")
-  inspect(sheet.get_cell_formula("A2"), content="Some(\"SUM(A1,B1)\")")
-  inspect(sheet.get_cell("A2"), content="Some(\"3\")")
+  debug_inspect(sheet.get_row(1), content="[\"A\", \"B\"]")
+  debug_inspect(sheet.get_cell_formula("A2"), content="Some(\"SUM(A1,B1)\")")
+  debug_inspect(sheet.get_cell("A2"), content="Some(\"3\")")
 }
 
 ///|
@@ -41,7 +41,7 @@ test "stream writer row order" {
   } noraise {
     _ => Ok(())
   }
-  inspect(result, content="Err(StreamRowOrder(last=2, next=1))")
+  debug_inspect(result, content="Err(StreamRowOrder(last=2, next=1))")
 }
 
 ///|
@@ -56,7 +56,7 @@ test "stream writer closed" {
   } noraise {
     _ => Ok(())
   }
-  inspect(result, content="Err(StreamWriterClosed)")
+  debug_inspect(result, content="Err(StreamWriterClosed)")
 }
 
 ///|
@@ -84,9 +84,9 @@ test "stream writer column helpers and panes" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  inspect(sheet.get_col_width(2), content="Some(20)")
+  debug_inspect(sheet.get_col_width(2), content="Some(20)")
   inspect(sheet.col_visible(2), content="false")
-  inspect(sheet.get_col_style(2), content="Some(1)")
+  debug_inspect(sheet.get_col_style(2), content="Some(1)")
   inspect(sheet.col_outline_level(3), content="2")
   let updated_panes = sheet.get_panes()
   inspect(updated_panes.freeze, content="true")
@@ -113,15 +113,15 @@ test "stream writer table merge and row opts" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  inspect(sheet.merged_cells(), content="[\"A1:B1\"]")
+  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:B1\"]")
   let table = match sheet.tables().get(0) {
     Some(value) => value
     None => fail("missing table")
   }
   inspect(table.name, content="Table1")
-  inspect(parsed.get_row_height("Sheet1", 1), content="Some(22)")
+  debug_inspect(parsed.get_row_height("Sheet1", 1), content="Some(22)")
   inspect(parsed.row_visible("Sheet1", 1), content="false")
-  inspect(parsed.get_row_style("Sheet1", 1), content="Some(1)")
+  debug_inspect(parsed.get_row_style("Sheet1", 1), content="Some(1)")
 }
 
 ///|
@@ -135,7 +135,7 @@ test "stream writer column helpers require pre-row" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     col_result,
     content="Err(StreamModeConflict(msg=\"set_col_width must be called before set_row\"))",
   )
@@ -145,7 +145,7 @@ test "stream writer column helpers require pre-row" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     pane_result,
     content="Err(StreamModeConflict(msg=\"set_panes must be called before set_row\"))",
   )
@@ -161,7 +161,7 @@ test "stream writer mode conflict" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content="Err(StreamModeConflict(msg=\"worksheet is in stream writer mode\"))",
   )
@@ -175,9 +175,9 @@ test "row stream iterates" {
   sheet.set_row(1, ["A", "B"])
   sheet.set_row(3, ["C"])
   let stream = sheet.row_stream()
-  inspect(stream.next(), content="Some([\"A\", \"B\"])")
-  inspect(stream.next(), content="Some([\"C\"])")
-  inspect(stream.next(), content="None")
+  debug_inspect(stream.next(), content="Some([\"A\", \"B\"])")
+  debug_inspect(stream.next(), content="Some([\"C\"])")
+  debug_inspect(stream.next(), content="None")
 }
 
 ///|
@@ -186,6 +186,6 @@ test "workbook row stream" {
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_row(1, ["A"])
   let stream = workbook.row_stream("Sheet1")
-  inspect(stream.next(), content="Some([\"A\"])")
-  inspect(stream.next(), content="None")
+  debug_inspect(stream.next(), content="Some([\"A\"])")
+  debug_inspect(stream.next(), content="None")
 }

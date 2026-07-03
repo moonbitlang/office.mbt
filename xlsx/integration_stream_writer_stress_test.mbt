@@ -51,14 +51,17 @@ test "integration stream writer stress with styles formulas and table" {
     Some(value) => value
     None => fail("missing parsed Data sheet")
   }
-  inspect(
+  debug_inspect(
     sheet.get_row(1),
     content="[\"N\", \"Double\", \"Triple\", \"Total\"]",
   )
-  inspect(sheet.get_cell_formula("D1201"), content="Some(\"SUM(B1201:C1201)\")")
-  inspect(sheet.get_cell("D1201"), content="Some(\"6000\")")
-  inspect(parsed.get_col_style("Data", 4), content="Some(\{style_id})")
-  inspect(parsed.get_col_width("Data", 1), content="Some(12)")
+  debug_inspect(
+    sheet.get_cell_formula("D1201"),
+    content="Some(\"SUM(B1201:C1201)\")",
+  )
+  debug_inspect(sheet.get_cell("D1201"), content="Some(\"6000\")")
+  debug_inspect(parsed.get_col_style("Data", 4), content="Some(\{style_id})")
+  debug_inspect(parsed.get_col_width("Data", 1), content="Some(12)")
   let tables = parsed.get_tables("Data")
   inspect(tables.length(), content="1")
   inspect(tables[0].name, content="StreamStress")

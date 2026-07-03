@@ -111,8 +111,8 @@ test "demo interactive controls: writer output remains consistent after roundtri
   assert_demo_interactive_controls_archive(bytes)
 
   let parsed = read(bytes)
-  inspect(parsed.sheet_name(0), content="Some(\"UI\")")
-  inspect(parsed.sheet_name(1), content="Some(\"Model\")")
+  debug_inspect(parsed.sheet_name(0), content="Some(\"UI\")")
+  debug_inspect(parsed.sheet_name(1), content="Some(\"Model\")")
 
   let roundtrip_bytes = write(parsed)
   assert_demo_interactive_controls_archive(roundtrip_bytes)

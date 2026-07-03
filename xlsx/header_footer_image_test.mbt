@@ -87,7 +87,7 @@ test "header footer image read roundtrip" {
   let images = parsed_sheet.get_header_footer_images()
   inspect(images.length(), content="1")
   let first = images[0]
-  inspect(
+  debug_inspect(
     (
       first.position,
       first.is_footer,
@@ -110,7 +110,7 @@ test "header footer image options from file path" {
     width="9pt",
     height="8pt",
   )
-  inspect(opts.file, content="Some(\"tmp_logo.PNG\")")
+  debug_inspect(opts.file, content="Some(\"tmp_logo.PNG\")")
   inspect(opts.extension, content=".png")
   inspect(opts.data.length(), content="0")
 }
@@ -123,7 +123,7 @@ test "header footer image options from file requires extension" {
     width="9pt",
     height="8pt",
   )
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(UnsupportedFeature(msg="unsupported header/footer image extension"))
@@ -141,7 +141,7 @@ test "header footer image file options require async api" {
     height="8pt",
   )
   let result : Result[Unit, Error] = try? sheet.add_header_footer_image(opts)
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(InvalidHeaderFooter(msg="header/footer image file path requires add_header_footer_image_from_file"))
@@ -164,7 +164,7 @@ async test "header footer image from file path requires file option" {
   let result : Result[Unit, Error] = try? workbook.add_header_footer_image_from_file(
     "Sheet1", opts,
   )
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(InvalidHeaderFooter(msg="header/footer image file path missing"))
@@ -271,7 +271,7 @@ test "header footer image invalid extension" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(UnsupportedFeature(msg="unsupported header/footer image extension"))
@@ -297,7 +297,7 @@ test "header footer image extension requires dot" {
   } noraise {
     _ => Ok(())
   }
-  inspect(
+  debug_inspect(
     result,
     content=(
       #|Err(UnsupportedFeature(msg="unsupported header/footer image extension"))
@@ -396,7 +396,7 @@ test "header footer image replaces same slot" {
   let parsed = read(write(workbook))
   let images = parsed.get_header_footer_images("Sheet1")
   inspect(images.length(), content="1")
-  inspect(
+  debug_inspect(
     (
       images[0].position,
       images[0].is_footer,

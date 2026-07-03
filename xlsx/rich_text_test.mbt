@@ -36,13 +36,42 @@ test "rich text set/get" {
     { text: "World", font: Some(font) },
   ]
   workbook.set_cell_rich_text("Sheet1", "A1", runs)
-  inspect(
+  debug_inspect(
     workbook.get_cell_rich_text("Sheet1", "A1"),
     content=(
-      #|Some([{text: "Hello ", font: None}, {text: "World", font: Some({bold: true, italic: false, strike: false, outline: false, shadow: false, condense: false, extend: false, underline: Some("single"), size: Some(12), color: Some("#FF0000"), color_theme: None, color_indexed: None, color_tint: None, charset: None, family_number: None, scheme: None, vert_align: None, family: Some("Calibri")})}])
+      #|Some(
+      #|  [
+      #|    { text: "Hello ", font: None },
+      #|    {
+      #|      text: "World",
+      #|      font: Some(
+      #|        {
+      #|          bold: true,
+      #|          italic: false,
+      #|          strike: false,
+      #|          outline: false,
+      #|          shadow: false,
+      #|          condense: false,
+      #|          extend: false,
+      #|          underline: Some("single"),
+      #|          size: Some(12),
+      #|          color: Some("#FF0000"),
+      #|          color_theme: None,
+      #|          color_indexed: None,
+      #|          color_tint: None,
+      #|          charset: None,
+      #|          family_number: None,
+      #|          scheme: None,
+      #|          vert_align: None,
+      #|          family: Some("Calibri"),
+      #|        },
+      #|      ),
+      #|    },
+      #|  ],
+      #|)
     ),
   )
-  inspect(
+  debug_inspect(
     workbook.get_cell("Sheet1", "A1"),
     content=(
       #|Some("Hello World")
@@ -55,10 +84,10 @@ test "rich text get on plain string cell returns single run" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "plain")
-  inspect(
+  debug_inspect(
     sheet.get_cell_rich_text("A1"),
     content=(
-      #|Some([{text: "plain", font: None}])
+      #|Some([{ text: "plain", font: None }])
     ),
   )
 }
@@ -68,7 +97,7 @@ test "rich text get on non-string cell returns None" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
-  inspect(sheet.get_cell_rich_text("A1"), content="None")
+  debug_inspect(sheet.get_cell_rich_text("A1"), content="None")
 }
 
 ///|
@@ -77,7 +106,7 @@ test "rich text set updates existing cell" {
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v1", font: None }])
   workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v2", font: None }])
-  inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"v2\")")
+  debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"v2\")")
 }
 
 ///|
@@ -110,13 +139,42 @@ test "rich text roundtrip" {
   ]
   workbook.set_cell_rich_text("Sheet1", "B2", runs)
   let parsed = read(write(workbook))
-  inspect(
+  debug_inspect(
     parsed.get_cell_rich_text("Sheet1", "B2"),
     content=(
-      #|Some([{text: "Moon", font: Some({bold: true, italic: true, strike: false, outline: false, shadow: false, condense: false, extend: false, underline: None, size: Some(11), color: Some("FF00AA00"), color_theme: None, color_indexed: None, color_tint: None, charset: None, family_number: None, scheme: None, vert_align: None, family: Some("Arial")})}, {text: "Bit", font: None}])
+      #|Some(
+      #|  [
+      #|    {
+      #|      text: "Moon",
+      #|      font: Some(
+      #|        {
+      #|          bold: true,
+      #|          italic: true,
+      #|          strike: false,
+      #|          outline: false,
+      #|          shadow: false,
+      #|          condense: false,
+      #|          extend: false,
+      #|          underline: None,
+      #|          size: Some(11),
+      #|          color: Some("FF00AA00"),
+      #|          color_theme: None,
+      #|          color_indexed: None,
+      #|          color_tint: None,
+      #|          charset: None,
+      #|          family_number: None,
+      #|          scheme: None,
+      #|          vert_align: None,
+      #|          family: Some("Arial"),
+      #|        },
+      #|      ),
+      #|    },
+      #|    { text: "Bit", font: None },
+      #|  ],
+      #|)
     ),
   )
-  inspect(
+  debug_inspect(
     parsed.get_cell("Sheet1", "B2"),
     content=(
       #|Some("MoonBit")
@@ -135,7 +193,7 @@ test "rich text length limit uses utf16" {
   let result : Result[Unit, Error] = try? workbook.set_cell_rich_text(
     "Sheet1", "A1", runs,
   )
-  inspect(result, content="Err(CellTextTooLong(len=32768))")
+  debug_inspect(result, content="Err(CellTextTooLong(len=32768))")
 }
 
 ///|
@@ -191,7 +249,7 @@ test "rich text font extended fields roundtrip" {
     Some(value) => value
     None => fail("missing font")
   }
-  inspect(
+  debug_inspect(
     (
       parsed_font.strike,
       parsed_font.outline,
@@ -203,7 +261,19 @@ test "rich text font extended fields roundtrip" {
       parsed_font.scheme,
       parsed_font.vert_align,
     ),
-    content="(true, true, true, true, true, Some(1), Some(2), Some(\"minor\"), Some(\"superscript\"))",
+    content=(
+      #|(
+      #|  true,
+      #|  true,
+      #|  true,
+      #|  true,
+      #|  true,
+      #|  Some(1),
+      #|  Some(2),
+      #|  Some("minor"),
+      #|  Some("superscript"),
+      #|)
+    ),
   )
 }
 
@@ -265,10 +335,63 @@ test "rich text color theme/indexed/tint roundtrip" {
   inspect(shared_xml.contains("tint=\"0.5\""), content="true")
   inspect(shared_xml.contains("indexed=\"64\""), content="true")
   let parsed = read(bytes)
-  inspect(
+  debug_inspect(
     parsed.get_cell_rich_text("Sheet1", "D4"),
     content=(
-      #|Some([{text: "T", font: Some({bold: false, italic: false, strike: false, outline: false, shadow: false, condense: false, extend: false, underline: None, size: None, color: None, color_theme: Some(1), color_indexed: None, color_tint: Some(0.5), charset: None, family_number: None, scheme: None, vert_align: None, family: None})}, {text: "I", font: Some({bold: false, italic: false, strike: false, outline: false, shadow: false, condense: false, extend: false, underline: None, size: None, color: None, color_theme: None, color_indexed: Some(64), color_tint: None, charset: None, family_number: None, scheme: None, vert_align: None, family: None})}])
+      #|Some(
+      #|  [
+      #|    {
+      #|      text: "T",
+      #|      font: Some(
+      #|        {
+      #|          bold: false,
+      #|          italic: false,
+      #|          strike: false,
+      #|          outline: false,
+      #|          shadow: false,
+      #|          condense: false,
+      #|          extend: false,
+      #|          underline: None,
+      #|          size: None,
+      #|          color: None,
+      #|          color_theme: Some(1),
+      #|          color_indexed: None,
+      #|          color_tint: Some(0.5),
+      #|          charset: None,
+      #|          family_number: None,
+      #|          scheme: None,
+      #|          vert_align: None,
+      #|          family: None,
+      #|        },
+      #|      ),
+      #|    },
+      #|    {
+      #|      text: "I",
+      #|      font: Some(
+      #|        {
+      #|          bold: false,
+      #|          italic: false,
+      #|          strike: false,
+      #|          outline: false,
+      #|          shadow: false,
+      #|          condense: false,
+      #|          extend: false,
+      #|          underline: None,
+      #|          size: None,
+      #|          color: None,
+      #|          color_theme: None,
+      #|          color_indexed: Some(64),
+      #|          color_tint: None,
+      #|          charset: None,
+      #|          family_number: None,
+      #|          scheme: None,
+      #|          vert_align: None,
+      #|          family: None,
+      #|        },
+      #|      ),
+      #|    },
+      #|  ],
+      #|)
     ),
   )
 }
