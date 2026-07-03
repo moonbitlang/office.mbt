@@ -101,6 +101,17 @@ fn format_number_builtin(raw : String, id : Int, options : Options) -> String {
       } else {
         format_excel_date(raw, "m/d/yy hh:mm")
       }
+    // language-glyph builtin IDs resolve through the workbook culture
+    27..=36 | 50..=62 | 67..=81 =>
+      match lang_num_fmt_code(options, id) {
+        Some(code) =>
+          if code == "" {
+            raw
+          } else {
+            format_number_code(raw, code, options)
+          }
+        None => raw
+      }
     _ => raw
   }
 }
