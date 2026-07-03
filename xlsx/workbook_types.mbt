@@ -24,6 +24,9 @@ pub struct Workbook {
   options : Options
   mut workbook_protection : WorkbookProtection?
   mut active_sheet_index : Int
+  /// Kingsoft WPS Office embedded cell images parsed from
+  /// xl/cellimages.xml on read, keyed by their DISPIMG identifier.
+  cell_images : Array[CellImage]
 }
 
 ///|
@@ -175,5 +178,6 @@ pub fn Workbook::new(options? : Options = Options::new()) -> Workbook {
     options,
     workbook_protection: None,
     active_sheet_index: 0,
+    cell_images: [],
   }
 }
