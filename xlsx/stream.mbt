@@ -12,6 +12,9 @@ pub struct StreamCell {
   rich_text : Array[RichTextRun]?
   formula : String?
   style_id : Int
+  /// Set only by StreamWriter::new_time_cell: the cell should receive the
+  /// stream default date/time format unless a row/column style applies.
+  priv needs_time_style : Bool
 }
 
 ///|
@@ -27,6 +30,7 @@ pub fn StreamCell::new(
     rich_text: None,
     formula: formula_value,
     style_id,
+    needs_time_style: false,
   }
 }
 
@@ -43,6 +47,7 @@ pub fn StreamCell::new_value(
     rich_text: None,
     formula: formula_value,
     style_id,
+    needs_time_style: false,
   }
 }
 
@@ -67,6 +72,7 @@ pub fn StreamCell::new_rich_text(
     rich_text: Some(stored_runs),
     formula: formula_value,
     style_id,
+    needs_time_style: false,
   }
 }
 
@@ -77,6 +83,12 @@ pub struct StreamWriter {
   mut last_row : Int
   styles : Array[Style]
   mut closed : Bool
+  /// Reads the workbook's current date-1904 setting; Go re-reads workbook
+  /// props on every stream setCellTime call, so this must stay live.
+  priv date1904_now : () -> Bool
+  /// Lazily-registered style holding the default date/time number format
+  /// (numFmt 22) applied to unstyled time cells; 0 until first use.
+  priv mut time_style_id : Int
 }
 
 ///|
@@ -84,8 +96,85 @@ fn StreamWriter::new(
   sheet : Worksheet,
   sheet_id : Int,
   styles : Array[Style],
+  date1904_now? : () -> Bool = () => false,
 ) -> StreamWriter {
-  { sheet, sheet_id, last_row: 0, styles, closed: false }
+  {
+    sheet,
+    sheet_id,
+    last_row: 0,
+    styles,
+    closed: false,
+    date1904_now,
+    time_style_id: 0,
+  }
+}
+
+///|
+/// Registers (once) and returns the stream default date/time style.
+fn StreamWriter::ensure_time_style(self : StreamWriter) -> Int {
+  if self.time_style_id == 0 {
+    let style = {
+      ..Style::new(),
+      number_format: Some(Builtin(22)),
+      num_fmt: Some(22),
+    }
+    self.styles.push(style)
+    self.time_style_id = self.styles.length() - 1
+  }
+  self.time_style_id
+}
+
+///|
+/// Builds a stream cell holding a datetime, mirroring the Go stream
+/// writer's `time.Time` handling: the value becomes an Excel date serial
+/// (reading the workbook's current date-1904 setting) and, when no
+/// explicit `style_id` is given and no row or column style applies at
+/// write time, the cell receives the default date/time format (numFmt
+/// 22, registered once per stream writer). Pre-epoch datetimes are
+/// stored as ISO-8601 text without a default style, like Go's RFC3339
+/// fallback.
+pub fn StreamWriter::new_time_cell(
+  self : StreamWriter,
+  value : @time.ZonedDateTime,
+  formula? : String = "",
+  style_id? : Int = 0,
+) -> StreamCell {
+  let serial = time_to_excel_date(value, use_1904_format=(self.date1904_now)())
+  if serial > 0.0 {
+    let formula_value = if formula == "" { None } else { Some(formula) }
+    {
+      value: cell_value_raw_string(Numeric(serial)),
+      value_type: Number,
+      rich_text: None,
+      formula: formula_value,
+      style_id,
+      // Excelize applies numFmt 22 only when the effective style after
+      // row/column inheritance is 0; that check happens in set_row_cells.
+      needs_time_style: style_id == 0,
+    }
+  } else {
+    StreamCell::new_value(
+      String(zoned_date_time_iso_string(value)),
+      formula~,
+      style_id~,
+    )
+  }
+}
+
+///|
+/// Builds a stream cell holding a duration as a fraction of a day,
+/// mirroring the Go stream writer's `time.Duration` handling: the value
+/// is stored numerically and no default style is applied. The serial
+/// keeps full double precision where Go formats through float32.
+pub fn StreamWriter::new_duration_cell(
+  self : StreamWriter,
+  value : @time.Duration,
+  formula? : String = "",
+  style_id? : Int = 0,
+) -> StreamCell {
+  let _ = self
+  let serial = value.to_nanoseconds().to_double() / nanos_per_day
+  StreamCell::new_value(Numeric(serial), formula~, style_id~)
 }
 
 ///|
@@ -286,10 +375,33 @@ pub fn StreamWriter::set_row_cells(
   if row <= self.last_row {
     raise StreamRowOrder(last=self.last_row, next=row)
   }
+  let row_style = match row_opts {
+    Some(opts) if opts.style_id > 0 => opts.style_id
+    _ => 0
+  }
+  // Validate every caller-provided style id against the style count seen
+  // at row entry: the lazy time-style registration below must not widen
+  // the valid range for later cells in the same row.
+  let style_count = self.styles.length()
+  for cell in values {
+    if cell.style_id < 0 || cell.style_id >= style_count {
+      raise InvalidStyleId(index=cell.style_id)
+    }
+  }
   let mut col = start_col
   for cell in values {
-    if cell.style_id < 0 || cell.style_id >= self.styles.length() {
-      raise InvalidStyleId(index=cell.style_id)
+    let mut style_id = cell.style_id
+    if cell.needs_time_style && style_id == 0 {
+      // Excelize's prepareCellStyle precedence: an explicit row-opts or
+      // column style wins; only a fully unstyled time cell receives the
+      // stream default date/time format.
+      let col_style = match self.sheet.col_dimension_value(col).style_id {
+        Some(value) if value > 0 => value
+        _ => 0
+      }
+      if row_style == 0 && col_style == 0 {
+        style_id = self.ensure_time_style()
+      }
     }
     let reference = cell_ref_from(row, col)
     self.sheet.cells.push({
@@ -303,7 +415,7 @@ pub fn StreamWriter::set_row_cells(
       formula_type: None,
       formula_ref: None,
       formula_shared_index: None,
-      style_id: cell.style_id,
+      style_id,
     })
     col = col + 1
   }

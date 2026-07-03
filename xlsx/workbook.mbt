@@ -65,7 +65,13 @@ pub fn Workbook::new_stream_writer(
     raise StreamModeConflict(msg="worksheet already has data")
   }
   sheet.stream_state = Writing
-  StreamWriter::new(sheet, sheet_id, self.styles)
+  let date1904_now = () => {
+    match self.get_workbook_props().date_1904 {
+      Some(flag) => flag
+      None => false
+    }
+  }
+  StreamWriter::new(sheet, sheet_id, self.styles, date1904_now~)
 }
 
 ///|
