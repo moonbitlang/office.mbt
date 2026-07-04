@@ -28,6 +28,20 @@ Export a sheet as CSV:
   $ xlsx.exe rows book.xlsx
   Hello,42
 
+Add a second row and view the sheet as an ASCII table (the first row is
+treated as a header):
+
+  $ xlsx.exe set book.xlsx Data A2 World
+  set Data!A2 = World
+  $ xlsx.exe set book.xlsx Data B2 7
+  set Data!B2 = 7
+  $ xlsx.exe view book.xlsx
+  +-------+----+
+  | Hello | 42 |
+  +-------+----+
+  | World | 7  |
+  +-------+----+
+
 Validate the OOXML package structure (empty problem list prints "valid"):
 
   $ xlsx.exe validate book.xlsx

@@ -7,7 +7,7 @@ import {
   "moonbitlang/core/env",
 }
 
-supported_targets = "native"
+supported_targets = "native+wasm"
 
 options(
   "is-main": true,

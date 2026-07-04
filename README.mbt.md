@@ -315,7 +315,26 @@ moon run cmd/xlsx -- set book.xlsx Data A1 Hello
 moon run cmd/xlsx -- get book.xlsx Data A1          # -> Hello
 moon run cmd/xlsx -- sheets book.xlsx               # -> Data
 moon run cmd/xlsx -- rows book.xlsx                 # CSV of the sheet
+moon run cmd/xlsx -- view book.xlsx                 # sheet as an ASCII table
 moon run cmd/xlsx -- validate book.xlsx             # -> valid
+```
+
+`view` renders a sheet as an ASCII table (first row treated as a header):
+
+```
++-------+-------+
+| Name  | Score |
++-------+-------+
+| Alice | 90    |
+| Bob   | 7     |
++-------+-------+
+```
+
+The library and CLI build for the **wasm** backend as well as native and
+js (the CLI needs the nightly toolchain for wasm filesystem support):
+
+```sh
+moon run --target wasm cmd/xlsx -- view book.xlsx
 ```
 
 ## Demos

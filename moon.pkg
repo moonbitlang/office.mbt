@@ -18,4 +18,4 @@ import {
 
 warnings = "-a"
 
-supported_targets = "native+js"
+supported_targets = "native+js+wasm"

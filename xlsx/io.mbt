@@ -9,7 +9,7 @@ async fn[R : @async/io.Reader] read_all_bytes(
 }
 
 ///|
-#cfg(target="native")
+#cfg(any(target="native", target="wasm"))
 async fn read_file_bytes(path : String) -> Bytes raise XlsxError {
   let data = @async/fs.read_file(path) catch {
     err => raise InvalidSheetOperation(msg="read file failed: \{err}")
@@ -160,7 +160,7 @@ pub async fn[R : @async/io.Reader] Workbook::read_zip_reader(
 }
 
 ///|
-#cfg(target="native")
+#cfg(any(target="native", target="wasm"))
 pub async fn open_file(
   path : String,
   password? : String = "",
@@ -227,7 +227,12 @@ pub async fn Workbook::save_as(
     raise InvalidSheetOperation(msg="unsupported workbook file format")
   }
   let bytes = write_bytes_with_io(self, options, Some(path))
-  @async/fs.write_file(path, bytes, create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => raise InvalidSheetOperation(msg="write file failed: \{err}")
   }
   self.set_io_context(
