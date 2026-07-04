@@ -78,9 +78,9 @@ pub fn pdf_reader_reconstruction_xref_coverage(BytesView, ArrayView[(Int, PdfXRe
 
 pub fn pdf_reader_reconstruction_xref_stream_entries(ArrayView[PdfXRefSection]) -> Array[PdfClassicXRefEntry]
 
-pub fn pdf_reader_reconstruction_xref_stream_refs(ArrayView[PdfXRefSection]) -> Array[(Int, Int)]
+pub fn pdf_reader_reconstruction_xref_stream_refs(ArrayView[PdfXRefSection]) -> Array[(Int, Int)] raise @core.PdfError
 
-pub fn pdf_reader_reconstruction_xref_stream_sections(BytesView, (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError) -> Array[PdfXRefSection]
+pub fn pdf_reader_reconstruction_xref_stream_sections(BytesView, (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError) -> Array[PdfXRefSection] raise @core.PdfError
 
 pub fn pdf_reader_root_name() -> @core.PdfName
 

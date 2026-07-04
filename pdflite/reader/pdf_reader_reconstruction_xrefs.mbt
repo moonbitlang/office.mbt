@@ -62,17 +62,19 @@ pub fn pdf_reader_reconstruction_classic_xref_entries(
 
 ///|
 /// Return object-number and offset refs for reconstructed xref-stream sections.
+///
+/// Raises `@core.PdfError::XRefEntryExpected` when a section is missing its
+/// stream object number or offset instead of panicking on corrupt input.
 pub fn pdf_reader_reconstruction_xref_stream_refs(
   sections : ArrayView[PdfXRefSection],
-) -> Array[(Int, Int)] {
+) -> Array[(Int, Int)] raise @core.PdfError {
   let refs : Array[(Int, Int)] = Array::new(capacity=sections.length())
   for section in sections {
-    refs.push(
-      (
-        section.stream_object_number.unwrap(),
-        section.stream_object_offset.unwrap(),
-      ),
-    )
+    guard section.stream_object_number is Some(number) &&
+      section.stream_object_offset is Some(offset) else {
+      raise XRefEntryExpected
+    }
+    refs.push((number, offset))
   }
   refs
 }
@@ -123,9 +125,13 @@ pub fn pdf_reader_reconstruction_object_xrefs(
           }
         }
         Err(_) =>
-          position = pdf_reader_reconstruction_skip_malformed_object(
-            data, position,
-          ).unwrap()
+          match
+            pdf_reader_reconstruction_skip_malformed_object(data, position) {
+            Some(next) => position = next
+            // Defensive: the candidate matched an indirect-object header
+            // above, so the skip scanner accepts the same position.
+            None => raise XRefEntryExpected
+          }
       }
     } else {
       position += 1

@@ -9,7 +9,9 @@ pub fn pdf_object_stream_number_offsets(
     raise StreamDataExpected
   }
   let values = @syntax.pdf_parse_lexemes(@syntax.pdf_lex_view(data[0:first]))
-  if values.length() < count * 2 {
+  // Guard without `count * 2`, which overflows Int for huge declared `/N`
+  // counts and would bypass the check (and the allocation bound below).
+  if count > values.length() / 2 {
     raise XRefEntryExpected
   }
   let pairs : Array[(Int, Int)] = Array::new(capacity=count)

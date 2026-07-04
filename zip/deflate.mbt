@@ -345,11 +345,16 @@ fn read_dynamic_tables(
 }
 
 ///|
+/// Default cap for decompressed output, guarding against decompression bombs.
+let deflate_max_output_default : Int = 1 << 30
+
+///|
 fn decode_huffman_block(
   reader : BitReader,
   lit_table : HuffmanTable,
   dist_table : HuffmanTable,
   out : Array[Byte],
+  max_output? : Int = deflate_max_output_default,
 ) -> Unit raise ZipError {
   for state = true {
     if !state {
@@ -357,6 +362,9 @@ fn decode_huffman_block(
     }
     let symbol = decode_symbol(reader, lit_table)
     if symbol < 256 {
+      if out.length() >= max_output {
+        raise OutputLimitExceeded(limit=max_output)
+      }
       out.push(symbol.to_byte())
       continue true
     }
@@ -378,6 +386,9 @@ fn decode_huffman_block(
       reader.read_bits(dist_extra[dist_symbol]).reinterpret_as_int()
     if dist <= 0 || dist > out.length() {
       raise UnsupportedFeature(msg="invalid back-reference distance")
+    }
+    if length > max_output - out.length() {
+      raise OutputLimitExceeded(limit=max_output)
     }
     for _ in 0..<length {
       let value = out[out.length() - dist]
@@ -495,7 +506,10 @@ fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
 }
 
 ///|
-fn deflate_decode(bytes : BytesView) -> Bytes raise ZipError {
+fn deflate_decode(
+  bytes : BytesView,
+  max_output? : Int = deflate_max_output_default,
+) -> Bytes raise ZipError {
   let reader = BitReader::new(bytes)
   let out : Array[Byte] = []
   for state = false {
@@ -512,6 +526,9 @@ fn deflate_decode(bytes : BytesView) -> Bytes raise ZipError {
         if (len.reinterpret_as_uint() ^ nlen) != 0xFFFF {
           raise UnsupportedFeature(msg="invalid stored block length")
         }
+        if len > max_output - out.length() {
+          raise OutputLimitExceeded(limit=max_output)
+        }
         for _ in 0..<len {
           out.push(reader.read_byte())
         }
@@ -519,11 +536,11 @@ fn deflate_decode(bytes : BytesView) -> Bytes raise ZipError {
       1 => {
         let lit = fixed_literal_table()
         let dist = fixed_distance_table()
-        decode_huffman_block(reader, lit, dist, out)
+        decode_huffman_block(reader, lit, dist, out, max_output~)
       }
       2 => {
         let (lit, dist) = read_dynamic_tables(reader)
-        decode_huffman_block(reader, lit, dist, out)
+        decode_huffman_block(reader, lit, dist, out, max_output~)
       }
       _ => raise UnsupportedFeature(msg="invalid deflate block type")
     }

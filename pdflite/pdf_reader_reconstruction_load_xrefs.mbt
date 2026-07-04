@@ -23,7 +23,7 @@ fn PdfDocument::load_reconstructed_xref_stream_plain_objects(
   data : BytesView,
   sections : ArrayView[@reader.PdfXRefSection],
   xrefs : ArrayView[@reader.PdfClassicXRefEntry],
-) -> Unit {
+) -> Unit raise @core.PdfError {
   let xref_stream_refs = @reader.pdf_reader_reconstruction_xref_stream_refs(
     sections,
   )

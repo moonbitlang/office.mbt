@@ -86,9 +86,10 @@ fn pdf_reader_classic_read_plan(
             xref_seen,
             stream_section.entries,
           )
-          xref_stream_refs.push(
-            (stream_section.stream_object_number.unwrap(), xref_stream_position),
-          )
+          guard stream_section.stream_object_number is Some(stream_number) else {
+            raise XRefEntryExpected
+          }
+          xref_stream_refs.push((stream_number, xref_stream_position))
         }
         None => ()
       }

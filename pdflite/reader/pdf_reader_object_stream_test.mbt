@@ -105,3 +105,23 @@ test "object stream groups keep active compressed entries by stream" {
   @test.assert_eq(groups[1].1.length(), 1)
   @test.assert_eq(groups[1].1[0].0.object_number, 5)
 }
+
+///|
+test "object stream number offsets reject overflowing declared counts" {
+  // `count * 2` overflows Int for huge `/N` values; the guard must reject the
+  // count instead of bypassing the length check and allocating gigabytes.
+  let overflow : Result[Array[(Int, Int)], Error] = try
+    @reader.pdf_object_stream_number_offsets(
+      @ascii.encode("2 0 "),
+      4,
+      0x40000000,
+    )
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard overflow is Err(@core.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+}

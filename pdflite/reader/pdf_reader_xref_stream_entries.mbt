@@ -66,11 +66,29 @@ pub fn pdf_xref_stream_entries(
   index_pairs : ArrayView[(Int, Int)],
 ) -> Array[PdfClassicXRefEntry] raise @core.PdfError {
   let (w0, w1, w2) = widths
-  if w0 < 0 || w1 < 0 || w2 < 0 || w0 + w1 + w2 <= 0 {
+  // Bound each attacker-controlled /W width individually before summing:
+  // unchecked, three large positives can wrap the signed sum back to a small
+  // positive row width and defeat the capacity clamp below. Real xref fields
+  // are at most 8 bytes wide; 64 is a generous, overflow-safe ceiling.
+  if w0 < 0 || w1 < 0 || w2 < 0 || w0 > 64 || w1 > 64 || w2 > 64 {
     raise XRefEntryExpected
   }
+  if w0 + w1 + w2 <= 0 {
+    raise XRefEntryExpected
+  }
+  // The `/Index` counts are attacker-controlled: clamp the preallocation
+  // against how many rows the stream data can actually hold. A lying count
+  // still fails below when the data runs out, without a huge up-front
+  // allocation.
+  let declared_capacity = pdf_xref_stream_entry_capacity(index_pairs)
+  let row_width = w0 + w1 + w2
+  let max_plausible_rows = data.length() / row_width + 1
   let entries : Array[PdfClassicXRefEntry] = Array::new(
-    capacity=pdf_xref_stream_entry_capacity(index_pairs),
+    capacity=if declared_capacity < max_plausible_rows {
+      declared_capacity
+    } else {
+      max_plausible_rows
+    },
   )
   let mut position = 0
   for pair in index_pairs {

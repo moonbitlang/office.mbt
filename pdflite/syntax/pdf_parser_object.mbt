@@ -94,9 +94,16 @@ fn pdf_parse_dictionary_capacity(
 }
 
 ///|
+/// Maximum array/dictionary nesting depth accepted by the object parser.
+/// Deeper values are rejected instead of overflowing the stack on malicious
+/// input.
+let pdf_parse_max_depth : Int = 512
+
+///|
 fn pdf_parse_array_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
+  depth : Int,
 ) -> (PdfObject, Int) raise @core.PdfError {
   let values : Array[PdfObject] = Array::new(
     capacity=pdf_parse_array_capacity(lexemes, index),
@@ -114,7 +121,11 @@ fn pdf_parse_array_at(
           done = true
         }
         _ => {
-          let (value, next) = pdf_parse_value_at(lexemes, current)
+          let (value, next) = pdf_parse_value_at(
+            lexemes,
+            current,
+            depth=depth + 1,
+          )
           values.push(value)
           current = next
         }
@@ -144,6 +155,7 @@ fn pdf_skip_dictionary_tail(lexemes : ArrayView[PdfLexeme], index : Int) -> Int 
 fn pdf_parse_dictionary_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
+  depth : Int,
 ) -> (PdfObject, Int) raise @core.PdfError {
   let entries : Array[(@core.PdfName, PdfObject)] = Array::new(
     capacity=pdf_parse_dictionary_capacity(lexemes, index),
@@ -162,7 +174,11 @@ fn pdf_parse_dictionary_at(
           done = true
         }
         _ => {
-          let (key, after_key) = pdf_parse_value_at(lexemes, current)
+          let (key, after_key) = pdf_parse_value_at(
+            lexemes,
+            current,
+            depth=depth + 1,
+          )
           match key {
             PdfNameObject(name) =>
               if after_key >= lexemes.length() {
@@ -184,7 +200,9 @@ fn pdf_parse_dictionary_at(
                     }
                     _ => {
                       let (value, after_value) = pdf_parse_value_at(
-                        lexemes, value_start,
+                        lexemes,
+                        value_start,
+                        depth=depth + 1,
                       )
                       entries.push((name, value))
                       current = after_value
@@ -213,7 +231,11 @@ fn pdf_parse_dictionary_at(
 fn pdf_parse_value_at(
   lexemes : ArrayView[PdfLexeme],
   index : Int,
+  depth? : Int = 0,
 ) -> (PdfObject, Int) raise @core.PdfError {
+  if depth >= pdf_parse_max_depth {
+    raise ParseObjectExpected
+  }
   let current = pdf_skip_comments(lexemes, index)
   if current >= lexemes.length() {
     raise ParseObjectExpected
@@ -228,8 +250,8 @@ fn pdf_parse_value_at(
         LexReal(value) => (PdfReal(value), current + 1)
         LexString(value) => (PdfString(value), current + 1)
         LexName(value) => (PdfNameObject(value), current + 1)
-        LexLeftSquare => pdf_parse_array_at(lexemes, current + 1)
-        LexLeftDict => pdf_parse_dictionary_at(lexemes, current + 1)
+        LexLeftSquare => pdf_parse_array_at(lexemes, current + 1, depth)
+        LexLeftDict => pdf_parse_dictionary_at(lexemes, current + 1, depth)
         _ => raise ParseObjectExpected
       }
   }
