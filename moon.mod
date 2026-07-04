@@ -1,6 +1,6 @@
 name = "bobzhang/mbtexcel"
 
-version = "0.1.5"
+version = "0.1.6"
 
 import {
   "moonbitlang/async@0.20.1",
@@ -11,12 +11,12 @@ readme = "README.mbt.md"
 
 preferred_target = "native"
 
-repository = ""
+repository = "https://github.com/moonbitlang/mbtexcel"
 
 license = "Apache-2.0"
 
-keywords = [ ]
+keywords = [ "excel", "xlsx", "spreadsheet", "ooxml", "office" ]
 
-description = ""
+description = "A MoonBit port of the Go excelize library for reading and writing XLSX (Excel) spreadsheets."
 
 warnings = "+result_error_return"
