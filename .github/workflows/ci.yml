@@ -61,8 +61,7 @@ jobs:
         run: moon version --all
 
       # Populate the module registry so dependency resolution works on a fresh
-      # runner (moonbitlang/async, moonbitlang/x, peter-jerry-ye/codex for
-      # mbtexcel; hustcer/fzip for docx2html).
+      # runner (all deps are first-party: moonbitlang/async and moonbitlang/x).
       - name: Resolve dependencies
         run: moon update
 

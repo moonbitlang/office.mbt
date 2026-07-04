@@ -5,7 +5,7 @@ import {
   "bobzhang/docx2html/style_map",
   "bobzhang/docx2html/xml",
   "bobzhang/docx2html/zip",
-  "hustcer/fzip",
+  "bobzhang/mbtexcel/zip" @mbtzip,
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/string",

@@ -7,15 +7,12 @@ pub(all) struct ZipArchive {
 ///|
 /// Opens ZIP bytes into an in-memory archive.
 pub fn open_zip(data : BytesView) -> ZipArchive raise DocxError {
-  let fixed = FixedArray::from_array(data.to_array())
-  let entries = @fzip.unzip_sync(fixed) catch {
-    FzipError(message~, ..) =>
-      raise InvalidZip(message="invalid ZIP archive: " + message)
+  let archive = @mbtzip.read(data) catch {
+    err => raise InvalidZip(message="invalid ZIP archive: \{repr(err)}")
   }
   let map : Map[String, Bytes] = {}
-  for entry in entries {
-    let (name, content) = entry
-    map[name] = Bytes::from_array(content)
+  for entry in archive.entries() {
+    map[entry.name()] = entry.data()
   }
   { entries: map }
 }

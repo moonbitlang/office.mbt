@@ -24,7 +24,7 @@ keywords = [ "docx", "html", "markdown", "mammoth" ]
 description = "Native MoonBit DOCX to HTML/Markdown converter ported from Mammoth"
 
 import {
-  "hustcer/fzip@0.5.8",
+  "bobzhang/mbtexcel@0.1.6",
   "moonbitlang/x@0.4.43",
   "moonbitlang/async@0.20.1",
 }
