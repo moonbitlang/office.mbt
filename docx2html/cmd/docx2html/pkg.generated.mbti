@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/cmd/docx2html"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+type CliError derive(Eq, @debug.Debug)
+
+// Types and methods
+type CliCommand derive(Eq, @debug.Debug)
+
+type CliOptions derive(Eq, @debug.Debug)
+
+type CliOutputFormat derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

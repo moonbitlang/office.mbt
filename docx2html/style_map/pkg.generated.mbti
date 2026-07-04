@@ -1,0 +1,66 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/style_map"
+
+import {
+  "bobzhang/docx2html/core",
+  "bobzhang/docx2html/document",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn default_style_map_lines() -> Array[String]
+
+pub fn find_style_mapping(@document.DocumentElement, Array[StyleMapping]) -> StyleMapping?
+
+pub fn parse_style_map(Array[String]) -> StyleMapParseResult
+
+pub fn parse_style_map_string(String) -> StyleMapParseResult
+
+pub fn read_style_map(Array[String]) -> Array[StyleMapping]
+
+pub fn read_style_map_string(String) -> Array[String]
+
+pub fn read_style_map_with_messages(Array[String]) -> StyleMapParseResult
+
+pub fn read_style_mapping(String) -> StyleMapping?
+
+// Errors
+
+// Types and methods
+pub(all) enum DocumentMatcher {
+  ParagraphMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?, numbering~ : @document.Numbering?)
+  RunMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
+  RunPropertyMatcher(String)
+  HighlightMatcher(String?)
+  TableMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
+  BreakMatcher(@document.BreakType)
+  CommentReferenceMatcher
+} derive(Eq, @debug.Debug)
+pub fn DocumentMatcher::matches(Self, @document.DocumentElement) -> Bool
+
+pub(all) struct HtmlPathElement {
+  tag : String
+  attributes : Map[String, String]
+  fresh : Bool
+  separator : String?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct StyleMapParseResult {
+  mappings : Array[StyleMapping]
+  messages : Array[@core.Message]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct StyleMapping {
+  from : DocumentMatcher
+  to : Array[HtmlPathElement]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum StyleNameMatcher {
+  ExactStyleName(String)
+  PrefixStyleName(String)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

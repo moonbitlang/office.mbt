@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/xml"
+
+import {
+  "bobzhang/docx2html/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn read_xml_string(String, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
+
+pub fn write_xml_string(XmlElement, namespaces? : Map[String, String]) -> String
+
+pub fn xml_element(String, attributes? : Map[String, String], children? : Array[XmlNode]) -> XmlElement
+
+pub fn xml_text(String) -> XmlNode
+
+// Errors
+
+// Types and methods
+pub(all) struct XmlElement {
+  name : String
+  attributes : Map[String, String]
+  children : Array[XmlNode]
+} derive(Eq, @debug.Debug)
+pub fn XmlElement::descendants_by_tag_name(Self, String) -> Array[Self]
+pub fn XmlElement::elements_by_tag_name(Self, String) -> Array[Self]
+pub fn XmlElement::first(Self, String) -> Self?
+pub fn XmlElement::first_or_empty(Self, String) -> Self
+pub fn XmlElement::text(Self) -> String raise @core.DocxError
+
+pub(all) enum XmlNode {
+  XmlElement(XmlElement)
+  XmlText(String)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+
