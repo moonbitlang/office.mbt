@@ -57,7 +57,7 @@ pub(all) enum ChartType {
   Bubble3D
   StockHighLowClose
   StockOpenHighLowClose
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub(all) enum ChartDashType {
@@ -73,7 +73,7 @@ pub(all) enum ChartDashType {
   SysDot
   SysDashDot
   SysDashDotDot
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub(all) enum ChartLineType {
@@ -81,7 +81,7 @@ pub(all) enum ChartLineType {
   Solid
   NoLine
   Automatic
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Emits the default solid line fill Excelize uses for `ChartLineSolid`
@@ -100,7 +100,7 @@ pub(all) enum ChartTickLabelPositionType {
   High
   Low
   NoTickLabels
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub(all) enum ChartDataLabelPositionType {
@@ -112,13 +112,13 @@ pub(all) enum ChartDataLabelPositionType {
   BestFit
   InEnd
   OutEnd
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 struct ChartNumFmt {
   custom_num_fmt : String
   source_linked : Bool
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub fn ChartNumFmt::new(
@@ -149,7 +149,7 @@ pub(all) struct ChartAxis {
   mut title : String
   mut title_rich : Array[RichTextRun]?
   mut ax_id : Int
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn ChartAxis::new() -> ChartAxis {
@@ -202,7 +202,7 @@ fn write_chart_axis_lines(
 struct ChartDimension {
   width : Int
   height : Int
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn ChartDimension::new() -> ChartDimension {
@@ -228,7 +228,7 @@ pub(all) struct ChartLine {
   mut transparency : Int
   mut smooth : Bool
   mut width : Double
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn ChartLine::new() -> ChartLine {
@@ -247,7 +247,7 @@ pub(all) struct ChartUpDownBar {
   mut fill_color : String
   mut border : ChartLine
   mut fill : ChartFill?
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn ChartUpDownBar::new() -> ChartUpDownBar {
@@ -271,7 +271,7 @@ pub(all) struct ChartPlotArea {
   mut fill_color : String
   mut fill_transparency : Int
   mut fill : ChartFill?
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn ChartPlotArea::new() -> ChartPlotArea {
@@ -299,7 +299,7 @@ pub(all) struct ChartLegend {
   mut position : String
   mut show_legend_key : Bool
   mut font : Font?
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn ChartLegend::new(
@@ -317,7 +317,7 @@ pub(all) struct ChartMarker {
   mut fill_transparency : Int
   mut fill : ChartFill?
   mut border : ChartLine
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn ChartMarker::new(symbol? : String = "", size? : Int = 0) -> ChartMarker {
@@ -338,7 +338,7 @@ pub(all) struct ChartDataLabel {
   mut fill_color : String
   mut fill_transparency : Int
   mut fill : ChartFill?
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn ChartDataLabel::new() -> ChartDataLabel {
@@ -356,7 +356,7 @@ struct ChartDataPoint {
   index : Int
   fill_color : String
   fill : ChartFill?
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub fn ChartDataPoint::new(
@@ -381,7 +381,7 @@ pub(all) struct ChartFill {
   mut color : Array[String]
   mut shading : Int
   mut transparency : Int
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub fn ChartFill::new(
@@ -470,7 +470,7 @@ pub(all) struct ChartSeries {
   mut data_label : ChartDataLabel
   mut data_label_position : ChartDataLabelPositionType
   data_point : Array[ChartDataPoint]
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub fn ChartSeries::new(
@@ -544,7 +544,7 @@ pub(all) struct ChartOptions {
   mut overlap : Int?
   mut hole_size : Int?
   mut bubble_scale : Int?
-} derive(Show)
+} derive(Debug)
 
 ///|
 struct ChartComboOptions {
@@ -558,7 +558,7 @@ struct ChartComboOptions {
   overlap : Int?
   hole_size : Int?
   bubble_scale : Int?
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn ChartComboOptions::from_chart_options(

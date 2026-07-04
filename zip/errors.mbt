@@ -2,7 +2,7 @@
 pub(all) enum Compression {
   Store
   Deflate
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub suberror ZipError {

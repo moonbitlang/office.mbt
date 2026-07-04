@@ -53,7 +53,7 @@ pub enum SheetState {
   Visible
   Hidden
   VeryHidden
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct RowDimension {

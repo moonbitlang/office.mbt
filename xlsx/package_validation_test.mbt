@@ -5,7 +5,7 @@ test "validate_ooxml_package accepts a well-formed workbook" {
   sheet.set_cell_value("A1", String("hello"))
   sheet.set_cell_value("B2", Numeric(42.0))
   let problems = @xlsx.validate_ooxml_package(@xlsx.write(workbook)[:])
-  inspect(
+  debug_inspect(
     problems,
     content=(
       #|[]

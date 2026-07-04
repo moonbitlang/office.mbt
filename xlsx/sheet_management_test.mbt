@@ -89,7 +89,7 @@ test "sheet visibility roundtrip" {
     Some(value) => value
     None => fail("missing Sheet2")
   }
-  inspect(sheet2.state(), content="Hidden")
+  debug_inspect(sheet2.state(), content="Hidden")
   inspect(parsed.active_sheet_index(), content="0")
 }
 
@@ -131,7 +131,7 @@ test "chart sheet visibility via workbook API" {
   ignore(workbook.add_chart_sheet("Chart1", "<chart/>"))
   workbook.set_sheet_visible("Chart1", false, very_hidden=true)
   inspect(workbook.sheet_visible("Chart1"), content="false")
-  inspect(workbook.chart_sheets()[0].state(), content="VeryHidden")
+  debug_inspect(workbook.chart_sheets()[0].state(), content="VeryHidden")
 }
 
 ///|

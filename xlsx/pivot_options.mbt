@@ -9,7 +9,7 @@ pub struct PivotTableField {
   show_all : Bool
   insert_blank_row : Bool
   default_subtotal : Bool
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub fn PivotTableField::new(
@@ -108,7 +108,7 @@ pub(all) struct PivotTableOptions {
   mut field_print_titles : Bool
   mut item_print_titles : Bool
   mut pivot_table_style_name : String
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub fn PivotTableOptions::new(

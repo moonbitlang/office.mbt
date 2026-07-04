@@ -26,7 +26,7 @@
 pub enum NumberFormat {
   Builtin(Int)
   Custom(String)
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Font styling for cell text.
@@ -61,7 +61,7 @@ pub struct Font {
   mut scheme : String?
   mut vert_align : String?
   mut family : String?
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Creates a new Font with all fields set to None (default styling).
@@ -224,7 +224,7 @@ pub struct Fill {
   mut bg_theme : Int?
   mut bg_indexed : Int?
   mut bg_tint : Double?
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn Fill::new() -> Fill {
@@ -559,7 +559,7 @@ pub struct Border {
   typ : String
   mut color : String?
   mut style : Int?
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 priv struct BorderXmlEntry {
@@ -608,7 +608,7 @@ pub fn Border::with_values(
 pub struct Protection {
   mut hidden : Bool?
   mut locked : Bool?
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn Protection::new() -> Protection {
@@ -647,7 +647,7 @@ pub struct Alignment {
   mut justify_last_line : Bool?
   mut reading_order : Int?
   mut relative_indent : Int?
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn Alignment::new() -> Alignment {
@@ -754,7 +754,7 @@ pub struct Style {
   border : Array[Border]?
   protection : Protection?
   alignment : Alignment?
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Creates a new empty Style with all fields set to None.

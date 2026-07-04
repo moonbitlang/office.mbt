@@ -7,8 +7,8 @@ test "unicode shared strings roundtrip" {
   sheet.set_cell("B1", "Plain")
   let bytes = write(workbook)
   let parsed = read(bytes)
-  assert_eq(parsed.get_cell("Data & Stats", "A1"), Some(value))
-  assert_eq(parsed.get_cell("Data & Stats", "B1"), Some("Plain"))
+  @test.assert_eq(parsed.get_cell("Data & Stats", "A1"), Some(value))
+  @test.assert_eq(parsed.get_cell("Data & Stats", "B1"), Some("Plain"))
 }
 
 ///|

@@ -47,7 +47,7 @@ test "shape parsed on read" {
   inspect(got.alt_text, content="Alt")
   inspect(got.locked, content="false")
   inspect(got.print_object, content="false")
-  inspect(got.positioning, content="TwoCell")
+  debug_inspect(got.positioning, content="TwoCell")
   inspect(got.paragraph.length() > 0, content="true")
   inspect(got.paragraph[0].text, content="Hello")
 }

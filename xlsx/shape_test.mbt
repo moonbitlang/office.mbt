@@ -136,5 +136,5 @@ test "shape new happy path with options" {
   inspect(shape.alt_text, content="Alt")
   inspect(shape.print_object, content="false")
   inspect(shape.locked, content="false")
-  inspect(shape.positioning, content="TwoCell")
+  debug_inspect(shape.positioning, content="TwoCell")
 }

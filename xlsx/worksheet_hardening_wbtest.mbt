@@ -10,11 +10,11 @@ test "worksheet wb: missing-cell getters return None" {
 ///|
 test "worksheet wb: set_state updates worksheet visibility state" {
   let sheet = Worksheet::new("Sheet1")
-  inspect(sheet.state(), content="Visible")
+  debug_inspect(sheet.state(), content="Visible")
   sheet.state = Hidden
-  inspect(sheet.state(), content="Hidden")
+  debug_inspect(sheet.state(), content="Hidden")
   sheet.state = VeryHidden
-  inspect(sheet.state(), content="VeryHidden")
+  debug_inspect(sheet.state(), content="VeryHidden")
 }
 
 ///|
@@ -209,13 +209,13 @@ test "worksheet wb: add_picture_from_bytes_with_options default branches" {
   inspect(image.scale_x == 1.0, content="true")
   inspect(image.scale_y == 1.0, content="true")
   inspect(image.hyperlink == "", content="true")
-  inspect(image.hyperlink_type, content="Unset")
+  debug_inspect(image.hyperlink_type, content="Unset")
   inspect(image.name == "", content="true")
   inspect(image.alt_text == "", content="true")
   inspect(image.lock_aspect_ratio, content="false")
   inspect(image.print_object, content="true")
   inspect(image.locked, content="true")
-  inspect(image.positioning, content="OneCell")
+  debug_inspect(image.positioning, content="OneCell")
 }
 
 ///|

@@ -16,7 +16,7 @@ pub struct Options {
   long_date_pattern : String
   long_time_pattern : String
   culture_info : String
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub fn Options::new() -> Options {

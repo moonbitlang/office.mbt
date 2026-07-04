@@ -668,13 +668,13 @@ async test "picture with options file path explicit values" {
   inspect(image.scale_x == 0.75, content="true")
   inspect(image.scale_y == 1.25, content="true")
   inspect(image.hyperlink, content="https://example.com")
-  inspect(image.hyperlink_type, content="External")
+  debug_inspect(image.hyperlink_type, content="External")
   inspect(image.name, content="Img1")
   inspect(image.alt_text, content="Alt1")
   inspect(image.lock_aspect_ratio, content="true")
   inspect(image.print_object, content="false")
   inspect(image.locked, content="false")
-  inspect(image.positioning, content="Absolute")
+  debug_inspect(image.positioning, content="Absolute")
   @async/fs.remove(path) catch {
     err => fail("remove image failed: \{err}")
   }

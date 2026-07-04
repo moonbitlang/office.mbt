@@ -59,7 +59,10 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   push_u32_be(png, 2)
   push_u32_be(png, 3)
   sheet.add_image("A1", Bytes::from_array(png), "png", "image/png")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(2, 3)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(2, 3))}",
+  )
 
   // GIF: GIF89a + width/height (little endian).
   let gif : Array[Byte] = []
@@ -69,7 +72,10 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   push_u16_le(gif, 5)
   push_u16_le(gif, 6)
   sheet.add_image("A2", Bytes::from_array(gif), "gif", "image/gif")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(5, 6)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(5, 6))}",
+  )
 
   // JPEG: SOI + SOF0 with height/width.
   let jpg : Array[Byte] = []
@@ -85,7 +91,10 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
     jpg.push((0).to_byte())
   }
   sheet.add_image("A3", Bytes::from_array(jpg), "jpg", "image/jpeg")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(32, 16)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(32, 16))}",
+  )
 
   // BMP (BITMAPCOREHEADER): dib size 12, width/height are u16.
   let bmp_core : Array[Byte] = Array::make(26, (0).to_byte())
@@ -97,7 +106,10 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   bmp_core[18] = (7).to_byte()
   bmp_core[20] = (8).to_byte()
   sheet.add_image("A4", Bytes::from_array(bmp_core), "bmp", "image/bmp")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(7, 8)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(7, 8))}",
+  )
 
   // BMP (BITMAPINFOHEADER): dib size >=40, height may be negative.
   let bmp_info : Array[Byte] = Array::make(26, (0).to_byte())
@@ -111,7 +123,10 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   bmp_info[24] = (0xFF).to_byte()
   bmp_info[25] = (0xFF).to_byte()
   sheet.add_image("A5", Bytes::from_array(bmp_info), "bmp", "image/bmp")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(9, 10)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(9, 10))}",
+  )
 
   // ICO: 0 width/height => 256.
   let ico : Array[Byte] = Array::make(22, (0).to_byte())
@@ -121,7 +136,10 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   ico[6] = (0).to_byte() // width=256
   ico[7] = (0).to_byte() // height=256
   sheet.add_image("A6", Bytes::from_array(ico), "ico", "image/x-icon")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(256, 256)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(256, 256))}",
+  )
 
   // TIFF little-endian with LONG values.
   let tiff_le : Array[Byte] = []
@@ -142,7 +160,10 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   push_u32_le(tiff_le, 200)
   push_u32_le(tiff_le, 0)
   sheet.add_image("A7", Bytes::from_array(tiff_le), "tiff", "image/tiff")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(300, 200)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(300, 200))}",
+  )
 
   // TIFF big-endian with SHORT values stored in high 16 bits.
   let tiff_be : Array[Byte] = []
@@ -163,17 +184,26 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   push_u32_be(tiff_be, 20 << 16)
   push_u32_be(tiff_be, 0)
   sheet.add_image("A8", Bytes::from_array(tiff_be), "tif", "image/tiff")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(10, 20)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(10, 20))}",
+  )
 
   // SVG: width/height with units.
   let svg1 = @encoding/utf8.encode("<svg width=\"1in\" height=\"2in\"></svg>")
   sheet.add_image("A9", svg1, "svg", "image/svg+xml")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(96, 192)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(96, 192))}",
+  )
 
   // SVG: viewBox fallback (no width/height attrs).
   let svg2 = @encoding/utf8.encode("<svg viewBox=\"0 0 10 20\"></svg>")
   sheet.add_image("A10", svg2, "svg", "image/svg+xml")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(10, 20)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(10, 20))}",
+  )
 
   // EMF: 1 inch frame => 96 px.
   let emf : Array[Byte] = Array::make(44, (0).to_byte())
@@ -190,7 +220,10 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   emf[42] = (0x4D).to_byte()
   emf[43] = (0x46).to_byte()
   sheet.add_image("A11", Bytes::from_array(emf), "emf", "image/emf")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(96, 96)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(96, 96))}",
+  )
 
   // WMF: 1x2 inches (placeable header).
   let wmf : Array[Byte] = Array::make(22, (0).to_byte())
@@ -204,15 +237,24 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   wmf[12] = (0xC8).to_byte()
   wmf[14] = (0x64).to_byte()
   sheet.add_image("A12", Bytes::from_array(wmf), "wmf", "image/wmf")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(96, 192)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(96, 192))}",
+  )
 
   // EMZ/WMZ: gzip-compressed EMF/WMF.
   let emz = @zip.gzip(Bytes::from_array(emf)[:])
   sheet.add_image("A13", emz, "emz", "application/octet-stream")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(96, 96)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(96, 96))}",
+  )
   let wmz = @zip.gzip(Bytes::from_array(wmf)[:])
   sheet.add_image("A14", wmz, "wmz", "application/octet-stream")
-  inspect(last_image_emu(sheet), content="\{expected_image_emu(96, 192)}")
+  debug_inspect(
+    last_image_emu(sheet),
+    content="\{repr(expected_image_emu(96, 192))}",
+  )
 
   // Malformed inputs should not crash and should fall back to default sizing.
   let bad = b""

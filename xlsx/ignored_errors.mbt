@@ -9,7 +9,7 @@ pub(all) enum IgnoredErrorType {
   EmptyCellReference
   ListDataValidation
   CalculatedColumn
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub struct IgnoredError {
@@ -23,7 +23,7 @@ pub struct IgnoredError {
   empty_cell_reference : Bool
   list_data_validation : Bool
   calculated_column : Bool
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 fn ignored_error_from_type(

@@ -714,11 +714,11 @@ test "workbook: add_image_with_options applies explicit option values" {
   inspect(picture.scale_x == 1.25, content="true")
   inspect(picture.scale_y == 1.5, content="true")
   inspect(picture.hyperlink, content="https://example.com")
-  inspect(picture.hyperlink_type, content="External")
+  debug_inspect(picture.hyperlink_type, content="External")
   inspect(picture.name, content="CustomName")
   inspect(picture.alt_text, content="Alt")
   inspect(picture.lock_aspect_ratio, content="true")
-  inspect(picture.positioning, content="TwoCell")
+  debug_inspect(picture.positioning, content="TwoCell")
   inspect(picture.print_object, content="false")
   inspect(picture.locked, content="false")
 }
@@ -803,13 +803,13 @@ test "workbook: default graphic options + formula rc wrapper branches" {
   inspect(picture.scale_x == 1.0, content="true")
   inspect(picture.scale_y == 1.0, content="true")
   inspect(picture.hyperlink, content="")
-  inspect(picture.hyperlink_type, content="Unset")
+  debug_inspect(picture.hyperlink_type, content="Unset")
   inspect(picture.name, content="")
   inspect(picture.alt_text, content="")
   inspect(picture.lock_aspect_ratio, content="false")
   inspect(picture.print_object, content="true")
   inspect(picture.locked, content="true")
-  inspect(picture.positioning, content="OneCell")
+  debug_inspect(picture.positioning, content="OneCell")
 }
 
 ///|

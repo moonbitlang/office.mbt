@@ -168,7 +168,7 @@ test "set_cell_time inherits row and column styles like prepareCellStyle" {
     Some(idx) => workbook.get_style(idx)
     None => fail("missing A2 style")
   }
-  inspect(a2_style.num_fmt, content="Some(14)")
+  debug_inspect(a2_style.num_fmt, content="Some(14)")
   inspect(
     a2_style.font is Some(font) && font.bold is Some(true),
     content="true",
@@ -179,7 +179,7 @@ test "set_cell_time inherits row and column styles like prepareCellStyle" {
     Some(idx) => workbook.get_style(idx)
     None => fail("missing C5 style")
   }
-  inspect(c5_style.num_fmt, content="Some(14)")
+  debug_inspect(c5_style.num_fmt, content="Some(14)")
   inspect(
     c5_style.font is Some(font) && font.italic is Some(true),
     content="true",

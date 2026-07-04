@@ -77,7 +77,7 @@ test "style roundtrip" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let style_id = workbook.new_style(Style::number_format("0%"))
-  assert_eq(workbook.get_style(style_id), Style::number_format("0%"))
+  @test.assert_eq(workbook.get_style(style_id), Style::number_format("0%"))
   workbook.set_cell("Sheet1", "B2", "0.5")
   workbook.set_cell_style("Sheet1", "B2", style_id)
   let parsed = read(write(workbook))
@@ -142,7 +142,7 @@ test "conditional style roundtrip" {
   inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
   inspect(styles_xml.contains("formatCode=\"0.00\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::number_format("0.00"))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::number_format("0.00"))
 }
 
 ///|
@@ -313,7 +313,7 @@ test "cell style font write + roundtrip" {
   inspect(styles_xml.contains("fontId=\"1\""), content="true")
   inspect(styles_xml.contains("applyFont=\"1\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::font(font))
+  @test.assert_eq(parsed.get_style(style_id), Style::font(font))
 }
 
 ///|
@@ -346,7 +346,7 @@ test "cell style font theme/indexed color write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::font(font))
+  @test.assert_eq(parsed.get_style(style_id), Style::font(font))
 }
 
 ///|
@@ -370,7 +370,7 @@ test "cell style font indexed color write + roundtrip" {
   }
   inspect(styles_xml.contains("color indexed=\"2\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::font(font))
+  @test.assert_eq(parsed.get_style(style_id), Style::font(font))
 }
 
 ///|
@@ -398,7 +398,7 @@ test "conditional style font write + roundtrip" {
   inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
   inspect(styles_xml.contains("<dxf><font><b/>"), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::font(font))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::font(font))
 }
 
 ///|
@@ -429,7 +429,7 @@ test "conditional style font theme/tint write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::font(font))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::font(font))
 }
 
 ///|
@@ -461,7 +461,7 @@ test "cell style fill write + roundtrip" {
   inspect(styles_xml.contains("fillId=\"2\""), content="true")
   inspect(styles_xml.contains("applyFill=\"1\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
 }
 
 ///|
@@ -491,7 +491,7 @@ test "cell style fill transparency write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
 }
 
 ///|
@@ -520,7 +520,7 @@ test "cell style fill theme color write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
 }
 
 ///|
@@ -549,7 +549,7 @@ test "cell style fill indexed color write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
 }
 
 ///|
@@ -582,7 +582,7 @@ test "cell style gradient fill write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
 }
 
 ///|
@@ -606,7 +606,7 @@ test "cell style gradient fill path variant write + roundtrip" {
   }
   inspect(styles_xml.contains("<gradientFill type=\"path\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
 }
 
 ///|
@@ -639,7 +639,7 @@ test "conditional style fill write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
 }
 
 ///|
@@ -672,7 +672,7 @@ test "conditional style fill transparency write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
 }
 
 ///|
@@ -705,7 +705,7 @@ test "conditional style fill theme color write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
 }
 
 ///|
@@ -738,7 +738,7 @@ test "conditional style fill indexed color write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
 }
 
 ///|
@@ -769,7 +769,7 @@ test "conditional style gradient fill write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
 }
 
 ///|
@@ -802,7 +802,7 @@ test "cell style border write + roundtrip" {
   inspect(styles_xml.contains("borderId=\"1\""), content="true")
   inspect(styles_xml.contains("applyBorder=\"1\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::border(borders))
+  @test.assert_eq(parsed.get_style(style_id), Style::border(borders))
 }
 
 ///|
@@ -832,7 +832,7 @@ test "cell style diagonal border write + roundtrip" {
   inspect(styles_xml.contains("<diagonal style=\"double\">"), content="true")
   inspect(styles_xml.contains("color rgb=\"FFA020F0\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::border(borders))
+  @test.assert_eq(parsed.get_style(style_id), Style::border(borders))
 }
 
 ///|
@@ -864,7 +864,7 @@ test "conditional style border write + roundtrip" {
   inspect(styles_xml.contains("<bottom style=\"thick\">"), content="true")
   inspect(styles_xml.contains("color rgb=\"FF0000FF\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::border(borders))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::border(borders))
 }
 
 ///|
@@ -892,7 +892,7 @@ test "cell style protection write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::protection(protection))
+  @test.assert_eq(parsed.get_style(style_id), Style::protection(protection))
 }
 
 ///|
@@ -923,7 +923,10 @@ test "conditional style protection write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::protection(protection))
+  @test.assert_eq(
+    parsed.get_conditional_style(0),
+    Style::protection(protection),
+  )
 }
 
 ///|
@@ -960,7 +963,7 @@ test "cell style alignment write + roundtrip" {
   inspect(styles_xml.contains("indent=\"2\""), content="true")
   inspect(styles_xml.contains("shrinkToFit=\"1\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::alignment(alignment))
+  @test.assert_eq(parsed.get_style(style_id), Style::alignment(alignment))
 }
 
 ///|
@@ -990,7 +993,7 @@ test "cell style alignment advanced attrs write + roundtrip" {
   inspect(styles_xml.contains("readingOrder=\"2\""), content="true")
   inspect(styles_xml.contains("relativeIndent=\"3\""), content="true")
   let parsed = read(bytes)
-  assert_eq(parsed.get_style(style_id), Style::alignment(alignment))
+  @test.assert_eq(parsed.get_style(style_id), Style::alignment(alignment))
 }
 
 ///|
@@ -1021,5 +1024,5 @@ test "conditional style alignment write + roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  assert_eq(parsed.get_conditional_style(0), Style::alignment(alignment))
+  @test.assert_eq(parsed.get_conditional_style(0), Style::alignment(alignment))
 }
