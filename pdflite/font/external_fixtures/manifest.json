@@ -1,0 +1,21 @@
+[
+  {
+    "id": "itext_type3_logo",
+    "filename": "cmp_itext_logo.pdf",
+    "url": "https://raw.githubusercontent.com/itext/i5js-sandbox/master/cmpfiles/fonts/cmp_itext_logo.pdf",
+    "source": "https://github.com/itext/i5js-sandbox",
+    "license": "AGPL-version per PDF producer metadata",
+    "redistribution": "download-only; do not vendor the PDF in this repository",
+    "acceptance_focus": "real Type3 custom-encoding font with indirect CharProc streams"
+  },
+  {
+    "id": "pdfium_type3_resource_inline_image",
+    "filename": "pdfium_bug_1591.pdf",
+    "url": "https://pdfium.googlesource.com/pdfium/+/refs/heads/main/testing/resources/bug_1591.pdf?format=TEXT",
+    "encoding": "base64",
+    "source": "https://pdfium.googlesource.com/pdfium/+/refs/heads/main/testing/resources/bug_1591.pdf",
+    "license": "BSD-3-Clause per PDFium repository",
+    "redistribution": "download-only; do not vendor the PDF in this repository",
+    "acceptance_focus": "real Type3 font with /Resources and inline-image CharProcs"
+  }
+]

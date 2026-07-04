@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/attachment"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfAttachment {
+  name : String
+  pagenumber : Int
+  data : Bytes?
+  description : String?
+  relationship : String?
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits

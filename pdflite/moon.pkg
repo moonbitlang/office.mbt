@@ -1,0 +1,76 @@
+import {
+  "bobzhang/pdflite/addtext",
+  "bobzhang/pdflite/annotation",
+  "bobzhang/pdflite/attachment",
+  "bobzhang/pdflite/bookmark",
+  "bobzhang/pdflite/codec",
+  "bobzhang/pdflite/composition",
+  "bobzhang/pdflite/content",
+  "bobzhang/pdflite/content/colour",
+  "bobzhang/pdflite/content/path",
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/crypt_core",
+  "bobzhang/pdflite/date",
+  "bobzhang/pdflite/destination",
+  "bobzhang/pdflite/flate",
+  "bobzhang/pdflite/font",
+  "bobzhang/pdflite/font/afm",
+  "bobzhang/pdflite/font/standard14",
+  "bobzhang/pdflite/font/truetype",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/metadata",
+  "bobzhang/pdflite/ocg",
+  "bobzhang/pdflite/page",
+  "bobzhang/pdflite/page/label",
+  "bobzhang/pdflite/page/spec",
+  "bobzhang/pdflite/portfolio",
+  "bobzhang/pdflite/reader",
+  "bobzhang/pdflite/shape",
+  "bobzhang/pdflite/syntax",
+  "bobzhang/pdflite/text/cmapdata",
+  "bobzhang/pdflite/text/encodingdata",
+  "bobzhang/pdflite/text/glyphdata",
+  "bobzhang/pdflite/text/unicodedata",
+  "bobzhang/pdflite/writer",
+  "bobzhang/pdflite/xref_model",
+  "moonbitlang/core/env",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/hashmap",
+  "moonbitlang/core/json",
+  "moonbitlang/core/math",
+  "moonbitlang/core/random",
+  "moonbitlang/core/strconv",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"
+
+import {
+  "moonbitlang/core/hashmap",
+  "moonbitlang/core/test",
+} for "wbtest"
+
+options(
+  "native-stub": [
+    "pdf_clip_native.c",
+    "pdf_random_native.c",
+    "pdf_time_native.c",
+  ],
+  targets: {
+    // Files absent from this map build for all backends (moon default). Only the
+    // genuinely native-only files (extern "c" stubs and their tests) are listed;
+    // the previous ~133 all-target entries were redundant no-ops. See
+    // EXECUTION_PLAN.md commit A3.
+    "pdf_clip_native.mbt": [ "native" ],
+    "pdf_clip_native_test.mbt": [ "native" ],
+    "pdf_random_native.mbt": [ "native" ],
+    "pdf_random_native_test.mbt": [ "native" ],
+    "pdf_random_native_wbtest.mbt": [ "native" ],
+    "pdf_strftime_native.mbt": [ "native" ],
+    "pdf_strftime_native_test.mbt": [ "native" ],
+  },
+)

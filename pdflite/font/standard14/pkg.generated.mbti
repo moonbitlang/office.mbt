@@ -1,0 +1,57 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/font/standard14"
+
+import {
+  "bobzhang/pdflite/font/afm",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_standard14_afm_data(PdfStandardFont) -> @afm.PdfAfmData
+
+pub fn pdf_standard14_kern(@afm.PdfAfmData, Int, Int) -> Int
+
+pub fn pdf_standard14_width_of_charcode(@afm.PdfAfmData, Int) -> Int
+
+pub fn pdf_standard14_width_of_glyphname(@afm.PdfAfmData, BytesView) -> Int
+
+pub fn pdf_standard_font_of_name(String) -> PdfStandardFont?
+
+pub fn pdf_standard_font_substitute_filenames(PdfStandardFont) -> Array[String]
+
+pub fn pdf_standard_font_substitute_font_name(PdfStandardFont) -> String
+
+pub fn pdf_string_of_standard_font(PdfStandardFont) -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfStandardFont {
+  PdfTimesRoman
+  PdfTimesBold
+  PdfTimesItalic
+  PdfTimesBoldItalic
+  PdfHelvetica
+  PdfHelveticaBold
+  PdfHelveticaOblique
+  PdfHelveticaBoldOblique
+  PdfCourier
+  PdfCourierBold
+  PdfCourierOblique
+  PdfCourierBoldOblique
+  PdfSymbol
+  PdfZapfDingbats
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStandardFont::afm_data(Self) -> @afm.PdfAfmData
+pub fn PdfStandardFont::baseline_adjustment(Self) -> Int
+pub fn PdfStandardFont::flags(Self) -> Int
+pub fn PdfStandardFont::name(Self) -> String
+pub fn PdfStandardFont::stemv(Self) -> Int
+
+// Type aliases
+pub using @afm {type PdfAfmData}
+
+pub type PdfBytes = Bytes
+
+// Traits
+

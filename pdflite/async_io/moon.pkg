@@ -1,0 +1,40 @@
+import {
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/attachment",
+  "bobzhang/pdflite/codec",
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/crypt_core",
+  "bobzhang/pdflite/metadata",
+  "bobzhang/pdflite/portfolio",
+  "bobzhang/pdflite/reader",
+  "bobzhang/pdflite/syntax",
+  "bobzhang/pdflite/writer",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/io",
+}
+
+import {
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/codec",
+  "bobzhang/pdflite/content",
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/crypt_core",
+  "bobzhang/pdflite/flate",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/metadata",
+  "bobzhang/pdflite/page",
+  "bobzhang/pdflite/ocg",
+  "bobzhang/pdflite/portfolio",
+  "bobzhang/pdflite/syntax",
+  "bobzhang/pdflite/writer",
+  "moonbitlang/core/test",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/env",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+} for "wbtest"
+
+supported_targets = "+native"

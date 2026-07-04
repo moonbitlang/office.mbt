@@ -1,0 +1,77 @@
+///|
+fn print_tree_name_for_test(value : Int) -> String {
+  match value {
+    0 => "root"
+    1 => "left"
+    2 => "right"
+    3 => "leaf"
+    _ => "?"
+  }
+}
+
+///|
+fn print_tree_children_for_test(value : Int) -> Array[Int] {
+  match value {
+    0 => [1, 2]
+    1 => [3]
+    _ => []
+  }
+}
+
+///|
+test "pdf_print_tree_to_string renders cpdf tree layout" {
+  @test.assert_eq(
+    @pdflite.pdf_print_tree_to_string(
+      0, print_tree_name_for_test, print_tree_children_for_test,
+    ),
+    "root\n├── left\n│   └── leaf\n└── right\n",
+  )
+  @test.assert_eq(
+    @pdflite.pdf_printtree_to_string(
+      0, print_tree_name_for_test, print_tree_children_for_test,
+    ),
+    "root\n├── left\n│   └── leaf\n└── right\n",
+  )
+}
+
+///|
+test "pdf_print_tree_to_string applies a line prefix to every line" {
+  @test.assert_eq(
+    @pdflite.pdf_print_tree_to_string(
+      0,
+      print_tree_name_for_test,
+      print_tree_children_for_test,
+      line_prefix="> ",
+    ),
+    "> root\n> ├── left\n> │   └── leaf\n> └── right\n",
+  )
+}
+
+///|
+test "pdf_print_tree_to_buffer appends cpdf tree layout to existing buffer" {
+  let output = Buffer()
+  output.write_string_utf16le("before\n")
+  @pdflite.pdf_print_tree_to_buffer(
+    output,
+    0,
+    print_tree_name_for_test,
+    print_tree_children_for_test,
+    line_prefix="| ",
+  )
+  @test.assert_eq(
+    output.to_string(),
+    "before\n| root\n| ├── left\n| │   └── leaf\n| └── right\n",
+  )
+  let alias_output = Buffer()
+  @pdflite.pdf_printtree_to_buffer(
+    alias_output,
+    0,
+    print_tree_name_for_test,
+    print_tree_children_for_test,
+    line_prefix="| ",
+  )
+  @test.assert_eq(
+    alias_output.to_string(),
+    "| root\n| ├── left\n| │   └── leaf\n| └── right\n",
+  )
+}

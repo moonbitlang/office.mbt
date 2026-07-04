@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MOON_WARN_LIST: "+a-39@65@73@74@75"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Format (${{ matrix.moonbit-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        moonbit-version:
+          - latest
+          - nightly
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit
+        env:
+          MOONBIT_INSTALL_VERSION: ${{ matrix.moonbit-version }}
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Update MoonBit dependencies
+        run: |
+          moon version --all
+          moon update
+
+      - name: Check formatting
+        run: moon fmt --check
+
+  native:
+    name: Native Test (${{ matrix.moonbit-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        moonbit-version:
+          - latest
+          - nightly
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit
+        env:
+          MOONBIT_INSTALL_VERSION: ${{ matrix.moonbit-version }}
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Update MoonBit dependencies
+        run: |
+          moon version --all
+          moon update
+
+      - name: Check native target
+        run: moon check --target native --warn-list "$MOON_WARN_LIST"
+
+      - name: Test native target
+        run: moon test --target native
+
+      - name: Build native CLI
+        run: moon run --target native --release --build-only cmd/main
+
+      - name: Test native CLI documentation
+        if: matrix.moonbit-version == 'nightly'
+        env:
+          PDFLITE_CLI: ${{ github.workspace }}/_build/native/release/build/cmd/main/main.exe
+          PDFLITE_LOGO_PDF: ${{ github.workspace }}/fixtures/camlpdf/logo.pdf
+        run: |
+          mkdir -p "$RUNNER_TEMP/moon-cram-project"
+          printf 'name = "pdflite/cram"\nversion = "0.1.0"\n' > "$RUNNER_TEMP/moon-cram-project/moon.mod"
+          cd "$RUNNER_TEMP/moon-cram-project"
+          timeout 180s moon cram test --log-level debug --shell /bin/bash --timeout-seconds 120 "${GITHUB_WORKSPACE}/tests/cram/cli.md"
+
+  backend-check:
+    name: Backend Check (${{ matrix.moonbit-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        moonbit-version:
+          - latest
+          - nightly
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit
+        env:
+          MOONBIT_INSTALL_VERSION: ${{ matrix.moonbit-version }}
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Update MoonBit dependencies
+        run: |
+          moon version --all
+          moon update
+
+      - name: Check all supported targets
+        run: moon check --target all --warn-list "$MOON_WARN_LIST"
+
+  arch-guard:
+    name: Architecture Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Enforce architecture ratchets
+        run: bash scripts/check_arch.sh

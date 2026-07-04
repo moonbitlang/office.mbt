@@ -1,0 +1,20 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/markdown"
+
+import {
+  "bobzhang/pdflite",
+}
+
+// Values
+pub fn pdf_bytes_to_markdown(Bytes) -> String raise
+
+pub fn pdf_document_to_markdown(@pdflite.PdfDocument) -> String raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

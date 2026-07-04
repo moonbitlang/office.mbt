@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/text/encodingdata"
+
+// Values
+pub fn pdf_text_macexpert_glyphname(Int) -> String?
+
+pub fn pdf_text_macroman_glyphname(Int) -> String?
+
+pub fn pdf_text_standard_glyphname(Int) -> String?
+
+pub fn pdf_text_symbol_glyphname(Int) -> String?
+
+pub fn pdf_text_winansi_glyphname(Int) -> String?
+
+pub fn pdf_text_zapfdingbats_glyphname(Int) -> String?
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,58 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/codec"
+
+import {
+  "bobzhang/pdflite/core",
+}
+
+// Values
+pub fn pdf_ascii85_decode(Bytes) -> Bytes raise @core.PdfError
+
+pub fn pdf_ascii85_decode_view(BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_ascii85_encode(Bytes) -> Bytes
+
+pub fn pdf_ascii85_encode_view(BytesView) -> Bytes
+
+pub fn pdf_ascii_hex_decode(Bytes) -> Bytes raise @core.PdfError
+
+pub fn pdf_ascii_hex_decode_view(BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_ascii_hex_encode(Bytes) -> Bytes
+
+pub fn pdf_ascii_hex_encode_view(BytesView) -> Bytes
+
+pub fn pdf_cursor_read_jpeg_data(@core.ByteCursor) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_jpeg_data(@core.ByteCursor) -> Bytes raise @core.PdfError
+
+pub fn pdf_jpeg_backup_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_jpeg_backup_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_jpeg_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_jpeg_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_lzw_decode(Bytes, early_change? : Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_lzw_decode_view(BytesView, early_change? : Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_lzw_decode_view_prefix(BytesView, early_change? : Int) -> (Bytes, Int) raise @core.PdfError
+
+pub fn pdf_run_length_decode(Bytes) -> Bytes
+
+pub fn pdf_run_length_decode_view(BytesView) -> Bytes
+
+pub fn pdf_run_length_encode(Bytes) -> Bytes
+
+pub fn pdf_run_length_encode_view(BytesView) -> Bytes
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

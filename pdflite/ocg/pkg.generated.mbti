@@ -1,0 +1,82 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/ocg"
+
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_ocg_default_config() -> PdfOcgConfig
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfOcg {
+  name : Bytes
+  intent : Array[@core.PdfName]
+  usage : PdfOcgUsage?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfOcgAppDict {
+  event : PdfOcgEvent
+  ocgs : Array[Int]
+  category : Array[@core.PdfName]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfOcgConfig {
+  name : Bytes?
+  creator : Bytes?
+  base_state : PdfOcgState
+  on : Array[Int]
+  off : Array[Int]
+  intent : Array[@core.PdfName]
+  usage_applications : Array[PdfOcgAppDict]
+  order : Array[(Bytes?, Array[Int])]?
+  list_mode : PdfOcgListMode
+  radio_button_groups : Array[Array[Int]]?
+  locked : Array[Int]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfOcgEvent {
+  OcgView
+  OcgPrint
+  OcgExport
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfOcgListMode {
+  OcgAllPages
+  OcgVisiblePages
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfOcgState {
+  OcgOn
+  OcgOff
+  OcgUnchanged
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfOcgUsage {
+  creator_info : (Bytes, @core.PdfName)?
+  language : (Bytes, @core.PdfName?)?
+  export_state : @core.PdfName?
+  zoom_min : Double?
+  zoom_max : Double?
+  print_subtype : @core.PdfName?
+  print_state : @core.PdfName?
+  view_state : @core.PdfName?
+  user : (@core.PdfName, Array[Bytes])?
+  page_element_subtype : @core.PdfName?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfOptionalContent {
+  ocgs : Array[(Int, PdfOcg)]
+  default_config : PdfOcgConfig
+  configs : Array[PdfOcgConfig]
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+pub using @core {type PdfName}
+
+// Traits

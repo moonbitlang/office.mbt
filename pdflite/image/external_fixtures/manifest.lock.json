@@ -1,0 +1,23 @@
+[
+  {
+    "bytes": 74061,
+    "filename": "pdflatex-image.pdf",
+    "id": "py_pdf_pdflatex_image",
+    "sha256": "64c5bc35008015936ef3ff60f6ad268a713b5271727b72ef308f87b9b495646f",
+    "url": "https://raw.githubusercontent.com/py-pdf/sample-files/main/003-pdflatex-image/pdflatex-image.pdf"
+  },
+  {
+    "bytes": 1880,
+    "filename": "imagemagick-CCITTFaxDecode.pdf",
+    "id": "py_pdf_imagemagick_ccitt",
+    "sha256": "cf6f94b533dc28974961fd62a67ebfc722224a0be8a4f0c4c91b26a522d5f70d",
+    "url": "https://raw.githubusercontent.com/py-pdf/sample-files/main/007-imagemagick-images/imagemagick-CCITTFaxDecode.pdf"
+  },
+  {
+    "bytes": 443953,
+    "filename": "cmyk-image.pdf",
+    "id": "py_pdf_cmyk_image",
+    "sha256": "5a5f76a951e403a5b357992789afc5164fd6c2914583741de7a1dd08ec029ab2",
+    "url": "https://raw.githubusercontent.com/py-pdf/sample-files/main/023-cmyk-image/cmyk-image.pdf"
+  }
+]

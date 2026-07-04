@@ -1,0 +1,15 @@
+import {
+  "bobzhang/pdflite/font/afm",
+  "moonbitlang/core/encoding/ascii",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"
+
+options(
+  targets: {
+    "pdf_standard14_substitute_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_standard14_width_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+  },
+)

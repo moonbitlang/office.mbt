@@ -1,0 +1,37 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/destination"
+
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfDestination {
+  DestAction(@syntax.PdfObject)
+  DestNull
+  DestNamed(@core.PdfName)
+  DestString(Bytes)
+  DestXYZ(PdfTargetPage, Double?, Double?, Double?)
+  DestFit(PdfTargetPage)
+  DestFitH(PdfTargetPage, Double?)
+  DestFitV(PdfTargetPage, Double?)
+  DestFitR(PdfTargetPage, Double, Double, Double, Double)
+  DestFitB(PdfTargetPage)
+  DestFitBH(PdfTargetPage, Double?)
+  DestFitBV(PdfTargetPage, Double?)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfTargetPage {
+  TargetPageObject(Int)
+  TargetOtherDocPageNumber(Int)
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits

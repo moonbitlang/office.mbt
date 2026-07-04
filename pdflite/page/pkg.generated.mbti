@@ -1,0 +1,48 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/page"
+
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_page_blank(@geometry.PaperSize) -> PdfPage
+
+pub fn pdf_page_custom(@syntax.PdfObject) -> PdfPage
+
+pub fn pdf_page_int_of_rotation(PdfPageRotation) -> Int
+
+pub fn pdf_page_rectangle_of_paper(@geometry.PaperSize) -> @syntax.PdfObject
+
+pub fn pdf_page_rotation_of_int(Int) -> PdfPageRotation raise @core.PdfError
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfPage {
+  content : Array[@syntax.PdfObject]
+  mediabox : @syntax.PdfObject
+  resources : @syntax.PdfObject
+  rotate : PdfPageRotation
+  rest : @syntax.PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPageRotation {
+  Rotate0
+  Rotate90
+  Rotate180
+  Rotate270
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub using @geometry {type PaperSize}
+
+pub using @core {type PdfError}
+
+pub using @syntax {type PdfObject}
+
+// Traits
+

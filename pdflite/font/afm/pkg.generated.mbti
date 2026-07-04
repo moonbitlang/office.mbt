@@ -1,0 +1,31 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/font/afm"
+
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_afm_parse_int(BytesView) -> Int raise @core.PdfError
+
+pub fn pdf_afm_view_equals(BytesView, BytesView) -> Bool
+
+pub fn pdf_read_afm(BytesView) -> PdfAfmData raise @core.PdfError
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfAfmData {
+  headers : Array[(Bytes, Bytes)]
+  char_metrics : Array[(Int, Int)]
+  kerns : Array[(Int, Int, Int)]
+  char_name_widths : Array[(Bytes, Int)]
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+pub using @core {type PdfError}
+
+// Traits

@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/composition"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_composition_bytes_with_newline(BytesView) -> Bytes
+
+pub fn pdf_composition_entry(String, Int, Int) -> PdfCompositionEntry
+
+pub fn pdf_composition_text_of_entries(ArrayView[PdfCompositionEntry]) -> Bytes
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfCompositionEntry {
+  label : String
+  bytes : Int
+  percent : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfCompositionEntry::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

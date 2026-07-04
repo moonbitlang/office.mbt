@@ -1,0 +1,121 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/addtext"
+
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_addtext_apply_justification_offset(PdfAddTextRotation, Double, Double, Double) -> (Double, Double)
+
+pub fn pdf_addtext_diagonal_offsets(@geometry.PdfRectangle, @geometry.PdfPosition, PdfAddTextRotation, Double, Double, Double, Double) -> (Double, Double)
+
+pub fn pdf_addtext_get_urls_line(String) -> PdfAddTextUrlLine raise @core.PdfError
+
+pub fn pdf_addtext_initial_line_offsets(@geometry.PdfPosition, Int, Double, Double) -> (Double, Double)
+
+pub fn pdf_addtext_justification_offset(PdfAddTextRotation, Double, Double, @geometry.PdfPosition, PdfAddTextJustification) -> Double
+
+pub fn pdf_addtext_line_advance(PdfAddTextRotation, Double, Double) -> (Double, Double)
+
+pub fn pdf_addtext_line_placement(@geometry.PdfRectangle, @geometry.PdfPosition, PdfAddTextRotation, Double, Double, Double, Double, PdfAddTextJustification) -> PdfAddTextLinePlacement
+
+pub fn pdf_addtext_rotation_offsets(@geometry.PdfPosition, PdfAddTextRotation, Double) -> (Double, Double)
+
+pub fn pdf_addtext_rotation_radians(PdfAddTextRotation) -> Double
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfAddTextJustification {
+  PdfAddTextLeftJustify
+  PdfAddTextCentreJustify
+  PdfAddTextRightJustify
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextLinePlacement {
+  origin : @geometry.Point2
+  base_rotation : Double
+  text_rotation : Double
+  rotation_offset : @geometry.Point2
+  horizontal_offset : Double
+  vertical_offset : Double
+  justification_offset : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextLineWidths {
+  text_width : Double
+  widths : Array[Double]
+  longest_width : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextPreparedLine {
+  text : String
+  text_bytes : Bytes
+  urls : Array[PdfAddTextUrl]
+  expanded_lines : Array[String]
+  expanded_line_bytes : Array[Bytes]
+  widths : PdfAddTextLineWidths
+  placement : PdfAddTextLinePlacement
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextReplacementValues {
+  page_number : Int
+  end_page : Int
+  filename : String
+  page_label : String
+  end_label : String
+  bates : Int
+  bates_pad : Int?
+  bookmarks : Array[String]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextResourceSetup {
+  resources : @syntax.PdfObject
+  font_dictionary : @syntax.PdfObject
+  unique_fontname : @core.PdfName
+  unique_fontnames : Array[@core.PdfName]
+  extgstate_name : @core.PdfName?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfAddTextRotation {
+  PdfAddTextRot0
+  PdfAddTextRot90
+  PdfAddTextRot180
+  PdfAddTextRot270
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextUrl {
+  url : String
+  start : Int
+  end : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextUrlAnnotationGeometry {
+  p0 : @geometry.Point2
+  p1 : @geometry.Point2
+  p2 : @geometry.Point2
+  p3 : @geometry.Point2
+  rectangle : @geometry.PdfRectangle
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfAddTextUrlLine {
+  text : String
+  urls : Array[PdfAddTextUrl]
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+pub using @core {type PdfName}
+
+pub using @syntax {type PdfObject}
+
+pub using @geometry {type PdfRectangle}
+
+pub using @geometry {type Point2}
+
+// Traits

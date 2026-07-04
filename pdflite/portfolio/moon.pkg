@@ -1,0 +1,8 @@
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"

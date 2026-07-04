@@ -1,0 +1,57 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/page/label"
+
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let pdf_page_label_basic : PdfPageLabel
+
+pub fn pdf_page_label_complete(ArrayView[PdfPageLabel]) -> Array[PdfPageLabel]
+
+pub fn pdf_page_label_lowercase(Bytes) -> Bytes
+
+pub fn pdf_page_label_number_bytes(Int, PdfPageLabelStyle) -> Bytes
+
+pub fn pdf_page_label_of_page_number(Int, ArrayView[PdfPageLabel]) -> PdfPageLabel?
+
+pub fn pdf_page_label_of_single(Int, PdfPageLabel) -> PdfPageLabel
+
+pub fn pdf_page_label_roman_upper(Int) -> Bytes
+
+pub fn pdf_page_label_style_of_string(String) -> PdfPageLabelStyle raise @core.PdfError
+
+pub fn pdf_page_label_text_of_page_number(Int, ArrayView[PdfPageLabel]) -> Bytes?
+
+pub fn pdf_page_label_text_of_single(Int, PdfPageLabel) -> Bytes
+
+pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfPageLabel {
+  label_style : PdfPageLabelStyle
+  label_prefix : Bytes?
+  start_page : Int
+  start_value : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPageLabelStyle {
+  PageLabelDecimalArabic
+  PageLabelUppercaseRoman
+  PageLabelLowercaseRoman
+  PageLabelUppercaseLetters
+  PageLabelLowercaseLetters
+  PageLabelNoLabelPrefixOnly
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfPageLabelStyle::debug_name(Self) -> String
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+pub using @core {type PdfError}
+
+// Traits

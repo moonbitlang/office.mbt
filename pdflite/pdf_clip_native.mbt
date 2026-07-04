@@ -1,0 +1,228 @@
+///|
+#cfg(target="native")
+#borrow(subject, clip, status)
+extern "C" fn pdf_clip_polygon_clip_ffi(
+  subject : @core.PdfBytes,
+  clip : @core.PdfBytes,
+  operation : Int,
+  status : Ref[Int],
+) -> @core.PdfBytes = "pdflite_gpc_clip"
+
+///|
+#cfg(target="native")
+fn pdf_clip_raise_bad_native_encoding() -> Unit raise @core.PdfError {
+  raise BadNumberArgument("pdf_clip_polygon_clip: malformed native polygon")
+}
+
+///|
+#cfg(target="native")
+fn pdf_clip_write_i32_le(
+  output : Array[Byte],
+  position : Int,
+  value : Int,
+) -> Int raise @core.PdfError {
+  if value < 0 {
+    pdf_clip_raise_bad_native_encoding()
+  }
+  output[position] = (value & 0xff).to_byte()
+  output[position + 1] = ((value >> 8) & 0xff).to_byte()
+  output[position + 2] = ((value >> 16) & 0xff).to_byte()
+  output[position + 3] = ((value >> 24) & 0xff).to_byte()
+  position + 4
+}
+
+///|
+#cfg(target="native")
+fn pdf_clip_write_u64_le(
+  output : Array[Byte],
+  position : Int,
+  value : UInt64,
+) -> Int {
+  let mut position = position
+  for byte in value.to_le_bytes() {
+    output[position] = byte
+    position += 1
+  }
+  position
+}
+
+///|
+#cfg(target="native")
+fn pdf_clip_encoded_polygon_length(polygon : PdfClipPolygon) -> Int {
+  let mut length = 4
+  for contour in polygon.contours {
+    length += 8 + contour.vertices.length() * 16
+  }
+  length
+}
+
+///|
+#cfg(target="native")
+fn pdf_clip_encode_polygon(
+  polygon : PdfClipPolygon,
+) -> @core.PdfBytes raise @core.PdfError {
+  let output = Array::make(pdf_clip_encoded_polygon_length(polygon), b'\x00')
+  let mut position = 0
+  position = pdf_clip_write_i32_le(output, position, polygon.contours.length())
+  for contour in polygon.contours {
+    position = pdf_clip_write_i32_le(output, position, contour.hole_flag())
+    position = pdf_clip_write_i32_le(
+      output,
+      position,
+      contour.vertices.length(),
+    )
+    for vertex in contour.vertices {
+      position = pdf_clip_write_u64_le(
+        output,
+        position,
+        vertex.x.reinterpret_as_uint64(),
+      )
+      position = pdf_clip_write_u64_le(
+        output,
+        position,
+        vertex.y.reinterpret_as_uint64(),
+      )
+    }
+  }
+  Bytes::from_array(output)
+}
+
+///|
+#cfg(target="native")
+fn pdf_clip_read_i32_le(
+  data : BytesView,
+  position : Ref[Int],
+) -> Int raise @core.PdfError {
+  if position.val < 0 ||
+    position.val > data.length() ||
+    data.length() - position.val < 4 {
+    raise EndOfInput
+  }
+  let index = position.val
+  let value = data[index].to_int() |
+    (data[index + 1].to_int() << 8) |
+    (data[index + 2].to_int() << 16) |
+    (data[index + 3].to_int() << 24)
+  position.val += 4
+  if value < 0 {
+    pdf_clip_raise_bad_native_encoding()
+  }
+  value
+}
+
+///|
+#cfg(target="native")
+fn pdf_clip_read_u64_le(
+  data : BytesView,
+  position : Ref[Int],
+) -> UInt64 raise @core.PdfError {
+  if position.val < 0 ||
+    position.val > data.length() ||
+    data.length() - position.val < 8 {
+    raise EndOfInput
+  }
+  let index = position.val
+  let mut value : UInt64 = 0
+  for offset in 0..<8 {
+    value = value | (data[index + offset].to_uint64() << (offset * 8))
+  }
+  position.val += 8
+  value
+}
+
+///|
+#cfg(target="native")
+fn pdf_clip_decode_count_for_remaining_bytes(
+  count : Int,
+  bytes_per_item : Int,
+  data : BytesView,
+  position : Ref[Int],
+) -> Unit raise @core.PdfError {
+  if count < 0 ||
+    bytes_per_item <= 0 ||
+    count > (data.length() - position.val) / bytes_per_item {
+    pdf_clip_raise_bad_native_encoding()
+  }
+}
+
+///|
+#cfg(target="native")
+fn pdf_clip_decode_polygon(
+  data : BytesView,
+) -> PdfClipPolygon raise @core.PdfError {
+  let position = Ref::{ val: 0 }
+  let contour_count = pdf_clip_read_i32_le(data, position)
+  pdf_clip_decode_count_for_remaining_bytes(contour_count, 8, data, position)
+  let contours : Array[PdfClipContour] = []
+  for _ in 0..<contour_count {
+    let hole_flag = pdf_clip_read_i32_le(data, position)
+    if hole_flag != 0 && hole_flag != 1 {
+      pdf_clip_raise_bad_native_encoding()
+    }
+    let vertex_count = pdf_clip_read_i32_le(data, position)
+    pdf_clip_decode_count_for_remaining_bytes(vertex_count, 16, data, position)
+    let vertices : Array[PdfClipVertex] = []
+    for _ in 0..<vertex_count {
+      vertices.push(
+        pdf_clip_vertex(
+          pdf_clip_read_u64_le(data, position).reinterpret_as_double(),
+          pdf_clip_read_u64_le(data, position).reinterpret_as_double(),
+        ),
+      )
+    }
+    contours.push(pdf_clip_contour(hole_flag == 1, vertices))
+  }
+  if position.val != data.length() {
+    pdf_clip_raise_bad_native_encoding()
+  }
+  pdf_clip_polygon(contours)
+}
+
+///|
+/// Clip `subject` by `clip` using cpdf's GPC-backed polygon operation.
+///
+/// This native-target wrapper preserves cpdf's operation-code mapping and
+/// raises `@core.PdfError::BadNumberArgument` when the native GPC bridge rejects the
+/// encoded polygon payload.
+#cfg(target="native")
+pub fn pdf_clip_polygon_clip(
+  operation : PdfClipOperation,
+  subject : PdfClipPolygon,
+  clip : PdfClipPolygon,
+) -> PdfClipPolygon raise @core.PdfError {
+  let subject_bytes = pdf_clip_encode_polygon(subject)
+  let clip_bytes = pdf_clip_encode_polygon(clip)
+  let status = Ref::{ val: 0 }
+  let result = pdf_clip_polygon_clip_ffi(
+    subject_bytes,
+    clip_bytes,
+    operation.gpc_code(),
+    status,
+  )
+  if status.val != 1 {
+    raise BadNumberArgument("pdf_clip_polygon_clip: native GPC failure")
+  }
+  pdf_clip_decode_polygon(result)
+}
+
+///|
+/// Clip `subject` by `clip` using this cpdf/GPC operation.
+#cfg(target="native")
+pub fn PdfClipOperation::clip_polygons(
+  self : PdfClipOperation,
+  subject : PdfClipPolygon,
+  clip : PdfClipPolygon,
+) -> PdfClipPolygon raise @core.PdfError {
+  pdf_clip_polygon_clip(self, subject, clip)
+}
+
+///|
+/// Source-spelled compatibility wrapper for cpdfclip's native clip operation.
+#cfg(target="native")
+pub fn pdf_gpcml_clippolygon(
+  operation : PdfClipOperation,
+  subject : PdfClipPolygon,
+  clip : PdfClipPolygon,
+) -> PdfClipPolygon raise @core.PdfError {
+  pdf_clip_polygon_clip(operation, subject, clip)
+}
