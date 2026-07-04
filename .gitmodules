@@ -1,0 +1,6 @@
+[submodule "docx2html"]
+	path = docx2html
+	url = https://github.com/bobzhang/docx2html.git
+[submodule "pdflite"]
+	path = pdflite
+	url = https://github.com/bobzhang/pdflite.git

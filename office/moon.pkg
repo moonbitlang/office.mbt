@@ -1,0 +1,7 @@
+import {
+  "bobzhang/mbtexcel",
+  "bobzhang/docx2html",
+  "bobzhang/pdflite",
+}
+
+supported_targets = "native"
