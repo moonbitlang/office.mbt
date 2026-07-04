@@ -21,7 +21,7 @@ pub fn Slicer::new(name : String) -> Slicer raise XlsxError {
     raise InvalidSheetOperation(msg="slicer name empty")
   }
   fn sanitize_cache_stub(value : StringView) -> String {
-    let name = value.to_string()
+    let name = value.to_owned()
     let sb = StringBuilder::new()
     for i, ch in name {
       let code = ch.to_int()
@@ -197,7 +197,7 @@ fn ensure_pivot_cache_slicer_id(
   cache_xml : StringView,
   pivot_cache_id : Int,
 ) -> String raise XlsxError {
-  let mut xml = cache_xml.to_string()
+  let mut xml = cache_xml.to_owned()
   if parse_pivot_cache_slicer_id(xml) is Some(_) {
     return xml
   }

@@ -314,7 +314,7 @@ fn amor_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
   let normalized = normalize_scalar(value)
   match normalized {
     String(text) => {
-      let trimmed = text.trim().to_string()
+      let trimmed = text.trim().to_owned()
       if trimmed == "" {
         Err(Error(formula_error_value))
       } else {

@@ -30,9 +30,9 @@ test "merge cells roundtrip" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  debug_inspect(parsed_sheet.merged_cells().to_array(), content="[\"C3:D4\"]")
+  debug_inspect(parsed_sheet.merged_cells().to_owned(), content="[\"C3:D4\"]")
   parsed_sheet.unmerge_cells("D4:C3")
-  debug_inspect(parsed_sheet.merged_cells().to_array(), content="[]")
+  debug_inspect(parsed_sheet.merged_cells().to_owned(), content="[]")
 }
 
 ///|
@@ -95,5 +95,5 @@ test "merge cells duplicate is no-op" {
   let sheet = workbook.add_sheet("Sheet1")
   sheet.merge_cells("A1:B2")
   sheet.merge_cells("B2:A1")
-  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:B2\"]")
+  debug_inspect(sheet.merged_cells().to_owned(), content="[\"A1:B2\"]")
 }

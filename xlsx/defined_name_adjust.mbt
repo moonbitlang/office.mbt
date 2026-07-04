@@ -189,7 +189,7 @@ fn adjust_ref_after_row_insert(
   row : Int,
   count : Int,
 ) -> String? raise XlsxError {
-  let text = ref_text.to_string()
+  let text = ref_text.to_owned()
   match text.find(":") {
     Some(pos) => {
       let left = text[:pos]
@@ -241,7 +241,7 @@ fn adjust_ref_after_row_remove(
   row : Int,
   count : Int,
 ) -> String? raise XlsxError {
-  let text = ref_text.to_string()
+  let text = ref_text.to_owned()
   match text.find(":") {
     Some(pos) => {
       let left = text[:pos]
@@ -297,7 +297,7 @@ fn adjust_ref_after_col_insert(
   col : Int,
   count : Int,
 ) -> String? raise XlsxError {
-  let text = ref_text.to_string()
+  let text = ref_text.to_owned()
   match text.find(":") {
     Some(pos) => {
       let left = text[:pos]
@@ -349,7 +349,7 @@ fn adjust_ref_after_col_remove(
   col : Int,
   count : Int,
 ) -> String? raise XlsxError {
-  let text = ref_text.to_string()
+  let text = ref_text.to_owned()
   match text.find(":") {
     Some(pos) => {
       let left = text[:pos]
@@ -406,7 +406,7 @@ fn adjust_defined_name_refers_to_for_sheet(
   adjust_fn : (StringView) -> String? raise XlsxError,
 ) -> String raise XlsxError {
   let raw_chars = refers_to.to_array()
-  let plain_prefix = "\{sheet_name.to_string()}!"
+  let plain_prefix = "\{sheet_name.to_owned()}!"
   let quoted_prefix = "'\{escape_sheet_name(sheet_name)}'!"
   let plain_chars = plain_prefix.to_array()
   let quoted_chars = quoted_prefix.to_array()

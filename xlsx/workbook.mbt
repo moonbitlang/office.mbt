@@ -55,7 +55,7 @@ pub fn Workbook::new_stream_writer(
   check_sheet_name(sheet_name)
   let sheet_id = match self.sheet_entry_index(sheet_name) {
     Some(value) => value + 1
-    None => raise SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_owned())
   }
   let sheet = self.require_sheet(sheet_name)
   if sheet.stream_state != Idle {
@@ -93,7 +93,7 @@ fn Workbook::require_sheet(
   check_sheet_name(sheet_name)
   match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_owned())
   }
 }
 
@@ -141,7 +141,7 @@ pub fn Workbook::sheet_index(
 ) -> Int raise XlsxError {
   match self.sheet_entry_index(name) {
     Some(value) => value
-    None => raise SheetNotFound(name=name.to_string())
+    None => raise SheetNotFound(name=name.to_owned())
   }
 }
 
@@ -411,12 +411,12 @@ pub fn Workbook::set_sheet_name(
 ) -> Unit raise XlsxError {
   check_sheet_name(source)
   check_sheet_name(target)
-  if source.to_string() == target {
+  if source.to_owned() == target {
     return
   }
   let entry = match self.sheet_entry(source) {
     Some(value) => value
-    None => raise SheetNotFound(name=source.to_string())
+    None => raise SheetNotFound(name=source.to_owned())
   }
   let old_name = self.sheet_entry_name(entry)
   if !sheet_name_equal(old_name, target) {
@@ -632,7 +632,7 @@ pub fn Workbook::sheet_visible(
   check_sheet_name(name)
   match self.sheet_entry(name) {
     Some(entry) => self.sheet_entry_state(entry) == Visible
-    None => raise SheetNotFound(name=name.to_string())
+    None => raise SheetNotFound(name=name.to_owned())
   }
 }
 
@@ -1445,9 +1445,9 @@ pub fn Workbook::set_cell(
       match self.sheet_entry(sheet_name) {
         Some(ChartSheet(_)) =>
           raise InvalidSheetOperation(
-            msg="sheet \{sheet_name.to_string()} is not a worksheet",
+            msg="sheet \{sheet_name.to_owned()} is not a worksheet",
           )
-        _ => raise SheetNotFound(name=sheet_name.to_string())
+        _ => raise SheetNotFound(name=sheet_name.to_owned())
       }
   }
   sheet.set_cell(reference, value)
@@ -1467,9 +1467,9 @@ pub fn Workbook::set_cell_value(
       match self.sheet_entry(sheet_name) {
         Some(ChartSheet(_)) =>
           raise InvalidSheetOperation(
-            msg="sheet \{sheet_name.to_string()} is not a worksheet",
+            msg="sheet \{sheet_name.to_owned()} is not a worksheet",
           )
-        _ => raise SheetNotFound(name=sheet_name.to_string())
+        _ => raise SheetNotFound(name=sheet_name.to_owned())
       }
   }
   sheet.set_cell_value(reference, value)
@@ -1703,7 +1703,7 @@ pub fn Workbook::get_cell_value(
   }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_owned())
   }
   let (row, col) = cell_ref_to_rc(reference)
   for cell in sheet.cells() {
@@ -1731,7 +1731,7 @@ pub fn Workbook::calc_cell_value(
   }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_owned())
   }
   let (row, col) = cell_ref_to_rc(reference)
   let canonical = cell_ref_from(row, col)
@@ -2246,7 +2246,7 @@ pub fn Workbook::add_slicer(
   opts : SlicerOptions,
 ) -> Unit raise XlsxError {
   fn slicer_cache_stub(value : StringView) -> String {
-    let name = value.to_string()
+    let name = value.to_owned()
     let sb = StringBuilder::new()
     for i, ch in name {
       let code = ch.to_int()
@@ -2286,7 +2286,7 @@ pub fn Workbook::add_slicer(
   }
 
   fn gen_slicer_name(workbook : Workbook, base_name : StringView) -> String {
-    let base = base_name.to_string()
+    let base = base_name.to_owned()
     let existing : Array[String] = []
     for sheet in workbook.sheets {
       for slicer in sheet.slicers() {
@@ -2307,7 +2307,7 @@ pub fn Workbook::add_slicer(
   fn pivot_cache_field_names(
     cache_definition_xml : StringView,
   ) -> Array[String] {
-    let xml = cache_definition_xml.to_string()
+    let xml = cache_definition_xml.to_owned()
     let out : Array[String] = []
     let needle = "<cacheField name=\""
     let mut pos = 0
@@ -2462,7 +2462,7 @@ pub fn Workbook::delete_slicer(
   self : Workbook,
   name : StringView,
 ) -> Unit raise XlsxError {
-  let target = name.to_string()
+  let target = name.to_owned()
   let mut removed = false
   for sheet in self.sheets {
     let mut found = false
@@ -2744,7 +2744,7 @@ pub fn Workbook::merge_cell(
 ) -> Unit raise XlsxError {
   self.merge_cells(
     sheet_name,
-    "\{top_left.to_string()}:\{bottom_right.to_string()}",
+    "\{top_left.to_owned()}:\{bottom_right.to_owned()}",
   )
 }
 
@@ -2767,7 +2767,7 @@ pub fn Workbook::unmerge_cell(
 ) -> Unit raise XlsxError {
   self.unmerge_cells(
     sheet_name,
-    "\{top_left.to_string()}:\{bottom_right.to_string()}",
+    "\{top_left.to_owned()}:\{bottom_right.to_owned()}",
   )
 }
 
@@ -2823,7 +2823,7 @@ pub fn Workbook::add_table(
   options : TableOptions,
 ) -> Table raise XlsxError {
   fn table_name_exists(workbook : Workbook, name : StringView) -> Bool {
-    let target = name.to_string().to_lower()
+    let target = name.to_owned().to_lower()
     for sheet in workbook.sheets {
       for table in sheet.tables {
         if table.name.to_lower() == target {
@@ -2996,7 +2996,7 @@ pub fn Workbook::delete_table(
   self : Workbook,
   name : StringView,
 ) -> Unit raise XlsxError {
-  let target = name.to_string()
+  let target = name.to_owned()
   for sheet in self.sheets {
     let mut found = false
     for table in sheet.tables {

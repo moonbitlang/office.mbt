@@ -315,7 +315,7 @@ fn tiff_dimensions(bytes : BytesView) -> (Int, Int)? {
 
 ///|
 fn svg_parse_length_px(text : StringView) -> Double? {
-  let raw = text.to_string().trim().to_lower()
+  let raw = text.to_owned().trim().to_lower()
   if raw == "" {
     return None
   }
@@ -353,7 +353,7 @@ fn svg_parse_length_px(text : StringView) -> Double? {
 
 ///|
 fn svg_attr_value(tag : StringView, name : StringView) -> String? {
-  let key = name.to_string()
+  let key = name.to_owned()
   let dq = key + "=\""
   match tag.find(dq) {
     Some(pos) => {
@@ -363,7 +363,7 @@ fn svg_attr_value(tag : StringView, name : StringView) -> String? {
         None => return None
       }
       let value = rest[:end]
-      Some(value.to_string())
+      Some(value.to_owned())
     }
     None => {
       let sq = key + "='"
@@ -375,7 +375,7 @@ fn svg_attr_value(tag : StringView, name : StringView) -> String? {
             None => return None
           }
           let value = rest[:end]
-          Some(value.to_string())
+          Some(value.to_owned())
         }
         None => None
       }
@@ -537,7 +537,7 @@ fn image_dimensions_px(
   data : BytesView,
   extension_lower : StringView,
 ) -> (Int, Int)? {
-  match extension_lower.to_string() {
+  match extension_lower.to_owned() {
     "png" => png_dimensions(data)
     "gif" => gif_dimensions(data)
     "jpg" => jpeg_dimensions(data)

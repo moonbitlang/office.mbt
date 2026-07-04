@@ -4849,7 +4849,7 @@ fn parse_double_opt(text : StringView) -> Double? {
 
 ///|
 fn parse_value_number(text : String) -> Double? {
-  let trimmed = text.trim().to_string()
+  let trimmed = text.trim().to_owned()
   if trimmed == "" {
     return Some(0.0)
   }
@@ -4857,12 +4857,12 @@ fn parse_value_number(text : String) -> Double? {
   let mut body = trimmed
   if body.has_prefix("(") && body.has_suffix(")") && body.length() >= 2 {
     negative = true
-    body = body[1:body.length() - 1].to_string()
+    body = body[1:body.length() - 1].to_owned()
   }
   let mut percent = false
   if body.has_suffix("%") && body.length() >= 1 {
     percent = true
-    body = body[:body.length() - 1].to_string()
+    body = body[:body.length() - 1].to_owned()
   }
   let sb = StringBuilder::new()
   for ch in body {
@@ -4870,7 +4870,7 @@ fn parse_value_number(text : String) -> Double? {
       sb.write_char(ch)
     }
   }
-  let cleaned = sb.to_string().trim().to_string()
+  let cleaned = sb.to_string().trim().to_owned()
   if cleaned == "" {
     return None
   }
@@ -5012,7 +5012,7 @@ fn complex_is_invalid(value : Complex) -> Bool {
 
 ///|
 fn complex_suffix_from_text(text : String) -> String {
-  let trimmed = text.trim().to_string()
+  let trimmed = text.trim().to_owned()
   if trimmed == "" {
     return "i"
   }
@@ -5025,7 +5025,7 @@ fn complex_suffix_from_text(text : String) -> String {
 
 ///|
 fn normalize_complex_text(text : StringView) -> String {
-  let trimmed = text.trim().to_string()
+  let trimmed = text.trim().to_owned()
   if trimmed == "" {
     return ""
   }
@@ -5069,7 +5069,7 @@ fn parse_complex_text(text : StringView) -> Result[Complex, FormulaValue] {
     return Err(Error(formula_error_num))
   }
   if normalized.has_suffix("i") {
-    let body = normalized.strip_suffix("i").unwrap().to_string()
+    let body = normalized.strip_suffix("i").unwrap().to_owned()
     let (real_text, imag_text) = split_complex_body(body)
     match (parse_double_opt(real_text), parse_double_opt(imag_text)) {
       (Some(real), Some(imag)) => Ok(complex_new(real, imag))
@@ -5132,7 +5132,7 @@ fn complex_to_string(value : Complex, suffix : String) -> String {
 
 ///|
 fn parse_date_parts(text : String) -> (Int, Int, Int)? {
-  let trimmed = text.trim().to_string()
+  let trimmed = text.trim().to_owned()
   if trimmed == "" {
     return None
   }
@@ -5190,10 +5190,10 @@ fn parse_time_parts(text : String) -> (Int, Int, Int)? {
   let mut core = trimmed
   if core.has_suffix("AM") {
     is_am = true
-    core = core[:core.length() - 2].trim().to_string()
+    core = core[:core.length() - 2].trim().to_owned()
   } else if core.has_suffix("PM") {
     is_pm = true
-    core = core[:core.length() - 2].trim().to_string()
+    core = core[:core.length() - 2].trim().to_owned()
   }
   let parts : Array[String] = []
   let mut current = StringBuilder::new()
@@ -5252,10 +5252,10 @@ fn parse_time_parts(text : String) -> (Int, Int, Int)? {
 ///|
 fn strip_hex_prefix(text : String) -> String {
   match text.strip_prefix("0x") {
-    Some(rest) => rest.to_string()
+    Some(rest) => rest.to_owned()
     None =>
       match text.strip_prefix("0X") {
-        Some(rest) => rest.to_string()
+        Some(rest) => rest.to_owned()
         None => text
       }
   }
@@ -5361,22 +5361,22 @@ fn parse_formula_criteria(value : FormulaValue) -> FormulaCriteria {
   }
   let mut condition_text = text
   let kind = if text.has_prefix("<>") {
-    condition_text = text[2:].to_string()
+    condition_text = text[2:].to_owned()
     FormulaCriteriaType::Ne
   } else if text.has_prefix("<=") {
-    condition_text = text[2:].to_string()
+    condition_text = text[2:].to_owned()
     Le
   } else if text.has_prefix(">=") {
-    condition_text = text[2:].to_string()
+    condition_text = text[2:].to_owned()
     Ge
   } else if text.has_prefix("<") {
-    condition_text = text[1:].to_string()
+    condition_text = text[1:].to_owned()
     Lt
   } else if text.has_prefix(">") {
-    condition_text = text[1:].to_string()
+    condition_text = text[1:].to_owned()
     Gt
   } else if text.has_prefix("=") {
-    condition_text = text[1:].to_string()
+    condition_text = text[1:].to_owned()
     Eq
   } else {
     Regexp
@@ -5923,7 +5923,7 @@ fn value_as_date_serial(value : FormulaValue) -> Result[Double, FormulaValue] {
     Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
     Empty => Ok(0.0)
     String(text) => {
-      let trimmed = text.trim().to_string()
+      let trimmed = text.trim().to_owned()
       match parse_date_parts(trimmed) {
         Some((year, month, day)) =>
           match excel_serial_from_date(year, month, day) {
@@ -6050,7 +6050,7 @@ fn weekend_mask_from_value(
   }
   match normalize_scalar(value) {
     String(text) => {
-      let trimmed = text.trim().to_string()
+      let trimmed = text.trim().to_owned()
       if trimmed.length() == 7 {
         let mut idx = 0
         for ch in trimmed {

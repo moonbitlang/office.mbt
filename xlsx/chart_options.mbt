@@ -740,7 +740,7 @@ fn write_plot_vary_colors(sb : StringBuilder, vary_colors : Bool) -> Unit {
 
 ///|
 fn legend_position_value(position : String) -> String? {
-  let normalized = position.trim().to_lower().to_string()
+  let normalized = position.trim().to_lower().to_owned()
   match normalized {
     "none" => None
     "b" | "bottom" => Some("b")
@@ -854,7 +854,7 @@ fn write_drawingml_run(
 ) -> Unit {
   sb.write_view(indent)
   sb.write_view("<a:r>\n")
-  write_drawingml_r_pr(sb, "\{indent.to_string()}  ", run.font)
+  write_drawingml_r_pr(sb, "\{indent.to_owned()}  ", run.font)
   let text_value = if run.text == "" { " " } else { run.text }
   sb.write_view(indent)
   if text_value.has_prefix(" ") ||
@@ -876,7 +876,7 @@ fn write_chart_rich_tx(
   tx_indent : StringView,
   runs : ArrayView[RichTextRun],
 ) -> Unit {
-  let base = tx_indent.to_string()
+  let base = tx_indent.to_owned()
   sb.write_view(base)
   sb.write_view("<c:tx>\n")
   sb.write_view("\{base}  <c:rich>\n")
@@ -1566,7 +1566,7 @@ fn write_drawingml_def_r_pr_from_font(
   match font.underline {
     Some(u) =>
       match drawingml_underline_value(u) {
-        Some(v) => sb.write_view(" u=\"\{v.to_string()}\"")
+        Some(v) => sb.write_view(" u=\"\{v.to_owned()}\"")
         None => ()
       }
     None => ()
@@ -1611,7 +1611,7 @@ fn write_drawingml_tx_pr_with_font(
   tx_pr_indent : StringView,
   font : Font,
 ) -> Unit {
-  let base = tx_pr_indent.to_string()
+  let base = tx_pr_indent.to_owned()
   sb.write_view(base)
   sb.write_view("<c:txPr>\n")
   sb.write_view("\{base}  <a:bodyPr/>\n")
@@ -1633,7 +1633,7 @@ fn write_drawingml_tx_pr_with_font_and_alignment(
   font : Font,
   alignment : Alignment,
 ) -> Unit {
-  let base = tx_pr_indent.to_string()
+  let base = tx_pr_indent.to_owned()
   sb.write_view(base)
   sb.write_view("<c:txPr>\n")
   sb.write_view("\{base}  <a:bodyPr")
@@ -1647,7 +1647,7 @@ fn write_drawingml_tx_pr_with_font_and_alignment(
   match alignment.vertical {
     Some(value) =>
       match drawingml_text_vertical_value(value) {
-        Some(v) => sb.write_view(" vert=\"\{v.to_string()}\"")
+        Some(v) => sb.write_view(" vert=\"\{v.to_owned()}\"")
         None => ()
       }
     None => ()
@@ -1660,7 +1660,7 @@ fn write_drawingml_tx_pr_with_font_and_alignment(
     None => None
   }
   match algn {
-    Some(v) => sb.write_view("\{base}    <a:pPr algn=\"\{v.to_string()}\">\n")
+    Some(v) => sb.write_view("\{base}    <a:pPr algn=\"\{v.to_owned()}\">\n")
     None => sb.write_view("\{base}    <a:pPr>\n")
   }
   if font == Font::new() {
@@ -1702,7 +1702,7 @@ fn write_axis_tx_pr(sb : StringBuilder, axis : ChartAxis) -> Unit {
   match axis.alignment.vertical {
     Some(value) =>
       match drawingml_text_vertical_value(value) {
-        Some(v) => sb.write_view(" vert=\"\{v.to_string()}\"")
+        Some(v) => sb.write_view(" vert=\"\{v.to_owned()}\"")
         None => ()
       }
     None => ()
@@ -1735,7 +1735,7 @@ fn write_axis(
   let is_category_like = axis_tag == "catAx" || axis_tag == "dateAx"
   let is_value_like = axis_tag == "valAx"
   let resolved_axis_pos = axis_position_value(axis_tag, axis, axis_pos)
-  sb.write_view("      <c:\{axis_tag.to_string()}>\n")
+  sb.write_view("      <c:\{axis_tag.to_owned()}>\n")
   sb.write_view("        <c:axId val=\"\{ax_id}\"/>\n")
   sb.write_view("        <c:scaling>")
   if axis.reverse_order {
@@ -1809,7 +1809,7 @@ fn write_axis(
   if is_value_like && axis.major_unit > 0.0 {
     sb.write_view("        <c:majorUnit val=\"\{axis.major_unit}\"/>\n")
   }
-  sb.write_view("      </c:\{axis_tag.to_string()}>\n")
+  sb.write_view("      </c:\{axis_tag.to_owned()}>\n")
 }
 
 ///|

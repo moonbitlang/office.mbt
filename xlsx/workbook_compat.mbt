@@ -154,7 +154,7 @@ pub fn Workbook::set_sheet_background_from_bytes(
 
 ///|
 fn parse_column_range(columns : StringView) -> (Int, Int) raise XlsxError {
-  let text = columns.to_string()
+  let text = columns.to_owned()
   let parts : Array[StringView] = []
   for part in text.split(":") {
     parts.push(part)

@@ -1,6 +1,6 @@
 ///|
 fn decode_base64_multiline(text : StringView) -> Bytes raise XlsxError {
-  let compact = text.to_string().replace_all(old="\n", new="")
+  let compact = text.to_owned().replace_all(old="\n", new="")
   base64_decode(compact)
 }
 

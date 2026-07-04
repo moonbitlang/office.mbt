@@ -178,7 +178,7 @@ fn workbook_props_is_empty(options : WorkbookPropsOptions) -> Bool {
 
 ///|
 fn normalize_calc_mode(mode : StringView) -> String? {
-  match mode.to_string().to_lower() {
+  match mode.to_owned().to_lower() {
     "manual" => Some("manual")
     "auto" => Some("auto")
     "autonotable" => Some("autoNoTable")
@@ -188,7 +188,7 @@ fn normalize_calc_mode(mode : StringView) -> String? {
 
 ///|
 fn normalize_ref_mode(mode : StringView) -> String? {
-  match mode.to_string().to_upper() {
+  match mode.to_owned().to_upper() {
     "A1" => Some("A1")
     "R1C1" => Some("R1C1")
     _ => None

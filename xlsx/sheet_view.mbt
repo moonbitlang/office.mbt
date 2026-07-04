@@ -263,7 +263,7 @@ fn SheetPane::new() -> SheetPane {
 
 ///|
 fn normalize_sheet_view_mode(mode : StringView) -> String? {
-  let needle = mode.to_string().to_lower()
+  let needle = mode.to_owned().to_lower()
   for supported in supported_sheet_view_modes {
     if supported.to_lower() == needle {
       return Some(supported)

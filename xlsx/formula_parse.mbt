@@ -61,9 +61,9 @@ fn FormulaParser::skip_spaces(self : FormulaParser) -> Unit {
 
 ///|
 fn parse_formula_expr(formula : StringView) -> Expr raise XlsxError {
-  let text = formula.to_string()
+  let text = formula.to_owned()
   let normalized = match text.strip_prefix("=") {
-    Some(rest) => rest.to_string()
+    Some(rest) => rest.to_owned()
     None => text
   }
   let parser = FormulaParser::new(normalized)
@@ -595,17 +595,17 @@ fn parse_range_ref_token(
     } else if ch.is_ascii_digit() {
       row_sb.write_char(ch)
     } else {
-      raise InvalidCellRef(value=token.to_string())
+      raise InvalidCellRef(value=token.to_owned())
     }
   }
   let col = col_sb.to_string()
   let row = row_sb.to_string()
   if col != "" && row == "" {
     let col_index = column_name_to_number(col) catch {
-      _ => raise InvalidCellRef(value=token.to_string())
+      _ => raise InvalidCellRef(value=token.to_owned())
     }
     if col_index <= 0 || col_index > excel_max_cols {
-      raise InvalidCellRef(value=token.to_string())
+      raise InvalidCellRef(value=token.to_owned())
     }
     let start_ref = cell_ref_from(1, col_index)
     let end_ref = cell_ref_from(excel_max_rows, col_index)
@@ -613,16 +613,16 @@ fn parse_range_ref_token(
   }
   if row != "" && col == "" {
     let row_index = @string.parse_int(row, base=10) catch {
-      _ => raise InvalidCellRef(value=token.to_string())
+      _ => raise InvalidCellRef(value=token.to_owned())
     }
     if row_index <= 0 || row_index > excel_max_rows {
-      raise InvalidCellRef(value=token.to_string())
+      raise InvalidCellRef(value=token.to_owned())
     }
     let start_ref = cell_ref_from(row_index, 1)
     let end_ref = cell_ref_from(row_index, excel_max_cols)
     return (start_ref, end_ref)
   }
-  raise InvalidCellRef(value=token.to_string())
+  raise InvalidCellRef(value=token.to_owned())
 }
 
 ///|

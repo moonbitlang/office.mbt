@@ -18,37 +18,37 @@ fn first_relationship_target(targets : Map[String, String]) -> String? {
 
 ///|
 fn rels_path_for(path : StringView, folder : StringView) -> String {
-  let path_str = path.to_string()
-  let prefix = "xl/\{folder.to_string()}/"
+  let path_str = path.to_owned()
+  let prefix = "xl/\{folder.to_owned()}/"
   if path_str.has_prefix(prefix) {
-    path_str.replace_all(old=prefix, new="xl/\{folder.to_string()}/_rels/") +
+    path_str.replace_all(old=prefix, new="xl/\{folder.to_owned()}/_rels/") +
     ".rels"
   } else {
-    "xl/\{folder.to_string()}/_rels/" + path_str + ".rels"
+    "xl/\{folder.to_owned()}/_rels/" + path_str + ".rels"
   }
 }
 
 ///|
 fn parse_id_from_path(path : StringView, prefix : StringView) -> Int {
-  let path_str = path.to_string()
+  let path_str = path.to_owned()
   let num = match path_str.strip_prefix(prefix) {
     Some(rest) =>
-      match rest.to_string().strip_suffix(".xml") {
+      match rest.to_owned().strip_suffix(".xml") {
         Some(n) => n
         None => return 0
       }
     None => return 0
   }
-  @string.parse_int(num.to_string(), base=10) catch {
+  @string.parse_int(num.to_owned(), base=10) catch {
     _ => 0
   }
 }
 
 ///|
 fn drop_first_path_segment(path : StringView) -> String {
-  match path.to_string().after("/") {
-    Some(rest) => rest.to_string()
-    None => path.to_string()
+  match path.to_owned().after("/") {
+    Some(rest) => rest.to_owned()
+    None => path.to_owned()
   }
 }
 
@@ -56,7 +56,7 @@ fn drop_first_path_segment(path : StringView) -> String {
 fn normalize_rel_part_path(path : StringView) -> String raise XlsxError {
   let segments : Array[String] = []
   for chunk in path.split("/") {
-    let segment = chunk.to_string()
+    let segment = chunk.to_owned()
     if segment == "" || segment == "." {
       continue
     }
@@ -80,15 +80,15 @@ fn resolve_rel_target(
   target : StringView,
   base_folder : StringView,
 ) -> String raise XlsxError {
-  let target_str = target.to_string()
+  let target_str = target.to_owned()
   let raw = if target_str.has_prefix("/") {
     drop_first_path_segment(target_str)
   } else if target_str.has_prefix("../") {
-    "xl/" + base_folder.to_string() + "/" + target_str
+    "xl/" + base_folder.to_owned() + "/" + target_str
   } else if target_str.has_prefix("xl/") {
     target_str
   } else {
-    let base = base_folder.to_string()
+    let base = base_folder.to_owned()
     if base.has_suffix("/") {
       "xl/" + base + target_str
     } else {
@@ -104,7 +104,7 @@ fn resolve_rel_target(
 
 ///|
 fn resolve_workbook_rel_target(target : StringView) -> String raise XlsxError {
-  let target_str = target.to_string()
+  let target_str = target.to_owned()
   let raw = if target_str.has_prefix("/") {
     drop_first_path_segment(target_str)
   } else if target_str.has_prefix("../") {

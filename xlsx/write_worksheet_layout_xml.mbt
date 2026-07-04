@@ -305,7 +305,7 @@ fn write_page_breaks_xml(
     }
   }
   sb.write_view(
-    "  <\{tag_name.to_string()} count=\"\{breaks.length()}\" manualBreakCount=\"\{manual_count}\">\n",
+    "  <\{tag_name.to_owned()} count=\"\{breaks.length()}\" manualBreakCount=\"\{manual_count}\">\n",
   )
   for brk in breaks {
     sb.write_view("    <brk id=\"\{brk.id}\"")
@@ -320,7 +320,7 @@ fn write_page_breaks_xml(
     }
     sb.write_view("/>\n")
   }
-  sb.write_view("  </\{tag_name.to_string()}>\n")
+  sb.write_view("  </\{tag_name.to_owned()}>\n")
   Some(sb.to_string())
 }
 

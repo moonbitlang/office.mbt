@@ -140,11 +140,11 @@ async fn run_one(
   args : ArrayView[String],
 ) -> Unit {
   try run_demo_bytes(demo, args) catch {
-    err => println("\{demo.to_string()}: failed: \{err}")
+    err => println("\{demo.to_owned()}: failed: \{err}")
   } noraise {
     Some((name, bytes)) => write_out(out_dir, name, bytes)
     None => {
-      println("unknown demo: \{demo.to_string()}")
+      println("unknown demo: \{demo.to_owned()}")
       usage()
     }
   }

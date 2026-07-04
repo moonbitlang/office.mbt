@@ -216,7 +216,7 @@ fn parse_table_columns(xml : StringView) -> Array[String] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>
@@ -240,7 +240,7 @@ fn parse_table_style(
   xml : StringView,
 ) -> (String, Bool, Bool, Bool, Bool) raise XlsxError {
   fn parse_bool_attr(value : StringView) -> Bool {
-    match value.to_string() {
+    match value.to_owned() {
       "1" => true
       "true" => true
       "TRUE" => true
@@ -248,7 +248,7 @@ fn parse_table_style(
     }
   }
 
-  let text = xml.to_string()
+  let text = xml.to_owned()
   let start = match text.find("<tableStyleInfo ") {
     Some(pos) => pos
     None => return ("TableStyleMedium9", false, false, true, false)
@@ -290,7 +290,7 @@ fn parse_table_style(
 
 ///|
 fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
-  let text = xml.to_string()
+  let text = xml.to_owned()
   let start = match text.find("<table ") {
     Some(pos) => pos
     None => raise InvalidXml(msg="table tag missing")

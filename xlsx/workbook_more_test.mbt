@@ -474,7 +474,7 @@ test "workbook: copy_sheet clones complex worksheet state" {
     None => fail("missing Dst")
   }
   debug_inspect(dst.get_cell("A1"), content="Some(\"v\")")
-  debug_inspect(dst.merged_cells().to_array(), content="[\"A1:B2\"]")
+  debug_inspect(dst.merged_cells().to_owned(), content="[\"A1:B2\"]")
   inspect(dst.get_cell_hyperlink("A1") is Some(_), content="true")
   inspect(workbook.get_tables("Dst").length(), content="1")
   inspect(dst.sparkline_groups().length(), content="1")

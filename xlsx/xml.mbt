@@ -31,7 +31,7 @@ fn escape_xml_attr(value : StringView) -> String {
 ///|
 fn unescape_xml_text(value : StringView) -> String {
   value
-  .to_string()
+  .to_owned()
   .replace_all(old="&lt;", new="<")
   .replace_all(old="&gt;", new=">")
   .replace_all(old="&quot;", new="\"")
@@ -105,7 +105,7 @@ fn attr_value(tag : StringView, name : StringView) -> String? raise XlsxError {
         }
       }
       if matched {
-        let value = tag.to_string().unsafe_substring(start=value_start, end=i)
+        let value = tag.to_owned().unsafe_substring(start=value_start, end=i)
         return Some(value.to_string())
       }
     }

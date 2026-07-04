@@ -61,7 +61,7 @@ fn drawing_axis_span_emu(
 fn parse_drawing_anchors(
   drawing_xml : StringView,
 ) -> Array[(String, PicturePositioning)] raise XlsxError {
-  let xml_str = drawing_xml.to_string()
+  let xml_str = drawing_xml.to_owned()
   let anchors : Array[(String, PicturePositioning)] = []
   let mut first_one = true
   for chunk in xml_str.split("<xdr:oneCellAnchor") {
@@ -69,14 +69,14 @@ fn parse_drawing_anchors(
       first_one = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let close_tag = "</xdr:oneCellAnchor>"
     let end = match text.find(close_tag) {
       Some(pos) => pos + close_tag.length()
       None => raise InvalidXml(msg="oneCellAnchor close missing")
     }
     let slice = text[:end]
-    anchors.push(("<xdr:oneCellAnchor\{slice.to_string()}", OneCell))
+    anchors.push(("<xdr:oneCellAnchor\{slice.to_owned()}", OneCell))
   }
   let mut first_two = true
   for chunk in xml_str.split("<xdr:twoCellAnchor") {
@@ -84,14 +84,14 @@ fn parse_drawing_anchors(
       first_two = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let close_tag = "</xdr:twoCellAnchor>"
     let end = match text.find(close_tag) {
       Some(pos) => pos + close_tag.length()
       None => raise InvalidXml(msg="twoCellAnchor close missing")
     }
     let slice = text[:end]
-    let full = "<xdr:twoCellAnchor\{slice.to_string()}"
+    let full = "<xdr:twoCellAnchor\{slice.to_owned()}"
     let positioning = match tag_attributes_in(full[:], "xdr:twoCellAnchor") {
       Some(tag) =>
         match attr_value(tag, "editAs") {
@@ -118,12 +118,12 @@ fn parse_drawing_images(
   archive : @zip.Archive,
 ) -> Array[Image] raise XlsxError {
   let images : Array[Image] = []
-  let image_targets = if drawing_rels_xml.to_string() == "" {
+  let image_targets = if drawing_rels_xml.to_owned() == "" {
     {}
   } else {
     parse_relationship_targets(drawing_rels_xml, rel_image)
   }
-  let hyperlink_targets = if drawing_rels_xml.to_string() == "" {
+  let hyperlink_targets = if drawing_rels_xml.to_owned() == "" {
     {}
   } else {
     parse_relationship_targets(drawing_rels_xml, rel_hyperlink)
@@ -269,7 +269,7 @@ fn parse_drawing_images(
         }
       None => ""
     }
-    let extension = ext.to_string().to_lower()
+    let extension = ext.to_owned().to_lower()
     let content_type = match image_content_type(extension) {
       Some(value) => value
       None => "application/octet-stream"
@@ -327,7 +327,7 @@ fn parse_drawing_charts(
   archive : @zip.Archive,
 ) -> Array[Chart] raise XlsxError {
   let charts : Array[Chart] = []
-  let chart_targets = if drawing_rels_xml.to_string() == "" {
+  let chart_targets = if drawing_rels_xml.to_owned() == "" {
     {}
   } else {
     parse_relationship_targets(drawing_rels_xml, rel_chart)
@@ -639,7 +639,7 @@ fn parse_drawing_shapes(
             first = false
             continue
           }
-          let part = chunk.to_string()
+          let part = chunk.to_owned()
           let end = match part.find("</a:t>") {
             Some(pos) => pos
             None => continue

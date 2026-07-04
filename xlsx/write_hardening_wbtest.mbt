@@ -1,8 +1,8 @@
 ///|
 fn wb_count_substr(text : StringView, needle : StringView) -> Int {
   let mut count = 0
-  let mut rest = text.to_string()
-  let target = needle.to_string()
+  let mut rest = text.to_owned()
+  let target = needle.to_owned()
   if target == "" {
     return 0
   }
@@ -11,7 +11,7 @@ fn wb_count_substr(text : StringView, needle : StringView) -> Int {
       Some(pos) => {
         count = count + 1
         let next = pos + target.length()
-        rest = rest[next:].to_string()
+        rest = rest[next:].to_owned()
       }
       None => break
     }

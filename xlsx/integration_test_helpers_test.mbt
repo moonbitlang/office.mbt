@@ -8,12 +8,12 @@ fn integration_rel_attr_values(xml : String, attr : String) -> Array[String] {
       first = false
       continue
     }
-    let part = chunk.to_string()
+    let part = chunk.to_owned()
     match part.find(marker) {
       Some(start) => {
         let rest = part[start + marker.length():]
         match rest.find("\"") {
-          Some(end) => values.push(rest[:end].to_string())
+          Some(end) => values.push(rest[:end].to_owned())
           None => ()
         }
       }
@@ -48,9 +48,9 @@ fn integration_has_value(values : ArrayView[String], expected : String) -> Bool 
 ///|
 fn integration_rel_target_to_part_path(target : String) -> String {
   if target.has_prefix("/") {
-    target[1:].to_string()
+    target[1:].to_owned()
   } else if target.has_prefix("../") {
-    let rest = target[3:].to_string()
+    let rest = target[3:].to_owned()
     "xl/\{rest}"
   } else {
     "xl/\{target}"

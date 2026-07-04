@@ -126,7 +126,7 @@ fn parse_ignored_errors(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>

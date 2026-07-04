@@ -5912,7 +5912,7 @@ fn split_complex_body_test(body : String) -> (String, String) {
 
 ///|
 fn parse_complex_value_test(text : String) -> (Double, Double) raise {
-  let trimmed = text.trim().to_string()
+  let trimmed = text.trim().to_owned()
   if trimmed == "" {
     fail("complex parse empty")
   }
@@ -5943,8 +5943,8 @@ fn parse_complex_value_test(text : String) -> (Double, Double) raise {
 
 ///|
 fn assert_complex_result(actual : String, expected : String) -> Unit raise {
-  let actual_trim = actual.trim().to_string()
-  let expected_trim = expected.trim().to_string()
+  let actual_trim = actual.trim().to_owned()
+  let expected_trim = expected.trim().to_owned()
   if expected_trim.has_suffix("j") {
     guard actual_trim.has_suffix("j") else { fail("expected j suffix") }
   } else if expected_trim.has_suffix("i") {

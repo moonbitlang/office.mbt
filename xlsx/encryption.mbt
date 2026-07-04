@@ -113,7 +113,7 @@ fn ByteWriter::to_bytes(self : ByteWriter) -> Bytes {
 
 ///|
 fn normalize_hash_algorithm(name : StringView) -> String {
-  let lower = name.to_lower().to_string()
+  let lower = name.to_lower().to_owned()
   if lower.has_prefix("sha-") {
     lower.replace_all(old="-", new="")
   } else {
@@ -185,7 +185,7 @@ fn pad_zero(data : BytesView, block_size : Int) -> Bytes {
   let len = data.length()
   let remainder = len % block_size
   if remainder == 0 {
-    return data.to_bytes()
+    return data.to_owned()
   }
   let padded_len = len + (block_size - remainder)
   let out : Array[Byte] = data.to_array()
@@ -292,8 +292,8 @@ fn tag_attributes(
   xml : StringView,
   tag_name : StringView,
 ) -> String? raise XlsxError {
-  let xml_str = xml.to_string()
-  let needle = "<" + tag_name.to_string()
+  let xml_str = xml.to_owned()
+  let needle = "<" + tag_name.to_owned()
   match xml_str.find(needle) {
     None => None
     Some(start) => {
@@ -303,7 +303,7 @@ fn tag_attributes(
         None => raise InvalidEncryptionInfo(msg="tag not closed")
       }
       let tag = rest[:end]
-      Some(tag.to_string())
+      Some(tag.to_owned())
     }
   }
 }
@@ -464,7 +464,7 @@ fn derive_password_key_from_hash(
     }
     Bytes::from_array(out)
   } else if key.length() > key_bytes {
-    key[:key_bytes].to_bytes()
+    key[:key_bytes].to_owned()
   } else {
     key
   }
@@ -518,7 +518,7 @@ fn create_iv_from_block(
     }
     iv = Bytes::from_array(out)
   } else if iv.length() > block_size {
-    iv = iv[:block_size].to_bytes()
+    iv = iv[:block_size].to_owned()
   }
   iv
 }
@@ -633,7 +633,7 @@ fn standard_convert_password_to_key(
   let x2 = hash_parts("sha1", [Bytes::from_array(buf2)])
   let combined : Array[Byte] = x1.to_array()
   combined.append(x2.to_array())
-  let key_derived = combined[:cb_required].to_array()
+  let key_derived = combined[:cb_required].to_owned()
   Bytes::from_array(key_derived)
 }
 
@@ -668,7 +668,7 @@ fn standard_decrypt(
   if encrypted_package_buf.length() >= 8 {
     let raw_size = @crypto.u64_from_le(encrypted_package_buf, 0).to_int()
     if raw_size >= 0 && raw_size <= decrypted.length() {
-      return decrypted[:raw_size].to_bytes()
+      return decrypted[:raw_size].to_owned()
     }
   }
   decrypted

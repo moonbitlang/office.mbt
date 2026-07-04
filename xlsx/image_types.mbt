@@ -1,9 +1,9 @@
 ///|
 fn normalize_image_extension(extension : StringView) -> String raise XlsxError {
-  let value = extension.to_string()
+  let value = extension.to_owned()
   let trimmed = match value.strip_prefix(".") {
     Some(rest) => {
-      let s = rest.to_string()
+      let s = rest.to_owned()
       if s == "" {
         raise InvalidSheetBackground(msg="image extension missing")
       }

@@ -2,7 +2,7 @@
 fn parse_header_footer_shape_id(
   id : StringView,
 ) -> (HeaderFooterImagePosition, Bool, Bool)? {
-  let id_norm = id.to_string().to_upper()
+  let id_norm = id.to_owned().to_upper()
   if id_norm.length() < 2 {
     return None
   }
@@ -21,7 +21,7 @@ fn parse_header_footer_shape_id(
   }
   let suffix = if id_norm.length() > 2 {
     let view = id_norm[2:]
-    view.to_string()
+    view.to_owned()
   } else {
     ""
   }
@@ -35,8 +35,8 @@ fn parse_header_footer_shape_id(
 
 ///|
 fn parse_style_value(style : StringView, key : StringView) -> String? {
-  let style_str = style.to_string()
-  let needle = "\{key.to_string()}:"
+  let style_str = style.to_owned()
+  let needle = "\{key.to_owned()}:"
   let start = match style_str.find(needle) {
     Some(pos) => pos + needle.length()
     None => return None
@@ -47,8 +47,8 @@ fn parse_style_value(style : StringView, key : StringView) -> String? {
     None => rest.length()
   }
   let slice = rest[:end]
-  let trimmed = slice.to_string().trim()
-  let value = trimmed.to_string()
+  let trimmed = slice.to_owned().trim()
+  let value = trimmed.to_owned()
   if value == "" {
     None
   } else {
@@ -58,7 +58,7 @@ fn parse_style_value(style : StringView, key : StringView) -> String? {
 
 ///|
 fn extension_from_path(path : StringView) -> String? {
-  let path_str = path.to_string()
+  let path_str = path.to_owned()
   let dot = match path_str.rev_find(".") {
     Some(pos) => pos
     None => return None
@@ -68,7 +68,7 @@ fn extension_from_path(path : StringView) -> String? {
     return None
   }
   let slice = path_str[start:]
-  let value = slice.to_string().to_lower()
+  let value = slice.to_owned().to_lower()
   if value == "" {
     None
   } else {

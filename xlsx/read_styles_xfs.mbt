@@ -11,7 +11,7 @@ fn parse_num_fmts(xml : StringView) -> Map[Int, String] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>
@@ -59,7 +59,7 @@ fn parse_cell_xfs(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let open_end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="xf tag not closed")
@@ -79,7 +79,7 @@ fn parse_cell_xfs(
         Some(pos) => pos
         None => raise InvalidXml(msg="xf close missing")
       }
-      rest[:close].to_string()
+      rest[:close].to_owned()
     }
     let num_fmt_id = match attr_value(tag, "numFmtId") {
       Some(value) =>
@@ -155,7 +155,7 @@ fn parse_dxfs(
   fonts : ArrayView[Font],
 ) -> Array[Style] raise XlsxError {
   let styles : Array[Style] = []
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let open_tag = "<dxfs"
   let start = match xml_str.find(open_tag) {
     Some(pos) => pos
@@ -182,7 +182,7 @@ fn parse_dxfs(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("</dxf>") {
       Some(pos) => pos
       None =>

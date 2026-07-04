@@ -11,7 +11,7 @@ fn parse_comment_authors(xml : StringView) -> Array[String] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("</author>") {
       Some(pos) => pos
       None => continue
@@ -36,7 +36,7 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="comment tag not closed")
@@ -96,7 +96,7 @@ fn parse_table_part_ids(xml : StringView) -> Array[String] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>
@@ -130,7 +130,7 @@ fn parse_pivot_table_part_ids(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>
@@ -154,14 +154,14 @@ fn parse_sheet_slicer_rel_ids(
   xml : StringView,
 ) -> Array[String] raise XlsxError {
   let ids : Array[String] = []
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let mut first = true
   for chunk in xml_str.split("<x14:slicer ") {
     if first {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>
@@ -193,14 +193,14 @@ fn parse_slicer_part_entries(
   xml : StringView,
 ) -> Array[ParsedSlicerPartEntry] raise XlsxError {
   let entries : Array[ParsedSlicerPartEntry] = []
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let mut first = true
   for chunk in xml_str.split("<slicer ") {
     if first {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>

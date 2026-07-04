@@ -138,13 +138,13 @@ fn content_override_path(part_path : String) -> String {
 fn archive_path_from_part_name(
   part_name : StringView,
 ) -> String raise XlsxError {
-  let part = part_name.to_string()
+  let part = part_name.to_owned()
   if part == "" {
     raise InvalidXml(msg="content type part name empty")
   }
   match part.strip_prefix("/") {
     Some(rest) => {
-      let path = rest.to_string()
+      let path = rest.to_owned()
       if path == "" {
         raise InvalidXml(msg="content type part name empty")
       }
@@ -156,12 +156,12 @@ fn archive_path_from_part_name(
 
 ///|
 fn rels_path_for_part(part_path : StringView) -> String raise XlsxError {
-  let part = part_path.to_string()
+  let part = part_path.to_owned()
   if part == "" || part.has_prefix("/") {
     raise InvalidXml(msg="part rels path invalid")
   }
   let segments = Array::from_iter(part.split("/"))
-  let file_name = segments[segments.length() - 1].to_string()
+  let file_name = segments[segments.length() - 1].to_owned()
   if file_name == "" {
     raise InvalidXml(msg="part rels path invalid")
   }
@@ -171,7 +171,7 @@ fn rels_path_for_part(part_path : StringView) -> String raise XlsxError {
   let folder_parts : Array[String] = []
   for i, segment in segments {
     if i + 1 < segments.length() {
-      folder_parts.push(segment.to_string())
+      folder_parts.push(segment.to_owned())
     }
   }
   let folder = folder_parts.join("/")

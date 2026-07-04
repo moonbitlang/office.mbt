@@ -187,7 +187,7 @@ test "merged cells" {
   sheet.merge_cells("A1:D1")
 
   // Get merged cell ranges
-  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:D1\"]")
+  debug_inspect(sheet.merged_cells().to_owned(), content="[\"A1:D1\"]")
 }
 ```
 

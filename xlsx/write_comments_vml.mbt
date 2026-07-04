@@ -264,7 +264,7 @@ fn write_comments_vml(
 
 ///|
 fn extract_vml_shapetype(xml : StringView) -> String? {
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let start = match xml_str.find("<v:shapetype") {
     Some(pos) => pos
     None => return None
@@ -280,7 +280,7 @@ fn extract_vml_shapetype(xml : StringView) -> String? {
 ///|
 fn extract_vml_shapes(xml : StringView) -> Array[String] {
   let shapes : Array[String] = []
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let needle = "<v:shape"
   let mut start_pos = 0
   while start_pos < xml_str.length() {
@@ -319,7 +319,7 @@ fn extract_vml_shapes(xml : StringView) -> Array[String] {
 
 ///|
 fn vml_shape_id(shape_xml : StringView) -> String? {
-  let xml_str = shape_xml.to_string()
+  let xml_str = shape_xml.to_owned()
   let id_key = "id=\""
   let start = match xml_str.find(id_key) {
     Some(pos) => pos + id_key.length()
@@ -428,7 +428,7 @@ fn merge_vml_drawings_with_shapetype(
     return extra_xml
   }
   let mut merged = base_xml
-  let shape_token = "id=\"\{shape_type_id.to_string()}\""
+  let shape_token = "id=\"\{shape_type_id.to_owned()}\""
   if !merged.contains(shape_token) {
     match extract_vml_shapetype(extra_xml) {
       Some(shape_type) => {

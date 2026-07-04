@@ -332,7 +332,7 @@ fn data_validation_xml(dv : DataValidation) -> String raise XlsxError {
 
 ///|
 fn parse_xml_bool(text : StringView) -> Bool {
-  match text.to_string().to_lower() {
+  match text.to_owned().to_lower() {
     "1" | "true" => true
     _ => false
   }

@@ -192,7 +192,7 @@ fn cfb_compare(left : String, right : String) -> Int {
 ///|
 fn parent_path(path : String) -> String {
   match path.rev_find("/") {
-    Some(pos) => path[:pos].to_string()
+    Some(pos) => path[:pos].to_owned()
     None => ""
   }
 }
@@ -200,7 +200,7 @@ fn parent_path(path : String) -> String {
 ///|
 fn base_name(path : String) -> String {
   match path.rev_find("/") {
-    Some(pos) => path[pos + 1:].to_string()
+    Some(pos) => path[pos + 1:].to_owned()
     None => path
   }
 }
@@ -742,7 +742,7 @@ fn CfbReader::read_stream(
   name : StringView,
 ) -> Bytes raise XlsxError {
   let mut entry : CfbEntry? = None
-  let target = name.to_string()
+  let target = name.to_owned()
   for item in self.entries {
     if item.name == target {
       entry = Some(item)
