@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: check + test + OpenXML validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # The `*_openxml_validity_test.mbt` tests shell out to the Microsoft
+      # DocumentFormat.OpenXml SDK validator via scripts/validate_xlsx.sh,
+      # which uses the system `dotnet` when it has the net8 runtime. Making
+      # .NET 8 available here means `moon test` runs real schema validation
+      # of generated workbooks in CI.
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Set up MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: MoonBit versions
+        run: moon version --all
+
+      - name: Format check
+        run: |
+          moon fmt
+          if ! git diff --quiet; then
+            echo "::error::moon fmt changed files; run moon fmt and commit the result."
+            git --no-pager diff --stat
+            exit 1
+          fi
+
+      - name: Type check
+        run: moon check
+
+      - name: Test (native, includes OpenXML SDK validation)
+        run: moon test --target native
