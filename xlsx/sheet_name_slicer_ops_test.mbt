@@ -3,7 +3,7 @@ test "slicer APIs validate sheet name" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let slicer = Slicer::new("Slicer1") catch {
-    err => fail("slicer init failed: \{err}")
+    err => fail("slicer init failed: \{repr(err)}")
   }
   let add_raw_result : Result[Unit, Error] = Ok(
     workbook.add_slicer_raw("Sheet:1", slicer),

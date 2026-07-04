@@ -8,15 +8,21 @@ test "rows iterator includes dimension-only rows" {
   let rows = workbook.rows("Sheet1")
   inspect(rows.next(), content="true")
   debug_inspect(rows.row_index(), content="Some(1)")
-  let row1 = rows.columns() catch { err => fail("row1 columns failed: \{err}") }
+  let row1 = rows.columns() catch {
+    err => fail("row1 columns failed: \{repr(err)}")
+  }
   debug_inspect(row1, content="[\"A\"]")
   inspect(rows.next(), content="true")
   debug_inspect(rows.row_index(), content="Some(2)")
-  let row2 = rows.columns() catch { err => fail("row2 columns failed: \{err}") }
+  let row2 = rows.columns() catch {
+    err => fail("row2 columns failed: \{repr(err)}")
+  }
   debug_inspect(row2, content="[]")
   inspect(rows.next(), content="true")
   debug_inspect(rows.row_index(), content="Some(3)")
-  let row3 = rows.columns() catch { err => fail("row3 columns failed: \{err}") }
+  let row3 = rows.columns() catch {
+    err => fail("row3 columns failed: \{repr(err)}")
+  }
   debug_inspect(row3, content="[\"C\"]")
   inspect(rows.next(), content="false")
 }
@@ -67,12 +73,12 @@ test "rows columns honors options" {
   let rows = workbook.rows("Sheet1")
   inspect(rows.next(), content="true")
   let formatted = rows.columns() catch {
-    err => fail("formatted columns failed: \{err}")
+    err => fail("formatted columns failed: \{repr(err)}")
   }
   debug_inspect(formatted, content="[\"1.00\"]")
   let raw_opts = Options::with_values(raw_cell_value=true)
   let raw_values = rows.columns(options=raw_opts) catch {
-    err => fail("raw columns failed: \{err}")
+    err => fail("raw columns failed: \{repr(err)}")
   }
   debug_inspect(raw_values, content="[\"1\"]")
 }

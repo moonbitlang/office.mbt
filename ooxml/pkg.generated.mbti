@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "bobzhang/mbtexcel/ooxml"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> String? raise ParseXmlError
 
@@ -9,7 +13,7 @@ pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String]
 // Errors
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
-} derive(Show)
+} derive(@debug.Debug)
 
 // Types and methods
 type WorkbookManifest

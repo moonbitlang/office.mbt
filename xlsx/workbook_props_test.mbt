@@ -38,7 +38,7 @@ test "workbook and calc props roundtrip" {
   debug_inspect(parsed_calc.iterate_delta, content="Some(0.01)")
   debug_inspect(parsed_calc.force_full_calc, content="Some(true)")
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let workbook_xml = match archive.get("xl/workbook.xml") {
     Some(value) =>

@@ -206,12 +206,14 @@ fn base_name(path : String) -> String {
 }
 
 ///|
+priv struct CfbBuildObj {
+  path : String
+  sector : CfbSector
+}
+
+///|
 fn CfbBuilder::prepare(self : CfbBuilder) -> Unit {
-  struct Obj {
-    path : String
-    sector : CfbSector
-  }
-  let objects : Array[Obj] = []
+  let objects : Array[CfbBuildObj] = []
   for i in 0..<self.paths.length() {
     if self.sectors[i].type_id == 0 {
       continue

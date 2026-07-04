@@ -632,7 +632,7 @@ test "standard decryption accepts RC4-style verifier layout" {
   try standard_decrypt(truncated, package_buf[:], password) catch {
     XlsxError::InvalidEncryptionInfo(msg~) =>
       inspect(msg, content="invalid verifier block")
-    e => fail("unexpected error \{e}")
+    e => fail("unexpected error \{repr(e)}")
   } noraise {
     _ => fail("expected truncated verifier to fail")
   }

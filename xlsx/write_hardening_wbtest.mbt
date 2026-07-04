@@ -274,10 +274,10 @@ test "write hardening wb: write_drawing_xml covers chart none-sheet anchor branc
 ///|
 test "write hardening wb: write_drawing_xml covers shape none-sheet and run-font branches" {
   let shape_two = wb_shape_for_anchor(TwoCell) catch {
-    err => fail("shape init failed: \{err}")
+    err => fail("shape init failed: \{repr(err)}")
   }
   let shape_abs = wb_shape_for_anchor(Absolute) catch {
-    err => fail("shape init failed: \{err}")
+    err => fail("shape init failed: \{repr(err)}")
   }
   let xml = write_drawing_xml(None, [], [], [shape_two, shape_abs], [])
   inspect(
@@ -414,7 +414,7 @@ test "write hardening wb: worksheet_dimension covers cell merge and table min/ma
   sheet.merge_cells("B2:B5")
   ignore(sheet.add_table("A1:E6", "DimTable", ["A", "B", "C", "D", "E"]))
   let dimension = worksheet_dimension(sheet) catch {
-    err => fail("worksheet_dimension failed: \{err}")
+    err => fail("worksheet_dimension failed: \{repr(err)}")
   }
   debug_inspect(dimension, content="Some(\"A1:E6\")")
 }
@@ -425,7 +425,7 @@ test "write hardening wb: worksheet_dimension covers auto-filter expansion branc
   sheet.set_cell("C3", "x")
   sheet.auto_filter = Some({ range_ref: "B2:D4", columns: [] })
   let dimension = worksheet_dimension(sheet) catch {
-    err => fail("worksheet_dimension failed: \{err}")
+    err => fail("worksheet_dimension failed: \{repr(err)}")
   }
   debug_inspect(dimension, content="Some(\"B2:D4\")")
 }
@@ -467,7 +467,7 @@ test "write hardening wb: write_worksheet_xml covers x14 map aggregation and unk
     None,
     None,
   ) catch {
-    err => fail("write_worksheet_xml failed: \{err}")
+    err => fail("write_worksheet_xml failed: \{repr(err)}")
   }
   inspect(xml.contains("<extLst>"), content="true")
   inspect(xml.contains("<x14:conditionalFormatting>"), content="true")
@@ -533,7 +533,7 @@ test "write hardening wb: write_worksheet_xml covers formula bool and error bran
     None,
     None,
   ) catch {
-    err => fail("write_worksheet_xml failed: \{err}")
+    err => fail("write_worksheet_xml failed: \{repr(err)}")
   }
   inspect(xml.contains("r=\"A1\" t=\"b\""), content="true")
   inspect(xml.contains("<f>1=1</f><v>1</v>"), content="true")
@@ -643,7 +643,7 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     None,
     None,
   ) catch {
-    err => fail("write_worksheet_xml failed: \{err}")
+    err => fail("write_worksheet_xml failed: \{repr(err)}")
   }
   inspect(no_hyperlinks_xml.contains("<hyperlinks>"), content="false")
 
@@ -688,7 +688,7 @@ test "write hardening wb: write_with_io covers file-path extension fallback bran
     zip_writer: None,
     charset_transcoder: None,
   }) catch {
-    err => fail("write_with_io without extension failed: \{err}")
+    err => fail("write_with_io without extension failed: \{repr(err)}")
   }
   inspect(no_ext.length() > 0, content="true")
 
@@ -697,7 +697,7 @@ test "write hardening wb: write_with_io covers file-path extension fallback bran
     zip_writer: None,
     charset_transcoder: None,
   }) catch {
-    err => fail("write_with_io unsupported extension failed: \{err}")
+    err => fail("write_with_io unsupported extension failed: \{repr(err)}")
   }
   inspect(unsupported_ext.length() > 0, content="true")
 }
@@ -706,9 +706,9 @@ test "write hardening wb: write_with_io covers file-path extension fallback bran
 test "write hardening wb: write_with_password empty password returns raw bytes" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let raw = write(workbook) catch { err => fail("write failed: \{err}") }
+  let raw = write(workbook) catch { err => fail("write failed: \{repr(err)}") }
   let with_empty_password = write_with_password(workbook, "") catch {
-    err => fail("write_with_password failed: \{err}")
+    err => fail("write_with_password failed: \{repr(err)}")
   }
   inspect(raw == with_empty_password, content="true")
 }
@@ -728,7 +728,9 @@ test "write hardening wb: write merges base vml with form-control and comment vm
     width: None,
     height: None,
   })
-  let bytes = write(workbook) catch { err => fail("write failed: \{err}") }
+  let bytes = write(workbook) catch {
+    err => fail("write failed: \{repr(err)}")
+  }
   inspect(bytes.length() > 0, content="true")
 }
 
@@ -799,7 +801,9 @@ test "write hardening wb: write handles duplicate pivot cache relationship entri
     cache_definition_xml: "<pivotCacheDefinition/>",
     cache_records_xml: None,
   })
-  let bytes = write(workbook) catch { err => fail("write failed: \{err}") }
+  let bytes = write(workbook) catch {
+    err => fail("write failed: \{repr(err)}")
+  }
   inspect(bytes.length() > 0, content="true")
 }
 

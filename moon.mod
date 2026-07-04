@@ -20,4 +20,4 @@ keywords = [ ]
 
 description = ""
 
-warnings = "-deprecated_syntax-reserved_keyword+result_error_return"
+warnings = "-reserved_keyword+result_error_return"

@@ -4,7 +4,9 @@ fn build_non_utf8_workbook_bytes() -> Bytes raise {
   ignore(try! workbook.add_sheet("Sheet1"))
   try! workbook.set_cell("Sheet1", "A1", "alpha")
   let raw = try! write(workbook)
-  let archive = @zip.read(raw) catch { err => fail("zip read failed: \{err}") }
+  let archive = @zip.read(raw) catch {
+    err => fail("zip read failed: \{repr(err)}")
+  }
   let updated = @zip.Archive::new()
   for entry in archive.entries() {
     let data = if entry.name() == "xl/workbook.xml" {
@@ -27,7 +29,7 @@ fn build_non_utf8_workbook_bytes() -> Bytes raise {
     )
   }
   @zip.write(updated) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
 }
 
@@ -66,7 +68,7 @@ async test "workbook read_zip_reader uses charset_transcoder" {
 
   let builder = Workbook::new().charset_transcoder(transcode)
   let (reader, writer) = @async/io.pipe()
-  let parsed = @async.with_task_group(fn(group) {
+  let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)

@@ -126,7 +126,7 @@ async test "save_as sets workbook content type by extension" {
       err => fail("read file failed: \{err}")
     }
     let archive = @zip.read(data.binary()) catch {
-      err => fail("zip read failed: \{err}")
+      err => fail("zip read failed: \{repr(err)}")
     }
     match archive.get("[Content_Types].xml") {
       Some(value) =>
@@ -158,7 +158,7 @@ async test "save_as sets workbook content type by extension" {
       err => fail("read file failed: \{err}")
     }
     let archive = @zip.read(data.binary()) catch {
-      err => fail("zip read failed: \{err}")
+      err => fail("zip read failed: \{repr(err)}")
     }
     match archive.get("[Content_Types].xml") {
       Some(value) =>
@@ -184,7 +184,7 @@ async test "save_as sets workbook content type by extension" {
       err => fail("read file failed: \{err}")
     }
     let archive = @zip.read(data.binary()) catch {
-      err => fail("zip read failed: \{err}")
+      err => fail("zip read failed: \{repr(err)}")
     }
     match archive.get("[Content_Types].xml") {
       Some(value) =>
@@ -216,7 +216,7 @@ async test "save_as sets workbook content type by extension" {
       err => fail("read file failed: \{err}")
     }
     let archive = @zip.read(data.binary()) catch {
-      err => fail("zip read failed: \{err}")
+      err => fail("zip read failed: \{repr(err)}")
     }
     match archive.get("[Content_Types].xml") {
       Some(value) =>
@@ -242,7 +242,7 @@ async test "open_reader from pipe" {
   workbook.set_cell("Sheet1", "B2", "gamma")
   let bytes = workbook.write_to_buffer()
   let (reader, writer) = @async/io.pipe()
-  let parsed = @async.with_task_group(fn(group) {
+  let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)
@@ -259,7 +259,7 @@ async test "read_zip_reader from pipe" {
   workbook.set_cell("Sheet1", "E5", "reader")
   let bytes = workbook.write_to_buffer()
   let (reader, writer) = @async/io.pipe()
-  let parsed = @async.with_task_group(fn(group) {
+  let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)

@@ -102,7 +102,7 @@ pub suberror XlsxError {
   InvalidPasswordLength(len~ : Int)
   UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 // Types and methods
 pub struct Alignment {

@@ -3025,11 +3025,11 @@ fn write_with_io(
   match io_context.zip_writer {
     Some(writer) =>
       writer(archive) catch {
-        err => raise UnsupportedFeature(msg=err.to_string())
+        err => raise UnsupportedFeature(msg=repr(err))
       }
     None =>
       @zip.write(archive) catch {
-        err => raise UnsupportedFeature(msg=err.to_string())
+        err => raise UnsupportedFeature(msg=repr(err))
       }
   }
 }

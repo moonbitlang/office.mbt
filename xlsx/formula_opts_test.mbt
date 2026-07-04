@@ -30,7 +30,7 @@ test "formula opts array writes typed formula" {
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -66,7 +66,7 @@ test "formula opts shared writes typed formula" {
   sheet.set_cell_formula_opts("C1", "A1+B1", opts=FormulaOpts::shared("C1:C3"))
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -107,7 +107,7 @@ test "formula opts dataTable behaves like normal formula" {
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>

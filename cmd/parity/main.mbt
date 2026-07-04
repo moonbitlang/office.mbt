@@ -123,22 +123,22 @@ async fn main {
   }
 
   try @demos.demo_dashboard_bytes() catch {
-    err => println("dashboard generation failed: \{err}")
+    err => println("dashboard generation failed: \{repr(err)}")
   } noraise {
     bytes => write_out(out_dir, "dashboard.xlsx", bytes)
   }
   try parity_controls_min_bytes() catch {
-    err => println("controls generation failed: \{err}")
+    err => println("controls generation failed: \{repr(err)}")
   } noraise {
     bytes => write_out(out_dir, "controls.xlsx", bytes)
   }
   try parity_cf_min_bytes() catch {
-    err => println("cf generation failed: \{err}")
+    err => println("cf generation failed: \{repr(err)}")
   } noraise {
     bytes => write_out(out_dir, "cf.xlsx", bytes)
   }
   try parity_shared_strings_bytes() catch {
-    err => println("shared_strings generation failed: \{err}")
+    err => println("shared_strings generation failed: \{repr(err)}")
   } noraise {
     bytes => write_out(out_dir, "shared_strings.xlsx", bytes)
   }

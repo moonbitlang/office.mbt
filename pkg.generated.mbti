@@ -68,7 +68,7 @@ pub suberror UtfIndexError {
   OutOfRange(index~ : Int, len~ : Int)
   InvalidBoundary(index~ : Int)
   InvalidUtf8(offset~ : Int)
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 // Types and methods
 

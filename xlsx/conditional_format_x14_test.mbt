@@ -4,7 +4,7 @@ test "x14 conditional formatting iconSet read" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -31,7 +31,7 @@ test "x14 conditional formatting iconSet read" {
     @encoding/utf8.encode(updated_sheet),
   )
   let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
   let parsed = read(updated_bytes)
   let formats = parsed.get_conditional_formats("Sheet1")

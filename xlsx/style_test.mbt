@@ -7,7 +7,7 @@ test "number format style write" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -42,7 +42,7 @@ test "excelize currency num fmt decimal places + neg red" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -138,7 +138,7 @@ test "conditional style roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -159,7 +159,7 @@ test "default font roundtrip" {
   workbook.set_default_font("Arial")
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -202,12 +202,12 @@ test "styles extLst roundtrip" {
   }
   updated_archive.add("xl/styles.xml", @encoding/utf8.encode(updated_styles))
   let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
   let parsed = read(updated_bytes)
   let roundtrip = write(parsed)
   let roundtrip_archive = @zip.read(roundtrip) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let roundtrip_styles = match roundtrip_archive.get("xl/styles.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -256,12 +256,12 @@ test "styles tableStyles defaults roundtrip" {
   }
   updated_archive.add("xl/styles.xml", @encoding/utf8.encode(updated_styles))
   let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
   let parsed = read(updated_bytes)
   let roundtrip = write(parsed)
   let roundtrip_archive = @zip.read(roundtrip) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let roundtrip_styles = match roundtrip_archive.get("xl/styles.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -298,7 +298,7 @@ test "cell style font write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -340,7 +340,7 @@ test "cell style font theme/indexed color write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -367,7 +367,7 @@ test "cell style font indexed color write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -394,7 +394,7 @@ test "conditional style font write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -422,7 +422,7 @@ test "conditional style font theme/tint write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -450,7 +450,7 @@ test "cell style fill write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -482,7 +482,7 @@ test "cell style fill transparency write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -512,7 +512,7 @@ test "cell style fill theme color write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -541,7 +541,7 @@ test "cell style fill indexed color write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -570,7 +570,7 @@ test "cell style gradient fill write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -603,7 +603,7 @@ test "cell style gradient fill path variant write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -630,7 +630,7 @@ test "conditional style fill write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -663,7 +663,7 @@ test "conditional style fill transparency write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -696,7 +696,7 @@ test "conditional style fill theme color write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -729,7 +729,7 @@ test "conditional style fill indexed color write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -762,7 +762,7 @@ test "conditional style gradient fill write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -793,7 +793,7 @@ test "cell style border write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -826,7 +826,7 @@ test "cell style diagonal border write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -858,7 +858,7 @@ test "conditional style border write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -885,7 +885,7 @@ test "cell style protection write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -916,7 +916,7 @@ test "conditional style protection write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -954,7 +954,7 @@ test "cell style alignment write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -988,7 +988,7 @@ test "cell style alignment advanced attrs write + roundtrip" {
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>
@@ -1017,7 +1017,7 @@ test "conditional style alignment write + roundtrip" {
   sheet.set_conditional_format("A1", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
     Some(value) =>

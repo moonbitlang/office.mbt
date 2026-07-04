@@ -65,10 +65,10 @@ test "worksheet wb: delete_slicer empty/missing/remove branches" {
   )
 
   let region = Slicer::new("Region") catch {
-    err => fail("slicer init failed: \{err}")
+    err => fail("slicer init failed: \{repr(err)}")
   }
   let typ = Slicer::new("Type") catch {
-    err => fail("slicer init failed: \{err}")
+    err => fail("slicer init failed: \{repr(err)}")
   }
   sheet.add_slicer(region)
   sheet.add_slicer(typ)

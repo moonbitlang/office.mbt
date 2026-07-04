@@ -84,33 +84,37 @@ async test "excelize Book1 iterators match get_rows/get_cols" {
   let path = ".repos/excelize/test/Book1.xlsx"
   let workbook = open_file(path)
   let total = workbook.get_cell_value("Sheet1", "A19") catch {
-    err => fail("get_cell_value failed: \{err}")
+    err => fail("get_cell_value failed: \{repr(err)}")
   }
   debug_inspect(total, content="Some(\"Total:\")")
   let sheet = "Sheet2"
-  let rows = workbook.rows(sheet) catch { err => fail("rows failed: \{err}") }
+  let rows = workbook.rows(sheet) catch {
+    err => fail("rows failed: \{repr(err)}")
+  }
   let collected_rows : Array[Array[String]] = []
   while rows.next() {
     let cols = rows.columns() catch {
-      err => fail("rows columns failed: \{err}")
+      err => fail("rows columns failed: \{repr(err)}")
     }
     collected_rows.push(trim_trailing_empty(cols))
   }
   let returned_rows = workbook.get_rows(sheet) catch {
-    err => fail("get_rows failed: \{err}")
+    err => fail("get_rows failed: \{repr(err)}")
   }
   let normalized_returned_rows = normalize_2d(returned_rows)
   inspect(collected_rows.length(), content="11")
   inspect(normalized_returned_rows.length(), content="11")
   inspect(eq_2d(collected_rows, normalized_returned_rows), content="true")
-  let cols = workbook.cols(sheet) catch { err => fail("cols failed: \{err}") }
+  let cols = workbook.cols(sheet) catch {
+    err => fail("cols failed: \{repr(err)}")
+  }
   let collected_cols : Array[Array[String]] = []
   while cols.next() {
     collected_cols.push(trim_trailing_empty(cols.rows()))
   }
   debug_inspect(cols.error(), content="None")
   let returned_cols = workbook.get_cols(sheet) catch {
-    err => fail("get_cols failed: \{err}")
+    err => fail("get_cols failed: \{repr(err)}")
   }
   let normalized_returned_cols = normalize_2d(returned_cols)
   inspect(collected_cols.length(), content="9")

@@ -170,7 +170,7 @@ test "hyperlink opts helper" {
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -293,7 +293,7 @@ test "hyperlink remove clears range reference" {
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -322,7 +322,7 @@ test "hyperlink remove clears range reference" {
     @encoding/utf8.encode(updated_sheet),
   )
   let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
   let parsed = read(updated_bytes)
   debug_inspect(
@@ -357,7 +357,7 @@ test "hyperlink invalid ref tolerated on read" {
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -386,7 +386,7 @@ test "hyperlink invalid ref tolerated on read" {
     @encoding/utf8.encode(updated_sheet),
   )
   let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
   let parsed = read(updated_bytes)
   let get_result : Result[Hyperlink?, Error] = Ok(

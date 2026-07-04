@@ -22,7 +22,7 @@ pub fn validate_ooxml_package(bytes : BytesView) -> Array[String] {
   let problems : Array[String] = []
   let archive = @zip.read(bytes) catch {
     err => {
-      problems.push("archive is not a readable zip: \{err}")
+      problems.push("archive is not a readable zip: \{repr(err)}")
       return problems
     }
   }

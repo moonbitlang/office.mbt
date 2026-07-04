@@ -15,7 +15,7 @@ test "merge cell wb: rect_union covers min/max branch matrix" {
 ///|
 test "merge cell wb: merge_overlap_ranges handles used-j continue path" {
   let merged = merge_overlap_ranges(["A1:B2", "D1:E2", "B2:C3"]) catch {
-    err => fail("merge_overlap_ranges failed: \{err}")
+    err => fail("merge_overlap_ranges failed: \{repr(err)}")
   }
   inspect(merged.length(), content="2")
   inspect(merged.contains("A1:C3"), content="true")

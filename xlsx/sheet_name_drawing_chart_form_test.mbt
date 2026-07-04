@@ -118,7 +118,7 @@ test "drawing/chart/form-control APIs validate sheet name" {
     content="true",
   )
   let control = FormControl::new("A1", "button") catch {
-    err => fail("form control init failed: \{err}")
+    err => fail("form control init failed: \{repr(err)}")
   }
   let add_control_result : Result[Unit, Error] = Ok(
     workbook.add_form_control("Sheet:1", control),

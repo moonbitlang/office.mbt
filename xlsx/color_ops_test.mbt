@@ -61,14 +61,14 @@ test "get base color from theme and indexed colors" {
   updated_archive.add("xl/theme/theme1.xml", @encoding/utf8.encode(theme_xml))
   updated_archive.add("xl/styles.xml", @encoding/utf8.encode(updated_styles))
   let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
   let parsed = read(updated_bytes)
   inspect(parsed.get_base_color("", 0, theme_color=4), content="ABCDEF")
   inspect(parsed.get_base_color("", 1), content="654321")
   let roundtrip = write(parsed)
   let roundtrip_archive = @zip.read(roundtrip) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let roundtrip_theme = match roundtrip_archive.get("xl/theme/theme1.xml") {
     Some(value) => @encoding/utf8.decode(value)
