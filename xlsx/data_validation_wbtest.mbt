@@ -1,7 +1,9 @@
 ///|
 test "data validation wb: data_validation_xml rejects empty sqref" {
   let dv = DataValidation::new(true)
-  let result : Result[String, Error] = try? data_validation_xml(dv)
+  let result : Result[String, Error] = Ok(data_validation_xml(dv)) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidDataValidation(_)), content="true")
 }
 
@@ -18,9 +20,11 @@ test "data validation wb: data_validation_xml emits showDropDown when enabled" {
 
 ///|
 test "data validation wb: parse requires dataValidation tag" {
-  let result : Result[DataValidation, Error] = try? data_validation_from_xml(
-    "<foo/>",
-  )
+  let result : Result[DataValidation, Error] = Ok(
+    data_validation_from_xml("<foo/>"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidXml(_)), content="true")
 }
 
@@ -43,8 +47,10 @@ test "data validation wb: parse defaults with minimal tag and optional attrs" {
 
 ///|
 test "data validation wb: parse requires sqref attribute" {
-  let result : Result[DataValidation, Error] = try? data_validation_from_xml(
-    "<dataValidation allowBlank=\"1\"/>",
-  )
+  let result : Result[DataValidation, Error] = Ok(
+    data_validation_from_xml("<dataValidation allowBlank=\"1\"/>"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidXml(_)), content="true")
 }

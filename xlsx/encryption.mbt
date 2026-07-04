@@ -199,11 +199,11 @@ fn pad_zero(data : BytesView, block_size : Int) -> Bytes {
 /// Lazily-initialized process-global generator behind `random_bytes`.
 /// A fresh `Rand::new()` per call would reuse ChaCha8's fixed default
 /// seed, making every salt/verifier identical across files and runs.
-let random_bytes_rng : Ref[@random.Rand?] = Ref::new(None)
+let random_bytes_rng : Ref[@random.Rand?] = { val: None }
 
 ///|
 /// Optional user-supplied source of cryptographically secure bytes.
-let random_bytes_override : Ref[((Int) -> Bytes)?] = Ref::new(None)
+let random_bytes_override : Ref[((Int) -> Bytes)?] = { val: None }
 
 ///|
 /// Installs a custom source for the random bytes used in workbook
@@ -701,7 +701,9 @@ fn is_valid_zip(bytes : BytesView) -> Bool {
   if !looks_like_zip(bytes) {
     return false
   }
-  let result : Result[@zip.Archive, Error] = try? @zip.read(bytes)
+  let result : Result[@zip.Archive, Error] = Ok(@zip.read(bytes)) catch {
+    e => Err(e)
+  }
   result is Ok(_)
 }
 

@@ -93,7 +93,9 @@ fn decode_utf16(
     (default_endian, bytes[:])
   }
   match
-    (try? @encoding/utf16.decode(body, endianness=endian, ignore_bom=false)) {
+    (Ok(@encoding/utf16.decode(body, endianness=endian, ignore_bom=false)) catch {
+      e => Err(e)
+    }) {
     Ok(text) => Some(text)
     Err(_) => None
   }

@@ -3,9 +3,11 @@ test "demo secure password: encrypted read/write roundtrip remains stable" {
   let password = "moonbit"
   let bytes = @demos.demo_secure_bytes(password~)
 
-  let bad : Result[@xlsx.Workbook, Error] = try? read_with_password(
-    bytes, "wrong-password",
-  )
+  let bad : Result[@xlsx.Workbook, Error] = Ok(
+    read_with_password(bytes, "wrong-password"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad is Err(_), content="true")
 
   let parsed = read_with_password(bytes, password)

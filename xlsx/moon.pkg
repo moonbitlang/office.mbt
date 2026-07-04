@@ -14,6 +14,7 @@ import {
   "moonbitlang/core/math",
   "moonbitlang/core/env",
   "moonbitlang/x/time",
+  "moonbitlang/core/test",
 }
 
 import {

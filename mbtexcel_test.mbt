@@ -60,7 +60,7 @@ test "mbtexcel data_validation" {
 
 ///|
 test "mbtexcel encrypt decrypt roundtrip" {
-  let raw : Bytes = "hello"
+  let raw : Bytes = b"hello"
   let opts = @xlsx.Options::with_values(password="secret")
   let encrypted = encrypt(raw, options=opts)
   let decrypted = decrypt(encrypted, options=opts)
@@ -113,9 +113,11 @@ test "mbtexcel sheet management helpers" {
 test "mbtexcel excel_date_to_time 1904 and invalid" {
   let t0 = excel_date_to_time(0.0, use_1904_format=true)
   debug_inspect((t0.year(), t0.month(), t0.day()), content="(1904, 1, 1)")
-  let invalid : Result[@time.ZonedDateTime, Error] = try? excel_date_to_time(
-    -1.0,
-  )
+  let invalid : Result[@time.ZonedDateTime, Error] = Ok(
+    excel_date_to_time(-1.0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(invalid is Err(_), content="true")
 }
 
@@ -147,7 +149,9 @@ test "mbtexcel read options unzip limits" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = write(workbook)
   let opts = @xlsx.Options::with_values(unzip_size_limit=1)
-  let result : Result[@xlsx.Workbook, Error] = try? read(bytes, options=opts)
+  let result : Result[@xlsx.Workbook, Error] = Ok(read(bytes, options=opts)) catch {
+    e => Err(e)
+  }
   guard result is Err(@xlsx.InvalidOptions(_)) else {
     fail("expected unzip size limit error")
   }
@@ -157,17 +161,19 @@ test "mbtexcel read options unzip limits" {
 test "mbtexcel calc props validation" {
   let workbook = new_workbook()
   let bad_mode = @xlsx.CalcPropsOptions::with_values(calc_mode="bad")
-  let result1 : Result[Unit, Error] = try? workbook.set_calc_props(
-    Some(bad_mode),
-  )
+  let result1 : Result[Unit, Error] = Ok(
+    workbook.set_calc_props(Some(bad_mode)),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     result1,
     content="Err(InvalidWorkbookProperty(msg=\"invalid calc mode\"))",
   )
   let bad_ref = @xlsx.CalcPropsOptions::with_values(ref_mode="R2C2")
-  let result2 : Result[Unit, Error] = try? workbook.set_calc_props(
-    Some(bad_ref),
-  )
+  let result2 : Result[Unit, Error] = Ok(workbook.set_calc_props(Some(bad_ref))) catch {
+    e => Err(e)
+  }
   debug_inspect(
     result2,
     content="Err(InvalidWorkbookProperty(msg=\"invalid reference mode\"))",
@@ -182,9 +188,11 @@ test "mbtexcel workbook protection invalid password" {
     lock_structure=true,
   )
   workbook.protect_workbook(options=opts)
-  let result : Result[Unit, Error] = try? workbook.unprotect_workbook(
-    password="wrong",
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.unprotect_workbook(password="wrong"),
+  ) catch {
+    e => Err(e)
+  }
   guard result is Err(@xlsx.InvalidWorkbookProtection(_)) else {
     fail("expected workbook protection mismatch")
   }
@@ -196,10 +204,11 @@ test "mbtexcel sheet protection invalid password" {
   ignore(workbook.add_sheet("Sheet1"))
   let opts = @xlsx.SheetProtectionOptions::with_values(password="secret")
   workbook.protect_sheet("Sheet1", opts)
-  let result : Result[Unit, Error] = try? workbook.unprotect_sheet(
-    "Sheet1",
-    password="wrong",
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.unprotect_sheet("Sheet1", password="wrong"),
+  ) catch {
+    e => Err(e)
+  }
   guard result is Err(@xlsx.InvalidSheetProtection(_)) else {
     fail("expected sheet protection mismatch")
   }

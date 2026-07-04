@@ -112,9 +112,11 @@ fn parse_default_font(xml : StringView) -> String {
             None => "Calibri"
             Some(end) => {
               let tag = name_rest[:end]
-              let value_result : Result[String?, Error] = try? attr_value(
-                tag, "val",
-              )
+              let value_result : Result[String?, Error] = Ok(
+                attr_value(tag, "val"),
+              ) catch {
+                e => Err(e)
+              }
               match value_result {
                 Ok(value) =>
                   match value {
@@ -3746,11 +3748,15 @@ pub fn read_with_password(
   let resolved_options = options_with_password(options, password)
   if is_encrypted_package(bytes) {
     let decrypted = decrypt_encrypted_package(bytes, password)
-    let result : Result[Workbook, Error] = try? (match transcoder {
-      Some(value) =>
-        read_zip_bytes(decrypted, options=resolved_options, transcoder=value)
-      None => read_zip_bytes(decrypted, options=resolved_options)
-    })
+    let result : Result[Workbook, Error] = Ok(
+      match transcoder {
+        Some(value) =>
+          read_zip_bytes(decrypted, options=resolved_options, transcoder=value)
+        None => read_zip_bytes(decrypted, options=resolved_options)
+      },
+    ) catch {
+      e => Err(e)
+    }
     match result {
       Ok(workbook) => workbook
       Err(_) => raise InvalidPassword

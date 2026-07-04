@@ -94,11 +94,11 @@ test "header/footer image read wb: missing target part raises MissingPart" {
     #|    <v:imagedata r:id="rId1"/>
     #|  </v:shape>
     #|</xml>
-  let result : Result[Array[HeaderFooterImage], Error] = try? parse_header_footer_images_from_vml(
-    vml_xml,
-    Some(rels_xml),
-    archive,
-  )
+  let result : Result[Array[HeaderFooterImage], Error] = Ok(
+    parse_header_footer_images_from_vml(vml_xml, Some(rels_xml), archive),
+  ) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::MissingPart(path~)) =>
       inspect(path, content="xl/media/missing.png")

@@ -15,8 +15,7 @@ test "cell reference conversions" {
     let round = cell_ref_from(row, col)
     inspect(round == reference, content="true")
   }
-  let bad : Result[(Int, Int), Error] = try? cell_ref_to_rc("1A")
-  inspect(bad is Err(_), content="true")
+  @test.assert_raise(() => cell_ref_to_rc("1A"))
 }
 
 ///|
@@ -37,6 +36,5 @@ test "workbook cell access" {
   debug_inspect(workbook.get_cell("Sheet1", "A1"), content="Some(\"hello\")")
   workbook.set_cell_rc("Sheet1", 2, 2, "world")
   debug_inspect(workbook.get_cell("Sheet1", "B2"), content="Some(\"world\")")
-  let missing : Result[String?, Error] = try? workbook.get_cell("Missing", "A1")
-  inspect(missing is Err(_), content="true")
+  @test.assert_raise(() => workbook.get_cell("Missing", "A1"))
 }

@@ -190,9 +190,11 @@ test "rich text length limit uses utf16" {
   let emoji = @encoding/utf8.decode(emoji_bytes)
   let text = repeat_rich_text(emoji, 16384)
   let runs : Array[RichTextRun] = [{ text, font: None }]
-  let result : Result[Unit, Error] = try? workbook.set_cell_rich_text(
-    "Sheet1", "A1", runs,
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.set_cell_rich_text("Sheet1", "A1", runs),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(result, content="Err(CellTextTooLong(len=32768))")
 }
 

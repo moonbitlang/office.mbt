@@ -115,35 +115,43 @@ test "write part paths: read-side path helpers are stable" {
 
 ///|
 test "write part paths: invalid read-side path helpers raise InvalidXml" {
-  let empty_part_result = try? archive_path_from_part_name("")
+  let empty_part_result = Ok(archive_path_from_part_name("")) catch {
+    e => Err(e)
+  }
   match empty_part_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="content type part name empty")
     _ => fail("expected content type part name empty")
   }
 
-  let slash_part_result = try? archive_path_from_part_name("/")
+  let slash_part_result = Ok(archive_path_from_part_name("/")) catch {
+    e => Err(e)
+  }
   match slash_part_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="content type part name empty")
     _ => fail("expected content type part name empty for /")
   }
 
-  let empty_rels_result = try? rels_path_for_part("")
+  let empty_rels_result = Ok(rels_path_for_part("")) catch { e => Err(e) }
   match empty_rels_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="part rels path invalid")
     _ => fail("expected part rels path invalid")
   }
 
-  let slash_rels_result = try? rels_path_for_part("/xl/workbook.xml")
+  let slash_rels_result = Ok(rels_path_for_part("/xl/workbook.xml")) catch {
+    e => Err(e)
+  }
   match slash_rels_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="part rels path invalid")
     _ => fail("expected part rels path invalid for leading slash")
   }
 
-  let trailing_slash_rels_result = try? rels_path_for_part("xl/")
+  let trailing_slash_rels_result = Ok(rels_path_for_part("xl/")) catch {
+    e => Err(e)
+  }
   match trailing_slash_rels_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="part rels path invalid")

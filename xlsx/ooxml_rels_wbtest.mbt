@@ -110,13 +110,17 @@ test "ooxml_rels: resolve target normalizes dot segments" {
 
 ///|
 test "ooxml_rels: resolve target rejects escaping root via dot segments" {
-  let rel_result = try? resolve_rel_target("../../../sheet1.xml", "worksheets")
+  let rel_result = Ok(resolve_rel_target("../../../sheet1.xml", "worksheets")) catch {
+    e => Err(e)
+  }
   match rel_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="relationship target invalid")
     _ => fail("expected InvalidXml for relative escape in resolve_rel_target")
   }
-  let workbook_result = try? resolve_workbook_rel_target("../../sheet1.xml")
+  let workbook_result = Ok(resolve_workbook_rel_target("../../sheet1.xml")) catch {
+    e => Err(e)
+  }
   match workbook_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="relationship target invalid")
@@ -129,14 +133,16 @@ test "ooxml_rels: resolve target rejects escaping root via dot segments" {
 
 ///|
 test "ooxml_rels: normalize and resolve invalid-path guards" {
-  let normalize_result = try? normalize_rel_part_path("./")
+  let normalize_result = Ok(normalize_rel_part_path("./")) catch { e => Err(e) }
   match normalize_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="relationship target invalid")
     _ => fail("expected InvalidXml for normalize_rel_part_path(\"./\")")
   }
 
-  let rel_result = try? resolve_rel_target("/docProps/core.xml", "worksheets")
+  let rel_result = Ok(resolve_rel_target("/docProps/core.xml", "worksheets")) catch {
+    e => Err(e)
+  }
   match rel_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="relationship target invalid")

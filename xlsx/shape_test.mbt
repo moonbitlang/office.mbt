@@ -3,72 +3,79 @@ test "shape workbook sheet name validation" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.add_shape("Sheet1", Shape::new("A1", "rect"))
-  let bad_name : Result[Unit, Error] = try? workbook.add_shape(
-    "Sheet:1",
-    Shape::new("A1", "rect"),
-  )
+  let bad_name : Result[Unit, Error] = Ok(
+    workbook.add_shape("Sheet:1", Shape::new("A1", "rect")),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_name is Err(XlsxError::InvalidSheetName(_)), content="true")
-  let missing : Result[Unit, Error] = try? workbook.add_shape(
-    "SheetN",
-    Shape::new("A1", "rect"),
-  )
+  let missing : Result[Unit, Error] = Ok(
+    workbook.add_shape("SheetN", Shape::new("A1", "rect")),
+  ) catch {
+    e => Err(e)
+  }
   inspect(missing is Err(XlsxError::SheetNotFound(_)), content="true")
 }
 
 ///|
 test "shape new validates basic fields" {
   inspect(
-    (try? Shape::new("", "rect")) is Err(InvalidSheetOperation(_)),
-    content="true",
-  )
-  inspect(
-    (try? Shape::new("A1", "")) is Err(InvalidSheetOperation(_)),
-    content="true",
-  )
-  inspect(
-    (try? Shape::new("A1", "rect", width=0)) is Err(InvalidSheetOperation(_)),
-    content="true",
-  )
-  inspect(
-    (try? Shape::new("A1", "rect", height=-1)) is Err(InvalidSheetOperation(_)),
-    content="true",
-  )
-  inspect(
-    (try? Shape::new("A1", "rect", scale_x=0.0))
+    (Ok(Shape::new("", "rect")) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (try? Shape::new("A1", "rect", scale_y=-1.0))
+    (Ok(Shape::new("A1", "")) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (try? Shape::new("A1", "rect", fill_transparency=-1))
+    (Ok(Shape::new("A1", "rect", width=0)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (try? Shape::new("A1", "rect", fill_transparency=101))
+    (Ok(Shape::new("A1", "rect", height=-1)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (try? Shape::new("A1", "rect", line_width=0.0))
+    (Ok(Shape::new("A1", "rect", scale_x=0.0)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (try? Shape::new("??", "rect")) is Err(InvalidCellRef(_)),
-    content="true",
-  )
-  inspect(
-    (try? ShapeFill::with_values(transparency=-1))
+    (Ok(Shape::new("A1", "rect", scale_y=-1.0)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (try? ShapeFill::with_values(transparency=101))
+    (Ok(Shape::new("A1", "rect", fill_transparency=-1)) catch { e => Err(e) })
+    is Err(InvalidSheetOperation(_)),
+    content="true",
+  )
+  inspect(
+    (Ok(Shape::new("A1", "rect", fill_transparency=101)) catch { e => Err(e) })
+    is Err(InvalidSheetOperation(_)),
+    content="true",
+  )
+  inspect(
+    (Ok(Shape::new("A1", "rect", line_width=0.0)) catch { e => Err(e) })
+    is Err(InvalidSheetOperation(_)),
+    content="true",
+  )
+  inspect(
+    (Ok(Shape::new("??", "rect")) catch { e => Err(e) })
+    is Err(InvalidCellRef(_)),
+    content="true",
+  )
+  inspect(
+    (Ok(ShapeFill::with_values(transparency=-1)) catch { e => Err(e) })
+    is Err(InvalidSheetOperation(_)),
+    content="true",
+  )
+  inspect(
+    (Ok(ShapeFill::with_values(transparency=101)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )

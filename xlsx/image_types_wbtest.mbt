@@ -1,9 +1,13 @@
 ///|
 test "image types wb: normalize image extension rejects dot-only and empty" {
-  let dot_only : Result[String, Error] = try? normalize_image_extension(".")
+  let dot_only : Result[String, Error] = Ok(normalize_image_extension(".")) catch {
+    e => Err(e)
+  }
   inspect(dot_only is Err(XlsxError::InvalidSheetBackground(_)), content="true")
 
-  let empty : Result[String, Error] = try? normalize_image_extension("")
+  let empty : Result[String, Error] = Ok(normalize_image_extension("")) catch {
+    e => Err(e)
+  }
   inspect(empty is Err(XlsxError::InvalidSheetBackground(_)), content="true")
 }
 

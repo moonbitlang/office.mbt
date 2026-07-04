@@ -11,22 +11,30 @@ test "sheet rename and index lookup" {
 ///|
 test "sheet name validation" {
   let workbook = Workbook::new()
-  let result : Result[Worksheet, Error] = try? workbook.add_sheet("Sheet:1")
+  let result : Result[Worksheet, Error] = Ok(workbook.add_sheet("Sheet:1")) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidSheetName(_)), content="true")
 }
 
 ///|
 test "sheet name validation guard branches" {
   let workbook = Workbook::new()
-  let blank : Result[Worksheet, Error] = try? workbook.add_sheet("")
+  let blank : Result[Worksheet, Error] = Ok(workbook.add_sheet("")) catch {
+    e => Err(e)
+  }
   inspect(blank is Err(XlsxError::InvalidSheetName(_)), content="true")
 
-  let too_long : Result[Worksheet, Error] = try? workbook.add_sheet(
-    "a".repeat(32),
-  )
+  let too_long : Result[Worksheet, Error] = Ok(
+    workbook.add_sheet("a".repeat(32)),
+  ) catch {
+    e => Err(e)
+  }
   inspect(too_long is Err(XlsxError::InvalidSheetName(_)), content="true")
 
-  let quoted : Result[Worksheet, Error] = try? workbook.add_sheet("'Quoted")
+  let quoted : Result[Worksheet, Error] = Ok(workbook.add_sheet("'Quoted")) catch {
+    e => Err(e)
+  }
   inspect(quoted is Err(XlsxError::InvalidSheetName(_)), content="true")
 }
 
@@ -45,7 +53,9 @@ test "sheet delete updates active index" {
 test "delete last sheet is no-op" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Only"))
-  let result : Result[Unit, Error] = try? workbook.delete_sheet("Only")
+  let result : Result[Unit, Error] = Ok(workbook.delete_sheet("Only")) catch {
+    e => Err(e)
+  }
   inspect(result is Ok(_), content="true")
   debug_inspect(workbook.sheet_name(0), content="Some(\"Only\")")
 }
@@ -118,9 +128,11 @@ test "sheet list and map" {
 test "cannot hide all sheets" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let result : Result[Unit, Error] = try? workbook.set_sheet_visible(
-    "Sheet1", false,
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.set_sheet_visible("Sheet1", false),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
 }
 
@@ -151,9 +163,11 @@ test "group and ungroup sheets" {
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   ignore(workbook.add_sheet("Sheet3"))
-  let bad_group : Result[Unit, Error] = try? workbook.group_sheets([
-    "Sheet2", "Sheet3",
-  ])
+  let bad_group : Result[Unit, Error] = Ok(
+    workbook.group_sheets(["Sheet2", "Sheet3"]),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_group is Err(XlsxError::InvalidSheetOperation(_)), content="true")
   workbook.group_sheets(["Sheet1", "Sheet2"])
   let bytes = write(workbook)

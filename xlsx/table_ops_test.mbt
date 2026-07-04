@@ -28,7 +28,9 @@ test "table list and delete" {
 test "table delete missing" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let result : Result[Unit, Error] = try? workbook.delete_table("Missing")
+  let result : Result[Unit, Error] = Ok(workbook.delete_table("Missing")) catch {
+    e => Err(e)
+  }
   debug_inspect(
     result,
     content=(

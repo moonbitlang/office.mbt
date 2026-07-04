@@ -2,15 +2,17 @@
 test "workbook cell setters: missing sheet errors" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let set_cell_missing : Result[Unit, Error] = try? workbook.set_cell(
-    "Missing", "A1", "x",
-  )
+  let set_cell_missing : Result[Unit, Error] = Ok(
+    workbook.set_cell("Missing", "A1", "x"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(set_cell_missing is Err(XlsxError::SheetNotFound(_)), content="true")
-  let set_value_missing : Result[Unit, Error] = try? workbook.set_cell_value(
-    "Missing",
-    "A1",
-    Bool(true),
-  )
+  let set_value_missing : Result[Unit, Error] = Ok(
+    workbook.set_cell_value("Missing", "A1", Bool(true)),
+  ) catch {
+    e => Err(e)
+  }
   inspect(set_value_missing is Err(XlsxError::SheetNotFound(_)), content="true")
 }
 
@@ -25,7 +27,9 @@ test "worksheet delete table/pivot edge branches" {
     table_names.push(table.name)
   }
   debug_inspect(table_names, content="[\"Table2\"]")
-  let missing_table : Result[Unit, Error] = try? sheet.delete_table("Missing")
+  let missing_table : Result[Unit, Error] = Ok(sheet.delete_table("Missing")) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_table,
     content=(
@@ -47,16 +51,20 @@ test "worksheet delete table/pivot edge branches" {
       name="Pivot2",
     ),
   )
-  let empty_name : Result[Unit, Error] = try? sheet.delete_pivot_table("")
+  let empty_name : Result[Unit, Error] = Ok(sheet.delete_pivot_table("")) catch {
+    e => Err(e)
+  }
   debug_inspect(
     empty_name,
     content=(
       #|Err(InvalidSheetOperation(msg="pivot table name empty"))
     ),
   )
-  let missing_pivot : Result[Unit, Error] = try? sheet.delete_pivot_table(
-    "Missing",
-  )
+  let missing_pivot : Result[Unit, Error] = Ok(
+    sheet.delete_pivot_table("Missing"),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_pivot,
     content=(

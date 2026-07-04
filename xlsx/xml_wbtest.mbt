@@ -12,8 +12,10 @@ test "xml wb: attr_value parser edge branches" {
   )
   debug_inspect(attr_value("foo=bar", "foo"), content="None")
 
-  let invalid : Result[String?, Error] = try? attr_value(
-    "foo=\"unterminated", "foo",
-  )
+  let invalid : Result[String?, Error] = Ok(
+    attr_value("foo=\"unterminated", "foo"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(invalid is Err(XlsxError::InvalidXml(_)), content="true")
 }

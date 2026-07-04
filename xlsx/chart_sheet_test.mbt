@@ -88,25 +88,29 @@ test "chart sheet with options (excelize-like)" {
     }
   }
   workbook.set_active_sheet(sheet_idx)
-  let result : Result[Unit, Error] = try? workbook.set_cell_value(
-    "Chart1",
-    "A1",
-    Bool(true),
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.set_cell_value("Chart1", "A1", Bool(true)),
+  ) catch {
+    e => Err(e)
+  }
   guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
     fail("expected chartsheet not-a-worksheet error")
   }
   inspect(msg.contains("not a worksheet"), content="true")
-  let exists_result : Result[ChartSheet, Error] = try? workbook.add_chart_sheet_with_options(
-    "Sheet1", opts,
-  )
+  let exists_result : Result[ChartSheet, Error] = Ok(
+    workbook.add_chart_sheet_with_options("Sheet1", opts),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     exists_result is Err(XlsxError::SheetAlreadyExists(_)),
     content="true",
   )
-  let name_result : Result[ChartSheet, Error] = try? workbook.add_chart_sheet_with_options(
-    "Sheet:1", opts,
-  )
+  let name_result : Result[ChartSheet, Error] = Ok(
+    workbook.add_chart_sheet_with_options("Sheet:1", opts),
+  ) catch {
+    e => Err(e)
+  }
   inspect(name_result is Err(XlsxError::InvalidSheetName(_)), content="true")
   let bytes = write(workbook)
   let archive = @zip.read(bytes)

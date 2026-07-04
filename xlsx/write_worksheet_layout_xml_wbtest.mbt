@@ -133,6 +133,8 @@ test "write worksheet layout wb: auto-filter custom and invalid-column branches"
     range_ref: "A1:B2",
     columns: [{ col: 3, filters: None, custom_filters: None }],
   }
-  let bad : Result[String, Error] = try? write_auto_filter_xml(out_of_range)
+  let bad : Result[String, Error] = Ok(write_auto_filter_xml(out_of_range)) catch {
+    e => Err(e)
+  }
   inspect(bad is Err(XlsxError::InvalidAutoFilter(_)), content="true")
 }

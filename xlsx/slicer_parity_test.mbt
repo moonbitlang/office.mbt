@@ -33,12 +33,16 @@ test "slicer duplicate names and cache reuse" {
 
 ///|
 test "slicer options required-fields and size guards" {
-  let missing : Result[SlicerOptions, Error] = try? SlicerOptions::new(
-    "", "A1", "Sheet1", "Table1",
-  )
+  let missing : Result[SlicerOptions, Error] = Ok(
+    SlicerOptions::new("", "A1", "Sheet1", "Table1"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(missing is Err(XlsxError::InvalidSheetOperation(_)), content="true")
 
   let opts = SlicerOptions::new("Region", "A1", "Sheet1", "Table1")
-  let bad_size : Result[Unit, Error] = try? opts.set_size(0, 100)
+  let bad_size : Result[Unit, Error] = Ok(opts.set_size(0, 100)) catch {
+    e => Err(e)
+  }
   inspect(bad_size is Err(XlsxError::InvalidSheetOperation(_)), content="true")
 }

@@ -10,7 +10,7 @@ fn demo_xlsx_bytes(sheet_name? : String = "Sheet1") -> Bytes raise {
 
 ///|
 fn main {
-  match (try? demo_xlsx_bytes()) {
+  match (Ok(demo_xlsx_bytes()) catch { e => Err(e) }) {
     Ok(bytes) => println("xlsx bytes: \{bytes.length()}")
     Err(err) => println("write failed: \{err}")
   }

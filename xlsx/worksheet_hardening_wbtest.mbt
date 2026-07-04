@@ -20,17 +20,20 @@ test "worksheet wb: set_state updates worksheet visibility state" {
 ///|
 test "worksheet wb: sparkline and validation guard errors" {
   let sheet = Worksheet::new("Sheet1")
-  let empty_inputs : Result[Unit, Error] = try? sheet.add_sparkline_group([], [])
+  let empty_inputs : Result[Unit, Error] = Ok(sheet.add_sparkline_group([], [])) catch {
+    e => Err(e)
+  }
   debug_inspect(
     empty_inputs,
     content=(
       #|Err(InvalidSparkline(msg="sparkline inputs empty"))
     ),
   )
-  let empty_list : Result[Unit, Error] = try? sheet.add_data_validation_list(
-    "A1",
-    [],
-  )
+  let empty_list : Result[Unit, Error] = Ok(
+    sheet.add_data_validation_list("A1", []),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     empty_list,
     content=(
@@ -42,14 +45,18 @@ test "worksheet wb: sparkline and validation guard errors" {
 ///|
 test "worksheet wb: delete_slicer empty/missing/remove branches" {
   let sheet = Worksheet::new("Sheet1")
-  let empty_name : Result[Unit, Error] = try? sheet.delete_slicer("")
+  let empty_name : Result[Unit, Error] = Ok(sheet.delete_slicer("")) catch {
+    e => Err(e)
+  }
   debug_inspect(
     empty_name,
     content=(
       #|Err(InvalidSheetOperation(msg="slicer name empty"))
     ),
   )
-  let missing : Result[Unit, Error] = try? sheet.delete_slicer("Missing")
+  let missing : Result[Unit, Error] = Ok(sheet.delete_slicer("Missing")) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing,
     content=(
@@ -92,10 +99,11 @@ test "worksheet wb: data validation append/clear/error branches" {
 
   let missing_tag = Worksheet::new("Sheet1")
   missing_tag.add_data_validation_xml("<foo/>")
-  let missing_tag_result : Result[Unit, Error] = try? missing_tag.delete_data_validation(sqrefs=[
-      "A1",
-    ],
-  )
+  let missing_tag_result : Result[Unit, Error] = Ok(
+    missing_tag.delete_data_validation(sqrefs=["A1"]),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_tag_result,
     content=(
@@ -107,10 +115,11 @@ test "worksheet wb: data validation append/clear/error branches" {
   missing_sqref.add_data_validation_xml(
     "<dataValidation type=\"list\"><formula1>\"Y\"</formula1></dataValidation>",
   )
-  let missing_sqref_result : Result[Unit, Error] = try? missing_sqref.delete_data_validation(sqrefs=[
-      "A1",
-    ],
-  )
+  let missing_sqref_result : Result[Unit, Error] = Ok(
+    missing_sqref.delete_data_validation(sqrefs=["A1"]),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_sqref_result,
     content=(
@@ -134,37 +143,33 @@ test "worksheet wb: pivot-table wrapper and picture/header-footer guards" {
   sheet.add_image("A1", [1], ".png", "image/png")
   inspect(sheet.get_pictures("A1").length(), content="1")
 
-  let dot_extension : Result[Unit, Error] = try? sheet.add_image(
-    "A1",
-    [1],
-    ".",
-    "image/png",
-  )
+  let dot_extension : Result[Unit, Error] = Ok(
+    sheet.add_image("A1", [1], ".", "image/png"),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     dot_extension,
     content=(
       #|Err(UnsupportedFeature(msg="image extension missing"))
     ),
   )
-  let empty_extension : Result[Unit, Error] = try? sheet.add_image(
-    "A1",
-    [1],
-    "",
-    "image/png",
-  )
+  let empty_extension : Result[Unit, Error] = Ok(
+    sheet.add_image("A1", [1], "", "image/png"),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     empty_extension,
     content=(
       #|Err(UnsupportedFeature(msg="image extension missing"))
     ),
   )
-  let invalid_scale : Result[Unit, Error] = try? sheet.add_image(
-    "A1",
-    [1],
-    ".png",
-    "image/png",
-    scale_x=0.0,
-  )
+  let invalid_scale : Result[Unit, Error] = Ok(
+    sheet.add_image("A1", [1], ".png", "image/png", scale_x=0.0),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     invalid_scale,
     content=(
@@ -172,18 +177,26 @@ test "worksheet wb: pivot-table wrapper and picture/header-footer guards" {
     ),
   )
 
-  let missing_width : Result[Unit, Error] = try? sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(Left, [1], ".png", width="", height="8pt"),
-  )
+  let missing_width : Result[Unit, Error] = Ok(
+    sheet.add_header_footer_image(
+      HeaderFooterImageOptions::new(Left, [1], ".png", width="", height="8pt"),
+    ),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_width,
     content=(
       #|Err(InvalidHeaderFooter(msg="header/footer width empty"))
     ),
   )
-  let missing_height : Result[Unit, Error] = try? sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(Left, [1], ".png", width="9pt", height=""),
-  )
+  let missing_height : Result[Unit, Error] = Ok(
+    sheet.add_header_footer_image(
+      HeaderFooterImageOptions::new(Left, [1], ".png", width="9pt", height=""),
+    ),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_height,
     content=(
@@ -228,17 +241,20 @@ test "worksheet wb: picture option Some branches and guard errors" {
   sheet.add_picture_from_bytes_with_options("C3", [1, 2, 3], ".png", opts)
   inspect(sheet.get_pictures("C3").length(), content="1")
 
-  let empty_vml : Result[Unit, Error] = try? sheet.add_vml_drawing_hf_xml("")
+  let empty_vml : Result[Unit, Error] = Ok(sheet.add_vml_drawing_hf_xml("")) catch {
+    e => Err(e)
+  }
   debug_inspect(
     empty_vml,
     content=(
       #|Err(InvalidVmlDrawing(msg="vml drawing hf xml empty"))
     ),
   )
-  let empty_options : Result[Unit, Error] = try? sheet.set_conditional_format(
-    "A1",
-    [],
-  )
+  let empty_options : Result[Unit, Error] = Ok(
+    sheet.set_conditional_format("A1", []),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     empty_options,
     content=(
@@ -337,9 +353,11 @@ test "worksheet wb: chart option guards and reference helper copies" {
     scale_x=1.0,
     scale_y=1.0,
   )
-  let bad_offset : Result[Unit, Error] = try? sheet.add_chart_with_options(
-    "C3", bad_offset_opts,
-  )
+  let bad_offset : Result[Unit, Error] = Ok(
+    sheet.add_chart_with_options("C3", bad_offset_opts),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     bad_offset,
     content=(
@@ -349,9 +367,11 @@ test "worksheet wb: chart option guards and reference helper copies" {
 
   let bad_scale_opts = ChartOptions::new(Col)
   bad_scale_opts.format = GraphicOptions::with_values(scale_x=0.0, scale_y=1.0)
-  let bad_scale : Result[Unit, Error] = try? sheet.add_chart_with_options(
-    "C3", bad_scale_opts,
-  )
+  let bad_scale : Result[Unit, Error] = Ok(
+    sheet.add_chart_with_options("C3", bad_scale_opts),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     bad_scale,
     content=(
@@ -370,9 +390,11 @@ test "worksheet wb: conditional format helper edge branches" {
       #|"<cfRule type=\"expression\"><extLst></extLst></cfRule>"
     ),
   )
-  let invalid_rule : Result[String, Error] = try? inject_x14_id_ext_lst_into_cf_rule(
-    "<cfRule/>", "id1",
-  )
+  let invalid_rule : Result[String, Error] = Ok(
+    inject_x14_id_ext_lst_into_cf_rule("<cfRule/>", "id1"),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     invalid_rule,
     content=(
@@ -387,10 +409,11 @@ test "worksheet wb: conditional/data-validation update-failure and x14 fallback 
   dv_update_fail.add_data_validation_xml(
     "<?xml version=\"1.0\"?><dataValidation type=\"list\" sqref=\"A1\"><formula1>\"Y\"</formula1></dataValidation>",
   )
-  let dv_update_result : Result[Unit, Error] = try? dv_update_fail.delete_data_validation(sqrefs=[
-      "A2",
-    ],
-  )
+  let dv_update_result : Result[Unit, Error] = Ok(
+    dv_update_fail.delete_data_validation(sqrefs=["A2"]),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     dv_update_result,
     content=(
@@ -414,9 +437,11 @@ test "worksheet wb: conditional/data-validation update-failure and x14 fallback 
 
   let cf_missing_tag = Worksheet::new("Sheet1")
   cf_missing_tag.add_conditional_format_xml("<foo/>")
-  let missing_tag_result : Result[Unit, Error] = try? cf_missing_tag.unset_conditional_format(
-    "A1",
-  )
+  let missing_tag_result : Result[Unit, Error] = Ok(
+    cf_missing_tag.unset_conditional_format("A1"),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_tag_result,
     content=(
@@ -428,9 +453,11 @@ test "worksheet wb: conditional/data-validation update-failure and x14 fallback 
   cf_missing_sqref.add_conditional_format_xml(
     "<conditionalFormatting><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
   )
-  let missing_sqref_result : Result[Unit, Error] = try? cf_missing_sqref.unset_conditional_format(
-    "A1",
-  )
+  let missing_sqref_result : Result[Unit, Error] = Ok(
+    cf_missing_sqref.unset_conditional_format("A1"),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_sqref_result,
     content=(
@@ -442,9 +469,11 @@ test "worksheet wb: conditional/data-validation update-failure and x14 fallback 
   cf_update_fail.add_conditional_format_xml(
     "<?xml version=\"1.0\"?><conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\" priority=\"1\"><formula>1=1</formula></cfRule></conditionalFormatting>",
   )
-  let update_fail_result : Result[Unit, Error] = try? cf_update_fail.unset_conditional_format(
-    "A2",
-  )
+  let update_fail_result : Result[Unit, Error] = Ok(
+    cf_update_fail.unset_conditional_format("A2"),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     update_fail_result,
     content=(
@@ -482,18 +511,28 @@ test "worksheet wb: rc cell api update branches and row/col basic guards" {
   debug_inspect(sheet.get_cell_rc(9, 9), content="None")
   debug_inspect(sheet.get_cell_value_raw_rc(9, 9), content="None")
 
-  let bad_get_rc : Result[String?, Error] = try? sheet.get_cell_rc(0, 1)
+  let bad_get_rc : Result[String?, Error] = Ok(sheet.get_cell_rc(0, 1)) catch {
+    e => Err(e)
+  }
   inspect(bad_get_rc is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_get_raw_rc : Result[CellValue?, Error] = try? sheet.get_cell_value_raw_rc(
-    0, 1,
-  )
+  let bad_get_raw_rc : Result[CellValue?, Error] = Ok(
+    sheet.get_cell_value_raw_rc(0, 1),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_get_raw_rc is Err(XlsxError::InvalidCellRef(_)), content="true")
 
-  let bad_set_row : Result[Unit, Error] = try? sheet.set_row(0, ["A"][:])
+  let bad_set_row : Result[Unit, Error] = Ok(sheet.set_row(0, ["A"][:])) catch {
+    e => Err(e)
+  }
   inspect(bad_set_row is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_set_col : Result[Unit, Error] = try? sheet.set_col(0, ["A"][:])
+  let bad_set_col : Result[Unit, Error] = Ok(sheet.set_col(0, ["A"][:])) catch {
+    e => Err(e)
+  }
   inspect(bad_set_col is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_get_col : Result[Array[String], Error] = try? sheet.get_col(0)
+  let bad_get_col : Result[Array[String], Error] = Ok(sheet.get_col(0)) catch {
+    e => Err(e)
+  }
   inspect(bad_get_col is Err(XlsxError::InvalidCellRef(_)), content="true")
 }
 
@@ -510,130 +549,172 @@ test "worksheet wb: row/col dimension guard and default branches" {
   inspect(sheet.col_outline_level(5), content="0")
   debug_inspect(sheet.get_col_style(5), content="None")
 
-  let bad_set_row_height_rc : Result[Unit, Error] = try? sheet.set_row_height(
-    0, 1.0,
-  )
+  let bad_set_row_height_rc : Result[Unit, Error] = Ok(
+    sheet.set_row_height(0, 1.0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_row_height_rc is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_set_row_height_neg : Result[Unit, Error] = try? sheet.set_row_height(
-    1, -1.0,
-  )
+  let bad_set_row_height_neg : Result[Unit, Error] = Ok(
+    sheet.set_row_height(1, -1.0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_row_height_neg is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
-  let bad_get_row_height : Result[Double?, Error] = try? sheet.get_row_height(0)
+  let bad_get_row_height : Result[Double?, Error] = Ok(sheet.get_row_height(0)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_get_row_height is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_set_row_visible : Result[Unit, Error] = try? sheet.set_row_visible(
-    0, true,
-  )
+  let bad_set_row_visible : Result[Unit, Error] = Ok(
+    sheet.set_row_visible(0, true),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_row_visible is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_row_visible : Result[Bool, Error] = try? sheet.row_visible(0)
+  let bad_row_visible : Result[Bool, Error] = Ok(sheet.row_visible(0)) catch {
+    e => Err(e)
+  }
   inspect(bad_row_visible is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_set_row_outline_row : Result[Unit, Error] = try? sheet.set_row_outline_level(
-    0, 1,
-  )
+  let bad_set_row_outline_row : Result[Unit, Error] = Ok(
+    sheet.set_row_outline_level(0, 1),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_row_outline_row is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_set_row_outline_level : Result[Unit, Error] = try? sheet.set_row_outline_level(
-    1, 8,
-  )
+  let bad_set_row_outline_level : Result[Unit, Error] = Ok(
+    sheet.set_row_outline_level(1, 8),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_row_outline_level is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
-  let bad_row_outline_level : Result[Int, Error] = try? sheet.row_outline_level(
-    0,
-  )
+  let bad_row_outline_level : Result[Int, Error] = Ok(
+    sheet.row_outline_level(0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_row_outline_level is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_row_style_range_bounds : Result[Unit, Error] = try? sheet.set_row_style_range(
-    0, 1, 1,
-  )
+  let bad_row_style_range_bounds : Result[Unit, Error] = Ok(
+    sheet.set_row_style_range(0, 1, 1),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_row_style_range_bounds is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_row_style_range_order : Result[Unit, Error] = try? sheet.set_row_style_range(
-    2, 1, 1,
-  )
+  let bad_row_style_range_order : Result[Unit, Error] = Ok(
+    sheet.set_row_style_range(2, 1, 1),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_row_style_range_order is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
-  let bad_get_row_style : Result[Int?, Error] = try? sheet.get_row_style(0)
+  let bad_get_row_style : Result[Int?, Error] = Ok(sheet.get_row_style(0)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_get_row_style is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
 
-  let bad_set_col_width_rc : Result[Unit, Error] = try? sheet.set_col_width(
-    0, 1.0,
-  )
+  let bad_set_col_width_rc : Result[Unit, Error] = Ok(
+    sheet.set_col_width(0, 1.0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_col_width_rc is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_set_col_width_neg : Result[Unit, Error] = try? sheet.set_col_width(
-    1, -1.0,
-  )
+  let bad_set_col_width_neg : Result[Unit, Error] = Ok(
+    sheet.set_col_width(1, -1.0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_col_width_neg is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
-  let bad_get_col_width : Result[Double?, Error] = try? sheet.get_col_width(0)
+  let bad_get_col_width : Result[Double?, Error] = Ok(sheet.get_col_width(0)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_get_col_width is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_set_col_visible : Result[Unit, Error] = try? sheet.set_col_visible(
-    0, true,
-  )
+  let bad_set_col_visible : Result[Unit, Error] = Ok(
+    sheet.set_col_visible(0, true),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_col_visible is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_col_visible : Result[Bool, Error] = try? sheet.col_visible(0)
+  let bad_col_visible : Result[Bool, Error] = Ok(sheet.col_visible(0)) catch {
+    e => Err(e)
+  }
   inspect(bad_col_visible is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_set_col_outline_col : Result[Unit, Error] = try? sheet.set_col_outline_level(
-    0, 1,
-  )
+  let bad_set_col_outline_col : Result[Unit, Error] = Ok(
+    sheet.set_col_outline_level(0, 1),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_col_outline_col is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_set_col_outline_level : Result[Unit, Error] = try? sheet.set_col_outline_level(
-    1, 8,
-  )
+  let bad_set_col_outline_level : Result[Unit, Error] = Ok(
+    sheet.set_col_outline_level(1, 8),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_col_outline_level is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
-  let bad_col_outline_level : Result[Int, Error] = try? sheet.col_outline_level(
-    0,
-  )
+  let bad_col_outline_level : Result[Int, Error] = Ok(
+    sheet.col_outline_level(0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_col_outline_level is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_set_col_style : Result[Unit, Error] = try? sheet.set_col_style(0, 1)
+  let bad_set_col_style : Result[Unit, Error] = Ok(sheet.set_col_style(0, 1)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_set_col_style is Err(XlsxError::InvalidCellRef(_)),
     content="true",
   )
-  let bad_get_col_style : Result[Int?, Error] = try? sheet.get_col_style(0)
+  let bad_get_col_style : Result[Int?, Error] = Ok(sheet.get_col_style(0)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_get_col_style is Err(XlsxError::InvalidCellRef(_)),
     content="true",
@@ -674,16 +755,24 @@ test "worksheet wb: row/col dimension guard and default branches" {
 ///|
 test "worksheet wb: row insert/remove structural guard and adjustment branches" {
   let sheet = Worksheet::new("Sheet1")
-  let bad_insert_row : Result[Unit, Error] = try? sheet.insert_rows(0, 1)
+  let bad_insert_row : Result[Unit, Error] = Ok(sheet.insert_rows(0, 1)) catch {
+    e => Err(e)
+  }
   inspect(bad_insert_row is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_insert_count : Result[Unit, Error] = try? sheet.insert_rows(1, 0)
+  let bad_insert_count : Result[Unit, Error] = Ok(sheet.insert_rows(1, 0)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_insert_count is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
-  let bad_remove_row : Result[Unit, Error] = try? sheet.remove_rows(0, 1)
+  let bad_remove_row : Result[Unit, Error] = Ok(sheet.remove_rows(0, 1)) catch {
+    e => Err(e)
+  }
   inspect(bad_remove_row is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_remove_count : Result[Unit, Error] = try? sheet.remove_rows(1, 0)
+  let bad_remove_count : Result[Unit, Error] = Ok(sheet.remove_rows(1, 0)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_remove_count is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
@@ -733,27 +822,37 @@ test "worksheet wb: duplicate-row helper edge branches" {
   inspect(col, content="2")
   inspect(abs_col, content="true")
   inspect(abs_row, content="true")
-  let bad_no_col : Result[(Int, Int, Bool, Bool), Error] = try? parse_cell_ref_with_abs(
-    "1A",
-  )
+  let bad_no_col : Result[(Int, Int, Bool, Bool), Error] = Ok(
+    parse_cell_ref_with_abs("1A"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_no_col is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_invalid_char : Result[(Int, Int, Bool, Bool), Error] = try? parse_cell_ref_with_abs(
-    "A1X",
-  )
+  let bad_invalid_char : Result[(Int, Int, Bool, Bool), Error] = Ok(
+    parse_cell_ref_with_abs("A1X"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_invalid_char is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_no_row : Result[(Int, Int, Bool, Bool), Error] = try? parse_cell_ref_with_abs(
-    "A",
-  )
+  let bad_no_row : Result[(Int, Int, Bool, Bool), Error] = Ok(
+    parse_cell_ref_with_abs("A"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_no_row is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_zero_row : Result[(Int, Int, Bool, Bool), Error] = try? parse_cell_ref_with_abs(
-    "A0",
-  )
+  let bad_zero_row : Result[(Int, Int, Bool, Bool), Error] = Ok(
+    parse_cell_ref_with_abs("A0"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_zero_row is Err(XlsxError::InvalidCellRef(_)), content="true")
 
   inspect(format_cell_ref_with_abs(3, 2, true, true) == "$B$3", content="true")
-  let bad_format : Result[String, Error] = try? format_cell_ref_with_abs(
-    0, 1, false, false,
-  )
+  let bad_format : Result[String, Error] = Ok(
+    format_cell_ref_with_abs(0, 1, false, false),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_format is Err(XlsxError::InvalidCellRef(_)), content="true")
 
   let refs = duplicate_sqref_for_row(1, 2, "  A1:A1   B1:B2  ")
@@ -784,7 +883,9 @@ test "worksheet wb: duplicate-row helper edge branches" {
   duplicate.set_row(1, ["A"][:])
   duplicate.duplicate_row_to(1, 2)
   debug_inspect(duplicate.get_row(2), content="[\"A\"]")
-  let bad_target : Result[Unit, Error] = try? duplicate.duplicate_row_to(1, 1)
+  let bad_target : Result[Unit, Error] = Ok(duplicate.duplicate_row_to(1, 1)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_target is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
@@ -794,20 +895,24 @@ test "worksheet wb: duplicate-row helper edge branches" {
 ///|
 test "worksheet wb: col insert/remove structural edge branches" {
   let guard_sheet = Worksheet::new("Guard")
-  let bad_insert_col : Result[Unit, Error] = try? guard_sheet.insert_cols(0, 1)
+  let bad_insert_col : Result[Unit, Error] = Ok(guard_sheet.insert_cols(0, 1)) catch {
+    e => Err(e)
+  }
   inspect(bad_insert_col is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_insert_count : Result[Unit, Error] = try? guard_sheet.insert_cols(
-    1, 0,
-  )
+  let bad_insert_count : Result[Unit, Error] = Ok(guard_sheet.insert_cols(1, 0)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_insert_count is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
-  let bad_remove_col : Result[Unit, Error] = try? guard_sheet.remove_cols(0, 1)
+  let bad_remove_col : Result[Unit, Error] = Ok(guard_sheet.remove_cols(0, 1)) catch {
+    e => Err(e)
+  }
   inspect(bad_remove_col is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_remove_count : Result[Unit, Error] = try? guard_sheet.remove_cols(
-    1, 0,
-  )
+  let bad_remove_count : Result[Unit, Error] = Ok(guard_sheet.remove_cols(1, 0)) catch {
+    e => Err(e)
+  }
   inspect(
     bad_remove_count is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",

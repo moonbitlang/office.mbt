@@ -261,20 +261,23 @@ test "hyperlink update existing reference" {
 test "hyperlink validates cell reference" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let set_result : Result[Unit, Error] = try? workbook.set_cell_hyperlink(
-    "Sheet1",
-    "",
-    "https://example.com",
-    External,
-  )
+  let set_result : Result[Unit, Error] = Ok(
+    workbook.set_cell_hyperlink("Sheet1", "", "https://example.com", External),
+  ) catch {
+    e => Err(e)
+  }
   inspect(set_result is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let get_result : Result[Hyperlink?, Error] = try? workbook.get_cell_hyperlink(
-    "Sheet1", "",
-  )
+  let get_result : Result[Hyperlink?, Error] = Ok(
+    workbook.get_cell_hyperlink("Sheet1", ""),
+  ) catch {
+    e => Err(e)
+  }
   inspect(get_result is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let remove_result : Result[Unit, Error] = try? workbook.remove_cell_hyperlink(
-    "Sheet1", "",
-  )
+  let remove_result : Result[Unit, Error] = Ok(
+    workbook.remove_cell_hyperlink("Sheet1", ""),
+  ) catch {
+    e => Err(e)
+  }
   inspect(remove_result is Err(XlsxError::InvalidCellRef(_)), content="true")
 }
 
@@ -386,16 +389,17 @@ test "hyperlink invalid ref tolerated on read" {
     err => fail("zip write failed: \{err}")
   }
   let parsed = read(updated_bytes)
-  let get_result : Result[Hyperlink?, Error] = try? parsed.get_cell_hyperlink(
-    "Sheet1", "A1",
-  )
+  let get_result : Result[Hyperlink?, Error] = Ok(
+    parsed.get_cell_hyperlink("Sheet1", "A1"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(get_result is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let remove_result : Result[Unit, Error] = try? parsed.set_cell_hyperlink(
-    "Sheet1",
-    "B2",
-    "",
-    Unset,
-  )
+  let remove_result : Result[Unit, Error] = Ok(
+    parsed.set_cell_hyperlink("Sheet1", "B2", "", Unset),
+  ) catch {
+    e => Err(e)
+  }
   inspect(remove_result is Err(XlsxError::InvalidCellRef(_)), content="true")
 }
 
@@ -458,9 +462,11 @@ test "get_hyperlink_cells filters by link type" {
       #|["A1", "B2"]
     ),
   )
-  let missing : Result[Array[String], Error] = try? workbook.get_hyperlink_cells(
-    "Missing",
-  )
+  let missing : Result[Array[String], Error] = Ok(
+    workbook.get_hyperlink_cells("Missing"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(missing is Err(_), content="true")
 }
 

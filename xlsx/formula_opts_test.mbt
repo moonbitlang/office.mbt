@@ -140,11 +140,15 @@ test "formula opts: worksheet edge cases" {
   )
 
   // Array: missing range_ref.
-  let missing_array_ref : Result[Unit, Error] = try? sheet.set_cell_formula_opts(
-    "B1",
-    "{1}",
-    opts=FormulaOpts::with_values(formula_type=Array),
-  )
+  let missing_array_ref : Result[Unit, Error] = Ok(
+    sheet.set_cell_formula_opts(
+      "B1",
+      "{1}",
+      opts=FormulaOpts::with_values(formula_type=Array),
+    ),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_array_ref,
     content=(
@@ -153,11 +157,11 @@ test "formula opts: worksheet edge cases" {
   )
 
   // Array: master must be top-left.
-  let bad_array_master : Result[Unit, Error] = try? sheet.set_cell_formula_opts(
-    "A1",
-    "{1,2}",
-    opts=FormulaOpts::array("B1:C1"),
-  )
+  let bad_array_master : Result[Unit, Error] = Ok(
+    sheet.set_cell_formula_opts("A1", "{1,2}", opts=FormulaOpts::array("B1:C1")),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     bad_array_master,
     content=(
@@ -171,11 +175,15 @@ test "formula opts: worksheet edge cases" {
   debug_inspect(sheet.get_cell_formula("C1"), content="Some(\"{1,2}\")")
 
   // Shared: missing range_ref.
-  let missing_shared_ref : Result[Unit, Error] = try? sheet.set_cell_formula_opts(
-    "E1",
-    "A1",
-    opts=FormulaOpts::with_values(formula_type=Shared),
-  )
+  let missing_shared_ref : Result[Unit, Error] = Ok(
+    sheet.set_cell_formula_opts(
+      "E1",
+      "A1",
+      opts=FormulaOpts::with_values(formula_type=Shared),
+    ),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_shared_ref,
     content=(
@@ -184,11 +192,15 @@ test "formula opts: worksheet edge cases" {
   )
 
   // Shared: master must be top-left.
-  let bad_shared_master : Result[Unit, Error] = try? sheet.set_cell_formula_opts(
-    "F1",
-    "A1+B1",
-    opts=FormulaOpts::shared("F2:F3"),
-  )
+  let bad_shared_master : Result[Unit, Error] = Ok(
+    sheet.set_cell_formula_opts(
+      "F1",
+      "A1+B1",
+      opts=FormulaOpts::shared("F2:F3"),
+    ),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     bad_shared_master,
     content=(

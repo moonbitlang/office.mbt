@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "bobzhang/mbtexcel/zip"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 pub fn gunzip(BytesView) -> Bytes raise ZipError
 
@@ -30,7 +34,7 @@ pub fn Archive::new() -> Self
 pub(all) enum Compression {
   Store
   Deflate
-} derive(Show)
+} derive(@debug.Debug)
 
 type Entry
 pub fn Entry::compression(Self) -> Compression

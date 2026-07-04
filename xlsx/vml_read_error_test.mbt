@@ -31,7 +31,9 @@ test "read: missing legacyDrawing vml relationship errors" {
     err => fail("zip write failed: \{err}")
   }
 
-  let result : Result[Workbook, Error] = try? read(updated_bytes)
+  let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="vml drawing relationship missing")
@@ -83,7 +85,9 @@ test "read: missing legacyDrawingHF vml relationship errors" {
     err => fail("zip write failed: \{err}")
   }
 
-  let result : Result[Workbook, Error] = try? read(updated_bytes)
+  let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="vml drawing hf relationship missing")

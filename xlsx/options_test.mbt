@@ -66,7 +66,9 @@ test "options enforce unzip size limit" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = write(workbook)
   let opts = Options::with_values(unzip_size_limit=1)
-  let result : Result[Workbook, Error] = try? read(bytes, options=opts)
+  let result : Result[Workbook, Error] = Ok(read(bytes, options=opts)) catch {
+    e => Err(e)
+  }
   guard result is Err(_) else { fail("expected unzip size limit error") }
 }
 
@@ -76,6 +78,8 @@ test "options invalid unzip xml size limit" {
   ignore(workbook.add_sheet("Sheet1"))
   let bytes = write(workbook)
   let opts = Options::with_values(unzip_size_limit=2, unzip_xml_size_limit=3)
-  let result : Result[Workbook, Error] = try? read(bytes, options=opts)
+  let result : Result[Workbook, Error] = Ok(read(bytes, options=opts)) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidOptions(_)), content="true")
 }

@@ -36,9 +36,10 @@ async test "excelize fixture encryptAES.xlsx opens with password" {
 ///|
 #cfg(target="native")
 async test "excelize fixture encryptAES.xlsx wrong password errors" {
-  let result : Result[Workbook, Error] = try? open_file(
-    ".repos/excelize/test/encryptAES.xlsx",
-    password="passwd",
-  )
+  let result : Result[Workbook, Error] = Ok(
+    open_file(".repos/excelize/test/encryptAES.xlsx", password="passwd"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidPassword), content="true")
 }

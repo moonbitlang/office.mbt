@@ -333,10 +333,14 @@ test "stream row rejects style ids minted by lazy time-style registration" {
   let stream = workbook.new_stream_writer("Sheet1")
   // the id the lazy numFmt-22 registration would mint
   let future_id = 1
-  let result : Result[Unit, Error] = try? stream.set_row_cells("A1", [
-    stream.new_time_cell(@time.date_time(2024, 7, 3, hour=9)),
-    @xlsx.StreamCell::new("x", style_id=future_id),
-  ])
+  let result : Result[Unit, Error] = Ok(
+    stream.set_row_cells("A1", [
+      stream.new_time_cell(@time.date_time(2024, 7, 3, hour=9)),
+      @xlsx.StreamCell::new("x", style_id=future_id),
+    ]),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(_), content="true")
 }
 

@@ -638,12 +638,16 @@ test "error handling" {
   let wb = Workbook::new()
 
   // Try to get non-existent sheet
-  let result : Result[Int, Error] = try? wb.get_sheet_index("Missing")
+  let result : Result[Int, Error] = Ok(wb.get_sheet_index("Missing")) catch {
+    e => Err(e)
+  }
   debug_inspect(result, content="Ok(-1)")
 
   // Invalid cell reference
   let sheet = wb.add_sheet("Test")
-  let bad_ref : Result[Unit, Error] = try? sheet.set_cell("123", "value")
+  let bad_ref : Result[Unit, Error] = Ok(sheet.set_cell("123", "value")) catch {
+    e => Err(e)
+  }
   guard bad_ref is Err(_) else { return }
 }
 ```

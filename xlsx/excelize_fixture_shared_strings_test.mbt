@@ -8,12 +8,16 @@ async test "excelize fixture SharedStrings.xlsx search_sheet parity" {
     workbook.search_sheet("Sheet1", "[0-9]", reg=true),
     content="[]",
   )
-  let invalid_result : Result[Array[String], Error] = try? workbook.search_sheet(
-    "Sheet:1", "",
-  )
+  let invalid_result : Result[Array[String], Error] = Ok(
+    workbook.search_sheet("Sheet:1", ""),
+  ) catch {
+    e => Err(e)
+  }
   inspect(invalid_result is Err(XlsxError::InvalidSheetName(_)), content="true")
-  let missing_result : Result[Array[String], Error] = try? workbook.search_sheet(
-    "Sheet4", "",
-  )
+  let missing_result : Result[Array[String], Error] = Ok(
+    workbook.search_sheet("Sheet4", ""),
+  ) catch {
+    e => Err(e)
+  }
   inspect(missing_result is Err(XlsxError::SheetNotFound(_)), content="true")
 }

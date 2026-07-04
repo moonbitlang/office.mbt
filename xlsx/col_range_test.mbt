@@ -5,9 +5,13 @@ test "column name conversions" {
   inspect(column_name_to_number("AA"), content="27")
   inspect(column_number_to_name(1), content="A")
   inspect(column_number_to_name(27), content="AA")
-  let bad : Result[Int, Error] = try? column_name_to_number("A1")
+  let bad : Result[Int, Error] = Ok(column_name_to_number("A1")) catch {
+    e => Err(e)
+  }
   guard bad is Err(_) else { fail("expected invalid column name") }
-  let bad_number : Result[String, Error] = try? column_number_to_name(0)
+  let bad_number : Result[String, Error] = Ok(column_number_to_name(0)) catch {
+    e => Err(e)
+  }
   guard bad_number is Err(_) else { fail("expected invalid column number") }
 }
 
@@ -63,13 +67,17 @@ test "column range parser edge branches" {
   workbook.set_col_width_range("Sheet1", "C", 9.0)
   debug_inspect(workbook.get_col_width("Sheet1", 3), content="Some(9)")
 
-  let too_many_parts : Result[Unit, Error] = try? workbook.set_col_width_range(
-    "Sheet1", "A:B:C", 10.0,
-  )
+  let too_many_parts : Result[Unit, Error] = Ok(
+    workbook.set_col_width_range("Sheet1", "A:B:C", 10.0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(too_many_parts is Err(XlsxError::InvalidCellRef(_)), content="true")
 
-  let descending : Result[Unit, Error] = try? workbook.set_col_width_range(
-    "Sheet1", "D:B", 10.0,
-  )
+  let descending : Result[Unit, Error] = Ok(
+    workbook.set_col_width_range("Sheet1", "D:B", 10.0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(descending is Err(XlsxError::InvalidCellRef(_)), content="true")
 }

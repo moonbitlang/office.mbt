@@ -117,9 +117,11 @@ test "auto filter invalid expression" {
   let options : Array[AutoFilterOption] = [
     { column: "A", expression: "x >< 1" },
   ]
-  let result : Result[Unit, Error] = try? workbook.set_auto_filter(
-    "Sheet1", "A1:A2", options,
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.set_auto_filter("Sheet1", "A1:A2", options),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     result,
     content=(
@@ -182,33 +184,39 @@ test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
 test "auto filter: invalid token count and blanks operator" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bad_tokens : Result[Unit, Error] = try? workbook.set_auto_filter(
-    "Sheet1",
-    "A1:A2",
-    [{ column: "A", expression: "x ==" }],
-  )
+  let bad_tokens : Result[Unit, Error] = Ok(
+    workbook.set_auto_filter("Sheet1", "A1:A2", [
+      { column: "A", expression: "x ==" },
+    ]),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     bad_tokens,
     content=(
       #|Err(InvalidAutoFilter(msg="auto filter expression invalid"))
     ),
   )
-  let bad_tokens2 : Result[Unit, Error] = try? workbook.set_auto_filter(
-    "Sheet1",
-    "A1:A2",
-    [{ column: "A", expression: "x == 1 2" }],
-  )
+  let bad_tokens2 : Result[Unit, Error] = Ok(
+    workbook.set_auto_filter("Sheet1", "A1:A2", [
+      { column: "A", expression: "x == 1 2" },
+    ]),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     bad_tokens2,
     content=(
       #|Err(InvalidAutoFilter(msg="auto filter expression invalid"))
     ),
   )
-  let bad_blanks_op : Result[Unit, Error] = try? workbook.set_auto_filter(
-    "Sheet1",
-    "A1:A2",
-    [{ column: "A", expression: "x > blanks" }],
-  )
+  let bad_blanks_op : Result[Unit, Error] = Ok(
+    workbook.set_auto_filter("Sheet1", "A1:A2", [
+      { column: "A", expression: "x > blanks" },
+    ]),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     bad_blanks_op,
     content=(
@@ -319,11 +327,13 @@ test "auto filter: custom operators, and-expression, and column validation" {
   )
 
   // Column invalid.
-  let bad_col : Result[Unit, Error] = try? workbook.set_auto_filter(
-    "Sheet1",
-    "A1:A2",
-    [{ column: "1", expression: "x == 1" }],
-  )
+  let bad_col : Result[Unit, Error] = Ok(
+    workbook.set_auto_filter("Sheet1", "A1:A2", [
+      { column: "1", expression: "x == 1" },
+    ]),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     bad_col,
     content=(
@@ -332,11 +342,13 @@ test "auto filter: custom operators, and-expression, and column validation" {
   )
 
   // Column out of range.
-  let out_of_range : Result[Unit, Error] = try? workbook.set_auto_filter(
-    "Sheet1",
-    "A1:A2",
-    [{ column: "B", expression: "x == 1" }],
-  )
+  let out_of_range : Result[Unit, Error] = Ok(
+    workbook.set_auto_filter("Sheet1", "A1:A2", [
+      { column: "B", expression: "x == 1" },
+    ]),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     out_of_range,
     content=(

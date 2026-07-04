@@ -71,9 +71,11 @@ test "conditional format invalid type" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let opt = ConditionalFormatOptions::new("unsupported")
-  let result : Result[Unit, Error] = try? sheet.set_conditional_format("A1", [
-    opt,
-  ])
+  let result : Result[Unit, Error] = Ok(
+    sheet.set_conditional_format("A1", [opt]),
+  ) catch {
+    e => Err(e)
+  }
   guard result is Err(XlsxError::InvalidConditionalFormat(_)) else {
     fail("expected invalid type")
   }

@@ -117,12 +117,16 @@ test "header footer image options from file path" {
 
 ///|
 test "header footer image options from file requires extension" {
-  let result : Result[HeaderFooterImageOptions, Error] = try? HeaderFooterImageOptions::from_file(
-    Left,
-    "tmp_logo",
-    width="9pt",
-    height="8pt",
-  )
+  let result : Result[HeaderFooterImageOptions, Error] = Ok(
+    HeaderFooterImageOptions::from_file(
+      Left,
+      "tmp_logo",
+      width="9pt",
+      height="8pt",
+    ),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     result,
     content=(
@@ -140,7 +144,9 @@ test "header footer image file options require async api" {
     width="9pt",
     height="8pt",
   )
-  let result : Result[Unit, Error] = try? sheet.add_header_footer_image(opts)
+  let result : Result[Unit, Error] = Ok(sheet.add_header_footer_image(opts)) catch {
+    e => Err(e)
+  }
   debug_inspect(
     result,
     content=(
@@ -161,9 +167,11 @@ async test "header footer image from file path requires file option" {
     width="9pt",
     height="8pt",
   )
-  let result : Result[Unit, Error] = try? workbook.add_header_footer_image_from_file(
-    "Sheet1", opts,
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.add_header_footer_image_from_file("Sheet1", opts),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     result,
     content=(
@@ -183,9 +191,11 @@ async test "header footer image from file path read failure" {
     width="9pt",
     height="8pt",
   )
-  let result : Result[Unit, Error] = try? workbook.add_header_footer_image_from_file(
-    "Sheet1", opts,
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.add_header_footer_image_from_file("Sheet1", opts),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidHeaderFooter(_)), content="true")
 }
 
@@ -417,16 +427,20 @@ test "header footer image replaces same slot" {
 test "header footer image workbook missing sheet" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let result : Result[Unit, Error] = try? workbook.add_header_footer_image(
-    "SheetN",
-    HeaderFooterImageOptions::new(
-      Left,
-      [1],
-      ".png",
-      width="10pt",
-      height="10pt",
+  let result : Result[Unit, Error] = Ok(
+    workbook.add_header_footer_image(
+      "SheetN",
+      HeaderFooterImageOptions::new(
+        Left,
+        [1],
+        ".png",
+        width="10pt",
+        height="10pt",
+      ),
     ),
-  )
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::SheetNotFound(_)), content="true")
 }
 
@@ -472,7 +486,9 @@ test "header footer image read: missing vml relationship errors" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{err}")
   }
-  let result : Result[Workbook, Error] = try? read(updated_bytes)
+  let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="header/footer image relationship missing")

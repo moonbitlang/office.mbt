@@ -11,10 +11,10 @@ test "hyperlink limit exceeded" {
   }
   let many : Array[Hyperlink] = Array::make(65530, dummy)
   sheet.hyperlinks.append(many[:])
-  let result : Result[Unit, Error] = try? sheet.set_cell_hyperlink(
-    "A1",
-    "https://example.com",
-    External,
-  )
+  let result : Result[Unit, Error] = Ok(
+    sheet.set_cell_hyperlink("A1", "https://example.com", External),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(HyperlinkLimitExceeded(_)), content="true")
 }

@@ -11,7 +11,7 @@ test "cmd/main: demo_xlsx_bytes honors the sheet name" {
 ///|
 test "cmd/main: an invalid sheet name raises" {
   inspect(
-    (try? demo_xlsx_bytes(sheet_name="Sheet/1")) is Err(_),
+    (Ok(demo_xlsx_bytes(sheet_name="Sheet/1")) catch { e => Err(e) }) is Err(_),
     content="true",
   )
 }
