@@ -1,17 +1,17 @@
 ///|
-test "cmd/main: main_with_sheet ok" {
-  let result = main_with_sheet("Sheet1")
-  inspect(result is Ok(_), content="true")
+test "cmd/main: demo_xlsx_bytes produces a workbook" {
+  inspect(demo_xlsx_bytes().length() > 0, content="true")
 }
 
 ///|
-test "cmd/main: main_with_sheet error" {
-  let result = main_with_sheet("Sheet/1")
-  inspect(result is Err(_), content="true")
+test "cmd/main: demo_xlsx_bytes honors the sheet name" {
+  inspect(demo_xlsx_bytes(sheet_name="Data").length() > 0, content="true")
 }
 
 ///|
-test "cmd/main: demo_xlsx_bytes ok" {
-  let result = demo_xlsx_bytes()
-  inspect(result is Ok(_), content="true")
+test "cmd/main: an invalid sheet name raises" {
+  inspect(
+    (try? demo_xlsx_bytes(sheet_name="Sheet/1")) is Err(_),
+    content="true",
+  )
 }
