@@ -40,7 +40,7 @@ DOTNET_LOCAL="$ROOT/.tools/dotnet/dotnet"
 DOTNET="$DOTNET_LOCAL"
 if command -v dotnet >/dev/null 2>&1; then
   # Only use the system `dotnet` if it has the net8 runtime installed.
-  if dotnet --list-runtimes 2>/dev/null | grep -Eq '^Microsoft\\.NETCore\\.App 8\\.'; then
+  if dotnet --list-runtimes 2>/dev/null | grep -Eq '^Microsoft\.NETCore\.App 8\.'; then
     DOTNET="dotnet"
   fi
 fi
