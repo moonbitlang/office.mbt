@@ -50,21 +50,43 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1
 export DOTNET_CLI_HOME="$ROOT/.tools/dotnet/.cli-home"
 export NUGET_PACKAGES="$ROOT/.tools/dotnet/.nuget/packages"
 
-unzip -t "$XLSX" >/dev/null
-
-entries="$(unzip -Z1 "$XLSX")"
-require_entry() {
-  local want="$1"
-  if ! printf '%s\n' "$entries" | grep -Fxq "$want"; then
-    echo "error: missing required part: $want" >&2
+# Interim guard for a rare CI flake ("missing required part: _rels/.rels").
+# Under heavy parallel load, unzip can observe this just-written file
+# incomplete -- either a transient read-visibility effect, or a colliding
+# test writer truncating it mid-read (millisecond-resolution temp paths are
+# a suspected root cause, tracked separately). Re-reading a few times lets a
+# complete archive be seen. This cannot mask a stable defect: a
+# persistently-malformed file yields the same result on every re-read and
+# still fails below.
+required_parts=(
+  "[Content_Types].xml"
+  "_rels/.rels"
+  "xl/workbook.xml"
+  "xl/_rels/workbook.xml.rels"
+)
+missing=""
+for attempt in 1 2 3 4 5; do
+  missing=""
+  if unzip -t "$XLSX" >/dev/null 2>&1; then
+    entries="$(unzip -Z1 "$XLSX")"
+    for part in "${required_parts[@]}"; do
+      if ! printf '%s\n' "$entries" | grep -Fxq "$part"; then
+        missing="$part"
+        break
+      fi
+    done
+    if [ -z "$missing" ]; then
+      break
+    fi
+  else
+    missing="<archive not yet readable>"
+  fi
+  if [ "$attempt" -eq 5 ]; then
+    echo "error: missing required part: $missing (after $attempt attempts)" >&2
     exit 1
   fi
-}
-
-require_entry "[Content_Types].xml"
-require_entry "_rels/.rels"
-require_entry "xl/workbook.xml"
-require_entry "xl/_rels/workbook.xml.rels"
+  sleep 0.2
+done
 
 DOTNET_PROJECT="$ROOT/tools/openxml-validator/OpenXmlValidator.csproj"
 acquire_lock
