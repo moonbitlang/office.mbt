@@ -5,7 +5,7 @@ fn trim_trailing_empty(values : Array[String]) -> Array[String] {
   while end > 0 && values[end - 1] == "" {
     end = end - 1
   }
-  values[:end].to_array()
+  values[:end].to_owned()
 }
 
 ///|

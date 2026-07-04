@@ -1,12 +1,12 @@
 ///|
 fn count_substr(text : StringView, needle : StringView) -> Int {
   let mut count = 0
-  let mut rest = text.to_string()
+  let mut rest = text.to_owned()
   while true {
     match rest.find(needle) {
       Some(idx) => {
         count = count + 1
-        rest = rest[idx + needle.length():].to_string()
+        rest = rest[idx + needle.length():].to_owned()
       }
       None => break
     }

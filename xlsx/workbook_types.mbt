@@ -48,7 +48,7 @@ let ole_identifier_bytes : Bytes = Bytes::from_array(ole_identifier)
 
 ///|
 fn check_sheet_name(name : StringView) -> Unit raise XlsxError {
-  let text = name.to_string()
+  let text = name.to_owned()
   if text == "" {
     raise InvalidSheetName(msg="sheet name is blank")
   }
@@ -71,7 +71,7 @@ fn check_sheet_name(name : StringView) -> Unit raise XlsxError {
 
 ///|
 fn normalize_sheet_name(name : StringView) -> String {
-  name.to_string().to_lower()
+  name.to_owned().to_lower()
 }
 
 ///|

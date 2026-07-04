@@ -4,8 +4,8 @@
 ///
 /// Example: `<a b="c">` -> `a b="c"`.
 fn tag_attributes_in(xml : StringView, tag_name : StringView) -> String? {
-  let xml_str = xml.to_string()
-  let needle = "<\{tag_name.to_string()}"
+  let xml_str = xml.to_owned()
+  let needle = "<\{tag_name.to_owned()}"
   let start = match xml_str.find(needle) {
     Some(pos) => pos
     None => return None
@@ -16,15 +16,15 @@ fn tag_attributes_in(xml : StringView, tag_name : StringView) -> String? {
     None => return None
   }
   let slice = rest[:end]
-  Some(slice.to_string())
+  Some(slice.to_owned())
 }
 
 ///|
 /// Extract the body text from the first `<tag_name ...>...</tag_name>` pair.
 fn extract_tag_body_from(xml : StringView, tag_name : StringView) -> String? {
-  let xml_str = xml.to_string()
-  let open_tag = "<\{tag_name.to_string()}"
-  let close_tag = "</\{tag_name.to_string()}>"
+  let xml_str = xml.to_owned()
+  let open_tag = "<\{tag_name.to_owned()}"
+  let close_tag = "</\{tag_name.to_owned()}>"
   let start = match xml_str.find(open_tag) {
     Some(pos) => pos
     None => return None
@@ -40,7 +40,7 @@ fn extract_tag_body_from(xml : StringView, tag_name : StringView) -> String? {
     None => return None
   }
   let body = xml_str[body_start:end]
-  Some(body.to_string())
+  Some(body.to_owned())
 }
 
 ///|
@@ -53,9 +53,9 @@ fn extract_tag_body(
   xml : StringView,
   tag_name : StringView,
 ) -> String? raise XlsxError {
-  let xml_str = xml.to_string()
-  let open_tag = "<\{tag_name.to_string()}"
-  let close_tag = "</\{tag_name.to_string()}>"
+  let xml_str = xml.to_owned()
+  let open_tag = "<\{tag_name.to_owned()}"
+  let close_tag = "</\{tag_name.to_owned()}>"
   let start = match xml_str.find(open_tag) {
     Some(pos) => pos
     None => return None
@@ -71,7 +71,7 @@ fn extract_tag_body(
     None => raise InvalidXml(msg="tag close missing")
   }
   let body = xml_str[body_start:end]
-  Some(body.to_string())
+  Some(body.to_owned())
 }
 
 ///|
@@ -81,7 +81,7 @@ fn replace_attr_value_in_open_tag(
   attr_name : StringView,
   value : String,
 ) -> String? {
-  let text = xml.to_string()
+  let text = xml.to_owned()
   let tag_start = match text.find("<") {
     Some(pos) => pos
     None => return None
@@ -91,7 +91,7 @@ fn replace_attr_value_in_open_tag(
     None => return None
   }
   let open_tag = text[tag_start:tag_end]
-  let needle = "\{attr_name.to_string()}=\""
+  let needle = "\{attr_name.to_owned()}=\""
   let attr_pos = match open_tag.find(needle) {
     Some(pos) => pos
     None => return None

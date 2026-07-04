@@ -92,7 +92,7 @@ test "insert and remove rows adjust ranges" {
     Some(value) => value
     None => fail("missing sparkline group")
   }
-  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:B3\"]")
+  debug_inspect(sheet.merged_cells().to_owned(), content="[\"A1:B3\"]")
   inspect(table.range_ref, content="C1:D4")
   inspect(group.sparklines[0].range_ref, content="A1:A4")
   inspect(group.sparklines[0].location, content="E1")
@@ -147,7 +147,7 @@ test "insert and remove cols adjust ranges" {
     Some(value) => value
     None => fail("missing sparkline group")
   }
-  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:D1\"]")
+  debug_inspect(sheet.merged_cells().to_owned(), content="[\"A1:D1\"]")
   inspect(table.range_ref, content="C1:D3")
   inspect(group.sparklines[0].range_ref, content="A1:D1")
   inspect(group.sparklines[0].location, content="E1")

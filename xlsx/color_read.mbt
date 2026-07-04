@@ -59,7 +59,7 @@ fn parse_indexed_colors(xml : StringView) -> Array[String]? raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>

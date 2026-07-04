@@ -97,7 +97,7 @@ fn zoned_date_time_iso_string(value : @time.ZonedDateTime) -> String {
   }
   let text = shifted.to_string()
   match text.find("[") {
-    Some(pos) => text[:pos].to_string()
+    Some(pos) => text[:pos].to_owned()
     None => text
   }
 }

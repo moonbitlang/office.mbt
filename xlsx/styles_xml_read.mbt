@@ -1,7 +1,7 @@
 ///|
 fn find_last_substring(text : StringView, needle : StringView) -> Int? {
-  let text_str = text.to_string()
-  let needle_str = needle.to_string()
+  let text_str = text.to_owned()
+  let needle_str = needle.to_owned()
   if needle_str == "" {
     return None
   }
@@ -23,14 +23,14 @@ fn find_last_substring(text : StringView, needle : StringView) -> Int? {
 
 ///|
 fn end_after_last_tag(xml : StringView, tag : StringView) -> Int? {
-  let close_tag = "</\{tag.to_string()}>"
+  let close_tag = "</\{tag.to_owned()}>"
   match find_last_substring(xml, close_tag) {
     Some(pos) => Some(pos + close_tag.length())
     None => {
-      let open_tag = "<\{tag.to_string()}"
+      let open_tag = "<\{tag.to_owned()}"
       match find_last_substring(xml, open_tag) {
         Some(pos) => {
-          let rest = xml.to_string()[pos:]
+          let rest = xml.to_owned()[pos:]
           match rest.find(">") {
             Some(rel) => Some(pos + rel + 1)
             None => None
@@ -44,7 +44,7 @@ fn end_after_last_tag(xml : StringView, tag : StringView) -> Int? {
 
 ///|
 fn parse_styles_ext_lst_xml(xml : StringView) -> String? raise XlsxError {
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let style_sheet_close = "</styleSheet>"
   let style_end = match xml_str.find(style_sheet_close) {
     Some(pos) => pos
@@ -79,7 +79,7 @@ fn parse_styles_ext_lst_xml(xml : StringView) -> String? raise XlsxError {
     None => raise InvalidXml(msg="styles.xml extLst close missing")
   }
   let body_end = body_start + close_rel
-  Some(prefix[body_start:body_end].to_string())
+  Some(prefix[body_start:body_end].to_owned())
 }
 
 ///|

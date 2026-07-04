@@ -84,7 +84,7 @@ fn parse_web_image_blip_ids(xml : String) -> Array[String] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("</webImageSrd>") {
       Some(pos) => pos
       None => text.length()
@@ -121,7 +121,7 @@ fn parse_value_metadata(xml : String) -> Array[Int] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("</bk>") {
       Some(pos) => pos
       None => text.length()
@@ -160,7 +160,7 @@ fn parse_rich_values(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let tag_end = match text.find(">") {
       Some(pos) => pos
       None => continue
@@ -182,7 +182,7 @@ fn parse_rich_values(
         first_v = false
         continue
       }
-      let v_text = v_chunk.to_string()
+      let v_text = v_chunk.to_owned()
       match v_text.find("</v>") {
         Some(pos) => values.push(unescape_xml_text(v_text[:pos]))
         None => ()
@@ -206,7 +206,7 @@ fn parse_rich_value_structures(
       first = false
       continue
     }
-    let text = "<s \{chunk.to_string()}"
+    let text = "<s \{chunk.to_owned()}"
     let end = match text.find("</s>") {
       Some(pos) => pos
       None => text.length()
@@ -219,7 +219,7 @@ fn parse_rich_value_structures(
         first_k = false
         continue
       }
-      let k_text = "<k \{k_chunk.to_string()}"
+      let k_text = "<k \{k_chunk.to_owned()}"
       match tag_attributes_in(k_text, "k") {
         Some(attrs) =>
           match attr_value(attrs, "n") {
@@ -245,7 +245,7 @@ fn parse_rich_value_rel_ids(xml : String) -> Array[String] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => continue
@@ -276,7 +276,7 @@ fn parse_cell_vm_map(sheet_xml : String) -> Map[String, Int] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => continue
@@ -456,7 +456,7 @@ fn Workbook::rich_value_image_for_cell(
 /// Returns a file extension without its leading dot.
 fn extension_no_dot(extension : String) -> String {
   if extension.has_prefix(".") {
-    extension[1:].to_string()
+    extension[1:].to_owned()
   } else {
     extension
   }

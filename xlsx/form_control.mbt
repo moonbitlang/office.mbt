@@ -25,7 +25,7 @@ let max_form_control_value = 30000
 fn normalize_form_control_type(
   control_type : StringView,
 ) -> (String, String) raise XlsxError {
-  let lower = control_type.to_string().to_lower()
+  let lower = control_type.to_owned().to_lower()
   let normalized = lower
     .replace_all(old=" ", new="")
     .replace_all(old="_", new="")
@@ -80,7 +80,7 @@ pub fn FormControl::set_macro_name(
   self : FormControl,
   value : StringView,
 ) -> Unit {
-  let v = value.to_string()
+  let v = value.to_owned()
   self.macro_name = if v == "" { None } else { Some(v) }
 }
 
@@ -94,7 +94,7 @@ pub fn FormControl::set_cell_link(
   self : FormControl,
   cell_link : StringView,
 ) -> Unit raise XlsxError {
-  let value = cell_link.to_string()
+  let value = cell_link.to_owned()
   if value == "" {
     self.cell_link = None
     return
@@ -218,7 +218,7 @@ struct FormControlVmlPreset {
 
 ///|
 fn form_control_vml_preset(control_type : StringView) -> FormControlVmlPreset? {
-  let lower = control_type.to_string().to_lower()
+  let lower = control_type.to_owned().to_lower()
   let normalized = lower
     .replace_all(old=" ", new="")
     .replace_all(old="_", new="")
@@ -612,7 +612,7 @@ fn write_form_controls_vml(
 
 ///|
 fn xml_has_tag(body : StringView, tag : StringView) -> Bool {
-  let t = tag.to_string()
+  let t = tag.to_owned()
   body.contains("<\{t}/>") ||
   body.contains("<\{t} />") ||
   body.contains("<\{t}></\{t}>") ||
@@ -621,8 +621,8 @@ fn xml_has_tag(body : StringView, tag : StringView) -> Bool {
 
 ///|
 fn extract_xml_text_tag(body : StringView, tag : StringView) -> String? {
-  let open = "<\{tag.to_string()}>"
-  let close = "</\{tag.to_string()}>"
+  let open = "<\{tag.to_owned()}>"
+  let close = "</\{tag.to_owned()}>"
   match body.find(open) {
     Some(start) => {
       let rest = body[start + open.length():]
@@ -639,7 +639,7 @@ fn extract_xml_text_tag(body : StringView, tag : StringView) -> String? {
 
 ///|
 fn strip_vml_font_markup(text : StringView) -> String {
-  let mut s = text.to_string()
+  let mut s = text.to_owned()
   s = s.replace(old="<b>", new="")
   s = s.replace(old="</b>", new="")
   s = s.replace(old="<i>", new="")
@@ -714,7 +714,7 @@ fn parse_vml_textbox(
   if !inner.contains("<font") {
     return (unescape_xml_text(inner), empty)
   }
-  let inner_s = inner.to_string()
+  let inner_s = inner.to_owned()
   let mut i = 0
   let runs : Array[RichTextRun] = []
   while true {

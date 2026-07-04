@@ -252,7 +252,7 @@ pub fn ConditionalFormatOptions::set_stop_if_true(
 
 ///|
 fn normalize_conditional_type(value : StringView) -> String? {
-  match value.to_string().to_lower() {
+  match value.to_owned().to_lower() {
     "cell" => Some("cellIs")
     "average" => Some("aboveAverage")
     "duplicate" => Some("duplicateValues")
@@ -276,7 +276,7 @@ fn normalize_conditional_type(value : StringView) -> String? {
 
 ///|
 fn criteria_type(value : StringView) -> String? {
-  match value.to_string().to_lower() {
+  match value.to_owned().to_lower() {
     "!=" | "<>" => Some("notEqual")
     "<" => Some("lessThan")
     "<=" => Some("lessThanOrEqual")
@@ -312,7 +312,7 @@ fn normalize_criteria(value : StringView) -> String? {
   match criteria_type(value) {
     Some(mapped) => Some(mapped)
     None => {
-      let raw = value.to_string()
+      let raw = value.to_owned()
       match raw {
         "notEqual"
         | "lessThan"
@@ -344,7 +344,7 @@ fn normalize_criteria(value : StringView) -> String? {
 
 ///|
 fn criteria_text_from_operator(value : StringView) -> String {
-  match value.to_string() {
+  match value.to_owned() {
     "beginsWith" => "begins with"
     "between" => "between"
     "containsText" => "containing"
@@ -367,7 +367,7 @@ fn criteria_text_from_operator(value : StringView) -> String {
     "today" => "today"
     "tomorrow" => "tomorrow"
     "yesterday" => "yesterday"
-    _ => value.to_string()
+    _ => value.to_owned()
   }
 }
 
@@ -376,7 +376,7 @@ fn palette_color(color : StringView) -> String {
   if color == "" {
     return "FF000000"
   }
-  let text = color.to_string()
+  let text = color.to_owned()
   let trimmed = text.strip_prefix("#").unwrap_or(text)
   "FF\{trimmed.to_upper()}"
 }
@@ -408,37 +408,37 @@ fn write_formula(sb : StringBuilder, formula : StringView) -> Unit {
 
 ///|
 fn time_period_formula(criteria : StringView, cell_ref : StringView) -> String? {
-  match criteria.to_string() {
-    "yesterday" => Some("FLOOR(\{cell_ref.to_string()},1)=TODAY()-1")
-    "today" => Some("FLOOR(\{cell_ref.to_string()},1)=TODAY()")
-    "tomorrow" => Some("FLOOR(\{cell_ref.to_string()},1)=TODAY()+1")
+  match criteria.to_owned() {
+    "yesterday" => Some("FLOOR(\{cell_ref.to_owned()},1)=TODAY()-1")
+    "today" => Some("FLOOR(\{cell_ref.to_owned()},1)=TODAY()")
+    "tomorrow" => Some("FLOOR(\{cell_ref.to_owned()},1)=TODAY()+1")
     "last7Days" =>
       Some(
-        "AND(TODAY()-FLOOR(\{cell_ref.to_string()},1)<=6,FLOOR(\{cell_ref.to_string()},1)<=TODAY())",
+        "AND(TODAY()-FLOOR(\{cell_ref.to_owned()},1)<=6,FLOOR(\{cell_ref.to_owned()},1)<=TODAY())",
       )
     "lastWeek" =>
       Some(
-        "AND(TODAY()-ROUNDDOWN(\{cell_ref.to_string()},0)>=(WEEKDAY(TODAY())),TODAY()-ROUNDDOWN(\{cell_ref.to_string()},0)<(WEEKDAY(TODAY())+7))",
+        "AND(TODAY()-ROUNDDOWN(\{cell_ref.to_owned()},0)>=(WEEKDAY(TODAY())),TODAY()-ROUNDDOWN(\{cell_ref.to_owned()},0)<(WEEKDAY(TODAY())+7))",
       )
     "thisWeek" =>
       Some(
-        "AND(TODAY()-ROUNDDOWN(\{cell_ref.to_string()},0)<=WEEKDAY(TODAY())-1,ROUNDDOWN(\{cell_ref.to_string()},0)-TODAY()>=7-WEEKDAY(TODAY()))",
+        "AND(TODAY()-ROUNDDOWN(\{cell_ref.to_owned()},0)<=WEEKDAY(TODAY())-1,ROUNDDOWN(\{cell_ref.to_owned()},0)-TODAY()>=7-WEEKDAY(TODAY()))",
       )
     "nextWeek" =>
       Some(
-        "AND(ROUNDDOWN(\{cell_ref.to_string()},0)-TODAY()>(7-WEEKDAY(TODAY())),ROUNDDOWN(\{cell_ref.to_string()},0)-TODAY()<(15-WEEKDAY(TODAY())))",
+        "AND(ROUNDDOWN(\{cell_ref.to_owned()},0)-TODAY()>(7-WEEKDAY(TODAY())),ROUNDDOWN(\{cell_ref.to_owned()},0)-TODAY()<(15-WEEKDAY(TODAY())))",
       )
     "lastMonth" =>
       Some(
-        "AND(MONTH(\{cell_ref.to_string()})=MONTH(TODAY())-1,OR(YEAR(\{cell_ref.to_string()})=YEAR(TODAY()),AND(MONTH(\{cell_ref.to_string()})=1,YEAR(\{cell_ref.to_string()})=YEAR(TODAY())-1)))",
+        "AND(MONTH(\{cell_ref.to_owned()})=MONTH(TODAY())-1,OR(YEAR(\{cell_ref.to_owned()})=YEAR(TODAY()),AND(MONTH(\{cell_ref.to_owned()})=1,YEAR(\{cell_ref.to_owned()})=YEAR(TODAY())-1)))",
       )
     "thisMonth" =>
       Some(
-        "AND(MONTH(\{cell_ref.to_string()})=MONTH(TODAY()),YEAR(\{cell_ref.to_string()})=YEAR(TODAY()))",
+        "AND(MONTH(\{cell_ref.to_owned()})=MONTH(TODAY()),YEAR(\{cell_ref.to_owned()})=YEAR(TODAY()))",
       )
     "nextMonth" =>
       Some(
-        "AND(MONTH(\{cell_ref.to_string()})=MONTH(TODAY())+1,OR(YEAR(\{cell_ref.to_string()})=YEAR(TODAY()),AND(MONTH(\{cell_ref.to_string()})=12,YEAR(\{cell_ref.to_string()})=YEAR(TODAY())+1)))",
+        "AND(MONTH(\{cell_ref.to_owned()})=MONTH(TODAY())+1,OR(YEAR(\{cell_ref.to_owned()})=YEAR(TODAY()),AND(MONTH(\{cell_ref.to_owned()})=12,YEAR(\{cell_ref.to_owned()})=YEAR(TODAY())+1)))",
       )
     _ => None
   }
@@ -450,23 +450,23 @@ fn text_formula(
   cell_ref : StringView,
   value : StringView,
 ) -> String? {
-  let escaped = value.to_string().replace_all(old="\"", new="\"\"")
-  match criteria.to_string() {
+  let escaped = value.to_owned().replace_all(old="\"", new="\"\"")
+  match criteria.to_owned() {
     "containsText" =>
-      Some("NOT(ISERROR(SEARCH(\"\{escaped}\",\{cell_ref.to_string()})))")
+      Some("NOT(ISERROR(SEARCH(\"\{escaped}\",\{cell_ref.to_owned()})))")
     "notContains" =>
-      Some("ISERROR(SEARCH(\"\{escaped}\",\{cell_ref.to_string()}))")
+      Some("ISERROR(SEARCH(\"\{escaped}\",\{cell_ref.to_owned()}))")
     "beginsWith" =>
-      Some("LEFT(\{cell_ref.to_string()},LEN(\"\{escaped}\"))=\"\{escaped}\"")
+      Some("LEFT(\{cell_ref.to_owned()},LEN(\"\{escaped}\"))=\"\{escaped}\"")
     "endsWith" =>
-      Some("RIGHT(\{cell_ref.to_string()},LEN(\"\{escaped}\"))=\"\{escaped}\"")
+      Some("RIGHT(\{cell_ref.to_owned()},LEN(\"\{escaped}\"))=\"\{escaped}\"")
     _ => None
   }
 }
 
 ///|
 fn icon_set_steps(icon_style : StringView) -> Array[String]? {
-  match icon_style.to_string() {
+  match icon_style.to_owned() {
     "3Arrows"
     | "3ArrowsGray"
     | "3Flags"
@@ -489,20 +489,20 @@ fn icon_set_steps(icon_style : StringView) -> Array[String]? {
 fn prepare_conditional_format_range(
   range_ref : StringView,
 ) -> (String, String) raise XlsxError {
-  let cleaned = range_ref.to_string().replace_all(old=",", new=" ")
+  let cleaned = range_ref.to_owned().replace_all(old=",", new=" ")
   if cleaned.trim() == "" {
     raise InvalidConditionalFormat(msg="range is empty")
   }
   let sqrefs : Array[String] = []
   let mut master_cell = ""
   for part in cleaned.split(" ") {
-    let trimmed = part.to_string().trim().to_string()
+    let trimmed = part.to_owned().trim().to_owned()
     if trimmed == "" {
       continue
     }
     let parts : Array[String] = []
     for item in trimmed.split(":") {
-      parts.push(item.to_string())
+      parts.push(item.to_owned())
     }
     if parts.length() > 2 || parts.length() == 0 {
       raise InvalidConditionalFormat(msg="range reference invalid")
@@ -590,7 +590,7 @@ fn build_text_rule(
   criteria : StringView,
   master_cell : StringView,
 ) -> String raise XlsxError {
-  let rule_type = match criteria.to_string() {
+  let rule_type = match criteria.to_owned() {
     "containsText" => "containsText"
     "notContains" => "notContainsText"
     "beginsWith" => "beginsWith"
@@ -667,7 +667,7 @@ fn build_simple_rule(
   formula? : String,
 ) -> String {
   let sb = StringBuilder::new()
-  sb.write_view("<cfRule type=\"\{rule_type.to_string()}\"")
+  sb.write_view("<cfRule type=\"\{rule_type.to_owned()}\"")
   sb.write_view(" priority=\"\{priority}\"")
   write_stop_if_true(sb, opt)
   write_dxf_attr(sb, opt)
@@ -832,28 +832,28 @@ fn conditional_format_rules_xml(
           rule_type,
           opt,
           priority,
-          formula="LEN(TRIM(\{master_cell.to_string()}))=0",
+          formula="LEN(TRIM(\{master_cell.to_owned()}))=0",
         )
       "no_blanks" =>
         build_simple_rule(
           rule_type,
           opt,
           priority,
-          formula="LEN(TRIM(\{master_cell.to_string()}))>0",
+          formula="LEN(TRIM(\{master_cell.to_owned()}))>0",
         )
       "errors" =>
         build_simple_rule(
           rule_type,
           opt,
           priority,
-          formula="ISERROR(\{master_cell.to_string()})",
+          formula="ISERROR(\{master_cell.to_owned()})",
         )
       "no_errors" =>
         build_simple_rule(
           rule_type,
           opt,
           priority,
-          formula="NOT(ISERROR(\{master_cell.to_string()}))",
+          formula="NOT(ISERROR(\{master_cell.to_owned()}))",
         )
       "2_color_scale" => build_color_scale_rule(opt, priority, false)
       "3_color_scale" => build_color_scale_rule(opt, priority, true)
@@ -893,16 +893,16 @@ fn extract_tag_blocks(
   xml : StringView,
   tag_name : StringView,
 ) -> Array[String] raise XlsxError {
-  let text = xml.to_string()
-  let open_tag = "<\{tag_name.to_string()}"
-  let close_tag = "</\{tag_name.to_string()}>"
+  let text = xml.to_owned()
+  let open_tag = "<\{tag_name.to_owned()}"
+  let close_tag = "</\{tag_name.to_owned()}>"
   let parts = Array::from_iter(text.split(open_tag))
   if parts.length() <= 1 {
     return []
   }
   let blocks : Array[String] = []
   for i in 1..<parts.length() {
-    let fragment = "\{open_tag}\{parts[i].to_string()}"
+    let fragment = "\{open_tag}\{parts[i].to_owned()}"
     let end = match fragment.find(close_tag) {
       Some(pos) => pos + close_tag.length()
       None =>
@@ -912,7 +912,7 @@ fn extract_tag_blocks(
         }
     }
     let slice = fragment[:end]
-    blocks.push(slice.to_string())
+    blocks.push(slice.to_owned())
   }
   blocks
 }
@@ -923,7 +923,7 @@ fn extract_tag_bodies(
   tag_name : StringView,
 ) -> Array[String] raise XlsxError {
   let blocks = extract_tag_blocks(xml, tag_name)
-  let close_tag = "</\{tag_name.to_string()}>"
+  let close_tag = "</\{tag_name.to_owned()}>"
   let bodies : Array[String] = []
   for block in blocks {
     let start = match block.find(">") {
@@ -935,14 +935,14 @@ fn extract_tag_bodies(
       None => raise InvalidXml(msg="tag body end missing")
     }
     let body = block[start:end]
-    bodies.push(body.to_string())
+    bodies.push(body.to_owned())
   }
   bodies
 }
 
 ///|
 fn color_text_from_rgb(rgb : StringView) -> String {
-  let text = rgb.to_string()
+  let text = rgb.to_owned()
   match text.strip_prefix("FF") {
     Some(rest) if text.length() == 8 => "#\{rest}"
     _ => "#\{text}"
@@ -1269,13 +1269,13 @@ fn parse_cf_rule(
 
 ///|
 fn master_cell_from_sqref(sqref : StringView) -> String raise XlsxError {
-  let text = sqref.to_string().trim().to_string()
+  let text = sqref.to_owned().trim().to_owned()
   if text == "" {
     raise InvalidXml(msg="sqref empty")
   }
   let mut first = ""
   for part in text.split(" ") {
-    let trimmed = part.to_string().trim().to_string()
+    let trimmed = part.to_owned().trim().to_owned()
     if trimmed != "" {
       first = trimmed
       break
@@ -1286,7 +1286,7 @@ fn master_cell_from_sqref(sqref : StringView) -> String raise XlsxError {
   }
   let parts : Array[String] = []
   for item in first.split(":") {
-    parts.push(item.to_string())
+    parts.push(item.to_owned())
   }
   if parts.length() == 0 {
     raise InvalidXml(msg="sqref invalid")
@@ -1302,20 +1302,20 @@ fn parse_conditional_format_xml(
 ) -> (String, Array[ConditionalFormatOptions]) raise XlsxError {
   fn extract_cf_rule_blocks(xml : StringView) -> Array[String] raise XlsxError {
     let rules : Array[String] = []
-    let xml_str = xml.to_string()
+    let xml_str = xml.to_owned()
     let mut first = true
     for chunk in xml_str.split("<cfRule") {
       if first {
         first = false
         continue
       }
-      let text = chunk.to_string()
+      let text = chunk.to_owned()
       let close_tag = "</cfRule>"
       match text.find(close_tag) {
         Some(pos) => {
           let end = pos + close_tag.length()
           let slice = text[:end]
-          rules.push("<cfRule\{slice.to_string()}")
+          rules.push("<cfRule\{slice.to_owned()}")
         }
         None => {
           let end = match text.find("/>") {
@@ -1323,7 +1323,7 @@ fn parse_conditional_format_xml(
             None => raise InvalidXml(msg="cfRule tag not closed")
           }
           let slice = text[:end]
-          rules.push("<cfRule\{slice.to_string()}")
+          rules.push("<cfRule\{slice.to_owned()}")
         }
       }
     }

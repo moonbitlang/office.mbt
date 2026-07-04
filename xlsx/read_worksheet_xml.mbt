@@ -27,7 +27,7 @@ fn parse_worksheet(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="cell tag not closed")
@@ -118,7 +118,7 @@ fn parse_worksheet(
           Some(end) => end
           None => raise InvalidXml(msg="cell value not closed")
         }
-        Some(v_rest[:v_end].to_string())
+        Some(v_rest[:v_end].to_owned())
       }
       None => None
     }

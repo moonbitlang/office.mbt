@@ -61,7 +61,7 @@ fn format_hex_upper(value : Int64) -> String {
 
 ///|
 fn normalize_sheet_hash_algorithm(name : StringView) -> String? {
-  match name.to_string() {
+  match name.to_owned() {
     "MD4" => Some("md4")
     "MD5" => Some("md5")
     "SHA-1" => Some("sha1")

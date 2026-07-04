@@ -21,10 +21,10 @@ fn parse_range_ref(
 ) -> (Int, Int, Int, Int) raise XlsxError {
   let parts : Array[String] = []
   for part in range_ref.split(":") {
-    parts.push(part.to_string())
+    parts.push(part.to_owned())
   }
   if parts.length() != 2 {
-    raise InvalidCellRef(value=range_ref.to_string())
+    raise InvalidCellRef(value=range_ref.to_owned())
   }
   let (row1, col1) = cell_ref_to_rc(parts[0])
   let (row2, col2) = cell_ref_to_rc(parts[1])
@@ -954,7 +954,7 @@ pub fn Worksheet::delete_table(
   self.ensure_stream_idle()
   let updated : Array[Table] = []
   let mut removed = false
-  let target = name.to_string()
+  let target = name.to_owned()
   for table in self.tables {
     if table.name == target || table.display_name == target {
       removed = true
@@ -1034,7 +1034,7 @@ pub fn Worksheet::delete_pivot_table(
   name : StringView,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  let target = name.to_string()
+  let target = name.to_owned()
   if target == "" {
     raise InvalidSheetOperation(msg="pivot table name empty")
   }
@@ -1058,9 +1058,9 @@ pub fn Worksheet::delete_pivot_table(
 
 ///|
 fn normalize_extension(extension : StringView) -> String raise XlsxError {
-  let value = extension.to_string()
+  let value = extension.to_owned()
   let trimmed = match value.strip_prefix(".") {
-    Some(rest) => rest.to_string()
+    Some(rest) => rest.to_owned()
     None => value
   }
   if trimmed == "" {
@@ -1079,14 +1079,14 @@ fn normalize_extension_lower_requires_dot(
     let rest : Array[String] = []
     for i, part in parts {
       if i > 0 {
-        rest.push(part.to_string())
+        rest.push(part.to_owned())
       }
     }
     rest.join(".")
   }
-  let raw = extension.to_string()
+  let raw = extension.to_owned()
   if !raw.has_prefix(".") || raw.length() <= 1 {
-    raise UnsupportedFeature(msg=unsupported_msg.to_string())
+    raise UnsupportedFeature(msg=unsupported_msg.to_owned())
   }
   let trimmed = trim_leading_dot(raw)
   trimmed.to_lower()
@@ -1097,8 +1097,8 @@ fn check_header_footer_image_size(
   value : StringView,
   field_name : StringView,
 ) -> Unit raise XlsxError {
-  if value.to_string() == "" {
-    raise InvalidHeaderFooter(msg="\{field_name.to_string()} empty")
+  if value.to_owned() == "" {
+    raise InvalidHeaderFooter(msg="\{field_name.to_owned()} empty")
   }
 }
 
@@ -1997,7 +1997,7 @@ fn Worksheet::delete_slicer(
   name : StringView,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  let target = name.to_string()
+  let target = name.to_owned()
   if target == "" {
     raise InvalidSheetOperation(msg="slicer name empty")
   }
@@ -2168,11 +2168,11 @@ fn inject_x14_id_ext_lst_into_cf_rule(
   if parts.length() <= 1 {
     raise InvalidXml(msg="cfRule tag invalid")
   }
-  let before = parts[0].to_string()
+  let before = parts[0].to_owned()
   let tail : Array[String] = []
   for i, part in parts {
     if i > 0 {
-      tail.push(part.to_string())
+      tail.push(part.to_owned())
     }
   }
   let after = close_tag + tail.join(close_tag)
@@ -2300,7 +2300,7 @@ pub fn Worksheet::unset_conditional_format(
           first = false
           continue
         }
-        let text = chunk.to_string()
+        let text = chunk.to_owned()
         let end = match text.find("</x14:id>") {
           Some(pos) => pos
           None => continue
@@ -3241,7 +3241,7 @@ fn parse_cell_ref_with_abs(
     }
   }
   if !has_col {
-    raise InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_owned())
   }
   let mut abs_row = false
   if idx < len && reference[idx] == '$' {
@@ -3257,14 +3257,14 @@ fn parse_cell_ref_with_abs(
       row = row * 10 + (u0.to_int() - ('0' : UInt16).to_int())
       idx = idx + 1
     } else {
-      raise InvalidCellRef(value=reference.to_string())
+      raise InvalidCellRef(value=reference.to_owned())
     }
   }
   if !has_row {
-    raise InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_owned())
   }
   if row <= 0 {
-    raise InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_owned())
   }
   (row, col, abs_col, abs_row)
 }
@@ -3315,7 +3315,7 @@ fn duplicate_sqref_for_row(
     if seen_sep {
       (left.to_string(), right.to_string())
     } else {
-      let cell = text.to_string()
+      let cell = text.to_owned()
       (cell, cell)
     }
   }

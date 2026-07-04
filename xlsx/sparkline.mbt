@@ -14,9 +14,9 @@ pub struct SparklineColor {
 
 ///|
 fn rgb(value : StringView) -> SparklineColor raise XlsxError {
-  let raw = value.to_string().to_upper()
+  let raw = value.to_owned().to_upper()
   let hex = match raw.strip_prefix("#") {
-    Some(rest) => rest.to_string()
+    Some(rest) => rest.to_owned()
     None => raw
   }
   let normalized = match hex.length() {
@@ -365,8 +365,8 @@ pub fn SparklineOptions::set_empty_cells(
   self : SparklineOptions,
   mode : StringView,
 ) -> Unit raise XlsxError {
-  match mode.to_string() {
-    "gap" | "zero" | "span" => self.empty_cells = Some(mode.to_string())
+  match mode.to_owned() {
+    "gap" | "zero" | "span" => self.empty_cells = Some(mode.to_owned())
     _ => raise InvalidSparkline(msg="sparkline empty cells invalid")
   }
 }
@@ -391,7 +391,7 @@ fn sparkline_type_to_string(kind : SparklineType) -> String {
 
 ///|
 fn sparkline_type_from_string(value : StringView) -> SparklineType {
-  match value.to_string() {
+  match value.to_owned() {
     "column" => Column
     "winLoss" => WinLoss
     "stacked" => WinLoss
@@ -780,7 +780,7 @@ fn write_sparkline_color_xml(
 
 ///|
 fn quote_sheet_name_for_formula(sheet_name : StringView) -> String {
-  "'" + sheet_name.to_string().replace_all(old="'", new="''") + "'"
+  "'" + sheet_name.to_owned().replace_all(old="'", new="''") + "'"
 }
 
 ///|
@@ -789,9 +789,9 @@ fn sparkline_formula_ref_for_xml(
   range_ref : StringView,
 ) -> String {
   if range_ref.contains("!") {
-    range_ref.to_string()
+    range_ref.to_owned()
   } else {
-    "\{quote_sheet_name_for_formula(sheet_name)}!\{range_ref.to_string()}"
+    "\{quote_sheet_name_for_formula(sheet_name)}!\{range_ref.to_owned()}"
   }
 }
 
@@ -933,8 +933,8 @@ fn find_sparkline_color_in_body(
   body : StringView,
   tag_name : StringView,
 ) -> SparklineColor? raise XlsxError {
-  let text = body.to_string()
-  let open = "<x14:" + tag_name.to_string()
+  let text = body.to_owned()
+  let open = "<x14:" + tag_name.to_owned()
   let start = match text.find(open) {
     Some(pos) => pos
     None => return None
@@ -955,7 +955,7 @@ fn parse_sparkline_groups(
   fn normalize_sparkline_range_ref(
     range_ref : StringView,
   ) -> String raise XlsxError {
-    let text = range_ref.to_string()
+    let text = range_ref.to_owned()
     match text.find("!") {
       Some(pos) => {
         let range_part = text[pos + 1:]
@@ -972,7 +972,7 @@ fn parse_sparkline_groups(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     if text.has_prefix("s") {
       continue
     }
@@ -1093,7 +1093,7 @@ fn parse_sparkline_groups(
         sparkline_first = false
         continue
       }
-      let spark_text = spark_chunk.to_string()
+      let spark_text = spark_chunk.to_owned()
       let spark_end = match spark_text.find("</x14:sparkline>") {
         Some(pos) => pos
         None => raise InvalidXml(msg="sparkline end missing")
@@ -1207,13 +1207,13 @@ fn build_sparklines(
   fn normalize_sparkline_range_for_write(
     range_ref : StringView,
   ) -> String raise XlsxError {
-    let text = range_ref.to_string()
+    let text = range_ref.to_owned()
     match text.find("!") {
       Some(pos) => {
         let sheet_prefix = text[:pos + 1]
         let range_part = text[pos + 1:]
         let normalized = normalize_range_ref(range_part)
-        sheet_prefix.to_string() + normalized
+        sheet_prefix.to_owned() + normalized
       }
       None => normalize_range_ref(text)
     }

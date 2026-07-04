@@ -29,7 +29,7 @@ fn builtin_charset_decode(encoding : String, bytes : Bytes) -> String? {
 /// same table Go's `charset.NewReaderLabel` uses). The Latin-1 and ASCII
 /// families intentionally fold into `windows-1252`.
 fn normalize_charset_label(encoding : String) -> String {
-  match encoding.to_lower().trim().to_string() {
+  match encoding.to_lower().trim().to_owned() {
     // Windows-1252 / Latin-1 / ASCII family (WHATWG maps them together)
     "windows-1252"
     | "cp1252"

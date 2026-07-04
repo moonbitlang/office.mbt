@@ -23,13 +23,13 @@ fn parse_cell_images(
   archive : @zip.Archive,
 ) -> Array[CellImage] raise XlsxError {
   let images : Array[CellImage] = []
-  let targets = if rels_xml.to_string() == "" {
+  let targets = if rels_xml.to_owned() == "" {
     {}
   } else {
     // cellimages relationships are always image relationships
     parse_relationship_targets(rels_xml, rel_image)
   }
-  let xml_str = cell_images_xml.to_string()
+  let xml_str = cell_images_xml.to_owned()
   // Each embedded image is one <...pic> element; cellimages.xml contains
   // only cell images, so every pic here is one. The WPS namespace prefix
   // (xdr:) is matched, falling back to an unprefixed <pic>.
@@ -44,7 +44,7 @@ fn parse_cell_images(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(close_tag) {
       Some(pos) => pos
       None => continue
@@ -125,9 +125,9 @@ fn parse_cell_images(
 /// Excelize's `"xl/" + r.Target` / package path handling.
 fn normalize_cell_image_target(target : String) -> String {
   if target.has_prefix("/") {
-    target[1:].to_string()
+    target[1:].to_owned()
   } else if target.has_prefix("../") {
-    "xl/" + target[3:].to_string()
+    "xl/" + target[3:].to_owned()
   } else {
     "xl/" + target
   }
@@ -138,7 +138,7 @@ fn normalize_cell_image_target(target : String) -> String {
 /// empty string when there is none.
 fn cell_image_extension(path : String) -> String {
   match path.rev_find(".") {
-    Some(pos) => path[pos:].to_string()
+    Some(pos) => path[pos:].to_owned()
     None => ""
   }
 }
@@ -211,10 +211,10 @@ fn Workbook::disp_images_for_cell(
 fn is_disp_img_formula(formula : String) -> Bool {
   let mut text = formula
   if text.has_prefix("=") {
-    text = text[1:].to_string()
+    text = text[1:].to_owned()
   }
   if text.has_prefix("_xlfn.") {
-    text = text[6:].to_string()
+    text = text[6:].to_owned()
   }
   text.has_prefix("DISPIMG")
 }

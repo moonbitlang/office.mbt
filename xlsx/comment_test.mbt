@@ -65,7 +65,7 @@ test "comment delete keeps other comments" {
   })
   sheet.delete_comment("A1")
   debug_inspect(
-    sheet.comments().to_array(),
+    sheet.comments().to_owned(),
     content=(
       #|[
       #|  {

@@ -151,7 +151,7 @@ pub fn PivotTableOptions::new(
 
 ///|
 fn split_sheet_range(value : StringView) -> (String, String) raise XlsxError {
-  let text = value.to_string()
+  let text = value.to_owned()
   match text.find("!") {
     Some(pos) => {
       if pos <= 0 || pos + 1 >= text.length() {
@@ -159,7 +159,7 @@ fn split_sheet_range(value : StringView) -> (String, String) raise XlsxError {
       }
       let sheet = text[:pos]
       let range_ref = text[pos + 1:]
-      (sheet.to_string(), range_ref.to_string())
+      (sheet.to_owned(), range_ref.to_owned())
     }
     None => raise InvalidPivotTable(msg="range must be Sheet!A1:B2")
   }

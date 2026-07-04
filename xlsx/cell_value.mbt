@@ -64,7 +64,7 @@ fn cell_value_raw_string(value : CellValue) -> String {
 
 ///|
 fn parse_cell_bool(value : StringView) -> Bool {
-  match value.to_string().to_lower() {
+  match value.to_owned().to_lower() {
     "1" => true
     "true" => true
     "yes" => true

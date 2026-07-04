@@ -838,7 +838,7 @@ pub fn Style::excelize_custom_num_fmt(
   if format_code == "" {
     raise InvalidOptions(msg="custom number format can not be empty")
   }
-  Style::number_format(format_code.to_string())
+  Style::number_format(format_code.to_owned())
 }
 
 ///|
@@ -1118,7 +1118,7 @@ fn write_styles_xml(
   let font_name = if default_font == "" {
     "Calibri"
   } else {
-    default_font.to_string()
+    default_font.to_owned()
   }
   // Font collection: id 0 is the workbook default font.
   let fonts : Array[Font] = [Font::with_values(size=11.0, family=font_name)]
@@ -1126,7 +1126,7 @@ fn write_styles_xml(
   fn normalize_font_key(font : Font, default_family : StringView) -> String {
     let family = match font.family {
       Some(v) => v.to_string()
-      None => default_family.to_string()
+      None => default_family.to_owned()
     }
     let size = match font.size {
       Some(v) => v.to_string()
@@ -1373,7 +1373,7 @@ fn write_styles_xml(
   fn fill_rgb(color : String, transparency : Int) -> String {
     let normalized = color.replace_all(old="#", new="")
     let base = if normalized.length() == 8 {
-      normalized[2:].to_string()
+      normalized[2:].to_owned()
     } else {
       normalized
     }

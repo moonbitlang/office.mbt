@@ -336,7 +336,7 @@ fn write_app_properties_xml(props : AppProperties) -> String {
 
 ///|
 fn parse_bool(text : StringView) -> Bool {
-  let value = text.to_string()
+  let value = text.to_owned()
   value == "true" || value == "1"
 }
 
@@ -452,9 +452,9 @@ let custom_props_fmt_id = "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}"
 
 ///|
 fn extract_tag_value(xml : StringView, tag_name : StringView) -> String? {
-  let open = "<\{tag_name.to_string()}>"
-  let close = "</\{tag_name.to_string()}>"
-  let text = xml.to_string()
+  let open = "<\{tag_name.to_owned()}>"
+  let close = "</\{tag_name.to_owned()}>"
+  let text = xml.to_owned()
   match text.find(open) {
     None => None
     Some(start) => {
@@ -462,7 +462,7 @@ fn extract_tag_value(xml : StringView, tag_name : StringView) -> String? {
       match rest.find(close) {
         Some(end) => {
           let slice = rest[:end]
-          Some(slice.to_string())
+          Some(slice.to_owned())
         }
         None => None
       }
@@ -598,7 +598,7 @@ fn parse_custom_properties(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="property tag not closed")

@@ -10,13 +10,13 @@ fn normalize_optional_value(
   supported : Array[String],
   field_name : StringView,
 ) -> String raise XlsxError {
-  let needle = value.to_string().to_lower()
+  let needle = value.to_owned().to_lower()
   for item in supported {
     if item.to_lower() == needle {
       return item
     }
   }
-  raise InvalidPageLayout(msg="\{field_name.to_string()} invalid")
+  raise InvalidPageLayout(msg="\{field_name.to_owned()} invalid")
 }
 
 ///|
@@ -60,7 +60,7 @@ fn check_header_footer_limit(
   field_name : StringView,
 ) -> Unit raise XlsxError {
   if count_utf16_units(value) > max_field_length {
-    raise InvalidHeaderFooter(msg="\{field_name.to_string()} too long")
+    raise InvalidHeaderFooter(msg="\{field_name.to_owned()} too long")
   }
 }
 

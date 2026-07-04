@@ -19,7 +19,7 @@ fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
     break
   }
   if !has_col {
-    raise InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_owned())
   }
   if idx < len && reference[idx] == '$' {
     idx = idx + 1
@@ -34,13 +34,13 @@ fn cell_ref_to_rc(reference : StringView) -> (Int, Int) raise XlsxError {
       idx = idx + 1
       continue
     }
-    raise InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_owned())
   }
   if col == 0 || !has_row {
-    raise InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_owned())
   }
   if row <= 0 {
-    raise InvalidCellRef(value=reference.to_string())
+    raise InvalidCellRef(value=reference.to_owned())
   }
   (row, col)
 }
@@ -56,7 +56,7 @@ fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
 ///|
 pub fn column_name_to_number(name : StringView) -> Int raise XlsxError {
   if name == "" {
-    raise InvalidCellRef(value=name.to_string())
+    raise InvalidCellRef(value=name.to_owned())
   }
   let mut value = 0
   for c in name {
@@ -66,11 +66,11 @@ pub fn column_name_to_number(name : StringView) -> Int raise XlsxError {
     } else if u0 is ('a'..='z') {
       value = value * 26 + (u0 - 'a'.to_int() + 1)
     } else {
-      raise InvalidCellRef(value=name.to_string())
+      raise InvalidCellRef(value=name.to_owned())
     }
   }
   if value <= 0 {
-    raise InvalidCellRef(value=name.to_string())
+    raise InvalidCellRef(value=name.to_owned())
   }
   value
 }
@@ -113,7 +113,7 @@ let cell_ref_max_cols = 16384
 
 ///|
 pub fn split_cell_name(cell : StringView) -> (String, Int) raise XlsxError {
-  let text = cell.to_string()
+  let text = cell.to_owned()
   if text == "" {
     raise InvalidCellRef(value=text)
   }
@@ -162,11 +162,11 @@ pub fn cell_name_to_coordinates(
 ) -> (Int, Int) raise XlsxError {
   let (col_name, row) = split_cell_name(cell)
   if row > cell_ref_max_rows {
-    raise InvalidCellRef(value=cell.to_string())
+    raise InvalidCellRef(value=cell.to_owned())
   }
   let col = column_name_to_number(col_name)
   if col > cell_ref_max_cols {
-    raise InvalidCellRef(value=cell.to_string())
+    raise InvalidCellRef(value=cell.to_owned())
   }
   (col, row)
 }

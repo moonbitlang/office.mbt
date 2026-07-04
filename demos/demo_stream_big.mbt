@@ -1,6 +1,6 @@
 ///|
 fn parse_int(s : StringView) -> Int? {
-  let text = s.to_string().trim()
+  let text = s.to_owned().trim()
   if text == "" {
     return None
   }

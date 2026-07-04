@@ -9,7 +9,7 @@
 
 ///|
 fn normalize_culture_info(value : String) -> String {
-  value.to_lower().replace_all(old="_", new="-").trim().to_string()
+  value.to_lower().replace_all(old="_", new="-").trim().to_owned()
 }
 
 ///|

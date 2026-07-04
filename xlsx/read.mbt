@@ -1,6 +1,6 @@
 ///|
 fn is_utf8_encoding(value : StringView) -> Bool {
-  let normalized = value.to_string().to_lower()
+  let normalized = value.to_owned().to_lower()
   normalized == "utf-8" || normalized == "utf8"
 }
 
@@ -98,7 +98,7 @@ fn decode_utf8(
 
 ///|
 fn parse_default_font(xml : StringView) -> String {
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let marker = "<fonts"
   match xml_str.find(marker) {
     None => "Calibri"
@@ -319,7 +319,7 @@ fn parse_fonts(xml : StringView) -> Array[Font] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let open_end = match text.find(">") {
       Some(pos) => pos
       None => continue
@@ -352,10 +352,10 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
       let opacity = (alpha * 100 + 127) / 255
       let t = 100 - opacity
       let transparency = if t <= 0 { None } else { Some(t) }
-      let color = rgb[2:].to_string()
+      let color = rgb[2:].to_owned()
       (color, transparency)
     } else {
-      (rgb.to_string(), None)
+      (rgb.to_owned(), None)
     }
   }
 
@@ -422,7 +422,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
               first = false
               continue
             }
-            let text = chunk.to_string()
+            let text = chunk.to_owned()
             let open_end = match text.find(">") {
               Some(pos) => pos
               None => continue
@@ -636,7 +636,7 @@ fn parse_fills(xml : StringView) -> Array[Fill] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let open_end = match text.find(">") {
       Some(pos) => pos
       None => continue
@@ -701,14 +701,14 @@ fn parse_border_entry(
       Some(rgb) =>
         Some(
           Border::with_values(
-            side.to_string(),
+            side.to_owned(),
             color=normalize_rgb_hex(rgb),
             style~,
           ),
         )
       None =>
         if style > 0 {
-          Some(Border::with_values(side.to_string(), style~))
+          Some(Border::with_values(side.to_owned(), style~))
         } else {
           None
         }
@@ -808,7 +808,7 @@ fn parse_borders(xml : StringView) -> Array[Array[Border]] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let open_end = match text.find(">") {
       Some(pos) => pos
       None => continue
@@ -961,7 +961,7 @@ fn parse_defined_names(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="definedName tag not closed")
@@ -1017,7 +1017,7 @@ fn parse_merge_cells(xml : StringView) -> Array[String] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>
@@ -1056,13 +1056,13 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let close_tag = "</dataValidation>"
     match text.find(close_tag) {
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = text[:end]
-        validations.push("<dataValidation \{slice.to_string()}")
+        validations.push("<dataValidation \{slice.to_owned()}")
       }
       None => {
         let end = match text.find("/>") {
@@ -1070,7 +1070,7 @@ fn parse_data_validations(xml : StringView) -> Array[String] raise XlsxError {
           None => raise InvalidXml(msg="dataValidation tag not closed")
         }
         let slice = text[:end]
-        validations.push("<dataValidation \{slice.to_string()}")
+        validations.push("<dataValidation \{slice.to_owned()}")
       }
     }
   }
@@ -1082,7 +1082,7 @@ fn parse_data_validations_x14(
   xml : StringView,
 ) -> Array[String] raise XlsxError {
   let validations : Array[String] = []
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   if !xml_str.contains("<x14:dataValidation") {
     return validations
   }
@@ -1092,14 +1092,14 @@ fn parse_data_validations_x14(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let close_tag = "</x14:dataValidation>"
     let end = match text.find(close_tag) {
       Some(pos) => pos + close_tag.length()
       None => raise InvalidXml(msg="x14:dataValidation tag not closed")
     }
     let slice = text[:end]
-    let full = "<x14:dataValidation \{slice.to_string()}"
+    let full = "<x14:dataValidation \{slice.to_owned()}"
     let open_end = match full.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="x14:dataValidation open tag missing")
@@ -1170,7 +1170,7 @@ fn parse_data_validations_x14(
 ///|
 fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError {
   let formats : Array[String] = []
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   if !xml_str.contains("<conditionalFormatting") {
     return formats
   }
@@ -1180,13 +1180,13 @@ fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError 
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let close_tag = "</conditionalFormatting>"
     match text.find(close_tag) {
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = text[:end]
-        formats.push("<conditionalFormatting\{slice.to_string()}")
+        formats.push("<conditionalFormatting\{slice.to_owned()}")
       }
       None => {
         let end = match text.find("/>") {
@@ -1194,7 +1194,7 @@ fn parse_conditional_formats(xml : StringView) -> Array[String] raise XlsxError 
           None => raise InvalidXml(msg="conditionalFormatting tag not closed")
         }
         let slice = text[:end]
-        formats.push("<conditionalFormatting\{slice.to_string()}")
+        formats.push("<conditionalFormatting\{slice.to_owned()}")
       }
     }
   }
@@ -1244,7 +1244,7 @@ fn build_icon_set_rule_xml_from_x14(
 ///|
 fn parse_x14_cfvo_values(xml : StringView) -> Array[String] raise XlsxError {
   let cfvos : Array[String] = []
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   if !xml_str.contains("<x14:cfvo") {
     return cfvos
   }
@@ -1254,13 +1254,13 @@ fn parse_x14_cfvo_values(xml : StringView) -> Array[String] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let close_tag = "</x14:cfvo>"
     let full = match text.find(close_tag) {
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = text[:end]
-        "<x14:cfvo\{slice.to_string()}"
+        "<x14:cfvo\{slice.to_owned()}"
       }
       None => {
         let end = match text.find("/>") {
@@ -1268,7 +1268,7 @@ fn parse_x14_cfvo_values(xml : StringView) -> Array[String] raise XlsxError {
           None => raise InvalidXml(msg="x14:cfvo tag not closed")
         }
         let slice = text[:end]
-        "<x14:cfvo\{slice.to_string()}"
+        "<x14:cfvo\{slice.to_owned()}"
       }
     }
     let open_end = match full.find(">") {
@@ -1308,7 +1308,7 @@ fn parse_x14_cfvo_values(xml : StringView) -> Array[String] raise XlsxError {
 
 ///|
 fn color_text_from_rgb_x14(rgb : StringView) -> String {
-  let text = rgb.to_string()
+  let text = rgb.to_owned()
   match text.strip_prefix("FF") {
     Some(rest) if text.length() == 8 => "#\{rest}"
     _ => "#\{text}"
@@ -1320,7 +1320,7 @@ fn parse_x14_conditional_formatting_blocks(
   xml : StringView,
 ) -> Array[String] raise XlsxError {
   let blocks : Array[String] = []
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   if xml_str.contains("<x14:conditionalFormattings") &&
     !xml_str.contains("</x14:conditionalFormattings>") {
     raise InvalidXml(msg="x14:conditionalFormattings tag not closed")
@@ -1376,12 +1376,12 @@ fn parse_x14_conditional_formatting_blocks(
       continue
     }
     let after_start = xml_str[start:]
-    let after_text = after_start.to_string()
+    let after_text = after_start.to_owned()
     let (full, consumed) = match after_text.find(close_tag) {
       Some(pos) => {
         let end = pos + close_tag.length()
         let slice = after_text[:end]
-        (slice.to_string(), end)
+        (slice.to_owned(), end)
       }
       None => {
         let end = match after_text.find("/>") {
@@ -1390,7 +1390,7 @@ fn parse_x14_conditional_formatting_blocks(
             raise InvalidXml(msg="x14:conditionalFormatting tag not closed")
         }
         let slice = after_text[:end]
-        (slice.to_string(), end)
+        (slice.to_owned(), end)
       }
     }
     blocks.push(full)
@@ -1426,13 +1426,13 @@ fn parse_x14_data_bars(
         rule_first = false
         continue
       }
-      let rule_text = rule_chunk.to_string()
+      let rule_text = rule_chunk.to_owned()
       let rule_close = "</x14:cfRule>"
       let rule_full = match rule_text.find(rule_close) {
         Some(pos) => {
           let end = pos + rule_close.length()
           let slice = rule_text[:end]
-          "<x14:cfRule\{slice.to_string()}"
+          "<x14:cfRule\{slice.to_owned()}"
         }
         None => {
           let end = match rule_text.find("/>") {
@@ -1440,7 +1440,7 @@ fn parse_x14_data_bars(
             None => raise InvalidXml(msg="x14:cfRule tag not closed")
           }
           let slice = rule_text[:end]
-          "<x14:cfRule\{slice.to_string()}"
+          "<x14:cfRule\{slice.to_owned()}"
         }
       }
       let open_end = match rule_full.find(">") {
@@ -1491,7 +1491,7 @@ fn parse_x14_data_bars(
 
 ///|
 fn worksheet_ext_uri_is_known(uri : StringView) -> Bool {
-  match uri.to_string() {
+  match uri.to_owned() {
     "{78C0D931-6437-407d-A8EE-F0AAD7539E65}" => true
     "{05C60535-1F16-4fd2-B633-F4F36F0B64E0}" => true
     "{A8765BA9-456A-4dab-B4F3-ACF838C121DE}" => true
@@ -1505,7 +1505,7 @@ fn parse_unknown_worksheet_ext_blocks(
   xml : StringView,
 ) -> Array[String] raise XlsxError {
   let unknown : Array[String] = []
-  let text = xml.to_string()
+  let text = xml.to_owned()
   let ext_start = match text.rev_find("<extLst") {
     Some(pos) => pos
     None => return unknown
@@ -1521,12 +1521,12 @@ fn parse_unknown_worksheet_ext_blocks(
   }
   let body = ext_tail[open_end + 1:close_rel]
   let mut first = true
-  for chunk in body.to_string().split("<ext ") {
+  for chunk in body.to_owned().split("<ext ") {
     if first {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let full = "<ext " + text
     let end = match full.find("</ext>") {
       Some(pos) => pos + "</ext>".length()
@@ -1554,7 +1554,7 @@ fn parse_unknown_worksheet_ext_blocks(
       block.contains("<x14:slicerList") {
       continue
     }
-    unknown.push(block.to_string())
+    unknown.push(block.to_owned())
   }
   unknown
 }
@@ -1586,13 +1586,13 @@ fn parse_conditional_formats_x14(
           rule_first = false
           continue
         }
-        let rule_text = rule_chunk.to_string()
+        let rule_text = rule_chunk.to_owned()
         let rule_close = "</x14:cfRule>"
         let rule_full = match rule_text.find(rule_close) {
           Some(pos) => {
             let end = pos + rule_close.length()
             let slice = rule_text[:end]
-            "<x14:cfRule\{slice.to_string()}"
+            "<x14:cfRule\{slice.to_owned()}"
           }
           None => {
             let end = match rule_text.find("/>") {
@@ -1600,7 +1600,7 @@ fn parse_conditional_formats_x14(
               None => raise InvalidXml(msg="x14:cfRule tag not closed")
             }
             let slice = rule_text[:end]
-            "<x14:cfRule\{slice.to_string()}"
+            "<x14:cfRule\{slice.to_owned()}"
           }
         }
         let open_end = match rule_full.find(">") {
@@ -1670,7 +1670,7 @@ fn parse_conditional_formats_x14(
 
 ///|
 fn parse_sheet_dimension(xml : StringView) -> String? raise XlsxError {
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let marker = "<dimension"
   match xml_str.find(marker) {
     None => None
@@ -1701,7 +1701,7 @@ fn parse_sheet_view_pane(body : StringView) -> SheetPane? raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>
@@ -1754,7 +1754,7 @@ fn parse_sheet_view_selections(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>
@@ -1795,7 +1795,7 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="sheetView tag not closed")
@@ -1858,7 +1858,7 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
         }
       None => ()
     }
-    let self_closing = tag.to_string().trim().has_suffix("/")
+    let self_closing = tag.to_owned().trim().has_suffix("/")
     if !self_closing {
       let close = match text.find("</sheetView>") {
         Some(pos) => pos
@@ -2365,7 +2365,7 @@ fn parse_page_breaks(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find("/>") {
       Some(pos) => pos
       None =>
@@ -2429,7 +2429,7 @@ fn parse_auto_filter_columns(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="filterColumn tag not closed")
@@ -2461,7 +2461,7 @@ fn parse_auto_filter_columns(
               first_filter = false
               continue
             }
-            let filter_text = part.to_string()
+            let filter_text = part.to_owned()
             let filter_end = match filter_text.find("/>") {
               Some(pos) => pos
               None =>
@@ -2498,7 +2498,7 @@ fn parse_auto_filter_columns(
               first_custom = false
               continue
             }
-            let custom_text = part.to_string()
+            let custom_text = part.to_owned()
             let custom_end = match custom_text.find("/>") {
               Some(pos) => pos
               None =>
@@ -2576,7 +2576,7 @@ fn parse_hyperlink_elements(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="hyperlink tag not closed")
@@ -2617,8 +2617,8 @@ fn parse_legacy_drawing_rel_id(
   xml : StringView,
   tag_name : StringView,
 ) -> String? raise XlsxError {
-  let xml_str = xml.to_string()
-  let marker = "<\{tag_name.to_string()}"
+  let xml_str = xml.to_owned()
+  let marker = "<\{tag_name.to_owned()}"
   let chars = xml_str.to_array()
   let mut pos = 0
   while pos < xml_str.length() {
@@ -2647,13 +2647,13 @@ fn parse_legacy_drawing_rel_id(
       None =>
         match text.find(">") {
           Some(value) => value
-          None => raise InvalidXml(msg="\{tag_name.to_string()} tag not closed")
+          None => raise InvalidXml(msg="\{tag_name.to_owned()} tag not closed")
         }
     }
     let tag = text[:end]
     let id = match attr_value(tag, "r:id") {
       Some(value) => value
-      None => raise InvalidXml(msg="\{tag_name.to_string()} id missing")
+      None => raise InvalidXml(msg="\{tag_name.to_owned()} id missing")
     }
     return Some(id)
   }
@@ -2662,7 +2662,7 @@ fn parse_legacy_drawing_rel_id(
 
 ///|
 fn parse_bool_attr(value : StringView) -> Bool {
-  match value.to_string() {
+  match value.to_owned() {
     "1" => true
     "true" => true
     "TRUE" => true
@@ -2672,7 +2672,7 @@ fn parse_bool_attr(value : StringView) -> Bool {
 
 ///|
 fn parse_inline_string(rest : StringView) -> InlineStringEntry raise XlsxError {
-  let text = rest.to_string()
+  let text = rest.to_owned()
   let start = match text.find("<is") {
     Some(pos) => pos
     None => return { text: "", runs: None }
@@ -2713,7 +2713,7 @@ fn parse_row_dimensions(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="row tag not closed")
@@ -2780,7 +2780,7 @@ fn parse_col_dimensions(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="col tag not closed")
@@ -3225,7 +3225,7 @@ fn read_zip_bytes(
             Some(pos) =>
               if pos + 1 < path_text.length() {
                 let view = path_text[pos + 1:]
-                view.to_string().to_lower()
+                view.to_owned().to_lower()
               } else {
                 raise InvalidSheetBackground(msg="image extension missing")
               }

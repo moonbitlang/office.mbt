@@ -95,7 +95,7 @@ fn Worksheet::set_sheet_dimension(
   range_ref : StringView,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  if range_ref.to_string() == "" {
+  if range_ref.to_owned() == "" {
     self.dimension_ref = None
     return
   }

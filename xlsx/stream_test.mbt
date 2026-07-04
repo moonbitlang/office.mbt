@@ -113,7 +113,7 @@ test "stream writer table merge and row opts" {
     Some(value) => value
     None => fail("missing sheet")
   }
-  debug_inspect(sheet.merged_cells().to_array(), content="[\"A1:B1\"]")
+  debug_inspect(sheet.merged_cells().to_owned(), content="[\"A1:B1\"]")
   let table = match sheet.tables().get(0) {
     Some(value) => value
     None => fail("missing table")

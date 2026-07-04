@@ -119,9 +119,9 @@ fn part_extension(name : String) -> String? {
           if slash > dot {
             None
           } else {
-            Some(name[dot + 1:].to_string())
+            Some(name[dot + 1:].to_owned())
           }
-        None => Some(name[dot + 1:].to_string())
+        None => Some(name[dot + 1:].to_owned())
       }
     None => None
   }
@@ -139,7 +139,7 @@ fn parse_content_types(xml : String) -> (Map[String, Bool], Map[String, Bool]) {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => continue
@@ -156,7 +156,7 @@ fn parse_content_types(xml : String) -> (Map[String, Bool], Map[String, Bool]) {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => continue
@@ -181,7 +181,7 @@ fn parse_rel_targets(xml : String) -> Array[(String, Bool)] {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => continue
@@ -208,7 +208,7 @@ fn parse_rel_targets(xml : String) -> Array[(String, Bool)] {
 /// the root `_rels/.rels` this is the package root ("").
 fn rels_base_dir(rels_part : String) -> String {
   match rels_part.rev_find("_rels/") {
-    Some(pos) => rels_part[:pos].to_string()
+    Some(pos) => rels_part[:pos].to_owned()
     None => ""
   }
 }
@@ -220,13 +220,13 @@ fn rels_base_dir(rels_part : String) -> String {
 /// unresolvable rather than a definite error).
 fn resolve_part_path(base : String, target : String) -> String {
   let combined = if target.has_prefix("/") {
-    target[1:].to_string()
+    target[1:].to_owned()
   } else {
     base + target
   }
   let segments : Array[String] = []
   for segment in combined.split("/") {
-    let seg = segment.to_string()
+    let seg = segment.to_owned()
     if seg == "" || seg == "." {
       continue
     }

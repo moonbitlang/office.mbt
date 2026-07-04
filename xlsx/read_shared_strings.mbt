@@ -19,7 +19,7 @@ fn parse_text_nodes(xml : StringView) -> String {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let start = match text.find(">") {
       Some(pos) => pos + 1
       None => continue
@@ -320,7 +320,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
 ///|
 fn parse_rich_text_runs(xml : StringView) -> Array[RichTextRun] raise XlsxError {
   let runs : Array[RichTextRun] = []
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let mut index = 0
   while index < xml_str.length() {
     let rest = xml_str[index:]
@@ -372,7 +372,7 @@ fn parse_shared_strings(xml : StringView) -> Array[SharedStringEntry] {
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let start = match text.find(">") {
       Some(pos) => pos + 1
       None => continue

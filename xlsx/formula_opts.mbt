@@ -18,7 +18,7 @@ fn formula_type_to_ooxml(kind : FormulaType) -> String {
 
 ///|
 fn formula_type_from_ooxml(value : StringView) -> FormulaType? {
-  match value.to_string() {
+  match value.to_owned() {
     "normal" => Some(Normal)
     "array" => Some(Array)
     "shared" => Some(Shared)

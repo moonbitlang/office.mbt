@@ -181,7 +181,7 @@ fn normalize_defined_name_scope(scope : StringView) -> String {
   if scope == "" {
     "Workbook"
   } else {
-    scope.to_string()
+    scope.to_owned()
   }
 }
 
@@ -219,7 +219,7 @@ fn check_defined_name(name : StringView) -> Unit raise XlsxError {
 
 ///|
 fn escape_sheet_name(name : StringView) -> String {
-  name.to_string().replace_all(old="'", new="''")
+  name.to_owned().replace_all(old="'", new="''")
 }
 
 ///|
@@ -228,11 +228,11 @@ fn replace_sheet_name_in_refers_to(
   from_name : StringView,
   to_name : StringView,
 ) -> String {
-  let raw = refers_to.to_string()
+  let raw = refers_to.to_owned()
   let quoted_from = "'\{escape_sheet_name(from_name)}'!"
   let quoted_to = "'\{escape_sheet_name(to_name)}'!"
-  let plain_from = "\{from_name.to_string()}!"
-  let plain_to = "\{to_name.to_string()}!"
+  let plain_from = "\{from_name.to_owned()}!"
+  let plain_to = "\{to_name.to_owned()}!"
   raw
   .replace_all(old=quoted_from, new=quoted_to)
   .replace_all(old=plain_from, new=plain_to)

@@ -16,7 +16,7 @@ fn parse_workbook_sheets(
       first = false
       continue
     }
-    let text = chunk.to_string()
+    let text = chunk.to_owned()
     let end = match text.find(">") {
       Some(pos) => pos
       None => raise InvalidXml(msg="sheet tag not closed")
@@ -46,7 +46,7 @@ fn parse_workbook_sheets(
 
 ///|
 fn parse_active_sheet_index(xml : StringView) -> Int? raise XlsxError {
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let marker = "<workbookView"
   match xml_str.find(marker) {
     None => None
@@ -74,7 +74,7 @@ fn parse_active_sheet_index(xml : StringView) -> Int? raise XlsxError {
 fn parse_workbook_props(
   xml : StringView,
 ) -> WorkbookPropsOptions raise XlsxError {
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let marker = "<workbookPr"
   match xml_str.find(marker) {
     None => WorkbookPropsOptions::new()
@@ -105,7 +105,7 @@ fn parse_workbook_props(
 
 ///|
 fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let marker = "<calcPr"
   match xml_str.find(marker) {
     None => CalcPropsOptions::new()
@@ -206,7 +206,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
 fn parse_workbook_protection(
   xml : StringView,
 ) -> WorkbookProtection? raise XlsxError {
-  let xml_str = xml.to_string()
+  let xml_str = xml.to_owned()
   let marker = "<workbookProtection"
   match xml_str.find(marker) {
     None => None

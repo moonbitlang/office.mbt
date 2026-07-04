@@ -17,7 +17,7 @@ pub fn MergeCell::get_cell_value(self : MergeCell) -> String {
 ///|
 pub fn MergeCell::get_start_axis(self : MergeCell) -> String {
   match self.range_ref.split_once(":") {
-    Some((start, _)) => start.to_string()
+    Some((start, _)) => start.to_owned()
     None => self.range_ref
   }
 }
@@ -25,7 +25,7 @@ pub fn MergeCell::get_start_axis(self : MergeCell) -> String {
 ///|
 pub fn MergeCell::get_end_axis(self : MergeCell) -> String {
   match self.range_ref.split_once(":") {
-    Some((_, end)) => end.to_string()
+    Some((_, end)) => end.to_owned()
     None => self.range_ref
   }
 }

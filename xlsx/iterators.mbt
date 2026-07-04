@@ -453,7 +453,7 @@ pub fn Workbook::rows(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_owned())
   }
   Rows::new_with_options(sheet, Some(self.styles), self.options)
 }
@@ -466,7 +466,7 @@ pub fn Workbook::cols(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_owned())
   }
   Cols::new_with_options(sheet, Some(self.styles), self.options)
 }
@@ -484,7 +484,7 @@ pub fn Workbook::get_rows(
   }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_owned())
   }
   let entries = collect_row_entries_with_options(
     sheet,
@@ -525,7 +525,7 @@ pub fn Workbook::get_cols(
   }
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_owned())
   }
   collect_columns_with_options(sheet, self.styles, resolved_options)
 }

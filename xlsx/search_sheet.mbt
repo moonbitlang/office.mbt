@@ -191,7 +191,7 @@ pub fn Workbook::search_sheet(
   check_sheet_name(sheet_name)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
-    None => raise SheetNotFound(name=sheet_name.to_string())
+    None => raise SheetNotFound(name=sheet_name.to_owned())
   }
   let use_regex = reg
   let results : Array[String] = []

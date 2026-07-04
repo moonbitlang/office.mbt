@@ -22,13 +22,13 @@ fn rel_attr_values_pivot_chart(xml : String, attr : String) -> Array[String] {
       first = false
       continue
     }
-    let part = chunk.to_string()
+    let part = chunk.to_owned()
     match part.find(marker) {
       Some(start) => {
         let rest = part[start + marker.length():]
         match rest.find("\"") {
           Some(end) => {
-            let value = rest[:end].to_string()
+            let value = rest[:end].to_owned()
             values.push(value)
           }
           None => ()
