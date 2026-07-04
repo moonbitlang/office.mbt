@@ -457,12 +457,17 @@ All functions that can fail raise `@xlsx.XlsxError`. Common error variants:
 - `EncryptedPackage` - File is encrypted but no password provided
 - `InvalidPassword` - Decryption failed with given password
 
-Use `try?` to convert errors to `Result`:
+Handle errors with `try`/`catch`:
 
 ```mbt nocheck
 ///|
-fn safe_read(bytes : Bytes) -> Result[@xlsx.Workbook, Error] {
-  try? @mbtexcel.read(bytes)
+fn describe(bytes : Bytes) -> String {
+  try {
+    let workbook = @mbtexcel.read(bytes)
+    "loaded \{workbook.get_sheet_list().length()} sheets"
+  } catch {
+    err => "read failed: \{err}"
+  }
 }
 ```
 
