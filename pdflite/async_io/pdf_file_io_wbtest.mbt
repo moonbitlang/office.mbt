@@ -17,6 +17,17 @@ fn pdf_async_io_assert_generated_id_for_test(
 }
 
 ///|
+// Ensure `dir` exists. The generated async test driver runs tests
+// concurrently, so `mkdir` can race with another test creating the same
+// directory (it re-raises "already exists"); treat "already exists" as
+// success by re-checking, and re-raise any genuine failure.
+async fn pdf_async_io_ensure_dir_for_test(dir : String) -> Unit {
+  try @fs.mkdir(dir, recursive=true) catch {
+    err => if @fs.exists(dir) == false { raise err }
+  }
+}
+
+///|
 async fn pdf_async_io_test_path_for_test(name : String) -> String {
   let directory = match @env.current_dir() {
     Some(current_dir) => current_dir + "/_build/"
@@ -24,9 +35,7 @@ async fn pdf_async_io_test_path_for_test(name : String) -> String {
   }
   // In the `moon work` workspace the build directory lives at the workspace
   // root, so `_build` relative to the pdflite module cwd may not exist yet.
-  if @fs.exists(directory) == false {
-    @fs.mkdir(directory, recursive=true)
-  }
+  pdf_async_io_ensure_dir_for_test(directory)
   directory + "pdflite_async_io_" + name + "_" + @env.now().to_string() + ".pdf"
 }
 
@@ -46,9 +55,7 @@ async fn pdf_async_io_build_dir_for_test() -> String {
   }
   // See pdf_async_io_test_path_for_test: ensure the module-relative `_build`
   // directory exists under the workspace build layout.
-  if @fs.exists(dir) == false {
-    @fs.mkdir(dir, recursive=true)
-  }
+  pdf_async_io_ensure_dir_for_test(dir)
   dir
 }
 

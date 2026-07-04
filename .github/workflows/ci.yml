@@ -14,6 +14,10 @@ jobs:
   test:
     name: check + test (mbtexcel + docx2html + pdflite, nightly)
     runs-on: ubuntu-latest
+    # The Build (native) step compiles one very large generated C file
+    # (pdflite's markdown CLI); cap the job so a pathological compile fails
+    # loudly instead of hanging for the 6h default.
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -101,6 +105,14 @@ jobs:
       - name: Test (native)
         run: moon test --target native
 
+      # Build all native executables once, up front. `moon cram test` builds
+      # every workspace executable before running a doc, and one of them
+      # (pdflite's markdown CLI) generates a very large C file that takes the
+      # C compiler many minutes — doing it here keeps that one-time cost out
+      # of the cram steps (which then run from cache).
+      - name: Build (native)
+        run: moon build --target native
+
       # Executable-doc cram tests for each CLI.
       - name: Cram tests (xlsx CLI)
         run: moon cram test cmd/xlsx/cram/
@@ -108,7 +120,13 @@ jobs:
       - name: Cram tests (docx2html CLI)
         run: moon cram test docx2html/tests/cram
 
+      # pdflite's cram doc invokes the CLI and a fixture via env vars (it does
+      # not rely on PATH); the Build (native) step above has already produced
+      # the binary at the workspace build path.
       - name: Cram tests (pdflite CLI)
+        env:
+          PDFLITE_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/pdflite/cmd/main/main.exe
+          PDFLITE_LOGO_PDF: ${{ github.workspace }}/pdflite/fixtures/camlpdf/logo.pdf
         run: moon cram test pdflite/tests/cram
 
       # The mbtexcel library and xlsx CLI also target wasm end to end. Build the
