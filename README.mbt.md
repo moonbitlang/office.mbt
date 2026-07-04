@@ -13,27 +13,28 @@ A pure MoonBit library for reading and writing Microsoft Excel (XLSX) files. Thi
 - Sparklines
 - Sheet protection and workbook encryption
 - Formula evaluation with 300+ built-in functions
+- Typed date/time and duration cells with automatic number formats
 - Streaming API for large files
+- Embedded cell image reading (WPS `DISPIMG`, rich-value "Place in cell", `IMAGE()`)
+- OOXML package validation and a command-line tool
 
 ## Installation
 
-Add to your `moon.mod.json`:
+Add the dependency to your module:
 
-```json
-{
-  "deps": {
-    "bobzhang/mbtexcel": "0.1.1"
-  }
+```sh
+moon add bobzhang/mbtexcel
+```
+
+Then import it in the `moon.pkg` of the package that uses it:
+
+```
+import {
+  "bobzhang/mbtexcel",
 }
 ```
 
-Then add to your package's `moon.pkg.json`:
-
-```json
-{
-  "import": ["bobzhang/mbtexcel"]
-}
-```
+Call the library through its default alias `@mbtexcel` (e.g. `@mbtexcel.new_workbook()`).
 
 ## Quick Start
 
@@ -190,6 +191,133 @@ test "merged cells" {
 }
 ```
 
+### Styling Cells
+
+```mbt check
+///|
+test "cell styling" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "1234.5")
+
+  // A style combines a number format with a font, fill, border, etc.
+  let style = workbook.new_style(
+    @xlsx.Style::builtin_number_format(2) // "0.00"
+    .with_font(@xlsx.Font::with_values(bold=true, color="#FF0000")),
+  )
+  workbook.set_cell_style("Sheet1", "A1", style)
+  debug_inspect(
+    workbook.get_cell_style("Sheet1", "A1"),
+    content="Some(\{style})",
+  )
+}
+```
+
+### Dates and Times
+
+```mbt check
+///|
+test "typed dates" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+
+  // Store a datetime; it is written as an Excel date serial with a default
+  // date number format (honoring the workbook's 1900/1904 date system).
+  workbook.set_cell_time("Sheet1", "A1", @time.date_time(2024, 7, 3))
+  debug_inspect(
+    workbook.get_cell("Sheet1", "A1"),
+    content=(
+      #|Some("45476")
+    ),
+  )
+
+  // The reverse conversion is available directly.
+  inspect(
+    time_to_excel_date(@time.date_time(2021, 1, 1, hour=12)),
+    content="44197.5",
+  )
+}
+```
+
+### Streaming Large Sheets
+
+For workbooks with many rows, the streaming writer avoids holding every
+cell in memory at once.
+
+```mbt check
+///|
+test "streaming writer" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Big"))
+  let stream = workbook.new_stream_writer("Big")
+  for r in 1..<=1000 {
+    stream.set_row_cells("A\{r}", [
+      @xlsx.StreamCell::new("row \{r}"),
+      @xlsx.StreamCell::new_value(Numeric(r.to_double())),
+    ])
+  }
+  stream.flush()
+  let parsed = read(write(workbook))
+  debug_inspect(
+    parsed.get_cell("Big", "B1000"),
+    content=(
+      #|Some("1000")
+    ),
+  )
+}
+```
+
+### Password Protection
+
+```mbt check
+///|
+test "password protection" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Secret"))
+  workbook.set_cell("Secret", "A1", "classified")
+
+  let encrypted = write_with_password(workbook, "s3cret")
+  let reopened = read_with_password(encrypted, "s3cret")
+  debug_inspect(
+    reopened.get_cell("Secret", "A1"),
+    content=(
+      #|Some("classified")
+    ),
+  )
+}
+```
+
+### Validating the Output Package
+
+`validate_ooxml_package` runs fast structural checks (content-type
+coverage, relationship integrity, required parts, well-formed part
+names) — the common causes of Excel's "we found a problem" repair
+dialog. An empty result means the package is well-formed.
+
+```mbt check
+///|
+test "validate output" {
+  let workbook = new_workbook()
+  ignore(workbook.add_sheet("Sheet1"))
+  workbook.set_cell("Sheet1", "A1", "hello")
+  debug_inspect(@xlsx.validate_ooxml_package(write(workbook)[:]), content="[]")
+}
+```
+
+## Command-Line Tool
+
+The repo ships a small CLI (`cmd/xlsx`) for common operations without
+writing code:
+
+```sh
+moon run cmd/xlsx -- create book.xlsx --sheet Data
+moon run cmd/xlsx -- set book.xlsx Data A1 Hello
+moon run cmd/xlsx -- get book.xlsx Data A1          # -> Hello
+moon run cmd/xlsx -- sheets book.xlsx               # -> Data
+moon run cmd/xlsx -- rows book.xlsx                 # CSV of the sheet
+moon run cmd/xlsx -- validate book.xlsx             # -> valid
+```
+
 ## Demos
 
 This repo includes a runnable demo generator that produces real `.xlsx` files you can open in Excel/Numbers/LibreOffice.
@@ -280,6 +408,13 @@ See `docs/demos.md` for what each demo generates and how the code is structured.
 | Function | Description |
 |----------|-------------|
 | `excel_date_to_time(serial)` | Convert Excel date serial to `ZonedDateTime` |
+| `time_to_excel_date(datetime)` | Convert a `ZonedDateTime` to an Excel date serial |
+
+### Validation
+
+| Function | Description |
+|----------|-------------|
+| `@xlsx.validate_ooxml_package(bytes)` | Return a list of OOXML package structure problems (empty = valid) |
 
 ## Core Types
 
