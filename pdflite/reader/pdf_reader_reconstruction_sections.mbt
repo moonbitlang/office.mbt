@@ -41,7 +41,7 @@ pub fn pdf_reader_reconstruction_classic_xref_sections(
 pub fn pdf_reader_reconstruction_xref_stream_sections(
   data : BytesView,
   read_section_at : (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError,
-) -> Array[PdfXRefSection] {
+) -> Array[PdfXRefSection] raise @core.PdfError {
   let sections : Array[PdfXRefSection] = Array::new(capacity=1)
   let cursor = @core.byte_cursor_of_view(data)
   let mut position = 0
@@ -60,9 +60,13 @@ pub fn pdf_reader_reconstruction_xref_stream_sections(
           position = next_position
         }
         Err(_) =>
-          position = pdf_reader_reconstruction_skip_malformed_object(
-            data, position,
-          ).unwrap()
+          match
+            pdf_reader_reconstruction_skip_malformed_object(data, position) {
+            Some(next) => position = next
+            // Defensive: the candidate matched an indirect-object header
+            // above, so the skip scanner accepts the same position.
+            None => raise XRefEntryExpected
+          }
       }
     } else {
       position += 1

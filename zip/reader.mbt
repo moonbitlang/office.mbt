@@ -187,6 +187,7 @@ priv struct EntryMeta {
   compression_method : Int
   local_header_offset : Int
   compressed_size : Int
+  uncompressed_size : Int
 }
 
 ///|
@@ -342,7 +343,16 @@ fn read_entry_data(bytes : BytesView, meta : EntryMeta) -> Bytes raise ZipError 
   let compressed = reader.read_bytes(meta.compressed_size)
   match compression {
     Store => compressed.to_owned()
-    Deflate => deflate_decode(compressed)
+    Deflate => {
+      // Allow legitimately large declared entries, but keep a hard ceiling so a
+      // lying tiny archive cannot expand without bound (decompression bomb).
+      let max_output = if meta.uncompressed_size > deflate_max_output_default {
+        meta.uncompressed_size
+      } else {
+        deflate_max_output_default
+      }
+      deflate_decode(compressed, max_output~)
+    }
   }
 }
 
@@ -382,7 +392,19 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
   if central_offset + central_size > bytes.length() {
     raise OutOfBounds(offset=central_offset)
   }
-  let metas : Array[EntryMeta] = Array::new(capacity=entry_count)
+  // The declared entry count is attacker-controlled (zip64 EOCD): clamp the
+  // preallocation against what the central directory could actually hold
+  // (its range was validated against the input just above). Each central
+  // directory record needs at least 46 bytes, so a lying count still fails
+  // during parsing without a huge up-front allocation.
+  let max_plausible_entries = central_size / 46 + 1
+  let metas : Array[EntryMeta] = Array::new(
+    capacity=if entry_count < max_plausible_entries {
+      entry_count
+    } else {
+      max_plausible_entries
+    },
+  )
   let central_reader = Reader::new(bytes, central_offset)
   for _ in 0..<entry_count {
     let header_offset = central_reader.pos
@@ -425,7 +447,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     } else {
       (None, None, None)
     }
-    let _uncomp_size = if need_uncomp {
+    let uncomp_size = if need_uncomp {
       match zip_uncomp {
         Some(value) => u64_to_int(value)
         None => raise UnsupportedFeature(msg="zip64 size missing")
@@ -455,6 +477,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
       compression_method: method_id,
       local_header_offset: local_offset,
       compressed_size: comp_size,
+      uncompressed_size: uncomp_size,
     })
   }
   let archive = Archive::new()

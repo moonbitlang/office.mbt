@@ -111,7 +111,13 @@ pub fn read_xml_string(
   source : String,
   namespace_map? : Map[String, String] = {},
 ) -> XmlElement raise DocxError {
-  let parser = XmlParser::{ source, pos: 0, namespace_map, namespaces: {} }
+  let parser = XmlParser::{
+    source,
+    pos: 0,
+    depth: 0,
+    namespace_map,
+    namespaces: {},
+  }
   parser.skip_misc()
   let root = parser.parse_element()
   parser.skip_misc()
@@ -298,15 +304,34 @@ fn write_serialized_xml_attribute(
 }
 
 ///|
+/// Maximum element nesting depth accepted by the XML parser. Deeper documents
+/// are rejected instead of overflowing the stack on malicious input.
+let xml_max_depth : Int = 512
+
+///|
 priv struct XmlParser {
   source : String
   mut pos : Int
+  mut depth : Int
   namespace_map : Map[String, String]
   namespaces : Map[String, String]
 }
 
 ///|
 fn XmlParser::parse_element(self : XmlParser) -> XmlElement raise DocxError {
+  if self.depth >= xml_max_depth {
+    raise InvalidXml(message="XML nesting too deep")
+  }
+  self.depth = self.depth + 1
+  let element = self.parse_element_inner()
+  self.depth = self.depth - 1
+  element
+}
+
+///|
+fn XmlParser::parse_element_inner(
+  self : XmlParser,
+) -> XmlElement raise DocxError {
   self.expect("<")
   let raw_name = self.read_name()
   let raw_attributes : Array[(String, String)] = []
@@ -341,7 +366,8 @@ fn XmlParser::parse_element(self : XmlParser) -> XmlElement raise DocxError {
       }
     }
   }
-  abort("unreachable")
+  // Defensive: the loop above always returns or raises.
+  raise InvalidXml(message="unterminated element")
 }
 
 ///|
@@ -398,7 +424,7 @@ fn XmlParser::build_element(
   raw_name : String,
   raw_attributes : Array[(String, String)],
   children : Array[XmlNode],
-) -> XmlElement {
+) -> XmlElement raise DocxError {
   let attributes : Map[String, String] = {}
   for item in raw_attributes {
     let (name, value) = item
@@ -481,6 +507,39 @@ fn XmlParser::skip_whitespace(self : XmlParser) -> Unit {
 }
 
 ///|
+fn xml_boundary_splits_pair(source : String, boundary : Int) -> Bool {
+  if boundary <= 0 || boundary >= source.length() {
+    return false
+  }
+  let unit = source[boundary].to_int()
+  let previous = source[boundary - 1].to_int()
+  unit >= 0xDC00 && unit <= 0xDFFF && previous >= 0xD800 && previous <= 0xDBFF
+}
+
+///|
+/// Extract a substring by UTF-16 code-unit range. Core string slicing aborts
+/// when a boundary splits a surrogate pair, so malicious input could crash
+/// the parser; raise the parser's typed error instead of aborting or of
+/// silently emitting an invalid-UTF-16 slice. Slices whose boundaries fall on
+/// valid positions are copied verbatim (exactly what core slicing produced
+/// historically), so well-formed documents are unaffected.
+fn xml_substring(
+  source : String,
+  start : Int,
+  end : Int,
+) -> String raise DocxError {
+  if xml_boundary_splits_pair(source, start) ||
+    xml_boundary_splits_pair(source, end) {
+    raise InvalidXml(message="invalid UTF-16 in XML content")
+  }
+  let builder = StringBuilder()
+  for index in start..<end {
+    builder.write_char(Int::unsafe_to_char(source[index].to_int()))
+  }
+  builder.to_string()
+}
+
+///|
 fn XmlParser::read_name(self : XmlParser) -> String raise DocxError {
   let start = self.pos
   while self.pos < self.source.length() {
@@ -500,7 +559,7 @@ fn XmlParser::read_name(self : XmlParser) -> String raise DocxError {
   if self.pos == start {
     raise InvalidXml(message="expected XML name")
   }
-  self.source[start:self.pos].to_owned()
+  xml_substring(self.source, start, self.pos)
 }
 
 ///|
@@ -520,18 +579,18 @@ fn XmlParser::read_quoted_value(self : XmlParser) -> String raise DocxError {
   if self.pos >= self.source.length() {
     raise InvalidXml(message="unterminated attribute value")
   }
-  let value = self.source[start:self.pos].to_owned()
+  let value = xml_substring(self.source, start, self.pos)
   self.pos = self.pos + 1
   value
 }
 
 ///|
-fn XmlParser::read_text(self : XmlParser) -> String {
+fn XmlParser::read_text(self : XmlParser) -> String raise DocxError {
   let start = self.pos
   while self.pos < self.source.length() && self.source[self.pos] != '<' {
     self.pos = self.pos + 1
   }
-  self.source[start:self.pos].to_owned()
+  xml_substring(self.source, start, self.pos)
 }
 
 ///|
@@ -565,7 +624,7 @@ fn XmlParser::read_until(
   let start = self.pos
   while self.pos + needle.length() <= self.source.length() {
     if self.starts_with(needle) {
-      return self.source[start:self.pos].to_owned()
+      return xml_substring(self.source, start, self.pos)
     }
     self.pos = self.pos + 1
   }
@@ -582,14 +641,14 @@ fn XmlParser::skip_until(
 }
 
 ///|
-fn decode_xml_entities(value : String) -> String {
+fn decode_xml_entities(value : String) -> String raise DocxError {
   let builder = StringBuilder()
   let mut index = 0
   while index < value.length() {
     if value[index] == '&' {
       match value[index:].find(";") {
         Some(length) => {
-          let entity = value[index + 1:index + length].to_owned()
+          let entity = xml_substring(value, index + 1, index + length)
           builder.write_string(decode_xml_entity(entity))
           index = index + length + 1
         }
@@ -599,7 +658,10 @@ fn decode_xml_entities(value : String) -> String {
         }
       }
     } else {
-      let char = value.get_char(index).unwrap()
+      let char = match value.get_char(index) {
+        Some(char) => char
+        None => raise InvalidXml(message="invalid UTF-16 in XML content")
+      }
       builder.write_char(char)
       index = index + char.utf16_len()
     }

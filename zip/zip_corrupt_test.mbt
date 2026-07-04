@@ -469,3 +469,46 @@ test "zip read: zip64 uncompressed size missing hits zip64 size missing" {
     _ => fail("expected zip64 size missing")
   }
 }
+
+///|
+fn make_zip_zip64_huge_declared_entry_count() -> Bytes {
+  let out : Array[Byte] = []
+  // Zip64 EOCD at offset 0 declaring 2^30 entries in a tiny archive.
+  push_u32_le(out, (0x06064b50 : UInt))
+  push_u64_le(out, (44 : UInt64))
+  push_u16_le(out, 45)
+  push_u16_le(out, 45)
+  push_u32_le(out, (0 : UInt))
+  push_u32_le(out, (0 : UInt))
+  push_u64_le(out, (0x40000000 : UInt64)) // entries on disk
+  push_u64_le(out, (0x40000000 : UInt64)) // total entries
+  push_u64_le(out, (0 : UInt64)) // central size
+  push_u64_le(out, (0 : UInt64)) // central offset
+  // Zip64 locator at offset 56.
+  push_u32_le(out, (0x07064b50 : UInt))
+  push_u32_le(out, (0 : UInt))
+  push_u64_le(out, (0 : UInt64))
+  push_u32_le(out, (1 : UInt))
+  // Regular EOCD at offset 76 (marks zip64-needed).
+  push_u32_le(out, (0x06054b50 : UInt))
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u16_le(out, 0xFFFF)
+  push_u16_le(out, 0xFFFF)
+  push_u32_le(out, (0xFFFFFFFF : UInt))
+  push_u32_le(out, (0xFFFFFFFF : UInt))
+  push_u16_le(out, 0)
+  Bytes::from_array(out)
+}
+
+///|
+test "zip read: zip64 EOCD huge declared entry count fails cleanly" {
+  // Declares 2^30 entries; must fail on the first bogus central header
+  // instead of preallocating gigabytes of entry metadata.
+  let bytes = make_zip_zip64_huge_declared_entry_count()
+  try read(bytes) catch {
+    e => inspect(e is ZipError::InvalidSignature(..), content="true")
+  } noraise {
+    _ => fail("expected read to raise")
+  }
+}

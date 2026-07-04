@@ -191,3 +191,23 @@ test "reconstructed xref coverage skips free trailer root entries" {
   @test.assert_eq(coverage.contains(3, 30), false)
   @test.assert_eq(coverage.contains(4, 40), true)
 }
+
+///|
+test "reconstructed xref stream refs reject sections missing stream identity" {
+  let refs : Result[Array[(Int, Int)], Error] = try
+    @reader.pdf_reader_reconstruction_xref_stream_refs([
+      reader_reconstruction_xref_section_for_test(
+        [],
+        stream_object_number=None,
+        stream_object_offset=Some(70),
+      ),
+    ])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard refs is Err(@core.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+}

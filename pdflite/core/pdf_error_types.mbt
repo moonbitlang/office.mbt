@@ -40,6 +40,7 @@ pub(all) suberror PdfError {
   PredictorNotSupported(Int)
   InvalidLZWData
   InvalidFlateData
+  FlateOutputLimitExceeded(Int)
   BadJPEGHeader
   BadJPEGString
   InvalidJPEGBlock

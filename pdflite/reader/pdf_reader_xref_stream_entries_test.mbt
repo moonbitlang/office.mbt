@@ -102,3 +102,42 @@ test "xref stream entries default missing kind to in-use" {
   @test.assert_eq(entries[1].generation, 1)
   @test.assert_eq(entries[1].in_use, true)
 }
+
+///|
+test "xref stream entries clamp huge declared index counts" {
+  // Declares one billion entries but provides a single 3-byte row: the
+  // preallocation is clamped to the stream size and decoding fails cleanly
+  // when the data runs out.
+  let huge : Result[Array[@reader.PdfClassicXRefEntry], Error] = try
+    @reader.pdf_xref_stream_entries(Bytes::from_array([1, 9, 0]), (1, 1, 1), [
+      (0, 1000000000),
+    ])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard huge is Err(@core.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected")
+  }
+}
+
+///|
+test "xref stream entries reject overflowing /W widths" {
+  // Three positive widths whose signed 32-bit sum wraps back to a small
+  // positive row width (0x7FFFFFFF + 0x7FFFFFFF + 4 == 2^32 + 2 -> +2);
+  // unbounded, this would defeat the capacity clamp.
+  let w = 2147483647
+  let overflowing : Result[Array[@reader.PdfClassicXRefEntry], Error] = try
+    @reader.pdf_xref_stream_entries(Bytes::from_array([1, 9, 0]), (w, w, 4), [
+      (0, 1),
+    ])
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard overflowing is Err(@core.PdfError::XRefEntryExpected) else {
+    fail("expected XRefEntryExpected for overflowing widths")
+  }
+}

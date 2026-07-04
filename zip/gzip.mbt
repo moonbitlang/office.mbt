@@ -78,7 +78,19 @@ pub fn gunzip(bytes : BytesView) -> Bytes raise ZipError {
   let trailer_crc = read_u32_le(bytes, bytes.length() - 8)
   let trailer_isize = read_u32_le(bytes, bytes.length() - 4)
   let compressed = bytes[idx:bytes.length() - 8]
-  let decoded = deflate_decode(compressed)
+  // Allow a legitimately large declared size, but keep a hard ceiling so a
+  // lying tiny stream cannot expand without bound (decompression bomb).
+  let declared_isize = if trailer_isize <= (0x7FFFFFFF : UInt) {
+    trailer_isize.reinterpret_as_int()
+  } else {
+    0x7FFFFFFF
+  }
+  let max_output = if declared_isize > deflate_max_output_default {
+    declared_isize
+  } else {
+    deflate_max_output_default
+  }
+  let decoded = deflate_decode(compressed, max_output~)
   let expected_isize = (decoded.length() & 0xFFFFFFFF).reinterpret_as_uint()
   if trailer_isize != expected_isize {
     raise UnsupportedFeature(msg="gzip size mismatch")

@@ -429,3 +429,35 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
     fail("expected @core.PdfError::InvalidFlateData for empty dynamic block")
   }
 }
+
+///|
+test "raw deflate decode enforces output cap for stored blocks" {
+  // Stored block declaring 2 bytes ("hi") against a cap of 1.
+  let stream : Bytes = [0x01, 0x02, 0x00, 0xFD, 0xFF, 0x68, 0x69]
+  let capped : Result[(@core.PdfBytes, Int), Error] = try
+    pdf_deflate_decode_raw_prefix(stream, max_output=1)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard capped is Err(@core.PdfError::FlateOutputLimitExceeded(1)) else {
+    fail("expected @core.PdfError::FlateOutputLimitExceeded")
+  }
+}
+
+///|
+test "raw deflate decode enforces output cap for huffman blocks" {
+  // Fixed-Huffman block decoding to "hello" against a cap of 4.
+  let stream : Bytes = [0xCB, 0x48, 0xCD, 0xC9, 0xC9, 0x07, 0x00]
+  let capped : Result[(@core.PdfBytes, Int), Error] = try
+    pdf_deflate_decode_raw_prefix(stream, max_output=4)
+  catch {
+    err => Err(err)
+  } noraise {
+    value => Ok(value)
+  }
+  guard capped is Err(@core.PdfError::FlateOutputLimitExceeded(4)) else {
+    fail("expected @core.PdfError::FlateOutputLimitExceeded")
+  }
+}

@@ -68,16 +68,24 @@ fn pdf_flate_read_dynamic_tables(
 }
 
 ///|
+/// Default cap for decompressed output, guarding against decompression bombs.
+let pdf_flate_max_output_default : Int = 1 << 30
+
+///|
 fn pdf_flate_decode_huffman_block(
   reader : FlateBitReader,
   literal_table : FlateHuffmanTable,
   distance_table : FlateHuffmanTable,
   output : Array[Byte],
+  max_output? : Int = pdf_flate_max_output_default,
 ) -> Unit raise @core.PdfError {
   let mut done = false
   while !done {
     let symbol = pdf_flate_decode_symbol(reader, literal_table)
     if symbol < 256 {
+      if output.length() >= max_output {
+        raise FlateOutputLimitExceeded(max_output)
+      }
       output.push(symbol.to_byte())
     } else if symbol == 256 {
       done = true
@@ -101,6 +109,9 @@ fn pdf_flate_decode_huffman_block(
       if distance <= 0 || distance > output.length() {
         raise InvalidFlateData
       }
+      if length > max_output - output.length() {
+        raise FlateOutputLimitExceeded(max_output)
+      }
       for _ in 0..<length {
         let value = output[output.length() - distance]
         output.push(value)
@@ -112,6 +123,7 @@ fn pdf_flate_decode_huffman_block(
 ///|
 fn pdf_deflate_decode_raw_prefix(
   bytes : BytesView,
+  max_output? : Int = pdf_flate_max_output_default,
 ) -> (@core.PdfBytes, Int) raise @core.PdfError {
   let reader = FlateBitReader::new(bytes)
   let output : Array[Byte] = Array::new(capacity=bytes.length())
@@ -127,6 +139,9 @@ fn pdf_deflate_decode_raw_prefix(
         if (length.reinterpret_as_uint() ^ nlength) != 0xFFFF {
           raise InvalidFlateData
         }
+        if length > max_output - output.length() {
+          raise FlateOutputLimitExceeded(max_output)
+        }
         for _ in 0..<length {
           output.push(reader.read_byte())
         }
@@ -134,11 +149,23 @@ fn pdf_deflate_decode_raw_prefix(
       1 => {
         let literal = pdf_flate_fixed_literal_table()
         let distance = pdf_flate_fixed_distance_table()
-        pdf_flate_decode_huffman_block(reader, literal, distance, output)
+        pdf_flate_decode_huffman_block(
+          reader,
+          literal,
+          distance,
+          output,
+          max_output~,
+        )
       }
       2 => {
         let (literal, distance) = pdf_flate_read_dynamic_tables(reader)
-        pdf_flate_decode_huffman_block(reader, literal, distance, output)
+        pdf_flate_decode_huffman_block(
+          reader,
+          literal,
+          distance,
+          output,
+          max_output~,
+        )
       }
       _ => raise InvalidFlateData
     }

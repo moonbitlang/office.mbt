@@ -179,3 +179,42 @@ test "deflate wb: decode_huffman_block validation branches" {
     _ => fail("expected decode_huffman_block to raise")
   }
 }
+
+///|
+test "deflate decode enforces max_output for stored blocks" {
+  // Stored block declaring 2 bytes ("hi") against a cap of 1.
+  let stream : Bytes = [0x01, 0x02, 0x00, 0xFD, 0xFF, 0x68, 0x69]
+  try deflate_decode(stream, max_output=1) catch {
+    ZipError::OutputLimitExceeded(limit~) => inspect(limit, content="1")
+    _ => fail("expected OutputLimitExceeded")
+  } noraise {
+    _ => fail("expected deflate_decode to raise")
+  }
+}
+
+///|
+test "deflate decode enforces max_output for huffman literals" {
+  // Fixed-Huffman block decoding to "hello" against a cap of 4.
+  let stream : Bytes = [0xCB, 0x48, 0xCD, 0xC9, 0xC9, 0x07, 0x00]
+  try deflate_decode(stream, max_output=4) catch {
+    ZipError::OutputLimitExceeded(limit~) => inspect(limit, content="4")
+    _ => fail("expected OutputLimitExceeded")
+  } noraise {
+    _ => fail("expected deflate_decode to raise")
+  }
+}
+
+///|
+test "deflate decode enforces max_output for back-references" {
+  let data : Array[Byte] = []
+  for _ in 0..<400 {
+    data.push(b'a')
+  }
+  let compressed = deflate_encode(Bytes::from_array(data))
+  try deflate_decode(compressed, max_output=100) catch {
+    ZipError::OutputLimitExceeded(limit~) => inspect(limit, content="100")
+    _ => fail("expected OutputLimitExceeded")
+  } noraise {
+    _ => fail("expected deflate_decode to raise")
+  }
+}
