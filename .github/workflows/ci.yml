@@ -36,6 +36,11 @@ jobs:
       - name: MoonBit versions
         run: moon version --all
 
+      # Populate the module registry so dependency resolution (moonbitlang/
+      # async, moonbitlang/x, peter-jerry-ye/codex) works on a fresh runner.
+      - name: Resolve dependencies
+        run: moon update
+
       - name: Format check
         run: |
           moon fmt
