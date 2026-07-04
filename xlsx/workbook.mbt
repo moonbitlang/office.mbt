@@ -3349,6 +3349,13 @@ pub fn Workbook::set_cell_formula_rc(
 }
 
 ///|
+/// Writes `values` across row `row` (1-based) starting at column A, one raw
+/// string per cell, on sheet `sheet_name`. Cells beyond `values` are left
+/// unchanged.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// if `row` is less than 1, or — when `values` is non-empty —
+/// `StreamModeConflict` if the sheet is in stream-writer mode.
 pub fn Workbook::set_row(
   self : Workbook,
   sheet_name : StringView,
@@ -3360,6 +3367,12 @@ pub fn Workbook::set_row(
 }
 
 ///|
+/// Returns the raw string values of row `row` (1-based) on `sheet_name`, from
+/// column A through the last populated cell; empty cells within that span are
+/// returned as empty strings. Returns an empty array for a row with no cells.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `row` is less than 1.
 pub fn Workbook::get_row(
   self : Workbook,
   sheet_name : StringView,
@@ -3370,6 +3383,12 @@ pub fn Workbook::get_row(
 }
 
 ///|
+/// Writes `values` down column `col` (1-based) starting at row 1, one raw string
+/// per cell, on `sheet_name`. Cells beyond `values` are left unchanged.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// if `col` is less than 1, or — when `values` is non-empty —
+/// `StreamModeConflict` if the sheet is in stream-writer mode.
 pub fn Workbook::set_col(
   self : Workbook,
   sheet_name : StringView,
@@ -3381,6 +3400,12 @@ pub fn Workbook::set_col(
 }
 
 ///|
+/// Returns the raw string values of column `col` (1-based) on `sheet_name`, from
+/// row 1 through the last populated cell; empty cells within that span are
+/// returned as empty strings. Returns an empty array for a column with no cells.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `col` is less than 1.
 pub fn Workbook::get_col(
   self : Workbook,
   sheet_name : StringView,
@@ -3391,6 +3416,11 @@ pub fn Workbook::get_col(
 }
 
 ///|
+/// Sets the height (in points) of row `row` (1-based) on `sheet_name`.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, if `row` is less
+/// than 1, or if `height` is negative.
 pub fn Workbook::set_row_height(
   self : Workbook,
   sheet_name : StringView,
@@ -3402,6 +3432,11 @@ pub fn Workbook::set_row_height(
 }
 
 ///|
+/// Returns the explicitly-set height (in points) of row `row` (1-based) on
+/// `sheet_name`, or `None` if the row uses the sheet default.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `row` is less than 1.
 pub fn Workbook::get_row_height(
   self : Workbook,
   sheet_name : StringView,
@@ -3412,6 +3447,12 @@ pub fn Workbook::get_row_height(
 }
 
 ///|
+/// Shows (`visible` true) or hides (`visible` false) row `row` (1-based) on
+/// `sheet_name`.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, or if `row` is
+/// less than 1.
 pub fn Workbook::set_row_visible(
   self : Workbook,
   sheet_name : StringView,
@@ -3423,6 +3464,11 @@ pub fn Workbook::set_row_visible(
 }
 
 ///|
+/// Reports whether row `row` (1-based) on `sheet_name` is visible. Rows with no
+/// explicit dimension are visible by default.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `row` is less than 1.
 pub fn Workbook::row_visible(
   self : Workbook,
   sheet_name : StringView,
@@ -3433,6 +3479,12 @@ pub fn Workbook::row_visible(
 }
 
 ///|
+/// Sets the outline (grouping) level of row `row` (1-based) on `sheet_name`.
+/// `level` must be between 0 and 7 inclusive.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, if `row` is less
+/// than 1, or if `level` is outside 0..=7.
 pub fn Workbook::set_row_outline_level(
   self : Workbook,
   sheet_name : StringView,
@@ -3444,6 +3496,11 @@ pub fn Workbook::set_row_outline_level(
 }
 
 ///|
+/// Returns the outline (grouping) level of row `row` (1-based) on `sheet_name`,
+/// or 0 if the row has no explicit level.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `row` is less than 1.
 pub fn Workbook::row_outline_level(
   self : Workbook,
   sheet_name : StringView,
@@ -3454,6 +3511,13 @@ pub fn Workbook::row_outline_level(
 }
 
 ///|
+/// Sets the row-level style (applied to the whole row) of row `row` (1-based) on
+/// `sheet_name`. A `style_id` of 0 clears the row style. Convenience wrapper
+/// over `set_row_style_range` for a single row.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `InvalidStyleId` if `style_id` is out of range, `StreamModeConflict` if the
+/// sheet is in stream-writer mode, or if `row` is less than 1.
 pub fn Workbook::set_row_style(
   self : Workbook,
   sheet_name : StringView,
@@ -3464,6 +3528,13 @@ pub fn Workbook::set_row_style(
 }
 
 ///|
+/// Sets the row-level style of every row from `start` to `end` (inclusive,
+/// 1-based) on `sheet_name`. A `style_id` of 0 clears the style for those rows.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `InvalidStyleId` if `style_id` is out of range, `StreamModeConflict` if the
+/// sheet is in stream-writer mode, if `start` or `end` is less than 1, or if
+/// `end` is less than `start`.
 pub fn Workbook::set_row_style_range(
   self : Workbook,
   sheet_name : StringView,
@@ -3478,6 +3549,11 @@ pub fn Workbook::set_row_style_range(
 }
 
 ///|
+/// Returns the row-level style id of row `row` (1-based) on `sheet_name`, or
+/// `None` if the row has no explicit style.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `row` is less than 1.
 pub fn Workbook::get_row_style(
   self : Workbook,
   sheet_name : StringView,
@@ -3488,6 +3564,12 @@ pub fn Workbook::get_row_style(
 }
 
 ///|
+/// Sets the width (in character units) of column `col` (1-based) on
+/// `sheet_name`.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, if `col` is less
+/// than 1, or if `width` is negative.
 pub fn Workbook::set_col_width(
   self : Workbook,
   sheet_name : StringView,
@@ -3499,6 +3581,11 @@ pub fn Workbook::set_col_width(
 }
 
 ///|
+/// Returns the explicitly-set width (in character units) of column `col`
+/// (1-based) on `sheet_name`, or `None` if the column uses the sheet default.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `col` is less than 1.
 pub fn Workbook::get_col_width(
   self : Workbook,
   sheet_name : StringView,
@@ -3509,6 +3596,12 @@ pub fn Workbook::get_col_width(
 }
 
 ///|
+/// Shows (`visible` true) or hides (`visible` false) column `col` (1-based) on
+/// `sheet_name`.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, or if `col` is
+/// less than 1.
 pub fn Workbook::set_col_visible(
   self : Workbook,
   sheet_name : StringView,
@@ -3520,6 +3613,11 @@ pub fn Workbook::set_col_visible(
 }
 
 ///|
+/// Reports whether column `col` (1-based) on `sheet_name` is visible. Columns
+/// with no explicit dimension are visible by default.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `col` is less than 1.
 pub fn Workbook::col_visible(
   self : Workbook,
   sheet_name : StringView,
@@ -3530,6 +3628,12 @@ pub fn Workbook::col_visible(
 }
 
 ///|
+/// Sets the outline (grouping) level of column `col` (1-based) on `sheet_name`.
+/// `level` must be between 0 and 7 inclusive.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, if `col` is less
+/// than 1, or if `level` is outside 0..=7.
 pub fn Workbook::set_col_outline_level(
   self : Workbook,
   sheet_name : StringView,
@@ -3541,6 +3645,11 @@ pub fn Workbook::set_col_outline_level(
 }
 
 ///|
+/// Returns the outline (grouping) level of column `col` (1-based) on
+/// `sheet_name`, or 0 if the column has no explicit level.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `col` is less than 1.
 pub fn Workbook::col_outline_level(
   self : Workbook,
   sheet_name : StringView,
@@ -3551,6 +3660,12 @@ pub fn Workbook::col_outline_level(
 }
 
 ///|
+/// Sets the column-level style (applied to the whole column) of column `col`
+/// (1-based) on `sheet_name`. A `style_id` of 0 clears the column style.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `InvalidStyleId` if `style_id` is out of range, `StreamModeConflict` if the
+/// sheet is in stream-writer mode, or if `col` is less than 1.
 pub fn Workbook::set_col_style(
   self : Workbook,
   sheet_name : StringView,
@@ -3564,6 +3679,11 @@ pub fn Workbook::set_col_style(
 }
 
 ///|
+/// Returns the column-level style id of column `col` (1-based) on `sheet_name`,
+/// or `None` if the column has no explicit style.
+///
+/// Raises `XlsxError` if the sheet name is invalid, no matching sheet exists, or
+/// `col` is less than 1.
 pub fn Workbook::get_col_style(
   self : Workbook,
   sheet_name : StringView,
@@ -3574,6 +3694,15 @@ pub fn Workbook::get_col_style(
 }
 
 ///|
+/// Inserts `count` blank rows before row `row` (1-based) on `sheet_name`,
+/// shifting existing rows down along with their cells, row dimensions, merged
+/// ranges, hyperlinks, auto filter, tables, sparklines, images, charts, and
+/// page breaks. Defined names referring to the sheet are adjusted to follow the
+/// shift.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, if `row` is less
+/// than 1, or if `count` is not positive.
 pub fn Workbook::insert_rows(
   self : Workbook,
   sheet_name : StringView,
@@ -3590,6 +3719,14 @@ pub fn Workbook::insert_rows(
 }
 
 ///|
+/// Removes `count` rows starting at row `row` (1-based) on `sheet_name`,
+/// shifting the rows below up and adjusting row dimensions, merged ranges,
+/// hyperlinks, auto filter, tables, sparklines, images, charts, page breaks,
+/// and defined names accordingly.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, if `row` is less
+/// than 1, or if `count` is not positive.
 pub fn Workbook::remove_rows(
   self : Workbook,
   sheet_name : StringView,
@@ -3616,6 +3753,14 @@ pub fn Workbook::remove_row(
 }
 
 ///|
+/// Inserts `count` blank columns before column `col` (1-based) on `sheet_name`,
+/// shifting existing columns right along with their cells and associated
+/// features. Defined names referring to the sheet are adjusted to follow the
+/// shift.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, if `col` is less
+/// than 1, or if `count` is not positive.
 pub fn Workbook::insert_cols(
   self : Workbook,
   sheet_name : StringView,
@@ -3632,6 +3777,13 @@ pub fn Workbook::insert_cols(
 }
 
 ///|
+/// Removes `count` columns starting at column `col` (1-based) on `sheet_name`,
+/// shifting the columns to its right leftward and adjusting associated features
+/// and defined names accordingly.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, if `col` is less
+/// than 1, or if `count` is not positive.
 pub fn Workbook::remove_cols(
   self : Workbook,
   sheet_name : StringView,
@@ -3658,6 +3810,13 @@ pub fn Workbook::remove_col(
 }
 
 ///|
+/// Duplicates row `row` (1-based) on `sheet_name`, inserting the copy directly
+/// below as the new row `row + 1` and shifting subsequent rows down.
+/// Convenience wrapper over `duplicate_row_to`.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, or if `row` is
+/// less than 1.
 pub fn Workbook::duplicate_row(
   self : Workbook,
   sheet_name : StringView,
@@ -3667,6 +3826,17 @@ pub fn Workbook::duplicate_row(
 }
 
 ///|
+/// Duplicates row `row` (1-based) on `sheet_name` into `target_row`: it inserts
+/// a new row at `target_row` (shifting existing rows there down) and copies the
+/// source row's cells and its full row dimension (height, visibility, outline
+/// level, style). Conditional formats, data validations, and single-row merged
+/// ranges scoped to the source row are also duplicated onto `target_row`, though
+/// merged-range duplication is skipped if `target_row` falls inside an existing
+/// merge. Defined names are adjusted for the insert.
+///
+/// Raises `XlsxError` if the sheet name is invalid or no matching sheet exists,
+/// `StreamModeConflict` if the sheet is in stream-writer mode, if `row` is less
+/// than 1, or if `target_row` is less than 1 or equal to `row`.
 pub fn Workbook::duplicate_row_to(
   self : Workbook,
   sheet_name : StringView,
