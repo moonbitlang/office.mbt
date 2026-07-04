@@ -6,7 +6,9 @@ DOTNET_DIR="$ROOT/.tools/dotnet"
 DOTNET="$DOTNET_DIR/dotnet"
 
 if command -v dotnet >/dev/null 2>&1; then
-  if dotnet --list-sdks 2>/dev/null | grep -Eq '(^|[[:space:]])8\.'; then
+  # here-string (no pipe): `... | grep -q` can false-negative under pipefail
+  # when grep exits early and the producer takes SIGPIPE.
+  if grep -Eq '(^|[[:space:]])8\.' <<<"$(dotnet --list-sdks 2>/dev/null)"; then
     exit 0
   fi
 fi

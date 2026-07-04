@@ -53,8 +53,8 @@ for name in "${encrypted_files[@]}"; do
 
   if unzip -t "$path" >/dev/null 2>&1; then
     entries="$(unzip -Z1 "$path" 2>/dev/null || true)"
-    if printf '%s\n' "$entries" | grep -Fxq "EncryptedPackage" \
-      && printf '%s\n' "$entries" | grep -Fxq "EncryptionInfo"; then
+    if grep -Fxq "EncryptedPackage" <<<"$entries" \
+      && grep -Fxq "EncryptionInfo" <<<"$entries"; then
       echo "SKIP(encrypted-zip-package) $name"
     else
       echo "INVALID(encryption-shape) $name" >&2
@@ -64,7 +64,7 @@ for name in "${encrypted_files[@]}"; do
   fi
 
   file_kind="$(file -b "$path" 2>/dev/null || true)"
-  if printf '%s\n' "$file_kind" | grep -Eiq 'encrypted|composite document file'; then
+  if grep -Eiq 'encrypted|composite document file' <<<"$file_kind"; then
     echo "SKIP(encrypted-container) $name"
   else
     echo "INVALID(non-zip-shape) $name" >&2

@@ -40,7 +40,7 @@ DOTNET_LOCAL="$ROOT/.tools/dotnet/dotnet"
 DOTNET="$DOTNET_LOCAL"
 if command -v dotnet >/dev/null 2>&1; then
   # Only use the system `dotnet` if it has the net8 runtime installed.
-  if dotnet --list-runtimes 2>/dev/null | grep -Eq '^Microsoft\.NETCore\.App 8\.'; then
+  if grep -Eq '^Microsoft\.NETCore\.App 8\.' <<<"$(dotnet --list-runtimes 2>/dev/null)"; then
     DOTNET="dotnet"
   fi
 fi
@@ -50,27 +50,36 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1
 export DOTNET_CLI_HOME="$ROOT/.tools/dotnet/.cli-home"
 export NUGET_PACKAGES="$ROOT/.tools/dotnet/.nuget/packages"
 
-# Interim guard for a rare CI flake ("missing required part: _rels/.rels").
-# Under heavy parallel load, unzip can observe this just-written file
-# incomplete -- either a transient read-visibility effect, or a colliding
-# test writer truncating it mid-read (millisecond-resolution temp paths are
-# a suspected root cause, tracked separately). Re-reading a few times lets a
-# complete archive be seen. This cannot mask a stable defect: a
-# persistently-malformed file yields the same result on every re-read and
-# still fails below.
+# The required-parts pre-check gives a clear early error for an incompletely
+# written archive before the (slower) .NET SDK validation.
+#
+# ROOT CAUSE of the historical "missing required part: _rels/.rels" flake
+# (found in code review): this used `printf ... | grep -Fxq`, and under
+# `set -o pipefail` `grep -q` exits on its first match, so `printf` can take
+# SIGPIPE and the pipeline reports non-zero -- making a PRESENT part look
+# missing. That is intermittent, load/scheduling-dependent, and more likely on
+# larger archives, which matches the flake exactly (the earlier retry masked
+# it). Generation was independently confirmed deterministic (in-memory
+# validate_ooxml_package never drops a part, 150x) and temp paths never
+# collide, so this pipeline bug was the sole cause. Fix: a here-string check
+# (no pipe, no SIGPIPE). A short retry still covers a not-yet-readable archive,
+# and diagnostics are dumped on final failure.
 required_parts=(
   "[Content_Types].xml"
   "_rels/.rels"
   "xl/workbook.xml"
   "xl/_rels/workbook.xml.rels"
 )
+attempts=5
 missing=""
-for attempt in 1 2 3 4 5; do
+for attempt in $(seq 1 "$attempts"); do
   missing=""
   if unzip -t "$XLSX" >/dev/null 2>&1; then
     entries="$(unzip -Z1 "$XLSX")"
     for part in "${required_parts[@]}"; do
-      if ! printf '%s\n' "$entries" | grep -Fxq "$part"; then
+      # here-string (no pipe) -- a `printf | grep -q` here false-negatives
+      # under pipefail when grep exits early and printf takes SIGPIPE.
+      if ! grep -Fxq "$part" <<<"$entries"; then
         missing="$part"
         break
       fi
@@ -81,8 +90,17 @@ for attempt in 1 2 3 4 5; do
   else
     missing="<archive not yet readable>"
   fi
-  if [ "$attempt" -eq 5 ]; then
-    echo "error: missing required part: $missing (after $attempt attempts)" >&2
+  if [ "$attempt" -eq "$attempts" ]; then
+    {
+      echo "error: missing required part: $missing (after $attempt attempts)"
+      echo "--- diagnostics for $XLSX ---"
+      ls -la "$XLSX" 2>&1 || true
+      echo "size: $(wc -c <"$XLSX" 2>/dev/null || echo '?') bytes"
+      echo "unzip -t:"
+      unzip -t "$XLSX" 2>&1 | tail -5 || true
+      echo "unzip -l:"
+      unzip -l "$XLSX" 2>&1 | tail -25 || true
+    } >&2
     exit 1
   fi
   sleep 0.2
