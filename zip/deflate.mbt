@@ -244,6 +244,18 @@ fn build_huffman(lengths : ArrayView[Int]) -> HuffmanTable raise ZipError {
       counts[len] = counts[len] + 1
     }
   }
+  // Reject oversubscribed length sets (Kraft inequality violated). The flat
+  // lookup table would otherwise let colliding canonical codes overwrite one
+  // another and silently "decode" malformed input that a strict decoder
+  // rejects; zlib performs the same validation. Incomplete sets stay
+  // accepted, matching the historical decoder.
+  let mut remaining = 1
+  for bits in 1..<=max_bits {
+    remaining = (remaining << 1) - counts[bits]
+    if remaining < 0 {
+      raise UnsupportedFeature(msg="oversubscribed huffman table")
+    }
+  }
   let next_code : Array[Int] = Array::make(max_bits + 1, 0)
   let mut code = 0
   for bits in 1..<=max_bits {
