@@ -54,6 +54,12 @@ fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
 }
 
 ///|
+/// Converts a column-letter reference to its 1-based column number, e.g.
+/// `"A"` -> 1, `"Z"` -> 26, `"AA"` -> 27. Letters are case-insensitive.
+/// Inverse of `column_number_to_name`.
+///
+/// Raises `InvalidCellRef` if `name` is empty, contains any non-letter
+/// character, or is long enough that the column number overflows.
 pub fn column_name_to_number(name : StringView) -> Int raise XlsxError {
   if name == "" {
     raise InvalidCellRef(value=name.to_owned())
@@ -76,6 +82,10 @@ pub fn column_name_to_number(name : StringView) -> Int raise XlsxError {
 }
 
 ///|
+/// Converts a 1-based column number to its letter reference, e.g. `1` -> `"A"`,
+/// `26` -> `"Z"`, `27` -> `"AA"`. Inverse of `column_name_to_number`.
+///
+/// Raises `InvalidCellRef` if `col` is less than 1.
 pub fn column_number_to_name(col : Int) -> String raise XlsxError {
   if col <= 0 {
     raise InvalidCellRef(value="\{col}")
@@ -112,6 +122,13 @@ let cell_ref_max_rows = 1048576
 let cell_ref_max_cols = 16384
 
 ///|
+/// Splits a cell reference into its column letters and 1-based row number, e.g.
+/// `"AB12"` -> `("AB", 12)`. Column letters are upper-cased and absolute-
+/// reference `$` markers are ignored, so `"$C$5"` -> `("C", 5)`.
+///
+/// Raises `InvalidCellRef` if `cell` is empty, is missing either the column or
+/// the row part, has letters following digits, contains an unexpected
+/// character, has a row of 0, or has a row number too large to parse.
 pub fn split_cell_name(cell : StringView) -> (String, Int) raise XlsxError {
   let text = cell.to_owned()
   if text == "" {
@@ -147,6 +164,13 @@ pub fn split_cell_name(cell : StringView) -> (String, Int) raise XlsxError {
 }
 
 ///|
+/// Joins column letters and a 1-based row number into a cell reference, e.g.
+/// `("A", 2)` -> `"A2"`. The column is normalized (lowercase letters are
+/// upper-cased), so `("a", 2)` also yields `"A2"`. Inverse of
+/// `split_cell_name`.
+///
+/// Raises `InvalidCellRef` if `col` is not valid column letters or `row` is
+/// less than 1.
 pub fn join_cell_name(col : StringView, row : Int) -> String raise XlsxError {
   let col_number = column_name_to_number(col)
   if row <= 0 {
@@ -157,6 +181,12 @@ pub fn join_cell_name(col : StringView, row : Int) -> String raise XlsxError {
 }
 
 ///|
+/// Converts a cell reference to `(column, row)` coordinates, both 1-based, e.g.
+/// `"C5"` -> `(3, 5)`. The tuple is column-first, not row-first. Inverse of
+/// `coordinates_to_cell_name`.
+///
+/// Raises `InvalidCellRef` if `cell` is malformed, its row exceeds 1048576, or
+/// its column exceeds 16384 (the sheet grid limits).
 pub fn cell_name_to_coordinates(
   cell : StringView,
 ) -> (Int, Int) raise XlsxError {
@@ -172,6 +202,13 @@ pub fn cell_name_to_coordinates(
 }
 
 ///|
+/// Converts 1-based `(col, row)` coordinates to a cell reference, e.g.
+/// `(3, 5)` -> `"C5"`. When `abs` is true each part is prefixed with `$` to form
+/// an absolute reference, so `(3, 5)` -> `"$C$5"`. Inverse of
+/// `cell_name_to_coordinates`.
+///
+/// Raises `InvalidCellRef` if `col` or `row` is less than 1, the row exceeds
+/// 1048576, or the column exceeds 16384.
 pub fn coordinates_to_cell_name(
   col : Int,
   row : Int,
