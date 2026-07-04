@@ -115,7 +115,7 @@ fn write_shared_strings_xml(
               if font.condense {
                 sb.write_view("<condense/>")
               }
-              if font.extend {
+              if font.extended {
                 sb.write_view("<extend/>")
               }
               match font.underline {

@@ -6,7 +6,7 @@ pub(all) struct RichTextFont {
   outline : Bool
   shadow : Bool
   condense : Bool
-  extend : Bool
+  extended : Bool
   underline : String?
   size : Double?
   color : String?

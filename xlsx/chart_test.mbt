@@ -511,7 +511,7 @@ test "chart options rich title + axis title runs" {
     outline: false,
     shadow: false,
     condense: false,
-    extend: false,
+    extended: false,
     underline: Some("single"),
     size: Some(12.0),
     color: Some("#FF0000"),
