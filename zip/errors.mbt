@@ -12,4 +12,4 @@ pub suberror ZipError {
   UnsupportedFeature(msg~ : String)
   UnsupportedCompression(method_id~ : Int)
   InvalidUtf8(offset~ : Int)
-} derive(Show)
+} derive(Debug)

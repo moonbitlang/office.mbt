@@ -24,7 +24,7 @@ test "ignored errors wb: parse non-self-closing ignoredError tag" {
   let parsed = parse_ignored_errors(
     "<ignoredErrors><ignoredError sqref=\"A1\"></ignoredError></ignoredErrors>",
   ) catch {
-    err => fail("parse_ignored_errors failed: \{err}")
+    err => fail("parse_ignored_errors failed: \{repr(err)}")
   }
   inspect(parsed.length(), content="1")
   inspect(parsed[0].sqref, content="A1")

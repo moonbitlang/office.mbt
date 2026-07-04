@@ -1,7 +1,7 @@
 ///|
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn is_attr_space(ch : UInt16) -> Bool {

@@ -174,31 +174,31 @@ fn find_match(
   let mut best_len = 0
   let mut best_dist = 0
   let mut chain_count = 0
-  loop true {
-    false => ()
-    true => {
-      if candidate < 0 || chain_count >= 128 {
-        continue false
-      }
-      let dist = pos - candidate
-      if dist > 32768 {
-        continue false
-      }
-      let mut l = 0
-      while l < max_len && bytes[candidate + l] == bytes[pos + l] {
-        l = l + 1
-      }
-      if l >= 3 && l > best_len {
-        best_len = l
-        best_dist = dist
-        if l == max_len {
-          continue false
-        }
-      }
-      candidate = prev[candidate]
-      chain_count = chain_count + 1
-      continue true
+  for state = true {
+    if !state {
+      break
     }
+    if candidate < 0 || chain_count >= 128 {
+      continue false
+    }
+    let dist = pos - candidate
+    if dist > 32768 {
+      continue false
+    }
+    let mut l = 0
+    while l < max_len && bytes[candidate + l] == bytes[pos + l] {
+      l = l + 1
+    }
+    if l >= 3 && l > best_len {
+      best_len = l
+      best_dist = dist
+      if l == max_len {
+        continue false
+      }
+    }
+    candidate = prev[candidate]
+    chain_count = chain_count + 1
+    continue true
   }
   (best_len, best_dist)
 }
@@ -351,39 +351,39 @@ fn decode_huffman_block(
   dist_table : HuffmanTable,
   out : Array[Byte],
 ) -> Unit raise ZipError {
-  loop true {
-    false => ()
-    true => {
-      let symbol = decode_symbol(reader, lit_table)
-      if symbol < 256 {
-        out.push(symbol.to_byte())
-        continue true
-      }
-      if symbol == 256 {
-        continue false
-      }
-      let length_idx = symbol - 257
-      if length_idx < 0 || length_idx >= length_base.length() {
-        raise UnsupportedFeature(msg="invalid length symbol")
-      }
-      let extra_len = length_extra[length_idx]
-      let length = length_base[length_idx] +
-        reader.read_bits(extra_len).reinterpret_as_int()
-      let dist_symbol = decode_symbol(reader, dist_table)
-      if dist_symbol < 0 || dist_symbol >= dist_base.length() {
-        raise UnsupportedFeature(msg="invalid distance symbol")
-      }
-      let dist = dist_base[dist_symbol] +
-        reader.read_bits(dist_extra[dist_symbol]).reinterpret_as_int()
-      if dist <= 0 || dist > out.length() {
-        raise UnsupportedFeature(msg="invalid back-reference distance")
-      }
-      for _ in 0..<length {
-        let value = out[out.length() - dist]
-        out.push(value)
-      }
+  for state = true {
+    if !state {
+      break
+    }
+    let symbol = decode_symbol(reader, lit_table)
+    if symbol < 256 {
+      out.push(symbol.to_byte())
       continue true
     }
+    if symbol == 256 {
+      continue false
+    }
+    let length_idx = symbol - 257
+    if length_idx < 0 || length_idx >= length_base.length() {
+      raise UnsupportedFeature(msg="invalid length symbol")
+    }
+    let extra_len = length_extra[length_idx]
+    let length = length_base[length_idx] +
+      reader.read_bits(extra_len).reinterpret_as_int()
+    let dist_symbol = decode_symbol(reader, dist_table)
+    if dist_symbol < 0 || dist_symbol >= dist_base.length() {
+      raise UnsupportedFeature(msg="invalid distance symbol")
+    }
+    let dist = dist_base[dist_symbol] +
+      reader.read_bits(dist_extra[dist_symbol]).reinterpret_as_int()
+    if dist <= 0 || dist > out.length() {
+      raise UnsupportedFeature(msg="invalid back-reference distance")
+    }
+    for _ in 0..<length {
+      let value = out[out.length() - dist]
+      out.push(value)
+    }
+    continue true
   }
 }
 
@@ -453,40 +453,40 @@ fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
   let head : Array[Int] = Array::make(1 << 15, -1)
   let prev : Array[Int] = Array::make(len, -1)
   let mut i = 0
-  loop true {
-    false => ()
-    true => {
-      if i >= len {
-        continue false
+  for state = true {
+    if !state {
+      break
+    }
+    if i >= len {
+      continue false
+    }
+    let (match_len, match_dist) = find_match(bytes, i, head, prev)
+    if match_len >= 3 {
+      let (len_sym, len_extra, len_value) = length_to_symbol(match_len)
+      let (len_code, len_bits) = fixed_literal_code(len_sym)
+      let len_rev = reverse_bits(len_code.reinterpret_as_uint(), len_bits).reinterpret_as_int()
+      writer.write_bits(len_rev, len_bits)
+      if len_extra > 0 {
+        writer.write_bits(len_value, len_extra)
       }
-      let (match_len, match_dist) = find_match(bytes, i, head, prev)
-      if match_len >= 3 {
-        let (len_sym, len_extra, len_value) = length_to_symbol(match_len)
-        let (len_code, len_bits) = fixed_literal_code(len_sym)
-        let len_rev = reverse_bits(len_code.reinterpret_as_uint(), len_bits).reinterpret_as_int()
-        writer.write_bits(len_rev, len_bits)
-        if len_extra > 0 {
-          writer.write_bits(len_value, len_extra)
-        }
-        let (dist_sym, dist_extra, dist_value) = distance_to_symbol(match_dist)
-        let dist_rev = reverse_bits(dist_sym.reinterpret_as_uint(), 5).reinterpret_as_int()
-        writer.write_bits(dist_rev, 5)
-        if dist_extra > 0 {
-          writer.write_bits(dist_value, dist_extra)
-        }
-        for j in 0..<match_len {
-          insert_position(bytes, i + j, head, prev)
-        }
-        i = i + match_len
-        continue true
+      let (dist_sym, dist_extra, dist_value) = distance_to_symbol(match_dist)
+      let dist_rev = reverse_bits(dist_sym.reinterpret_as_uint(), 5).reinterpret_as_int()
+      writer.write_bits(dist_rev, 5)
+      if dist_extra > 0 {
+        writer.write_bits(dist_value, dist_extra)
       }
-      let (code, bits) = fixed_literal_code(bytes[i].to_int())
-      let rev = reverse_bits(code.reinterpret_as_uint(), bits).reinterpret_as_int()
-      writer.write_bits(rev, bits)
-      insert_position(bytes, i, head, prev)
-      i = i + 1
+      for j in 0..<match_len {
+        insert_position(bytes, i + j, head, prev)
+      }
+      i = i + match_len
       continue true
     }
+    let (code, bits) = fixed_literal_code(bytes[i].to_int())
+    let rev = reverse_bits(code.reinterpret_as_uint(), bits).reinterpret_as_int()
+    writer.write_bits(rev, bits)
+    insert_position(bytes, i, head, prev)
+    i = i + 1
+    continue true
   }
   let (end_code, end_len) = fixed_literal_code(256)
   let end_rev = reverse_bits(end_code.reinterpret_as_uint(), end_len).reinterpret_as_int()
@@ -498,36 +498,36 @@ fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
 fn deflate_decode(bytes : BytesView) -> Bytes raise ZipError {
   let reader = BitReader::new(bytes)
   let out : Array[Byte] = []
-  loop false {
-    true => ()
-    false => {
-      let bfinal = reader.read_bits(1)
-      let btype = reader.read_bits(2)
-      match btype {
-        0 => {
-          reader.align_byte()
-          let len = reader.read_bits(16).reinterpret_as_int()
-          let nlen = reader.read_bits(16)
-          if (len.reinterpret_as_uint() ^ nlen) != 0xFFFF {
-            raise UnsupportedFeature(msg="invalid stored block length")
-          }
-          for _ in 0..<len {
-            out.push(reader.read_byte())
-          }
-        }
-        1 => {
-          let lit = fixed_literal_table()
-          let dist = fixed_distance_table()
-          decode_huffman_block(reader, lit, dist, out)
-        }
-        2 => {
-          let (lit, dist) = read_dynamic_tables(reader)
-          decode_huffman_block(reader, lit, dist, out)
-        }
-        _ => raise UnsupportedFeature(msg="invalid deflate block type")
-      }
-      continue bfinal == 1
+  for state = false {
+    if state {
+      break
     }
+    let bfinal = reader.read_bits(1)
+    let btype = reader.read_bits(2)
+    match btype {
+      0 => {
+        reader.align_byte()
+        let len = reader.read_bits(16).reinterpret_as_int()
+        let nlen = reader.read_bits(16)
+        if (len.reinterpret_as_uint() ^ nlen) != 0xFFFF {
+          raise UnsupportedFeature(msg="invalid stored block length")
+        }
+        for _ in 0..<len {
+          out.push(reader.read_byte())
+        }
+      }
+      1 => {
+        let lit = fixed_literal_table()
+        let dist = fixed_distance_table()
+        decode_huffman_block(reader, lit, dist, out)
+      }
+      2 => {
+        let (lit, dist) = read_dynamic_tables(reader)
+        decode_huffman_block(reader, lit, dist, out)
+      }
+      _ => raise UnsupportedFeature(msg="invalid deflate block type")
+    }
+    continue bfinal == 1
   }
   Bytes::from_array(out)
 }

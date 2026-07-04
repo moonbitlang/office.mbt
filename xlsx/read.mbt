@@ -2907,7 +2907,7 @@ fn read_zip_bytes(
 ) -> Workbook raise XlsxError {
   let resolved_options = normalize_unzip_limits(options)
   let archive = @zip.read(bytes) catch {
-    err => raise UnsupportedFeature(msg=err.to_string())
+    err => raise UnsupportedFeature(msg=repr(err))
   }
   enforce_unzip_limits(archive, resolved_options)
   let decode = (value : Bytes) => decode_utf8(value, transcoder)

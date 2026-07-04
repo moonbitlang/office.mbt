@@ -13,7 +13,7 @@ test "data validation wb: data_validation_xml emits showDropDown when enabled" {
   dv.show_drop_down = true
   dv.set_sqref("A1")
   let xml = data_validation_xml(dv) catch {
-    err => fail("data_validation_xml failed: \{err}")
+    err => fail("data_validation_xml failed: \{repr(err)}")
   }
   inspect(xml.contains(" showDropDown=\"1\""), content="true")
 }
@@ -31,7 +31,7 @@ test "data validation wb: parse requires dataValidation tag" {
 ///|
 test "data validation wb: parse defaults with minimal tag and optional attrs" {
   let dv = data_validation_from_xml("<dataValidation sqref=\"A1\"/>") catch {
-    err => fail("data_validation_from_xml failed: \{err}")
+    err => fail("data_validation_from_xml failed: \{repr(err)}")
   }
   inspect(dv.allow_blank, content="false")
   inspect(dv.validation_type, content="")
@@ -40,7 +40,8 @@ test "data validation wb: parse defaults with minimal tag and optional attrs" {
   let dv_show = data_validation_from_xml(
     "<dataValidation sqref=\"A1\" showDropDown=\"1\"/>",
   ) catch {
-    err => fail("data_validation_from_xml with showDropDown failed: \{err}")
+    err =>
+      fail("data_validation_from_xml with showDropDown failed: \{repr(err)}")
   }
   inspect(dv_show.show_drop_down, content="true")
 }

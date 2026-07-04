@@ -47,4 +47,4 @@ pub suberror XlsxError {
   InvalidPasswordLength(len~ : Int)
   UnsupportedEncryption(msg~ : String)
   UnsupportedFeature(msg~ : String)
-} derive(Show, Debug)
+} derive(Debug)

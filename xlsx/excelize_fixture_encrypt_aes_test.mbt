@@ -12,7 +12,7 @@ async test "excelize fixture encryptAES.xlsx opens with password" {
     options=Options::with_values(password="password"),
   )
   let archive = @zip.read(decrypted) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let shared_strings_xml = match archive.get("xl/sharedStrings.xml") {
     Some(value) =>

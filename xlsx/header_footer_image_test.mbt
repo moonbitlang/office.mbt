@@ -17,7 +17,7 @@ test "header footer image vml and rels" {
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -255,7 +255,7 @@ test "header footer vml merge preserves existing shapes" {
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let vml_xml = match archive.get("xl/drawings/vmlDrawing1.vml") {
     Some(value) =>
@@ -462,7 +462,7 @@ test "header footer image read: missing vml relationship errors" {
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let bad_rels =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -484,7 +484,7 @@ test "header footer image read: missing vml relationship errors" {
     @encoding/utf8.encode(bad_rels),
   )
   let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
   let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {
     e => Err(e)

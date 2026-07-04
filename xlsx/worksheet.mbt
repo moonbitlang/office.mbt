@@ -1319,7 +1319,9 @@ async fn Worksheet::add_header_footer_image_from_file(
   }
   let data = read_file_bytes(path) catch {
     err =>
-      raise InvalidHeaderFooter(msg="read header/footer image failed: \{err}")
+      raise InvalidHeaderFooter(
+        msg="read header/footer image failed: \{repr(err)}",
+      )
   }
   self.add_header_footer_image(
     HeaderFooterImageOptions::new(
@@ -1496,7 +1498,7 @@ async fn Worksheet::add_picture(
     None => raise UnsupportedFeature(msg="image extension missing")
   }
   let bytes = read_file_bytes(path) catch {
-    err => raise InvalidSheetOperation(msg="read picture failed: \{err}")
+    err => raise InvalidSheetOperation(msg="read picture failed: \{repr(err)}")
   }
   self.add_picture_from_bytes(
     reference,
@@ -4317,16 +4319,16 @@ fn sort_cells(cells : Array[Cell]) -> Unit {
   while i < cells.length() {
     let key = cells[i]
     let mut j = i - 1
-    loop true {
-      false => ()
-      true => {
-        if j < 0 || compare_cell(cells[j], key) <= 0 {
-          continue false
-        }
-        cells[j + 1] = cells[j]
-        j = j - 1
-        continue true
+    for state = true {
+      if !state {
+        break
       }
+      if j < 0 || compare_cell(cells[j], key) <= 0 {
+        continue false
+      }
+      cells[j + 1] = cells[j]
+      j = j - 1
+      continue true
     }
     cells[j + 1] = key
     i = i + 1

@@ -570,13 +570,13 @@ test "workbook: missing-sheet cell/media wrapper guards" {
   ignore(workbook.add_sheet("Sheet1"))
   let rich : Array[RichTextRun] = [{ text: "x", font: None }]
   let shape = Shape::new("A1", "rect") catch {
-    err => fail("shape init failed: \{err}")
+    err => fail("shape init failed: \{repr(err)}")
   }
   let control = FormControl::new("A1", "checkbox") catch {
-    err => fail("form control init failed: \{err}")
+    err => fail("form control init failed: \{repr(err)}")
   }
   let slicer_opts = SlicerOptions::new("Field", "A1", "Sheet1", "Table1") catch {
-    err => fail("slicer options init failed: \{err}")
+    err => fail("slicer options init failed: \{repr(err)}")
   }
   let chart_opts = ChartOptions::new(Bar)
   let image_opts = GraphicOptions::new()
@@ -925,7 +925,7 @@ async test "workbook: async missing-sheet picture/header wrappers" {
     Left,
     "/tmp/does-not-matter.png",
   ) catch {
-    err => fail("header/footer file options init failed: \{err}")
+    err => fail("header/footer file options init failed: \{repr(err)}")
   }
   let add_hf_result : Result[Unit, Error] = Ok(
     workbook.add_header_footer_image_from_file("Missing", hf_options),
@@ -1091,13 +1091,13 @@ test "workbook: table naming and slicer wrapper/error branches" {
   )
 
   let auto_name_opts = TableOptions::new("J1:K2") catch {
-    err => fail("table options init failed: \{err}")
+    err => fail("table options init failed: \{repr(err)}")
   }
   let auto_name_table = workbook.add_table("Sheet1", auto_name_opts)
   inspect(auto_name_table.name, content="Table4")
 
   let bad_name_opts = TableOptions::new("L1:M2") catch {
-    err => fail("table options init failed: \{err}")
+    err => fail("table options init failed: \{repr(err)}")
   }
   bad_name_opts.set_name("1bad")
   let bad_name_result : Result[Table, Error] = Ok(
@@ -1110,7 +1110,7 @@ test "workbook: table naming and slicer wrapper/error branches" {
   let missing_sheet_opts = SlicerOptions::new(
     "Region", "A1", "Missing", "Table",
   ) catch {
-    err => fail("slicer options init failed: \{err}")
+    err => fail("slicer options init failed: \{repr(err)}")
   }
   let missing_sheet : Result[Unit, Error] = Ok(
     workbook.add_slicer("Sheet1", missing_sheet_opts),
@@ -1122,7 +1122,7 @@ test "workbook: table naming and slicer wrapper/error branches" {
   let missing_table_opts = SlicerOptions::new(
     "Region", "A1", "Sheet1", "NoSuch",
   ) catch {
-    err => fail("slicer options init failed: \{err}")
+    err => fail("slicer options init failed: \{repr(err)}")
   }
   let missing_table : Result[Unit, Error] = Ok(
     workbook.add_slicer_with_options("Sheet1", missing_table_opts),
@@ -1134,7 +1134,7 @@ test "workbook: table naming and slicer wrapper/error branches" {
   let missing_field_opts = SlicerOptions::new(
     "MissingField", "A1", "Sheet1", "Table",
   ) catch {
-    err => fail("slicer options init failed: \{err}")
+    err => fail("slicer options init failed: \{repr(err)}")
   }
   let missing_field : Result[Unit, Error] = Ok(
     workbook.add_slicer("Sheet1", missing_field_opts),
@@ -1157,7 +1157,7 @@ test "workbook: table naming and slicer wrapper/error branches" {
   let digit_field_opts = SlicerOptions::new(
     "1Region", "N3", "Sheet1", "TableDigits",
   ) catch {
-    err => fail("slicer options init failed: \{err}")
+    err => fail("slicer options init failed: \{repr(err)}")
   }
   workbook.add_slicer("Sheet1", digit_field_opts)
 
@@ -1172,7 +1172,7 @@ test "workbook: table naming and slicer wrapper/error branches" {
   let pivot_field_missing_opts = SlicerOptions::new(
     "Region", "P1", "Sheet1", "PivotBad",
   ) catch {
-    err => fail("slicer options init failed: \{err}")
+    err => fail("slicer options init failed: \{repr(err)}")
   }
   let pivot_field_missing : Result[Unit, Error] = Ok(
     workbook.add_slicer("Sheet1", pivot_field_missing_opts),
@@ -1185,7 +1185,7 @@ test "workbook: table naming and slicer wrapper/error branches" {
   )
 
   let raw = Slicer::new("RawSlicer") catch {
-    err => fail("raw slicer init failed: \{err}")
+    err => fail("raw slicer init failed: \{repr(err)}")
   }
   workbook.add_slicer_raw("Sheet1", raw)
   inspect(workbook.get_slicers("Sheet1").length() > 0, content="true")

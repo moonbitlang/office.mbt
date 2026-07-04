@@ -34,7 +34,7 @@ async test "mbtexcel open_reader wrapper" {
   workbook.set_cell("Sheet1", "A1", "reader")
   let bytes = write(workbook)
   let (reader, writer) = @async/io.pipe()
-  let parsed = @async.with_task_group(fn(group) {
+  let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)
@@ -51,7 +51,7 @@ async test "mbtexcel open_reader wrapper with transcoder branch" {
   workbook.set_cell("Sheet1", "A1", "reader")
   let bytes = write(workbook)
   let (reader, writer) = @async/io.pipe()
-  let parsed = @async.with_task_group(fn(group) {
+  let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)
@@ -72,7 +72,7 @@ async test "mbtexcel read_zip_reader wrapper" {
   workbook.set_cell("Sheet1", "B2", "zip")
   let bytes = write(workbook)
   let (reader, writer) = @async/io.pipe()
-  let parsed = @async.with_task_group(fn(group) {
+  let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)
@@ -89,7 +89,7 @@ async test "mbtexcel read_zip_reader wrapper with transcoder branch" {
   workbook.set_cell("Sheet1", "B2", "zip")
   let bytes = write(workbook)
   let (reader, writer) = @async/io.pipe()
-  let parsed = @async.with_task_group(fn(group) {
+  let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)

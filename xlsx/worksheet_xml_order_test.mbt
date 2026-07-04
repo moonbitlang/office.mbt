@@ -26,7 +26,7 @@ test "worksheet xml order: conditional formatting is written before table parts 
   sheet.set_conditional_format("B2:B2", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -58,7 +58,7 @@ test "worksheet xml order: hyperlinks are written before ignoredErrors" {
   sheet.add_ignored_errors("A1", NumberStoredAsText)
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>

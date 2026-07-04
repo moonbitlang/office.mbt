@@ -6,7 +6,7 @@ test "read: missing legacyDrawing vml relationship errors" {
   let bytes = write(workbook)
 
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let bad_rels =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -28,7 +28,7 @@ test "read: missing legacyDrawing vml relationship errors" {
     @encoding/utf8.encode(bad_rels),
   )
   let updated_bytes = @zip.write(updated) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
 
   let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {
@@ -60,7 +60,7 @@ test "read: missing legacyDrawingHF vml relationship errors" {
   let bytes = write(workbook)
 
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let bad_rels =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -82,7 +82,7 @@ test "read: missing legacyDrawingHF vml relationship errors" {
     @encoding/utf8.encode(bad_rels),
   )
   let updated_bytes = @zip.write(updated) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
 
   let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {

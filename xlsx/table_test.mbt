@@ -5,7 +5,7 @@ test "table write and relationships" {
   ignore(sheet.add_table("A1:B2", "Table1", ["Name", "Value"]))
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -93,7 +93,7 @@ test "table style flags and header row" {
   )
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let table_xml = match archive.get("xl/tables/table1.xml") {
     Some(value) =>

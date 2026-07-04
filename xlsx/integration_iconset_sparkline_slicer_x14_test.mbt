@@ -33,7 +33,7 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
 
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -65,11 +65,11 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
     @encoding/utf8.encode(updated_sheet),
   )
   let updated_bytes = @zip.write(updated_archive) catch {
-    err => fail("zip write failed: \{err}")
+    err => fail("zip write failed: \{repr(err)}")
   }
 
   let updated = @zip.read(updated_bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let updated_sheet_xml = match updated.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)

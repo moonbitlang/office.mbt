@@ -98,10 +98,10 @@ test "cfb wb: large builder/write and cfb_read difat branches" {
   inspect(bytes.length() > 0, content="true")
 
   let reader = cfb_read(bytes) catch {
-    err => fail("expected big cfb to parse, got \{err}")
+    err => fail("expected big cfb to parse, got \{repr(err)}")
   }
   let stream = reader.read_stream("BigStream") catch {
-    err => fail("expected BigStream, got \{err}")
+    err => fail("expected BigStream, got \{repr(err)}")
   }
   inspect(stream.length(), content="8388608")
 

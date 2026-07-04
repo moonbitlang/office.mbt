@@ -172,7 +172,7 @@ test "group and ungroup sheets" {
   workbook.group_sheets(["Sheet1", "Sheet2"])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet1_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) =>
@@ -201,7 +201,7 @@ test "group and ungroup sheets" {
   workbook.ungroup_sheets()
   let bytes2 = write(workbook)
   let archive2 = @zip.read(bytes2) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet2_xml2 = match archive2.get("xl/worksheets/sheet2.xml") {
     Some(value) =>

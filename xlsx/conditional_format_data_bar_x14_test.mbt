@@ -12,7 +12,7 @@ test "conditional format data bar x14 extLst roundtrip" {
   sheet.set_conditional_format("A1:A3", [opt])
   let bytes = write(workbook)
   let archive = @zip.read(bytes) catch {
-    err => fail("zip read failed: \{err}")
+    err => fail("zip read failed: \{repr(err)}")
   }
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
