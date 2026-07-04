@@ -197,7 +197,12 @@ async test "header footer image from file path" {
   let stamp = @env.now().to_string()
   let path = "mbtexcel_hf_img_\{stamp}.png"
   let img = Bytes::from_array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a])
-  @async/fs.write_file(path, img, create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    img,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => fail("write file failed: \{err}")
   }
   let opts = try! HeaderFooterImageOptions::from_file(

@@ -6,7 +6,12 @@ async test "set sheet background from file" {
   let stamp = @env.now().to_string()
   let path = "mbtexcel_sheet_bg_\{stamp}.png"
   let bytes = Bytes::from_array([0x89, 0x50, 0x4e, 0x47])
-  @async/fs.write_file(path, bytes, create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => fail("write file failed: \{err}")
   }
   workbook.set_sheet_background_from_file("Sheet1", path)

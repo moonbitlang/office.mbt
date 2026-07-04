@@ -115,7 +115,12 @@ async test "mbtexcel open_file wrapper" {
   let bytes = write(workbook)
   let stamp = @env.now().to_string()
   let path = "mbtexcel_open_file_\{stamp}.xlsx"
-  @async/fs.write_file(path, bytes, create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => fail("write file failed: \{err}")
   }
   let parsed = open_file(path)
@@ -134,7 +139,12 @@ async test "mbtexcel open_file wrapper with transcoder branch" {
   let bytes = write(workbook)
   let stamp = @env.now().to_string()
   let path = "mbtexcel_open_file_transcoder_\{stamp}.xlsx"
-  @async/fs.write_file(path, bytes, create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => fail("write file failed: \{err}")
   }
   let parsed = open_file(path, transcoder=fn(

@@ -14,7 +14,8 @@ async test "complex demos generate OpenXML-valid packages" {
   @async/fs.write_file(
     combo_path,
     @demos.demo_combo_chart_bytes(),
-    create=0o644,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
   ) catch {
     err => fail("write combo_chart.xlsx failed: \{err}")
   }
@@ -37,7 +38,8 @@ async test "complex demos generate OpenXML-valid packages" {
   @async/fs.write_file(
     controls_path,
     @demos.demo_interactive_controls_bytes(),
-    create=0o644,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
   ) catch {
     err => fail("write interactive_controls.xlsx failed: \{err}")
   }
@@ -60,7 +62,8 @@ async test "complex demos generate OpenXML-valid packages" {
   @async/fs.write_file(
     pivot_path,
     @demos.demo_pivot_slicer_bytes(),
-    create=0o644,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
   ) catch {
     err => fail("write pivot_slicer.xlsx failed: \{err}")
   }
@@ -83,7 +86,8 @@ async test "complex demos generate OpenXML-valid packages" {
   @async/fs.write_file(
     stream_path,
     @demos.demo_stream_big_bytes(rows=3000),
-    create=0o644,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
   ) catch {
     err => fail("write stream_big_3000.xlsx failed: \{err}")
   }

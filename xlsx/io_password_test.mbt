@@ -7,7 +7,12 @@ async test "open file and reader with password" {
   let bytes = write_with_password(workbook, "pass")
   let stamp = @env.now().to_string()
   let path = "mbtexcel_password_\{stamp}.xlsx"
-  @async/fs.write_file(path, bytes, create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => fail("write file failed: \{err}")
   }
   let file = @async/fs.open(path, mode=ReadOnly) catch {

@@ -5,7 +5,12 @@
 #cfg(target="native")
 async fn validate_via_sdk(dir : String, name : String, bytes : Bytes) -> Unit {
   let path = "\{dir}/\{name}.xlsx"
-  @async/fs.write_file(path, bytes, create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => fail("write \{name} failed: \{err}")
   }
   let (code, stdout, stderr) = @process.collect_output("bash", [
