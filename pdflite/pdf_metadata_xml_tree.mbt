@@ -22,22 +22,24 @@ fn pdf_metadata_xml_string_of_attribute(
 fn pdf_metadata_xml_string_of_attributes(
   attributes : ArrayView[@metadata.PdfMetadataXmlAttribute],
 ) -> String {
-  let mut output = ""
+  let output = StringBuilder::new()
   for attribute in attributes {
-    output = output + " " + pdf_metadata_xml_string_of_attribute(attribute)
+    output.write_string(" ")
+    output.write_string(pdf_metadata_xml_string_of_attribute(attribute))
   }
-  output
+  output.to_string()
 }
 
 ///|
 fn pdf_metadata_xml_string_of_trees(
   trees : ArrayView[@metadata.PdfMetadataXmlTree],
 ) -> String {
-  let mut output = ""
+  let output = StringBuilder::new()
   for tree in trees {
-    output = output + " " + pdf_metadata_string_of_xmltree(tree)
+    output.write_string(" ")
+    output.write_string(pdf_metadata_string_of_xmltree(tree))
   }
-  output
+  output.to_string()
 }
 
 ///|

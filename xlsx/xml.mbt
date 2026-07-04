@@ -1,5 +1,26 @@
 ///|
+/// Scan for characters that `escape_xml_text`/`escape_xml_attr` would
+/// rewrite, so the escape functions can skip allocating when the input needs
+/// no escaping. All escapable characters are single code units, so scanning
+/// UTF-16 units directly is safe.
+fn xml_needs_escape(value : StringView, attr~ : Bool) -> Bool {
+  for i in 0..<value.length() {
+    match value[i] {
+      '&' | '<' | '>' => return true
+      '"' | '\'' => if attr { return true }
+      _ => ()
+    }
+  }
+  false
+}
+
+///|
 fn escape_xml_text(value : StringView) -> String {
+  if !xml_needs_escape(value, attr=false) {
+    // Fast path: nothing to escape. A view covering a whole string converts
+    // back without copying.
+    return value.to_owned()
+  }
   let sb = StringBuilder::new()
   for c in value {
     match c {
@@ -14,6 +35,9 @@ fn escape_xml_text(value : StringView) -> String {
 
 ///|
 fn escape_xml_attr(value : StringView) -> String {
+  if !xml_needs_escape(value, attr=true) {
+    return value.to_owned()
+  }
   let sb = StringBuilder::new()
   for c in value {
     match c {

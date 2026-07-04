@@ -93,15 +93,14 @@ fn pdf_metadata_extract_xmp_attribute(
 
 ///|
 fn pdf_metadata_combine_list_items(values : ArrayView[String]) -> String {
-  let mut output = ""
+  let output = StringBuilder::new()
   for value in values {
-    if output == "" {
-      output = value
-    } else {
-      output = output + ", " + value
+    if !output.is_empty() {
+      output.write_string(", ")
     }
+    output.write_string(value)
   }
-  output
+  output.to_string()
 }
 
 ///|

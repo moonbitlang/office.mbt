@@ -45,6 +45,21 @@ fn BitReader::drop_bits(self : BitReader, count : Int) -> Unit raise ZipError {
 }
 
 ///|
+/// Fill the bit buffer with up to `count` bits and return them without
+/// consuming any. Near the end of input fewer bits may remain; missing high
+/// bits are zero-padded, and `self.bit_count` reflects how many bits are
+/// actually available. `count` must be in `0..=15`.
+fn BitReader::peek_bits(self : BitReader, count : Int) -> UInt {
+  while self.bit_count < count && self.byte_pos < self.bytes.length() {
+    let byte = self.bytes[self.byte_pos].to_uint()
+    self.bit_buf = self.bit_buf | (byte << self.bit_count)
+    self.bit_count = self.bit_count + 8
+    self.byte_pos = self.byte_pos + 1
+  }
+  self.bit_buf & bit_mask(count)
+}
+
+///|
 fn BitReader::align_byte(self : BitReader) -> Unit raise ZipError {
   let drop = self.bit_count % 8
   if drop != 0 {
@@ -58,12 +73,11 @@ fn BitReader::read_byte(self : BitReader) -> Byte raise ZipError {
 }
 
 ///|
+/// Mask of the low `count` bits. `count` must be in `0..=31`; callers only
+/// ever pass at most 16 (stored-block lengths) and `max_bits <= 15` for
+/// huffman codes.
 fn bit_mask(count : Int) -> UInt {
-  let mut mask : UInt = 0
-  for _ in 0..<count {
-    mask = (mask << 1) | 1
-  }
-  mask
+  (1U << count) - 1
 }
 
 ///|
@@ -257,20 +271,26 @@ fn build_huffman(lengths : ArrayView[Int]) -> HuffmanTable raise ZipError {
 }
 
 ///|
+/// Decode one huffman symbol with a single flat-table lookup: peek up to
+/// `max_bits` bits (zero-padded near end of input), index the table built by
+/// `build_huffman` (which maps every reversed bit-prefix to its unique
+/// `(sym, len)`), then drop only the bits the resolved code actually uses.
 fn decode_symbol(
   reader : BitReader,
   table : HuffmanTable,
 ) -> Int raise ZipError {
-  let mut code : UInt = 0
-  for len in 1..<=table.max_bits {
-    let bit = reader.read_bits(1)
-    code = code | (bit << (len - 1))
-    let idx = code.reinterpret_as_int()
-    if table.len[idx] == len {
-      return table.sym[idx]
+  let idx = reader.peek_bits(table.max_bits).reinterpret_as_int()
+  let len = table.len[idx]
+  if len == 0 || len > reader.bit_count {
+    if reader.bit_count < table.max_bits {
+      // Input ended mid-code: the bit-serial decoder would have failed to
+      // read the next bit here.
+      raise OutOfBounds(offset=reader.byte_pos)
     }
+    raise UnsupportedFeature(msg="invalid huffman code")
   }
-  raise UnsupportedFeature(msg="invalid huffman code")
+  reader.drop_bits(len)
+  table.sym[idx]
 }
 
 ///|

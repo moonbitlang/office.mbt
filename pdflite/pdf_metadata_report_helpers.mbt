@@ -9,15 +9,14 @@ fn pdf_metadata_json_string_array(values : ArrayView[String]) -> Json {
 
 ///|
 fn pdf_metadata_combine_with_commas(values : ArrayView[String]) -> String {
-  let mut output = ""
+  let output = StringBuilder::new()
   for value in values {
-    if output == "" {
-      output = value
-    } else {
-      output = output + ", " + value
+    if !output.is_empty() {
+      output.write_string(", ")
     }
+    output.write_string(value)
   }
-  output.trim().to_owned()
+  output.to_string().trim().to_owned()
 }
 
 ///|
