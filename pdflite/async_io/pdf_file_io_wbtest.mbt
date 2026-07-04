@@ -17,10 +17,15 @@ fn pdf_async_io_assert_generated_id_for_test(
 }
 
 ///|
-fn pdf_async_io_test_path_for_test(name : String) -> String {
+async fn pdf_async_io_test_path_for_test(name : String) -> String {
   let directory = match @env.current_dir() {
     Some(current_dir) => current_dir + "/_build/"
     None => "_build/"
+  }
+  // In the `moon work` workspace the build directory lives at the workspace
+  // root, so `_build` relative to the pdflite module cwd may not exist yet.
+  if @fs.exists(directory) == false {
+    @fs.mkdir(directory, recursive=true)
   }
   directory + "pdflite_async_io_" + name + "_" + @env.now().to_string() + ".pdf"
 }
@@ -34,11 +39,17 @@ fn pdf_async_io_repo_path_for_test(path : String) -> String {
 }
 
 ///|
-fn pdf_async_io_build_dir_for_test() -> String {
-  match @env.current_dir() {
+async fn pdf_async_io_build_dir_for_test() -> String {
+  let dir = match @env.current_dir() {
     Some(current_dir) => current_dir + "/_build"
     None => "_build"
   }
+  // See pdf_async_io_test_path_for_test: ensure the module-relative `_build`
+  // directory exists under the workspace build layout.
+  if @fs.exists(dir) == false {
+    @fs.mkdir(dir, recursive=true)
+  }
+  dir
 }
 
 ///|
