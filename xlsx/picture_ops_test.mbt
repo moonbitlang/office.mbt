@@ -635,7 +635,12 @@ async test "picture with options file path explicit values" {
   ignore(workbook.add_sheet("Sheet1"))
   let stamp = @env.now().to_string()
   let path = "mbtexcel_picture_opts_\{stamp}.png"
-  @async/fs.write_file(path, b"img", create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    b"img",
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => fail("write image failed: \{err}")
   }
   let opts = GraphicOptions::with_values(
@@ -682,7 +687,12 @@ async test "picture from file path" {
   ignore(workbook.add_sheet("Sheet1"))
   let stamp = @env.now().to_string()
   let path = "mbtexcel_picture_\{stamp}.png"
-  @async/fs.write_file(path, b"img", create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    b"img",
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => fail("write image failed: \{err}")
   }
   workbook.add_picture("Sheet1", "A1", path)

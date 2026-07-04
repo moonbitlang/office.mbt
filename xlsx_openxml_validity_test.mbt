@@ -29,7 +29,12 @@ async test "xlsx writer generates OpenXML-valid package" {
     err => fail("mkdir failed: \{err}")
   }
   let path = "\{out_dir}/openxml_valid.xlsx"
-  @async/fs.write_file(path, bytes, create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => fail("write xlsx failed: \{err}")
   }
   let (code, stdout, stderr) = @process.collect_output("bash", [
