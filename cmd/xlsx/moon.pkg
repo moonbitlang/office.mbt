@@ -1,0 +1,14 @@
+import {
+  "bobzhang/mbtexcel" @lib,
+  "bobzhang/mbtexcel/xlsx" @xl,
+  "moonbitlang/core/argparse",
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async/fs,
+  "moonbitlang/core/env",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+)
