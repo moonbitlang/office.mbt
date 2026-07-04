@@ -1,0 +1,2 @@
+///|
+type DocxError = @core.DocxError

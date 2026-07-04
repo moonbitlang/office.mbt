@@ -1,0 +1,172 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/document"
+
+import {
+  "bobzhang/docx2html/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn bookmark_start(String) -> DocumentElement
+
+pub fn checkbox(Bool) -> DocumentElement
+
+pub fn column_break() -> DocumentElement
+
+pub fn comment(String, Array[DocumentElement], author_name? : String, author_initials? : String) -> Comment
+
+pub fn comment_reference(String) -> DocumentElement
+
+pub fn document(Array[DocumentElement], notes? : Array[Note], comments? : Array[Comment]) -> DocumentElement
+
+pub fn document_descendants(DocumentElement) -> Array[DocumentElement]
+
+pub fn document_descendants_where(DocumentElement, (DocumentElement) -> Bool) -> Array[DocumentElement]
+
+pub fn extract_raw_text_from_document(DocumentElement) -> @core.ConversionResult
+
+pub fn hyperlink(Array[DocumentElement], href? : String?, anchor? : String?, target_frame? : String?) -> DocumentElement
+
+pub fn identity_document_transform(DocumentElement) -> DocumentElement
+
+pub fn image(String, Bytes, alt_text? : String?) -> DocumentElement
+
+pub fn indent(start? : String?, end? : String?, first_line? : String?, hanging? : String?) -> Indent
+
+pub fn line_break() -> DocumentElement
+
+pub fn note(String, String, Array[DocumentElement]) -> Note
+
+pub fn note_reference(String, String) -> DocumentElement
+
+pub fn numbering(Bool, Int) -> Numbering
+
+pub fn page_break() -> DocumentElement
+
+pub fn paragraph(Array[DocumentElement], properties? : ParagraphProperties) -> DocumentElement
+
+pub fn paragraph_properties(style_id? : String?, style_name? : String?, numbering? : Numbering?, alignment? : String?, indent? : Indent) -> ParagraphProperties
+
+pub fn run(Array[DocumentElement], properties? : RunProperties) -> DocumentElement
+
+pub fn run_properties(style_id? : String?, style_name? : String?, is_bold? : Bool, is_underline? : Bool, is_italic? : Bool, is_strikethrough? : Bool, is_all_caps? : Bool, is_small_caps? : Bool, vertical_alignment? : VerticalAlignment, font? : String?, font_size? : Int?, highlight? : String?) -> RunProperties
+
+pub fn tab() -> DocumentElement
+
+pub fn table(Array[DocumentElement], properties? : TableProperties) -> DocumentElement
+
+pub fn table_cell(Array[DocumentElement], col_span? : Int, row_span? : Int) -> DocumentElement
+
+pub fn table_properties(style_id? : String?, style_name? : String?) -> TableProperties
+
+pub fn table_row(Array[DocumentElement], is_header? : Bool) -> DocumentElement
+
+pub fn text(String) -> DocumentElement
+
+pub fn transform_elements(DocumentElement, (DocumentElement) -> DocumentElement) -> DocumentElement
+
+pub fn transform_paragraphs((DocumentElement) -> DocumentElement) -> (DocumentElement) -> DocumentElement
+
+pub fn transform_runs((DocumentElement) -> DocumentElement) -> (DocumentElement) -> DocumentElement
+
+// Errors
+
+// Types and methods
+pub(all) enum BreakType {
+  Line
+  Page
+  Column
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Comment {
+  comment_id : String
+  body : Array[DocumentElement]
+  author_name : String
+  author_initials : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum DocumentElement {
+  Document(children~ : Array[DocumentElement], notes~ : Array[Note], comments~ : Array[Comment])
+  Paragraph(children~ : Array[DocumentElement], properties~ : ParagraphProperties)
+  Run(children~ : Array[DocumentElement], properties~ : RunProperties)
+  Text(String)
+  Tab
+  Checkbox(Bool)
+  Hyperlink(children~ : Array[DocumentElement], href~ : String?, anchor~ : String?, target_frame~ : String?)
+  NoteReference(note_type~ : String, note_id~ : String)
+  CommentReference(String)
+  Image(Image)
+  Table(children~ : Array[DocumentElement], properties~ : TableProperties)
+  TableRow(children~ : Array[DocumentElement], is_header~ : Bool)
+  TableCell(children~ : Array[DocumentElement], col_span~ : Int, row_span~ : Int)
+  Break(BreakType)
+  BookmarkStart(String)
+} derive(Eq, @debug.Debug)
+pub fn DocumentElement::to_raw_text(Self) -> String
+
+pub(all) struct Image {
+  content_type : String
+  alt_text : String?
+  data : Bytes
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Indent {
+  start : String?
+  end : String?
+  first_line : String?
+  hanging : String?
+} derive(Eq, @debug.Debug)
+pub fn Indent::default() -> Self
+
+pub(all) struct Note {
+  note_type : String
+  note_id : String
+  body : Array[DocumentElement]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Numbering {
+  is_ordered : Bool
+  level : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ParagraphProperties {
+  style_id : String?
+  style_name : String?
+  numbering : Numbering?
+  alignment : String?
+  indent : Indent
+} derive(Eq, @debug.Debug)
+pub fn ParagraphProperties::default() -> Self
+
+pub(all) struct RunProperties {
+  style_id : String?
+  style_name : String?
+  is_bold : Bool
+  is_underline : Bool
+  is_italic : Bool
+  is_strikethrough : Bool
+  is_all_caps : Bool
+  is_small_caps : Bool
+  vertical_alignment : VerticalAlignment
+  font : String?
+  font_size : Int?
+  highlight : String?
+} derive(Eq, @debug.Debug)
+pub fn RunProperties::default() -> Self
+
+pub(all) struct TableProperties {
+  style_id : String?
+  style_name : String?
+} derive(Eq, @debug.Debug)
+pub fn TableProperties::default() -> Self
+
+pub(all) enum VerticalAlignment {
+  Baseline
+  Superscript
+  Subscript
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

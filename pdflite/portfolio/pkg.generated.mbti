@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/portfolio"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_portfolio_entry(String, BytesView, relationship? : String?, description? : String?) -> PdfPortfolioEntry
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfPortfolioEntry {
+  filename : String
+  data : Bytes
+  relationship : String?
+  description : String?
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+// Traits
+

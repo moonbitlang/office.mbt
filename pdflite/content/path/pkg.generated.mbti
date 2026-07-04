@@ -1,0 +1,63 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/content/path"
+
+import {
+  "bobzhang/pdflite/content",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/shape",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_content_apply_clipping_op(PdfContentPartialPath, ArrayView[@shape.PdfPath], @content.PdfContentOp) -> PdfContentClippingOpResult
+
+pub fn pdf_content_apply_path_op(PdfContentPartialPath, @content.PdfContentOp) -> PdfContentPathOpResult
+
+pub fn pdf_content_no_partial_path() -> PdfContentPartialPath
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfContentClippingOpResult {
+  partial_path : PdfContentPartialPath
+  clipping_path : Array[@shape.PdfPath]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfContentPartialPath {
+  PdfContentNoPartialPath
+  PdfContentPartialPath(PdfContentPartialPathState)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentPartialPath::content_apply_clipping_op(Self, ArrayView[@shape.PdfPath], @content.PdfContentOp) -> PdfContentClippingOpResult
+pub fn PdfContentPartialPath::content_apply_path_op(Self, @content.PdfContentOp) -> PdfContentPathOpResult
+
+pub(all) struct PdfContentPartialPathState {
+  start_point : @geometry.Point2
+  current_point : @geometry.Point2
+  segments : Array[@shape.PdfPathSegment]
+  subpaths : Array[@shape.PdfPathSubpath]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentPathOpResult {
+  partial_path : PdfContentPartialPath
+  drawn_path : @shape.PdfDrawnPath?
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+pub using @content {type PdfContentOp}
+
+pub using @shape {type PdfDrawnPath}
+
+pub using @shape {type PdfPath}
+
+pub using @shape {type PdfPathClosure}
+
+pub using @shape {type PdfPathSegment}
+
+pub using @shape {type PdfPathSubpath}
+
+pub using @shape {type PdfPathWindingRule}
+
+pub using @geometry {type Point2}
+
+// Traits
+

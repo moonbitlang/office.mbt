@@ -1,0 +1,16 @@
+import {
+  "bobzhang/pdflite/core",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"
+
+import {
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/test",
+} for "wbtest"
+
+options(
+  "native-stub": [ "pdf_zlib_native.c" ],
+)

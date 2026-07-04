@@ -1,0 +1,33 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/bookmark"
+
+import {
+  "bobzhang/pdflite/destination",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let pdf_bookmark_black : PdfBookmarkColour
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfBookmark {
+  level : Int
+  text : Bytes
+  target : @destination.PdfDestination
+  is_open : Bool
+  colour : PdfBookmarkColour
+  flags : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfBookmarkColour {
+  red : Double
+  green : Double
+  blue : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

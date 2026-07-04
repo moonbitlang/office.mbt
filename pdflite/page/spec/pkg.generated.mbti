@@ -1,0 +1,34 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/page/spec"
+
+import {
+  "bobzhang/pdflite/core",
+}
+
+// Values
+pub fn pdf_invert_page_range(Int, ArrayView[Int]) -> Array[Int]
+
+pub fn pdf_invert_range(Int, ArrayView[Int]) -> Array[Int]
+
+pub fn pdf_parse_pagespec_for_count(Int, String) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_parse_pagespec_with_selectors(Int, String, PdfPageSpecSelectors?) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_parse_pagespec_without_pdf(String) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_string_of_pagespec_for_count(Int, ArrayView[Int]) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfPageSpecSelectors {
+  resolve_references : (BytesView) -> Bytes raise @core.PdfError
+  select_dimensions : (ArrayView[Int], Bool) -> Array[Int] raise @core.PdfError
+  select_annotated : (ArrayView[Int]) -> Array[Int] raise @core.PdfError
+}
+
+// Type aliases
+pub using @core {type PdfError}
+
+// Traits
+

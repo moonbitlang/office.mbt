@@ -1,0 +1,12 @@
+import {
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/date",
+  "bobzhang/pdflite/page/label",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/env",
+  "moonbitlang/core/test",
+} for "test"
+
+supported_targets = "+native"

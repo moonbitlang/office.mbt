@@ -1,0 +1,7 @@
+.DS_Store
+_build/
+.mooncakes/
+.moonagent/
+.repos/
+scripts/.mooncakes/
+scripts/_build/

@@ -1,0 +1,27 @@
+///|
+test "standard14 package exposes substitute font metadata" {
+  @test.assert_eq(
+    @standard14.pdf_standard_font_substitute_filenames(PdfTimesRoman),
+    ["NimbusRoman-Regular.ttf"],
+  )
+  @test.assert_eq(
+    @standard14.pdf_standard_font_substitute_filenames(PdfHelveticaBoldOblique),
+    ["NimbusSans-BoldItalic.ttf"],
+  )
+  @test.assert_eq(
+    @standard14.pdf_standard_font_substitute_filenames(PdfCourierOblique),
+    ["NimbusMonoPS-Italic.ttf"],
+  )
+  @test.assert_eq(
+    @standard14.pdf_standard_font_substitute_filenames(PdfSymbol),
+    ["StandardSymbolsPS.ttf"],
+  )
+  @test.assert_eq(
+    @standard14.pdf_standard_font_substitute_font_name(PdfHelvetica),
+    "NimbusSans-Regular",
+  )
+  @test.assert_eq(
+    @standard14.pdf_standard_font_substitute_font_name(PdfZapfDingbats),
+    "D050000L",
+  )
+}

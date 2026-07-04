@@ -1,0 +1,41 @@
+import {
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/content",
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/page",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/hashmap",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/content",
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/markdown",
+  "bobzhang/pdflite/page",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/test",
+} for "test"
+
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/syntax",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/test",
+} for "wbtest"
+
+supported_targets = "+wasm-gc +js +native +llvm"
+
+options(
+  targets: {
+    "pdf_markdown_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_markdown_wbtest.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+  },
+)

@@ -1,0 +1,18 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/text/glyphdata"
+
+// Values
+pub fn pdf_text_codepoint_of_agl_base_glyphname(String) -> Int?
+
+pub fn pdf_text_codepoint_of_glyphname_table(String, String) -> Int?
+
+pub fn pdf_text_codepoints_of_agl_sequence_glyphname(String) -> Array[Int]?
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

@@ -1,0 +1,28 @@
+import {
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/core",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/stdio",
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x/sys",
+}
+
+import {
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/core",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/test",
+} for "wbtest"
+
+supported_targets = "+native"
+
+options(
+  "is-main": true,
+)

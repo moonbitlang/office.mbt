@@ -1,0 +1,29 @@
+[
+  {
+    "id": "py_pdf_pdflatex_image",
+    "filename": "pdflatex-image.pdf",
+    "url": "https://raw.githubusercontent.com/py-pdf/sample-files/main/003-pdflatex-image/pdflatex-image.pdf",
+    "source": "https://github.com/py-pdf/sample-files",
+    "license": "CC-BY-SA-4.0",
+    "redistribution": "download-only; do not vendor the PDF in this repository",
+    "acceptance_focus": "DCTDecode/JPEG image XObject passthrough"
+  },
+  {
+    "id": "py_pdf_imagemagick_ccitt",
+    "filename": "imagemagick-CCITTFaxDecode.pdf",
+    "url": "https://raw.githubusercontent.com/py-pdf/sample-files/main/007-imagemagick-images/imagemagick-CCITTFaxDecode.pdf",
+    "source": "https://github.com/py-pdf/sample-files",
+    "license": "CC-BY-SA-4.0",
+    "redistribution": "download-only; do not vendor the PDF in this repository",
+    "acceptance_focus": "CCITTFaxDecode image XObject decode to RGB24"
+  },
+  {
+    "id": "py_pdf_cmyk_image",
+    "filename": "cmyk-image.pdf",
+    "url": "https://raw.githubusercontent.com/py-pdf/sample-files/main/023-cmyk-image/cmyk-image.pdf",
+    "source": "https://github.com/py-pdf/sample-files",
+    "license": "CC-BY-SA-4.0",
+    "redistribution": "download-only; do not vendor the PDF in this repository",
+    "acceptance_focus": "Indexed CMYK image XObject decode to RGB24"
+  }
+]

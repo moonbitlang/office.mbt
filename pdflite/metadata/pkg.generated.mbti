@@ -1,0 +1,101 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/metadata"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub let pdf_adobe : String
+
+pub let pdf_dc : String
+
+pub let pdf_metadata_adobe : String
+
+pub let pdf_metadata_adobe_namespace : String
+
+pub let pdf_metadata_dc : String
+
+pub let pdf_metadata_dc_namespace : String
+
+pub let pdf_metadata_pdfaid : String
+
+pub let pdf_metadata_pdfaid_namespace : String
+
+pub let pdf_metadata_pdfe : String
+
+pub let pdf_metadata_pdfe_namespace : String
+
+pub let pdf_metadata_pdfuaid : String
+
+pub let pdf_metadata_pdfuaid_namespace : String
+
+pub let pdf_metadata_pdfvtid : String
+
+pub let pdf_metadata_pdfvtid_namespace : String
+
+pub let pdf_metadata_pdfxid : String
+
+pub let pdf_metadata_pdfxid_namespace : String
+
+pub let pdf_metadata_rdf : String
+
+pub let pdf_metadata_rdf_namespace : String
+
+pub let pdf_metadata_xmp : String
+
+pub let pdf_metadata_xmp_namespace : String
+
+pub let pdf_pdfaid : String
+
+pub let pdf_pdfe : String
+
+pub let pdf_pdfuaid : String
+
+pub let pdf_pdfvtid : String
+
+pub let pdf_pdfxid : String
+
+pub let pdf_rdf : String
+
+pub let pdf_xmp : String
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfMetadataEncoding {
+  PdfMetadataRaw
+  PdfMetadataUTF8
+  PdfMetadataStripped
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlAttribute {
+  name : PdfMetadataXmlName
+  value : String
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlDocument {
+  dtd : String?
+  tree : PdfMetadataXmlTree
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlName {
+  uri : String
+  local_name : String
+  prefix : String?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfMetadataXmlTag {
+  name : PdfMetadataXmlName
+  attributes : Array[PdfMetadataXmlAttribute]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfMetadataXmlTree {
+  PdfMetadataXmlElement(PdfMetadataXmlTag, Array[PdfMetadataXmlTree])
+  PdfMetadataXmlData(String)
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

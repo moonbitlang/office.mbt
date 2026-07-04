@@ -1,0 +1,27 @@
+import {
+  "bobzhang/pdflite",
+  "bobzhang/pdflite/bookmark",
+  "bobzhang/pdflite/composition",
+  "bobzhang/pdflite/content",
+  "bobzhang/pdflite/content/colour",
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/date",
+  "bobzhang/pdflite/flate",
+  "bobzhang/pdflite/font",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/metadata",
+  "bobzhang/pdflite/ocg",
+  "bobzhang/pdflite/page",
+  "bobzhang/pdflite/page/label",
+  "bobzhang/pdflite/portfolio",
+  "bobzhang/pdflite/syntax",
+  "bobzhang/pdflite/text/unicodedata",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/test",
+} for "test"
+
+supported_targets = "+native"

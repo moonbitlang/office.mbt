@@ -1,0 +1,71 @@
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/syntax",
+  "bobzhang/pdflite/xref_model",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/hashmap",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"
+
+options(
+  targets: {
+    "pdf_reader_header_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_reader_names_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_reader_object_stream_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_reader_reconstruction_scan_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
+    "pdf_reader_reconstruction_sections_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
+    "pdf_reader_reconstruction_plan_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
+    "pdf_reader_reconstruction_trailers_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
+    "pdf_reader_reconstruction_xrefs_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
+    "pdf_reader_trailer_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_reader_xref_classic_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_reader_xref_model_test.mbt": [ "wasm-gc", "js", "native", "llvm" ],
+    "pdf_reader_xref_stream_metadata_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
+    "pdf_reader_xref_stream_refs_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
+    "pdf_reader_xref_stream_entries_test.mbt": [
+      "wasm-gc",
+      "js",
+      "native",
+      "llvm",
+    ],
+  },
+)

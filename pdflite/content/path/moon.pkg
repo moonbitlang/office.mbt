@@ -1,0 +1,10 @@
+import {
+  "bobzhang/pdflite/content",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/shape",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/core/test",
+} for "test"

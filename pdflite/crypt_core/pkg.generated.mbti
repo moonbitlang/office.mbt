@@ -1,0 +1,119 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/crypt_core"
+
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_aes_cbc_decrypt(BytesView, BytesView, remove_padding? : Bool) -> Bytes raise @core.PdfError
+
+pub fn pdf_aes_cbc_encrypt_with_iv(BytesView, BytesView, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_aes_decrypt_block(BytesView, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_aes_ecb_decrypt(BytesView, BytesView, remove_padding? : Bool) -> Bytes raise @core.PdfError
+
+pub fn pdf_aes_ecb_encrypt(BytesView, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_aes_encrypt_block(BytesView, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_aesv2_decrypt_object_data(Int, Int, BytesView, Int, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_aesv2_encrypt_object_data(Int, Int, BytesView, Int, BytesView, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_aesv3_decrypt_object_data(BytesView, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_aesv3_encrypt_object_data(BytesView, BytesView, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_arc4_crypt(BytesView, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_arc4_crypt_object(Int, Int, BytesView, Int, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_authenticate_owner_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise @core.PdfError
+
+pub fn pdf_authenticate_user_password(Bool, BytesView, Int, BytesView, BytesView, Int, BytesView, Int) -> Bool raise @core.PdfError
+
+pub fn pdf_bytes_prefix_equal(BytesView, BytesView, Int) -> Bool
+
+pub fn pdf_crypt_low_byte(Int, Int) -> Byte
+
+pub fn pdf_encryption_file_key(Bool, BytesView, Int, BytesView, Int, BytesView, Int) -> Bytes
+
+pub fn pdf_encryption_object_key(@core.PdfCryptType, Int, Int, BytesView, Int) -> Bytes
+
+pub fn pdf_make_owner_password_entry(Int, BytesView, BytesView, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_make_user_password_entry(Bool, BytesView, Int, BytesView, Int, BytesView, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_md5_digest(BytesView) -> Bytes
+
+pub fn pdf_p_of_permissions(ArrayView[PdfPermission]) -> Int
+
+pub fn pdf_pad_password(BytesView) -> Bytes
+
+pub fn pdf_password_padding() -> Bytes
+
+pub fn pdf_permissions_of_p(Int) -> Array[PdfPermission]
+
+pub fn pdf_sha256_digest(BytesView) -> Bytes
+
+pub fn pdf_sha384_digest(BytesView) -> Bytes
+
+pub fn pdf_sha512_digest(BytesView) -> Bytes
+
+pub fn pdf_user_password_from_owner_password(Int, BytesView, BytesView, Int) -> Bytes raise @core.PdfError
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfAesV3RandomField {
+  PdfAesV3FileKey
+  PdfAesV3UserValidationSalt
+  PdfAesV3UserKeySalt
+  PdfAesV3OwnerValidationSalt
+  PdfAesV3OwnerKeySalt
+  PdfAesV3PermissionsPadding
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfEncryptionMethod {
+  PdfEncryption40Bit
+  PdfEncryption128Bit
+  PdfEncryptionAES128(Bool)
+  PdfEncryptionAES256(Bool)
+  PdfEncryptionAES256ISO(Bool)
+  PdfEncryptionAlreadyEncrypted
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfEncryptionValues {
+  crypt_type : @core.PdfCryptType
+  user_entry : Bytes
+  owner_entry : Bytes
+  permissions : Int
+  file_id : Bytes
+  encrypt_metadata : Bool
+  permissions_entry : Bytes?
+  user_encryption_key : Bytes?
+  owner_encryption_key : Bytes?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum PdfPermission {
+  PdfNoEdit
+  PdfNoPrint
+  PdfNoCopy
+  PdfNoAnnot
+  PdfNoForms
+  PdfNoExtract
+  PdfNoAssemble
+  PdfNoHqPrint
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfSavedEncryption {
+  values : PdfEncryptionValues
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

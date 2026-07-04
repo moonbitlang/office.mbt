@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  moonbit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Update dependencies
+        run: |
+          moon version --all
+          moon update
+
+      - name: Check generated interfaces
+        run: |
+          moon info
+          git diff --exit-code -- pkg.generated.mbti cmd/main/pkg.generated.mbti
+
+      - name: Check formatting
+        run: moon fmt --check
+
+      - name: Run native tests
+        run: moon test --target native
+
+      - name: Run cram tests
+        run: moon cram test tests/cram
+
+      - name: Check native target
+        run: moon check --target native --warn-list +73
+
+      - name: Check all targets
+        run: moon check --target all --warn-list +73

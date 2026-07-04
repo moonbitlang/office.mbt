@@ -1,0 +1,38 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/text/unicodedata"
+
+import {
+  "bobzhang/pdflite/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn pdf_unicode_data_source() -> Bytes raise @core.PdfError
+
+pub fn pdf_unicodedata_source() -> Bytes raise @core.PdfError
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfUnicodeDataEntry {
+  code_value : String
+  character_name : String
+  general_category : String
+  canonical_combining_classes : String
+  bidirectional_category : String
+  character_decomposition_mapping : String
+  decimal_digit_value : String
+  digit_value : String
+  numeric_value : String
+  mirrored : String
+  unicode_10_name : String
+  iso_10646_comment_field : String
+  uppercase_mapping : String
+  lowercase_mapping : String
+  titlecase_mapping : String
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

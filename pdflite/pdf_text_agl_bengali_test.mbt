@@ -1,0 +1,120 @@
+///|
+test "PdfTextExtractor decodes Bengali AGL glyph names" {
+  let entries : Array[(String, Int)] = [
+    ("/aabengali", 0x0986),
+    ("/aavowelsignbengali", 0x09BE),
+    ("/abengali", 0x0985),
+    ("/aibengali", 0x0990),
+    ("/aivowelsignbengali", 0x09C8),
+    ("/anusvarabengali", 0x0982),
+    ("/aubengali", 0x0994),
+    ("/aulengthmarkbengali", 0x09D7),
+    ("/auvowelsignbengali", 0x09CC),
+    ("/babengali", 0x09AC),
+    ("/bhabengali", 0x09AD),
+    ("/cabengali", 0x099A),
+    ("/candrabindubengali", 0x0981),
+    ("/chabengali", 0x099B),
+    ("/dabengali", 0x09A6),
+    ("/ddabengali", 0x09A1),
+    ("/ddhabengali", 0x09A2),
+    ("/denominatorminusonenumeratorbengali", 0x09F8),
+    ("/dhabengali", 0x09A7),
+    ("/ebengali", 0x098F),
+    ("/eightbengali", 0x09EE),
+    ("/evowelsignbengali", 0x09C7),
+    ("/fivebengali", 0x09EB),
+    ("/fourbengali", 0x09EA),
+    ("/fournumeratorbengali", 0x09F7),
+    ("/gabengali", 0x0997),
+    ("/ghabengali", 0x0998),
+    ("/habengali", 0x09B9),
+    ("/ibengali", 0x0987),
+    ("/iibengali", 0x0988),
+    ("/iivowelsignbengali", 0x09C0),
+    ("/issharbengali", 0x09FA),
+    ("/ivowelsignbengali", 0x09BF),
+    ("/jabengali", 0x099C),
+    ("/jhabengali", 0x099D),
+    ("/kabengali", 0x0995),
+    ("/khabengali", 0x0996),
+    ("/labengali", 0x09B2),
+    ("/llvocalicbengali", 0x09E1),
+    ("/llvocalicvowelsignbengali", 0x09E3),
+    ("/lvocalicbengali", 0x098C),
+    ("/lvocalicvowelsignbengali", 0x09E2),
+    ("/mabengali", 0x09AE),
+    ("/nabengali", 0x09A8),
+    ("/ngabengali", 0x0999),
+    ("/ninebengali", 0x09EF),
+    ("/nnabengali", 0x09A3),
+    ("/nuktabengali", 0x09BC),
+    ("/nyabengali", 0x099E),
+    ("/obengali", 0x0993),
+    ("/onebengali", 0x09E7),
+    ("/onenumeratorbengali", 0x09F4),
+    ("/ovowelsignbengali", 0x09CB),
+    ("/pabengali", 0x09AA),
+    ("/phabengali", 0x09AB),
+    ("/rabengali", 0x09B0),
+    ("/ralowerdiagonalbengali", 0x09F1),
+    ("/ramiddlediagonalbengali", 0x09F0),
+    ("/rhabengali", 0x09DD),
+    ("/rrabengali", 0x09DC),
+    ("/rrvocalicbengali", 0x09E0),
+    ("/rrvocalicvowelsignbengali", 0x09C4),
+    ("/rupeemarkbengali", 0x09F2),
+    ("/rupeesignbengali", 0x09F3),
+    ("/rvocalicbengali", 0x098B),
+    ("/rvocalicvowelsignbengali", 0x09C3),
+    ("/sabengali", 0x09B8),
+    ("/sevenbengali", 0x09ED),
+    ("/shabengali", 0x09B6),
+    ("/sixbengali", 0x09EC),
+    ("/sixteencurrencydenominatorbengali", 0x09F9),
+    ("/ssabengali", 0x09B7),
+    ("/tabengali", 0x09A4),
+    ("/thabengali", 0x09A5),
+    ("/threebengali", 0x09E9),
+    ("/threenumeratorbengali", 0x09F6),
+    ("/ttabengali", 0x099F),
+    ("/tthabengali", 0x09A0),
+    ("/twobengali", 0x09E8),
+    ("/twonumeratorbengali", 0x09F5),
+    ("/ubengali", 0x0989),
+    ("/uubengali", 0x098A),
+    ("/uuvowelsignbengali", 0x09C2),
+    ("/uvowelsignbengali", 0x09C1),
+    ("/viramabengali", 0x09CD),
+    ("/visargabengali", 0x0983),
+    ("/yabengali", 0x09AF),
+    ("/yyabengali", 0x09DF),
+    ("/zerobengali", 0x09E6),
+  ]
+  let differences : Array[@pdflite.PdfEncodingDifference] = []
+  let text_codes : Array[Int] = []
+  let expected_codepoints : Array[Int] = []
+  for index in 0..<entries.length() {
+    let entry = entries[index]
+    let code = index + 1
+    differences.push(text_difference_for_test(entry.0, code))
+    text_codes.push(code)
+    expected_codepoints.push(entry.1)
+  }
+  let standard_font : @pdflite.PdfFont = PdfFontStandard(
+    text_standard_font_data_for_test(
+      PdfHelvetica,
+      PdfCustomEncoding(PdfStandardEncoding, differences),
+    ),
+  )
+  let extractor = standard_font.text_extractor()
+  @test.assert_eq(
+    try! extractor.codepoints_of_text(text_bytes_for_test(text_codes)),
+    expected_codepoints,
+  )
+  @test.assert_eq(extractor.charcode_of_codepoint(0x0986), Some(1))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x098F), Some(20))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x098C), Some(41))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x09F2), Some(63))
+  @test.assert_eq(extractor.charcode_of_codepoint(0x09E6), Some(89))
+}

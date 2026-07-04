@@ -1,0 +1,162 @@
+# pdflite Architecture Refactor — Execution Plan
+
+Companion to `ARCHITECTURE_PROPOSAL.md`. This is the commit-by-commit sequence.
+
+## Status (2026-06-20)
+
+- **Phase A — DONE & MERGED** (PR #12): hygiene + guardrails.
+- **Phase B — DONE & MERGED** (PR #13): leaf extraction below root (`xref_model`,
+  `crypt_core` security state), async-dep upgrade, `derive(ToJson)` cleanup.
+- **Phase C / C1 (extract `document`) — ABANDONED.** Infeasible in MoonBit: `pub`
+  methods cannot be defined on a foreign type ([4059]), and `PdfDocument`'s
+  ~445-method public API cannot leave root. See ARCHITECTURE_PROPOSAL.md §0.
+- **Going forward:** keep `PdfDocument` in root as the facade; extract leaf
+  packages below root (Phase B style) and/or do per-domain public-API boundary
+  cleanup. See "Revised Phase C+" below.
+
+## Ground rules (every commit)
+
+1. One commit = one reviewable, behavior-preserving step (unless explicitly a
+   docs/tooling commit).
+2. Before committing, run the gate (warn-list matches CI in
+   `.github/workflows/ci.yml`, env `MOON_WARN_LIST: "+a-39@65@73@74@75"`):
+   ```
+   moon fmt
+   moon check
+   moon check --warn-list +a-39@65@73@74@75   # exactly the CI policy
+   moon test
+   ```
+3. Commit, then have `codex` review the single commit diff
+   (`git show --stat` + full diff) for correctness/regressions before moving on.
+4. If codex flags a real issue, fix in a follow-up commit (don't rewrite history).
+5. `.mbti` diffs are part of the review: API changes must be intentional.
+
+## Phase A — Hygiene & guardrails (safe, mechanical)
+
+These carry near-zero behavior risk and unblock everything else.
+
+### Commit A1 — Archive historical migration docs
+- Move ONLY the three genuinely-historical CamlPDF docs into `docs/history/`
+  (use `git mv`): `CamlPDFArchitecturePlan.md`, `CamlPDFMigrationPlan.md`,
+  `CamlPDFMigrationTodo.md`.
+- KEEP at root (verified to be living, not historical): `OCaml2MoonBit.md` is an
+  actively-maintained porting guide ("Update it whenever a reusable porting rule
+  ... is verified"); `PdfMarkdownAcceptancePlan.md` is an active plan ("This plan
+  tracks ..."). Archiving these was rejected after reading them.
+- No code touched. Gate: `moon check` (should be a no-op) + repo builds.
+
+### Commit A2 — Land planning docs
+- Add `ARCHITECTURE_PROPOSAL.md`, `EXECUTION_PLAN.md`, and `docs/packages.md`
+  (current domain → package + remaining-root-files map).
+- Additive docs only.
+
+### Commit A3 — Rule-based test target matrix
+- Replace the ~150-entry per-file `targets` map in root `moon.pkg` with the
+  broadest default that builds, keeping explicit entries ONLY for the files that
+  are genuinely native-only. Use an EXPLICIT native-only list, NOT a `*_native*`
+  glob: `pdf_clip_native*`, `pdf_random_native*`, `pdf_strftime_native*`. Note
+  `pdf_native_acceptance*.mbt` contains the substring "native" but is all-target
+  today, so a glob would wrongly restrict it.
+- Gate: full multi-target `moon test` must stay green. This is the one Phase A
+  commit with real (build-config) risk — validate carefully per target.
+
+### Commit A4 — Dependency-graph CI guard
+- Add a script (e.g. `scripts/check_arch.sh`) asserting:
+  - **No feature package imports the root package.** Define the set explicitly.
+    Entry-point / glue packages legitimately import root TODAY and are excluded:
+    `cmd/main`, `markdown`, `markdown/cmd`, `async_io`, and every
+    `*/fixture_acceptance` package. The guard's deny-list is "all project
+    packages MINUS those entry/test packages". As domains are extracted in
+    Phase D, remove them from any temporary exclusion.
+  - **No new root source file outside an allowlist.** Allowlist ALL current root
+    `*.mbt` files (not just `pdf_*.mbt` — there are only ~3 non-`pdf_` ones), so
+    the guard cannot be bypassed by adding `new_feature.mbt`.
+- Wire it into `.github/workflows/ci.yml`.
+- Seed the allowlist with today's root files so it is green now and ratchets down.
+
+## Phase B — leaf extraction below root (was framed as "keystone prep") — DONE & MERGED
+
+> Note: Phase B was originally framed as prep for the (now-abandoned) `document`
+> keystone. In hindsight its commits are valuable in their own right as **leaf
+> extractions below root**, independent of C1. **B1 DONE** (`xref_model` package),
+> **B2 DONE** (crypt security state in `crypt_core`), plus a prerequisite `deps`
+> commit (moonbitlang/async 0.17.0 -> 0.19.4, restoring local native validation)
+> and a `derive(ToJson)` cleanup. C1 itself was attempted afterward and abandoned
+> (see status block + Phase C below).
+
+### Commit B1 — Lower the xref model types
+- DECISION (per review): create a small new `xref_model` package (depends on
+  `core`, `syntax`) and move the pure xref *model* types there:
+  `ObjectStreamReference`, `PdfClassicXRefEntry`, `PdfXRefSection`,
+  `PdfClassicXRefIndex` (from `reader/pdf_reader_xref_model.mbt`). Then both
+  `reader` and the future `document` depend DOWNWARD on `xref_model`. Do NOT keep
+  them in `reader` (that would force `document -> reader`, the very cycle risk
+  this refactor removes).
+- Behavior-preserving; use `moon ide rename` for references.
+
+### Commit B2 — Lower the saved-encryption state
+- Move `PdfEncryptionValues` and `PdfSavedEncryption` (package-private, in root
+  `pdf_crypt_model.mbt`, only depend on `@core.PdfCryptType`) down into
+  `crypt_core` so `document` can hold a `saved_encryption` field without
+  depending on root crypt logic.
+- DO NOT move `PdfDecryptionResult` — it contains a `PdfDocument` field and so
+  must stay above `document`, not below it.
+- Visibility caveat: root crypt code reads these record fields directly (e.g.
+  `pdf_crypt_encrypt_dictionaries.mbt`, `pdf_crypt_passwords.mbt`). Moving the
+  types across the boundary means either exposing fields `pub(all)` or adding
+  deliberate constructors/accessors. Prefer accessors; only widen fields where
+  the field-read volume makes accessors impractical, and note it in the commit.
+- Behavior-preserving.
+
+### Commit B3 — Method-ownership inventory (phased, not all-at-once) — NOT DONE / MOOT
+> This was prep for the abandoned C1 keystone (deciding which methods move to
+> `document`). Since `PdfDocument` stays in root, there is nothing to split out, so
+> B3 was never executed and is no longer needed. The "Revised Phase C+" tracks
+> (leaf extraction + API-boundary cleanup) replace it.
+- Generate `docs/document-method-inventory.md`: list all 446 public
+  `PdfDocument::` methods, each assigned a `domain` (page/crypt/metadata/...).
+- For C1 it is ONLY required to decide the coarse split: which methods are
+  genuine document-core (stay in `document`) vs feature methods (stay in root as
+  facade wrappers for now). The fine `facade` / `domain-function` / `drop`
+  decision per method is made lazily in each Phase D domain slice, NOT up front.
+- This resolves the apparent tension with proposal §10: the inventory is created
+  once (B3), but per-method ownership is decided incrementally per domain.
+- Additive doc; becomes the running contract for Phase D slices.
+
+## Phase C — Keystone extraction (Slice 1) — ABANDONED
+
+### Commit C1 — Create the `document` package — NOT DONE (infeasible)
+Attempted on a throwaway branch and reverted. MoonBit forbids `pub` methods on a
+foreign type ([4059], `moon explain --diagnostic 4059`), so once `PdfDocument`
+lives in `document`, root cannot define its ~445-method public API. Demoting all
+450 `pub` methods showed only 11 are used by real external packages
+(markdown/async_io/cmd/README); 386 are `pub` only for blackbox tests. A thin
+`document` package is therefore impossible without effectively renaming root or
+free-function-ifying the entire API. See ARCHITECTURE_PROPOSAL.md §0.
+
+## Revised Phase C+ — leaf extraction + API-boundary cleanup (keep PdfDocument in root)
+
+`PdfDocument` stays in the root package as the public facade. Two complementary,
+independently-shippable tracks, each commit gated + codex-reviewed:
+
+### Track 1 — extract leaf packages BELOW root (Phase B style)
+Pull pure models / state / algorithms that do NOT reference `PdfDocument` into
+their own packages (root keeps the orchestration methods). Candidates: remaining
+codec/image filter helpers (→ `codec`), content-stream model types, geometry/shape
+helpers, text/font data tables, function/shading evaluators. Each: move
+self-contained files, add the package, qualify references, regen `.mbti`, validate.
+
+### Track 2 — per-domain public-API boundary cleanup (in root)
+For one domain at a time: demote `pub` methods that are only used by blackbox tests
+to non-`pub`, convert those specific `_test.mbt` files to `_wbtest.mbt` (whitebox)
+so they can still call them, and KEEP a blackbox suite around the genuine public
+API. Shrinks root's `.mbti` toward the real ~11-method external surface. Review the
+`moon info` diff each time.
+
+## Checkpoints
+
+- After each commit: gate (`moon fmt --check`, `moon check --target native`,
+  `moon check --target all --warn-list "+a-39@65@73@74@75"`, `bash
+  scripts/check_arch.sh`, `moon test --target native`) + codex review of the diff.
+- Track progress by the §8 metrics (root file count trend) — but note root will
+  NOT approach zero, since `PdfDocument` and its method API stay there by design.

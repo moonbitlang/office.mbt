@@ -1,0 +1,8 @@
+import {
+  "bobzhang/pdflite/core",
+}
+
+import {
+  "moonbitlang/core/encoding/ascii",
+  "moonbitlang/core/test",
+} for "wbtest"

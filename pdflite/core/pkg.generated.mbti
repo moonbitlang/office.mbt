@@ -1,0 +1,336 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/core"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
+}
+
+// Values
+pub fn bit_writer_new() -> BitWriter
+
+pub fn bitstream_of_bytes(Bytes, source? : String) -> BitStream
+
+pub fn bitstream_of_cursor(ByteCursor) -> BitStream
+
+pub fn bitstream_of_view(BytesView, source? : String) -> BitStream
+
+pub fn byte_cursor_of_bytes(Bytes, source? : String) -> ByteCursor
+
+pub fn byte_cursor_of_view(BytesView, source? : String) -> ByteCursor
+
+pub fn byte_output_new(initial_size? : Int) -> ByteOutput raise PdfError
+
+pub fn pdf_byte_of_int(Int) -> Byte raise PdfError
+
+pub fn pdf_bytes_concat_views(ArrayView[BytesView]) -> Bytes
+
+pub fn pdf_bytes_copy(BytesView) -> Bytes
+
+pub fn pdf_bytes_get(Bytes, Int) -> Byte?
+
+pub fn pdf_bytes_length(Bytes) -> Int
+
+pub fn pdf_bytes_make(Int, value? : Int) -> Bytes raise PdfError
+
+pub fn pdf_bytes_map_int(BytesView, (Int) -> Int) -> Bytes raise PdfError
+
+pub fn pdf_bytes_of_array_view(ArrayView[Byte]) -> Bytes
+
+pub fn pdf_bytes_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
+
+pub fn pdf_bytes_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise PdfError
+
+pub fn pdf_bytes_of_view(BytesView) -> Bytes
+
+pub fn pdf_bytes_to_array(Bytes) -> Array[Byte]
+
+pub fn pdf_bytes_to_fixed_array(Bytes) -> FixedArray[Byte]
+
+pub fn pdf_count_whitespace_tokens(BytesView) -> Int
+
+pub fn pdf_error(String) -> Unit raise PdfError
+
+pub fn pdf_error_summary(PdfError) -> String
+
+pub fn pdf_find_ascii_from(BytesView, Int, ArrayView[Int]) -> Int
+
+pub fn pdf_find_last_ascii(BytesView, ArrayView[Int]) -> Int
+
+pub fn pdf_hard_error(String) -> Unit raise PdfError
+
+pub fn pdf_int_array_of_bytes(BytesView) -> Array[Int]
+
+pub fn pdf_is_delimiter_byte(Int) -> Bool
+
+pub fn pdf_is_digit_byte(Int) -> Bool
+
+pub fn pdf_is_newline_byte(Int) -> Bool
+
+pub fn pdf_is_not_whitespace_byte(Int) -> Bool
+
+pub fn pdf_is_whitespace_byte(Int) -> Bool
+
+pub fn pdf_is_whitespace_or_delimiter_byte(Int) -> Bool
+
+pub fn pdf_name_of_bytes(Bytes) -> PdfName
+
+pub fn pdf_name_of_view(BytesView) -> PdfName
+
+pub let pdf_no_more : Int
+
+pub fn pdf_number_set(ArrayView[Int]) -> PdfNumberSet
+
+pub fn pdf_parse_ascii_int_view(BytesView) -> Int raise PdfError
+
+pub fn pdf_push_unique_number(Array[Int], PdfNumberSet, Int) -> Unit
+
+pub fn pdf_soft_error(String) -> Unit raise PdfError
+
+pub fn pdf_split_whitespace_tokens(BytesView) -> Array[BytesView]
+
+pub fn pdf_startxref_search_view(BytesView) -> BytesView
+
+pub fn pdf_string_of_int_array(ArrayView[Int]) -> Bytes raise PdfError
+
+pub fn pdf_string_of_int_arrays(ArrayView[ArrayView[Int]]) -> Bytes raise PdfError
+
+pub fn pdf_view_equals_ascii(BytesView, ArrayView[Int]) -> Bool
+
+pub fn pdf_view_matches_ascii_at(BytesView, Int, ArrayView[Int]) -> Bool
+
+// Errors
+pub(all) suberror PdfError {
+  InvalidByte(Int)
+  InvalidCursorPosition(Int)
+  InvalidReadLength(Int)
+  InvalidBit(Int)
+  InvalidBitCount(Int)
+  MatrixNotInvertable
+  DictionaryExpected
+  DictionaryKeyNotFound(PdfName)
+  NumberExpected
+  RectangleExpected
+  BadRectangle
+  MatrixMalformed
+  InvalidHexEscape
+  InvalidASCII85Data
+  FilterNotSupported(PdfName)
+  FilterExpected
+  CCITTDecodeParmsExpected
+  CCITTNotSupported(String)
+  InvalidCCITTData
+  PredictorExpected
+  PredictorNotSupported(Int)
+  InvalidLZWData
+  InvalidFlateData
+  BadJPEGHeader
+  BadJPEGString
+  InvalidJPEGBlock
+  JPEGDimensionsExpected
+  BadPNG(String)
+  BadJPEG2000Header
+  JPEG2000DimensionsExpected
+  ParseObjectExpected
+  ParseArrayMalformed
+  ParseSingleObjectExpected
+  ParseIndirectObjectExpected
+  ParseEndObjectExpected
+  ParseStreamExpected
+  ParseEndStreamExpected
+  StreamLengthExpected
+  StreamDataExpected
+  ParsedObjectExpected
+  PageTreeExpected
+  PageRotationExpected(Int)
+  BadPageSpecification(String)
+  BadCoordinateSpecification(String)
+  BadRectangleSpecification(String)
+  BadNumberArgument(String)
+  BadPresentationEffect(String)
+  SoftError(String)
+  HardError(String)
+  InsecurePathName(String)
+  ContentOperatorExpected
+  ContentOperandExpected
+  FunctionExpected
+  FunctionNotSupported(Int)
+  BadFunctionEvaluation(String)
+  StartXRefExpected
+  XRefExpected
+  XRefEntryExpected
+  TrailerExpected
+  RootExpected
+  BadRevision
+  InvalidObjectNumber(Int)
+  BadDate
+  InvalidUnicodeCodepoint(Int)
+  InvalidUTF16BE
+  InvalidUTF8
+  InvalidPDFDocEncoding(Int)
+  CryptoKeyExpected
+  InvalidCryptoDataLength(Int)
+  EncryptionExpected
+  EncryptionMethodExpected
+  EncryptionDictionaryEntryExpected(PdfName)
+  EncryptionDictionaryEntryTooShort(PdfName)
+  EncryptionIDExpected
+  EncryptionAuthenticationUnsupported(PdfCryptType)
+  EncryptionObjectCryptUnsupported(PdfCryptType)
+  EncryptionSavedStateExpected
+  EncryptionRecryptUnsupported(PdfCryptType)
+  EncryptionRecryptFailed
+  EncryptionPermissionsCorrupt
+  EncryptionPermissionsMismatch(Int, Int)
+  RandomBytesUnavailable
+  EncodingExpected
+  EncodingDifferencesMalformed
+  EncodingWriteUnsupported
+  FontSubtypeExpected
+  FontFlagsExpected
+  StandardFontExpected
+  BaseFontExpected
+  FontFirstCharExpected
+  FontLastCharExpected
+  FontWidthsExpected
+  FontWidthExpected
+  FontCharProcsExpected
+  FontTypeExpected
+  FontWriteUnsupported
+  AfmExpected
+  ColourSpaceExpected
+  BadText
+  TitleExpected
+  CIDSystemInfoExpected
+  CIDRegistryExpected
+  CIDOrderingExpected
+  CIDSupplementExpected
+  CIDBaseFontExpected
+  CIDFontDescriptorExpected
+  CIDWidthsExpected
+  CIDWidths2Expected
+  DescendantFontExpected
+  CMapEncodingExpected
+  PageLabelStyleExpected(String)
+  EndOfInput
+} derive(Eq, ToJson, @debug.Debug)
+
+// Types and methods
+pub struct BitStream {
+  input : ByteCursor
+  mut current_byte : Int
+  mut bit_mask : Int
+  mut bits_read : Int
+} derive(Eq, ToJson, @debug.Debug)
+pub fn BitStream::align(Self) -> Unit
+pub fn BitStream::bits_read(Self) -> Int
+pub fn BitStream::get_bit(Self) -> Bool raise PdfError
+pub fn BitStream::get_bit_int(Self) -> Int raise PdfError
+pub fn BitStream::get_value_int(Self, Int) -> Int raise PdfError
+pub fn BitStream::get_value_int64(Self, Int) -> Int64 raise PdfError
+pub fn BitStream::position(Self) -> BitStreamPosition
+pub fn BitStream::seek(Self, BitStreamPosition) -> Unit
+
+pub struct BitStreamPosition {
+  input_position : Int
+  current_byte : Int
+  bit_mask : Int
+  bits_read : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub struct BitWriter {
+  mut current_byte : Int
+  mut bit_index : Int
+  bytes : Array[Byte]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn BitWriter::align(Self) -> Unit
+pub fn BitWriter::append_aligned(Self, Self) -> Self
+pub fn BitWriter::bit_length(Self) -> Int
+pub fn BitWriter::put_bit(Self, Int) -> Unit raise PdfError
+pub fn BitWriter::put_value_int(Self, Int, Int) -> Unit raise PdfError
+pub fn BitWriter::put_value_int64(Self, Int, Int64) -> Unit raise PdfError
+pub fn BitWriter::to_bytes(Self) -> Bytes
+
+pub struct ByteCursor {
+  data : BytesView
+  mut position : Int
+  mut offset : Int
+  source : String
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ByteCursor::absolute_position(Self) -> Int
+pub fn ByteCursor::byte_at_absolute(Self, Int) -> Byte?
+pub fn ByteCursor::byte_int_at_absolute(Self, Int) -> Int
+pub fn ByteCursor::deep_copy(Self) -> Self
+pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> Unit raise PdfError
+pub fn ByteCursor::input_byte(Self) -> Int
+pub fn ByteCursor::input_pdf_error(Self, String) -> String
+pub fn ByteCursor::length(Self) -> Int
+pub fn ByteCursor::nudge(Self) -> Unit
+pub fn ByteCursor::peek(Self) -> Byte?
+pub fn ByteCursor::peek_byte(Self) -> Int
+pub fn ByteCursor::peek_bytes(Self, Int) -> Bytes raise PdfError
+pub fn ByteCursor::peek_view(Self, Int) -> BytesView raise PdfError
+pub fn ByteCursor::position(Self) -> Int
+pub fn ByteCursor::read_byte(Self) -> Byte?
+pub fn ByteCursor::read_byte_back(Self) -> Byte?
+pub fn ByteCursor::read_bytes(Self, Int) -> Bytes raise PdfError
+pub fn ByteCursor::read_bytes_at(Self, Int, Int) -> Bytes raise PdfError
+pub fn ByteCursor::read_line(Self) -> Bytes raise PdfError
+pub fn ByteCursor::read_line_view(Self) -> BytesView raise PdfError
+pub fn ByteCursor::read_line_views(Self) -> Array[BytesView]
+pub fn ByteCursor::read_lines(Self) -> Array[Bytes]
+pub fn ByteCursor::read_remaining_bytes(Self) -> Bytes
+pub fn ByteCursor::read_until_view(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> BytesView raise PdfError
+pub fn ByteCursor::read_view(Self, Int) -> BytesView raise PdfError
+pub fn ByteCursor::read_view_at(Self, Int, Int) -> BytesView raise PdfError
+pub fn ByteCursor::remaining_length(Self) -> Int
+pub fn ByteCursor::remaining_view(Self) -> BytesView
+pub fn ByteCursor::rewind(Self) -> Unit raise PdfError
+pub fn ByteCursor::seek(Self, Int) -> Unit raise PdfError
+pub fn ByteCursor::seek_absolute(Self, Int) -> Unit raise PdfError
+pub fn ByteCursor::set_offset(Self, Int) -> Unit raise PdfError
+pub fn ByteCursor::source(Self) -> String
+pub fn ByteCursor::to_bytes(Self) -> Bytes
+pub fn ByteCursor::view(Self) -> BytesView
+pub fn ByteCursor::view_at(Self, Int, Int) -> BytesView raise PdfError
+pub fn ByteCursor::view_at_absolute(Self, Int, Int) -> BytesView raise PdfError
+
+pub struct ByteOutput {
+  data : Array[Byte]
+  mut position : Int
+  mut written_length : Int
+} derive(Eq, ToJson, @debug.Debug)
+pub fn ByteOutput::length(Self) -> Int
+pub fn ByteOutput::position(Self) -> Int
+pub fn ByteOutput::seek(Self, Int) -> Unit raise PdfError
+pub fn ByteOutput::to_bytes(Self) -> Bytes
+pub fn ByteOutput::write_ascii(Self, String) -> Unit raise PdfError
+pub fn ByteOutput::write_byte(Self, Int) -> Unit raise PdfError
+pub fn ByteOutput::write_byte_at(Self, Int, Int) -> Unit raise PdfError
+pub fn ByteOutput::write_repeated_byte(Self, Int, value? : Int) -> Unit raise PdfError
+pub fn ByteOutput::write_view(Self, BytesView) -> Unit raise PdfError
+pub fn ByteOutput::write_view_at(Self, Int, BytesView) -> Unit raise PdfError
+pub fn ByteOutput::write_view_slice(Self, BytesView, Int, Int) -> Unit raise PdfError
+
+pub(all) enum PdfCryptType {
+  PdfCryptARC4(Int, Int)
+  PdfCryptAESV2
+  PdfCryptAESV3(Bool)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfName(Bytes) derive(Eq, ToJson, @debug.Debug)
+pub fn PdfName::byte_length(Self) -> Int
+pub fn PdfName::bytes(Self) -> Bytes
+pub fn PdfName::view(Self) -> BytesView
+
+pub struct PdfNumberSet {
+  values : @hashmap.HashMap[Int, Bool]
+}
+pub fn PdfNumberSet::add(Self, Int) -> Unit
+pub fn PdfNumberSet::contains(Self, Int) -> Bool
+
+// Type aliases
+pub type PdfBytes = Bytes
+
+// Traits
+

@@ -1,0 +1,3199 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite"
+
+import {
+  "bobzhang/pdflite/addtext",
+  "bobzhang/pdflite/annotation",
+  "bobzhang/pdflite/attachment",
+  "bobzhang/pdflite/bookmark",
+  "bobzhang/pdflite/composition",
+  "bobzhang/pdflite/content",
+  "bobzhang/pdflite/content/colour",
+  "bobzhang/pdflite/content/path",
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/crypt_core",
+  "bobzhang/pdflite/date",
+  "bobzhang/pdflite/destination",
+  "bobzhang/pdflite/font",
+  "bobzhang/pdflite/font/afm",
+  "bobzhang/pdflite/font/truetype",
+  "bobzhang/pdflite/geometry",
+  "bobzhang/pdflite/metadata",
+  "bobzhang/pdflite/ocg",
+  "bobzhang/pdflite/page",
+  "bobzhang/pdflite/page/label",
+  "bobzhang/pdflite/portfolio",
+  "bobzhang/pdflite/reader",
+  "bobzhang/pdflite/shape",
+  "bobzhang/pdflite/syntax",
+  "bobzhang/pdflite/text/unicodedata",
+  "bobzhang/pdflite/writer",
+  "bobzhang/pdflite/xref_model",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
+}
+
+// Values
+pub fn decompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_add_annotation(PdfDocument, @page.PdfPage, @annotation.PdfAnnotation) -> @page.PdfPage raise @core.PdfError
+
+pub fn pdf_add_bookmark_title(String, Bool, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_add_bookmarks(ArrayView[@bookmark.PdfBookmark], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_add_bookmarks_from_json(Bool, Json, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_add_bookmarks_from_text(Bool, BytesView, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_add_default_fontpack(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_add_page_labels(PdfDocument, Bool, @label.PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_add_page_labels_json(PdfDocument, Json) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_add_pagetree(ArrayView[@page.PdfPage], PdfDocument) -> (PdfDocument, Int) raise @core.PdfError
+
+pub fn pdf_add_prefix(PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_add_root(Int, ArrayView[(@core.PdfName, @syntax.PdfObject)], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_addbezier(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addbezier13(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addbezier23(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addbt(PdfDrawControl) -> Unit
+
+pub fn pdf_addcharspace(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_addcircle(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addet(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_addimage(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addjpeg(PdfDrawControl, String, BytesView, path_to_im? : String) -> Unit raise @core.PdfError
+
+pub fn pdf_addjpeg2000(PdfDrawControl, String, BytesView) -> Unit raise @core.PdfError
+
+pub fn pdf_addleading(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_addline(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addnamespace(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addnewline(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_addnewpage(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_addopacity(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_addpara(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addparas(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addpng(PdfDrawControl, PdfDocument, String, BytesView) -> Unit raise @core.PdfError
+
+pub fn pdf_addrect(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addrectangle(Bool, String, @colour.PdfContentColour, Bool, Double, Double, @geometry.PdfPosition, String, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_addrendermode(PdfDrawControl, Int) -> Unit raise @core.PdfError
+
+pub fn pdf_addrise(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_addsopacity(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_addspecialtext(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addstag(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addtag(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addtext(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addtext_allocate_font_names(@syntax.PdfObject, PdfFontPack?) -> (@core.PdfName, @syntax.PdfObject, Array[@core.PdfName]) raise @core.PdfError
+
+pub fn pdf_addtext_baseline_offsets(PdfFont?, Double, @geometry.PdfPosition, @addtext.PdfAddTextRotation, Bool, Bool) -> (Double, Double)
+
+pub fn pdf_addtext_bates_number(Int, Int, Int?) -> String
+
+pub fn pdf_addtext_bookmark_for_page(PdfDocument, ArrayView[@bookmark.PdfBookmark], Int, Int) -> String raise @core.PdfError
+
+pub fn pdf_addtext_calc_textwidth(PdfDocument, @page.PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, Double, BytesView) -> Double raise @core.PdfError
+
+pub fn pdf_addtext_cap_height(PdfFont?, String) -> Double?
+
+pub fn pdf_addtext_charcodes_of_utf8(PdfFont, String) -> Bytes raise @core.PdfError
+
+pub fn pdf_addtext_colour_op(@colour.PdfContentColour) -> @content.PdfContentOp
+
+pub fn pdf_addtext_colour_op_stroke(@colour.PdfContentColour) -> @content.PdfContentOp
+
+pub fn pdf_addtext_effective_encoding(PdfFont?) -> PdfEncoding
+
+pub fn pdf_addtext_existing_font_resource(PdfDocument, @page.PdfPage, @core.PdfName) -> (@core.PdfName, @syntax.PdfObject) raise @core.PdfError
+
+pub fn pdf_addtext_expand_lines_with_time(@date.PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)]) -> Array[String] raise @core.PdfError
+
+pub fn pdf_addtext_fontpack_resource_dictionary(@syntax.PdfObject, ArrayView[@core.PdfName], ArrayView[Int]) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_addtext_install_font_resource(@syntax.PdfObject, @syntax.PdfObject, @core.PdfName, @syntax.PdfObject?) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_addtext_install_fontpack_resources(@syntax.PdfObject, @syntax.PdfObject, ArrayView[@core.PdfName], ArrayView[Int]) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_addtext_line_page(PdfDocument, @page.PdfPage, @date.PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double, String, @colour.PdfContentColour, @geometry.PdfPosition, relative_to_box? : @core.PdfName, horizontal_offset? : Double, vertical_offset? : Double, shift_x? : Double, shift_y? : Double, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> @page.PdfPage raise @core.PdfError
+
+pub fn pdf_addtext_line_widths(PdfDocument, @page.PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, Double, BytesView, ArrayView[Bytes]) -> @addtext.PdfAddTextLineWidths raise @core.PdfError
+
+pub fn pdf_addtext_lines_for_rotation(String, @addtext.PdfAddTextRotation) -> Array[String] raise @core.PdfError
+
+pub fn pdf_addtext_longest_width(ArrayView[Double]) -> Double raise @core.PdfError
+
+pub fn pdf_addtext_measurement_bytes(PdfFont?, PdfFontPack?, Bool, String) -> Bytes raise @core.PdfError
+
+pub fn pdf_addtext_opacity_resources(PdfDocument, @syntax.PdfObject, Double) -> (@syntax.PdfObject, @core.PdfName?) raise @core.PdfError
+
+pub fn pdf_addtext_page_font_dictionary(PdfDocument, @page.PdfPage) -> @syntax.PdfObject
+
+pub fn pdf_addtext_page_label(PdfDocument, Int) -> String raise @core.PdfError
+
+pub fn pdf_addtext_page_lines(PdfDocument, @page.PdfPage, @date.PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double, Double, @colour.PdfContentColour, @geometry.PdfPosition, relative_to_box? : @core.PdfName, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, midline? : Bool, topline? : Bool, shift_x? : Double, shift_y? : Double, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> @page.PdfPage raise @core.PdfError
+
+pub fn pdf_addtext_page_rest_with_annotations(PdfDocument, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_addtext_pages_with_font(PdfDocument, ArrayView[Int], ArrayView[String], @date.PdfStrftimeTime, ArrayView[@bookmark.PdfBookmark], PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double, Double, @colour.PdfContentColour, @geometry.PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_addtext_prepare_line(PdfDocument, @page.PdfPage, @date.PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, Double, String, @geometry.PdfPosition, relative_to_box? : @core.PdfName, horizontal_offset? : Double, vertical_offset? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, raw? : Bool) -> @addtext.PdfAddTextPreparedLine raise @core.PdfError
+
+pub fn pdf_addtext_process_text_with_time(@date.PdfStrftimeTime, String, ArrayView[(String, () -> String)]) -> String
+
+pub fn pdf_addtext_rectangle(PdfDocument, ArrayView[Int], String, @colour.PdfContentColour, @geometry.PdfPosition, relative_to_box? : @core.PdfName, outline? : Bool, line_width? : Double, opacity? : Double, underneath? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_addtext_rectangle_ops(Double, Double, Double, Double, @colour.PdfContentColour, Bool, Double, @core.PdfName?) -> Array[@content.PdfContentOp]
+
+pub fn pdf_addtext_rectangle_origin(@geometry.PdfRectangle, @geometry.PdfPosition, Double, Double) -> (Double, Double)
+
+pub fn pdf_addtext_replacement_pairs(@addtext.PdfAddTextReplacementValues) -> Array[(String, () -> String)]
+
+pub fn pdf_addtext_replacement_values(PdfDocument, ArrayView[@bookmark.PdfBookmark], Int, Int, String, Int, Int?) -> @addtext.PdfAddTextReplacementValues raise @core.PdfError
+
+pub fn pdf_addtext_resource_setup(PdfDocument, @page.PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double) -> @addtext.PdfAddTextResourceSetup raise @core.PdfError
+
+pub fn pdf_addtext_selected_font_object(PdfDocument, PdfFont?) -> @syntax.PdfObject? raise @core.PdfError
+
+pub fn pdf_addtext_split_at_newline(String) -> Array[String]
+
+pub fn pdf_addtext_text_ops(PdfFont?, PdfFontPack?, Double, Double, Double, Double, Double, Bool, Double, @core.PdfName, ArrayView[@core.PdfName], @core.PdfName?, @colour.PdfContentColour, Double, String, Double, Double, Double) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_addtext_unescape_string(String) -> String raise @core.PdfError
+
+pub fn pdf_addtext_url_annotation(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.PdfRectangle, String, Bool) -> @syntax.PdfObject
+
+pub fn pdf_addtext_url_annotation_geometry(@geometry.Point2, Double, Double, Double, Double, @geometry.Point2, Double, Double, Double, Double) -> @addtext.PdfAddTextUrlAnnotationGeometry
+
+pub fn pdf_addtext_url_annotation_height(PdfFont?, String, Double) -> Double
+
+pub fn pdf_addtext_url_annotation_references(PdfDocument, String, ArrayView[@addtext.PdfAddTextUrl], (String) -> Double raise @core.PdfError, @geometry.Point2, Double, Double, Double, Double, @geometry.Point2, Double, PdfFont?, String, Double, Bool) -> Array[@syntax.PdfObject] raise @core.PdfError
+
+pub fn pdf_addtext_url_annotation_widths(String, @addtext.PdfAddTextUrl, (String) -> Double) -> (Double, Double) raise @core.PdfError
+
+pub fn pdf_addtext_used_codepoints(ArrayView[String]) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_addtext_width_of_existing_font_resource(PdfDocument, @page.PdfPage, @core.PdfName, Double, BytesView) -> (@core.PdfName, Double) raise @core.PdfError
+
+pub fn pdf_addtext_width_of_fontpack(PdfFontPack, Double, String) -> Double raise @core.PdfError
+
+pub fn pdf_addtext_width_of_selected_font(PdfFont, Double, BytesView) -> Double
+
+pub fn pdf_addtext_width_of_text(PdfFont, BytesView) -> Double
+
+pub fn pdf_addtexts_with_font(PdfDocument, ArrayView[Int], String, @date.PdfStrftimeTime, ArrayView[@bookmark.PdfBookmark], PdfFont?, PdfFontPack?, @core.PdfName, Double, Double, @colour.PdfContentColour, @geometry.PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_addtexts_with_source(PdfDocument, ArrayView[Int], String, @date.PdfStrftimeTime, ArrayView[@bookmark.PdfBookmark], PdfAddTextFontSource, @core.PdfName, Double, Double, @colour.PdfContentColour, @geometry.PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_addtextscale(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_addto(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_addwordspace(PdfDrawControl, Double) -> Unit raise @core.PdfError
+
+pub fn pdf_allupright(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfError
+
+pub fn pdf_allupright_cpdf_order(ArrayView[Int], PdfDocument) -> Bool raise @core.PdfError
+
+pub fn pdf_alluprightonly(PdfDocument, ArrayView[Int]) -> Bool raise @core.PdfError
+
+pub fn pdf_alluprightonly_cpdf_order(ArrayView[Int], PdfDocument) -> Bool raise @core.PdfError
+
+pub fn pdf_annotations_of_page(PdfDocument, @page.PdfPage) -> Array[@annotation.PdfAnnotation] raise @core.PdfError
+
+pub fn pdf_append_page_content(PdfDocument, ArrayView[Int], BytesView, before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_cpdf_order(BytesView, Bool, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_multiple(PdfDocument, ArrayView[Bytes], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_multiple_cpdf_order(ArrayView[Bytes], Bool, Bool, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_multiple_ops(PdfDocument, ArrayView[Array[@content.PdfContentOp]], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_multiple_ops_cpdf_order(ArrayView[Array[@content.PdfContentOp]], Bool, Bool, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_append_page_content_ops(PdfDocument, ArrayView[Int], ArrayView[@content.PdfContentOp], before? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_apply(PdfDocument, ArrayView[Int]) -> Unit
+
+pub fn pdf_apply_redaction_type(PdfDocument, String, ArrayView[Int]) -> Unit
+
+pub fn pdf_apply_redactions(PdfDocument, ArrayView[Int]) -> Unit
+
+pub fn pdf_apply_type(PdfDocument, String, ArrayView[Int]) -> Unit
+
+pub fn pdf_artifact(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_attach_file(PdfDocument, String, BytesView, keep_version? : Bool, page_number? : Int?, relationship? : String?, description? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_attach_file_cpdf_order(Bool, Int?, PdfDocument, String?, String?, String, BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_attachment_remove_unsafe_characters(String) -> String raise @core.PdfError
+
+pub fn pdf_autoartifacts(PdfDrawControl, Bool) -> Unit
+
+pub fn pdf_autotags(PdfDrawControl, Bool) -> Unit raise @core.PdfError
+
+pub fn pdf_black_fills(PdfDocument, ArrayView[Int], @colour.PdfContentColour) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_black_fills_ops(@colour.PdfContentColour, ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
+
+pub fn pdf_black_lines(PdfDocument, ArrayView[Int], @colour.PdfContentColour) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_black_lines_ops(@colour.PdfContentColour, ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
+
+pub fn pdf_black_text(PdfDocument, ArrayView[Int], @colour.PdfContentColour) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_black_text_ops(@colour.PdfContentColour, ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
+
+pub fn pdf_blackfills(@colour.PdfContentColour, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_blacklines(@colour.PdfContentColour, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_blacktext(@colour.PdfContentColour, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_blank_document(Double, Double, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_blank_document_paper(@geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_bookmark_name_of_spec(@metadata.PdfMetadataEncoding, ArrayView[@bookmark.PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
+
+pub fn pdf_bookmarks_open_to_level(Int, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_build_name_tree(Bool, PdfDocument, ArrayView[(Bytes, @syntax.PdfObject)]) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_bytes_of_xmltree(@metadata.PdfMetadataXmlDocument) -> Bytes
+
+pub fn pdf_ccitt_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
+
+pub fn pdf_ccitt_encode_view(Int, Int, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_ccitt_g4_encode(Int, Int, Bytes) -> Bytes raise @core.PdfError
+
+pub fn pdf_ccitt_g4_encode_view(Int, Int, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_center_to_fit(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_center_to_fit_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_change_bookmark(ArrayView[(Int, Int)], @bookmark.PdfBookmark) -> @bookmark.PdfBookmark
+
+pub fn pdf_change_boxes(PdfDocument, @page.PdfPage, (Double, Double, Double, Double) -> (Double, Double, Double, Double)) -> @page.PdfPage raise @core.PdfError
+
+pub fn pdf_change_boxes_cpdf_order((Double, Double, Double, Double) -> (Double, Double, Double, Double), PdfDocument, @page.PdfPage) -> @page.PdfPage raise @core.PdfError
+
+pub fn pdf_change_pages(Bool, PdfDocument, ArrayView[@page.PdfPage], matrices? : ArrayView[(Int, @geometry.TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_change_pattern_matrices_page(PdfDocument, @geometry.TransformMatrix, @page.PdfPage) -> @page.PdfPage raise @core.PdfError
+
+pub fn pdf_charcode_extractor_of_font(PdfDocument, @syntax.PdfObject, debug? : Bool) -> ((Int) -> Int?) raise @core.PdfError
+
+pub fn pdf_charcode_extractor_of_font_real(PdfFont, debug? : Bool) -> (Int) -> Int?
+
+pub fn pdf_check_injectible(String) -> Unit raise @core.PdfError
+
+pub fn pdf_chop(PdfDocument, Int, Int, Bool, Bool, Bool, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_chop_cpdf_order(Int, Int, Bool, Bool, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_chop_hv(PdfDocument, Bool, Double, Bool, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_chop_hv_cpdf_order(Bool, Double, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_clear_progress_output() -> Unit
+
+pub fn pdf_clip(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_clip_contour(Bool, ArrayView[PdfClipVertex]) -> PdfClipContour
+
+pub fn pdf_clip_make_polygon(ArrayView[Bool], ArrayView[Array[PdfClipVertex]]) -> PdfClipPolygon raise @core.PdfError
+
+pub fn pdf_clip_null_polygon() -> PdfClipPolygon
+
+pub fn pdf_clip_polygon(ArrayView[PdfClipContour]) -> PdfClipPolygon
+
+pub fn pdf_clip_polygon_of_box(Double, Double, Double, Double) -> PdfClipPolygon
+
+pub fn pdf_clip_vertex(Double, Double) -> PdfClipVertex
+
+pub fn pdf_clipevenodd(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_closepath(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_codepoint_of_pdfdocencoding_byte(Int) -> Int raise @core.PdfError
+
+pub fn pdf_codepoints_of_pdfdocencoding(BytesView) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_codepoints_of_pdfdocstring(BytesView) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_codepoints_of_text(PdfTextExtractor, BytesView) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_codepoints_of_utf16be(BytesView) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_codepoints_of_utf8(BytesView) -> Array[Int] raise @core.PdfError
+
+pub fn[A, B : Eq, C] pdf_collate_runs(ArrayView[(A, B, C)]) -> Array[Array[(A, B, C)]]
+
+pub fn pdf_colour_op(@colour.PdfContentColour) -> @content.PdfContentOp
+
+pub fn pdf_colour_op_stroke(@colour.PdfContentColour) -> @content.PdfContentOp
+
+pub fn pdf_colour_space_components(PdfDocument, @syntax.PdfObject, @syntax.PdfObject) -> Int raise @core.PdfError
+
+pub fn pdf_colour_space_content_json(PdfColourSpace) -> Json
+
+pub fn pdf_colour_space_of_device_name(@core.PdfName) -> PdfColourSpace?
+
+pub fn pdf_colour_space_of_object(@syntax.PdfObject) -> PdfColourSpace?
+
+pub fn pdf_combine_pages(PdfDocument, PdfDocument, fast? : Bool, scale_to_fit? : Bool, overlay_is_under? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_combine_pages_cpdf_order(Bool, Bool, PdfDocument, PdfDocument, Bool, Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_composition(PdfDocument, Int) -> Array[@composition.PdfCompositionEntry] raise @core.PdfError
+
+pub fn pdf_contains_javascript(PdfDocument) -> Bool
+
+pub fn pdf_content_apply_core_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_extgstate_alpha_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_extgstate_compositing_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_extgstate_dash_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState raise @core.PdfError
+
+pub fn pdf_content_apply_extgstate_font_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState raise @core.PdfError
+
+pub fn pdf_content_apply_extgstate_graphics_parameter_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_extgstate_halftone_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_extgstate_overprint_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_extgstate_rendering_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_extgstate_resource_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentOperatorState raise @core.PdfError
+
+pub fn pdf_content_apply_extgstate_text_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_extgstate_transfer_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_font_resource_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName, Double) -> PdfContentOperatorState raise @core.PdfError
+
+pub fn pdf_content_apply_graphics_parameter_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_graphics_state_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_marked_content_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
+
+pub fn pdf_content_apply_path_state_op(PdfContentPathState, @content.PdfContentOp) -> PdfContentPathState
+
+pub fn pdf_content_apply_resource_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject, @content.PdfContentOp) -> PdfContentOperatorResourceResult raise @core.PdfError
+
+pub fn pdf_content_apply_text_op(PdfContentTextState, PdfFont, @geometry.TransformMatrix, @content.PdfContentOp) -> PdfContentTextOpResult
+
+pub fn pdf_content_apply_text_resource_op(PdfDocument, PdfContentOperatorState, @syntax.PdfObject, @content.PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
+
+pub fn pdf_content_apply_text_show_op(PdfContentOperatorState, PdfFont, @content.PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
+
+pub fn pdf_content_apply_text_state_op(PdfContentTextState, @content.PdfContentOp) -> PdfContentTextState
+
+pub fn pdf_content_apply_type3_metrics_op(PdfContentOperatorState, @content.PdfContentOp) -> PdfContentOperatorState
+
+pub fn pdf_content_bounding_box_content_json(PdfContentBoundingBox) -> Json
+
+pub fn pdf_content_bytes_of_charcode(PdfFont, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_content_bytes_of_op(@content.PdfContentOp) -> Bytes raise @core.PdfError
+
+pub fn pdf_content_bytes_of_ops(ArrayView[@content.PdfContentOp]) -> Bytes raise @core.PdfError
+
+pub fn pdf_content_charcodes_of_bytes(BytesView, PdfFont) -> Array[Int]
+
+pub fn pdf_content_clipping_state_content_json(PdfContentClippingState) -> Json
+
+pub fn pdf_content_clipping_state_of_paths(ArrayView[@shape.PdfPath]) -> PdfContentClippingState
+
+pub fn pdf_content_colour_values_content_json(PdfContentColourValues) -> Json
+
+pub fn pdf_content_concat_stream_views(ArrayView[BytesView]) -> Bytes
+
+pub fn pdf_content_concat_streams(ArrayView[Bytes]) -> Bytes
+
+pub fn pdf_content_dash_pattern_content_json(PdfContentDashPattern) -> Json
+
+pub fn pdf_content_entries_of_ops(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+
+pub fn pdf_content_entries_of_ops_recursive(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+
+pub fn pdf_content_entries_of_page(PdfDocument, @page.PdfPage) -> Array[PdfContentJsonEntry] raise @core.PdfError
+
+pub fn pdf_content_extra_metrics(PdfFont) -> (Double, Double)
+
+pub fn pdf_content_filter(PdfDocument, (PdfContentJsonEntry) -> Bool, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_content_form_xobject_enter_state(PdfDocument, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
+
+pub fn pdf_content_form_xobject_ops(PdfDocument, @syntax.PdfObject, @core.PdfName) -> Array[@content.PdfContentOp]? raise @core.PdfError
+
+pub fn pdf_content_form_xobject_resources(PdfDocument, @syntax.PdfObject, @core.PdfName) -> @syntax.PdfObject? raise @core.PdfError
+
+pub fn pdf_content_glyph_state_content_json(PdfContentGlyphState) -> Json
+
+pub fn pdf_content_glyph_state_of_text_state(PdfContentTextState, ArrayView[@shape.PdfPath]) -> PdfContentGlyphState
+
+pub fn pdf_content_image_entry(PdfContentOperatorState, @core.PdfName) -> PdfContentJsonEntry
+
+pub fn pdf_content_image_entry_from_resources(PdfDocument, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentJsonEntry? raise @core.PdfError
+
+pub fn pdf_content_initial_clipping_path(Double, Double, Double, Double) -> Array[@shape.PdfPath]
+
+pub fn pdf_content_initial_clipping_state(Double, Double, Double, Double) -> PdfContentClippingState
+
+pub fn pdf_content_initial_drawn_path() -> @shape.PdfDrawnPath
+
+pub fn pdf_content_initial_glyph_state(Double, Double, Double, Double) -> PdfContentGlyphState
+
+pub fn pdf_content_initial_operator_state(Double, Double, Double, Double) -> PdfContentOperatorState
+
+pub fn pdf_content_initial_path_state(Double, Double, Double, Double) -> PdfContentPathState
+
+pub fn pdf_content_initial_text_state() -> PdfContentTextState
+
+pub fn pdf_content_inline_image_entry(PdfContentOperatorState) -> PdfContentJsonEntry
+
+pub fn pdf_content_is_vertical(PdfFont) -> Bool
+
+pub fn pdf_content_json_entries_content_json(ArrayView[PdfContentJsonEntry]) -> Json
+
+pub fn pdf_content_json_entry_content_json(PdfContentJsonEntry) -> Json
+
+pub fn pdf_content_json_of_ops(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
+
+pub fn pdf_content_json_of_page(PdfDocument, @page.PdfPage) -> Json raise @core.PdfError
+
+pub fn pdf_content_object_content_json(PdfContentObject) -> Json
+
+pub fn pdf_content_path_entry(PdfContentOperatorState, Bool) -> PdfContentJsonEntry?
+
+pub fn pdf_content_path_state_content_json(PdfContentPathState) -> Json
+
+pub fn pdf_content_path_state_with_clipping_path(PdfContentPathState, ArrayView[@shape.PdfPath]) -> PdfContentPathState
+
+pub fn pdf_content_read_pattern(PdfDocument, @syntax.PdfObject, @core.PdfName) -> PdfContentPattern? raise @core.PdfError
+
+pub fn pdf_content_read_tiling_pattern(@syntax.PdfObject) -> PdfContentPattern
+
+pub fn pdf_content_shading_entry(PdfContentOperatorState, @core.PdfName, @geometry.PdfRectangle?) -> PdfContentJsonEntry?
+
+pub fn pdf_content_shading_entry_from_resources(PdfDocument, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentJsonEntry?
+
+pub fn pdf_content_state_content_json(PdfContentState) -> Json
+
+pub fn pdf_content_stream_of_ops(ArrayView[@content.PdfContentOp]) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_content_text_glyph_entry(PdfContentOperatorState, PdfFont, PdfContentTextGlyphPlacement) -> PdfContentJsonEntry raise @core.PdfError
+
+pub fn pdf_content_text_layout_of_bytes(PdfFont, BytesView, PdfContentTextLayout) -> PdfContentTextLayoutResult
+
+pub fn pdf_content_text_layout_of_tj_array(PdfFont, ArrayView[@syntax.PdfObject], PdfContentTextLayout) -> PdfContentTextLayoutResult
+
+pub fn pdf_content_to_json(PdfDocument, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
+
+pub fn pdf_content_width_of_charcode(PdfFont, Int) -> (Double, Double, Double)
+
+pub fn pdf_copy_annotations(ArrayView[Int], PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_copy_box(String, String, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_copy_font(PdfDocument, String, Int, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_copy_id(Bool, PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_copy_page_box(PdfDocument, ArrayView[Int], @core.PdfName, @core.PdfName, mediabox_if_missing? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_create_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_crop_pdf(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : @core.PdfName) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_crop_pdf_string(ArrayView[(Double, Double, Double, Double)], PdfDocument, ArrayView[Int], box_name? : String) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_date_of_object(@syntax.PdfObject) -> @date.PdfDate raise @core.PdfError
+
+pub fn pdf_debug_image_processing() -> Bool
+
+pub fn pdf_debug_objects(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_decode_filter_bytes(@core.PdfName, Bytes) -> Bytes raise @core.PdfError
+
+pub fn pdf_decode_filter_view(@core.PdfName, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_decode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise @core.PdfError
+
+pub fn pdf_decode_predictor_view(Int, Int, Int, Int, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_decode_stream(@syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_decode_stream_onestage(@syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_decompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_determine_subformats(PdfDocument) -> Array[String] raise @core.PdfError
+
+pub fn pdf_deterministic_aes_iv_provider_from_seed(BytesView) -> (Int, Int, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_deterministic_aesv3_random_provider_from_seed(BytesView) -> (@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_dict_entry_values(PdfDocument, @core.PdfName) -> Array[@syntax.PdfObject]
+
+pub fn pdf_document_empty() -> PdfDocument
+
+pub fn pdf_document_of_json(Json) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_document_of_json_blob(BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_document_of_parsed_indirect_objects(ArrayView[@syntax.PdfParsedIndirectObject], version? : @reader.PdfVersion) -> PdfDocument
+
+pub fn pdf_draft(@core.PdfName?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_draft_string(String?, Bool, ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_draw(PdfDocument, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : @date.PdfStrftimeTime?, add_artifacts? : Bool, role_map? : String) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_draw_control() -> PdfDrawControl
+
+pub fn pdf_draw_control_new() -> PdfDrawControl
+
+pub fn pdf_draw_render_state_new() -> PdfDrawRenderState
+
+pub fn pdf_draw_special_text_context(@date.PdfStrftimeTime, @addtext.PdfAddTextReplacementValues) -> PdfDrawSpecialTextContext
+
+pub fn pdf_draw_special_text_context_for_document(PdfDocument, Int, filename? : String, bates? : Int, bates_pad? : Int?, time? : @date.PdfStrftimeTime?) -> PdfDrawSpecialTextContext raise @core.PdfError
+
+pub fn pdf_drawop_to_content_ops(PdfDrawOp) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawop_to_content_ops_with_context(PdfDrawRenderState, PdfDrawSpecialTextContext, PdfDrawOp) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawop_to_content_ops_with_document(PdfDrawRenderState, PdfDocument, PdfDrawOp) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawop_to_content_ops_with_document_context(PdfDrawRenderState, PdfDocument, PdfDrawSpecialTextContext, PdfDrawOp) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawop_to_content_ops_with_state(PdfDrawRenderState, PdfDrawOp) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawops_to_content_ops(ArrayView[PdfDrawOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawops_to_content_ops_with_context(PdfDrawRenderState, PdfDrawSpecialTextContext, ArrayView[PdfDrawOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawops_to_content_ops_with_document(PdfDrawRenderState, PdfDocument, ArrayView[PdfDrawOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawops_to_content_ops_with_document_context(PdfDrawRenderState, PdfDocument, PdfDrawSpecialTextContext, ArrayView[PdfDrawOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_drawops_to_content_ops_with_state(PdfDrawRenderState, ArrayView[PdfDrawOp]) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_eltinfo(PdfDrawControl, String, @syntax.PdfObject) -> Unit raise @core.PdfError
+
+pub fn[A, B : Eq, C] pdf_embed_collate_runs(ArrayView[(A, B, C)]) -> Array[Array[(A, B, C)]]
+
+pub fn pdf_embed_get_char(PdfFontPack, Int) -> (Int, Int, PdfFont)?
+
+pub fn pdf_embed_truetype(PdfDocument, BytesView, String, ArrayView[Int], PdfEncoding) -> PdfFontPack raise @core.PdfError
+
+pub fn pdf_encode_filter_bytes(@core.PdfName, Bytes) -> Bytes raise @core.PdfError
+
+pub fn pdf_encode_filter_bytes_with_flate_level(@core.PdfName, Bytes, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_encode_filter_view(@core.PdfName, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_encode_filter_view_with_flate_level(@core.PdfName, BytesView, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_encode_output(@metadata.PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_encode_predictor(Int, Int, Int, Int, Bytes) -> Bytes raise @core.PdfError
+
+pub fn pdf_encode_predictor_view(Int, Int, Int, Int, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_encode_stream_with_encoding(PdfStreamEncoding, @syntax.PdfObject, only_if_smaller? : Bool, predictor? : PdfStreamPredictor?, predictor_columns? : Int, flate_level? : Int?) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_encode_stream_with_filter(@core.PdfName, @syntax.PdfObject, only_if_smaller? : Bool, flate_level? : Int?) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_encode_stream_with_filter_and_predictor(@core.PdfName, Int, Int, Int, Int, @syntax.PdfObject, only_if_smaller? : Bool, flate_level? : Int?) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_encoding_of_name(@core.PdfName) -> PdfEncoding?
+
+pub fn pdf_endartifact(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_endeltinfo(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_endpage(PdfDocument) -> Int raise @core.PdfError
+
+pub fn pdf_endpage_fast(PdfDocument) -> Int raise @core.PdfError
+
+pub fn pdf_endstag(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_endtag(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_endxobj(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_eval_function(PdfFunction, ArrayView[Double]) -> Array[Double] raise @core.PdfError
+
+pub fn pdf_expand_date(String) -> String
+
+pub fn pdf_extract_fontfile_bytes(PdfDocument, Int, String) -> Bytes? raise @core.PdfError
+
+pub fn pdf_fill(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_fillevenodd(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_find_obj(PdfDocument, String) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_find_object(PdfDocument, String) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_font_from_name(PdfDocument, String, Int) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_font_table(PdfDocument, String, Int) -> Array[@font.PdfFontTableEntry] raise @core.PdfError
+
+pub fn pdf_font_table_text(PdfDocument, String, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_fontpack_collate_runs(ArrayView[(Int, Int, PdfFont)]) -> Array[Array[(Int, Int, PdfFont)]]
+
+pub fn pdf_fontpack_get_char(PdfFontPack, Int) -> (Int, Int, PdfFont)?
+
+pub fn pdf_fontpack_of_standard_font(PdfFont) -> PdfFontPack raise @core.PdfError
+
+pub fn pdf_fontpack_of_standardfont(PdfFont) -> PdfFontPack raise @core.PdfError
+
+pub fn pdf_fonts_json(PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
+
+pub fn pdf_fonts_json_blob(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_format_real(Double) -> Bytes raise @core.PdfError
+
+pub fn pdf_generate_id(String, () -> Double) -> @syntax.PdfObject
+
+pub fn pdf_get_annotations(@metadata.PdfMetadataEncoding, PdfDocument) -> Array[(Int, Bytes)] raise @core.PdfError
+
+pub fn pdf_get_annotations_json(ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_annotations_json_cpdf_order(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_bookmarks_json(Bool, PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_catalog_item(@core.PdfName, PdfDocument) -> String
+
+pub fn pdf_get_catalog_item_cpdf_order(String, PdfDocument) -> String
+
+pub fn pdf_get_catalog_item_string(String, PdfDocument) -> String
+
+pub fn pdf_get_data_for(String, String, @metadata.PdfMetadataXmlTree) -> String?
+
+pub fn pdf_get_dict_entries(PdfDocument, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_dict_entries_cpdf_order(Bool, PdfDocument, String) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_dict_entries_string(PdfDocument, String, utf8? : Bool) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_image_24bpp(PdfDocument, @syntax.PdfObject, @syntax.PdfObject) -> PdfImage raise @core.PdfError
+
+pub fn pdf_get_info_utf8(PdfDocument, @core.PdfName) -> String
+
+pub fn pdf_get_info_utf8_string(PdfDocument, String) -> String
+
+pub fn pdf_get_mark_info_item(@core.PdfName, PdfDocument) -> Bool
+
+pub fn pdf_get_metadata(PdfDocument) -> Bytes? raise @core.PdfError
+
+pub fn pdf_get_open_action(PdfDocument) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_get_open_action_json_blob(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_get_open_action_string(PdfDocument) -> String raise @core.PdfError
+
+pub fn pdf_get_viewer_pref_item(@core.PdfName, PdfDocument) -> String
+
+pub fn pdf_get_viewer_pref_item_cpdf_order(String, PdfDocument) -> String
+
+pub fn pdf_get_viewer_pref_item_string(String, PdfDocument) -> String
+
+pub fn pdf_get_xmp_info(PdfDocument, @core.PdfName) -> String
+
+pub fn pdf_get_xmp_info_string(PdfDocument, String) -> String
+
+pub fn pdf_getfontname(PdfDrawControl) -> String
+
+pub fn pdf_getfontsize(PdfDrawControl) -> Double
+
+pub fn pdf_getindent(PdfDrawControl) -> Double?
+
+pub fn pdf_glyphnames_of_text(PdfTextExtractor, BytesView) -> Array[@core.PdfName] raise @core.PdfError
+
+pub fn pdf_gpc_polygon_of_box(Double, Double, Double, Double) -> PdfClipPolygon
+
+pub fn pdf_gpcml_printpolygon(PdfClipPolygon) -> Bytes
+
+pub fn pdf_hard_box(PdfDocument, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_hard_box_string(PdfDocument, ArrayView[Int], String, mediabox_if_missing? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_hasbox(PdfDocument, Int, @core.PdfName) -> Bool raise @core.PdfError
+
+pub fn pdf_hasbox_string(PdfDocument, Int, String) -> Bool raise @core.PdfError
+
+pub fn pdf_hflip_pdf(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_bpc(PdfDocument, @syntax.PdfObject) -> @syntax.PdfObject?
+
+pub fn pdf_image_colspace(PdfDocument, @syntax.PdfObject, @syntax.PdfObject) -> PdfColourSpace raise @core.PdfError
+
+pub fn pdf_image_debug_image_processing() -> Bool
+
+pub fn pdf_image_document_of_jbig2_data(BytesView, global? : BytesView?, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_document_of_jpeg2000_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_document_of_jpeg_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_document_of_object(@syntax.PdfObject, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_document_of_png_data(BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_extract_images_files(Bool, @metadata.PdfMetadataEncoding, Bool, Bool, PdfDocument, ArrayView[Int], String) -> Array[PdfExtractedImageFile] raise @core.PdfError
+
+pub fn pdf_image_extract_single_image_files(PdfDocument, Int, String) -> Array[PdfExtractedImageFile] raise @core.PdfError
+
+pub fn pdf_image_images(Bool, PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
+
+pub fn pdf_image_images_json_blob(Bool, PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_image_obj_of_jbig2_data(BytesView, global? : BytesView?) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError
+
+pub fn pdf_image_obj_of_jpeg2000_data(BytesView) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError
+
+pub fn pdf_image_obj_of_jpeg_data(BytesView, path_to_im? : String) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError
+
+pub fn pdf_image_obj_of_png_data(PdfDocument, BytesView) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError
+
+pub fn pdf_image_object_of_jbig2_data(BytesView, global? : BytesView?) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError
+
+pub fn pdf_image_object_of_jpeg2000_data(BytesView) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_image_object_of_jpeg_data(BytesView) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_image_object_of_png_data(PdfDocument, BytesView) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_image_of_input(BytesView, (PdfDocument, BytesView) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_image_resolution(Bool, PdfDocument, ArrayView[Int], Double) -> Array[(Int, String, Int, Int, Double, Double, Int)] raise @core.PdfError
+
+pub fn pdf_image_resolution_json(Bool, PdfDocument, ArrayView[Int], Double) -> Json raise @core.PdfError
+
+pub fn pdf_image_resolution_json_blob(Bool, PdfDocument, ArrayView[Int], Double) -> Bytes raise @core.PdfError
+
+pub fn pdf_image_set_debug_image_processing(Bool) -> Unit
+
+pub fn pdf_images(Bool, PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
+
+pub fn pdf_impose(PdfDocument, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_is_identity_h(PdfFont) -> Bool
+
+pub fn pdf_is_linearized(BytesView) -> Bool
+
+pub fn pdf_is_unicode_string(BytesView) -> Bool
+
+pub fn pdf_is_xfa(PdfDocument) -> Bool
+
+pub fn pdf_iter_pages(PdfDocument, ArrayView[Int], (Int, @page.PdfPage) -> Unit raise @core.PdfError) -> Unit raise @core.PdfError
+
+pub fn pdf_iter_pages_cpdf_order((Int, @page.PdfPage) -> Unit raise @core.PdfError, PdfDocument, ArrayView[Int]) -> Unit raise @core.PdfError
+
+pub fn pdf_jpeg2000_dimensions(Bytes) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_jpeg2000_dimensions_view(BytesView) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_json_fonts(PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
+
+pub fn pdf_json_of_document(PdfDocument, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Json raise @core.PdfError
+
+pub fn pdf_json_of_document_blob(PdfDocument, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Bytes raise @core.PdfError
+
+pub fn pdf_json_of_object(PdfDocument, @syntax.PdfObject, utf8? : Bool, clean_strings? : Bool, no_stream_data? : Bool, parse_content? : Bool) -> Json raise @core.PdfError
+
+pub fn pdf_json_page_info(PdfDocument, ArrayView[Int], @geometry.PdfUnit) -> Json raise @core.PdfError
+
+pub fn pdf_json_to_output(PdfDocument, utf8? : Bool, parse_content? : Bool, no_stream_data? : Bool, decompress_streams? : Bool, clean_strings? : Bool) -> Bytes raise @core.PdfError
+
+pub fn pdf_language(PdfDocument) -> Bytes?
+
+pub fn pdf_language_string(PdfDocument) -> String?
+
+pub fn pdf_list_annotations(ArrayView[Int], @metadata.PdfMetadataEncoding, PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_list_attached_files(PdfDocument) -> Array[@attachment.PdfAttachment] raise @core.PdfError
+
+pub fn pdf_list_bookmarks(Bool, Bool, @metadata.PdfMetadataEncoding, ArrayView[Int], PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_list_fonts(PdfDocument, ArrayView[Int]) -> Array[@font.PdfFontListEntry] raise @core.PdfError
+
+pub fn pdf_list_fonts_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_list_spot_colours(PdfDocument) -> Array[@core.PdfName]
+
+pub fn pdf_list_spot_colours_blob(PdfDocument) -> Bytes
+
+pub fn pdf_make_font(@core.PdfName, PdfEncoding) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_make_gpcpolygon(ArrayView[Bool], ArrayView[Array[PdfClipVertex]]) -> PdfClipPolygon raise @core.PdfError
+
+pub fn pdf_make_hex_pdf_string(BytesView) -> Bytes
+
+pub fn pdf_make_pdf_string(BytesView) -> Bytes
+
+pub fn[T] pdf_map_pages(PdfDocument, ArrayView[Int], (Int, @page.PdfPage) -> T raise @core.PdfError) -> Array[T] raise @core.PdfError
+
+pub fn[T] pdf_map_pages_cpdf_order((Int, @page.PdfPage) -> T raise @core.PdfError, PdfDocument, ArrayView[Int]) -> Array[T] raise @core.PdfError
+
+pub fn pdf_mark_all_as_artifact(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_merge_documents(ArrayView[PdfDocument], ArrayView[Array[Int]], retain_numbering? : Bool, retain_bookmarks? : Bool, retain_optional_content? : Bool, retain_acroforms? : Bool, retain_named_destinations? : Bool, retain_name_dictionary? : Bool, retain_structure_tree? : Bool, add_toplevel_document? : Bool, retain_info? : Bool, retain_catalog_entries? : Bool, remove_duplicate_fonts? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_merge_name_trees_no_clash(PdfDocument, ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject
+
+pub fn pdf_merge_number_trees_no_clash(PdfDocument, ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject
+
+pub fn pdf_merge_pdfs(Bool, Bool, ArrayView[String], ArrayView[PdfDocument], ArrayView[Array[Int]], process_struct_trees? : Bool, add_toplevel_document? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_merge_structure_trees(PdfDocument, ArrayView[PdfDocument], add_toplevel_document? : Bool) -> Int? raise @core.PdfError
+
+pub fn pdf_metadata_bytes_of_xmltree(@metadata.PdfMetadataXmlDocument) -> Bytes
+
+pub fn pdf_metadata_encode_output(@metadata.PdfMetadataEncoding, BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_metadata_get_data_for_bytes(String, String, BytesView) -> String?
+
+pub fn pdf_metadata_string_of_xmltree(@metadata.PdfMetadataXmlTree) -> String
+
+pub fn pdf_metadata_xmltree_get_data_for(String, String, @metadata.PdfMetadataXmlTree) -> String?
+
+pub fn pdf_metadata_xmltree_of_bytes(BytesView) -> @metadata.PdfMetadataXmlDocument raise @core.PdfError
+
+pub fn pdf_minimum_valid_pdf() -> PdfDocument raise @core.PdfError
+
+pub fn pdf_missing_fonts(PdfDocument, ArrayView[Int]) -> Array[@font.PdfMissingFontEntry] raise @core.PdfError
+
+pub fn pdf_missing_fonts_return(PdfDocument, ArrayView[Int]) -> Array[(Int, String, String, String, String)] raise @core.PdfError
+
+pub fn pdf_missing_fonts_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_name_of_colour_space(PdfColourSpace) -> @core.PdfName?
+
+pub fn pdf_name_of_spec(@metadata.PdfMetadataEncoding, ArrayView[@bookmark.PdfBookmark], PdfDocument, Int, String, Int, String, Int, Int) -> String raise @core.PdfError
+
+pub fn pdf_nullpoly() -> PdfClipPolygon
+
+pub fn pdf_obj_of_jbig2_data(BytesView, global? : BytesView?) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError
+
+pub fn pdf_obj_of_jpeg2000_data(BytesView) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError
+
+pub fn pdf_obj_of_jpeg_data(BytesView, path_to_im? : String) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError
+
+pub fn pdf_obj_of_png_data(PdfDocument, BytesView) -> (@syntax.PdfObject, Array[(Int, @syntax.PdfObject)]) raise @core.PdfError
+
+pub fn pdf_object_entry(PdfObjectData, generation? : Int) -> PdfObjectEntry
+
+pub fn pdf_object_map_empty() -> PdfObjectMap
+
+pub fn pdf_object_of_colour_space(PdfColourSpace) -> @syntax.PdfObject?
+
+pub fn pdf_object_of_date(@date.PdfDate) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_object_of_destination(@destination.PdfDestination) -> @syntax.PdfObject
+
+pub fn pdf_object_of_function(PdfDocument, PdfFunction) -> @syntax.PdfObject
+
+pub fn pdf_object_of_json(Json) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_object_of_matrix(@geometry.TransformMatrix) -> @syntax.PdfObject
+
+pub fn pdf_objects_empty() -> PdfObjects
+
+pub fn pdf_objects_of_entries(ArrayView[(Int, PdfObjectEntry)]) -> PdfObjects
+
+pub fn pdf_ocg_coalesce(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ocg_get_list(PdfDocument) -> Array[Bytes] raise @core.PdfError
+
+pub fn pdf_ocg_list(Bool, PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_ocg_list_json(PdfDocument) -> Json raise @core.PdfError
+
+pub fn pdf_ocg_list_json_blob(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_ocg_order_all(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ocg_read_json(Json) -> @ocg.PdfOptionalContent? raise @core.PdfError
+
+pub fn pdf_ocg_rename(Bytes, Bytes, PdfDocument) -> PdfDocument
+
+pub fn pdf_ocg_replace_json(Json, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_of_pages(PdfDocument, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_optional_content_merge(ArrayView[PdfDocument]) -> @ocg.PdfOptionalContent? raise @core.PdfError
+
+pub fn pdf_output_info(PdfDocument, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+
+pub fn pdf_output_info_json_blob(PdfDocument, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+
+pub fn pdf_output_page_info(@geometry.PdfUnit, PdfDocument, ArrayView[Int], json? : Bool, raisejson? : Bool) -> Bytes raise @core.PdfError
+
+pub fn pdf_output_page_info_json_blob(PdfDocument, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+
+pub fn pdf_output_page_info_text(PdfDocument, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+
+pub fn pdf_output_xmp_info(PdfDocument, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+
+pub fn pdf_output_xmp_info_json_blob(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_pad_after(PdfDocument, ArrayView[Int], pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_pad_before(PdfDocument, ArrayView[Int], pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_pad_to_multiple(PdfDocument, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_padafter(ArrayView[Int], PdfDocument, pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_padbefore(ArrayView[Int], PdfDocument, pad_with? : PdfDocument?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_padmultiple(Int, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_page_content_json(PdfDocument, ArrayView[Int]) -> Json raise @core.PdfError
+
+pub fn pdf_page_info_json(PdfDocument, ArrayView[Int], unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
+
+pub fn pdf_page_label_add_label(Int, ArrayView[@label.PdfPageLabel], @label.PdfPageLabel, Int) -> Array[@label.PdfPageLabel]
+
+pub fn pdf_page_label_coalesce(ArrayView[@label.PdfPageLabel]) -> Array[@label.PdfPageLabel]
+
+pub fn pdf_page_label_merge(ArrayView[PdfDocument], ArrayView[Array[Int]]) -> Array[@label.PdfPageLabel] raise @core.PdfError
+
+pub fn pdf_page_object_number(PdfDocument, Int) -> Int? raise @core.PdfError
+
+pub fn[A, B, C] pdf_page_process_stub((A, B) -> C raise, A, B) -> (C, A, @geometry.TransformMatrix) raise
+
+pub fn pdf_page_protect(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
+
+pub fn pdf_page_reference_numbers(PdfDocument) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_pagenumber_of_target(PdfDocument, @destination.PdfDestination) -> Int raise @core.PdfError
+
+pub fn pdf_pages_of_pagetree(PdfDocument) -> Array[@page.PdfPage] raise @core.PdfError
+
+pub fn pdf_parse_bookmark_file(Bool, PdfDocument, BytesView) -> Array[@bookmark.PdfBookmark] raise @core.PdfError
+
+pub fn pdf_parse_bookmark_json(Bool, Json, PdfDocument) -> Array[@bookmark.PdfBookmark] raise @core.PdfError
+
+pub fn pdf_parse_bookmark_text(Bool, BytesView, PdfDocument) -> Array[@bookmark.PdfBookmark] raise @core.PdfError
+
+pub fn pdf_parse_cmap(PdfDocument, @syntax.PdfObject) -> PdfParsedCMap raise @core.PdfError
+
+pub fn pdf_parse_cmap_data(BytesView) -> PdfParsedCMap
+
+pub fn pdf_parse_content_ops_from_bytes(Bytes) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_parse_content_ops_from_view(BytesView) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_parse_coordinate(PdfDocument, String) -> @geometry.Point2 raise @core.PdfError
+
+pub fn pdf_parse_coordinate_rectangle(PdfDocument, String) -> @geometry.PdfCoordRectangle raise @core.PdfError
+
+pub fn pdf_parse_coordinate_rectangles(PdfDocument, String) -> Array[@geometry.PdfCoordRectangle] raise @core.PdfError
+
+pub fn pdf_parse_coordinate_tuple(PdfDocument, String) -> (Double, Double) raise @core.PdfError
+
+pub fn pdf_parse_coordinates(PdfDocument, String) -> Array[@geometry.Point2] raise @core.PdfError
+
+pub fn pdf_parse_coordinates_tuple(PdfDocument, String) -> Array[(Double, Double)] raise @core.PdfError
+
+pub fn pdf_parse_flate_unicode_data(BytesView) -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError
+
+pub fn pdf_parse_function(PdfDocument, @syntax.PdfObject) -> PdfFunction raise @core.PdfError
+
+pub fn pdf_parse_pagespec(PdfDocument, String) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_parse_rectangle(PdfDocument, String) -> (Double, Double, Double, Double) raise @core.PdfError
+
+pub fn pdf_parse_rectangles(PdfDocument, String) -> Array[(Double, Double, Double, Double)] raise @core.PdfError
+
+pub fn pdf_parse_single_number(PdfDocument, String) -> Double raise @core.PdfError
+
+pub fn pdf_parse_stream_object_from_bytes(Bytes) -> @syntax.PdfParsedIndirectObject raise @core.PdfError
+
+pub fn pdf_parse_stream_object_from_view(BytesView) -> @syntax.PdfParsedIndirectObject raise @core.PdfError
+
+pub fn pdf_parse_unicode_data(BytesView) -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError
+
+pub fn pdf_parse_units_string(PdfDocument, @page.PdfPage, String) -> Array[Double] raise @core.PdfError
+
+pub fn pdf_path_content_bounding_box(@shape.PdfPath, @geometry.TransformMatrix, Double, Bool) -> PdfContentBoundingBox?
+
+pub fn pdf_pdfdocencoding_byte_of_codepoint(Int) -> Byte?
+
+pub fn pdf_pdfdocencoding_of_codepoints(ArrayView[Int]) -> Bytes?
+
+pub fn pdf_pdfdocstring_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_pdfdocstring_of_utf8(BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_pop(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_portfolio(PdfDocument, ArrayView[@portfolio.PdfPortfolioEntry], mod_date? : Bytes?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_postpend_operators(PdfDocument, ArrayView[@content.PdfContentOp], @page.PdfPage, fast? : Bool) -> @page.PdfPage raise @core.PdfError
+
+pub fn pdf_prepend_operators(PdfDocument, ArrayView[@content.PdfContentOp], @page.PdfPage, fast? : Bool) -> @page.PdfPage raise @core.PdfError
+
+pub fn pdf_presentation(ArrayView[Int], String?, Double?, Bool, Bool, Int, Double, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_print_dict_entry(PdfDocument, @core.PdfName) -> Array[Bytes] raise @core.PdfError
+
+pub fn pdf_print_dict_entry_cpdf_order(Bool, PdfDocument, String) -> Array[Bytes] raise @core.PdfError
+
+pub fn pdf_print_dict_entry_string(PdfDocument, String) -> Array[Bytes] raise @core.PdfError
+
+pub fn pdf_print_font_table(PdfDocument, String, Int) -> Bytes raise @core.PdfError
+
+pub fn pdf_print_fonts(PdfDocument, ArrayView[Int], json? : Bool) -> Bytes raise @core.PdfError
+
+pub fn pdf_print_function(PdfFunction) -> Unit
+
+pub fn pdf_print_metadata(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_print_pdf_objs(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn[T] pdf_print_tree_to_buffer(@buffer.Buffer, T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> Unit
+
+pub fn[T] pdf_print_tree_to_string(T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> String
+
+pub fn[T] pdf_printtree_to_buffer(@buffer.Buffer, T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> Unit
+
+pub fn[T] pdf_printtree_to_string(T, (T) -> String, (T) -> Array[T], line_prefix? : String) -> String
+
+pub fn pdf_process_pages(PdfDocument, ArrayView[Int], (Int, @page.PdfPage) -> (@page.PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_process_pages_cpdf_order((Int, @page.PdfPage) -> (@page.PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_process_text(@date.PdfStrftimeTime, String, ArrayView[(String, () -> String)]) -> String
+
+pub fn pdf_progress() -> Bool
+
+pub fn pdf_progress_done() -> Unit
+
+pub fn pdf_progress_endpage() -> Unit
+
+pub fn pdf_progress_line(String) -> Unit
+
+pub fn pdf_progress_line_no_end(String) -> Unit
+
+pub fn pdf_progress_output() -> String
+
+pub fn pdf_progress_page(Int) -> Unit
+
+pub fn pdf_push(PdfDrawControl) -> Unit
+
+pub fn pdf_read_bookmarks(PdfDocument, preserve_actions? : Bool) -> Array[@bookmark.PdfBookmark] raise @core.PdfError
+
+pub fn pdf_read_classic_document_from_bytes(Bytes) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_read_classic_document_from_view(BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_read_classic_document_revision_from_bytes(Bytes, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_read_classic_document_revision_from_view(BytesView, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_read_colour_space(PdfDocument, @syntax.PdfObject, @syntax.PdfObject) -> PdfColourSpace? raise @core.PdfError
+
+pub fn pdf_read_destination(PdfDocument, @syntax.PdfObject, shallow? : Bool) -> @destination.PdfDestination raise @core.PdfError
+
+pub fn pdf_read_document_from_bytes(Bytes) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_read_document_from_bytes_with_passwords(Bytes, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise @core.PdfError
+
+pub fn pdf_read_document_from_view(BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_read_document_from_view_with_passwords(BytesView, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise @core.PdfError
+
+pub fn pdf_read_document_revision_from_bytes(Bytes, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_read_document_revision_from_bytes_with_passwords(Bytes, Int, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise @core.PdfError
+
+pub fn pdf_read_document_revision_from_view(BytesView, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_read_document_revision_from_view_with_passwords(BytesView, Int, user_password? : BytesView?, owner_password? : BytesView?) -> PdfDecryptionResult? raise @core.PdfError
+
+pub fn pdf_read_font(PdfDocument, @syntax.PdfObject) -> PdfFont raise @core.PdfError
+
+pub fn pdf_read_name_tree(PdfDocument, @syntax.PdfObject) -> Array[(Bytes, @syntax.PdfObject)]
+
+pub fn pdf_read_number_tree(PdfDocument, @syntax.PdfObject) -> Array[(Bytes, @syntax.PdfObject)]
+
+pub fn pdf_read_ocg(PdfDocument) -> @ocg.PdfOptionalContent? raise @core.PdfError
+
+pub fn pdf_read_page_labels(PdfDocument) -> Array[@label.PdfPageLabel] raise @core.PdfError
+
+pub fn pdf_read_png(Bytes) -> PdfPNG raise @core.PdfError
+
+pub fn pdf_read_png_view(BytesView) -> PdfPNG raise @core.PdfError
+
+pub fn pdf_read_primitive_document_from_bytes(Bytes) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_read_primitive_document_from_view(BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_recompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rectify_boxes(PdfDocument, @page.PdfPage, fast? : Bool) -> @page.PdfPage raise @core.PdfError
+
+pub fn pdf_redact(PdfDocument, ArrayView[(Double, Double)], ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_redact_pages(PdfDocument, ArrayView[Int], process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_redact_pages_cpdf_order(Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_added_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_added_text_ops(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
+
+pub fn pdf_remove_all_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_all_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_all_text_cpdf_order(ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_all_text_ops(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
+
+pub fn pdf_remove_annotations(ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_art_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_attached_files(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_bleed_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_bookmarks(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_clipping(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_clipping_ops(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
+
+pub fn pdf_remove_cropping_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_dict_entry(PdfDocument, @core.PdfName, search? : @syntax.PdfObject?) -> Unit
+
+pub fn pdf_remove_dict_entry_string(PdfDocument, String, search? : @syntax.PdfObject?) -> Unit
+
+pub fn pdf_remove_duplicate_fonts(PdfDocument) -> Unit
+
+pub fn pdf_remove_fonts(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_javascript(PdfDocument) -> Unit raise @core.PdfError
+
+pub fn pdf_remove_metadata(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_obj(PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_remove_object_by_spec(PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn pdf_remove_ocg(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_page_box(PdfDocument, ArrayView[Int], @core.PdfName) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_page_labels(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_struct_tree(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_trim_pdf(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_remove_unsafe_characters(String) -> String raise @core.PdfError
+
+pub fn pdf_removetext(ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_renumber_documents(ArrayView[PdfDocument]) -> Array[PdfDocument] raise @core.PdfError
+
+pub fn pdf_renumber_pages(PdfDocument, ArrayView[@page.PdfPage]) -> Array[@page.PdfPage] raise @core.PdfError
+
+pub fn pdf_renumber_parent_trees(ArrayView[PdfDocument]) -> Unit raise @core.PdfError
+
+pub fn pdf_replace_dict_entry(PdfDocument, @core.PdfName, @syntax.PdfObject, search? : @syntax.PdfObject?) -> Unit
+
+pub fn pdf_replace_dict_entry_string(PdfDocument, String, @syntax.PdfObject, search? : @syntax.PdfObject?) -> Unit
+
+pub fn pdf_replace_obj(PdfDocument, String, @syntax.PdfObject) -> Unit raise @core.PdfError
+
+pub fn pdf_replace_object_by_spec(PdfDocument, String, @syntax.PdfObject) -> Unit raise @core.PdfError
+
+pub fn pdf_replace_pairs(ArrayView[@bookmark.PdfBookmark], PdfDocument, Int, String, Int, Int?, Int) -> Array[(String, () -> String)] raise @core.PdfError
+
+pub fn pdf_replace_stream_by_spec(PdfDocument, String, BytesView) -> Unit raise @core.PdfError
+
+pub fn pdf_reveal_hidden_text(PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_reveal_hidden_text_cpdf_order(ArrayView[Int], PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_reveal_hidden_text_ops(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
+
+pub fn pdf_reverse_table_of_encoding(PdfEncoding) -> Array[(@core.PdfName, Int)]
+
+pub fn pdf_revisions_from_bytes(Bytes) -> Int raise @core.PdfError
+
+pub fn pdf_revisions_from_view(BytesView) -> Int raise @core.PdfError
+
+pub fn pdf_rotate_contents(PdfDocument, Double, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rotate_contents_cpdf_order(Double, PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rotate_pages(PdfDocument, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rotate_pages_by(PdfDocument, Int, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rotate_pdf(Int, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_rotate_pdf_by(Int, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_scale_contents(PdfDocument, ArrayView[Int], @geometry.PdfPosition, Double, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_scale_contents_cpdf_order(@geometry.PdfPosition, Double, PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_scale_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_scale_pdf(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_scale_to_fit_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], position? : @geometry.PdfPosition, input_scale? : Double, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn[T] pdf_scale_to_fit_pdf(@geometry.PdfPosition, Double, ArrayView[(Double, Double)], T, PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_scale_to_fit_rotate(ArrayView[(Double, Double)], Int, PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_scale_to_fit_rotate_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_annotations_json(Json, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_annotations_json_cpdf_order(PdfDocument, Json) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_box(PdfDocument, ArrayView[Int], @core.PdfName, Double, Double, Double, Double) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_box_string(String, Double, Double, Double, Double, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_debug_image_processing(Bool) -> Unit
+
+pub fn pdf_set_language(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_language_string(PdfDocument, String) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_mediabox(ArrayView[(Double, Double, Double, Double)], PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_mediaboxes(PdfDocument, ArrayView[Int], ArrayView[(Double, Double, Double, Double)]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_metadata_date(PdfDocument, String) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_metadata_from_bytes(Bool, BytesView, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_non_full_screen_page_mode(PdfDocument, String) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_open_action(PdfDocument, Bool, Int, destination? : @syntax.PdfObject?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_open_action_cpdf_order(PdfDocument, Bool, Int, destination? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_open_action_string_destination(PdfDocument, Bool, Int, destination? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_page_layout(PdfDocument, String) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_page_mode(PdfDocument, String) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_pdf_info(@core.PdfName, @syntax.PdfObject, Int, PdfDocument, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_pdf_info_cpdf_order((String, @syntax.PdfObject, Int), PdfDocument, xmp_also? : Bool, xmp_just_set? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_pdf_info_string((String, @syntax.PdfObject, Int), PdfDocument, xmp_also? : Bool, xmp_just_set? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_progress(Bool) -> Unit
+
+pub fn pdf_set_version(Int, PdfDocument) -> Unit
+
+pub fn pdf_set_viewer_preference(@core.PdfName, @syntax.PdfObject, Int, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_viewer_preference_cpdf_order((String, @syntax.PdfObject, Int), PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_set_viewer_preference_string((String, @syntax.PdfObject, Int), PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_setcap(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setdash(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setfill(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setfontname(PdfDrawControl, String) -> Unit
+
+pub fn pdf_setfontsize(PdfDrawControl, Double) -> Unit
+
+pub fn pdf_setjoin(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmatrix(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmiter(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmrotate(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmscale(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmshearx(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmsheary(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setmtranslate(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setrolemap(PdfDrawControl, String) -> Unit
+
+pub fn pdf_setstroke(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_setthickness(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_shift_boxes(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_shift_boxes_cpdf_order(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_shift_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_shift_pdf(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_shortest_unused_prefix(PdfDocument) -> String
+
+pub fn pdf_show_annotation_bounding_boxes(PdfDocument, ArrayView[Int], light? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_show_bounding_boxes(PdfDocument, ArrayView[Int], shape? : @geometry.PdfRectangle?, light? : Bool, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_show_bounding_boxes_cpdf_order(Bool, @geometry.PdfRectangle?, Bool, PdfDocument, ArrayView[Int]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_show_boxes(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_show_composition(Int, Bool, PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_show_composition_json_blob(Int, PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_simplify_utf16be(BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_size_attached_files(PdfDocument) -> Int raise @core.PdfError
+
+pub fn pdf_squeeze(PdfDocument, page_data? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_stamp(PdfDocument, ArrayView[Int], PdfDocument, relative_to_box? : @core.PdfName, position? : @geometry.PdfPosition, topline? : Bool, midline? : Bool, fast? : Bool, scale_to_fit? : Bool, is_over? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_stamp_as_xobject(PdfDocument, ArrayView[Int], PdfDocument) -> (PdfDocument, @core.PdfName) raise @core.PdfError
+
+pub fn pdf_stamp_as_xobject_string(PdfDocument, ArrayView[Int], PdfDocument) -> (PdfDocument, String) raise @core.PdfError
+
+pub fn pdf_stamp_cpdf_order(Bool, String, @geometry.PdfPosition, Bool, Bool, Bool, Bool, Bool, ArrayView[Int], PdfDocument, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_standard14_afm_data(PdfStandardFont) -> @afm.PdfAfmData
+
+pub fn pdf_standard14_baseline_adjustment(PdfStandardFont) -> Int
+
+pub fn pdf_standard14_flags_of_standard_font(PdfStandardFont) -> Int
+
+pub fn pdf_standard14_stemv_of_standard_font(PdfStandardFont) -> Int
+
+pub fn pdf_standard14_text_width(PdfStandardFont, PdfEncoding, BytesView, kern? : Bool) -> Int
+
+pub fn pdf_standard14_textwidth(Bool, PdfEncoding, PdfStandardFont, BytesView) -> Int
+
+pub fn pdf_standard_font_of_name(String) -> PdfStandardFont?
+
+pub fn pdf_standard_font_of_pdf_name(@core.PdfName) -> PdfStandardFont?
+
+pub fn pdf_standard_font_substitute_filenames(PdfStandardFont) -> Array[String]
+
+pub fn pdf_standard_font_substitute_font_name(PdfStandardFont) -> String
+
+pub fn pdf_startxobj(PdfDrawControl, String) -> Unit
+
+pub fn pdf_stretch(ArrayView[(Double, Double)], PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_stretch_pages(PdfDocument, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_string_of_bookmark(@bookmark.PdfBookmark) -> Bytes raise @core.PdfError
+
+pub fn pdf_string_of_calculator(ArrayView[PdfCalculatorOp]) -> String
+
+pub fn pdf_string_of_colour_space(PdfColourSpace) -> String
+
+pub fn pdf_string_of_content_op(@content.PdfContentOp) -> Bytes raise @core.PdfError
+
+pub fn pdf_string_of_content_ops(ArrayView[@content.PdfContentOp]) -> Bytes raise @core.PdfError
+
+pub fn pdf_string_of_drawop(PdfDrawOp) -> String
+
+pub fn pdf_string_of_drawops(ArrayView[PdfDrawOp]) -> String
+
+pub fn pdf_string_of_font(PdfFont) -> String
+
+pub fn pdf_string_of_function(PdfFunction) -> String
+
+pub fn pdf_string_of_pagespec(PdfDocument, ArrayView[Int]) -> String raise @core.PdfError
+
+pub fn pdf_string_of_pdf(@syntax.PdfObject) -> Bytes raise @core.PdfError
+
+pub fn pdf_string_of_pdf_including_data(@syntax.PdfObject) -> Bytes raise @core.PdfError
+
+pub fn pdf_string_of_position(@geometry.PdfPosition) -> String
+
+pub fn pdf_string_of_standard_font(PdfStandardFont) -> String
+
+pub fn pdf_string_of_type(ArrayView[PdfTypeElement]) -> Bytes
+
+pub fn pdf_string_of_type_element(PdfTypeElement) -> Bytes
+
+pub fn pdf_string_of_xmltree(@metadata.PdfMetadataXmlTree) -> String
+
+pub fn pdf_stroke(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_strokefill(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_strokefillevenodd(PdfDrawControl) -> Unit raise @core.PdfError
+
+pub fn pdf_subformat_of_string(String) -> PdfUASubformat raise @core.PdfError
+
+pub fn pdf_table_of_encoding(PdfEncoding) -> Array[(Int, @core.PdfName)]
+
+pub fn pdf_target_of_pagenumber(PdfDocument, Int) -> @destination.PdfDestination raise @core.PdfError
+
+pub fn pdf_test_extract_text(PdfDocument, ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_text_extractor_of_font(PdfDocument, @syntax.PdfObject) -> PdfTextExtractor raise @core.PdfError
+
+pub fn pdf_text_extractor_of_font_real(PdfFont) -> PdfTextExtractor
+
+pub fn pdf_texttopdf_of_utf8_with_newlines(PdfFontPack, Double, BytesView) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_texttopdf_tag_paragraphs(ArrayView[PdfTypeElement]) -> Array[PdfTypeElement]
+
+pub fn pdf_texttopdf_typeset(PdfFontPack, Double, @geometry.PaperSize, BytesView, process_struct_tree? : Bool, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_texttopdf_typeset_cpdf_order(Bool, @geometry.PaperSize, PdfFontPack, Double, BytesView, subformat? : PdfUASubformat?, title? : String?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_thin_lines(PdfDocument, ArrayView[Int], Double) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_thin_lines_ops(PdfDocument, @syntax.PdfObject, ArrayView[@content.PdfContentOp], Double) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub fn pdf_thinlines(ArrayView[Int], Double, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_toc_add_bookmark(PdfDocument, BytesView) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_toc_bookmark_text(BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_toc_insert_pages(PdfDocument, ArrayView[@page.PdfPage], ArrayView[@label.PdfPageLabel]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_toc_make_dots(Double, PdfFontPack, Double) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_toc_of_pdfdocencoding(PdfFontPack, Double, BytesView) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_toc_of_utf8(PdfFontPack, Double, BytesView) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_toc_shift_page_labels(Int, ArrayView[@label.PdfPageLabel]) -> Array[@label.PdfPageLabel]
+
+pub fn pdf_toc_shorten_text(PdfFontPack, Double, Double, ArrayView[PdfTypeElement]) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_toc_split_title(BytesView) -> Array[Bytes]
+
+pub fn pdf_toc_title_real_newlines(BytesView) -> Bytes
+
+pub fn pdf_toc_type_elements(PdfDocument, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[@label.PdfPageLabel], ArrayView[@bookmark.PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_toc_typeset_pages(PdfDocument, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[@label.PdfPageLabel], ArrayView[@bookmark.PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
+
+pub fn pdf_toc_used_codepoints(PdfDocument, ArrayView[@label.PdfPageLabel], BytesView, ArrayView[@bookmark.PdfBookmark]) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_toc_width_of_runs(ArrayView[PdfTypeElement]) -> Double raise @core.PdfError
+
+pub fn pdf_toc_with_fontpack(PdfDocument, PdfFontPack, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_toc_with_source(PdfDocument, PdfTocFontSource, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_transform_annotations(PdfDocument, @geometry.TransformMatrix, @syntax.PdfObject) -> Unit raise @core.PdfError
+
+pub fn pdf_transform_bookmark(PdfDocument, @geometry.TransformMatrix, @bookmark.PdfBookmark) -> @bookmark.PdfBookmark raise @core.PdfError
+
+pub fn pdf_transform_destination(PdfDocument, @geometry.TransformMatrix, @destination.PdfDestination) -> @destination.PdfDestination raise @core.PdfError
+
+pub fn pdf_trim_marks(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_trim_structure_tree(PdfDocument, ArrayView[Int]) -> Unit raise @core.PdfError
+
+pub fn pdf_truetype_cmap_glyph(BytesView, Int) -> Int?
+
+pub fn pdf_truetype_cmap_glyphs(BytesView) -> Array[@truetype.PdfTrueTypeCMapGlyph]
+
+pub fn pdf_truetype_cmaps(BytesView) -> Array[(Int, Int)]
+
+pub fn pdf_truetype_descriptor_metrics(BytesView) -> @truetype.PdfTrueTypeDescriptorMetrics raise @core.PdfError
+
+pub fn pdf_truetype_expand_composite_glyphs(BytesView, ArrayView[Int]) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_truetype_glyph_byte_ranges(BytesView, ArrayView[Int]) -> Array[@truetype.PdfTrueTypeGlyphByteRange] raise @core.PdfError
+
+pub fn pdf_truetype_higher_tounicode(ArrayView[Int]) -> Array[(Int, Bytes)]? raise @core.PdfError
+
+pub fn pdf_truetype_loca_offsets(BytesView) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_truetype_metrics(BytesView) -> @truetype.PdfTrueTypeMetrics raise @core.PdfError
+
+pub fn pdf_truetype_parse(BytesView, PdfEncoding, ArrayView[Int]) -> Array[@truetype.PdfTrueTypeParsedSubset] raise @core.PdfError
+
+pub fn pdf_truetype_partition_subsets(PdfEncoding, ArrayView[Int]) -> @truetype.PdfTrueTypeSubsetPartition
+
+pub fn pdf_truetype_subset_cmap_table(BytesView, ArrayView[Int]) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError
+
+pub fn pdf_truetype_subset_font(BytesView, ArrayView[Int], rewrite_cmap? : Bool) -> Bytes raise @core.PdfError
+
+pub fn pdf_truetype_subset_glyf_table(BytesView, ArrayView[Int]) -> @truetype.PdfTrueTypeSubsetTable raise @core.PdfError
+
+pub fn pdf_truetype_subset_glyph_indices(BytesView, ArrayView[Int]) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_truetype_subset_loca_table(BytesView, ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_truetype_table(BytesView, String) -> @truetype.PdfTrueTypeTableRecord?
+
+pub fn pdf_truetype_tables(BytesView) -> Array[@truetype.PdfTrueTypeTableRecord]
+
+pub fn pdf_truetype_widths(BytesView, PdfEncoding, Int, Int, ArrayView[Int]) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_truetype_widths_higher(BytesView, Int, Int, ArrayView[Int]) -> Array[Int] raise @core.PdfError
+
+pub fn pdf_twoup(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_twoup_stack(PdfDocument, fast? : Bool, process_struct_tree? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_type_add_artifacts(ArrayView[@content.PdfContentOp]) -> Array[@content.PdfContentOp]
+
+pub fn pdf_type_font_widths(PdfFont, Double) -> Array[Double] raise @core.PdfError
+
+pub fn pdf_type_layout(Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> Array[PdfTypeElement] raise @core.PdfError
+
+pub fn pdf_type_paginate(Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> Array[PdfTypeElement]
+
+pub fn pdf_type_split_text(Double, ArrayView[Double], BytesView) -> (Bytes, Bool, Bytes) raise @core.PdfError
+
+pub fn pdf_type_to_string(ArrayView[PdfTypeElement]) -> Bytes
+
+pub fn pdf_type_typeset(PdfDocument, Bool, Double, Double, Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
+
+pub fn pdf_type_typeset_cpdf_order(Bool, Double, Double, Double, Double, @geometry.PaperSize, PdfDocument, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
+
+pub fn pdf_type_width_of_bytes(ArrayView[Double], BytesView) -> Double raise @core.PdfError
+
+pub fn pdf_type_width_of_string(ArrayView[Double], BytesView) -> Double raise @core.PdfError
+
+pub fn pdf_typeset_table_of_contents(PdfTocFontSource, Double, BytesView, Bool, Bool, Bool, PdfDocument, subformat? : PdfUASubformat?) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_create_pdfua1(String, @geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_create_pdfua2(String, @geometry.PaperSize, Int) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_extract_struct_tree(PdfDocument) -> Json raise @core.PdfError
+
+pub fn pdf_ua_extract_struct_tree_json_blob(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_ua_mark(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_mark2(Int, PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_print_struct_tree(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_ua_remove_mark(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_replace_struct_tree(PdfDocument, Json) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_ua_subformat_of_string(String) -> PdfUASubformat raise @core.PdfError
+
+pub fn pdf_ua_test_matterhorn_json(PdfDocument, String) -> Json raise @core.PdfError
+
+pub fn pdf_ua_test_matterhorn_print(PdfDocument, String) -> Bytes raise @core.PdfError
+
+pub fn pdf_unicode_data() -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError
+
+pub fn pdf_unicode_data_source() -> Bytes raise @core.PdfError
+
+pub fn pdf_unicodedata() -> Array[@unicodedata.PdfUnicodeDataEntry] raise @core.PdfError
+
+pub fn pdf_unicodedata_source() -> Bytes raise @core.PdfError
+
+pub fn pdf_upright(ArrayView[Int], PdfDocument, fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_upright_pages(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_usexobj(PdfDrawControl, String) -> Unit raise @core.PdfError
+
+pub fn pdf_utf16be_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_utf8_of_codepoints(ArrayView[Int]) -> Bytes raise @core.PdfError
+
+pub fn pdf_utf8_of_pdfdocstring(BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_vflip_pdf(PdfDocument, ArrayView[Int], fast? : Bool) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_write_colour_space(PdfDocument, PdfColourSpace) -> @syntax.PdfObject
+
+pub fn pdf_write_document(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_incremental_update(Bytes, PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_incremental_update_with_compressed_xref_stream(Bytes, PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_incremental_update_with_generated_id(Bytes, PdfDocument, String, mode? : @writer.PdfWriteMode) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_incremental_update_with_mode(Bytes, PdfDocument, @writer.PdfWriteMode) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_incremental_update_with_xref_stream(Bytes, PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_options(PdfDocument, encryption? : @writer.PdfWriteEncryption?, update_from? : Bytes?, make_id? : Bool, id_path? : String, mode? : @writer.PdfWriteMode, file_id? : BytesView, aes_iv_provider? : ((Int, Int, Int) -> Bytes raise @core.PdfError)?, aesv3_random_provider? : ((@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError)?) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_with_compressed_xref_stream(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_with_generated_id(PdfDocument, String, mode? : @writer.PdfWriteMode) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_with_mode(PdfDocument, @writer.PdfWriteMode) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_document_with_xref_stream(PdfDocument) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_encrypted_128bit_document(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], mode? : @writer.PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_encrypted_128bit_r4_document(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], encrypt_metadata? : Bool, mode? : @writer.PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_encrypted_40bit_document(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], mode? : @writer.PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_encrypted_aesv2_document_with_iv_provider(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, mode? : @writer.PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_encrypted_aesv3_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, iso? : Bool, encrypt_metadata? : Bool, mode? : @writer.PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_encrypted_aesv3_iso_document_with_providers(PdfDocument, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, mode? : @writer.PdfWriteMode, file_id? : BytesView) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_font(PdfDocument, PdfFont, objnum? : Int?) -> Int raise @core.PdfError
+
+pub fn pdf_write_hex_string(BytesView) -> Bytes
+
+pub fn pdf_write_indirect_object(@syntax.PdfParsedIndirectObject) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_literal_string(BytesView) -> Bytes
+
+pub fn pdf_write_name(@core.PdfName) -> Bytes
+
+pub fn pdf_write_object(@syntax.PdfObject) -> Bytes raise @core.PdfError
+
+pub fn pdf_write_ocg(PdfDocument, @ocg.PdfOptionalContent) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_write_page_labels(PdfDocument, ArrayView[@label.PdfPageLabel]) -> PdfDocument raise @core.PdfError
+
+pub fn pdf_write_real(Double) -> Bytes raise @core.PdfError
+
+pub fn pdf_xmltree_of_bytes(BytesView) -> @metadata.PdfMetadataXmlDocument raise @core.PdfError
+
+pub fn pdf_xobjbbox(PdfDrawControl, PdfDocument, String) -> Unit raise @core.PdfError
+
+pub fn recompress_pdf(PdfDocument) -> PdfDocument raise @core.PdfError
+
+pub fn squeeze(PdfDocument, page_data? : Bool) -> PdfDocument raise @core.PdfError
+
+// Errors
+
+// Types and methods
+pub(all) enum PdfAddTextFontSource {
+  PdfAddTextPreMadeFontPack(PdfFontPack)
+  PdfAddTextExistingNamedFont
+} derive(Eq, ToJson, @debug.Debug)
+
+type PdfBookmarkNode derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfCIDKeyedFont {
+  basefont : @core.PdfName
+  composite : PdfCompositeCIDFont
+  encoding : PdfCMapEncoding
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfCIDKeyedFont::debug_name(Self) -> String
+pub fn PdfCIDKeyedFont::is_identity_h(Self) -> Bool
+pub fn PdfCIDKeyedFont::is_identity_v(Self) -> Bool
+pub fn PdfCIDKeyedFont::uses_two_byte_codes(Self) -> Bool
+
+pub(all) struct PdfCIDSystemInfo {
+  registry : Bytes
+  ordering : Bytes
+  supplement : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfCIDVerticalWidth {
+  width : Double
+  vx : Double
+  vy : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfCMapCodeSpace {
+  length : Int
+  first : Int
+  last : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfCMapEncoding {
+  PdfPredefinedCMap(@core.PdfName)
+  PdfCMap(Int)
+  PdfExternalCMap(Int, PdfParsedCMap)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfCMapEncoding::is_identity_h(Self) -> Bool
+pub fn PdfCMapEncoding::is_identity_v(Self) -> Bool
+pub fn PdfCMapEncoding::uses_two_byte_codes(Self) -> Bool
+
+pub(all) struct PdfCalculatorFunction {
+  operations : Array[PdfCalculatorOp]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfCalculatorOp {
+  PdfCalculatorInt(Int)
+  PdfCalculatorFloat(Double)
+  PdfCalculatorAbs
+  PdfCalculatorAdd
+  PdfCalculatorAnd
+  PdfCalculatorAtan
+  PdfCalculatorBitshift
+  PdfCalculatorBool(Bool)
+  PdfCalculatorCeiling
+  PdfCalculatorCos
+  PdfCalculatorCopy
+  PdfCalculatorCvi
+  PdfCalculatorCvr
+  PdfCalculatorSub
+  PdfCalculatorMul
+  PdfCalculatorDiv
+  PdfCalculatorDup
+  PdfCalculatorExch
+  PdfCalculatorExp
+  PdfCalculatorFloor
+  PdfCalculatorIdiv
+  PdfCalculatorIf(Array[PdfCalculatorOp])
+  PdfCalculatorIfElse(Array[PdfCalculatorOp], Array[PdfCalculatorOp])
+  PdfCalculatorIndex
+  PdfCalculatorLn
+  PdfCalculatorLog
+  PdfCalculatorEq
+  PdfCalculatorGe
+  PdfCalculatorGt
+  PdfCalculatorLe
+  PdfCalculatorLt
+  PdfCalculatorMod
+  PdfCalculatorNe
+  PdfCalculatorNeg
+  PdfCalculatorNot
+  PdfCalculatorOr
+  PdfCalculatorPop
+  PdfCalculatorRoll
+  PdfCalculatorRound
+  PdfCalculatorSin
+  PdfCalculatorSqrt
+  PdfCalculatorTruncate
+  PdfCalculatorXor
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfCalculatorOp::debug_name(Self) -> String
+
+pub(all) struct PdfClipContour {
+  hole : Bool
+  vertices : Array[PdfClipVertex]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfClipContour::hole_flag(Self) -> Int
+pub fn PdfClipContour::num_vertices(Self) -> Int
+
+pub(all) enum PdfClipOperation {
+  PdfClipDifference
+  PdfClipIntersection
+  PdfClipExclusiveOr
+  PdfClipUnion
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfClipOperation::gpc_code(Self) -> Int
+
+pub(all) struct PdfClipPolygon {
+  contours : Array[PdfClipContour]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfClipPolygon::num_contours(Self) -> Int
+
+pub(all) struct PdfClipVertex {
+  x : Double
+  y : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfColourSpace {
+  PdfDeviceGray
+  PdfDeviceRGB
+  PdfDeviceCMYK
+  PdfCalGray(PdfTristimulusPoint, PdfTristimulusPoint, Double)
+  PdfCalRGB(PdfTristimulusPoint, PdfTristimulusPoint, Array[Double], Array[Double])
+  PdfLab(PdfTristimulusPoint, PdfTristimulusPoint, Array[Double])
+  PdfICCBased(Int, PdfColourSpace, Array[Double], @syntax.PdfObject?, @syntax.PdfObject)
+  PdfIndexed(PdfColourSpace, Array[(Int, Array[Int])])
+  PdfPattern
+  PdfPatternWithBaseColourSpace(PdfColourSpace)
+  PdfSeparation(@core.PdfName, PdfColourSpace, @syntax.PdfObject)
+  PdfDeviceN(Array[@core.PdfName], PdfColourSpace, @syntax.PdfObject, @syntax.PdfObject)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfColourSpace::content_json(Self) -> Json
+pub fn PdfColourSpace::debug_name(Self) -> String
+pub fn PdfColourSpace::name(Self) -> @core.PdfName?
+
+pub(all) struct PdfCompositeCIDFont {
+  cid_system_info : PdfCIDSystemInfo
+  cid_basefont : @core.PdfName
+  cid_fontdescriptor : PdfFontDescriptor
+  cid_widths : Array[(Int, Double)]
+  cid_widths2 : Array[(Int, PdfCIDVerticalWidth)]
+  cid_default_width : Double
+  cid_default_width2 : Array[Double]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentAxialShading {
+  axialshading_coords : (Double, Double, Double, Double)
+  axialshading_domain : (Double, Double)
+  axialshading_function : Array[PdfFunction]
+  axialshading_extend : (Bool, Bool)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentBoundingBox {
+  x0 : Double
+  y0 : Double
+  x1 : Double
+  y1 : Double
+  x2 : Double
+  y2 : Double
+  x3 : Double
+  y3 : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentBoundingBox::content_json(Self) -> Json
+
+pub(all) struct PdfContentClippingState {
+  clipping_path : Array[@shape.PdfPath]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentClippingState::content_json(Self) -> Json
+
+pub(all) enum PdfContentColourValues {
+  PdfContentColourFloats(Array[Double])
+  PdfContentColourNamed(String, Array[Double])
+  PdfContentColourPattern
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentColourValues::content_json(Self) -> Json
+
+pub(all) struct PdfContentDashPattern {
+  array : Array[Double]
+  phase : Double
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentDashPattern::content_json(Self) -> Json
+
+pub(all) struct PdfContentFunctionShading {
+  funshading_domain : (Double, Double, Double, Double)
+  funshading_matrix : @geometry.TransformMatrix
+  funshading_function : PdfFunction
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentGlyphState {
+  rendering_mode : Int
+  knockout : Bool
+  font : String
+  font_size : Double
+  clipping_path : Array[@shape.PdfPath]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentGlyphState::content_json(Self) -> Json
+
+type PdfContentInlineTextFilter derive(Eq, @debug.Debug)
+
+pub(all) struct PdfContentJsonEntry {
+  object : PdfContentObject
+  state : PdfContentState
+  bounding_box : PdfContentBoundingBox
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentJsonEntry::content_json(Self) -> Json
+
+type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentMarkedContent {
+  tag : String
+  properties : @syntax.PdfObject?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfContentObject {
+  PdfContentGlyphObject(Int, String, String)
+  PdfContentInlineImageObject
+  PdfContentImageObject(String)
+  PdfContentPathObject(@shape.PdfDrawnPath)
+  PdfContentShadingObject(String)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentObject::content_json(Self) -> Json
+
+pub(all) struct PdfContentOperatorFrame {
+  ctm : @geometry.TransformMatrix
+  partial_path : @path.PdfContentPartialPath
+  clipping_path : Array[@shape.PdfPath]
+  path : @shape.PdfDrawnPath
+  path_state : PdfContentPathState
+  text_state : PdfContentTextState
+  miter_limit : Double
+  flatness : Double
+  alpha_constant_stroke : Double
+  alpha_constant_non_stroke : Double
+  alpha_source : Bool
+  smoothness : Double
+  stroke_adjustment : Bool
+  overprint_stroke : Bool
+  overprint_non_stroke : Bool
+  overprint_mode : Int
+  black_generation : @syntax.PdfObject
+  undercolour_removal : @syntax.PdfObject
+  transfer : @syntax.PdfObject
+  halftone : @syntax.PdfObject
+  blend_mode : @syntax.PdfObject
+  soft_mask : @syntax.PdfObject
+  black_point_compensation : String
+  marked_content_point : PdfContentMarkedContent?
+  marked_content : Array[PdfContentMarkedContent]
+  type3_d0 : PdfContentType3D0?
+  type3_d1 : PdfContentType3D1?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentOperatorResourceResult {
+  state : PdfContentOperatorState
+  entries : Array[PdfContentJsonEntry]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentOperatorState {
+  ctm : @geometry.TransformMatrix
+  partial_path : @path.PdfContentPartialPath
+  clipping_path : Array[@shape.PdfPath]
+  path : @shape.PdfDrawnPath
+  path_state : PdfContentPathState
+  text_state : PdfContentTextState
+  miter_limit : Double
+  flatness : Double
+  alpha_constant_stroke : Double
+  alpha_constant_non_stroke : Double
+  alpha_source : Bool
+  smoothness : Double
+  stroke_adjustment : Bool
+  overprint_stroke : Bool
+  overprint_non_stroke : Bool
+  overprint_mode : Int
+  black_generation : @syntax.PdfObject
+  undercolour_removal : @syntax.PdfObject
+  transfer : @syntax.PdfObject
+  halftone : @syntax.PdfObject
+  blend_mode : @syntax.PdfObject
+  soft_mask : @syntax.PdfObject
+  black_point_compensation : String
+  marked_content_point : PdfContentMarkedContent?
+  marked_content : Array[PdfContentMarkedContent]
+  type3_d0 : PdfContentType3D0?
+  type3_d1 : PdfContentType3D1?
+  state_stack : Array[PdfContentOperatorFrame]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentOperatorState::content_apply_core_op(Self, @content.PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_apply_graphics_parameter_op(Self, @content.PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_apply_graphics_state_op(Self, @content.PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_apply_marked_content_op(Self, @content.PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_apply_text_show_op(Self, PdfFont, @content.PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
+pub fn PdfContentOperatorState::content_apply_type3_metrics_op(Self, @content.PdfContentOp) -> Self
+pub fn PdfContentOperatorState::content_image_entry(Self, @core.PdfName) -> PdfContentJsonEntry
+pub fn PdfContentOperatorState::content_inline_image_entry(Self) -> PdfContentJsonEntry
+pub fn PdfContentOperatorState::content_path_entry(Self, Bool) -> PdfContentJsonEntry?
+pub fn PdfContentOperatorState::content_shading_entry(Self, @core.PdfName, @geometry.PdfRectangle?) -> PdfContentJsonEntry?
+pub fn PdfContentOperatorState::content_text_glyph_entry(Self, PdfFont, PdfContentTextGlyphPlacement) -> PdfContentJsonEntry raise @core.PdfError
+pub fn PdfContentOperatorState::content_unit_square_bounding_box(Self) -> PdfContentBoundingBox
+
+pub(all) struct PdfContentOperatorTextResult {
+  state : PdfContentOperatorState
+  entries : Array[PdfContentJsonEntry]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentPathState {
+  clipping_path : Array[@shape.PdfPath]
+  colourspace_stroke : PdfColourSpace
+  colourspace_non_stroke : PdfColourSpace
+  colour_stroke : PdfContentColourValues
+  colour_non_stroke : PdfContentColourValues
+  line_width : Double
+  line_cap : Int
+  line_join : Int
+  dash_pattern : PdfContentDashPattern
+  rendering_intent : String
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentPathState::content_apply_path_state_op(Self, @content.PdfContentOp) -> Self
+pub fn PdfContentPathState::content_json(Self) -> Json
+pub fn PdfContentPathState::content_with_clipping_path(Self, ArrayView[@shape.PdfPath]) -> Self
+
+pub(all) enum PdfContentPattern {
+  PdfContentColouredTilingPattern(PdfContentTiling)
+  PdfContentUncolouredTilingPattern(PdfContentTiling)
+  PdfContentShadingPattern(PdfContentShading)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentRadialShading {
+  radialshading_coords : (Double, Double, Double, Double, Double, Double)
+  radialshading_domain : (Double, Double)
+  radialshading_function : Array[PdfFunction]
+  radialshading_extend : (Bool, Bool)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentShading {
+  shading_colourspace : @syntax.PdfObject
+  shading_background : @syntax.PdfObject?
+  shading_bbox : @syntax.PdfObject?
+  shading_antialias : Bool
+  shading_matrix : @geometry.TransformMatrix
+  shading_extgstate : @syntax.PdfObject
+  shading : PdfContentShadingKind
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfContentShadingKind {
+  PdfContentFunctionShading(PdfContentFunctionShading)
+  PdfContentAxialShading(PdfContentAxialShading)
+  PdfContentRadialShading(PdfContentRadialShading)
+  PdfContentFreeFormGouraudShading
+  PdfContentLatticeFormGouraudShading
+  PdfContentCoonsPatchMesh
+  PdfContentTensorProductPatchMesh
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfContentState {
+  PdfContentStateGlyph(PdfContentGlyphState)
+  PdfContentStatePath(PdfContentPathState)
+  PdfContentStateClipping(PdfContentClippingState)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentState::content_json(Self) -> Json
+
+pub(all) struct PdfContentTextFontCacheEntry {
+  name : String
+  font : PdfFont
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentTextGlyphPlacement {
+  charcode : Int
+  text_matrix : @geometry.TransformMatrix
+  width : Double
+  pvx : Double
+  pvy : Double
+  advance_x : Double
+  advance_y : Double
+  bounding_box : PdfContentBoundingBox
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentTextLayout {
+  font_size : Double
+  horizontal_scaling : Double
+  character_spacing : Double
+  word_spacing : Double
+  rise : Double
+  ctm : @geometry.TransformMatrix
+  text_matrix : @geometry.TransformMatrix
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentTextLayoutResult {
+  glyphs : Array[PdfContentTextGlyphPlacement]
+  text_matrix : @geometry.TransformMatrix
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentTextOpResult {
+  text_state : PdfContentTextState
+  glyphs : Array[PdfContentTextGlyphPlacement]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentTextState {
+  character_spacing : Double
+  word_spacing : Double
+  horizontal_scaling : Double
+  leading : Double
+  font : String
+  current_font : PdfFont
+  font_cache : Array[PdfContentTextFontCacheEntry]
+  font_size : Double
+  rendering_mode : Int
+  rise : Double
+  knockout : Bool
+  text_matrix : @geometry.TransformMatrix
+  line_matrix : @geometry.TransformMatrix
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfContentTextState::content_apply_text_op(Self, PdfFont, @geometry.TransformMatrix, @content.PdfContentOp) -> PdfContentTextOpResult
+pub fn PdfContentTextState::content_apply_text_state_op(Self, @content.PdfContentOp) -> Self
+pub fn PdfContentTextState::content_cache_font(Self, String, PdfFont) -> Self
+pub fn PdfContentTextState::content_cached_font(Self, String) -> PdfFont?
+pub fn PdfContentTextState::content_glyph_state(Self, ArrayView[@shape.PdfPath]) -> PdfContentGlyphState
+pub fn PdfContentTextState::content_text_layout(Self, @geometry.TransformMatrix) -> PdfContentTextLayout
+
+pub(all) enum PdfContentTiling {
+  PdfContentTiling
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentType3D0 {
+  width_x : Double
+  width_y : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfContentType3D1 {
+  width_x : Double
+  width_y : Double
+  llx : Double
+  lly : Double
+  urx : Double
+  ury : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfDecryptionResult {
+  document : PdfDocument
+  denied_permissions : Array[@crypt_core.PdfPermission]
+} derive(Eq, @debug.Debug)
+
+pub struct PdfDocument {
+  mut major : Int
+  mut minor : Int
+  mut root : Int
+  objects : PdfObjects
+  mut trailer_dict : @syntax.PdfObject
+  mut was_linearized : Bool
+  mut saved_encryption : @crypt_core.PdfSavedEncryption?
+  mut first_xref : Int
+  mut revision_read : Int
+} derive(Eq, @debug.Debug)
+pub fn PdfDocument::add_annotation(Self, @page.PdfPage, @annotation.PdfAnnotation) -> @page.PdfPage raise @core.PdfError
+pub fn PdfDocument::add_bookmark_title(Self, String, Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::add_bookmarks(Self, ArrayView[@bookmark.PdfBookmark]) -> Self raise @core.PdfError
+pub fn PdfDocument::add_bookmarks_from_json(Self, Json, verify? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::add_bookmarks_from_text(Self, BytesView, verify? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::add_object(Self, @syntax.PdfObject, generation? : Int) -> Int
+pub fn PdfDocument::add_object_given_number(Self, Int, @syntax.PdfObject, generation? : Int) -> Unit
+pub fn PdfDocument::add_page_labels(Self, Bool, @label.PdfPageLabelStyle, Bytes?, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::add_page_labels_json(Self, Json) -> Self raise @core.PdfError
+pub fn PdfDocument::add_pagetree(Self, ArrayView[@page.PdfPage]) -> Int raise @core.PdfError
+pub fn PdfDocument::add_prefix(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDocument::add_root(Self, Int, ArrayView[(@core.PdfName, @syntax.PdfObject)]) -> Int raise @core.PdfError
+pub fn PdfDocument::addtext_bookmark_for_page(Self, ArrayView[@bookmark.PdfBookmark], Int, Int) -> String raise @core.PdfError
+pub fn PdfDocument::addtext_calc_textwidth(Self, @page.PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, Double, BytesView) -> Double raise @core.PdfError
+pub fn PdfDocument::addtext_existing_font_resource(Self, @page.PdfPage, @core.PdfName) -> (@core.PdfName, @syntax.PdfObject) raise @core.PdfError
+pub fn PdfDocument::addtext_line_page(Self, @page.PdfPage, @date.PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double, String, @colour.PdfContentColour, @geometry.PdfPosition, relative_to_box? : @core.PdfName, horizontal_offset? : Double, vertical_offset? : Double, shift_x? : Double, shift_y? : Double, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> @page.PdfPage raise @core.PdfError
+pub fn PdfDocument::addtext_line_widths(Self, @page.PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, Double, BytesView, ArrayView[Bytes]) -> @addtext.PdfAddTextLineWidths raise @core.PdfError
+pub fn PdfDocument::addtext_opacity_resources(Self, @syntax.PdfObject, Double) -> (@syntax.PdfObject, @core.PdfName?) raise @core.PdfError
+pub fn PdfDocument::addtext_page_font_dictionary(Self, @page.PdfPage) -> @syntax.PdfObject
+pub fn PdfDocument::addtext_page_label(Self, Int) -> String raise @core.PdfError
+pub fn PdfDocument::addtext_page_lines(Self, @page.PdfPage, @date.PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double, Double, @colour.PdfContentColour, @geometry.PdfPosition, relative_to_box? : @core.PdfName, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, midline? : Bool, topline? : Bool, shift_x? : Double, shift_y? : Double, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> @page.PdfPage raise @core.PdfError
+pub fn PdfDocument::addtext_page_rest_with_annotations(Self, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::addtext_pages_with_font(Self, ArrayView[Int], ArrayView[String], @date.PdfStrftimeTime, ArrayView[@bookmark.PdfBookmark], PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double, Double, @colour.PdfContentColour, @geometry.PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::addtext_prepare_line(Self, @page.PdfPage, @date.PdfStrftimeTime, ArrayView[String], ArrayView[(String, () -> String)], PdfFont?, PdfFontPack?, @core.PdfName, Double, String, @geometry.PdfPosition, relative_to_box? : @core.PdfName, horizontal_offset? : Double, vertical_offset? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, raw? : Bool) -> @addtext.PdfAddTextPreparedLine raise @core.PdfError
+pub fn PdfDocument::addtext_rectangle(Self, ArrayView[Int], String, @colour.PdfContentColour, @geometry.PdfPosition, relative_to_box? : @core.PdfName, outline? : Bool, line_width? : Double, opacity? : Double, underneath? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::addtext_replacement_values(Self, ArrayView[@bookmark.PdfBookmark], Int, Int, String, Int, Int?) -> @addtext.PdfAddTextReplacementValues raise @core.PdfError
+pub fn PdfDocument::addtext_resource_setup(Self, @page.PdfPage, PdfFont?, PdfFontPack?, @core.PdfName, @syntax.PdfObject?, ArrayView[Int], Double) -> @addtext.PdfAddTextResourceSetup raise @core.PdfError
+pub fn PdfDocument::addtext_selected_font_object(Self, PdfFont?) -> @syntax.PdfObject? raise @core.PdfError
+pub fn PdfDocument::addtext_url_annotation_references(Self, String, ArrayView[@addtext.PdfAddTextUrl], (String) -> Double raise @core.PdfError, @geometry.Point2, Double, Double, Double, Double, @geometry.Point2, Double, PdfFont?, String, Double, Bool) -> Array[@syntax.PdfObject] raise @core.PdfError
+pub fn PdfDocument::addtext_width_of_existing_font_resource(Self, @page.PdfPage, @core.PdfName, Double, BytesView) -> (@core.PdfName, Double) raise @core.PdfError
+pub fn PdfDocument::addtexts_with_font(Self, ArrayView[Int], String, @date.PdfStrftimeTime, ArrayView[@bookmark.PdfBookmark], PdfFont?, PdfFontPack?, @core.PdfName, Double, Double, @colour.PdfContentColour, @geometry.PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::addtexts_with_source(Self, ArrayView[Int], String, @date.PdfStrftimeTime, ArrayView[@bookmark.PdfBookmark], PdfAddTextFontSource, @core.PdfName, Double, Double, @colour.PdfContentColour, @geometry.PdfPosition, filename? : String, bates? : Int, bates_pad? : Int?, relative_to_box? : @core.PdfName, shift? : String, opacity? : Double, justification? : @addtext.PdfAddTextJustification, rotation? : @addtext.PdfAddTextRotation, midline? : Bool, topline? : Bool, outline? : Bool, line_width? : Double, underneath? : Bool, fast? : Bool, raw? : Bool, url_border? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::all_pages_upright(Self, ArrayView[Int]) -> Bool raise @core.PdfError
+pub fn PdfDocument::all_pages_upright_only(Self, ArrayView[Int]) -> Bool raise @core.PdfError
+pub fn PdfDocument::annotations_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
+pub fn PdfDocument::annotations_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
+pub fn PdfDocument::annotations_of_page(Self, @page.PdfPage) -> Array[@annotation.PdfAnnotation] raise @core.PdfError
+pub fn PdfDocument::append_page_content(Self, ArrayView[Int], BytesView, before? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::append_page_content_multiple(Self, ArrayView[Bytes], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::append_page_content_multiple_ops(Self, ArrayView[Array[@content.PdfContentOp]], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::append_page_content_ops(Self, ArrayView[Int], ArrayView[@content.PdfContentOp], before? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::apply_redaction_type(Self, String, ArrayView[Int]) -> Unit
+pub fn PdfDocument::apply_redactions(Self, ArrayView[Int]) -> Unit
+pub fn PdfDocument::attach_file(Self, String, BytesView, keep_version? : Bool, page_number? : Int?, relationship? : String?, description? : String?) -> Self raise @core.PdfError
+pub fn PdfDocument::black_fills(Self, ArrayView[Int], @colour.PdfContentColour) -> Self raise @core.PdfError
+pub fn PdfDocument::black_lines(Self, ArrayView[Int], @colour.PdfContentColour) -> Self raise @core.PdfError
+pub fn PdfDocument::black_text(Self, ArrayView[Int], @colour.PdfContentColour) -> Self raise @core.PdfError
+pub fn PdfDocument::bookmark_name_of_spec(Self, @metadata.PdfMetadataEncoding, ArrayView[@bookmark.PdfBookmark], Int, String, Int, String, Int, Int) -> String raise @core.PdfError
+pub fn PdfDocument::bookmarks_json(Self, json_preserve_actions? : Bool) -> Json raise @core.PdfError
+pub fn PdfDocument::bookmarks_json_blob(Self, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::bookmarks_open_to_level(Self, Int) -> Self raise @core.PdfError
+pub fn PdfDocument::bpc(Self, @syntax.PdfObject) -> @syntax.PdfObject?
+pub fn PdfDocument::build_name_tree(Self, ArrayView[(Bytes, @syntax.PdfObject)]) -> @syntax.PdfObject
+pub fn PdfDocument::build_number_tree(Self, ArrayView[(Int, @syntax.PdfObject)]) -> @syntax.PdfObject
+pub fn PdfDocument::catalog(Self) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::catalog_item(Self, @core.PdfName) -> String
+pub fn PdfDocument::catalog_item_string(Self, String) -> String
+pub fn PdfDocument::center_to_fit(Self, ArrayView[Int], ArrayView[(Double, Double)]) -> Self raise @core.PdfError
+pub fn PdfDocument::center_to_fit_pages(Self, ArrayView[Int], ArrayView[(Double, Double)]) -> Self raise @core.PdfError
+pub fn PdfDocument::change_boxes(Self, @page.PdfPage, (Double, Double, Double, Double) -> (Double, Double, Double, Double)) -> @page.PdfPage raise @core.PdfError
+pub fn PdfDocument::change_id(Self, String, () -> Double) -> Unit raise @core.PdfError
+pub fn PdfDocument::change_pages(Self, ArrayView[@page.PdfPage], change_references? : Bool, matrices? : ArrayView[(Int, @geometry.TransformMatrix)], changes? : ArrayView[(Int, Int)]) -> Self raise @core.PdfError
+pub fn PdfDocument::change_pattern_matrices_page(Self, @geometry.TransformMatrix, @page.PdfPage) -> @page.PdfPage raise @core.PdfError
+pub fn PdfDocument::chop(Self, Int, Int, Bool, Bool, Bool, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::chop_hv(Self, Bool, Double, Bool, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::colour_space_components(Self, @syntax.PdfObject, @syntax.PdfObject) -> Int raise @core.PdfError
+pub fn PdfDocument::colspace(Self, @syntax.PdfObject, @syntax.PdfObject) -> PdfColourSpace raise @core.PdfError
+pub fn PdfDocument::combine_pages(Self, Self, fast? : Bool, scale_to_fit? : Bool, overlay_is_under? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::combine_pdf_resources(Self, @syntax.PdfObject, @syntax.PdfObject) -> @syntax.PdfObject
+pub fn PdfDocument::combine_pdf_rests(Self, @syntax.PdfObject, @syntax.PdfObject) -> @syntax.PdfObject
+pub fn PdfDocument::composition(Self, Int) -> Array[@composition.PdfCompositionEntry] raise @core.PdfError
+pub fn PdfDocument::composition_json(Self, Int) -> Json raise @core.PdfError
+pub fn PdfDocument::composition_json_blob(Self, Int) -> Bytes raise @core.PdfError
+pub fn PdfDocument::composition_text(Self, Int) -> Bytes raise @core.PdfError
+pub fn PdfDocument::contains_javascript(Self) -> Bool
+pub fn PdfDocument::content_apply_extgstate_alpha_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_extgstate_compositing_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_extgstate_dash_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState raise @core.PdfError
+pub fn PdfDocument::content_apply_extgstate_font_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState raise @core.PdfError
+pub fn PdfDocument::content_apply_extgstate_graphics_parameter_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_extgstate_halftone_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_extgstate_overprint_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_extgstate_rendering_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_extgstate_resource_op(Self, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentOperatorState raise @core.PdfError
+pub fn PdfDocument::content_apply_extgstate_text_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_extgstate_transfer_op(Self, PdfContentOperatorState, @syntax.PdfObject) -> PdfContentOperatorState
+pub fn PdfDocument::content_apply_font_resource_op(Self, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName, Double) -> PdfContentOperatorState raise @core.PdfError
+pub fn PdfDocument::content_apply_resource_op(Self, PdfContentOperatorState, @syntax.PdfObject, @content.PdfContentOp) -> PdfContentOperatorResourceResult raise @core.PdfError
+pub fn PdfDocument::content_apply_text_resource_op(Self, PdfContentOperatorState, @syntax.PdfObject, @content.PdfContentOp) -> PdfContentOperatorTextResult raise @core.PdfError
+pub fn PdfDocument::content_entries_of_ops(Self, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+pub fn PdfDocument::content_entries_of_ops_recursive(Self, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Array[PdfContentJsonEntry] raise @core.PdfError
+pub fn PdfDocument::content_entries_of_page(Self, @page.PdfPage) -> Array[PdfContentJsonEntry] raise @core.PdfError
+pub fn PdfDocument::content_filter(Self, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp], (PdfContentJsonEntry) -> Bool) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDocument::content_form_xobject_enter_state(Self, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentOperatorState? raise @core.PdfError
+pub fn PdfDocument::content_form_xobject_ops(Self, @syntax.PdfObject, @core.PdfName) -> Array[@content.PdfContentOp]? raise @core.PdfError
+pub fn PdfDocument::content_form_xobject_resources(Self, @syntax.PdfObject, @core.PdfName) -> @syntax.PdfObject? raise @core.PdfError
+pub fn PdfDocument::content_image_entry_from_resources(Self, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentJsonEntry? raise @core.PdfError
+pub fn PdfDocument::content_json_of_ops(Self, @geometry.PdfRectangle, @syntax.PdfObject, ArrayView[@content.PdfContentOp]) -> Json raise @core.PdfError
+pub fn PdfDocument::content_json_of_page(Self, @page.PdfPage) -> Json raise @core.PdfError
+pub fn PdfDocument::content_read_axial_shading(Self, @syntax.PdfObject) -> PdfContentShadingKind raise @core.PdfError
+pub fn PdfDocument::content_read_function_shading(Self, @syntax.PdfObject) -> PdfContentShadingKind raise @core.PdfError
+pub fn PdfDocument::content_read_pattern(Self, @syntax.PdfObject, @core.PdfName) -> PdfContentPattern? raise @core.PdfError
+pub fn PdfDocument::content_read_radial_shading(Self, @syntax.PdfObject) -> PdfContentShadingKind raise @core.PdfError
+pub fn PdfDocument::content_read_shading(Self, @geometry.TransformMatrix, @syntax.PdfObject, @syntax.PdfObject) -> PdfContentShading raise @core.PdfError
+pub fn PdfDocument::content_read_shading_pattern(Self, @syntax.PdfObject) -> PdfContentPattern raise @core.PdfError
+pub fn PdfDocument::content_shading_entry_from_resources(Self, PdfContentOperatorState, @syntax.PdfObject, @core.PdfName) -> PdfContentJsonEntry?
+pub fn PdfDocument::contents_of_name_tree(Self, @syntax.PdfObject) -> Array[(@syntax.PdfObject, @syntax.PdfObject)]
+pub fn PdfDocument::copy(Self) -> Self
+pub fn PdfDocument::copy_annotations_from(Self, Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::copy_box(Self, ArrayView[Int], String, String, mediabox_if_missing? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::copy_font_from(Self, Self, String, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::copy_id_from(Self, Self, keep_version? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::copy_page_box(Self, ArrayView[Int], @core.PdfName, @core.PdfName, mediabox_if_missing? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::create_metadata(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::crop_pages(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : @core.PdfName) -> Self raise @core.PdfError
+pub fn PdfDocument::crop_pdf_string(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)], box_name? : String) -> Self raise @core.PdfError
+pub fn PdfDocument::debug_objects(Self) -> Bytes raise @core.PdfError
+pub fn PdfDocument::decompress(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::decrypt_single_stream(Self, Int, Int, @syntax.PdfObject, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> @syntax.PdfObject? raise @core.PdfError
+pub fn PdfDocument::decrypt_with_owner_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
+pub fn PdfDocument::decrypt_with_passwords(Self, user_password? : BytesView?, owner_password? : BytesView?, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
+pub fn PdfDocument::decrypt_with_user_password(Self, BytesView, no_encrypt_metadata? : Bool) -> PdfDecryptionResult? raise @core.PdfError
+pub fn PdfDocument::determine_subformats(Self) -> Array[String] raise @core.PdfError
+pub fn PdfDocument::dict_entries_json(Self, @core.PdfName, utf8? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::dict_entries_json_string(Self, String, utf8? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::dict_entry_rendered_values(Self, @core.PdfName) -> Array[Bytes] raise @core.PdfError
+pub fn PdfDocument::dict_entry_rendered_values_string(Self, String) -> Array[Bytes] raise @core.PdfError
+pub fn PdfDocument::dict_entry_values(Self, @core.PdfName) -> Array[@syntax.PdfObject]
+pub fn PdfDocument::direct(Self, @syntax.PdfObject) -> @syntax.PdfObject
+pub fn PdfDocument::draft(Self, @core.PdfName?, Bool, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::draw(Self, ArrayView[Int], ArrayView[PdfDrawOp], struct_tree? : Bool, fast? : Bool, underneath? : Bool, filename? : String, bates? : Int, bates_pad? : Int?, time? : @date.PdfStrftimeTime?, add_artifacts? : Bool, role_map? : String) -> Self raise @core.PdfError
+pub fn PdfDocument::draw_special_text_context(Self, Int, filename? : String, bates? : Int, bates_pad? : Int?, time? : @date.PdfStrftimeTime?) -> PdfDrawSpecialTextContext raise @core.PdfError
+pub fn PdfDocument::embed_truetype(Self, BytesView, String, ArrayView[Int], PdfEncoding) -> PdfFontPack raise @core.PdfError
+pub fn PdfDocument::encrypt_128bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_128bit_aesv2_with_iv_provider(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_128bit_r4(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_256bit_aesv3_iso_with_providers(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], (@crypt_core.PdfAesV3RandomField, Int) -> Bytes raise @core.PdfError, (Int, Int, Int) -> Bytes raise @core.PdfError, iso? : Bool, encrypt_metadata? : Bool, file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::endpage(Self) -> Int raise @core.PdfError
+pub fn PdfDocument::endpage_fast(Self) -> Int raise @core.PdfError
+pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
+pub fn PdfDocument::extract_fontfile_bytes(Self, Int, String) -> Bytes? raise @core.PdfError
+pub fn PdfDocument::extract_images_files(Self, ArrayView[Int], String, encoding? : @metadata.PdfMetadataEncoding, inline? : Bool, dedup? : Bool, dedup_per_page? : Bool) -> Array[PdfExtractedImageFile] raise @core.PdfError
+pub fn PdfDocument::extract_single_image_files(Self, Int, String) -> Array[PdfExtractedImageFile] raise @core.PdfError
+pub fn PdfDocument::extract_struct_tree(Self) -> Json raise @core.PdfError
+pub fn PdfDocument::find_object_by_spec(Self, String) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::first_xref(Self) -> Int
+pub fn PdfDocument::flip_pages_horizontally(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::flip_pages_vertically(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::font_from_name(Self, String, Int) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::font_table(Self, String, Int) -> Array[@font.PdfFontTableEntry] raise @core.PdfError
+pub fn PdfDocument::font_table_text(Self, String, Int) -> Bytes raise @core.PdfError
+pub fn PdfDocument::fonts_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
+pub fn PdfDocument::fonts_json_blob(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
+pub fn PdfDocument::get_annotations(Self, encoding? : @metadata.PdfMetadataEncoding) -> Array[(Int, Bytes)] raise @core.PdfError
+pub fn PdfDocument::get_image_24bpp(Self, @syntax.PdfObject, @syntax.PdfObject) -> PdfImage raise @core.PdfError
+pub fn PdfDocument::get_number(Self, @syntax.PdfObject) -> Double raise @core.PdfError
+pub fn PdfDocument::hard_box(Self, ArrayView[Int], @core.PdfName, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::hard_box_string(Self, ArrayView[Int], String, mediabox_if_missing? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::has_page_box(Self, Int, @core.PdfName) -> Bool raise @core.PdfError
+pub fn PdfDocument::hasbox_string(Self, Int, String) -> Bool raise @core.PdfError
+pub fn PdfDocument::hflip_pdf(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::image_bits_per_component(Self, @syntax.PdfObject) -> @syntax.PdfObject?
+pub fn PdfDocument::image_colour_space(Self, @syntax.PdfObject, @syntax.PdfObject) -> PdfColourSpace raise @core.PdfError
+pub fn PdfDocument::image_resolution(Self, ArrayView[Int], Double, inline? : Bool) -> Array[(Int, String, Int, Int, Double, Double, Int)] raise @core.PdfError
+pub fn PdfDocument::image_resolution_json(Self, ArrayView[Int], Double, inline? : Bool) -> Json raise @core.PdfError
+pub fn PdfDocument::image_resolution_json_blob(Self, ArrayView[Int], Double, inline? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::images_json(Self, ArrayView[Int], inline? : Bool) -> Json raise @core.PdfError
+pub fn PdfDocument::images_json_blob(Self, ArrayView[Int], inline? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::impose(Self, Double, Double, fit? : Bool, columns? : Bool, rtl? : Bool, btt? : Bool, center? : Bool, margin? : Double, spacing? : Double, line_width? : Double, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::indirect_number(Self, @core.PdfName, @syntax.PdfObject) -> Int?
+pub fn PdfDocument::info_blob(Self, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+pub fn PdfDocument::info_json(Self, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
+pub fn PdfDocument::info_json_blob(Self, encoding? : @metadata.PdfMetadataEncoding, unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+pub fn PdfDocument::info_utf8(Self, @core.PdfName) -> String
+pub fn PdfDocument::info_utf8_string(Self, String) -> String
+pub fn PdfDocument::is_cidkeyed_font(Self, @syntax.PdfObject) -> Bool
+pub fn PdfDocument::is_encrypted(Self) -> Bool
+pub fn PdfDocument::is_missing_font(Self, @syntax.PdfObject) -> Bool
+pub fn PdfDocument::is_simple_font(Self, @syntax.PdfObject) -> Bool
+pub fn PdfDocument::is_standard14_font(Self, @syntax.PdfObject) -> Bool
+pub fn PdfDocument::is_xfa(Self) -> Bool
+pub fn PdfDocument::iter_objects(Self, (Int, @syntax.PdfObject) -> Unit raise) -> Unit raise
+pub fn PdfDocument::iter_objects_in_order(Self, (Int, @syntax.PdfObject) -> Unit raise) -> Unit raise
+pub fn PdfDocument::iter_objects_with_generation(Self, (Int, Int, @syntax.PdfObject) -> Unit raise) -> Unit raise
+pub fn PdfDocument::iter_pages(Self, ArrayView[Int], (Int, @page.PdfPage) -> Unit raise @core.PdfError) -> Unit raise @core.PdfError
+pub fn PdfDocument::iter_stream(Self, (@syntax.PdfObject) -> Unit raise) -> Unit raise
+pub fn PdfDocument::json_of_document(Self, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Json raise @core.PdfError
+pub fn PdfDocument::json_of_document_blob(Self, utf8? : Bool, parse_content? : Bool, clean_strings? : Bool, no_stream_data? : Bool, decompress_streams? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::json_of_object(Self, @syntax.PdfObject, utf8? : Bool, clean_strings? : Bool, no_stream_data? : Bool, parse_content? : Bool) -> Json raise @core.PdfError
+pub fn PdfDocument::json_to_output(Self, utf8? : Bool, parse_content? : Bool, no_stream_data? : Bool, decompress_streams? : Bool, clean_strings? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::language(Self) -> Bytes?
+pub fn PdfDocument::language_string(Self) -> String?
+pub fn PdfDocument::list_annotations(Self, ArrayView[Int], encoding? : @metadata.PdfMetadataEncoding) -> Bytes raise @core.PdfError
+pub fn PdfDocument::list_attached_files(Self) -> Array[@attachment.PdfAttachment] raise @core.PdfError
+pub fn PdfDocument::list_bookmarks(Self, ArrayView[Int], encoding? : @metadata.PdfMetadataEncoding, json? : Bool, json_preserve_actions? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::list_fonts(Self, ArrayView[Int]) -> Array[@font.PdfFontListEntry] raise @core.PdfError
+pub fn PdfDocument::list_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
+pub fn PdfDocument::list_spot_colours(Self) -> Array[@core.PdfName]
+pub fn PdfDocument::list_spot_colours_blob(Self) -> Bytes
+pub fn PdfDocument::lookup_chain(Self, @syntax.PdfObject, ArrayView[@core.PdfName]) -> @syntax.PdfObject?
+pub fn PdfDocument::lookup_direct(Self, @core.PdfName, @syntax.PdfObject) -> @syntax.PdfObject?
+pub fn PdfDocument::lookup_direct_or_array(Self, @core.PdfName, @syntax.PdfObject) -> @syntax.PdfObject?
+pub fn PdfDocument::lookup_direct_or_else(Self, @core.PdfName, @core.PdfName, @syntax.PdfObject) -> @syntax.PdfObject?
+pub fn PdfDocument::lookup_object_or_null(Self, Int) -> @syntax.PdfObject
+pub fn PdfDocument::lookup_required(Self, @core.PdfName, @syntax.PdfObject, @core.PdfError) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::map_objects_in_place(Self, (@syntax.PdfObject) -> @syntax.PdfObject) -> Unit
+pub fn[T] PdfDocument::map_pages(Self, ArrayView[Int], (Int, @page.PdfPage) -> T raise @core.PdfError) -> Array[T] raise @core.PdfError
+pub fn PdfDocument::mark_all_as_artifact(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::mark_info_item(Self, @core.PdfName) -> Bool
+pub fn PdfDocument::mark_pdfua1(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::mark_pdfua2(Self, Int) -> Self raise @core.PdfError
+pub fn PdfDocument::merge_content_streams(Self) -> Unit raise @core.PdfError
+pub fn PdfDocument::merge_name_trees_no_clash(Self, ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject
+pub fn PdfDocument::merge_number_trees_no_clash(Self, ArrayView[@syntax.PdfObject]) -> @syntax.PdfObject
+pub fn PdfDocument::metadata(Self) -> Bytes? raise @core.PdfError
+pub fn PdfDocument::missing_fonts(Self, ArrayView[Int]) -> Array[@font.PdfMissingFontEntry] raise @core.PdfError
+pub fn PdfDocument::missing_fonts_return(Self, ArrayView[Int]) -> Array[(Int, String, String, String, String)] raise @core.PdfError
+pub fn PdfDocument::missing_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
+pub fn PdfDocument::name_tree_lookup(Self, BytesView, @syntax.PdfObject) -> @syntax.PdfObject?
+pub fn PdfDocument::name_tree_lookup_object(Self, @syntax.PdfObject, @syntax.PdfObject) -> @syntax.PdfObject?
+pub fn PdfDocument::number_tree_lookup(Self, Int, @syntax.PdfObject) -> @syntax.PdfObject?
+pub fn PdfDocument::object_count(Self) -> Int
+pub fn PdfDocument::object_numbers(Self) -> Array[Int]
+pub fn PdfDocument::ocg_coalesce(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::ocg_get_list(Self) -> Array[Bytes] raise @core.PdfError
+pub fn PdfDocument::ocg_list(Self, Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::ocg_list_json(Self) -> Json raise @core.PdfError
+pub fn PdfDocument::ocg_list_json_blob(Self) -> Bytes raise @core.PdfError
+pub fn PdfDocument::ocg_order_all(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::ocg_rename(Self, Bytes, Bytes) -> Self
+pub fn PdfDocument::ocg_replace_json(Self, Json) -> Self raise @core.PdfError
+pub fn PdfDocument::open_action(Self) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::open_action_json_blob(Self) -> Bytes raise @core.PdfError
+pub fn PdfDocument::open_action_string(Self) -> String raise @core.PdfError
+pub fn PdfDocument::output_page_info(Self, ArrayView[Int], unit? : @geometry.PdfUnit, json? : Bool, raisejson? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::pad_after(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
+pub fn PdfDocument::pad_before(Self, ArrayView[Int], pad_with? : Self?) -> Self raise @core.PdfError
+pub fn PdfDocument::pad_to_multiple(Self, Int) -> Self raise @core.PdfError
+pub fn PdfDocument::page_content_json(Self, ArrayView[Int]) -> Json raise @core.PdfError
+pub fn PdfDocument::page_info_json(Self, ArrayView[Int], unit? : @geometry.PdfUnit) -> Json raise @core.PdfError
+pub fn PdfDocument::page_info_json_blob(Self, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+pub fn PdfDocument::page_info_text(Self, ArrayView[Int], unit? : @geometry.PdfUnit) -> Bytes raise @core.PdfError
+pub fn PdfDocument::page_number_of_target(Self, @destination.PdfDestination) -> Int raise @core.PdfError
+pub fn PdfDocument::page_object_number(Self, Int) -> Int? raise @core.PdfError
+pub fn PdfDocument::page_reference_numbers(Self) -> Array[Int] raise @core.PdfError
+pub fn PdfDocument::pages_of_pagetree(Self) -> Array[@page.PdfPage] raise @core.PdfError
+pub fn PdfDocument::pages_of_pagetree_quick(Self) -> Int raise @core.PdfError
+pub fn PdfDocument::parse_bookmark_json(Self, Json, verify? : Bool) -> Array[@bookmark.PdfBookmark] raise @core.PdfError
+pub fn PdfDocument::parse_bookmark_text(Self, BytesView, verify? : Bool) -> Array[@bookmark.PdfBookmark] raise @core.PdfError
+pub fn PdfDocument::parse_cmap(Self, @syntax.PdfObject) -> PdfParsedCMap raise @core.PdfError
+pub fn PdfDocument::parse_content_bytes_with_resources(Self, @syntax.PdfObject, Bytes) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDocument::parse_content_ops(Self, ArrayView[@syntax.PdfObject]) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDocument::parse_content_ops_with_resources(Self, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDocument::parse_content_view_with_resources(Self, @syntax.PdfObject, BytesView) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDocument::parse_coordinate(Self, String) -> @geometry.Point2 raise @core.PdfError
+pub fn PdfDocument::parse_coordinate_rectangle(Self, String) -> @geometry.PdfCoordRectangle raise @core.PdfError
+pub fn PdfDocument::parse_coordinate_rectangles(Self, String) -> Array[@geometry.PdfCoordRectangle] raise @core.PdfError
+pub fn PdfDocument::parse_coordinate_tuple(Self, String) -> (Double, Double) raise @core.PdfError
+pub fn PdfDocument::parse_coordinates(Self, String) -> Array[@geometry.Point2] raise @core.PdfError
+pub fn PdfDocument::parse_coordinates_tuple(Self, String) -> Array[(Double, Double)] raise @core.PdfError
+pub fn PdfDocument::parse_function(Self, @syntax.PdfObject) -> PdfFunction raise @core.PdfError
+pub fn PdfDocument::parse_matrix(Self, @core.PdfName, @syntax.PdfObject) -> @geometry.TransformMatrix raise @core.PdfError
+pub fn PdfDocument::parse_pagespec(Self, String) -> Array[Int] raise @core.PdfError
+pub fn PdfDocument::parse_rectangle(Self, @syntax.PdfObject) -> @geometry.PdfRectangle raise @core.PdfError
+pub fn PdfDocument::parse_single_number(Self, String) -> Double raise @core.PdfError
+pub fn PdfDocument::parse_units_string(Self, @page.PdfPage, String) -> Array[Double] raise @core.PdfError
+pub fn PdfDocument::parsed_object_entries(Self) -> Array[(Int, Int, @syntax.PdfObject)]
+pub fn PdfDocument::pdf_decode_stream(Self, @syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::pdf_decode_stream_until_unknown(Self, @syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::pdf_decode_streams_until_unknown(Self) -> Unit raise @core.PdfError
+pub fn PdfDocument::pdf_image_object_of_png_data(Self, BytesView) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::pdf_object_of_function(Self, PdfFunction) -> @syntax.PdfObject
+pub fn PdfDocument::pdf_of_pages(Self, ArrayView[Int], retain_numbering? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::pdf_type_typeset(Self, Bool, Double, Double, Double, Double, @geometry.PaperSize, ArrayView[PdfTypeElement]) -> PdfTypeTypesetResult raise @core.PdfError
+pub fn PdfDocument::permissions(Self) -> Array[@crypt_core.PdfPermission] raise @core.PdfError
+pub fn PdfDocument::portfolio(Self, ArrayView[@portfolio.PdfPortfolioEntry], mod_date? : Bytes?) -> Self raise @core.PdfError
+pub fn PdfDocument::postpend_operators(Self, @page.PdfPage, ArrayView[@content.PdfContentOp], fast? : Bool) -> @page.PdfPage raise @core.PdfError
+pub fn PdfDocument::prepend_operators(Self, @page.PdfPage, ArrayView[@content.PdfContentOp], fast? : Bool) -> @page.PdfPage raise @core.PdfError
+pub fn PdfDocument::presentation(Self, ArrayView[Int], String?, Double?, Bool, Bool, Int, Double) -> Self raise @core.PdfError
+pub fn PdfDocument::print_font_table(Self, String, Int) -> Bytes raise @core.PdfError
+pub fn PdfDocument::print_fonts(Self, ArrayView[Int], json? : Bool) -> Bytes raise @core.PdfError
+pub fn PdfDocument::process_pages(Self, ArrayView[Int], (Int, @page.PdfPage) -> (@page.PdfPage, Int, @geometry.TransformMatrix) raise @core.PdfError) -> Self raise @core.PdfError
+pub fn PdfDocument::process_xobjects(Self, @page.PdfPage, (Self, @syntax.PdfObject, ArrayView[@syntax.PdfObject]) -> Array[@syntax.PdfObject] raise @core.PdfError) -> Unit raise @core.PdfError
+pub fn PdfDocument::read_annotation(Self, @syntax.PdfObject) -> @annotation.PdfAnnotation raise @core.PdfError
+pub fn PdfDocument::read_bookmarks(Self, preserve_actions? : Bool) -> Array[@bookmark.PdfBookmark] raise @core.PdfError
+pub fn PdfDocument::read_cid_system_info(Self, @syntax.PdfObject) -> PdfCIDSystemInfo raise @core.PdfError
+pub fn PdfDocument::read_cidkeyed_font(Self, @syntax.PdfObject) -> PdfCIDKeyedFont raise @core.PdfError
+pub fn PdfDocument::read_colour_space(Self, @syntax.PdfObject, @syntax.PdfObject) -> PdfColourSpace? raise @core.PdfError
+pub fn PdfDocument::read_destination(Self, @syntax.PdfObject, shallow? : Bool) -> @destination.PdfDestination raise @core.PdfError
+pub fn PdfDocument::read_encoding(Self, @syntax.PdfObject) -> PdfEncoding raise @core.PdfError
+pub fn PdfDocument::read_font(Self, @syntax.PdfObject) -> PdfFont raise @core.PdfError
+pub fn PdfDocument::read_font_descriptor(Self, @syntax.PdfObject) -> PdfFontDescriptor? raise @core.PdfError
+pub fn PdfDocument::read_font_metrics(Self, @syntax.PdfObject) -> Array[Double]? raise @core.PdfError
+pub fn PdfDocument::read_name_tree(Self, @syntax.PdfObject) -> Array[(Bytes, @syntax.PdfObject)]
+pub fn PdfDocument::read_number_tree(Self, @syntax.PdfObject) -> Array[(Int, @syntax.PdfObject)]
+pub fn PdfDocument::read_optional_content_groups(Self) -> @ocg.PdfOptionalContent? raise @core.PdfError
+pub fn PdfDocument::read_page_labels(Self) -> Array[@label.PdfPageLabel] raise @core.PdfError
+pub fn PdfDocument::read_simple_font(Self, @syntax.PdfObject) -> PdfSimpleFont raise @core.PdfError
+pub fn PdfDocument::read_standard14_font(Self, @syntax.PdfObject) -> PdfStandardFontData raise @core.PdfError
+pub fn PdfDocument::recompress(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::recrypt_with_password(Self, BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::recrypt_with_password_aesv2_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes raise @core.PdfError) -> Self raise @core.PdfError
+pub fn PdfDocument::recrypt_with_password_aesv3_with_iv_provider(Self, BytesView, (Int, Int, Int) -> Bytes raise @core.PdfError) -> Self raise @core.PdfError
+pub fn PdfDocument::rectify_boxes(Self, @page.PdfPage, fast? : Bool) -> @page.PdfPage raise @core.PdfError
+pub fn PdfDocument::redact_pages(Self, ArrayView[Int], process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::redact_path(Self, ArrayView[(Double, Double)], ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::referenced_object_numbers(Self, @syntax.PdfObject, no_follow_entries? : ArrayView[@core.PdfName], no_follow_contains? : ArrayView[(@core.PdfName, @syntax.PdfObject)]) -> Array[Int]
+pub fn PdfDocument::remove_added_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_all_metadata(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_all_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_annotations(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_art(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_attached_files(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_bleed(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_bookmarks(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_chain(Self, ArrayView[@core.PdfName]) -> Bool raise @core.PdfError
+pub fn PdfDocument::remove_clipping(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_cropping(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_dict_entry_everywhere(Self, @core.PdfName, search? : @syntax.PdfObject?) -> Unit
+pub fn PdfDocument::remove_dict_entry_string(Self, String, search? : @syntax.PdfObject?) -> Unit
+pub fn PdfDocument::remove_duplicate_fonts(Self) -> Unit
+pub fn PdfDocument::remove_embedded_fonts(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_javascript(Self) -> Unit raise @core.PdfError
+pub fn PdfDocument::remove_metadata(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_object(Self, Int) -> Unit
+pub fn PdfDocument::remove_object_by_spec(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDocument::remove_optional_content_groups(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_page_box(Self, ArrayView[Int], @core.PdfName) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_page_labels(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_pdfua_mark(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_struct_tree(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_trim(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::remove_unreferenced(Self) -> Unit raise @core.PdfError
+pub fn PdfDocument::renumber_objects(Self, ArrayView[(Int, Int)]) -> Self raise @core.PdfError
+pub fn PdfDocument::renumber_objects_by_offset(Self, Int) -> Self raise @core.PdfError
+pub fn PdfDocument::renumber_objects_compact(Self) -> Self raise @core.PdfError
+pub fn PdfDocument::renumber_pages(Self, ArrayView[@page.PdfPage]) -> Array[@page.PdfPage] raise @core.PdfError
+pub fn PdfDocument::replace_chain(Self, ArrayView[@core.PdfName], @syntax.PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDocument::replace_dict_entry_everywhere(Self, @core.PdfName, @syntax.PdfObject, search? : @syntax.PdfObject?) -> Unit
+pub fn PdfDocument::replace_dict_entry_string(Self, String, @syntax.PdfObject, search? : @syntax.PdfObject?) -> Unit
+pub fn PdfDocument::replace_inherit(Self, ArrayView[Int]) -> Unit raise @core.PdfError
+pub fn PdfDocument::replace_object_by_spec(Self, String, @syntax.PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDocument::replace_stream_by_spec(Self, String, BytesView) -> Unit raise @core.PdfError
+pub fn PdfDocument::replace_struct_tree(Self, Json) -> Self raise @core.PdfError
+pub fn PdfDocument::reveal_hidden_text(Self, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::revision_read(Self) -> Int
+pub fn PdfDocument::root(Self) -> Int
+pub fn PdfDocument::rotate_contents(Self, Double, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::rotate_pages(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::rotate_pages_by(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::rotate_pdf(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::rotate_pdf_by(Self, Int, ArrayView[Int]) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_contents(Self, ArrayView[Int], @geometry.PdfPosition, Double, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_pdf(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_to_fit_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], position? : @geometry.PdfPosition, input_scale? : Double, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_to_fit_pdf(Self, ArrayView[Int], ArrayView[(Double, Double)], position? : @geometry.PdfPosition, input_scale? : Double, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_to_fit_rotate(Self, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::scale_to_fit_rotate_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], Int, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::select_object_numbers(Self, (@syntax.PdfObject) -> Bool) -> Array[Int]
+pub fn PdfDocument::set_annotations_json(Self, Json) -> Self raise @core.PdfError
+pub fn PdfDocument::set_box_string(Self, ArrayView[Int], String, Double, Double, Double, Double) -> Self raise @core.PdfError
+pub fn PdfDocument::set_first_xref(Self, Int) -> Unit
+pub fn PdfDocument::set_info_entry(Self, @core.PdfName, @syntax.PdfObject, Int, keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::set_info_entry_string(Self, (String, @syntax.PdfObject, Int), keep_version? : Bool, xmp_also? : Bool, xmp_just_set? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::set_language(Self, BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::set_language_string(Self, String) -> Self raise @core.PdfError
+pub fn PdfDocument::set_mediabox(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)]) -> Self raise @core.PdfError
+pub fn PdfDocument::set_mediaboxes(Self, ArrayView[Int], ArrayView[(Double, Double, Double, Double)]) -> Self raise @core.PdfError
+pub fn PdfDocument::set_metadata_date(Self, String) -> Self raise @core.PdfError
+pub fn PdfDocument::set_metadata_from_bytes(Self, BytesView, keep_version? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::set_non_full_screen_page_mode(Self, String) -> Self raise @core.PdfError
+pub fn PdfDocument::set_open_action(Self, Int, fit? : Bool, destination? : @syntax.PdfObject?) -> Self raise @core.PdfError
+pub fn PdfDocument::set_open_action_string_destination(Self, Int, fit? : Bool, destination? : String?) -> Self raise @core.PdfError
+pub fn PdfDocument::set_page_box(Self, ArrayView[Int], @core.PdfName, Double, Double, Double, Double) -> Self raise @core.PdfError
+pub fn PdfDocument::set_page_layout(Self, String) -> Self raise @core.PdfError
+pub fn PdfDocument::set_page_mode(Self, String) -> Self raise @core.PdfError
+pub fn PdfDocument::set_revision_read(Self, Int) -> Unit
+pub fn PdfDocument::set_root(Self, Int) -> Unit
+pub fn PdfDocument::set_trailer_dict(Self, @syntax.PdfObject) -> Unit
+pub fn PdfDocument::set_version(Self, Int, Int) -> Unit
+pub fn PdfDocument::set_viewer_preference(Self, @core.PdfName, @syntax.PdfObject, Int, keep_version? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::set_viewer_preference_string(Self, (String, @syntax.PdfObject, Int)) -> Self raise @core.PdfError
+pub fn PdfDocument::set_was_linearized(Self, Bool) -> Unit
+pub fn PdfDocument::shift_boxes(Self, ArrayView[Int], ArrayView[(Double, Double)]) -> Self raise @core.PdfError
+pub fn PdfDocument::shift_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::shift_pdf(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::shortest_unused_prefix(Self) -> String
+pub fn PdfDocument::show_annotation_bounding_boxes(Self, ArrayView[Int], light? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::show_bounding_boxes(Self, ArrayView[Int], shape? : @geometry.PdfRectangle?, light? : Bool, fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::show_page_boxes(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::size_attached_files(Self) -> Int raise @core.PdfError
+pub fn PdfDocument::squeeze(Self, page_data? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::stamp_as_xobject(Self, ArrayView[Int], Self) -> (Self, @core.PdfName) raise @core.PdfError
+pub fn PdfDocument::stamp_pages(Self, ArrayView[Int], Self, relative_to_box? : @core.PdfName, position? : @geometry.PdfPosition, topline? : Bool, midline? : Bool, fast? : Bool, scale_to_fit? : Bool, is_over? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::stamp_pages_string(Self, ArrayView[Int], Self, String, position? : @geometry.PdfPosition, topline? : Bool, midline? : Bool, fast? : Bool, scale_to_fit? : Bool, is_over? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::stream_object_entries(Self) -> Array[(Int, Int, @syntax.PdfStream)]
+pub fn PdfDocument::stretch(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::stretch_pages(Self, ArrayView[Int], ArrayView[(Double, Double)], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::string_of_pagespec(Self, ArrayView[Int]) -> String raise @core.PdfError
+pub fn PdfDocument::struct_tree_json_blob(Self) -> Bytes raise @core.PdfError
+pub fn PdfDocument::struct_tree_text(Self) -> Bytes raise @core.PdfError
+pub fn PdfDocument::target_of_page_number(Self, Int) -> @destination.PdfDestination raise @core.PdfError
+pub fn PdfDocument::test_extract_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
+pub fn PdfDocument::test_matterhorn_json(Self, String) -> Json raise @core.PdfError
+pub fn PdfDocument::test_matterhorn_text(Self, String) -> Bytes raise @core.PdfError
+pub fn PdfDocument::text_extractor_of_font(Self, @syntax.PdfObject) -> PdfTextExtractor raise @core.PdfError
+pub fn PdfDocument::thin_lines(Self, ArrayView[Int], Double) -> Self raise @core.PdfError
+pub fn PdfDocument::toc_add_bookmark(Self, BytesView) -> Self raise @core.PdfError
+pub fn PdfDocument::toc_insert_pages(Self, ArrayView[@page.PdfPage], ArrayView[@label.PdfPageLabel]) -> Self raise @core.PdfError
+pub fn PdfDocument::toc_type_elements(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[@label.PdfPageLabel], ArrayView[@bookmark.PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
+pub fn PdfDocument::toc_typeset_pages(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[@label.PdfPageLabel], ArrayView[@bookmark.PdfBookmark]) -> PdfTypeTypesetResult raise @core.PdfError
+pub fn PdfDocument::toc_used_codepoints(Self, ArrayView[@label.PdfPageLabel], BytesView, ArrayView[@bookmark.PdfBookmark]) -> Array[Int] raise @core.PdfError
+pub fn PdfDocument::toc_with_fontpack(Self, PdfFontPack, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::toc_with_source(Self, PdfTocFontSource, Double, BytesView, bookmark? : Bool, dotleader? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::trailer_dict(Self) -> @syntax.PdfObject
+pub fn PdfDocument::transform_annotations(Self, @geometry.TransformMatrix, @syntax.PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDocument::transform_bookmark(Self, @geometry.TransformMatrix, @bookmark.PdfBookmark) -> @bookmark.PdfBookmark raise @core.PdfError
+pub fn PdfDocument::transform_destination(Self, @geometry.TransformMatrix, @destination.PdfDestination) -> @destination.PdfDestination raise @core.PdfError
+pub fn PdfDocument::transform_quadpoints(Self, @geometry.TransformMatrix, @syntax.PdfObject) -> @syntax.PdfObject
+pub fn PdfDocument::transform_rect(Self, @geometry.TransformMatrix, @syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError
+pub fn PdfDocument::trim_marks(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::trim_structure_tree(Self, ArrayView[Int]) -> Unit raise @core.PdfError
+pub fn PdfDocument::twoup(Self, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::twoup_stack(Self, fast? : Bool, process_struct_tree? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::typeset_table_of_contents(Self, PdfTocFontSource, Double, BytesView, Bool, Bool, Bool, subformat? : PdfUASubformat?) -> Self raise @core.PdfError
+pub fn PdfDocument::upright(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::upright_pages(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::version(Self) -> (Int, Int)
+pub fn PdfDocument::vflip_pdf(Self, ArrayView[Int], fast? : Bool) -> Self raise @core.PdfError
+pub fn PdfDocument::viewer_preference_item(Self, @core.PdfName) -> String
+pub fn PdfDocument::viewer_preference_item_string(Self, String) -> String
+pub fn PdfDocument::was_linearized(Self) -> Bool
+pub fn PdfDocument::what_encryption(Self) -> @crypt_core.PdfEncryptionMethod? raise @core.PdfError
+pub fn PdfDocument::write_colour_space(Self, PdfColourSpace) -> @syntax.PdfObject
+pub fn PdfDocument::write_encoding(Self, PdfEncoding) -> Int raise @core.PdfError
+pub fn PdfDocument::write_font(Self, PdfFont, objnum? : Int?) -> Int raise @core.PdfError
+pub fn PdfDocument::write_optional_content_groups(Self, @ocg.PdfOptionalContent) -> Self raise @core.PdfError
+pub fn PdfDocument::write_page_labels(Self, ArrayView[@label.PdfPageLabel]) -> Self raise @core.PdfError
+pub fn PdfDocument::xmp_info(Self, @core.PdfName) -> String
+pub fn PdfDocument::xmp_info_blob(Self) -> Bytes raise @core.PdfError
+pub fn PdfDocument::xmp_info_json(Self) -> Json raise @core.PdfError
+pub fn PdfDocument::xmp_info_json_blob(Self) -> Bytes raise @core.PdfError
+pub fn PdfDocument::xmp_info_string(Self, String) -> String
+
+pub struct PdfDrawControl {
+  frames : Array[PdfDrawControlFrame]
+  mut xobject_bbox : @geometry.PdfCoordRectangle
+  mut font_name : String
+  mut font_size : Double
+  mut fontpack : PdfFontPack?
+  mut fontpack_initialized : Bool
+  mut paragraph_indent : Double?
+  mut role_map : String
+  mut auto_artifacts : Bool
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawControl::add_bezier(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_bezier13(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_bezier23(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_char_space(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_circle(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_default_fontpack(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_element_info(Self, String, @syntax.PdfObject) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_image(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_jpeg2000_data(Self, String, BytesView) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_jpeg_data(Self, String, BytesView) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_leading(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_line(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_namespace(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_new_page(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_newline(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_op(Self, PdfDrawOp) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_opacity(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_para(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_paras(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_png_data(Self, PdfDocument, String, BytesView) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_rect(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_render_mode(Self, Int) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_rise(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_special_text(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_stroke_opacity(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_structure_tag(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_tag(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_text(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_text_scale(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_to(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::add_word_space(Self, Double) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::auto_artifacts(Self) -> Bool
+pub fn PdfDrawControl::begin_artifact(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::begin_text_section(Self) -> Unit
+pub fn PdfDrawControl::clip(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::clip_even_odd(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::close_path(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::current_frame_name(Self) -> String raise @core.PdfError
+pub fn PdfDrawControl::current_ops(Self) -> Array[PdfDrawOp] raise @core.PdfError
+pub fn PdfDrawControl::depth(Self) -> Int
+pub fn PdfDrawControl::end_artifact(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::end_element_info(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::end_structure_tag(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::end_tag(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::end_text_section(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::end_xobject(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::fill(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::fill_even_odd(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::font_name(Self) -> String
+pub fn PdfDrawControl::font_size(Self) -> Double
+pub fn PdfDrawControl::fontpack_initialized(Self) -> Bool
+pub fn PdfDrawControl::matrix_rotate(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::matrix_scale(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::matrix_shear_x(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::matrix_shear_y(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::matrix_translate(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::ops(Self) -> Array[PdfDrawOp]
+pub fn PdfDrawControl::paragraph_indent(Self) -> Double?
+pub fn PdfDrawControl::pop_group(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::push_group(Self) -> Unit
+pub fn PdfDrawControl::role_map(Self) -> String
+pub fn PdfDrawControl::set_auto_artifacts(Self, Bool) -> Unit
+pub fn PdfDrawControl::set_auto_tag(Self, Bool) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_dash_pattern(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_fill(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_font(Self, String, Double) -> Unit
+pub fn PdfDrawControl::set_font_name(Self, String) -> Unit
+pub fn PdfDrawControl::set_font_size(Self, Double) -> Unit
+pub fn PdfDrawControl::set_fontpack(Self, PdfFontPack?) -> Unit
+pub fn PdfDrawControl::set_line_cap(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_line_join(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_line_thickness(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_matrix(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_miter_limit(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_paragraph_indent(Self, Double?) -> Unit
+pub fn PdfDrawControl::set_role_map(Self, String) -> Unit
+pub fn PdfDrawControl::set_stroke(Self, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::set_xobject_bbox(Self, @geometry.PdfCoordRectangle) -> Unit
+pub fn PdfDrawControl::set_xobject_bbox_from_string(Self, PdfDocument, String) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::start_xobject(Self, String) -> Unit
+pub fn PdfDrawControl::stroke(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::stroke_fill(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::stroke_fill_even_odd(Self) -> Unit raise @core.PdfError
+pub fn PdfDrawControl::use_xobject(Self, String) -> Unit raise @core.PdfError
+
+pub(all) struct PdfDrawControlFrame {
+  name : String
+  ops : Array[PdfDrawOp]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfDrawExtGStateResource {
+  kind : @core.PdfName
+  value : Double
+  name : @core.PdfName
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfDrawFontPackState {
+  identifier : String
+  fontpack : PdfFontPack
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfDrawFontResource {
+  identifier : String
+  font_index : Int
+  resource_name : @core.PdfName
+  object_number : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfDrawJustification {
+  PdfDrawLeft
+  PdfDrawRight
+  PdfDrawCentre
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfDrawOp {
+  PdfDrawRect(Double, Double, Double, Double)
+  PdfDrawBezier(Double, Double, Double, Double, Double, Double)
+  PdfDrawBezier23(Double, Double, Double, Double)
+  PdfDrawBezier13(Double, Double, Double, Double)
+  PdfDrawTo(Double, Double)
+  PdfDrawLine(Double, Double)
+  PdfDrawClosePath
+  PdfDrawSetFill(@colour.PdfDrawColour)
+  PdfDrawSetStroke(@colour.PdfDrawColour)
+  PdfDrawSetLineThickness(Double)
+  PdfDrawSetLineCap(Int)
+  PdfDrawSetLineJoin(Int)
+  PdfDrawSetMiterLimit(Double)
+  PdfDrawSetDashPattern(Array[Double], Double)
+  PdfDrawMatrix(@geometry.TransformMatrix)
+  PdfDrawQq(Array[PdfDrawOp])
+  PdfDrawFill
+  PdfDrawFillEvenOdd
+  PdfDrawStroke
+  PdfDrawFillStroke
+  PdfDrawFillStrokeEvenOdd
+  PdfDrawClip
+  PdfDrawClipEvenOdd
+  PdfDrawFormXObject(Double, Double, Double, Double, String, Array[PdfDrawOp])
+  PdfDrawUse(String)
+  PdfDrawImageXObject(String, @syntax.PdfObject)
+  PdfDrawImage(String)
+  PdfDrawNewPage
+  PdfDrawOpacity(Double)
+  PdfDrawSOpacity(Double)
+  PdfDrawFontPack(String, PdfFontPack, Array[Int])
+  PdfDrawFont(String, Double)
+  PdfDrawTextSection(Array[PdfDrawOp])
+  PdfDrawText(String)
+  PdfDrawSpecialText(String)
+  PdfDrawPara(Double?, PdfDrawJustification, Double, Array[String])
+  PdfDrawNewline
+  PdfDrawLeading(Double)
+  PdfDrawCharSpace(Double)
+  PdfDrawWordSpace(Double)
+  PdfDrawTextScale(Double)
+  PdfDrawRenderMode(Int)
+  PdfDrawRise(Double)
+  PdfDrawTag(String)
+  PdfDrawEndTag
+  PdfDrawSTag(String)
+  PdfDrawEndSTag
+  PdfDrawBeginArtifact
+  PdfDrawEndArtifact
+  PdfDrawNamespace(String)
+  PdfDrawEltInfo(String, @syntax.PdfObject)
+  PdfDrawEndEltInfo(String)
+  PdfDrawAutoTag(Bool)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawOp::debug_name(Self) -> String
+pub fn PdfDrawOp::to_content_ops(Self) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDrawOp::to_content_ops_with_context(Self, PdfDrawRenderState, PdfDrawSpecialTextContext) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDrawOp::to_content_ops_with_document(Self, PdfDrawRenderState, PdfDocument) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDrawOp::to_content_ops_with_document_context(Self, PdfDrawRenderState, PdfDocument, PdfDrawSpecialTextContext) -> Array[@content.PdfContentOp] raise @core.PdfError
+pub fn PdfDrawOp::to_content_ops_with_state(Self, PdfDrawRenderState) -> Array[@content.PdfContentOp] raise @core.PdfError
+
+pub(all) struct PdfDrawRenderState {
+  mut resource_number : Int
+  mut marked_content_id : Int
+  extgstates : Array[PdfDrawExtGStateResource]
+  xobjects : Array[PdfDrawXObjectResource]
+  form_xobjects : Array[PdfDrawXObjectResource]
+  fonts : Array[PdfDrawFontResource]
+  fontpacks : Array[PdfDrawFontPackState]
+  mut current_fontpack_identifier : String
+  mut current_fontpack : PdfFontPack
+  mut font_size : Double
+  mut structure_tree_enabled : Bool
+  mut auto_tag : Bool
+  mut structure_page_number : Int
+  structure_data : Array[PdfDrawStructureData]
+  page_names : Array[@core.PdfName]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfDrawRenderState::resources(Self) -> @syntax.PdfObject
+
+pub(all) struct PdfDrawSpecialTextContext {
+  time : @date.PdfStrftimeTime
+  replacement_values : @addtext.PdfAddTextReplacementValues
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfDrawStructureData {
+  PdfDrawStructureMCID(String, Int, Int)
+  PdfDrawStructureBeginTree(String)
+  PdfDrawStructureEndTree
+  PdfDrawStructureNamespace(String)
+  PdfDrawStructureElementInfo(String, @syntax.PdfObject)
+  PdfDrawStructureEndElementInfo(String)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfDrawXObjectResource {
+  source_name : String
+  resource_name : @core.PdfName
+  object_number : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfEmbedFontSource {
+  PdfEmbedPreMadeFontPack(PdfFontPack)
+  PdfEmbedInfo(Bytes, String, PdfEncoding)
+  PdfEmbedExistingNamedFont
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfEncoding {
+  PdfImplicitInFontFile
+  PdfStandardEncoding
+  PdfMacRomanEncoding
+  PdfWinAnsiEncoding
+  PdfMacExpertEncoding
+  PdfCustomEncoding(PdfEncoding, Array[PdfEncodingDifference])
+  PdfFillUndefinedWithStandard(PdfEncoding)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfEncoding::debug_name(Self) -> String
+pub fn PdfEncoding::pdf_name(Self) -> @core.PdfName?
+pub fn PdfEncoding::reverse_table(Self) -> Array[(@core.PdfName, Int)]
+pub fn PdfEncoding::table(Self) -> Array[(Int, @core.PdfName)]
+
+pub(all) struct PdfEncodingDifference {
+  name : @core.PdfName
+  code : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfExtractedImageFile {
+  path : String
+  data : Bytes
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfFont {
+  PdfFontStandard(PdfStandardFontData)
+  PdfFontSimple(PdfSimpleFont)
+  PdfFontCIDKeyed(PdfCIDKeyedFont)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFont::content_bytes_of_charcode(Self, Int) -> Bytes raise @core.PdfError
+pub fn PdfFont::content_charcodes_of_bytes(Self, BytesView) -> Array[Int]
+pub fn PdfFont::content_extra_metrics(Self) -> (Double, Double)
+pub fn PdfFont::content_is_vertical(Self) -> Bool
+pub fn PdfFont::content_text_layout_of_bytes(Self, BytesView, PdfContentTextLayout) -> PdfContentTextLayoutResult
+pub fn PdfFont::content_text_layout_of_tj_array(Self, ArrayView[@syntax.PdfObject], PdfContentTextLayout) -> PdfContentTextLayoutResult
+pub fn PdfFont::content_width_of_charcode(Self, Int) -> (Double, Double, Double)
+pub fn PdfFont::debug_name(Self) -> String
+pub fn PdfFont::embedded_fontfile_number(Self) -> Int?
+pub fn PdfFont::is_identity_h(Self) -> Bool
+pub fn PdfFont::is_identity_v(Self) -> Bool
+pub fn PdfFont::text_extractor(Self) -> PdfTextExtractor
+pub fn PdfFont::uses_two_byte_codes(Self) -> Bool
+
+pub(all) struct PdfFontDescriptor {
+  ascent : Double
+  descent : Double
+  avgwidth : Double
+  maxwidth : Double
+  flags : Int
+  fontbbox : @geometry.PdfRectangle
+  italicangle : Double
+  capheight : Double
+  xheight : Double
+  stemv : Double
+  fontfile : PdfFontFile?
+  charset : Array[@core.PdfName]?
+  tounicode : Array[(Int, Bytes)]?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfFontFile {
+  PdfFontFile(Int)
+  PdfFontFile2(Int)
+  PdfFontFile3(Int)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFontFile::object_number(Self) -> Int
+
+pub(all) struct PdfFontPack {
+  fonts : Array[PdfFont]
+  entries : Array[PdfFontPackEntry]
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFontPack::get_char(Self, Int) -> (Int, Int, PdfFont)?
+
+pub(all) struct PdfFontPackEntry {
+  codepoint : Int
+  font_index : Int
+  charcode : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfFunction {
+  func : PdfFunctionKind
+  domain : Array[Double]
+  range : Array[Double]?
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfFunction::debug_string(Self) -> String
+pub fn PdfFunction::eval(Self, ArrayView[Double]) -> Array[Double] raise @core.PdfError
+
+pub(all) enum PdfFunctionKind {
+  PdfFunctionSampled(PdfSampledFunction)
+  PdfFunctionInterpolation(PdfInterpolationFunction)
+  PdfFunctionStitching(PdfStitchingFunction)
+  PdfFunctionCalculator(PdfCalculatorFunction)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfImage {
+  PdfJPEG(Bytes, Array[Double]?)
+  PdfJPEG2000(Bytes, Array[Double]?)
+  PdfJBIG2(Bytes, Array[Double]?, Int?)
+  PdfRawImage(Int, Int, PdfPixelLayout, Bytes)
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfInterpolationFunction {
+  c0 : Array[Double]
+  c1 : Array[Double]
+  n : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfObjectData {
+  ObjectParsed(@syntax.PdfObject)
+  ObjectParsedAlreadyDecrypted(@syntax.PdfObject)
+  ObjectToParse
+  ObjectToParseFromObjectStream(@xref_model.ObjectStreamReference)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PdfObjectEntry {
+  mut data : PdfObjectData
+  generation : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum PdfObjectEvent {
+  ObjectAltered
+  ObjectDeleted
+} derive(Eq, @debug.Debug)
+
+pub struct PdfObjectMap {
+  entries : @hashmap.HashMap[Int, PdfObjectEntry]
+} derive(Eq, @debug.Debug)
+pub fn PdfObjectMap::contains(Self, Int) -> Bool
+pub fn PdfObjectMap::get_entry(Self, Int) -> PdfObjectEntry?
+pub fn PdfObjectMap::length(Self) -> Int
+pub fn PdfObjectMap::lookup_parsed_or_null(Self, Int) -> @syntax.PdfObject
+pub fn PdfObjectMap::object_numbers(Self) -> Array[Int]
+pub fn PdfObjectMap::remove(Self, Int) -> Unit
+pub fn PdfObjectMap::set_entry(Self, Int, PdfObjectEntry) -> Unit
+
+pub struct PdfObjects {
+  mut max_object_number : Int
+  object_map : PdfObjectMap
+  object_stream_ids : @hashmap.HashMap[Int, Int]
+  log : Array[(Int, PdfObjectEvent)]
+} derive(Eq, @debug.Debug)
+pub fn PdfObjects::add_object(Self, @syntax.PdfObject, generation? : Int) -> Int
+pub fn PdfObjects::add_object_given_number(Self, Int, @syntax.PdfObject, generation? : Int) -> Unit
+pub fn PdfObjects::get_entry(Self, Int) -> PdfObjectEntry?
+pub fn PdfObjects::length(Self) -> Int
+pub fn PdfObjects::log(Self) -> Array[(Int, PdfObjectEvent)]
+pub fn PdfObjects::lookup_object_or_null(Self, Int) -> @syntax.PdfObject
+pub fn PdfObjects::map_objects_in_place(Self, (@syntax.PdfObject) -> @syntax.PdfObject) -> Unit
+pub fn PdfObjects::max_object_number(Self) -> Int
+pub fn PdfObjects::object_numbers(Self) -> Array[Int]
+pub fn PdfObjects::parsed_entries(Self) -> Array[(Int, Int, @syntax.PdfObject)]
+pub fn PdfObjects::remove_object(Self, Int) -> Unit
+pub fn PdfObjects::set_entry(Self, Int, PdfObjectEntry) -> Unit
+pub fn PdfObjects::stream_entries(Self) -> Array[(Int, Int, @syntax.PdfStream)]
+
+pub(all) struct PdfPNG {
+  width : Int
+  height : Int
+  bit_depth : Int
+  color_type : Int
+  idat : Bytes
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfParsedCMap {
+  map : Array[(Int, Bytes)]
+  cid_map : Array[(Int, Int)]
+  notdef_map : Array[(Int, Int)]
+  codespaces : Array[PdfCMapCodeSpace]
+  usecmap : @core.PdfName?
+  wmode : Int?
+  cmap_name : @core.PdfName?
+  cmap_type : Int?
+  cid_system_info : PdfCIDSystemInfo?
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfPixelLayout {
+  PdfBPP1
+  PdfBPP8
+  PdfBPP24
+  PdfBPP48
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfSampledFunction {
+  size : Array[Int]
+  order : Int
+  encode : Array[Double]
+  decode : Array[Double]
+  bits_per_sample : Int
+  samples : Array[Int]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfSimpleFont {
+  fonttype : PdfSimpleFontType
+  basefont : @core.PdfName?
+  firstchar : Int
+  lastchar : Int
+  widths : Array[Int]
+  fontdescriptor : PdfFontDescriptor?
+  fontmetrics : Array[Double]?
+  encoding : PdfEncoding
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfSimpleFont::debug_name(Self) -> String
+
+pub(all) enum PdfSimpleFontType {
+  PdfType1
+  PdfMMType1
+  PdfType3(PdfType3Glyphs)
+  PdfTrueType
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfSimpleFontType::debug_name(Self) -> String
+
+pub(all) enum PdfStandardFont {
+  PdfTimesRoman
+  PdfTimesBold
+  PdfTimesItalic
+  PdfTimesBoldItalic
+  PdfHelvetica
+  PdfHelveticaBold
+  PdfHelveticaOblique
+  PdfHelveticaBoldOblique
+  PdfCourier
+  PdfCourierBold
+  PdfCourierOblique
+  PdfCourierBoldOblique
+  PdfSymbol
+  PdfZapfDingbats
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStandardFont::afm_data(Self) -> @afm.PdfAfmData
+pub fn PdfStandardFont::baseline_adjustment(Self) -> Int
+pub fn PdfStandardFont::flags(Self) -> Int
+pub fn PdfStandardFont::name(Self) -> String
+pub fn PdfStandardFont::pdf_name(Self) -> @core.PdfName
+pub fn PdfStandardFont::stemv(Self) -> Int
+pub fn PdfStandardFont::text_width(Self, PdfEncoding, BytesView, kern? : Bool) -> Int
+
+pub(all) struct PdfStandardFontData {
+  font : PdfStandardFont
+  encoding : PdfEncoding
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStandardFontData::debug_name(Self) -> String
+pub fn PdfStandardFontData::text_width(Self, BytesView, kern? : Bool) -> Int
+
+pub(all) struct PdfStitchingFunction {
+  functions : Array[PdfFunction]
+  bounds : Array[Double]
+  stitch_encode : Array[Double]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfStreamEncoding {
+  PdfStreamASCIIHex
+  PdfStreamASCII85
+  PdfStreamRunLength
+  PdfStreamFlate
+  PdfStreamCCITT(Int, Int)
+  PdfStreamCCITTG4(Int, Int)
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStreamEncoding::filter_name(Self) -> @core.PdfName
+
+pub(all) enum PdfStreamPredictor {
+  PdfStreamPredictorTIFF2
+  PdfStreamPredictorPNGNone
+  PdfStreamPredictorPNGSub
+  PdfStreamPredictorPNGUp
+  PdfStreamPredictorPNGAverage
+  PdfStreamPredictorPNGPaeth
+  PdfStreamPredictorPNGOptimum
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfStreamPredictor::number(Self) -> Int
+
+pub(all) struct PdfTextExtractor {
+  font : PdfFont
+} derive(Eq, ToJson, @debug.Debug)
+pub fn PdfTextExtractor::charcode_of_codepoint(Self, Int) -> Int?
+pub fn PdfTextExtractor::codepoints_of_text(Self, BytesView) -> Array[Int] raise @core.PdfError
+pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(Self, BytesView) -> Array[PdfTextGlyph] raise @core.PdfError
+pub fn PdfTextExtractor::glyphnames_of_text(Self, BytesView) -> Array[@core.PdfName] raise @core.PdfError
+pub fn PdfTextExtractor::text_width(Self, BytesView) -> Double raise @core.PdfError
+
+pub(all) struct PdfTextGlyph {
+  glyphname : @core.PdfName
+  codepoints : Array[Int]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfTocFontSource {
+  PdfTocPreMadeFontPack(PdfFontPack)
+  PdfTocExistingNamedFont
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTristimulusPoint {
+  x : Double
+  y : Double
+  z : Double
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfType3Glyphs {
+  fontbbox : @geometry.PdfRectangle
+  fontmatrix : @geometry.TransformMatrix
+  charprocs : Array[(@core.PdfName, @syntax.PdfObject)]
+  resources : @syntax.PdfObject
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfTypeElement {
+  PdfTypeText(Bytes)
+  PdfTypeHGlue(Double)
+  PdfTypeVGlue(Double)
+  PdfTypeNewLine
+  PdfTypeNewPage
+  PdfTypeFont(String, PdfFont, Double)
+  PdfTypeBeginDest(@destination.PdfDestination, String?)
+  PdfTypeEndDest
+  PdfTypeBeginDocument
+  PdfTypeTag(String, Int)
+  PdfTypeEndTag
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfTypeTypesetResult {
+  pages : Array[@page.PdfPage]
+  tags : Array[Array[(String, Int)]]
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) enum PdfUASubformat {
+  PdfUA1
+  PdfUA2
+} derive(Eq, ToJson, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

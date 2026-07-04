@@ -1,0 +1,188 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/pdflite/reader"
+
+import {
+  "bobzhang/pdflite/core",
+  "bobzhang/pdflite/syntax",
+  "bobzhang/pdflite/xref_model",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/hashmap",
+}
+
+// Values
+pub fn pdf_classic_xref_index(ArrayView[PdfClassicXRefEntry]) -> PdfClassicXRefIndex
+
+pub fn pdf_classic_xref_lookup(ArrayView[PdfClassicXRefEntry], Int) -> PdfClassicXRefEntry?
+
+pub fn pdf_classic_xrefs_add_newer_first_with_seen(Array[PdfClassicXRefEntry], @core.PdfNumberSet, ArrayView[PdfClassicXRefEntry]) -> Unit
+
+pub fn pdf_cursor_consume_ascii(@core.ByteCursor, ArrayView[Int], @core.PdfError) -> Unit raise @core.PdfError
+
+pub fn pdf_cursor_read_classic_xref_entries(@core.ByteCursor) -> Array[PdfClassicXRefEntry] raise @core.PdfError
+
+pub fn pdf_cursor_read_trailer_dictionary(@core.ByteCursor) -> @syntax.PdfObject raise @core.PdfError
+
+pub let pdf_default_version : PdfVersion
+
+pub fn pdf_length_name() -> @core.PdfName
+
+pub fn pdf_object_stream_end_offsets(ArrayView[(Int, Int)], Int, Int) -> Array[Int]
+
+pub fn pdf_object_stream_number_offsets(BytesView, Int, Int) -> Array[(Int, Int)] raise @core.PdfError
+
+pub fn pdf_read_header_from_bytes(Bytes) -> PdfVersion raise @core.PdfError
+
+pub fn pdf_read_header_from_cursor(@core.ByteCursor) -> PdfVersion raise @core.PdfError
+
+pub fn pdf_read_header_from_view(BytesView) -> PdfVersion raise @core.PdfError
+
+pub fn pdf_read_startxref_position(BytesView) -> Int raise @core.PdfError
+
+pub fn pdf_reader_decodeparms_name() -> @core.PdfName
+
+pub fn pdf_reader_filter_name() -> @core.PdfName
+
+pub fn pdf_reader_first_name() -> @core.PdfName
+
+pub fn pdf_reader_index_name() -> @core.PdfName
+
+pub fn pdf_reader_linearized_name() -> @core.PdfName
+
+pub fn pdf_reader_n_name() -> @core.PdfName
+
+pub fn pdf_reader_name(String) -> @core.PdfName
+
+pub fn pdf_reader_object_is_xref_stream(@syntax.PdfObject) -> Bool
+
+pub fn pdf_reader_object_stream_groups(ArrayView[PdfClassicXRefEntry]) -> Array[(Int, Array[(PdfClassicXRefEntry, @xref_model.ObjectStreamReference)])]
+
+pub fn pdf_reader_objstm_name() -> @core.PdfName
+
+pub fn pdf_reader_prev_name() -> @core.PdfName
+
+pub fn pdf_reader_reconstruction_classic_xref_entries(ArrayView[(Int, PdfXRefSection)]) -> Array[PdfClassicXRefEntry]
+
+pub fn pdf_reader_reconstruction_classic_xref_sections(BytesView, (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError) -> Array[(Int, PdfXRefSection)]
+
+pub fn pdf_reader_reconstruction_indirect_header_at(BytesView, Int) -> Bool
+
+pub fn pdf_reader_reconstruction_object_xrefs(BytesView, (@core.ByteCursor, Int, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex) -> (PdfClassicXRefEntry?, Int?) raise @core.PdfError) -> Array[PdfClassicXRefEntry] raise @core.PdfError
+
+pub fn pdf_reader_reconstruction_plan(BytesView, Bool, PdfReaderReconstructionCallbacks) -> PdfReaderReconstructionPlan raise @core.PdfError
+
+pub fn pdf_reader_reconstruction_skip_malformed_object(BytesView, Int) -> Int?
+
+pub fn pdf_reader_reconstruction_trailers(BytesView, Bool, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError, (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError) -> Array[@syntax.PdfObject]
+
+pub fn pdf_reader_reconstruction_xref_coverage(BytesView, ArrayView[(Int, PdfXRefSection)], ArrayView[PdfXRefSection], (BytesView, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex, PdfClassicXRefEntry) -> Bool) -> PdfReconstructedXRefCoverage
+
+pub fn pdf_reader_reconstruction_xref_stream_entries(ArrayView[PdfXRefSection]) -> Array[PdfClassicXRefEntry]
+
+pub fn pdf_reader_reconstruction_xref_stream_refs(ArrayView[PdfXRefSection]) -> Array[(Int, Int)]
+
+pub fn pdf_reader_reconstruction_xref_stream_sections(BytesView, (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError) -> Array[PdfXRefSection]
+
+pub fn pdf_reader_root_name() -> @core.PdfName
+
+pub fn pdf_reader_sanitize_trailer(@syntax.PdfObject, Int) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_reader_short_decodeparms_name() -> @core.PdfName
+
+pub fn pdf_reader_short_filter_name() -> @core.PdfName
+
+pub fn pdf_reader_size_name() -> @core.PdfName
+
+pub fn pdf_reader_stream_dictionary_without_xref_keys(@syntax.PdfObject) -> @syntax.PdfObject raise @core.PdfError
+
+pub fn pdf_reader_type_name() -> @core.PdfName
+
+pub fn pdf_reader_w_name() -> @core.PdfName
+
+pub fn pdf_reader_xref_name() -> @core.PdfName
+
+pub fn pdf_reader_xref_stream_ref_set(ArrayView[(Int, Int)]) -> PdfReaderXRefStreamRefSet
+
+pub fn pdf_reader_xref_stream_type_ok(@syntax.PdfObject) -> Bool
+
+pub fn pdf_reader_xrefstm_name() -> @core.PdfName
+
+pub fn pdf_trailer_prev_position(@syntax.PdfObject) -> Int? raise @core.PdfError
+
+pub fn pdf_trailer_xref_stream_position(@syntax.PdfObject) -> Int? raise @core.PdfError
+
+pub fn pdf_xref_stream_entries(BytesView, (Int, Int, Int), ArrayView[(Int, Int)]) -> Array[PdfClassicXRefEntry] raise @core.PdfError
+
+pub fn pdf_xref_stream_entry_capacity(ArrayView[(Int, Int)]) -> Int raise @core.PdfError
+
+pub fn pdf_xref_stream_index_pairs(@syntax.PdfObject) -> Array[(Int, Int)] raise @core.PdfError
+
+pub fn pdf_xref_stream_int_array(@syntax.PdfObject, @core.PdfName) -> Array[Int]? raise @core.PdfError
+
+pub fn pdf_xref_stream_read_entry(BytesView, Int, Int, Int, Int) -> (Int, Int, Int, Int) raise @core.PdfError
+
+pub fn pdf_xref_stream_read_field(BytesView, Int, Int) -> (Int, Int) raise @core.PdfError
+
+pub fn pdf_xref_stream_widths(@syntax.PdfObject) -> (Int, Int, Int) raise @core.PdfError
+
+pub fn pdf_xref_token_in_use(BytesView) -> Bool raise @core.PdfError
+
+// Errors
+
+// Types and methods
+pub(all) struct PdfClassicXRefEntry {
+  object_number : Int
+  offset : Int
+  generation : Int
+  in_use : Bool
+  object_stream : @xref_model.ObjectStreamReference?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PdfClassicXRefIndex {
+  entries : @hashmap.HashMap[Int, PdfClassicXRefEntry]
+}
+pub fn PdfClassicXRefIndex::lookup(Self, Int) -> PdfClassicXRefEntry?
+
+pub(all) struct PdfReaderReconstructionCallbacks {
+  read_classic_xref_section_at : (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError
+  read_xref_stream_section_at : (@core.ByteCursor, Int) -> (PdfXRefSection, Int) raise @core.PdfError
+  read_object_xref_at_current : (@core.ByteCursor, Int, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex) -> (PdfClassicXRefEntry?, Int?) raise @core.PdfError
+  read_trailer_at : (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError
+  read_xref_stream_trailer_at : (@core.ByteCursor, Int) -> @syntax.PdfObject raise @core.PdfError
+  verify_classic_xref_entry : (BytesView, ArrayView[PdfClassicXRefEntry], PdfClassicXRefIndex, PdfClassicXRefEntry) -> Bool
+}
+
+pub(all) struct PdfReaderReconstructionPlan {
+  classic_xref_sections : Array[(Int, PdfXRefSection)]
+  xref_stream_sections : Array[PdfXRefSection]
+  xref_coverage : PdfReconstructedXRefCoverage
+  classic_xrefs : Array[PdfClassicXRefEntry]
+  object_xrefs : Array[PdfClassicXRefEntry]
+  trailers : Array[@syntax.PdfObject]
+}
+
+pub struct PdfReaderXRefStreamRefSet {
+  values : @hashmap.HashMap[Int, @core.PdfNumberSet]
+}
+pub fn PdfReaderXRefStreamRefSet::contains(Self, Int, Int) -> Bool
+
+pub(all) struct PdfReconstructedXRefCoverage {
+  sections : Array[(Int, @core.PdfNumberSet)]
+}
+pub fn PdfReconstructedXRefCoverage::contains(Self, Int, Int) -> Bool
+
+pub(all) struct PdfVersion {
+  major : Int
+  minor : Int
+} derive(Eq, ToJson, @debug.Debug)
+
+pub(all) struct PdfXRefSection {
+  entries : Array[PdfClassicXRefEntry]
+  trailer : @syntax.PdfObject
+  stream_object_number : Int?
+  stream_object_offset : Int?
+}
+
+// Type aliases
+
+// Traits
+
