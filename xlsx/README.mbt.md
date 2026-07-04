@@ -562,6 +562,72 @@ test "read workbook" {
 }
 ```
 
+### Embedded Cell Images
+
+`get_pictures` returns the images anchored at a cell, including the
+modern embedded "in-cell" images that are not part of the drawing layer:
+WPS Office `DISPIMG` images, rich-value "Place in cell" images, and
+images inserted by the `IMAGE()` function. They are read from the
+`xl/richData/*` and `xl/cellimages.xml` parts on open.
+
+```mbt nocheck
+///|
+let workbook = @mbtexcel.open_file("with_images.xlsx")
+
+///|
+let pictures = workbook.get_pictures("Sheet1", "A1")
+```
+
+## Dates and Times
+
+Store a `ZonedDateTime` or `Duration` directly; the cell is written as an
+Excel serial number with an appropriate default number format.
+
+```mbt check
+///|
+test "typed date and duration cells" {
+  let wb = Workbook::new()
+  ignore(wb.add_sheet("Sheet1"))
+
+  // A date is stored as a whole-number serial (2024-07-03 -> 45476).
+  wb.set_cell_time("Sheet1", "A1", @time.date_time(2024, 7, 3))
+  debug_inspect(
+    wb.get_cell("Sheet1", "A1"),
+    content=(
+      #|Some("45476")
+    ),
+  )
+
+  // A duration is stored as a fraction of a day (90 minutes -> 0.0625).
+  wb.set_cell_duration("Sheet1", "A2", @time.Duration::of(minutes=90))
+  debug_inspect(
+    wb.get_cell("Sheet1", "A2"),
+    content=(
+      #|Some("0.0625")
+    ),
+  )
+}
+```
+
+## Package Validation
+
+`validate_ooxml_package` runs fast, dependency-free structural checks on
+serialized workbook bytes — content-type coverage for every part,
+relationship-target integrity, presence of the required core parts, and
+well-formed part names. These are the package-level problems that trigger
+Excel's "we found a problem" repair dialog. An empty result means the
+package is well-formed.
+
+```mbt check
+///|
+test "validate package" {
+  let wb = Workbook::new()
+  ignore(wb.add_sheet("Sheet1"))
+  wb.set_cell("Sheet1", "A1", "hello")
+  debug_inspect(validate_ooxml_package(write(wb)[:]), content="[]")
+}
+```
+
 ## Error Handling
 
 All operations that can fail raise `XlsxError`:
