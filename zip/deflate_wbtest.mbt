@@ -218,3 +218,22 @@ test "deflate decode enforces max_output for back-references" {
     _ => fail("expected deflate_decode to raise")
   }
 }
+
+///|
+test "deflate wb: build_huffman rejects oversubscribed length sets" {
+  // Lengths [1, 2, 1] violate the Kraft inequality (two 1-bit codes leave no
+  // room for a 2-bit code). The flat lookup table would let the colliding
+  // canonical codes overwrite one another and decode bit pattern `10` as
+  // symbol 0, where a strict decoder rejects the table outright.
+  try build_huffman([1, 2, 1]) catch {
+    ZipError::UnsupportedFeature(msg~) =>
+      inspect(msg, content="oversubscribed huffman table")
+    _ => fail("expected UnsupportedFeature")
+  } noraise {
+    _ => fail("expected build_huffman to raise")
+  }
+  // Incomplete sets (Kraft sum < 1) remain accepted, as before: a lone
+  // 2-bit code builds fine.
+  let table = try! build_huffman([2])
+  inspect(table.max_bits, content="2")
+}
