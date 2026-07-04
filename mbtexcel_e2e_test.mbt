@@ -5,10 +5,8 @@ test "mbtexcel cell reference helpers" {
   inspect(join_cell_name("BC", 12), content="BC12")
   let abs = coordinates_to_cell_name(27, 12, abs=true)
   inspect(abs, content="$AA$12")
-  let invalid_split : Result[(String, Int), Error] = try? split_cell_name("1A")
-  inspect(invalid_split is Err(_), content="true")
-  let invalid_join : Result[String, Error] = try? join_cell_name("", 0)
-  inspect(invalid_join is Err(_), content="true")
+  @test.assert_raise(() => split_cell_name("1A"))
+  @test.assert_raise(() => join_cell_name("", 0))
 }
 
 ///|
@@ -822,10 +820,8 @@ test "mbtexcel e2e delete table and slicer/form control" {
   inspect(workbook.get_tables("Sheet1").length(), content="0")
   inspect(workbook.get_form_controls("Sheet1").length(), content="0")
   inspect(workbook.get_slicers("Sheet1").length(), content="0")
-  let missing_table : Result[Unit, Error] = try? workbook.delete_table("Nope")
-  inspect(missing_table is Err(_), content="true")
-  let missing_slicer : Result[Unit, Error] = try? workbook.delete_slicer("Nope")
-  inspect(missing_slicer is Err(_), content="true")
+  @test.assert_raise(() => workbook.delete_table("Nope"))
+  @test.assert_raise(() => workbook.delete_slicer("Nope"))
 }
 
 ///|

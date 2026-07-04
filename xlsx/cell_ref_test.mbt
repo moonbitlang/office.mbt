@@ -2,15 +2,12 @@
 test "cell ref helpers" {
   debug_inspect(split_cell_name("AK74"), content="(\"AK\", 74)")
   debug_inspect(split_cell_name("$b$2"), content="(\"B\", 2)")
-  let split_err : Result[(String, Int), Error] = try? split_cell_name("A")
-  inspect(split_err is Err(_), content="true")
+  @test.assert_raise(() => split_cell_name("A"))
   inspect(join_cell_name("ak", 74), content="AK74")
-  let join_err : Result[String, Error] = try? join_cell_name("A1", 1)
-  inspect(join_err is Err(_), content="true")
+  @test.assert_raise(() => join_cell_name("A1", 1))
   inspect(column_name_to_number("AK"), content="37")
   inspect(column_number_to_name(37), content="AK")
-  let name_err : Result[Int, Error] = try? column_name_to_number("A1")
-  inspect(name_err is Err(_), content="true")
+  @test.assert_raise(() => column_name_to_number("A1"))
   debug_inspect(cell_name_to_coordinates("Z3"), content="(26, 3)")
   debug_inspect(cell_name_to_coordinates("$C$3"), content="(3, 3)")
   let coords_err : Result[(Int, Int), Error] = try? cell_name_to_coordinates(
