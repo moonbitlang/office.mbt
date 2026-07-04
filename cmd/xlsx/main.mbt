@@ -13,16 +13,48 @@
 /// The subcommand handlers live in `commands.mbt`; pure output formatting
 /// lives in `render.mbt`.
 async fn main {
+  run_cli() catch {
+    // `--help`/`--version` are handled inside argparse (exit 0). Anything
+    // that reaches here is a real failure. Re-raising it as a `CliError`
+    // lets it escape `main`, which prints the message once and exits
+    // non-zero (the async runtime exposes no public exit()). Errors go to
+    // stdout on both targets, since the wasm backend has no stderr.
+    err => {
+      // argparse's own errors already start with "error:"; don't double it.
+      let msg = "\{err}"
+      raise CliError(
+        if msg.has_prefix("error:") {
+          msg
+        } else {
+          "error: " + msg
+        },
+      )
+    }
+  }
+}
+
+///|
+/// A formatted, user-facing CLI error. Its `Show` writes exactly the
+/// message, so the runtime's uncaught-error print produces one clean line.
+suberror CliError {
+  CliError(String)
+}
+
+///|
+impl Show for CliError with fn output(self, logger) {
+  match self {
+    CliError(message) => logger.write_string(message)
+  }
+}
+
+///|
+/// Parses arguments and dispatches to the selected subcommand. Argument
+/// errors from `parse` propagate to `main`.
+async fn run_cli() -> Unit {
   let argv = @env.args()
   let args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
   let command = build_command()
-  let matches = command.parse(argv=args[:], env={}) catch {
-    err => {
-      // argparse prints help/usage itself; surface anything else.
-      println("error: \{err}")
-      return
-    }
-  }
+  let matches = command.parse(argv=args[:], env={})
   match matches.subcommand {
     Some(("create", m)) => run_create(m)
     Some(("set", m)) => run_set(m)

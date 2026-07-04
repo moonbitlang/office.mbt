@@ -46,3 +46,10 @@ Validate the OOXML package structure (empty problem list prints "valid"):
 
   $ xlsx.exe validate book.xlsx
   valid
+
+A failing operation prints an `error:` line and exits non-zero, so
+scripts can detect it:
+
+  $ xlsx.exe get missing.xlsx Sheet1 A1
+  error: * (glob)
+  [1]
