@@ -1075,7 +1075,7 @@ fn eval_function(
           (Ok(text), Ok(radix)) => {
             let base = Double::to_int(trunc_double(radix))
             let text_value = strip_hex_prefix(text)
-            let parsed = @strconv.parse_int(text_value, base~) catch {
+            let parsed = @string.parse_int(text_value, base~) catch {
               _ => return Error(formula_error_value)
             }
             Number(Double::from_int(parsed))
@@ -4609,7 +4609,7 @@ fn eval_function(
           Ok(text) => text
           Err(err) => return err
         }
-        let idx = @strconv.parse_int(index_text, base=10) catch {
+        let idx = @string.parse_int(index_text, base=10) catch {
           _ => return Error(formula_error_value)
         }
         if values.length() <= idx {
@@ -5381,7 +5381,7 @@ fn base_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if values.length() == 3 {
     match value_as_string(values[2]) {
       Ok(text) =>
-        min_length = @strconv.parse_int(text, base=10) catch {
+        min_length = @string.parse_int(text, base=10) catch {
           _ => return Error(formula_error_value)
         }
       Err(err) => return err
@@ -5523,7 +5523,7 @@ fn oct2dec_string(text : String) -> FormulaValue {
   for i in 1..<=length {
     let idx = length - i
     let ch = chars[idx]
-    let digit = @strconv.parse_int(String::from_array([ch]), base=10) catch {
+    let digit = @string.parse_int(String::from_array([ch]), base=10) catch {
       _ => return Error(formula_error_num)
     }
     if digit < 0 || digit > 7 {

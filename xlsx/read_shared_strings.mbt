@@ -166,7 +166,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
     Some(tag) =>
       match attr_value(tag, "val") {
         Some(val) =>
-          try @strconv.parse_double(val) catch {
+          try @string.parse_double(val) catch {
             _ => ()
           } noraise {
             value => {
@@ -182,7 +182,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
     Some(tag) =>
       match attr_value(tag, "val") {
         Some(val) =>
-          try @strconv.parse_int(val, base=10) catch {
+          try @string.parse_int(val, base=10) catch {
             _ => ()
           } noraise {
             value => {
@@ -198,7 +198,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
     Some(tag) =>
       match attr_value(tag, "val") {
         Some(val) =>
-          try @strconv.parse_int(val, base=10) catch {
+          try @string.parse_int(val, base=10) catch {
             _ => ()
           } noraise {
             value => {
@@ -232,7 +232,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       }
       match attr_value(tag, "theme") {
         Some(val) =>
-          try @strconv.parse_int(val, base=10) catch {
+          try @string.parse_int(val, base=10) catch {
             _ => raise InvalidXml(msg="rich text color theme invalid")
           } noraise {
             value => {
@@ -244,7 +244,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       }
       match attr_value(tag, "indexed") {
         Some(val) =>
-          try @strconv.parse_int(val, base=10) catch {
+          try @string.parse_int(val, base=10) catch {
             _ => raise InvalidXml(msg="rich text color indexed invalid")
           } noraise {
             value => {
@@ -256,7 +256,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       }
       match attr_value(tag, "tint") {
         Some(val) =>
-          try @strconv.parse_double(val) catch {
+          try @string.parse_double(val) catch {
             _ => raise InvalidXml(msg="rich text color tint invalid")
           } noraise {
             value => {

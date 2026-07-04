@@ -131,7 +131,7 @@ fn parse_value_metadata(xml : String) -> Array[Int] raise XlsxError {
       Some(attrs) =>
         match attr_value(attrs, "v") {
           Some(v) =>
-            result.push(@strconv.parse_int(v, base=10) catch { _ => -1 })
+            result.push(@string.parse_int(v, base=10) catch { _ => -1 })
           None => result.push(-1)
         }
       None => result.push(-1)
@@ -167,7 +167,7 @@ fn parse_rich_values(
     }
     let tag = text[:tag_end]
     let s = match attr_value(tag, "s") {
-      Some(value) => @strconv.parse_int(value, base=10) catch { _ => 0 }
+      Some(value) => @string.parse_int(value, base=10) catch { _ => 0 }
       None => 0
     }
     let end = match text.find("</rv>") {
@@ -290,7 +290,7 @@ fn parse_cell_vm_map(sheet_xml : String) -> Map[String, Int] raise XlsxError {
       Some(value) => value
       None => continue
     }
-    let vm_index = @strconv.parse_int(vm, base=10) catch { _ => continue }
+    let vm_index = @string.parse_int(vm, base=10) catch { _ => continue }
     let (row, col) = cell_ref_to_rc(reference)
     result[cell_ref_from(row, col)] = vm_index
   }
@@ -310,7 +310,7 @@ fn rich_value_local_target(
   if local_idx < 0 || local_idx >= values.length() {
     return None
   }
-  let rel_index = @strconv.parse_int(values[local_idx], base=10) catch {
+  let rel_index = @string.parse_int(values[local_idx], base=10) catch {
     _ => return None
   }
   if rel_index < 0 || rel_index >= data.rel_ids.length() {
@@ -332,7 +332,7 @@ fn rich_value_web_target(
   if web_idx < 0 || web_idx >= values.length() {
     return None
   }
-  let web_index = @strconv.parse_int(values[web_idx], base=10) catch {
+  let web_index = @string.parse_int(values[web_idx], base=10) catch {
     _ => return None
   }
   if web_index < 0 || web_index >= data.web_blip_ids.length() {

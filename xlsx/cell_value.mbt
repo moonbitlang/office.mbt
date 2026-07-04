@@ -81,7 +81,7 @@ fn cell_value_from_raw(
     String => String(raw)
     Number =>
       Numeric(
-        @strconv.parse_double(raw) catch {
+        @string.parse_double(raw) catch {
           _ => raise InvalidXml(msg="cell number invalid")
         },
       )

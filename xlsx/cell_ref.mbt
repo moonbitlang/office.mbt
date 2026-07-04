@@ -137,7 +137,7 @@ pub fn split_cell_name(cell : StringView) -> (String, Int) raise XlsxError {
   if col == "" || row_text == "" {
     raise InvalidCellRef(value=text)
   }
-  let row = @strconv.parse_int(row_text, base=10) catch {
+  let row = @string.parse_int(row_text, base=10) catch {
     _ => raise InvalidCellRef(value=text)
   }
   if row <= 0 {

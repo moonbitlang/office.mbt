@@ -914,11 +914,11 @@ fn parse_sparkline_color(tag : StringView) -> SparklineColor? raise XlsxError {
     None => None
   }
   let parsed_theme = match theme {
-    Some(v) => Some(@strconv.parse_int(v.to_string(), base=10) catch { _ => 0 })
+    Some(v) => Some(@string.parse_int(v.to_string(), base=10) catch { _ => 0 })
     None => None
   }
   let parsed_tint = match tint {
-    Some(v) => Some(@strconv.parse_double(v.to_string()) catch { _ => 0.0 })
+    Some(v) => Some(@string.parse_double(v.to_string()) catch { _ => 0.0 })
     None => None
   }
   if parsed_rgb is None && parsed_theme is None {
@@ -1002,7 +1002,7 @@ fn parse_sparkline_groups(
     match attr_value(tag, "lineWeight") {
       Some(value) =>
         options.line_weight = Some(
-          @strconv.parse_double(value.to_string()) catch {
+          @string.parse_double(value.to_string()) catch {
             _ => raise InvalidXml(msg="sparkline lineWeight invalid")
           },
         )
@@ -1011,7 +1011,7 @@ fn parse_sparkline_groups(
     match attr_value(tag, "manualMax") {
       Some(value) =>
         options.manual_max = Some(
-          @strconv.parse_int(value.to_string(), base=10) catch {
+          @string.parse_int(value.to_string(), base=10) catch {
             _ => raise InvalidXml(msg="sparkline manualMax invalid")
           },
         )
@@ -1020,7 +1020,7 @@ fn parse_sparkline_groups(
     match attr_value(tag, "manualMin") {
       Some(value) =>
         options.manual_min = Some(
-          @strconv.parse_int(value.to_string(), base=10) catch {
+          @string.parse_int(value.to_string(), base=10) catch {
             _ => raise InvalidXml(msg="sparkline manualMin invalid")
           },
         )

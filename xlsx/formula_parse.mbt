@@ -390,7 +390,7 @@ fn FormulaParser::parse_number(self : FormulaParser) -> Expr raise XlsxError {
     break
   }
   let text = sb.to_string()
-  let value = @strconv.parse_double(text) catch {
+  let value = @string.parse_double(text) catch {
     _ => raise InvalidXml(msg="formula number invalid")
   }
   Number(value)
@@ -612,7 +612,7 @@ fn parse_range_ref_token(
     return (start_ref, end_ref)
   }
   if row != "" && col == "" {
-    let row_index = @strconv.parse_int(row, base=10) catch {
+    let row_index = @string.parse_int(row, base=10) catch {
       _ => raise InvalidCellRef(value=token.to_string())
     }
     if row_index <= 0 || row_index > excel_max_rows {
@@ -679,8 +679,8 @@ fn parse_r1c1_token(text : StringView) -> (Int, Int)? {
   if col_text == "" || idx != chars.length() {
     return None
   }
-  let row = @strconv.parse_int(row_text, base=10) catch { _ => return None }
-  let col = @strconv.parse_int(col_text, base=10) catch { _ => return None }
+  let row = @string.parse_int(row_text, base=10) catch { _ => return None }
+  let col = @string.parse_int(col_text, base=10) catch { _ => return None }
   Some((row, col))
 }
 

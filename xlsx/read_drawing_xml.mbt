@@ -8,7 +8,7 @@ fn parse_xml_int_tag(
     Some(value) => value
     None => raise InvalidXml(msg~)
   }
-  @strconv.parse_int(body, base=10) catch {
+  @string.parse_int(body, base=10) catch {
     _ => raise InvalidXml(msg~)
   }
 }
@@ -170,14 +170,14 @@ fn parse_drawing_images(
         }
         let cx = match attr_value(ext_tag, "cx") {
           Some(value) =>
-            @strconv.parse_int(value, base=10) catch {
+            @string.parse_int(value, base=10) catch {
               _ => raise InvalidXml(msg="drawing cx invalid")
             }
           None => raise InvalidXml(msg="drawing cx missing")
         }
         let cy = match attr_value(ext_tag, "cy") {
           Some(value) =>
-            @strconv.parse_int(value, base=10) catch {
+            @string.parse_int(value, base=10) catch {
               _ => raise InvalidXml(msg="drawing cy invalid")
             }
           None => raise InvalidXml(msg="drawing cy missing")
@@ -390,14 +390,14 @@ fn parse_drawing_charts(
         }
         let cx = match attr_value(ext_tag, "cx") {
           Some(value) =>
-            @strconv.parse_int(value, base=10) catch {
+            @string.parse_int(value, base=10) catch {
               _ => raise InvalidXml(msg="drawing cx invalid")
             }
           None => raise InvalidXml(msg="drawing cx missing")
         }
         let cy = match attr_value(ext_tag, "cy") {
           Some(value) =>
-            @strconv.parse_int(value, base=10) catch {
+            @string.parse_int(value, base=10) catch {
               _ => raise InvalidXml(msg="drawing cy invalid")
             }
           None => raise InvalidXml(msg="drawing cy missing")
@@ -540,14 +540,14 @@ fn parse_drawing_shapes(
     }
     let cx = match attr_value(ext_tag, "cx") {
       Some(value) =>
-        @strconv.parse_int(value, base=10) catch {
+        @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="drawing shape cx invalid")
         }
       None => raise InvalidXml(msg="drawing shape cx missing")
     }
     let cy = match attr_value(ext_tag, "cy") {
       Some(value) =>
-        @strconv.parse_int(value, base=10) catch {
+        @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="drawing shape cy invalid")
         }
       None => raise InvalidXml(msg="drawing shape cy missing")
@@ -579,7 +579,7 @@ fn parse_drawing_shapes(
                   Some(alpha_tag) =>
                     match attr_value(alpha_tag, "val") {
                       Some(alpha) =>
-                        try @strconv.parse_int(alpha, base=10) catch {
+                        try @string.parse_int(alpha, base=10) catch {
                           _ => ()
                         } noraise {
                           value => {
@@ -607,7 +607,7 @@ fn parse_drawing_shapes(
       Some(tag) => {
         match attr_value(tag, "w") {
           Some(value) =>
-            try @strconv.parse_int(value, base=10) catch {
+            try @string.parse_int(value, base=10) catch {
               _ => ()
             } noraise {
               value => line_width = value.to_double() / 12700.0
@@ -751,14 +751,14 @@ fn parse_drawing_slicer_anchors(
         }
         let cx = match attr_value(ext_tag, "cx") {
           Some(value) =>
-            @strconv.parse_int(value, base=10) catch {
+            @string.parse_int(value, base=10) catch {
               _ => raise InvalidXml(msg="drawing slicer cx invalid")
             }
           None => raise InvalidXml(msg="drawing slicer cx missing")
         }
         let cy = match attr_value(ext_tag, "cy") {
           Some(value) =>
-            @strconv.parse_int(value, base=10) catch {
+            @string.parse_int(value, base=10) catch {
               _ => raise InvalidXml(msg="drawing slicer cy invalid")
             }
           None => raise InvalidXml(msg="drawing slicer cy missing")

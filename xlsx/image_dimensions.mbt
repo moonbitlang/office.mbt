@@ -338,7 +338,7 @@ fn svg_parse_length_px(text : StringView) -> Double? {
     return None
   }
   let number_text = raw[:end]
-  let value = @strconv.parse_double(number_text) catch { _ => return None }
+  let value = @string.parse_double(number_text) catch { _ => return None }
   let unit_raw = raw[end:]
   let unit = unit_raw.trim()
   match unit {
@@ -426,7 +426,7 @@ fn svg_dimensions(bytes : BytesView) -> (Int, Int)? {
             if trimmed == "" {
               continue
             }
-            let parsed = @strconv.parse_double(trimmed) catch { _ => continue }
+            let parsed = @string.parse_double(trimmed) catch { _ => continue }
             numbers.push(parsed)
             if numbers.length() >= 4 {
               break

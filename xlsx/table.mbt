@@ -303,7 +303,7 @@ fn parse_table_xml(xml : StringView) -> Table raise XlsxError {
   let tag = rest[:end]
   let id = match attr_value(tag, "id") {
     Some(value) =>
-      @strconv.parse_int(value, base=10) catch {
+      @string.parse_int(value, base=10) catch {
         _ => raise InvalidXml(msg="table id invalid")
       }
     None => raise InvalidXml(msg="table id missing")

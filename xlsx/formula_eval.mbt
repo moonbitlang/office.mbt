@@ -4572,7 +4572,7 @@ fn lookup_range_flag(value : FormulaValue) -> Result[Bool, FormulaValue] {
     Number(num) => Ok(num != 0.0)
     Empty => Ok(false)
     String(text) => {
-      let parsed = @strconv.parse_bool(text) catch {
+      let parsed = @string.parse_bool(text) catch {
         _ => return Err(Error(formula_error_value))
       }
       Ok(parsed)
@@ -4815,7 +4815,7 @@ fn value_as_number(value : FormulaValue) -> Result[Double, FormulaValue] {
     Bool(flag) => Ok(if flag { 1.0 } else { 0.0 })
     Empty => Ok(0.0)
     String(text) => {
-      let parsed = @strconv.parse_double(text) catch {
+      let parsed = @string.parse_double(text) catch {
         _ => return Err(Error(formula_error_value))
       }
       Ok(parsed)
@@ -4843,7 +4843,7 @@ fn value_as_number_text(value : FormulaValue) -> Result[Double, FormulaValue] {
 
 ///|
 fn parse_double_opt(text : StringView) -> Double? {
-  let parsed = @strconv.parse_double(text) catch { _ => return None }
+  let parsed = @string.parse_double(text) catch { _ => return None }
   Some(parsed)
 }
 
@@ -4874,7 +4874,7 @@ fn parse_value_number(text : String) -> Double? {
   if cleaned == "" {
     return None
   }
-  let parsed = @strconv.parse_double(cleaned) catch { _ => return None }
+  let parsed = @string.parse_double(cleaned) catch { _ => return None }
   let mut value = if percent { parsed / 100.0 } else { parsed }
   if negative {
     value = -value
@@ -5162,9 +5162,9 @@ fn parse_date_parts(text : String) -> (Int, Int, Int)? {
   if parts.length() != 3 {
     return None
   }
-  let p0 = @strconv.parse_int(parts[0], base=10) catch { _ => return None }
-  let p1 = @strconv.parse_int(parts[1], base=10) catch { _ => return None }
-  let p2 = @strconv.parse_int(parts[2], base=10) catch { _ => return None }
+  let p0 = @string.parse_int(parts[0], base=10) catch { _ => return None }
+  let p1 = @string.parse_int(parts[1], base=10) catch { _ => return None }
+  let p2 = @string.parse_int(parts[2], base=10) catch { _ => return None }
   let year = if parts[0].length() == 4 {
     p0
   } else if parts[2].length() == 4 {
@@ -5221,16 +5221,16 @@ fn parse_time_parts(text : String) -> (Int, Int, Int)? {
   if parts.length() == 0 || parts.length() > 3 {
     return None
   }
-  let hour = @strconv.parse_int(parts[0], base=10) catch { _ => return None }
+  let hour = @string.parse_int(parts[0], base=10) catch { _ => return None }
   let minute = if parts.length() >= 2 {
-    @strconv.parse_int(parts[1], base=10) catch {
+    @string.parse_int(parts[1], base=10) catch {
       _ => return None
     }
   } else {
     0
   }
   let second = if parts.length() == 3 {
-    @strconv.parse_int(parts[2], base=10) catch {
+    @string.parse_int(parts[2], base=10) catch {
       _ => return None
     }
   } else {
@@ -5268,7 +5268,7 @@ fn value_as_bool(value : FormulaValue) -> Result[Bool, FormulaValue] {
     Number(num) => Ok(num == 1.0)
     Empty => Ok(false)
     String(text) => {
-      let parsed = @strconv.parse_bool(text) catch {
+      let parsed = @string.parse_bool(text) catch {
         _ => return Err(Error(formula_error_value))
       }
       Ok(parsed)

@@ -181,7 +181,7 @@ fn parse_pivot_cache_slicer_id(cache_xml : StringView) -> Int? raise XlsxError {
     Some(tag) =>
       match attr_value(tag, "pivotCacheId") {
         Some(raw) =>
-          try @strconv.parse_int(raw, base=10) catch {
+          try @string.parse_int(raw, base=10) catch {
             _ => None
           } noraise {
             value => Some(value)
