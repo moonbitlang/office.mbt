@@ -29,7 +29,7 @@ fn parse_num_fmts(xml : StringView) -> Map[Int, String] raise XlsxError {
       Some(value) => value
       None => continue
     }
-    let id = @strconv.parse_int(id_text, base=10) catch {
+    let id = @string.parse_int(id_text, base=10) catch {
       _ => raise InvalidXml(msg="numFmtId invalid")
     }
     num_fmts[id] = unescape_xml_text(fmt_text)
@@ -83,7 +83,7 @@ fn parse_cell_xfs(
     }
     let num_fmt_id = match attr_value(tag, "numFmtId") {
       Some(value) =>
-        @strconv.parse_int(value, base=10) catch {
+        @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="numFmtId invalid")
         }
       None => 0
@@ -99,7 +99,7 @@ fn parse_cell_xfs(
     }
     let font_id = match attr_value(tag, "fontId") {
       Some(value) =>
-        @strconv.parse_int(value, base=10) catch {
+        @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="fontId invalid")
         }
       None => 0
@@ -109,7 +109,7 @@ fn parse_cell_xfs(
     }
     let fill_id = match attr_value(tag, "fillId") {
       Some(value) =>
-        @strconv.parse_int(value, base=10) catch {
+        @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="fillId invalid")
         }
       None => 0
@@ -119,7 +119,7 @@ fn parse_cell_xfs(
     }
     let border_id = match attr_value(tag, "borderId") {
       Some(value) =>
-        @strconv.parse_int(value, base=10) catch {
+        @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="borderId invalid")
         }
       None => 0
@@ -196,7 +196,7 @@ fn parse_dxfs(
       Some(num_fmt_tag) => {
         let num_fmt_id = match attr_value(num_fmt_tag, "numFmtId") {
           Some(value) =>
-            @strconv.parse_int(value, base=10) catch {
+            @string.parse_int(value, base=10) catch {
               _ => raise InvalidXml(msg="numFmtId invalid")
             }
           None => 0

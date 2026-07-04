@@ -39,7 +39,7 @@ fn parse_worksheet(
     }
     let style_id = match attr_value(tag, "s") {
       Some(value) =>
-        @strconv.parse_int(value, base=10) catch {
+        @string.parse_int(value, base=10) catch {
           _ => raise InvalidXml(msg="style id invalid")
         }
       None => 0
@@ -91,7 +91,7 @@ fn parse_worksheet(
         let si_value = match attr_value(open_tag, "si") {
           Some(value) =>
             Some(
-              @strconv.parse_int(value, base=10) catch {
+              @string.parse_int(value, base=10) catch {
                 _ => raise InvalidXml(msg="formula si invalid")
               },
             )
@@ -139,7 +139,7 @@ fn parse_worksheet(
     } else {
       match cell_type {
         Some("s") => {
-          let index = @strconv.parse_int(raw_value, base=10) catch {
+          let index = @string.parse_int(raw_value, base=10) catch {
             _ => raise InvalidXml(msg="shared string index invalid")
           }
           if index < 0 || index >= shared_strings.length() {
@@ -187,7 +187,7 @@ fn parse_worksheet(
             value_type = String
           } else {
             ignore(
-              @strconv.parse_double(raw_value) catch {
+              @string.parse_double(raw_value) catch {
                 _ => raise InvalidXml(msg="cell number invalid")
               },
             )
@@ -204,7 +204,7 @@ fn parse_worksheet(
             value_type = String
           } else {
             ignore(
-              @strconv.parse_double(raw_value) catch {
+              @string.parse_double(raw_value) catch {
                 _ => raise InvalidXml(msg="cell number invalid")
               },
             )

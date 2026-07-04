@@ -23,7 +23,7 @@ fn parse_hex_byte(text : StringView, start : Int) -> Int {
     return 0
   }
   let view = text[start:end]
-  @strconv.parse_int(view, base=16) catch {
+  @string.parse_int(view, base=16) catch {
     _ => 0
   }
 }

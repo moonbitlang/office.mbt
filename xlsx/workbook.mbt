@@ -2846,7 +2846,7 @@ pub fn Workbook::add_table(
         if suffix == "" {
           continue
         }
-        let id = @strconv.parse_int(suffix, base=10) catch { _ => continue }
+        let id = @string.parse_int(suffix, base=10) catch { _ => continue }
         if id > max_id {
           max_id = id
         }
@@ -3096,7 +3096,7 @@ fn Workbook::next_pivot_table_name(self : Workbook) -> String {
       if suffix == "" {
         continue
       }
-      let id = @strconv.parse_int(suffix, base=10) catch { _ => continue }
+      let id = @string.parse_int(suffix, base=10) catch { _ => continue }
       if id > max_id {
         max_id = id
       }

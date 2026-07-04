@@ -60,7 +60,7 @@ fn parse_active_sheet_index(xml : StringView) -> Int? raise XlsxError {
       match attr_value(tag, "activeTab") {
         Some(value) =>
           Some(
-            @strconv.parse_int(value, base=10) catch {
+            @string.parse_int(value, base=10) catch {
               _ => raise InvalidXml(msg="activeTab invalid")
             },
           )
@@ -120,7 +120,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
       match attr_value(tag, "calcId") {
         Some(value) =>
           props.calc_id = Some(
-            @strconv.parse_uint(value, base=10) catch {
+            @string.parse_uint(value, base=10) catch {
               _ => raise InvalidXml(msg="calcId invalid")
             },
           )
@@ -153,7 +153,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
       match attr_value(tag, "iterateCount") {
         Some(value) =>
           props.iterate_count = Some(
-            @strconv.parse_uint(value, base=10) catch {
+            @string.parse_uint(value, base=10) catch {
               _ => raise InvalidXml(msg="iterateCount invalid")
             },
           )
@@ -162,7 +162,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
       match attr_value(tag, "iterateDelta") {
         Some(value) =>
           props.iterate_delta = Some(
-            @strconv.parse_double(value) catch {
+            @string.parse_double(value) catch {
               _ => raise InvalidXml(msg="iterateDelta invalid")
             },
           )
@@ -187,7 +187,7 @@ fn parse_calc_props(xml : StringView) -> CalcPropsOptions raise XlsxError {
       match attr_value(tag, "concurrentManualCount") {
         Some(value) =>
           props.concurrent_manual_count = Some(
-            @strconv.parse_uint(value, base=10) catch {
+            @string.parse_uint(value, base=10) catch {
               _ => raise InvalidXml(msg="concurrentManualCount invalid")
             },
           )
@@ -247,7 +247,7 @@ fn parse_workbook_protection(
       }
       match attr_value(tag, "workbookSpinCount") {
         Some(value) =>
-          protection.spin_count = @strconv.parse_int(value, base=10) catch {
+          protection.spin_count = @string.parse_int(value, base=10) catch {
             _ => raise InvalidXml(msg="workbookSpinCount invalid")
           }
         None => ()

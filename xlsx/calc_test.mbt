@@ -2118,7 +2118,7 @@ test "calc trig functions" {
   sheet.set_cell_formula("J1", "COS(0.785398163)")
   // Compare with tolerance: the last emitted digit of an irrational
   // float64 differs across platforms (macOS vs Linux to_string).
-  let cos_val = @strconv.parse_double(workbook.calc_cell_value("Sheet1", "J1"))
+  let cos_val = @string.parse_double(workbook.calc_cell_value("Sheet1", "J1"))
   inspect((cos_val - 0.707106781467586).abs() < 1.0e-12, content="true")
   sheet.set_cell_formula("J2", "COS(0)")
   inspect(workbook.calc_cell_value("Sheet1", "J2"), content="1")
@@ -2753,7 +2753,7 @@ test "calc random functions" {
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "RAND()")
   let rand_text = workbook.calc_cell_value("Sheet1", "A1")
-  let rand_value = @strconv.parse_double(rand_text) catch {
+  let rand_value = @string.parse_double(rand_text) catch {
     _ => {
       assert_eq(true, false)
       0.0
@@ -2762,7 +2762,7 @@ test "calc random functions" {
   assert_eq(rand_value >= 0.0 && rand_value < 1.0, true)
   sheet.set_cell_formula("A2", "RANDBETWEEN(1,2)")
   let rand_between_text = workbook.calc_cell_value("Sheet1", "A2")
-  let rand_between_value = @strconv.parse_double(rand_between_text) catch {
+  let rand_between_value = @string.parse_double(rand_between_text) catch {
     _ => {
       assert_eq(true, false)
       0.0
@@ -5926,15 +5926,15 @@ fn parse_complex_value_test(text : String) -> (Double, Double) raise {
   if normalized.has_suffix("i") {
     let body = normalized.unsafe_substring(start=0, end=normalized.length() - 1)
     let (real_text, imag_text) = split_complex_body_test(body)
-    let real = @strconv.parse_double(real_text) catch {
+    let real = @string.parse_double(real_text) catch {
       _ => fail("complex real parse")
     }
-    let imag = @strconv.parse_double(imag_text) catch {
+    let imag = @string.parse_double(imag_text) catch {
       _ => fail("complex imag parse")
     }
     (real, imag)
   } else {
-    let real = @strconv.parse_double(normalized) catch {
+    let real = @string.parse_double(normalized) catch {
       _ => fail("complex real parse")
     }
     (real, 0.0)

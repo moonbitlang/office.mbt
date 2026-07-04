@@ -54,7 +54,7 @@ fn parse_row_ref(text : StringView) -> (Int, Bool)? {
   if text_value == "" {
     return None
   }
-  let row = @strconv.parse_int(text_value, base=10) catch { _ => return None }
+  let row = @string.parse_int(text_value, base=10) catch { _ => return None }
   if row <= 0 {
     return None
   }
@@ -105,7 +105,7 @@ fn parse_cell_ref(text : StringView) -> (Int, Int, Bool, Bool)? {
   if row_text == "" {
     return None
   }
-  let row = @strconv.parse_int(row_text, base=10) catch { _ => return None }
+  let row = @string.parse_int(row_text, base=10) catch { _ => return None }
   if row <= 0 {
     return None
   }

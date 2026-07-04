@@ -123,7 +123,7 @@ fn format_number_code(raw : String, code : String, options : Options) -> String 
   if sections.length() == 0 {
     return raw
   }
-  let parsed : Result[Double, Error] = try? @strconv.parse_double(raw)
+  let parsed : Result[Double, Error] = try? @string.parse_double(raw)
   match parsed {
     Err(_) => format_text_pattern(raw, code)
     Ok(value) => {
@@ -456,7 +456,7 @@ fn format_number_pattern(
   add_minus : Bool,
   currency_prefix : String,
 ) -> String {
-  let value = @strconv.parse_double(raw) catch { _ => return raw }
+  let value = @string.parse_double(raw) catch { _ => return raw }
   let negative = value < 0.0
   let abs_value = if negative { -value } else { value }
   let (prefix, suffix, info) = parse_number_pattern(pattern)
@@ -646,7 +646,7 @@ fn parse_number_pattern(
 
 ///|
 fn format_general_number(raw : String) -> String {
-  let value = @strconv.parse_double(raw) catch { _ => return raw }
+  let value = @string.parse_double(raw) catch { _ => return raw }
   let negative = value < 0.0
   let abs_value = if negative { -value } else { value }
   let int_part = Double::to_int64(Double::floor(abs_value))
@@ -832,7 +832,7 @@ fn format_number_simple(
   use_group : Bool,
   percent : Bool,
 ) -> String {
-  let value = @strconv.parse_double(raw) catch { _ => return raw }
+  let value = @string.parse_double(raw) catch { _ => return raw }
   let scaled = if percent { value * 100.0 } else { value }
   let info = {
     min_int_digits: 1,
@@ -1029,7 +1029,7 @@ fn format_int_grouped_string(text : String) -> String {
 
 ///|
 fn format_excel_date(raw : String, pattern : String) -> String {
-  let value = @strconv.parse_double(raw) catch { _ => return raw }
+  let value = @string.parse_double(raw) catch { _ => return raw }
   let parts = excel_serial_to_parts(value)
   match parts {
     None => raw

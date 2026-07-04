@@ -276,7 +276,7 @@ fn parse_required_attr(
 ///|
 fn parse_int_attr(tag : StringView, name : String) -> Int raise XlsxError {
   let text = parse_required_attr(tag, name)
-  @strconv.parse_int(text, base=10) catch {
+  @string.parse_int(text, base=10) catch {
     _ => raise InvalidEncryptionInfo(msg="invalid \{name} value")
   }
 }
