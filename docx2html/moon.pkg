@@ -13,5 +13,5 @@ import {
 }
 
 import {
-  "hustcer/fzip",
+  "bobzhang/mbtexcel/zip" @mbtzip,
 } for "test"

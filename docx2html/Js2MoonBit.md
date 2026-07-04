@@ -23,7 +23,7 @@ This file records translation rules found while porting `.repos/mammoth`.
 
 ## ZIP and XML
 
-- JSZip's async object API maps to a small `ZipArchive` wrapper over `hustcer/fzip`. Convert public `BytesView` input to `FixedArray[Byte]` only at the `@fzip.unzip_sync` boundary.
+- JSZip's async object API maps to a small `ZipArchive` wrapper over the in-repo `bobzhang/mbtexcel/zip` package. Pass the public `BytesView` input straight to `@mbtzip.read` and copy entry names/bytes into the wrapper's map.
 - Keep the general ZIP wrapper read-only for docx-to-output conversion. Do not port JSZip's mutable `write()` surface unless a public feature needs it; `embed_style_map` is the model for a focused archive rewrite API that accepts DOCX bytes and returns new DOCX bytes.
 - Node `TextDecoder("utf8")` maps to `@utf8.decode(bytes[:], ignore_bom=true)` so DOCX XML parts with a UTF-8 BOM match Mammoth behavior.
 - Mammoth's XML DOM adapter normalizes namespace URIs into short names (`w:p`) using a caller-provided URI map, falling back to `{uri}local`. An empty mapped prefix is falsy in the JS reader and therefore still falls back to `{uri}local`; reserve empty-prefix namespace behavior for XML writing.

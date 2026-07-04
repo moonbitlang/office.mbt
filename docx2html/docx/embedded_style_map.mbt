@@ -42,15 +42,12 @@ pub fn embed_style_map(
 fn unzip_write_entries(
   data : BytesView,
 ) -> Array[ZipWriteEntry] raise DocxError {
-  let fixed = FixedArray::from_array(data.to_array())
-  let unzipped = @fzip.unzip_sync(fixed) catch {
-    FzipError(message~, ..) =>
-      raise InvalidZip(message="invalid ZIP archive: " + message)
+  let archive = @mbtzip.read(data) catch {
+    err => raise InvalidZip(message="invalid ZIP archive: \{repr(err)}")
   }
   let entries : Array[ZipWriteEntry] = []
-  for item in unzipped {
-    let (path, content) = item
-    entries.push({ path, content: Bytes::from_array(content) })
+  for entry in archive.entries() {
+    entries.push({ path: entry.name(), content: entry.data() })
   }
   entries
 }
@@ -80,12 +77,14 @@ fn replace_or_append_zip_entry(
 }
 
 ///|
-fn zip_write_entries(entries : Array[ZipWriteEntry]) -> Bytes {
-  let files : Array[(String, FixedArray[Byte])] = []
+fn zip_write_entries(entries : Array[ZipWriteEntry]) -> Bytes raise DocxError {
+  let archive = @mbtzip.Archive::new()
   for entry in entries {
-    files.push((entry.path, FixedArray::from_array(entry.content.to_array())))
+    archive.add(entry.path, entry.content, compression=Deflate)
   }
-  Bytes::from_array(@fzip.zip_sync(files))
+  @mbtzip.write(archive) catch {
+    err => raise InvalidZip(message="failed to write ZIP archive: \{repr(err)}")
+  }
 }
 
 ///|
