@@ -12,16 +12,18 @@ concurrency:
 
 jobs:
   test:
-    name: check + test (mbtexcel + docx2html, nightly)
+    name: check + test (mbtexcel + docx2html + pdflite, nightly)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # This repo is a `moon work` workspace with two members: `.`
-      # (bobzhang/mbtexcel) and `./docx2html` (bobzhang/docx2html, vendored
-      # with full history). Root `moon check`/`moon test`/`moon fmt` operate on
-      # BOTH members, so most steps below cover the two modules at once.
+      # This repo is a `moon work` workspace with three members: `.`
+      # (bobzhang/mbtexcel), `./docx2html` (bobzhang/docx2html), and `./pdflite`
+      # (bobzhang/pdflite) — the latter two vendored with full history. Root
+      # `moon check`/`moon test`/`moon fmt` operate on ALL members, so most
+      # steps below cover the three modules at once. (pdflite has native C
+      # stubs; the ubuntu runner's `cc` compiles them for the native target.)
       #
       # A handful of mbtexcel parity/fixture tests read the vendored Go excelize
       # checkout (gitignored locally) from `excelize/` and `.repos/excelize/`.
@@ -71,8 +73,8 @@ jobs:
           fi
 
       # Regenerate every member's `pkg.generated.mbti` and fail if the committed
-      # interfaces drift from the source (both mbtexcel and docx2html commit
-      # their .mbti). Run `moon info` and commit the result to fix.
+      # interfaces drift from the source (all three members commit their .mbti).
+      # Run `moon info` and commit the result to fix.
       - name: Interface check
         run: |
           moon info
@@ -92,9 +94,10 @@ jobs:
       - name: Type check (wasm)
         run: moon check --target wasm
 
-      # Run both members' native test suites in one pass. Covers mbtexcel
-      # (including OpenXML SDK schema validation via .NET) and docx2html
-      # (converter/reader/fixtures/stress).
+      # Run all members' native test suites in one pass. Covers mbtexcel
+      # (including OpenXML SDK schema validation via .NET), docx2html
+      # (converter/reader/fixtures/stress), and pdflite (reader/writer/
+      # fixture-acceptance, incl. native C-stub code paths).
       - name: Test (native)
         run: moon test --target native
 
@@ -104,6 +107,9 @@ jobs:
 
       - name: Cram tests (docx2html CLI)
         run: moon cram test docx2html/tests/cram
+
+      - name: Cram tests (pdflite CLI)
+        run: moon cram test pdflite/tests/cram
 
       # The mbtexcel library and xlsx CLI also target wasm end to end. Build the
       # CLI for wasm and drive it (filesystem read/write via the async runtime).
