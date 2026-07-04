@@ -22,7 +22,7 @@ fn pdf_async_io_assert_generated_id_for_test(
 // directory (it re-raises "already exists"); treat "already exists" as
 // success by re-checking, and re-raise any genuine failure.
 async fn pdf_async_io_ensure_dir_for_test(dir : String) -> Unit {
-  try @fs.mkdir(dir, recursive=true) catch {
+  @fs.mkdir(dir, recursive=true) catch {
     err => if @fs.exists(dir) == false { raise err }
   }
 }
