@@ -67,6 +67,14 @@ fn cli_tiny_picture_base64() -> String {
 
 ///|
 fn ensure_test_dir(path : String) -> Unit {
+  // `create_dir` is not recursive. In a `moon work` workspace build the test
+  // process's working directory does not necessarily already contain `_build`
+  // (unlike a standalone docx2html build, where it always does), so create the
+  // `_build` ancestor first — otherwise the leaf `create_dir` silently no-ops
+  // and the subsequent file write fails with `No such file or directory`.
+  @fs.create_dir("_build") catch {
+    IOError(_) => ()
+  }
   @fs.create_dir(path) catch {
     IOError(_) => ()
   }
