@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   test:
-    name: check + test + OpenXML validation
+    name: check + test + wasm (nightly)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -36,9 +36,12 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Set up MoonBit
+      # The nightly toolchain is required: the project depends on
+      # moonbitlang/async >= 0.20 (wasm filesystem support), and the xlsx
+      # CLI targets the wasm backend, both of which need nightly.
+      - name: Set up MoonBit (nightly)
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: MoonBit versions
@@ -66,3 +69,18 @@ jobs:
 
       - name: CLI cram tests
         run: moon cram test cmd/xlsx/cram/
+
+      # The library and the xlsx CLI also target the wasm backend. Verify
+      # everything compiles for wasm and that the CLI actually runs there
+      # end to end (filesystem read/write via the async runtime).
+      - name: Wasm build + CLI smoke test
+        run: |
+          moon check --target wasm
+          moon build --target wasm cmd/xlsx
+          moon run --target wasm cmd/xlsx -- create ci.xlsx --sheet Data
+          moon run --target wasm cmd/xlsx -- set ci.xlsx Data A1 Hello
+          got=$(moon run --target wasm cmd/xlsx -- get ci.xlsx Data A1 2>/dev/null)
+          echo "get -> $got"; test "$got" = "Hello"
+          moon run --target wasm cmd/xlsx -- view ci.xlsx
+          v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
+          echo "validate -> $v"; test "$v" = "valid"

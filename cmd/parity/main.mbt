@@ -9,7 +9,12 @@ async fn ensure_dir(path : String) -> Unit {
 async fn write_out(out_dir : String, name : String, bytes : Bytes) -> Unit {
   ensure_dir(out_dir)
   let path = "\{out_dir}/\{name}"
-  @async/fs.write_file(path, bytes, create=0o644) catch {
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  ) catch {
     err => {
       println("write failed: \{path}: \{err}")
       return

@@ -7,6 +7,7 @@
 ///   xlsx get <file> <sheet> <cell>             print a cell value
 ///   xlsx sheets <file>                         list sheet names
 ///   xlsx rows <file> [--sheet NAME]            print a sheet as CSV
+///   xlsx view <file> [--sheet NAME]            print a sheet as an ASCII table
 ///   xlsx validate <file>                       check OOXML package validity
 ///
 /// Errors print `error: <message>` to stderr and exit non-zero.
@@ -27,6 +28,7 @@ async fn main {
     Some(("get", m)) => run_get(m)
     Some(("sheets", m)) => run_sheets(m)
     Some(("rows", m)) => run_rows(m)
+    Some(("view", m)) => run_view(m)
     Some(("validate", m)) => run_validate(m)
     _ => println(command.render_help())
   }
@@ -80,6 +82,18 @@ fn build_command() -> @argparse.Command {
             "sheet",
             long="sheet",
             about="sheet to export (default: first sheet)",
+          ),
+        ],
+      ),
+      @argparse.Command(
+        "view",
+        about="Print a sheet as an ASCII table",
+        positionals=[@argparse.PositionArg("file")],
+        options=[
+          @argparse.OptionArg(
+            "sheet",
+            long="sheet",
+            about="sheet to view (default: first sheet)",
           ),
         ],
       ),
@@ -143,20 +157,82 @@ async fn run_sheets(m : @argparse.Matches) -> Unit {
 ///|
 async fn run_rows(m : @argparse.Matches) -> Unit {
   let workbook = @lib.open_file(arg(m, "file"))
-  let sheet = {
-    let requested = arg(m, "sheet")
-    if requested != "" {
-      requested
-    } else {
-      match workbook.get_sheet_name(0) {
-        Some(name) => name
-        None => ""
-      }
-    }
-  }
+  let sheet = resolve_sheet(workbook, arg(m, "sheet"))
   for row in workbook.get_rows(sheet) {
     println(row.map(csv_field).join(","))
   }
+}
+
+///|
+async fn run_view(m : @argparse.Matches) -> Unit {
+  let workbook = @lib.open_file(arg(m, "file"))
+  let sheet = resolve_sheet(workbook, arg(m, "sheet"))
+  println(render_ascii_table(workbook.get_rows(sheet)))
+}
+
+///|
+/// The sheet to operate on: the requested name, or the first sheet when
+/// none was given.
+fn resolve_sheet(workbook : @xl.Workbook, requested : String) -> String {
+  if requested != "" {
+    requested
+  } else {
+    match workbook.get_sheet_name(0) {
+      Some(name) => name
+      None => ""
+    }
+  }
+}
+
+///|
+/// Renders a grid of rows as an ASCII table. The first row is treated as
+/// a header and separated from the body by a rule. Column widths are the
+/// widest cell in each column (measured in UTF-16 code units).
+fn render_ascii_table(rows : Array[Array[String]]) -> String {
+  let ncols = rows.fold(init=0, (n, r) => {
+    if r.length() > n {
+      r.length()
+    } else {
+      n
+    }
+  })
+  if rows.length() == 0 || ncols == 0 {
+    return "(empty sheet)"
+  }
+  let widths = Array::make(ncols, 0)
+  for r in rows {
+    for c in 0..<ncols {
+      let cell = if c < r.length() { r[c] } else { "" }
+      if cell.length() > widths[c] {
+        widths[c] = cell.length()
+      }
+    }
+  }
+  let lines = [ascii_border(widths), ascii_row(rows[0], widths)]
+  if rows.length() > 1 {
+    lines.push(ascii_border(widths))
+    for i in 1..<rows.length() {
+      lines.push(ascii_row(rows[i], widths))
+    }
+  }
+  lines.push(ascii_border(widths))
+  lines.join("\n")
+}
+
+///|
+fn ascii_border(widths : Array[Int]) -> String {
+  let segs = widths.map(w => "-".repeat(w + 2))
+  "+" + segs.join("+") + "+"
+}
+
+///|
+fn ascii_row(cells : Array[String], widths : Array[Int]) -> String {
+  let segs = []
+  for c in 0..<widths.length() {
+    let cell = if c < cells.length() { cells[c] } else { "" }
+    segs.push(" " + cell.pad_end(widths[c], ' ') + " ")
+  }
+  "|" + segs.join("|") + "|"
 }
 
 ///|
@@ -184,5 +260,10 @@ fn csv_field(value : String) -> String {
 
 ///|
 async fn write_file(path : String, bytes : Bytes) -> Unit {
-  @async/fs.write_file(path, bytes, create=0o644)
+  @async/fs.write_file(
+    path,
+    bytes,
+    create_mode=@async/fs.CreateOrTruncate,
+    permission=0o644,
+  )
 }
