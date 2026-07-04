@@ -20,4 +20,4 @@ keywords = [ ]
 
 description = ""
 
-warnings = "-deprecated_syntax"
+warnings = "-deprecated_syntax-deprecated-reserved_keyword"

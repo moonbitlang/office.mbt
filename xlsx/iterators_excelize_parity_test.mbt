@@ -1,4 +1,5 @@
 ///|
+#cfg(target="native")
 fn trim_trailing_empty(values : Array[String]) -> Array[String] {
   let mut end = values.length()
   while end > 0 && values[end - 1] == "" {
@@ -8,6 +9,7 @@ fn trim_trailing_empty(values : Array[String]) -> Array[String] {
 }
 
 ///|
+#cfg(target="native")
 fn normalize_2d(values : Array[Array[String]]) -> Array[Array[String]] {
   let out : Array[Array[String]] = []
   for row in values {
@@ -17,6 +19,7 @@ fn normalize_2d(values : Array[Array[String]]) -> Array[Array[String]] {
 }
 
 ///|
+#cfg(target="native")
 fn eq_1d(a : Array[String], b : Array[String]) -> Bool {
   if a.length() != b.length() {
     return false
@@ -30,6 +33,7 @@ fn eq_1d(a : Array[String], b : Array[String]) -> Bool {
 }
 
 ///|
+#cfg(target="native")
 fn eq_2d(a : Array[Array[String]], b : Array[Array[String]]) -> Bool {
   if a.length() != b.length() {
     return false
