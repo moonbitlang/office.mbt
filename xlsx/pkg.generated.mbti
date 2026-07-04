@@ -47,6 +47,8 @@ pub fn theme_color(String, Double) -> String
 
 pub fn time_to_excel_date(@time.ZonedDateTime, use_1904_format? : Bool) -> Double
 
+pub fn validate_ooxml_package(BytesView) -> Array[String]
+
 pub fn write(Workbook) -> Bytes raise XlsxError
 
 pub fn write_with_password(Workbook, String) -> Bytes raise XlsxError
