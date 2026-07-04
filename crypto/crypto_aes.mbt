@@ -1,9 +1,13 @@
 ///|
-priv struct AesSchedule {
-  round_keys : Array[Byte]
-  rounds : Int
-  sbox : Array[Byte]
-  inv_sbox : Array[Byte]
+/// An expanded AES key schedule, reusable across block operations. Obtain one
+/// with `aes_key_schedule` and use the `encrypt_block`/`decrypt_block` methods
+/// (or their `_in_place` variants) for block-level work; the `aes_ecb_*` /
+/// `aes_cbc_*` functions cover whole-buffer modes.
+pub struct AesSchedule {
+  priv round_keys : Array[Byte]
+  priv rounds : Int
+  priv sbox : Array[Byte]
+  priv inv_sbox : Array[Byte]
 }
 
 ///|
@@ -86,8 +90,14 @@ fn aes_rot_word(word : UInt) -> UInt {
 }
 
 ///|
+let aes_tables_cached : (Array[Byte], Array[Byte]) = aes_tables()
+
+///|
+let aes_rcon_cached : Array[UInt] = aes_rcon()
+
+///|
 fn aes_schedule(key : BytesView) -> AesSchedule raise CryptoError {
-  let (sbox, inv_sbox) = aes_tables()
+  let (sbox, inv_sbox) = aes_tables_cached
   let key_len = key.length()
   if key_len != 16 && key_len != 24 && key_len != 32 {
     raise InvalidCrypto(msg="invalid AES key size")
@@ -99,7 +109,7 @@ fn aes_schedule(key : BytesView) -> AesSchedule raise CryptoError {
   for i in 0..<nk {
     w[i] = u32_from_be(key, i * 4)
   }
-  let rcon = aes_rcon()
+  let rcon = aes_rcon_cached
   for i in nk..<total_words {
     let mut temp = w[i - 1]
     if i % nk == 0 {
@@ -305,6 +315,66 @@ fn aes_decrypt_block(
   let state = block.to_array()
   aes_decrypt_state(schedule, state)
   state
+}
+
+///|
+/// Expands `key` (16, 24, or 32 bytes) into a reusable AES key schedule.
+///
+/// Raises `CryptoError` if the key length is not 16, 24, or 32 bytes.
+pub fn aes_key_schedule(key : BytesView) -> AesSchedule raise CryptoError {
+  aes_schedule(key)
+}
+
+///|
+/// Encrypts one 16-byte block, returning the ciphertext bytes.
+///
+/// Raises `CryptoError` if `block` is not exactly 16 bytes.
+pub fn AesSchedule::encrypt_block(
+  self : AesSchedule,
+  block : BytesView,
+) -> Array[Byte] raise CryptoError {
+  aes_encrypt_block(self, block)
+}
+
+///|
+/// Decrypts one 16-byte block, returning the plaintext bytes.
+///
+/// Raises `CryptoError` if `block` is not exactly 16 bytes.
+pub fn AesSchedule::decrypt_block(
+  self : AesSchedule,
+  block : BytesView,
+) -> Array[Byte] raise CryptoError {
+  aes_decrypt_block(self, block)
+}
+
+///|
+/// Encrypts a 16-byte `state` in place (useful for CBC-style chaining where
+/// the caller XORs before encrypting, without an intermediate copy).
+///
+/// Raises `CryptoError` if `state` is not exactly 16 bytes long.
+pub fn AesSchedule::encrypt_block_in_place(
+  self : AesSchedule,
+  state : Array[Byte],
+) -> Unit raise CryptoError {
+  if state.length() != 16 {
+    raise InvalidCrypto(msg="invalid AES block size")
+  }
+  aes_encrypt_state(self, state)
+}
+
+///|
+/// Decrypts a 16-byte `state` in place (useful for CBC-style chaining where
+/// the caller XORs after decrypting, without an intermediate copy).
+///
+/// Raises `CryptoError` if `state` is not exactly 16 bytes long.
+pub fn AesSchedule::decrypt_block_in_place(
+  self : AesSchedule,
+  state : Array[Byte],
+) -> Unit raise CryptoError {
+  if state.length() != 16 {
+    raise InvalidCrypto(msg="invalid AES block size")
+  }
+  aes_decrypt_state(self, state)
 }
 
 ///|

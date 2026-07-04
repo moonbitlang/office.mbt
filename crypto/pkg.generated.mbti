@@ -12,6 +12,8 @@ pub fn aes_ecb_decrypt(BytesView, BytesView) -> Bytes raise CryptoError
 
 pub fn aes_ecb_encrypt(BytesView, BytesView) -> Bytes raise CryptoError
 
+pub fn aes_key_schedule(BytesView) -> AesSchedule raise CryptoError
+
 pub fn hash_concat(String, ArrayView[BytesView]) -> Bytes
 
 pub fn push_u32_le(Array[Byte], UInt) -> Unit
@@ -26,6 +28,13 @@ pub suberror CryptoError {
 } derive(@debug.Debug)
 
 // Types and methods
+pub struct AesSchedule {
+  // private fields
+}
+pub fn AesSchedule::decrypt_block(Self, BytesView) -> Array[Byte] raise CryptoError
+pub fn AesSchedule::decrypt_block_in_place(Self, Array[Byte]) -> Unit raise CryptoError
+pub fn AesSchedule::encrypt_block(Self, BytesView) -> Array[Byte] raise CryptoError
+pub fn AesSchedule::encrypt_block_in_place(Self, Array[Byte]) -> Unit raise CryptoError
 
 // Type aliases
 

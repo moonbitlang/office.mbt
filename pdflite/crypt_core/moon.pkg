@@ -1,6 +1,6 @@
 import {
   "bobzhang/pdflite/core",
-  "illusory0x0/rijndael/rijndael",
+  "bobzhang/mbtexcel/crypto" @aes,
   "moonbitlang/x/crypto",
 }
 
