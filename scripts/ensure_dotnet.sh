@@ -6,7 +6,7 @@ DOTNET_DIR="$ROOT/.tools/dotnet"
 DOTNET="$DOTNET_DIR/dotnet"
 
 if command -v dotnet >/dev/null 2>&1; then
-  if dotnet --list-sdks 2>/dev/null | grep -Eq '(^|[[:space:]])8\\.'; then
+  if dotnet --list-sdks 2>/dev/null | grep -Eq '(^|[[:space:]])8\.'; then
     exit 0
   fi
 fi
