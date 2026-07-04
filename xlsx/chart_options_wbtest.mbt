@@ -703,7 +703,9 @@ test "chart options wb: axis and plot area writer branches" {
 ///|
 test "chart options wb: chart_options_to_xml guard and single-plot branches" {
   let empty = ChartOptions::new(Col)
-  let empty_result : Result[String, Error] = try? chart_options_to_xml(empty)
+  let empty_result : Result[String, Error] = Ok(chart_options_to_xml(empty)) catch {
+    e => Err(e)
+  }
   inspect(
     empty_result
     is Err(XlsxError::InvalidSheetOperation(msg="chart series empty")),
@@ -713,9 +715,11 @@ test "chart options wb: chart_options_to_xml guard and single-plot branches" {
   let combo_empty = ChartOptions::new(Col)
   combo_empty.series.push(wb_series())
   combo_empty.add_combo_chart(ChartOptions::new(Line))
-  let combo_empty_result : Result[String, Error] = try? chart_options_to_xml(
-    combo_empty,
-  )
+  let combo_empty_result : Result[String, Error] = Ok(
+    chart_options_to_xml(combo_empty),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     combo_empty_result
     is Err(XlsxError::InvalidSheetOperation(msg="combo chart series empty")),
@@ -788,9 +792,11 @@ test "chart options wb: combo branches and guards" {
   let pie_combo = ChartOptions::new(Pie)
   pie_combo.series.push(wb_series(name="Pie"))
   unsupported_combo.add_combo_chart(pie_combo)
-  let unsupported_result : Result[String, Error] = try? chart_options_to_xml(
-    unsupported_combo,
-  )
+  let unsupported_result : Result[String, Error] = Ok(
+    chart_options_to_xml(unsupported_combo),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     unsupported_result
     is Err(XlsxError::UnsupportedFeature(msg="combo chart type unsupported")),
@@ -802,9 +808,11 @@ test "chart options wb: combo branches and guards" {
   let stock = ChartOptions::new(StockHighLowClose)
   stock.series.push(wb_series(name="OnlyOne"))
   stock_combo_bad.add_combo_chart(stock)
-  let stock_result : Result[String, Error] = try? chart_options_to_xml(
-    stock_combo_bad,
-  )
+  let stock_result : Result[String, Error] = Ok(
+    chart_options_to_xml(stock_combo_bad),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     stock_result
     is Err(

@@ -56,7 +56,7 @@ test "workbook and calc props roundtrip" {
 test "invalid calc props" {
   let workbook = Workbook::new()
   let bad = CalcPropsOptions::with_values(calc_mode="bad")
-  let result = try? workbook.set_calc_props(Some(bad))
+  let result = Ok(workbook.set_calc_props(Some(bad))) catch { e => Err(e) }
   debug_inspect(
     result,
     content="Err(InvalidWorkbookProperty(msg=\"invalid calc mode\"))",

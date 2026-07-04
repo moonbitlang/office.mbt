@@ -25,9 +25,11 @@ test "read_sheet_rel_parts wb: parse_comments_xml edge branches and errors" {
     #|    <comment ref="A1"
     #|  </commentList>
     #|</comments>
-  let malformed_result : Result[Array[Comment], Error] = try? parse_comments_xml(
-    malformed_tag,
-  )
+  let malformed_result : Result[Array[Comment], Error] = Ok(
+    parse_comments_xml(malformed_tag),
+  ) catch {
+    e => Err(e)
+  }
   match malformed_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="comment tag not closed")
@@ -40,9 +42,11 @@ test "read_sheet_rel_parts wb: parse_comments_xml edge branches and errors" {
     #|    <comment authorId="0"><text><t>x</t></text></comment>
     #|  </commentList>
     #|</comments>
-  let missing_ref_result : Result[Array[Comment], Error] = try? parse_comments_xml(
-    missing_ref,
-  )
+  let missing_ref_result : Result[Array[Comment], Error] = Ok(
+    parse_comments_xml(missing_ref),
+  ) catch {
+    e => Err(e)
+  }
   match missing_ref_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="comment ref missing")
@@ -81,9 +85,11 @@ test "read_sheet_rel_parts wb: parse_table_part_ids supports expanded tags and v
     #|    <tablePart />
     #|  </tableParts>
     #|</worksheet>
-  let result : Result[Array[String], Error] = try? parse_table_part_ids(
-    missing_id,
-  )
+  let result : Result[Array[String], Error] = Ok(
+    parse_table_part_ids(missing_id),
+  ) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="tablePart id missing")
@@ -107,9 +113,11 @@ test "read_sheet_rel_parts wb: parse_pivot_table_part_ids supports expanded tags
     #|    <pivotTablePart />
     #|  </pivotTableParts>
     #|</worksheet>
-  let result : Result[Array[String], Error] = try? parse_pivot_table_part_ids(
-    missing_id,
-  )
+  let result : Result[Array[String], Error] = Ok(
+    parse_pivot_table_part_ids(missing_id),
+  ) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="pivotTablePart id missing")

@@ -181,27 +181,39 @@ test "form control roundtrip preserves basic fields" {
 
 ///|
 test "form control invalid inputs and delete no-op" {
-  let bad_type : Result[FormControl, Error] = try? FormControl::new(
-    "A1", "Unknown",
-  )
+  let bad_type : Result[FormControl, Error] = Ok(
+    FormControl::new("A1", "Unknown"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_type is Err(XlsxError::InvalidSheetOperation(_)), content="true")
   let spin = FormControl::new("C5", "SpinButton")
-  let bad_link : Result[Unit, Error] = try? spin.set_cell_link("*")
+  let bad_link : Result[Unit, Error] = Ok(spin.set_cell_link("*")) catch {
+    e => Err(e)
+  }
   inspect(bad_link is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_value : Result[Unit, Error] = try? spin.set_current_val(30001)
+  let bad_value : Result[Unit, Error] = Ok(spin.set_current_val(30001)) catch {
+    e => Err(e)
+  }
   inspect(bad_value is Err(XlsxError::InvalidSheetOperation(_)), content="true")
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let del_empty : Result[Unit, Error] = try? workbook.delete_form_control(
-    "Sheet1", "A1",
-  )
+  let del_empty : Result[Unit, Error] = Ok(
+    workbook.delete_form_control("Sheet1", "A1"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(del_empty is Ok(_), content="true")
-  let del_bad_sheet : Result[Unit, Error] = try? workbook.delete_form_control(
-    "SheetN", "A1",
-  )
+  let del_bad_sheet : Result[Unit, Error] = Ok(
+    workbook.delete_form_control("SheetN", "A1"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(del_bad_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
-  let del_bad_cell : Result[Unit, Error] = try? workbook.delete_form_control(
-    "Sheet1", "A",
-  )
+  let del_bad_cell : Result[Unit, Error] = Ok(
+    workbook.delete_form_control("Sheet1", "A"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(del_bad_cell is Err(XlsxError::InvalidCellRef(_)), content="true")
 }

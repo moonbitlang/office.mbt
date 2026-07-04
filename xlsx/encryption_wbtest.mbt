@@ -456,7 +456,9 @@ test "read encrypted standard workbook" {
 test "decrypt agile zip read" {
   let bytes = decode_base64_multiline(encrypt_sha1_b64)
   let decrypted = decrypt_encrypted_package(bytes, "password")
-  let result : Result[@zip.Archive, Error] = try? @zip.read(decrypted)
+  let result : Result[@zip.Archive, Error] = Ok(@zip.read(decrypted)) catch {
+    e => Err(e)
+  }
   inspect(result is Ok(_), content="true")
 }
 
@@ -464,7 +466,9 @@ test "decrypt agile zip read" {
 test "decrypt standard zip read" {
   let bytes = decode_base64_multiline(encrypt_aes_b64)
   let decrypted = decrypt_encrypted_package(bytes, "password")
-  let result : Result[@zip.Archive, Error] = try? @zip.read(decrypted)
+  let result : Result[@zip.Archive, Error] = Ok(@zip.read(decrypted)) catch {
+    e => Err(e)
+  }
   match result {
     Ok(archive) =>
       inspect(archive.get("xl/workbook.xml") is Some(_), content="true")
@@ -476,30 +480,36 @@ test "decrypt standard zip read" {
 test "decrypt standard workbook parse" {
   let bytes = decode_base64_multiline(encrypt_aes_b64)
   let decrypted = decrypt_encrypted_package(bytes, "password")
-  let result : Result[Workbook, Error] = try? read_zip_bytes(decrypted)
+  let result : Result[Workbook, Error] = Ok(read_zip_bytes(decrypted)) catch {
+    e => Err(e)
+  }
   inspect(result is Ok(_), content="true")
 }
 
 ///|
 test "read encrypted wrong password" {
   let bytes = decode_base64_multiline(encrypt_sha1_b64)
-  let result : Result[Workbook, Error] = try? read_with_password(bytes, "wrong")
+  let result : Result[Workbook, Error] = Ok(read_with_password(bytes, "wrong")) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidPassword), content="true")
 }
 
 ///|
 test "decrypt agile wrong password" {
   let bytes = decode_base64_multiline(encrypt_sha1_b64)
-  let result : Result[Bytes, Error] = try? decrypt_encrypted_package(
-    bytes, "wrong",
-  )
+  let result : Result[Bytes, Error] = Ok(
+    decrypt_encrypted_package(bytes, "wrong"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidPassword), content="true")
 }
 
 ///|
 test "read encrypted without password" {
   let bytes = decode_base64_multiline(encrypt_sha1_b64)
-  let result : Result[Workbook, Error] = try? read(bytes)
+  let result : Result[Workbook, Error] = Ok(read(bytes)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::EncryptedPackage), content="true")
 }
 
@@ -557,9 +567,11 @@ test "write encrypted roundtrip" {
 test "write encrypted invalid password length" {
   let workbook = Workbook::new()
   let long_password = "*".repeat(256)
-  let result : Result[Bytes, Error] = try? write_with_password(
-    workbook, long_password,
-  )
+  let result : Result[Bytes, Error] = Ok(
+    write_with_password(workbook, long_password),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(InvalidPasswordLength(_)), content="true")
 }
 

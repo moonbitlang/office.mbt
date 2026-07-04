@@ -24,9 +24,11 @@ fn wb_rels_image_target(target : String) -> String {
 ///|
 test "read_drawing_xml wb: parse_xml_int_tag missing/invalid errors" {
   let missing_tag = "<xdr:from><xdr:row>1</xdr:row></xdr:from>"
-  let missing_result : Result[Int, Error] = try? parse_xml_int_tag(
-    missing_tag, "xdr:col", "drawing col invalid",
-  )
+  let missing_result : Result[Int, Error] = Ok(
+    parse_xml_int_tag(missing_tag, "xdr:col", "drawing col invalid"),
+  ) catch {
+    e => Err(e)
+  }
   match missing_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="drawing col invalid")
@@ -34,9 +36,11 @@ test "read_drawing_xml wb: parse_xml_int_tag missing/invalid errors" {
   }
 
   let invalid_value = "<xdr:from><xdr:col>abc</xdr:col></xdr:from>"
-  let invalid_result : Result[Int, Error] = try? parse_xml_int_tag(
-    invalid_value, "xdr:col", "drawing col invalid",
-  )
+  let invalid_result : Result[Int, Error] = Ok(
+    parse_xml_int_tag(invalid_value, "xdr:col", "drawing col invalid"),
+  ) catch {
+    e => Err(e)
+  }
   match invalid_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="drawing col invalid")
@@ -54,9 +58,11 @@ test "read_drawing_xml wb: drawing_axis_span_emu handles reverse and same-index 
 ///|
 test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
   let one_missing_close = "<xdr:wsDr><xdr:oneCellAnchor><xdr:pic/></xdr:wsDr>"
-  let one_result : Result[Array[(String, PicturePositioning)], Error] = try? parse_drawing_anchors(
-    one_missing_close,
-  )
+  let one_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
+    parse_drawing_anchors(one_missing_close),
+  ) catch {
+    e => Err(e)
+  }
   match one_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="oneCellAnchor close missing")
@@ -64,9 +70,11 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
   }
 
   let two_missing_close = "<xdr:wsDr><xdr:oneCellAnchor></xdr:oneCellAnchor><xdr:twoCellAnchor></xdr:wsDr>"
-  let two_result : Result[Array[(String, PicturePositioning)], Error] = try? parse_drawing_anchors(
-    two_missing_close,
-  )
+  let two_result : Result[Array[(String, PicturePositioning)], Error] = Ok(
+    parse_drawing_anchors(two_missing_close),
+  ) catch {
+    e => Err(e)
+  }
   match two_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="twoCellAnchor close missing")
@@ -91,12 +99,11 @@ test "read_drawing_xml wb: parse_drawing_images empty rel map branch" {
     "<xdr:ext cx=\"9525\" cy=\"9525\"/>",
   )
   let archive = @zip.Archive::new()
-  let result : Result[Array[Image], Error] = try? parse_drawing_images(
-    drawing_xml,
-    "",
-    Worksheet::new("Sheet1"),
-    archive,
-  )
+  let result : Result[Array[Image], Error] = Ok(
+    parse_drawing_images(drawing_xml, "", Worksheet::new("Sheet1"), archive),
+  ) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="drawing image target missing")
@@ -114,9 +121,11 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
   let missing_from = wb_one_cell_anchor(
     "", "<xdr:ext cx=\"9525\" cy=\"9525\"/>",
   )
-  let missing_from_result : Result[Array[Image], Error] = try? parse_drawing_images(
-    missing_from, rels_xml, sheet, archive,
-  )
+  let missing_from_result : Result[Array[Image], Error] = Ok(
+    parse_drawing_images(missing_from, rels_xml, sheet, archive),
+  ) catch {
+    e => Err(e)
+  }
   match missing_from_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="drawing anchor from missing")
@@ -124,9 +133,11 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
   }
 
   let missing_ext = wb_one_cell_anchor(wb_from_xml(), "")
-  let missing_ext_result : Result[Array[Image], Error] = try? parse_drawing_images(
-    missing_ext, rels_xml, sheet, archive,
-  )
+  let missing_ext_result : Result[Array[Image], Error] = Ok(
+    parse_drawing_images(missing_ext, rels_xml, sheet, archive),
+  ) catch {
+    e => Err(e)
+  }
   match missing_ext_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="drawing ext missing")
@@ -137,9 +148,11 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
     wb_from_xml(),
     "<xdr:ext cx=\"x\" cy=\"9525\"/>",
   )
-  let cx_invalid_result : Result[Array[Image], Error] = try? parse_drawing_images(
-    cx_invalid, rels_xml, sheet, archive,
-  )
+  let cx_invalid_result : Result[Array[Image], Error] = Ok(
+    parse_drawing_images(cx_invalid, rels_xml, sheet, archive),
+  ) catch {
+    e => Err(e)
+  }
   match cx_invalid_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="drawing cx invalid")
@@ -147,9 +160,11 @@ test "read_drawing_xml wb: parse_drawing_images anchor/ext validation errors" {
   }
 
   let cy_missing = wb_one_cell_anchor(wb_from_xml(), "<xdr:ext cx=\"9525\"/>")
-  let cy_missing_result : Result[Array[Image], Error] = try? parse_drawing_images(
-    cy_missing, rels_xml, sheet, archive,
-  )
+  let cy_missing_result : Result[Array[Image], Error] = Ok(
+    parse_drawing_images(cy_missing, rels_xml, sheet, archive),
+  ) catch {
+    e => Err(e)
+  }
   match cy_missing_result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="drawing cy missing")

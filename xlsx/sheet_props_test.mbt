@@ -44,16 +44,18 @@ test "page layout validation" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bad_orientation = PageLayoutOptions::with_values(orientation="sideways")
-  let result : Result[Unit, Error] = try? workbook.set_page_layout(
-    "Sheet1",
-    Some(bad_orientation),
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.set_page_layout("Sheet1", Some(bad_orientation)),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidPageLayout(_)), content="true")
   let bad_adjust = PageLayoutOptions::with_values(adjust_to=5)
-  let result2 : Result[Unit, Error] = try? workbook.set_page_layout(
-    "Sheet1",
-    Some(bad_adjust),
-  )
+  let result2 : Result[Unit, Error] = Ok(
+    workbook.set_page_layout("Sheet1", Some(bad_adjust)),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result2 is Err(XlsxError::InvalidPageLayout(_)), content="true")
 }
 
@@ -78,10 +80,11 @@ test "header footer roundtrip and limits" {
   inspect(parsed_opts.even_footer, content="&L&D")
   let long_text = "a".repeat(256)
   let bad_opts = HeaderFooterOptions::with_values(odd_header=long_text)
-  let result : Result[Unit, Error] = try? workbook.set_header_footer(
-    "Sheet1",
-    Some(bad_opts),
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.set_header_footer("Sheet1", Some(bad_opts)),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidHeaderFooter(_)), content="true")
   workbook.set_header_footer("Sheet1", None)
   debug_inspect(workbook.get_header_footer("Sheet1"), content="None")
@@ -102,10 +105,11 @@ test "sheet protection xor and sha512" {
     None => fail("missing protection")
   }
   inspect(protection.password.length() > 0, content="true")
-  let bad_unprotect : Result[Unit, Error] = try? workbook.unprotect_sheet(
-    "Sheet1",
-    password="bad",
-  )
+  let bad_unprotect : Result[Unit, Error] = Ok(
+    workbook.unprotect_sheet("Sheet1", password="bad"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_unprotect is Err(XlsxError::InvalidSheetProtection(_)),
     content="true",
@@ -161,9 +165,11 @@ test "defined names set delete and adjust" {
     DefinedName::new("Scoped", "Sheet1!$C$1", scope="Sheet1"),
   )
   inspect(workbook.get_defined_names().length(), content="2")
-  let dup : Result[Unit, Error] = try? workbook.set_defined_name(
-    DefinedName::new("Amount", "Sheet1!$A$1"),
-  )
+  let dup : Result[Unit, Error] = Ok(
+    workbook.set_defined_name(DefinedName::new("Amount", "Sheet1!$A$1")),
+  ) catch {
+    e => Err(e)
+  }
   inspect(dup is Err(XlsxError::DefinedNameDuplicate(_)), content="true")
   workbook.insert_rows("Sheet1", 1, 1)
   let mut amount_ref = ""
@@ -188,9 +194,11 @@ test "defined names set delete and adjust" {
     DefinedName::new("Scoped", "Main!$C$1", scope="Main"),
   )
   inspect(workbook.get_defined_names().length(), content="1")
-  let missing : Result[Unit, Error] = try? workbook.delete_defined_name(
-    DefinedName::new("Missing", "Sheet1!$A$1"),
-  )
+  let missing : Result[Unit, Error] = Ok(
+    workbook.delete_defined_name(DefinedName::new("Missing", "Sheet1!$A$1")),
+  ) catch {
+    e => Err(e)
+  }
   inspect(missing is Err(XlsxError::DefinedNameScope(_)), content="true")
 }
 
@@ -311,8 +319,10 @@ test "get_sheet_protection mirrors protect options" {
   let cleared = workbook.get_sheet_protection("Sheet1")
   inspect(cleared.edit_objects, content="false")
   inspect(cleared.algorithm_name, content="")
-  let missing : Result[@xlsx.SheetProtectionOptions, Error] = try? workbook.get_sheet_protection(
-    "Missing",
-  )
+  let missing : Result[@xlsx.SheetProtectionOptions, Error] = Ok(
+    workbook.get_sheet_protection("Missing"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(missing is Err(_), content="true")
 }

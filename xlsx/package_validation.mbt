@@ -48,7 +48,7 @@ pub fn validate_ooxml_package(bytes : BytesView) -> Array[String] {
     required in [
       "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels",
     ] {
-    if not(parts.contains(required)) {
+    if !parts.contains(required) {
       problems.push("missing required part: \{required}")
     }
   }
@@ -68,7 +68,7 @@ pub fn validate_ooxml_package(bytes : BytesView) -> Array[String] {
           Some(ext) => defaults.contains(ext.to_lower())
           None => false
         }
-        if not(has_override) && not(has_default) {
+        if !has_override && !has_default {
           problems.push("part has no declared content type: \{name}")
         }
       }
@@ -79,7 +79,7 @@ pub fn validate_ooxml_package(bytes : BytesView) -> Array[String] {
   // relationship target integrity
   for entry in archive.entries() {
     let name = entry.name()
-    if not(name.has_suffix(".rels")) {
+    if !name.has_suffix(".rels") {
       continue
     }
     let base = rels_base_dir(name)
@@ -90,7 +90,7 @@ pub fn validate_ooxml_package(bytes : BytesView) -> Array[String] {
         continue
       }
       let resolved = resolve_part_path(base, target)
-      if resolved != "" && not(parts.contains(resolved)) {
+      if resolved != "" && !parts.contains(resolved) {
         problems.push(
           "relationship in \{name} points to a missing part: \{target} -> \{resolved}",
         )

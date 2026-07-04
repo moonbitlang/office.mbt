@@ -58,6 +58,8 @@ test "duplicate row copies validations and merges" {
 test "duplicate row invalid index" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let result : Result[Unit, Error] = try? workbook.duplicate_row("Sheet1", 0)
+  let result : Result[Unit, Error] = Ok(workbook.duplicate_row("Sheet1", 0)) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidCellRef(_)), content="true")
 }

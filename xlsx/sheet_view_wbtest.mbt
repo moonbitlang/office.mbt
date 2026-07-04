@@ -17,6 +17,8 @@ test "sheet view wb: invalid view mode is ignored and defaults are preserved" {
 
 ///|
 test "sheet view wb: normalize_view_index rejects empty view list" {
-  let result : Result[Int, Error] = try? normalize_view_index(0, 0)
+  let result : Result[Int, Error] = Ok(normalize_view_index(0, 0)) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
 }

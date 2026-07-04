@@ -103,7 +103,9 @@ async test "open file save and save_as" {
 async test "save_as rejects unsupported extension" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let result : Result[Unit, Error] = try? workbook.save_as("bad.foo")
+  let result : Result[Unit, Error] = Ok(workbook.save_as("bad.foo")) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidSheetOperation(msg~)) =>
       inspect(msg, content="unsupported workbook file format")

@@ -27,10 +27,9 @@ test "ignored errors write and roundtrip" {
 test "ignored errors invalid range" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let result : Result[Unit, Error] = try? sheet.add_ignored_errors(
-    "",
-    EvalError,
-  )
+  let result : Result[Unit, Error] = Ok(sheet.add_ignored_errors("", EvalError)) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidSheetOperation(msg~)) =>
       inspect(msg, content="ignored errors range empty")
@@ -78,17 +77,17 @@ test "ignored errors workbook parity (all types + errors)" {
     None => fail("missing parsed sheet")
   }
   inspect(sheet.ignored_errors().length(), content="9")
-  let missing_sheet : Result[Unit, Error] = try? parsed.add_ignored_errors(
-    "SheetN",
-    "A1",
-    EvalError,
-  )
+  let missing_sheet : Result[Unit, Error] = Ok(
+    parsed.add_ignored_errors("SheetN", "A1", EvalError),
+  ) catch {
+    e => Err(e)
+  }
   inspect(missing_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
-  let blank_range : Result[Unit, Error] = try? parsed.add_ignored_errors(
-    "Sheet1",
-    "",
-    EvalError,
-  )
+  let blank_range : Result[Unit, Error] = Ok(
+    parsed.add_ignored_errors("Sheet1", "", EvalError),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     blank_range is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",

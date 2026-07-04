@@ -17,9 +17,11 @@ test "mbtexcel password wrappers" {
   let bytes = write_with_password(workbook, "pass")
   let parsed = read_with_password(bytes, "pass")
   debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
-  let bad : Result[@xlsx.Workbook, Error] = try? read_with_password(
-    bytes, "wrong",
-  )
+  let bad : Result[@xlsx.Workbook, Error] = Ok(
+    read_with_password(bytes, "wrong"),
+  ) catch {
+    e => Err(e)
+  }
   guard bad is Err(@xlsx.InvalidPassword) else {
     fail("expected invalid password")
   }
@@ -831,9 +833,11 @@ test "mbtexcel e2e group and ungroup sheets" {
   ignore(workbook.add_sheet("Sheet2"))
   ignore(workbook.add_sheet("Sheet3"))
   workbook.set_active_sheet(1)
-  let bad_group : Result[Unit, Error] = try? workbook.group_sheets([
-    "Sheet1", "Sheet3",
-  ])
+  let bad_group : Result[Unit, Error] = Ok(
+    workbook.group_sheets(["Sheet1", "Sheet3"]),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_group is Err(@xlsx.InvalidSheetOperation(_)), content="true")
   workbook.group_sheets(["Sheet2", "Sheet3"])
   let bytes = write(workbook)

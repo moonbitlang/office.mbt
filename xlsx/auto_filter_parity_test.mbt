@@ -40,11 +40,11 @@ test "auto filter accepts absolute range refs" {
 ///|
 test "auto filter invalid sheet name" {
   let workbook = Workbook::new()
-  let result : Result[Unit, Error] = try? workbook.auto_filter(
-    "Sheet:1",
-    "A1:B1",
-    [],
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.auto_filter("Sheet:1", "A1:B1", []),
+  ) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidSheetName(msg~)) =>
       inspect(msg, content="sheet name contains invalid characters")

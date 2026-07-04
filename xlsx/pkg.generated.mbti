@@ -115,7 +115,7 @@ pub struct Alignment {
   mut justify_last_line : Bool?
   mut reading_order : Int?
   mut relative_indent : Int?
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn Alignment::with_values(horizontal? : String, vertical? : String, wrap_text? : Bool, text_rotation? : Int, indent? : Int, shrink_to_fit? : Bool, justify_last_line? : Bool, reading_order? : Int, relative_indent? : Int) -> Self
 
 pub struct AppProperties {
@@ -132,35 +132,35 @@ pub fn AppProperties::with_values(application? : String, doc_security? : Int, sc
 pub struct AutoFilter {
   range_ref : String
   columns : Array[AutoFilterColumn]
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct AutoFilterColumn {
   col : Int
   filters : Array[String]?
   custom_filters : AutoFilterCustomFilters?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct AutoFilterCustomFilter {
   operator : String
   value : String
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct AutoFilterCustomFilters {
   and_filter : Bool
   filters : Array[AutoFilterCustomFilter]
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 #alias(AutoFilterOptions)
 pub(all) struct AutoFilterOption {
   column : String
   expression : String
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct Border {
   typ : String
   mut color : String?
   mut style : Int?
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn Border::with_values(String, color? : String, style? : Int) -> Self
 
 pub struct CalcPropsOptions {
@@ -177,7 +177,7 @@ pub struct CalcPropsOptions {
   mut concurrent_calc : Bool?
   mut concurrent_manual_count : UInt?
   mut force_full_calc : Bool?
-} derive(Eq, Show, @debug.Debug)
+} derive(Eq, @debug.Debug)
 pub fn CalcPropsOptions::new() -> Self
 pub fn CalcPropsOptions::with_values(calc_id? : UInt, calc_mode? : String, full_calc_on_load? : Bool, ref_mode? : String, iterate? : Bool, iterate_count? : UInt, iterate_delta? : Double, full_precision? : Bool, calc_completed? : Bool, calc_on_save? : Bool, concurrent_calc? : Bool, concurrent_manual_count? : UInt, force_full_calc? : Bool) -> Self
 
@@ -202,10 +202,10 @@ pub(all) enum CellValue {
   Numeric(Double)
   Bool(Bool)
   Error(String)
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 #alias(CellType)
-type CellValueType derive(Eq, Show, @debug.Debug)
+type CellValueType derive(Eq, @debug.Debug)
 
 pub struct Chart {
   reference : String
@@ -239,9 +239,9 @@ pub(all) struct ChartAxis {
   mut title : String
   mut title_rich : Array[RichTextRun]?
   mut ax_id : Int
-} derive(Show)
+} derive(@debug.Debug)
 
-type ChartComboOptions derive(Show)
+type ChartComboOptions derive(@debug.Debug)
 
 pub(all) enum ChartDashType {
   Unset
@@ -256,7 +256,7 @@ pub(all) enum ChartDashType {
   SysDot
   SysDashDot
   SysDashDotDot
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ChartDataLabel {
   mut font : Font
@@ -264,7 +264,7 @@ pub(all) struct ChartDataLabel {
   mut fill_color : String
   mut fill_transparency : Int
   mut fill : ChartFill?
-} derive(Show)
+} derive(@debug.Debug)
 
 pub(all) enum ChartDataLabelPositionType {
   Center
@@ -275,12 +275,12 @@ pub(all) enum ChartDataLabelPositionType {
   BestFit
   InEnd
   OutEnd
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
-type ChartDataPoint derive(Show)
+type ChartDataPoint derive(@debug.Debug)
 pub fn ChartDataPoint::new(Int, fill_color? : String, fill? : ChartFill) -> Self
 
-type ChartDimension derive(Show)
+type ChartDimension derive(@debug.Debug)
 pub fn ChartDimension::with_values(Int, Int) -> Self raise XlsxError
 
 pub(all) struct ChartFill {
@@ -289,14 +289,14 @@ pub(all) struct ChartFill {
   mut color : Array[String]
   mut shading : Int
   mut transparency : Int
-} derive(Show)
+} derive(@debug.Debug)
 pub fn ChartFill::new(typ? : String, pattern? : Int, color? : Array[String], shading? : Int, transparency? : Int) -> Self
 
 pub(all) struct ChartLegend {
   mut position : String
   mut show_legend_key : Bool
   mut font : Font?
-} derive(Show)
+} derive(@debug.Debug)
 
 pub(all) struct ChartLine {
   mut typ : ChartLineType
@@ -305,14 +305,14 @@ pub(all) struct ChartLine {
   mut transparency : Int
   mut smooth : Bool
   mut width : Double
-} derive(Show)
+} derive(@debug.Debug)
 
 pub(all) enum ChartLineType {
   Unset
   Solid
   NoLine
   Automatic
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ChartMarker {
   mut symbol : String
@@ -321,9 +321,9 @@ pub(all) struct ChartMarker {
   mut fill_transparency : Int
   mut fill : ChartFill?
   mut border : ChartLine
-} derive(Show)
+} derive(@debug.Debug)
 
-type ChartNumFmt derive(Show)
+type ChartNumFmt derive(@debug.Debug)
 pub fn ChartNumFmt::new(custom_num_fmt? : String, source_linked? : Bool) -> Self
 
 pub(all) struct ChartOptions {
@@ -348,7 +348,7 @@ pub(all) struct ChartOptions {
   mut overlap : Int?
   mut hole_size : Int?
   mut bubble_scale : Int?
-} derive(Show)
+} derive(@debug.Debug)
 pub fn ChartOptions::add_combo_chart(Self, Self) -> Unit
 pub fn ChartOptions::new(ChartType) -> Self
 
@@ -368,7 +368,7 @@ pub(all) struct ChartPlotArea {
   mut fill_color : String
   mut fill_transparency : Int
   mut fill : ChartFill?
-} derive(Show)
+} derive(@debug.Debug)
 
 pub(all) struct ChartSeries {
   name : String
@@ -385,7 +385,7 @@ pub(all) struct ChartSeries {
   mut data_label : ChartDataLabel
   mut data_label_position : ChartDataLabelPositionType
   data_point : Array[ChartDataPoint]
-} derive(Show)
+} derive(@debug.Debug)
 pub fn ChartSeries::new(String, String, name? : String) -> Self raise XlsxError
 pub fn ChartSeries::set_bubble_size(Self, String) -> Unit raise XlsxError
 
@@ -404,7 +404,7 @@ pub(all) enum ChartTickLabelPositionType {
   High
   Low
   NoTickLabels
-} derive(Show)
+} derive(@debug.Debug)
 
 pub(all) enum ChartType {
   Area
@@ -464,13 +464,13 @@ pub(all) enum ChartType {
   Bubble3D
   StockHighLowClose
   StockOpenHighLowClose
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct ChartUpDownBar {
   mut fill_color : String
   mut border : ChartLine
   mut fill : ChartFill?
-} derive(Show)
+} derive(@debug.Debug)
 
 pub struct ColDimension {
   width : Double?
@@ -501,7 +501,7 @@ pub(all) struct Comment {
   paragraph : Array[RichTextRun]
   width : Int?
   height : Int?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub(all) struct ConditionalFormatOptions {
   mut format_type : String
@@ -528,7 +528,7 @@ pub(all) struct ConditionalFormatOptions {
   mut reverse_icons : Bool
   mut icons_only : Bool
   mut stop_if_true : Bool
-} derive(Show)
+} derive(@debug.Debug)
 pub fn ConditionalFormatOptions::new(String) -> Self
 pub fn ConditionalFormatOptions::set_above_average(Self, Bool) -> Unit
 pub fn ConditionalFormatOptions::set_bar_border_color(Self, String) -> Unit
@@ -575,7 +575,7 @@ pub fn CoreProperties::with_values(title? : String, subject? : String, creator? 
 pub struct CustomProperty {
   name : String
   value : CustomPropertyValue?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn CustomProperty::new(String, CustomPropertyValue?) -> Self
 
 pub(all) enum CustomPropertyValue {
@@ -584,7 +584,7 @@ pub(all) enum CustomPropertyValue {
   Boolean(Bool)
   Text(String)
   DateTime(String)
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct DataValidation {
   allow_blank : Bool
@@ -601,7 +601,7 @@ pub struct DataValidation {
   mut validation_type : String
   mut formula1 : String
   mut formula2 : String
-} derive(Show)
+} derive(@debug.Debug)
 pub fn DataValidation::new(Bool) -> Self
 pub fn DataValidation::set_drop_list(Self, ArrayView[String]) -> Unit raise XlsxError
 pub fn DataValidation::set_error(Self, DataValidationErrorStyle, String, String) -> Unit
@@ -614,13 +614,13 @@ pub(all) enum DataValidationErrorStyle {
   Stop
   Warning
   Information
-} derive(Show)
+} derive(@debug.Debug)
 
 pub(all) enum DataValidationFormula {
   IntValue(Int)
   DoubleValue(Double)
   TextValue(String)
-} derive(Show)
+} derive(@debug.Debug)
 
 pub(all) enum DataValidationOperator {
   Between
@@ -631,7 +631,7 @@ pub(all) enum DataValidationOperator {
   LessThanOrEqual
   NotBetween
   NotEqual
-} derive(Show)
+} derive(@debug.Debug)
 
 pub(all) enum DataValidationType {
   NoneType
@@ -642,14 +642,14 @@ pub(all) enum DataValidationType {
   TextLength
   Time
   Whole
-} derive(Show)
+} derive(@debug.Debug)
 
 pub struct DefinedName {
   name : String
   refers_to : String
   scope : String
   comment : String
-} derive(Show)
+} derive(@debug.Debug)
 pub fn DefinedName::new(String, String, scope? : String, comment? : String) -> Self
 
 pub struct Fill {
@@ -664,7 +664,7 @@ pub struct Fill {
   mut bg_theme : Int?
   mut bg_indexed : Int?
   mut bg_tint : Double?
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn Fill::gradient(String, String, shading? : Int, transparency? : Int) -> Self
 pub fn Fill::pattern(pattern? : Int, color? : String, transparency? : Int) -> Self
 pub fn Fill::solid(String, transparency? : Int) -> Self
@@ -692,7 +692,7 @@ pub struct Font {
   mut scheme : String?
   mut vert_align : String?
   mut family : String?
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn Font::with_values(bold? : Bool, italic? : Bool, strike? : Bool, outline? : Bool, shadow? : Bool, condense? : Bool, extend? : Bool, underline? : String, size? : Double, color? : String, color_theme? : Int, color_indexed? : Int, color_tint? : Double, charset? : Int, family_number? : Int, scheme? : String, vert_align? : String, family? : String) -> Self
 
 pub struct FormControl {
@@ -712,7 +712,7 @@ pub struct FormControl {
   mut horizontally : Bool?
   mut format : GraphicOptions
   mut paragraph : Array[RichTextRun]
-} derive(Show)
+} derive(@debug.Debug)
 pub fn FormControl::new(String, String, text? : String) -> Self raise XlsxError
 pub fn FormControl::set_cell_link(Self, StringView) -> Unit raise XlsxError
 pub fn FormControl::set_checked(Self, Bool) -> Unit
@@ -728,12 +728,12 @@ pub fn FormControl::set_page_change(Self, Int) -> Unit raise XlsxError
 pub fn FormControl::set_paragraph(Self, Array[RichTextRun]) -> Unit
 pub fn FormControl::set_width(Self, Int) -> Unit raise XlsxError
 
-type FormControlVmlPreset derive(Show)
+type FormControlVmlPreset derive(@debug.Debug)
 
 pub struct FormulaOpts {
   mut formula_type : FormulaType?
   mut range_ref : String?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn FormulaOpts::array(String) -> Self
 pub fn FormulaOpts::shared(String) -> Self
 pub fn FormulaOpts::with_values(formula_type? : FormulaType, range_ref? : String) -> Self
@@ -743,7 +743,7 @@ pub(all) enum FormulaType {
   Array
   Shared
   DataTable
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct GraphicOptions {
   mut offset_x : Int?
@@ -760,7 +760,7 @@ pub struct GraphicOptions {
   mut print_object : Bool?
   mut locked : Bool?
   mut positioning : PicturePositioning?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn GraphicOptions::new() -> Self
 pub fn GraphicOptions::with_values(offset_x? : Int, offset_y? : Int, scale_x? : Double, scale_y? : Double, hyperlink? : String, hyperlink_type? : HyperlinkType, name? : String, alt_text? : String, lock_aspect_ratio? : Bool, auto_fit? : Bool, auto_fit_ignore_aspect? : Bool, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self
 
@@ -775,7 +775,7 @@ pub struct HeaderFooterImageOptions {
   first_page : Bool
   width : String
   height : String
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn HeaderFooterImageOptions::from_file(HeaderFooterImagePosition, String, is_footer? : Bool, first_page? : Bool, width? : String, height? : String) -> Self raise XlsxError
 pub fn HeaderFooterImageOptions::new(HeaderFooterImagePosition, Bytes, String, is_footer? : Bool, first_page? : Bool, width? : String, height? : String) -> Self
 
@@ -783,7 +783,7 @@ pub(all) enum HeaderFooterImagePosition {
   Left
   Center
   Right
-} derive(Eq, Show, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub struct HeaderFooterOptions {
   mut align_with_margins : Bool?
@@ -796,7 +796,7 @@ pub struct HeaderFooterOptions {
   mut even_footer : String
   mut first_header : String
   mut first_footer : String
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn HeaderFooterOptions::with_values(align_with_margins? : Bool, different_first? : Bool, different_odd_even? : Bool, scale_with_doc? : Bool, odd_header? : String, odd_footer? : String, even_header? : String, even_footer? : String, first_header? : String, first_footer? : String) -> Self
 
 pub struct Hyperlink {
@@ -806,12 +806,12 @@ pub struct Hyperlink {
   location : String?
   display : String?
   tooltip : String?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct HyperlinkOpts {
   mut display : String?
   mut tooltip : String?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn HyperlinkOpts::new() -> Self
 pub fn HyperlinkOpts::with_values(display? : String, tooltip? : String) -> Self
 
@@ -819,7 +819,7 @@ pub(all) enum HyperlinkType {
   External
   Location
   Unset
-} derive(Eq, Show, @debug.Debug)
+} derive(Eq, @debug.Debug)
 
 pub struct IgnoredError {
   sqref : String
@@ -832,7 +832,7 @@ pub struct IgnoredError {
   empty_cell_reference : Bool
   list_data_validation : Bool
   calculated_column : Bool
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum IgnoredErrorType {
   EvalError
@@ -844,7 +844,7 @@ pub(all) enum IgnoredErrorType {
   EmptyCellReference
   ListDataValidation
   CalculatedColumn
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 #alias(Picture)
 pub struct Image {
@@ -871,7 +871,7 @@ pub struct Image {
 pub struct MergeCell {
   range_ref : String
   value : String
-} derive(Show)
+} derive(@debug.Debug)
 pub fn MergeCell::get_cell_value(Self) -> String
 pub fn MergeCell::get_end_axis(Self) -> String
 pub fn MergeCell::get_start_axis(Self) -> String
@@ -879,7 +879,7 @@ pub fn MergeCell::get_start_axis(Self) -> String
 pub enum NumberFormat {
   Builtin(Int)
   Custom(String)
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub struct Options {
   max_calc_iterations : UInt
@@ -892,7 +892,7 @@ pub struct Options {
   long_date_pattern : String
   long_time_pattern : String
   culture_info : String
-} derive(Show)
+} derive(@debug.Debug)
 pub fn Options::new() -> Self
 pub fn Options::with_values(max_calc_iterations? : UInt, password? : String, raw_cell_value? : Bool, unzip_size_limit? : Int, unzip_xml_size_limit? : Int, tmp_dir? : String, short_date_pattern? : String, long_date_pattern? : String, long_time_pattern? : String, culture_info? : String) -> Self
 
@@ -901,7 +901,7 @@ pub struct PageBreak {
   min : Int
   max : Int
   manual : Bool
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct PageLayoutMarginsOptions {
   mut top : Double?
@@ -912,7 +912,7 @@ pub struct PageLayoutMarginsOptions {
   mut footer : Double?
   mut horizontally : Bool?
   mut vertically : Bool?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn PageLayoutMarginsOptions::with_values(top? : Double, bottom? : Double, left? : Double, right? : Double, header? : Double, footer? : Double, horizontally? : Bool, vertically? : Bool) -> Self
 
 pub struct PageLayoutOptions {
@@ -924,7 +924,7 @@ pub struct PageLayoutOptions {
   mut fit_to_width : Int?
   mut black_and_white : Bool?
   mut page_order : String?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn PageLayoutOptions::with_values(size? : Int, orientation? : String, first_page_number? : Int, adjust_to? : Int, fit_to_height? : Int, fit_to_width? : Int, black_and_white? : Bool, page_order? : String) -> Self
 
 pub struct Panes {
@@ -935,7 +935,7 @@ pub struct Panes {
   mut top_left_cell : String
   mut active_pane : String
   mut selection : Array[Selection]
-} derive(Show)
+} derive(@debug.Debug)
 pub fn Panes::new() -> Self
 pub fn Panes::with_values(freeze? : Bool, split? : Bool, x_split? : Int, y_split? : Int, top_left_cell? : String, active_pane? : String, selection? : Array[Selection]) -> Self
 
@@ -943,7 +943,7 @@ pub(all) enum PicturePositioning {
   OneCell
   TwoCell
   Absolute
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct PivotTable {
   name : String
@@ -956,15 +956,15 @@ pub struct PivotTable {
 
 pub struct PivotTableField {
   data : String
-  mut name : String
-  mut subtotal : String
-  mut num_fmt : Int
-  mut compact : Bool
-  mut outline : Bool
-  mut show_all : Bool
-  mut insert_blank_row : Bool
-  mut default_subtotal : Bool
-} derive(Show)
+  name : String
+  subtotal : String
+  num_fmt : Int
+  compact : Bool
+  outline : Bool
+  show_all : Bool
+  insert_blank_row : Bool
+  default_subtotal : Bool
+} derive(@debug.Debug)
 pub fn PivotTableField::new(String, name? : String, subtotal? : String, num_fmt? : Int, compact? : Bool, outline? : Bool, show_all? : Bool, insert_blank_row? : Bool, default_subtotal? : Bool) -> Self raise XlsxError
 
 pub(all) struct PivotTableOptions {
@@ -992,13 +992,13 @@ pub(all) struct PivotTableOptions {
   mut field_print_titles : Bool
   mut item_print_titles : Bool
   mut pivot_table_style_name : String
-} derive(Show)
+} derive(@debug.Debug)
 pub fn PivotTableOptions::new(String, String) -> Self raise XlsxError
 
 pub struct Protection {
   mut hidden : Bool?
   mut locked : Bool?
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Self
 
 pub(all) struct RichTextFont {
@@ -1020,12 +1020,12 @@ pub(all) struct RichTextFont {
   scheme : String?
   vert_align : String?
   family : String?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub(all) struct RichTextRun {
   text : String
   font : RichTextFont?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 type RichValueImages
 
@@ -1043,7 +1043,7 @@ pub struct RowOpts {
   hidden : Bool
   style_id : Int
   outline_level : Int
-} derive(Show)
+} derive(@debug.Debug)
 pub fn RowOpts::with_values(height? : Double, hidden? : Bool, style_id? : Int, outline_level? : Int) -> Self
 
 pub struct RowStream {
@@ -1070,7 +1070,7 @@ pub struct Selection {
   mut sqref : String
   mut active_cell : String
   mut pane : String
-} derive(Show)
+} derive(@debug.Debug)
 pub fn Selection::with_values(sqref? : String, active_cell? : String, pane? : String) -> Self
 
 pub struct Shape {
@@ -1097,30 +1097,30 @@ pub struct Shape {
   print_object : Bool
   locked : Bool
   positioning : PicturePositioning
-} derive(Show)
+} derive(@debug.Debug)
 pub fn Shape::new(String, String, macro_name? : String, text? : String, paragraph? : Array[RichTextRun], width? : Int, height? : Int, scale_x? : Double, scale_y? : Double, fill_color? : String, fill_transparency? : Int, line_color? : String, line_width? : Double, name? : String, alt_text? : String, print_object? : Bool, locked? : Bool, positioning? : PicturePositioning) -> Self raise XlsxError
 
 pub struct ShapeFill {
   mut color : String?
   mut transparency : Int?
-} derive(Show)
+} derive(@debug.Debug)
 pub fn ShapeFill::with_values(color? : String, transparency? : Int) -> Self raise XlsxError
 
 pub struct ShapeLine {
   mut color : String?
   mut width : Double?
-} derive(Show)
+} derive(@debug.Debug)
 pub fn ShapeLine::with_values(color? : String, width? : Double) -> Self
 
 pub struct SheetBackground {
   data : Bytes
   extension : String
   content_type : String
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
-type SheetEntry derive(Show)
+type SheetEntry derive(@debug.Debug)
 
-type SheetPane derive(Show)
+type SheetPane derive(@debug.Debug)
 
 pub struct SheetPropsOptions {
   mut code_name : String?
@@ -1141,7 +1141,7 @@ pub struct SheetPropsOptions {
   mut zero_height : Bool?
   mut thick_top : Bool?
   mut thick_bottom : Bool?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn SheetPropsOptions::with_values(code_name? : String, enable_format_conditions_calculation? : Bool, published? : Bool, auto_page_breaks? : Bool, fit_to_page? : Bool, tab_color_indexed? : Int, tab_color_rgb? : String, tab_color_theme? : Int, tab_color_tint? : Double, outline_summary_below? : Bool, outline_summary_right? : Bool, base_col_width? : Int, default_col_width? : Double, default_row_height? : Double, custom_height? : Bool, zero_height? : Bool, thick_top? : Bool, thick_bottom? : Bool) -> Self
 
 pub struct SheetProtection {
@@ -1166,7 +1166,7 @@ pub struct SheetProtection {
   auto_filter : Bool
   pivot_tables : Bool
   select_unlocked_cells : Bool
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 
 pub struct SheetProtectionOptions {
   mut algorithm_name : String
@@ -1186,7 +1186,7 @@ pub struct SheetProtectionOptions {
   mut select_locked_cells : Bool
   mut select_unlocked_cells : Bool
   mut sort : Bool
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn SheetProtectionOptions::new() -> Self
 pub fn SheetProtectionOptions::with_values(algorithm_name? : String, password? : String, auto_filter? : Bool, delete_columns? : Bool, delete_rows? : Bool, edit_objects? : Bool, edit_scenarios? : Bool, format_cells? : Bool, format_columns? : Bool, format_rows? : Bool, insert_columns? : Bool, insert_hyperlinks? : Bool, insert_rows? : Bool, pivot_tables? : Bool, select_locked_cells? : Bool, select_unlocked_cells? : Bool, sort? : Bool) -> Self
 
@@ -1194,9 +1194,9 @@ pub enum SheetState {
   Visible
   Hidden
   VeryHidden
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
-type SheetView derive(Show)
+type SheetView derive(@debug.Debug)
 
 #alias(ViewOptions)
 pub struct SheetViewOptions {
@@ -1210,7 +1210,7 @@ pub struct SheetViewOptions {
   mut top_left_cell : String?
   mut view : String?
   mut zoom_scale : Double?
-} derive(Show)
+} derive(@debug.Debug)
 pub fn SheetViewOptions::new() -> Self
 pub fn SheetViewOptions::with_values(default_grid_color? : Bool, right_to_left? : Bool, show_formulas? : Bool, show_grid_lines? : Bool, show_row_col_headers? : Bool, show_ruler? : Bool, show_zeros? : Bool, top_left_cell? : String, view? : String, zoom_scale? : Double) -> Self
 
@@ -1228,10 +1228,10 @@ pub struct Slicer {
   display_header : Bool?
   item_desc : Bool
   format : GraphicOptions
-} derive(Show)
+} derive(@debug.Debug)
 pub fn Slicer::new(String) -> Self raise XlsxError
 
-type SlicerOptions derive(Show)
+type SlicerOptions derive(@debug.Debug)
 pub fn SlicerOptions::new(String, String, String, String) -> Self raise XlsxError
 pub fn SlicerOptions::set_caption(Self, String) -> Unit
 pub fn SlicerOptions::set_display_header(Self, Bool?) -> Unit
@@ -1249,7 +1249,7 @@ pub struct SparklineColor {
   rgb : String?
   theme : Int?
   tint : Double?
-} derive(Show)
+} derive(@debug.Debug)
 
 pub struct SparklineGroup {
   sparkline_type : SparklineType
@@ -1280,7 +1280,7 @@ pub struct SparklineGroupOptions {
   mut color_last : SparklineColor?
   mut color_high : SparklineColor?
   mut color_low : SparklineColor?
-} derive(Show)
+} derive(@debug.Debug)
 
 pub struct SparklineOptions {
   locations : Array[String]
@@ -1314,7 +1314,7 @@ pub struct SparklineOptions {
   mut manual_max : Int?
   mut manual_min : Int?
   mut empty_cells : String?
-} derive(Show)
+} derive(@debug.Debug)
 pub fn SparklineOptions::clear_manual_max(Self) -> Unit
 pub fn SparklineOptions::clear_manual_min(Self) -> Unit
 pub fn SparklineOptions::new(ArrayView[String], ArrayView[String]) -> Self raise XlsxError
@@ -1343,7 +1343,7 @@ pub(all) enum SparklineType {
   Line
   Column
   WinLoss
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 pub struct StreamCell {
   value : String
@@ -1394,7 +1394,7 @@ pub struct Style {
   border : Array[Border]?
   protection : Protection?
   alignment : Alignment?
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn Style::alignment(Alignment) -> Self
 pub fn Style::border(Array[Border]) -> Self
 pub fn Style::builtin_number_format(Int) -> Self
@@ -1424,7 +1424,7 @@ pub struct Table {
   show_header_row : Bool
 }
 
-type TableOptions derive(Show)
+type TableOptions derive(@debug.Debug)
 pub fn TableOptions::new(String) -> Self raise XlsxError
 pub fn TableOptions::set_name(Self, String) -> Unit
 pub fn TableOptions::set_show_column_stripes(Self, Bool) -> Unit
@@ -1715,17 +1715,17 @@ pub struct WorkbookPropsOptions {
   mut date_1904 : Bool?
   mut filter_privacy : Bool?
   mut code_name : String?
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn WorkbookPropsOptions::with_values(date_1904? : Bool, filter_privacy? : Bool, code_name? : String) -> Self
 
-type WorkbookProtection derive(Show, @debug.Debug)
+type WorkbookProtection derive(@debug.Debug)
 
 pub struct WorkbookProtectionOptions {
   algorithm_name : String
   password : String
   lock_structure : Bool
   lock_windows : Bool
-} derive(Show, @debug.Debug)
+} derive(@debug.Debug)
 pub fn WorkbookProtectionOptions::with_values(algorithm_name? : String, password? : String, lock_structure? : Bool, lock_windows? : Bool) -> Self
 
 pub struct Worksheet {
@@ -1879,7 +1879,7 @@ pub fn Worksheet::unset_conditional_format(Self, String) -> Unit raise XlsxError
 pub fn Worksheet::vml_drawing_hf_xml(Self) -> String?
 pub fn Worksheet::vml_drawing_xml(Self) -> String?
 
-type X14DataBarProps derive(Show)
+type X14DataBarProps derive(@debug.Debug)
 
 // Type aliases
 

@@ -51,7 +51,9 @@ test "base64 encode/decode" {
   inspect(base64_encode(input), content="aGVsbG8=")
   let decoded = base64_decode("aGVsbG8=")
   inspect(@encoding/utf8.decode(decoded), content="hello")
-  let result : Result[Bytes, Error] = try? base64_decode("!!")
+  let result : Result[Bytes, Error] = Ok(base64_decode("!!")) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidBase64(_)), content="true")
 }
 

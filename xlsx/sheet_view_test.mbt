@@ -56,9 +56,11 @@ test "sheet view set and get" {
     Some(value) => inspect(value, content="120")
     None => fail("missing zoom_scale")
   }
-  let bad_view : Result[Unit, Error] = try? workbook.set_sheet_view(
-    "Sheet1", 3, options,
-  )
+  let bad_view : Result[Unit, Error] = Ok(
+    workbook.set_sheet_view("Sheet1", 3, options),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_view is Err(XlsxError::InvalidSheetOperation(_)), content="true")
 }
 

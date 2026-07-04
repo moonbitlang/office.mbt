@@ -2,7 +2,9 @@
 test "stream wb: apply_row_opts rejects non-positive row" {
   let sheet = Worksheet::new("Sheet1")
   let opts = RowOpts::with_values()
-  let result : Result[Unit, Error] = try? apply_row_opts(sheet, 0, opts)
+  let result : Result[Unit, Error] = Ok(apply_row_opts(sheet, 0, opts)) catch {
+    e => Err(e)
+  }
   debug_inspect(
     result,
     content=(

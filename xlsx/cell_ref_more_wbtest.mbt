@@ -74,7 +74,9 @@ test "cell ref invalid inputs" {
     "", "$", "1A", "A", "A0", "A-1", "A1!", "!", "$A$", "$$A1", "A$0",
   ]
   for r in bad_refs {
-    let result : Result[(Int, Int), Error] = try? cell_ref_to_rc(r)
+    let result : Result[(Int, Int), Error] = Ok(cell_ref_to_rc(r)) catch {
+      e => Err(e)
+    }
     inspect(
       result is Err(_),
       content=(
@@ -84,7 +86,9 @@ test "cell ref invalid inputs" {
   }
   let bad_cols = ["", "A1", "A!", "1", "A A"]
   for c in bad_cols {
-    let result : Result[Int, Error] = try? column_name_to_number(c)
+    let result : Result[Int, Error] = Ok(column_name_to_number(c)) catch {
+      e => Err(e)
+    }
     inspect(
       result is Err(_),
       content=(
@@ -92,7 +96,9 @@ test "cell ref invalid inputs" {
       ),
     )
   }
-  let result_neg : Result[String, Error] = try? column_number_to_name(0)
+  let result_neg : Result[String, Error] = Ok(column_number_to_name(0)) catch {
+    e => Err(e)
+  }
   inspect(
     result_neg is Err(_),
     content=(
@@ -101,7 +107,9 @@ test "cell ref invalid inputs" {
   )
   let split_bad = ["", "1", "A0", "A-1", "A!", "A 1"]
   for c in split_bad {
-    let result : Result[(String, Int), Error] = try? split_cell_name(c)
+    let result : Result[(String, Int), Error] = Ok(split_cell_name(c)) catch {
+      e => Err(e)
+    }
     inspect(
       result is Err(_),
       content=(
@@ -109,27 +117,33 @@ test "cell ref invalid inputs" {
       ),
     )
   }
-  let coord_bad : Result[(Int, Int), Error] = try? cell_name_to_coordinates(
-    "XFE1",
-  )
+  let coord_bad : Result[(Int, Int), Error] = Ok(
+    cell_name_to_coordinates("XFE1"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     coord_bad is Err(_),
     content=(
       #|true
     ),
   )
-  let row_oob : Result[(Int, Int), Error] = try? cell_name_to_coordinates(
-    "A1048577",
-  )
+  let row_oob : Result[(Int, Int), Error] = Ok(
+    cell_name_to_coordinates("A1048577"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     row_oob is Err(_),
     content=(
       #|true
     ),
   )
-  let out_of_range : Result[String, Error] = try? coordinates_to_cell_name(
-    16385, 1,
-  )
+  let out_of_range : Result[String, Error] = Ok(
+    coordinates_to_cell_name(16385, 1),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     out_of_range is Err(_),
     content=(
@@ -140,16 +154,16 @@ test "cell ref invalid inputs" {
 
 ///|
 test "cell ref row/col guards and split overflow row parse" {
-  let from_bad_row : Result[String, Error] = try? cell_ref_from(0, 1)
-  inspect(from_bad_row is Err(_), content="true")
+  @test.assert_raise(() => cell_ref_from(0, 1))
 
-  let join_bad_row : Result[String, Error] = try? join_cell_name("A", 0)
-  inspect(join_bad_row is Err(_), content="true")
+  @test.assert_raise(() => join_cell_name("A", 0))
 
   let huge_row = "A" + "9".repeat(5000)
-  let split_overflow : Result[(String, Int), Error] = try? split_cell_name(
-    huge_row,
-  )
+  let split_overflow : Result[(String, Int), Error] = Ok(
+    split_cell_name(huge_row),
+  ) catch {
+    e => Err(e)
+  }
   inspect(split_overflow is Err(_), content="true")
 }
 
@@ -158,7 +172,9 @@ test "cell ref column-name overflow guard" {
   let mut overflowed = false
   for n in 1..<512 {
     let name = "Z".repeat(n)
-    let parsed : Result[Int, Error] = try? column_name_to_number(name)
+    let parsed : Result[Int, Error] = Ok(column_name_to_number(name)) catch {
+      e => Err(e)
+    }
     if parsed is Err(XlsxError::InvalidCellRef(_)) {
       overflowed = true
       break

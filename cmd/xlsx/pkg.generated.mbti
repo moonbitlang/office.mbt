@@ -4,6 +4,7 @@ package "bobzhang/mbtexcel/cmd/xlsx"
 // Values
 
 // Errors
+type CliError
 
 // Types and methods
 

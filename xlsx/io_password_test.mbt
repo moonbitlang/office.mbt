@@ -36,7 +36,7 @@ async test "options password used for write_to_buffer and save_as" {
   workbook.set_cell("Sheet1", "A1", "secret")
   let opts = Options::with_values(password="pass")
   let bytes = workbook.write_to_buffer(options=opts)
-  let result : Result[Workbook, Error] = try? read(bytes)
+  let result : Result[Workbook, Error] = Ok(read(bytes)) catch { e => Err(e) }
   match result {
     Err(XlsxError::EncryptedPackage) => ()
     Err(_) => fail("expected encrypted package error")

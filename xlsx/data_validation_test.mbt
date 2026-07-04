@@ -19,7 +19,9 @@ test "data validation drop list roundtrip" {
 test "data validation drop list length limit" {
   let dv = DataValidation::new(true)
   let long = "a".repeat(260)
-  let result : Result[Unit, Error] = try? dv.set_drop_list([long])
+  let result : Result[Unit, Error] = Ok(dv.set_drop_list([long])) catch {
+    e => Err(e)
+  }
   guard result is Err(XlsxError::InvalidDataValidation(_)) else {
     fail("expected length error")
   }
@@ -28,12 +30,11 @@ test "data validation drop list length limit" {
 ///|
 test "data validation range value bounds" {
   let dv = DataValidation::new(true)
-  let result : Result[Unit, Error] = try? dv.set_range(
-    DoubleValue(1.0e39),
-    IntValue(10),
-    Whole,
-    Between,
-  )
+  let result : Result[Unit, Error] = Ok(
+    dv.set_range(DoubleValue(1.0e39), IntValue(10), Whole, Between),
+  ) catch {
+    e => Err(e)
+  }
   guard result is Err(XlsxError::InvalidDataValidation(_)) else {
     fail("expected range error")
   }
@@ -68,13 +69,17 @@ test "data validation workbook invalid sheet name" {
   let dv = DataValidation::new(true)
   dv.set_sqref("A1")
   dv.set_drop_list(["Yes"])
-  let add_result : Result[Unit, Error] = try? workbook.add_data_validation(
-    "Sheet:1", dv,
-  )
+  let add_result : Result[Unit, Error] = Ok(
+    workbook.add_data_validation("Sheet:1", dv),
+  ) catch {
+    e => Err(e)
+  }
   inspect(add_result is Err(XlsxError::InvalidSheetName(_)), content="true")
-  let get_result : Result[Array[DataValidation], Error] = try? workbook.get_data_validations(
-    "Sheet:1",
-  )
+  let get_result : Result[Array[DataValidation], Error] = Ok(
+    workbook.get_data_validations("Sheet:1"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(get_result is Err(XlsxError::InvalidSheetName(_)), content="true")
 }
 

@@ -18,8 +18,8 @@ test "workbook row and column ops" {
   workbook.set_col("Sheet1", 1, ["x", "y", "z"])
   debug_inspect(workbook.get_row("Sheet1", 1), content="[\"x\", \"b\"]")
   debug_inspect(workbook.get_col("Sheet1", 1), content="[\"x\", \"y\", \"z\"]")
-  let bad_row : Result[Array[String], Error] = try? workbook.get_row(
-    "Sheet1", 0,
-  )
+  let bad_row : Result[Array[String], Error] = Ok(workbook.get_row("Sheet1", 0)) catch {
+    e => Err(e)
+  }
   inspect(bad_row is Err(_), content="true")
 }

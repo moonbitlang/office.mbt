@@ -16,13 +16,19 @@ fn wb_write_u16_le(buf : Array[Byte], offset : Int, value : Int) -> Unit {
 
 ///|
 test "cfb wb: primitive guards and helper branches" {
-  let bad16 : Result[Int, Error] = try? read_u16_le(b"\x00", 0)
+  let bad16 : Result[Int, Error] = Ok(read_u16_le(b"\x00", 0)) catch {
+    e => Err(e)
+  }
   inspect(bad16 is Err(XlsxError::InvalidEncryptionInfo(_)), content="true")
 
-  let bad32 : Result[UInt, Error] = try? read_u32_le(b"\x00\x01", 0)
+  let bad32 : Result[UInt, Error] = Ok(read_u32_le(b"\x00\x01", 0)) catch {
+    e => Err(e)
+  }
   inspect(bad32 is Err(XlsxError::InvalidEncryptionInfo(_)), content="true")
 
-  let bad64 : Result[UInt64, Error] = try? read_u64_le(b"\x00\x01\x02", 0)
+  let bad64 : Result[UInt64, Error] = Ok(read_u64_le(b"\x00\x01\x02", 0)) catch {
+    e => Err(e)
+  }
   inspect(bad64 is Err(XlsxError::InvalidEncryptionInfo(_)), content="true")
 
   let builder = cfb_builder_new()
@@ -57,19 +63,24 @@ test "cfb wb: prepare and read-chain guard branches" {
   }
   inspect(found_b, content="true")
 
-  let chain_oob : Result[Array[Int], Error] = try? read_sector_chain([5], 2)
+  let chain_oob : Result[Array[Int], Error] = Ok(read_sector_chain([5], 2)) catch {
+    e => Err(e)
+  }
   inspect(chain_oob is Err(XlsxError::InvalidEncryptionInfo(_)), content="true")
 
-  let chain_cycle : Result[Array[Int], Error] = try? read_sector_chain([0], 0)
+  let chain_cycle : Result[Array[Int], Error] = Ok(read_sector_chain([0], 0)) catch {
+    e => Err(e)
+  }
   inspect(
     chain_cycle is Err(XlsxError::InvalidEncryptionInfo(msg="cfb chain cycle")),
     content="true",
   )
 
-  let chain_long : Result[Array[Int], Error] = try? read_sector_chain(
-    [1, 2, 1],
-    0,
-  )
+  let chain_long : Result[Array[Int], Error] = Ok(
+    read_sector_chain([1, 2, 1], 0),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     chain_long
     is Err(XlsxError::InvalidEncryptionInfo(msg="cfb chain too long")),
@@ -97,15 +108,19 @@ test "cfb wb: large builder/write and cfb_read difat branches" {
   let tweaked = bytes.to_array()
   wb_write_i32_le(tweaked, 0x44, 0)
   wb_write_i32_le(tweaked, 0x48, 0)
-  let parsed_tweaked : Result[CfbReader, Error] = try? cfb_read(
-    Bytes::from_array(tweaked),
-  )
+  let parsed_tweaked : Result[CfbReader, Error] = Ok(
+    cfb_read(Bytes::from_array(tweaked)),
+  ) catch {
+    e => Err(e)
+  }
   inspect(parsed_tweaked is Ok(_) || parsed_tweaked is Err(_), content="true")
 }
 
 ///|
 test "cfb wb: cfb_read short/signature/invalid-name branches" {
-  let short_header : Result[CfbReader, Error] = try? cfb_read(b"short")
+  let short_header : Result[CfbReader, Error] = Ok(cfb_read(b"short")) catch {
+    e => Err(e)
+  }
   inspect(
     short_header
     is Err(XlsxError::InvalidEncryptionInfo(msg="cfb header too short")),
@@ -113,9 +128,11 @@ test "cfb wb: cfb_read short/signature/invalid-name branches" {
   )
 
   let bad_sig : Array[Byte] = Array::make(512, (0x00).to_byte())
-  let invalid_sig : Result[CfbReader, Error] = try? cfb_read(
-    Bytes::from_array(bad_sig),
-  )
+  let invalid_sig : Result[CfbReader, Error] = Ok(
+    cfb_read(Bytes::from_array(bad_sig)),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     invalid_sig
     is Err(XlsxError::InvalidEncryptionInfo(msg="invalid cfb signature")),
@@ -134,9 +151,11 @@ test "cfb wb: cfb_read short/signature/invalid-name branches" {
   invalid_name[second_entry] = (0x00).to_byte()
   invalid_name[second_entry + 1] = (0xD8).to_byte()
   wb_write_u16_le(invalid_name, second_entry + 0x40, 4)
-  let bad_name_result : Result[CfbReader, Error] = try? cfb_read(
-    Bytes::from_array(invalid_name),
-  )
+  let bad_name_result : Result[CfbReader, Error] = Ok(
+    cfb_read(Bytes::from_array(invalid_name)),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_name_result
     is Err(XlsxError::InvalidEncryptionInfo(msg="invalid cfb name")),
@@ -155,7 +174,9 @@ test "cfb wb: read_stream guard branches" {
     entries: [],
     mini_stream: Bytes::default(),
   }
-  let missing : Result[Bytes, Error] = try? not_found.read_stream("missing")
+  let missing : Result[Bytes, Error] = Ok(not_found.read_stream("missing")) catch {
+    e => Err(e)
+  }
   inspect(
     missing is Err(XlsxError::InvalidEncryptionInfo(msg="cfb entry not found")),
     content="true",
@@ -170,9 +191,9 @@ test "cfb wb: read_stream guard branches" {
     entries: [{ name: "x", type_id: 5, start: 0, size: 1 }],
     mini_stream: Bytes::default(),
   }
-  let not_stream_result : Result[Bytes, Error] = try? not_stream.read_stream(
-    "x",
-  )
+  let not_stream_result : Result[Bytes, Error] = Ok(not_stream.read_stream("x")) catch {
+    e => Err(e)
+  }
   inspect(
     not_stream_result
     is Err(XlsxError::InvalidEncryptionInfo(msg="cfb entry is not a stream")),
@@ -199,9 +220,11 @@ test "cfb wb: read_stream guard branches" {
     entries: [{ name: "x", type_id: 2, start: 0, size: 1 }],
     mini_stream: Bytes::default(),
   }
-  let mini_missing_result : Result[Bytes, Error] = try? mini_missing.read_stream(
-    "x",
-  )
+  let mini_missing_result : Result[Bytes, Error] = Ok(
+    mini_missing.read_stream("x"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     mini_missing_result
     is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini stream missing")),
@@ -217,7 +240,9 @@ test "cfb wb: read_stream guard branches" {
     entries: [{ name: "x", type_id: 2, start: 1, size: 1 }],
     mini_stream: Bytes::make(64, (0x00).to_byte()),
   }
-  let mini_oob_result : Result[Bytes, Error] = try? mini_oob.read_stream("x")
+  let mini_oob_result : Result[Bytes, Error] = Ok(mini_oob.read_stream("x")) catch {
+    e => Err(e)
+  }
   inspect(
     mini_oob_result
     is Err(
@@ -235,9 +260,11 @@ test "cfb wb: read_stream guard branches" {
     entries: [{ name: "x", type_id: 2, start: 0, size: 1 }],
     mini_stream: Bytes::make(64, (0x00).to_byte()),
   }
-  let mini_chain_oob_result : Result[Bytes, Error] = try? mini_chain_oob.read_stream(
-    "x",
-  )
+  let mini_chain_oob_result : Result[Bytes, Error] = Ok(
+    mini_chain_oob.read_stream("x"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     mini_chain_oob_result
     is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini chain out of bounds")),
@@ -253,9 +280,11 @@ test "cfb wb: read_stream guard branches" {
     entries: [{ name: "x", type_id: 2, start: 0, size: 128 }],
     mini_stream: Bytes::make(64, (0x00).to_byte()),
   }
-  let mini_chain_long_result : Result[Bytes, Error] = try? mini_chain_long.read_stream(
-    "x",
-  )
+  let mini_chain_long_result : Result[Bytes, Error] = Ok(
+    mini_chain_long.read_stream("x"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     mini_chain_long_result
     is Err(XlsxError::InvalidEncryptionInfo(msg="cfb mini chain too long")),

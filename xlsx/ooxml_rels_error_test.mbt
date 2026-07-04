@@ -75,7 +75,7 @@ test "ooxml rels: relationship tag not closed" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(bad),
   )
-  let result = try? read(updated)
+  let result = Ok(read(updated)) catch { e => Err(e) }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="relationship tag not closed")
@@ -100,7 +100,7 @@ test "ooxml rels: relationship id missing" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(bad),
   )
-  let result = try? read(updated)
+  let result = Ok(read(updated)) catch { e => Err(e) }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="relationship id missing")
@@ -125,7 +125,7 @@ test "ooxml rels: relationship target missing" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(bad),
   )
-  let result = try? read(updated)
+  let result = Ok(read(updated)) catch { e => Err(e) }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="relationship target missing")

@@ -20,11 +20,13 @@ test "utf length and offsets" {
 test "utf index errors" {
   let s = "A😀中"
   let bytes = @encoding/utf8.encode(s)
-  let bad_offset = try? utf8_offset_to_utf16_index(bytes, 2)
+  let bad_offset = Ok(utf8_offset_to_utf16_index(bytes, 2)) catch {
+    e => Err(e)
+  }
   debug_inspect(bad_offset, content="Err(InvalidUtf8(offset=2))")
-  let bad_index = try? utf16_index_to_utf8_offset(s, 2)
+  let bad_index = Ok(utf16_index_to_utf8_offset(s, 2)) catch { e => Err(e) }
   debug_inspect(bad_index, content="Err(InvalidBoundary(index=2))")
-  let out_of_range = try? utf16_index_to_utf8_offset(s, 5)
+  let out_of_range = Ok(utf16_index_to_utf8_offset(s, 5)) catch { e => Err(e) }
   debug_inspect(out_of_range, content="Err(OutOfRange(index=5, len=4))")
 }
 
@@ -32,11 +34,15 @@ test "utf index errors" {
 test "utf index bounds" {
   let s = "A😀中"
   let bytes = @encoding/utf8.encode(s)
-  let negative_offset = try? utf8_offset_to_utf16_index(bytes, -1)
+  let negative_offset = Ok(utf8_offset_to_utf16_index(bytes, -1)) catch {
+    e => Err(e)
+  }
   debug_inspect(negative_offset, content="Err(OutOfRange(index=-1, len=8))")
-  let past_end = try? utf8_offset_to_utf16_index(bytes, 9)
+  let past_end = Ok(utf8_offset_to_utf16_index(bytes, 9)) catch { e => Err(e) }
   debug_inspect(past_end, content="Err(OutOfRange(index=9, len=8))")
-  let negative_index = try? utf16_index_to_utf8_offset(s, -1)
+  let negative_index = Ok(utf16_index_to_utf8_offset(s, -1)) catch {
+    e => Err(e)
+  }
   debug_inspect(negative_index, content="Err(OutOfRange(index=-1, len=4))")
 }
 
@@ -44,12 +50,16 @@ test "utf index bounds" {
 test "utf8 offset invalid sequences" {
   let two = Bytes::from_array([(0xC2).to_byte(), (0xA2).to_byte()])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(two, 1),
+    Ok(utf8_offset_to_utf16_index(two, 1)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=1))",
   )
   let bad_two = Bytes::from_array([(0xC2).to_byte(), (0x00).to_byte()])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(bad_two, 2),
+    Ok(utf8_offset_to_utf16_index(bad_two, 2)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=2))",
   )
   let bad_three_overlong = Bytes::from_array([
@@ -58,7 +68,9 @@ test "utf8 offset invalid sequences" {
     (0x80).to_byte(),
   ])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(bad_three_overlong, 3),
+    Ok(utf8_offset_to_utf16_index(bad_three_overlong, 3)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=3))",
   )
   let bad_three_surrogate = Bytes::from_array([
@@ -67,7 +79,9 @@ test "utf8 offset invalid sequences" {
     (0x80).to_byte(),
   ])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(bad_three_surrogate, 3),
+    Ok(utf8_offset_to_utf16_index(bad_three_surrogate, 3)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=3))",
   )
   let four = Bytes::from_array([
@@ -77,7 +91,9 @@ test "utf8 offset invalid sequences" {
     (0x80).to_byte(),
   ])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(four, 2),
+    Ok(utf8_offset_to_utf16_index(four, 2)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=2))",
   )
   let bad_four_min = Bytes::from_array([
@@ -87,7 +103,9 @@ test "utf8 offset invalid sequences" {
     (0x80).to_byte(),
   ])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(bad_four_min, 4),
+    Ok(utf8_offset_to_utf16_index(bad_four_min, 4)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=4))",
   )
   let bad_four_max = Bytes::from_array([
@@ -97,12 +115,16 @@ test "utf8 offset invalid sequences" {
     (0x80).to_byte(),
   ])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(bad_four_max, 4),
+    Ok(utf8_offset_to_utf16_index(bad_four_max, 4)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=4))",
   )
   let bad_lead = Bytes::from_array([(0x80).to_byte()])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(bad_lead, 1),
+    Ok(utf8_offset_to_utf16_index(bad_lead, 1)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=1))",
   )
 }
@@ -115,7 +137,9 @@ test "utf8 offset invalid continuation bytes" {
     (0x80).to_byte(),
   ])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(bad_three_cont, 3),
+    Ok(utf8_offset_to_utf16_index(bad_three_cont, 3)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=3))",
   )
   let bad_four_cont = Bytes::from_array([
@@ -125,7 +149,9 @@ test "utf8 offset invalid continuation bytes" {
     (0x80).to_byte(),
   ])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(bad_four_cont, 4),
+    Ok(utf8_offset_to_utf16_index(bad_four_cont, 4)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=4))",
   )
 }
@@ -138,7 +164,9 @@ test "utf8 offset invalid: truncated 3-byte sequence" {
     (0xAC).to_byte(),
   ])
   debug_inspect(
-    try? utf8_offset_to_utf16_index(euro, 2),
+    Ok(utf8_offset_to_utf16_index(euro, 2)) catch {
+      e => Err(e)
+    },
     content="Err(InvalidUtf8(offset=2))",
   )
 }

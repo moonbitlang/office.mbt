@@ -89,7 +89,9 @@ test "style roundtrip" {
 test "invalid style id" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let result = try? workbook.set_cell_style("Sheet1", "A1", 1)
+  let result = Ok(workbook.set_cell_style("Sheet1", "A1", 1)) catch {
+    e => Err(e)
+  }
   debug_inspect(result, content="Err(InvalidStyleId(index=1))")
 }
 
@@ -103,9 +105,13 @@ test "worksheet set_cell_style and set_cell_style_rc" {
   debug_inspect(sheet.get_cell_style("A1"), content="Some(0)")
 
   // Negative style ids reject.
-  let neg1 : Result[Unit, Error] = try? sheet.set_cell_style("A1", -1)
+  let neg1 : Result[Unit, Error] = Ok(sheet.set_cell_style("A1", -1)) catch {
+    e => Err(e)
+  }
   inspect(neg1 is Err(XlsxError::InvalidStyleId(_)), content="true")
-  let neg2 : Result[Unit, Error] = try? sheet.set_cell_style_rc(1, 1, -1)
+  let neg2 : Result[Unit, Error] = Ok(sheet.set_cell_style_rc(1, 1, -1)) catch {
+    e => Err(e)
+  }
   inspect(neg2 is Err(XlsxError::InvalidStyleId(_)), content="true")
 
   // set_cell_style_rc creates + updates existing.
@@ -114,7 +120,9 @@ test "worksheet set_cell_style and set_cell_style_rc" {
   debug_inspect(sheet.get_cell_style_rc(1, 2), content="Some(2)")
 
   // get_cell_style_rc validates row/col.
-  let bad_rc : Result[Int?, Error] = try? sheet.get_cell_style_rc(0, 1)
+  let bad_rc : Result[Int?, Error] = Ok(sheet.get_cell_style_rc(0, 1)) catch {
+    e => Err(e)
+  }
   inspect(bad_rc is Err(XlsxError::InvalidCellRef(_)), content="true")
 }
 

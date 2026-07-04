@@ -10,6 +10,8 @@ test "defined name wb: builtin name detection includes print area" {
 
 ///|
 test "defined name wb: reject too-long names" {
-  let too_long : Result[Unit, Error] = try? check_defined_name("a".repeat(256))
+  let too_long : Result[Unit, Error] = Ok(check_defined_name("a".repeat(256))) catch {
+    e => Err(e)
+  }
   inspect(too_long is Err(XlsxError::InvalidDefinedName(_)), content="true")
 }

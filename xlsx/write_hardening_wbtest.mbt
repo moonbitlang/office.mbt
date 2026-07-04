@@ -557,21 +557,25 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     formula_shared_index: None,
     style_id: 0,
   })
-  let missing_rich : Result[String, Error] = try? write_worksheet_xml(
-    rich_missing,
-    {},
-    {},
-    {},
-    [],
-    None,
-    None,
-    [],
-    [],
-    [],
-    [],
-    None,
-    None,
-  )
+  let missing_rich : Result[String, Error] = Ok(
+    write_worksheet_xml(
+      rich_missing,
+      {},
+      {},
+      {},
+      [],
+      None,
+      None,
+      [],
+      [],
+      [],
+      [],
+      None,
+      None,
+    ),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     missing_rich is Err(XlsxError::InvalidSharedString(_)),
     content="true",
@@ -591,21 +595,25 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
     formula_shared_index: None,
     style_id: 0,
   })
-  let missing_plain : Result[String, Error] = try? write_worksheet_xml(
-    plain_missing,
-    {},
-    {},
-    {},
-    [],
-    None,
-    None,
-    [],
-    [],
-    [],
-    [],
-    None,
-    None,
-  )
+  let missing_plain : Result[String, Error] = Ok(
+    write_worksheet_xml(
+      plain_missing,
+      {},
+      {},
+      {},
+      [],
+      None,
+      None,
+      [],
+      [],
+      [],
+      [],
+      None,
+      None,
+    ),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     missing_plain is Err(XlsxError::InvalidSharedString(_)),
     content="true",
@@ -639,30 +647,34 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
   }
   inspect(no_hyperlinks_xml.contains("<hyperlinks>"), content="false")
 
-  let missing_rel : Result[String, Error] = try? write_worksheet_xml(
-    Worksheet::new("MissingRel"),
-    {},
-    {},
-    {},
-    [
-      {
-        reference: "A1",
-        target: "https://example.com",
-        link_type: External,
-        location: None,
-        display: None,
-        tooltip: None,
-      },
-    ],
-    None,
-    None,
-    [],
-    [],
-    [],
-    [],
-    None,
-    None,
-  )
+  let missing_rel : Result[String, Error] = Ok(
+    write_worksheet_xml(
+      Worksheet::new("MissingRel"),
+      {},
+      {},
+      {},
+      [
+        {
+          reference: "A1",
+          target: "https://example.com",
+          link_type: External,
+          location: None,
+          display: None,
+          tooltip: None,
+        },
+      ],
+      None,
+      None,
+      [],
+      [],
+      [],
+      [],
+      None,
+      None,
+    ),
+  ) catch {
+    e => Err(e)
+  }
   inspect(missing_rel is Err(XlsxError::InvalidHyperlink(_)), content="true")
 }
 
@@ -739,7 +751,7 @@ test "write hardening wb: write fails for slicer source missing" {
     item_desc: false,
     format: GraphicOptions::new(),
   })
-  let result : Result[Bytes, Error] = try? write(workbook)
+  let result : Result[Bytes, Error] = Ok(write(workbook)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
 }
 
@@ -763,7 +775,7 @@ test "write hardening wb: write fails for slicer table field missing" {
     item_desc: false,
     format: GraphicOptions::new(),
   })
-  let result : Result[Bytes, Error] = try? write(workbook)
+  let result : Result[Bytes, Error] = Ok(write(workbook)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
 }
 
@@ -798,7 +810,9 @@ test "write hardening wb: failing custom zip writer maps to UnsupportedFeature" 
   workbook.set_zip_writer(_archive => {
     raise InvalidSheetOperation(msg="zip writer failed")
   })
-  let result : Result[Bytes, Error] = try? workbook.write_to_buffer()
+  let result : Result[Bytes, Error] = Ok(workbook.write_to_buffer()) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::UnsupportedFeature(_)), content="true")
 }
 
@@ -826,6 +840,6 @@ test "write hardening wb: default zip writer failure maps to UnsupportedFeature"
     lock_aspect_ratio: false,
     positioning: TwoCell,
   })
-  let result : Result[Bytes, Error] = try? write(workbook)
+  let result : Result[Bytes, Error] = Ok(write(workbook)) catch { e => Err(e) }
   inspect(result is Err(XlsxError::UnsupportedFeature(_)), content="true")
 }

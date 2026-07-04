@@ -973,9 +973,11 @@ test "chart options bubble missing size errors" {
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
   )
-  let result : Result[Unit, Error] = try? workbook.add_chart_with_options(
-    "Sheet1", "C3", opts,
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.add_chart_with_options("Sheet1", "C3", opts),
+  ) catch {
+    e => Err(e)
+  }
   guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
     fail("expected bubble size error")
   }
@@ -1050,9 +1052,11 @@ test "chart options stock invalid series count" {
   opts.series.push(
     ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="High"),
   )
-  let result : Result[Unit, Error] = try? workbook.add_chart_with_options(
-    "Sheet1", "C3", opts,
-  )
+  let result : Result[Unit, Error] = Ok(
+    workbook.add_chart_with_options("Sheet1", "C3", opts),
+  ) catch {
+    e => Err(e)
+  }
   guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
     fail("expected stock series count error")
   }

@@ -103,10 +103,11 @@ test "read wb: xml encoding parser guard paths" {
 
 ///|
 test "read wb: decode_utf8 invalid paths" {
-  let requires_transcoder = try? decode_utf8(
-    b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><x/>",
-    None,
-  )
+  let requires_transcoder = Ok(
+    decode_utf8(b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><x/>", None),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     match requires_transcoder {
       Err(XlsxError::InvalidXml(msg~)) =>
@@ -116,7 +117,9 @@ test "read wb: decode_utf8 invalid paths" {
     content="true",
   )
 
-  let invalid_utf8 = try? decode_utf8(b"\xFF\xFF\xFF", None)
+  let invalid_utf8 = Ok(decode_utf8(b"\xFF\xFF\xFF", None)) catch {
+    e => Err(e)
+  }
   inspect(
     match invalid_utf8 {
       Err(XlsxError::InvalidXml(msg~)) => msg == "invalid utf8"
@@ -176,42 +179,54 @@ test "read wb: parse_font_entry attributes and invalid numerics" {
 
   inspect(
     is_invalid_xml_error(
-      try? parse_font_entry("<font><sz val=\"bad\"/></font>"),
+      Ok(parse_font_entry("<font><sz val=\"bad\"/></font>")) catch {
+        e => Err(e)
+      },
       "font sz invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_error(
-      try? parse_font_entry("<font><charset val=\"x\"/></font>"),
+      Ok(parse_font_entry("<font><charset val=\"x\"/></font>")) catch {
+        e => Err(e)
+      },
       "font charset invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_error(
-      try? parse_font_entry("<font><family val=\"x\"/></font>"),
+      Ok(parse_font_entry("<font><family val=\"x\"/></font>")) catch {
+        e => Err(e)
+      },
       "font family invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_error(
-      try? parse_font_entry("<font><color theme=\"x\"/></font>"),
+      Ok(parse_font_entry("<font><color theme=\"x\"/></font>")) catch {
+        e => Err(e)
+      },
       "font color theme invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_error(
-      try? parse_font_entry("<font><color indexed=\"x\"/></font>"),
+      Ok(parse_font_entry("<font><color indexed=\"x\"/></font>")) catch {
+        e => Err(e)
+      },
       "font color indexed invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_error(
-      try? parse_font_entry("<font><color tint=\"x\"/></font>"),
+      Ok(parse_font_entry("<font><color tint=\"x\"/></font>")) catch {
+        e => Err(e)
+      },
       "font color tint invalid",
     ),
     content="true",
@@ -261,44 +276,58 @@ test "read wb: parse_font_entry implicit default and none-attr branches" {
 test "read wb: parse_fill_entry gradient and pattern guard branches" {
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry("<gradientFill bottom=\"bad\"></gradientFill>"),
+      Ok(parse_fill_entry("<gradientFill bottom=\"bad\"></gradientFill>")) catch {
+        e => Err(e)
+      },
       "gradientFill bottom invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry("<gradientFill degree=\"bad\"></gradientFill>"),
+      Ok(parse_fill_entry("<gradientFill degree=\"bad\"></gradientFill>")) catch {
+        e => Err(e)
+      },
       "gradientFill degree invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry("<gradientFill left=\"bad\"></gradientFill>"),
+      Ok(parse_fill_entry("<gradientFill left=\"bad\"></gradientFill>")) catch {
+        e => Err(e)
+      },
       "gradientFill left invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry("<gradientFill right=\"bad\"></gradientFill>"),
+      Ok(parse_fill_entry("<gradientFill right=\"bad\"></gradientFill>")) catch {
+        e => Err(e)
+      },
       "gradientFill right invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry("<gradientFill top=\"bad\"></gradientFill>"),
+      Ok(parse_fill_entry("<gradientFill top=\"bad\"></gradientFill>")) catch {
+        e => Err(e)
+      },
       "gradientFill top invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry(
-        "<gradientFill><stop position=\"bad\"><color rgb=\"FF112233\"/></stop></gradientFill>",
-      ),
+      Ok(
+        parse_fill_entry(
+          "<gradientFill><stop position=\"bad\"><color rgb=\"FF112233\"/></stop></gradientFill>",
+        ),
+      ) catch {
+        e => Err(e)
+      },
       "gradientFill stop position invalid",
     ),
     content="true",
@@ -338,46 +367,58 @@ test "read wb: parse_fill_entry gradient and pattern guard branches" {
 
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry("<patternFill><fgColor theme=\"x\"/></patternFill>"),
+      Ok(parse_fill_entry("<patternFill><fgColor theme=\"x\"/></patternFill>")) catch {
+        e => Err(e)
+      },
       "fill fgColor theme invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry(
-        "<patternFill><fgColor indexed=\"x\"/></patternFill>",
-      ),
+      Ok(
+        parse_fill_entry("<patternFill><fgColor indexed=\"x\"/></patternFill>"),
+      ) catch {
+        e => Err(e)
+      },
       "fill fgColor indexed invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry("<patternFill><fgColor tint=\"x\"/></patternFill>"),
+      Ok(parse_fill_entry("<patternFill><fgColor tint=\"x\"/></patternFill>")) catch {
+        e => Err(e)
+      },
       "fill fgColor tint invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry("<patternFill><bgColor theme=\"x\"/></patternFill>"),
+      Ok(parse_fill_entry("<patternFill><bgColor theme=\"x\"/></patternFill>")) catch {
+        e => Err(e)
+      },
       "fill bgColor theme invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry(
-        "<patternFill><bgColor indexed=\"x\"/></patternFill>",
-      ),
+      Ok(
+        parse_fill_entry("<patternFill><bgColor indexed=\"x\"/></patternFill>"),
+      ) catch {
+        e => Err(e)
+      },
       "fill bgColor indexed invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_fill_error(
-      try? parse_fill_entry("<patternFill><bgColor tint=\"x\"/></patternFill>"),
+      Ok(parse_fill_entry("<patternFill><bgColor tint=\"x\"/></patternFill>")) catch {
+        e => Err(e)
+      },
       "fill bgColor tint invalid",
     ),
     content="true",
@@ -480,28 +521,36 @@ test "read wb: protection alignment and pivot parser guard branches" {
   )
   inspect(
     is_invalid_xml_alignment_error(
-      try? parse_alignment_entry("<xf><alignment textRotation=\"bad\"/></xf>"),
+      Ok(parse_alignment_entry("<xf><alignment textRotation=\"bad\"/></xf>")) catch {
+        e => Err(e)
+      },
       "textRotation invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_alignment_error(
-      try? parse_alignment_entry("<xf><alignment indent=\"bad\"/></xf>"),
+      Ok(parse_alignment_entry("<xf><alignment indent=\"bad\"/></xf>")) catch {
+        e => Err(e)
+      },
       "indent invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_alignment_error(
-      try? parse_alignment_entry("<xf><alignment readingOrder=\"bad\"/></xf>"),
+      Ok(parse_alignment_entry("<xf><alignment readingOrder=\"bad\"/></xf>")) catch {
+        e => Err(e)
+      },
       "readingOrder invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_alignment_error(
-      try? parse_alignment_entry("<xf><alignment relativeIndent=\"bad\"/></xf>"),
+      Ok(parse_alignment_entry("<xf><alignment relativeIndent=\"bad\"/></xf>")) catch {
+        e => Err(e)
+      },
       "relativeIndent invalid",
     ),
     content="true",
@@ -543,38 +592,55 @@ test "read wb: defined names merge cells and classic validation guards" {
 
   inspect(
     is_invalid_xml_defined_name_error(
-      try? parse_defined_names(
-        "<definedNames><definedName >Sheet1!$A$1</definedName></definedNames>", sheet_names,
-      ),
+      Ok(
+        parse_defined_names(
+          "<definedNames><definedName >Sheet1!$A$1</definedName></definedNames>",
+          sheet_names,
+        ),
+      ) catch {
+        e => Err(e)
+      },
       "definedName name missing",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_defined_name_error(
-      try? parse_defined_names(
-        "<definedNames><definedName name=\"A\" localSheetId=\"bad\">Sheet1!$A$1</definedName></definedNames>",
-        sheet_names,
-      ),
+      Ok(
+        parse_defined_names(
+          "<definedNames><definedName name=\"A\" localSheetId=\"bad\">Sheet1!$A$1</definedName></definedNames>",
+          sheet_names,
+        ),
+      ) catch {
+        e => Err(e)
+      },
       "definedName localSheetId invalid",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_defined_name_error(
-      try? parse_defined_names(
-        "<definedNames><definedName name=\"A\">Sheet1!$A$1</definedNames>", sheet_names,
-      ),
+      Ok(
+        parse_defined_names(
+          "<definedNames><definedName name=\"A\">Sheet1!$A$1</definedNames>", sheet_names,
+        ),
+      ) catch {
+        e => Err(e)
+      },
       "definedName close missing",
     ),
     content="true",
   )
   inspect(
     is_invalid_xml_defined_name_error(
-      try? parse_defined_names(
-        "<definedNames><definedName name=\"A\" localSheetId=\"5\">Sheet1!$A$1</definedName></definedNames>",
-        sheet_names,
-      ),
+      Ok(
+        parse_defined_names(
+          "<definedNames><definedName name=\"A\" localSheetId=\"5\">Sheet1!$A$1</definedName></definedNames>",
+          sheet_names,
+        ),
+      ) catch {
+        e => Err(e)
+      },
       "definedName localSheetId missing",
     ),
     content="true",
@@ -587,7 +653,9 @@ test "read wb: defined names merge cells and classic validation guards" {
   inspect(merged[0], content="A1:A1")
   inspect(
     is_invalid_xml_string_array_error(
-      try? parse_merge_cells("<mergeCells><mergeCell /></mergeCells>"),
+      Ok(parse_merge_cells("<mergeCells><mergeCell /></mergeCells>")) catch {
+        e => Err(e)
+      },
       "mergeCell ref missing",
     ),
     content="true",
@@ -600,9 +668,13 @@ test "read wb: defined names merge cells and classic validation guards" {
   inspect(validations[0].contains("sqref=\"A1\""), content="true")
   inspect(
     is_invalid_xml_string_array_error(
-      try? parse_data_validations(
-        "<dataValidations><dataValidation type=\"whole\"></dataValidations>",
-      ),
+      Ok(
+        parse_data_validations(
+          "<dataValidations><dataValidation type=\"whole\"></dataValidations>",
+        ),
+      ) catch {
+        e => Err(e)
+      },
       "dataValidation tag not closed",
     ),
     content="true",
@@ -662,9 +734,13 @@ test "read wb: x14 validation and icon-set helper guard branches" {
 
   inspect(
     is_invalid_xml_string_array_error(
-      try? parse_data_validations_x14(
-        "<worksheet><x14:dataValidation allowBlank=\"1\"></x14:dataValidation></worksheet>",
-      ),
+      Ok(
+        parse_data_validations_x14(
+          "<worksheet><x14:dataValidation allowBlank=\"1\"></x14:dataValidation></worksheet>",
+        ),
+      ) catch {
+        e => Err(e)
+      },
       "x14:dataValidation sqref missing",
     ),
     content="true",
@@ -725,9 +801,11 @@ test "read wb: x14 validation and icon-set helper guard branches" {
 
 ///|
 test "read wb: sheet views and sheet props parser guard branches part 5" {
-  let dimension_err = try? parse_sheet_dimension(
-    "<worksheet><dimension ref=\"A1\"",
-  )
+  let dimension_err = Ok(
+    parse_sheet_dimension("<worksheet><dimension ref=\"A1\""),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     match dimension_err {
       Err(XlsxError::InvalidXml(msg~)) => msg == "dimension tag not closed"
@@ -736,7 +814,9 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
     content="true",
   )
 
-  let pane_not_closed = try? parse_sheet_view_pane("<pane ")
+  let pane_not_closed = Ok(parse_sheet_view_pane("<pane ")) catch {
+    e => Err(e)
+  }
   inspect(
     match pane_not_closed {
       Err(XlsxError::InvalidXml(msg~)) => msg == "pane tag not closed"
@@ -744,7 +824,9 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
     },
     content="true",
   )
-  let pane_bad_xsplit = try? parse_sheet_view_pane("<pane xSplit=\"x\"/>")
+  let pane_bad_xsplit = Ok(parse_sheet_view_pane("<pane xSplit=\"x\"/>")) catch {
+    e => Err(e)
+  }
   inspect(
     match pane_bad_xsplit {
       Err(XlsxError::InvalidXml(msg~)) => msg == "pane xSplit invalid"
@@ -752,7 +834,9 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
     },
     content="true",
   )
-  let pane_bad_ysplit = try? parse_sheet_view_pane("<pane ySplit=\"x\"/>")
+  let pane_bad_ysplit = Ok(parse_sheet_view_pane("<pane ySplit=\"x\"/>")) catch {
+    e => Err(e)
+  }
   inspect(
     match pane_bad_ysplit {
       Err(XlsxError::InvalidXml(msg~)) => msg == "pane ySplit invalid"
@@ -788,7 +872,9 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
     content="true",
   )
 
-  let selection_not_closed = try? parse_sheet_view_selections("<selection ")
+  let selection_not_closed = Ok(parse_sheet_view_selections("<selection ")) catch {
+    e => Err(e)
+  }
   inspect(
     match selection_not_closed {
       Err(XlsxError::InvalidXml(msg~)) => msg == "selection tag not closed"
@@ -815,9 +901,11 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
     content="true",
   )
 
-  let sheet_view_bad_zoom = try? parse_sheet_views(
-    "<sheetViews><sheetView zoomScale=\"x\"/></sheetViews>",
-  )
+  let sheet_view_bad_zoom = Ok(
+    parse_sheet_views("<sheetViews><sheetView zoomScale=\"x\"/></sheetViews>"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     match sheet_view_bad_zoom {
       Err(XlsxError::InvalidXml(msg~)) => msg == "sheetView zoomScale invalid"
@@ -825,9 +913,13 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
     },
     content="true",
   )
-  let sheet_view_bad_id = try? parse_sheet_views(
-    "<sheetViews><sheetView workbookViewId=\"x\"/></sheetViews>",
-  )
+  let sheet_view_bad_id = Ok(
+    parse_sheet_views(
+      "<sheetViews><sheetView workbookViewId=\"x\"/></sheetViews>",
+    ),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     match sheet_view_bad_id {
       Err(XlsxError::InvalidXml(msg~)) =>
@@ -836,9 +928,13 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
     },
     content="true",
   )
-  let sheet_view_missing_close = try? parse_sheet_views(
-    "<sheetViews><sheetView workbookViewId=\"0\"></sheetViews>",
-  )
+  let sheet_view_missing_close = Ok(
+    parse_sheet_views(
+      "<sheetViews><sheetView workbookViewId=\"0\"></sheetViews>",
+    ),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     match sheet_view_missing_close {
       Err(XlsxError::InvalidXml(msg~)) => msg == "sheetView close missing"
@@ -898,9 +994,11 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
     },
     content="true",
   )
-  let tab_color_bad_indexed = try? parse_sheet_props(
-    "<worksheet><tabColor indexed=\"x\"/></worksheet>",
-  )
+  let tab_color_bad_indexed = Ok(
+    parse_sheet_props("<worksheet><tabColor indexed=\"x\"/></worksheet>"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     match tab_color_bad_indexed {
       Err(XlsxError::InvalidXml(msg~)) => msg == "tabColor indexed invalid"

@@ -63,7 +63,9 @@ test "vba project roundtrip" {
 test "vba project invalid bytes" {
   let workbook = Workbook::new()
   let invalid : Bytes = Bytes::from_array([0x00, 0x01, 0x02])
-  let result : Result[Unit, Error] = try? workbook.add_vba_project(invalid)
+  let result : Result[Unit, Error] = Ok(workbook.add_vba_project(invalid)) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidVBAProject(msg~)) =>
       inspect(msg, content="unsupported vba project")

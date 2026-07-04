@@ -1,6 +1,6 @@
 ///|
 test "slicer: Slicer::new validation and cache sanitization" {
-  let empty : Result[Slicer, Error] = try? Slicer::new("")
+  let empty : Result[Slicer, Error] = Ok(Slicer::new("")) catch { e => Err(e) }
   inspect(empty is Err(XlsxError::InvalidSheetOperation(_)), content="true")
   let s1 = Slicer::new("1.a")
   inspect(s1.cache, content="Slicer__.a")

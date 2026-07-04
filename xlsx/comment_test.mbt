@@ -246,8 +246,12 @@ test "comment duplicate + invalid sheet name" {
     height: None,
   }
   workbook.add_comment("Sheet1", comment)
-  let dup : Result[Unit, Error] = try? workbook.add_comment("Sheet1", comment)
+  let dup : Result[Unit, Error] = Ok(workbook.add_comment("Sheet1", comment)) catch {
+    e => Err(e)
+  }
   inspect(dup is Err(XlsxError::CommentAlreadyExists(_)), content="true")
-  let bad : Result[Unit, Error] = try? workbook.add_comment("Sheet:1", comment)
+  let bad : Result[Unit, Error] = Ok(workbook.add_comment("Sheet:1", comment)) catch {
+    e => Err(e)
+  }
   inspect(bad is Err(XlsxError::InvalidSheetName(_)), content="true")
 }

@@ -54,8 +54,10 @@ test "conditional format: invalid time_period criteria" {
   let sheet = workbook.add_sheet("Sheet1")
   let time = ConditionalFormatOptions::new("time_period")
   time.set_criteria("nope")
-  let result : Result[Unit, Error] = try? sheet.set_conditional_format("A1", [
-    time,
-  ])
+  let result : Result[Unit, Error] = Ok(
+    sheet.set_conditional_format("A1", [time]),
+  ) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidConditionalFormat(_)), content="true")
 }

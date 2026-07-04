@@ -1,12 +1,16 @@
 ///|
 test "chart options: setter coverage and basic validation" {
-  let bad_dim : Result[ChartDimension, Error] = try? ChartDimension::with_values(
-    0, 1,
-  )
+  let bad_dim : Result[ChartDimension, Error] = Ok(
+    ChartDimension::with_values(0, 1),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_dim is Err(XlsxError::InvalidSheetOperation(_)), content="true")
-  let bad_series : Result[ChartSeries, Error] = try? ChartSeries::new(
-    "", "Sheet1!$A$1:$A$2",
-  )
+  let bad_series : Result[ChartSeries, Error] = Ok(
+    ChartSeries::new("", "Sheet1!$A$1:$A$2"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     bad_series is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
@@ -16,7 +20,9 @@ test "chart options: setter coverage and basic validation" {
     "Sheet1!$B$1:$B$2",
     name="S1",
   )
-  let bad_bubble : Result[Unit, Error] = try? series.set_bubble_size("")
+  let bad_bubble : Result[Unit, Error] = Ok(series.set_bubble_size("")) catch {
+    e => Err(e)
+  }
   inspect(
     bad_bubble is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",

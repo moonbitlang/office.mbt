@@ -26,12 +26,14 @@ test "workbook protection roundtrip" {
     content="true",
   )
   let parsed = read(bytes)
-  let bad = try? parsed.unprotect_workbook(password="bad")
+  let bad = Ok(parsed.unprotect_workbook(password="bad")) catch { e => Err(e) }
   debug_inspect(
     bad,
     content="Err(InvalidWorkbookProtection(msg=\"workbook protection password mismatch\"))",
   )
-  let ok = try? parsed.unprotect_workbook(password="secret")
+  let ok = Ok(parsed.unprotect_workbook(password="secret")) catch {
+    e => Err(e)
+  }
   debug_inspect(ok, content="Ok(())")
 }
 
@@ -39,9 +41,11 @@ test "workbook protection roundtrip" {
 test "workbook protection mismatched password on no-hash protection" {
   let workbook = Workbook::new()
   workbook.protect_workbook()
-  let bad : Result[Unit, Error] = try? workbook.unprotect_workbook(
-    password="secret",
-  )
+  let bad : Result[Unit, Error] = Ok(
+    workbook.unprotect_workbook(password="secret"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad is Err(XlsxError::InvalidWorkbookProtection(_)), content="true")
 }
 
@@ -70,6 +74,8 @@ test "workbook protection with explicit algorithm option" {
     content="true",
   )
   let parsed = read(bytes)
-  let ok = try? parsed.unprotect_workbook(password="secret")
+  let ok = Ok(parsed.unprotect_workbook(password="secret")) catch {
+    e => Err(e)
+  }
   debug_inspect(ok, content="Ok(())")
 }

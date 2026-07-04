@@ -237,19 +237,17 @@ test "picture from bytes extension requires dot" {
 test "picture from bytes invalid cell and sheet" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bad_cell : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
-    "Sheet1",
-    "A",
-    [1],
-    ".png",
-  )
+  let bad_cell : Result[Unit, Error] = Ok(
+    workbook.add_picture_from_bytes("Sheet1", "A", [1], ".png"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_cell is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_sheet : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
-    "SheetN",
-    "A1",
-    [1],
-    ".png",
-  )
+  let bad_sheet : Result[Unit, Error] = Ok(
+    workbook.add_picture_from_bytes("SheetN", "A1", [1], ".png"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
 }
 
@@ -531,30 +529,31 @@ test "picture options validation" {
     result2,
     content="Err(InvalidHyperlink(msg=\"picture hyperlink type missing\"))",
   )
-  let bad_sheet : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
-    "Sheet:1",
-    "A1",
-    [1],
-    ".png",
-  )
+  let bad_sheet : Result[Unit, Error] = Ok(
+    workbook.add_picture_from_bytes("Sheet:1", "A1", [1], ".png"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(bad_sheet is Err(XlsxError::InvalidSheetName(_)), content="true")
   let long_name = "s".repeat(255)
-  let name_result : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
-    "Sheet1",
-    "A1",
-    [1],
-    ".png",
-    name=long_name,
-  )
+  let name_result : Result[Unit, Error] = Ok(
+    workbook.add_picture_from_bytes("Sheet1", "A1", [1], ".png", name=long_name),
+  ) catch {
+    e => Err(e)
+  }
   inspect(name_result is Err(XlsxError::GraphicNameTooLong(..)), content="true")
   let long_alt = "a".repeat(65536)
-  let alt_result : Result[Unit, Error] = try? workbook.add_picture_from_bytes(
-    "Sheet1",
-    "A1",
-    [1],
-    ".png",
-    alt_text=long_alt,
-  )
+  let alt_result : Result[Unit, Error] = Ok(
+    workbook.add_picture_from_bytes(
+      "Sheet1",
+      "A1",
+      [1],
+      ".png",
+      alt_text=long_alt,
+    ),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     alt_result is Err(XlsxError::GraphicAltTextTooLong(..)),
     content="true",
@@ -581,18 +580,22 @@ async test "picture invalid sheet name (from file path)" {
 async test "picture file path guards: missing extension and missing file" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let missing_extension : Result[Unit, Error] = try? workbook.add_picture(
-    "Sheet1", "A1", "missing_extension",
-  )
+  let missing_extension : Result[Unit, Error] = Ok(
+    workbook.add_picture("Sheet1", "A1", "missing_extension"),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_extension,
     content=(
       #|Err(UnsupportedFeature(msg="image extension missing"))
     ),
   )
-  let missing_file : Result[Unit, Error] = try? workbook.add_picture(
-    "Sheet1", "A1", "__missing_picture__.png",
-  )
+  let missing_file : Result[Unit, Error] = Ok(
+    workbook.add_picture("Sheet1", "A1", "__missing_picture__.png"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     missing_file is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",
@@ -604,24 +607,32 @@ async test "picture file path guards: missing extension and missing file" {
 async test "picture with options file path guards" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let missing_extension : Result[Unit, Error] = try? workbook.add_picture_with_options(
-    "Sheet1",
-    "A1",
-    "missing_extension",
-    GraphicOptions::new(),
-  )
+  let missing_extension : Result[Unit, Error] = Ok(
+    workbook.add_picture_with_options(
+      "Sheet1",
+      "A1",
+      "missing_extension",
+      GraphicOptions::new(),
+    ),
+  ) catch {
+    e => Err(e)
+  }
   debug_inspect(
     missing_extension,
     content=(
       #|Err(UnsupportedFeature(msg="image extension missing"))
     ),
   )
-  let missing_file : Result[Unit, Error] = try? workbook.add_picture_with_options(
-    "Sheet1",
-    "A1",
-    "__missing_picture_with_opts__.png",
-    GraphicOptions::new(),
-  )
+  let missing_file : Result[Unit, Error] = Ok(
+    workbook.add_picture_with_options(
+      "Sheet1",
+      "A1",
+      "__missing_picture_with_opts__.png",
+      GraphicOptions::new(),
+    ),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     missing_file is Err(XlsxError::InvalidSheetOperation(_)),
     content="true",

@@ -49,9 +49,9 @@ test "excel date to time 1904" {
 
 ///|
 test "excel date to time invalid" {
-  let result : Result[@time.ZonedDateTime, Error] = try? excel_date_to_time(
-    -1.0,
-  )
+  let result : Result[@time.ZonedDateTime, Error] = Ok(excel_date_to_time(-1.0)) catch {
+    e => Err(e)
+  }
   inspect(result is Err(_), content="true")
 }
 
@@ -59,8 +59,8 @@ test "excel date to time invalid" {
 test "excel date to time 1900 leap-year bug day 60" {
   // Day 60 is the Excel 1900 leap-year bug (1900-02-29), which is not a real
   // calendar date. Our `excel_date_to_time` rejects it.
-  let result : Result[@time.ZonedDateTime, Error] = try? excel_date_to_time(
-    60.0,
-  )
+  let result : Result[@time.ZonedDateTime, Error] = Ok(excel_date_to_time(60.0)) catch {
+    e => Err(e)
+  }
   inspect(result is Err(_), content="true")
 }

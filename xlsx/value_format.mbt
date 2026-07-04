@@ -123,7 +123,9 @@ fn format_number_code(raw : String, code : String, options : Options) -> String 
   if sections.length() == 0 {
     return raw
   }
-  let parsed : Result[Double, Error] = try? @string.parse_double(raw)
+  let parsed : Result[Double, Error] = Ok(@string.parse_double(raw)) catch {
+    e => Err(e)
+  }
   match parsed {
     Err(_) => format_text_pattern(raw, code)
     Ok(value) => {

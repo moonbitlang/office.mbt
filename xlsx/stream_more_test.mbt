@@ -42,7 +42,9 @@ test "stream cell rich text too long" {
   }
   let too_long = sb.to_string()
   let runs : Array[RichTextRun] = [{ text: too_long, font: None }]
-  let result : Result[StreamCell, Error] = try? StreamCell::new_rich_text(runs)
+  let result : Result[StreamCell, Error] = Ok(StreamCell::new_rich_text(runs)) catch {
+    e => Err(e)
+  }
   inspect(
     result is Err(_),
     content=(

@@ -85,7 +85,9 @@ test "merge cells info merges overlap" {
 test "merge cells invalid range reference" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let result : Result[Unit, Error] = try? sheet.merge_cells("A1:B2:C3")
+  let result : Result[Unit, Error] = Ok(sheet.merge_cells("A1:B2:C3")) catch {
+    e => Err(e)
+  }
   inspect(result is Err(XlsxError::InvalidCellRef(_)), content="true")
 }
 

@@ -56,9 +56,11 @@ test "read package parts: malformed [Content_Types] raises InvalidXml" {
     #|</Types>
     #|
   archive.add(content_types_part_path, @encoding/utf8.encode(malformed))
-  let result = try? resolve_workbook_xml_part_path(
-    archive, decode_utf8_or_invalid_xml,
-  )
+  let result = Ok(
+    resolve_workbook_xml_part_path(archive, decode_utf8_or_invalid_xml),
+  ) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="content type override tag not closed")
@@ -76,9 +78,11 @@ test "read package parts: invalid workbook part name raises InvalidXml" {
     #|</Types>
     #|
   archive.add(content_types_part_path, @encoding/utf8.encode(invalid_part_name))
-  let result = try? resolve_workbook_xml_part_path(
-    archive, decode_utf8_or_invalid_xml,
-  )
+  let result = Ok(
+    resolve_workbook_xml_part_path(archive, decode_utf8_or_invalid_xml),
+  ) catch {
+    e => Err(e)
+  }
   match result {
     Err(XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="content type part name empty")

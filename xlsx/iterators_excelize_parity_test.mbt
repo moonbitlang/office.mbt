@@ -50,20 +50,28 @@ fn eq_2d(a : Array[Array[String]], b : Array[Array[String]]) -> Bool {
 test "rows/cols/get_rows/get_cols validate sheet name" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let rows_result : Result[Rows, Error] = try? workbook.rows("Sheet:1")
+  let rows_result : Result[Rows, Error] = Ok(workbook.rows("Sheet:1")) catch {
+    e => Err(e)
+  }
   inspect(rows_result is Err(XlsxError::InvalidSheetName(_)), content="true")
-  let cols_result : Result[Cols, Error] = try? workbook.cols("Sheet:1")
+  let cols_result : Result[Cols, Error] = Ok(workbook.cols("Sheet:1")) catch {
+    e => Err(e)
+  }
   inspect(cols_result is Err(XlsxError::InvalidSheetName(_)), content="true")
-  let get_rows_result : Result[Array[Array[String]], Error] = try? workbook.get_rows(
-    "Sheet:1",
-  )
+  let get_rows_result : Result[Array[Array[String]], Error] = Ok(
+    workbook.get_rows("Sheet:1"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     get_rows_result is Err(XlsxError::InvalidSheetName(_)),
     content="true",
   )
-  let get_cols_result : Result[Array[Array[String]], Error] = try? workbook.get_cols(
-    "Sheet:1",
-  )
+  let get_cols_result : Result[Array[Array[String]], Error] = Ok(
+    workbook.get_cols("Sheet:1"),
+  ) catch {
+    e => Err(e)
+  }
   inspect(
     get_cols_result is Err(XlsxError::InvalidSheetName(_)),
     content="true",
