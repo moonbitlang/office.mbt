@@ -2,7 +2,7 @@
 pub(all) struct AutoFilterOption {
   column : String
   expression : String
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 pub type AutoFilterOptions = AutoFilterOption
@@ -11,26 +11,26 @@ pub type AutoFilterOptions = AutoFilterOption
 pub struct AutoFilterCustomFilter {
   operator : String
   value : String
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 pub struct AutoFilterCustomFilters {
   and_filter : Bool
   filters : Array[AutoFilterCustomFilter]
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 pub struct AutoFilterColumn {
   col : Int
   filters : Array[String]?
   custom_filters : AutoFilterCustomFilters?
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 pub struct AutoFilter {
   range_ref : String
   columns : Array[AutoFilterColumn]
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 fn is_whitespace(ch : Char) -> Bool {

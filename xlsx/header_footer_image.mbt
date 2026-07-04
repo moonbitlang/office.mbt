@@ -3,7 +3,7 @@ pub(all) enum HeaderFooterImagePosition {
   Left
   Center
   Right
-} derive(Eq, Show, Debug)
+} derive(Eq, Debug)
 
 ///|
 pub struct HeaderFooterImageOptions {
@@ -15,7 +15,7 @@ pub struct HeaderFooterImageOptions {
   first_page : Bool
   width : String
   height : String
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 pub fn HeaderFooterImageOptions::new(

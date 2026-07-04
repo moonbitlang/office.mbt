@@ -80,8 +80,8 @@ test "read_drawing_xml wb: parse_drawing_anchors validation and positioning" {
     #|</xdr:wsDr>
   let anchors = parse_drawing_anchors(xml)
   inspect(anchors.length(), content="2")
-  inspect(anchors[0].1, content="Absolute")
-  inspect(anchors[1].1, content="TwoCell")
+  debug_inspect(anchors[0].1, content="Absolute")
+  debug_inspect(anchors[1].1, content="TwoCell")
 }
 
 ///|

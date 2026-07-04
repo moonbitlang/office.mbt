@@ -125,7 +125,7 @@ test "chart sheet state setter" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let chart = workbook.add_chart_sheet("Chart1", "<chart/>")
-  inspect(chart.state(), content="Visible")
+  debug_inspect(chart.state(), content="Visible")
   chart.set_state(chart.state())
-  inspect(chart.state(), content="Visible")
+  debug_inspect(chart.state(), content="Visible")
 }

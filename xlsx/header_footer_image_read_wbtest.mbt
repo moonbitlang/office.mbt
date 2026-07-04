@@ -73,7 +73,7 @@ test "header/footer image read wb: parse images with r:id fallback and duplicate
     archive,
   )
   inspect(images.length(), content="1")
-  inspect(images[0].position, content="Left")
+  debug_inspect(images[0].position, content="Left")
   inspect(images[0].is_footer, content="false")
   inspect(images[0].first_page, content="false")
   inspect(images[0].width, content="30pt")

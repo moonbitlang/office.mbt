@@ -4,7 +4,7 @@ pub(all) enum FormulaType {
   Array
   Shared
   DataTable
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 fn formula_type_to_ooxml(kind : FormulaType) -> String {
@@ -31,7 +31,7 @@ fn formula_type_from_ooxml(value : StringView) -> FormulaType? {
 pub struct FormulaOpts {
   mut formula_type : FormulaType?
   mut range_ref : String?
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 fn FormulaOpts::new() -> FormulaOpts {

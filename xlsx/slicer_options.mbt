@@ -11,7 +11,7 @@ struct SlicerOptions {
   mut display_header : Bool?
   mut item_desc : Bool
   mut format : GraphicOptions
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub fn SlicerOptions::new(

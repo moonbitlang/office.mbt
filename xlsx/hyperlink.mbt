@@ -3,7 +3,7 @@ pub(all) enum HyperlinkType {
   External
   Location
   Unset
-} derive(Eq, Show, Debug)
+} derive(Eq, Debug)
 
 ///|
 pub struct Hyperlink {
@@ -17,13 +17,13 @@ pub struct Hyperlink {
   location : String?
   display : String?
   tooltip : String?
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 pub struct HyperlinkOpts {
   mut display : String?
   mut tooltip : String?
-} derive(Show, Debug)
+} derive(Debug)
 
 ///|
 pub fn HyperlinkOpts::new() -> HyperlinkOpts {

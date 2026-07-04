@@ -21,7 +21,7 @@ test "demo workbooks are structurally valid OOXML packages" {
     let (name, bytes) = entry
     let problems = @xlsx.validate_ooxml_package(bytes[:])
     if problems.length() != 0 {
-      fail("demo \{name} is not a valid package: \{problems}")
+      fail("demo \{name} is not a valid package: \{repr(problems)}")
     }
   }
 }

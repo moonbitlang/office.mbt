@@ -3,7 +3,7 @@ pub struct Selection {
   mut sqref : String
   mut active_cell : String
   mut pane : String
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn Selection::new() -> Selection {
@@ -41,7 +41,7 @@ pub struct Panes {
   mut top_left_cell : String
   mut active_pane : String
   mut selection : Array[Selection]
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub fn Panes::new() -> Panes {
@@ -110,7 +110,7 @@ pub struct SheetViewOptions {
   mut top_left_cell : String?
   mut view : String?
   mut zoom_scale : Double?
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub type ViewOptions = SheetViewOptions
@@ -195,7 +195,7 @@ struct SheetPane {
   mut top_left_cell : String
   mut x_split : Double
   mut y_split : Double
-} derive(Show)
+} derive(Debug)
 
 ///|
 struct SheetView {
@@ -213,7 +213,7 @@ struct SheetView {
   mut workbook_view_id : Int
   mut pane : SheetPane?
   selection : Array[Selection]
-} derive(Show)
+} derive(Debug)
 
 ///|
 let supported_sheet_view_modes : Array[String] = [

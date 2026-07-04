@@ -8,14 +8,14 @@ pub(all) enum DataValidationType {
   TextLength
   Time
   Whole
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub(all) enum DataValidationErrorStyle {
   Stop
   Warning
   Information
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub(all) enum DataValidationOperator {
@@ -27,14 +27,14 @@ pub(all) enum DataValidationOperator {
   LessThanOrEqual
   NotBetween
   NotEqual
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub(all) enum DataValidationFormula {
   IntValue(Int)
   DoubleValue(Double)
   TextValue(String)
-} derive(Show)
+} derive(Debug)
 
 ///|
 pub struct DataValidation {
@@ -52,7 +52,7 @@ pub struct DataValidation {
   mut validation_type : String
   mut formula1 : String
   mut formula2 : String
-} derive(Show)
+} derive(Debug)
 
 ///|
 fn data_validation_type_text(value : DataValidationType) -> String {
