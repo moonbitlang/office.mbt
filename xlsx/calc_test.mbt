@@ -2116,7 +2116,10 @@ test "calc trig functions" {
   sheet.set_cell_formula("I4", "ATAN2(4,ATAN2(4,0))")
   inspect(workbook.calc_cell_value("Sheet1", "I4"), content="0")
   sheet.set_cell_formula("J1", "COS(0.785398163)")
-  inspect(workbook.calc_cell_value("Sheet1", "J1"), content="0.707106781467586")
+  // Compare with tolerance: the last emitted digit of an irrational
+  // float64 differs across platforms (macOS vs Linux to_string).
+  let cos_val = @strconv.parse_double(workbook.calc_cell_value("Sheet1", "J1"))
+  inspect((cos_val - 0.707106781467586).abs() < 1.0e-12, content="true")
   sheet.set_cell_formula("J2", "COS(0)")
   inspect(workbook.calc_cell_value("Sheet1", "J2"), content="1")
   sheet.set_cell_formula("J3", "-COS(0)")
