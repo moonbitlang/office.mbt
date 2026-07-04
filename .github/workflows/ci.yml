@@ -63,3 +63,6 @@ jobs:
 
       - name: Test (native, includes OpenXML SDK validation)
         run: moon test --target native
+
+      - name: CLI cram tests
+        run: moon cram test cmd/xlsx/cram/
