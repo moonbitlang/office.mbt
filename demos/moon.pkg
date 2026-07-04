@@ -3,6 +3,4 @@ import {
   "bobzhang/mbtexcel/xlsx",
 }
 
-warnings = "-a"
-
 supported_targets = "native+js"
