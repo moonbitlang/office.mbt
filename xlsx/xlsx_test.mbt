@@ -42,6 +42,5 @@ test "xlsx shared strings unique count" {
 ///|
 test "xlsx invalid cell ref" {
   let sheet = Worksheet::new("Sheet1")
-  let result : Result[Unit, Error] = try? sheet.set_cell("1A", "bad")
-  inspect(result is Err(_), content="true")
+  @test.assert_raise(() => sheet.set_cell("1A", "bad"))
 }

@@ -77,10 +77,8 @@ test "mbtexcel excel_date_to_time wrapper" {
 test "mbtexcel column name conversions" {
   inspect(column_name_to_number("AK"), content="37")
   inspect(column_number_to_name(37), content="AK")
-  let invalid_name : Result[Int, Error] = try? column_name_to_number("A1")
-  inspect(invalid_name is Err(_), content="true")
-  let invalid_num : Result[String, Error] = try? column_number_to_name(0)
-  inspect(invalid_num is Err(_), content="true")
+  @test.assert_raise(() => column_name_to_number("A1"))
+  @test.assert_raise(() => column_number_to_name(0))
 }
 
 ///|
@@ -108,8 +106,7 @@ test "mbtexcel sheet management helpers" {
     fail("unexpected sheet map")
   }
   workbook.delete_sheet("Data")
-  let missing : Result[Int, Error] = try? workbook.sheet_index("Data")
-  inspect(missing is Err(_), content="true")
+  @test.assert_raise(() => workbook.sheet_index("Data"))
 }
 
 ///|
