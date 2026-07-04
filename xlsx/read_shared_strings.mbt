@@ -45,7 +45,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
   let mut outline = false
   let mut shadow = false
   let mut condense = false
-  let mut extend = false
+  let mut extended = false
   let mut underline : String? = None
   let mut size : Double? = None
   let mut color : String? = None
@@ -143,7 +143,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
         None => true
       }
       if value {
-        extend = true
+        extended = true
         has_any = true
       }
     }
@@ -299,7 +299,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       outline,
       shadow,
       condense,
-      extend,
+      extended,
       underline,
       size,
       color,

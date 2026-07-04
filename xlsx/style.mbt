@@ -49,7 +49,7 @@ pub struct Font {
   mut outline : Bool?
   mut shadow : Bool?
   mut condense : Bool?
-  mut extend : Bool?
+  mut extended : Bool?
   mut underline : String?
   mut size : Double?
   mut color : String?
@@ -73,7 +73,7 @@ fn Font::new() -> Font {
     outline: None,
     shadow: None,
     condense: None,
-    extend: None,
+    extended: None,
     underline: None,
     size: None,
     color: None,
@@ -109,7 +109,7 @@ pub fn Font::with_values(
   outline? : Bool,
   shadow? : Bool,
   condense? : Bool,
-  extend? : Bool,
+  extended? : Bool,
   underline? : String,
   size? : Double,
   color? : String,
@@ -147,8 +147,8 @@ pub fn Font::with_values(
     Some(v) => font.condense = Some(v)
     None => ()
   }
-  match extend {
-    Some(v) => font.extend = Some(v)
+  match extended {
+    Some(v) => font.extended = Some(v)
     None => ()
   }
   match underline {
@@ -1156,7 +1156,7 @@ fn write_styles_xml(
       Some(v) => if v { "1" } else { "0" }
       None => "0"
     }
-    let extend = match font.extend {
+    let extended = match font.extended {
       Some(v) => if v { "1" } else { "0" }
       None => "0"
     }
@@ -1196,7 +1196,7 @@ fn write_styles_xml(
       Some(v) => v.to_string()
       None => ""
     }
-    "\{family}|\{size}|\{bold}|\{italic}|\{strike}|\{outline}|\{shadow}|\{condense}|\{extend}|\{underline}|\{color}|\{color_theme}|\{color_indexed}|\{color_tint}|\{charset}|\{family_number}|\{scheme}|\{vert_align}"
+    "\{family}|\{size}|\{bold}|\{italic}|\{strike}|\{outline}|\{shadow}|\{condense}|\{extended}|\{underline}|\{color}|\{color_theme}|\{color_indexed}|\{color_tint}|\{charset}|\{family_number}|\{scheme}|\{vert_align}"
   }
 
   fn write_font_color(sb : StringBuilder, font : Font) -> Unit {
@@ -1288,7 +1288,7 @@ fn write_styles_xml(
       Some(true) => sb.write_view("      <condense/>\n")
       _ => ()
     }
-    match font.extend {
+    match font.extended {
       Some(true) => sb.write_view("      <extend/>\n")
       _ => ()
     }
@@ -2103,7 +2103,7 @@ fn write_styles_xml(
               Some(true) => sb.write_view("<condense/>")
               _ => ()
             }
-            match font.extend {
+            match font.extended {
               Some(true) => sb.write_view("<extend/>")
               _ => ()
             }

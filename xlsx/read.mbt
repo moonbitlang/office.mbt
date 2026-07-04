@@ -187,8 +187,8 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
   match tag_attributes_in(xml, "extend") {
     Some(tag) =>
       match attr_value(tag, "val") {
-        Some(value) => if parse_bool_attr(value) { font.extend = Some(true) }
-        None => font.extend = Some(true)
+        Some(value) => if parse_bool_attr(value) { font.extended = Some(true) }
+        None => font.extended = Some(true)
       }
     None => ()
   }

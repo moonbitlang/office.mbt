@@ -484,7 +484,7 @@ test "workbook: copy_sheet clones complex worksheet state" {
           outline: false,
           shadow: false,
           condense: false,
-          extend: false,
+          extended: false,
           underline: None,
           size: None,
           color: None,

@@ -671,7 +671,7 @@ fn vml_rich_text_font(
     outline: false,
     shadow: false,
     condense: false,
-    extend: false,
+    extended: false,
     underline,
     size,
     color,

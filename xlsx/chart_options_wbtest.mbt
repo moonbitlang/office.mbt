@@ -19,7 +19,7 @@ fn wb_rich_font(
     outline: false,
     shadow: false,
     condense: false,
-    extend: false,
+    extended: false,
     underline,
     size,
     color,

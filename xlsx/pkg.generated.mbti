@@ -680,7 +680,7 @@ pub struct Font {
   mut outline : Bool?
   mut shadow : Bool?
   mut condense : Bool?
-  mut extend : Bool?
+  mut extended : Bool?
   mut underline : String?
   mut size : Double?
   mut color : String?
@@ -693,7 +693,7 @@ pub struct Font {
   mut vert_align : String?
   mut family : String?
 } derive(Eq, @debug.Debug)
-pub fn Font::with_values(bold? : Bool, italic? : Bool, strike? : Bool, outline? : Bool, shadow? : Bool, condense? : Bool, extend? : Bool, underline? : String, size? : Double, color? : String, color_theme? : Int, color_indexed? : Int, color_tint? : Double, charset? : Int, family_number? : Int, scheme? : String, vert_align? : String, family? : String) -> Self
+pub fn Font::with_values(bold? : Bool, italic? : Bool, strike? : Bool, outline? : Bool, shadow? : Bool, condense? : Bool, extended? : Bool, underline? : String, size? : Double, color? : String, color_theme? : Int, color_indexed? : Int, color_tint? : Double, charset? : Int, family_number? : Int, scheme? : String, vert_align? : String, family? : String) -> Self
 
 pub struct FormControl {
   cell : String
@@ -1008,7 +1008,7 @@ pub(all) struct RichTextFont {
   outline : Bool
   shadow : Bool
   condense : Bool
-  extend : Bool
+  extended : Bool
   underline : String?
   size : Double?
   color : String?

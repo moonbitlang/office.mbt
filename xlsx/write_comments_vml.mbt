@@ -147,7 +147,7 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
           if font.condense {
             sb.write_view("<condense/>")
           }
-          if font.extend {
+          if font.extended {
             sb.write_view("<extend/>")
           }
           match font.underline {
