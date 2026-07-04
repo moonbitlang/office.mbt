@@ -1,4 +1,11 @@
 ///|
+/// Creates a new worksheet named `name`, appends it after the existing sheets,
+/// and returns it for immediate use. Names must be unique and follow Excel's
+/// rules: 1–31 characters, may not start or end with a single quote (`'`), and
+/// may not contain any of `[ ] : * ? / \`.
+///
+/// Raises `XlsxError` if `name` is empty, too long, starts/ends with `'`,
+/// contains an invalid character, or duplicates an existing sheet.
 pub fn Workbook::add_sheet(
   self : Workbook,
   name : String,
@@ -75,6 +82,10 @@ pub fn Workbook::new_stream_writer(
 }
 
 ///|
+/// Returns the worksheet named `name`, or `None` if there is no worksheet with
+/// that name. A chart sheet of the same name is not returned by this method.
+/// Use `add_sheet` to create one, `get_sheet_list` to enumerate names, or
+/// `sheets` to iterate over every worksheet.
 pub fn Workbook::sheet(self : Workbook, name : StringView) -> Worksheet? {
   let needle = normalize_sheet_name(name)
   for sheet in self.sheets {
@@ -117,6 +128,8 @@ pub fn Workbook::sheet_name(self : Workbook, index : Int) -> String? {
 }
 
 ///|
+/// Returns the names of all sheets — worksheets and chart sheets — in tab
+/// order.
 pub fn Workbook::get_sheet_list(self : Workbook) -> Array[String] {
   let names : Array[String] = []
   for entry in self.sheet_order {
@@ -146,6 +159,9 @@ pub fn Workbook::sheet_index(
 }
 
 ///|
+/// Returns every worksheet as a view, for iteration, in the order the sheets
+/// were created (not necessarily tab order, and excluding chart sheets). Use
+/// `sheet` to look one up by name, or `get_sheet_list` for names in tab order.
 pub fn Workbook::sheets(self : Workbook) -> ArrayView[Worksheet] {
   self.sheets[:]
 }
@@ -391,6 +407,9 @@ pub fn Workbook::active_sheet_index(self : Workbook) -> Int {
 }
 
 ///|
+/// Marks the sheet at `index` (0-based, in tab order across worksheets and
+/// chart sheets) as the active sheet — the one Excel selects and shows when the
+/// workbook is opened. An out-of-range `index` falls back to the first sheet.
 pub fn Workbook::set_active_sheet(self : Workbook, index : Int) -> Unit {
   if self.sheet_order.length() == 0 {
     self.active_sheet_index = 0
@@ -450,6 +469,12 @@ pub fn Workbook::set_sheet_name(
 }
 
 ///|
+/// Removes the sheet named `name` — a worksheet or a chart sheet — from the
+/// workbook, together with its cells and sheet-scoped settings. Does nothing if
+/// no sheet has that name, or if it is the workbook's only remaining sheet (a
+/// workbook must always keep at least one sheet).
+///
+/// Raises `XlsxError` if `name` is not a valid sheet name.
 pub fn Workbook::delete_sheet(
   self : Workbook,
   name : StringView,
@@ -1343,6 +1368,10 @@ pub fn Workbook::add_style(self : Workbook, style : Style) -> Int {
 }
 
 ///|
+/// Registers `style` with the workbook and returns its integer style id. Pass
+/// that id to the styling APIs — e.g. `Worksheet::set_cell_style`,
+/// `Workbook::set_col_style`, or the `style_id` field of `RowOpts` — to apply
+/// the formatting to cells, columns, or rows.
 pub fn Workbook::new_style(self : Workbook, style : Style) -> Int {
   self.add_style(style)
 }

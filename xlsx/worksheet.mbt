@@ -98,6 +98,14 @@ fn Worksheet::merged_anchor_for_cell(
 }
 
 ///|
+/// Writes `value` into the cell at `reference` (A1 notation, e.g. `"B2"`) as a
+/// raw string, overwriting any existing content while preserving the cell's
+/// style. For numeric or boolean values use `set_cell_value`; for dates and
+/// times use `Workbook::set_cell_time`; for formulas use `set_cell_formula`.
+///
+/// Raises `XlsxError` if `reference` is not a valid A1 cell reference, or
+/// `StreamModeConflict` if the worksheet is currently driven by a stream
+/// writer.
 pub fn Worksheet::set_cell(
   self : Worksheet,
   reference : String,
@@ -144,6 +152,12 @@ pub fn Worksheet::set_cell(
 }
 
 ///|
+/// Returns the raw string value of the cell at `reference` (A1 notation), or
+/// `None` if the cell has never been set. Numbers and booleans are returned in
+/// their stored string form; use `get_cell_value_raw` to recover the typed
+/// `CellValue` instead.
+///
+/// Raises `XlsxError` if `reference` is not a valid A1 cell reference.
 pub fn Worksheet::get_cell(
   self : Worksheet,
   reference : StringView,
@@ -156,6 +170,14 @@ pub fn Worksheet::get_cell(
 }
 
 ///|
+/// Writes a typed `CellValue` (number, string, boolean, …) into the cell at
+/// `reference` (A1 notation), overwriting existing content while preserving the
+/// cell's style. Prefer this over `set_cell` when the value should be stored as
+/// a number or boolean rather than as text (so Excel treats it numerically).
+///
+/// Raises `XlsxError` if `reference` is not a valid A1 cell reference, or
+/// `StreamModeConflict` if the worksheet is currently driven by a stream
+/// writer.
 pub fn Worksheet::set_cell_value(
   self : Worksheet,
   reference : String,
@@ -204,6 +226,11 @@ pub fn Worksheet::set_cell_value(
 }
 
 ///|
+/// Returns the typed `CellValue` stored at `reference` (A1 notation), or `None`
+/// if the cell has never been set. Unlike `get_cell`, this preserves the value
+/// type (number vs. text vs. boolean) rather than coercing to a string.
+///
+/// Raises `XlsxError` if `reference` is not a valid A1 cell reference.
 pub fn Worksheet::get_cell_value_raw(
   self : Worksheet,
   reference : StringView,
@@ -889,6 +916,11 @@ pub fn Worksheet::get_cell_style_rc(
 }
 
 ///|
+/// Merges the rectangular range `range_ref` (e.g. `"A1:C3"`) into a single
+/// region; the top-left cell's value is displayed across the whole range. The
+/// range is normalized, so `"C3:A1"` and `"A1:C3"` are equivalent.
+///
+/// Raises `XlsxError` if `range_ref` is not a valid range reference.
 pub fn Worksheet::merge_cells(
   self : Worksheet,
   range_ref : String,
@@ -2522,6 +2554,13 @@ pub fn Worksheet::max_col(self : Worksheet) -> Int {
 }
 
 ///|
+/// Writes `values` across row `row` (1-based) starting at column A, one raw
+/// string per cell. Cells beyond `values` are left unchanged. For a single
+/// typed cell use `set_cell_value`; to build very large sheets efficiently use
+/// the stream writer (`Workbook::new_stream_writer`).
+///
+/// Raises `XlsxError` if `row` is less than 1, or — when `values` is non-empty
+/// — `StreamModeConflict` if the worksheet is driven by a stream writer.
 pub fn Worksheet::set_row(
   self : Worksheet,
   row : Int,
@@ -2536,6 +2575,11 @@ pub fn Worksheet::set_row(
 }
 
 ///|
+/// Returns the raw string values of row `row` (1-based) from column A through
+/// the last populated cell. Empty cells within that span are returned as empty
+/// strings. Returns an empty array for a row with no cells.
+///
+/// Raises `XlsxError` if `row` is less than 1.
 pub fn Worksheet::get_row(
   self : Worksheet,
   row : Int,
@@ -2562,6 +2606,11 @@ pub fn Worksheet::get_row(
 }
 
 ///|
+/// Writes `values` down column `col` (1-based) starting at row 1, one raw
+/// string per cell. Cells beyond `values` are left unchanged.
+///
+/// Raises `XlsxError` if `col` is less than 1, or — when `values` is non-empty
+/// — `StreamModeConflict` if the worksheet is driven by a stream writer.
 pub fn Worksheet::set_col(
   self : Worksheet,
   col : Int,
