@@ -352,7 +352,8 @@ few files act as “hubs”:
 - Container/security helpers
   - `xlsx/encryption.mbt`: OOXML package encryption/decryption orchestration
   - `crypto/`: cryptographic primitives (AES + hashes)
-  - `base64/`: base64 codec (with `xlsx/base64.mbt` wrappers for `XlsxError`)
+  - `xlsx/base64.mbt`: thin wrappers over `moonbitlang/core/encoding/base64`
+    (mapping errors to `XlsxError`)
 
 Because MoonBit allows `Type::method` blocks to live in any file in a package,
 methods for `Workbook` / `Worksheet` are distributed across many feature files.

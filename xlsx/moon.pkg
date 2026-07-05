@@ -2,7 +2,7 @@ import {
   "bobzhang/mbtexcel/zip",
   "bobzhang/mbtexcel/ooxml",
   "bobzhang/mbtexcel/crypto",
-  "bobzhang/mbtexcel/base64",
+  "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/encoding/utf16" @encoding/utf16,
   "moonbitlang/async/io" @async/io,
