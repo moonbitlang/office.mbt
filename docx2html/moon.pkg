@@ -14,4 +14,5 @@ import {
 
 import {
   "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbitlang/core/random",
 } for "test"
