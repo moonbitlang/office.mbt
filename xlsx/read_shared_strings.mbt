@@ -34,6 +34,24 @@ fn parse_text_nodes(xml : StringView) -> String {
 }
 
 ///|
+/// Read a boolean font flag from an `rPr` body: `true` if the `<tag ...>`
+/// element is present and its `val` attribute (default `"1"`) is truthy,
+/// `false` if the element is absent or `val` is falsy.
+fn read_font_bool_flag(
+  rpr_body : StringView,
+  tag : StringView,
+) -> Bool raise XlsxError {
+  match tag_attributes_in(rpr_body, tag) {
+    Some(attrs) =>
+      match attr_value(attrs, "val") {
+        Some(val) => parse_bool_attr(val)
+        None => true
+      }
+    None => false
+  }
+}
+
+///|
 fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
   let rpr_body = match extract_tag_body_from(body, "rPr") {
     Some(value) => value
@@ -58,96 +76,36 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
   let mut vert_align : String? = None
   let mut family : String? = None
   let mut has_any = false
-  match tag_attributes_in(rpr_body, "b") {
-    Some(tag) => {
-      let value = match attr_value(tag, "val") {
-        Some(val) => parse_bool_attr(val)
-        None => true
-      }
-      if value {
-        bold = true
-        has_any = true
-      }
-    }
-    None => ()
+  // Each of these boolean font flags is present-with-optional-val="0"; a flag
+  // that resolves true marks the font as non-default. `read_font_bool_flag`
+  // centralizes that parse. (`extend` is the XML tag for the `extended` field.)
+  bold = read_font_bool_flag(rpr_body, "b")
+  if bold {
+    has_any = true
   }
-  match tag_attributes_in(rpr_body, "i") {
-    Some(tag) => {
-      let value = match attr_value(tag, "val") {
-        Some(val) => parse_bool_attr(val)
-        None => true
-      }
-      if value {
-        italic = true
-        has_any = true
-      }
-    }
-    None => ()
+  italic = read_font_bool_flag(rpr_body, "i")
+  if italic {
+    has_any = true
   }
-  match tag_attributes_in(rpr_body, "strike") {
-    Some(tag) => {
-      let value = match attr_value(tag, "val") {
-        Some(val) => parse_bool_attr(val)
-        None => true
-      }
-      if value {
-        strike = true
-        has_any = true
-      }
-    }
-    None => ()
+  strike = read_font_bool_flag(rpr_body, "strike")
+  if strike {
+    has_any = true
   }
-  match tag_attributes_in(rpr_body, "outline") {
-    Some(tag) => {
-      let value = match attr_value(tag, "val") {
-        Some(val) => parse_bool_attr(val)
-        None => true
-      }
-      if value {
-        outline = true
-        has_any = true
-      }
-    }
-    None => ()
+  outline = read_font_bool_flag(rpr_body, "outline")
+  if outline {
+    has_any = true
   }
-  match tag_attributes_in(rpr_body, "shadow") {
-    Some(tag) => {
-      let value = match attr_value(tag, "val") {
-        Some(val) => parse_bool_attr(val)
-        None => true
-      }
-      if value {
-        shadow = true
-        has_any = true
-      }
-    }
-    None => ()
+  shadow = read_font_bool_flag(rpr_body, "shadow")
+  if shadow {
+    has_any = true
   }
-  match tag_attributes_in(rpr_body, "condense") {
-    Some(tag) => {
-      let value = match attr_value(tag, "val") {
-        Some(val) => parse_bool_attr(val)
-        None => true
-      }
-      if value {
-        condense = true
-        has_any = true
-      }
-    }
-    None => ()
+  condense = read_font_bool_flag(rpr_body, "condense")
+  if condense {
+    has_any = true
   }
-  match tag_attributes_in(rpr_body, "extend") {
-    Some(tag) => {
-      let value = match attr_value(tag, "val") {
-        Some(val) => parse_bool_attr(val)
-        None => true
-      }
-      if value {
-        extended = true
-        has_any = true
-      }
-    }
-    None => ()
+  extended = read_font_bool_flag(rpr_body, "extend")
+  if extended {
+    has_any = true
   }
   match tag_attributes_in(rpr_body, "u") {
     Some(tag) => {

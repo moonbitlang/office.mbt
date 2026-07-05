@@ -181,7 +181,8 @@ fn parse_worksheet(
           value = unescape_xml_text(raw_value)
           value_type = String
         }
-        Some("n") =>
+        // A missing `t` attribute defaults to a numeric cell, same as t="n".
+        Some("n") | None =>
           if raw_value == "" {
             value = ""
             value_type = String
@@ -198,19 +199,6 @@ fn parse_worksheet(
           value = unescape_xml_text(raw_value)
           value_type = String
         }
-        None =>
-          if raw_value == "" {
-            value = ""
-            value_type = String
-          } else {
-            ignore(
-              @string.parse_double(raw_value) catch {
-                _ => raise InvalidXml(msg="cell number invalid")
-              },
-            )
-            value = raw_value
-            value_type = Number
-          }
       }
     }
     let (row, col) = cell_ref_to_rc(ref_value)
