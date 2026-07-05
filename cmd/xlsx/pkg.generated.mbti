@@ -7,6 +7,7 @@ package "bobzhang/mbtexcel/cmd/xlsx"
 type CliError
 
 // Types and methods
+type CellKind
 
 // Type aliases
 
