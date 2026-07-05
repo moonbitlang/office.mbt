@@ -9,6 +9,7 @@
 ///   xlsx style <file> <sheet> <range> [flags]  apply a cell style
 ///   xlsx merge <file> <sheet> <range>          merge a cell range
 ///   xlsx get <file> <sheet> <cell>             print a cell value
+///   xlsx calc <file> <sheet> <cell> [--raw]    evaluate a cell's formula
 ///   xlsx sheets <file>                         list sheet names
 ///   xlsx rows <file> [--sheet NAME]            print a sheet as CSV
 ///   xlsx view <file> [--sheet NAME]            print a sheet as an ASCII table
@@ -67,6 +68,7 @@ async fn run_cli() -> Unit {
     Some(("style", m)) => run_style(m)
     Some(("merge", m)) => run_merge(m)
     Some(("get", m)) => run_get(m)
+    Some(("calc", m)) => run_calc(m)
     Some(("sheets", m)) => run_sheets(m)
     Some(("rows", m)) => run_rows(m)
     Some(("view", m)) => run_view(m)
@@ -176,6 +178,22 @@ fn build_command() -> @argparse.Command {
         @argparse.PositionArg("sheet"),
         @argparse.PositionArg("cell"),
       ]),
+      @argparse.Command(
+        "calc",
+        about="Evaluate a cell's formula and print the computed value",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("sheet"),
+          @argparse.PositionArg("cell"),
+        ],
+        flags=[
+          @argparse.FlagArg(
+            "raw",
+            long="raw",
+            about="print the unformatted computed value",
+          ),
+        ],
+      ),
       @argparse.Command("sheets", about="List the sheet names in a workbook", positionals=[
         @argparse.PositionArg("file"),
       ]),

@@ -79,6 +79,21 @@ async fn run_get(m : @argparse.Matches) -> Unit {
 }
 
 ///|
+async fn run_calc(m : @argparse.Matches) -> Unit {
+  let workbook = @lib.open_file(arg(m, "file"))
+  // Evaluate the cell's formula (or return a plain cell's value). `--raw`
+  // returns the unformatted result; the default applies the cell's number
+  // format, like Excel's displayed value.
+  println(
+    workbook.calc_cell_value(
+      arg(m, "sheet"),
+      arg(m, "cell"),
+      raw=flag(m, "raw"),
+    ),
+  )
+}
+
+///|
 async fn run_sheets(m : @argparse.Matches) -> Unit {
   let workbook = @lib.open_file(arg(m, "file"))
   for name in workbook.get_sheet_list() {

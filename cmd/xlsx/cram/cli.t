@@ -19,8 +19,8 @@ Read a single cell back:
   Hello
 
 Formulas, styles, and merges (in a separate workbook). A leading `=` is
-optional; formulas aren't evaluated, so a formula cell has no cached value and
-`get` falls back to showing the formula:
+optional. `get` shows the formula text (a formula cell has no cached value);
+`calc` evaluates the formula and prints the computed result:
 
   $ xlsx.exe create calc.xlsx --sheet Data
   created calc.xlsx (sheet Data)
@@ -32,6 +32,8 @@ optional; formulas aren't evaluated, so a formula cell has no cached value and
   set Data!B3 = =SUM(B1:B2)
   $ xlsx.exe get calc.xlsx Data B3
   =SUM(B1:B2)
+  $ xlsx.exe calc calc.xlsx Data B3
+  30
 
 Style a cell or range (number format, bold/italic, fill color, alignment) and
 merge cells; the package stays valid. Each `style` call sets a cell's complete
