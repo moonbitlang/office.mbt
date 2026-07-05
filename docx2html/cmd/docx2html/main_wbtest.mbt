@@ -66,17 +66,16 @@ fn cli_tiny_picture_base64() -> String {
 }
 
 ///|
-fn ensure_test_dir(path : String) -> Unit {
-  // `create_dir` is not recursive. In a `moon work` workspace build the test
-  // process's working directory does not necessarily already contain `_build`
-  // (unlike a standalone docx2html build, where it always does), so create the
-  // `_build` ancestor first — otherwise the leaf `create_dir` silently no-ops
-  // and the subsequent file write fails with `No such file or directory`.
-  @fs.create_dir("_build") catch {
-    IOError(_) => ()
+async fn ensure_test_dir(path : String) -> Unit {
+  // Create the `_build` ancestor then the leaf as two EEXIST-tolerant steps
+  // (rather than one recursive mkdir): async tests run concurrently and share
+  // `_build`, and a recursive mkdir can abort on the already-existing ancestor
+  // before creating the leaf.
+  @afs.mkdir("_build") catch {
+    _ => ()
   }
-  @fs.create_dir(path) catch {
-    IOError(_) => ()
+  @afs.mkdir(path) catch {
+    _ => ()
   }
 }
 
@@ -231,7 +230,7 @@ test "CLI output-dir helpers match Mammoth naming" {
   let markdown_options = CliOptions::{ ..options, output_format: Markdown }
   debug_inspect(
     output_path(markdown_options),
-    content="Some(\"out/single-paragraph.html\")",
+    content="Some(\"out/single-paragraph.md\")",
   )
   inspect(image_extension("image/png"), content="png")
   inspect(input_basename_without_docx("C:\\tmp\\sample.docx"), content="sample")
@@ -242,7 +241,11 @@ async test "CLI conversion renders stdout-mode HTML and inline images" {
   let dir = "_build/cli-main-stdout-html"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
-  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
+  @afs.write_file(
+    input_path,
+    cli_single_paragraph_docx(),
+    create_mode=CreateOrTruncate,
+  )
   let html = render_conversion({
     input_path,
     output_path: None,
@@ -255,7 +258,11 @@ async test "CLI conversion renders stdout-mode HTML and inline images" {
   debug_inspect(html.messages, content="[]")
 
   let image_path = join_path(dir, "tiny-picture.docx")
-  @fs.write_bytes_to_file(image_path, cli_tiny_picture_docx())
+  @afs.write_file(
+    image_path,
+    cli_tiny_picture_docx(),
+    create_mode=CreateOrTruncate,
+  )
   let image_html = render_conversion({
     input_path: image_path,
     output_path: None,
@@ -277,8 +284,16 @@ async test "CLI conversion renders stdout-mode markdown with style map" {
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
   let style_map_path = join_path(dir, "style-map")
-  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
-  @fs.write_string_to_file(style_map_path, "p => h1")
+  @afs.write_file(
+    input_path,
+    cli_single_paragraph_docx(),
+    create_mode=CreateOrTruncate,
+  )
+  @afs.write_file(
+    style_map_path,
+    @encoding/utf8.encode("p => h1"),
+    create_mode=CreateOrTruncate,
+  )
   let markdown = render_conversion({
     input_path,
     output_path: None,
@@ -297,8 +312,16 @@ async test "CLI conversion renders stdout-mode HTML with style map" {
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
   let style_map_path = join_path(dir, "style-map")
-  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
-  @fs.write_string_to_file(style_map_path, "p => span:fresh")
+  @afs.write_file(
+    input_path,
+    cli_single_paragraph_docx(),
+    create_mode=CreateOrTruncate,
+  )
+  @afs.write_file(
+    style_map_path,
+    @encoding/utf8.encode("p => span:fresh"),
+    create_mode=CreateOrTruncate,
+  )
   let html = render_conversion({
     input_path,
     output_path: None,
@@ -317,7 +340,11 @@ async test "CLI conversion writes default HTML output file" {
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
   let output_file = join_path(dir, "output.html")
-  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
+  @afs.write_file(
+    input_path,
+    cli_single_paragraph_docx(),
+    create_mode=CreateOrTruncate,
+  )
   run_conversion({
     input_path,
     output_path: Some(output_file),
@@ -327,7 +354,7 @@ async test "CLI conversion writes default HTML output file" {
     pretty_print: false,
   })
   inspect(
-    @fs.read_file_to_string(output_file),
+    @afs.read_file(output_file).text(),
     content="<p>Walking on imported air</p>",
   )
 }
@@ -339,8 +366,16 @@ async test "CLI conversion writes output file and applies style map" {
   let input_path = join_path(dir, "input.docx")
   let style_map_path = join_path(dir, "style-map")
   let output_file = join_path(dir, "output.html")
-  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
-  @fs.write_string_to_file(style_map_path, "p => span:fresh")
+  @afs.write_file(
+    input_path,
+    cli_single_paragraph_docx(),
+    create_mode=CreateOrTruncate,
+  )
+  @afs.write_file(
+    style_map_path,
+    @encoding/utf8.encode("p => span:fresh"),
+    create_mode=CreateOrTruncate,
+  )
   run_conversion({
     input_path,
     output_path: Some(output_file),
@@ -350,7 +385,7 @@ async test "CLI conversion writes output file and applies style map" {
     pretty_print: false,
   })
   inspect(
-    @fs.read_file_to_string(output_file),
+    @afs.read_file(output_file).text(),
     content="<span>Walking on imported air</span>",
   )
 }
@@ -361,7 +396,11 @@ async test "CLI conversion writes markdown output file" {
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
   let output_file = join_path(dir, "output.md")
-  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
+  @afs.write_file(
+    input_path,
+    cli_single_paragraph_docx(),
+    create_mode=CreateOrTruncate,
+  )
   run_conversion({
     input_path,
     output_path: Some(output_file),
@@ -371,7 +410,7 @@ async test "CLI conversion writes markdown output file" {
     pretty_print: false,
   })
   inspect(
-    @fs.read_file_to_string(output_file),
+    @afs.read_file(output_file).text(),
     content="Walking on imported air\n\n",
   )
 }
@@ -382,7 +421,11 @@ async test "CLI conversion threads pretty print to HTML output" {
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
   let output_file = join_path(dir, "output.html")
-  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
+  @afs.write_file(
+    input_path,
+    cli_single_paragraph_docx(),
+    create_mode=CreateOrTruncate,
+  )
   run_conversion({
     input_path,
     output_path: Some(output_file),
@@ -392,7 +435,7 @@ async test "CLI conversion threads pretty print to HTML output" {
     pretty_print: true,
   })
   inspect(
-    @fs.read_file_to_string(output_file),
+    @afs.read_file(output_file).text(),
     content="<p>\n  Walking on imported air\n</p>",
   )
 }
@@ -403,7 +446,11 @@ async test "CLI conversion keeps inline images in single-file output" {
   ensure_test_dir(dir)
   let input_path = join_path(dir, "tiny-picture.docx")
   let output_file = join_path(dir, "tiny-picture.html")
-  @fs.write_bytes_to_file(input_path, cli_tiny_picture_docx())
+  @afs.write_file(
+    input_path,
+    cli_tiny_picture_docx(),
+    create_mode=CreateOrTruncate,
+  )
   run_conversion({
     input_path,
     output_path: Some(output_file),
@@ -413,7 +460,7 @@ async test "CLI conversion keeps inline images in single-file output" {
     pretty_print: false,
   })
   inspect(
-    @fs.read_file_to_string(output_file),
+    @afs.read_file(output_file).text(),
     content="<p><img src=\"data:image/png;base64,\{cli_tiny_picture_base64()}\" /></p>",
   )
 }
@@ -423,7 +470,11 @@ async test "CLI conversion writes markdown output inside output dir" {
   let dir = "_build/cli-main-output-dir-markdown"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "input.docx")
-  @fs.write_bytes_to_file(input_path, cli_single_paragraph_docx())
+  @afs.write_file(
+    input_path,
+    cli_single_paragraph_docx(),
+    create_mode=CreateOrTruncate,
+  )
   run_conversion({
     input_path,
     output_path: None,
@@ -433,7 +484,7 @@ async test "CLI conversion writes markdown output inside output dir" {
     pretty_print: false,
   })
   inspect(
-    @fs.read_file_to_string(join_path(dir, "input.html")),
+    @afs.read_file(join_path(dir, "input.md")).text(),
     content="Walking on imported air\n\n",
   )
 }
@@ -443,7 +494,11 @@ async test "CLI conversion writes markdown image output inside output dir" {
   let dir = "_build/cli-main-output-dir-markdown-images"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "tiny-picture.docx")
-  @fs.write_bytes_to_file(input_path, cli_tiny_picture_docx())
+  @afs.write_file(
+    input_path,
+    cli_tiny_picture_docx(),
+    create_mode=CreateOrTruncate,
+  )
   run_conversion({
     input_path,
     output_path: None,
@@ -453,11 +508,11 @@ async test "CLI conversion writes markdown image output inside output dir" {
     pretty_print: false,
   })
   inspect(
-    @fs.read_file_to_string(join_path(dir, "tiny-picture.html")),
+    @afs.read_file(join_path(dir, "tiny-picture.md")).text(),
     content="![](1.png)\n\n",
   )
   inspect(
-    @base64.encode(@fs.read_file_to_bytes(join_path(dir, "1.png"))),
+    @base64.encode(@afs.read_file(join_path(dir, "1.png")).binary()),
     content=cli_tiny_picture_base64(),
   )
 }
@@ -467,7 +522,11 @@ async test "CLI conversion writes images inside output dir" {
   let dir = "_build/cli-main-output-dir-images"
   ensure_test_dir(dir)
   let input_path = join_path(dir, "tiny-picture.docx")
-  @fs.write_bytes_to_file(input_path, cli_tiny_picture_docx())
+  @afs.write_file(
+    input_path,
+    cli_tiny_picture_docx(),
+    create_mode=CreateOrTruncate,
+  )
   run_conversion({
     input_path,
     output_path: None,
@@ -477,41 +536,74 @@ async test "CLI conversion writes images inside output dir" {
     pretty_print: false,
   })
   inspect(
-    @fs.read_file_to_string(join_path(dir, "tiny-picture.html")),
+    @afs.read_file(join_path(dir, "tiny-picture.html")).text(),
     content="<p><img src=\"1.png\" /></p>",
   )
   inspect(
-    @base64.encode(@fs.read_file_to_bytes(join_path(dir, "1.png"))),
+    @base64.encode(@afs.read_file(join_path(dir, "1.png")).binary()),
     content=cli_tiny_picture_base64(),
   )
 }
 
 ///|
-async test "CLI conversion reports output-dir image write failures" {
+async test "CLI conversion fails when an --output-dir image cannot be written" {
   let dir = "_build/cli-main-output-dir-image-write-error"
   ensure_test_dir(dir)
+  // Make the image's target path (1.png) an existing directory so its write
+  // fails. The conversion must fail rather than emit a document that references
+  // an image file that isn't there.
+  @afs.mkdir(join_path(dir, "1.png")) catch {
+    _ => ()
+  }
   let input_path = join_path(dir, "tiny-picture.docx")
-  let output_dir = join_path(dir, "not-a-dir")
-  @fs.write_bytes_to_file(input_path, cli_tiny_picture_docx())
-  @fs.write_string_to_file(output_dir, "file, not directory")
-  let result = render_conversion({
+  @afs.write_file(
+    input_path,
+    cli_tiny_picture_docx(),
+    create_mode=CreateOrTruncate,
+  )
+  try
+    run_conversion({
+      input_path,
+      output_path: None,
+      output_dir: Some(dir),
+      style_map_path: None,
+      output_format: Html,
+      pretty_print: false,
+    })
+  catch {
+    CliError(message) =>
+      inspect(
+        message.has_prefix("docx2html: could not write image file"),
+        content="true",
+      )
+    _ => fail("expected a CliError for the image write failure")
+  } noraise {
+    _ => fail("expected the image write failure to raise")
+  }
+}
+
+///|
+async test "CLI conversion creates a missing --output-dir" {
+  let dir = "_build/cli-main-output-dir-created"
+  ensure_test_dir(dir)
+  // Point --output-dir at a nested directory that does not exist yet.
+  let fresh = join_path(dir, "nested")
+  let input_path = join_path(dir, "input.docx")
+  @afs.write_file(
+    input_path,
+    cli_single_paragraph_docx(),
+    create_mode=CreateOrTruncate,
+  )
+  run_conversion({
     input_path,
     output_path: None,
-    output_dir: Some(output_dir),
+    output_dir: Some(fresh),
     style_map_path: None,
     output_format: Html,
     pretty_print: false,
   })
-  inspect(result.value, content="")
-  inspect(result.messages.length(), content="1")
-  match result.messages[0] {
-    Error(message) =>
-      inspect(
-        message.has_prefix(
-          "could not write image file '" + output_dir + "/1.png': ",
-        ),
-        content="true",
-      )
-    _ => fail("expected image write error")
-  }
+  inspect(
+    @afs.read_file(join_path(fresh, "input.html")).text(),
+    content="<p>Walking on imported air</p>",
+  )
 }

@@ -23,40 +23,38 @@ struct CliOptions {
 ///|
 suberror CliError {
   CliError(String)
-} derive(Debug, Eq)
+} derive(Eq)
 
 ///|
-extern "C" fn exit_process(status : Int) -> Unit = "exit"
+/// Its `Show` writes exactly the message, so the runtime's uncaught-error
+/// print (when the error escapes `main`) produces one clean line and a
+/// non-zero exit — the wasm backend exposes no public `exit()`.
+impl Show for CliError with fn output(self, logger) {
+  match self {
+    CliError(message) => logger.write_string(message)
+  }
+}
 
 ///|
 async fn main {
+  // Any failure is turned into a `CliError` that escapes `main`: this prints
+  // the message once and exits non-zero on both native and wasm (which has no
+  // `exit()` and no stderr). `CliError` messages already carry their own
+  // prefix; everything else is labelled `docx2html:`.
   run_main() catch {
-    CliError(message) => {
-      write_stderr(message + "\n")
-      exit_process(1)
-    }
-    @os_error.OSError(_) as err => {
-      write_stderr("docx2html: " + err.to_string() + "\n")
-      exit_process(1)
-    }
+    CliError(_) as err => raise err
     @docx.InvalidZip(message~)
     | @docx.InvalidXml(message~)
     | @docx.MissingPart(message~)
-    | @docx.Unsupported(message~) => {
-      write_stderr("docx2html: " + message + "\n")
-      exit_process(1)
-    }
-    _ => {
-      write_stderr("docx2html: unexpected failure\n")
-      exit_process(1)
-    }
+    | @docx.Unsupported(message~) => raise CliError("docx2html: " + message)
+    err => raise CliError("docx2html: " + err.to_string())
   }
 }
 
 ///|
 async fn run_main() -> Unit {
   match parse_cli_args(@env.args()) {
-    Help => write_stdout(ensure_trailing_newline(render_cli_help()))
+    Help => println(render_cli_help())
     Run(options) => run_conversion(options)
   }
 }
@@ -176,29 +174,66 @@ fn parse_output_format(value : String) -> CliOutputFormat raise CliError {
 
 ///|
 async fn run_conversion(options : CliOptions) -> Unit {
-  let result = render_conversion(options)
-  for message in result.messages {
-    write_stderr(format_message(message) + "\n")
+  // Images destined for an --output-dir are collected during conversion (the
+  // convert_image callback is synchronous) and written afterwards, so the
+  // writes can use async fs and run on the wasm backend.
+  let pending_images : Array[(String, Bytes)] = []
+  let result = render_conversion(options, pending=pending_images)
+  // Create the --output-dir if it doesn't exist, so callers can name a fresh
+  // directory directly (write_file creates files, not their parent dirs).
+  match options.output_dir {
+    Some(dir) => @afs.mkdir(dir, recursive=true) catch { _ => () }
+    None => ()
+  }
+  // Write the collected --output-dir images before the document. If an image
+  // cannot be written the whole conversion fails, rather than emitting a
+  // document that references an image file that isn't there: the synchronous
+  // convert_image callback has already embedded the `1.png`-style reference,
+  // and wasm's async fs means we can't learn the write outcome in time to drop
+  // it. Failing loudly beats a document with a dangling image link.
+  for entry in pending_images {
+    let (path, data) = entry
+    @afs.write_file(path, data, create_mode=CreateOrTruncate) catch {
+      err =>
+        raise CliError(
+          "docx2html: could not write image file '\{path}': \{err}",
+        )
+    }
   }
   match output_path(options) {
-    Some(path) =>
+    Some(path) => {
       @afs.write_file(path, result.value, create_mode=CreateOrTruncate)
-    None => write_stdout(result.value)
+      // Warnings go to stdout only when the document output went to a file, so
+      // they never corrupt output piped to stdout. (Wasm has no stderr.)
+      for message in result.messages {
+        println(format_message(message))
+      }
+    }
+    // stdout: the wasm backend has no exact (no-newline) stdout primitive, so
+    // `println` appends a trailing newline here; file output above is the
+    // exact document bytes.
+    None => println(result.value)
   }
 }
 
 ///|
-async fn render_conversion(options : CliOptions) -> @docx.ConversionResult {
+/// Read the input document and convert it, recording any `--output-dir` images
+/// into `pending` for the caller to write. Performs no output writes itself,
+/// which keeps it easy to test.
+async fn render_conversion(
+  options : CliOptions,
+  pending? : Array[(String, Bytes)] = [],
+) -> @docx.ConversionResult {
   let style_map = match options.style_map_path {
     Some(path) => @docx.read_style_map_string(@afs.read_file(path).text())
     None => []
   }
   let docx = @afs.read_file(options.input_path).binary()
   let convert_image = match options.output_dir {
-    Some(output_dir) => output_dir_image_converter(output_dir)
+    Some(output_dir) => collect_output_dir_images(output_dir, pending)
     None => @docx.data_uri_image_converter
   }
-  let result = match options.output_format {
+  match options.output_format {
     Html =>
       @docx.convert_to_html(
         docx,
@@ -208,12 +243,15 @@ async fn render_conversion(options : CliOptions) -> @docx.ConversionResult {
       )
     Markdown => @docx.convert_to_markdown(docx, style_map~, convert_image~)
   }
-  result
 }
 
 ///|
-fn output_dir_image_converter(
+/// A synchronous image converter for `--output-dir`: it records each image's
+/// bytes and target path into `pending` (written asynchronously after the
+/// conversion) and returns an `<img>` element referencing the file by name.
+fn collect_output_dir_images(
   output_dir : String,
+  pending : Array[(String, Bytes)],
 ) -> (@docx.Image) -> @docx.ImageConversion {
   let mut image_index = 0
   fn(image) {
@@ -221,16 +259,8 @@ fn output_dir_image_converter(
     let filename = image_index.to_string() +
       "." +
       image_extension(image.content_type)
-    let path = join_path(output_dir, filename)
-    try {
-      @fs.write_bytes_to_file(path, image.data)
-      @docx.img_element(fn(_image) { { "src": filename } })(image)
-    } catch {
-      IOError(message) =>
-        @docx.image_conversion([], messages=[
-          Error("could not write image file '" + path + "': " + message),
-        ])
-    }
+    pending.push((join_path(output_dir, filename), image.data))
+    @docx.img_element(fn(_image) { { "src": filename } })(image)
   }
 }
 
@@ -240,13 +270,21 @@ fn output_path(options : CliOptions) -> String? {
     Some(path) => Some(path)
     None =>
       match options.output_dir {
-        Some(dir) =>
+        Some(dir) => {
+          // Name the file after the input, with an extension matching the
+          // chosen output format (so Markdown lands in a `.md` file, not
+          // Markdown-inside-`.html`).
+          let extension = match options.output_format {
+            Html => ".html"
+            Markdown => ".md"
+          }
           Some(
             join_path(
               dir,
-              input_basename_without_docx(options.input_path) + ".html",
+              input_basename_without_docx(options.input_path) + extension,
             ),
           )
+        }
         None => None
       }
   }
@@ -304,25 +342,6 @@ fn format_message(message : @docx.Message) -> String {
 }
 
 ///|
-async fn write_stdout(content : String) -> Unit {
-  @stdio.stdout.write(content)
-}
-
-///|
-async fn write_stderr(content : String) -> Unit {
-  @stdio.stderr.write(content)
-}
-
-///|
 fn render_cli_help() -> String {
   cli_command().render_help()
-}
-
-///|
-fn ensure_trailing_newline(content : String) -> String {
-  if content.has_suffix("\n") {
-    content
-  } else {
-    content + "\n"
-  }
 }
