@@ -8,6 +8,10 @@
 ///   xlsx formula <file> <sheet> <cell> <expr>  set a cell formula
 ///   xlsx style <file> <sheet> <range> [flags]  apply a cell style
 ///   xlsx merge <file> <sheet> <range>          merge a cell range
+///   xlsx width <file> <sheet> <col> <width>    set a column (or A:C) width
+///   xlsx freeze <file> <sheet> <cell>          freeze panes above/left of cell
+///   xlsx filter <file> <sheet> <range>         add an auto-filter over a range
+///   xlsx add-sheet <file> <name>               add a sheet to a workbook
 ///   xlsx get <file> <sheet> <cell>             print a cell value
 ///   xlsx calc <file> <sheet> <cell> [--raw]    evaluate a cell's formula
 ///   xlsx sheets <file>                         list sheet names
@@ -67,6 +71,10 @@ async fn run_cli() -> Unit {
     Some(("formula", m)) => run_formula(m)
     Some(("style", m)) => run_style(m)
     Some(("merge", m)) => run_merge(m)
+    Some(("width", m)) => run_width(m)
+    Some(("freeze", m)) => run_freeze(m)
+    Some(("filter", m)) => run_filter(m)
+    Some(("add-sheet", m)) => run_add_sheet(m)
     Some(("get", m)) => run_get(m)
     Some(("calc", m)) => run_calc(m)
     Some(("sheets", m)) => run_sheets(m)
@@ -171,6 +179,45 @@ fn build_command() -> @argparse.Command {
           @argparse.PositionArg("file"),
           @argparse.PositionArg("sheet"),
           @argparse.PositionArg("range", about="range to merge, e.g. A1:B2"),
+        ],
+      ),
+      @argparse.Command(
+        "width",
+        about="Set a column's (or a column range's) width and save in place",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("sheet"),
+          @argparse.PositionArg("column", about="a column (A) or range (A:C)"),
+          @argparse.PositionArg(
+            "width",
+            about="width in character units, e.g. 18",
+          ),
+        ],
+      ),
+      @argparse.Command(
+        "freeze",
+        about="Freeze panes above and left of a cell (e.g. A2 freezes row 1)",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("sheet"),
+          @argparse.PositionArg("cell", about="first scrollable cell, e.g. A2"),
+        ],
+      ),
+      @argparse.Command(
+        "filter",
+        about="Add an auto-filter over a range and save in place",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("sheet"),
+          @argparse.PositionArg("range", about="range to filter, e.g. A1:C10"),
+        ],
+      ),
+      @argparse.Command(
+        "add-sheet",
+        about="Add a new empty sheet to an existing workbook",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("name", about="name of the new sheet"),
         ],
       ),
       @argparse.Command("get", about="Print a single cell value", positionals=[
