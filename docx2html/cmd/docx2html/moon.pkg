@@ -2,16 +2,16 @@ import {
   "bobzhang/docx2html" @docx,
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
-  "moonbitlang/async/io",
-  "moonbitlang/async/os_error",
-  "moonbitlang/async/stdio",
   "moonbitlang/core/argparse",
-  "moonbitlang/core/encoding/base64",
   "moonbitlang/core/env",
-  "moonbitlang/x/fs",
 }
 
-supported_targets = "native"
+import {
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/encoding/utf8" @encoding/utf8,
+} for "wbtest"
+
+supported_targets = "native+wasm"
 
 options(
   "is-main": true,
