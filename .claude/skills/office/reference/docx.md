@@ -23,7 +23,8 @@ Options:
 - **Output destination.** With no `output` and no `--output-dir`, the result
   goes to **stdout**. With an `output` path, it's written there. `--output-dir`
   writes `<input-basename>.html` (or `.md`) *and* the extracted images into that
-  directory. `output` and `--output-dir` are mutually exclusive.
+  directory, creating the directory if it doesn't exist. `output` and
+  `--output-dir` are mutually exclusive.
 - **Images.** By default images are inlined as base64 `data:` URIs (so a single
   HTML/Markdown file is self-contained). With `--output-dir`, images are
   extracted to files (`1.png`, `2.png`, …) and referenced by name.
