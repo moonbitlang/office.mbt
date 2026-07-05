@@ -47,8 +47,8 @@ pub fn PdfDocument::lookup_direct(
 ) -> @syntax.PdfObject? {
   match self.direct(object).dictionary_view() {
     Some(entries) =>
-      for i in 0..<entries.length() {
-        let (name, value) = entries[i]
+      for entry in entries {
+        let (name, value) = entry
         if name == key {
           let direct_value = self.direct(value)
           break if direct_value == PdfNull { None } else { Some(direct_value) }

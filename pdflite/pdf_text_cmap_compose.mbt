@@ -1,4 +1,14 @@
 ///|
+/// Returns `primary` when it is present, otherwise `fallback` — layers a cmap's
+/// own fields over the values it inherits.
+fn[T] pdf_option_or(primary : T?, fallback : T?) -> T? {
+  match primary {
+    Some(_) => primary
+    None => fallback
+  }
+}
+
+///|
 fn pdf_text_tounicode_has_charcode(
   entries : ArrayView[(Int, @core.PdfBytes)],
   code : Int,
@@ -89,25 +99,13 @@ fn pdf_text_compose_parsed_cmap(
       current.codespaces,
       inherited.codespaces,
     ),
-    usecmap: match current.usecmap {
-      Some(_) => current.usecmap
-      None => inherited.usecmap
-    },
-    wmode: match current.wmode {
-      Some(_) => current.wmode
-      None => inherited.wmode
-    },
-    cmap_name: match current.cmap_name {
-      Some(_) => current.cmap_name
-      None => inherited.cmap_name
-    },
-    cmap_type: match current.cmap_type {
-      Some(_) => current.cmap_type
-      None => inherited.cmap_type
-    },
-    cid_system_info: match current.cid_system_info {
-      Some(_) => current.cid_system_info
-      None => inherited.cid_system_info
-    },
+    usecmap: pdf_option_or(current.usecmap, inherited.usecmap),
+    wmode: pdf_option_or(current.wmode, inherited.wmode),
+    cmap_name: pdf_option_or(current.cmap_name, inherited.cmap_name),
+    cmap_type: pdf_option_or(current.cmap_type, inherited.cmap_type),
+    cid_system_info: pdf_option_or(
+      current.cid_system_info,
+      inherited.cid_system_info,
+    ),
   }
 }

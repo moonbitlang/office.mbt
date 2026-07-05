@@ -49,14 +49,10 @@ pub fn ZipArchive::read_text(
 ///|
 /// Splits a ZIP path into directory and filename.
 pub fn split_zip_path(path : String) -> (String, String) {
-  let mut index = path.length() - 1
-  while index >= 0 {
-    if path[index] == '/' {
-      return (path[:index].to_owned(), path[index + 1:].to_owned())
-    }
-    index = index - 1
+  match path.rev_find("/") {
+    Some(index) => (path[:index].to_owned(), path[index + 1:].to_owned())
+    None => ("", path)
   }
-  ("", path)
 }
 
 ///|

@@ -30,8 +30,8 @@ pub fn PdfObject::lookup_immediate(
 ) -> PdfObject? {
   match self.dictionary_view() {
     Some(entries) =>
-      for i in 0..<entries.length() {
-        let (name, value) = entries[i]
+      for entry in entries {
+        let (name, value) = entry
         if name == key {
           break Some(value)
         }

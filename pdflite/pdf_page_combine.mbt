@@ -90,14 +90,7 @@ fn pdf_page_combine_append_bookmarks(
   first : ArrayView[@bookmark.PdfBookmark],
   second : ArrayView[@bookmark.PdfBookmark],
 ) -> Array[@bookmark.PdfBookmark] {
-  let output : Array[@bookmark.PdfBookmark] = []
-  for bookmark in first {
-    output.push(bookmark)
-  }
-  for bookmark in second {
-    output.push(bookmark)
-  }
-  output
+  [..first, ..second]
 }
 
 ///|
