@@ -30,8 +30,13 @@ and want a real `.xlsx` file.
    ```
 
 Notes:
-- Values are stored as text (the CLI doesn't infer number/date types).
-- `csv` preserves empty cells and quoted fields, so `csv` then `rows` is a
-  faithful round-trip.
+- Plain numbers (e.g. `120000`, `98000`, `9.99`) are stored as real numeric
+  cells, so a `SUM`/`AVERAGE` over them computes and number formats render in
+  Excel. Values that aren't plain numbers — including leading-zero ids like
+  `007` — stay text; dates are not inferred.
+- `csv` preserves empty cells, quoted fields, and text exactly. Two things
+  don't round-trip verbatim: a numeric field comes back by value, not spelling
+  (`1.0` → `1`, `0.50` → `0.5`), and a cell you later `--number-format` shows its
+  formatted display in `rows` (read the raw value with `get`).
 - To append or tweak individual cells afterwards, use `set`:
   `moon run --target wasm cmd/xlsx -- set report.xlsx Revenue D1 Delta`.

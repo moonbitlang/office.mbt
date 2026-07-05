@@ -47,6 +47,23 @@ the number-formatted data cells are disjoint:
   $ xlsx.exe validate calc.xlsx
   valid
 
+Plain numbers are stored as real numeric cells (so formulas evaluate and
+number formats render in Excel), while ambiguous strings like a leading-zero
+id stay text. `rows` shows a formatted cell as Excel would display it:
+
+  $ xlsx.exe create num.xlsx --sheet S
+  created num.xlsx (sheet S)
+  $ xlsx.exe set num.xlsx S A1 100
+  set S!A1 = 100
+  $ xlsx.exe set num.xlsx S B1 9.99
+  set S!B1 = 9.99
+  $ xlsx.exe set num.xlsx S C1 007
+  set S!C1 = 007
+  $ xlsx.exe style num.xlsx S B1 --number-format '$#,##0.00'
+  styled 1 cell(s) in S!B1
+  $ xlsx.exe rows num.xlsx
+  100,$9.99,007
+
 List the sheet names:
 
   $ xlsx.exe sheets book.xlsx
@@ -57,8 +74,8 @@ Export a sheet as CSV:
   $ xlsx.exe rows book.xlsx
   Hello,42
 
-Import a CSV file into a new workbook — `csv` and `rows` are inverses, so both
-RFC 4180 quoting (an embedded comma) and empty cells survive the round-trip:
+Import a CSV file into a new workbook — RFC 4180 quoting (an embedded comma),
+empty cells, and text survive the round-trip:
 
   $ printf 'City,Pop,Note\nOslo,700000,\n"Sao, Paulo",12000000,big\n' > cities.csv
   $ xlsx.exe csv cities.csv cities.xlsx --sheet Cities
@@ -69,6 +86,16 @@ RFC 4180 quoting (an embedded comma) and empty cells survive the round-trip:
   "Sao, Paulo",12000000,big
   $ xlsx.exe get cities.xlsx Cities A3
   Sao, Paulo
+
+A numeric field round-trips by value, not spelling — it's stored as a number,
+so `1.0` comes back `1` and `0.50` comes back `0.5`, while a leading-zero id
+stays text:
+
+  $ printf '1.0,0.50,007\n' > spellings.csv
+  $ xlsx.exe csv spellings.csv spellings.xlsx
+  imported 1 row(s) into spellings.xlsx (sheet Sheet1)
+  $ xlsx.exe rows spellings.xlsx
+  1,0.5,007
 
 Add a second row and view the sheet as an ASCII table (the first row is
 treated as a header):
