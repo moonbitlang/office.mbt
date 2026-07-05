@@ -62,6 +62,7 @@ row is copy-pasteable):
 | Set column width(s) | `moon run --target wasm cmd/xlsx -- width f.xlsx Sheet1 A:C 16` |
 | Freeze the header row | `moon run --target wasm cmd/xlsx -- freeze f.xlsx Sheet1 A2` |
 | Add a filter to a range | `moon run --target wasm cmd/xlsx -- filter f.xlsx Sheet1 A1:C10` |
+| Add a chart from data | `moon run --target wasm cmd/xlsx -- chart f.xlsx Sheet1 E2 --type col --categories A2:A6 --values B2:B6 --title Sales` |
 | Add a sheet | `moon run --target wasm cmd/xlsx -- add-sheet f.xlsx Summary` |
 | Read a cell | `moon run --target wasm cmd/xlsx -- get f.xlsx Sheet1 A1` |
 | See a sheet as a table | `moon run --target wasm cmd/xlsx -- view f.xlsx` |
