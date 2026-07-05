@@ -34,7 +34,8 @@ This repo has already implemented several items from the roadmap:
   - Covered by `xlsx/read_package_parts_wbtest.mbt`.
 - [x] Phase 2: extract pure libraries out of `xlsx/`
   - `crypto/` (AES + hashes)
-  - `base64/` (codec; `xlsx/base64.mbt` keeps error-mapping wrappers)
+  - base64: `xlsx/base64.mbt` wraps `moonbitlang/core/encoding/base64` (the
+    in-repo `base64/` package was later removed in favor of core)
 - [x] Phase 3 (partial): reduce IO config coupling in write helpers
   - `Workbook::save_as` does not need to mutate `Workbook.file_path` just to
     select workbook content type during write.
@@ -169,7 +170,9 @@ Good candidates (based on current layout):
   - Implemented: moved into `crypto/` and `xlsx/encryption.mbt` imports
     `@crypto`.
 - Base64
-  - Implemented: moved into `base64/` with `xlsx/base64.mbt` wrappers.
+  - Implemented, then consolidated onto `moonbitlang/core/encoding/base64`;
+    the in-repo `base64/` package was removed and `xlsx/base64.mbt` keeps the
+    `XlsxError` mapping wrappers.
 - XML helpers
   - Either:
     - expand `ooxml/` into a general-purpose `ooxml_xml` helper package, or

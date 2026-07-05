@@ -44,8 +44,9 @@ Completed (already landed):
 2. **Centralize OOXML string/fragment utilities + `.rels` parsing**
    - `xlsx/ooxml_utils.mbt` and `xlsx/ooxml_rels.mbt` added with unit tests.
 
-3. **Extract pure crypto/hash + base64 into dedicated packages**
-   - `crypto/` and `base64/` packages; `xlsx/` uses them via imports/wrappers.
+3. **Extract pure crypto/hash into a dedicated package**
+   - `crypto/` package; `xlsx/` uses it via imports/wrappers. (Base64 now uses
+     `moonbitlang/core/encoding/base64` rather than an in-repo package.)
 
 4. **Split very large API/type hubs**
    - `xlsx/workbook_types.mbt`, `xlsx/worksheet_types.mbt`,

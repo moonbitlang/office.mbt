@@ -479,7 +479,6 @@ bobzhang/mbtexcel              # Facade package (this package)
        -> bobzhang/mbtexcel/ooxml  # OOXML metadata helpers
        -> bobzhang/mbtexcel/zip    # ZIP archive handling
        -> bobzhang/mbtexcel/crypto # Cryptographic operations
-       -> bobzhang/mbtexcel/base64 # Base64 encoding
 ```
 
 ## License
