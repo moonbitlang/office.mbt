@@ -30,6 +30,21 @@ moon run --target wasm <tool> -- <args...>
 - For trusted files where speed matters, swap `--target wasm` for
   `--target native`.
 
+### Run anywhere (no repo, no build toolchain)
+
+`moon run` is just the in-repo convenience — build + run. The compiled `.wasm`
+is portable: ship it alongside `moonrun` (MoonBit's WebAssembly runtime, which
+supports the async I/O these tools use out of the box) and run it directly on
+any platform `moonrun` targets, with no repo and no build step:
+
+```
+moon build --target wasm cmd/xlsx                 # once, produces xlsx.wasm
+moonrun path/to/xlsx.wasm create book.xlsx --sheet Data   # anywhere
+```
+
+So this is genuinely cross-platform: a ~1 MB `.wasm` plus the `moonrun` binary,
+not a Python/LibreOffice install.
+
 ## I want to… → run this
 
 Every command starts with `moon run --target wasm` (written in full below so each
@@ -40,6 +55,9 @@ row is copy-pasteable):
 | Turn a CSV / table into a spreadsheet | `moon run --target wasm cmd/xlsx -- csv data.csv out.xlsx` |
 | Create an empty workbook | `moon run --target wasm cmd/xlsx -- create out.xlsx --sheet Data` |
 | Set a cell | `moon run --target wasm cmd/xlsx -- set f.xlsx Sheet1 A1 hi` |
+| Set a formula | `moon run --target wasm cmd/xlsx -- formula f.xlsx Sheet1 B4 "=SUM(B1:B3)"` |
+| Style a cell/range | `moon run --target wasm cmd/xlsx -- style f.xlsx Sheet1 A1:B1 --bold --fill FFFF00` |
+| Merge cells | `moon run --target wasm cmd/xlsx -- merge f.xlsx Sheet1 A1:C1` |
 | Read a cell | `moon run --target wasm cmd/xlsx -- get f.xlsx Sheet1 A1` |
 | See a sheet as a table | `moon run --target wasm cmd/xlsx -- view f.xlsx` |
 | Dump a sheet as CSV | `moon run --target wasm cmd/xlsx -- rows f.xlsx` |
@@ -49,7 +67,9 @@ row is copy-pasteable):
 | Convert a .docx to Markdown | `moon run --target wasm docx2html/cmd/docx2html -- --output-format=markdown in.docx out.md` |
 | Convert a .docx + extract images | `moon run --target wasm docx2html/cmd/docx2html -- --output-dir ./out in.docx` |
 
-Omit the output path on `docx2html` to write to stdout.
+Omit the output path on `docx2html` to write to stdout. Note that each `style`
+call sets a cell's **complete** style (it replaces, not merges), so combine all
+the formatting for a cell into one command and avoid overlapping styled ranges.
 
 ## Going deeper
 

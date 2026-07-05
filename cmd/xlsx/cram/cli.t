@@ -18,6 +18,35 @@ Read a single cell back:
   $ xlsx.exe get book.xlsx Data A1
   Hello
 
+Formulas, styles, and merges (in a separate workbook). A leading `=` is
+optional; formulas aren't evaluated, so a formula cell has no cached value and
+`get` falls back to showing the formula:
+
+  $ xlsx.exe create calc.xlsx --sheet Data
+  created calc.xlsx (sheet Data)
+  $ xlsx.exe set calc.xlsx Data B1 10
+  set Data!B1 = 10
+  $ xlsx.exe set calc.xlsx Data B2 20
+  set Data!B2 = 20
+  $ xlsx.exe formula calc.xlsx Data B3 "=SUM(B1:B2)"
+  set Data!B3 = =SUM(B1:B2)
+  $ xlsx.exe get calc.xlsx Data B3
+  =SUM(B1:B2)
+
+Style a cell or range (number format, bold/italic, fill color, alignment) and
+merge cells; the package stays valid. Each `style` call sets a cell's complete
+style, so keep styled ranges from overlapping — here the bold header row and
+the number-formatted data cells are disjoint:
+
+  $ xlsx.exe style calc.xlsx Data A1:B1 --bold --fill FFFF00 --align center
+  styled 2 cell(s) in Data!A1:B1
+  $ xlsx.exe style calc.xlsx Data B2:B3 --number-format "#,##0.00"
+  styled 2 cell(s) in Data!B2:B3
+  $ xlsx.exe merge calc.xlsx Data A5:B5
+  merged Data!A5:B5
+  $ xlsx.exe validate calc.xlsx
+  valid
+
 List the sheet names:
 
   $ xlsx.exe sheets book.xlsx

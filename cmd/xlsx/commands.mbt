@@ -47,7 +47,19 @@ async fn run_set(m : @argparse.Matches) -> Unit {
 ///|
 async fn run_get(m : @argparse.Matches) -> Unit {
   let workbook = @lib.open_file(arg(m, "file"))
-  println(workbook.get_cell(arg(m, "sheet"), arg(m, "cell")).unwrap_or(""))
+  let sheet = arg(m, "sheet")
+  let cell = arg(m, "cell")
+  let value = workbook.get_cell(sheet, cell).unwrap_or("")
+  if value != "" {
+    println(value)
+  } else {
+    // A formula cell has no cached value (the tool doesn't evaluate formulas),
+    // so fall back to showing the formula itself rather than a blank line.
+    match workbook.get_cell_formula(sheet, cell) {
+      Some(formula) => println("=" + formula)
+      None => println("")
+    }
+  }
 }
 
 ///|

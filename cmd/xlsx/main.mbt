@@ -5,14 +5,17 @@
 ///   xlsx create <output> [--sheet NAME]        create a new workbook
 ///   xlsx csv <input> <output> [--sheet NAME]   import a CSV file into a workbook
 ///   xlsx set <file> <sheet> <cell> <value>     set a cell (in place)
+///   xlsx formula <file> <sheet> <cell> <expr>  set a cell formula
+///   xlsx style <file> <sheet> <range> [flags]  apply a cell style
+///   xlsx merge <file> <sheet> <range>          merge a cell range
 ///   xlsx get <file> <sheet> <cell>             print a cell value
 ///   xlsx sheets <file>                         list sheet names
 ///   xlsx rows <file> [--sheet NAME]            print a sheet as CSV
 ///   xlsx view <file> [--sheet NAME]            print a sheet as an ASCII table
 ///   xlsx validate <file>                       check OOXML package validity
 ///
-/// The subcommand handlers live in `commands.mbt`; pure output formatting
-/// lives in `render.mbt`.
+/// The subcommand handlers live in `commands.mbt` (and `commands_style.mbt`
+/// for formula/style/merge); pure output formatting lives in `render.mbt`.
 async fn main {
   run_cli() catch {
     // `--help`/`--version` are handled inside argparse (exit 0). Anything
@@ -60,6 +63,9 @@ async fn run_cli() -> Unit {
     Some(("create", m)) => run_create(m)
     Some(("csv", m)) => run_import_csv(m)
     Some(("set", m)) => run_set(m)
+    Some(("formula", m)) => run_formula(m)
+    Some(("style", m)) => run_style(m)
+    Some(("merge", m)) => run_merge(m)
     Some(("get", m)) => run_get(m)
     Some(("sheets", m)) => run_sheets(m)
     Some(("rows", m)) => run_rows(m)
@@ -114,6 +120,55 @@ fn build_command() -> @argparse.Command {
           @argparse.PositionArg("sheet"),
           @argparse.PositionArg("cell"),
           @argparse.PositionArg("value"),
+        ],
+      ),
+      @argparse.Command(
+        "formula",
+        about="Set a cell formula (leading '=' optional) and save in place",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("sheet"),
+          @argparse.PositionArg("cell"),
+          @argparse.PositionArg("formula", about="e.g. =SUM(B2:B10)"),
+        ],
+      ),
+      @argparse.Command(
+        "style",
+        about="Apply a style to a cell or range and save in place",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("sheet"),
+          @argparse.PositionArg("range", about="a cell (A1) or range (A1:B2)"),
+        ],
+        flags=[
+          @argparse.FlagArg("bold", long="bold", about="bold font"),
+          @argparse.FlagArg("italic", long="italic", about="italic font"),
+        ],
+        options=[
+          @argparse.OptionArg(
+            "number-format",
+            long="number-format",
+            about="number format code, e.g. \"#,##0.00\" or \"0%\"",
+          ),
+          @argparse.OptionArg(
+            "fill",
+            long="fill",
+            about="solid fill color as hex RGB, e.g. FFFF00",
+          ),
+          @argparse.OptionArg(
+            "align",
+            long="align",
+            about="horizontal alignment: left, center, or right",
+          ),
+        ],
+      ),
+      @argparse.Command(
+        "merge",
+        about="Merge a cell range (e.g. A1:B2) and save in place",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("sheet"),
+          @argparse.PositionArg("range", about="range to merge, e.g. A1:B2"),
         ],
       ),
       @argparse.Command("get", about="Print a single cell value", positionals=[
