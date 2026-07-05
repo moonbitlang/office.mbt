@@ -12,6 +12,7 @@
 ///   xlsx freeze <file> <sheet> <cell>          freeze panes above/left of cell
 ///   xlsx filter <file> <sheet> <range>         add an auto-filter over a range
 ///   xlsx add-sheet <file> <name>               add a sheet to a workbook
+///   xlsx chart <file> <sheet> <anchor> [opts]  add a chart from a data range
 ///   xlsx get <file> <sheet> <cell>             print a cell value
 ///   xlsx calc <file> <sheet> <cell> [--raw]    evaluate a cell's formula
 ///   xlsx sheets <file>                         list sheet names
@@ -75,6 +76,7 @@ async fn run_cli() -> Unit {
     Some(("freeze", m)) => run_freeze(m)
     Some(("filter", m)) => run_filter(m)
     Some(("add-sheet", m)) => run_add_sheet(m)
+    Some(("chart", m)) => run_chart(m)
     Some(("get", m)) => run_get(m)
     Some(("calc", m)) => run_calc(m)
     Some(("sheets", m)) => run_sheets(m)
@@ -218,6 +220,41 @@ fn build_command() -> @argparse.Command {
         positionals=[
           @argparse.PositionArg("file"),
           @argparse.PositionArg("name", about="name of the new sheet"),
+        ],
+      ),
+      @argparse.Command(
+        "chart",
+        about="Add a chart (col/bar/line/pie/…) from a data range and save in place",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("sheet"),
+          @argparse.PositionArg(
+            "anchor",
+            about="top-left cell of the chart, e.g. E2",
+          ),
+        ],
+        options=[
+          @argparse.OptionArg(
+            "type",
+            long="type",
+            about="chart type: col (default), bar, line, pie, area, scatter, doughnut, radar",
+          ),
+          @argparse.OptionArg(
+            "categories",
+            long="categories",
+            about="category-label range, e.g. A2:A6",
+          ),
+          @argparse.OptionArg(
+            "values",
+            long="values",
+            about="series value range, e.g. B2:B6",
+          ),
+          @argparse.OptionArg(
+            "name",
+            long="name",
+            about="series legend label (a literal; for a cell use a qualified ref like Sheet1!B1)",
+          ),
+          @argparse.OptionArg("title", long="title", about="chart title"),
         ],
       ),
       @argparse.Command("get", about="Print a single cell value", positionals=[

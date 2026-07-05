@@ -14,10 +14,10 @@ When unsure of a command's exact arguments, ask the tool itself:
 ## Conventions (apply to every command)
 
 - **`<file>` is modified in place.** `set`, `formula`, `style`, `merge`,
-  `width`, `freeze`, `filter`, `add-sheet` open `<file>`, change it, and
-  overwrite it. `create` and `csv` instead take an `<output>` path and write a
-  new file. Read-only commands (`get`, `calc`, `sheets`, `rows`, `view`,
-  `validate`) never modify the file.
+  `width`, `freeze`, `filter`, `add-sheet`, `chart` open `<file>`, change it,
+  and overwrite it. `create` and `csv` instead take an `<output>` path and
+  write a new file. Read-only commands (`get`, `calc`, `sheets`, `rows`,
+  `view`, `validate`) never modify the file.
 - **`<cell>`** is an A1-style reference: a column letter(s) then a row number,
   e.g. `A1`, `B2`, `AA10`. Columns and rows are 1-based.
 - **`<range>`** is `<cell>:<cell>`, e.g. `A1:C10`.
@@ -25,8 +25,8 @@ When unsure of a command's exact arguments, ask the tool itself:
   `Data`); the original case is preserved for display. `--sheet` defaults to
   `Sheet1` for `create`/`csv` and to the first sheet for readers.
 - **On success, mutating commands** (`create`, `csv`, `set`, `formula`,
-  `style`, `merge`, `width`, `freeze`, `filter`, `add-sheet`) print one
-  confirmation line and exit `0` — the exact line is in the command table
+  `style`, `merge`, `width`, `freeze`, `filter`, `add-sheet`, `chart`) print
+  one confirmation line and exit `0` — the exact line is in the command table
   below; match it, don't assume. **Read commands** (`get`, `calc`, `sheets`,
   `rows`, `view`, `validate`) print their data/result instead, which may be
   multiple lines.
@@ -52,6 +52,7 @@ When unsure of a command's exact arguments, ask the tool itself:
 | `freeze <file> <sheet> <cell>` | Freeze panes above/left of a cell | `froze panes above and left of <sheet>!<cell>` |
 | `filter <file> <sheet> <range>` | Add an auto-filter | `added auto-filter to <sheet>!<range>` |
 | `add-sheet <file> <name>` | Add a sheet to an existing workbook | `added sheet <name>` |
+| `chart <file> <sheet> <anchor> [--type … --categories … --values … --title … --name …]` | Add a chart from a data range | `added <type> chart to <sheet>!<anchor>` |
 | `get <file> <sheet> <cell>` | Print a cell's stored value | the value, or its formula text |
 | `sheets <file>` | List sheet names | one name per line |
 | `rows <file> [--sheet NAME]` | Dump a sheet as CSV | RFC 4180 CSV |
@@ -109,6 +110,33 @@ When unsure of a command's exact arguments, ask the tool itself:
 - **`sheets`** lists names; use a name (case-insensitive) as the `<sheet>`
   argument to other commands.
 
+### Charts
+
+- **`chart <anchor>`** adds a chart whose top-left corner sits at `<anchor>`
+  (e.g. `E2`). Options:
+  - `--type` — `col` (vertical bars, the default), `bar` (horizontal), `line`,
+    `pie`, `area`, `scatter`, `doughnut`, `radar`. An unknown type is a clean
+    `error:`.
+  - `--categories <range>` — the axis labels. A column (`A2:A6`) or a single
+    row (`C1:F1`) both work — a horizontal range is handy for a radar over
+    stat-name headers. Required.
+  - `--values <range>` — the series data (`B2:B6`, or a row `C6:F6`). Required.
+  - `--name <text>` — the series' legend label. A plain string is used
+    literally (`--name Revenue`); to pull the label from a cell, pass a
+    sheet-qualified reference (`--name Sheet1!B1`) — a bare `B1` is treated as
+    literal text, not a cell.
+  - `--title <text>` — chart title.
+  Ranges are single-sheet: pass a plain `A2:A6` and it's read from `<sheet>`;
+  to point at another sheet, qualify it yourself (`Other!A2:A6`). One `chart`
+  call adds **one series**; run it again to add more charts. The data cells must
+  already exist — add the chart after the data.
+
+  **Size and placement.** Each chart is a fixed footprint of ~7 columns wide ×
+  14 rows tall from its anchor (there is no size flag). To stack several charts
+  on one sheet without silent overlap, space their anchors by ≥15 rows (e.g.
+  `H2`, `H18`, `H34`) or ≥8 columns. Charts are write-only here (no command
+  reads them back); confirm the file with `validate`.
+
 ### Reading whole sheets
 
 - **`rows`** dumps a sheet as CSV; **`view`** renders it as an ASCII table with
@@ -132,6 +160,8 @@ When unsure of a command's exact arguments, ask the tool itself:
 - Read a whole sheet as data → `rows` (CSV). Eyeball a sheet → `view`.
 - Make a data dump look like a real report → `style` (bold header, number
   formats), `width`, `freeze` (header row), `filter`.
+- Visualize data → `chart` (a `col`/`bar`/`line`/`pie`/`radar` over a
+  categories range + a values range).
 
 ## Worked example: a formatted report
 

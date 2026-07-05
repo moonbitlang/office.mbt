@@ -70,6 +70,32 @@ auto-filter, and adding a sheet; the package stays valid:
   $ xlsx.exe validate layout.xlsx
   valid
 
+Add a chart from a data range; the package (with a chart part and drawing)
+stays valid:
+
+  $ xlsx.exe create chart.xlsx --sheet Data
+  created chart.xlsx (sheet Data)
+  $ xlsx.exe set chart.xlsx Data A1 North
+  set Data!A1 = North
+  $ xlsx.exe set chart.xlsx Data B1 120
+  set Data!B1 = 120
+  $ xlsx.exe set chart.xlsx Data A2 West
+  set Data!A2 = West
+  $ xlsx.exe set chart.xlsx Data B2 98
+  set Data!B2 = 98
+  $ xlsx.exe chart chart.xlsx Data D1 --type col --categories A1:A2 --values B1:B2 --title Revenue --name Revenue
+  added col chart to Data!D1
+  $ xlsx.exe chart chart.xlsx Data D20 --type pie --categories A1:A2 --values B1:B2
+  added pie chart to Data!D20
+  $ xlsx.exe chart chart.xlsx Data D40 --type bogus --categories A1:A2 --values B1:B2
+  error: unknown chart type 'bogus' (expected one of: col, bar, line, pie, area, scatter, doughnut, radar)
+  [1]
+  $ xlsx.exe chart chart.xlsx Data D40 --type col --categories A1:A2
+  error: chart requires --categories and --values (e.g. --categories A2:A6 --values B2:B6)
+  [1]
+  $ xlsx.exe validate chart.xlsx
+  valid
+
 Plain numbers are stored as real numeric cells (so formulas evaluate and
 number formats render in Excel), while ambiguous strings like a leading-zero
 id stay text. `rows` shows a formatted cell as Excel would display it:
