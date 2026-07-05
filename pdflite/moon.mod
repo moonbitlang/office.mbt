@@ -1,11 +1,11 @@
 name = "bobzhang/pdflite"
 
-version = "0.1.39"
+version = "0.1.40"
 
 import {
   "moonbitlang/async@0.20.1",
   "moonbitlang/x@0.4.43",
-  "bobzhang/mbtexcel@0.1.6",
+  "bobzhang/mbtexcel@0.1.7",
 }
 
 readme = "README.mbt.md"
