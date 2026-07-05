@@ -49,6 +49,27 @@ the number-formatted data cells are disjoint:
   $ xlsx.exe validate calc.xlsx
   valid
 
+Layout and sheet management — column widths, a frozen header row, an
+auto-filter, and adding a sheet; the package stays valid:
+
+  $ xlsx.exe create layout.xlsx --sheet Data
+  created layout.xlsx (sheet Data)
+  $ xlsx.exe set layout.xlsx Data A1 Product
+  set Data!A1 = Product
+  $ xlsx.exe width layout.xlsx Data A:C 16
+  set width of Data!A:C to 16
+  $ xlsx.exe freeze layout.xlsx Data A2
+  froze panes above and left of Data!A2
+  $ xlsx.exe filter layout.xlsx Data A1:C10
+  added auto-filter to Data!A1:C10
+  $ xlsx.exe add-sheet layout.xlsx Summary
+  added sheet Summary
+  $ xlsx.exe sheets layout.xlsx
+  Data
+  Summary
+  $ xlsx.exe validate layout.xlsx
+  valid
+
 Plain numbers are stored as real numeric cells (so formulas evaluate and
 number formats render in Excel), while ambiguous strings like a leading-zero
 id stay text. `rows` shows a formatted cell as Excel would display it:

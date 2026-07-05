@@ -1,92 +1,148 @@
 # Reference: `cmd/xlsx`
 
-Run as `moon run --target wasm cmd/xlsx -- <command> [args]` from the repo root.
-Confirm anything here with `moon run --target wasm cmd/xlsx -- <command> --help`.
-
-| Command | Purpose |
-| --- | --- |
-| `create <output.xlsx> [--sheet NAME]` | Create a new empty workbook (default sheet `Sheet1`) |
-| `csv <input.csv> <output.xlsx> [--sheet NAME]` | Import a CSV file into a new workbook |
-| `set <file> <sheet> <cell> <value>` | Set one cell and save the file in place |
-| `formula <file> <sheet> <cell> <expr>` | Set a cell formula (leading `=` optional) |
-| `style <file> <sheet> <cell-or-range> [flags]` | Apply a style to a cell or range |
-| `merge <file> <sheet> <range>` | Merge a cell range (e.g. `A1:B2`) |
-| `get <file> <sheet> <cell>` | Print a cell's value (or its formula, if unevaluated) |
-| `calc <file> <sheet> <cell> [--raw]` | Evaluate a cell's formula and print the computed result |
-| `sheets <file>` | List sheet names, one per line |
-| `rows <file> [--sheet NAME]` | Dump a sheet as RFC 4180 CSV |
-| `view <file> [--sheet NAME]` | Render a sheet as an ASCII table (first row = header) |
-| `validate <file>` | Report OOXML structure problems; prints `valid` if clean |
-
-## Behavior and quirks
-
-- **Cell references** are A1-style (`A1`, `B2`, …).
-- **Sheet names** are matched case-insensitively; their original case is kept
-  for display. `--sheet` defaults to the first sheet for readers, `Sheet1` for
-  `create`/`csv`.
-- **Numbers are stored as numbers.** `set` and `csv` write a *plain, canonical*
-  number (`42`, `-3.5`, `9.99`) as a real numeric cell, so formulas over it
-  evaluate and number formats render in Excel. Anything ambiguous stays text:
-  leading zeros (`007`), a leading `+`, exponent forms (`1e3`), thousands
-  separators (`1,000`), and non-numbers. There is no date/formula inference —
-  use `formula` for formulas.
-- **`csv` → `rows` preserves structure and values, but not every spelling.**
-  `csv` parses RFC 4180 (quoted fields, `""` escapes, embedded commas/newlines,
-  `LF`/`CRLF`, a leading BOM) and writes every field including empty ones, so the
-  round trip preserves comma-bearing quoted fields, empty cells, and text
-  exactly. `rows` quotes any field containing a comma, quote, CR, or LF. Two
-  things that do *not* round-trip verbatim: (1) a numeric field round-trips by
-  *value*, not spelling — since it's stored as a number, `1.0` comes back as `1`,
-  `0.50` as `0.5`, `-0` as `0` (use a leading-zero/`+`/etc. form to keep an exact
-  string as text); (2) `rows`/`view` show a cell as Excel would *display* it, so a
-  cell with a `--number-format` shows its formatted text (e.g. `$9.99`) — read the
-  raw value with `get`, and avoid number-formatting data you intend to
-  re-export.
-- **`formula`** stores the expression (leading `=` optional). It is not
-  *cached* in the file — Excel recomputes on open, and `rows`/`view` show a
-  formula cell as blank — but `calc` evaluates it on demand (see below). `get`
-  on a formula cell falls back to printing the formula text (`=SUM(...)`).
-- **`calc`** evaluates a cell's formula with the built-in engine and prints the
-  computed result (a plain cell just returns its value). Supports arithmetic,
-  cell/range references, and functions like `SUM`, `AVERAGE`, `IF`. By default
-  it applies the cell's number format — but a cell with **no** format (General)
-  prints the full-precision value, identical to `--raw`, so a sum of decimals
-  can show floating-point noise (e.g. `29.979999999999997` for `9.99+19.99`).
-  For a clean rounded display, give the formula cell a number format first
-  (`style … C4 --number-format "0.00"` → `calc` prints `29.98`). `--raw` always
-  prints the unformatted value.
-- **`style`** builds a style from flags and applies it to every cell in the
-  target cell or `A1:B2` range: `--number-format "CODE"` (an Excel format code,
-  stored verbatim — e.g. `"#,##0.00"`, `"0%"`; for a `$` currency code use
-  single quotes so the shell doesn't expand it: `--number-format '$#,##0.00'`),
-  `--bold`,
-  `--italic`, `--fill HEXRGB` (solid fill, e.g. `FFFF00`),
-  `--align left|center|right`. Number formats only render on numeric cells (see
-  above). A range wider than 100000 cells is rejected.
-  Each `style` call sets the target's **complete** style — it *replaces* any
-  prior style on those cells rather than merging — so put all the formatting a
-  cell needs into one command, and avoid overlapping styled ranges.
-- **`merge`** merges a range (`A1:B2`); the top-left cell's value is kept.
-- **`validate` checks the file's own bytes**, not a re-serialized copy, so it
-  reports defects even in a package this reader would otherwise tolerate. A
-  clean file prints exactly `valid`; otherwise one problem per line.
-- **Errors** print a single `error: …` line and exit non-zero.
-
-## Examples
+Invoke every command as:
 
 ```
-# data -> spreadsheet, then confirm
-moon run --target wasm cmd/xlsx -- csv report.csv report.xlsx --sheet Data
-moon run --target wasm cmd/xlsx -- view report.xlsx
-moon run --target wasm cmd/xlsx -- validate report.xlsx
+moon run --target wasm cmd/xlsx -- <command> [args...]
+```
 
-# build a workbook cell by cell
-moon run --target wasm cmd/xlsx -- create book.xlsx --sheet Summary
-moon run --target wasm cmd/xlsx -- set book.xlsx Summary A1 Total
-moon run --target wasm cmd/xlsx -- set book.xlsx Summary B1 42
-moon run --target wasm cmd/xlsx -- get book.xlsx Summary B1        # -> 42
+from the repository root (`--target native` is a faster drop-in for trusted
+files; a prebuilt `.wasm` also runs standalone via `moonrun` — see SKILL.md).
+When unsure of a command's exact arguments, ask the tool itself:
+`moon run --target wasm cmd/xlsx -- <command> --help`.
 
-# inspect an existing (possibly untrusted) workbook
-moon run --target wasm cmd/xlsx -- sheets incoming.xlsx
-moon run --target wasm cmd/xlsx -- rows incoming.xlsx > incoming.csv
+## Conventions (apply to every command)
+
+- **`<file>` is modified in place.** `set`, `formula`, `style`, `merge`,
+  `width`, `freeze`, `filter`, `add-sheet` open `<file>`, change it, and
+  overwrite it. `create` and `csv` instead take an `<output>` path and write a
+  new file. Read-only commands (`get`, `calc`, `sheets`, `rows`, `view`,
+  `validate`) never modify the file.
+- **`<cell>`** is an A1-style reference: a column letter(s) then a row number,
+  e.g. `A1`, `B2`, `AA10`. Columns and rows are 1-based.
+- **`<range>`** is `<cell>:<cell>`, e.g. `A1:C10`.
+- **`<sheet>`** is a sheet name, matched **case-insensitively** (`data` finds
+  `Data`); the original case is preserved for display. `--sheet` defaults to
+  `Sheet1` for `create`/`csv` and to the first sheet for readers.
+- **On success, mutating commands** (`create`, `csv`, `set`, `formula`,
+  `style`, `merge`, `width`, `freeze`, `filter`, `add-sheet`) print one
+  confirmation line and exit `0` — the exact line is in the command table
+  below; match it, don't assume. **Read commands** (`get`, `calc`, `sheets`,
+  `rows`, `view`, `validate`) print their data/result instead, which may be
+  multiple lines.
+- **Failure** prints one diagnostic line and exits **non-zero**. `cmd/xlsx`
+  diagnostics start with `error:`. Because the wasm backend has no stderr, the
+  diagnostic arrives on stdout — so **check the exit code**, not just output.
+- Values passed on the shell command line: quote anything with spaces or shell
+  metacharacters. In particular a `$`-containing number format must be
+  **single-quoted** (`'$#,##0.00'`) or the shell expands `$#`.
+
+## Commands
+
+| Command | Purpose | Success output |
+| --- | --- | --- |
+| `create <output> [--sheet NAME]` | New empty workbook | `created <output> (sheet <NAME>)` |
+| `csv <input> <output> [--sheet NAME]` | Import a CSV into a new workbook | `imported <N> row(s) into <output> (sheet <NAME>)` |
+| `set <file> <sheet> <cell> <value>` | Set one cell's value | `set <sheet>!<cell> = <value>` |
+| `formula <file> <sheet> <cell> <expr>` | Set a cell's formula | `set <sheet>!<cell> = =<expr>` |
+| `calc <file> <sheet> <cell> [--raw]` | Evaluate a cell's formula | the computed value |
+| `style <file> <sheet> <cell-or-range> [flags]` | Apply a cell style | `styled <N> cell(s) in <sheet>!<target>` |
+| `merge <file> <sheet> <range>` | Merge a cell range | `merged <sheet>!<range>` |
+| `width <file> <sheet> <col-or-range> <width>` | Set column width | `set width of <sheet>!<target> to <width>` |
+| `freeze <file> <sheet> <cell>` | Freeze panes above/left of a cell | `froze panes above and left of <sheet>!<cell>` |
+| `filter <file> <sheet> <range>` | Add an auto-filter | `added auto-filter to <sheet>!<range>` |
+| `add-sheet <file> <name>` | Add a sheet to an existing workbook | `added sheet <name>` |
+| `get <file> <sheet> <cell>` | Print a cell's stored value | the value, or its formula text |
+| `sheets <file>` | List sheet names | one name per line |
+| `rows <file> [--sheet NAME]` | Dump a sheet as CSV | RFC 4180 CSV |
+| `view <file> [--sheet NAME]` | Render a sheet as a table | an ASCII table |
+| `validate <file>` | Check OOXML structure | `valid`, or one problem per line |
+
+## Command details
+
+### Writing cells
+
+- **`set`** stores a *plain, canonical* number (`42`, `-3.5`, `9.99`) as a real
+  numeric cell — so formulas over it evaluate and number formats render.
+  Anything else stays **text**: leading zeros (`007`), a leading `+`, exponent
+  forms (`1e3`), thousands separators (`1,000`), non-numbers. No date inference.
+- **`formula`** stores the expression; a leading `=` is optional. The result is
+  **not cached** in the file — Excel computes it on open, and `get`/`rows`/`view`
+  show a formula cell as its formula text / blank. Use **`calc`** to compute it
+  here.
+
+### Reading formula results — `get` vs `calc`
+
+- **`get`** returns the cell's *stored* content: a value cell → its value; a
+  formula cell → the formula text (`=SUM(A1:A2)`); an empty cell → empty.
+- **`calc`** *evaluates* a formula and prints the computed result (a value cell
+  just returns its value). Supports arithmetic, cell/range references, and
+  functions such as `SUM`, `AVERAGE`, `IF`. **Formatting:** by default `calc`
+  applies the cell's number format; a cell with **no** format (General) prints
+  the full-precision value — identical to `--raw` — so a decimal sum can show
+  floating-point noise (`9.99+19.99` → `29.979999999999997`). Give the formula
+  cell a number format (`style … --number-format "0.00"`) for a clean rounded
+  result (`29.98`); `--raw` always prints the unformatted value.
+
+### Formatting and layout
+
+- **`style <cell-or-range>`** builds a style from flags and applies it to every
+  cell in the target. Flags: `--number-format "CODE"` (an Excel format code,
+  stored verbatim — `"#,##0.00"`, `"0%"`; single-quote a `$` code:
+  `'$#,##0.00'`), `--bold`, `--italic`, `--fill HEXRGB` (solid fill, e.g.
+  `FFFF00`), `--align left|center|right`. Number formats render only on numeric
+  cells. Each call sets the target's **complete** style (it *replaces*, not
+  merges) — put all of a cell's formatting in one command and don't overlap
+  styled ranges. A range over 100000 cells is rejected.
+- **`merge <range>`** merges the range into one cell; the top-left cell's value
+  is kept.
+- **`width <col-or-range> <width>`** sets a column width in character units. The
+  column is a letter (`C`) or a letter range (`A:C`). `<width>` is a number.
+- **`freeze <cell>`** freezes every row above and every column left of `<cell>`;
+  `<cell>` becomes the first scrollable cell. So `freeze f Sheet1 A2` freezes
+  the header row; `B2` freezes row 1 and column A.
+
+### Sheets
+
+- **`add-sheet <name>`** appends a new empty sheet to an existing workbook
+  (`create`/`csv` only make new files, each with one sheet).
+- **`sheets`** lists names; use a name (case-insensitive) as the `<sheet>`
+  argument to other commands.
+
+### Reading whole sheets
+
+- **`rows`** dumps a sheet as CSV; **`view`** renders it as an ASCII table with
+  the first row as the header. Both show a cell as Excel would *display* it: a
+  `--number-format`'d value shows its formatted text; a formula cell shows blank
+  when unformatted, but shows the **format code literally** (e.g. `$#,##0`) if it
+  carries a number format — because a formula has no cached value to format. So
+  to read a total, use `calc`, not `rows`/`view`. `csv` → `rows` round-trips
+  text/empty/quoted structure exactly, but a numeric field round-trips by
+  *value* not spelling (`1.0` → `1`, `0.50` → `0.5`) — read a raw value with
+  `get`.
+- **`validate`** checks the file's own bytes (not a re-serialized copy); prints
+  exactly `valid`, or one structural problem per line.
+
+## Choosing a command
+
+- Turn a table/CSV into a spreadsheet → `csv`. Build one from scratch → `create`
+  then `set`/`formula`.
+- Read a cell's stored value or formula text → `get`. Read a formula's *computed
+  result* → `calc`.
+- Read a whole sheet as data → `rows` (CSV). Eyeball a sheet → `view`.
+- Make a data dump look like a real report → `style` (bold header, number
+  formats), `width`, `freeze` (header row), `filter`.
+
+## Worked example: a formatted report
+
+```
+moon run --target wasm cmd/xlsx -- csv sales.csv sales.xlsx --sheet Q1
+moon run --target wasm cmd/xlsx -- formula sales.xlsx Q1 B5 "=SUM(B2:B4)"
+moon run --target wasm cmd/xlsx -- style sales.xlsx Q1 A1:C1 --bold --fill DDDDDD
+moon run --target wasm cmd/xlsx -- style sales.xlsx Q1 B2:B5 --number-format '$#,##0.00'
+moon run --target wasm cmd/xlsx -- width sales.xlsx Q1 A:C 16
+moon run --target wasm cmd/xlsx -- freeze sales.xlsx Q1 A2
+moon run --target wasm cmd/xlsx -- filter sales.xlsx Q1 A1:C4
+moon run --target wasm cmd/xlsx -- calc sales.xlsx Q1 B5        # the computed total
+moon run --target wasm cmd/xlsx -- validate sales.xlsx          # -> valid
 ```
