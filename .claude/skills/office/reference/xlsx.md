@@ -91,10 +91,12 @@ When unsure of a command's exact arguments, ask the tool itself:
   cell in the target. Flags: `--number-format "CODE"` (an Excel format code,
   stored verbatim — `"#,##0.00"`, `"0%"`; single-quote a `$` code:
   `'$#,##0.00'`), `--bold`, `--italic`, `--fill HEXRGB` (solid fill, e.g.
-  `FFFF00`), `--align left|center|right`. Number formats render only on numeric
-  cells. Each call sets the target's **complete** style (it *replaces*, not
-  merges) — put all of a cell's formatting in one command and don't overlap
-  styled ranges. A range over 100000 cells is rejected.
+  `FFFF00`), `--font-color HEXRGB` (text color, e.g. `FFFFFF` for white — pair
+  with a dark `--fill` for a header band), `--align left|center|right`. Number
+  formats render only on numeric cells. Each call sets the target's **complete**
+  style (it *replaces*, not merges) — put all of a cell's formatting in one
+  command and don't overlap styled ranges. A range over 100000 cells is
+  rejected.
 - **`merge <range>`** merges the range into one cell; the top-left cell's value
   is kept.
 - **`width <col-or-range> <width>`** sets a column width in character units. The

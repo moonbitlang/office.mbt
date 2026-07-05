@@ -35,12 +35,12 @@ optional. `get` shows the formula text (a formula cell has no cached value);
   $ xlsx.exe calc calc.xlsx Data B3
   30
 
-Style a cell or range (number format, bold/italic, fill color, alignment) and
-merge cells; the package stays valid. Each `style` call sets a cell's complete
-style, so keep styled ranges from overlapping — here the bold header row and
-the number-formatted data cells are disjoint:
+Style a cell or range (number format, bold/italic, fill color, white font on a
+dark header, alignment) and merge cells; the package stays valid. Each `style`
+call sets a cell's complete style, so keep styled ranges from overlapping —
+here the header row and the number-formatted data cells are disjoint:
 
-  $ xlsx.exe style calc.xlsx Data A1:B1 --bold --fill FFFF00 --align center
+  $ xlsx.exe style calc.xlsx Data A1:B1 --bold --fill 4472C4 --font-color FFFFFF --align center
   styled 2 cell(s) in Data!A1:B1
   $ xlsx.exe style calc.xlsx Data B2:B3 --number-format "#,##0.00"
   styled 2 cell(s) in Data!B2:B3

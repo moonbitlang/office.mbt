@@ -57,7 +57,7 @@ row is copy-pasteable):
 | Set a cell | `moon run --target wasm cmd/xlsx -- set f.xlsx Sheet1 A1 hi` |
 | Set a formula | `moon run --target wasm cmd/xlsx -- formula f.xlsx Sheet1 B4 "=SUM(B1:B3)"` |
 | Compute a formula's value | `moon run --target wasm cmd/xlsx -- calc f.xlsx Sheet1 B4` |
-| Style a cell/range | `moon run --target wasm cmd/xlsx -- style f.xlsx Sheet1 A1:B1 --bold --fill FFFF00` |
+| Style a cell/range | `moon run --target wasm cmd/xlsx -- style f.xlsx Sheet1 A1:B1 --bold --fill 4472C4 --font-color FFFFFF` |
 | Merge cells | `moon run --target wasm cmd/xlsx -- merge f.xlsx Sheet1 A1:C1` |
 | Set column width(s) | `moon run --target wasm cmd/xlsx -- width f.xlsx Sheet1 A:C 16` |
 | Freeze the header row | `moon run --target wasm cmd/xlsx -- freeze f.xlsx Sheet1 A2` |
