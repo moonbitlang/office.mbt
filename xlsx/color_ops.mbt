@@ -33,10 +33,7 @@ pub fn Workbook::get_base_color(
   indexed_color : Int,
   theme_color? : Int,
 ) -> String {
-  let theme_colors = match self.theme_colors {
-    Some(colors) => colors
-    None => default_theme_colors
-  }
+  let theme_colors = self.theme_colors.unwrap_or(default_theme_colors)
   match theme_color {
     Some(value) =>
       if value >= 0 && value < theme_colors.length() {

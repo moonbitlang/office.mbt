@@ -113,10 +113,7 @@ pub fn Rows::columns(
   if entry.max_col == 0 {
     return []
   }
-  let resolved_options = match options {
-    Some(value) => value
-    None => self.options
-  }
+  let resolved_options = options.unwrap_or(self.options)
   let values : Array[String] = Array::make(entry.max_col, "")
   match self.styles {
     Some(styles) =>
@@ -145,10 +142,7 @@ pub fn Rows::row_index(self : Rows) -> Int? {
 ///|
 fn default_row_height(sheet : Worksheet) -> Double {
   let props = sheet.sheet_props()
-  match props.default_row_height {
-    Some(value) => value
-    None => 15.0
-  }
+  props.default_row_height.unwrap_or(15.0)
 }
 
 ///|
@@ -158,10 +152,7 @@ fn row_opts_for_row(sheet : Worksheet, row : Int) -> RowOpts {
     Some(value) => value
     None => default_row_height(sheet)
   }
-  let style_id = match dim.style_id {
-    Some(value) => value
-    None => 0
-  }
+  let style_id = dim.style_id.unwrap_or(0)
   { height, hidden: dim.hidden, style_id, outline_level: dim.outline_level }
 }
 
@@ -337,10 +328,7 @@ pub fn Cols::rows(self : Cols, options? : Options) -> Array[String] {
   if self.index <= 0 || self.index > self.columns.length() {
     return []
   }
-  let resolved_options = match options {
-    Some(value) => value
-    None => self.options
-  }
+  let resolved_options = options.unwrap_or(self.options)
   if self.max_row <= 0 {
     return []
   }
@@ -478,10 +466,7 @@ pub fn Workbook::get_rows(
   options? : Options,
 ) -> Array[Array[String]] raise XlsxError {
   check_sheet_name(sheet_name)
-  let resolved_options = match options {
-    Some(value) => value
-    None => self.options
-  }
+  let resolved_options = options.unwrap_or(self.options)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise SheetNotFound(name=sheet_name.to_owned())
@@ -519,10 +504,7 @@ pub fn Workbook::get_cols(
   options? : Options,
 ) -> Array[Array[String]] raise XlsxError {
   check_sheet_name(sheet_name)
-  let resolved_options = match options {
-    Some(value) => value
-    None => self.options
-  }
+  let resolved_options = options.unwrap_or(self.options)
   let sheet = match self.sheet(sheet_name) {
     Some(value) => value
     None => raise SheetNotFound(name=sheet_name.to_owned())
