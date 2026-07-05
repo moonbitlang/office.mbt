@@ -11,7 +11,7 @@
 
 name = "bobzhang/docx2html"
 
-version = "0.1.41"
+version = "0.1.42"
 
 readme = "README.mbt.md"
 
@@ -24,7 +24,7 @@ keywords = [ "docx", "html", "markdown", "mammoth" ]
 description = "Native MoonBit DOCX to HTML/Markdown converter ported from Mammoth"
 
 import {
-  "bobzhang/mbtexcel@0.1.6",
+  "bobzhang/mbtexcel@0.1.7",
   "moonbitlang/x@0.4.43",
   "moonbitlang/async@0.20.1",
 }
