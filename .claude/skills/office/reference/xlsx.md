@@ -12,6 +12,7 @@ Confirm anything here with `moon run --target wasm cmd/xlsx -- <command> --help`
 | `style <file> <sheet> <cell-or-range> [flags]` | Apply a style to a cell or range |
 | `merge <file> <sheet> <range>` | Merge a cell range (e.g. `A1:B2`) |
 | `get <file> <sheet> <cell>` | Print a cell's value (or its formula, if unevaluated) |
+| `calc <file> <sheet> <cell> [--raw]` | Evaluate a cell's formula and print the computed result |
 | `sheets <file>` | List sheet names, one per line |
 | `rows <file> [--sheet NAME]` | Dump a sheet as RFC 4180 CSV |
 | `view <file> [--sheet NAME]` | Render a sheet as an ASCII table (first row = header) |
@@ -41,10 +42,19 @@ Confirm anything here with `moon run --target wasm cmd/xlsx -- <command> --help`
   cell with a `--number-format` shows its formatted text (e.g. `$9.99`) — read the
   raw value with `get`, and avoid number-formatting data you intend to
   re-export.
-- **`formula`** stores the expression (leading `=` optional). Formulas are
-  **not evaluated** — Excel computes them when it opens the file — so a
-  formula-only cell has no cached value. `get` on such a cell falls back to
-  printing the formula (`=SUM(...)`); `rows`/`view` show it as blank.
+- **`formula`** stores the expression (leading `=` optional). It is not
+  *cached* in the file — Excel recomputes on open, and `rows`/`view` show a
+  formula cell as blank — but `calc` evaluates it on demand (see below). `get`
+  on a formula cell falls back to printing the formula text (`=SUM(...)`).
+- **`calc`** evaluates a cell's formula with the built-in engine and prints the
+  computed result (a plain cell just returns its value). Supports arithmetic,
+  cell/range references, and functions like `SUM`, `AVERAGE`, `IF`. By default
+  it applies the cell's number format — but a cell with **no** format (General)
+  prints the full-precision value, identical to `--raw`, so a sum of decimals
+  can show floating-point noise (e.g. `29.979999999999997` for `9.99+19.99`).
+  For a clean rounded display, give the formula cell a number format first
+  (`style … C4 --number-format "0.00"` → `calc` prints `29.98`). `--raw` always
+  prints the unformatted value.
 - **`style`** builds a style from flags and applies it to every cell in the
   target cell or `A1:B2` range: `--number-format "CODE"` (an Excel format code,
   stored verbatim — e.g. `"#,##0.00"`, `"0%"`; for a `$` currency code use

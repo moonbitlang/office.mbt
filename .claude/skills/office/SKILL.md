@@ -56,6 +56,7 @@ row is copy-pasteable):
 | Create an empty workbook | `moon run --target wasm cmd/xlsx -- create out.xlsx --sheet Data` |
 | Set a cell | `moon run --target wasm cmd/xlsx -- set f.xlsx Sheet1 A1 hi` |
 | Set a formula | `moon run --target wasm cmd/xlsx -- formula f.xlsx Sheet1 B4 "=SUM(B1:B3)"` |
+| Compute a formula's value | `moon run --target wasm cmd/xlsx -- calc f.xlsx Sheet1 B4` |
 | Style a cell/range | `moon run --target wasm cmd/xlsx -- style f.xlsx Sheet1 A1:B1 --bold --fill FFFF00` |
 | Merge cells | `moon run --target wasm cmd/xlsx -- merge f.xlsx Sheet1 A1:C1` |
 | Read a cell | `moon run --target wasm cmd/xlsx -- get f.xlsx Sheet1 A1` |
