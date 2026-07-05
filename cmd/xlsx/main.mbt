@@ -3,6 +3,7 @@
 /// the mbtexcel library. Subcommands:
 ///
 ///   xlsx create <output> [--sheet NAME]        create a new workbook
+///   xlsx csv <input> <output> [--sheet NAME]   import a CSV file into a workbook
 ///   xlsx set <file> <sheet> <cell> <value>     set a cell (in place)
 ///   xlsx get <file> <sheet> <cell>             print a cell value
 ///   xlsx sheets <file>                         list sheet names
@@ -57,6 +58,7 @@ async fn run_cli() -> Unit {
   let matches = command.parse(argv=args[:], env={})
   match matches.subcommand {
     Some(("create", m)) => run_create(m)
+    Some(("csv", m)) => run_import_csv(m)
     Some(("set", m)) => run_set(m)
     Some(("get", m)) => run_get(m)
     Some(("sheets", m)) => run_sheets(m)
@@ -84,6 +86,22 @@ fn build_command() -> @argparse.Command {
             "sheet",
             long="sheet",
             about="name of the first sheet",
+            default_values=["Sheet1"],
+          ),
+        ],
+      ),
+      @argparse.Command(
+        "csv",
+        about="Import a CSV file into a new workbook",
+        positionals=[
+          @argparse.PositionArg("input", about="input .csv path"),
+          @argparse.PositionArg("output", about="output .xlsx path"),
+        ],
+        options=[
+          @argparse.OptionArg(
+            "sheet",
+            long="sheet",
+            about="name of the sheet to create",
             default_values=["Sheet1"],
           ),
         ],
