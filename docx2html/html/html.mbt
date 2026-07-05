@@ -212,12 +212,7 @@ fn HtmlWriter::is_inside_indented_element(self : HtmlWriter) -> Bool {
 
 ///|
 fn HtmlWriter::is_inside_pre(self : HtmlWriter) -> Bool {
-  for tag_name in self.stack {
-    if tag_name == "pre" {
-      return true
-    }
-  }
-  false
+  self.stack.contains("pre")
 }
 
 ///|

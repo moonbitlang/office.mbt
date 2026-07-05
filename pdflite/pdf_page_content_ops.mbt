@@ -3,14 +3,7 @@ fn pdf_page_concat_ops(
   first : ArrayView[@content.PdfContentOp],
   second : ArrayView[@content.PdfContentOp],
 ) -> Array[@content.PdfContentOp] {
-  let output : Array[@content.PdfContentOp] = []
-  for op in first {
-    output.push(op)
-  }
-  for op in second {
-    output.push(op)
-  }
-  output
+  [..first, ..second]
 }
 
 ///|

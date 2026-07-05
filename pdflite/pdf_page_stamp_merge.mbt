@@ -44,14 +44,7 @@ fn pdf_page_stamp_concat_content(
   first : ArrayView[@syntax.PdfObject],
   second : ArrayView[@syntax.PdfObject],
 ) -> Array[@syntax.PdfObject] {
-  let output : Array[@syntax.PdfObject] = []
-  for object in first {
-    output.push(object)
-  }
-  for object in second {
-    output.push(object)
-  }
-  output
+  [..first, ..second]
 }
 
 ///|

@@ -15,14 +15,7 @@ fn pdf_toc_prepend_pages(
   toc_pages : ArrayView[@page.PdfPage],
   original_pages : ArrayView[@page.PdfPage],
 ) -> Array[@page.PdfPage] {
-  let output : Array[@page.PdfPage] = []
-  for page in toc_pages {
-    output.push(page)
-  }
-  for page in original_pages {
-    output.push(page)
-  }
-  output
+  [..toc_pages, ..original_pages]
 }
 
 ///|

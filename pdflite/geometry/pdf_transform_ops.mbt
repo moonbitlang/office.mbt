@@ -51,14 +51,7 @@ pub fn transform_append(
   after : ArrayView[TransformOp],
   before : ArrayView[TransformOp],
 ) -> Array[TransformOp] {
-  let output : Array[TransformOp] = []
-  for item in after {
-    output.push(item)
-  }
-  for item in before {
-    output.push(item)
-  }
-  output
+  [..after, ..before]
 }
 
 ///|
