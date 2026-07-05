@@ -28,6 +28,19 @@ Export a sheet as CSV:
   $ xlsx.exe rows book.xlsx
   Hello,42
 
+Import a CSV file into a new workbook — `csv` and `rows` are inverses, so both
+RFC 4180 quoting (an embedded comma) and empty cells survive the round-trip:
+
+  $ printf 'City,Pop,Note\nOslo,700000,\n"Sao, Paulo",12000000,big\n' > cities.csv
+  $ xlsx.exe csv cities.csv cities.xlsx --sheet Cities
+  imported 3 row(s) into cities.xlsx (sheet Cities)
+  $ xlsx.exe rows cities.xlsx --sheet Cities
+  City,Pop,Note
+  Oslo,700000,
+  "Sao, Paulo",12000000,big
+  $ xlsx.exe get cities.xlsx Cities A3
+  Sao, Paulo
+
 Add a second row and view the sheet as an ASCII table (the first row is
 treated as a header):
 

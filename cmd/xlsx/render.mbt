@@ -55,9 +55,14 @@ fn ascii_row(cells : Array[String], widths : Array[Int]) -> String {
 }
 
 ///|
-/// Quotes a CSV field when it contains a comma, quote, or newline.
+/// Quotes a CSV field when it contains a comma, quote, CR, or LF. CR must be
+/// quoted too: an unquoted `\r` is consumed as a line terminator by the `csv`
+/// importer's parser, so leaving it bare would lose data on a round-trip.
 fn csv_field(value : String) -> String {
-  if value.contains(",") || value.contains("\"") || value.contains("\n") {
+  if value.contains(",") ||
+    value.contains("\"") ||
+    value.contains("\n") ||
+    value.contains("\r") {
     "\"" + value.replace_all(old="\"", new="\"\"") + "\""
   } else {
     value

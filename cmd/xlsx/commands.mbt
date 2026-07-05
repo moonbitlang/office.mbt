@@ -68,6 +68,32 @@ async fn run_rows(m : @argparse.Matches) -> Unit {
 }
 
 ///|
+async fn run_import_csv(m : @argparse.Matches) -> Unit {
+  let input = arg(m, "input")
+  let output = arg(m, "output")
+  let sheet = arg(m, "sheet")
+  let text = @encoding/utf8.decode(@async/fs.read_file(input).binary())
+  let rows = parse_csv(text)
+  let workbook = @lib.new_workbook()
+  ignore(workbook.add_sheet(sheet))
+  for r in 0..<rows.length() {
+    let cols = rows[r]
+    for c in 0..<cols.length() {
+      // Write every field, including empty ones: an explicit empty cell keeps
+      // the used range, so a CSV's shape (trailing/interior blank cells, blank
+      // rows) survives a `csv` -> `rows` round-trip.
+      workbook.set_cell(
+        sheet,
+        @lib.coordinates_to_cell_name(c + 1, r + 1),
+        cols[c],
+      )
+    }
+  }
+  write_file(output, @lib.write(workbook))
+  println("imported \{rows.length()} row(s) into \{output} (sheet \{sheet})")
+}
+
+///|
 async fn run_view(m : @argparse.Matches) -> Unit {
   let workbook = @lib.open_file(arg(m, "file"))
   let sheet = resolve_sheet(workbook, arg(m, "sheet"))
@@ -76,8 +102,10 @@ async fn run_view(m : @argparse.Matches) -> Unit {
 
 ///|
 async fn run_validate(m : @argparse.Matches) -> Unit {
-  let workbook = @lib.open_file(arg(m, "file"))
-  let problems = @xl.validate_ooxml_package(@lib.write(workbook)[:])
+  // Validate the file's own bytes, not a re-serialized copy: opening and
+  // rewriting would hide input-package defects the reader tolerates.
+  let bytes = @async/fs.read_file(arg(m, "file")).binary()
+  let problems = @xl.validate_ooxml_package(bytes[:])
   if problems.length() == 0 {
     println("valid")
   } else {
