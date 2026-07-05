@@ -23,22 +23,36 @@ Confirm anything here with `moon run --target wasm cmd/xlsx -- <command> --help`
 - **Sheet names** are matched case-insensitively; their original case is kept
   for display. `--sheet` defaults to the first sheet for readers, `Sheet1` for
   `create`/`csv`.
-- **Values are stored as text.** `set` and `csv` do not infer numbers, dates,
-  or formulas — a cell set to `42` is the string "42". Downstream numeric use
-  may need explicit typing (not currently exposed by the CLI).
-- **`csv` and `rows` are inverses.** `csv` parses RFC 4180 (quoted fields, `""`
-  escapes, embedded commas/newlines, `LF`/`CRLF`, a leading BOM) and writes
-  every field including empty ones, so a `csv` → `rows` round-trip preserves
-  both comma-bearing quoted fields and empty cells. `rows` quotes any field
-  containing a comma, quote, CR, or LF.
+- **Numbers are stored as numbers.** `set` and `csv` write a *plain, canonical*
+  number (`42`, `-3.5`, `9.99`) as a real numeric cell, so formulas over it
+  evaluate and number formats render in Excel. Anything ambiguous stays text:
+  leading zeros (`007`), a leading `+`, exponent forms (`1e3`), thousands
+  separators (`1,000`), and non-numbers. There is no date/formula inference —
+  use `formula` for formulas.
+- **`csv` → `rows` preserves structure and values, but not every spelling.**
+  `csv` parses RFC 4180 (quoted fields, `""` escapes, embedded commas/newlines,
+  `LF`/`CRLF`, a leading BOM) and writes every field including empty ones, so the
+  round trip preserves comma-bearing quoted fields, empty cells, and text
+  exactly. `rows` quotes any field containing a comma, quote, CR, or LF. Two
+  things that do *not* round-trip verbatim: (1) a numeric field round-trips by
+  *value*, not spelling — since it's stored as a number, `1.0` comes back as `1`,
+  `0.50` as `0.5`, `-0` as `0` (use a leading-zero/`+`/etc. form to keep an exact
+  string as text); (2) `rows`/`view` show a cell as Excel would *display* it, so a
+  cell with a `--number-format` shows its formatted text (e.g. `$9.99`) — read the
+  raw value with `get`, and avoid number-formatting data you intend to
+  re-export.
 - **`formula`** stores the expression (leading `=` optional). Formulas are
   **not evaluated** — Excel computes them when it opens the file — so a
   formula-only cell has no cached value. `get` on such a cell falls back to
   printing the formula (`=SUM(...)`); `rows`/`view` show it as blank.
 - **`style`** builds a style from flags and applies it to every cell in the
-  target cell or `A1:B2` range: `--number-format "CODE"` (e.g. `"#,##0.00"`,
-  `"0%"`), `--bold`, `--italic`, `--fill HEXRGB` (solid fill, e.g. `FFFF00`),
-  `--align left|center|right`. A range wider than 100000 cells is rejected.
+  target cell or `A1:B2` range: `--number-format "CODE"` (an Excel format code,
+  stored verbatim — e.g. `"#,##0.00"`, `"0%"`; for a `$` currency code use
+  single quotes so the shell doesn't expand it: `--number-format '$#,##0.00'`),
+  `--bold`,
+  `--italic`, `--fill HEXRGB` (solid fill, e.g. `FFFF00`),
+  `--align left|center|right`. Number formats only render on numeric cells (see
+  above). A range wider than 100000 cells is rejected.
   Each `style` call sets the target's **complete** style — it *replaces* any
   prior style on those cells rather than merging — so put all the formatting a
   cell needs into one command, and avoid overlapping styled ranges.

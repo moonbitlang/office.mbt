@@ -23,6 +23,22 @@ fn resolve_sheet(workbook : @xl.Workbook, requested : String) -> String {
 }
 
 ///|
+/// Set a cell, storing plain numbers as real numeric cells (so formulas
+/// evaluate and number formats render) and everything else as text.
+fn set_cell_auto(
+  workbook : @xl.Workbook,
+  sheet : String,
+  cell : String,
+  raw : String,
+) -> Unit raise @xl.XlsxError {
+  match classify_cell_value(raw) {
+    AsInt(value) => workbook.set_cell_int(sheet, cell, value)
+    AsFloat(value) => workbook.set_cell_float(sheet, cell, value)
+    AsText => workbook.set_cell(sheet, cell, raw)
+  }
+}
+
+///|
 async fn run_create(m : @argparse.Matches) -> Unit {
   let output = arg(m, "output")
   let sheet = arg(m, "sheet")
@@ -39,7 +55,7 @@ async fn run_set(m : @argparse.Matches) -> Unit {
   let cell = arg(m, "cell")
   let value = arg(m, "value")
   let workbook = @lib.open_file(file)
-  workbook.set_cell(sheet, cell, value)
+  set_cell_auto(workbook, sheet, cell, value)
   write_file(file, @lib.write(workbook))
   println("set \{sheet}!\{cell} = \{value}")
 }
@@ -93,8 +109,10 @@ async fn run_import_csv(m : @argparse.Matches) -> Unit {
     for c in 0..<cols.length() {
       // Write every field, including empty ones: an explicit empty cell keeps
       // the used range, so a CSV's shape (trailing/interior blank cells, blank
-      // rows) survives a `csv` -> `rows` round-trip.
-      workbook.set_cell(
+      // rows) survives a `csv` -> `rows` round-trip. Plain numbers are stored
+      // as real numeric cells.
+      set_cell_auto(
+        workbook,
         sheet,
         @lib.coordinates_to_cell_name(c + 1, r + 1),
         cols[c],
