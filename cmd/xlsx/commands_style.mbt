@@ -93,8 +93,14 @@ async fn run_style(m : @argparse.Matches) -> Unit {
   }
   let bold = flag(m, "bold")
   let italic = flag(m, "italic")
-  if bold || italic {
-    style = style.with_font(@xl.Font::with_values(bold~, italic~))
+  let font_color = arg(m, "font-color")
+  if bold || italic || font_color != "" {
+    let font = if font_color != "" {
+      @xl.Font::with_values(bold~, italic~, color=font_color)
+    } else {
+      @xl.Font::with_values(bold~, italic~)
+    }
+    style = style.with_font(font)
   }
   let fill = arg(m, "fill")
   if fill != "" {

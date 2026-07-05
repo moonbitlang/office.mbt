@@ -168,6 +168,11 @@ fn build_command() -> @argparse.Command {
             about="solid fill color as hex RGB, e.g. FFFF00",
           ),
           @argparse.OptionArg(
+            "font-color",
+            long="font-color",
+            about="font color as hex RGB, e.g. FFFFFF (white)",
+          ),
+          @argparse.OptionArg(
             "align",
             long="align",
             about="horizontal alignment: left, center, or right",
