@@ -26,13 +26,11 @@ fn pdf_impose_page_reference_changes(
   page_count : Int,
   pages_per_sheet : Int,
 ) -> Array[(Int, Int)] {
-  let changes : Array[(Int, Int)] = []
-  for page_number in 1..<=page_count {
-    changes.push(
-      (page_number, (page_number + pages_per_sheet - 1) / pages_per_sheet),
-    )
-  }
-  changes
+  [
+    for page_number in 1..<=page_count => {
+      (page_number, (page_number + pages_per_sheet - 1) / pages_per_sheet)
+    }
+  ]
 }
 
 ///|
@@ -59,21 +57,6 @@ fn PdfDocument::pdf_impose_preprocess(
 }
 
 ///|
-fn pdf_impose_concat_ops(
-  first : ArrayView[@content.PdfContentOp],
-  second : ArrayView[@content.PdfContentOp],
-) -> Array[@content.PdfContentOp] {
-  let output : Array[@content.PdfContentOp] = []
-  for op in first {
-    output.push(op)
-  }
-  for op in second {
-    output.push(op)
-  }
-  output
-}
-
-///|
 fn pdf_impose_push_objects(
   output : Array[@syntax.PdfObject],
   objects : ArrayView[@syntax.PdfObject],
@@ -85,11 +68,9 @@ fn pdf_impose_push_objects(
 
 ///|
 fn pdf_impose_all_pages(end_page : Int) -> Array[Int] {
-  let pages : Array[Int] = []
-  for page_number in 1..<=end_page {
-    pages.push(page_number)
-  }
-  pages
+  [
+    for page_number in 1..<=end_page => page_number
+  ]
 }
 
 ///|
@@ -97,11 +78,11 @@ fn pdf_impose_repeated_offsets(
   count : Int,
   offset : (Double, Double),
 ) -> Array[(Double, Double)] {
-  let offsets : Array[(Double, Double)] = []
-  for _ in 0..<count {
-    offsets.push(offset)
+  if count > 0 {
+    Array::make(count, offset)
+  } else {
+    []
   }
-  offsets
 }
 
 ///|
@@ -109,11 +90,11 @@ fn pdf_impose_repeated_scales(
   count : Int,
   scale : (Double, Double),
 ) -> Array[(Double, Double)] {
-  let scales : Array[(Double, Double)] = []
-  for _ in 0..<count {
-    scales.push(scale)
+  if count > 0 {
+    Array::make(count, scale)
+  } else {
+    []
   }
-  scales
 }
 
 ///|
@@ -121,11 +102,11 @@ fn pdf_impose_repeated_boxes(
   count : Int,
   box : (Double, Double, Double, Double),
 ) -> Array[(Double, Double, Double, Double)] {
-  let boxes : Array[(Double, Double, Double, Double)] = []
-  for _ in 0..<count {
-    boxes.push(box)
+  if count > 0 {
+    Array::make(count, box)
+  } else {
+    []
   }
-  boxes
 }
 
 ///|

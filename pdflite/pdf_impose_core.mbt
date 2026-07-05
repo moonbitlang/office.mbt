@@ -16,15 +16,12 @@ fn PdfDocument::pdf_impose_transform_content(
     output
   } else {
     let old_ops = self.parse_content_ops_with_resources(resources, content)
-    let protected_ops = pdf_impose_concat_ops(
-      pdf_page_protect(old_ops),
-      old_ops,
-    )
+    let protected_ops = pdf_page_concat_ops(pdf_page_protect(old_ops), old_ops)
     [
       pdf_content_stream_of_ops(
-        pdf_impose_concat_ops(
+        pdf_page_concat_ops(
           [Op_q, Op_cm(matrix)],
-          pdf_impose_concat_ops(protected_ops, [Op_Q]),
+          pdf_page_concat_ops(protected_ops, [Op_Q]),
         ),
       ),
     ]

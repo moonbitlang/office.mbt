@@ -1,4 +1,35 @@
 ///|
+/// Emit the shared `<?xml ...?>` + opening `<Relationships>` preamble.
+fn write_rels_open(sb : StringBuilder) -> Unit {
+  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+  sb.write_view(
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
+  )
+}
+
+///|
+/// Emit one `<Relationship>` element (two-space indented, newline-terminated).
+/// `external` adds `TargetMode="External"`. Centralizing the element format
+/// keeps every rels writer byte-identical.
+fn write_relationship(
+  sb : StringBuilder,
+  rel_id : Int,
+  rel_type : String,
+  target : String,
+  external? : Bool = false,
+) -> Unit {
+  sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
+  sb.write_view(rel_type)
+  sb.write_view("\" Target=\"")
+  sb.write_view(escape_xml_attr(target))
+  if external {
+    sb.write_view("\" TargetMode=\"External\"/>\n")
+  } else {
+    sb.write_view("\"/>\n")
+  }
+}
+
+///|
 fn write_sheet_rels_xml(
   drawing_target : String?,
   table_targets : ArrayView[String],
@@ -10,76 +41,41 @@ fn write_sheet_rels_xml(
   image_targets : ArrayView[String],
 ) -> String {
   let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
-  )
+  write_rels_open(sb)
   let mut rel_id = 1
   match drawing_target {
     Some(target) => {
-      sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-      sb.write_view(rel_drawing)
-      sb.write_view("\" Target=\"")
-      sb.write_view(escape_xml_attr(target))
-      sb.write_view("\"/>\n")
+      write_relationship(sb, rel_id, rel_drawing, target)
       rel_id = rel_id + 1
     }
     None => ()
   }
   for target in table_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_table)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
+    write_relationship(sb, rel_id, rel_table, target)
     rel_id = rel_id + 1
   }
   for target in pivot_table_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_pivot_table)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
+    write_relationship(sb, rel_id, rel_pivot_table, target)
     rel_id = rel_id + 1
   }
   for target in slicer_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_slicer)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
+    write_relationship(sb, rel_id, rel_slicer, target)
     rel_id = rel_id + 1
   }
   for target in hyperlink_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_hyperlink)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\" TargetMode=\"External\"/>\n")
+    write_relationship(sb, rel_id, rel_hyperlink, target, external=true)
     rel_id = rel_id + 1
   }
   for target in comment_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_comments)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
+    write_relationship(sb, rel_id, rel_comments, target)
     rel_id = rel_id + 1
   }
   for target in vml_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_vml)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
+    write_relationship(sb, rel_id, rel_vml, target)
     rel_id = rel_id + 1
   }
   for target in image_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_image)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
+    write_relationship(sb, rel_id, rel_image, target)
     rel_id = rel_id + 1
   }
   sb.write_view("</Relationships>")
@@ -89,14 +85,12 @@ fn write_sheet_rels_xml(
 ///|
 fn write_pivot_table_rels_xml(cache_id : Int) -> String {
   let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
-  )
-  sb.write_view("  <Relationship Id=\"rId1\" Type=\"")
-  sb.write_view(rel_pivot_cache)
-  sb.write_view(
-    "\" Target=\"../pivotCache/pivotCacheDefinition\{cache_id}.xml\"/>\n",
+  write_rels_open(sb)
+  write_relationship(
+    sb,
+    1,
+    rel_pivot_cache,
+    "../pivotCache/pivotCacheDefinition\{cache_id}.xml",
   )
   sb.write_view("</Relationships>")
   sb.to_string()
@@ -105,13 +99,13 @@ fn write_pivot_table_rels_xml(cache_id : Int) -> String {
 ///|
 fn write_pivot_cache_rels_xml(cache_id : Int) -> String {
   let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
+  write_rels_open(sb)
+  write_relationship(
+    sb,
+    1,
+    rel_pivot_cache_records,
+    "pivotCacheRecords\{cache_id}.xml",
   )
-  sb.write_view("  <Relationship Id=\"rId1\" Type=\"")
-  sb.write_view(rel_pivot_cache_records)
-  sb.write_view("\" Target=\"pivotCacheRecords\{cache_id}.xml\"/>\n")
   sb.write_view("</Relationships>")
   sb.to_string()
 }
@@ -123,36 +117,23 @@ fn write_drawing_rels_xml(
   hyperlink_targets : Array[DrawingHyperlink],
 ) -> String {
   let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
-  )
+  write_rels_open(sb)
   for entry in image_targets {
     let (rel_id, target) = entry
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_image)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
+    write_relationship(sb, rel_id, rel_image, target)
   }
   for entry in chart_targets {
     let (rel_id, target) = entry
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_chart)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
+    write_relationship(sb, rel_id, rel_chart, target)
   }
   for entry in hyperlink_targets {
-    sb.write_view("  <Relationship Id=\"rId\{entry.rel_id}\" Type=\"")
-    sb.write_view(rel_hyperlink)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(entry.target))
-    sb.write_view("\"")
-    if entry.link_type == External {
-      sb.write_view(" TargetMode=\"External\"")
-    }
-    sb.write_view("/>\n")
+    write_relationship(
+      sb,
+      entry.rel_id,
+      rel_hyperlink,
+      entry.target,
+      external=entry.link_type == External,
+    )
   }
   sb.write_view("</Relationships>")
   sb.to_string()
@@ -161,17 +142,10 @@ fn write_drawing_rels_xml(
 ///|
 fn write_vml_rels_xml(image_targets : Array[String]) -> String {
   let sb = StringBuilder::new()
-  sb.write_view("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-  sb.write_view(
-    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n",
-  )
+  write_rels_open(sb)
   let mut rel_id = 1
   for target in image_targets {
-    sb.write_view("  <Relationship Id=\"rId\{rel_id}\" Type=\"")
-    sb.write_view(rel_image)
-    sb.write_view("\" Target=\"")
-    sb.write_view(escape_xml_attr(target))
-    sb.write_view("\"/>\n")
+    write_relationship(sb, rel_id, rel_image, target)
     rel_id = rel_id + 1
   }
   sb.write_view("</Relationships>")

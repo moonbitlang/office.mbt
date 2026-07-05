@@ -216,11 +216,11 @@ test "pdf_impose_add_border appends cpdf stamp rectangle" {
   ]
   @test.assert_eq(
     try! impose_page_content_ops_for_test(bordered, pages[0]),
-    pdf_impose_concat_ops([Op_q, Op_S, Op_Q], border_ops),
+    pdf_page_concat_ops([Op_q, Op_S, Op_Q], border_ops),
   )
   @test.assert_eq(
     try! impose_page_content_ops_for_test(bordered, pages[1]),
-    pdf_impose_concat_ops([Op_q, Op_BT, Op_ET, Op_Q], border_ops),
+    pdf_page_concat_ops([Op_q, Op_BT, Op_ET, Op_Q], border_ops),
   )
 }
 
