@@ -1477,8 +1477,7 @@ fn write_styles_xml(
       sb.write_view(" type=\"\{escape_xml_attr(variant.typ)}\"")
     }
     sb.write_view(">")
-    for i in 0..<variant.stops.length() {
-      let pos = variant.stops[i]
+    for i, pos in variant.stops {
       let color = if i == 1 { c2 } else { c1 }
       sb.write_view("<stop position=\"\{pos}\"><color rgb=\"")
       sb.write_view(escape_xml_attr(color))

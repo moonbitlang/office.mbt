@@ -246,6 +246,24 @@ fn data_validation_bool_attr(value : Bool) -> String {
 }
 
 ///|
+/// Writes ` name="escaped-value"` for a present optional string attribute, or
+/// nothing when it is absent.
+fn write_opt_xml_attr(
+  sb : StringBuilder,
+  name : String,
+  value : String?,
+) -> Unit {
+  match value {
+    Some(v) => {
+      sb.write_view(" \{name}=\"")
+      sb.write_view(escape_xml_attr(v))
+      sb.write_view("\"")
+    }
+    None => ()
+  }
+}
+
+///|
 fn data_validation_xml(dv : DataValidation) -> String raise XlsxError {
   if dv.sqref == "" {
     raise InvalidDataValidation(msg="data validation sqref empty")
@@ -253,51 +271,16 @@ fn data_validation_xml(dv : DataValidation) -> String raise XlsxError {
   let sb = StringBuilder::new()
   sb.write_view("<dataValidation")
   sb.write_view(" allowBlank=\"\{data_validation_bool_attr(dv.allow_blank)}\"")
-  match dv.error {
-    Some(value) => {
-      sb.write_view(" error=\"")
-      sb.write_view(escape_xml_attr(value))
-      sb.write_view("\"")
-    }
-    None => ()
-  }
-  match dv.error_style {
-    Some(value) => {
-      sb.write_view(" errorStyle=\"")
-      sb.write_view(escape_xml_attr(value))
-      sb.write_view("\"")
-    }
-    None => ()
-  }
-  match dv.error_title {
-    Some(value) => {
-      sb.write_view(" errorTitle=\"")
-      sb.write_view(escape_xml_attr(value))
-      sb.write_view("\"")
-    }
-    None => ()
-  }
+  write_opt_xml_attr(sb, "error", dv.error)
+  write_opt_xml_attr(sb, "errorStyle", dv.error_style)
+  write_opt_xml_attr(sb, "errorTitle", dv.error_title)
   if dv.operator != "" {
     sb.write_view(" operator=\"")
     sb.write_view(escape_xml_attr(dv.operator))
     sb.write_view("\"")
   }
-  match dv.prompt {
-    Some(value) => {
-      sb.write_view(" prompt=\"")
-      sb.write_view(escape_xml_attr(value))
-      sb.write_view("\"")
-    }
-    None => ()
-  }
-  match dv.prompt_title {
-    Some(value) => {
-      sb.write_view(" promptTitle=\"")
-      sb.write_view(escape_xml_attr(value))
-      sb.write_view("\"")
-    }
-    None => ()
-  }
+  write_opt_xml_attr(sb, "prompt", dv.prompt)
+  write_opt_xml_attr(sb, "promptTitle", dv.prompt_title)
   if dv.show_drop_down {
     sb.write_view(" showDropDown=\"1\"")
   }

@@ -1,4 +1,21 @@
 ///|
+/// Reads an integer attribute, returning `default` when absent and raising
+/// `InvalidXml` (mirroring the attribute name) when present but unparseable.
+fn attr_int_or(
+  tag : StringView,
+  name : StringView,
+  default : Int,
+) -> Int raise XlsxError {
+  match attr_value(tag, name) {
+    Some(value) =>
+      @string.parse_int(value, base=10) catch {
+        _ => raise InvalidXml(msg="\{name} invalid")
+      }
+    None => default
+  }
+}
+
+///|
 fn parse_num_fmts(xml : StringView) -> Map[Int, String] raise XlsxError {
   let num_fmts : Map[Int, String] = {}
   let body = match extract_tag_body(xml, "numFmts") {
@@ -81,13 +98,7 @@ fn parse_cell_xfs(
       }
       rest[:close].to_owned()
     }
-    let num_fmt_id = match attr_value(tag, "numFmtId") {
-      Some(value) =>
-        @string.parse_int(value, base=10) catch {
-          _ => raise InvalidXml(msg="numFmtId invalid")
-        }
-      None => 0
-    }
+    let num_fmt_id = attr_int_or(tag, "numFmtId", 0)
     let mut style = match num_fmts.get(num_fmt_id) {
       Some(code) => Style::number_format(code)
       None =>
@@ -97,33 +108,15 @@ fn parse_cell_xfs(
           Style::builtin_number_format(num_fmt_id)
         }
     }
-    let font_id = match attr_value(tag, "fontId") {
-      Some(value) =>
-        @string.parse_int(value, base=10) catch {
-          _ => raise InvalidXml(msg="fontId invalid")
-        }
-      None => 0
-    }
+    let font_id = attr_int_or(tag, "fontId", 0)
     if font_id > 0 && font_id < fonts.length() {
       style = style.with_font(fonts[font_id])
     }
-    let fill_id = match attr_value(tag, "fillId") {
-      Some(value) =>
-        @string.parse_int(value, base=10) catch {
-          _ => raise InvalidXml(msg="fillId invalid")
-        }
-      None => 0
-    }
+    let fill_id = attr_int_or(tag, "fillId", 0)
     if fill_id > 1 && fill_id < fills.length() {
       style = style.with_fill(fills[fill_id])
     }
-    let border_id = match attr_value(tag, "borderId") {
-      Some(value) =>
-        @string.parse_int(value, base=10) catch {
-          _ => raise InvalidXml(msg="borderId invalid")
-        }
-      None => 0
-    }
+    let border_id = attr_int_or(tag, "borderId", 0)
     if border_id > 0 && border_id < borders.length() {
       let border = borders[border_id]
       if border.length() > 0 {
@@ -194,13 +187,7 @@ fn parse_dxfs(
     let tag = text[:end]
     let mut style = match tag_attributes_in(tag, "numFmt") {
       Some(num_fmt_tag) => {
-        let num_fmt_id = match attr_value(num_fmt_tag, "numFmtId") {
-          Some(value) =>
-            @string.parse_int(value, base=10) catch {
-              _ => raise InvalidXml(msg="numFmtId invalid")
-            }
-          None => 0
-        }
+        let num_fmt_id = attr_int_or(num_fmt_tag, "numFmtId", 0)
         match attr_value(num_fmt_tag, "formatCode") {
           Some(value) => Style::number_format(unescape_xml_text(value))
           None =>

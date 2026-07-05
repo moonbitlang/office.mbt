@@ -2665,9 +2665,7 @@ fn parse_legacy_drawing_rel_id(
 ///|
 fn parse_bool_attr(value : StringView) -> Bool {
   match value.to_owned() {
-    "1" => true
-    "true" => true
-    "TRUE" => true
+    "1" | "true" | "TRUE" => true
     _ => false
   }
 }

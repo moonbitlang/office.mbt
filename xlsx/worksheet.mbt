@@ -1426,62 +1426,20 @@ fn Worksheet::add_picture_from_bytes_with_options(
   extension : String,
   options : GraphicOptions,
 ) -> Unit raise XlsxError {
-  let offset_x = match options.offset_x {
-    Some(value) => value
-    None => 0
-  }
-  let offset_y = match options.offset_y {
-    Some(value) => value
-    None => 0
-  }
-  let scale_x = match options.scale_x {
-    Some(value) => value
-    None => 1.0
-  }
-  let scale_y = match options.scale_y {
-    Some(value) => value
-    None => 1.0
-  }
-  let hyperlink = match options.hyperlink {
-    Some(value) => value
-    None => ""
-  }
-  let hyperlink_type = match options.hyperlink_type {
-    Some(value) => value
-    None => Unset
-  }
-  let name = match options.name {
-    Some(value) => value
-    None => ""
-  }
-  let alt_text = match options.alt_text {
-    Some(value) => value
-    None => ""
-  }
-  let lock_aspect_ratio = match options.lock_aspect_ratio {
-    Some(value) => value
-    None => false
-  }
-  let auto_fit = match options.auto_fit {
-    Some(value) => value
-    None => false
-  }
-  let auto_fit_ignore_aspect = match options.auto_fit_ignore_aspect {
-    Some(value) => value
-    None => false
-  }
-  let print_object = match options.print_object {
-    Some(value) => value
-    None => true
-  }
-  let locked = match options.locked {
-    Some(value) => value
-    None => true
-  }
-  let positioning = match options.positioning {
-    Some(value) => value
-    None => OneCell
-  }
+  let offset_x = options.offset_x.unwrap_or(0)
+  let offset_y = options.offset_y.unwrap_or(0)
+  let scale_x = options.scale_x.unwrap_or(1.0)
+  let scale_y = options.scale_y.unwrap_or(1.0)
+  let hyperlink = options.hyperlink.unwrap_or("")
+  let hyperlink_type = options.hyperlink_type.unwrap_or(Unset)
+  let name = options.name.unwrap_or("")
+  let alt_text = options.alt_text.unwrap_or("")
+  let lock_aspect_ratio = options.lock_aspect_ratio.unwrap_or(false)
+  let auto_fit = options.auto_fit.unwrap_or(false)
+  let auto_fit_ignore_aspect = options.auto_fit_ignore_aspect.unwrap_or(false)
+  let print_object = options.print_object.unwrap_or(true)
+  let locked = options.locked.unwrap_or(true)
+  let positioning = options.positioning.unwrap_or(OneCell)
   self.add_picture_from_bytes(
     reference,
     data,
@@ -1561,62 +1519,20 @@ async fn Worksheet::add_picture_with_options(
   path : String,
   options : GraphicOptions,
 ) -> Unit raise XlsxError {
-  let offset_x = match options.offset_x {
-    Some(value) => value
-    None => 0
-  }
-  let offset_y = match options.offset_y {
-    Some(value) => value
-    None => 0
-  }
-  let scale_x = match options.scale_x {
-    Some(value) => value
-    None => 1.0
-  }
-  let scale_y = match options.scale_y {
-    Some(value) => value
-    None => 1.0
-  }
-  let hyperlink = match options.hyperlink {
-    Some(value) => value
-    None => ""
-  }
-  let hyperlink_type = match options.hyperlink_type {
-    Some(value) => value
-    None => Unset
-  }
-  let name = match options.name {
-    Some(value) => value
-    None => ""
-  }
-  let alt_text = match options.alt_text {
-    Some(value) => value
-    None => ""
-  }
-  let lock_aspect_ratio = match options.lock_aspect_ratio {
-    Some(value) => value
-    None => false
-  }
-  let auto_fit = match options.auto_fit {
-    Some(value) => value
-    None => false
-  }
-  let auto_fit_ignore_aspect = match options.auto_fit_ignore_aspect {
-    Some(value) => value
-    None => false
-  }
-  let print_object = match options.print_object {
-    Some(value) => value
-    None => true
-  }
-  let locked = match options.locked {
-    Some(value) => value
-    None => true
-  }
-  let positioning = match options.positioning {
-    Some(value) => value
-    None => OneCell
-  }
+  let offset_x = options.offset_x.unwrap_or(0)
+  let offset_y = options.offset_y.unwrap_or(0)
+  let scale_x = options.scale_x.unwrap_or(1.0)
+  let scale_y = options.scale_y.unwrap_or(1.0)
+  let hyperlink = options.hyperlink.unwrap_or("")
+  let hyperlink_type = options.hyperlink_type.unwrap_or(Unset)
+  let name = options.name.unwrap_or("")
+  let alt_text = options.alt_text.unwrap_or("")
+  let lock_aspect_ratio = options.lock_aspect_ratio.unwrap_or(false)
+  let auto_fit = options.auto_fit.unwrap_or(false)
+  let auto_fit_ignore_aspect = options.auto_fit_ignore_aspect.unwrap_or(false)
+  let print_object = options.print_object.unwrap_or(true)
+  let locked = options.locked.unwrap_or(true)
+  let positioning = options.positioning.unwrap_or(OneCell)
   self.add_picture(
     reference,
     path,
