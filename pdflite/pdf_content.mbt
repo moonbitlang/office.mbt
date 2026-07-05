@@ -51,6 +51,7 @@ fn pdf_parse_content_ops_from_view_with_context(
   let operands : Array[@syntax.PdfObject] = Array::new(capacity=8)
   let mut done = false
   while !done {
+    let before = cursor.position()
     match pdf_content_lex_next(cursor) {
       ContentEnd => done = true
       ContentComment => ()
@@ -63,6 +64,13 @@ fn pdf_parse_content_ops_from_view_with_context(
           ops.push(pdf_content_parse_section(operands, operator))
           operands.clear()
         }
+    }
+    // A non-terminal lexeme that consumed no input means the stream is
+    // malformed (e.g. a stray closing delimiter that no rule advances past,
+    // which lexes to an empty operator token). Without this guard the loop
+    // would spin forever, growing `ops`/`operands` until memory is exhausted.
+    if !done && cursor.position() == before {
+      raise ContentOperatorExpected
     }
   }
   if operands.length() > 0 {
