@@ -8,7 +8,7 @@ import {
 // Values
 
 // Errors
-type CliError derive(Eq, @debug.Debug)
+type CliError derive(Eq)
 
 // Types and methods
 type CliCommand derive(Eq, @debug.Debug)
