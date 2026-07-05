@@ -6,9 +6,17 @@ import {
 }
 
 // Values
+pub fn attr_value(StringView, StringView) -> String? raise ParseXmlError
+
+pub fn escape_xml_attr(StringView) -> String
+
+pub fn escape_xml_text(StringView) -> String
+
 pub fn find_override_part_by_content_types(StringView, ArrayView[String]) -> String? raise ParseXmlError
 
 pub fn parse_relationship_targets(StringView, StringView) -> Map[String, String] raise ParseXmlError
+
+pub fn xml_needs_escape(StringView, attr~ : Bool) -> Bool
 
 // Errors
 pub suberror ParseXmlError {

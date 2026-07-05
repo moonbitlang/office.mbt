@@ -12,7 +12,9 @@ fn is_attr_space(ch : UInt16) -> Bool {
 }
 
 ///|
-fn attr_value(
+/// Extract the value of attribute `name` from an XML start-tag body, or `None`
+/// if absent. Raises `InvalidXml` on a malformed (unterminated) attribute.
+pub fn attr_value(
   tag : StringView,
   name : StringView,
 ) -> String? raise ParseXmlError {
