@@ -29,14 +29,10 @@ jobs:
       # steps below cover the three modules at once. (pdflite has native C
       # stubs; the ubuntu runner's `cc` compiles them for the native target.)
       #
-      # A handful of mbtexcel parity/fixture tests read the vendored Go excelize
-      # checkout (gitignored locally) from `excelize/` and `.repos/excelize/`.
-      # Provision it so the full suite can run in CI. (docx2html's own fixtures
-      # are committed under docx2html/tests/, so they need no extra setup.)
-      - name: Fetch excelize test fixtures
-        run: |
-          git clone --depth 1 https://github.com/qax-os/excelize.git .repos/excelize
-          ln -s .repos/excelize excelize
+      # mbtexcel's parity/fixture tests read a small committed subset of the
+      # excelize test fixtures from `fixtures/excelize/` (see that directory's
+      # README) — no upstream checkout is fetched at test time. (docx2html's own
+      # fixtures are likewise committed under docx2html/tests/.)
 
       # mbtexcel's `*_openxml_validity_test.mbt` tests shell out to the Microsoft
       # DocumentFormat.OpenXml SDK validator via scripts/validate_xlsx.sh, which

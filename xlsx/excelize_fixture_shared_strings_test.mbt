@@ -1,7 +1,7 @@
 ///|
 #cfg(target="native")
 async test "excelize fixture SharedStrings.xlsx search_sheet parity" {
-  let workbook = open_file(".repos/excelize/test/SharedStrings.xlsx")
+  let workbook = open_file("fixtures/excelize/test/SharedStrings.xlsx")
   debug_inspect(workbook.search_sheet("Sheet1", "X"), content="[]")
   debug_inspect(workbook.search_sheet("Sheet1", "A"), content="[\"A1\"]")
   debug_inspect(

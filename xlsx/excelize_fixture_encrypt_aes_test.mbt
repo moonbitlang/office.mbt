@@ -2,7 +2,7 @@
 #cfg(target="native")
 async test "excelize fixture encryptAES.xlsx opens with password" {
   let encrypted_bytes = @async/fs.read_file(
-    ".repos/excelize/test/encryptAES.xlsx",
+    "fixtures/excelize/test/encryptAES.xlsx",
   ) catch {
     err => fail("read file failed: \{err}")
   }
@@ -23,7 +23,7 @@ async test "excelize fixture encryptAES.xlsx opens with password" {
   }
   inspect(shared_strings_xml.contains("SECRET"), content="true")
   let workbook = open_file(
-    ".repos/excelize/test/encryptAES.xlsx",
+    "fixtures/excelize/test/encryptAES.xlsx",
     password="password",
   )
   debug_inspect(workbook.search_sheet("Sheet1", "SECRET"), content="[\"A1\"]")
@@ -37,7 +37,7 @@ async test "excelize fixture encryptAES.xlsx opens with password" {
 #cfg(target="native")
 async test "excelize fixture encryptAES.xlsx wrong password errors" {
   let result : Result[Workbook, Error] = Ok(
-    open_file(".repos/excelize/test/encryptAES.xlsx", password="passwd"),
+    open_file("fixtures/excelize/test/encryptAES.xlsx", password="passwd"),
   ) catch {
     e => Err(e)
   }

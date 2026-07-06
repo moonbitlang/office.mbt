@@ -1,7 +1,7 @@
 ///|
 #cfg(target="native")
 async test "excelize fixture MergeCell.xlsx merge-cells info parity" {
-  let workbook = open_file(".repos/excelize/test/MergeCell.xlsx")
+  let workbook = open_file("fixtures/excelize/test/MergeCell.xlsx")
   let sheet_name = match workbook.sheet_name(0) {
     Some(value) => value
     None => fail("missing sheet")

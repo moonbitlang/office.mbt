@@ -1,7 +1,7 @@
 ///|
 #cfg(target="native")
 async test "excelize fixture CalcChain.xlsx can remove formulas" {
-  let workbook = open_file(".repos/excelize/test/CalcChain.xlsx")
+  let workbook = open_file("fixtures/excelize/test/CalcChain.xlsx")
   workbook.set_cell_formula("Sheet1", "A1", "")
   workbook.set_cell_formula("Sheet1", "B1", "")
   let parsed = read(write(workbook))
