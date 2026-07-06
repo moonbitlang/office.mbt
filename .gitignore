@@ -4,10 +4,13 @@ target/
 target
 .mooncakes/
 .moonagent/
-.repos
+# Full excelize Go checkout used by developer parity tooling (not the vendored
+# `fixtures/excelize/` test subset, which is committed). Anchored so the bare
+# names don't also ignore that subset.
+/.repos
 ..mi
 *~
-excelize
+/excelize
 __pycache__/
 *.pyc
 .tools

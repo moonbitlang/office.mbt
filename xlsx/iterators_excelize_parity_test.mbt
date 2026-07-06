@@ -81,7 +81,7 @@ test "rows/cols/get_rows/get_cols validate sheet name" {
 ///|
 #cfg(target="native")
 async test "excelize Book1 iterators match get_rows/get_cols" {
-  let path = ".repos/excelize/test/Book1.xlsx"
+  let path = "fixtures/excelize/test/Book1.xlsx"
   let workbook = open_file(path)
   let total = workbook.get_cell_value("Sheet1", "A19") catch {
     err => fail("get_cell_value failed: \{repr(err)}")

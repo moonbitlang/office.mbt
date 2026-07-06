@@ -464,7 +464,12 @@ async test "picture autofit preserves aspect" {
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_col_width(1, 1.0)
   sheet.set_row_height(1, 10.0)
-  workbook.add_picture("Sheet1", "A1", "excelize/logo.png", auto_fit=true)
+  workbook.add_picture(
+    "Sheet1",
+    "A1",
+    "fixtures/excelize/logo.png",
+    auto_fit=true,
+  )
   let bytes = write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
@@ -485,7 +490,7 @@ async test "picture autofit ignore aspect" {
   workbook.add_picture(
     "Sheet1",
     "A1",
-    "excelize/logo.png",
+    "fixtures/excelize/logo.png",
     auto_fit=true,
     auto_fit_ignore_aspect=true,
   )
@@ -570,7 +575,7 @@ async test "picture invalid sheet name (from file path)" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result = try
-    workbook.add_picture("Sheet:1", "A1", "excelize/logo.png")
+    workbook.add_picture("Sheet:1", "A1", "fixtures/excelize/logo.png")
   catch {
     err => Err(err)
   } noraise {
