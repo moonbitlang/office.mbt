@@ -4,7 +4,6 @@ package "bobzhang/mbtexcel"
 import {
   "bobzhang/mbtexcel/xlsx",
   "moonbitlang/async/io",
-  "moonbitlang/core/debug",
   "moonbitlang/x/time",
 }
 
@@ -51,24 +50,11 @@ pub fn theme_color(String, Double) -> String
 
 pub fn time_to_excel_date(@time.ZonedDateTime, use_1904_format? : Bool) -> Double
 
-pub fn utf16_index_to_utf8_offset(StringView, Int) -> Int raise UtfIndexError
-
-pub fn utf16_len(StringView) -> Int
-
-pub fn utf8_len(StringView) -> Int
-
-pub fn utf8_offset_to_utf16_index(BytesView, Int) -> Int raise UtfIndexError
-
 pub fn write(@xlsx.Workbook) -> Bytes raise @xlsx.XlsxError
 
 pub fn write_with_password(@xlsx.Workbook, String) -> Bytes raise @xlsx.XlsxError
 
 // Errors
-pub suberror UtfIndexError {
-  OutOfRange(index~ : Int, len~ : Int)
-  InvalidBoundary(index~ : Int)
-  InvalidUtf8(offset~ : Int)
-} derive(@debug.Debug)
 
 // Types and methods
 
