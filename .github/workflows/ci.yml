@@ -165,7 +165,10 @@ jobs:
           v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"
           # The docx agent CLI also targets wasm end to end: build it and
-          # drive its convert subcommand over a committed fixture.
+          # drive its convert subcommand over a committed fixture. Keep the
+          # captured stderr and print it on failure — discarding it makes a
+          # red run undebuggable.
           moon build --target wasm docx2html/cmd/docx
-          d=$(moon run --target wasm docx2html/cmd/docx -- convert docx2html/tests/cram/fixtures/single-paragraph.docx 2>/dev/null)
-          echo "docx convert -> $d"; test "$d" = "<p>Walking on imported air</p>"
+          d=$(moon run --target wasm docx2html/cmd/docx -- convert docx2html/tests/cram/fixtures/single-paragraph.docx 2>docx-wasm.err) || { echo "docx convert failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "docx convert -> $d"
+          test "$d" = "<p>Walking on imported air</p>" || { echo "unexpected output; stderr:"; cat docx-wasm.err; exit 1; }
