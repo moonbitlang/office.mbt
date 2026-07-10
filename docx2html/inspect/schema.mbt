@@ -12,3 +12,7 @@
 ///|
 /// Schema identifier of the `outline` payload (document structure map).
 pub const SCHEMA_OUTLINE : String = "docx.outline/1"
+
+///|
+/// Schema identifier of the `element` payload (`get <path> --json`).
+pub const SCHEMA_ELEMENT : String = "docx.element/1"

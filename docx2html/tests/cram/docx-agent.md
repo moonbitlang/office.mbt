@@ -73,3 +73,53 @@ $ printf 'not a docx' > bad.docx; docx.exe outline bad.docx
 docx: invalid ZIP archive: MissingEndOfCentral
 [1]
 ```
+
+## Text: Path-Tagged Plain Text
+
+`docx text` prints one line per paragraph — including table-cell paragraphs —
+prefixed with the path `docx get` accepts. (This fixture's one paragraph:)
+
+```mooncram
+$ docx.exe text "$TESTDIR/fixtures/single-paragraph.docx"
+[/body/p[1]] Walking on imported air
+```
+
+## Get: One Element By Path (`docx.element/1`)
+
+Without `--json`, `get` prints the element's raw text:
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/body/p[1]'
+Walking on imported air
+```
+
+With `--json`, the structured payload (note the normalized path echo):
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/tiny-picture.docx" '/body/p[01]/r[1]/image[1]' --json | sed "s|$TESTDIR|TESTDIR|"
+{
+  "schema": "docx.element/1",
+  "file": "TESTDIR/fixtures/tiny-picture.docx",
+  "path": "/body/p[1]/r[1]/image[1]",
+  "kind": "image",
+  "content_type": "image/png",
+  "bytes": 110,
+  "children": []
+}
+```
+
+Path errors are agent-correctable — they say what exists:
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/body/p[9]'
+error: path '/body/p[9]' not found: '/body' has 1 'p' children (wanted index 9)
+[1]
+```
+
+Reserved roots (headers/footers/notes/comments) are named as such:
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/header[1]/p[1]'
+error: path root '/header[1]' is reserved but not yet addressable; only '/body' paths are supported today
+[1]
+```

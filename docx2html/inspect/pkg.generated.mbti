@@ -7,11 +7,23 @@ import {
 }
 
 // Values
+pub const SCHEMA_ELEMENT : String = "docx.element/1"
+
 pub const SCHEMA_OUTLINE : String = "docx.outline/1"
+
+pub fn element(@document.DocumentElement, file~ : String, path~ : String) -> Json raise PathError
 
 pub fn outline(@document.DocumentElement, file~ : String, messages? : Array[@core.Message]) -> Json
 
+pub fn resolve_path(@document.DocumentElement, String) -> @document.DocumentElement raise PathError
+
+pub fn text_lines(@document.DocumentElement) -> Array[String]
+
 // Errors
+pub(all) suberror PathError {
+  PathError(String)
+} derive(Eq)
+pub impl Show for PathError
 
 // Types and methods
 
