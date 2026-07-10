@@ -165,9 +165,18 @@ params:
 Application is **all-or-nothing**: a parse error or a failing op leaves the
 file untouched (a failing op reports `error: op <i> (<name>): …; <file> not
 modified` with a 0-based index and exit 1), and the final save writes a
-temp file then renames it. `--dry-run` parses and applies in memory, writes
-nothing, and prints `dry-run ok: <N> op(s); <file> not modified`. Zero ops
-is a valid no-op; scripts are capped at 10,000 ops. Full grammar:
+uniquely-named temp file through an exclusive handle, then renames it over
+the (symlink-resolved) target — the saved file is created owner-only
+(0600); chmod afterwards if others need to read it. `--dry-run` parses and
+applies in memory, writes nothing, and prints
+`dry-run ok: <N> op(s); <file> not modified`. Zero ops is a valid no-op and
+writes nothing. Every reference is validated strictly at parse time (`cell`
+params take a single in-grid cell, `range` params a range; malformed or
+out-of-grid references fail up front — the `style` subcommand, by contrast,
+passes a bare cell name through untouched). Numbers follow standard
+JSON/IEEE-double semantics; non-finite values (`1e309`) and numeric
+literals over 40 characters are rejected. Scripts are capped at 10,000
+ops and 1,000,000 aggregate style-expanded cells. Full grammar:
 `docs/agent-json-schemas.md`; runnable examples: `cmd/xlsx/cram/agent.t`.
 
 ### Structured JSON reads (`outline`, `get --json`)

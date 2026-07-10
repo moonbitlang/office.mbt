@@ -196,20 +196,27 @@ test "fuzz: parsed scripts apply or fail typed on a live workbook" {
     let ops = parse_script(document)
     let workbook = @xlsx.Workbook::new()
     ignore(workbook.add_sheet("Data"))
+    let mut script_failed = false
     for op in ops {
       // Application may fail (missing sheet) but must fail with an error,
       // never a panic; the workbook stays usable either way.
       try apply_op(workbook, op) catch {
         _ => {
           errored += 1
+          script_failed = true
           break
         }
       } noraise {
         _ => applied += 1
       }
     }
+    if !script_failed {
+      scripts_ok += 1
+    }
     ignore(workbook.get_sheet_list())
   }
+  // Whole scripts must complete, not just individual ops before a failure.
+  assert_true(scripts_ok > 20)
   assert_true(applied > 50)
   assert_true(errored > 20)
 }

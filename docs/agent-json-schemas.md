@@ -166,10 +166,21 @@ Envelope:
   than corrupting the sheet.
 - Application is all-or-nothing: ops apply to the in-memory workbook and the
   file is written (temp file + rename) only after every op succeeds.
+- Every cell/range/column reference is validated at parse time against
+  the strict in-grid grammar: `cell` params must be a single cell,
+  `range` params a cell or range (each range capped at 100,000 cells),
+  `column` a column or column range, and chart `categories`/`values` an
+  optionally `Sheet!`-qualified range.
 - Zero ops is a valid no-op and writes nothing. Scripts are capped at
-  10,000 ops.
+  10,000 ops, style ranges at 1,000,000 expanded cells per script in
+  aggregate, and numeric literals at 40 characters (pathologically long
+  literals can round incorrectly upstream).
 - `--dry-run` parses and applies in memory but never writes.
 
+- The save resolves a symlinked workbook to its target first (native),
+  writes a uniquely-named temp through its exclusive handle, and renames
+  it over the target. The saved file is created owner-only (0600) —
+  never wider than the original; chmod afterwards for group access.
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
 
 A metadata-priced orientation payload: no document text is emitted beyond

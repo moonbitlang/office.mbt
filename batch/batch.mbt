@@ -3,16 +3,22 @@
 // unknown param key, or a wrong param type fails naming the 0-based op
 // index — and application delegates to the same library calls as the
 // CLI subcommand twins, sharing their helpers (build_style,
-// chart_type_of, qualify_range). One deliberate divergence: batch
-// validates every cell/range reference through the strict bounded
-// parser, while the `style` subcommand passes a bare (colon-free) cell
-// name to the workbook untouched. Errors are bare messages; the CLI
-// adds its `error: ` prefix.
+// chart_type_of, qualify_range). Every cell/range/column reference is
+// validated through the strict bounded parser at parse time — one
+// deliberate divergence from the `style` subcommand, which passes a bare
+// (colon-free) cell name to the workbook untouched. Errors are bare
+// messages; the CLI adds its `error: ` prefix.
 
 ///|
 /// Scripts are capped well above any real workload; the cap turns a
 /// runaway generator into a clean error instead of an OOM.
 pub const MAX_BATCH_OPS : Int = 10_000
+
+///|
+/// Aggregate cap on cells touched by `style` range expansions across one
+/// script: the per-range parser caps each range at 100k cells, but 10k
+/// such ops would still be a billion mutations — an OOM, not a workload.
+pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
 
 ///|
 /// A batch script or op that failed validation or application. The
@@ -136,14 +142,19 @@ pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
     )
   }
   let ops = []
+  let style_cells : Ref[Int64] = Ref::new(0)
   for index, item in items {
-    ops.push(parse_op(index, item))
+    ops.push(parse_op(index, item, style_cells))
   }
   ops
 }
 
 ///|
-fn parse_op(index : Int, item : Json) -> BatchOp raise BatchError {
+fn parse_op(
+  index : Int,
+  item : Json,
+  style_cells : Ref[Int64],
+) -> BatchOp raise BatchError {
   let entry = match item {
     Object(map) => map
     _ => raise BatchError("op \{index}: must be a JSON object")
@@ -168,19 +179,28 @@ fn parse_op(index : Int, item : Json) -> BatchOp raise BatchError {
     "set" =>
       OpSet(
         sheet=reader.string("sheet"),
-        cell=reader.string("cell"),
+        cell=reader.cell("cell"),
         value=reader.value("value"),
       )
     "formula" =>
       OpFormula(
         sheet=reader.string("sheet"),
-        cell=reader.string("cell"),
+        cell=reader.cell("cell"),
         formula=reader.string("formula"),
       )
-    "style" =>
+    "style" => {
+      let (range, cells) = reader.range("range")
+      style_cells.val = style_cells.val + cells
+      if style_cells.val > MAX_TOTAL_STYLE_CELLS {
+        raise op_error(
+          index,
+          name,
+          "style ranges expand past \{MAX_TOTAL_STYLE_CELLS} total cells",
+        )
+      }
       OpStyle(
         sheet=reader.string("sheet"),
-        range=reader.string("range"),
+        range~,
         bold=reader.optional_bool("bold"),
         italic=reader.optional_bool("italic"),
         number_format=reader.optional_string("number_format"),
@@ -188,26 +208,26 @@ fn parse_op(index : Int, item : Json) -> BatchOp raise BatchError {
         font_color=reader.optional_string("font_color"),
         align=reader.optional_string("align"),
       )
+    }
     "merge" =>
-      OpMerge(sheet=reader.string("sheet"), range=reader.string("range"))
+      OpMerge(sheet=reader.string("sheet"), range=reader.range("range").0)
     "width" =>
       OpWidth(
         sheet=reader.string("sheet"),
-        column=reader.string("column"),
+        column=reader.column("column"),
         width=reader.number("width"),
       )
-    "freeze" =>
-      OpFreeze(sheet=reader.string("sheet"), cell=reader.string("cell"))
+    "freeze" => OpFreeze(sheet=reader.string("sheet"), cell=reader.cell("cell"))
     "filter" =>
-      OpFilter(sheet=reader.string("sheet"), range=reader.string("range"))
+      OpFilter(sheet=reader.string("sheet"), range=reader.range("range").0)
     "add-sheet" => OpAddSheet(name=reader.string("name"))
     "chart" =>
       OpChart(
         sheet=reader.string("sheet"),
-        anchor=reader.string("anchor"),
+        anchor=reader.cell("anchor"),
         chart_type=reader.optional_string_default("type", "col"),
-        categories=reader.string("categories"),
-        values=reader.string("values"),
+        categories=reader.series_range("categories"),
+        values=reader.series_range("values"),
         series_name=reader.optional_string("name"),
         title=reader.optional_string("title"),
       )
@@ -341,6 +361,104 @@ fn ParamReader::value(
       )
     None => raise op_error(self.index, self.op, "missing param '\{key}'")
   }
+}
+
+///|
+/// A param that must be a single in-grid cell reference (`B2`, `$B$2`).
+fn ParamReader::cell(
+  self : ParamReader,
+  key : String,
+) -> String raise BatchError {
+  let text = self.string(key)
+  let range = @inspect.parse_range(text) catch {
+    _ =>
+      raise op_error(
+        self.index,
+        self.op,
+        "'\{key}' is not a valid cell reference: '\{text}'",
+      )
+  }
+  if range.cell_count() != 1 {
+    raise op_error(
+      self.index,
+      self.op,
+      "'\{key}' must be a single cell, not a range: '\{text}'",
+    )
+  }
+  text
+}
+
+///|
+/// A param that must be an in-grid cell or `A1:B2`-style range; returns
+/// the text plus the parsed cell count (for the aggregate work budget).
+fn ParamReader::range(
+  self : ParamReader,
+  key : String,
+) -> (String, Int64) raise BatchError {
+  let text = self.string(key)
+  let range = @inspect.parse_range(text) catch {
+    @inspect.RangeTooLarge(_) as err =>
+      raise op_error(self.index, self.op, "\{err}")
+    _ =>
+      raise op_error(
+        self.index,
+        self.op,
+        "'\{key}' is not a valid cell or range reference: '\{text}'",
+      )
+  }
+  (text, range.cell_count())
+}
+
+///|
+/// A param that must be a column (`A`) or column range (`A:C`), validated
+/// by grafting row 1 onto the letters.
+fn ParamReader::column(
+  self : ParamReader,
+  key : String,
+) -> String raise BatchError {
+  let text = self.string(key)
+  let probe = match text.find(":") {
+    Some(index) =>
+      text[:index].to_owned() + "1:" + text[index + 1:].to_owned() + "1"
+    None => text + "1"
+  }
+  ignore(
+    @inspect.parse_range(probe) catch {
+      _ =>
+        raise op_error(
+          self.index,
+          self.op,
+          "'\{key}' is not a valid column or column range: '\{text}'",
+        )
+    },
+  )
+  text
+}
+
+///|
+/// A chart series range: an optional `Sheet!` qualification followed by a
+/// cell range. Only the range part is validated; the sheet name is the
+/// workbook's concern.
+fn ParamReader::series_range(
+  self : ParamReader,
+  key : String,
+) -> String raise BatchError {
+  let text = self.string(key)
+  let range_part = match text.rev_find("!") {
+    Some(index) => text[index + 1:].to_owned()
+    None => text
+  }
+  ignore(
+    @inspect.parse_range(range_part.replace_all(old="$", new="")) catch {
+      _ =>
+        raise op_error(
+          self.index,
+          self.op,
+          "'\{key}' is not a valid series range: '\{text}'",
+        )
+    },
+  )
+  text
 }
 
 ///|

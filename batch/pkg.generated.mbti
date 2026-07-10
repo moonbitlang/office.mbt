@@ -9,6 +9,8 @@ import {
 // Values
 pub const MAX_BATCH_OPS : Int = 10_000
 
+pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
+
 pub fn apply_op(@xlsx.Workbook, BatchOp) -> Unit raise
 
 pub fn build_style(bold~ : Bool, italic~ : Bool, number_format~ : String, fill~ : String, font_color~ : String, align~ : String) -> @xlsx.Style
