@@ -396,3 +396,56 @@ test "outline reports live extents when the declared dimension is stale" {
     ),
   )
 }
+
+///|
+test "outline counts space-separated sqref ranges, not rule blocks" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell_int("Data", "A1", 1)
+  // One conditionalFormatting block whose sqref covers two ranges.
+  workbook.add_conditional_format_xml(
+    "Data",
+    (
+      #|<conditionalFormatting sqref="A1:A3 C1:C3"><cfRule type="duplicateValues" priority="1"/></conditionalFormatting>
+    ),
+  )
+  inspect(
+    @inspect.outline(workbook, file="cf.xlsx").stringify(indent=2),
+    content=(
+      #|{
+      #|  "schema": "xlsx.outline/1",
+      #|  "file": "cf.xlsx",
+      #|  "sheet_count": 1,
+      #|  "active_sheet": {
+      #|    "name": "Data",
+      #|    "index": 0
+      #|  },
+      #|  "defined_names": [],
+      #|  "sheets": [
+      #|    {
+      #|      "kind": "worksheet",
+      #|      "name": "Data",
+      #|      "index": 0,
+      #|      "state": "visible",
+      #|      "declared_dimension": "A1:A1",
+      #|      "max_row": 1,
+      #|      "max_col": 1,
+      #|      "used_range": "A1:A1",
+      #|      "merges": [],
+      #|      "tables": [],
+      #|      "charts": [],
+      #|      "images": [],
+      #|      "pivot_tables": [],
+      #|      "counts": {
+      #|        "data_validations": 0,
+      #|        "conditional_format_ranges": 2,
+      #|        "comments": 0,
+      #|        "hyperlinks": 0,
+      #|        "slicers": 0
+      #|      }
+      #|    }
+      #|  ]
+      #|}
+    ),
+  )
+}

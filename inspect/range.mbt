@@ -1,10 +1,20 @@
 // A pure, bounded A1-style range parser shared by the JSON read surface and
 // the CLI (`style`, `get --json`, batch ops). Bounded so a pathological range
-// like A1:XFD1048576 cannot exhaust memory when expanded.
+// like A1:XFD1048576 cannot exhaust memory when expanded, and strict so a
+// malformed reference is rejected instead of silently aliasing to a valid
+// cell (the tolerant workbook parser skips `$` anywhere and lets long column
+// names wrap its accumulator).
 
 ///|
 /// Maximum number of cells a parsed range may cover when expanded.
 pub const MAX_RANGE_CELLS : Int64 = 100_000
+
+///|
+/// Largest column (XFD) and row of the xlsx grid.
+const MAX_COL : Int = 16_384
+
+///|
+const MAX_ROW : Int = 1_048_576
 
 ///|
 /// A normalized, inclusive rectangular cell range (1-based coordinates,
@@ -17,36 +27,39 @@ pub struct CellRange {
 } derive(Eq, @debug.Debug)
 
 ///|
-/// Raised when a syntactically valid range covers more than
-/// `MAX_RANGE_CELLS` cells.
+/// Raised for a range that exceeds `MAX_RANGE_CELLS` or a reference that is
+/// not a well-formed in-grid A1-style cell name.
 pub suberror RangeError {
   RangeTooLarge(range~ : String, count~ : Int64)
+  MalformedRef(ref_~ : String)
 } derive(@debug.Debug)
 
 ///|
-impl Show for RangeError with fn output(self, logger) {
+pub impl Show for RangeError with fn output(self, logger) {
   match self {
     RangeTooLarge(range~, count~) =>
       logger.write_string(
         "range \{range} covers \{count} cells; max is \{MAX_RANGE_CELLS}",
       )
+    MalformedRef(ref_~) =>
+      logger.write_string("invalid cell reference '\{ref_}'")
   }
 }
 
 ///|
 /// Parses a single cell (`A1`) or an `A1:B2`-style range into a normalized
-/// `CellRange`. Corner order is irrelevant (`B2:A1` equals `A1:B2`). Raises
-/// `@xlsx.XlsxError` for malformed cell references and `RangeError` when the
-/// range exceeds `MAX_RANGE_CELLS`.
-pub fn parse_range(target : String) -> CellRange raise {
+/// `CellRange`. Corner order is irrelevant (`B2:A1` equals `A1:B2`); `$`
+/// anchors (`$A$1`) are accepted. Raises `RangeError` for a malformed or
+/// out-of-grid reference and for a range exceeding `MAX_RANGE_CELLS`.
+pub fn parse_range(target : String) -> CellRange raise RangeError {
   match target.find(":") {
     None => {
-      let (col, row) = @xlsx.cell_name_to_coordinates(target)
+      let (col, row) = parse_cell_ref(target[:], full=target)
       { col_lo: col, row_lo: row, col_hi: col, row_hi: row }
     }
     Some(index) => {
-      let (c1, r1) = @xlsx.cell_name_to_coordinates(target[:index])
-      let (c2, r2) = @xlsx.cell_name_to_coordinates(target[index + 1:])
+      let (c1, r1) = parse_cell_ref(target[:index], full=target)
+      let (c2, r2) = parse_cell_ref(target[index + 1:], full=target)
       let range : CellRange = {
         col_lo: if c1 < c2 {
           c1
@@ -75,6 +88,59 @@ pub fn parse_range(target : String) -> CellRange raise {
       range
     }
   }
+}
+
+///|
+/// Strictly parses one `[$]AA[$]11`-style reference into 1-based
+/// `(col, row)`. `full~` is the whole user input, echoed in errors.
+fn parse_cell_ref(
+  reference : StringView,
+  full~ : String,
+) -> (Int, Int) raise RangeError {
+  let mut pos = 0
+  let len = reference.length()
+  fn at(i : Int) -> UInt16 {
+    reference[i]
+  }
+
+  if pos < len && at(pos) == '$' {
+    pos += 1
+  }
+  // Column letters: at most 3 (XFD is the last column).
+  let col_start = pos
+  while pos < len && at(pos) is ('A'..='Z' | 'a'..='z') {
+    pos += 1
+  }
+  let letters = pos - col_start
+  if letters < 1 || letters > 3 {
+    raise MalformedRef(ref_=full)
+  }
+  let mut col = 0
+  for i in col_start..<pos {
+    let c = at(i).to_int()
+    let upper = if c >= 'a'.to_int() { c - 32 } else { c }
+    col = col * 26 + (upper - 'A'.to_int() + 1)
+  }
+  if pos < len && at(pos) == '$' {
+    pos += 1
+  }
+  // Row digits: at most 7 (1048576 is the last row), no other trailing text.
+  let row_start = pos
+  while pos < len && at(pos) is ('0'..='9') {
+    pos += 1
+  }
+  let digits = pos - row_start
+  if digits < 1 || digits > 7 || pos != len {
+    raise MalformedRef(ref_=full)
+  }
+  let mut row = 0
+  for i in row_start..<pos {
+    row = row * 10 + (at(i).to_int() - '0'.to_int())
+  }
+  if row < 1 || row > MAX_ROW || col > MAX_COL {
+    raise MalformedRef(ref_=full)
+  }
+  (col, row)
 }
 
 ///|

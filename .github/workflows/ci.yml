@@ -137,9 +137,22 @@ jobs:
           got=$(moon run --target wasm cmd/xlsx -- get ci.xlsx Data A1 2>/dev/null)
           echo "get -> $got"; test "$got" = "Hello"
           moon run --target wasm cmd/xlsx -- view ci.xlsx
+          # Agent JSON surface: exercise a styled cell and a chart, then
+          # validate the payloads structurally (not by substring).
+          moon run --target wasm cmd/xlsx -- set ci.xlsx Data B1 42
+          moon run --target wasm cmd/xlsx -- style ci.xlsx Data A1 --bold --fill 4472C4
+          moon run --target wasm cmd/xlsx -- chart ci.xlsx Data D2 --categories A1:A1 --values B1:B1 --name S
           o=$(moon run --target wasm cmd/xlsx -- outline ci.xlsx 2>/dev/null)
-          echo "$o" | head -2; echo "$o" | grep -q '"schema": "xlsx.outline/1"'
+          echo "$o" | jq -e '.schema == "xlsx.outline/1"
+            and (.sheets[0].kind == "worksheet")
+            and (.sheets[0].charts | length == 1)
+            and (.sheets[0].charts[0].kinds == ["barChart"])
+            and (.sheets[0].used_range == "A1:B1")'
           j=$(moon run --target wasm cmd/xlsx -- get ci.xlsx Data A1:B2 --json 2>/dev/null)
-          echo "$j" | head -2; echo "$j" | grep -q '"schema": "xlsx.cells/1"'
+          echo "$j" | jq -e '.schema == "xlsx.cells/1"
+            and (.cells | length == 2)
+            and ([.cells[].ref] == ["A1", "B1"])
+            and (.styles[.cells[0].style_id | tostring].font.bold == true)
+            and (.styles[.cells[0].style_id | tostring].fill.colors == ["4472C4"])'
           v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"

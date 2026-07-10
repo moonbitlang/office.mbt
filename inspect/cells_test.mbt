@@ -69,21 +69,11 @@ test "cells over a mixed range" {
       #|    },
       #|    {
       #|      "ref": "A3",
-      #|      "value": "",
-      #|      "raw": {
-      #|        "type": "string",
-      #|        "value": ""
-      #|      },
       #|      "formula": "SUM(A2:B2)",
       #|      "style_id": 0
       #|    },
       #|    {
       #|      "ref": "B3",
-      #|      "value": "#,##0.00",
-      #|      "raw": {
-      #|        "type": "string",
-      #|        "value": ""
-      #|      },
       #|      "style_id": 1
       #|    }
       #|  ],
@@ -148,4 +138,54 @@ test "cells on a missing sheet raises" {
   } noraise {
     _ => fail("expected a missing-sheet error")
   }
+}
+
+///|
+test "cells serializes alignment style fields" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "centered")
+  let centered = workbook.new_style(
+    @xlsx.Style::new().with_alignment(
+      @xlsx.Alignment::with_values(
+        horizontal="center",
+        vertical="top",
+        wrap_text=true,
+        text_rotation=45,
+      ),
+    ),
+  )
+  workbook.set_cell_style("Data", "A1", centered)
+  inspect(
+    @inspect.cells(workbook, file="a.xlsx", "Data", "A1").stringify(indent=2),
+    content=(
+      #|{
+      #|  "schema": "xlsx.cells/1",
+      #|  "file": "a.xlsx",
+      #|  "sheet": "Data",
+      #|  "range": "A1",
+      #|  "cells": [
+      #|    {
+      #|      "ref": "A1",
+      #|      "value": "centered",
+      #|      "raw": {
+      #|        "type": "string",
+      #|        "value": "centered"
+      #|      },
+      #|      "style_id": 1
+      #|    }
+      #|  ],
+      #|  "styles": {
+      #|    "1": {
+      #|      "alignment": {
+      #|        "horizontal": "center",
+      #|        "vertical": "top",
+      #|        "wrap_text": true,
+      #|        "text_rotation": 45
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
 }

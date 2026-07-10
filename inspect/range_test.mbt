@@ -63,12 +63,64 @@ test "parse_range allows exactly the cap and rejects one past it" {
 }
 
 ///|
+test "parse_range accepts anchors, lowercase, and leading zeros" {
+  debug_inspect(
+    @inspect.parse_range("$A$01"),
+    content=(
+      #|{ col_lo: 1, row_lo: 1, col_hi: 1, row_hi: 1 }
+    ),
+  )
+  debug_inspect(
+    @inspect.parse_range("$B$2:$C$3"),
+    content=(
+      #|{ col_lo: 2, row_lo: 2, col_hi: 3, row_hi: 3 }
+    ),
+  )
+  debug_inspect(
+    @inspect.parse_range("xfd1048576"),
+    content=(
+      #|{ col_lo: 16384, row_lo: 1048576, col_hi: 16384, row_hi: 1048576 }
+    ),
+  )
+}
+
+///|
 test "parse_range rejects malformed references" {
-  for bad in ["", "A0", "1A", "A1:B", ":", "A1:"] {
+  for bad in ["", "A0", "1A", "A1:B", ":", "A1:", "A", "1", "A1B2", "A 1"] {
     try ignore(@inspect.parse_range(bad)) catch {
       _ => ()
     } noraise {
       _ => fail("expected '\{bad}' to be rejected")
     }
+  }
+}
+
+///|
+test "parse_range rejects references the tolerant parser would alias" {
+  // The workbook's coordinate parser skips `$` anywhere ("A$B1" -> AB1) and
+  // its column accumulator can wrap on long letter runs; the strict parser
+  // must reject these instead of silently reading a different cell.
+  for
+    bad in [
+      "A$B1", "QJYLAVITCVEBUJK1", "ZZZZ1", "XFE1", "A1048577", "A12345678", "$$A1",
+      "A$$1",
+    ] {
+    try ignore(@inspect.parse_range(bad)) catch {
+      err => {
+        // Every rejection is the strict parser's own error, not an alias.
+        let message = "\{err}"
+        if !message.has_prefix("invalid cell reference") {
+          fail("expected a MalformedRef for '\{bad}', got: \{message}")
+        }
+      }
+    } noraise {
+      _ => fail("expected '\{bad}' to be rejected")
+    }
+  }
+  // The error names the full user input, not just the bad half.
+  try ignore(@inspect.parse_range("A1:XFE9")) catch {
+    err => inspect(err, content="invalid cell reference 'A1:XFE9'")
+  } noraise {
+    _ => fail("expected 'A1:XFE9' to be rejected")
   }
 }

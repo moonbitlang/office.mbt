@@ -16,7 +16,10 @@ are the source of truth and this document has a bug.
   breaking change mints a new identifier with a bumped major. Consumers must
   ignore keys they do not recognize.
 - **`null` is never emitted.** An absent key means "unset / not present".
-  List-valued keys are always present (possibly `[]`).
+  Top-level inventory lists (`sheets`, `merges`, `tables`, `charts`,
+  `images`, `pivot_tables`, `defined_names`, `cells`) are always present
+  (possibly `[]`); optional sub-object fields — including list-valued ones
+  like `fill.colors` or a style's `border` — may be omitted entirely.
 - **Index bases**: sheet `index` is 0-based tab order. Rows and columns are
   never sent as bare numbers; cell and range references are A1-style strings.
 - Output is pretty-printed (2-space indent) UTF-8 with a trailing newline,
@@ -49,7 +52,7 @@ Sheet entries carry a `kind` discriminator:
 | `auto_filter` | string? | the filter range |
 | `merges` | array | range strings |
 | `tables` | array | `{name, range, columns[]}` |
-| `charts` | array | `{anchor, width_emu, height_emu, kinds[], series[]}`; `kinds` are DrawingML plot-kind names (e.g. `barChart`), `series` entries are `{name?, categories?, values?}` range refs scanned from the retained chart XML |
+| `charts` | array | `{anchor, width_emu, height_emu, kinds[], series[]}`; `kinds` are DrawingML plot-kind names (e.g. `barChart`), `series` entries are `{name?, categories?, values?}` range refs scanned from the retained chart XML (XML entities decoded). The scanner matches the conventional `c:` namespace prefix — a chart bound to a different prefix yields empty `kinds`/`series`, never an error |
 | `images` | array | `{anchor, extension, content_type, width_emu, height_emu}` |
 | `pivot_tables` | array | `{name}` |
 | `counts` | object | `{data_validations, conditional_format_ranges, comments, hyperlinks, slicers}`; conditional-format ranges count space-separated `sqref` entries, not rule blocks |
@@ -63,8 +66,12 @@ classify (should not occur) and keeps `index` aligned with tab order.
 ## `xlsx.cells/1` — structured range read (`xlsx get <file> <sheet> <range> --json`)
 
 The `<range>` argument accepts a single cell (`B2`) or a range (`A1:C3`,
-corner order irrelevant). Ranges are capped at **100,000 cells**; larger
-ranges fail with a clean error and no output.
+corner order irrelevant), with optional `$` anchors and lowercase letters.
+Parsing is strict: a reference must be 1–3 column letters plus row digits
+inside the xlsx grid (`XFD1048576`), so malformed input (`A$B1`,
+over-long column names) is rejected rather than silently aliased to some
+valid cell. Ranges are capped at **100,000 cells**; larger ranges fail with
+a clean error and no output.
 
 | key | type | notes |
 |---|---|---|
@@ -74,13 +81,17 @@ ranges fail with a clean error and no output.
 | `cells` | array | row-major; one entry per non-absent cell |
 | `styles` | object | style id (decimal string) → style object; only ids referenced by `cells` |
 
-A cell appears in `cells` when it has a stored value, a formula, or a style;
-fully-absent cells are omitted (absence ⇒ blank and unstyled). Entry keys:
+A cell appears in `cells` when it has a stored non-empty value, a formula,
+or a style; fully-absent cells are omitted (absence ⇒ blank and unstyled).
+An **empty-string cell is treated as a synthetic blank** — styling a bare
+cell and setting an uncached formula both store one — so such a cell carries
+no `value`/`raw`: a styled blank appears as `{ref, style_id}`, an uncached
+formula as `{ref, formula, style_id?}`. Entry keys:
 
 | key | type | notes |
 |---|---|---|
 | `ref` | string | A1-style |
-| `value` | string? | the **formatted display string** (number format applied); present iff the cell stores a value. A formula cell whose result is not cached shows `""` |
+| `value` | string? | the **formatted display string** (number format applied); present iff the cell stores a non-empty value |
 | `raw` | object? | `{type, value}` with `type` ∈ `string` \| `number` \| `bool` \| `error`; `value` is the matching JSON type (`error` carries the code as a string) |
 | `formula` | string? | stored formula text, without a leading `=` |
 | `style_id` | number? | key into `styles` |

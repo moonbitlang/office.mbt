@@ -49,7 +49,13 @@ fn cell_json(
   cell : String,
   style_ids : Array[Int],
 ) -> Json? raise @xlsx.XlsxError {
-  let raw = workbook.get_cell_value_raw(sheet, cell)
+  // An empty-string cell is a synthetic blank — `set_cell_style` on a bare
+  // cell and an uncached formula both store one — so it carries no `value`;
+  // reporting it would make a blank look like it contains "".
+  let raw = match workbook.get_cell_value_raw(sheet, cell) {
+    Some(String("")) => None
+    other => other
+  }
   let formula = workbook.get_cell_formula(sheet, cell)
   let style_id = workbook.get_cell_style(sheet, cell)
   if raw is None && formula is None && style_id is None {

@@ -23,14 +23,16 @@ pub fn chart_series(String) -> Array[ChartSeriesMeta]
 
 pub fn outline(@xlsx.Workbook, file~ : String) -> Json raise @xlsx.XlsxError
 
-pub fn parse_range(String) -> CellRange raise
+pub fn parse_range(String) -> CellRange raise RangeError
 
 pub fn style_to_json(@xlsx.Style) -> Json
 
 // Errors
 pub suberror RangeError {
   RangeTooLarge(range~ : String, count~ : Int64)
+  MalformedRef(ref_~ : String)
 } derive(@debug.Debug)
+pub impl Show for RangeError
 
 // Types and methods
 pub struct CellRange {

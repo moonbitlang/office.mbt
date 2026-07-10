@@ -69,7 +69,7 @@ test "chart_series tolerates malformed fragments" {
   debug_inspect(
     @inspect.chart_series("<c:ser><c:val><c:f>Data!$B$2</c:f>"),
     content=(
-      #|[{ name: None, categories: None, values: None }]
+      #|[]
     ),
   )
   // Empty ref and missing f: both dropped.
@@ -85,6 +85,73 @@ test "chart_series tolerates malformed fragments" {
     @inspect.chart_series(""),
     content=(
       #|[]
+    ),
+  )
+}
+
+///|
+test "chart scanner handles attributes, whitespace, and self-closing tags" {
+  // `<c:ser >` (trailing space), a kind whose `>` is on the next line, an
+  // attributed inner element, and a self-closing `<c:tx/>` are all valid XML.
+  let xml =
+    #|<c:barChart
+    #|><c:ser ><c:tx/>
+    #|<c:cat foo="1"><c:numRef><c:f>Data!$A$1:$A$3</c:f></c:numRef></c:cat>
+    #|<c:val><c:numRef><c:f>Data!$B$1:$B$3</c:f></c:numRef></c:val></c:ser></c:barChart>
+  debug_inspect(
+    @inspect.chart_kinds(xml),
+    content=(
+      #|["barChart"]
+    ),
+  )
+  debug_inspect(
+    @inspect.chart_series(xml),
+    content=(
+      #|[
+      #|  {
+      #|    name: None,
+      #|    categories: Some("Data!$A$1:$A$3"),
+      #|    values: Some("Data!$B$1:$B$3"),
+      #|  },
+      #|]
+    ),
+  )
+}
+
+///|
+test "tag matching requires a delimiter" {
+  // `<c:serAx>` and `<c:barCharting>` must not match `c:ser`/`c:barChart`.
+  debug_inspect(
+    @inspect.chart_series("<c:serAx><c:val><c:f>X!$A$1</c:f></c:val></c:serAx>"),
+    content=(
+      #|[]
+    ),
+  )
+  debug_inspect(
+    @inspect.chart_kinds("<c:barCharting><x/></c:barCharting>"),
+    content=(
+      #|[]
+    ),
+  )
+}
+
+///|
+test "chart refs are XML-entity-decoded" {
+  let xml =
+    #|<c:ser><c:val><c:numRef><c:f>'R&amp;D &lt;EU&gt; &#65;&#x42;'!$A$1</c:f></c:numRef></c:val></c:ser>
+  debug_inspect(
+    @inspect.chart_series(xml),
+    content=(
+      #|[{ name: None, categories: None, values: Some("'R&D <EU> AB'!$A$1") }]
+    ),
+  )
+  // Unknown and unterminated entities pass through verbatim.
+  let odd =
+    #|<c:ser><c:val><c:f>A&unknown;B&amp</c:f></c:val></c:ser>
+  debug_inspect(
+    @inspect.chart_series(odd),
+    content=(
+      #|[{ name: None, categories: None, values: Some("A&unknown;B&amp") }]
     ),
   )
 }
