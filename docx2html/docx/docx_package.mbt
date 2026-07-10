@@ -69,7 +69,7 @@ priv struct SectionScan {
 fn collect_sections(
   root : XmlElement,
   collector : HeaderFooterCollector,
-) -> Array[@document.DocumentSection] raise DocxError {
+) -> Array[@document.DocumentSection] {
   let scans : Array[SectionScan] = []
   guard root.first("w:body") is Some(body) else {
     // Defensive only: the public entry point reads the body first and
@@ -195,7 +195,7 @@ fn HeaderFooterCollector::section(
   self : HeaderFooterCollector,
   sect_pr : XmlElement,
   ends_after_paragraph : Int?,
-) -> SectionScan raise DocxError {
+) -> SectionScan {
   let headers : Array[@document.SectionRef] = []
   let footers : Array[@document.SectionRef] = []
   let declared_headers : Array[String] = []
@@ -247,7 +247,7 @@ fn HeaderFooterCollector::resolve_part(
   self : HeaderFooterCollector,
   rel_id : String,
   is_header~ : Bool,
-) -> Int? raise DocxError {
+) -> Int? {
   let kind = if is_header { "header" } else { "footer" }
   guard self.parts.relationships.find_target_by_id(rel_id) is Some(target) else {
     self.messages.push(
