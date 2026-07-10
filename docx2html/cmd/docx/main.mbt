@@ -2,6 +2,7 @@
 /// The agent-facing docx CLI, structured like `cmd/xlsx`: one binary, one
 /// subcommand per operation. Subcommands:
 ///
+///   docx create <output>                    create a blank document
 ///   docx convert <input> [output] [flags]   convert to HTML or Markdown
 ///   docx outline <file>                     print a document map as JSON
 ///   docx text <file>                        print path-tagged plain text
@@ -48,6 +49,7 @@ async fn run_cli() -> Unit {
   let command = build_command()
   let matches = command.parse(argv=args, env=Map([]))
   match matches.subcommand {
+    Some(("create", m)) => run_create(m)
     Some(("convert", m)) => run_convert(m)
     Some(("outline", m)) => run_outline(m)
     Some(("text", m)) => run_text(m)
@@ -65,6 +67,7 @@ fn build_command() -> @argparse.Command {
     about="Read, inspect, and convert docx documents",
     subcommand_required=true,
     subcommands=[
+      create_command(),
       convert_command(),
       outline_command(),
       text_command(),

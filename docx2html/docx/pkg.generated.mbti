@@ -19,6 +19,8 @@ pub fn embed_style_map(BytesView, String) -> Bytes raise @core.DocxError
 
 pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
+pub fn new_blank_docx() -> Bytes
+
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 
 pub fn read_docx_package(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxPackageResult raise @core.DocxError

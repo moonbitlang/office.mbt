@@ -88,6 +88,8 @@ pub fn join_zip_path(Array[String]) -> String
 
 pub fn line_break() -> @document.DocumentElement
 
+pub fn new_blank_docx() -> Bytes
+
 pub fn note(String, String, Array[@document.DocumentElement]) -> @document.Note
 
 pub fn note_reference(String, String) -> @document.DocumentElement
