@@ -30,7 +30,7 @@ priv struct PendingMerge {
 fn write_table(
   children : Array[DocumentElement],
   properties : TableProperties,
-  used_styles : Set[String],
+  ctx : WriteContext,
 ) -> XmlElement raise DocxError {
   if properties.style_id is Some(_) || properties.style_name is Some(_) {
     raise Unsupported(
@@ -126,9 +126,7 @@ fn write_table(
         pending[grid_column] = { remaining: row_span - 1, col_span }
       }
       cell_nodes.push(
-        XmlElement(
-          write_table_cell(children, col_span, row_span > 1, used_styles),
-        ),
+        XmlElement(write_table_cell(children, col_span, row_span > 1, ctx)),
       )
       grid_column += col_span
     }
@@ -213,7 +211,7 @@ fn write_table_cell(
   children : Array[DocumentElement],
   col_span : Int,
   starts_merge : Bool,
-  used_styles : Set[String],
+  ctx : WriteContext,
 ) -> XmlElement raise DocxError {
   let nodes : Array[XmlNode] = []
   // CT_TcPr sequence: gridSpan before vMerge.
@@ -243,7 +241,7 @@ fn write_table_cell(
     nodes.push(XmlElement(@xml.xml_element("w:p")))
   } else {
     for child in children {
-      nodes.push(XmlElement(write_block(child, used_styles)))
+      nodes.push(XmlElement(write_block(child, ctx)))
     }
   }
   @xml.xml_element("w:tc", children=nodes)
