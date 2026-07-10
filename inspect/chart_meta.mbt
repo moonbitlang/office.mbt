@@ -35,7 +35,7 @@ pub fn chart_kinds(xml : String) -> Array[String] {
   let kinds = []
   let cleaned = preprocess_chart_xml(xml)
   for tag in chart_kind_tags {
-    if find_tag_open(cleaned[:], "c:" + tag, 0) is Some(_) {
+    if find_tag_open(cleaned, "c:" + tag, 0) is Some(_) {
       kinds.push(tag)
     }
   }
@@ -101,7 +101,7 @@ fn find_tag_open(view : StringView, tag : String, from : Int) -> Int? {
     if pos >= view.length() {
       break None
     }
-    match view[pos:].find(open[:]) {
+    match view[pos:].find(open) {
       None => break None
       Some(offset) => {
         let start = pos + offset
