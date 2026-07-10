@@ -12,7 +12,9 @@ views (text/outline/annotated/stats/issues/html/screenshot), OpenXML validate, d
 replay, template merge, HTML render engine. It distinguishes stable `p[@paraId=…]` anchors
 from positional `p[N]` paths.
 
-Our repo today (docx side): `docx2html` (9,805 production .mbt lines excluding tests) —
+Our repo at the **pre-PR-A baseline** (origin/main before this roadmap's first PR — PR A
+itself adds the `docx` binary, the shared runner, and the docx wasm smoke): `docx2html`
+(9,805 production .mbt lines excluding tests at that baseline) —
 a Mammoth port with a **public typed reader** (`read_docx` → `DocumentElement` AST +
 diagnostics) and HTML/Markdown/text converters. Coverage is deliberately **lossy** (Mammoth
 semantics): lists collapse to ordered/unordered + level (no numId identity), bookmark ends

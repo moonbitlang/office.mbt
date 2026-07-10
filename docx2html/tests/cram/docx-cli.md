@@ -6,7 +6,8 @@ builds the native package at `cmd/docx` first, then exposes the executable on
 
 `docx` is the subcommand-structured agent CLI; its `convert` subcommand shares
 one implementation with the flag-only `docx2html` binary documented in
-`cli.md`, and behaves identically.
+`cli.md`, with identical conversion and output semantics (argument parsing,
+help text, and diagnostic prefixes intentionally differ).
 
 ## Help
 
@@ -69,10 +70,13 @@ error: unexpected value 'wat' found; no more were expected
 
 A missing input file is a conversion error, prefixed with the program name:
 
+The OS error's human-readable tail is locale/platform-dependent, so the
+assertion pins only the stable prefix and path:
+
 ```mooncram
-$ docx.exe convert no-such-file.docx
-docx: OSError("@fs.open(): \"no-such-file.docx\": No such file or directory")
-[1]
+$ docx.exe convert no-such-file.docx > missing.txt; echo "exit=$?"; grep -Fc 'docx: OSError("@fs.open(): \"no-such-file.docx\"' missing.txt
+exit=1
+1
 ```
 
 An output path and `--output-dir` are mutually exclusive:
