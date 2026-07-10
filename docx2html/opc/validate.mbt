@@ -310,8 +310,10 @@ fn rels_base_dir(rels_name : String) -> String {
 ///|
 /// Resolves a relationship target against a base directory: pack-absolute
 /// targets (`/word/media/x.png`) are archive-rooted; relative targets may
-/// climb with `..`.
-fn resolve_target(base : String, target : String) -> String {
+/// climb with `..` (clamped at the package root) and `.`/empty segments
+/// collapse. Shared OPC primitive — the package reader resolves
+/// header/footer targets with the same semantics validation checks them by.
+pub fn resolve_target(base : String, target : String) -> String {
   if target.has_prefix("/") {
     return target[1:].to_owned()
   }

@@ -129,18 +129,29 @@ fn parse_path(path : String) -> ParsedPath raise PathError {
 }
 
 ///|
+/// Parses a `header[n]` / `footer[n]` ROOT segment. Deliberately not routed
+/// through `parse_step`: header/footer are not child kinds (widening the
+/// child-kind table for them would make `/body/header[1]` parse and fail
+/// with a misleading not-found).
 fn parse_root_index(
   segment : String,
   kind : String,
   path : String,
 ) -> Int raise PathError {
-  let step = parse_step(segment, path) catch {
+  guard segment.find("[") is Some(open) &&
+    segment.has_suffix("]") &&
+    segment[:open].to_owned() == kind else {
+    raise PathError(
+      "invalid path root '/\{segment}' in '\{path}': expected \{kind}[index], e.g. /\{kind}[1]",
+    )
+  }
+  let digits = segment[open + 1:segment.length() - 1].to_owned()
+  parse_positive_int(digits) catch {
     _ =>
       raise PathError(
         "invalid path root '/\{segment}' in '\{path}': expected \{kind}[index], e.g. /\{kind}[1]",
       )
   }
-  step.index
 }
 
 ///|
@@ -168,19 +179,7 @@ fn parse_step(segment : String, path : String) -> PathStep raise PathError {
 
 ///|
 fn known_kind(kind : String) -> Bool {
-  // header/footer appear only as path ROOTS; parse_root_index reuses
-  // parse_step, so they must be known kinds. resolve_steps never sees them
-  // as child kinds (no element projects to them).
-  kind
-  is ("p"
-  | "r"
-  | "tbl"
-  | "tr"
-  | "tc"
-  | "hyperlink"
-  | "image"
-  | "header"
-  | "footer")
+  kind is ("p" | "r" | "tbl" | "tr" | "tc" | "hyperlink" | "image")
 }
 
 ///|

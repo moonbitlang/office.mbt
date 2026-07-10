@@ -60,7 +60,12 @@ fn collect_sections(
   collector : HeaderFooterCollector,
 ) -> Array[@document.DocumentSection] raise DocxError {
   let sections : Array[@document.DocumentSection] = []
-  guard root.first("w:body") is Some(body) else { return sections }
+  guard root.first("w:body") is Some(body) else {
+    // Even a bodyless document projects one section covering nothing:
+    // "each body range maps to exactly one section".
+    sections.push({ ends_after_paragraph: None, headers: [], footers: [] })
+    return sections
+  }
   let mut paragraph_index = 0
   let mut trailing_sect_pr : XmlElement? = None
   for node in body.children {
@@ -80,9 +85,47 @@ fn collect_sections(
   }
   match trailing_sect_pr {
     Some(sect_pr) => sections.push(collector.section(sect_pr, None))
-    None => ()
+    // A document without a body-final sectPr still has a final section
+    // running to the body end.
+    None =>
+      sections.push({ ends_after_paragraph: None, headers: [], footers: [] })
   }
+  apply_header_inheritance(sections)
   sections
+}
+
+///|
+/// OOXML header/footer inheritance: a section without an explicit
+/// reference for a variant uses the previous section's (effective)
+/// reference for that variant. The projection exposes EFFECTIVE
+/// associations, so an agent reading `sections[1].headers` sees what the
+/// section actually renders with.
+fn apply_header_inheritance(
+  sections : Array[@document.DocumentSection],
+) -> Unit {
+  for i in 1..<sections.length() {
+    inherit_missing_variants(sections[i].headers, sections[i - 1].headers)
+    inherit_missing_variants(sections[i].footers, sections[i - 1].footers)
+  }
+}
+
+///|
+fn inherit_missing_variants(
+  current : Array[@document.SectionRef],
+  previous : Array[@document.SectionRef],
+) -> Unit {
+  for candidate in previous {
+    let mut present = false
+    for existing in current {
+      if existing.variant == candidate.variant {
+        present = true
+        break
+      }
+    }
+    if !present {
+      current.push({ variant: candidate.variant, part: candidate.part })
+    }
+  }
 }
 
 ///|
@@ -171,7 +214,10 @@ fn HeaderFooterCollector::resolve_part(
     )
     return None
   }
-  let path = resolve_part_target(self.parts.base_path, target)
+  // Normalize with the shared OPC resolver ('..' and '.' segments are
+  // legal in relationship targets); the reader's naive concatenator would
+  // miss parts that validate clean.
+  let path = @opc.resolve_target(self.parts.base_path, target)
   let index_by_path = if is_header {
     self.header_index_by_path
   } else {
@@ -186,7 +232,17 @@ fn HeaderFooterCollector::resolve_part(
         )
         return None
       }
-      let body = self.read_part_story(path)
+      // A malformed part or malformed part-rels must not abort the read —
+      // outline/text/get all flow through here, and the body-only surface
+      // never raised for a broken header. Warn and skip instead.
+      let body = self.read_part_story(path) catch {
+        _ => {
+          self.messages.push(
+            Warning("A \{kind} part could not be read and was ignored: \{path}"),
+          )
+          return None
+        }
+      }
       let stories = if is_header { self.headers } else { self.footers }
       stories.push({ body, })
       let index = stories.length() - 1
