@@ -201,13 +201,17 @@ fn Walk::record_heading(
   level : Int,
   properties : @document.ParagraphProperties,
 ) -> Unit {
+  // Raw text of a paragraph ends with Mammoth's "\n\n" separator; a heading
+  // line should be just the line. A heading with no text (e.g. a
+  // bookmark-only paragraph) is omitted — an empty entry orients nobody, and
+  // the converter typically elides such paragraphs too.
+  let text = paragraph.to_raw_text().trim_end(chars="\n").to_owned()
+  if text == "" {
+    return
+  }
   let entry : Map[String, Json] = {
     "level": count_json(level),
-    // Raw text of a paragraph ends with Mammoth's "\n\n" separator;
-    // a heading line should be just the line.
-    "text": Json::string(
-      paragraph.to_raw_text().trim_end(chars="\n").to_owned(),
-    ),
+    "text": Json::string(text),
   }
   match properties.style_id {
     Some(id) => entry["style_id"] = Json::string(id)
@@ -222,21 +226,34 @@ fn Walk::record_heading(
 
 ///|
 /// Resolves a paragraph's heading level using the same convention as the
-/// Mammoth default style map (style_map.mbt): style id `Heading1`..`Heading6`
-/// or bare `Heading` (level 1), or style name `Heading N` / `heading N` for
-/// N in 1..6. Anything else — including `Heading7`+ — is not a heading here,
-/// matching what `convert` would render as `<h1>`..`<h6>`.
+/// Mammoth default style map (style_map.mbt), with the default map's rule
+/// order and matching semantics: style IDS compare exactly, style NAMES
+/// compare case-insensitively. In order: id `Heading1`..`Heading6`; name
+/// equal (ignoring case) to `heading 1`..`heading 6`; bare id `Heading` or
+/// bare name `heading` (level 1). Anything else — `Heading7`+, `Heading10`,
+/// names without the space — is not a heading.
 fn heading_level(properties : @document.ParagraphProperties) -> Int? {
-  match style_id_heading_level(properties.style_id) {
+  match digit_id_heading_level(properties.style_id) {
     Some(level) => Some(level)
-    None => style_name_heading_level(properties.style_name)
+    None =>
+      match digit_name_heading_level(properties.style_name) {
+        Some(level) => Some(level)
+        None =>
+          // The bare rules come last: a paragraph with id `Heading` but name
+          // `Heading 3` is level 3, matching the default map's rule order.
+          if properties.style_id is Some("Heading") ||
+            lowercased(properties.style_name) is Some("heading") {
+            Some(1)
+          } else {
+            None
+          }
+      }
   }
 }
 
 ///|
-fn style_id_heading_level(style_id : String?) -> Int? {
+fn digit_id_heading_level(style_id : String?) -> Int? {
   match style_id {
-    Some("Heading") => Some(1)
     Some(id) =>
       if id.has_prefix("Heading") && id.length() == 8 {
         digit_level(id[7])
@@ -248,15 +265,22 @@ fn style_id_heading_level(style_id : String?) -> Int? {
 }
 
 ///|
-fn style_name_heading_level(style_name : String?) -> Int? {
-  match style_name {
+fn digit_name_heading_level(style_name : String?) -> Int? {
+  match lowercased(style_name) {
     Some(name) =>
-      if (name.has_prefix("Heading ") || name.has_prefix("heading ")) &&
-        name.length() == 9 {
+      if name.has_prefix("heading ") && name.length() == 9 {
         digit_level(name[8])
       } else {
         None
       }
+    None => None
+  }
+}
+
+///|
+fn lowercased(value : String?) -> String? {
+  match value {
+    Some(text) => Some(text.to_lower())
     None => None
   }
 }

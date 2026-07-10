@@ -13,7 +13,7 @@ async fn run_outline(matches : @argparse.Matches) -> Unit {
       )
   }
   let data = @afs.read_file(file).binary()
-  let result = @docx2html.read_docx_with_messages(data[:])
+  let result = @docx2html.read_docx_with_messages(data)
   println(
     @inspect.outline(result.document, file~, messages=result.messages).stringify(
       indent=2,
@@ -23,8 +23,8 @@ async fn run_outline(matches : @argparse.Matches) -> Unit {
 
 ///|
 fn outline_command() -> @argparse.Command {
-  @argparse.Command("outline", about="Print a document structure map as JSON", positionals=[
-    @argparse.PositionArg(
+  Command("outline", about="Print a document structure map as JSON", positionals=[
+    PositionArg(
       "file",
       about="Input .docx file.",
       num_args=ValueRange(lower=1, upper=1),
