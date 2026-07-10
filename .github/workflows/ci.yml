@@ -61,13 +61,20 @@ jobs:
       - name: Resolve dependencies
         run: moon update
 
-      # Format check across the whole workspace.
+      # Format check across the whole workspace. The 2026-07-10 nightly's
+      # moonfmt migrates moon.pkg `options("is-main": true)` to a new
+      # `pkgtype(kind: "executable")` form that the same nightly's default
+      # parser still REJECTS (the new syntax is behind preview feature
+      # flags), so a repo carrying either form cannot satisfy both halves.
+      # Until the parser ships by default, restore moon.pkg after fmt and
+      # gate formatting on source files only.
       - name: Format check
         run: |
           moon fmt
+          git checkout -- ':(glob)**/moon.pkg'
           if ! git diff --quiet; then
             echo "::error::moon fmt changed files; run moon fmt and commit the result."
-            git --no-pager diff --stat
+            git --no-pager diff
             exit 1
           fi
 
