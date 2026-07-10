@@ -1,9 +1,12 @@
 // Builder side of the OPC primitives (the read/validation side lives in
 // validate.mbt): assemble a package from parts, content types, and
-// relationships, fail-closed. `build` re-checks what validation checks —
-// part-name shape, duplicate names, content-type coverage, override and
-// internal-relationship targets — so a builder misuse raises instead of
-// producing a package `docx validate` would reject.
+// relationships, fail-closed. Defense in depth: the add-time checks give
+// early errors, the struct's state is private, and `build()` re-validates
+// EVERYTHING from the authoritative part list anyway — name shape,
+// reserved/duplicate names, coverage, override targets, relationship
+// sources AND targets, and metadata well-formedness — so no sequence of
+// calls (or future code path) can emit a package `docx validate` would
+// reject.
 //
 // Follow-up (flagged, not this PR): docx/embedded_style_map.mbt hand-emits
 // the same Types/Relationships XML; migrate it onto these emitters.
@@ -23,54 +26,44 @@ pub impl Show for PackageBuildError with fn output(self, logger) {
 }
 
 ///|
-/// One relationship row as the builder will emit it (readonly).
-pub struct PackageRelationship {
+priv struct PackageRelationship {
   id : String
   relationship_type : String
   target : String
 }
 
 ///|
-/// Assembles an OPC package. Parts keep insertion order; `build` emits
-/// `[Content_Types].xml` first, then `_rels/.rels`, then each part followed
-/// by its own relationships part.
+/// Assembles an OPC package. State is private — mutate only through the
+/// `add_*` methods. `build()` emits `[Content_Types].xml`, then every
+/// relationships part, then the parts in insertion order.
 pub struct PackageBuilder {
-  parts : Array[(String, Bytes)]
-  part_names : Set[String]
-  defaults : Map[String, String]
-  overrides : Map[String, String]
-  relationships : Map[String, Array[PackageRelationship]]
+  priv parts : Array[(String, Bytes)]
+  priv defaults : Map[String, String]
+  priv overrides : Map[String, String]
+  priv relationships : Map[String, Array[PackageRelationship]]
 }
 
 ///|
 /// An empty builder: no parts, no content types, no relationships.
 pub fn PackageBuilder::new() -> PackageBuilder {
-  {
-    parts: [],
-    part_names: Set([]),
-    defaults: Map([]),
-    overrides: Map([]),
-    relationships: Map([]),
-  }
+  { parts: [], defaults: Map([]), overrides: Map([]), relationships: Map([]) }
 }
 
 ///|
 /// Adds a part. The name is archive-form (`word/document.xml`, no leading
-/// slash); malformed or duplicate names raise.
+/// slash); malformed, reserved (builder-emitted), or duplicate names raise.
 pub fn PackageBuilder::add_part(
   self : PackageBuilder,
   name : String,
   data : Bytes,
 ) -> Unit raise PackageBuildError {
-  let problems : Array[String] = []
-  check_entry_name(name, problems)
-  if problems.length() > 0 {
-    raise PackageBuildError("invalid part name '\{name}': \{problems[0]}")
+  check_part_name(name)
+  for entry in self.parts {
+    let (existing, _) = entry
+    if existing == name {
+      raise PackageBuildError("duplicate part name: \{name}")
+    }
   }
-  if self.part_names.contains(name) {
-    raise PackageBuildError("duplicate part name: \{name}")
-  }
-  self.part_names.add(name)
   self.parts.push((name, data))
 }
 
@@ -80,7 +73,9 @@ pub fn PackageBuilder::add_default(
   self : PackageBuilder,
   extension : String,
   content_type : String,
-) -> Unit {
+) -> Unit raise PackageBuildError {
+  check_metadata("Default extension", extension)
+  check_metadata("Default content type", content_type)
   self.defaults[extension.to_lower()] = content_type
 }
 
@@ -97,20 +92,25 @@ pub fn PackageBuilder::add_override(
       "override PartName must start with '/': \{part_name}",
     )
   }
+  check_metadata("Override PartName", part_name)
+  check_metadata("Override content type", content_type)
   self.overrides[part_name] = content_type
 }
 
 ///|
 /// Adds a relationship. `source~` is the part the relationship belongs to
 /// (`""` = the package root `_rels/.rels`); `target` is source-relative (or
-/// pack-absolute with a leading `/`).
+/// pack-absolute with a leading `/`). Ids must be unique per source.
 pub fn PackageBuilder::add_relationship(
   self : PackageBuilder,
   id : String,
   relationship_type : String,
   target : String,
   source? : String = "",
-) -> Unit {
+) -> Unit raise PackageBuildError {
+  check_metadata("relationship Id", id)
+  check_metadata("relationship Type", relationship_type)
+  check_metadata("relationship Target", target)
   let rels = match self.relationships.get(source) {
     Some(existing) => existing
     None => {
@@ -119,36 +119,79 @@ pub fn PackageBuilder::add_relationship(
       fresh
     }
   }
+  for existing in rels {
+    if existing.id == id {
+      raise PackageBuildError(
+        "duplicate relationship Id '\{id}' for source '\{source}'",
+      )
+    }
+  }
   rels.push({ id, relationship_type, target })
 }
 
 ///|
-/// Emits the package bytes, fail-closed: every part must be covered by a
-/// default or override, overrides must name added parts, and internal
-/// relationship targets must resolve to added parts.
+/// Emits the package bytes. Everything is re-validated here from the
+/// authoritative state: part names (shape, reserved, duplicates — including
+/// collisions with the builder's own emitted rels parts), content-type
+/// coverage for every emitted entry, override targets, relationship sources
+/// AND internal targets, and metadata well-formedness. Output is
+/// deterministic for a given call sequence.
 pub fn PackageBuilder::build(
   self : PackageBuilder,
 ) -> Bytes raise PackageBuildError {
-  // Coverage and target checks against the FINAL part list (including the
-  // rels parts this builder itself will emit, which the `rels` default must
-  // cover).
-  let emitted_rels : Array[String] = []
-  for source, _ in self.relationships {
-    emitted_rels.push(
-      if source == "" {
-        ROOT_RELS_PART
-      } else {
-        rels_part_for(source)
-      },
-    )
+  // Authoritative name set, revalidated from scratch.
+  let part_names : Set[String] = Set([])
+  for entry in self.parts {
+    let (name, _) = entry
+    check_part_name(name)
+    if part_names.contains(name) {
+      raise PackageBuildError("duplicate part name: \{name}")
+    }
+    part_names.add(name)
   }
-  for part_name, _ in self.overrides {
+  // Generated entries are builder-owned; a collision with an explicit part
+  // would emit duplicate zip entries (Archive::add appends blindly), which
+  // is exactly what validation rejects.
+  let emitted_rels : Array[String] = []
+  for source, rels in self.relationships {
+    // Every non-root source must be an added part, or its rels part would
+    // be an orphan describing nothing.
+    if source != "" && !part_names.contains(source) {
+      raise PackageBuildError(
+        "relationships declared for source '\{source}', which was not added as a part",
+      )
+    }
+    for relationship in rels {
+      check_metadata("relationship Id", relationship.id)
+      check_metadata("relationship Type", relationship.relationship_type)
+      check_metadata("relationship Target", relationship.target)
+    }
+    let name = if source == "" { ROOT_RELS_PART } else { rels_part_for(source) }
+    if part_names.contains(name) {
+      raise PackageBuildError(
+        "part name collides with the builder-emitted relationships part: \{name}",
+      )
+    }
+    emitted_rels.push(name)
+  }
+  for part_name, content_type in self.overrides {
+    check_metadata("Override PartName", part_name)
+    check_metadata("Override content type", content_type)
+    guard part_name.has_prefix("/") else {
+      raise PackageBuildError(
+        "override PartName must start with '/': \{part_name}",
+      )
+    }
     let archive_name = part_name[1:].to_owned()
-    if !self.part_names.contains(archive_name) {
+    if !part_names.contains(archive_name) {
       raise PackageBuildError(
         "override names a part that was not added: \{part_name}",
       )
     }
+  }
+  for extension, content_type in self.defaults {
+    check_metadata("Default extension", extension)
+    check_metadata("Default content type", content_type)
   }
   for entry in self.parts {
     let (name, _) = entry
@@ -161,7 +204,7 @@ pub fn PackageBuilder::build(
     let base = split_part_dir(source)
     for relationship in rels {
       let resolved = resolve_target(base, relationship.target)
-      if !self.part_names.contains(resolved) {
+      if !part_names.contains(resolved) {
         raise PackageBuildError(
           "relationship \{relationship.id} of '\{source}' targets a part that was not added: \{relationship.target} (resolved \{resolved})",
         )
@@ -193,22 +236,47 @@ pub fn PackageBuilder::build(
 }
 
 ///|
-fn PackageBuilder::check_coverage(
-  self : PackageBuilder,
-  name : String,
+/// Part-name policy: the shared entry-name checks (shape) plus builder
+/// specifics — no trailing slash (a "directory" is not a part) and no
+/// builder-owned names (`[Content_Types].xml` and anything shaped like a
+/// relationships part: the builder emits all relationships itself).
+fn check_part_name(name : String) -> Unit raise PackageBuildError {
+  let problems : Array[String] = []
+  check_entry_name(name, problems)
+  if problems.length() > 0 {
+    raise PackageBuildError("invalid part name '\{name}': \{problems[0]}")
+  }
+  if name.has_suffix("/") {
+    raise PackageBuildError(
+      "invalid part name '\{name}': a part cannot be a directory entry",
+    )
+  }
+  if name == CONTENT_TYPES_PART || name == ROOT_RELS_PART || is_rels_part(name) {
+    raise PackageBuildError(
+      "reserved part name '\{name}': the builder emits content types and relationships itself",
+    )
+  }
+}
+
+///|
+/// Metadata strings are emitted into XML attributes: they must be
+/// non-empty and free of XML-1.0-illegal control characters (the escaper
+/// passes those through, and the SDK rejects the result).
+fn check_metadata(
+  what : String,
+  value : String,
 ) -> Unit raise PackageBuildError {
-  if name == CONTENT_TYPES_PART {
-    return
+  if value == "" {
+    raise PackageBuildError("\{what} must not be empty")
   }
-  if self.overrides.contains("/" + name) {
-    return
+  for unit in value {
+    let code = unit.to_int()
+    if code < 0x20 && !(unit is ('\t' | '\n' | '\r')) {
+      raise PackageBuildError(
+        "\{what} contains an XML-illegal control character (code \{code})",
+      )
+    }
   }
-  if part_extension(name) is Some(ext) && self.defaults.contains(ext) {
-    return
-  }
-  raise PackageBuildError(
-    "no content type for part '\{name}': add a Default for its extension or an Override",
-  )
 }
 
 ///|
@@ -230,6 +298,25 @@ fn split_part_dir(part : String) -> String {
     Some(index) => part[:index].to_owned()
     None => ""
   }
+}
+
+///|
+fn PackageBuilder::check_coverage(
+  self : PackageBuilder,
+  name : String,
+) -> Unit raise PackageBuildError {
+  if name == CONTENT_TYPES_PART {
+    return
+  }
+  if self.overrides.contains("/" + name) {
+    return
+  }
+  if part_extension(name) is Some(ext) && self.defaults.contains(ext) {
+    return
+  }
+  raise PackageBuildError(
+    "no content type for part '\{name}': add a Default for its extension or an Override",
+  )
 }
 
 ///|
@@ -255,7 +342,7 @@ fn PackageBuilder::content_types_xml(self : PackageBuilder) -> String {
       ),
     )
   }
-  // write_xml_string already emits the XML declaration.
+  // write_xml_string supplies the XML declaration.
   @xml.write_xml_string(@xml.xml_element("Types", children~), namespaces={
     "": "http://schemas.openxmlformats.org/package/2006/content-types",
   })

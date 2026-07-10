@@ -1,10 +1,6 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "bobzhang/docx2html/opc"
 
-import {
-  "moonbitlang/core/set",
-}
-
 // Values
 pub fn resolve_target(String, String) -> String
 
@@ -18,24 +14,14 @@ pub impl Show for PackageBuildError
 
 // Types and methods
 pub struct PackageBuilder {
-  parts : Array[(String, Bytes)]
-  part_names : @set.Set[String]
-  defaults : Map[String, String]
-  overrides : Map[String, String]
-  relationships : Map[String, Array[PackageRelationship]]
+  // private fields
 }
-pub fn PackageBuilder::add_default(Self, String, String) -> Unit
+pub fn PackageBuilder::add_default(Self, String, String) -> Unit raise PackageBuildError
 pub fn PackageBuilder::add_override(Self, String, String) -> Unit raise PackageBuildError
 pub fn PackageBuilder::add_part(Self, String, Bytes) -> Unit raise PackageBuildError
-pub fn PackageBuilder::add_relationship(Self, String, String, String, source? : String) -> Unit
+pub fn PackageBuilder::add_relationship(Self, String, String, String, source? : String) -> Unit raise PackageBuildError
 pub fn PackageBuilder::build(Self) -> Bytes raise PackageBuildError
 pub fn PackageBuilder::new() -> Self
-
-pub struct PackageRelationship {
-  id : String
-  relationship_type : String
-  target : String
-}
 
 // Type aliases
 
