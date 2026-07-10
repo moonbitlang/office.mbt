@@ -166,3 +166,60 @@ included. All top-level keys are always present (possibly `[]`).
 | `styles_in_use` | array | unique `{kind, id?, name?}` in first-use order; `kind` ∈ `paragraph` \| `run` \| `table`. Only styles the reader resolved on body elements (unstyled elements contribute nothing) |
 | `images` | array | `{content_type, bytes}` per embedded image, in document order; `bytes` is the image part's byte length — no image data is emitted |
 | `messages` | array | reader diagnostics: `{severity, text}` with `severity` ∈ `warning` \| `error` (e.g. ignored unrecognised elements) |
+
+## docx element paths (shared by `docx text`, `docx get`, and future mutations)
+
+Paths are **logical, snapshot-relative projection paths** over the parsed
+document — not literal source-XML paths, and not stable anchors:
+
+- Grammar: `/body` followed by `kind[index]` segments, 1-based:
+  `/body/p[3]`, `/body/tbl[1]/tr[2]/tc[1]/p[1]`.
+- Kind table (part of the `docx.element/1` contract; extended only
+  additively): `p` paragraph, `r` run, `tbl` table, `tr` table row, `tc`
+  table cell, `hyperlink`, `image`. Leaves and structural nodes without a
+  kind (text, tabs, breaks, references, bookmarks) are not directly
+  addressable — read them through their parent.
+- Indices count same-kind DIRECT siblings within the parent (a hyperlink
+  between two paragraphs does not consume a `p` index). Nested content
+  always gets its full path — a table-cell paragraph is never `/body/p[N]`.
+- A path is valid for one document snapshot; positional paths shift after
+  any edit. Because the reader flattens some OOXML nodes (content controls,
+  revisions), kinds are the parsed document's semantic kinds with OOXML-like
+  spellings.
+- Reserved roots for the upcoming header/footer/notes surface —
+  `/header[n]`, `/footer[n]`, `/footnotes/note[id]`, `/endnotes/note[id]`,
+  `/comments/comment[id]` — fail with a dedicated "reserved but not yet
+  addressable" error rather than `not found`.
+- Future batch mutations will resolve each path against the document state
+  produced by the preceding ops in the same script.
+
+Resolution errors are agent-correctable: they name the failing segment and
+how many same-kind children exist (`'/body' has 2 'p' children (wanted
+index 9)`).
+
+## `docx.element/1` — one element by path (`docx get <file> <path> --json`)
+
+Without `--json`, `get` prints the element's raw text only. The JSON payload:
+
+| key | type | notes |
+|---|---|---|
+| `schema` | string | `"docx.element/1"` |
+| `file` | string | echoed |
+| `path` | string | **normalized** (`p[02]` → `p[2]`); `/body` for the body itself |
+| `kind` | string | `body` \| `p` \| `r` \| `tbl` \| `tr` \| `tc` \| `hyperlink` \| `image` |
+| `children` | array | `{kind, path}` per addressable direct child, in document order |
+
+Kind-specific keys (all optional — absent means unset; boolean flags appear
+only when true; `null` is never emitted):
+
+- `p`: `text` (raw text without the trailing paragraph separator),
+  `style_id`, `style_name`, `numbering` (`{ordered, level}`), `alignment`
+- `r`: `text`, `style_id`, `style_name`, `bold`, `italic`, `underline`,
+  `strikethrough`, `all_caps`, `small_caps`, `vertical_alignment`
+  (`superscript`/`subscript`), `font`, `font_size` (half-points as parsed),
+  `highlight`
+- `tbl`: `style_id`, `style_name`
+- `tr`: `header` (true for header rows)
+- `tc`: `col_span`, `row_span` (present only when ≠ 1)
+- `hyperlink`: `text`, `href`, `anchor`, `target_frame`
+- `image`: `content_type`, `bytes` (image part byte length), `alt_text`

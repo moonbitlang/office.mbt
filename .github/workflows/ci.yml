@@ -178,3 +178,7 @@ jobs:
             and (.counts.paragraphs == 1)
             and (.counts.images == 1)
             and (.images[0].content_type == "image/png")'
+          g=$(moon run --target wasm docx2html/cmd/docx -- get docx2html/tests/cram/fixtures/tiny-picture.docx '/body/p[1]/r[1]/image[1]' --json 2>docx-wasm.err) || { echo "docx get failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "$g" | jq -e '.schema == "docx.element/1"
+            and (.kind == "image")
+            and (.path == "/body/p[1]/r[1]/image[1]")'
