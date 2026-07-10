@@ -172,3 +172,9 @@ jobs:
           d=$(moon run --target wasm docx2html/cmd/docx -- convert docx2html/tests/cram/fixtures/single-paragraph.docx 2>docx-wasm.err) || { echo "docx convert failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "docx convert -> $d"
           test "$d" = "<p>Walking on imported air</p>" || { echo "unexpected output; stderr:"; cat docx-wasm.err; exit 1; }
+          # Agent JSON surface: validate the outline payload structurally.
+          o=$(moon run --target wasm docx2html/cmd/docx -- outline docx2html/tests/cram/fixtures/tiny-picture.docx 2>docx-wasm.err) || { echo "docx outline failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "$o" | jq -e '.schema == "docx.outline/1"
+            and (.counts.paragraphs == 1)
+            and (.counts.images == 1)
+            and (.images[0].content_type == "image/png")'

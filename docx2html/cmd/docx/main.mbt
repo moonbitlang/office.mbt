@@ -3,6 +3,7 @@
 /// subcommand per operation. Subcommands:
 ///
 ///   docx convert <input> [output] [flags]   convert to HTML or Markdown
+///   docx outline <file>                     print a document map as JSON
 ///
 /// The `convert` subcommand is the same operation as the published
 /// `docx2html` binary (both call the shared runner in `internal/cli`); this
@@ -45,6 +46,7 @@ async fn run_cli() -> Unit {
   let matches = command.parse(argv=args, env=Map([]))
   match matches.subcommand {
     Some(("convert", m)) => run_convert(m)
+    Some(("outline", m)) => run_outline(m)
     _ => println(command.render_help())
   }
 }
@@ -56,6 +58,6 @@ fn build_command() -> @argparse.Command {
     "docx",
     about="Read, inspect, and convert docx documents",
     subcommand_required=true,
-    subcommands=[convert_command()],
+    subcommands=[convert_command(), outline_command()],
   )
 }
