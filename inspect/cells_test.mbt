@@ -263,14 +263,19 @@ test "cells serializes theme and indexed colors" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Data"))
   workbook.set_cell("Data", "A1", "themed")
+  workbook.set_cell("Data", "A2", "indexed")
   let themed = workbook.new_style(
     @xlsx.Style::new().with_font(
       @xlsx.Font::with_values(color_theme=1, color_tint=-0.25),
     ),
   )
+  let indexed = workbook.new_style(
+    @xlsx.Style::new().with_font(@xlsx.Font::with_values(color_indexed=64)),
+  )
   workbook.set_cell_style("Data", "A1", themed)
+  workbook.set_cell_style("Data", "A2", indexed)
   inspect(
-    @inspect.cells(workbook, file="theme.xlsx", "Data", "A1").stringify(
+    @inspect.cells(workbook, file="theme.xlsx", "Data", "A1:A2").stringify(
       indent=2,
     ),
     content=(
@@ -278,7 +283,7 @@ test "cells serializes theme and indexed colors" {
       #|  "schema": "xlsx.cells/1",
       #|  "file": "theme.xlsx",
       #|  "sheet": "Data",
-      #|  "range": "A1",
+      #|  "range": "A1:A2",
       #|  "cells": [
       #|    {
       #|      "ref": "A1",
@@ -288,6 +293,15 @@ test "cells serializes theme and indexed colors" {
       #|        "value": "themed"
       #|      },
       #|      "style_id": 1
+      #|    },
+      #|    {
+      #|      "ref": "A2",
+      #|      "value": "indexed",
+      #|      "raw": {
+      #|        "type": "string",
+      #|        "value": "indexed"
+      #|      },
+      #|      "style_id": 2
       #|    }
       #|  ],
       #|  "styles": {
@@ -295,6 +309,11 @@ test "cells serializes theme and indexed colors" {
       #|      "font": {
       #|        "color_theme": 1,
       #|        "color_tint": -0.25
+      #|      }
+      #|    },
+      #|    "2": {
+      #|      "font": {
+      #|        "color_indexed": 64
       #|      }
       #|    }
       #|  }

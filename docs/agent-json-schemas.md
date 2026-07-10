@@ -114,9 +114,10 @@ Style objects (all keys optional; absent ⇒ property unset):
   shrink_to_fit?}`
 - `protection`: `{hidden?, locked?}`
 
-Colors are the workbook's stored hex strings (typically `RRGGBB` or
-`AARRGGBB`), passed through unvalidated — consumers rendering them must
-validate.
+Literal color fields (`font.color`, `fill.colors[]`, `border[].color`) are
+the workbook's stored hex strings (typically `RRGGBB` or `AARRGGBB`),
+passed through unvalidated — consumers rendering them must validate. The
+theme/indexed/tint fields are numeric theme-palette references, not hex.
 
 ## `xlsx.batch/1` — mutation script (`xlsx batch <file> <script.json>`)
 
