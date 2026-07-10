@@ -16,7 +16,7 @@ pub fn demo_tracker_heatmap_bytes() -> Bytes raise @xlsx.XlsxError {
   sheet.set_cell("AG1", "Trend")
 
   // 12 months x 31 days of scores (0..10). 0 means “missed”, 10 means “nailed it”.
-  let months = [
+  let months : ReadOnlyArray[String] = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov",
     "Dec",
   ]

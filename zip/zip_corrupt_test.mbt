@@ -35,7 +35,7 @@ fn zip_overwrite_u32_le(
 
 ///|
 fn find_eocd_offset(bytes : Array[Byte]) -> Int? {
-  let sig = [
+  let sig : ReadOnlyArray[Byte] = [
     (0x50).to_byte(),
     (0x4B).to_byte(),
     (0x05).to_byte(),

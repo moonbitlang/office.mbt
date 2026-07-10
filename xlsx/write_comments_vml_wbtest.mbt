@@ -132,7 +132,7 @@ test "write comments vml wb: rich comment xml branches" {
   }
   let long_author = "A".repeat(max_comment_author_chars + 5)
   let long_text = "B".repeat(max_cell_chars + 10)
-  let comments = [
+  let comments : ReadOnlyArray[Comment] = [
     wb_comment("A1", "", " lead\n", [
       { text: "Rich", font: Some(rich_font) },
       { text: "Theme", font: Some(theme_font) },
@@ -172,7 +172,7 @@ test "write comments vml wb: rich comment xml branches" {
 
 ///|
 test "write comments vml wb: vml writer and extraction branches" {
-  let comments = [wb_comment("C3", "Bob", "note", [])]
+  let comments : ReadOnlyArray[Comment] = [wb_comment("C3", "Bob", "note", [])]
   let vml = write_comments_vml(7, comments)
   inspect(vml.contains("<o:idmap v:ext=\"edit\" data=\"7\"/>"), content="true")
   inspect(vml.contains("_x0000_s1025"), content="true")
@@ -194,7 +194,7 @@ test "write comments vml wb: vml writer and extraction branches" {
 
 ///|
 test "write comments vml wb: filter and merge branches" {
-  let comments = [
+  let comments : ReadOnlyArray[Comment] = [
     wb_comment("A1", "A", "x", []),
     wb_comment("B2", "B", "y", []),
   ]

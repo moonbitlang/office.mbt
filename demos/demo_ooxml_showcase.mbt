@@ -117,8 +117,10 @@ pub fn demo_ooxml_showcase_bytes() -> Bytes raise @xlsx.XlsxError {
   sheet.set_cell("B7", "Numbers stored as text (warnings suppressed)")
   sheet.set_cell("A8", "SKU")
   sheet.set_cell("B8", "Quantity(text)")
-  let skus = ["A-100", "A-101", "B-200", "B-201", "C-300"]
-  let qtys = ["0012", "0007", "0100", "0025", "0003"]
+  let skus : ReadOnlyArray[String] = [
+    "A-100", "A-101", "B-200", "B-201", "C-300",
+  ]
+  let qtys : ReadOnlyArray[String] = ["0012", "0007", "0100", "0025", "0003"]
   for i in 0..<skus.length() {
     let r = 9 + i
     sheet.set_cell("A\{r}", skus[i])

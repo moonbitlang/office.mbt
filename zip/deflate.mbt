@@ -338,7 +338,9 @@ fn read_dynamic_tables(
   let hlit = reader.read_bits(5).reinterpret_as_int() + 257
   let hdist = reader.read_bits(5).reinterpret_as_int() + 1
   let hclen = reader.read_bits(4).reinterpret_as_int() + 4
-  let order = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
+  let order : ReadOnlyArray[Int] = [
+    16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
+  ]
   let code_lengths : Array[Int] = Array::make(19, 0)
   for i in 0..<hclen {
     code_lengths[order[i]] = reader.read_bits(3).reinterpret_as_int()
