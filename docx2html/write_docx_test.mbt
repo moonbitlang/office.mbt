@@ -103,7 +103,7 @@ fn expect_unsupported(
   try {
     let _ = @docx2html.write_docx(body)
   } catch {
-    @docx2html.Unsupported(message~) =>
+    Unsupported(message~) =>
       if !message.has_prefix(expected_prefix) {
         fail("unexpected message: \{message}")
       }
@@ -158,4 +158,80 @@ test "the F1 writer fails closed on everything it cannot serialize yet" {
     ],
     "the run writer cannot serialize this content yet: image",
   )
+}
+
+///|
+test "review round 1: fail closed on indent, dangling style name, raw CR" {
+  expect_unsupported(
+    [
+      @docx2html.paragraph(
+        [@docx2html.run([@docx2html.text("x")])],
+        properties=@docx2html.paragraph_properties(
+          indent=@docx2html.indent(start=Some("720"), hanging=Some("360")),
+        ),
+      ),
+    ],
+    "the paragraph writer cannot serialize indentation yet",
+  )
+  expect_unsupported(
+    [
+      @docx2html.paragraph(
+        [@docx2html.run([@docx2html.text("x")])],
+        properties=@docx2html.paragraph_properties(style_name=Some("Fancy")),
+      ),
+    ],
+    "the paragraph writer needs a style id",
+  )
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([@docx2html.text("line one\r\nline two")]),
+      ]),
+    ],
+    "the run writer cannot serialize raw line-break characters",
+  )
+  // SDK-valid reader-producible alignments are accepted now.
+  let bytes = @docx2html.write_docx([
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("spread")])],
+      properties=@docx2html.paragraph_properties(alignment=Some("start")),
+    ),
+  ])
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  // Legacy 'justify' stays rejected (the SDK rejects it too).
+  expect_unsupported(
+    [
+      @docx2html.paragraph(
+        [@docx2html.run([@docx2html.text("x")])],
+        properties=@docx2html.paragraph_properties(alignment=Some("justify")),
+      ),
+    ],
+    "unsupported paragraph alignment",
+  )
+}
+
+///|
+test "all-flags formatting round-trips exactly" {
+  let body = [
+    @docx2html.paragraph([
+      @docx2html.run(
+        [@docx2html.text("everything")],
+        properties=@docx2html.run_properties(
+          is_bold=true,
+          is_italic=true,
+          is_underline=true,
+          is_strikethrough=true,
+          is_all_caps=true,
+          is_small_caps=true,
+          vertical_alignment=Subscript,
+          font=Some("Courier"),
+          font_size=Some(9),
+          highlight=Some("green"),
+        ),
+      ),
+    ]),
+  ]
+  let result = @docx2html.read_docx_package(@docx2html.write_docx(body))
+  guard result.document is Document(children~, ..)
+  assert_eq(children, body)
 }

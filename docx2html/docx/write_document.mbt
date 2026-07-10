@@ -110,7 +110,16 @@ fn write_paragraph(
   }
   match properties.alignment {
     Some(alignment) => {
-      if !(alignment is ("left" | "center" | "right" | "both")) {
+      // ST_Jc values that are BOTH reader-producible and SDK-schema-valid;
+      // legacy 'justify' stays rejected (the SDK rejects it too).
+      if !(alignment
+        is ("left"
+        | "center"
+        | "right"
+        | "both"
+        | "start"
+        | "end"
+        | "distribute")) {
         raise Unsupported(
           message="unsupported paragraph alignment for the writer: '\{alignment}'",
         )
@@ -121,10 +130,24 @@ fn write_paragraph(
     }
     None => ()
   }
-  // Anything else the AST can carry on a paragraph is not writable yet.
+  // Anything else the AST can carry on a paragraph is not writable yet —
+  // fail closed rather than silently dropping reader-producible data.
   if properties.numbering is Some(_) {
     raise Unsupported(
       message="the paragraph writer cannot serialize list numbering yet (F3)",
+    )
+  }
+  if properties.indent.start is Some(_) ||
+    properties.indent.end is Some(_) ||
+    properties.indent.first_line is Some(_) ||
+    properties.indent.hanging is Some(_) {
+    raise Unsupported(
+      message="the paragraph writer cannot serialize indentation yet",
+    )
+  }
+  if properties.style_id is None && properties.style_name is Some(_) {
+    raise Unsupported(
+      message="the paragraph writer needs a style id; a bare style name cannot be serialized",
     )
   }
   if ppr_children.length() > 0 {
@@ -153,46 +176,14 @@ fn write_run(
   properties : RunProperties,
 ) -> XmlElement raise DocxError {
   let nodes : Array[XmlNode] = []
+  // CT_RPr is an ENFORCED sequence — the Microsoft SDK rejects out-of-order
+  // children. Emission order here must stay: rFonts, b, i, caps, smallCaps,
+  // strike, sz, szCs, highlight, u, vertAlign.
   let rpr : Array[XmlNode] = []
   if properties.style_id is Some(_) || properties.style_name is Some(_) {
     raise Unsupported(
       message="the run writer cannot serialize character styles yet",
     )
-  }
-  if properties.is_bold {
-    rpr.push(XmlElement(@xml.xml_element("w:b")))
-  }
-  if properties.is_italic {
-    rpr.push(XmlElement(@xml.xml_element("w:i")))
-  }
-  if properties.is_strikethrough {
-    rpr.push(XmlElement(@xml.xml_element("w:strike")))
-  }
-  if properties.is_all_caps {
-    rpr.push(XmlElement(@xml.xml_element("w:caps")))
-  }
-  if properties.is_small_caps {
-    rpr.push(XmlElement(@xml.xml_element("w:smallCaps")))
-  }
-  if properties.is_underline {
-    rpr.push(
-      XmlElement(@xml.xml_element("w:u", attributes={ "w:val": "single" })),
-    )
-  }
-  match properties.vertical_alignment {
-    Baseline => ()
-    Superscript =>
-      rpr.push(
-        XmlElement(
-          @xml.xml_element("w:vertAlign", attributes={ "w:val": "superscript" }),
-        ),
-      )
-    Subscript =>
-      rpr.push(
-        XmlElement(
-          @xml.xml_element("w:vertAlign", attributes={ "w:val": "subscript" }),
-        ),
-      )
   }
   match properties.font {
     Some(font) =>
@@ -205,6 +196,21 @@ fn write_run(
         ),
       )
     None => ()
+  }
+  if properties.is_bold {
+    rpr.push(XmlElement(@xml.xml_element("w:b")))
+  }
+  if properties.is_italic {
+    rpr.push(XmlElement(@xml.xml_element("w:i")))
+  }
+  if properties.is_all_caps {
+    rpr.push(XmlElement(@xml.xml_element("w:caps")))
+  }
+  if properties.is_small_caps {
+    rpr.push(XmlElement(@xml.xml_element("w:smallCaps")))
+  }
+  if properties.is_strikethrough {
+    rpr.push(XmlElement(@xml.xml_element("w:strike")))
   }
   match properties.font_size {
     Some(points) => {
@@ -233,12 +239,40 @@ fn write_run(
       )
     None => ()
   }
+  if properties.is_underline {
+    rpr.push(
+      XmlElement(@xml.xml_element("w:u", attributes={ "w:val": "single" })),
+    )
+  }
+  match properties.vertical_alignment {
+    Baseline => ()
+    Superscript =>
+      rpr.push(
+        XmlElement(
+          @xml.xml_element("w:vertAlign", attributes={ "w:val": "superscript" }),
+        ),
+      )
+    Subscript =>
+      rpr.push(
+        XmlElement(
+          @xml.xml_element("w:vertAlign", attributes={ "w:val": "subscript" }),
+        ),
+      )
+  }
   if rpr.length() > 0 {
     nodes.push(XmlElement(@xml.xml_element("w:rPr", children=rpr)))
   }
   for child in children {
     match child {
       Text(text) => {
+        // A literal CR would be normalized (i.e. mutated) by conformant
+        // consumers, and a literal LF is crafted-file territory — fail
+        // closed; line breaks are written with `line_break()`.
+        if text.find("\r") is Some(_) || text.find("\n") is Some(_) {
+          raise Unsupported(
+            message="the run writer cannot serialize raw line-break characters in text; use line_break()",
+          )
+        }
         let attributes : Map[String, String] = Map([])
         if text.has_prefix(" ") ||
           text.has_suffix(" ") ||
