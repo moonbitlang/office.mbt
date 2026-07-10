@@ -407,24 +407,9 @@ test "hyperlink invalid ref tolerated on read" {
 test "get_hyperlink_cells filters by link type" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.set_cell_hyperlink(
-    "Sheet1",
-    "A1",
-    "https://example.com",
-    @xlsx.HyperlinkType::External,
-  )
-  workbook.set_cell_hyperlink(
-    "Sheet1",
-    "B2",
-    "https://example.org",
-    @xlsx.HyperlinkType::External,
-  )
-  workbook.set_cell_hyperlink(
-    "Sheet1",
-    "C3",
-    "Sheet1!D4",
-    @xlsx.HyperlinkType::Location,
-  )
+  workbook.set_cell_hyperlink("Sheet1", "A1", "https://example.com", External)
+  workbook.set_cell_hyperlink("Sheet1", "B2", "https://example.org", External)
+  workbook.set_cell_hyperlink("Sheet1", "C3", "Sheet1!D4", Location)
   debug_inspect(
     workbook.get_hyperlink_cells("Sheet1"),
     content=(
@@ -432,32 +417,23 @@ test "get_hyperlink_cells filters by link type" {
     ),
   )
   debug_inspect(
-    workbook.get_hyperlink_cells(
-      "Sheet1",
-      link_type=@xlsx.HyperlinkType::External,
-    ),
+    workbook.get_hyperlink_cells("Sheet1", link_type=External),
     content=(
       #|["A1", "B2"]
     ),
   )
   debug_inspect(
-    workbook.get_hyperlink_cells(
-      "Sheet1",
-      link_type=@xlsx.HyperlinkType::Location,
-    ),
+    workbook.get_hyperlink_cells("Sheet1", link_type=Location),
     content=(
       #|["C3"]
     ),
   )
   debug_inspect(
-    workbook.get_hyperlink_cells("Sheet1", link_type=@xlsx.HyperlinkType::Unset),
+    workbook.get_hyperlink_cells("Sheet1", link_type=Unset),
     content="[]",
   )
   debug_inspect(
-    workbook.get_hyper_link_cells(
-      "Sheet1",
-      link_type=@xlsx.HyperlinkType::External,
-    ),
+    workbook.get_hyper_link_cells("Sheet1", link_type=External),
     content=(
       #|["A1", "B2"]
     ),
@@ -476,12 +452,7 @@ test "hyperlink with both r:id and location matches both filters" {
   // attribute into the sheet XML the way another producer could
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.set_cell_hyperlink(
-    "Sheet1",
-    "A1",
-    "https://example.com",
-    @xlsx.HyperlinkType::External,
-  )
+  workbook.set_cell_hyperlink("Sheet1", "A1", "https://example.com", External)
   let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let patched = @zip.Archive::new()
@@ -518,19 +489,13 @@ test "hyperlink with both r:id and location matches both filters" {
     ),
   )
   debug_inspect(
-    parsed.get_hyperlink_cells(
-      "Sheet1",
-      link_type=@xlsx.HyperlinkType::External,
-    ),
+    parsed.get_hyperlink_cells("Sheet1", link_type=External),
     content=(
       #|["A1"]
     ),
   )
   debug_inspect(
-    parsed.get_hyperlink_cells(
-      "Sheet1",
-      link_type=@xlsx.HyperlinkType::Location,
-    ),
+    parsed.get_hyperlink_cells("Sheet1", link_type=Location),
     content=(
       #|["A1"]
     ),

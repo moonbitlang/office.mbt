@@ -67,7 +67,7 @@ async fn run_get(matches : @argparse.Matches) -> Unit {
       headers=result.headers,
       footers=result.footers,
     ) catch {
-      @inspect.PathError(message) => raise @cli.CliError("error: " + message)
+      PathError(message) => raise @cli.CliError("error: " + message)
     }
     println(payload.stringify(indent=2))
   } else {
@@ -77,7 +77,7 @@ async fn run_get(matches : @argparse.Matches) -> Unit {
       headers=result.headers,
       footers=result.footers,
     ) catch {
-      @inspect.PathError(message) => raise @cli.CliError("error: " + message)
+      PathError(message) => raise @cli.CliError("error: " + message)
     }
     println(element.to_raw_text().trim_end(chars="\n"))
   }
@@ -91,7 +91,7 @@ fn required_value(
   match first_value(matches, name) {
     Some(value) => value
     None =>
-      raise @cli.CliError(
+      raise CliError(
         "error: the following required argument was not provided: '\{name}'",
       )
   }

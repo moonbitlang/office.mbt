@@ -70,17 +70,17 @@ test "zip write zip64 structures" {
 test "zip writer wb: helper guard and zip64 descriptor branches" {
   let out : Array[Byte] = []
   try write_u16_le(out, -1) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected write_u16_le to raise")
   }
   try to_u32(-1) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected to_u32 to raise")
   }
   try to_u64(-1) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected to_u64 to raise")
   }

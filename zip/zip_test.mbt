@@ -66,7 +66,7 @@ test "zip write rejects too-long file names" {
   }
   archive.add(name, b"hello")
   try write(archive) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected write to raise")
   }

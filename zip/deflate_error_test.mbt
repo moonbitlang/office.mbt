@@ -24,7 +24,7 @@ fn gzip_bytes_with_deflate_payload(payload : Array[Byte]) -> Bytes {
 test "gunzip invalid deflate: empty payload hits OutOfBounds" {
   let gz = gzip_bytes_with_deflate_payload([])
   try gunzip(gz) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected gunzip to raise")
   }
@@ -35,7 +35,7 @@ test "gunzip invalid deflate: invalid block type" {
   // BFINAL=1, BTYPE=3 (invalid): bits 1,1,1 => 0x07
   let gz = gzip_bytes_with_deflate_payload([(0x07).to_byte()])
   try gunzip(gz) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected gunzip to raise")
   }
@@ -54,7 +54,7 @@ test "gunzip invalid deflate: invalid stored block length" {
   ]
   let gz = gzip_bytes_with_deflate_payload(payload)
   try gunzip(gz) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected gunzip to raise")
   }
@@ -72,8 +72,7 @@ test "gunzip invalid deflate: empty dynamic huffman table" {
   ]
   let gz = gzip_bytes_with_deflate_payload(payload)
   try gunzip(gz) catch {
-    ZipError::UnsupportedFeature(msg~) =>
-      inspect(msg, content="empty huffman table")
+    UnsupportedFeature(msg~) => inspect(msg, content="empty huffman table")
     _ => fail("expected UnsupportedFeature(empty huffman table)")
   } noraise {
     _ => fail("expected UnsupportedFeature(empty huffman table)")

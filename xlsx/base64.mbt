@@ -14,6 +14,6 @@ fn base64_decode(text : StringView) -> Bytes raise XlsxError {
   // unaffected; the edge cases are pinned in base64_wbtest.mbt. The input is
   // not echoed into the error (it can be large or binary).
   @base64.decode(text) catch {
-    @base64.Malformed(_) => raise InvalidBase64(msg="invalid base64 data")
+    Malformed(_) => raise InvalidBase64(msg="invalid base64 data")
   }
 }

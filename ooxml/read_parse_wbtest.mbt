@@ -9,7 +9,7 @@ test "ooxml read_parse wb: attr_value parser branches" {
   debug_inspect(attr_value("bar=\"ok\"", "baz"), content="None")
 
   try attr_value("foo=\"unterminated", "foo") catch {
-    e => inspect(e is ParseXmlError::InvalidXml(_), content="true")
+    e => inspect(e is InvalidXml(_), content="true")
   } noraise {
     _ => fail("expected attr_value to raise")
   }
@@ -36,7 +36,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|</Types>
     #|
   try parse_content_type_overrides(missing_part) catch {
-    ParseXmlError::InvalidXml(msg~) =>
+    InvalidXml(msg~) =>
       inspect(msg, content="content type override part name missing")
   } noraise {
     _ => fail("expected content type override part name missing")
@@ -49,7 +49,7 @@ test "ooxml read_parse wb: content-type override required attrs" {
     #|</Types>
     #|
   try parse_content_type_overrides(missing_content_type) catch {
-    ParseXmlError::InvalidXml(msg~) =>
+    InvalidXml(msg~) =>
       inspect(msg, content="content type override content type missing")
   } noraise {
     _ => fail("expected content type override content type missing")

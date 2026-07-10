@@ -8,7 +8,7 @@ async fn validate_via_sdk(dir : String, name : String, bytes : Bytes) -> Unit {
   @async/fs.write_file(
     path,
     bytes,
-    create_mode=@async/fs.CreateOrTruncate,
+    create_mode=CreateOrTruncate,
     permission=0o644,
   ) catch {
     err => fail("write \{name} failed: \{err}")
@@ -54,7 +54,7 @@ async test "feature matrix is Microsoft OpenXML schema-valid" {
     cs.set_cell_value("A\{i}", Numeric(i.to_double()))
     cs.set_cell_value("B\{i}", Numeric((i * 3 % 7).to_double()))
   }
-  for entry in [("D1", @xlsx.Col), ("D20", @xlsx.Line), ("D40", @xlsx.Pie)] {
+  for entry in [("D1", @xlsx.Col), ("D20", Line), ("D40", Pie)] {
     let (anchor, kind) = entry
     let opts = @xlsx.ChartOptions::new(kind)
     opts.series.push(

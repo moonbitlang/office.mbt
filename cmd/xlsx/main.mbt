@@ -93,33 +93,30 @@ async fn run_cli() -> Unit {
 ///|
 /// Builds the argparse command tree.
 fn build_command() -> @argparse.Command {
-  @argparse.Command(
+  Command(
     "xlsx",
     about="Create, inspect, and validate xlsx spreadsheets",
     subcommand_required=true,
     subcommands=[
-      @argparse.Command(
+      Command(
         "create",
         about="Create a new empty workbook",
-        positionals=[@argparse.PositionArg("output", about="output .xlsx path")],
+        positionals=[PositionArg("output", about="output .xlsx path")],
         options=[
-          @argparse.OptionArg(
-            "sheet",
-            long="sheet",
-            about="name of the first sheet",
-            default_values=["Sheet1"],
-          ),
+          OptionArg("sheet", long="sheet", about="name of the first sheet", default_values=[
+            "Sheet1",
+          ]),
         ],
       ),
-      @argparse.Command(
+      Command(
         "csv",
         about="Import a CSV file into a new workbook",
         positionals=[
-          @argparse.PositionArg("input", about="input .csv path"),
-          @argparse.PositionArg("output", about="output .xlsx path"),
+          PositionArg("input", about="input .csv path"),
+          PositionArg("output", about="output .xlsx path"),
         ],
         options=[
-          @argparse.OptionArg(
+          OptionArg(
             "sheet",
             long="sheet",
             about="name of the sheet to create",
@@ -127,215 +124,203 @@ fn build_command() -> @argparse.Command {
           ),
         ],
       ),
-      @argparse.Command(
-        "set",
-        about="Set a cell value and save the file in place",
-        positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg("cell"),
-          @argparse.PositionArg("value"),
-        ],
-      ),
-      @argparse.Command(
+      Command("set", about="Set a cell value and save the file in place", positionals=[
+        PositionArg("file"),
+        PositionArg("sheet"),
+        PositionArg("cell"),
+        PositionArg("value"),
+      ]),
+      Command(
         "formula",
         about="Set a cell formula (leading '=' optional) and save in place",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg("cell"),
-          @argparse.PositionArg("formula", about="e.g. =SUM(B2:B10)"),
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg("cell"),
+          PositionArg("formula", about="e.g. =SUM(B2:B10)"),
         ],
       ),
-      @argparse.Command(
+      Command(
         "style",
         about="Apply a style to a cell or range and save in place",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg("range", about="a cell (A1) or range (A1:B2)"),
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg("range", about="a cell (A1) or range (A1:B2)"),
         ],
         flags=[
-          @argparse.FlagArg("bold", long="bold", about="bold font"),
-          @argparse.FlagArg("italic", long="italic", about="italic font"),
+          FlagArg("bold", long="bold", about="bold font"),
+          FlagArg("italic", long="italic", about="italic font"),
         ],
         options=[
-          @argparse.OptionArg(
+          OptionArg(
             "number-format",
             long="number-format",
             about="number format code, e.g. \"#,##0.00\" or \"0%\"",
           ),
-          @argparse.OptionArg(
+          OptionArg(
             "fill",
             long="fill",
             about="solid fill color as hex RGB, e.g. FFFF00",
           ),
-          @argparse.OptionArg(
+          OptionArg(
             "font-color",
             long="font-color",
             about="font color as hex RGB, e.g. FFFFFF (white)",
           ),
-          @argparse.OptionArg(
+          OptionArg(
             "align",
             long="align",
             about="horizontal alignment: left, center, or right",
           ),
         ],
       ),
-      @argparse.Command(
+      Command(
         "merge",
         about="Merge a cell range (e.g. A1:B2) and save in place",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg("range", about="range to merge, e.g. A1:B2"),
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg("range", about="range to merge, e.g. A1:B2"),
         ],
       ),
-      @argparse.Command(
+      Command(
         "width",
         about="Set a column's (or a column range's) width and save in place",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg("column", about="a column (A) or range (A:C)"),
-          @argparse.PositionArg(
-            "width",
-            about="width in character units, e.g. 18",
-          ),
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg("column", about="a column (A) or range (A:C)"),
+          PositionArg("width", about="width in character units, e.g. 18"),
         ],
       ),
-      @argparse.Command(
+      Command(
         "freeze",
         about="Freeze panes above and left of a cell (e.g. A2 freezes row 1)",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg("cell", about="first scrollable cell, e.g. A2"),
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg("cell", about="first scrollable cell, e.g. A2"),
         ],
       ),
-      @argparse.Command(
+      Command(
         "filter",
         about="Add an auto-filter over a range and save in place",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg("range", about="range to filter, e.g. A1:C10"),
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg("range", about="range to filter, e.g. A1:C10"),
         ],
       ),
-      @argparse.Command(
+      Command(
         "add-sheet",
         about="Add a new empty sheet to an existing workbook",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("name", about="name of the new sheet"),
+          PositionArg("file"),
+          PositionArg("name", about="name of the new sheet"),
         ],
       ),
-      @argparse.Command(
+      Command(
         "chart",
         about="Add a chart (col/bar/line/pie/…) from a data range and save in place",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg(
-            "anchor",
-            about="top-left cell of the chart, e.g. E2",
-          ),
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg("anchor", about="top-left cell of the chart, e.g. E2"),
         ],
         options=[
-          @argparse.OptionArg(
+          OptionArg(
             "type",
             long="type",
             about="chart type: col (default), bar, line, pie, area, scatter, doughnut, radar",
           ),
-          @argparse.OptionArg(
+          OptionArg(
             "categories",
             long="categories",
             about="category-label range, e.g. A2:A6",
           ),
-          @argparse.OptionArg(
+          OptionArg(
             "values",
             long="values",
             about="series value range, e.g. B2:B6",
           ),
-          @argparse.OptionArg(
+          OptionArg(
             "name",
             long="name",
             about="series legend label (a literal; for a cell use a qualified ref like Sheet1!B1)",
           ),
-          @argparse.OptionArg("title", long="title", about="chart title"),
+          OptionArg("title", long="title", about="chart title"),
         ],
       ),
-      @argparse.Command(
+      Command(
         "get",
         about="Print a single cell value (or a cell/range as JSON)",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg(
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg(
             "cell",
             about="a cell (A1) or, with --json, a range (A1:B2)",
           ),
         ],
         flags=[
-          @argparse.FlagArg(
+          FlagArg(
             "json",
             long="json",
             about="print the cell or range as a structured JSON payload",
           ),
         ],
       ),
-      @argparse.Command(
-        "outline",
-        about="Print a workbook structure map as JSON",
-        positionals=[@argparse.PositionArg("file")],
-      ),
-      @argparse.Command(
+      Command("outline", about="Print a workbook structure map as JSON", positionals=[
+        PositionArg("file"),
+      ]),
+      Command(
         "calc",
         about="Evaluate a cell's formula and print the computed value",
         positionals=[
-          @argparse.PositionArg("file"),
-          @argparse.PositionArg("sheet"),
-          @argparse.PositionArg("cell"),
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg("cell"),
         ],
         flags=[
-          @argparse.FlagArg(
+          FlagArg(
             "raw",
             long="raw",
             about="print the unformatted computed value",
           ),
         ],
       ),
-      @argparse.Command("sheets", about="List the sheet names in a workbook", positionals=[
-        @argparse.PositionArg("file"),
+      Command("sheets", about="List the sheet names in a workbook", positionals=[
+        PositionArg("file"),
       ]),
-      @argparse.Command(
+      Command(
         "rows",
         about="Print a sheet as CSV",
-        positionals=[@argparse.PositionArg("file")],
+        positionals=[PositionArg("file")],
         options=[
-          @argparse.OptionArg(
+          OptionArg(
             "sheet",
             long="sheet",
             about="sheet to export (default: first sheet)",
           ),
         ],
       ),
-      @argparse.Command(
+      Command(
         "view",
         about="Print a sheet as an ASCII table",
-        positionals=[@argparse.PositionArg("file")],
+        positionals=[PositionArg("file")],
         options=[
-          @argparse.OptionArg(
+          OptionArg(
             "sheet",
             long="sheet",
             about="sheet to view (default: first sheet)",
           ),
         ],
       ),
-      @argparse.Command(
+      Command(
         "validate",
         about="Report OOXML package structure problems (empty = valid)",
-        positionals=[@argparse.PositionArg("file")],
+        positionals=[PositionArg("file")],
       ),
     ],
   )

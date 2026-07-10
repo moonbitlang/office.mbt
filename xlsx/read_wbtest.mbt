@@ -4,7 +4,7 @@ fn is_invalid_xml_error(
   expected_msg : String,
 ) -> Bool {
   match result {
-    Err(XlsxError::InvalidXml(msg~)) => msg == expected_msg
+    Err(InvalidXml(msg~)) => msg == expected_msg
     _ => false
   }
 }
@@ -15,7 +15,7 @@ fn is_invalid_xml_fill_error(
   expected_msg : String,
 ) -> Bool {
   match result {
-    Err(XlsxError::InvalidXml(msg~)) => msg == expected_msg
+    Err(InvalidXml(msg~)) => msg == expected_msg
     _ => false
   }
 }
@@ -26,7 +26,7 @@ fn is_invalid_xml_alignment_error(
   expected_msg : String,
 ) -> Bool {
   match result {
-    Err(XlsxError::InvalidXml(msg~)) => msg == expected_msg
+    Err(InvalidXml(msg~)) => msg == expected_msg
     _ => false
   }
 }
@@ -57,7 +57,7 @@ fn is_invalid_xml_string_array_error(
   expected_msg : String,
 ) -> Bool {
   match result {
-    Err(XlsxError::InvalidXml(msg~)) => msg == expected_msg
+    Err(InvalidXml(msg~)) => msg == expected_msg
     _ => false
   }
 }
@@ -68,7 +68,7 @@ fn is_invalid_xml_defined_name_error(
   expected_msg : String,
 ) -> Bool {
   match result {
-    Err(XlsxError::InvalidXml(msg~)) => msg == expected_msg
+    Err(InvalidXml(msg~)) => msg == expected_msg
     _ => false
   }
 }
@@ -110,8 +110,7 @@ test "read wb: decode_utf8 invalid paths" {
   }
   inspect(
     match requires_transcoder {
-      Err(XlsxError::InvalidXml(msg~)) =>
-        msg.contains("requires charset transcoder")
+      Err(InvalidXml(msg~)) => msg.contains("requires charset transcoder")
       _ => false
     },
     content="true",
@@ -122,7 +121,7 @@ test "read wb: decode_utf8 invalid paths" {
   }
   inspect(
     match invalid_utf8 {
-      Err(XlsxError::InvalidXml(msg~)) => msg == "invalid utf8"
+      Err(InvalidXml(msg~)) => msg == "invalid utf8"
       _ => false
     },
     content="true",
@@ -806,7 +805,7 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
   }
   inspect(
     match dimension_err {
-      Err(XlsxError::InvalidXml(msg~)) => msg == "dimension tag not closed"
+      Err(InvalidXml(msg~)) => msg == "dimension tag not closed"
       _ => false
     },
     content="true",
@@ -817,7 +816,7 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
   }
   inspect(
     match pane_not_closed {
-      Err(XlsxError::InvalidXml(msg~)) => msg == "pane tag not closed"
+      Err(InvalidXml(msg~)) => msg == "pane tag not closed"
       _ => false
     },
     content="true",
@@ -827,7 +826,7 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
   }
   inspect(
     match pane_bad_xsplit {
-      Err(XlsxError::InvalidXml(msg~)) => msg == "pane xSplit invalid"
+      Err(InvalidXml(msg~)) => msg == "pane xSplit invalid"
       _ => false
     },
     content="true",
@@ -837,7 +836,7 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
   }
   inspect(
     match pane_bad_ysplit {
-      Err(XlsxError::InvalidXml(msg~)) => msg == "pane ySplit invalid"
+      Err(InvalidXml(msg~)) => msg == "pane ySplit invalid"
       _ => false
     },
     content="true",
@@ -875,7 +874,7 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
   }
   inspect(
     match selection_not_closed {
-      Err(XlsxError::InvalidXml(msg~)) => msg == "selection tag not closed"
+      Err(InvalidXml(msg~)) => msg == "selection tag not closed"
       _ => false
     },
     content="true",
@@ -906,7 +905,7 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
   }
   inspect(
     match sheet_view_bad_zoom {
-      Err(XlsxError::InvalidXml(msg~)) => msg == "sheetView zoomScale invalid"
+      Err(InvalidXml(msg~)) => msg == "sheetView zoomScale invalid"
       _ => false
     },
     content="true",
@@ -920,8 +919,7 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
   }
   inspect(
     match sheet_view_bad_id {
-      Err(XlsxError::InvalidXml(msg~)) =>
-        msg == "sheetView workbookViewId invalid"
+      Err(InvalidXml(msg~)) => msg == "sheetView workbookViewId invalid"
       _ => false
     },
     content="true",
@@ -935,7 +933,7 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
   }
   inspect(
     match sheet_view_missing_close {
-      Err(XlsxError::InvalidXml(msg~)) => msg == "sheetView close missing"
+      Err(InvalidXml(msg~)) => msg == "sheetView close missing"
       _ => false
     },
     content="true",
@@ -999,7 +997,7 @@ test "read wb: sheet views and sheet props parser guard branches part 5" {
   }
   inspect(
     match tab_color_bad_indexed {
-      Err(XlsxError::InvalidXml(msg~)) => msg == "tabColor indexed invalid"
+      Err(InvalidXml(msg~)) => msg == "tabColor indexed invalid"
       _ => false
     },
     content="true",

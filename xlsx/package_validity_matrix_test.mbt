@@ -51,18 +51,8 @@ test "package validity: multiple sheets and defined names" {
 test "package validity: hyperlinks" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.set_cell_hyperlink(
-    "Sheet1",
-    "A1",
-    "https://example.com",
-    @xlsx.HyperlinkType::External,
-  )
-  workbook.set_cell_hyperlink(
-    "Sheet1",
-    "A2",
-    "Sheet1!B2",
-    @xlsx.HyperlinkType::Location,
-  )
+  workbook.set_cell_hyperlink("Sheet1", "A1", "https://example.com", External)
+  workbook.set_cell_hyperlink("Sheet1", "A2", "Sheet1!B2", Location)
   assert_valid_package("hyperlinks", workbook)
 }
 

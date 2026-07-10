@@ -169,7 +169,7 @@ async fn write_file(path : String, bytes : Bytes) -> Unit {
   @async/fs.write_file(
     path,
     bytes,
-    create_mode=@async/fs.CreateOrTruncate,
+    create_mode=CreateOrTruncate,
     permission=0o644,
   )
 }

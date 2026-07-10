@@ -25,27 +25,27 @@ test "crypto aes invalid key/iv/data lengths" {
   let key128 = b"0123456789abcdef"
   let data = b"0123456789abcdef0123456789abcdef"
   try aes_ecb_encrypt(b"short", data) catch {
-    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+    e => inspect(e is InvalidCrypto(_), content="true")
   } noraise {
     _ => fail("expected aes_ecb_encrypt to raise")
   }
   try aes_ecb_encrypt(key128, b"123") catch {
-    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+    e => inspect(e is InvalidCrypto(_), content="true")
   } noraise {
     _ => fail("expected aes_ecb_encrypt to raise")
   }
   try aes_ecb_decrypt(key128, b"123") catch {
-    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+    e => inspect(e is InvalidCrypto(_), content="true")
   } noraise {
     _ => fail("expected aes_ecb_decrypt to raise")
   }
   try aes_cbc_decrypt(key128, b"iv", data) catch {
-    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+    e => inspect(e is InvalidCrypto(_), content="true")
   } noraise {
     _ => fail("expected aes_cbc_decrypt to raise")
   }
   try aes_cbc_decrypt(key128, b"0000000000000000", b"123") catch {
-    e => inspect(e is CryptoError::InvalidCrypto(_), content="true")
+    e => inspect(e is InvalidCrypto(_), content="true")
   } noraise {
     _ => fail("expected aes_cbc_decrypt to raise")
   }

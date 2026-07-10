@@ -30,7 +30,7 @@ fn expand_range(target : String) -> Array[String] raise {
     None => [target]
     Some(_) => {
       let range = @inspect.parse_range(target) catch {
-        @inspect.RangeTooLarge(count~, ..) =>
+        RangeTooLarge(count~, ..) =>
           raise CliError(
             "error: range \{target} covers \{count} cells; max is \{@inspect.MAX_RANGE_CELLS}",
           )

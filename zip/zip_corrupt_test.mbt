@@ -92,7 +92,7 @@ test "zip read: corrupted structures hit error variants" {
   let bad_eocd_sig = raw_bytes.copy()
   bad_eocd_sig[eocd] = (0).to_byte()
   try read(Bytes::from_array(bad_eocd_sig)) catch {
-    e => inspect(e is ZipError::MissingEndOfCentral, content="true")
+    e => inspect(e is MissingEndOfCentral, content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -103,14 +103,14 @@ test "zip read: corrupted structures hit error variants" {
     (out_of_bounds.length() + central_size).reinterpret_as_uint(),
   )
   try read(Bytes::from_array(out_of_bounds)) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
   let bad_cd_sig = raw_bytes.copy()
   bad_cd_sig[central_offset] = (0).to_byte()
   try read(Bytes::from_array(bad_cd_sig)) catch {
-    e => inspect(e is ZipError::InvalidSignature(..), content="true")
+    e => inspect(e is InvalidSignature(..), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -119,28 +119,28 @@ test "zip read: corrupted structures hit error variants" {
     bad_name[central_offset + 46] = (0xFF).to_byte()
   }
   try read(Bytes::from_array(bad_name)) catch {
-    e => inspect(e is ZipError::InvalidUtf8(_), content="true")
+    e => inspect(e is InvalidUtf8(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
   let bad_method = raw_bytes.copy()
   overwrite_u16_le(bad_method, central_offset + 10, 99)
   try read(Bytes::from_array(bad_method)) catch {
-    e => inspect(e is ZipError::UnsupportedCompression(_), content="true")
+    e => inspect(e is UnsupportedCompression(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
   let bad_local_sig = raw_bytes.copy()
   bad_local_sig[local_offset] = (0).to_byte()
   try read(Bytes::from_array(bad_local_sig)) catch {
-    e => inspect(e is ZipError::InvalidSignature(..), content="true")
+    e => inspect(e is InvalidSignature(..), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
   let multi_disk = raw_bytes.copy()
   overwrite_u16_le(multi_disk, eocd + 4, 1)
   try read(Bytes::from_array(multi_disk)) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -150,14 +150,14 @@ test "zip read: corrupted structures hit error variants" {
   zip_overwrite_u32_le(zip64_locator_missing, eocd + 12, (0xFFFFFFFF : UInt))
   zip_overwrite_u32_le(zip64_locator_missing, eocd + 16, (0xFFFFFFFF : UInt))
   try read(Bytes::from_array(zip64_locator_missing)) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
   let mismatched_comp_size = raw_bytes.copy()
   zip_overwrite_u32_le(mismatched_comp_size, local_offset + 18, (1 : UInt))
   try read(Bytes::from_array(mismatched_comp_size)) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -168,7 +168,7 @@ test "zip read: corrupted structures hit error variants" {
     (0xFFFFFFFF : UInt),
   )
   try read(Bytes::from_array(zip64_size_missing)) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -179,14 +179,14 @@ test "zip read: corrupted structures hit error variants" {
     (0xFFFFFFFF : UInt),
   )
   try read(Bytes::from_array(zip64_offset_missing)) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
   let encrypted_flag = raw_bytes.copy()
   overwrite_u16_le(encrypted_flag, central_offset + 8, 0x0801)
   try read(Bytes::from_array(encrypted_flag)) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -204,7 +204,7 @@ test "zip read: EOCD comment length hits Reader::skip OutOfBounds" {
   let bad_comment = raw_bytes.copy()
   overwrite_u16_le(bad_comment, eocd + 20, 1)
   try read(Bytes::from_array(bad_comment)) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -223,7 +223,7 @@ test "zip read: central name_len hits Reader::read_bytes OutOfBounds" {
   let bad_name_len = raw_bytes.copy()
   overwrite_u16_le(bad_name_len, central_offset + 28, 0xFFFF)
   try read(Bytes::from_array(bad_name_len)) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -246,7 +246,7 @@ test "zip read: central offset near EOF hits Reader::read_u8 OutOfBounds" {
     (bad_central.length() - 2).reinterpret_as_uint(),
   )
   try read(Bytes::from_array(bad_central)) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -266,7 +266,7 @@ test "zip read: unsupported flags hits ensure_flags_supported branch" {
   // UTF-8 (0x0800) + unsupported bit 0x0020.
   overwrite_u16_le(bad_flags, central_offset + 8, 0x0820)
   try read(Bytes::from_array(bad_flags)) catch {
-    ZipError::UnsupportedFeature(msg~) =>
+    UnsupportedFeature(msg~) =>
       inspect(msg, content="unsupported zip flags: 0x20")
     _ => fail("expected UnsupportedFeature for unsupported flags")
   } noraise {
@@ -286,8 +286,7 @@ test "zip read: u32_to_int overflow hits UnsupportedFeature" {
   let bad = raw_bytes.copy()
   zip_overwrite_u32_le(bad, eocd + 16, (0x80000000 : UInt))
   try read(Bytes::from_array(bad)) catch {
-    ZipError::UnsupportedFeature(msg~) =>
-      inspect(msg, content="u32 exceeds Int range")
+    UnsupportedFeature(msg~) => inspect(msg, content="u32 exceeds Int range")
     _ => fail("expected UnsupportedFeature for u32 exceeds Int range")
   } noraise {
     _ => fail("expected UnsupportedFeature for u32 exceeds Int range")
@@ -313,8 +312,7 @@ fn make_zip_zip64_locator_offset_negative() -> Bytes {
 test "zip read: zip64 locator offset negative hits locator-missing branch" {
   let bytes = make_zip_zip64_locator_offset_negative()
   try read(bytes) catch {
-    ZipError::UnsupportedFeature(msg~) =>
-      inspect(msg, content="zip64 locator missing")
+    UnsupportedFeature(msg~) => inspect(msg, content="zip64 locator missing")
     _ => fail("expected zip64 locator missing")
   } noraise {
     _ => fail("expected zip64 locator missing")
@@ -363,7 +361,7 @@ fn make_zip_zip64_extra_declared_too_large() -> Bytes {
 test "zip read: parse_zip64_extra hits OutOfBounds branch" {
   let bytes = make_zip_zip64_extra_declared_too_large()
   try read(bytes) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -398,7 +396,7 @@ fn make_zip_zip64_invalid_eocd_signature() -> Bytes {
 test "zip read: zip64 EOCD invalid signature hits InvalidSignature branch" {
   let bytes = make_zip_zip64_invalid_eocd_signature()
   try read(bytes) catch {
-    e => inspect(e is ZipError::InvalidSignature(..), content="true")
+    e => inspect(e is InvalidSignature(..), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -440,7 +438,7 @@ fn make_zip_zip64_multidisk_eocd() -> Bytes {
 test "zip read: zip64 EOCD multi-disk fields hit UnsupportedFeature" {
   let bytes = make_zip_zip64_multidisk_eocd()
   try read(bytes) catch {
-    ZipError::UnsupportedFeature(msg~) =>
+    UnsupportedFeature(msg~) =>
       inspect(msg, content="multi-disk zip not supported")
     _ => fail("expected multi-disk zip not supported")
   } noraise {
@@ -462,8 +460,7 @@ test "zip read: zip64 uncompressed size missing hits zip64 size missing" {
   // Uncompressed size -> needs zip64, but no zip64 extra field present.
   zip_overwrite_u32_le(bad, central_offset + 24, (0xFFFFFFFF : UInt))
   try read(Bytes::from_array(bad)) catch {
-    ZipError::UnsupportedFeature(msg~) =>
-      inspect(msg, content="zip64 size missing")
+    UnsupportedFeature(msg~) => inspect(msg, content="zip64 size missing")
     _ => fail("expected zip64 size missing")
   } noraise {
     _ => fail("expected zip64 size missing")
@@ -507,7 +504,7 @@ test "zip read: zip64 EOCD huge declared entry count fails cleanly" {
   // instead of preallocating gigabytes of entry metadata.
   let bytes = make_zip_zip64_huge_declared_entry_count()
   try read(bytes) catch {
-    e => inspect(e is ZipError::InvalidSignature(..), content="true")
+    e => inspect(e is InvalidSignature(..), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }

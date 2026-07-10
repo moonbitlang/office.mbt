@@ -77,8 +77,7 @@ test "ooxml rels: relationship tag not closed" {
   )
   let result = Ok(read(updated)) catch { e => Err(e) }
   match result {
-    Err(XlsxError::InvalidXml(msg~)) =>
-      inspect(msg, content="relationship tag not closed")
+    Err(InvalidXml(msg~)) => inspect(msg, content="relationship tag not closed")
     _ => fail("expected InvalidXml for relationship tag not closed")
   }
 }
@@ -102,8 +101,7 @@ test "ooxml rels: relationship id missing" {
   )
   let result = Ok(read(updated)) catch { e => Err(e) }
   match result {
-    Err(XlsxError::InvalidXml(msg~)) =>
-      inspect(msg, content="relationship id missing")
+    Err(InvalidXml(msg~)) => inspect(msg, content="relationship id missing")
     _ => fail("expected InvalidXml for relationship id missing")
   }
 }
@@ -127,8 +125,7 @@ test "ooxml rels: relationship target missing" {
   )
   let result = Ok(read(updated)) catch { e => Err(e) }
   match result {
-    Err(XlsxError::InvalidXml(msg~)) =>
-      inspect(msg, content="relationship target missing")
+    Err(InvalidXml(msg~)) => inspect(msg, content="relationship target missing")
     _ => fail("expected InvalidXml for relationship target missing")
   }
 }

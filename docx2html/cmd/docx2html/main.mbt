@@ -40,7 +40,7 @@ fn parse_cli_args(args : Array[String]) -> CliCommand raise @cli.CliError {
     return Help
   }
   let matches = cli_command().parse(argv~, env=Map([])) catch {
-    err => raise @cli.CliError(err.to_string())
+    err => raise CliError(err.to_string())
   }
   if matches.flags.get_or_default("help", false) {
     return Help
@@ -48,7 +48,7 @@ fn parse_cli_args(args : Array[String]) -> CliCommand raise @cli.CliError {
   let input_path = match first_value(matches, "input") {
     Some(value) => value
     None =>
-      raise @cli.CliError(
+      raise CliError(
         "error: the following required argument was not provided: 'input'\n\n" +
         render_cli_help(),
       )
@@ -56,7 +56,7 @@ fn parse_cli_args(args : Array[String]) -> CliCommand raise @cli.CliError {
   let output_path = first_value(matches, "output")
   let output_dir = first_value(matches, "output-dir")
   if output_path is Some(_) && output_dir is Some(_) {
-    raise @cli.CliError(
+    raise CliError(
       "error: output path and --output-dir are mutually exclusive\n\n" +
       render_cli_help(),
     )

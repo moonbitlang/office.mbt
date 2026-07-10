@@ -18,7 +18,7 @@ fn resolve_workbook_xml_part_path(
         content_types_xml,
         workbook_content_type_candidates(),
       ) catch {
-        @ooxml.ParseXmlError::InvalidXml(msg~) => raise InvalidXml(msg~)
+        InvalidXml(msg~) => raise InvalidXml(msg~)
       }
       match workbook_part_name {
         Some(part_name) => archive_path_from_part_name(part_name)

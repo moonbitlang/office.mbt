@@ -17,8 +17,8 @@
 fn builtin_charset_decode(encoding : String, bytes : Bytes) -> String? {
   match normalize_charset_label(encoding) {
     "windows-1252" => Some(decode_windows_1252(bytes))
-    "utf-16le" => decode_utf16(bytes, @encoding/utf16.Endian::Little)
-    "utf-16be" => decode_utf16(bytes, @encoding/utf16.Endian::Big)
+    "utf-16le" => decode_utf16(bytes, Little)
+    "utf-16be" => decode_utf16(bytes, Big)
     _ => None
   }
 }
@@ -88,7 +88,7 @@ fn decode_utf16(
     bytes[1] == 0xff {
     (@encoding/utf16.Endian::Big, bytes[2:])
   } else if bytes.length() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe {
-    (@encoding/utf16.Endian::Little, bytes[2:])
+    (Little, bytes[2:])
   } else {
     (default_endian, bytes)
   }

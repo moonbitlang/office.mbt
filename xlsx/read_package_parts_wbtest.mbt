@@ -62,7 +62,7 @@ test "read package parts: malformed [Content_Types] raises InvalidXml" {
     e => Err(e)
   }
   match result {
-    Err(XlsxError::InvalidXml(msg~)) =>
+    Err(InvalidXml(msg~)) =>
       inspect(msg, content="content type override tag not closed")
     _ => fail("expected content type override tag not closed")
   }
@@ -84,7 +84,7 @@ test "read package parts: invalid workbook part name raises InvalidXml" {
     e => Err(e)
   }
   match result {
-    Err(XlsxError::InvalidXml(msg~)) =>
+    Err(InvalidXml(msg~)) =>
       inspect(msg, content="content type part name empty")
     _ => fail("expected content type part name empty")
   }

@@ -57,11 +57,7 @@ test "property: zip write then read preserves every entry" {
       // Distinct names (avoid last-write-wins ambiguity within one archive).
       let name = "e\{i}_\{rng.int(limit=100000)}.dat"
       let data = fuzz_payload(rng, 1500)
-      let compression = if rng.boolean() {
-        Compression::Deflate
-      } else {
-        Compression::Store
-      }
+      let compression = if rng.boolean() { Compression::Deflate } else { Store }
       archive.add(name, data, compression~)
       expected.push((name, data))
     }

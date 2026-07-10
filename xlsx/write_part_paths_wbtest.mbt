@@ -119,7 +119,7 @@ test "write part paths: invalid read-side path helpers raise InvalidXml" {
     e => Err(e)
   }
   match empty_part_result {
-    Err(XlsxError::InvalidXml(msg~)) =>
+    Err(InvalidXml(msg~)) =>
       inspect(msg, content="content type part name empty")
     _ => fail("expected content type part name empty")
   }
@@ -128,15 +128,14 @@ test "write part paths: invalid read-side path helpers raise InvalidXml" {
     e => Err(e)
   }
   match slash_part_result {
-    Err(XlsxError::InvalidXml(msg~)) =>
+    Err(InvalidXml(msg~)) =>
       inspect(msg, content="content type part name empty")
     _ => fail("expected content type part name empty for /")
   }
 
   let empty_rels_result = Ok(rels_path_for_part("")) catch { e => Err(e) }
   match empty_rels_result {
-    Err(XlsxError::InvalidXml(msg~)) =>
-      inspect(msg, content="part rels path invalid")
+    Err(InvalidXml(msg~)) => inspect(msg, content="part rels path invalid")
     _ => fail("expected part rels path invalid")
   }
 
@@ -144,8 +143,7 @@ test "write part paths: invalid read-side path helpers raise InvalidXml" {
     e => Err(e)
   }
   match slash_rels_result {
-    Err(XlsxError::InvalidXml(msg~)) =>
-      inspect(msg, content="part rels path invalid")
+    Err(InvalidXml(msg~)) => inspect(msg, content="part rels path invalid")
     _ => fail("expected part rels path invalid for leading slash")
   }
 
@@ -153,8 +151,7 @@ test "write part paths: invalid read-side path helpers raise InvalidXml" {
     e => Err(e)
   }
   match trailing_slash_rels_result {
-    Err(XlsxError::InvalidXml(msg~)) =>
-      inspect(msg, content="part rels path invalid")
+    Err(InvalidXml(msg~)) => inspect(msg, content="part rels path invalid")
     _ => fail("expected part rels path invalid for trailing slash")
   }
 }
