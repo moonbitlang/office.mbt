@@ -239,3 +239,25 @@ $ docx.exe get "$TESTDIR/fixtures/header-footer.docx" '/header[3]'
 error: path '/header[3]' not found: the document has 2 header part(s) (wanted index 3)
 [1]
 ```
+
+## Create: A Blank Document
+
+`docx create` writes a minimal, schema-valid blank document (one empty
+paragraph, Normal style, Letter page) — the write foundation the authoring
+commands build on. Its output satisfies `docx validate` and the outline
+shows the expected shape:
+
+```mooncram
+$ docx.exe create blank.docx
+created blank.docx
+```
+
+```mooncram
+$ docx.exe validate blank.docx
+valid
+```
+
+```mooncram
+$ docx.exe outline blank.docx | jq -c '[.counts.paragraphs, .counts.sections, .counts.headers]'
+[1,1,0]
+```

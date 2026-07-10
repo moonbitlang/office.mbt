@@ -154,6 +154,13 @@ pub fn read_docx_with_messages(
 }
 
 ///|
+/// Builds a minimal, schema-valid blank docx (one empty paragraph, Normal
+/// style, Letter page). See `@docx.new_blank_docx`.
+pub fn new_blank_docx() -> Bytes {
+  @docx_impl.new_blank_docx()
+}
+
+///|
 /// Reads DOCX bytes into the package-level representation: the body
 /// document (identical to `read_docx_with_messages`) plus sections and
 /// header/footer stories. See `@docx.read_docx_package`.

@@ -185,3 +185,8 @@ jobs:
             and (.path == "/body/p[1]/r[1]/image[1]")'
           v=$(moon run --target wasm docx2html/cmd/docx -- validate docx2html/tests/cram/fixtures/single-paragraph.docx 2>docx-wasm.err) || { echo "docx validate failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "docx validate -> $v"; test "$v" = "valid"
+          # Write foundation: create a blank document on wasm and gate it
+          # with the portable validator.
+          moon run --target wasm docx2html/cmd/docx -- create ci-blank.docx 2>docx-wasm.err || { echo "docx create failed; stderr:"; cat docx-wasm.err; exit 1; }
+          c=$(moon run --target wasm docx2html/cmd/docx -- validate ci-blank.docx 2>docx-wasm.err) || { echo "blank validate failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "blank validate -> $c"; test "$c" = "valid"
