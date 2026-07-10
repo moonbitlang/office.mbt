@@ -77,9 +77,11 @@ fn write_block(
   match element {
     Paragraph(children~, properties~) =>
       write_paragraph(children, properties, used_styles)
+    Table(children~, properties~) =>
+      write_table(children, properties, used_styles)
     other =>
       raise Unsupported(
-        message="the paragraph writer cannot serialize this element yet: \{block_kind_name(other)} (tables arrive in F2, lists in F3, media in F4)",
+        message="the paragraph writer cannot serialize this element yet: \{block_kind_name(other)} (lists arrive in F3, media in F4)",
       )
   }
 }
