@@ -647,3 +647,40 @@ test "multiple images and images inside hyperlinks and cells round-trip" {
   }
   debug_inspect(media_count, content="3")
 }
+
+///|
+test "F4 round 2: wide-image extents and direct header truncation pins" {
+  // A 300,000 px wide "PNG" (header-only bytes: the writer sizes from the
+  // header and stores the part verbatim). 300000 * 9525 = 2,857,500,000 —
+  // above the 32-bit Int overflow threshold the Int64 fix removed.
+  let wide = b"\x89PNG\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x04\x93\xe0\x00\x00\x00\x01"
+  let bytes = @docx2html.write_docx([
+    @docx2html.paragraph([@docx2html.run([@docx2html.image("image/png", wide)])]),
+  ])
+  let archive = @mbtzip.read(bytes)
+  guard archive.get("word/document.xml") is Some(doc)
+  let text = @utf8.decode(doc, ignore_bom=true)
+  inspect(text.find("cx=\"2857500000\"") is Some(_), content="true")
+  // PNG whose IHDR length field is not 13 is rejected.
+  let bad_ihdr_len = b"\x89PNG\x0d\x0a\x1a\x0a\x00\x00\x00\x0e\x49\x48\x44\x52\x00\x00\x00\x0a\x00\x00\x00\x0a"
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([@docx2html.image("image/png", bad_ihdr_len)]),
+      ]),
+    ],
+    "could not read the image's dimensions",
+  )
+  // A GIF cut off mid logical-screen-descriptor (12 bytes < 13) is rejected
+  // even with a valid GIF89a signature.
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([
+          @docx2html.image("image/gif", b"GIF89a\x0a\x00\x0a\x00\x00\x00"),
+        ]),
+      ]),
+    ],
+    "could not read the image's dimensions",
+  )
+}
