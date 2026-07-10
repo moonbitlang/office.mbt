@@ -258,7 +258,7 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
 
   // Malformed inputs should not crash and should fall back to default sizing.
   let bad = b""
-  let bad_exts = [
+  let bad_exts : ReadOnlyArray[String] = [
     "png", "gif", "jpg", "bmp", "ico", "tif", "svg", "emf", "wmf", "emz", "wmz",
   ]
   for i in 0..<bad_exts.length() {

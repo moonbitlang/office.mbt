@@ -62,13 +62,17 @@ pub fn demo_dashboard_bytes() -> Bytes raise @xlsx.XlsxError {
   data.set_col_width(5, 14.0)
   data.set_row(1, ["Month", "North", "South", "West", "Total"])
   data.set_row_style(1, header_style_id)
-  let months = [
+  let months : ReadOnlyArray[String] = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov",
     "Dec",
   ]
-  let north = [12, 15, 11, 18, 22, 24, 20, 21, 19, 25, 27, 30]
-  let south = [9, 10, 8, 11, 13, 14, 13, 15, 16, 18, 19, 21]
-  let west = [7, 6, 9, 10, 11, 12, 10, 11, 12, 13, 14, 16]
+  let north : ReadOnlyArray[Int] = [
+    12, 15, 11, 18, 22, 24, 20, 21, 19, 25, 27, 30,
+  ]
+  let south : ReadOnlyArray[Int] = [
+    9, 10, 8, 11, 13, 14, 13, 15, 16, 18, 19, 21,
+  ]
+  let west : ReadOnlyArray[Int] = [7, 6, 9, 10, 11, 12, 10, 11, 12, 13, 14, 16]
   for i in 0..<months.length() {
     let row = i + 2
     let sum = north[i] + south[i] + west[i]

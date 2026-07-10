@@ -2,7 +2,7 @@
 test "calc: _xlfn aliases (basic coverage)" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let formulas = [
+  let formulas : ReadOnlyArray[String] = [
     "_xlfn.ARABIC(\"XII\")", "_xlfn.DECIMAL(\"FF\",16)", "_xlfn.CEILING.MATH(4.3,2)",
     "_xlfn.CEILING.PRECISE(4.3,2)", "_xlfn.FLOOR.MATH(4.3,2)", "_xlfn.FLOOR.PRECISE(4.3,2)",
     "_xlfn.ISO.CEILING(4.3,2)", "_xlfn.TEXTBEFORE(\"hello-world\",\"-\")", "_xlfn.TEXTAFTER(\"hello-world\",\"-\")",

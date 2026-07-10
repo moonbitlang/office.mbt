@@ -11,8 +11,8 @@ pub fn demo_sparklines_bytes() -> Bytes raise @xlsx.XlsxError {
     "Team", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct",
     "Nov", "Dec", "Trend",
   ])
-  let teams = ["Alpha", "Beta", "Gamma", "Delta"]
-  let data = [
+  let teams : ReadOnlyArray[String] = ["Alpha", "Beta", "Gamma", "Delta"]
+  let data : ReadOnlyArray[Array[Int]] = [
     [3, 4, 3, 5, 6, 7, 8, 7, 7, 8, 9, 10],
     [6, 5, 6, 6, 5, 4, 5, 5, 6, 7, 6, 6],
     [2, 2, 3, 2, 3, 2, 4, 5, 4, 4, 5, 6],
@@ -27,8 +27,8 @@ pub fn demo_sparklines_bytes() -> Bytes raise @xlsx.XlsxError {
     }
     sheet.set_cell("N\{r}", "")
   }
-  let locations = ["N2", "N3", "N4", "N5"]
-  let ranges = ["B2:M2", "B3:M3", "B4:M4", "B5:M5"]
+  let locations : ReadOnlyArray[String] = ["N2", "N3", "N4", "N5"]
+  let ranges : ReadOnlyArray[String] = ["B2:M2", "B3:M3", "B4:M4", "B5:M5"]
   let opts = @xlsx.SparklineOptions::new(locations, ranges)
   opts.set_type(Line)
   opts.set_markers(true)

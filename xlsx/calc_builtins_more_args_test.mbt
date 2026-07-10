@@ -2,7 +2,7 @@
 test "calc: builtins smoke (valid-arg calls are recognized)" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let formulas = [
+  let formulas : ReadOnlyArray[String] = [
     // Trig/hyperbolic.
     "ACOT(1)", "ACOTH(2)", "COT(1)", "COTH(2)", "CSC(1)", "CSCH(2)", "SEC(1)", "SECH(2)",
     "ASINH(1)", "ACOSH(2)", "ATANH(0.5)", "SINH(1)", "COSH(1)", "TANH(1)", "RADIANS(180)",

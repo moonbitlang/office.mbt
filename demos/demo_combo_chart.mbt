@@ -7,13 +7,17 @@ pub fn demo_combo_chart_bytes() -> Bytes raise @xlsx.XlsxError {
   sheet.set_col_width(3, 14.0)
   sheet.set_col_width(4, 14.0)
   sheet.set_row(1, ["Month", "New MRR", "Churn %", "Active Users"])
-  let months = [
+  let months : ReadOnlyArray[String] = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov",
     "Dec",
   ]
-  let new_mrr = [12, 18, 22, 24, 30, 28, 34, 40, 38, 45, 52, 60]
-  let churn = [6.2, 5.5, 5.0, 4.8, 4.4, 4.6, 4.2, 3.9, 3.8, 3.6, 3.4, 3.1]
-  let users = [
+  let new_mrr : ReadOnlyArray[Int] = [
+    12, 18, 22, 24, 30, 28, 34, 40, 38, 45, 52, 60,
+  ]
+  let churn : ReadOnlyArray[Double] = [
+    6.2, 5.5, 5.0, 4.8, 4.4, 4.6, 4.2, 3.9, 3.8, 3.6, 3.4, 3.1,
+  ]
+  let users : ReadOnlyArray[Int] = [
     1200, 1350, 1500, 1650, 1900, 2100, 2350, 2600, 2750, 3000, 3300, 3600,
   ]
   for i in 0..<months.length() {

@@ -2,7 +2,7 @@
 test "calc: builtins dispatch (no-arg calls are recognized)" {
   let workbook = Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let names = [
+  let names : ReadOnlyArray[String] = [
     "ABS", "ACCRINT", "ACCRINTM", "ACOS", "ACOSH", "ACOT", "ACOTH", "ADDRESS", "AGGREGATE",
     "AMORDEGRC", "AMORLINC", "ANCHORARRAY", "AND", "ARABIC", "ARRAYTOTEXT", "ASIN",
     "ASINH", "ATAN", "ATAN2", "ATANH", "AVEDEV", "AVERAGE", "AVERAGEA", "AVERAGEIF",
