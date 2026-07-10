@@ -7,7 +7,16 @@ LOCK_DIR="$ROOT/.tools/openxml-validator/.lock"
 
 acquire_lock() {
   local attempts=0
-  while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+  while true; do
+    # Ignore signals only across the atomic mkdir and the flag assignment;
+    # rearm before the retry sleep so lock contention stays cancellable.
+    trap '' INT TERM
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+      LOCK_HELD=1
+      trap handle_signal INT TERM
+      return
+    fi
+    trap handle_signal INT TERM
     sleep 0.1
     attempts=$((attempts + 1))
     if [[ "$attempts" -ge 600 ]]; then
@@ -15,20 +24,18 @@ acquire_lock() {
       exit 1
     fi
   done
-  LOCK_HELD=1
 }
 
-# Lock lifecycle vs catchable signals: release runs exactly once because
-# every entry point first disarms the signals that could re-enter it; the
-# ownership flag is cleared only after the removal attempt, so a release
-# interrupted before rmdir would still remove the lock on the (now sole)
-# continuing path. Acquisition runs with INT/TERM ignored — the window
-# between the atomic mkdir and the flag assignment cannot be interrupted —
-# and the real handlers are armed immediately afterwards. Only an
-# uncatchable KILL can strand the lock.
+# Lock lifecycle vs catchable signals. Invariants: no double-release (a
+# release IGNORES further INT/TERM for the rest of cleanup — `trap ''`,
+# not `trap -`, which would restore terminating dispositions and let a
+# second signal kill the shell between rmdir and the flag clear), and no
+# catchable-signal strand (signals are ignored only across the atomic
+# mkdir + ownership-flag assignment; the contention retry sleeps stay
+# cancellable). Only an uncatchable KILL can strand the lock.
 LOCK_HELD=0
 release_lock() {
-  trap - INT TERM
+  trap '' INT TERM
   if [[ "$LOCK_HELD" == 1 ]]; then
     rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
     LOCK_HELD=0
@@ -36,7 +43,7 @@ release_lock() {
 }
 
 handle_signal() {
-  trap - EXIT INT TERM
+  trap - EXIT
   release_lock
   exit 1
 }
@@ -127,10 +134,9 @@ for attempt in $(seq 1 "$attempts"); do
 done
 
 DOTNET_PROJECT="$ROOT/tools/openxml-validator/OpenXmlValidator.csproj"
-trap '' INT TERM
 trap release_lock EXIT
-acquire_lock
 trap handle_signal INT TERM
+acquire_lock
 "$DOTNET" build "$DOTNET_PROJECT" -p:UseAppHost=false >/dev/null
 VALIDATOR_DLL="$ROOT/tools/openxml-validator/bin/Debug/net8.0/OpenXmlValidator.dll"
 "$DOTNET" "$VALIDATOR_DLL" "$XLSX"
