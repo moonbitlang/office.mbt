@@ -188,6 +188,7 @@ priv struct EntryMeta {
   local_header_offset : Int
   compressed_size : Int
   uncompressed_size : Int
+  crc32 : UInt
 }
 
 ///|
@@ -423,7 +424,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     let method_id = central_reader.read_u16()
     let _mod_time = central_reader.read_u16()
     let _mod_date = central_reader.read_u16()
-    let _crc32 = central_reader.read_u32_raw()
+    let crc32 = central_reader.read_u32_raw()
     let comp_size_raw = central_reader.read_u32_raw()
     let uncomp_size_raw = central_reader.read_u32_raw()
     let name_len = central_reader.read_u16()
@@ -478,13 +479,23 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
       local_header_offset: local_offset,
       compressed_size: comp_size,
       uncompressed_size: uncomp_size,
+      crc32,
     })
   }
   let archive = Archive::new()
   for meta in metas {
     ignore(compression_from_method(meta.compression_method))
     let data = read_entry_data(bytes, meta)
-    archive.add(meta.name, data)
+    // Construct the entry directly so it carries the central directory's
+    // STORED crc (Archive::add would recompute from the inflated data,
+    // hiding any mismatch from validators).
+    archive.entries.push({
+      name: meta.name,
+      data,
+      compression: Store,
+      data_descriptor: false,
+      crc32: meta.crc32,
+    })
   }
   archive
 }

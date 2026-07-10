@@ -4,6 +4,9 @@ struct Entry {
   data : Bytes
   compression : Compression
   data_descriptor : Bool
+  // CRC-32 of `data`: the central-directory value for entries read from an
+  // archive, or computed at add time for entries created in memory.
+  crc32 : UInt
 }
 
 ///|
@@ -27,6 +30,15 @@ pub fn Entry::data_descriptor(self : Entry) -> Bool {
 }
 
 ///|
+/// The entry's CRC-32: as stored in the central directory for entries read
+/// from an archive (compare with `crc32(entry.data())` to detect
+/// corruption the inflater tolerates), or computed from the data for
+/// entries created via `Archive::add`.
+pub fn Entry::crc32(self : Entry) -> UInt {
+  self.crc32
+}
+
+///|
 struct Archive {
   entries : Array[Entry]
 }
@@ -44,7 +56,13 @@ pub fn Archive::add(
   compression? : Compression = Store,
   data_descriptor? : Bool = false,
 ) -> Unit {
-  self.entries.push({ name, data, compression, data_descriptor })
+  self.entries.push({
+    name,
+    data,
+    compression,
+    data_descriptor,
+    crc32: crc32(data),
+  })
 }
 
 ///|

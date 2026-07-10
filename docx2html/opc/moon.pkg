@@ -1,0 +1,11 @@
+import {
+  "bobzhang/docx2html/core",
+  "bobzhang/docx2html/xml",
+  "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbitlang/core/encoding/utf8",
+} for "test"
