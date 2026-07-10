@@ -19,7 +19,7 @@ pub fn cells(
   let parsed = parse_range(range)
   let entries = []
   let style_order : Array[Int] = []
-  let style_seen : Map[Int, Unit] = {}
+  let style_seen : Map[Int, Unit] = Map([])
   for row in parsed.row_lo..<=parsed.row_hi {
     for col in parsed.col_lo..<=parsed.col_hi {
       let cell = @xlsx.coordinates_to_cell_name(col, row)
@@ -30,7 +30,7 @@ pub fn cells(
       }
     }
   }
-  let styles : Map[String, Json] = {}
+  let styles : Map[String, Json] = Map([])
   for style_id in style_order {
     styles["\{style_id}"] = style_to_json(workbook.get_style(style_id))
   }

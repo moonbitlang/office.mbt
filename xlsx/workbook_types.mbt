@@ -185,6 +185,6 @@ pub fn Workbook::new(options? : Options = Options::new()) -> Workbook {
     active_sheet_index: 0,
     cell_images: [],
     rich_value_images: None,
-    rich_value_media: {},
+    rich_value_media: Map([]),
   }
 }

@@ -1718,7 +1718,7 @@ fn Worksheet::get_picture_cells(
   self : Worksheet,
 ) -> Array[String] raise XlsxError {
   let cells : Array[String] = []
-  let seen : Map[String, Bool] = {}
+  let seen : Map[String, Bool] = Map([])
   for image in self.images {
     let (row, col) = cell_ref_to_rc(image.reference)
     let reference = cell_ref_from(row, col)
@@ -2188,7 +2188,7 @@ pub fn Worksheet::set_conditional_format(
 pub fn Worksheet::get_conditional_formats(
   self : Worksheet,
 ) -> Map[String, Array[ConditionalFormatOptions]] raise XlsxError {
-  let formats : Map[String, Array[ConditionalFormatOptions]] = {}
+  let formats : Map[String, Array[ConditionalFormatOptions]] = Map([])
   for xml in self.conditional_formats {
     let (sqref, opts) = parse_conditional_format_xml(xml, self.x14_data_bars)
     match formats.get(sqref) {
@@ -2236,11 +2236,11 @@ pub fn Worksheet::unset_conditional_format(
     self.conditional_formats.push(xml)
   }
   if self.x14_data_bars.length() > 0 {
-    let prior : Map[String, X14DataBarProps] = {}
+    let prior : Map[String, X14DataBarProps] = Map([])
     for id, props in self.x14_data_bars {
       prior[id] = props
     }
-    let referenced : Map[String, X14DataBarProps] = {}
+    let referenced : Map[String, X14DataBarProps] = Map([])
     for item in updated {
       let (xml, sqref) = item
       let mut first = true
@@ -3027,7 +3027,7 @@ fn Worksheet::insert_rows(
   }
   self.charts.clear()
   self.charts.append(updated_charts)
-  let updated_rows : Map[Int, RowDimension] = {}
+  let updated_rows : Map[Int, RowDimension] = Map([])
   for row_index, dim in self.row_dimensions {
     let new_row = if row_index >= row { row_index + count } else { row_index }
     updated_rows[new_row] = dim
@@ -3160,7 +3160,7 @@ fn Worksheet::remove_rows(
   }
   self.charts.clear()
   self.charts.append(updated_charts)
-  let updated_rows : Map[Int, RowDimension] = {}
+  let updated_rows : Map[Int, RowDimension] = Map([])
   for row_index, dim in self.row_dimensions {
     if row_index < row {
       updated_rows[row_index] = dim
@@ -3537,7 +3537,7 @@ fn Worksheet::insert_cols(
   }
   self.charts.clear()
   self.charts.append(updated_charts)
-  let updated_cols : Map[Int, ColDimension] = {}
+  let updated_cols : Map[Int, ColDimension] = Map([])
   for col_index, dim in self.col_dimensions {
     let new_col = if col_index >= col { col_index + count } else { col_index }
     updated_cols[new_col] = dim
@@ -3670,7 +3670,7 @@ fn Worksheet::remove_cols(
   }
   self.charts.clear()
   self.charts.append(updated_charts)
-  let updated_cols : Map[Int, ColDimension] = {}
+  let updated_cols : Map[Int, ColDimension] = Map([])
   for col_index, dim in self.col_dimensions {
     if col_index < col {
       updated_cols[col_index] = dim

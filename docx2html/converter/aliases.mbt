@@ -70,7 +70,7 @@ fn html_text(value : String) -> HtmlNode {
 ///|
 fn html_element(
   tag : String,
-  attributes? : Map[String, String] = {},
+  attributes? : Map[String, String] = Map([]),
   children? : Array[HtmlNode] = [],
   fresh? : Bool = false,
   separator? : String = "",
@@ -81,7 +81,7 @@ fn html_element(
 ///|
 fn fresh_html_element(
   tag : String,
-  attributes? : Map[String, String] = {},
+  attributes? : Map[String, String] = Map([]),
   children? : Array[HtmlNode] = [],
   separator? : String = "",
 ) -> HtmlNode {

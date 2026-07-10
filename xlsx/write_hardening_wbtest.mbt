@@ -454,9 +454,9 @@ test "write hardening wb: write_worksheet_xml covers x14 map aggregation and unk
   sheet.unknown_ext_blocks.push("<foo/>")
   let xml = write_worksheet_xml(
     sheet,
-    {},
-    {},
-    {},
+    Map([]),
+    Map([]),
+    Map([]),
     [],
     None,
     None,
@@ -520,9 +520,9 @@ test "write hardening wb: write_worksheet_xml covers formula bool and error bran
   })
   let xml = write_worksheet_xml(
     sheet,
-    {},
-    {},
-    {},
+    Map([]),
+    Map([]),
+    Map([]),
     [],
     None,
     None,
@@ -560,9 +560,9 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
   let missing_rich : Result[String, Error] = Ok(
     write_worksheet_xml(
       rich_missing,
-      {},
-      {},
-      {},
+      Map([]),
+      Map([]),
+      Map([]),
       [],
       None,
       None,
@@ -598,9 +598,9 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
   let missing_plain : Result[String, Error] = Ok(
     write_worksheet_xml(
       plain_missing,
-      {},
-      {},
-      {},
+      Map([]),
+      Map([]),
+      Map([]),
       [],
       None,
       None,
@@ -621,9 +621,9 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
 
   let no_hyperlinks_xml = write_worksheet_xml(
     Worksheet::new("NoLinks"),
-    {},
-    {},
-    {},
+    Map([]),
+    Map([]),
+    Map([]),
     [
       {
         reference: "A1",
@@ -650,9 +650,9 @@ test "write hardening wb: write_worksheet_xml covers shared-string and hyperlink
   let missing_rel : Result[String, Error] = Ok(
     write_worksheet_xml(
       Worksheet::new("MissingRel"),
-      {},
-      {},
-      {},
+      Map([]),
+      Map([]),
+      Map([]),
       [
         {
           reference: "A1",

@@ -85,10 +85,10 @@ fn parse_header_footer_images_from_vml(
   let shapes = extract_vml_shapes(vml_xml)
   let rel_targets = match vml_rels_xml {
     Some(xml) => parse_relationship_targets(xml, rel_image)
-    None => {}
+    None => Map([])
   }
   let images : Array[HeaderFooterImage] = []
-  let index_by_id : Map[String, Int] = {}
+  let index_by_id : Map[String, Int] = Map([])
   for shape in shapes {
     let shape_attrs = match tag_attributes_in(shape, "v:shape") {
       Some(value) => value

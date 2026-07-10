@@ -1070,7 +1070,7 @@ fn write_styles_xml(
     dxf_list.push(style)
   }
   let num_fmt_entries : Array[(Int, String)] = []
-  let num_fmt_ids : Map[String, Int] = {}
+  let num_fmt_ids : Map[String, Int] = Map([])
   let mut next_id = 164
   for style in style_list {
     match style.number_format {
@@ -1122,7 +1122,7 @@ fn write_styles_xml(
   }
   // Font collection: id 0 is the workbook default font.
   let fonts : Array[Font] = [Font::with_values(size=11.0, family=font_name)]
-  let font_ids : Map[String, Int] = {}
+  let font_ids : Map[String, Int] = Map([])
   fn normalize_font_key(font : Font, default_family : StringView) -> String {
     let family = match font.family {
       Some(v) => v.to_string()
@@ -1341,7 +1341,7 @@ fn write_styles_xml(
   let fills : Array[String] = [
     "    <fill><patternFill patternType=\"none\"/></fill>\n", "    <fill><patternFill patternType=\"gray125\"/></fill>\n",
   ]
-  let fill_ids : Map[String, Int] = {}
+  let fill_ids : Map[String, Int] = Map([])
   fn normalize_pattern_fill_key(
     pattern : Int,
     fg_attrs : String,
@@ -1602,7 +1602,7 @@ fn write_styles_xml(
       ],
     },
   ]
-  let border_ids : Map[String, Int] = {}
+  let border_ids : Map[String, Int] = Map([])
   fn normalize_border_key(entry : BorderXmlEntry) -> String {
     let sb = StringBuilder::new()
     sb.write_view(if entry.diagonal_up { "1" } else { "0" })

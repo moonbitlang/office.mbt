@@ -1192,7 +1192,7 @@ fn unique_range_values(
   exactly_once : Bool,
 ) -> Result[RangeValues, FormulaValue] {
   let base = if by_col { transpose_range_values(range) } else { range }
-  let counts : Map[String, Int] = {}
+  let counts : Map[String, Int] = Map([])
   for row in 0..<base.rows {
     let key = match unique_row_key(base, row) {
       Ok(value) => value
@@ -3934,7 +3934,7 @@ fn wildcard_match_full_prefix(
 
 ///|
 fn wildcard_match_full(text : String, pattern : String) -> Bool {
-  let memo : Map[(Int, Int), Bool] = {}
+  let memo : Map[(Int, Int), Bool] = Map([])
   wildcard_match_full_prefix(text, pattern, 0, 0, memo)
 }
 
@@ -3945,7 +3945,7 @@ fn wildcard_find(text : String, pattern : String, start : Int) -> Int? {
     return None
   }
   for idx in start..<=len {
-    let memo : Map[(Int, Int), Bool] = {}
+    let memo : Map[(Int, Int), Bool] = Map([])
     if wildcard_match_prefix(text, pattern, idx, 0, memo) {
       return Some(idx)
     }
@@ -4173,7 +4173,7 @@ fn wildcard_find_dbcs(text : String, pattern : String, start : Int) -> Int? {
     return None
   }
   for idx in start..<=len {
-    let memo : Map[(Int, Int), Bool] = {}
+    let memo : Map[(Int, Int), Bool] = Map([])
     if wildcard_match_prefix_dbcs(text, pattern, idx, 0, memo) {
       return Some(idx)
     }
@@ -5473,7 +5473,7 @@ fn regex_match_from(
 fn regex_like_match(text : StringView, pattern : StringView) -> Bool {
   let text_chars = text.to_array()
   let pattern_chars = pattern.to_array()
-  let memo : Map[(Int, Int), Bool] = {}
+  let memo : Map[(Int, Int), Bool] = Map([])
   regex_match_from(text_chars, pattern_chars, 0, 0, memo)
 }
 
@@ -5572,7 +5572,7 @@ fn calc_database_new(
       return None
     }
   }
-  Some({ row: 0, col, index_map: {}, database, criteria })
+  Some({ row: 0, col, index_map: Map([]), database, criteria })
 }
 
 ///|

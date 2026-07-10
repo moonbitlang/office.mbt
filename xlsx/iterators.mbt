@@ -41,14 +41,14 @@ pub struct Rows {
 ///|
 fn collect_row_cells(sheet : Worksheet) -> Array[RowCells] {
   let cells = sheet.sorted_cells()
-  let row_cells : Map[Int, Array[Cell]] = {}
+  let row_cells : Map[Int, Array[Cell]] = Map([])
   for cell in cells {
     let entries = row_cells.get(cell.row).unwrap_or([])
     entries.push(cell)
     row_cells[cell.row] = entries
   }
   let row_keys : Array[Int] = []
-  let row_present : Map[Int, Bool] = {}
+  let row_present : Map[Int, Bool] = Map([])
   for row, _ in row_cells {
     row_keys.push(row)
     row_present[row] = true
@@ -217,14 +217,14 @@ fn collect_row_entries_with_options(
   options : Options,
 ) -> Array[RowValues] raise XlsxError {
   let cells = sheet.sorted_cells()
-  let row_cells : Map[Int, Array[Cell]] = {}
+  let row_cells : Map[Int, Array[Cell]] = Map([])
   for cell in cells {
     let entries = row_cells.get(cell.row).unwrap_or([])
     entries.push(cell)
     row_cells[cell.row] = entries
   }
   let row_keys : Array[Int] = []
-  let row_present : Map[Int, Bool] = {}
+  let row_present : Map[Int, Bool] = Map([])
   for row, _ in row_cells {
     row_keys.push(row)
     row_present[row] = true
@@ -271,7 +271,7 @@ fn collect_columns_with_options(
     return []
   }
   let max_row = max_row_for_columns(sheet)
-  let col_cells : Map[Int, Array[(Int, String)]] = {}
+  let col_cells : Map[Int, Array[(Int, String)]] = Map([])
   for cell in sheet.cells {
     let formatted = format_cell_value_for_workbook(styles, cell, false, options)
     let entries = col_cells.get(cell.col).unwrap_or([])

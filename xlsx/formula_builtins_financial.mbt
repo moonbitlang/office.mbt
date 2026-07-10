@@ -678,7 +678,7 @@ let conversion_multipliers : Map[String, Double] = {
 
 ///|
 fn build_unit_conversions() -> Map[Int, Map[String, Double]] {
-  let conversions : Map[Int, Map[String, Double]] = {}
+  let conversions : Map[Int, Map[String, Double]] = Map([])
   conversions[category_weight_and_mass] = {
     "g": 1.0,
     "sg": 6.85217658567918e-05,

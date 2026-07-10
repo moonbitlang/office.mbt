@@ -343,7 +343,7 @@ fn parse_slicer_cache_definitions(
   archive : @zip.Archive,
   decode : (Bytes) -> String raise XlsxError,
 ) -> Map[String, SlicerCacheDef] raise XlsxError {
-  let defs : Map[String, SlicerCacheDef] = {}
+  let defs : Map[String, SlicerCacheDef] = Map([])
   let targets = parse_relationship_targets(workbook_rels_xml, rel_slicer_cache)
   for _rel_id, target in targets {
     let cache_path = resolve_workbook_rel_target(target)
@@ -380,7 +380,7 @@ fn resolve_slicer_sources_after_read(
     None
   }
 
-  let table_by_id : Map[Int, (String, Table)] = {}
+  let table_by_id : Map[Int, (String, Table)] = Map([])
   for sheet in workbook.sheets {
     for table in sheet.tables() {
       if table.id > 0 {

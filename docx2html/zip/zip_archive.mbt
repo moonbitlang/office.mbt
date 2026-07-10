@@ -10,7 +10,7 @@ pub fn open_zip(data : BytesView) -> ZipArchive raise DocxError {
   let archive = @mbtzip.read(data) catch {
     err => raise InvalidZip(message="invalid ZIP archive: \{repr(err)}")
   }
-  let map : Map[String, Bytes] = {}
+  let map : Map[String, Bytes] = Map([])
   for entry in archive.entries() {
     map[entry.name()] = entry.data()
   }

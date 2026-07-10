@@ -103,7 +103,7 @@ pub fn parse_relationship_targets(
   xml : StringView,
   rel_type : StringView,
 ) -> Map[String, String] raise ParseXmlError {
-  let targets : Map[String, String] = {}
+  let targets : Map[String, String] = Map([])
   let mut first = true
   for chunk in xml.split("<Relationship ") {
     if first {
@@ -140,7 +140,7 @@ pub fn parse_relationship_targets(
 fn parse_content_type_overrides(
   xml : StringView,
 ) -> Map[String, String] raise ParseXmlError {
-  let overrides : Map[String, String] = {}
+  let overrides : Map[String, String] = Map([])
   let mut first = true
   for chunk in xml.split("<Override ") {
     if first {

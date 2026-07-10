@@ -208,7 +208,7 @@ fn DocumentConverter::convert_element(
       [html_element("input", attributes=attrs)]
     }
     Hyperlink(children~, href~, anchor~, target_frame~) => {
-      let attrs : Map[String, String] = {}
+      let attrs : Map[String, String] = Map([])
       match (href, anchor) {
         (Some(value), None) => attrs["href"] = value
         (Some(value), Some(anchor)) =>
@@ -313,7 +313,7 @@ fn DocumentConverter::convert_paragraph(
     []
   } else {
     let default_path : Array[HtmlPathElement] = [
-      { tag: "p", attributes: {}, fresh: true, separator: None },
+      { tag: "p", attributes: Map([]), fresh: true, separator: None },
     ]
     if @style_map.find_style_mapping(element, self.options.style_map) == None {
       self.warn_unrecognised_style(
@@ -369,9 +369,13 @@ fn DocumentConverter::convert_run(
   }
   match properties.vertical_alignment {
     Superscript =>
-      paths.push([{ tag: "sup", attributes: {}, fresh: false, separator: None }])
+      paths.push([
+        { tag: "sup", attributes: Map([]), fresh: false, separator: None },
+      ])
     Subscript =>
-      paths.push([{ tag: "sub", attributes: {}, fresh: false, separator: None }])
+      paths.push([
+        { tag: "sub", attributes: Map([]), fresh: false, separator: None },
+      ])
     Baseline => ()
   }
   if properties.is_italic {
@@ -433,7 +437,7 @@ fn path_for_property(
     }
   }
   match default_tag {
-    Some(tag) => [{ tag, attributes: {}, fresh: false, separator: None }]
+    Some(tag) => [{ tag, attributes: Map([]), fresh: false, separator: None }]
     None => []
   }
 }
@@ -464,7 +468,7 @@ fn DocumentConverter::convert_table(
 ) -> Array[HtmlNode] {
   let rows = force_write_nodes(self.convert_table_children(children))
   let default_path : Array[HtmlPathElement] = [
-    { tag: "table", attributes: {}, fresh: true, separator: None },
+    { tag: "table", attributes: Map([]), fresh: true, separator: None },
   ]
   ignore(properties)
   self.wrap_with_style(element, rows, default_path)
@@ -567,7 +571,7 @@ fn DocumentConverter::convert_table_cell(
   row_span~ : Int,
   as_header~ : Bool,
 ) -> HtmlNode {
-  let attrs : Map[String, String] = {}
+  let attrs : Map[String, String] = Map([])
   if col_span != 1 {
     attrs["colspan"] = col_span.to_string()
   }
@@ -625,7 +629,7 @@ pub fn img_element(
   read_attributes : (Image) -> Map[String, String],
 ) -> (Image) -> ImageConversion {
   fn(image) {
-    let attrs : Map[String, String] = {}
+    let attrs : Map[String, String] = Map([])
     match image.alt_text {
       Some(alt) => attrs["alt"] = alt
       None => ()

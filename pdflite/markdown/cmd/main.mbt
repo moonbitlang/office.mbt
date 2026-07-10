@@ -28,7 +28,7 @@ fn markdown_cmd_single_value(
 ///|
 fn markdown_cmd_parse_args(argv : ArrayView[String]) -> (String, String) raise {
   let command = markdown_cmd_command()
-  let matches = command.parse(argv~, env={})
+  let matches = command.parse(argv~, env=Map([]))
   (
     markdown_cmd_single_value(matches, "input"),
     markdown_cmd_single_value(matches, "output"),

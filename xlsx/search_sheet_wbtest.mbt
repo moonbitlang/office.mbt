@@ -6,7 +6,7 @@ test "search sheet wb: regex parser handles trailing escape and escaped class ch
 
 ///|
 test "search sheet wb: memoized match fast-return branch" {
-  let memo : Map[(Int, Int), Bool] = {}
+  let memo : Map[(Int, Int), Bool] = Map([])
   memo[(1, 1)] = true
   let tokens : Array[RegexToken] = []
   let result = sheet_regex_match_from(

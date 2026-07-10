@@ -17,7 +17,7 @@ pub(all) struct XmlElement {
 /// Builds an XML element.
 pub fn xml_element(
   name : String,
-  attributes? : Map[String, String] = {},
+  attributes? : Map[String, String] = Map([]),
   children? : Array[XmlNode] = [],
 ) -> XmlElement {
   { name, attributes, children }
@@ -109,14 +109,14 @@ pub fn XmlElement::text(self : XmlElement) -> String raise DocxError {
 /// Parses XML text into an element.
 pub fn read_xml_string(
   source : String,
-  namespace_map? : Map[String, String] = {},
+  namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
   let parser = XmlParser::{
     source,
     pos: 0,
     depth: 0,
     namespace_map,
-    namespaces: {},
+    namespaces: Map([]),
   }
   parser.skip_misc()
   let root = parser.parse_element()
@@ -131,7 +131,7 @@ pub fn read_xml_string(
 /// Serializes an XML element to text.
 pub fn write_xml_string(
   root : XmlElement,
-  namespaces? : Map[String, String] = {},
+  namespaces? : Map[String, String] = Map([]),
 ) -> String {
   let writer = XmlWriter::{ namespaces, uri_to_prefix: invert_map(namespaces) }
   let builder = StringBuilder()
@@ -150,7 +150,7 @@ priv struct XmlWriter {
 
 ///|
 fn invert_map(map : Map[String, String]) -> Map[String, String] {
-  let inverse : Map[String, String] = {}
+  let inverse : Map[String, String] = Map([])
   for item in map {
     let (key, value) = item
     inverse[value] = key
@@ -425,7 +425,7 @@ fn XmlParser::build_element(
   raw_attributes : Array[(String, String)],
   children : Array[XmlNode],
 ) -> XmlElement raise DocxError {
-  let attributes : Map[String, String] = {}
+  let attributes : Map[String, String] = Map([])
   for item in raw_attributes {
     let (name, value) = item
     attributes[self.map_name(name, is_attribute=true)] = decode_xml_entities(

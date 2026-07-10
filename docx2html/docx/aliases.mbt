@@ -70,7 +70,7 @@ fn join_zip_path(parts : Array[String]) -> String {
 ///|
 fn read_xml_string(
   value : String,
-  namespace_map? : Map[String, String] = {},
+  namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
   @xml.read_xml_string(value, namespace_map~)
 }
@@ -78,7 +78,7 @@ fn read_xml_string(
 ///|
 fn write_xml_string(
   element : XmlElement,
-  namespaces? : Map[String, String] = {},
+  namespaces? : Map[String, String] = Map([]),
 ) -> String {
   @xml.write_xml_string(element, namespaces~)
 }
@@ -86,7 +86,7 @@ fn write_xml_string(
 ///|
 fn xml_element(
   name : String,
-  attributes? : Map[String, String] = {},
+  attributes? : Map[String, String] = Map([]),
   children? : Array[XmlNode] = [],
 ) -> XmlElement {
   @xml.xml_element(name, attributes~, children~)

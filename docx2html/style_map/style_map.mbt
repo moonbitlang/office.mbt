@@ -568,7 +568,7 @@ fn parse_style_html_path(
 ) -> (Array[HtmlPathElement], Int, String?) {
   if line[index] == '!' {
     return (
-      [{ tag: "!", attributes: {}, fresh: false, separator: None }],
+      [{ tag: "!", attributes: Map([]), fresh: false, separator: None }],
       index + 1,
       None,
     )
@@ -632,7 +632,7 @@ fn parse_style_html_path_element(
 ) -> ParsedHtmlPathElement {
   let (tag, first_index) = parse_style_tag_choices_after_start(line, index, end)
   let mut index = first_index
-  let attributes : Map[String, String] = {}
+  let attributes : Map[String, String] = Map([])
   while index < end {
     if line[index] == '.' {
       let (class_name, next, error) = parse_style_identifier(

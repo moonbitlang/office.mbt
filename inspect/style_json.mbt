@@ -39,7 +39,7 @@ fn set_double(out : Map[String, Json], key : String, value : Double?) -> Unit {
 /// Converts a resolved `Style` into its `xlsx.cells/1` JSON shape. See
 /// docs/agent-json-schemas.md for the normative field list.
 pub fn style_to_json(style : @xlsx.Style) -> Json {
-  let out : Map[String, Json] = {}
+  let out : Map[String, Json] = Map([])
   match style.number_format {
     Some(Builtin(id)) => out["num_fmt_id"] = Json::number(id.to_double())
     Some(Custom(code)) => out["number_format"] = Json::string(code)
@@ -53,7 +53,7 @@ pub fn style_to_json(style : @xlsx.Style) -> Json {
   }
   match style.font {
     Some(font) => {
-      let f : Map[String, Json] = {}
+      let f : Map[String, Json] = Map([])
       set_bool(f, "bold", font.bold)
       set_bool(f, "italic", font.italic)
       set_bool(f, "strike", font.strike)
@@ -74,7 +74,7 @@ pub fn style_to_json(style : @xlsx.Style) -> Json {
   }
   match style.fill {
     Some(fill) => {
-      let f : Map[String, Json] = {}
+      let f : Map[String, Json] = Map([])
       set_string(f, "type", fill.typ)
       set_int(f, "pattern", fill.pattern)
       match fill.colors {
@@ -110,7 +110,7 @@ pub fn style_to_json(style : @xlsx.Style) -> Json {
   }
   match style.alignment {
     Some(alignment) => {
-      let a : Map[String, Json] = {}
+      let a : Map[String, Json] = Map([])
       set_string(a, "horizontal", alignment.horizontal)
       set_string(a, "vertical", alignment.vertical)
       set_bool(a, "wrap_text", alignment.wrap_text)
@@ -125,7 +125,7 @@ pub fn style_to_json(style : @xlsx.Style) -> Json {
   }
   match style.protection {
     Some(protection) => {
-      let p : Map[String, Json] = {}
+      let p : Map[String, Json] = Map([])
       set_bool(p, "hidden", protection.hidden)
       set_bool(p, "locked", protection.locked)
       if p.length() > 0 {

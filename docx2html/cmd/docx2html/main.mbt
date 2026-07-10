@@ -65,7 +65,7 @@ fn parse_cli_args(args : Array[String]) -> CliCommand raise CliError {
   if argv_is_help_only(argv) {
     return Help
   }
-  let matches = cli_command().parse(argv~, env={}) catch {
+  let matches = cli_command().parse(argv~, env=Map([])) catch {
     err => raise CliError(err.to_string())
   }
   if matches.flags.get_or_default("help", false) {
