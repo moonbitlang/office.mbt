@@ -89,6 +89,48 @@ async test "docx fixtures and embed_style_map output are Microsoft OpenXML schem
     ]),
   ])
   validate_docx_via_sdk(dir, "written_paragraphs", written)
+  // Every rPr property at once + heading + alignment: CT_RPr is an enforced
+  // child sequence, and this all-flags body is what exposes ordering
+  // regressions the structural tier cannot see (review finding on F1).
+  let all_flags = @docx2html.write_docx([
+    @docx2html.paragraph(
+      [
+        @docx2html.run(
+          [@docx2html.text("Every flag at once")],
+          properties=@docx2html.run_properties(
+            is_bold=true,
+            is_italic=true,
+            is_underline=true,
+            is_strikethrough=true,
+            is_all_caps=true,
+            is_small_caps=true,
+            vertical_alignment=Superscript,
+            font=Some("Arial"),
+            font_size=Some(11),
+            highlight=Some("yellow"),
+          ),
+        ),
+      ],
+      properties=@docx2html.paragraph_properties(
+        style_id=Some("Heading1"),
+        alignment=Some("center"),
+      ),
+    ),
+    @docx2html.paragraph(
+      [
+        @docx2html.run(
+          [@docx2html.text("italic with font and size")],
+          properties=@docx2html.run_properties(
+            is_italic=true,
+            font=Some("Arial"),
+            font_size=Some(14),
+          ),
+        ),
+      ],
+      properties=@docx2html.paragraph_properties(alignment=Some("distribute")),
+    ),
+  ])
+  validate_docx_via_sdk(dir, "written_all_flags", all_flags)
   let restyled = @docx2html.embed_style_map(single_paragraph, "p => h1:fresh")
   validate_docx_via_sdk(dir, "embedded_style_map", restyled)
 }
