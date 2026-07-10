@@ -130,16 +130,20 @@ fn check_content_types(
             element.attributes.get("ContentType"),
           ) {
           (Some(part_name), Some(content_type)) => {
-            if !part_name.has_prefix("/") {
+            overrides[part_name] = content_type
+            // Only a '/'-prefixed PartName can be resolved to an entry; an
+            // empty or slash-less one is itself the finding (and slicing it
+            // would abort on attacker-supplied input).
+            if part_name.has_prefix("/") {
+              let target = part_name[1:].to_owned()
+              if !parts.contains(target) {
+                findings.push(
+                  "\{CONTENT_TYPES_PART}: Override names a missing part: \{part_name}",
+                )
+              }
+            } else {
               findings.push(
                 "\{CONTENT_TYPES_PART}: Override PartName must start with '/': \{part_name}",
-              )
-            }
-            overrides[part_name] = content_type
-            let target = part_name[1:].to_owned()
-            if !parts.contains(target) {
-              findings.push(
-                "\{CONTENT_TYPES_PART}: Override names a missing part: \{part_name}",
               )
             }
           }

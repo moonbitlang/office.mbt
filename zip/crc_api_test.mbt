@@ -15,7 +15,7 @@ test "entries carry stored CRCs so validators can detect tolerated corruption" {
   let payload = b"hello zip world"
   let mut payload_at = -1
   for i in 0..<(corrupted.length() - payload.length()) {
-    if corrupted[i:i + payload.length()] == payload[:] {
+    if corrupted[i:i + payload.length()] == payload {
       payload_at = i
       break
     }
