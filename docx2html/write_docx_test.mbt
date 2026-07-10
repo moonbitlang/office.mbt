@@ -342,3 +342,80 @@ test "the table writer fails closed on malformed shapes" {
     "the table writer cannot serialize table styles yet",
   )
 }
+
+///|
+test "review round 1 (F2): merge-overlap rejection and the empty-cell asymmetry" {
+  // A colspan striding over a pending merge column must be rejected —
+  // silently writing it misplaces the vMerge continuation into a later row
+  // (schema-valid, masked by the reader's reconstruction, wrong in Word).
+  expect_unsupported(
+    [
+      @docx2html.table([
+        @docx2html.table_row([
+          @docx2html.table_cell([
+            @docx2html.paragraph([@docx2html.run([@docx2html.text("A")])]),
+          ]),
+          @docx2html.table_cell(
+            [@docx2html.paragraph([@docx2html.run([@docx2html.text("B")])])],
+            row_span=2,
+          ),
+        ]),
+        @docx2html.table_row([
+          @docx2html.table_cell(
+            [@docx2html.paragraph([@docx2html.run([@docx2html.text("C")])])],
+            col_span=2,
+          ),
+        ]),
+        @docx2html.table_row([
+          @docx2html.table_cell([
+            @docx2html.paragraph([@docx2html.run([@docx2html.text("D")])]),
+          ]),
+          @docx2html.table_cell([
+            @docx2html.paragraph([@docx2html.run([@docx2html.text("E")])]),
+          ]),
+        ]),
+      ]),
+    ],
+    "row 2: a cell spanning columns 1..2 collides with a vertical merge at column 2",
+  )
+  // A table with rows but no cells anywhere is degenerate.
+  expect_unsupported(
+    [@docx2html.table([@docx2html.table_row([])])],
+    "the table writer cannot serialize a table with no cells",
+  )
+  // DELIBERATE ASYMMETRY (like F1's style-name enrichment): an empty cell
+  // is written with the schema-required empty paragraph, so it reads back
+  // normalized as a cell containing one empty paragraph.
+  let body = [
+    @docx2html.table([
+      @docx2html.table_row([
+        @docx2html.table_cell([]),
+        @docx2html.table_cell([
+          @docx2html.paragraph([@docx2html.run([@docx2html.text("x")])]),
+        ]),
+      ]),
+    ]),
+  ]
+  let result = @docx2html.read_docx_package(@docx2html.write_docx(body))
+  guard result.document is Document(children~, ..)
+  guard children is [Table(children=rows, ..)]
+  guard rows is [TableRow(children=cells, ..)]
+  guard cells is [TableCell(children=first_cell, ..), _]
+  debug_inspect(
+    first_cell,
+    content=(
+      #|[
+      #|  Paragraph(
+      #|    children=[],
+      #|    properties={
+      #|      style_id: None,
+      #|      style_name: None,
+      #|      numbering: None,
+      #|      alignment: None,
+      #|      indent: { start: None, end: None, first_line: None, hanging: None },
+      #|    },
+      #|  ),
+      #|]
+    ),
+  )
+}
