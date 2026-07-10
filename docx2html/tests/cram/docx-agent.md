@@ -261,3 +261,65 @@ valid
 $ docx.exe outline blank.docx | jq -c '[.counts.paragraphs, .counts.sections, .counts.headers]'
 [1,1,0]
 ```
+
+## Batch: Author A Document From An Op Script (`docx.batch/1`)
+
+`docx batch` authors a NEW document from a strict JSON op script — the
+write-side counterpart of the read payloads above. The output path must not
+exist (batch creates documents; it cannot preserve parts of an existing
+file), and the write is atomic.
+
+```mooncram
+$ cat > report.json <<'SCRIPT'
+> {
+>   "schema": "docx.batch/1",
+>   "ops": [
+>     {"op": "paragraph", "params": {"text": "Report", "style": "Heading1"}},
+>     {"op": "paragraph", "params": {"runs": [
+>       {"text": "See ", "italic": true},
+>       {"link": {"href": "https://example.com", "text": "the site"}}
+>     ]}},
+>     {"op": "paragraph", "params": {"text": "First win", "list": {"ordered": true}}},
+>     {"op": "table", "params": {"header_rows": 1, "rows": [
+>       [{"text": "K"}, {"text": "V"}],
+>       [{"text": "region"}, {"text": "EMEA"}]
+>     ]}}
+>   ]
+> }
+> SCRIPT
+```
+
+```mooncram
+$ docx.exe batch report.docx report.json
+created report.docx (4 op(s))
+```
+
+```mooncram
+$ docx.exe validate report.docx
+valid
+```
+
+```mooncram
+$ docx.exe text report.docx
+[/body/p[1]] Report
+[/body/p[2]] See the site
+[/body/p[3]] First win
+[/body/tbl[1]/tr[1]/tc[1]/p[1]] K
+[/body/tbl[1]/tr[1]/tc[2]/p[1]] V
+[/body/tbl[1]/tr[2]/tc[1]/p[1]] region
+[/body/tbl[1]/tr[2]/tc[2]/p[1]] EMEA
+```
+
+Strict validation names the op index; an existing output fails closed:
+
+```mooncram
+$ printf '{"schema": "docx.batch/1", "ops": [{"op": "chart", "params": {}}]}' > bad.json; docx.exe batch out2.docx bad.json
+error: ops[0].op 'chart' is unknown (known ops: paragraph, table)
+[1]
+```
+
+```mooncram
+$ docx.exe batch report.docx report.json
+docx: refusing to write 'report.docx': it already exists (batch creates NEW documents only; it cannot preserve parts of an existing file)
+[1]
+```

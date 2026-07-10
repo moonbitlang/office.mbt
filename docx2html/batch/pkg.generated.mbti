@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/batch"
+
+import {
+  "bobzhang/docx2html/document",
+}
+
+// Values
+pub const SCHEMA_BATCH : String = "docx.batch/1"
+
+pub fn parse_batch(Json) -> BatchScript raise BatchError
+
+// Errors
+pub(all) suberror BatchError {
+  BatchError(String)
+} derive(Eq)
+pub impl Show for BatchError
+
+// Types and methods
+pub struct BatchScript {
+  // private fields
+}
+pub fn BatchScript::build_body(Self, Map[String, Bytes]) -> Array[@document.DocumentElement] raise BatchError
+pub fn BatchScript::image_paths(Self) -> Array[String]
+pub fn BatchScript::op_count(Self) -> Int
+
+// Type aliases
+
+// Traits
+

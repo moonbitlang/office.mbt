@@ -1,5 +1,6 @@
 import {
   "bobzhang/docx2html",
+  "bobzhang/docx2html/batch",
   "bobzhang/docx2html/inspect",
   "bobzhang/docx2html/opc",
   "bobzhang/docx2html/internal/cli",
@@ -7,6 +8,7 @@ import {
   "moonbitlang/async/fs" @afs,
   "moonbitlang/core/argparse",
   "moonbitlang/core/env",
+  "moonbitlang/core/json",
 }
 
 supported_targets = "native+wasm"

@@ -264,3 +264,47 @@ only when true; `null` is never emitted):
 - `tc`: `col_span`, `row_span` (present only when ≠ 1)
 - `hyperlink`: `text`, `href`, `anchor`, `target_frame`
 - `image`: `content_type`, `bytes` (image part byte length), `alt_text`
+
+## `docx.batch/1` — authoring script (`docx batch <output> <script.json>`)
+
+The consumed (input) schema: **strict** validation — an unknown schema, op,
+or key, or a wrong value type, fails naming the 0-based op index and the
+offending key; nothing is repaired. **Fresh-document-only**: the output path
+must not exist (the reader is lossy, so mutating existing files would
+silently drop unmodeled parts — batch refuses rather than corrupts). The
+build is all-or-nothing with an atomic write; `--dry-run` parses, builds,
+and validates without writing. Scripts are capped at 10,000 ops.
+
+```json
+{
+  "schema": "docx.batch/1",
+  "ops": [
+    {"op": "paragraph", "params": {"text": "Title", "style": "Heading1"}},
+    {"op": "paragraph", "params": {"align": "center", "runs": [
+      {"text": "bold", "bold": true, "size": 14},
+      {"link": {"href": "https://example.com", "text": "site"}},
+      {"image": {"path": "logo.png", "alt": "logo"}}
+    ]}},
+    {"op": "paragraph", "params": {"text": "item", "list": {"ordered": true, "level": 2}}},
+    {"op": "table", "params": {"header_rows": 1, "rows": [
+      [{"text": "H"}, {"text": "V", "col_span": 1}],
+      [{"paragraphs": [{"text": "cell paragraphs"}], "row_span": 1}, {"text": "x"}]
+    ]}}
+  ]
+}
+```
+
+- `paragraph.params`: `text` (one plain run) XOR `runs[]`; `style`
+  (`Normal`, `Heading1`..`Heading6`); `align`; `list` (`{ordered,
+  level?=1}`, levels 1–9).
+- run spec: `text` plus `bold/italic/underline/strike/all_caps/small_caps`
+  (booleans), `vertical` (`superscript`/`subscript`), `font`, `size`
+  (points), `highlight` — the exact writer surface, so anything the writer
+  fails closed on (e.g. blank alt text) fails the batch too.
+- `link`: `href` XOR `anchor`, optional `target_frame`, `text` XOR `runs[]`
+  (links cannot nest).
+- `image`: `path` (read relative to the CLI's working directory; PNG, JPEG,
+  GIF), `content_type` (inferred from the extension when omitted), `alt`.
+- `table.params`: `rows[][]` of cells (`text` XOR `paragraphs[]`,
+  `col_span`/`row_span` ≥ 1); `header_rows` marks the first N rows. Grid
+  geometry is validated by the table writer (ragged tables fail).
