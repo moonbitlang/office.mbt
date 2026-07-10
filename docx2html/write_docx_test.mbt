@@ -124,11 +124,12 @@ test "the F1 writer fails closed on everything it cannot serialize yet" {
       @docx2html.paragraph([
         @docx2html.hyperlink(
           [@docx2html.run([@docx2html.text("x")])],
-          href=Some("https://example.com"),
+          href=Some("https://example.com/page"),
+          anchor=Some("frag"),
         ),
       ]),
     ],
-    "the paragraph writer cannot serialize this inline element yet: hyperlink",
+    "a hyperlink with both href and anchor cannot round-trip",
   )
   expect_unsupported(
     [
@@ -156,7 +157,7 @@ test "the F1 writer fails closed on everything it cannot serialize yet" {
         @docx2html.run([@docx2html.image("image/png", b"\x89PNG")]),
       ]),
     ],
-    "the run writer cannot serialize this content yet: image",
+    "could not read the image's dimensions from its image/png header",
   )
 }
 
@@ -473,4 +474,62 @@ test "list levels outside 1..9 fail closed" {
     ],
     "list levels must be 1..9 (got 10)",
   )
+}
+
+///|
+/// The 10x10 PNG the reader fixtures use (base64 from tiny-picture).
+fn tiny_png() -> Bytes {
+  try! @base64.decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=",
+    ignore_whitespace=true,
+  )
+}
+
+///|
+test "hyperlinks and images round-trip" {
+  let body = [
+    @docx2html.paragraph([
+      @docx2html.hyperlink(
+        [@docx2html.run([@docx2html.text("visit")])],
+        href=Some("https://example.com/page"),
+      ),
+      @docx2html.hyperlink(
+        [@docx2html.run([@docx2html.text("jump")])],
+        anchor=Some("section2"),
+        target_frame=Some("_blank"),
+      ),
+    ]),
+    @docx2html.paragraph([
+      @docx2html.run([
+        @docx2html.image("image/png", tiny_png(), alt_text=Some("dot grid")),
+      ]),
+    ]),
+  ]
+  let bytes = @docx2html.write_docx(body)
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let result = @docx2html.read_docx_package(bytes)
+  debug_inspect(result.messages, content="[]")
+  guard result.document is Document(children~, ..)
+  assert_eq(children, body)
+  // The converter emits a data-URI img and a real link.
+  inspect(
+    @docx2html.convert_to_html(bytes).value,
+    content=(
+      #|<p><a href="https://example.com/page">visit</a><a href="#section2" target="_blank">jump</a></p><p><img alt="dot grid" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOvgAADr4B6kKxwAAAABNJREFUKFNj/M+ADzDhlWUYqdIAQSwBE8U+X40AAAAASUVORK5CYII=" /></p>
+    ),
+  )
+}
+
+///|
+test "image dimensions are parsed from real headers" {
+  // tiny_png is 10x10: wp:extent must carry 10 * 9525 EMUs.
+  let bytes = @docx2html.write_docx([
+    @docx2html.paragraph([
+      @docx2html.run([@docx2html.image("image/png", tiny_png())]),
+    ]),
+  ])
+  let archive = @mbtzip.read(bytes)
+  guard archive.get("word/document.xml") is Some(doc)
+  let text = @utf8.decode(doc, ignore_bom=true)
+  inspect(text.find("cx=\"95250\" cy=\"95250\"") is Some(_), content="true")
 }

@@ -12,8 +12,18 @@ test "build revalidates duplicate relationship ids from raw state" {
     overrides: Map([]),
     relationships: {
       "": [
-        { id: "rId1", relationship_type: "t", target: "word/document.xml" },
-        { id: "rId1", relationship_type: "t", target: "word/document.xml" },
+        {
+          id: "rId1",
+          relationship_type: "t",
+          target: "word/document.xml",
+          external: false,
+        },
+        {
+          id: "rId1",
+          relationship_type: "t",
+          target: "word/document.xml",
+          external: false,
+        },
       ],
     },
   }
