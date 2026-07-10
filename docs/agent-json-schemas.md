@@ -159,9 +159,11 @@ Envelope:
   Envelope errors (missing/unsupported `schema`, malformed `ops`) carry no
   index; op-level errors (unknown op, unknown param key, wrong param type)
   name the 0-based op index, e.g. `op 1 (style): unknown param 'colour'`.
-- Numbers must be exactly representable as IEEE doubles: literals such as
-  `1e309` or `9007199254740993` are rejected rather than silently rounded
-  or stored as infinity.
+- Numbers follow standard JSON semantics: a literal parses to the nearest
+  IEEE-754 double (about 15–17 significant digits; `9007199254740993`
+  stores `9007199254740992`, spelling-independent). Literals whose value
+  is not finite — `1e309` overflows to infinity — are rejected rather
+  than corrupting the sheet.
 - Application is all-or-nothing: ops apply to the in-memory workbook and the
   file is written (temp file + rename) only after every op succeeds.
 - Zero ops is a valid no-op and writes nothing. Scripts are capped at

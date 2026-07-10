@@ -179,6 +179,8 @@ jobs:
           sed -i 's/"cell_range"/"range"/' ci-batch.json
           b=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>/dev/null)
           echo "batch -> $b"; test "$b" = "applied 3 op(s) to ci.xlsx"
+          c=$(moon run --target wasm cmd/xlsx -- calc ci.xlsx Data A3 2>/dev/null)
+          echo "calc A3 -> $c"; test "$c" = "15"
           v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"
           # The docx agent CLI also targets wasm end to end: build it and

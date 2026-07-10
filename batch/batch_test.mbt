@@ -111,12 +111,15 @@ test "a script covering every op kind applies like its CLI twins" {
       #|["Data", "Summary"]
     ),
   )
+  let mut chart_count = 0
   let mut chart_xml = ""
   for sheet in workbook.sheets() {
     for chart in sheet.charts() {
+      chart_count += 1
       chart_xml = chart.xml
     }
   }
+  inspect(chart_count, content="1")
   // Line type, sheet-qualified series ranges, series name, and title all
   // survive into the chart part.
   assert_true(chart_xml.contains("<c:lineChart>"))
@@ -149,26 +152,38 @@ test "a chart op requires categories and values" {
 }
 
 ///|
-test "non-representable numbers are rejected, not corrupted" {
+test "non-finite numbers are rejected, finite ones follow IEEE semantics" {
+  // Standard JSON number semantics: literals round to the nearest double
+  // (spelling-independent); only values that are not finite are rejected.
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let rounding =
+    #|{"schema": "xlsx.batch/1",
+    #| "ops": [{"op": "set", "params": {"sheet": "Data", "cell": "A1", "value": 9007199254740993}}]}
+  ignore(apply_script(workbook, rounding))
+  match workbook.get_cell_value_raw("Data", "A1") {
+    Some(Numeric(n)) => inspect(n, content="9007199254740992")
+    other => fail("expected the rounded double, got \{to_repr(other)}")
+  }
   for
     case in [
       (
         (
           #|{"schema": "xlsx.batch/1", "ops": [{"op": "set", "params": {"sheet": "S", "cell": "A1", "value": 1e309}}]}
         ),
-        "op 0 (set): 'value' is not exactly representable as a number",
+        "op 0 (set): 'value' must be a finite JSON number",
       ),
       (
         (
-          #|{"schema": "xlsx.batch/1", "ops": [{"op": "set", "params": {"sheet": "S", "cell": "A1", "value": 9007199254740993}}]}
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "set", "params": {"sheet": "S", "cell": "A1", "value": -1e309}}]}
         ),
-        "op 0 (set): 'value' is not exactly representable as a number",
+        "op 0 (set): 'value' must be a finite JSON number",
       ),
       (
         (
           #|{"schema": "xlsx.batch/1", "ops": [{"op": "width", "params": {"sheet": "S", "column": "A", "width": 1e309}}]}
         ),
-        "op 0 (width): 'width' is not exactly representable as a number",
+        "op 0 (width): 'width' must be a finite JSON number",
       ),
     ] {
     let (script, expected) = case

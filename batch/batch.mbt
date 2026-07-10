@@ -2,8 +2,12 @@
 // docs/agent-json-schemas.md). Parsing is strict — an unknown op, an
 // unknown param key, or a wrong param type fails naming the 0-based op
 // index — and application delegates to the same library calls as the
-// CLI subcommand twins, so a batch op and its CLI twin cannot drift
-// apart. Errors are bare messages; the CLI adds its `error: ` prefix.
+// CLI subcommand twins, sharing their helpers (build_style,
+// chart_type_of, qualify_range). One deliberate divergence: batch
+// validates every cell/range reference through the strict bounded
+// parser, while the `style` subcommand passes a bare (colon-free) cell
+// name to the workbook untouched. Errors are bare messages; the CLI
+// adds its `error: ` prefix.
 
 ///|
 /// Scripts are capped well above any real workload; the cap turns a
@@ -287,33 +291,34 @@ fn ParamReader::number(
   key : String,
 ) -> Double raise BatchError {
   match self.take(key) {
-    Some(Number(value, repr~)) => {
-      self.check_representable(key, value, repr)
-      value
-    }
+    Some(Number(value, repr~)) => self.normalize_number(key, value, repr)
     Some(_) => raise op_error(self.index, self.op, "'\{key}' must be a number")
     None => raise op_error(self.index, self.op, "missing param '\{key}'")
   }
 }
 
 ///|
-/// Core JSON keeps the source text (`repr`) when a literal cannot be
-/// represented exactly as a Double (e.g. 1e309 becomes infinity,
-/// 9007199254740993 rounds); accepting the sentinel would silently
-/// corrupt the workbook, so such numbers are rejected outright.
-fn ParamReader::check_representable(
+/// Numbers follow standard JSON semantics: a literal parses to the
+/// nearest IEEE-754 double, spelling-independent. Core JSON stores an
+/// integer literal beyond the JS-safe range as an infinity sentinel plus
+/// the source text in `repr`, so the real value is recovered by
+/// re-parsing `repr`. What is rejected is the corruption class —
+/// literals whose VALUE is not finite (1e309 overflows to infinity;
+/// storing it would write "Inf" into the sheet).
+fn ParamReader::normalize_number(
   self : ParamReader,
   key : String,
   value : Double,
   repr : String?,
-) -> Unit raise BatchError {
-  if repr is Some(_) || value != value || value.is_inf() {
-    raise op_error(
-      self.index,
-      self.op,
-      "'\{key}' is not exactly representable as a number",
-    )
+) -> Double raise BatchError {
+  let resolved = match repr {
+    Some(text) => @string.parse_double(text) catch { _ => value }
+    None => value
   }
+  if resolved != resolved || resolved.is_inf() {
+    raise op_error(self.index, self.op, "'\{key}' must be a finite JSON number")
+  }
+  resolved
 }
 
 ///|
@@ -323,10 +328,8 @@ fn ParamReader::value(
 ) -> BatchValue raise BatchError {
   match self.take(key) {
     Some(String(text)) => Text(text)
-    Some(Number(value, repr~)) => {
-      self.check_representable(key, value, repr)
-      Number(value)
-    }
+    Some(Number(value, repr~)) =>
+      Number(self.normalize_number(key, value, repr))
     Some(True) => Flag(true)
     Some(False) => Flag(false)
     Some(Null) => Clear

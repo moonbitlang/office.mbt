@@ -38,39 +38,52 @@ async fn run_batch(m : @argparse.Matches) -> Unit {
 }
 
 ///|
-/// Saves `bytes` over `path` atomically: the bytes go to a unique,
-/// exclusively-created temp file in the same directory, which is then
-/// renamed over `path`. A predictable temp name would let an existing
-/// sidecar be destroyed or a symlink redirect the write, so creation uses
-/// `CreateNew` with a timestamped name and a short retry; the temp is
-/// removed if anything after its creation fails.
+/// Saves `bytes` over `path` atomically. The path is resolved first so a
+/// symlinked workbook updates its target (keeping "save in place"
+/// semantics) instead of being replaced by a regular file. The bytes go
+/// to a unique, exclusively-created temp file in the target's directory,
+/// which is then renamed over the target. Only name collisions are
+/// retried; once the temp exists, every subsequent failure removes it.
 async fn write_file_replacing(path : String, bytes : Bytes) -> Unit {
+  let target = resolve_save_target(path)
   let stamp = @env.now()
   let mut temp = ""
-  let mut created = false
   for attempt in 0..<5 {
-    let candidate = "\{path}.tmp-\{stamp}-\{attempt}"
-    @async/fs.write_file(
+    let candidate = "\{target}.tmp-\{stamp}-\{attempt}"
+    let file = @async/fs.create(
       candidate,
-      bytes,
-      create_mode=@async/fs.CreateNew,
+      allow_existing=false,
       permission=0o644,
     ) catch {
       err => {
-        if attempt == 4 {
-          raise err
+        // Retry only when the name is taken; any other failure aborts
+        // before a temp exists, so there is nothing to clean up.
+        let collided = (try? @async/fs.kind(candidate, follow_symlink=false))
+          is Ok(_)
+        if collided && attempt < 4 {
+          continue
         }
-        continue
+        raise err
       }
     }
+    file.close()
     temp = candidate
-    created = true
     break
   }
-  if !created {
-    raise CliError("error: could not create a temp file next to \{path}")
+  if temp == "" {
+    raise CliError("error: could not create a temp file next to \{target}")
   }
-  @async/fs.rename(temp, path, replace=true) catch {
+  // The exclusive claim above is ours; from here on, any failure must
+  // remove the temp so no partial workbook bytes are left behind.
+  write_file(temp, bytes) catch {
+    err => {
+      @async/fs.remove(temp) catch {
+        _ => ()
+      }
+      raise err
+    }
+  }
+  @async/fs.rename(temp, target, replace=true) catch {
     err => {
       @async/fs.remove(temp) catch {
         _ => ()
@@ -90,4 +103,21 @@ fn strip_error_prefix(err : Error) -> String {
   } else {
     message
   }
+}
+
+///|
+/// The real file the save should replace: symlinks resolve to their
+/// target on native; the wasm sandbox has no realpath (and practically
+/// no symlinks), so the path is used as-is there.
+#cfg(target="native")
+async fn resolve_save_target(path : String) -> String noraise {
+  @async/fs.realpath(path) catch {
+    _ => path
+  }
+}
+
+///|
+#cfg(target="wasm")
+async fn resolve_save_target(path : String) -> String noraise {
+  path
 }

@@ -166,6 +166,7 @@ test "fuzz: generated documents parse or fail typed, never panic" {
 ///|
 test "fuzz: parsed scripts apply or fail typed on a live workbook" {
   let rng = fuzz_rng(b"batch-generated-apply")
+  let mut scripts_ok = 0
   let mut applied = 0
   let mut errored = 0
   for _round in 0..<200 {
