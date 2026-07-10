@@ -227,7 +227,7 @@ fn chart_sheet_json(
   name : String,
   index : Int,
 ) -> Json {
-  let chart : Map[String, Json] = {}
+  let chart : Map[String, Json] = Map([])
   chart_meta_into(chart, chart_sheet.chart_xml())
   Json::object({
     "kind": Json::string("chart_sheet"),
@@ -255,7 +255,7 @@ fn chart_meta_into(out : Map[String, Json], xml : String) -> Unit {
   out["kinds"] = Json::array(chart_kinds(xml).map(Json::string))
   let series = []
   for meta in chart_series(xml) {
-    let s : Map[String, Json] = {}
+    let s : Map[String, Json] = Map([])
     set_string(s, "name", meta.name)
     set_string(s, "categories", meta.categories)
     set_string(s, "values", meta.values)

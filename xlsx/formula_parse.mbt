@@ -1,6 +1,12 @@
 ///|
 fn CalcContext::new() -> CalcContext {
-  { visiting: {}, depth: 0, max_depth: 128, current_sheet: "", current_ref: "" }
+  {
+    visiting: Map([]),
+    depth: 0,
+    max_depth: 128,
+    current_sheet: "",
+    current_ref: "",
+  }
 }
 
 ///|

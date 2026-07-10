@@ -12,7 +12,7 @@ pub fn html_text(value : String) -> HtmlNode {
 /// Builds an HTML element node.
 pub fn html_element(
   tag : String,
-  attributes? : Map[String, String] = {},
+  attributes? : Map[String, String] = Map([]),
   children? : Array[HtmlNode] = [],
   fresh? : Bool = false,
   separator? : String = "",
@@ -24,7 +24,7 @@ pub fn html_element(
 /// Builds an HTML element with a fresh generated id.
 pub fn fresh_html_element(
   tag : String,
-  attributes? : Map[String, String] = {},
+  attributes? : Map[String, String] = Map([]),
   children? : Array[HtmlNode] = [],
   separator? : String = "",
 ) -> HtmlNode {

@@ -71,10 +71,10 @@ fn convert_document_to_html(
 ///|
 fn empty_body_reader(relationships : Relationships) -> BodyReader {
   {
-    styles: {},
-    zip: { entries: {} },
+    styles: Map([]),
+    zip: { entries: Map([]) },
     relationships,
-    content_types: { defaults: {}, overrides: {} },
+    content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -90,9 +90,9 @@ fn body_reader_with_numbering(
 ) -> BodyReader {
   {
     styles,
-    zip: { entries: {} },
+    zip: { entries: Map([]) },
     relationships: { relationships: [] },
-    content_types: { defaults: {}, overrides: {} },
+    content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
     numbering,
     messages: [],
@@ -114,7 +114,7 @@ fn numbering_from_xml(
 
 ///|
 fn zip_with_text(path : String, text : String) -> ZipArchive {
-  let entries : Map[String, Bytes] = {}
+  let entries : Map[String, Bytes] = Map([])
   entries[path] = @utf8.encode(text)
   { entries, }
 }
@@ -143,7 +143,7 @@ fn empty_docx_zip() -> ZipArchive {
 ///|
 fn run_properties_from_xml(
   properties_xml : String,
-  styles? : Map[String, StyleInfo] = {},
+  styles? : Map[String, StyleInfo] = Map([]),
 ) -> RunProperties raise DocxError {
   let xml = "<w:r xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:rPr>" +
     properties_xml +
@@ -170,7 +170,7 @@ fn body_elements_from_xml(
 ///|
 fn paragraph_properties_from_xml(
   properties_xml : String,
-  styles? : Map[String, StyleInfo] = {},
+  styles? : Map[String, StyleInfo] = Map([]),
 ) -> ParagraphProperties raise DocxError {
   let xml = "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr>" +
     properties_xml +
@@ -206,9 +206,9 @@ fn footnotes_from_xml(xml : String) -> NotesReadResult raise DocxError {
     note_type="footnote",
     relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
     fallback_path="word/footnotes.xml",
-    styles={},
+    styles=Map([]),
     numbering=NumberingMap::empty(),
-    content_types={ defaults: {}, overrides: {} },
+    content_types={ defaults: Map([]), overrides: Map([]) },
     document_relationships={ relationships: [] },
     base_path="word",
   )
@@ -218,9 +218,9 @@ fn footnotes_from_xml(xml : String) -> NotesReadResult raise DocxError {
 fn comments_from_xml(xml : String) -> CommentsReadResult raise DocxError {
   read_comments_for_document(
     zip_with_text("word/comments.xml", xml),
-    {},
+    Map([]),
     NumberingMap::empty(),
-    { defaults: {}, overrides: {} },
+    { defaults: Map([]), overrides: Map([]) },
     { relationships: [] },
     "word",
   )
@@ -403,7 +403,7 @@ test "style document matchers follow Mammoth predicate semantics" {
 
 ///|
 test "docx content types include Mammoth image fallbacks" {
-  let content_types = ContentTypes::{ defaults: {}, overrides: {} }
+  let content_types = ContentTypes::{ defaults: Map([]), overrides: Map([]) }
   inspect(
     content_types.find_content_type("word/media/hat.png"),
     content="image/png",
@@ -689,7 +689,7 @@ test "docx related part paths use existing relationship targets before fallbacks
 
 ///|
 test "docx xml part reader reports missing parts" {
-  try read_xml_part({ entries: {} }, "word/missing.xml") catch {
+  try read_xml_part({ entries: Map([]) }, "word/missing.xml") catch {
     MissingPart(message~) =>
       inspect(message, content="missing DOCX part: word/missing.xml")
     _ => fail("expected MissingPart")
@@ -1427,9 +1427,9 @@ test "docx table properties include table style name" {
         name: "Normal Table",
       },
     },
-    zip: { entries: {} },
+    zip: { entries: Map([]) },
     relationships: { relationships: [] },
-    content_types: { defaults: {}, overrides: {} },
+    content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -1701,9 +1701,9 @@ test "docx body reader records Mammoth-compatible warnings" {
 test "docx note and comment reader warnings are preserved" {
   let footnotes_xml =
     #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:id="1"><w:not-an-element /></w:footnote></w:footnotes>
-  let styles : Map[String, StyleInfo] = {}
+  let styles : Map[String, StyleInfo] = Map([])
   let numbering = NumberingMap::empty()
-  let content_types = ContentTypes::{ defaults: {}, overrides: {} }
+  let content_types = ContentTypes::{ defaults: Map([]), overrides: Map([]) }
   let document_relationships = Relationships::{ relationships: [] }
   let base_path = "word"
   let footnotes = read_note_part(
@@ -1756,9 +1756,9 @@ test "docx note and comment reader warnings are preserved" {
 test "docx related parts fall back when relationship target is missing" {
   let footnotes_xml =
     #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:id="1"><w:p /></w:footnote></w:footnotes>
-  let styles : Map[String, StyleInfo] = {}
+  let styles : Map[String, StyleInfo] = Map([])
   let numbering = NumberingMap::empty()
-  let content_types = ContentTypes::{ defaults: {}, overrides: {} }
+  let content_types = ContentTypes::{ defaults: Map([]), overrides: Map([]) }
   let document_relationships = Relationships::{
     relationships: [
       {
@@ -1792,11 +1792,11 @@ test "docx document xml reader rejects missing body" {
   try
     read_document_xml_with_messages(
       root,
-      {},
+      Map([]),
       NumberingMap::empty(),
-      { entries: {} },
+      { entries: Map([]) },
       { relationships: [] },
-      { defaults: {}, overrides: {} },
+      { defaults: Map([]), overrides: Map([]) },
       "word",
       [],
       [],
@@ -1886,7 +1886,7 @@ test "docx numbering xml maps explicit and style-based list levels" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   match numbering.find_level("47", "0") {
     Some(level) => {
@@ -1920,7 +1920,7 @@ test "docx numbering xml handles missing references and level defaults" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   debug_inspect(ignored_abstract.find_level("47", "0"), content="None")
   let missing_reference = numbering_from_xml(
@@ -1929,7 +1929,7 @@ test "docx numbering xml handles missing references and level defaults" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   debug_inspect(missing_reference.find_level("47", "0"), content="None")
   debug_inspect(missing_reference.find_level("missing", "0"), content="None")
@@ -1940,7 +1940,7 @@ test "docx numbering xml handles missing references and level defaults" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   debug_inspect(missing_level.find_level("47", "0"), content="None")
   let missing_style_link = numbering_from_xml(
@@ -1950,7 +1950,7 @@ test "docx numbering xml handles missing references and level defaults" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   debug_inspect(missing_style_link.find_level("47", "0"), content="None")
   let missing_level_index = numbering_from_xml(
@@ -1960,7 +1960,7 @@ test "docx numbering xml handles missing references and level defaults" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   match missing_level_index.find_level("47", "0") {
     Some(level) => {
@@ -1976,7 +1976,7 @@ test "docx numbering xml handles missing references and level defaults" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   match explicit_level_wins.find_level("47", "0") {
     Some(level) => inspect(level.is_ordered, content="false")
@@ -1989,7 +1989,7 @@ test "docx numbering xml handles missing references and level defaults" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   match missing_num_format.find_level("47", "0") {
     Some(level) => inspect(level.is_ordered, content="true")
@@ -2002,7 +2002,7 @@ test "docx numbering xml handles missing references and level defaults" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   match malformed_level_index.find_level("47", "abc") {
     Some(level) => inspect(level.level, content="1")
@@ -2022,7 +2022,7 @@ test "docx numbering xml ignores missing level index when explicit zero exists" 
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   match explicit_before_missing.find_level("47", "0") {
     Some(level) => inspect(level.is_ordered, content="false")
@@ -2038,7 +2038,7 @@ test "docx numbering xml ignores missing level index when explicit zero exists" 
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   match explicit_after_missing.find_level("47", "0") {
     Some(level) => inspect(level.is_ordered, content="false")
@@ -2092,7 +2092,7 @@ test "docx paragraph numbering uses numbering xml semantics" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   let explicit_xml =
     #|<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:pPr><w:numPr><w:ilvl w:val="1" /><w:numId w:val="47" /></w:numPr></w:pPr></w:p>
@@ -2100,7 +2100,7 @@ test "docx paragraph numbering uses numbering xml semantics" {
     explicit_xml,
     namespace_map=office_namespace_map(),
   )
-  let explicit_reader = body_reader_with_numbering({}, numbering)
+  let explicit_reader = body_reader_with_numbering(Map([]), numbering)
   match explicit_reader.read_element(explicit)[0] {
     Paragraph(properties~, ..) =>
       match properties.numbering {
@@ -2115,7 +2115,7 @@ test "docx paragraph numbering uses numbering xml semantics" {
   match
     paragraph_numbering_from_xml(
       "<w:pStyle w:val=\"NoStyle\" /><w:numPr><w:numId w:val=\"47\" /></w:numPr>",
-      {},
+      Map([]),
       numbering,
     ) {
     Some(level) => {
@@ -2165,12 +2165,12 @@ test "docx paragraph numbering follows Mammoth fallback order" {
       #|  <w:num w:numId="47"><w:abstractNumId w:val="42" /></w:num>
       #|</w:numbering>
     ),
-    {},
+    Map([]),
   )
   debug_inspect(
     paragraph_numbering_from_xml(
       "<w:numPr><w:numId w:val=\"47\" /></w:numPr>",
-      {},
+      Map([]),
       numbering,
     ),
     content="Some({ is_ordered: false, level: 1 })",
@@ -2192,7 +2192,7 @@ test "docx paragraph numbering follows Mammoth fallback order" {
   debug_inspect(
     paragraph_numbering_from_xml(
       "<w:numPr><w:ilvl w:val=\"1\" /></w:numPr>",
-      {},
+      Map([]),
       numbering,
     ),
     content="None",
@@ -3096,7 +3096,7 @@ test "docx transparent wrappers pass through children" {
 ///|
 fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
   {
-    styles: {},
+    styles: Map([]),
     zip: { entries: { "word/media/tiny.png": b"abc" } },
     relationships: {
       relationships: [
@@ -3114,7 +3114,7 @@ fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
         },
       ],
     },
-    content_types: { defaults: { "png": "image/png" }, overrides: {} },
+    content_types: { defaults: { "png": "image/png" }, overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3206,8 +3206,8 @@ test "docx linked DrawingML images use the external loader" {
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rLinkedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
-    styles: {},
-    zip: { entries: {} },
+    styles: Map([]),
+    zip: { entries: Map([]) },
     relationships: {
       relationships: [
         {
@@ -3218,7 +3218,7 @@ test "docx linked DrawingML images use the external loader" {
         },
       ],
     },
-    content_types: { defaults: {}, overrides: {} },
+    content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3244,8 +3244,8 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rLinkedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
-    styles: {},
-    zip: { entries: {} },
+    styles: Map([]),
+    zip: { entries: Map([]) },
     relationships: {
       relationships: [
         {
@@ -3256,7 +3256,7 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
         },
       ],
     },
-    content_types: { defaults: {}, overrides: {} },
+    content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3282,7 +3282,7 @@ test "docx embedded DrawingML images ignore relationship target mode" {
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rEmbeddedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
-    styles: {},
+    styles: Map([]),
     zip: { entries: { "word/media/hat.png": b"abc" } },
     relationships: {
       relationships: [
@@ -3294,7 +3294,7 @@ test "docx embedded DrawingML images ignore relationship target mode" {
         },
       ],
     },
-    content_types: { defaults: { "png": "image/png" }, overrides: {} },
+    content_types: { defaults: { "png": "image/png" }, overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3317,8 +3317,8 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     namespace_map=office_namespace_map(),
   )
   let linked_reader = BodyReader::{
-    styles: {},
-    zip: { entries: {} },
+    styles: Map([]),
+    zip: { entries: Map([]) },
     relationships: {
       relationships: [
         {
@@ -3329,7 +3329,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
         },
       ],
     },
-    content_types: { defaults: {}, overrides: {} },
+    content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3354,7 +3354,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     namespace_map=office_namespace_map(),
   )
   let blank_link_reader = BodyReader::{
-    styles: {},
+    styles: Map([]),
     zip: { entries: { "word/media/tiny.png": b"abc" } },
     relationships: {
       relationships: [
@@ -3372,7 +3372,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
         },
       ],
     },
-    content_types: { defaults: { "png": "image/png" }, overrides: {} },
+    content_types: { defaults: { "png": "image/png" }, overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3540,8 +3540,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let missing_entry_reader = BodyReader::{
-    styles: {},
-    zip: { entries: {} },
+    styles: Map([]),
+    zip: { entries: Map([]) },
     relationships: {
       relationships: [
         {
@@ -3552,7 +3552,7 @@ test "docx image reader records Mammoth-compatible warnings" {
         },
       ],
     },
-    content_types: { defaults: { "png": "image/png" }, overrides: {} },
+    content_types: { defaults: { "png": "image/png" }, overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3629,8 +3629,8 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let external_reader = BodyReader::{
-    styles: {},
-    zip: { entries: {} },
+    styles: Map([]),
+    zip: { entries: Map([]) },
     relationships: {
       relationships: [
         {
@@ -3641,7 +3641,7 @@ test "docx image reader records Mammoth-compatible warnings" {
         },
       ],
     },
-    content_types: { defaults: {}, overrides: {} },
+    content_types: { defaults: Map([]), overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3662,7 +3662,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let unsupported_reader = BodyReader::{
-    styles: {},
+    styles: Map([]),
     zip: { entries: { "word/media/hat.emf": b"abc" } },
     relationships: {
       relationships: [
@@ -3674,7 +3674,7 @@ test "docx image reader records Mammoth-compatible warnings" {
         },
       ],
     },
-    content_types: { defaults: { "emf": "image/x-emf" }, overrides: {} },
+    content_types: { defaults: { "emf": "image/x-emf" }, overrides: Map([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],

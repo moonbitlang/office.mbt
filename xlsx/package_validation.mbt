@@ -26,7 +26,7 @@ pub fn validate_ooxml_package(bytes : BytesView) -> Array[String] {
       return problems
     }
   }
-  let parts : Map[String, Int] = {}
+  let parts : Map[String, Int] = Map([])
   for entry in archive.entries() {
     let name = entry.name()
     parts[name] = parts.get(name).unwrap_or(0) + 1
@@ -131,8 +131,8 @@ fn part_extension(name : String) -> String? {
 /// Parses `[Content_Types].xml` into the set of Default extensions
 /// (lowercased) and the set of Override part names.
 fn parse_content_types(xml : String) -> (Map[String, Bool], Map[String, Bool]) {
-  let defaults : Map[String, Bool] = {}
-  let overrides : Map[String, Bool] = {}
+  let defaults : Map[String, Bool] = Map([])
+  let overrides : Map[String, Bool] = Map([])
   let mut first = true
   for chunk in xml.split("<Default ") {
     if first {

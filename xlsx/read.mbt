@@ -1405,7 +1405,7 @@ fn parse_x14_conditional_formatting_blocks(
 fn parse_x14_data_bars(
   xml : StringView,
 ) -> Map[String, X14DataBarProps] raise XlsxError {
-  let bars : Map[String, X14DataBarProps] = {}
+  let bars : Map[String, X14DataBarProps] = Map([])
   let blocks = parse_x14_conditional_formatting_blocks(xml)
   if blocks.length() == 0 {
     return bars
@@ -2706,7 +2706,7 @@ fn parse_row_dimensions(
   xml : StringView,
   style_count : Int,
 ) -> Map[Int, RowDimension] raise XlsxError {
-  let dims : Map[Int, RowDimension] = {}
+  let dims : Map[Int, RowDimension] = Map([])
   let mut first = true
   for chunk in xml.split("<row ") {
     if first {
@@ -2773,7 +2773,7 @@ fn parse_col_dimensions(
   xml : StringView,
   style_count : Int,
 ) -> Map[Int, ColDimension] raise XlsxError {
-  let dims : Map[Int, ColDimension] = {}
+  let dims : Map[Int, ColDimension] = Map([])
   let mut first = true
   for chunk in xml.split("<col ") {
     if first {
@@ -3011,7 +3011,7 @@ fn read_zip_bytes(
     None => []
   }
   let rich_value_images = parse_rich_value_images(archive, decode)
-  let rich_value_media : Map[String, Bytes] = {}
+  let rich_value_media : Map[String, Bytes] = Map([])
   match rich_value_images {
     Some(data) => {
       for _, target in data.rel_targets {
@@ -3185,7 +3185,7 @@ fn read_zip_bytes(
         }
         let rel_targets = parse_relationship_targets(rels_xml, rel_slicer)
         let parsed : Array[ParsedSlicerPartEntry] = []
-        let seen_paths : Map[String, Bool] = {}
+        let seen_paths : Map[String, Bool] = Map([])
         for rel_id in slicer_rel_ids {
           let target = match rel_targets.get(rel_id) {
             Some(value) => value
@@ -3246,7 +3246,7 @@ fn read_zip_bytes(
         let rel_targets = if needs_hyperlink_rels {
           parse_relationship_targets(rels_xml, rel_hyperlink)
         } else {
-          {}
+          Map([])
         }
         let parsed_links : Array[Hyperlink] = []
         for link in hyperlink_elements {
@@ -3304,7 +3304,7 @@ fn read_zip_bytes(
       }
       let pivot_tables = {
         let rel_targets = if rels_xml == "" {
-          {}
+          Map([])
         } else {
           parse_relationship_targets(rels_xml, rel_pivot_table)
         }
@@ -3416,7 +3416,7 @@ fn read_zip_bytes(
         legacy_drawing_hf_rel_id is Some(_) {
         parse_relationship_targets(rels_xml, rel_vml)
       } else {
-        {}
+        Map([])
       }
       let vml_drawing_xml = match legacy_drawing_rel_id {
         Some(rel_id) => {
@@ -3492,7 +3492,7 @@ fn read_zip_bytes(
         sheet_views,
         dimension_ref,
         cells,
-        cell_index: {},
+        cell_index: Map([]),
         cell_index_valid: false,
         merged_cells,
         auto_filter,
@@ -3530,10 +3530,10 @@ fn read_zip_bytes(
         cell_vm: if rich_value_images is Some(_) {
           parse_cell_vm_map(sheet_xml)
         } else {
-          {}
+          Map([])
         },
       }
-      let mut slicer_anchor_info : Map[String, SlicerAnchorInfo] = {}
+      let mut slicer_anchor_info : Map[String, SlicerAnchorInfo] = Map([])
       match drawing_rel_id {
         Some(rel_id) => {
           if rels_xml == "" {

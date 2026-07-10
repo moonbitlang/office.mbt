@@ -92,7 +92,7 @@ fn pdflite_cmd_flag_value(matches : @argparse.Matches, name : String) -> Bool {
 
 ///|
 fn pdflite_cmd_parse_args(args : ArrayView[String]) -> PdfliteCmd raise {
-  let matches = pdflite_cmd_command().parse(argv=args, env={})
+  let matches = pdflite_cmd_command().parse(argv=args, env=Map([]))
   match matches.subcommand {
     Some(("info", subcommand)) =>
       PdfliteCmdInfo(

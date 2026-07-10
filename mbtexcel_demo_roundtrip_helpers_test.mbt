@@ -38,7 +38,7 @@ fn demo_has_value(values : ArrayView[String], expected : String) -> Bool {
 
 ///|
 fn demo_unique(values : ArrayView[String]) -> Bool {
-  let seen : Map[String, Bool] = {}
+  let seen : Map[String, Bool] = Map([])
   for value in values {
     if seen.get(value) is Some(_) {
       return false

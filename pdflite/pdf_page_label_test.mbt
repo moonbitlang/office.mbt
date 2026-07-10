@@ -951,7 +951,7 @@ test "PdfDocument add_page_labels_json writes cpdf JSON label array" {
 ///|
 test "PdfDocument add_page_labels_json rejects malformed JSON" {
   let document = try! @pdflite.pdf_blank_document(10.0, 10.0, 1)
-  let not_list : Json = {}
+  let not_list : Json = Json::empty_object()
   let malformed : Result[@pdflite.PdfDocument, Error] = try
     document.add_page_labels_json(not_list)
   catch {

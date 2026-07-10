@@ -17,7 +17,7 @@ fn attr_int_or(
 
 ///|
 fn parse_num_fmts(xml : StringView) -> Map[Int, String] raise XlsxError {
-  let num_fmts : Map[Int, String] = {}
+  let num_fmts : Map[Int, String] = Map([])
   let body = match extract_tag_body(xml, "numFmts") {
     Some(value) => value
     None => return num_fmts

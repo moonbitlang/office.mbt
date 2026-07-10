@@ -140,7 +140,7 @@ pub fn Workbook::get_sheet_list(self : Workbook) -> Array[String] {
 
 ///|
 pub fn Workbook::get_sheet_map(self : Workbook) -> Map[Int, String] {
-  let mapping : Map[Int, String] = {}
+  let mapping : Map[Int, String] = Map([])
   for index, entry in self.sheet_order {
     mapping[index + 1] = self.sheet_entry_name(entry)
   }
@@ -1046,7 +1046,7 @@ fn clone_strings(values : ArrayView[String]) -> Array[String] {
 fn clone_row_dimensions(
   values : Map[Int, RowDimension],
 ) -> Map[Int, RowDimension] {
-  let out : Map[Int, RowDimension] = {}
+  let out : Map[Int, RowDimension] = Map([])
   for row, dim in values {
     out[row] = dim
   }
@@ -1057,7 +1057,7 @@ fn clone_row_dimensions(
 fn clone_col_dimensions(
   values : Map[Int, ColDimension],
 ) -> Map[Int, ColDimension] {
-  let out : Map[Int, ColDimension] = {}
+  let out : Map[Int, ColDimension] = Map([])
   for col, dim in values {
     out[col] = dim
   }
@@ -1235,7 +1235,7 @@ fn clone_ignored_errors(
 fn clone_x14_data_bars(
   values : Map[String, X14DataBarProps],
 ) -> Map[String, X14DataBarProps] {
-  let out : Map[String, X14DataBarProps] = {}
+  let out : Map[String, X14DataBarProps] = Map([])
   for key, value in values {
     out[key] = value
   }
@@ -1292,7 +1292,7 @@ fn clone_worksheet(
     sheet_views: clone_sheet_views(sheet.sheet_views),
     dimension_ref: sheet.dimension_ref,
     cells: clone_cells(sheet.cells),
-    cell_index: {},
+    cell_index: Map([]),
     cell_index_valid: false,
     merged_cells: clone_strings(sheet.merged_cells),
     hyperlinks: clone_hyperlinks(sheet.hyperlinks),
@@ -1343,7 +1343,7 @@ fn clone_worksheet(
     vml_drawing_xml: sheet.vml_drawing_xml,
     vml_drawing_hf_xml: sheet.vml_drawing_hf_xml,
     cell_vm: {
-      let copy : Map[String, Int] = {}
+      let copy : Map[String, Int] = Map([])
       for reference, vm in sheet.cell_vm {
         copy[reference] = vm
       }
@@ -3129,7 +3129,7 @@ fn Workbook::add_pivot_table_with_options(
     field_names.push(value)
     col = col + 1
   }
-  let field_index : Map[String, Int] = {}
+  let field_index : Map[String, Int] = Map([])
   for i, name in field_names {
     field_index[name] = i
   }

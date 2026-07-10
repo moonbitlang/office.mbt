@@ -236,22 +236,22 @@ fn write_pivot_table_definition_xml(
   sb.write_view(
     "\" firstHeaderRow=\"1\" firstDataRow=\"2\" firstDataCol=\"1\"/>\n",
   )
-  let row_opts : Map[Int, PivotTableField] = {}
+  let row_opts : Map[Int, PivotTableField] = Map([])
   for entry in row_fields {
     let (idx, field) = entry
     row_opts[idx] = field
   }
-  let col_opts : Map[Int, PivotTableField] = {}
+  let col_opts : Map[Int, PivotTableField] = Map([])
   for entry in col_fields {
     let (idx, field) = entry
     col_opts[idx] = field
   }
-  let page_opts : Map[Int, PivotTableField] = {}
+  let page_opts : Map[Int, PivotTableField] = Map([])
   for entry in page_fields {
     let (idx, field) = entry
     page_opts[idx] = field
   }
-  let data_opts : Map[Int, PivotTableField] = {}
+  let data_opts : Map[Int, PivotTableField] = Map([])
   for entry in data_fields {
     let (idx, field) = entry
     data_opts[idx] = field

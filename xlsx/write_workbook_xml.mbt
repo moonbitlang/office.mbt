@@ -71,7 +71,7 @@ fn write_workbook_xml(
   let sheets = workbook.sheet_order
   let worksheet_count = workbook.sheets().length()
   let sb = StringBuilder::new()
-  let sheet_index : Map[String, Int] = {}
+  let sheet_index : Map[String, Int] = Map([])
   for i, entry in sheets {
     sheet_index.set(normalize_sheet_name(workbook.sheet_entry_name(entry)), i)
   }

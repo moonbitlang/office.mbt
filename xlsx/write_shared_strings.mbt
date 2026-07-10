@@ -3,8 +3,8 @@ fn collect_shared_strings(
   workbook : Workbook,
 ) -> (Array[SharedStringEntry], Map[String, Int], Map[String, Int], Int) {
   let shared_strings : Array[SharedStringEntry] = []
-  let text_map : Map[String, Int] = {}
-  let rich_text_map : Map[String, Int] = {}
+  let text_map : Map[String, Int] = Map([])
+  let rich_text_map : Map[String, Int] = Map([])
   let mut total = 0
   for sheet in workbook.sheets() {
     for cell in sheet.cells() {

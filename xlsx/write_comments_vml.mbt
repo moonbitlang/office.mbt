@@ -66,7 +66,7 @@ fn write_comments_xml(comments : ArrayView[Comment]) -> String {
   }
 
   let authors : Array[String] = []
-  let author_ids : Map[String, Int] = {}
+  let author_ids : Map[String, Int] = Map([])
   for comment in comments {
     let base_author = if comment.author == "" {
       "Author"
@@ -346,7 +346,7 @@ fn filter_vml_shapes_by_id(
   if !base_xml.contains("<v:shape") {
     return base_xml
   }
-  let remove_map : Map[String, Bool] = {}
+  let remove_map : Map[String, Bool] = Map([])
   for id in remove_ids {
     remove_map[id] = true
   }

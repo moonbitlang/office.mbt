@@ -1398,7 +1398,7 @@ fn write_worksheet_xml(
     fn write_x14_conditional_formattings_ext_block_xml(
       x14_data_bars : Map[String, X14DataBarProps],
     ) -> String? {
-      let by_sqref : Map[String, Array[(String, X14DataBarProps)]] = {}
+      let by_sqref : Map[String, Array[(String, X14DataBarProps)]] = Map([])
       for id, props in x14_data_bars {
         if props.bar_direction == "" &&
           !props.bar_solid &&
@@ -1617,7 +1617,7 @@ fn write_worksheet_xml(
   }
   sb.write_view("  <sheetData>\n")
   let cells = sheet.sorted_cells()
-  let row_cells : Map[Int, Array[Cell]] = {}
+  let row_cells : Map[Int, Array[Cell]] = Map([])
   for cell in cells {
     let entries = match row_cells.get(cell.row) {
       Some(value) => value
@@ -1627,7 +1627,7 @@ fn write_worksheet_xml(
     row_cells[cell.row] = entries
   }
   let row_keys : Array[Int] = []
-  let row_present : Map[Int, Bool] = {}
+  let row_present : Map[Int, Bool] = Map([])
   for row, _ in row_cells {
     row_keys.push(row)
     row_present[row] = true
@@ -2248,7 +2248,7 @@ fn write_with_io(
     }
     pivots_by_sheet.push(sheet_pivots)
   }
-  let table_lookup : Map[String, (Int, Table)] = {}
+  let table_lookup : Map[String, (Int, Table)] = Map([])
   for i, sheet in workbook.sheets() {
     let sheet_key = normalize_sheet_name(sheet.name())
     for entry in tables_by_sheet[i] {
@@ -2256,7 +2256,7 @@ fn write_with_io(
       table_lookup["\{sheet_key}|\{table.name.to_lower()}"] = (table_id, table)
     }
   }
-  let pivot_lookup : Map[String, (Int, Int, PivotTable)] = {}
+  let pivot_lookup : Map[String, (Int, Int, PivotTable)] = Map([])
   for i, sheet in workbook.sheets() {
     let sheet_key = normalize_sheet_name(sheet.name())
     let sheet_id = i + 1
@@ -2269,7 +2269,7 @@ fn write_with_io(
       }
     }
   }
-  let pivot_cache_slicer_id_by_cache_id : Map[Int, Int] = {}
+  let pivot_cache_slicer_id_by_cache_id : Map[Int, Int] = Map([])
   let mut next_pivot_cache_slicer_id = 1
   for sheet_pivots in pivots_by_sheet {
     for entry in sheet_pivots {
@@ -2285,8 +2285,8 @@ fn write_with_io(
       }
     }
   }
-  let slicer_cache_id_by_name : Map[String, Int] = {}
-  let slicer_cache_rel_id_by_name : Map[String, String] = {}
+  let slicer_cache_id_by_name : Map[String, Int] = Map([])
+  let slicer_cache_rel_id_by_name : Map[String, String] = Map([])
   let resolved_slicer_caches : Array[ResolvedSlicerCache] = []
   let workbook_slicer_cache_rel_ids_x14 : Array[String] = []
   let workbook_slicer_cache_rel_ids_x15 : Array[String] = []
@@ -2363,7 +2363,7 @@ fn write_with_io(
     }
   }
   let workbook_pivot_cache_rel_entries : Array[(Int, String)] = []
-  let pivot_cache_rel_written : Map[Int, Bool] = {}
+  let pivot_cache_rel_written : Map[Int, Bool] = Map([])
   for sheet_pivots in pivots_by_sheet {
     for entry in sheet_pivots {
       let (_pivot_id, cache_id, _pivot) = entry
@@ -2387,7 +2387,7 @@ fn write_with_io(
       ),
     ),
   )
-  let added_extensions : Map[String, Bool] = {}
+  let added_extensions : Map[String, Bool] = Map([])
   let mut image_index = 1
   let mut chart_index = 1
   let mut vml_index = 1
@@ -2459,7 +2459,7 @@ fn write_with_io(
       rel_id = rel_id + 1
     }
     let hyperlink_targets : Array[String] = []
-    let hyperlink_rel_ids : Map[String, Int] = {}
+    let hyperlink_rel_ids : Map[String, Int] = Map([])
     for link in sheet.hyperlinks() {
       if link.link_type == External {
         hyperlink_targets.push(link.target)

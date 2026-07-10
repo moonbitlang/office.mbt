@@ -54,7 +54,7 @@ fn unzip_write_entries(
 
 ///|
 fn zip_archive_from_write_entries(entries : Array[ZipWriteEntry]) -> ZipArchive {
-  let map : Map[String, Bytes] = {}
+  let map : Map[String, Bytes] = Map([])
   for entry in entries {
     map[entry.path] = entry.content
   }

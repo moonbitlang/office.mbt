@@ -41,7 +41,7 @@ fn release_check_command() -> @argparse.Command {
 async fn main {
   let all_args = @env.args()
   let args = if all_args.is_empty() { all_args[:] } else { all_args[1:] }
-  let parse_result = try? release_check_command().parse(argv=args, env={})
+  let parse_result = try? release_check_command().parse(argv=args, env=Map([]))
   let matches = match parse_result {
     Ok(value) => value
     Err(error) => {

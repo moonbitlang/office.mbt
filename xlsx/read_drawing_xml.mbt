@@ -119,12 +119,12 @@ fn parse_drawing_images(
 ) -> Array[Image] raise XlsxError {
   let images : Array[Image] = []
   let image_targets = if drawing_rels_xml.to_owned() == "" {
-    {}
+    Map([])
   } else {
     parse_relationship_targets(drawing_rels_xml, rel_image)
   }
   let hyperlink_targets = if drawing_rels_xml.to_owned() == "" {
-    {}
+    Map([])
   } else {
     parse_relationship_targets(drawing_rels_xml, rel_hyperlink)
   }
@@ -312,7 +312,7 @@ fn parse_drawing_charts(
 ) -> Array[Chart] raise XlsxError {
   let charts : Array[Chart] = []
   let chart_targets = if drawing_rels_xml.to_owned() == "" {
-    {}
+    Map([])
   } else {
     parse_relationship_targets(drawing_rels_xml, rel_chart)
   }
@@ -668,7 +668,7 @@ fn parse_drawing_slicer_anchors(
   drawing_xml : StringView,
   sheet : Worksheet,
 ) -> Map[String, SlicerAnchorInfo] raise XlsxError {
-  let out : Map[String, SlicerAnchorInfo] = {}
+  let out : Map[String, SlicerAnchorInfo] = Map([])
   let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
     let (anchor_xml, positioning) = entry

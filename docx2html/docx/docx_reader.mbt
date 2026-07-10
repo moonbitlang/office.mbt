@@ -42,10 +42,10 @@ priv struct NumberingMap {
 ///|
 fn NumberingMap::empty() -> NumberingMap {
   {
-    nums: {},
-    abstract_nums: {},
-    levels_by_paragraph_style_id: {},
-    numbering_style_num_ids: {},
+    nums: Map([]),
+    abstract_nums: Map([]),
+    levels_by_paragraph_style_id: Map([]),
+    numbering_style_num_ids: Map([]),
   }
 }
 
@@ -523,8 +523,8 @@ fn relationships_path_for_part(path : String) -> String {
 
 ///|
 fn read_content_types(zip : ZipArchive) -> ContentTypes raise DocxError {
-  let defaults : Map[String, String] = {}
-  let overrides : Map[String, String] = {}
+  let defaults : Map[String, String] = Map([])
+  let overrides : Map[String, String] = Map([])
   match zip.read_text("[Content_Types].xml") {
     Some(text) => {
       let root = read_xml_string(text, namespace_map=office_namespace_map())
@@ -623,7 +623,7 @@ fn read_numbering_xml(
 fn read_abstract_numberings(
   root : XmlElement,
 ) -> Map[String, AbstractNumbering] {
-  let abstract_nums : Map[String, AbstractNumbering] = {}
+  let abstract_nums : Map[String, AbstractNumbering] = Map([])
   for element in root.elements_by_tag_name("w:abstractNum") {
     match element.attributes.get("w:abstractNumId") {
       Some(id) => abstract_nums[id] = read_abstract_numbering(element)
@@ -635,7 +635,7 @@ fn read_abstract_numberings(
 
 ///|
 fn read_abstract_numbering(element : XmlElement) -> AbstractNumbering {
-  let levels : Map[String, NumberingLevel] = {}
+  let levels : Map[String, NumberingLevel] = Map([])
   let mut level_without_index : NumberingLevel? = None
   for level_element in element.elements_by_tag_name("w:lvl") {
     let level = read_numbering_level(level_element)
@@ -675,7 +675,7 @@ fn read_numbering_level(element : XmlElement) -> NumberingLevel {
 
 ///|
 fn read_numbering_instances(root : XmlElement) -> Map[String, String] {
-  let nums : Map[String, String] = {}
+  let nums : Map[String, String] = Map([])
   for element in root.elements_by_tag_name("w:num") {
     let num_id = element.attributes.get_or_default("w:numId", "")
     let abstract_num_id = element.first_or_empty("w:abstractNumId").attributes.get_or_default(
@@ -692,7 +692,7 @@ fn read_numbering_instances(root : XmlElement) -> Map[String, String] {
 fn index_levels_by_paragraph_style_id(
   abstract_nums : Map[String, AbstractNumbering],
 ) -> Map[String, NumberingLevel] {
-  let levels : Map[String, NumberingLevel] = {}
+  let levels : Map[String, NumberingLevel] = Map([])
   for item in abstract_nums.to_array() {
     let (_, abstract_num) = item
     for level_item in abstract_num.levels.to_array() {
@@ -710,7 +710,7 @@ fn index_levels_by_paragraph_style_id(
 fn index_numbering_style_num_ids(
   styles : Map[String, StyleInfo],
 ) -> Map[String, String] {
-  let style_num_ids : Map[String, String] = {}
+  let style_num_ids : Map[String, String] = Map([])
   for item in styles.to_array() {
     let (_, style) = item
     if style.style_type == "numbering" {
@@ -938,7 +938,7 @@ fn read_styles(
   zip : ZipArchive,
   path : String,
 ) -> Map[String, StyleInfo] raise DocxError {
-  let styles : Map[String, StyleInfo] = {}
+  let styles : Map[String, StyleInfo] = Map([])
   match zip.read_text(path) {
     Some(text) => {
       let root = read_xml_string(text, namespace_map=office_namespace_map())
@@ -2688,7 +2688,7 @@ fn BodyReader::calculate_typed_table_row_spans(
     row_spans.push(spans)
     skip_cells.push(skips)
   }
-  let open_cells : Map[Int, (Int, Int)] = {}
+  let open_cells : Map[Int, (Int, Int)] = Map([])
   for row_index in 0..<elements.length() {
     let mut column_index = 0
     for cell_index in 0..<elements[row_index].cells.length() {

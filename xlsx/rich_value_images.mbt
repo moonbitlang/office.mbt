@@ -50,7 +50,7 @@ fn parse_rich_value_images(
   let rel_targets = match
     archive.get("xl/richData/_rels/richValueRel.xml.rels") {
     Some(value) => parse_relationship_targets(decode(value), rel_image)
-    None => {}
+    None => Map([])
   }
   let web_blip_ids = match archive.get("xl/richData/rdRichValueWebImage.xml") {
     Some(value) => parse_web_image_blip_ids(decode(value))
@@ -59,7 +59,7 @@ fn parse_rich_value_images(
   let web_rel_targets = match
     archive.get("xl/richData/_rels/rdRichValueWebImage.xml.rels") {
     Some(value) => parse_relationship_targets(decode(value), rel_image)
-    None => {}
+    None => Map([])
   }
   Some({
     value_metadata,
@@ -269,7 +269,7 @@ fn parse_rich_value_rel_ids(xml : String) -> Array[String] raise XlsxError {
 /// images are the only cells that carry `vm`, so this is the link
 /// between a cell and its rich value.
 fn parse_cell_vm_map(sheet_xml : String) -> Map[String, Int] raise XlsxError {
-  let result : Map[String, Int] = {}
+  let result : Map[String, Int] = Map([])
   let mut first = true
   for chunk in sheet_xml.split("<c ") {
     if first {

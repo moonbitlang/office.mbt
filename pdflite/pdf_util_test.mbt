@@ -932,7 +932,9 @@ test "pdf_object_of_json decodes parsed content-stream operation arrays" {
 ///|
 test "pdf_object_of_json rejects malformed parsed content operations" {
   let bad_number : Result[@syntax.PdfObject, Error] = try
-    @pdflite.pdf_object_of_json({ "S": [{}, [[{ "I": 2.0 }, "w"]]] })
+    @pdflite.pdf_object_of_json({
+      "S": [Json::empty_object(), [[{ "I": 2.0 }, "w"]]],
+    })
   catch {
     err => Err(err)
   } noraise {
@@ -943,7 +945,7 @@ test "pdf_object_of_json rejects malformed parsed content operations" {
   }
 
   let bad_shape : Result[@syntax.PdfObject, Error] = try
-    @pdflite.pdf_object_of_json({ "S": [{}, [["q", "bad"]]] })
+    @pdflite.pdf_object_of_json({ "S": [Json::empty_object(), [["q", "bad"]]] })
   catch {
     err => Err(err)
   } noraise {
@@ -1384,7 +1386,7 @@ test "pdf_document_of_json rejects malformed cpdf document arrays" {
           "/CPDFJSONminorpdfversion": { "I": 7.0 },
         },
       ],
-      [0.0, {}],
+      [0.0, Json::empty_object()],
     ])
   catch {
     err => Err(err)
@@ -1396,7 +1398,7 @@ test "pdf_document_of_json rejects malformed cpdf document arrays" {
   }
 
   let bad_top : Result[@pdflite.PdfDocument, Error] = try
-    @pdflite.pdf_document_of_json({})
+    @pdflite.pdf_document_of_json(Json::empty_object())
   catch {
     err => Err(err)
   } noraise {
