@@ -251,3 +251,50 @@ test "relationship targets with dot segments resolve like validation does" {
   debug_inspect(result.messages, content="[]")
   debug_inspect(result.headers.length(), content="1")
 }
+
+///|
+test "an explicit but unreadable override blocks inheritance of its variant" {
+  // Section 1 carries a readable default header; section 2 explicitly
+  // overrides default with a malformed part. Section 2 must NOT inherit
+  // section 1's header — the author overrode it, we just couldn't read the
+  // override.
+  let rels =
+    #|<?xml version="1.0"?>
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/></Relationships>
+  let bytes = hf_package(
+    document=(
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:pPr><w:sectPr><w:headerReference w:type="default" r:id="rId1"/></w:sectPr></w:pPr><w:r><w:t>one</w:t></w:r></w:p><w:p><w:r><w:t>two</w:t></w:r></w:p><w:sectPr><w:headerReference w:type="default" r:id="rId2"/></w:sectPr></w:body></w:document>
+    ),
+    extra=[
+      ("word/_rels/document.xml.rels", rels),
+      (
+        "word/header1.xml",
+        (
+          #|<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>H1</w:t></w:r></w:p></w:hdr>
+        ),
+      ),
+      (
+        "word/header2.xml",
+        (
+          #|<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>broken
+        ),
+      ),
+    ],
+  )
+  let result = @docx2html.read_docx_package(bytes)
+  guard result.sections is [first, second]
+  debug_inspect(
+    first.headers,
+    content=(
+      #|[{ variant: "default", part: 0 }]
+    ),
+  )
+  debug_inspect(second.headers, content="[]")
+  debug_inspect(result.headers.length(), content="1")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[Warning("A header part could not be read and was ignored: word/header2.xml")]
+    ),
+  )
+}
