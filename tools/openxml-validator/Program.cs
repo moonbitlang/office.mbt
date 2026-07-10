@@ -13,7 +13,7 @@ public static class Program
     {
         if (args.Length != 1)
         {
-            Console.Error.WriteLine("usage: openxml-validator <path-to-xlsx>");
+            Console.Error.WriteLine("usage: openxml-validator <path-to-xlsx-or-docx>");
             return 2;
         }
 
@@ -32,7 +32,12 @@ public static class Program
 
         try
         {
-            using var doc = SpreadsheetDocument.Open(filePath, false);
+            // Dispatch on extension: .docx opens as a WordprocessingDocument,
+            // everything else keeps the original spreadsheet behavior.
+            var isDocx = filePath.EndsWith(".docx", StringComparison.OrdinalIgnoreCase);
+            using OpenXmlPackage doc = isDocx
+                ? WordprocessingDocument.Open(filePath, false)
+                : SpreadsheetDocument.Open(filePath, false);
             var validator = new OpenXmlValidator(FileFormatVersions.Office2013);
             var errors = validator.Validate(doc).ToList();
             if (errors.Count == 0)

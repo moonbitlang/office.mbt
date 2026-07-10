@@ -34,11 +34,12 @@ jobs:
       # README) — no upstream checkout is fetched at test time. (docx2html's own
       # fixtures are likewise committed under docx2html/tests/.)
 
-      # mbtexcel's `*_openxml_validity_test.mbt` tests shell out to the Microsoft
-      # DocumentFormat.OpenXml SDK validator via scripts/validate_xlsx.sh, which
-      # uses the system `dotnet` when it has the net8 runtime. Making .NET 8
+      # mbtexcel's `*_openxml_validity_test.mbt` tests and docx2html's
+      # `sdk_validity_test.mbt` shell out to the Microsoft DocumentFormat.OpenXml
+      # SDK validator via scripts/validate_xlsx.sh / validate_docx.sh, which
+      # use the system `dotnet` when it has the net8 runtime. Making .NET 8
       # available here means `moon test` runs real schema validation of
-      # generated workbooks in CI. (docx2html does not use the SDK validator.)
+      # generated workbooks and docx packages in CI.
       - name: Set up .NET 8
         uses: actions/setup-dotnet@v4
         with:
