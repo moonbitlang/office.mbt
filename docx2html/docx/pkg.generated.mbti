@@ -29,6 +29,8 @@ pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_ext
 
 pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
 
+pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
+
 // Errors
 
 // Types and methods

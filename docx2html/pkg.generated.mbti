@@ -154,6 +154,8 @@ pub fn transform_runs((@document.DocumentElement) -> @document.DocumentElement) 
 
 pub fn warning(String) -> @core.Message
 
+pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise DocxError
+
 pub fn write_html(Array[@html.HtmlNode], pretty_print? : Bool) -> String
 
 pub fn write_markdown(Array[@html.HtmlNode]) -> String

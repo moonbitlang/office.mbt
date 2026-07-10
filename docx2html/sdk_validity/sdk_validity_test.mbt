@@ -76,6 +76,19 @@ async test "docx fixtures and embed_style_map output are Microsoft OpenXML schem
   validate_docx_via_sdk(dir, "tiny_picture", tiny_picture)
   validate_docx_via_sdk(dir, "header_footer", header_footer)
   validate_docx_via_sdk(dir, "blank_document", @docx2html.new_blank_docx())
+  let written = @docx2html.write_docx([
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("Written heading")])],
+      properties=@docx2html.paragraph_properties(style_id=Some("Heading2")),
+    ),
+    @docx2html.paragraph([
+      @docx2html.run(
+        [@docx2html.text("Body "), @docx2html.text("text")],
+        properties=@docx2html.run_properties(is_bold=true, font_size=Some(12)),
+      ),
+    ]),
+  ])
+  validate_docx_via_sdk(dir, "written_paragraphs", written)
   let restyled = @docx2html.embed_style_map(single_paragraph, "p => h1:fresh")
   validate_docx_via_sdk(dir, "embedded_style_map", restyled)
 }
