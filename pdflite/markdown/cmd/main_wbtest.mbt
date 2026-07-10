@@ -217,7 +217,7 @@ fn markdown_cmd_push_ascii_for_test(
 fn markdown_cmd_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = markdown_cmd_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -251,7 +251,7 @@ fn markdown_cmd_corrupt_startxref_pointer_for_test(
 
 ///|
 fn markdown_cmd_startxref_offset_for_test(bytes : Bytes) -> Int raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = markdown_cmd_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -285,11 +285,7 @@ fn markdown_cmd_corrupt_startxref_xref_header_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   let xref_offset = markdown_cmd_startxref_offset_for_test(bytes)
-  guard markdown_cmd_bytes_start_with_at_for_test(
-    bytes,
-    @ascii.encode("xref"),
-    xref_offset,
-  ) else {
+  guard markdown_cmd_bytes_start_with_at_for_test(bytes, b"xref", xref_offset) else {
     fail("expected startxref to point at a classic xref table")
   }
   let output : Array[Byte] = []
@@ -306,9 +302,7 @@ fn markdown_cmd_corrupt_startxref_trailer_keyword_for_test(
 ) -> Bytes raise {
   let xref_offset = markdown_cmd_startxref_offset_for_test(bytes)
   let trailer_position = markdown_cmd_find_bytes_after_for_test(
-    bytes,
-    @ascii.encode("trailer"),
-    xref_offset,
+    bytes, b"trailer", xref_offset,
   )
   if trailer_position < 0 {
     fail("expected classic xref trailer keyword after startxref target")
@@ -360,7 +354,7 @@ fn markdown_cmd_replace_xref_stream_entry_with_padded_ascii_for_test(
     fail("replacement must fit xref stream " + description + " byte span")
   }
   let xref_offset = markdown_cmd_startxref_offset_for_test(bytes)
-  let anchor = @ascii.encode("/Type /XRef")
+  let anchor = b"/Type /XRef"
   let anchor_position = markdown_cmd_find_bytes_after_for_test(
     bytes, anchor, xref_offset,
   )
@@ -478,7 +472,7 @@ fn markdown_cmd_stream_data_start_for_test(
   bytes : BytesView,
   stream_position : Int,
 ) -> Int {
-  let mut current = stream_position + @ascii.encode("stream").length()
+  let mut current = stream_position + b"stream".length()
   while current < bytes.length() {
     let value = bytes[current].to_int()
     if value == 0 || value == 9 || value == 12 || value == 32 {
@@ -505,7 +499,7 @@ fn markdown_cmd_direct_length_before_for_test(
   limit : Int,
   description : String,
 ) -> Int raise {
-  let length_key = @ascii.encode("/Length")
+  let length_key = b"/Length"
   let length_position = markdown_cmd_find_bytes_after_for_test(
     bytes, length_key, anchor_position,
   )
@@ -533,10 +527,7 @@ fn markdown_cmd_corrupt_startxref_xref_stream_type_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
-    bytes,
-    @ascii.encode("/Type /XRef"),
-    @ascii.encode("/Type /Bad "),
-    "type",
+    bytes, b"/Type /XRef", b"/Type /Bad ", "type",
   )
 }
 
@@ -545,10 +536,7 @@ fn markdown_cmd_corrupt_startxref_xref_stream_marker_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
-    bytes,
-    @ascii.encode("stream"),
-    @ascii.encode("stramx"),
-    "stream marker",
+    bytes, b"stream", b"stramx", "stream marker",
   )
 }
 
@@ -557,10 +545,7 @@ fn markdown_cmd_corrupt_startxref_xref_stream_endstream_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
-    bytes,
-    @ascii.encode("endstream"),
-    @ascii.encode("endstreax"),
-    "endstream marker",
+    bytes, b"endstream", b"endstreax", "endstream marker",
   )
 }
 
@@ -569,10 +554,7 @@ fn markdown_cmd_corrupt_startxref_xref_stream_endobj_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
-    bytes,
-    @ascii.encode("endobj"),
-    @ascii.encode("endobx"),
-    "endobj marker",
+    bytes, b"endobj", b"endobx", "endobj marker",
   )
 }
 
@@ -602,10 +584,7 @@ fn markdown_cmd_corrupt_xref_stream_filter_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   markdown_cmd_corrupt_startxref_xref_stream_token_for_test(
-    bytes,
-    @ascii.encode("/Filter /FlateDecode"),
-    @ascii.encode("/Filter /NoSuchThing"),
-    "filter",
+    bytes, b"/Filter /FlateDecode", b"/Filter /NoSuchThing", "filter",
   )
 }
 
@@ -623,12 +602,12 @@ fn markdown_cmd_corrupt_xref_stream_length_entry_for_test(
 fn markdown_cmd_first_object_stream_marker_position_for_test(
   bytes : BytesView,
 ) -> Int raise {
-  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor = b"/Type /ObjStm"
   let anchor_position = markdown_cmd_find_bytes_after_for_test(bytes, anchor, 0)
   if anchor_position < 0 {
     fail("expected first object stream")
   }
-  let stream_marker = @ascii.encode("stream")
+  let stream_marker = b"stream"
   let stream_position = markdown_cmd_find_bytes_after_for_test(
     bytes,
     stream_marker,
@@ -644,7 +623,7 @@ fn markdown_cmd_first_object_stream_marker_position_for_test(
 fn markdown_cmd_first_object_stream_endstream_position_for_test(
   bytes : BytesView,
 ) -> Int raise {
-  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor = b"/Type /ObjStm"
   let anchor_position = markdown_cmd_find_bytes_after_for_test(bytes, anchor, 0)
   if anchor_position < 0 {
     fail("expected first object stream")
@@ -660,9 +639,7 @@ fn markdown_cmd_first_object_stream_endstream_position_for_test(
     markdown_cmd_stream_data_start_for_test(bytes, stream_position) + length,
   )
   if !markdown_cmd_bytes_start_with_at_for_test(
-      bytes,
-      @ascii.encode("endstream"),
-      marker_position,
+      bytes, b"endstream", marker_position,
     ) {
     fail("expected first object stream endstream marker")
   }
@@ -678,12 +655,10 @@ fn markdown_cmd_first_object_stream_endobj_position_for_test(
   )
   let endobj_position = markdown_cmd_skip_pdf_whitespace_for_test(
     bytes,
-    endstream_position + @ascii.encode("endstream").length(),
+    endstream_position + b"endstream".length(),
   )
   if !markdown_cmd_bytes_start_with_at_for_test(
-      bytes,
-      @ascii.encode("endobj"),
-      endobj_position,
+      bytes, b"endobj", endobj_position,
     ) {
     fail("expected first object stream endobj marker")
   }
@@ -695,11 +670,7 @@ fn markdown_cmd_corrupt_first_object_stream_count_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   markdown_cmd_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/N 100"),
-    "/N/Bad",
-    "first object stream count",
+    bytes, b"/Type /ObjStm", b"/N 100", "/N/Bad", "first object stream count",
   )
 }
 
@@ -708,11 +679,7 @@ fn markdown_cmd_corrupt_first_object_stream_first_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   markdown_cmd_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/First 832"),
-    "/First/Bad",
-    "first object stream first offset",
+    bytes, b"/Type /ObjStm", b"/First 832", "/First/Bad", "first object stream first offset",
   )
 }
 
@@ -721,11 +688,7 @@ fn markdown_cmd_corrupt_first_object_stream_length_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   markdown_cmd_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/Length 1526"),
-    "/Length /Bad",
-    "first object stream length",
+    bytes, b"/Type /ObjStm", b"/Length 1526", "/Length /Bad", "first object stream length",
   )
 }
 
@@ -734,11 +697,7 @@ fn markdown_cmd_corrupt_first_object_stream_filter_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   markdown_cmd_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/Filter /FlateDecode"),
-    "/Filter /NoSuchThing",
-    "first object stream filter",
+    bytes, b"/Type /ObjStm", b"/Filter /FlateDecode", "/Filter /NoSuchThing", "first object stream filter",
   )
 }
 
@@ -749,8 +708,8 @@ fn markdown_cmd_corrupt_first_object_stream_marker_for_test(
   markdown_cmd_replace_bytes_at_for_test(
     bytes,
     markdown_cmd_first_object_stream_marker_position_for_test(bytes),
-    @ascii.encode("stream"),
-    @ascii.encode("stramx"),
+    b"stream",
+    b"stramx",
     "first object stream marker",
   )
 }
@@ -762,8 +721,8 @@ fn markdown_cmd_corrupt_first_object_stream_endstream_for_test(
   markdown_cmd_replace_bytes_at_for_test(
     bytes,
     markdown_cmd_first_object_stream_endstream_position_for_test(bytes),
-    @ascii.encode("endstream"),
-    @ascii.encode("endstreax"),
+    b"endstream",
+    b"endstreax",
     "first object stream endstream marker",
   )
 }
@@ -775,8 +734,8 @@ fn markdown_cmd_corrupt_first_object_stream_endobj_for_test(
   markdown_cmd_replace_bytes_at_for_test(
     bytes,
     markdown_cmd_first_object_stream_endobj_position_for_test(bytes),
-    @ascii.encode("endobj"),
-    @ascii.encode("endobx"),
+    b"endobj",
+    b"endobx",
     "first object stream endobj marker",
   )
 }
@@ -785,7 +744,7 @@ fn markdown_cmd_corrupt_first_object_stream_endobj_for_test(
 fn markdown_cmd_first_in_use_xref_row_start_for_test(
   bytes : Bytes,
 ) -> Int raise {
-  let free_row = @ascii.encode("0000000000 65535 f")
+  let free_row = b"0000000000 65535 f"
   let free_row_position = markdown_cmd_find_bytes_after_for_test(
     bytes, free_row, 0,
   )
@@ -862,7 +821,7 @@ fn markdown_cmd_corrupt_first_in_use_xref_generation_for_test(
 fn markdown_cmd_first_xref_subsection_spans_for_test(
   bytes : Bytes,
 ) -> (Int, Int, Int, Int) raise {
-  let header = @ascii.encode("xref")
+  let header = b"xref"
   let header_position = markdown_cmd_find_bytes_after_for_test(bytes, header, 0)
   if header_position < 0 {
     fail("expected first classic xref header")
@@ -1277,7 +1236,7 @@ async test "markdown command reconstructs optional cpdf source manual fixture wi
       @fs.read_file(clean_output_path).binary(),
     )
     let input_bytes = @fs.read_file(input_path).binary()
-    let manual_root_entry = @ascii.encode("/Root 1841 0 R")
+    let manual_root_entry = b"/Root 1841 0 R"
     let manual_id_entry = @ascii.encode(
       "/ID [<CA2FED47397E566603B0A9A8E7328C79> <CA2FED47397E566603B0A9A8E7328C79>]",
     )
@@ -1421,8 +1380,7 @@ async test "markdown command repairs optional cpdf source manual fixture with ma
     for
       corrupted in [
         markdown_cmd_corrupt_xref_stream_length_entry_for_test(
-          input_bytes,
-          @ascii.encode("/Length 4551"),
+          input_bytes, b"/Length 4551",
         ),
         markdown_cmd_corrupt_first_object_stream_length_for_test(input_bytes),
       ] {

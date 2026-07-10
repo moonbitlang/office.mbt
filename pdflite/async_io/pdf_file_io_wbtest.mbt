@@ -261,7 +261,7 @@ fn pdf_async_io_corrupt_startxref_pointer_at_for_test(
   bytes : @core.PdfBytes,
   marker_position : Int,
 ) -> @core.PdfBytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   if marker_position < 0 {
     fail("expected startxref marker")
   }
@@ -290,7 +290,7 @@ fn pdf_async_io_corrupt_startxref_pointer_at_for_test(
 fn pdf_async_io_corrupt_first_in_use_xref_offset_for_test(
   bytes : @core.PdfBytes,
 ) -> @core.PdfBytes raise {
-  let free_row = @ascii.encode("0000000000 65535 f \n")
+  let free_row = b"0000000000 65535 f \n"
   let free_row_position = pdf_async_io_find_bytes_for_test(bytes, free_row)
   if free_row_position < 0 {
     fail("expected classic xref free row")
@@ -313,7 +313,7 @@ fn pdf_async_io_corrupt_first_in_use_xref_offset_for_test(
 fn pdf_async_io_corrupt_first_in_use_xref_marker_for_test(
   bytes : @core.PdfBytes,
 ) -> @core.PdfBytes raise {
-  let free_row = @ascii.encode("0000000000 65535 f \n")
+  let free_row = b"0000000000 65535 f \n"
   let free_row_position = pdf_async_io_find_bytes_for_test(bytes, free_row)
   if free_row_position < 0 {
     fail("expected classic xref free row")
@@ -338,7 +338,7 @@ fn pdf_async_io_mark_classic_xref_entry_free_for_test(
   if object_number < 0 {
     fail("expected non-negative classic xref object number")
   }
-  let header = @ascii.encode("xref\n0 ")
+  let header = b"xref\n0 "
   let header_position = pdf_async_io_find_bytes_for_test(bytes, header)
   if header_position < 0 {
     fail("expected first classic xref subsection header")
@@ -385,7 +385,7 @@ fn pdf_async_io_keep_catalog_and_encrypt_xref_entries_for_test(
   bytes : @core.PdfBytes,
   encrypt_object_number : Int,
 ) -> @core.PdfBytes raise {
-  let header = @ascii.encode("xref\n0 ")
+  let header = b"xref\n0 "
   let header_position = pdf_async_io_find_bytes_for_test(bytes, header)
   if header_position < 0 {
     fail("expected first classic xref subsection header")
@@ -434,7 +434,7 @@ fn pdf_async_io_keep_catalog_and_encrypt_xref_entries_for_test(
 fn pdf_async_io_corrupt_first_xref_subsection_count_for_test(
   bytes : @core.PdfBytes,
 ) -> @core.PdfBytes raise {
-  let header = @ascii.encode("xref\n0 ")
+  let header = b"xref\n0 "
   let header_position = pdf_async_io_find_bytes_for_test(bytes, header)
   if header_position < 0 {
     fail("expected first classic xref subsection header")
@@ -463,7 +463,7 @@ fn pdf_async_io_corrupt_first_xref_subsection_count_for_test(
 fn pdf_async_io_corrupt_startxref_pointer_for_test(
   bytes : @core.PdfBytes,
 ) -> @core.PdfBytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   pdf_async_io_corrupt_startxref_pointer_at_for_test(
     bytes,
     pdf_async_io_find_bytes_for_test(bytes, marker),
@@ -474,7 +474,7 @@ fn pdf_async_io_corrupt_startxref_pointer_for_test(
 fn pdf_async_io_corrupt_final_startxref_pointer_for_test(
   bytes : @core.PdfBytes,
 ) -> @core.PdfBytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   pdf_async_io_corrupt_startxref_pointer_at_for_test(
     bytes,
     pdf_async_io_find_last_bytes_for_test(bytes, marker),
@@ -541,7 +541,7 @@ fn pdf_async_io_ocg_content_for_test(
     ],
     default_config: {
       ..@ocg.pdf_ocg_default_config(),
-      name: Some(@ascii.encode("Default")),
+      name: Some(b"Default"),
       on: [number],
       order: Some([(Some(name_bytes), [number])]),
     },
@@ -1895,7 +1895,7 @@ fn pdf_async_io_assert_recovered_hello_stream_for_test(
     stream.dictionary.lookup_immediate(pdf_async_io_name_for_test("/Length")),
     Some(PdfInteger(5)),
   )
-  @test.assert_eq(stream.data, StreamGot(@ascii.encode("Hello")))
+  @test.assert_eq(stream.data, StreamGot(b"Hello"))
 }
 
 ///|
@@ -2381,8 +2381,8 @@ fn pdf_async_io_xref_stream_pdf_with_two_object_stream_entries_for_test() -> @co
       (pdf_async_io_name_for_test("/Other"), PdfIndirect(5)),
     ]),
   )
-  let first_object = @ascii.encode("<< /Answer 42 >>")
-  let second_object = @ascii.encode("[1 2 3]")
+  let first_object = b"<< /Answer 42 >>"
+  let second_object = b"[1 2 3]"
   let object_stream_data : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(object_stream_data, "2 0 5 ")
   pdf_async_io_push_ascii_for_test(
@@ -2454,7 +2454,7 @@ fn pdf_async_io_xref_stream_pdf_with_stream_object_in_object_stream_for_test() -
     1,
     pdf_async_io_catalog_with_payload_for_test(2),
   )
-  let stream_object = @ascii.encode("<< /Length 99 >>\nstream\nHi\nendstream")
+  let stream_object = b"<< /Length 99 >>\nstream\nHi\nendstream"
   let object_stream_data : Array[Byte] = []
   pdf_async_io_push_ascii_for_test(object_stream_data, "2 0 ")
   let first = object_stream_data.length()
@@ -3003,10 +3003,10 @@ fn pdf_async_io_encrypted_object_stream_pdf_for_test(
     owner_password,
     denied,
     @pdflite.pdf_deterministic_aes_iv_provider_from_seed(
-      @ascii.encode("async-object-stream-reader"),
+      b"async-object-stream-reader",
     ),
     encrypt_metadata=false,
-    file_id=@ascii.encode("async-objstm-id"),
+    file_id=b"async-objstm-id",
   )
   let encrypt_number = match
     encrypted

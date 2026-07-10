@@ -13,33 +13,27 @@ fn cmap_wbtest_text_name(text : String) -> @core.PdfName {
 
 ///|
 test "private text ToUnicode CMap helpers reject malformed ranges" {
-  @test.assert_eq(pdf_text_parse_hex_bytes(@ascii.encode("0g"), 0, 2), None)
-  @test.assert_eq(pdf_text_after_ascii(@ascii.encode("abc"), "missing"), None)
-  @test.assert_eq(pdf_text_parse_cmap_hex_groups(@ascii.encode("<0g>")), None)
+  @test.assert_eq(pdf_text_parse_hex_bytes(b"0g", 0, 2), None)
+  @test.assert_eq(pdf_text_after_ascii(b"abc", "missing"), None)
+  @test.assert_eq(pdf_text_parse_cmap_hex_groups(b"<0g>"), None)
+  @test.assert_eq(pdf_text_parse_cmap_hex_group_at(b"<0g>", 0), None)
   @test.assert_eq(
-    pdf_text_parse_cmap_hex_group_at(@ascii.encode("<0g>"), 0),
+    pdf_text_tounicode_bfrange_inline_entries(b"<01><02>[<0041>]"),
     None,
   )
   @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<01><02>[<0041>]")),
+    pdf_text_tounicode_bfrange_inline_entries(b"<01><01>[<0g>]"),
     None,
   )
   @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<01><01>[<0g>]")),
+    pdf_text_tounicode_bfrange_inline_entries(b"<00><01><ff>"),
     None,
   )
   @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<00><01><ff>")),
+    pdf_text_tounicode_bfrange_inline_entries(b"<02><01><0041>"),
     None,
   )
-  @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<02><01><0041>")),
-    None,
-  )
-  @test.assert_eq(
-    pdf_text_tounicode_bfrange_inline_entries(@ascii.encode("<01>")),
-    None,
-  )
+  @test.assert_eq(pdf_text_tounicode_bfrange_inline_entries(b"<01>"), None)
   @test.assert_eq(
     pdf_text_add_to_big_endian_bytes(cmap_wbtest_text_bytes([0xff]), 1),
     None,
@@ -58,29 +52,25 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
 
   let invalid_bfrange_entries : Array[(Int, @core.PdfBytes)] = []
   guard pdf_text_append_tounicode_bfrange_line(
-      invalid_bfrange_entries,
-      @ascii.encode("<02><01>["),
+      invalid_bfrange_entries, b"<02><01>[",
     )
     is None else {
     fail("expected invalid bfrange line")
   }
   guard pdf_text_append_tounicode_bfrange_line(
-      invalid_bfrange_entries,
-      @ascii.encode("<01>["),
+      invalid_bfrange_entries, b"<01>[",
     )
     is None else {
     fail("expected incomplete bfrange line")
   }
   guard pdf_text_append_tounicode_bfrange_line(
-      invalid_bfrange_entries,
-      @ascii.encode("<01><02><FF>"),
+      invalid_bfrange_entries, b"<01><02><FF>",
     )
     is None else {
     fail("expected overflow bfrange line")
   }
   guard pdf_text_append_tounicode_bfrange_line(
-      invalid_bfrange_entries,
-      @ascii.encode("<01><02>plain"),
+      invalid_bfrange_entries, b"<01><02>plain",
     )
     is None else {
     fail("expected missing unicode bfrange line")
@@ -89,20 +79,16 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
   let pending : PdfTextCMapBFRangeArray = { first: 1, last: 2, unicodes: [] }
   let pending_entries : Array[(Int, @core.PdfBytes)] = []
   let append_result = pdf_text_append_pending_bfrange_array(
-    pending_entries,
-    pending,
-    @ascii.encode("<0041>]"),
+    pending_entries, pending, b"<0041>]",
   )
   guard append_result is PdfTextCMapBFRangeArrayClosed(rest) else {
     fail("expected closed bfrange array")
   }
   @test.assert_eq(rest.length(), 0)
   @test.assert_eq(pending_entries, [])
-  @test.assert_eq(pdf_text_parse_tounicode(@ascii.encode("plain")), None)
+  @test.assert_eq(pdf_text_parse_tounicode(b"plain"), None)
   @test.assert_eq(
-    pdf_text_parse_tounicode(
-      @ascii.encode("1 beginbfrange <01><02>[<0041>] endbfrange\n"),
-    ),
+    pdf_text_parse_tounicode(b"1 beginbfrange <01><02>[<0041>] endbfrange\n"),
     None,
   )
 }
@@ -344,45 +330,27 @@ test "private external CMap helpers cover malformed and compact sections" {
       supplement: 4,
     }),
   )
-  @test.assert_eq(
-    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" 7x"), 0),
-    Some((7, 2)),
-  )
-  @test.assert_eq(
-    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" +7x"), 0),
-    None,
-  )
-  @test.assert_eq(
-    pdf_text_parse_cmap_ascii_int_at(@ascii.encode(" +x"), 0),
-    None,
-  )
+  @test.assert_eq(pdf_text_parse_cmap_ascii_int_at(b" 7x", 0), Some((7, 2)))
+  @test.assert_eq(pdf_text_parse_cmap_ascii_int_at(b" +7x", 0), None)
+  @test.assert_eq(pdf_text_parse_cmap_ascii_int_at(b" +x", 0), None)
   let cidchar_entries : Array[(Int, Int)] = []
-  pdf_text_push_cmap_cidchar_entries(
-    cidchar_entries,
-    @ascii.encode("<> 1 <41> 7 <42> +"),
-  )
+  pdf_text_push_cmap_cidchar_entries(cidchar_entries, b"<> 1 <41> 7 <42> +")
   @test.assert_eq(cidchar_entries, [(0x41, 7)])
-  pdf_text_push_cmap_cidchar_entries(cidchar_entries, @ascii.encode("<43> +7"))
+  pdf_text_push_cmap_cidchar_entries(cidchar_entries, b"<43> +7")
   @test.assert_eq(cidchar_entries, [(0x41, 7)])
 
   let cidrange_entries : Array[(Int, Int)] = []
-  pdf_text_push_cmap_cidrange_entries(
-    cidrange_entries,
-    @ascii.encode("<02><01> 5"),
-  )
+  pdf_text_push_cmap_cidrange_entries(cidrange_entries, b"<02><01> 5")
   @test.assert_eq(cidrange_entries, [])
-  pdf_text_push_cmap_cidrange_entries(
-    cidrange_entries,
-    @ascii.encode("<10><11>"),
-  )
+  pdf_text_push_cmap_cidrange_entries(cidrange_entries, b"<10><11>")
   @test.assert_eq(cidrange_entries, [])
-  pdf_text_push_cmap_cidrange_entries(cidrange_entries, @ascii.encode("<12> 8"))
+  pdf_text_push_cmap_cidrange_entries(cidrange_entries, b"<12> 8")
   @test.assert_eq(cidrange_entries, [])
 
   let codespaces : Array[PdfCMapCodeSpace] = []
-  pdf_text_push_cmap_codespace_entries(codespaces, @ascii.encode("<00><FFFF>"))
+  pdf_text_push_cmap_codespace_entries(codespaces, b"<00><FFFF>")
   @test.assert_eq(codespaces, [])
-  pdf_text_push_cmap_codespace_entries(codespaces, @ascii.encode("<00>"))
+  pdf_text_push_cmap_codespace_entries(codespaces, b"<00>")
   @test.assert_eq(codespaces, [])
 
   @test.assert_eq(
@@ -626,11 +594,7 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
   let bad_deferred = @syntax.pdf_stream(
     PdfDictionary([]),
     StreamToGet(
-      @syntax.stream_to_get(
-        @core.byte_cursor_of_bytes(@ascii.encode("abc")),
-        -1,
-        1,
-      ),
+      @syntax.stream_to_get(@core.byte_cursor_of_bytes(b"abc"), -1, 1),
     ),
   )
   let bad_deferred_result : Result[PdfParsedCMap, Error] = try
@@ -645,7 +609,7 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
   }
   let bad_filter = @syntax.pdf_stream(
     PdfDictionary([(cmap_wbtest_text_name("/Filter"), PdfInteger(1))]),
-    StreamGot(@ascii.encode("x")),
+    StreamGot(b"x"),
   )
   let bad_filter_result : Result[PdfParsedCMap, Error] = try
     helper_doc.parse_cmap(bad_filter)
@@ -665,7 +629,7 @@ test "private text stream helpers treat malformed ToUnicode streams as absent" {
         PdfNameObject(cmap_wbtest_text_name("/NoSuchFilter")),
       ),
     ]),
-    StreamGot(@ascii.encode("x")),
+    StreamGot(b"x"),
   )
   let unsupported_filter_result : Result[PdfParsedCMap, Error] = try
     helper_doc.parse_cmap(unsupported_filter)

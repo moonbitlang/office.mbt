@@ -113,7 +113,7 @@ fn draw_fixture_push_ascii_for_test(
 fn draw_fixture_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = draw_fixture_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -147,7 +147,7 @@ fn draw_fixture_corrupt_startxref_pointer_for_test(
 
 ///|
 fn draw_fixture_startxref_offset_for_test(bytes : Bytes) -> Int raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = draw_fixture_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -181,11 +181,7 @@ fn draw_fixture_corrupt_startxref_xref_header_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   let xref_offset = draw_fixture_startxref_offset_for_test(bytes)
-  guard draw_fixture_bytes_start_with_at_for_test(
-    bytes,
-    @ascii.encode("xref"),
-    xref_offset,
-  ) else {
+  guard draw_fixture_bytes_start_with_at_for_test(bytes, b"xref", xref_offset) else {
     fail("expected startxref to point at a classic xref table")
   }
   let output : Array[Byte] = []
@@ -202,9 +198,7 @@ fn draw_fixture_corrupt_startxref_trailer_keyword_for_test(
 ) -> Bytes raise {
   let xref_offset = draw_fixture_startxref_offset_for_test(bytes)
   let trailer_position = draw_fixture_find_bytes_after_for_test(
-    bytes,
-    @ascii.encode("trailer"),
-    xref_offset,
+    bytes, b"trailer", xref_offset,
   )
   if trailer_position < 0 {
     fail("expected classic xref trailer keyword after startxref target")
@@ -221,7 +215,7 @@ fn draw_fixture_corrupt_startxref_trailer_keyword_for_test(
 fn draw_fixture_first_in_use_xref_row_start_for_test(
   bytes : Bytes,
 ) -> Int raise {
-  let free_row = @ascii.encode("0000000000 65535 f")
+  let free_row = b"0000000000 65535 f"
   let free_row_position = draw_fixture_find_bytes_after_for_test(
     bytes, free_row, 0,
   )
@@ -298,7 +292,7 @@ fn draw_fixture_corrupt_first_in_use_xref_generation_for_test(
 fn draw_fixture_first_xref_subsection_spans_for_test(
   bytes : Bytes,
 ) -> (Int, Int, Int, Int) raise {
-  let header = @ascii.encode("xref")
+  let header = b"xref"
   let header_position = draw_fixture_find_bytes_after_for_test(bytes, header, 0)
   if header_position < 0 {
     fail("expected first classic xref header")
@@ -1490,12 +1484,12 @@ async test "cpdf source fontparams manual fixture parses text-state operators" {
         Op_Tc(5.0),
         Op_Tw(20.0),
         Op_Tf(draw_fixture_name_for_test("/F1"), 72.0),
-        Op_Tj(@ascii.encode("Different ")),
+        Op_Tj(b"Different "),
         Op_Tf(draw_fixture_name_for_test("/F2"), 72.0),
-        Op_Tj(@ascii.encode("fonts")),
+        Op_Tj(b"fonts"),
         Op_Ts(40.0),
         Op_Tf(draw_fixture_name_for_test("/F2"), 36.0),
-        Op_Tj(@ascii.encode(" and sizes")),
+        Op_Tj(b" and sizes"),
         Op_ET,
       ])
   }
@@ -1527,7 +1521,7 @@ async test "cpdf source text manual fixture parses text section operators" {
         Op_cm(@geometry.transform_translate(50.0, 50.0)),
         Op_BT,
         Op_Tf(draw_fixture_name_for_test("/F1"), 144.0),
-        Op_Tj(@ascii.encode("Hello")),
+        Op_Tj(b"Hello"),
         Op_ET,
       ])
   }

@@ -60,7 +60,7 @@ test "PdfDocument test_matterhorn_json detects default optional content names" {
 
   let empty_name = ua_matterhorn_document_for_test([], root_extras=[
     ua_matterhorn_ocproperties_for_test([
-      (key_d, PdfDictionary([(key_name, PdfString(@ascii.encode("")))])),
+      (key_d, PdfDictionary([(key_name, PdfString(b""))])),
     ]),
   ])
   @test.assert_eq(
@@ -72,7 +72,7 @@ test "PdfDocument test_matterhorn_json detects default optional content names" {
 
   let valid = ua_matterhorn_document_for_test([], root_extras=[
     ua_matterhorn_ocproperties_for_test([
-      (key_d, PdfDictionary([(key_name, PdfString(@ascii.encode("Default")))])),
+      (key_d, PdfDictionary([(key_name, PdfString(b"Default"))])),
     ]),
   ])
   @test.assert_eq(try! valid.test_matterhorn_json("20-002"), Json::array([]))
@@ -224,11 +224,11 @@ test "PdfDocument test_matterhorn_json detects required XFA dynamicRender" {
     [],
     root_extras=ua_matterhorn_xfa_root_for_test(
       PdfArray([
-        PdfString(@ascii.encode("config")),
+        PdfString(b"config"),
         ua_matterhorn_xfa_config_stream_for_test(
           b"<dynamicRender>required</dynamicRender>",
         ),
-        PdfString(@ascii.encode("config")),
+        PdfString(b"config"),
         ua_matterhorn_xfa_config_stream_for_test(
           b"<dynamicRender>required</dynamicRender>",
         ),
@@ -255,9 +255,7 @@ test "PdfDocument test_matterhorn_json detects required XFA dynamicRender" {
 
   let non_stream_config = ua_matterhorn_document_for_test(
     [],
-    root_extras=ua_matterhorn_xfa_config_root_for_test(
-      PdfString(@ascii.encode("required")),
-    ),
+    root_extras=ua_matterhorn_xfa_config_root_for_test(PdfString(b"required")),
   )
   @test.assert_eq(
     try! non_stream_config.test_matterhorn_json("25-001"),
@@ -272,15 +270,13 @@ test "PdfDocument test_matterhorn_json checks encryption permissions" {
   @test.assert_eq(try! plain.test_matterhorn_json("26-002"), Json::array([]))
 
   let no_extract_encrypted = try! ua_matterhorn_document_for_test([]).encrypt_40bit(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [PdfNoExtract],
-    file_id=@ascii.encode("ua-no-extract"),
+    file_id=b"ua-no-extract",
   )
   let no_extract = ua_matterhorn_decryption_result_for_test(
-      try! no_extract_encrypted.decrypt_with_user_password(
-        @ascii.encode("user"),
-      ),
+      try! no_extract_encrypted.decrypt_with_user_password(b"user"),
     ).document
   @test.assert_eq(
     try! no_extract.test_matterhorn_json("26-001"),
@@ -292,15 +288,13 @@ test "PdfDocument test_matterhorn_json checks encryption permissions" {
   )
 
   let print_denied_encrypted = try! ua_matterhorn_document_for_test([]).encrypt_40bit(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [PdfNoPrint],
-    file_id=@ascii.encode("ua-print-denied"),
+    file_id=b"ua-print-denied",
   )
   let print_denied = ua_matterhorn_decryption_result_for_test(
-      try! print_denied_encrypted.decrypt_with_user_password(
-        @ascii.encode("user"),
-      ),
+      try! print_denied_encrypted.decrypt_with_user_password(b"user"),
     ).document
   @test.assert_eq(
     try! print_denied.test_matterhorn_json("26-002"),

@@ -59,9 +59,9 @@ fn pdf_annotation_listing_line_length(
   page_number : Int,
   contents : BytesView,
 ) -> Int {
-  @ascii.encode("Page ").length() +
+  b"Page ".length() +
   @ascii.encode(page_number.to_string()).length() +
-  @ascii.encode(": ").length() +
+  b": ".length() +
   contents.length() +
   1
 }

@@ -204,10 +204,7 @@ test "PdfDocument test_matterhorn_json checks annotation Contents or Alt" {
   with_contents.add_object_given_number(
     40,
     ua_matterhorn_annotation_for_test("/Stamp", extras=[
-      (
-        ua_matterhorn_name_for_test("/Contents"),
-        PdfString(@ascii.encode("Reviewed")),
-      ),
+      (ua_matterhorn_name_for_test("/Contents"), PdfString(b"Reviewed")),
     ]),
   )
   @test.assert_eq(
@@ -223,7 +220,7 @@ test "PdfDocument test_matterhorn_json checks annotation Contents or Alt" {
         ua_matterhorn_structure_element_for_test("/Annot", extras=[
           (
             ua_matterhorn_name_for_test("/Alt"),
-            PdfString(@ascii.encode("Reviewed annotation")),
+            PdfString(b"Reviewed annotation"),
           ),
         ]),
       ),
@@ -314,10 +311,7 @@ test "PdfDocument test_matterhorn_json preserves source no-op form field TU chec
   document.add_object_given_number(
     field_number,
     PdfDictionary([
-      (
-        ua_matterhorn_name_for_test("/T"),
-        PdfString(@ascii.encode("field name")),
-      ),
+      (ua_matterhorn_name_for_test("/T"), PdfString(b"field name")),
       (key_struct_parent, PdfInteger(7)),
     ]),
   )
@@ -488,7 +482,7 @@ test "PdfDocument test_matterhorn_json checks link annotation contents" {
         ua_matterhorn_annotation_for_test("/Link", extras=[
           (
             ua_matterhorn_name_for_test("/Contents"),
-            PdfString(@ascii.encode("Open related section")),
+            PdfString(b"Open related section"),
           ),
         ]),
       ],
@@ -533,10 +527,7 @@ test "PdfDocument test_matterhorn_json detects media clip dictionaries" {
   let with_ct = ua_matterhorn_document_for_test([])
   with_ct.add_object_given_number(
     40,
-    try! media_clip.add_dict_entry(
-      key_ct,
-      PdfString(@ascii.encode("video/mp4")),
-    ),
+    try! media_clip.add_dict_entry(key_ct, PdfString(b"video/mp4")),
   )
   @test.assert_eq(try! with_ct.test_matterhorn_json("28-014"), Json::array([]))
   @test.assert_eq(try! with_ct.test_matterhorn_json("28-015"), Json::array([]))

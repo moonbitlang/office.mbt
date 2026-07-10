@@ -218,28 +218,28 @@ test "PdfDocument catalog reads the root object or reports @core.PdfError::RootE
 
 ///|
 test "PdfDocument catalog prefers trailer Root over stale root number" {
-  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_type = @core.pdf_name_of_bytes(@ascii.encode("/Type"))
-  let key_catalog = @core.pdf_name_of_bytes(@ascii.encode("/Catalog"))
-  let key_lang = @core.pdf_name_of_bytes(@ascii.encode("/Lang"))
+  let key_root = @core.pdf_name_of_bytes(b"/Root")
+  let key_type = @core.pdf_name_of_bytes(b"/Type")
+  let key_catalog = @core.pdf_name_of_bytes(b"/Catalog")
+  let key_lang = @core.pdf_name_of_bytes(b"/Lang")
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(1)
   doc.add_object_given_number(
     1,
-    @syntax.pdf_dictionary([(key_lang, PdfString(@ascii.encode("stale")))]),
+    @syntax.pdf_dictionary([(key_lang, PdfString(b"stale"))]),
   )
   doc.add_object_given_number(
     10,
     @syntax.pdf_dictionary([
       (key_type, PdfNameObject(key_catalog)),
-      (key_lang, PdfString(@ascii.encode("active"))),
+      (key_lang, PdfString(b"active")),
     ]),
   )
   doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(10))]))
 
   @test.assert_eq(
     try! doc.catalog().lookup_immediate(key_lang),
-    Some(PdfString(@ascii.encode("active"))),
+    Some(PdfString(b"active")),
   )
 
   doc.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(99))]))
@@ -392,9 +392,7 @@ test "PdfDocument copy preserves metadata and separates object map state" {
   doc.set_revision_read(3)
   doc.add_object_given_number(4, PdfDictionary([]), generation=2)
   doc.set_trailer_dict(
-    PdfDictionary([
-      (@core.pdf_name_of_bytes(@ascii.encode("/Root")), PdfIndirect(4)),
-    ]),
+    PdfDictionary([(@core.pdf_name_of_bytes(b"/Root"), PdfIndirect(4))]),
   )
   let copied = doc.copy()
   @test.assert_eq(copied.version(), (1, 6))
@@ -412,10 +410,10 @@ test "PdfDocument copy preserves metadata and separates object map state" {
 
 ///|
 test "PdfDocument copy deep-copies mutable object containers and streams" {
-  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_length = @core.pdf_name_of_bytes(@ascii.encode("/Length"))
-  let key_initial = @core.pdf_name_of_bytes(@ascii.encode("/Initial"))
-  let key_added = @core.pdf_name_of_bytes(@ascii.encode("/Added"))
+  let key_root = @core.pdf_name_of_bytes(b"/Root")
+  let key_length = @core.pdf_name_of_bytes(b"/Length")
+  let key_initial = @core.pdf_name_of_bytes(b"/Initial")
+  let key_added = @core.pdf_name_of_bytes(b"/Added")
   let doc = @pdflite.pdf_document_empty()
   let stream_object : @syntax.PdfObject = @syntax.pdf_stream(
     PdfDictionary([(key_length, PdfInteger(1))]),
@@ -470,9 +468,9 @@ test "PdfDocument copy deep-copies mutable object containers and streams" {
 
 ///|
 test "PdfDocument renumber_objects_by_offset moves objects and rewrites references" {
-  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_pages = @core.pdf_name_of_bytes(@ascii.encode("/Pages"))
-  let key_parent = @core.pdf_name_of_bytes(@ascii.encode("/Parent"))
+  let key_root = @core.pdf_name_of_bytes(b"/Root")
+  let key_pages = @core.pdf_name_of_bytes(b"/Pages")
+  let key_parent = @core.pdf_name_of_bytes(b"/Parent")
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(1)
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(1))]))
@@ -499,9 +497,9 @@ test "PdfDocument renumber_objects_by_offset moves objects and rewrites referenc
 
 ///|
 test "PdfDocument renumber_objects_compact packs sparse object numbers" {
-  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_pages = @core.pdf_name_of_bytes(@ascii.encode("/Pages"))
-  let key_parent = @core.pdf_name_of_bytes(@ascii.encode("/Parent"))
+  let key_root = @core.pdf_name_of_bytes(b"/Root")
+  let key_pages = @core.pdf_name_of_bytes(b"/Pages")
+  let key_parent = @core.pdf_name_of_bytes(b"/Parent")
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(10)
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
@@ -510,7 +508,7 @@ test "PdfDocument renumber_objects_compact packs sparse object numbers" {
     20,
     PdfDictionary([(key_parent, PdfIndirect(10))]),
   )
-  doc.add_object_given_number(40, PdfString(@ascii.encode("detached")))
+  doc.add_object_given_number(40, PdfString(b"detached"))
   let renumbered = try! doc.renumber_objects_compact()
   @test.assert_eq(doc.object_numbers(), [10, 20, 40])
   @test.assert_eq(renumbered.object_numbers(), [1, 2, 3])
@@ -532,8 +530,8 @@ test "PdfDocument renumber_objects_compact packs sparse object numbers" {
 
 ///|
 test "PdfDocument renumber_objects applies explicit change table" {
-  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_next = @core.pdf_name_of_bytes(@ascii.encode("/Next"))
+  let key_root = @core.pdf_name_of_bytes(b"/Root")
+  let key_next = @core.pdf_name_of_bytes(b"/Next")
   let doc = @pdflite.pdf_document_empty()
   doc.set_root(10)
   doc.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))
@@ -564,8 +562,8 @@ test "PdfDocument renumber_objects applies explicit change table" {
 
 ///|
 test "pdf_renumber_documents gives documents disjoint compact ranges" {
-  let key_root = @core.pdf_name_of_bytes(@ascii.encode("/Root"))
-  let key_peer = @core.pdf_name_of_bytes(@ascii.encode("/Peer"))
+  let key_root = @core.pdf_name_of_bytes(b"/Root")
+  let key_peer = @core.pdf_name_of_bytes(b"/Peer")
   let first = @pdflite.pdf_document_empty()
   first.set_root(10)
   first.set_trailer_dict(PdfDictionary([(key_root, PdfIndirect(10))]))

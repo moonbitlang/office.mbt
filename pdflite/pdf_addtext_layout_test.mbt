@@ -127,10 +127,7 @@ test "pdf_addtext_width_of_text sums simple font metrics" {
   metrics[65] = 500.0
   metrics[66] = 610.0
   let font = addtext_layout_simple_font_with_metrics_for_test(Some(metrics))
-  @test.assert_eq(
-    @pdflite.pdf_addtext_width_of_text(font, @ascii.encode("ABA")),
-    1610.0,
-  )
+  @test.assert_eq(@pdflite.pdf_addtext_width_of_text(font, b"ABA"), 1610.0)
 }
 
 ///|
@@ -138,21 +135,21 @@ test "pdf_addtext_width_of_text mirrors cpdf zero fallbacks" {
   @test.assert_eq(
     @pdflite.pdf_addtext_width_of_text(
       addtext_layout_simple_font_with_metrics_for_test(None),
-      @ascii.encode("A"),
+      b"A",
     ),
     0.0,
   )
   @test.assert_eq(
     @pdflite.pdf_addtext_width_of_text(
       addtext_layout_simple_font_with_metrics_for_test(Some([100.0])),
-      @ascii.encode("A"),
+      b"A",
     ),
     0.0,
   )
   @test.assert_eq(
     @pdflite.pdf_addtext_width_of_text(
       PdfFontStandard({ font: PdfHelvetica, encoding: PdfWinAnsiEncoding }),
-      @ascii.encode("A"),
+      b"A",
     ),
     0.0,
   )
@@ -164,7 +161,7 @@ test "pdf_addtext_width_of_selected_font scales parsed font widths" {
     @pdflite.pdf_addtext_width_of_selected_font(
       addtext_layout_standard_font_for_test(),
       10.0,
-      @ascii.encode("AV"),
+      b"AV",
     ),
     13.34,
   )
@@ -175,7 +172,7 @@ test "pdf_addtext_width_of_selected_font scales parsed font widths" {
     @pdflite.pdf_addtext_width_of_selected_font(
       addtext_layout_simple_font_with_metrics_for_test(Some(metrics)),
       10.0,
-      @ascii.encode("AB"),
+      b"AB",
     ),
     11.1,
   )
@@ -183,7 +180,7 @@ test "pdf_addtext_width_of_selected_font scales parsed font widths" {
     @pdflite.pdf_addtext_width_of_selected_font(
       addtext_layout_simple_font_with_metrics_for_test(None),
       10.0,
-      @ascii.encode("AB"),
+      b"AB",
     ),
     0.0,
   )
@@ -234,7 +231,7 @@ test "PdfDocument addtext_calc_textwidth measures selected fonts" {
       None,
       addtext_layout_name_for_test("/F0"),
       10.0,
-      @ascii.encode("AV"),
+      b"AV",
     ),
     13.34,
   )
@@ -309,10 +306,7 @@ test "PdfDocument addtext_calc_textwidth measures existing page fonts" {
     ]),
   }
   let expected = try! document.addtext_width_of_existing_font_resource(
-    page,
-    resource_name,
-    10.0,
-    @ascii.encode("A"),
+    page, resource_name, 10.0, b"A",
   )
   addtext_layout_assert_close_for_test(
     try! document.addtext_calc_textwidth(
@@ -321,7 +315,7 @@ test "PdfDocument addtext_calc_textwidth measures existing page fonts" {
       None,
       resource_name,
       10.0,
-      @ascii.encode("A"),
+      b"A",
     ),
     expected.1,
   )
@@ -337,8 +331,8 @@ test "PdfDocument addtext_line_widths measures selected font paragraphs" {
     None,
     addtext_layout_name_for_test("/F0"),
     10.0,
-    @ascii.encode("A"),
-    [@ascii.encode("A"), @ascii.encode("AV")],
+    b"A",
+    [b"A", b"AV"],
   )
   addtext_layout_assert_close_for_test(widths.text_width, 6.67)
   @test.assert_eq(widths.widths.length(), 2)
@@ -390,7 +384,7 @@ test "PdfDocument addtext_line_widths reports empty expanded lines" {
       None,
       addtext_layout_name_for_test("/F0"),
       10.0,
-      @ascii.encode("A"),
+      b"A",
       [],
     )
   catch {
@@ -1130,7 +1124,7 @@ test "PdfDocument addtext_page_label renders existing page labels" {
   let labelled = try! document.write_page_labels([
     {
       label_style: PageLabelLowercaseRoman,
-      label_prefix: Some(@ascii.encode("intro-")),
+      label_prefix: Some(b"intro-"),
       start_page: 1,
       start_value: 1,
     },
@@ -1198,7 +1192,7 @@ test "PdfDocument addtext_replacement_values derives labels and bookmarks" {
   let labelled = try! document.write_page_labels([
     {
       label_style: PageLabelDecimalArabic,
-      label_prefix: Some(@ascii.encode("p.")),
+      label_prefix: Some(b"p."),
       start_page: 1,
       start_value: 10,
     },

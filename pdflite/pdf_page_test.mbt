@@ -64,7 +64,7 @@ fn page_hello_ops_for_test() -> Array[@content.PdfContentOp] {
     Op_cm(@geometry.transform_translate(50.0, 770.0)),
     Op_BT,
     Op_Tf(page_name_for_test("/F0"), 36.0),
-    Op_Tj(@ascii.encode("Hello, World!")),
+    Op_Tj(b"Hello, World!"),
     Op_ET,
   ]
 }
@@ -408,7 +408,7 @@ test "PdfDocument page_number_of_target resolves named destinations" {
   let key_names = page_name_for_test("/Names")
   let type_fit = page_name_for_test("/Fit")
   let named_destination = page_name_for_test("/Chapter")
-  let string_destination = @ascii.encode("chapter")
+  let string_destination = b"chapter"
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   let page_refs = try! doc.page_reference_numbers()
   let dest : @syntax.PdfObject = PdfArray([
@@ -436,10 +436,7 @@ test "PdfDocument page_number_of_target resolves named destinations" {
     try! doc.page_number_of_target(DestNamed(named_destination)),
     1,
   )
-  @test.assert_eq(
-    try! doc.page_number_of_target(DestString(@ascii.encode("missing"))),
-    0,
-  )
+  @test.assert_eq(try! doc.page_number_of_target(DestString(b"missing")), 0)
 }
 
 ///|
@@ -585,7 +582,7 @@ test "pdfhello-style standard font document roundtrips" {
     PdfFontStandard({ font: PdfTimesItalic, encoding: PdfImplicitInFontFile }),
   )
 
-  let hello = @ascii.encode("Hello, World!")
+  let hello = b"Hello, World!"
   let extractor = try! parsed.text_extractor_of_font(font_object)
   @test.assert_eq(try! extractor.codepoints_of_text(hello), [
     72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33,
@@ -1018,7 +1015,7 @@ test "PdfDocument process_xobjects rewrites form xobject streams" {
         (key_length, PdfInteger(3)),
         (key_keep, PdfInteger(1)),
       ]),
-      StreamGot(@ascii.encode("old")),
+      StreamGot(b"old"),
     ),
   )
   let page = {
@@ -1038,14 +1035,14 @@ test "PdfDocument process_xobjects rewrites form xobject streams" {
           (key_length, PdfInteger(2)),
           (key_extra, PdfInteger(7)),
         ]),
-        StreamGot(@ascii.encode("BT")),
+        StreamGot(b"BT"),
       ),
     ]
   })
   guard doc.lookup_object_or_null(20) is PdfStreamObject(stream) else {
     fail("expected form xobject stream")
   }
-  @test.assert_eq(stream.data, StreamGot(@ascii.encode("BT")))
+  @test.assert_eq(stream.data, StreamGot(b"BT"))
   @test.assert_eq(
     stream.dictionary.lookup_immediate(key_subtype),
     Some(PdfNameObject(page_name_for_test("/Form"))),
@@ -1078,11 +1075,7 @@ test "PdfDocument process_xobjects materializes deferred form streams" {
         (key_length, PdfInteger(99)),
       ]),
       StreamToGet(
-        @syntax.stream_to_get(
-          @core.byte_cursor_of_bytes(@ascii.encode("xxBTyy")),
-          2,
-          2,
-        ),
+        @syntax.stream_to_get(@core.byte_cursor_of_bytes(b"xxBTyy"), 2, 2),
       ),
     ),
   )
@@ -1107,12 +1100,12 @@ test "PdfDocument process_xobjects materializes deferred form streams" {
       other => [other]
     }
   })
-  @test.assert_eq(seen_data.val, Some(StreamGot(@ascii.encode("BT"))))
+  @test.assert_eq(seen_data.val, Some(StreamGot(b"BT")))
   @test.assert_eq(seen_length.val, Some(PdfInteger(2)))
   guard doc.lookup_object_or_null(20) is PdfStreamObject(stream) else {
     fail("expected form xobject stream")
   }
-  @test.assert_eq(stream.data, StreamGot(@ascii.encode("BT")))
+  @test.assert_eq(stream.data, StreamGot(b"BT"))
   @test.assert_eq(
     stream.dictionary.lookup_immediate(key_length),
     Some(PdfInteger(2)),
@@ -1129,7 +1122,7 @@ test "PdfDocument process_xobjects skips non-form xobjects" {
       @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_name_for_test("/Image"))),
       ]),
-      StreamGot(@ascii.encode("image")),
+      StreamGot(b"image"),
     ),
   )
   let page = {
@@ -1153,7 +1146,7 @@ test "PdfDocument process_xobjects skips non-form xobjects" {
       @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_name_for_test("/Image"))),
       ]),
-      StreamGot(@ascii.encode("image")),
+      StreamGot(b"image"),
     ),
   )
 }
@@ -1219,7 +1212,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
       @syntax.pdf_dictionary([
         (key_subtype, PdfNameObject(page_name_for_test("/Form"))),
       ]),
-      StreamGot(@ascii.encode("form")),
+      StreamGot(b"form"),
     ),
   )
   let bad_result_page = {
@@ -1275,7 +1268,7 @@ test "PdfDocument process_xobjects validates xobject resources" {
       if streams.length() < 0 {
         raise ParseStreamExpected
       }
-      [@syntax.pdf_stream(PdfInteger(1), StreamGot(@ascii.encode("bad")))]
+      [@syntax.pdf_stream(PdfInteger(1), StreamGot(b"bad"))]
     })
   catch {
     err => Err(err)
@@ -1533,7 +1526,7 @@ test "PdfDocument prepend_operators parses inline image resource color spaces" {
       ]),
     ),
   ])
-  let data = @ascii.encode("BI /W 2 /H 1 /BPC 8 /CS /CS1 ID A EI B EI Q")
+  let data = b"BI /W 2 /H 1 /BPC 8 /CS /CS1 ID A EI B EI Q"
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     resources,
@@ -1559,7 +1552,7 @@ test "PdfDocument prepend_operators parses inline image resource color spaces" {
           (page_name_for_test("/CS"), PdfNameObject(page_name_for_test("/CS1"))),
         ]),
         None,
-        @ascii.encode("A EI B"),
+        b"A EI B",
       ),
       Op_Q,
     ],
@@ -1569,7 +1562,7 @@ test "PdfDocument prepend_operators parses inline image resource color spaces" {
 ///|
 test "PdfDocument prepend_operators falls back for missing inline image resources" {
   let doc = @pdflite.pdf_document_empty()
-  let data = @ascii.encode("BI /W 1 /H 1 /BPC 8 /CS /Missing ID abc EI")
+  let data = b"BI /W 1 /H 1 /BPC 8 /CS /Missing ID abc EI"
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [
@@ -1595,7 +1588,7 @@ test "PdfDocument prepend_operators falls back for missing inline image resource
         ),
       ]),
       None,
-      @ascii.encode("abc"),
+      b"abc",
     ),
   ])
 }
@@ -1603,7 +1596,7 @@ test "PdfDocument prepend_operators falls back for missing inline image resource
 ///|
 test "PdfDocument prepend_operators propagates non-colour parse errors" {
   let doc = @pdflite.pdf_document_empty()
-  let data = @ascii.encode("1 2")
+  let data = b"1 2"
   let page = {
     ..@page.pdf_page_blank(@geometry.paper_a4),
     content: [

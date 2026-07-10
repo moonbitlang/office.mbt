@@ -91,7 +91,7 @@ test "private LZW code expansion rejects malformed tables" {
   let prefix_encoded = wbtest_lzw_codes([65, 257], 1)
   @test.assert_eq(
     try! pdf_lzw_decode_view_prefix(prefix_encoded),
-    (@ascii.encode("A"), prefix_encoded.length()),
+    (b"A", prefix_encoded.length()),
   )
   let eod_encoded = wbtest_lzw_codes([257], 1)
   @test.assert_eq(
@@ -109,17 +109,17 @@ test "private LZW code expansion rejects malformed tables" {
   )
   @test.assert_eq(
     try! pdf_lzw_decode_view_prefix(exact_byte_encoded),
-    (@ascii.encode("ABCDEFG"), exact_byte_encoded.length()),
+    (b"ABCDEFG", exact_byte_encoded.length()),
   )
   let clear_restart_encoded = wbtest_lzw_codes([65, 256, 66, 257], 1)
   @test.assert_eq(
     try! pdf_lzw_decode_view_prefix(clear_restart_encoded),
-    (@ascii.encode("AB"), clear_restart_encoded.length()),
+    (b"AB", clear_restart_encoded.length()),
   )
   let clear_then_eod_encoded = wbtest_lzw_codes([65, 256, 257], 1)
   @test.assert_eq(
     try! pdf_lzw_decode_view_prefix(clear_then_eod_encoded),
-    (@ascii.encode("A"), clear_then_eod_encoded.length()),
+    (b"A", clear_then_eod_encoded.length()),
   )
   let clear_then_eof : Result[(@core.PdfBytes, Int), Error] = try
     pdf_lzw_decode_view_prefix(wbtest_lzw_codes([65, 256], 1))
@@ -134,7 +134,7 @@ test "private LZW code expansion rejects malformed tables" {
   let repeated_previous_encoded = wbtest_lzw_codes([65, 258, 257], 1)
   @test.assert_eq(
     try! pdf_lzw_decode_view_prefix(repeated_previous_encoded),
-    (@ascii.encode("AAA"), repeated_previous_encoded.length()),
+    (b"AAA", repeated_previous_encoded.length()),
   )
   let bump_codes : Array[Int] = [256]
   for _ in 0..<255 {

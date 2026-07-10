@@ -393,7 +393,7 @@ test "PdfDocument pdf_object_of_function writes sampled and calculator common en
 ///|
 test "PdfDocument parse_function reads simple Type 4 calculator functions" {
   let doc = @pdflite.pdf_document_empty()
-  let calculator = @ascii.encode("{ 2 mul 1 add }")
+  let calculator = b"{ 2 mul 1 add }"
   let function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -410,7 +410,7 @@ test "PdfDocument parse_function reads simple Type 4 calculator functions" {
 ///|
 test "PdfDocument parse_function ignores Type 4 calculator comments" {
   let doc = @pdflite.pdf_document_empty()
-  let calculator = @ascii.encode("{ 2 % ignored add\n mul 1 add }")
+  let calculator = b"{ 2 % ignored add\n mul 1 add }"
   let function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -427,7 +427,7 @@ test "PdfDocument parse_function ignores Type 4 calculator comments" {
 ///|
 test "PdfDocument parse_function salvages doubled-minus calculator numbers" {
   let doc = @pdflite.pdf_document_empty()
-  let calculator = @ascii.encode("{ --2 mul --1.5 add }")
+  let calculator = b"{ --2 mul --1.5 add }"
   let function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -444,7 +444,7 @@ test "PdfDocument parse_function salvages doubled-minus calculator numbers" {
 ///|
 test "PdfDocument parse_function evaluates calculator functions with multiple inputs" {
   let doc = @pdflite.pdf_document_empty()
-  let calculator = @ascii.encode("{ add }")
+  let calculator = b"{ add }"
   let function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -464,7 +464,7 @@ test "PdfDocument parse_function evaluates calculator functions with multiple in
 ///|
 test "PdfDocument parse_function evaluates unary calculator operators" {
   let doc = @pdflite.pdf_document_empty()
-  let calculator = @ascii.encode("{ neg abs sqrt }")
+  let calculator = b"{ neg abs sqrt }"
   let function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -520,7 +520,7 @@ test "PdfDocument parse_function evaluates remaining numeric calculator operator
 ///|
 test "PdfDocument parse_function evaluates calculator stack operators" {
   let doc = @pdflite.pdf_document_empty()
-  let calculator = @ascii.encode("{ dup 1 index add exch pop }")
+  let calculator = b"{ dup 1 index add exch pop }"
   let function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -537,7 +537,7 @@ test "PdfDocument parse_function evaluates calculator stack operators" {
 ///|
 test "PdfDocument parse_function evaluates calculator copy and roll operators" {
   let doc = @pdflite.pdf_document_empty()
-  let copy_calculator = @ascii.encode("{ 2 3 2 copy add add add }")
+  let copy_calculator = b"{ 2 3 2 copy add add add }"
   let copy_function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(copy_calculator.length())),
@@ -549,7 +549,7 @@ test "PdfDocument parse_function evaluates calculator copy and roll operators" {
   )
   let copy_function = try! doc.parse_function(copy_function_object)
   @test.assert_eq(try! copy_function.eval([]), [10.0])
-  let roll_calculator = @ascii.encode("{ 1 2 3 3 1 roll sub sub }")
+  let roll_calculator = b"{ 1 2 3 3 1 roll sub sub }"
   let roll_function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(roll_calculator.length())),
@@ -566,7 +566,7 @@ test "PdfDocument parse_function evaluates calculator copy and roll operators" {
 ///|
 test "PdfDocument parse_function evaluates calculator ifelse procedures" {
   let doc = @pdflite.pdf_document_empty()
-  let calculator = @ascii.encode("{ dup 0.5 lt { 0 } { 1 } ifelse exch pop }")
+  let calculator = b"{ dup 0.5 lt { 0 } { 1 } ifelse exch pop }"
   let function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -584,7 +584,7 @@ test "PdfDocument parse_function evaluates calculator ifelse procedures" {
 ///|
 test "PdfDocument parse_function evaluates calculator if and boolean operators" {
   let doc = @pdflite.pdf_document_empty()
-  let calculator = @ascii.encode("{ dup 0.5 ge true and { 2 mul } if }")
+  let calculator = b"{ dup 0.5 ge true and { 2 mul } if }"
   let function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -662,7 +662,7 @@ test "PdfDocument parse_function preserves calculator integer value semantics" {
 ///|
 test "PdfDocument parse_function rejects float operands for integer operators" {
   let doc = @pdflite.pdf_document_empty()
-  let calculator = @ascii.encode("{ 6.0 3 and }")
+  let calculator = b"{ 6.0 3 and }"
   let function_object = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (fun_name_for_test("/Length"), PdfInteger(calculator.length())),
@@ -1093,20 +1093,18 @@ test "PdfDocument parse_function rejects malformed interpolation and stitching d
 ///|
 test "PdfDocument parse_function rejects malformed calculator syntax" {
   let doc = @pdflite.pdf_document_empty()
-  let bare = try! doc.parse_function(
-    fun_type4_for_test(@ascii.encode("1 2 add")),
-  )
+  let bare = try! doc.parse_function(fun_type4_for_test(b"1 2 add"))
   @test.assert_eq(try! bare.eval([]), [3.0])
 
   let bad_cases = [
-    @ascii.encode("{ --bad }"),
-    @ascii.encode("{ bogus }"),
+    b"{ --bad }",
+    b"{ bogus }",
     fun_bytes_for_test([123, 255, 125]),
-    @ascii.encode("{ true if }"),
-    @ascii.encode("{ { 1 } }"),
-    @ascii.encode("}"),
-    @ascii.encode("{ { 1 }"),
-    @ascii.encode("{ 1 } 2"),
+    b"{ true if }",
+    b"{ { 1 } }",
+    b"}",
+    b"{ { 1 }",
+    b"{ 1 } 2",
   ]
   for calculator in bad_cases {
     let parsed : Result[@pdflite.PdfFunction, Error] = try
@@ -1135,13 +1133,11 @@ test "PdfFunction calculator evaluator covers comparison and numeric edge cases"
     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
   ])
 
-  let division = try! doc.parse_function(
-    fun_type4_for_test(@ascii.encode("{ 6 3 div }")),
-  )
+  let division = try! doc.parse_function(fun_type4_for_test(b"{ 6 3 div }"))
   @test.assert_eq(try! division.eval([]), [2.0])
 
   let float_compare = try! doc.parse_function(
-    fun_type4_for_test(@ascii.encode("{ 1.0 2.0 ne { 1 } { 0 } ifelse }")),
+    fun_type4_for_test(b"{ 1.0 2.0 ne { 1 } { 0 } ifelse }"),
   )
   @test.assert_eq(try! float_compare.eval([]), [1.0])
 
@@ -1161,25 +1157,10 @@ test "PdfFunction calculator evaluator covers comparison and numeric edge cases"
 test "PdfFunction calculator evaluator reports stack and type errors" {
   let doc = @pdflite.pdf_document_empty()
   let bad_cases = [
-    @ascii.encode("{ pop }"),
-    @ascii.encode("{ true abs }"),
-    @ascii.encode("{ 1.0 2 bitshift }"),
-    @ascii.encode("{ 1 { 2 } if }"),
-    @ascii.encode("{ 1 3 copy }"),
-    @ascii.encode("{ 1 1 index }"),
-    @ascii.encode("{ 1 2 0 roll }"),
-    @ascii.encode("{ true 1 add }"),
-    @ascii.encode("{ 1.0 not }"),
-    @ascii.encode("{ dup }"),
-    @ascii.encode("{ exch }"),
-    @ascii.encode("{ true ceiling }"),
-    @ascii.encode("{ true cvi }"),
-    @ascii.encode("{ true cvr }"),
-    @ascii.encode("{ true floor }"),
-    @ascii.encode("{ true neg }"),
-    @ascii.encode("{ true round }"),
-    @ascii.encode("{ true truncate }"),
-    @ascii.encode("{ true }"),
+    b"{ pop }", b"{ true abs }", b"{ 1.0 2 bitshift }", b"{ 1 { 2 } if }", b"{ 1 3 copy }",
+    b"{ 1 1 index }", b"{ 1 2 0 roll }", b"{ true 1 add }", b"{ 1.0 not }", b"{ dup }",
+    b"{ exch }", b"{ true ceiling }", b"{ true cvi }", b"{ true cvr }", b"{ true floor }",
+    b"{ true neg }", b"{ true round }", b"{ true truncate }", b"{ true }",
   ]
   for calculator in bad_cases {
     let function = try! doc.parse_function(fun_type4_for_test(calculator))
@@ -1200,7 +1181,7 @@ test "PdfFunction calculator evaluator reports stack and type errors" {
         (fun_name_for_test("/FunctionType"), PdfInteger(4)),
         (fun_name_for_test("/Domain"), PdfArray([PdfInteger(0), PdfInteger(1)])),
       ]),
-      StreamGot(@ascii.encode("{ 1 add }")),
+      StreamGot(b"{ 1 add }"),
     ),
   )
   let arity : Result[Array[Double], Error] = try

@@ -7,7 +7,7 @@ fn squeeze_wbtest_name(text : String) -> @core.PdfName {
 fn squeeze_wbtest_data() -> @core.PdfBytes {
   let output : Array[Byte] = []
   for _ in 0..<96 {
-    for byte in @ascii.encode("already decrypted squeeze data\n")[:] {
+    for byte in b"already decrypted squeeze data\n"[:] {
       output.push(byte)
     }
   }
@@ -74,7 +74,7 @@ test "PdfDocument squeeze skips deferred object entries" {
   let doc = pdf_document_empty()
   doc.objects.set_entry(40, pdf_object_entry(ObjectToParse))
   doc.objects.set_entry(41, pdf_object_entry(ObjectToParse))
-  doc.add_object_given_number(42, PdfString(@ascii.encode("parsed")))
+  doc.add_object_given_number(42, PdfString(b"parsed"))
 
   let squeezed = try! doc.squeeze(page_data=false)
 
@@ -86,8 +86,5 @@ test "PdfDocument squeeze skips deferred object entries" {
     squeezed.objects.get_entry(41),
     Some(pdf_object_entry(ObjectToParse)),
   )
-  @test.assert_eq(
-    squeezed.lookup_object_or_null(42),
-    PdfString(@ascii.encode("parsed")),
-  )
+  @test.assert_eq(squeezed.lookup_object_or_null(42), PdfString(b"parsed"))
 }

@@ -1,6 +1,6 @@
 ///|
 fn pdf_id_name() -> @core.PdfName {
-  @core.pdf_name_of_bytes(@ascii.encode("/ID"))
+  @core.pdf_name_of_bytes(b"/ID")
 }
 
 ///|

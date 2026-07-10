@@ -2,7 +2,7 @@
 test "read startxref finds final marker before eof" {
   @test.assert_eq(
     try! @reader.pdf_read_startxref_position(
-      @ascii.encode("startxref\n7\n%%EOF\njunk startxref\n9\n%%EOF"),
+      b"startxref\n7\n%%EOF\njunk startxref\n9\n%%EOF",
     ),
     9,
   )
@@ -10,7 +10,7 @@ test "read startxref finds final marker before eof" {
 
 ///|
 test "cursor consume ascii advances only on match" {
-  let cursor = @core.byte_cursor_of_bytes(@ascii.encode("xref trailer"))
+  let cursor = @core.byte_cursor_of_bytes(b"xref trailer")
   try! @reader.pdf_cursor_consume_ascii(
     cursor,
     [120, 114, 101, 102],

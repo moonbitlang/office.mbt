@@ -1,6 +1,6 @@
 ///|
 let pdf_crypt_stream_length_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/Length"),
+  b"/Length",
 )
 
 ///|

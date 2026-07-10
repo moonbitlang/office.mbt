@@ -22,7 +22,7 @@ fn page_change_hello_ops_for_test() -> Array[@content.PdfContentOp] {
     Op_cm(@geometry.transform_translate(50.0, 770.0)),
     Op_BT,
     Op_Tf(page_change_name_for_test("/F0"), 36.0),
-    Op_Tj(@ascii.encode("Hello, World!")),
+    Op_Tj(b"Hello, World!"),
     Op_ET,
   ]
 }
@@ -298,12 +298,10 @@ test "PdfDocument change_pages preserves document metadata and trailer entries" 
   let page_root = try! doc.add_pagetree([
     @page.pdf_page_blank(@geometry.paper_a4),
   ])
-  ignore(
-    try! doc.add_root(page_root, [(key_lang, PdfString(@ascii.encode("en-US")))]),
-  )
+  ignore(try! doc.add_root(page_root, [(key_lang, PdfString(b"en-US"))]))
   let document_id : @syntax.PdfObject = PdfArray([
-    PdfString(@ascii.encode("first-id")),
-    PdfString(@ascii.encode("second-id")),
+    PdfString(b"first-id"),
+    PdfString(b"second-id"),
   ])
   doc.set_trailer_dict(doc.trailer_dict().add_dict_entry(key_id, document_id))
 
@@ -323,7 +321,7 @@ test "PdfDocument change_pages preserves document metadata and trailer entries" 
   }
   @test.assert_eq(
     changed.lookup_object_or_null(root_number).lookup_immediate(key_lang),
-    Some(PdfString(@ascii.encode("en-US"))),
+    Some(PdfString(b"en-US")),
   )
   @test.assert_eq((try! changed.pages_of_pagetree())[0].rotate, Rotate90)
 }
@@ -392,7 +390,7 @@ test "pdfdraft-style image replacement removes image xobjects and roundtrips" {
         (key_subtype, PdfNameObject(page_change_name_for_test("/Form"))),
         (key_length, PdfInteger(3)),
       ]),
-      StreamGot(@ascii.encode("q Q")),
+      StreamGot(b"q Q"),
     ),
   )
   let page = {
@@ -509,7 +507,7 @@ test "PdfDocument change_pages transforms bookmark destinations with matrices" {
   let bookmarked = try! doc.add_bookmarks([
     {
       level: 0,
-      text: @ascii.encode("Top"),
+      text: b"Top",
       target: DestXYZ(
         TargetPageObject(old_numbers[0]),
         Some(1.0),
@@ -530,7 +528,7 @@ test "PdfDocument change_pages transforms bookmark destinations with matrices" {
   @test.assert_eq(try! changed.read_bookmarks(preserve_actions=true), [
     {
       level: 0,
-      text: @ascii.encode("Top"),
+      text: b"Top",
       target: DestXYZ(
         TargetPageObject(new_numbers[0]),
         Some(11.0),
@@ -1079,7 +1077,7 @@ test "PdfDocument change_pages tolerates malformed catalog matrix destinations" 
   let type_fitr = page_change_name_for_test("/FitR")
   let bad_coordinate = page_change_name_for_test("/Bad")
   let named_destination = page_change_name_for_test("/BadChapter")
-  let string_destination = @ascii.encode("bad-chapter")
+  let string_destination = b"bad-chapter"
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
     @page.pdf_page_blank(@geometry.paper_a4),
@@ -1140,7 +1138,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
   let type_xyz = page_change_name_for_test("/XYZ")
   let type_fith = page_change_name_for_test("/FitH")
   let named_destination = page_change_name_for_test("/Chapter")
-  let string_destination = @ascii.encode("chapter")
+  let string_destination = b"chapter"
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
     @page.pdf_page_blank(@geometry.paper_a4),
@@ -1186,7 +1184,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
   let bookmarked = try! doc.add_bookmarks([
     {
       level: 0,
-      text: @ascii.encode("Named"),
+      text: b"Named",
       target: DestNamed(named_destination),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -1194,7 +1192,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
     },
     {
       level: 0,
-      text: @ascii.encode("String"),
+      text: b"String",
       target: DestString(string_destination),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -1232,7 +1230,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
   @test.assert_eq(try! changed.read_bookmarks(), [
     {
       level: 0,
-      text: @ascii.encode("Named"),
+      text: b"Named",
       target: DestFitH(TargetPageObject(new_numbers[0]), Some(25.0)),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -1240,7 +1238,7 @@ test "PdfDocument change_pages transforms named destination definitions" {
     },
     {
       level: 0,
-      text: @ascii.encode("String"),
+      text: b"String",
       target: DestXYZ(
         TargetPageObject(new_numbers[0]),
         Some(11.0),
@@ -1395,7 +1393,7 @@ test "PdfDocument change_pages skips bookmark matrices when page count changes" 
   let bookmarked = try! doc.add_bookmarks([
     {
       level: 0,
-      text: @ascii.encode("Second"),
+      text: b"Second",
       target: DestXYZ(
         TargetPageObject(old_numbers[1]),
         Some(5.0),
@@ -1418,7 +1416,7 @@ test "PdfDocument change_pages skips bookmark matrices when page count changes" 
   @test.assert_eq(try! changed.read_bookmarks(preserve_actions=true), [
     {
       level: 0,
-      text: @ascii.encode("Second"),
+      text: b"Second",
       target: DestXYZ(
         TargetPageObject(new_numbers[0]),
         Some(5.0),

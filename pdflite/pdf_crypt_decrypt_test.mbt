@@ -17,12 +17,12 @@ fn crypt_decrypt_aesv3_encrypt_data_for_test(
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(1, PdfString(data.to_owned()))
   let encrypted_doc = try! doc.encrypt_256bit_aesv3_with_providers(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [],
     crypt_decrypt_aesv3_r5_random_for_test,
     fn(_, _, _) { iv.to_owned() },
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   match encrypted_doc.lookup_object_or_null(1) {
     PdfString(bytes) => bytes
@@ -171,15 +171,15 @@ fn crypt_decrypt_unwrap_decryption_result_for_test(
 
 ///|
 test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a copy" {
-  let file_id = @ascii.encode("doc-id")
+  let file_id = b"doc-id"
   let plain_object : @syntax.PdfObject = PdfDictionary([
-    (crypt_decrypt_name_for_test("/Title"), PdfString(@ascii.encode("hello"))),
+    (crypt_decrypt_name_for_test("/Title"), PdfString(b"hello")),
   ])
   let source = @pdflite.pdf_document_empty()
   source.add_object_given_number(1, plain_object)
   let template = try! source.encrypt_128bit(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
     file_id~,
   )
@@ -195,16 +195,13 @@ test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a c
       (crypt_decrypt_name_for_test("/Encrypt"), PdfIndirect(2)),
       (
         crypt_decrypt_name_for_test("/ID"),
-        PdfArray([
-          PdfString(@ascii.encode("doc-id")),
-          PdfString(@ascii.encode("ignored")),
-        ]),
+        PdfArray([PdfString(b"doc-id"), PdfString(b"ignored")]),
       ),
     ]),
   )
 
   let decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! doc.decrypt_with_user_password(@ascii.encode("user")),
+    try! doc.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
   @test.assert_eq(
@@ -226,10 +223,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a c
     doc.trailer_dict().lookup_immediate(crypt_decrypt_name_for_test("/Encrypt")),
     Some(PdfIndirect(2)),
   )
-  @test.assert_eq(
-    try! doc.decrypt_with_user_password(@ascii.encode("bad")),
-    None,
-  )
+  @test.assert_eq(try! doc.decrypt_with_user_password(b"bad"), None)
 
   let direct_doc = @pdflite.pdf_document_empty()
   direct_doc.add_object_given_number(1, encrypted_object)
@@ -238,15 +232,12 @@ test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a c
       (crypt_decrypt_name_for_test("/Encrypt"), encrypt_dictionary),
       (
         crypt_decrypt_name_for_test("/ID"),
-        PdfArray([
-          PdfString(@ascii.encode("doc-id")),
-          PdfString(@ascii.encode("ignored")),
-        ]),
+        PdfArray([PdfString(b"doc-id"), PdfString(b"ignored")]),
       ),
     ]),
   )
   let direct_decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! direct_doc.decrypt_with_user_password(@ascii.encode("user")),
+    try! direct_doc.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(
     direct_decrypted.document.lookup_object_or_null(1),
@@ -260,28 +251,28 @@ test "PdfDocument decrypt_with_user_password decrypts parsed ARC4 objects in a c
   )
 
   let plain_doc = @pdflite.pdf_document_empty()
-  plain_doc.add_object_given_number(1, PdfString(@ascii.encode("plain")))
+  plain_doc.add_object_given_number(1, PdfString(b"plain"))
   let no_encryption = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! plain_doc.decrypt_with_user_password(@ascii.encode("anything")),
+    try! plain_doc.decrypt_with_user_password(b"anything"),
   )
   @test.assert_eq(
     no_encryption.document.lookup_object_or_null(1),
-    PdfString(@ascii.encode("plain")),
+    PdfString(b"plain"),
   )
   @test.assert_eq(no_encryption.denied_permissions, [])
 }
 
 ///|
 test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a copy" {
-  let file_id = @ascii.encode("doc-id")
+  let file_id = b"doc-id"
   let plain_object : @syntax.PdfObject = PdfDictionary([
-    (crypt_decrypt_name_for_test("/Title"), PdfString(@ascii.encode("owner"))),
+    (crypt_decrypt_name_for_test("/Title"), PdfString(b"owner")),
   ])
   let source = @pdflite.pdf_document_empty()
   source.add_object_given_number(1, plain_object)
   let template = try! source.encrypt_128bit(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
     file_id~,
   )
@@ -297,16 +288,13 @@ test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a 
       (crypt_decrypt_name_for_test("/Encrypt"), PdfIndirect(2)),
       (
         crypt_decrypt_name_for_test("/ID"),
-        PdfArray([
-          PdfString(@ascii.encode("doc-id")),
-          PdfString(@ascii.encode("ignored")),
-        ]),
+        PdfArray([PdfString(b"doc-id"), PdfString(b"ignored")]),
       ),
     ]),
   )
 
   let decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! doc.decrypt_with_owner_password(@ascii.encode("owner")),
+    try! doc.decrypt_with_owner_password(b"owner"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
   @test.assert_eq(
@@ -324,19 +312,16 @@ test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a 
     @crypt_core.pdf_permissions_of_p(-3904),
   )
   @test.assert_eq(doc.lookup_object_or_null(1), encrypted_object)
-  @test.assert_eq(
-    try! doc.decrypt_with_owner_password(@ascii.encode("bad")),
-    None,
-  )
+  @test.assert_eq(try! doc.decrypt_with_owner_password(b"bad"), None)
 
   let plain_doc = @pdflite.pdf_document_empty()
-  plain_doc.add_object_given_number(1, PdfString(@ascii.encode("plain")))
+  plain_doc.add_object_given_number(1, PdfString(b"plain"))
   let no_encryption = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! plain_doc.decrypt_with_owner_password(@ascii.encode("anything")),
+    try! plain_doc.decrypt_with_owner_password(b"anything"),
   )
   @test.assert_eq(
     no_encryption.document.lookup_object_or_null(1),
-    PdfString(@ascii.encode("plain")),
+    PdfString(b"plain"),
   )
   @test.assert_eq(no_encryption.denied_permissions, [])
 }
@@ -345,7 +330,7 @@ test "PdfDocument decrypt_with_owner_password decrypts parsed ARC4 objects in a 
 test "PdfDocument decrypt_with_passwords handles unencrypted, blank, user, and owner passwords" {
   let key_title = crypt_decrypt_name_for_test("/Title")
   let plain_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("secret"))),
+    (key_title, PdfString(b"secret")),
   ])
   let plain_doc = @pdflite.pdf_document_empty()
   plain_doc.add_object_given_number(1, plain_object)
@@ -358,10 +343,10 @@ test "PdfDocument decrypt_with_passwords handles unencrypted, blank, user, and o
   let blank_doc = @pdflite.pdf_document_empty()
   blank_doc.add_object_given_number(1, plain_object)
   let blank_encrypted = try! blank_doc.encrypt_40bit(
-    @ascii.encode(""),
-    @ascii.encode("owner"),
+    b"",
+    b"owner",
     [PdfNoCopy],
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   let blank_decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
     try! blank_encrypted.decrypt_with_passwords(),
@@ -372,22 +357,18 @@ test "PdfDocument decrypt_with_passwords handles unencrypted, blank, user, and o
   )
   @test.assert_eq(blank_decrypted.denied_permissions, [PdfNoCopy])
   @test.assert_eq(
-    try! blank_encrypted.decrypt_with_passwords(
-      user_password=Some(@ascii.encode("bad")),
-    ),
+    try! blank_encrypted.decrypt_with_passwords(user_password=Some(b"bad")),
     None,
   )
 
   let encrypted = try! plain_doc.encrypt_128bit(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [PdfNoPrint],
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   let user_decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! encrypted.decrypt_with_passwords(
-      user_password=Some(@ascii.encode("user")),
-    ),
+    try! encrypted.decrypt_with_passwords(user_password=Some(b"user")),
   )
   @test.assert_eq(
     user_decrypted.document.lookup_object_or_null(1),
@@ -396,8 +377,8 @@ test "PdfDocument decrypt_with_passwords handles unencrypted, blank, user, and o
   @test.assert_eq(user_decrypted.denied_permissions, [PdfNoPrint])
   let owner_decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
     try! encrypted.decrypt_with_passwords(
-      user_password=Some(@ascii.encode("bad")),
-      owner_password=Some(@ascii.encode("owner")),
+      user_password=Some(b"bad"),
+      owner_password=Some(b"owner"),
     ),
   )
   @test.assert_eq(
@@ -406,9 +387,7 @@ test "PdfDocument decrypt_with_passwords handles unencrypted, blank, user, and o
   )
   @test.assert_eq(owner_decrypted.denied_permissions, [PdfNoPrint])
   @test.assert_eq(
-    try! encrypted.decrypt_with_passwords(
-      user_password=Some(@ascii.encode("bad")),
-    ),
+    try! encrypted.decrypt_with_passwords(user_password=Some(b"bad")),
     None,
   )
 }
@@ -418,8 +397,8 @@ test "PdfDocument decrypt_single_stream handles unencrypted and ARC4 streams" {
   let key_length = crypt_decrypt_name_for_test("/Length")
   let key_title = crypt_decrypt_name_for_test("/Title")
   let plain_stream = crypt_decrypt_stream_for_test(
-    [(key_length, PdfInteger(4)), (key_title, PdfString(@ascii.encode("info")))],
-    @ascii.encode("data"),
+    [(key_length, PdfInteger(4)), (key_title, PdfString(b"info"))],
+    b"data",
   )
   let plain_doc = @pdflite.pdf_document_empty()
   @test.assert_eq(
@@ -430,10 +409,10 @@ test "PdfDocument decrypt_single_stream handles unencrypted and ARC4 streams" {
   let blank_password_doc = @pdflite.pdf_document_empty()
   blank_password_doc.add_object_given_number(1, plain_stream)
   let blank_password_encrypted = try! blank_password_doc.encrypt_40bit(
-    @ascii.encode(""),
-    @ascii.encode("owner"),
+    b"",
+    b"owner",
     [],
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   let blank_password_stream = blank_password_encrypted.lookup_object_or_null(1)
   @test.assert_eq(
@@ -447,7 +426,7 @@ test "PdfDocument decrypt_single_stream handles unencrypted and ARC4 streams" {
       1,
       0,
       blank_password_stream,
-      user_password=Some(@ascii.encode("bad")),
+      user_password=Some(b"bad"),
     ),
     None,
   )
@@ -455,10 +434,10 @@ test "PdfDocument decrypt_single_stream handles unencrypted and ARC4 streams" {
   let owner_password_doc = @pdflite.pdf_document_empty()
   owner_password_doc.add_object_given_number(1, plain_stream)
   let owner_password_encrypted = try! owner_password_doc.encrypt_128bit(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [],
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   let owner_password_stream = owner_password_encrypted.lookup_object_or_null(1)
   @test.assert_eq(
@@ -466,8 +445,8 @@ test "PdfDocument decrypt_single_stream handles unencrypted and ARC4 streams" {
       1,
       0,
       owner_password_stream,
-      user_password=Some(@ascii.encode("bad")),
-      owner_password=Some(@ascii.encode("owner")),
+      user_password=Some(b"bad"),
+      owner_password=Some(b"owner"),
     ),
     Some(plain_stream),
   )
@@ -476,7 +455,7 @@ test "PdfDocument decrypt_single_stream handles unencrypted and ARC4 streams" {
       1,
       0,
       owner_password_stream,
-      user_password=Some(@ascii.encode("bad")),
+      user_password=Some(b"bad"),
     ),
     None,
   )
@@ -487,11 +466,11 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
   let key_length = crypt_decrypt_name_for_test("/Length")
   let key_title = crypt_decrypt_name_for_test("/Title")
   let plain_stream = crypt_decrypt_stream_for_test(
-    [(key_length, PdfInteger(3)), (key_title, PdfString(@ascii.encode("aes")))],
-    @ascii.encode("raw"),
+    [(key_length, PdfInteger(3)), (key_title, PdfString(b"aes"))],
+    b"raw",
   )
 
-  let aesv2_file_id = @ascii.encode("doc-id")
+  let aesv2_file_id = b"doc-id"
   let aesv2_iv = crypt_decrypt_model_bytes_for_test([
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
     0x1d, 0x1e, 0x1f,
@@ -499,8 +478,8 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
   let aesv2_source = @pdflite.pdf_document_empty()
   aesv2_source.add_object_given_number(1, plain_stream)
   let aesv2_doc = try! aesv2_source.encrypt_128bit_aesv2_with_iv_provider(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
     fn(_, _, _) { aesv2_iv },
     file_id=aesv2_file_id,
@@ -511,7 +490,7 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
       1,
       0,
       aesv2_encrypted_stream,
-      user_password=Some(@ascii.encode("user")),
+      user_password=Some(b"user"),
     ),
     Some(plain_stream),
   )
@@ -559,14 +538,10 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
     0x2d, 0x2e, 0x2f,
   ])
   let aesv3_encrypted_title = try! crypt_decrypt_aesv3_encrypt_data_for_test(
-    aesv3_file_key,
-    @ascii.encode("aes"),
-    aesv3_iv,
+    aesv3_file_key, b"aes", aesv3_iv,
   )
   let aesv3_encrypted_data = try! crypt_decrypt_aesv3_encrypt_data_for_test(
-    aesv3_file_key,
-    @ascii.encode("raw"),
-    aesv3_iv,
+    aesv3_file_key, b"raw", aesv3_iv,
   )
   let aesv3_encrypted_stream = crypt_decrypt_stream_for_test(
     [
@@ -582,10 +557,7 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
       (crypt_decrypt_name_for_test("/Encrypt"), PdfIndirect(2)),
       (
         crypt_decrypt_name_for_test("/ID"),
-        PdfArray([
-          PdfString(@ascii.encode("doc-id")),
-          PdfString(@ascii.encode("ignored")),
-        ]),
+        PdfArray([PdfString(b"doc-id"), PdfString(b"ignored")]),
       ),
     ]),
   )
@@ -594,7 +566,7 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
       1,
       0,
       aesv3_encrypted_stream,
-      owner_password=Some(@ascii.encode("owner")),
+      owner_password=Some(b"owner"),
     ),
     Some(plain_stream),
   )
@@ -602,20 +574,20 @@ test "PdfDocument decrypt_single_stream handles AESV2 and AESV3 streams" {
 
 ///|
 test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a copy" {
-  let file_id = @ascii.encode("doc-id")
+  let file_id = b"doc-id"
   let iv = crypt_decrypt_model_bytes_for_test([
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
     0x1d, 0x1e, 0x1f,
   ])
   let key_title = crypt_decrypt_name_for_test("/Title")
   let plain_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("aes"))),
+    (key_title, PdfString(b"aes")),
   ])
   let source = @pdflite.pdf_document_empty()
   source.add_object_given_number(1, plain_object)
   let template = try! source.encrypt_128bit_aesv2_with_iv_provider(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
     fn(_, _, _) { iv },
     file_id~,
@@ -632,16 +604,13 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
       (crypt_decrypt_name_for_test("/Encrypt"), PdfIndirect(2)),
       (
         crypt_decrypt_name_for_test("/ID"),
-        PdfArray([
-          PdfString(@ascii.encode("doc-id")),
-          PdfString(@ascii.encode("ignored")),
-        ]),
+        PdfArray([PdfString(b"doc-id"), PdfString(b"ignored")]),
       ),
     ]),
   )
 
   let decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! doc.decrypt_with_user_password(@ascii.encode("user")),
+    try! doc.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
   @test.assert_eq(
@@ -659,7 +628,7 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
     @crypt_core.pdf_permissions_of_p(-3904),
   )
   let owner_decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! doc.decrypt_with_owner_password(@ascii.encode("owner")),
+    try! doc.decrypt_with_owner_password(b"owner"),
   )
   @test.assert_eq(
     owner_decrypted.document.lookup_object_or_null(1),
@@ -672,26 +641,20 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV2 objects in a 
     None,
   )
   @test.assert_eq(doc.lookup_object_or_null(1), encrypted_object)
-  @test.assert_eq(
-    try! doc.decrypt_with_user_password(@ascii.encode("bad")),
-    None,
-  )
-  @test.assert_eq(
-    try! doc.decrypt_with_owner_password(@ascii.encode("bad")),
-    None,
-  )
+  @test.assert_eq(try! doc.decrypt_with_user_password(b"bad"), None)
+  @test.assert_eq(try! doc.decrypt_with_owner_password(b"bad"), None)
 }
 
 ///|
 test "PdfDocument decrypt_with_user_password honors EncryptMetadata false" {
-  let file_id = @ascii.encode("doc-id")
+  let file_id = b"doc-id"
   let iv = crypt_decrypt_model_bytes_for_test([
     0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
     0x1e, 0x1f, 0x20,
   ])
   let key_title = crypt_decrypt_name_for_test("/Title")
   let plain_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("aes"))),
+    (key_title, PdfString(b"aes")),
   ])
   let metadata_stream = crypt_decrypt_stream_for_test(
     [
@@ -700,15 +663,15 @@ test "PdfDocument decrypt_with_user_password honors EncryptMetadata false" {
         crypt_decrypt_name_for_test("/Type"),
         PdfNameObject(crypt_decrypt_name_for_test("/Metadata")),
       ),
-      (key_title, PdfString(@ascii.encode("meta"))),
+      (key_title, PdfString(b"meta")),
     ],
-    @ascii.encode("meta"),
+    b"meta",
   )
   let source = @pdflite.pdf_document_empty()
   source.add_object_given_number(1, plain_object)
   let template = try! source.encrypt_128bit_aesv2_with_iv_provider(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
     fn(_, _, _) { iv },
     encrypt_metadata=false,
@@ -727,21 +690,18 @@ test "PdfDocument decrypt_with_user_password honors EncryptMetadata false" {
       (crypt_decrypt_name_for_test("/Encrypt"), PdfIndirect(2)),
       (
         crypt_decrypt_name_for_test("/ID"),
-        PdfArray([
-          PdfString(@ascii.encode("doc-id")),
-          PdfString(@ascii.encode("ignored")),
-        ]),
+        PdfArray([PdfString(b"doc-id"), PdfString(b"ignored")]),
       ),
     ]),
   )
 
   let decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! doc.decrypt_with_user_password(@ascii.encode("user")),
+    try! doc.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
   @test.assert_eq(decrypted.document.lookup_object_or_null(3), metadata_stream)
   let owner_decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! doc.decrypt_with_owner_password(@ascii.encode("owner")),
+    try! doc.decrypt_with_owner_password(b"owner"),
   )
   @test.assert_eq(
     owner_decrypted.document.lookup_object_or_null(1),
@@ -799,24 +759,18 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
   ])
   let key_title = crypt_decrypt_name_for_test("/Title")
   let plain_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("aes3"))),
+    (key_title, PdfString(b"aes3")),
   ])
   let encrypted_object : @syntax.PdfObject = PdfDictionary([
     (
       key_title,
       PdfString(
-        try! crypt_decrypt_aesv3_encrypt_data_for_test(
-          file_key,
-          @ascii.encode("aes3"),
-          iv,
-        ),
+        try! crypt_decrypt_aesv3_encrypt_data_for_test(file_key, b"aes3", iv),
       ),
     ),
   ])
   let encrypted_metadata = try! crypt_decrypt_aesv3_encrypt_data_for_test(
-    file_key,
-    @ascii.encode("meta"),
-    iv,
+    file_key, b"meta", iv,
   )
   let encrypted_metadata_stream = crypt_decrypt_stream_for_test(
     [
@@ -839,9 +793,9 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
         crypt_decrypt_name_for_test("/Type"),
         PdfNameObject(crypt_decrypt_name_for_test("/Metadata")),
       ),
-      (key_title, PdfString(@ascii.encode("meta"))),
+      (key_title, PdfString(b"meta")),
     ],
-    @ascii.encode("meta"),
+    b"meta",
   )
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(1, encrypted_object)
@@ -852,16 +806,13 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
       (crypt_decrypt_name_for_test("/Encrypt"), PdfIndirect(2)),
       (
         crypt_decrypt_name_for_test("/ID"),
-        PdfArray([
-          PdfString(@ascii.encode("doc-id")),
-          PdfString(@ascii.encode("ignored")),
-        ]),
+        PdfArray([PdfString(b"doc-id"), PdfString(b"ignored")]),
       ),
     ]),
   )
 
   let decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! doc.decrypt_with_user_password(@ascii.encode("user")),
+    try! doc.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
   @test.assert_eq(
@@ -883,17 +834,14 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
     @crypt_core.pdf_permissions_of_p(-3904),
   )
   let owner_decrypted = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! doc.decrypt_with_owner_password(@ascii.encode("owner")),
+    try! doc.decrypt_with_owner_password(b"owner"),
   )
   @test.assert_eq(
     owner_decrypted.document.lookup_object_or_null(1),
     plain_object,
   )
   let metadata_skipped = crypt_decrypt_unwrap_decryption_result_for_test(
-    try! doc.decrypt_with_user_password(
-      @ascii.encode("user"),
-      no_encrypt_metadata=true,
-    ),
+    try! doc.decrypt_with_user_password(b"user", no_encrypt_metadata=true),
   )
   @test.assert_eq(
     metadata_skipped.document.lookup_object_or_null(1),
@@ -904,12 +852,6 @@ test "PdfDocument decrypt_with_user_password decrypts parsed AESV3 revision 5 ob
     encrypted_metadata_stream,
   )
   @test.assert_eq(doc.lookup_object_or_null(1), encrypted_object)
-  @test.assert_eq(
-    try! doc.decrypt_with_user_password(@ascii.encode("bad")),
-    None,
-  )
-  @test.assert_eq(
-    try! doc.decrypt_with_owner_password(@ascii.encode("bad")),
-    None,
-  )
+  @test.assert_eq(try! doc.decrypt_with_user_password(b"bad"), None)
+  @test.assert_eq(try! doc.decrypt_with_owner_password(b"bad"), None)
 }

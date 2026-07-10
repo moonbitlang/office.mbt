@@ -89,7 +89,7 @@ async test "checked-in CamlPDF introduction fixture tolerates malformed indexed 
       "fixtures/camlpdf/introduction_to_camlpdf.pdf",
     ),
     10,
-    @ascii.encode("/Size 104\n"),
+    b"/Size 104\n",
   )
 }
 
@@ -166,7 +166,7 @@ async test "checked-in CamlPDF introduction fixture reconstructs malformed xref 
       "fixtures/camlpdf/introduction_to_camlpdf.pdf",
     ),
     10,
-    @ascii.encode("/Root 101 0 R"),
+    b"/Root 101 0 R",
   )
 }
 
@@ -177,7 +177,7 @@ async test "checked-in CamlPDF introduction fixture repairs malformed xref strea
       "fixtures/camlpdf/introduction_to_camlpdf.pdf",
     ),
     10,
-    @ascii.encode("/Length 271 "),
+    b"/Length 271 ",
   )
 }
 
@@ -873,7 +873,7 @@ async test "optional cpdf source tweak fixtures recolor thin and append content"
       let appended = @pdflite.pdf_append_page_content(
         document,
         [1],
-        @ascii.encode("0.25 g 10 10 20 20 re f"),
+        b"0.25 g 10 10 20 20 re f",
         before=true,
       )
       fixture_acceptance_assert_cpdf_source_appended_content_for_test(
@@ -1287,7 +1287,7 @@ async test "optional cpdf source hello fixture builds portfolio from real payloa
       ),
     ) {
     (Some(pdf_bytes), Some(readme_payload), Some(changes_payload)) => {
-      let mod_date = @ascii.encode("D:20240102030405")
+      let mod_date = b"D:20240102030405"
       let document = @pdflite.pdf_read_document_from_bytes(pdf_bytes)
       let portfolio = document.portfolio(
         [
@@ -2943,7 +2943,7 @@ async test "optional cpdf source manual fixture mutates metadata" {
       )
       let updated = document
         .create_metadata()
-        .set_language(@ascii.encode("en-GB"))
+        .set_language(b"en-GB")
         .set_info_entry(
           fixture_acceptance_pdf_name_for_test("/Title"),
           PdfString(title),
@@ -3330,9 +3330,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_xref_stream_index_entry_reconstructs_for_test(
-        bytes,
-        175,
-        @ascii.encode("/Index [0 1844]"),
+        bytes, 175, b"/Index [0 1844]",
       )
   }
 }
@@ -3346,9 +3344,7 @@ async test "optional cpdf source manual fixture tolerates malformed indexed xref
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_xref_stream_size_entry_tolerates_for_test(
-        bytes,
-        175,
-        @ascii.encode("/Size 1844"),
+        bytes, 175, b"/Size 1844",
       )
   }
 }
@@ -3362,10 +3358,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_xref_stream_index_and_size_reconstructs_for_test(
-        bytes,
-        175,
-        @ascii.encode("/Index [0 1844]"),
-        @ascii.encode("/Size 1844"),
+        bytes, 175, b"/Index [0 1844]", b"/Size 1844",
       )
   }
 }
@@ -3425,9 +3418,7 @@ async test "optional cpdf source manual fixture reconstructs malformed xref stre
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_xref_stream_root_entry_reconstructs_for_test(
-        bytes,
-        175,
-        @ascii.encode("/Root 1841 0 R"),
+        bytes, 175, b"/Root 1841 0 R",
       )
   }
 }
@@ -3441,9 +3432,7 @@ async test "optional cpdf source manual fixture repairs malformed xref stream le
     None => ()
     Some(bytes) =>
       fixture_acceptance_assert_xref_stream_length_entry_repairs_for_test(
-        bytes,
-        175,
-        @ascii.encode("/Length 4551"),
+        bytes, 175, b"/Length 4551",
       )
   }
 }

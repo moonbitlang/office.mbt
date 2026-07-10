@@ -1,16 +1,13 @@
 ///|
 test "xref stream field reader handles zero-width and bounds" {
+  @test.assert_eq(try! @reader.pdf_xref_stream_read_field(b"ab", 0, 0), (0, 0))
   @test.assert_eq(
-    try! @reader.pdf_xref_stream_read_field(@ascii.encode("ab"), 0, 0),
-    (0, 0),
-  )
-  @test.assert_eq(
-    try! @reader.pdf_xref_stream_read_field(@ascii.encode("ab"), 0, 2),
+    try! @reader.pdf_xref_stream_read_field(b"ab", 0, 2),
     (24930, 2),
   )
 
   let short_field : Result[(Int, Int), Error] = try
-    @reader.pdf_xref_stream_read_field(@ascii.encode("a"), 0, 2)
+    @reader.pdf_xref_stream_read_field(b"a", 0, 2)
   catch {
     err => Err(err)
   } noraise {
@@ -21,7 +18,7 @@ test "xref stream field reader handles zero-width and bounds" {
   }
 
   let negative_width : Result[(Int, Int), Error] = try
-    @reader.pdf_xref_stream_read_field(@ascii.encode("a"), 0, -1)
+    @reader.pdf_xref_stream_read_field(b"a", 0, -1)
   catch {
     err => Err(err)
   } noraise {

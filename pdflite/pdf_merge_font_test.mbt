@@ -34,7 +34,7 @@ fn merge_font_add_catalog_entry_for_test(
 fn merge_font_duplicate_stream_for_test() -> @syntax.PdfObject {
   @syntax.pdf_stream(
     PdfDictionary([(merge_font_name_for_test("/Length"), PdfInteger(2))]),
-    StreamGot(@ascii.encode("Hi")),
+    StreamGot(b"Hi"),
   )
 }
 
@@ -76,7 +76,7 @@ test "PdfDocument remove_duplicate_fonts coalesces identical streams" {
 ///|
 test "PdfDocument remove_duplicate_fonts coalesces deferred stream data" {
   let doc = @pdflite.pdf_document_empty()
-  let input = @core.byte_cursor_of_bytes(@ascii.encode("xxHiyyHi"))
+  let input = @core.byte_cursor_of_bytes(b"xxHiyyHi")
   let dictionary : @syntax.PdfObject = PdfDictionary([
     (merge_font_name_for_test("/Length"), PdfInteger(2)),
   ])
@@ -96,10 +96,7 @@ test "PdfDocument remove_duplicate_fonts coalesces deferred stream data" {
   )
   doc.add_object_given_number(3, PdfArray([PdfIndirect(1), PdfIndirect(2)]))
   doc.remove_duplicate_fonts()
-  @test.assert_eq(
-    try! doc.lookup_object_or_null(1).stream_bytes(),
-    @ascii.encode("Hi"),
-  )
+  @test.assert_eq(try! doc.lookup_object_or_null(1).stream_bytes(), b"Hi")
   @test.assert_eq(doc.lookup_object_or_null(2), PdfNull)
   @test.assert_eq(
     doc.lookup_object_or_null(3),

@@ -149,11 +149,7 @@ fn annotation_json_helper_document_for_test() -> @pdflite.PdfDocument {
 ///|
 test "PdfDocument get_annotations returns old-style page content pairs" {
   let document = try! annotation_cpdf_helper_document_for_test()
-  let expected = [
-    (1, @ascii.encode("first")),
-    (2, @ascii.encode("second")),
-    (2, Bytes::new(0)),
-  ]
+  let expected = [(1, b"first"), (2, b"second"), (2, Bytes::new(0))]
   @test.assert_eq(
     try! document.get_annotations(encoding=PdfMetadataRaw),
     expected,
@@ -167,7 +163,7 @@ test "PdfDocument get_annotations returns old-style page content pairs" {
 ///|
 test "PdfDocument list_annotations renders selected non-empty old-style lines" {
   let document = try! annotation_cpdf_helper_document_for_test()
-  let expected = @ascii.encode("Page 1: first\nPage 2: second\n")
+  let expected = b"Page 1: first\nPage 2: second\n"
   @test.assert_eq(
     try! document.list_annotations([1, 2], encoding=PdfMetadataRaw),
     expected,
@@ -178,7 +174,7 @@ test "PdfDocument list_annotations renders selected non-empty old-style lines" {
   )
   @test.assert_eq(
     try! document.list_annotations([2], encoding=PdfMetadataRaw),
-    @ascii.encode("Page 2: second\n"),
+    b"Page 2: second\n",
   )
   let bad_page : Result[@core.PdfBytes, Error] = try
     document.list_annotations([3], encoding=PdfMetadataRaw)
@@ -293,15 +289,15 @@ test "PdfDocument set_annotations_json imports cpdf annotation rows" {
   let copied = try! target.copy_annotations_from(source, [2])
   let copied_wrapper = try! @pdflite.pdf_copy_annotations([2], source, target)
   let expected_annotations = [
-    (1, @ascii.encode("first")),
-    (2, @ascii.encode("second")),
+    (1, b"first"),
+    (2, b"second"),
     (2, Bytes::new(0)),
-    (2, @ascii.encode("json")),
-    (2, @ascii.encode("dest")),
+    (2, b"json"),
+    (2, b"dest"),
   ]
   @test.assert_eq(try! target.get_annotations(encoding=PdfMetadataRaw), [
-    (1, @ascii.encode("first")),
-    (2, @ascii.encode("second")),
+    (1, b"first"),
+    (2, b"second"),
     (2, Bytes::new(0)),
   ])
   @test.assert_eq(
@@ -398,12 +394,12 @@ test "PdfDocument remove_annotations removes selected page arrays" {
   let removed = try! document.remove_annotations([2])
   let wrapper = try! @pdflite.pdf_remove_annotations([2], document)
   @test.assert_eq(try! document.get_annotations(encoding=PdfMetadataRaw), [
-    (1, @ascii.encode("first")),
-    (2, @ascii.encode("second")),
+    (1, b"first"),
+    (2, b"second"),
     (2, Bytes::new(0)),
   ])
   @test.assert_eq(try! removed.get_annotations(encoding=PdfMetadataRaw), [
-    (1, @ascii.encode("first")),
+    (1, b"first"),
   ])
   @test.assert_eq(
     try! wrapper.get_annotations(encoding=PdfMetadataRaw),
@@ -445,8 +441,8 @@ test "PdfDocument annotations_of_page reads popup annotations" {
     10,
     PdfDictionary([
       (key_subtype, PdfNameObject(annotation_name_for_test("/Text"))),
-      (key_contents, PdfString(@ascii.encode("hello"))),
-      (key_subject, PdfString(@ascii.encode("topic"))),
+      (key_contents, PdfString(b"hello")),
+      (key_subject, PdfString(b"topic")),
       (
         key_rect,
         PdfArray([
@@ -465,7 +461,7 @@ test "PdfDocument annotations_of_page reads popup annotations" {
         ]),
       ),
       (key_colour, PdfArray([PdfInteger(1), PdfInteger(2), PdfInteger(3)])),
-      (key_nm, PdfString(@ascii.encode("n1"))),
+      (key_nm, PdfString(b"n1")),
     ]),
   )
   doc.add_object_given_number(
@@ -492,8 +488,8 @@ test "PdfDocument annotations_of_page reads popup annotations" {
     fail("expected popup annotation")
   }
   @test.assert_eq(parent.subtype, AnnotationText)
-  @test.assert_eq(parent.contents, Some(@ascii.encode("hello")))
-  @test.assert_eq(parent.subject, Some(@ascii.encode("topic")))
+  @test.assert_eq(parent.contents, Some(b"hello"))
+  @test.assert_eq(parent.subject, Some(b"topic"))
   @test.assert_eq(
     parent.rectangle,
     annotation_rect_for_test(10.0, 20.0, 30.0, 40.0),
@@ -506,10 +502,7 @@ test "PdfDocument annotations_of_page reads popup annotations" {
     dash_array: [3, 1],
   })
   @test.assert_eq(parent.colour, Some({ red: 1, green: 2, blue: 3 }))
-  @test.assert_eq(
-    parent.rest,
-    PdfDictionary([(key_nm, PdfString(@ascii.encode("n1")))]),
-  )
+  @test.assert_eq(parent.rest, PdfDictionary([(key_nm, PdfString(b"n1"))]))
   @test.assert_eq(
     annotations[0].rest,
     PdfDictionary([(key_parent, PdfIndirect(10))]),
@@ -528,7 +521,7 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
   let doc = @pdflite.pdf_document_empty()
   let annotation = @annotation.pdf_annotation_make(
     AnnotationLink,
-    contents=Some(@ascii.encode("jump")),
+    contents=Some(b"jump"),
     border=@annotation.pdf_annotation_make_border(
       2.0,
       vertical_radius=1.0,
@@ -537,7 +530,7 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
     ),
     rectangle=annotation_rect_for_test(1.0, 2.0, 3.0, 4.0),
     colour=Some({ red: 9, green: 8, blue: 7 }),
-    subject=Some(@ascii.encode("subject")),
+    subject=Some(b"subject"),
   )
   let page = try! doc.add_annotation(
     @page.pdf_page_blank(@geometry.paper_a4),
@@ -557,7 +550,7 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
       )
       @test.assert_eq(
         object.lookup_immediate(key_contents),
-        Some(PdfString(@ascii.encode("jump"))),
+        Some(PdfString(b"jump")),
       )
       @test.assert_eq(
         object.lookup_immediate(key_rect),
@@ -580,7 +573,7 @@ test "PdfDocument add_annotation writes annotation objects into page rest" {
       )
       @test.assert_eq(
         object.lookup_immediate(key_subject),
-        Some(PdfString(@ascii.encode("subject"))),
+        Some(PdfString(b"subject")),
       )
     }
     _ => fail("expected one direct annotation")
@@ -842,7 +835,7 @@ test "PdfDocument add_annotation prepends to existing annotations and keeps rest
   let doc = @pdflite.pdf_document_empty()
   let annotation = {
     ..@annotation.pdf_annotation_make(AnnotationText),
-    rest: PdfDictionary([(key_nm, PdfString(@ascii.encode("a1")))]),
+    rest: PdfDictionary([(key_nm, PdfString(b"a1"))]),
   }
   let page = try! doc.add_annotation(
     {
@@ -855,10 +848,7 @@ test "PdfDocument add_annotation prepends to existing annotations and keeps rest
     is Some(PdfArray([PdfDictionary(_) as inserted, PdfIndirect(99)])) else {
     fail("expected prepended direct annotation")
   }
-  @test.assert_eq(
-    inserted.lookup_immediate(key_nm),
-    Some(PdfString(@ascii.encode("a1"))),
-  )
+  @test.assert_eq(inserted.lookup_immediate(key_nm), Some(PdfString(b"a1")))
 }
 
 ///|

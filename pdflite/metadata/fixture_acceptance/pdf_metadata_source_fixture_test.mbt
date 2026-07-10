@@ -76,7 +76,7 @@ fn metadata_fixture_push_ascii_for_test(
 fn metadata_fixture_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = metadata_fixture_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -261,8 +261,8 @@ fn metadata_fixture_assert_cpdf_manual_metadata_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  @test.assert_eq(document.language(), Some(@ascii.encode("en-GB")))
-  @test.assert_eq(@pdflite.pdf_language(document), Some(@ascii.encode("en-GB")))
+  @test.assert_eq(document.language(), Some(b"en-GB"))
+  @test.assert_eq(@pdflite.pdf_language(document), Some(b"en-GB"))
   @test.assert_eq(
     document.info_utf8(metadata_fixture_pdf_name_for_test("/Title")),
     "cpdf source & metadata",
@@ -388,8 +388,8 @@ fn metadata_fixture_assert_cpdf_manual_metadata_removed_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  @test.assert_eq(document.language(), Some(@ascii.encode("en-GB")))
-  @test.assert_eq(@pdflite.pdf_language(document), Some(@ascii.encode("en-GB")))
+  @test.assert_eq(document.language(), Some(b"en-GB"))
+  @test.assert_eq(@pdflite.pdf_language(document), Some(b"en-GB"))
   @test.assert_eq(document.metadata(), None)
   @test.assert_eq(@pdflite.pdf_get_metadata(document), None)
   let xmp_json = document.xmp_info_json()
@@ -586,10 +586,7 @@ async test "cpdf source manual fixture mutates metadata" {
         @utf8.encode("MoonBit port"),
       )
       let with_metadata = @pdflite.pdf_create_metadata(document)
-      let with_language = @pdflite.pdf_set_language(
-        with_metadata,
-        @ascii.encode("en-GB"),
-      )
+      let with_language = @pdflite.pdf_set_language(with_metadata, b"en-GB")
       let with_title = @pdflite.pdf_set_pdf_info(
         metadata_fixture_pdf_name_for_test("/Title"),
         PdfString(title),

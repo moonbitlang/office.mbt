@@ -218,7 +218,7 @@ test "PdfDocument combine_pages retargets under and overlay bookmarks" {
   let under = try! under.add_bookmarks([
     {
       level: 0,
-      text: @ascii.encode("under second"),
+      text: b"under second",
       target: DestFit(TargetPageObject(under_refs[1])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -233,7 +233,7 @@ test "PdfDocument combine_pages retargets under and overlay bookmarks" {
   let overlay = try! overlay.add_bookmarks([
     {
       level: 0,
-      text: @ascii.encode("overlay first"),
+      text: b"overlay first",
       target: DestFit(TargetPageObject(overlay_refs[0])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -246,7 +246,7 @@ test "PdfDocument combine_pages retargets under and overlay bookmarks" {
   @test.assert_eq(try! combined.read_bookmarks(preserve_actions=true), [
     {
       level: 0,
-      text: @ascii.encode("under second"),
+      text: b"under second",
       target: DestFit(TargetPageObject(final_refs[1])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -254,7 +254,7 @@ test "PdfDocument combine_pages retargets under and overlay bookmarks" {
     },
     {
       level: 0,
-      text: @ascii.encode("overlay first"),
+      text: b"overlay first",
       target: DestFit(TargetPageObject(final_refs[0])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,

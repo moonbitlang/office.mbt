@@ -78,7 +78,7 @@ test "PdfDocument test_matterhorn_json checks top-level language" {
   )
 
   let empty = ua_matterhorn_document_for_test([], root_extras=[
-    (ua_matterhorn_name_for_test("/Lang"), PdfString(@ascii.encode(""))),
+    (ua_matterhorn_name_for_test("/Lang"), PdfString(b"")),
   ])
   @test.assert_eq(
     try! empty.test_matterhorn_json("11-001"),
@@ -90,7 +90,7 @@ test "PdfDocument test_matterhorn_json checks top-level language" {
   )
 
   let present = ua_matterhorn_document_for_test([], root_extras=[
-    (ua_matterhorn_name_for_test("/Lang"), PdfString(@ascii.encode("en-US"))),
+    (ua_matterhorn_name_for_test("/Lang"), PdfString(b"en-US")),
   ])
   @test.assert_eq(try! present.test_matterhorn_json("11-001"), Json::array([]))
 }

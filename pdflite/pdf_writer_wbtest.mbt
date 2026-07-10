@@ -65,14 +65,11 @@ test "pdf_writer_xref_stream_data_for_numbers emits sparse entries in order" {
 
 ///|
 test "writer parses signed integer fragments for scientific reals" {
-  @test.assert_eq(try! pdf_writer_parse_signed_int(@ascii.encode("+12"), 0), 12)
-  @test.assert_eq(
-    try! pdf_writer_parse_signed_int(@ascii.encode("-12"), 0),
-    -12,
-  )
-  @test.assert_eq(try! pdf_writer_parse_signed_int(@ascii.encode("12"), 0), 12)
+  @test.assert_eq(try! pdf_writer_parse_signed_int(b"+12", 0), 12)
+  @test.assert_eq(try! pdf_writer_parse_signed_int(b"-12", 0), -12)
+  @test.assert_eq(try! pdf_writer_parse_signed_int(b"12", 0), 12)
   let missing : Result[Int, Error] = try
-    pdf_writer_parse_signed_int(@ascii.encode("+"), 0)
+    pdf_writer_parse_signed_int(b"+", 0)
   catch {
     err => Err(err)
   } noraise {
@@ -82,7 +79,7 @@ test "writer parses signed integer fragments for scientific reals" {
     fail("expected @core.PdfError::NumberExpected")
   }
   let malformed : Result[Int, Error] = try
-    pdf_writer_parse_signed_int(@ascii.encode("12a"), 0)
+    pdf_writer_parse_signed_int(b"12a", 0)
   catch {
     err => Err(err)
   } noraise {
@@ -95,102 +92,72 @@ test "writer parses signed integer fragments for scientific reals" {
 
 ///|
 test "writer expands scientific real edge forms" {
-  @test.assert_eq(pdf_writer_exponent_marker(@ascii.encode("1E2")), 1)
+  @test.assert_eq(pdf_writer_exponent_marker(b"1E2"), 1)
 
   let plus_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(plus_output, @ascii.encode("+1.25e2"), 5)
-  @test.assert_eq(Bytes::from_array(plus_output), @ascii.encode("125"))
+  try! pdf_writer_push_scientific_real(plus_output, b"+1.25e2", 5)
+  @test.assert_eq(Bytes::from_array(plus_output), b"125")
 
   let negative_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(
-    negative_output,
-    @ascii.encode("-1.25e2"),
-    5,
-  )
-  @test.assert_eq(Bytes::from_array(negative_output), @ascii.encode("-125"))
+  try! pdf_writer_push_scientific_real(negative_output, b"-1.25e2", 5)
+  @test.assert_eq(Bytes::from_array(negative_output), b"-125")
 
   let padded_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(padded_output, @ascii.encode("1.2e3"), 3)
-  @test.assert_eq(Bytes::from_array(padded_output), @ascii.encode("1200"))
+  try! pdf_writer_push_scientific_real(padded_output, b"1.2e3", 3)
+  @test.assert_eq(Bytes::from_array(padded_output), b"1200")
 
   let middle_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(
-    middle_output,
-    @ascii.encode("1.25e1"),
-    4,
-  )
-  @test.assert_eq(Bytes::from_array(middle_output), @ascii.encode("12.5"))
+  try! pdf_writer_push_scientific_real(middle_output, b"1.25e1", 4)
+  @test.assert_eq(Bytes::from_array(middle_output), b"12.5")
 
   let negative_exponent_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(
-    negative_exponent_output,
-    @ascii.encode("1.25e-3"),
-    4,
-  )
-  @test.assert_eq(
-    Bytes::from_array(negative_exponent_output),
-    @ascii.encode("0.00125"),
-  )
+  try! pdf_writer_push_scientific_real(negative_exponent_output, b"1.25e-3", 4)
+  @test.assert_eq(Bytes::from_array(negative_exponent_output), b"0.00125")
 
   let rounded_exponent_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
-    rounded_exponent_output,
-    @ascii.encode("1.23456789012345e21"),
-    16,
+    rounded_exponent_output, b"1.23456789012345e21", 16,
   )
   @test.assert_eq(
     Bytes::from_array(rounded_exponent_output),
-    @ascii.encode("1234567890120000000000"),
+    b"1234567890120000000000",
   )
 
   let carry_exponent_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
-    carry_exponent_output,
-    @ascii.encode("9.999999999999e21"),
-    14,
+    carry_exponent_output, b"9.999999999999e21", 14,
   )
   @test.assert_eq(
     Bytes::from_array(carry_exponent_output),
-    @ascii.encode("10000000000000000000000"),
+    b"10000000000000000000000",
   )
 
   let rounded_no_carry_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
-    rounded_no_carry_output,
-    @ascii.encode("1.234567890125e21"),
-    14,
+    rounded_no_carry_output, b"1.234567890125e21", 14,
   )
   @test.assert_eq(
     Bytes::from_array(rounded_no_carry_output),
-    @ascii.encode("1234567890130000000000"),
+    b"1234567890130000000000",
   )
 
   let trimmed_fraction_output : Array[Byte] = []
   try! pdf_writer_push_scientific_real(
-    trimmed_fraction_output,
-    @ascii.encode("1.230000000001e-1"),
-    14,
+    trimmed_fraction_output, b"1.230000000001e-1", 14,
   )
-  @test.assert_eq(
-    Bytes::from_array(trimmed_fraction_output),
-    @ascii.encode("0.123"),
-  )
+  @test.assert_eq(Bytes::from_array(trimmed_fraction_output), b"0.123")
 
   let zero_digits_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(
-    zero_digits_output,
-    @ascii.encode("0.000e10"),
-    5,
-  )
-  @test.assert_eq(Bytes::from_array(zero_digits_output), @ascii.encode("0"))
+  try! pdf_writer_push_scientific_real(zero_digits_output, b"0.000e10", 5)
+  @test.assert_eq(Bytes::from_array(zero_digits_output), b"0")
 
   let zero_output : Array[Byte] = []
-  try! pdf_writer_push_scientific_real(zero_output, @ascii.encode(".e1"), 1)
-  @test.assert_eq(Bytes::from_array(zero_output), @ascii.encode("0"))
+  try! pdf_writer_push_scientific_real(zero_output, b".e1", 1)
+  @test.assert_eq(Bytes::from_array(zero_output), b"0")
 
   let malformed_output : Array[Byte] = []
   let malformed : Result[Unit, Error] = try
-    pdf_writer_push_scientific_real(malformed_output, @ascii.encode("1Ae1"), 2)
+    pdf_writer_push_scientific_real(malformed_output, b"1Ae1", 2)
   catch {
     err => Err(err)
   } noraise {
@@ -204,41 +171,30 @@ test "writer expands scientific real edge forms" {
 ///|
 test "writer rounds plain significant real helper edge forms" {
   let plus_output : Array[Byte] = []
-  try! pdf_writer_push_plain_significant_real(
-    plus_output,
-    @ascii.encode("+1.23456789012345"),
-  )
-  @test.assert_eq(
-    Bytes::from_array(plus_output),
-    @ascii.encode("1.23456789012"),
-  )
+  try! pdf_writer_push_plain_significant_real(plus_output, b"+1.23456789012345")
+  @test.assert_eq(Bytes::from_array(plus_output), b"1.23456789012")
 
   let negative_output : Array[Byte] = []
   try! pdf_writer_push_plain_significant_real(
-    negative_output,
-    @ascii.encode("-1.23456789012345"),
+    negative_output, b"-1.23456789012345",
   )
-  @test.assert_eq(
-    Bytes::from_array(negative_output),
-    @ascii.encode("-1.23456789012"),
-  )
+  @test.assert_eq(Bytes::from_array(negative_output), b"-1.23456789012")
 
   let leading_decimal_output : Array[Byte] = []
   try! pdf_writer_push_plain_significant_real(
-    leading_decimal_output,
-    @ascii.encode(".000123456789012345"),
+    leading_decimal_output, b".000123456789012345",
   )
   @test.assert_eq(
     Bytes::from_array(leading_decimal_output),
-    @ascii.encode("0.000123456789012"),
+    b"0.000123456789012",
   )
 
   let zero_output : Array[Byte] = []
-  try! pdf_writer_push_plain_significant_real(zero_output, @ascii.encode("0.0"))
-  @test.assert_eq(Bytes::from_array(zero_output), @ascii.encode("0"))
+  try! pdf_writer_push_plain_significant_real(zero_output, b"0.0")
+  @test.assert_eq(Bytes::from_array(zero_output), b"0")
 
   let double_dot : Result[Unit, Error] = try
-    pdf_writer_push_plain_significant_real([], @ascii.encode("1.2.3"))
+    pdf_writer_push_plain_significant_real([], b"1.2.3")
   catch {
     err => Err(err)
   } noraise {
@@ -249,7 +205,7 @@ test "writer rounds plain significant real helper edge forms" {
   }
 
   let bad_digit : Result[Unit, Error] = try
-    pdf_writer_push_plain_significant_real([], @ascii.encode("1a"))
+    pdf_writer_push_plain_significant_real([], b"1a")
   catch {
     err => Err(err)
   } noraise {
@@ -301,7 +257,7 @@ test "pdf_write_document rejects deferred object states" {
 
 ///|
 test "private writer stream dictionary uses materialized deferred length" {
-  let cursor = @core.byte_cursor_of_bytes(@ascii.encode("abc"))
+  let cursor = @core.byte_cursor_of_bytes(b"abc")
   let stream = @syntax.pdf_stream(
     PdfDictionary([]),
     StreamToGet(@syntax.stream_to_get(cursor, 0, 1)),
@@ -314,8 +270,6 @@ test "private writer stream dictionary uses materialized deferred length" {
       stream_value,
       @syntax.pdf_stream_data_view(stream_value.data).length(),
     ),
-    PdfDictionary([
-      (@core.pdf_name_of_bytes(@ascii.encode("/Length")), PdfInteger(1)),
-    ]),
+    PdfDictionary([(@core.pdf_name_of_bytes(b"/Length"), PdfInteger(1))]),
   )
 }

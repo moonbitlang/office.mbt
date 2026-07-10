@@ -69,7 +69,7 @@ fn toc_fixture_push_ascii_for_test(output : Array[Byte], text : String) -> Unit 
 
 ///|
 fn toc_fixture_corrupt_startxref_pointer_for_test(bytes : Bytes) -> Bytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = toc_fixture_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -190,7 +190,7 @@ fn toc_fixture_assert_cpdf_manual_toc_bookmark_for_test(
   @test.assert_eq(bookmarks.length(), 164)
   @test.assert_eq(
     bookmarks[0].text,
-    @pdflite.pdf_toc_bookmark_text(@ascii.encode("Contents\\nGenerated")),
+    @pdflite.pdf_toc_bookmark_text(b"Contents\\nGenerated"),
   )
   toc_fixture_assert_page_for_test(document, bookmarks[0], 1)
   @test.assert_eq(bookmarks[1].text.length() > 0, true)
@@ -212,7 +212,7 @@ fn toc_fixture_assert_cpdf_manual_toc_elements_for_test(
     original_bookmarks,
   )
   @test.assert_eq(original_bookmarks.length(), 163)
-  let title = @ascii.encode("Contents\\nGenerated")
+  let title = b"Contents\\nGenerated"
   let pack = toc_fixture_fontpack_for_test()
   let toc_bookmarks : ReadOnlyArray[@bookmark.PdfBookmark] = [
     original_bookmarks[0],
@@ -294,9 +294,7 @@ async test "cpdf source manual fixture builds table of contents" {
       toc_fixture_assert_cpdf_manual_toc_elements_for_test(
         toc_fixture_reparse_compressed_for_test(document),
       )
-      let bookmarked = document.toc_add_bookmark(
-        @ascii.encode("Contents\\nGenerated"),
-      )
+      let bookmarked = document.toc_add_bookmark(b"Contents\\nGenerated")
       toc_fixture_assert_cpdf_manual_toc_bookmark_for_test(bookmarked, 19)
       toc_fixture_assert_cpdf_manual_toc_bookmark_for_test(
         toc_fixture_reparse_compressed_for_test(bookmarked),

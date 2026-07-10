@@ -589,7 +589,7 @@ test "cpdfcontent operator state recursively collects Form XObject entries" {
       (base_font_key, PdfNameObject(content_operator_name_for_test("/Courier"))),
     ]),
   )
-  let form_data = @ascii.encode("/FForm 10 Tf (A) Tj")
+  let form_data = b"/FForm 10 Tf (A) Tj"
   let form_xobject = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (subtype_key, PdfNameObject(content_operator_name_for_test("/Form"))),
@@ -1388,7 +1388,7 @@ test "cpdfcontent operator state parses Form XObject ops with merged resources" 
         (content_operator_name_for_test("/CS"), PdfNameObject(color_space_name)),
       ]),
       None,
-      @ascii.encode("A EI B"),
+      b"A EI B",
     ),
     Op_Q,
   ])

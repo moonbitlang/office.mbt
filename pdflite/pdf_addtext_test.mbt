@@ -1579,15 +1579,12 @@ test "PdfDocument addtext_width_of_existing_font_resource measures direct keys" 
     ]),
   }
   let result = try! document.addtext_width_of_existing_font_resource(
-    page,
-    resource_name,
-    12.0,
-    @ascii.encode("ABC"),
+    page, resource_name, 12.0, b"ABC",
   )
   let expected = @pdflite.pdf_addtext_width_of_selected_font(
     try! document.read_font(font_object),
     12.0,
-    @ascii.encode("ABC"),
+    b"ABC",
   )
   @test.assert_eq(result.0, resource_name)
   addtext_assert_close_for_test(result.1, expected)
@@ -1615,11 +1612,7 @@ test "PdfDocument addtext_width_of_existing_font_resource returns fallback resou
     ]),
   }
   let result = try! @pdflite.pdf_addtext_width_of_existing_font_resource(
-    document,
-    page,
-    basefont,
-    10.0,
-    @ascii.encode("A"),
+    document, page, basefont, 10.0, b"A",
   )
   @test.assert_eq(result.0, resource_name)
   @test.assert_eq(result.1 > 0.0, true)

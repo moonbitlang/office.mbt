@@ -18,17 +18,11 @@ test "reconstruction scan recognizes indirect object headers" {
     true,
   )
   @test.assert_eq(
-    @reader.pdf_reader_reconstruction_indirect_header_at(
-      @ascii.encode("1 0 object"),
-      0,
-    ),
+    @reader.pdf_reader_reconstruction_indirect_header_at(b"1 0 object", 0),
     false,
   )
   @test.assert_eq(
-    @reader.pdf_reader_reconstruction_indirect_header_at(
-      @ascii.encode("1 0 obj/Name"),
-      0,
-    ),
+    @reader.pdf_reader_reconstruction_indirect_header_at(b"1 0 obj/Name", 0),
     true,
   )
 }
@@ -53,7 +47,7 @@ test "reconstruction scan skips malformed object candidates" {
     None,
   )
 
-  let line_ending_endobj = @ascii.encode("1 0 obj\n]\nabcendobj\r\n4 0 obj\n")
+  let line_ending_endobj = b"1 0 obj\n]\nabcendobj\r\n4 0 obj\n"
   let trailing_endobj = @core.pdf_find_ascii_from(line_ending_endobj, 0, endobj)
   @test.assert_eq(
     @reader.pdf_reader_reconstruction_skip_malformed_object(
@@ -62,7 +56,7 @@ test "reconstruction scan skips malformed object candidates" {
     Some(trailing_endobj + 8),
   )
 
-  let leading_trim_endobj = @ascii.encode("1 0 obj\n]\n  endobj\n")
+  let leading_trim_endobj = b"1 0 obj\n]\n  endobj\n"
   @test.assert_eq(
     @reader.pdf_reader_reconstruction_skip_malformed_object(
       leading_trim_endobj, 0,
@@ -70,7 +64,7 @@ test "reconstruction scan skips malformed object candidates" {
     Some(leading_trim_endobj.length()),
   )
 
-  let no_endobj = @ascii.encode("1 0 obj\n]")
+  let no_endobj = b"1 0 obj\n]"
   @test.assert_eq(
     @reader.pdf_reader_reconstruction_skip_malformed_object(no_endobj, 0),
     Some(no_endobj.length()),

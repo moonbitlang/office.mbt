@@ -270,12 +270,9 @@ test "private xref stream helpers cover malformed and deferred entries" {
     fail("expected @core.PdfError::XRefEntryExpected")
   }
 
-  @test.assert_eq(
-    try! @reader.pdf_xref_stream_read_field(@ascii.encode("ab"), 0, 0),
-    (0, 0),
-  )
+  @test.assert_eq(try! @reader.pdf_xref_stream_read_field(b"ab", 0, 0), (0, 0))
   let short_field : Result[(Int, Int), Error] = try
-    @reader.pdf_xref_stream_read_field(@ascii.encode("a"), 0, 2)
+    @reader.pdf_xref_stream_read_field(b"a", 0, 2)
   catch {
     err => Err(err)
   } noraise {
@@ -339,7 +336,7 @@ test "private object stream helpers cover malformed object streams" {
   }
 
   let bad_first : Result[Array[(Int, Int)], Error] = try
-    @reader.pdf_object_stream_number_offsets(@ascii.encode("1 0"), 4, 1)
+    @reader.pdf_object_stream_number_offsets(b"1 0", 4, 1)
   catch {
     err => Err(err)
   } noraise {
@@ -350,7 +347,7 @@ test "private object stream helpers cover malformed object streams" {
   }
 
   let short_header : Result[Array[(Int, Int)], Error] = try
-    @reader.pdf_object_stream_number_offsets(@ascii.encode("2 "), 2, 1)
+    @reader.pdf_object_stream_number_offsets(b"2 ", 2, 1)
   catch {
     err => Err(err)
   } noraise {
@@ -361,7 +358,7 @@ test "private object stream helpers cover malformed object streams" {
   }
 
   let malformed_pair : Result[Array[(Int, Int)], Error] = try
-    @reader.pdf_object_stream_number_offsets(@ascii.encode("/Name 0 "), 8, 1)
+    @reader.pdf_object_stream_number_offsets(b"/Name 0 ", 8, 1)
   catch {
     err => Err(err)
   } noraise {
@@ -392,7 +389,7 @@ test "private object stream helpers cover malformed object streams" {
       (key_first, PdfInteger(8)),
       (key_length, PdfInteger(17)),
     ]),
-    StreamGot(@ascii.encode("2 0 3 4 truefalse")),
+    StreamGot(b"2 0 3 4 truefalse"),
   )
   doc.add_object_given_number(7, valid_stream)
   let context = try! doc.read_object_stream_context(7)
@@ -520,7 +517,7 @@ test "private object stream helpers cover malformed object streams" {
         (key_first, PdfInteger(4)),
         (key_length, PdfInteger(8)),
       ]),
-      StreamGot(@ascii.encode("2 0 true")),
+      StreamGot(b"2 0 true"),
     ),
   )
   let no_type_context = try! no_type_doc.read_object_stream_context(10)
@@ -539,7 +536,7 @@ test "private object stream helpers cover malformed object streams" {
         (key_first, PdfInteger(4)),
         (key_length, PdfInteger(8)),
       ]),
-      StreamGot(@ascii.encode("2 0 true")),
+      StreamGot(b"2 0 true"),
     ),
   )
   let wrong_type : Result[PdfObjectStreamContext, Error] = try
@@ -565,11 +562,7 @@ test "private object stream helpers cover malformed object streams" {
   }
 
   let missing_encrypted_stream : Result[(PdfObjectStreamContext, Bool), Error] = try
-    doc.read_object_stream_context_with_passwords(
-      99,
-      Some(@ascii.encode("user")),
-      None,
-    )
+    doc.read_object_stream_context_with_passwords(99, Some(b"user"), None)
   catch {
     err => Err(err)
   } noraise {
@@ -589,7 +582,7 @@ test "private object stream helpers cover malformed object streams" {
         (key_first, PdfInteger(5)),
         (key_length, PdfInteger(9)),
       ]),
-      StreamGot(@ascii.encode("2 99 true")),
+      StreamGot(b"2 99 true"),
     ),
   )
   let bad_offset_context = try! bad_offset_doc.read_object_stream_context(9)
@@ -618,7 +611,7 @@ test "private reader xref helpers report malformed inputs" {
     fail("expected @core.PdfError::XRefEntryExpected")
   }
   let bad_token : Result[Bool, Error] = try
-    @reader.pdf_xref_token_in_use(@ascii.encode("q"))
+    @reader.pdf_xref_token_in_use(b"q")
   catch {
     err => Err(err)
   } noraise {
@@ -668,7 +661,7 @@ test "private reader xref helpers report malformed inputs" {
   @test.assert_eq(xref_stream_ref_set.contains(7, 100), true)
   @test.assert_eq(xref_stream_ref_set.contains(8, 100), false)
 
-  let no_object = @core.byte_cursor_of_bytes(@ascii.encode("notobject"))
+  let no_object = @core.byte_cursor_of_bytes(b"notobject")
   let no_object_result : Result[@syntax.PdfParsedIndirectObject, Error] = try
     pdf_cursor_read_first_indirect_object_at_current(no_object, empty_xrefs)
   catch {
@@ -680,7 +673,7 @@ test "private reader xref helpers report malformed inputs" {
     fail("expected @core.PdfError::ParseIndirectObjectExpected")
   }
 
-  let no_plain_object = @core.byte_cursor_of_bytes(@ascii.encode("notobject"))
+  let no_plain_object = @core.byte_cursor_of_bytes(b"notobject")
   let no_plain_object_result : Result[@syntax.PdfParsedIndirectObject, Error] = try
     pdf_cursor_read_plain_indirect_object_at_current(no_plain_object)
   catch {
@@ -694,7 +687,7 @@ test "private reader xref helpers report malformed inputs" {
   }
   @test.assert_eq(
     try! pdf_cursor_read_plain_indirect_object_at_current(
-      @core.byte_cursor_of_bytes(@ascii.encode("2 0 obj\n42\n")),
+      @core.byte_cursor_of_bytes(b"2 0 obj\n42\n"),
     ),
     { number: 2, generation: 0, object: PdfInteger(42) },
   )
@@ -706,10 +699,7 @@ test "private reader xref helpers report malformed inputs" {
     try! pdf_cursor_read_first_indirect_object_at_current(adjacent, empty_xrefs),
     { number: 2, generation: 0, object: PdfInteger(42) },
   )
-  @test.assert_eq(
-    adjacent.absolute_position(),
-    @ascii.encode("2 0 obj\n42\nendobj").length(),
-  )
+  @test.assert_eq(adjacent.absolute_position(), b"2 0 obj\n42\nendobj".length())
 
   let empty_prefix = @core.byte_cursor_of_bytes(Bytes::new(0))
   let empty_prefix_result : Result[@syntax.PdfParsedIndirectObject, Error] = try
@@ -722,9 +712,7 @@ test "private reader xref helpers report malformed inputs" {
   guard empty_prefix_result is Err(@core.PdfError::ParseIndirectObjectExpected) else {
     fail("expected @core.PdfError::ParseIndirectObjectExpected")
   }
-  let incomplete_scan = @core.byte_cursor_of_bytes(
-    @ascii.encode("3 0 obj\n42\n"),
-  )
+  let incomplete_scan = @core.byte_cursor_of_bytes(b"3 0 obj\n42\n")
   let (incomplete_candidate, incomplete_next) = try! pdf_cursor_read_reconstructed_indirect_scan_candidate_at_current(
     incomplete_scan, empty_xrefs,
   )
@@ -735,8 +723,7 @@ test "private reader xref helpers report malformed inputs" {
   })
   @test.assert_eq(incomplete_next, None)
   let incomplete_xrefs = try! @reader.pdf_reader_reconstruction_object_xrefs(
-    @ascii.encode("3 0 obj\n42\n"),
-    pdf_cursor_read_reconstructed_xref_at_current,
+    b"3 0 obj\n42\n", pdf_cursor_read_reconstructed_xref_at_current,
   )
   @test.assert_eq(incomplete_xrefs.length(), 1)
   @test.assert_eq(incomplete_xrefs[0].object_number, 3)
@@ -772,10 +759,7 @@ test "private reader xref helpers report malformed inputs" {
     true,
   )
   @test.assert_eq(
-    @reader.pdf_reader_reconstruction_indirect_header_at(
-      @ascii.encode("1 0 object"),
-      0,
-    ),
+    @reader.pdf_reader_reconstruction_indirect_header_at(b"1 0 object", 0),
     false,
   )
   @test.assert_eq(
@@ -790,7 +774,7 @@ test "private reader xref helpers report malformed inputs" {
     ),
     None,
   )
-  let line_ending_endobj = @ascii.encode("1 0 obj\n]\nabcendobj\r\n4 0 obj\n")
+  let line_ending_endobj = b"1 0 obj\n]\nabcendobj\r\n4 0 obj\n"
   let trailing_endobj = @core.pdf_find_ascii_from(line_ending_endobj, 0, endobj)
   @test.assert_eq(
     @reader.pdf_reader_reconstruction_skip_malformed_object(
@@ -798,14 +782,14 @@ test "private reader xref helpers report malformed inputs" {
     ),
     Some(trailing_endobj + 8),
   )
-  let leading_trim_endobj = @ascii.encode("1 0 obj\n]\n  endobj\n")
+  let leading_trim_endobj = b"1 0 obj\n]\n  endobj\n"
   @test.assert_eq(
     @reader.pdf_reader_reconstruction_skip_malformed_object(
       leading_trim_endobj, 0,
     ),
     Some(leading_trim_endobj.length()),
   )
-  let no_endobj = @ascii.encode("1 0 obj\n]")
+  let no_endobj = b"1 0 obj\n]"
   @test.assert_eq(
     @reader.pdf_reader_reconstruction_skip_malformed_object(no_endobj, 0),
     Some(no_endobj.length()),
@@ -845,20 +829,15 @@ test "private reader xref helpers report malformed inputs" {
   @test.assert_eq(objects_with_bad_resolved_length[0].number, 2)
 
   @test.assert_eq(
-    pdf_reader_stream_data_end_before_marker(@ascii.encode("A\r\nendstream"), 3),
+    pdf_reader_stream_data_end_before_marker(b"A\r\nendstream", 3),
     1,
   )
   @test.assert_eq(
-    pdf_reader_stream_data_end_before_marker(@ascii.encode("A\rendstream"), 2),
+    pdf_reader_stream_data_end_before_marker(b"A\rendstream", 2),
     1,
   )
-  @test.assert_eq(
-    pdf_reader_stream_data_end_before_marker(@ascii.encode("Aendstream"), 1),
-    1,
-  )
-  let malformed_stream = @core.byte_cursor_of_bytes(
-    @ascii.encode("stream\nabc"),
-  )
+  @test.assert_eq(pdf_reader_stream_data_end_before_marker(b"Aendstream", 1), 1)
+  let malformed_stream = @core.byte_cursor_of_bytes(b"stream\nabc")
   let malformed_stream_result : Result[@syntax.PdfParsedIndirectObject, Error] = try
     pdf_cursor_finish_malformed_stream_object(malformed_stream, {
       number: 1,
@@ -874,7 +853,7 @@ test "private reader xref helpers report malformed inputs" {
     fail("expected @core.PdfError::ParseEndStreamExpected")
   }
 
-  let mismatch = @core.byte_cursor_of_bytes(@ascii.encode("abc"))
+  let mismatch = @core.byte_cursor_of_bytes(b"abc")
   let mismatch_result : Result[Unit, Error] = try
     @reader.pdf_cursor_consume_ascii(mismatch, [120], XRefExpected)
   catch {

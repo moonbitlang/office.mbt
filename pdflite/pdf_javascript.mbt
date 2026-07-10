@@ -56,7 +56,7 @@ fn pdf_javascript_javascript_key() -> @core.PdfName {
 }
 
 ///|
-let pdf_javascript_empty_bytes : @core.PdfBytes = @ascii.encode("")
+let pdf_javascript_empty_bytes : @core.PdfBytes = b""
 
 ///|
 fn pdf_javascript_empty_string() -> @syntax.PdfObject {
@@ -64,7 +64,7 @@ fn pdf_javascript_empty_string() -> @syntax.PdfObject {
 }
 
 ///|
-let pdf_javascript_action_bytes : @core.PdfBytes = @ascii.encode("/JavaScript")
+let pdf_javascript_action_bytes : @core.PdfBytes = b"/JavaScript"
 
 ///|
 let pdf_javascript_uri_prefix_bytes : @core.PdfBytes = @ascii.encode(

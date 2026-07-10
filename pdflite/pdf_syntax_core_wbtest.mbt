@@ -4,7 +4,7 @@
 
 ///|
 test "private stream data materialization reports invalid deferred slices" {
-  let cursor = @core.byte_cursor_of_bytes(@ascii.encode("abc"))
+  let cursor = @core.byte_cursor_of_bytes(b"abc")
   let bad_position : Result[BytesView, Error] = try
     @syntax.pdf_stream_data_view(
       StreamToGet(@syntax.stream_to_get(cursor, -1, 1)),
@@ -47,7 +47,7 @@ test "private stream data materialization reports invalid deferred slices" {
 
 ///|
 test "private stream data no-crypt decrypt returns bytes" {
-  let source = @ascii.encode("abc")
+  let source = b"abc"
   let copied = @syntax.PdfStreamDataNoCrypt.decrypt(source)
   @test.assert_eq(copied, source)
 }
@@ -105,7 +105,7 @@ test "parser prefix helper reports malformed indirect prefixes" {
 
 ///|
 test "core byte-view helpers cover boundary cases through root facade" {
-  let cursor = @core.byte_cursor_of_bytes(@ascii.encode("abc"))
+  let cursor = @core.byte_cursor_of_bytes(b"abc")
   let bad_seek : Result[Unit, Error] = try cursor.seek_absolute(-1) catch {
     err => Err(err)
   } noraise {
@@ -115,7 +115,7 @@ test "core byte-view helpers cover boundary cases through root facade" {
     fail("expected @core.PdfError::InvalidCursorPosition")
   }
 
-  let view = @ascii.encode("abc")[:]
+  let view = b"abc"[:]
   @test.assert_eq(@core.pdf_view_matches_ascii_at(view, -1, [97]), false)
   @test.assert_eq(@core.pdf_view_matches_ascii_at(view, 2, [98, 99]), false)
   @test.assert_eq(@core.pdf_find_last_ascii(view, []), 3)
@@ -133,7 +133,7 @@ test "core byte-view helpers cover boundary cases through root facade" {
     fail("expected @core.PdfError::NumberExpected")
   }
   let bad_number : Result[Int, Error] = try
-    @core.pdf_parse_ascii_int_view(@ascii.encode("12a"))
+    @core.pdf_parse_ascii_int_view(b"12a")
   catch {
     err => Err(err)
   } noraise {
@@ -143,7 +143,7 @@ test "core byte-view helpers cover boundary cases through root facade" {
     fail("expected @core.PdfError::NumberExpected")
   }
   let overflow_number : Result[Int, Error] = try
-    @core.pdf_parse_ascii_int_view(@ascii.encode("2147483648"))
+    @core.pdf_parse_ascii_int_view(b"2147483648")
   catch {
     err => Err(err)
   } noraise {
@@ -153,10 +153,10 @@ test "core byte-view helpers cover boundary cases through root facade" {
     fail("expected @core.PdfError::NumberExpected")
   }
   @test.assert_eq(
-    try! @core.pdf_parse_ascii_int_view(@ascii.encode("2147483647")),
+    try! @core.pdf_parse_ascii_int_view(b"2147483647"),
     2147483647,
   )
   @test.assert_eq(@syntax.pdf_number_view_int(Bytes::new(0)), None)
-  @test.assert_eq(@syntax.pdf_number_view_int(@ascii.encode("+")), None)
-  @test.assert_eq(@syntax.pdf_number_view_int(@ascii.encode("-")), None)
+  @test.assert_eq(@syntax.pdf_number_view_int(b"+"), None)
+  @test.assert_eq(@syntax.pdf_number_view_int(b"-"), None)
 }

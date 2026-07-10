@@ -93,11 +93,7 @@ test "private positioned text array treats large integer adjustment as space" {
     @geometry.transform_translate(10.0, 100.0),
     12.0,
     Some(extractor),
-    [
-      PdfString(@ascii.encode("A")),
-      PdfInteger(-300),
-      PdfString(@ascii.encode("B")),
-    ],
+    [PdfString(b"A"), PdfInteger(-300), PdfString(b"B")],
   )
   @test.assert_eq(chunks.length(), 1)
   @test.assert_eq(chunks[0].codepoints, [0x41, 0x20, 0x42])

@@ -105,7 +105,7 @@ fn fixture_acceptance_push_ascii_for_test(
 fn fixture_acceptance_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = fixture_acceptance_find_last_bytes_for_test(
     bytes, marker,
   )
@@ -144,7 +144,7 @@ fn fixture_acceptance_corrupt_startxref_pointer_for_test(
 
 ///|
 fn fixture_acceptance_startxref_offset_for_test(bytes : Bytes) -> Int raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = fixture_acceptance_find_last_bytes_for_test(
     bytes, marker,
   )
@@ -181,9 +181,7 @@ fn fixture_acceptance_corrupt_startxref_xref_header_for_test(
 ) -> Bytes raise {
   let xref_offset = fixture_acceptance_startxref_offset_for_test(bytes)
   guard fixture_acceptance_bytes_start_with_at_for_test(
-    bytes,
-    @ascii.encode("xref"),
-    xref_offset,
+    bytes, b"xref", xref_offset,
   ) else {
     fail("expected startxref to point at a classic xref table")
   }
@@ -201,9 +199,7 @@ fn fixture_acceptance_corrupt_startxref_trailer_keyword_for_test(
 ) -> Bytes raise {
   let xref_offset = fixture_acceptance_startxref_offset_for_test(bytes)
   let trailer_position = fixture_acceptance_find_bytes_after_for_test(
-    bytes,
-    @ascii.encode("trailer"),
-    xref_offset,
+    bytes, b"trailer", xref_offset,
   )
   if trailer_position < 0 {
     fail("expected classic xref trailer keyword after startxref target")
@@ -220,7 +216,7 @@ fn fixture_acceptance_corrupt_startxref_trailer_keyword_for_test(
 fn fixture_acceptance_corrupt_first_in_use_xref_marker_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let free_row = @ascii.encode("0000000000 65535 f")
+  let free_row = b"0000000000 65535 f"
   let free_row_position = fixture_acceptance_find_bytes_for_test(
     bytes, free_row,
   )
@@ -253,7 +249,7 @@ fn fixture_acceptance_corrupt_first_in_use_xref_marker_for_test(
 fn fixture_acceptance_first_in_use_xref_row_start_for_test(
   bytes : Bytes,
 ) -> Int raise {
-  let free_row = @ascii.encode("0000000000 65535 f")
+  let free_row = b"0000000000 65535 f"
   let free_row_position = fixture_acceptance_find_bytes_for_test(
     bytes, free_row,
   )
@@ -313,7 +309,7 @@ fn fixture_acceptance_corrupt_first_in_use_xref_generation_for_test(
 fn fixture_acceptance_first_xref_subsection_spans_for_test(
   bytes : Bytes,
 ) -> (Int, Int, Int, Int) raise {
-  let header = @ascii.encode("xref")
+  let header = b"xref"
   let header_position = fixture_acceptance_find_bytes_for_test(bytes, header)
   if header_position < 0 {
     fail("expected first classic xref header")
@@ -541,9 +537,7 @@ fn fixture_acceptance_corrupt_xref_stream_widths_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   fixture_acceptance_replace_first_bytes_for_test(
-    bytes,
-    @ascii.encode("/W [1 3 1]"),
-    @ascii.encode("/W /Bad   "),
+    bytes, b"/W [1 3 1]", b"/W /Bad   ",
   )
 }
 
@@ -552,9 +546,7 @@ fn fixture_acceptance_corrupt_bare_xref_stream_widths_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   fixture_acceptance_replace_first_bytes_for_test(
-    bytes,
-    @ascii.encode("/W[1 2 2]"),
-    @ascii.encode("/W/Bad123"),
+    bytes, b"/W[1 2 2]", b"/W/Bad123",
   )
 }
 
@@ -564,10 +556,7 @@ fn fixture_acceptance_corrupt_xref_stream_index_entry_for_test(
   index_entry : BytesView,
 ) -> Bytes raise {
   fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /XRef"),
-    index_entry,
-    "/Index /Bad",
+    bytes, b"/Type /XRef", index_entry, "/Index /Bad",
   )
 }
 
@@ -577,10 +566,7 @@ fn fixture_acceptance_corrupt_xref_stream_size_entry_for_test(
   size_entry : BytesView,
 ) -> Bytes raise {
   fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /XRef"),
-    size_entry,
-    "/Size /Bad",
+    bytes, b"/Type /XRef", size_entry, "/Size /Bad",
   )
 }
 
@@ -603,8 +589,8 @@ fn fixture_acceptance_corrupt_startxref_xref_stream_type_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   let xref_offset = fixture_acceptance_startxref_offset_for_test(bytes)
-  let target = @ascii.encode("/Type /XRef")
-  let replacement = @ascii.encode("/Type /Bad")
+  let target = b"/Type /XRef"
+  let replacement = b"/Type /Bad"
   let position = fixture_acceptance_find_bytes_after_for_test(
     bytes, target, xref_offset,
   )
@@ -650,10 +636,7 @@ fn fixture_acceptance_corrupt_startxref_xref_stream_marker_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   fixture_acceptance_corrupt_startxref_xref_stream_token_for_test(
-    bytes,
-    @ascii.encode("stream"),
-    @ascii.encode("stramx"),
-    "stream marker",
+    bytes, b"stream", b"stramx", "stream marker",
   )
 }
 
@@ -662,10 +645,7 @@ fn fixture_acceptance_corrupt_startxref_xref_stream_endstream_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   fixture_acceptance_corrupt_startxref_xref_stream_token_for_test(
-    bytes,
-    @ascii.encode("endstream"),
-    @ascii.encode("endstreax"),
-    "endstream marker",
+    bytes, b"endstream", b"endstreax", "endstream marker",
   )
 }
 
@@ -674,10 +654,7 @@ fn fixture_acceptance_corrupt_startxref_xref_stream_endobj_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   fixture_acceptance_corrupt_startxref_xref_stream_token_for_test(
-    bytes,
-    @ascii.encode("endobj"),
-    @ascii.encode("endobx"),
-    "endobj marker",
+    bytes, b"endobj", b"endobx", "endobj marker",
   )
 }
 
@@ -687,10 +664,7 @@ fn fixture_acceptance_corrupt_xref_stream_root_entry_for_test(
   root_entry : BytesView,
 ) -> Bytes raise {
   fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /XRef"),
-    root_entry,
-    "/Root /Bad",
+    bytes, b"/Type /XRef", root_entry, "/Root /Bad",
   )
 }
 
@@ -700,10 +674,7 @@ fn fixture_acceptance_corrupt_xref_stream_length_entry_for_test(
   length_entry : BytesView,
 ) -> Bytes raise {
   fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /XRef"),
-    length_entry,
-    "/Length /Bad",
+    bytes, b"/Type /XRef", length_entry, "/Length /Bad",
   )
 }
 
@@ -714,10 +685,7 @@ fn fixture_acceptance_corrupt_xref_stream_decodeparms_entry_for_test(
   replacement_text : String,
 ) -> Bytes raise {
   fixture_acceptance_replace_bytes_after_with_padded_ascii_for_test(
-    bytes,
-    @ascii.encode("/Type /XRef"),
-    metadata_entry,
-    replacement_text,
+    bytes, b"/Type /XRef", metadata_entry, replacement_text,
   )
 }
 
@@ -748,7 +716,7 @@ fn fixture_acceptance_stream_data_start_for_test(
   bytes : BytesView,
   stream_position : Int,
 ) -> Int {
-  let mut current = stream_position + @ascii.encode("stream").length()
+  let mut current = stream_position + b"stream".length()
   while current < bytes.length() {
     let value = bytes[current].to_int()
     if value == 0 || value == 9 || value == 12 || value == 32 {
@@ -775,7 +743,7 @@ fn fixture_acceptance_direct_length_before_for_test(
   limit : Int,
   description : String,
 ) -> Int raise {
-  let length_key = @ascii.encode("/Length")
+  let length_key = b"/Length"
   let length_position = fixture_acceptance_find_bytes_after_for_test(
     bytes, length_key, anchor_position,
   )
@@ -802,12 +770,12 @@ fn fixture_acceptance_direct_length_before_for_test(
 fn fixture_acceptance_first_object_stream_stream_position_for_test(
   bytes : BytesView,
 ) -> Int raise {
-  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor = b"/Type /ObjStm"
   let anchor_position = fixture_acceptance_find_bytes_for_test(bytes, anchor)
   if anchor_position < 0 {
     fail("expected first object stream")
   }
-  let stream_marker = @ascii.encode("stream")
+  let stream_marker = b"stream"
   let stream_position = fixture_acceptance_find_bytes_after_for_test(
     bytes,
     stream_marker,
@@ -823,7 +791,7 @@ fn fixture_acceptance_first_object_stream_stream_position_for_test(
 fn fixture_acceptance_first_object_stream_endstream_position_for_test(
   bytes : BytesView,
 ) -> Int raise {
-  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor = b"/Type /ObjStm"
   let anchor_position = fixture_acceptance_find_bytes_for_test(bytes, anchor)
   if anchor_position < 0 {
     fail("expected first object stream")
@@ -840,9 +808,7 @@ fn fixture_acceptance_first_object_stream_endstream_position_for_test(
     length,
   )
   if !fixture_acceptance_bytes_start_with_at_for_test(
-      bytes,
-      @ascii.encode("endstream"),
-      marker_position,
+      bytes, b"endstream", marker_position,
     ) {
     fail("expected first object stream endstream marker")
   }
@@ -858,12 +824,10 @@ fn fixture_acceptance_first_object_stream_endobj_position_for_test(
   )
   let endobj_position = fixture_acceptance_skip_pdf_whitespace_for_test(
     bytes,
-    endstream_position + @ascii.encode("endstream").length(),
+    endstream_position + b"endstream".length(),
   )
   if !fixture_acceptance_bytes_start_with_at_for_test(
-      bytes,
-      @ascii.encode("endobj"),
-      endobj_position,
+      bytes, b"endobj", endobj_position,
     ) {
     fail("expected first object stream endobj marker")
   }
@@ -903,7 +867,7 @@ fn fixture_acceptance_corrupt_first_object_stream_numeric_entry_for_test(
   key_text : String,
   replacement_text : String,
 ) -> Bytes raise {
-  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor = b"/Type /ObjStm"
   let anchor_position = fixture_acceptance_find_bytes_for_test(bytes, anchor)
   if anchor_position < 0 {
     fail("expected first object stream")
@@ -957,10 +921,7 @@ fn fixture_acceptance_corrupt_first_object_stream_filter_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   fixture_acceptance_replace_bytes_after_for_test(
-    bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/Filter /FlateDecode"),
-    @ascii.encode("/Filter /NoSuchThing"),
+    bytes, b"/Type /ObjStm", b"/Filter /FlateDecode", b"/Filter /NoSuchThing",
   )
 }
 
@@ -969,10 +930,7 @@ fn fixture_acceptance_corrupt_first_object_stream_decodeparms_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   fixture_acceptance_replace_bytes_after_for_test(
-    bytes,
-    @ascii.encode("/Type /ObjStm"),
-    @ascii.encode("/Length 1526      "),
-    @ascii.encode("/Length 1526/DP 0 "),
+    bytes, b"/Type /ObjStm", b"/Length 1526      ", b"/Length 1526/DP 0 ",
   )
 }
 
@@ -980,7 +938,7 @@ fn fixture_acceptance_corrupt_first_object_stream_decodeparms_for_test(
 fn fixture_acceptance_corrupt_first_object_stream_decodeparms_predictor_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let anchor = @ascii.encode("/Type /ObjStm")
+  let anchor = b"/Type /ObjStm"
   let anchor_position = fixture_acceptance_find_bytes_for_test(bytes, anchor)
   if anchor_position < 0 {
     fail("expected first object stream")
@@ -988,7 +946,7 @@ fn fixture_acceptance_corrupt_first_object_stream_decodeparms_predictor_for_test
   let stream_position = fixture_acceptance_first_object_stream_stream_position_for_test(
     bytes,
   )
-  let length_key = @ascii.encode("/Length")
+  let length_key = b"/Length"
   let length_position = fixture_acceptance_find_bytes_after_for_test(
     bytes,
     length_key,
@@ -997,7 +955,7 @@ fn fixture_acceptance_corrupt_first_object_stream_decodeparms_predictor_for_test
   if length_position < 0 || length_position >= stream_position {
     fail("expected first object stream length")
   }
-  let filter = @ascii.encode("/Filter /FlateDecode")
+  let filter = b"/Filter /FlateDecode"
   let filter_position = fixture_acceptance_find_bytes_after_for_test(
     bytes,
     filter,
@@ -1038,8 +996,8 @@ fn fixture_acceptance_corrupt_first_object_stream_marker_for_test(
   fixture_acceptance_replace_bytes_at_for_test(
     bytes,
     fixture_acceptance_first_object_stream_stream_position_for_test(bytes),
-    @ascii.encode("stream"),
-    @ascii.encode("stramx"),
+    b"stream",
+    b"stramx",
     "first object stream marker",
   )
 }
@@ -1051,8 +1009,8 @@ fn fixture_acceptance_corrupt_first_object_stream_endstream_for_test(
   fixture_acceptance_replace_bytes_at_for_test(
     bytes,
     fixture_acceptance_first_object_stream_endstream_position_for_test(bytes),
-    @ascii.encode("endstream"),
-    @ascii.encode("endstreax"),
+    b"endstream",
+    b"endstreax",
     "first object stream endstream marker",
   )
 }
@@ -1064,8 +1022,8 @@ fn fixture_acceptance_corrupt_first_object_stream_endobj_for_test(
   fixture_acceptance_replace_bytes_at_for_test(
     bytes,
     fixture_acceptance_first_object_stream_endobj_position_for_test(bytes),
-    @ascii.encode("endobj"),
-    @ascii.encode("endobx"),
+    b"endobj",
+    b"endobx",
     "first object stream endobj marker",
   )
 }
@@ -1075,10 +1033,7 @@ fn fixture_acceptance_corrupt_xref_stream_filter_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   fixture_acceptance_replace_bytes_after_for_test(
-    bytes,
-    @ascii.encode("/Type /XRef"),
-    @ascii.encode("/Filter /FlateDecode"),
-    @ascii.encode("/Filter /NoSuchThing"),
+    bytes, b"/Type /XRef", b"/Filter /FlateDecode", b"/Filter /NoSuchThing",
   )
 }
 
@@ -1419,9 +1374,7 @@ fn fixture_acceptance_assert_xref_stream_index_reconstructs_for_test(
   expected_pages : Int,
 ) -> Unit raise {
   fixture_acceptance_assert_xref_stream_index_entry_reconstructs_for_test(
-    bytes,
-    expected_pages,
-    @ascii.encode("/Index [0 104]"),
+    bytes, expected_pages, b"/Index [0 104]",
   )
 }
 
@@ -2628,10 +2581,7 @@ fn fixture_acceptance_assert_cpdf_source_stamp_for_test(
   let text = @utf8.decode_lossy(stamped.test_extract_text([1]))
   fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
   let ops = fixture_acceptance_page_content_ops_for_test(stamped)
-  fixture_acceptance_assert_content_op_for_test(
-    ops,
-    Op_Tj(@ascii.encode("Hello, World!")),
-  )
+  fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"Hello, World!"))
   @test.assert_eq(
     fixture_acceptance_content_ops_contain_translation_cm_for_test(
       ops, 10.0, 20.0,
@@ -2673,10 +2623,7 @@ fn fixture_acceptance_assert_cpdf_source_combine_for_test(
   let text = @utf8.decode_lossy(combined.test_extract_text([1]))
   fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
   let ops = fixture_acceptance_page_content_ops_for_test(combined)
-  fixture_acceptance_assert_content_op_for_test(
-    ops,
-    Op_Tj(@ascii.encode("Hello, World!")),
-  )
+  fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"Hello, World!"))
   @test.assert_eq(
     fixture_acceptance_content_ops_contain_scaled_cm_for_test(ops),
     true,
@@ -3004,18 +2951,9 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
         Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 100.0, f: 200.0 }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_TL(55.0))
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("This is")),
-      )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("on multiple")),
-      )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("lines")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"This is"))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"on multiple"))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"lines"))
       fixture_acceptance_assert_content_op_for_test(ops, Op_f)
     }
     "fixtures/cpdf-source/manualimages/matrix.pdf" => {
@@ -3076,26 +3014,17 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
         ops,
         Op_Tf(fixture_acceptance_pdf_name_for_test("/F1"), 72.0),
       )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("Different ")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"Different "))
       fixture_acceptance_assert_content_op_for_test(
         ops,
         Op_Tf(fixture_acceptance_pdf_name_for_test("/F2"), 72.0),
       )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("fonts")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"fonts"))
       fixture_acceptance_assert_content_op_for_test(
         ops,
         Op_Tf(fixture_acceptance_pdf_name_for_test("/F2"), 36.0),
       )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode(" and sizes")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b" and sizes"))
       fixture_acceptance_assert_content_op_for_test(ops, Op_ET)
     }
     "fixtures/cpdf-source/manualimages/h1.pdf" => {
@@ -3114,16 +3043,10 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
       )
       fixture_acceptance_assert_content_op_for_test(
         ops,
-        Op_Tj(@ascii.encode("This is the heading")),
+        Op_Tj(b"This is the heading"),
       )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("paragraph,")),
-      )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("lines...")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"paragraph,"))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"lines..."))
       @test.assert_eq(
         fixture_acceptance_content_op_count_for_test(ops, Op_EMC),
         5,
@@ -3139,18 +3062,9 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
         ops,
         Op_Tf(fixture_acceptance_pdf_name_for_test("/F1"), 50.0),
       )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("This is")),
-      )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("on multiple")),
-      )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("lines")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"This is"))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"on multiple"))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"lines"))
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tstar)
     }
     "fixtures/cpdf-source/manualimages/stext.pdf" => {
@@ -3163,10 +3077,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
         ops,
         Op_Tf(fixture_acceptance_pdf_name_for_test("/F1"), 144.0),
       )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("Page 1")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"Page 1"))
       fixture_acceptance_assert_content_op_for_test(ops, Op_ET)
     }
     "fixtures/cpdf-source/manualimages/text.pdf" => {
@@ -3179,10 +3090,7 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
         ops,
         Op_Tf(fixture_acceptance_pdf_name_for_test("/F1"), 144.0),
       )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("Hello")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"Hello"))
       fixture_acceptance_assert_content_op_for_test(ops, Op_ET)
     }
     "fixtures/cpdf-source/manualimages/para.pdf" => {
@@ -3191,14 +3099,8 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
         Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 200.0, f: 400.0 }),
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_TL(25.0))
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("paragraph")),
-      )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("line...")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"paragraph"))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"line..."))
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tstar)
     }
     "fixtures/cpdf-source/manualimages/paras.pdf" => {
@@ -3208,14 +3110,8 @@ fn fixture_acceptance_assert_cpdf_draw_operator_fixture_for_test(
       )
       fixture_acceptance_assert_content_op_for_test(ops, Op_TL(25.0))
       fixture_acceptance_assert_content_op_for_test(ops, Op_Td(0.0, 0.0))
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("first")),
-      )
-      fixture_acceptance_assert_content_op_for_test(
-        ops,
-        Op_Tj(@ascii.encode("second,")),
-      )
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"first"))
+      fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"second,"))
       fixture_acceptance_assert_content_op_for_test(ops, Op_Tstar)
     }
     "fixtures/cpdf-source/manualimages/trans.pdf" => {
@@ -3415,7 +3311,7 @@ fn fixture_acceptance_assert_cpdf_source_readme_pdfua2_for_test(
   )
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/Lang", catalog),
-    PdfString(@ascii.encode("en-US")),
+    PdfString(b"en-US"),
   )
   let viewer_preferences = fixture_acceptance_lookup_required_for_test(
     document, "/ViewerPreferences", catalog,
@@ -3440,7 +3336,7 @@ fn fixture_acceptance_assert_cpdf_source_readme_pdfua2_for_test(
     fixture_acceptance_lookup_required_for_test(
       document, "/NS", namespace_object,
     ),
-    PdfString(@ascii.encode("http://iso.org/pdf2/ssn")),
+    PdfString(b"http://iso.org/pdf2/ssn"),
   )
   let root_k = fixture_acceptance_lookup_immediate_required_for_test(
     "/K", struct_root,
@@ -3508,7 +3404,7 @@ fn fixture_acceptance_assert_cpdf_source_changes_pdfua1_for_test(
   )
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/Lang", catalog),
-    PdfString(@ascii.encode("en-US")),
+    PdfString(b"en-US"),
   )
   let viewer_preferences = fixture_acceptance_lookup_required_for_test(
     document, "/ViewerPreferences", catalog,
@@ -4532,34 +4428,27 @@ fn fixture_acceptance_add_cpdf_source_javascript_for_test(
   let key_uri = fixture_acceptance_pdf_name_for_test("/URI")
   let action_number = document.add_object(
     PdfDictionary([
-      (key_js, PdfString(@ascii.encode("app.alert('source')"))),
+      (key_js, PdfString(b"app.alert('source')")),
       (fixture_acceptance_pdf_name_for_test("/Keep"), PdfInteger(7)),
     ]),
   )
   let uri_number = document.add_object(
     PdfArray([
       PdfDictionary([
-        (key_js, PdfString(@ascii.encode("nested alert"))),
-        (key_uri, PdfString(@ascii.encode("javascript:app.alert('uri')"))),
+        (key_js, PdfString(b"nested alert")),
+        (key_uri, PdfString(b"javascript:app.alert('uri')")),
       ]),
-      PdfDictionary([
-        (key_uri, PdfString(@ascii.encode("https://example.invalid"))),
-      ]),
+      PdfDictionary([(key_uri, PdfString(b"https://example.invalid"))]),
     ]),
   )
   let stream_number = document.add_object(
     PdfStreamObject({
-      dictionary: PdfDictionary([
-        (key_js, PdfString(@ascii.encode("stream alert"))),
-      ]),
-      data: StreamGot(@ascii.encode("stream payload")),
+      dictionary: PdfDictionary([(key_js, PdfString(b"stream alert"))]),
+      data: StreamGot(b"stream payload"),
     }),
   )
   let javascript_tree = document.build_name_tree([
-    (
-      @ascii.encode("cpdf-source-script"),
-      PdfString(@ascii.encode("app.alert('tree')")),
-    ),
+    (b"cpdf-source-script", PdfString(b"app.alert('tree')")),
   ])
   document.replace_chain(
     [
@@ -4591,15 +4480,12 @@ fn fixture_acceptance_assert_cpdf_source_javascript_for_test(
     fail("missing cpdf source JavaScript name tree")
   }
   @test.assert_eq(document.read_name_tree(javascript_tree), [
-    (
-      @ascii.encode("cpdf-source-script"),
-      PdfString(@ascii.encode("app.alert('tree')")),
-    ),
+    (b"cpdf-source-script", PdfString(b"app.alert('tree')")),
   ])
   let action = document.lookup_object_or_null(action_number)
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/JS", action),
-    PdfString(@ascii.encode("app.alert('source')")),
+    PdfString(b"app.alert('source')"),
   )
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/Keep", action),
@@ -4613,18 +4499,18 @@ fn fixture_acceptance_assert_cpdf_source_javascript_for_test(
   let second_uri : @syntax.PdfObject = PdfDictionary(second_entries)
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/JS", first_uri),
-    PdfString(@ascii.encode("nested alert")),
+    PdfString(b"nested alert"),
   )
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/URI", first_uri),
-    PdfString(@ascii.encode("javascript:app.alert('uri')")),
+    PdfString(b"javascript:app.alert('uri')"),
   )
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/URI", second_uri),
-    PdfString(@ascii.encode("https://example.invalid")),
+    PdfString(b"https://example.invalid"),
   )
   let stream_object = document.lookup_object_or_null(stream_number)
-  @test.assert_eq(stream_object.stream_bytes(), @ascii.encode("stream payload"))
+  @test.assert_eq(stream_object.stream_bytes(), b"stream payload")
   guard stream_object is PdfStreamObject(stream) else {
     fail("expected cpdf source JavaScript stream")
   }
@@ -4634,7 +4520,7 @@ fn fixture_acceptance_assert_cpdf_source_javascript_for_test(
       "/JS",
       stream.dictionary,
     ),
-    PdfString(@ascii.encode("stream alert")),
+    PdfString(b"stream alert"),
   )
 }
 
@@ -4659,7 +4545,7 @@ fn fixture_acceptance_assert_cpdf_source_javascript_removed_for_test(
   let action = document.lookup_object_or_null(action_number)
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/JS", action),
-    PdfString(@ascii.encode("")),
+    PdfString(b""),
   )
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/Keep", action),
@@ -4673,18 +4559,18 @@ fn fixture_acceptance_assert_cpdf_source_javascript_removed_for_test(
   let second_uri : @syntax.PdfObject = PdfDictionary(second_entries)
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/JS", first_uri),
-    PdfString(@ascii.encode("")),
+    PdfString(b""),
   )
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/URI", first_uri),
-    PdfString(@ascii.encode("")),
+    PdfString(b""),
   )
   @test.assert_eq(
     fixture_acceptance_lookup_required_for_test(document, "/URI", second_uri),
-    PdfString(@ascii.encode("https://example.invalid")),
+    PdfString(b"https://example.invalid"),
   )
   let stream_object = document.lookup_object_or_null(stream_number)
-  @test.assert_eq(stream_object.stream_bytes(), @ascii.encode("stream payload"))
+  @test.assert_eq(stream_object.stream_bytes(), b"stream payload")
   guard stream_object is PdfStreamObject(stream) else {
     fail("expected scrubbed cpdf source JavaScript stream")
   }
@@ -4694,7 +4580,7 @@ fn fixture_acceptance_assert_cpdf_source_javascript_removed_for_test(
       "/JS",
       stream.dictionary,
     ),
-    PdfString(@ascii.encode("")),
+    PdfString(b""),
   )
 }
 
@@ -4875,7 +4761,7 @@ fn fixture_acceptance_assert_cpdf_manual_metadata_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  @test.assert_eq(document.language(), Some(@ascii.encode("en-GB")))
+  @test.assert_eq(document.language(), Some(b"en-GB"))
   @test.assert_eq(
     document.info_utf8(fixture_acceptance_pdf_name_for_test("/Title")),
     "cpdf source & metadata",
@@ -4954,7 +4840,7 @@ fn fixture_acceptance_assert_cpdf_manual_metadata_removed_for_test(
   document : @pdflite.PdfDocument,
 ) -> Unit raise {
   @test.assert_eq(document.endpage(), 175)
-  @test.assert_eq(document.language(), Some(@ascii.encode("en-GB")))
+  @test.assert_eq(document.language(), Some(b"en-GB"))
   @test.assert_eq(document.metadata(), None)
   let xmp_json = document.xmp_info_json().stringify()
   fixture_acceptance_assert_contains_for_test(
@@ -5276,19 +5162,19 @@ fn fixture_acceptance_assert_cpdf_manual_pdf_of_pages_for_test(
   @test.assert_eq(document.read_page_labels(), expected_labels)
   @test.assert_eq(
     @label.pdf_page_label_text_of_page_number(1, expected_labels),
-    Some(@ascii.encode("15")),
+    Some(b"15"),
   )
   @test.assert_eq(
     @label.pdf_page_label_text_of_page_number(2, expected_labels),
-    Some(@ascii.encode("1")),
+    Some(b"1"),
   )
   @test.assert_eq(
     @label.pdf_page_label_text_of_page_number(3, expected_labels),
-    Some(@ascii.encode("i")),
+    Some(b"i"),
   )
   @test.assert_eq(
     @label.pdf_page_label_text_of_page_number(4, expected_labels),
-    Some(@ascii.encode("157")),
+    Some(b"157"),
   )
   let page_info_json = document.page_info_json([1, 2, 3, 4]).stringify()
   fixture_acceptance_assert_contains_for_test(page_info_json, "\"Page\":1")
@@ -5893,7 +5779,7 @@ fn fixture_acceptance_assert_cpdf_manual_toc_for_test(
   @test.assert_eq(document.endpage(), 175)
   let original_bookmarks = document.read_bookmarks(preserve_actions=true)
   @test.assert_eq(original_bookmarks.length(), 163)
-  let title = @ascii.encode("Contents\\nGenerated")
+  let title = b"Contents\\nGenerated"
   let pack = fixture_acceptance_cpdf_toc_fontpack_for_test()
   let toc_bookmarks : ReadOnlyArray[@bookmark.PdfBookmark] = [
     original_bookmarks[0],
@@ -5960,7 +5846,7 @@ fn fixture_acceptance_assert_cpdf_manual_toc_bookmark_roundtrip_for_test(
   @test.assert_eq(original_bookmarks.length(), 164)
   @test.assert_eq(
     original_bookmarks[0].text,
-    @pdflite.pdf_toc_bookmark_text(@ascii.encode("Contents\\nGenerated")),
+    @pdflite.pdf_toc_bookmark_text(b"Contents\\nGenerated"),
   )
   @test.assert_eq(
     document.page_number_of_target(original_bookmarks[0].target),
@@ -5976,7 +5862,7 @@ fn fixture_acceptance_assert_cpdf_manual_toc_bookmark_roundtrip_for_test(
 fn fixture_acceptance_cpdf_manual_toc_bookmark_for_test(
   document : @pdflite.PdfDocument,
 ) -> @pdflite.PdfDocument raise {
-  document.toc_add_bookmark(@ascii.encode("Contents\\nGenerated"))
+  document.toc_add_bookmark(b"Contents\\nGenerated")
 }
 
 ///|
@@ -6115,7 +6001,7 @@ fn fixture_acceptance_cpdf_source_hello_with_inline_image_for_test(
     Op_InlineImage(
       fixture_acceptance_cpdf_source_inline_image_dictionary_for_test(),
       None,
-      @ascii.encode("abcdefghijklmnopqr"),
+      b"abcdefghijklmnopqr",
     ),
   ]
   let updated_page = document.postpend_operators(pages[0], image_ops, fast=true)
@@ -7690,10 +7576,7 @@ fn fixture_acceptance_cpdf_source_predefined_descendant_font_for_test(
     (
       fixture_acceptance_pdf_name_for_test("/CIDSystemInfo"),
       @syntax.pdf_dictionary([
-        (
-          fixture_acceptance_pdf_name_for_test("/Registry"),
-          PdfString(@ascii.encode("Adobe")),
-        ),
+        (fixture_acceptance_pdf_name_for_test("/Registry"), PdfString(b"Adobe")),
         (
           fixture_acceptance_pdf_name_for_test("/Ordering"),
           PdfString(@ascii.encode(ordering)),
@@ -7835,10 +7718,7 @@ fn fixture_acceptance_assert_cpdf_source_identity_font_for_test(
     cid_font.encoding,
     PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
   )
-  @test.assert_eq(
-    cid_font.composite.cid_system_info.ordering,
-    @ascii.encode("Identity"),
-  )
+  @test.assert_eq(cid_font.composite.cid_system_info.ordering, b"Identity")
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(extractor.codepoints_of_text(text), expected_codepoints)
   @test.assert_eq(extractor.charcode_of_codepoint(expected_codepoints[0]), None)
@@ -8111,10 +7991,7 @@ fn fixture_acceptance_assert_cpdf_source_unijis_unicode_font_for_test(
     cid_font.encoding,
     PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
   )
-  @test.assert_eq(
-    cid_font.composite.cid_system_info.ordering,
-    @ascii.encode("Japan1"),
-  )
+  @test.assert_eq(cid_font.composite.cid_system_info.ordering, b"Japan1")
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(
     extractor.codepoints_of_text(@core.pdf_bytes_of_int_array(text)),
@@ -8359,10 +8236,7 @@ fn fixture_acceptance_assert_cpdf_source_uniakr_predefined_font_for_test(
     cid_font.encoding,
     PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
   )
-  @test.assert_eq(
-    cid_font.composite.cid_system_info.ordering,
-    @ascii.encode("Korea1"),
-  )
+  @test.assert_eq(cid_font.composite.cid_system_info.ordering, b"Korea1")
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(extractor.codepoints_of_text(text), [0xAC00, 0xB098])
   @test.assert_eq(extractor.charcode_of_codepoint(0xAC00), Some(first_charcode))
@@ -8588,10 +8462,7 @@ fn fixture_acceptance_assert_cpdf_source_uniks_predefined_font_for_test(
     cid_font.encoding,
     PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
   )
-  @test.assert_eq(
-    cid_font.composite.cid_system_info.ordering,
-    @ascii.encode("Korea1"),
-  )
+  @test.assert_eq(cid_font.composite.cid_system_info.ordering, b"Korea1")
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(
     extractor.codepoints_of_text(
@@ -8919,10 +8790,7 @@ fn fixture_acceptance_assert_cpdf_source_korea1_vertical_font_for_test(
     cid_font.encoding,
     PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
   )
-  @test.assert_eq(
-    cid_font.composite.cid_system_info.ordering,
-    @ascii.encode("Korea1"),
-  )
+  @test.assert_eq(cid_font.composite.cid_system_info.ordering, b"Korea1")
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(
     extractor.codepoints_of_text(@core.pdf_bytes_of_int_array([0xA1, 0xA6])),
@@ -9055,10 +8923,7 @@ fn fixture_acceptance_assert_cpdf_source_japan1_predefined_font_for_test(
     cid_font.encoding,
     PdfPredefinedCMap(fixture_acceptance_pdf_name_for_test(encoding)),
   )
-  @test.assert_eq(
-    cid_font.composite.cid_system_info.ordering,
-    @ascii.encode("Japan1"),
-  )
+  @test.assert_eq(cid_font.composite.cid_system_info.ordering, b"Japan1")
   let extractor = document.text_extractor_of_font(source_font.font)
   @test.assert_eq(extractor.codepoints_of_text(text), expected_codepoints)
   @test.assert_eq(
@@ -11138,10 +11003,7 @@ fn fixture_acceptance_assert_cpdf_source_matterhorn_cmap_typo_for_test(
   guard document.read_font(typo_font.font) is PdfFontCIDKeyed(typo_cid_font) else {
     fail("expected source Matterhorn typo CID-keyed font")
   }
-  @test.assert_eq(
-    typo_cid_font.composite.cid_system_info.ordering,
-    @ascii.encode("Korea1"),
-  )
+  @test.assert_eq(typo_cid_font.composite.cid_system_info.ordering, b"Korea1")
   let corrected_font = fixture_acceptance_cpdf_source_font_entry_for_test(
     document.list_fonts([1]),
     "/SourceCMapCorrected",
@@ -11155,7 +11017,7 @@ fn fixture_acceptance_assert_cpdf_source_matterhorn_cmap_typo_for_test(
   }
   @test.assert_eq(
     corrected_cid_font.composite.cid_system_info.ordering,
-    @ascii.encode("Korea1"),
+    b"Korea1",
   )
   @test.assert_eq(
     try! document.test_matterhorn_json("31-006"),
@@ -11773,18 +11635,12 @@ fn fixture_acceptance_assert_cpdf_source_reveal_hidden_text_for_test(
     fixture_acceptance_content_text_rendering_mode_count_for_test(revealed_ops),
     0,
   )
+  fixture_acceptance_assert_content_op_for_test(revealed_ops, Op_Tj(b"This is"))
   fixture_acceptance_assert_content_op_for_test(
     revealed_ops,
-    Op_Tj(@ascii.encode("This is")),
+    Op_Tj(b"on multiple"),
   )
-  fixture_acceptance_assert_content_op_for_test(
-    revealed_ops,
-    Op_Tj(@ascii.encode("on multiple")),
-  )
-  fixture_acceptance_assert_content_op_for_test(
-    revealed_ops,
-    Op_Tj(@ascii.encode("lines")),
-  )
+  fixture_acceptance_assert_content_op_for_test(revealed_ops, Op_Tj(b"lines"))
   let (glyphs, _, paths) = fixture_acceptance_assert_cpdf_manual_image_content_corpus_for_test(
     revealed,
   )
@@ -11875,21 +11731,18 @@ fn fixture_acceptance_assert_cpdf_source_black_text_for_test(
   fixture_acceptance_assert_content_op_for_test(original_ops, Op_ET)
   fixture_acceptance_assert_content_op_for_test(
     original_ops,
-    Op_Tj(@ascii.encode("Different ")),
+    Op_Tj(b"Different "),
   )
   fixture_acceptance_assert_no_content_op_for_test(original_ops, Op_g(0.0))
   fixture_acceptance_assert_content_op_for_test(rewritten_ops, Op_g(0.0))
   fixture_acceptance_assert_content_op_for_test(
     rewritten_ops,
-    Op_Tj(@ascii.encode("Different ")),
+    Op_Tj(b"Different "),
   )
+  fixture_acceptance_assert_content_op_for_test(rewritten_ops, Op_Tj(b"fonts"))
   fixture_acceptance_assert_content_op_for_test(
     rewritten_ops,
-    Op_Tj(@ascii.encode("fonts")),
-  )
-  fixture_acceptance_assert_content_op_for_test(
-    rewritten_ops,
-    Op_Tj(@ascii.encode(" and sizes")),
+    Op_Tj(b" and sizes"),
   )
 }
 
@@ -11925,10 +11778,7 @@ fn fixture_acceptance_assert_cpdf_source_appended_content_for_test(
   @test.assert_eq(ops[0], Op_g(0.25))
   @test.assert_eq(ops[1], Op_re(10.0, 10.0, 20.0, 20.0))
   @test.assert_eq(ops[2], Op_f)
-  fixture_acceptance_assert_content_op_for_test(
-    ops,
-    Op_Tj(@ascii.encode("Hello, World!")),
-  )
+  fixture_acceptance_assert_content_op_for_test(ops, Op_Tj(b"Hello, World!"))
   let text = @ascii.decode_lossy(appended.test_extract_text([1]))
   fixture_acceptance_assert_contains_for_test(text, "Hello, World!")
 }

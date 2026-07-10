@@ -14,7 +14,7 @@ test "ByteOutput writes bytes views and ASCII without using String for payloads"
 ///|
 test "ByteOutput seek overwrites bytes and frozen output stays owned" {
   let output = try! @core.byte_output_new()
-  try! output.write_view(@ascii.encode("ABCD"))
+  try! output.write_view(b"ABCD")
   let frozen = output.to_bytes()
   try! output.seek(1)
   try! output.write_ascii("zz")
@@ -30,7 +30,7 @@ test "ByteOutput writes bytes and views at explicit positions" {
   try! output.write_ascii("ABCD")
   try! output.write_byte_at(1, 0x78)
   @test.assert_eq(output.position(), 2)
-  try! output.write_view_at(3, @ascii.encode("YZ"))
+  try! output.write_view_at(3, b"YZ")
   @test.assert_eq(output.position(), 5)
   @test.assert_eq(@core.pdf_int_array_of_bytes(output.to_bytes()), [
     65, 0x78, 67, 89, 90,
@@ -52,7 +52,7 @@ test "ByteOutput writes bytes and views at explicit positions" {
     )
   }
   let bad_view_position : Result[Unit, Error] = try
-    output.write_view_at(-1, @ascii.encode("x"))
+    output.write_view_at(-1, b"x")
   catch {
     err => Err(err)
   } noraise {
@@ -68,7 +68,7 @@ test "ByteOutput writes bytes and views at explicit positions" {
 ///|
 test "ByteOutput writes checked byte slices" {
   let output = try! @core.byte_output_new()
-  let source = @ascii.encode("012345")
+  let source = b"012345"
   try! output.write_view_slice(source, 2, 3)
   @test.assert_eq(@core.pdf_int_array_of_bytes(output.to_bytes()), [50, 51, 52])
   @test.assert_eq(output.position(), 3)
@@ -209,9 +209,7 @@ test "ByteOutput reports checked cursor and byte errors" {
     fail("expected @core.PdfError::InvalidByte for byte output")
   }
   try! output.seek(2147483647)
-  let overflow : Result[Unit, Error] = try
-    output.write_view(@ascii.encode("x"))
-  catch {
+  let overflow : Result[Unit, Error] = try output.write_view(b"x") catch {
     err => Err(err)
   } noraise {
     value => Ok(value)

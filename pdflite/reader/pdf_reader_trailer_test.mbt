@@ -18,7 +18,7 @@ fn test_trailer_name(name : @core.PdfName) -> @syntax.PdfObject {
 ///|
 test "cursor reads classic trailer dictionary" {
   let cursor = @core.byte_cursor_of_bytes(
-    @ascii.encode(" \ntrailer << /Root 1 0 R /Size 2 >> startxref"),
+    b" \ntrailer << /Root 1 0 R /Size 2 >> startxref",
   )
   let trailer = try! @reader.pdf_cursor_read_trailer_dictionary(cursor)
   @test.assert_eq(
@@ -35,7 +35,7 @@ test "cursor reads classic trailer dictionary" {
 test "cursor trailer dictionary rejects malformed input" {
   let missing_marker : Result[@syntax.PdfObject, Error] = try
     @reader.pdf_cursor_read_trailer_dictionary(
-      @core.byte_cursor_of_bytes(@ascii.encode("xref")),
+      @core.byte_cursor_of_bytes(b"xref"),
     )
   catch {
     err => Err(err)
@@ -48,7 +48,7 @@ test "cursor trailer dictionary rejects malformed input" {
 
   let not_dictionary : Result[@syntax.PdfObject, Error] = try
     @reader.pdf_cursor_read_trailer_dictionary(
-      @core.byte_cursor_of_bytes(@ascii.encode("trailer 7")),
+      @core.byte_cursor_of_bytes(b"trailer 7"),
     )
   catch {
     err => Err(err)

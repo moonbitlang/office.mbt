@@ -132,7 +132,7 @@ fn create_assert_pdfua_common_for_test(
   )
   @test.assert_eq(
     try! create_lookup_required_for_test(catalog, "/Lang"),
-    PdfString(@ascii.encode("en-US")),
+    PdfString(b"en-US"),
   )
   let viewer_preferences = try! create_lookup_required_for_test(
     catalog, "/ViewerPreferences",
@@ -207,10 +207,7 @@ test "pdf_ua_create_pdfua1 creates blank document metadata and marker" {
     metadata, "<pdfuaid:part>1</pdfuaid:part>",
   )
   try! create_assert_metadata_contains_for_test(metadata, "Accessible title")
-  @test.assert_eq(
-    create_find_bytes_for_test(metadata, @ascii.encode("<pdfuaid:rev>")),
-    -1,
-  )
+  @test.assert_eq(create_find_bytes_for_test(metadata, b"<pdfuaid:rev>"), -1)
 }
 
 ///|

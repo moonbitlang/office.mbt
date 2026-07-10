@@ -63,13 +63,13 @@ test "pdf_texttopdf_of_utf8_with_newlines maps UTF8 to cpdftype text" {
     try! @pdflite.pdf_texttopdf_of_utf8_with_newlines(
       texttopdf_standard_pack_for_test(),
       12.0,
-      @ascii.encode("A\nB\rC"),
+      b"A\nB\rC",
     ),
     [
       PdfTypeFont("0", font, 12.0),
-      PdfTypeText(@ascii.encode("A")),
+      PdfTypeText(b"A"),
       PdfTypeNewLine,
-      PdfTypeText(@ascii.encode("BC")),
+      PdfTypeText(b"BC"),
     ],
   )
 }
@@ -83,7 +83,7 @@ test "pdf_texttopdf_of_utf8_with_newlines skips unmapped glyphs" {
       9.0,
       @utf8.encode("A☃B"),
     ),
-    [PdfTypeFont("0", font, 9.0), PdfTypeText(@ascii.encode("AB"))],
+    [PdfTypeFont("0", font, 9.0), PdfTypeText(b"AB")],
   )
 }
 
@@ -101,18 +101,14 @@ test "pdf_texttopdf_of_utf8_with_newlines switches font runs" {
     ],
   }
   @test.assert_eq(
-    try! @pdflite.pdf_texttopdf_of_utf8_with_newlines(
-      pack,
-      10.0,
-      @ascii.encode("ABCD"),
-    ),
+    try! @pdflite.pdf_texttopdf_of_utf8_with_newlines(pack, 10.0, b"ABCD"),
     [
       PdfTypeFont("0", regular, 10.0),
-      PdfTypeText(@ascii.encode("A")),
+      PdfTypeText(b"A"),
       PdfTypeFont("1", bold, 10.0),
-      PdfTypeText(@ascii.encode("BC")),
+      PdfTypeText(b"BC"),
       PdfTypeFont("0", regular, 10.0),
-      PdfTypeText(@ascii.encode("D")),
+      PdfTypeText(b"D"),
     ],
   )
 }
@@ -125,7 +121,7 @@ test "pdf_texttopdf_of_utf8_with_newlines rejects invalid charcodes" {
     entries: [{ codepoint: 65, font_index: 0, charcode: 300 }],
   }
   let result : Result[Array[@pdflite.PdfTypeElement], Error] = try
-    @pdflite.pdf_texttopdf_of_utf8_with_newlines(pack, 10.0, @ascii.encode("A"))
+    @pdflite.pdf_texttopdf_of_utf8_with_newlines(pack, 10.0, b"A")
   catch {
     err => Err(err)
   } noraise {
@@ -144,19 +140,19 @@ test "pdf_texttopdf_tag_paragraphs wraps blank-line paragraphs" {
   ])
   @test.assert_eq(
     @pdflite.pdf_texttopdf_tag_paragraphs([
-      PdfTypeText(@ascii.encode("A")),
+      PdfTypeText(b"A"),
       PdfTypeNewLine,
       PdfTypeNewLine,
-      PdfTypeText(@ascii.encode("B")),
+      PdfTypeText(b"B"),
     ]),
     [
       PdfTypeTag("P", 0),
-      PdfTypeText(@ascii.encode("A")),
+      PdfTypeText(b"A"),
       PdfTypeEndTag,
       PdfTypeNewLine,
       PdfTypeNewLine,
       PdfTypeTag("P", 0),
-      PdfTypeText(@ascii.encode("B")),
+      PdfTypeText(b"B"),
       PdfTypeEndTag,
     ],
   )
@@ -166,7 +162,7 @@ test "pdf_texttopdf_tag_paragraphs wraps blank-line paragraphs" {
 test "pdf_texttopdf_typeset creates a standalone text document" {
   let paper = @geometry.paper_size_make(PdfPoint, 100.0, 100.0)
   let fontpack = texttopdf_standard_pack_for_test()
-  let text = @ascii.encode("Hi")
+  let text = b"Hi"
   let document = try! @pdflite.pdf_texttopdf_typeset(
     fontpack, 10.0, paper, text,
   )
@@ -191,7 +187,7 @@ test "pdf_texttopdf_typeset creates a standalone text document" {
   for op in ops {
     match op {
       Op_Tf(_, 10.0) => font_ops += 1
-      Op_Tj(bytes) if bytes == @ascii.encode("Hi") => found_text = true
+      Op_Tj(bytes) if bytes == b"Hi" => found_text = true
       _ => ()
     }
   }
@@ -212,7 +208,7 @@ test "pdf_texttopdf_typeset creates a blank document for empty text" {
     texttopdf_standard_pack_for_test(),
     10.0,
     paper,
-    @ascii.encode(""),
+    b"",
   )
   let pages = try! document.pages_of_pagetree()
   @test.assert_eq(pages.length(), 1)
@@ -230,7 +226,7 @@ test "pdf_texttopdf_typeset can build paragraph structure tree" {
     texttopdf_standard_pack_for_test(),
     10.0,
     paper,
-    @ascii.encode("A\n\nB"),
+    b"A\n\nB",
     process_struct_tree=true,
   )
   let pages = try! document.pages_of_pagetree()
@@ -331,7 +327,7 @@ test "pdf_texttopdf_typeset requires title when subformat is requested" {
       texttopdf_standard_pack_for_test(),
       10.0,
       paper,
-      @ascii.encode("Hi"),
+      b"Hi",
       subformat=Some(PdfUA1),
     )
   catch {
@@ -351,7 +347,7 @@ test "pdf_texttopdf_typeset PDF/UA-1 writes accessibility catalog metadata" {
     texttopdf_standard_pack_for_test(),
     10.0,
     paper,
-    @ascii.encode("Hi"),
+    b"Hi",
     subformat=Some(PdfUA1),
     title=Some("Sample title"),
   )
@@ -379,7 +375,7 @@ test "pdf_texttopdf_typeset PDF/UA-1 writes accessibility catalog metadata" {
   )
   @test.assert_eq(
     try! texttopdf_lookup_for_test(catalog, "/Lang"),
-    PdfString(@ascii.encode("en-US")),
+    PdfString(b"en-US"),
   )
   let viewer_preferences = try! texttopdf_lookup_for_test(
     catalog, "/ViewerPreferences",
@@ -408,7 +404,7 @@ test "pdf_texttopdf_typeset PDF/UA-2 wraps paragraphs under document namespace" 
     texttopdf_standard_pack_for_test(),
     10.0,
     paper,
-    @ascii.encode("A\n\nB"),
+    b"A\n\nB",
     subformat=Some(PdfUA2),
     title=Some("UA2 title"),
   )
@@ -426,7 +422,7 @@ test "pdf_texttopdf_typeset PDF/UA-2 wraps paragraphs under document namespace" 
   let namespace_object = document.lookup_object_or_null(namespace_number)
   @test.assert_eq(
     try! texttopdf_lookup_for_test(namespace_object, "/NS"),
-    PdfString(@ascii.encode("http://iso.org/pdf2/ssn")),
+    PdfString(b"http://iso.org/pdf2/ssn"),
   )
   let root_k = try! texttopdf_lookup_for_test(struct_root, "/K")
   guard root_k is PdfIndirect(document_number) else {

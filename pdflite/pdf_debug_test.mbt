@@ -52,7 +52,7 @@ test "PdfDocument debug_objects renders trailer catalog pages and objects" {
 ///|
 test "pdf_debug_objects reports missing trailer root and keeps object dump" {
   let document = @pdflite.pdf_document_empty()
-  document.add_object_given_number(3, PdfString(@ascii.encode("hi")))
+  document.add_object_given_number(3, PdfString(b"hi"))
   @test.assert_eq(
     try! @pdflite.pdf_debug_objects(document),
     @ascii.encode(

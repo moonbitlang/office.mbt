@@ -6,11 +6,11 @@ fn crypt_bytes_for_test(values : ArrayView[Int]) -> @core.PdfBytes {
 ///|
 test "pdf_arc4_crypt matches standard ARC4 vectors" {
   @test.assert_eq(
-    try! pdf_arc4_crypt(@ascii.encode("Key"), @ascii.encode("Plaintext")),
+    try! pdf_arc4_crypt(b"Key", b"Plaintext"),
     crypt_bytes_for_test([0xBB, 0xF3, 0x16, 0xE8, 0xD9, 0x40, 0xAF, 0x0A, 0xD3]),
   )
   @test.assert_eq(
-    try! pdf_arc4_crypt(@ascii.encode("Wiki"), @ascii.encode("pedia")),
+    try! pdf_arc4_crypt(b"Wiki", b"pedia"),
     crypt_bytes_for_test([0x10, 0x21, 0xBF, 0x04, 0x20]),
   )
 }
@@ -18,7 +18,7 @@ test "pdf_arc4_crypt matches standard ARC4 vectors" {
 ///|
 test "pdf_arc4_crypt decrypts by applying the same stream" {
   let key = crypt_bytes_for_test([1, 2, 3, 4, 5])
-  let plaintext = @ascii.encode("legacy PDF payload")
+  let plaintext = b"legacy PDF payload"
   let encrypted = try! pdf_arc4_crypt(key, plaintext)
   @test.assert_eq(try! pdf_arc4_crypt(key, encrypted), plaintext)
   @test.assert_eq(try! pdf_arc4_crypt(key, Bytes::new(0)), Bytes::new(0))
@@ -27,7 +27,7 @@ test "pdf_arc4_crypt decrypts by applying the same stream" {
 ///|
 test "pdf_arc4_crypt rejects empty keys" {
   let result : Result[@core.PdfBytes, Error] = try
-    pdf_arc4_crypt(Bytes::new(0), @ascii.encode("data"))
+    pdf_arc4_crypt(Bytes::new(0), b"data")
   catch {
     err => Err(err)
   } noraise {
@@ -48,23 +48,21 @@ test "pdf_md5_digest matches RFC 1321 vectors" {
     ]),
   )
   @test.assert_eq(
-    pdf_md5_digest(@ascii.encode("abc")),
+    pdf_md5_digest(b"abc"),
     crypt_bytes_for_test([
       0x90, 0x01, 0x50, 0x98, 0x3c, 0xd2, 0x4f, 0xb0, 0xd6, 0x96, 0x3f, 0x7d, 0x28,
       0xe1, 0x7f, 0x72,
     ]),
   )
   @test.assert_eq(
-    pdf_md5_digest(@ascii.encode("message digest")),
+    pdf_md5_digest(b"message digest"),
     crypt_bytes_for_test([
       0xf9, 0x6b, 0x69, 0x7d, 0x7c, 0xb7, 0x93, 0x8d, 0x52, 0x5a, 0x2f, 0x31, 0xaa,
       0xf1, 0x61, 0xd0,
     ]),
   )
   @test.assert_eq(
-    pdf_md5_digest(
-      @ascii.encode("12345678901234567890123456789012345678901234567890123456"),
-    ),
+    pdf_md5_digest(b"12345678901234567890123456789012345678901234567890123456"),
     crypt_bytes_for_test([
       0x49, 0xf1, 0x93, 0xad, 0xce, 0x17, 0x84, 0x90, 0xe3, 0x4d, 0x1b, 0x3a, 0x4e,
       0xc0, 0x06, 0x4c,
@@ -75,7 +73,7 @@ test "pdf_md5_digest matches RFC 1321 vectors" {
 ///|
 test "pdf_sha256_digest matches SHA-256 known vector" {
   @test.assert_eq(
-    pdf_sha256_digest(@ascii.encode("abc")),
+    pdf_sha256_digest(b"abc"),
     crypt_bytes_for_test([
       0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40, 0xde, 0x5d,
       0xae, 0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c, 0xb4, 0x10,
@@ -87,7 +85,7 @@ test "pdf_sha256_digest matches SHA-256 known vector" {
 ///|
 test "pdf_sha384_digest and pdf_sha512_digest match FIPS vectors" {
   @test.assert_eq(
-    pdf_sha384_digest(@ascii.encode("abc")),
+    pdf_sha384_digest(b"abc"),
     crypt_bytes_for_test([
       0xcb, 0x00, 0x75, 0x3f, 0x45, 0xa3, 0x5e, 0x8b, 0xb5, 0xa0, 0x3d, 0x69, 0x9a,
       0xc6, 0x50, 0x07, 0x27, 0x2c, 0x32, 0xab, 0x0e, 0xde, 0xd1, 0x63, 0x1a, 0x8b,
@@ -96,7 +94,7 @@ test "pdf_sha384_digest and pdf_sha512_digest match FIPS vectors" {
     ]),
   )
   @test.assert_eq(
-    pdf_sha512_digest(@ascii.encode("abc")),
+    pdf_sha512_digest(b"abc"),
     crypt_bytes_for_test([
       0xdd, 0xaf, 0x35, 0xa1, 0x93, 0x61, 0x7a, 0xba, 0xcc, 0x41, 0x73, 0x49, 0xae,
       0x20, 0x41, 0x31, 0x12, 0xe6, 0xfa, 0x4e, 0x89, 0xa9, 0x7e, 0xa2, 0x0a, 0x9e,
@@ -192,11 +190,7 @@ test "pdf_aes_cbc helpers match IV-prefixed CamlPDF data" {
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
     0x1d, 0x1e, 0x1f,
   ])
-  let encrypted_hello = try! pdf_aes_cbc_encrypt_with_iv(
-    key,
-    iv,
-    @ascii.encode("hello"),
-  )
+  let encrypted_hello = try! pdf_aes_cbc_encrypt_with_iv(key, iv, b"hello")
   @test.assert_eq(
     encrypted_hello,
     crypt_bytes_for_test([
@@ -205,19 +199,14 @@ test "pdf_aes_cbc helpers match IV-prefixed CamlPDF data" {
       0xea, 0x85, 0x96, 0xd9, 0xc3, 0xc3,
     ]),
   )
-  @test.assert_eq(
-    try! pdf_aes_cbc_decrypt(key, encrypted_hello),
-    @ascii.encode("hello"),
-  )
+  @test.assert_eq(try! pdf_aes_cbc_decrypt(key, encrypted_hello), b"hello")
 
   let encrypted_exact_block = try! pdf_aes_cbc_encrypt_with_iv(
-    key,
-    iv,
-    @ascii.encode("0123456789abcdef"),
+    key, iv, b"0123456789abcdef",
   )
   @test.assert_eq(
     try! pdf_aes_cbc_decrypt(key, encrypted_exact_block),
-    @ascii.encode("0123456789abcdef"),
+    b"0123456789abcdef",
   )
 }
 
@@ -317,10 +306,7 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
 ///|
 test "canonical crypt primitive helpers cover AES data" {
   @test.assert_eq(
-    try! pdf_arc4_crypt(
-      crypt_bytes_for_test([75, 101, 121]),
-      @ascii.encode("Plaintext"),
-    ),
+    try! pdf_arc4_crypt(crypt_bytes_for_test([75, 101, 121]), b"Plaintext"),
     crypt_bytes_for_test([0xBB, 0xF3, 0x16, 0xE8, 0xD9, 0x40, 0xAF, 0x0A, 0xD3]),
   )
 
@@ -354,28 +340,19 @@ test "canonical crypt primitive helpers cover AES data" {
     0x1d, 0x1e, 0x1f,
   ])
   let cbc_key = crypt_bytes_for_test(cbc_key_values)
-  let cbc_encrypted = try! pdf_aes_cbc_encrypt_with_iv(
-    cbc_key,
-    iv,
-    @ascii.encode("hello"),
-  )
-  @test.assert_eq(
-    try! pdf_aes_cbc_decrypt(cbc_key, cbc_encrypted),
-    @ascii.encode("hello"),
-  )
+  let cbc_encrypted = try! pdf_aes_cbc_encrypt_with_iv(cbc_key, iv, b"hello")
+  @test.assert_eq(try! pdf_aes_cbc_decrypt(cbc_key, cbc_encrypted), b"hello")
 
   let key128_values : ReadOnlyArray[Int] = [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
   ]
   let aesv3_file_key = crypt_bytes_for_test([ for value in 0..<32 => value ])
   let aesv3_encrypted = try! pdf_aes_cbc_encrypt_with_iv(
-    aesv3_file_key,
-    iv,
-    @ascii.encode("moon"),
+    aesv3_file_key, iv, b"moon",
   )
   @test.assert_eq(
     try! pdf_aes_cbc_decrypt(aesv3_file_key, aesv3_encrypted),
-    @ascii.encode("moon"),
+    b"moon",
   )
 
   let bad_key : Result[@core.PdfBytes, Error] = try

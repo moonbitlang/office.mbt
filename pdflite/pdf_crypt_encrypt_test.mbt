@@ -170,21 +170,21 @@ test "PdfDocument encrypt_128bit encrypts parsed objects and writes length" {
   let key_p = crypt_encrypt_name_for_test("/P")
   let doc = @pdflite.pdf_document_empty()
   let plain_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("hello"))),
+    (key_title, PdfString(b"hello")),
   ])
   doc.add_object_given_number(1, plain_object)
   let encrypted = try! doc.encrypt_128bit(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [PdfNoPrint, PdfNoCopy],
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   let permissions = @crypt_core.pdf_p_of_permissions([PdfNoPrint, PdfNoCopy])
   guard encrypted.lookup_object_or_null(1).lookup_immediate(key_title)
     is Some(PdfString(encrypted_title)) else {
     fail("expected encrypted title")
   }
-  @test.assert_eq(encrypted_title == @ascii.encode("hello"), false)
+  @test.assert_eq(encrypted_title == b"hello", false)
   guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
     is Some(PdfIndirect(encrypt_number)) else {
     fail("expected indirect encryption dictionary")
@@ -208,12 +208,12 @@ test "PdfDocument encrypt_128bit encrypts parsed objects and writes length" {
   )
   @test.assert_eq(try! encrypted.what_encryption(), Some(PdfEncryption128Bit))
   let decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! encrypted.decrypt_with_user_password(@ascii.encode("user")),
+    try! encrypted.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
   @test.assert_eq(decrypted.denied_permissions, [PdfNoCopy, PdfNoPrint])
   let owner_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")),
+    try! encrypted.decrypt_with_owner_password(b"owner"),
   )
   @test.assert_eq(
     owner_decrypted.document.lookup_object_or_null(1),
@@ -244,31 +244,31 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
   let key_metadata = crypt_encrypt_name_for_test("/Metadata")
   let doc = @pdflite.pdf_document_empty()
   let plain_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("hello"))),
+    (key_title, PdfString(b"hello")),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
     [
       (crypt_encrypt_name_for_test("/Length"), PdfInteger(4)),
       (key_type, PdfNameObject(key_metadata)),
-      (key_title, PdfString(@ascii.encode("meta"))),
+      (key_title, PdfString(b"meta")),
     ],
-    @ascii.encode("data"),
+    b"data",
   )
   doc.add_object_given_number(1, plain_object)
   doc.add_object_given_number(3, metadata_stream)
   let encrypted = try! doc.encrypt_128bit_r4(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [PdfNoExtract],
     encrypt_metadata=false,
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   let permissions = @crypt_core.pdf_p_of_permissions([PdfNoExtract])
   guard encrypted.lookup_object_or_null(1).lookup_immediate(key_title)
     is Some(PdfString(encrypted_title)) else {
     fail("expected encrypted title")
   }
-  @test.assert_eq(encrypted_title == @ascii.encode("hello"), false)
+  @test.assert_eq(encrypted_title == b"hello", false)
   @test.assert_eq(encrypted.lookup_object_or_null(3), metadata_stream)
   guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
     is Some(PdfIndirect(encrypt_number)) else {
@@ -327,7 +327,7 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
   )
   @test.assert_eq(try! encrypted.what_encryption(), Some(PdfEncryption128Bit))
   let decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! encrypted.decrypt_with_user_password(@ascii.encode("user")),
+    try! encrypted.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(1), plain_object)
   @test.assert_eq(decrypted.document.lookup_object_or_null(3), metadata_stream)
@@ -336,7 +336,7 @@ test "PdfDocument encrypt_128bit_r4 writes crypt filter and honors metadata flag
     @crypt_core.pdf_permissions_of_p(permissions),
   )
   let owner_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")),
+    try! encrypted.decrypt_with_owner_password(b"owner"),
   )
   @test.assert_eq(
     owner_decrypted.document.lookup_object_or_null(1),
@@ -382,27 +382,27 @@ test "PdfDocument encrypt_128bit_aesv2_with_iv_provider writes AES crypt filter"
     ]),
   )
   let secret_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("secret"))),
+    (key_title, PdfString(b"secret")),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
     [
       (crypt_encrypt_name_for_test("/Length"), PdfInteger(4)),
       (key_type, PdfNameObject(key_metadata)),
-      (key_title, PdfString(@ascii.encode("meta"))),
+      (key_title, PdfString(b"meta")),
     ],
-    @ascii.encode("data"),
+    b"data",
   )
   doc.add_object_given_number(5, secret_object)
   doc.add_object_given_number(6, metadata_stream)
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [PdfNoPrint],
     fn(object_number, generation, index) {
       crypt_encrypt_aes_document_iv_for_test(object_number, generation, index)
     },
     encrypt_metadata=false,
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   @test.assert_eq(encrypted.lookup_object_or_null(6), metadata_stream)
   guard encrypted.trailer_dict().lookup_immediate(key_encrypt)
@@ -433,7 +433,7 @@ test "PdfDocument encrypt_128bit_aesv2_with_iv_provider writes AES crypt filter"
     Some(PdfEncryptionAES128(false)),
   )
   let decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! encrypted.decrypt_with_user_password(@ascii.encode("user")),
+    try! encrypted.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
   @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
@@ -442,7 +442,7 @@ test "PdfDocument encrypt_128bit_aesv2_with_iv_provider writes AES crypt filter"
   let rendered = try! @pdflite.pdf_write_document(encrypted)
   let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
   let read_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! parsed.decrypt_with_owner_password(@ascii.encode("owner")),
+    try! parsed.decrypt_with_owner_password(b"owner"),
   )
   @test.assert_eq(
     read_decrypted.document.lookup_object_or_null(5),
@@ -459,19 +459,19 @@ test "pdfencrypt-style AES128 blank-user owner-password output roundtrips" {
   let key_title = crypt_encrypt_name_for_test("/Title")
   let doc = crypt_encrypt_minimal_catalog_document_for_test(1, 4)
   let secret_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("pdfencrypt-secret"))),
+    (key_title, PdfString(b"pdfencrypt-secret")),
   ])
   doc.add_object_given_number(5, secret_object)
   let denied : Array[@crypt_core.PdfPermission] = [PdfNoEdit, PdfNoPrint]
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
-    @ascii.encode(""),
-    @ascii.encode("owner-password"),
+    b"",
+    b"owner-password",
     denied,
     fn(object_number, generation, index) {
       crypt_encrypt_aes_document_iv_for_test(object_number, generation, index)
     },
     encrypt_metadata=false,
-    file_id=@ascii.encode("pdfencrypt-doc-id"),
+    file_id=b"pdfencrypt-doc-id",
   )
   @test.assert_eq(try! encrypted.permissions(), denied)
   @test.assert_eq(encrypted.is_encrypted(), true)
@@ -479,7 +479,7 @@ test "pdfencrypt-style AES128 blank-user owner-password output roundtrips" {
   let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
   @test.assert_eq(try! parsed.permissions(), denied)
   let user_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! parsed.decrypt_with_user_password(@ascii.encode("")),
+    try! parsed.decrypt_with_user_password(b""),
   )
   @test.assert_eq(user_decrypted.denied_permissions, denied)
   @test.assert_eq(
@@ -487,7 +487,7 @@ test "pdfencrypt-style AES128 blank-user owner-password output roundtrips" {
     secret_object,
   )
   let owner_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! parsed.decrypt_with_owner_password(@ascii.encode("owner-password")),
+    try! parsed.decrypt_with_owner_password(b"owner-password"),
   )
   @test.assert_eq(owner_decrypted.denied_permissions, denied)
   @test.assert_eq(
@@ -512,29 +512,29 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
   let key_perms = crypt_encrypt_name_for_test("/Perms")
   let doc = crypt_encrypt_minimal_catalog_document_for_test(1, 7)
   let secret_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("aes3-secret"))),
+    (key_title, PdfString(b"aes3-secret")),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
     [
       (crypt_encrypt_name_for_test("/Length"), PdfInteger(4)),
       (key_type, PdfNameObject(key_metadata)),
-      (key_title, PdfString(@ascii.encode("meta"))),
+      (key_title, PdfString(b"meta")),
     ],
-    @ascii.encode("data"),
+    b"data",
   )
   doc.add_object_given_number(5, secret_object)
   doc.add_object_given_number(6, metadata_stream)
   let denied_permissions = @crypt_core.pdf_permissions_of_p(-3904)
   let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     denied_permissions,
     crypt_encrypt_aesv3_r5_random_for_test,
     fn(object_number, generation, index) {
       crypt_encrypt_aes_document_iv_for_test(object_number, generation, index)
     },
     encrypt_metadata=false,
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   @test.assert_eq(encrypted.lookup_object_or_null(6), metadata_stream)
   @test.assert_eq(
@@ -573,13 +573,13 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
     Some(PdfNameObject(key_aesv3)),
   )
   let decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! encrypted.decrypt_with_user_password(@ascii.encode("user")),
+    try! encrypted.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
   @test.assert_eq(decrypted.document.lookup_object_or_null(6), metadata_stream)
   @test.assert_eq(decrypted.denied_permissions, denied_permissions)
   let owner_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! encrypted.decrypt_with_owner_password(@ascii.encode("owner")),
+    try! encrypted.decrypt_with_owner_password(b"owner"),
   )
   @test.assert_eq(
     owner_decrypted.document.lookup_object_or_null(5),
@@ -589,7 +589,7 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
   let rendered = try! @pdflite.pdf_write_document(encrypted)
   let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
   let read_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! parsed.decrypt_with_owner_password(@ascii.encode("owner")),
+    try! parsed.decrypt_with_owner_password(b"owner"),
   )
   @test.assert_eq(
     read_decrypted.document.lookup_object_or_null(5),
@@ -611,14 +611,14 @@ test "PdfDocument encrypt_256bit_aesv3_with_providers writes AESV3 revision 5 en
   }
   let bad_provider : Result[@pdflite.PdfDocument, Error] = try
     doc.encrypt_256bit_aesv3_with_providers(
-      @ascii.encode("user"),
-      @ascii.encode("owner"),
+      b"user",
+      b"owner",
       denied_permissions,
       bad_random,
       fn(object_number, generation, index) {
         crypt_encrypt_aes_document_iv_for_test(object_number, generation, index)
       },
-      file_id=@ascii.encode("doc-id"),
+      file_id=b"doc-id",
     )
   catch {
     err => Err(err)
@@ -640,29 +640,29 @@ test "PdfDocument encrypted AESV3 output round trips through xref stream writers
   let key_encrypt = crypt_encrypt_name_for_test("/Encrypt")
   let doc = crypt_encrypt_minimal_catalog_document_for_test(1, 7)
   let secret_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("secret-aes3-xref"))),
+    (key_title, PdfString(b"secret-aes3-xref")),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
     [
       (crypt_encrypt_name_for_test("/Length"), PdfInteger(4)),
       (key_type, PdfNameObject(key_metadata)),
-      (key_title, PdfString(@ascii.encode("meta"))),
+      (key_title, PdfString(b"meta")),
     ],
-    @ascii.encode("data"),
+    b"data",
   )
   doc.add_object_given_number(5, secret_object)
   doc.add_object_given_number(6, metadata_stream)
   let denied_permissions = @crypt_core.pdf_permissions_of_p(-3904)
   let encrypted = try! doc.encrypt_256bit_aesv3_with_providers(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     denied_permissions,
     crypt_encrypt_aesv3_r5_random_for_test,
     fn(object_number, generation, index) {
       crypt_encrypt_aes_document_iv_for_test(object_number, generation, index)
     },
     encrypt_metadata=false,
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
 
   let rendered = try! @pdflite.pdf_write_document_with_xref_stream(encrypted)
@@ -673,7 +673,7 @@ test "PdfDocument encrypted AESV3 output round trips through xref stream writers
     true,
   )
   let decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! parsed.decrypt_with_user_password(@ascii.encode("user")),
+    try! parsed.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
   try! crypt_encrypt_assert_equivalent_object_for_test(
@@ -688,8 +688,8 @@ test "PdfDocument encrypted AESV3 output round trips through xref stream writers
   let compressed_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       compressed,
-      user_password=Some(@ascii.encode("bad")),
-      owner_password=Some(@ascii.encode("owner")),
+      user_password=Some(b"bad"),
+      owner_password=Some(b"owner"),
     ),
   )
   @test.assert_eq(
@@ -711,27 +711,27 @@ test "PdfDocument encrypted AESV2 output round trips through xref stream writers
   let key_encrypt = crypt_encrypt_name_for_test("/Encrypt")
   let doc = crypt_encrypt_minimal_catalog_document_for_test(1, 5)
   let secret_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("secret-aes-xref"))),
+    (key_title, PdfString(b"secret-aes-xref")),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
     [
       (crypt_encrypt_name_for_test("/Length"), PdfInteger(4)),
       (key_type, PdfNameObject(key_metadata)),
-      (key_title, PdfString(@ascii.encode("meta"))),
+      (key_title, PdfString(b"meta")),
     ],
-    @ascii.encode("data"),
+    b"data",
   )
   doc.add_object_given_number(5, secret_object)
   doc.add_object_given_number(6, metadata_stream)
   let encrypted = try! doc.encrypt_128bit_aesv2_with_iv_provider(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [PdfNoCopy],
     fn(object_number, generation, index) {
       crypt_encrypt_aes_document_iv_for_test(object_number, generation, index)
     },
     encrypt_metadata=false,
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
 
   let rendered = try! @pdflite.pdf_write_document_with_xref_stream(encrypted)
@@ -742,7 +742,7 @@ test "PdfDocument encrypted AESV2 output round trips through xref stream writers
     true,
   )
   let decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! parsed.decrypt_with_user_password(@ascii.encode("user")),
+    try! parsed.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
   try! crypt_encrypt_assert_equivalent_object_for_test(
@@ -757,8 +757,8 @@ test "PdfDocument encrypted AESV2 output round trips through xref stream writers
   let compressed_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       compressed,
-      user_password=Some(@ascii.encode("bad")),
-      owner_password=Some(@ascii.encode("owner")),
+      user_password=Some(b"bad"),
+      owner_password=Some(b"owner"),
     ),
   )
   @test.assert_eq(
@@ -801,24 +801,24 @@ test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
     ]),
   )
   let secret_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("secret"))),
+    (key_title, PdfString(b"secret")),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
     [
       (crypt_encrypt_name_for_test("/Length"), PdfInteger(4)),
       (key_type, PdfNameObject(key_metadata)),
-      (key_title, PdfString(@ascii.encode("meta"))),
+      (key_title, PdfString(b"meta")),
     ],
-    @ascii.encode("data"),
+    b"data",
   )
   doc.add_object_given_number(5, secret_object)
   doc.add_object_given_number(6, metadata_stream)
   let encrypted = try! doc.encrypt_128bit_r4(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [PdfNoPrint],
     encrypt_metadata=false,
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
   let rendered = try! @pdflite.pdf_write_document(encrypted)
   let parsed = try! @pdflite.pdf_read_document_from_bytes(rendered)
@@ -828,7 +828,7 @@ test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
     true,
   )
   let decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! parsed.decrypt_with_user_password(@ascii.encode("user")),
+    try! parsed.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.is_encrypted(), false)
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
@@ -840,8 +840,8 @@ test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
   let read_owner_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       rendered,
-      user_password=Some(@ascii.encode("bad")),
-      owner_password=Some(@ascii.encode("owner")),
+      user_password=Some(b"bad"),
+      owner_password=Some(b"owner"),
     ),
   )
   @test.assert_eq(
@@ -856,7 +856,7 @@ test "PdfDocument encrypted ARC4 output round trips through writer and reader" {
   @test.assert_eq(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       rendered,
-      user_password=Some(@ascii.encode("bad")),
+      user_password=Some(b"bad"),
     ),
     None,
   )
@@ -891,24 +891,24 @@ test "PdfDocument encrypted ARC4 output round trips through xref stream writers"
     ]),
   )
   let secret_object : @syntax.PdfObject = PdfDictionary([
-    (key_title, PdfString(@ascii.encode("secret-xref"))),
+    (key_title, PdfString(b"secret-xref")),
   ])
   let metadata_stream = crypt_encrypt_stream_for_test(
     [
       (crypt_encrypt_name_for_test("/Length"), PdfInteger(4)),
       (key_type, PdfNameObject(key_metadata)),
-      (key_title, PdfString(@ascii.encode("meta"))),
+      (key_title, PdfString(b"meta")),
     ],
-    @ascii.encode("data"),
+    b"data",
   )
   doc.add_object_given_number(5, secret_object)
   doc.add_object_given_number(6, metadata_stream)
   let encrypted = try! doc.encrypt_128bit_r4(
-    @ascii.encode("user"),
-    @ascii.encode("owner"),
+    b"user",
+    b"owner",
     [PdfNoPrint],
     encrypt_metadata=false,
-    file_id=@ascii.encode("doc-id"),
+    file_id=b"doc-id",
   )
 
   let rendered = try! @pdflite.pdf_write_document_with_xref_stream(encrypted)
@@ -919,7 +919,7 @@ test "PdfDocument encrypted ARC4 output round trips through xref stream writers"
     true,
   )
   let decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
-    try! parsed.decrypt_with_user_password(@ascii.encode("user")),
+    try! parsed.decrypt_with_user_password(b"user"),
   )
   @test.assert_eq(decrypted.document.lookup_object_or_null(5), secret_object)
   try! crypt_encrypt_assert_equivalent_object_for_test(
@@ -934,8 +934,8 @@ test "PdfDocument encrypted ARC4 output round trips through xref stream writers"
   let compressed_decrypted = crypt_encrypt_unwrap_decryption_result_for_test(
     try! @pdflite.pdf_read_document_from_bytes_with_passwords(
       compressed,
-      user_password=Some(@ascii.encode("bad")),
-      owner_password=Some(@ascii.encode("owner")),
+      user_password=Some(b"bad"),
+      owner_password=Some(b"owner"),
     ),
   )
   @test.assert_eq(

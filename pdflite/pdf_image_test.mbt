@@ -315,7 +315,7 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
         (image_name_for_test("/ImageMask"), PdfBoolean(true)),
         (image_name_for_test("/Length"), PdfInteger(7)),
       ]),
-      StreamGot(@ascii.encode("mask")),
+      StreamGot(b"mask"),
     ),
   )
   doc.add_object_given_number(
@@ -340,7 +340,7 @@ test "PdfDocument images_json lists image xobjects and soft masks" {
         (image_name_for_test("/Length"), PdfInteger(123)),
         (image_name_for_test("/SMask"), PdfIndirect(21)),
       ]),
-      StreamGot(@ascii.encode("jpg")),
+      StreamGot(b"jpg"),
     ),
   )
   let page = {
@@ -412,7 +412,7 @@ test "PdfDocument images_json optionally includes form inline images" {
     ),
   ])
   let form = (try! @pdflite.pdf_content_stream_of_ops([
-      Op_InlineImage(inline_dict, None, @ascii.encode("abc")),
+      Op_InlineImage(inline_dict, None, b"abc"),
     ]))
     .add_dict_entry(
       image_name_for_test("/Subtype"),
@@ -533,7 +533,7 @@ test "PdfDocument image_resolution optionally includes inline images" {
     content: [
       try! @pdflite.pdf_content_stream_of_ops([
         Op_cm(placement),
-        Op_InlineImage(inline_dict, None, @ascii.encode("abc")),
+        Op_InlineImage(inline_dict, None, b"abc"),
       ]),
     ],
   }
@@ -620,12 +620,12 @@ test "PdfDocument image_resolution descends into form xobjects" {
 test "PdfImage public variants preserve image payload metadata" {
   let layout : @pdflite.PdfPixelLayout = PdfBPP24
   @test.assert_eq(layout, PdfBPP24)
-  let jpeg : @pdflite.PdfImage = PdfJPEG(@ascii.encode("jpg"), Some([0.0, 1.0]))
-  @test.assert_eq(jpeg, PdfJPEG(@ascii.encode("jpg"), Some([0.0, 1.0])))
-  let jbig2 : @pdflite.PdfImage = PdfJBIG2(@ascii.encode("jbig"), None, Some(7))
-  @test.assert_eq(jbig2, PdfJBIG2(@ascii.encode("jbig"), None, Some(7)))
-  let raw : @pdflite.PdfImage = PdfRawImage(1, 1, PdfBPP8, @ascii.encode("x"))
-  @test.assert_eq(raw, PdfRawImage(1, 1, PdfBPP8, @ascii.encode("x")))
+  let jpeg : @pdflite.PdfImage = PdfJPEG(b"jpg", Some([0.0, 1.0]))
+  @test.assert_eq(jpeg, PdfJPEG(b"jpg", Some([0.0, 1.0])))
+  let jbig2 : @pdflite.PdfImage = PdfJBIG2(b"jbig", None, Some(7))
+  @test.assert_eq(jbig2, PdfJBIG2(b"jbig", None, Some(7)))
+  let raw : @pdflite.PdfImage = PdfRawImage(1, 1, PdfBPP8, b"x")
+  @test.assert_eq(raw, PdfRawImage(1, 1, PdfBPP8, b"x"))
 }
 
 ///|
@@ -1035,7 +1035,7 @@ test "pdf_image_object_of_jbig2_data builds JBIG2 image XObject" {
 ///|
 test "pdf_image_object_of_jbig2_data returns globals extra object" {
   let data = image_jbig2_for_document_test()
-  let globals = @ascii.encode("jbig2-globals")
+  let globals = b"jbig2-globals"
   let (object, extra) = try! @pdflite.pdf_image_object_of_jbig2_data(
     data,
     global=Some(globals),
@@ -1066,7 +1066,7 @@ test "pdf_image_object_of_jbig2_data returns globals extra object" {
 ///|
 test "pdf_image_obj_of_jbig2_data returns cpdf tuple shape" {
   let data = image_jbig2_for_document_test()
-  let globals = @ascii.encode("wrapper-jbig2-globals")
+  let globals = b"wrapper-jbig2-globals"
   let (object, extra) = try! @pdflite.pdf_image_obj_of_jbig2_data(
     data,
     global=Some(globals),
@@ -1087,7 +1087,7 @@ test "pdf_image_obj_of_jbig2_data returns cpdf tuple shape" {
 
 ///|
 test "pdf_image_document_of_jbig2_data preserves globals object" {
-  let globals = @ascii.encode("document-jbig2-globals")
+  let globals = b"document-jbig2-globals"
   let document = try! @pdflite.pdf_image_document_of_jbig2_data(
     image_jbig2_for_document_test(),
     global=Some(globals),
@@ -1289,7 +1289,7 @@ test "pdf_image_document_of_jpeg_data creates PDF/UA-2 document wrapper" {
       document.lookup_object_or_null(namespace_number),
       "/NS",
     ),
-    PdfString(@ascii.encode("http://iso.org/pdf2/ssn")),
+    PdfString(b"http://iso.org/pdf2/ssn"),
   )
   let root_k = try! image_lookup_for_test(struct_root, "/K")
   guard root_k is PdfArray([PdfIndirect(document_number)]) else {
@@ -1331,10 +1331,7 @@ test "pdf_image_document_of_jpeg_data creates PDF/UA-2 document wrapper" {
     fail("expected materialized PDF/UA metadata")
   }
   @test.assert_eq(
-    image_find_bytes_for_test(
-      metadata_bytes,
-      @ascii.encode("<pdfuaid:part>2</pdfuaid:part>"),
-    ) >=
+    image_find_bytes_for_test(metadata_bytes, b"<pdfuaid:part>2</pdfuaid:part>") >=
     0,
     true,
   )

@@ -89,15 +89,15 @@ test "PdfDocument get_image_24bpp returns encoded JPEG images" {
         PdfArray([PdfInteger(0), PdfInteger(1)]),
       ),
     ]),
-    StreamGot(@ascii.encode("jpg")),
+    StreamGot(b"jpg"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), image),
-    PdfJPEG(@ascii.encode("jpg"), Some([0.0, 1.0])),
+    PdfJPEG(b"jpg", Some([0.0, 1.0])),
   )
   @test.assert_eq(
     try! @pdflite.pdf_get_image_24bpp(doc, @syntax.pdf_dictionary([]), image),
-    PdfJPEG(@ascii.encode("jpg"), Some([0.0, 1.0])),
+    PdfJPEG(b"jpg", Some([0.0, 1.0])),
   )
   let gray_jpeg = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -112,11 +112,11 @@ test "PdfDocument get_image_24bpp returns encoded JPEG images" {
         PdfNameObject(image_get_name_for_test("/DeviceGray")),
       ),
     ]),
-    StreamGot(@ascii.encode("gray-jpg")),
+    StreamGot(b"gray-jpg"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), gray_jpeg),
-    PdfJPEG(@ascii.encode("gray-jpg"), Some([0.0, 1.0])),
+    PdfJPEG(b"gray-jpg", Some([0.0, 1.0])),
   )
   let array_jpeg = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -127,11 +127,11 @@ test "PdfDocument get_image_24bpp returns encoded JPEG images" {
         PdfArray([PdfNameObject(image_get_name_for_test("/DCTDecode"))]),
       ),
     ]),
-    StreamGot(@ascii.encode("array-jpg")),
+    StreamGot(b"array-jpg"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), array_jpeg),
-    PdfJPEG(@ascii.encode("array-jpg"), None),
+    PdfJPEG(b"array-jpg", None),
   )
   let short_alias_jpeg = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -142,11 +142,11 @@ test "PdfDocument get_image_24bpp returns encoded JPEG images" {
         PdfArray([PdfNameObject(image_get_name_for_test("/DCT"))]),
       ),
     ]),
-    StreamGot(@ascii.encode("short-alias-jpg")),
+    StreamGot(b"short-alias-jpg"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), short_alias_jpeg),
-    PdfJPEG(@ascii.encode("short-alias-jpg"), None),
+    PdfJPEG(b"short-alias-jpg", None),
   )
   doc.add_object_given_number(
     8,
@@ -158,11 +158,11 @@ test "PdfDocument get_image_24bpp returns encoded JPEG images" {
       (image_get_name_for_test("/Height"), PdfInteger(1)),
       (image_get_name_for_test("/Filter"), PdfArray([PdfIndirect(8)])),
     ]),
-    StreamGot(@ascii.encode("indirect-array-jpg")),
+    StreamGot(b"indirect-array-jpg"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), indirect_array_jpeg),
-    PdfJPEG(@ascii.encode("indirect-array-jpg"), None),
+    PdfJPEG(b"indirect-array-jpg", None),
   )
 }
 
@@ -178,11 +178,11 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
         PdfNameObject(image_get_name_for_test("/JPXDecode")),
       ),
     ]),
-    StreamGot(@ascii.encode("jpx")),
+    StreamGot(b"jpx"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), jpx),
-    PdfJPEG2000(@ascii.encode("jpx"), None),
+    PdfJPEG2000(b"jpx", None),
   )
   let jbig2 = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -199,11 +199,11 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
         ]),
       ),
     ]),
-    StreamGot(@ascii.encode("jbig")),
+    StreamGot(b"jbig"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), jbig2),
-    PdfJBIG2(@ascii.encode("jbig"), None, Some(99)),
+    PdfJBIG2(b"jbig", None, Some(99)),
   )
   let jbig2_short_decodeparms = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -220,14 +220,14 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
         ]),
       ),
     ]),
-    StreamGot(@ascii.encode("short-jbig")),
+    StreamGot(b"short-jbig"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(
       @syntax.pdf_dictionary([]),
       jbig2_short_decodeparms,
     ),
-    PdfJBIG2(@ascii.encode("short-jbig"), None, Some(77)),
+    PdfJBIG2(b"short-jbig", None, Some(77)),
   )
   let jbig2_array_decodeparms = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -246,14 +246,14 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
         ]),
       ),
     ]),
-    StreamGot(@ascii.encode("array-jbig")),
+    StreamGot(b"array-jbig"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(
       @syntax.pdf_dictionary([]),
       jbig2_array_decodeparms,
     ),
-    PdfJBIG2(@ascii.encode("array-jbig"), None, Some(42)),
+    PdfJBIG2(b"array-jbig", None, Some(42)),
   )
   let jbig2_empty_decodeparms = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -265,14 +265,14 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
       ),
       (image_get_name_for_test("/DecodeParms"), @syntax.pdf_dictionary([])),
     ]),
-    StreamGot(@ascii.encode("empty-dp-jbig")),
+    StreamGot(b"empty-dp-jbig"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(
       @syntax.pdf_dictionary([]),
       jbig2_empty_decodeparms,
     ),
-    PdfJBIG2(@ascii.encode("empty-dp-jbig"), None, None),
+    PdfJBIG2(b"empty-dp-jbig", None, None),
   )
   let jbig2_bad_array_decodeparms = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -284,14 +284,14 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
       ),
       (image_get_name_for_test("/DecodeParms"), PdfArray([PdfInteger(1)])),
     ]),
-    StreamGot(@ascii.encode("bad-array-jbig")),
+    StreamGot(b"bad-array-jbig"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(
       @syntax.pdf_dictionary([]),
       jbig2_bad_array_decodeparms,
     ),
-    PdfJBIG2(@ascii.encode("bad-array-jbig"), None, None),
+    PdfJBIG2(b"bad-array-jbig", None, None),
   )
   let jbig2_without_globals = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -302,11 +302,11 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
         PdfNameObject(image_get_name_for_test("/JBIG2Decode")),
       ),
     ]),
-    StreamGot(@ascii.encode("plain-jbig")),
+    StreamGot(b"plain-jbig"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), jbig2_without_globals),
-    PdfJBIG2(@ascii.encode("plain-jbig"), None, None),
+    PdfJBIG2(b"plain-jbig", None, None),
   )
   let jbig2_bad_decodeparms = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -318,11 +318,11 @@ test "PdfDocument get_image_24bpp returns encoded JPX and JBIG2 images" {
       ),
       (image_get_name_for_test("/DecodeParms"), PdfInteger(1)),
     ]),
-    StreamGot(@ascii.encode("bad-jbig")),
+    StreamGot(b"bad-jbig"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), jbig2_bad_decodeparms),
-    PdfJBIG2(@ascii.encode("bad-jbig"), None, None),
+    PdfJBIG2(b"bad-jbig", None, None),
   )
 }
 
@@ -352,7 +352,7 @@ test "PdfDocument get_image_24bpp decodes filter stages before image extraction"
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), flate_raw),
     PdfRawImage(2, 1, PdfBPP24, raw_data),
   )
-  let flate_jpeg_data = @flate.pdf_flate_encode(@ascii.encode("jpg"))
+  let flate_jpeg_data = @flate.pdf_flate_encode(b"jpg")
   let encoded_jpeg = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (image_get_name_for_test("/Length"), PdfInteger(flate_jpeg_data.length())),
@@ -370,9 +370,9 @@ test "PdfDocument get_image_24bpp decodes filter stages before image extraction"
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), encoded_jpeg),
-    PdfJPEG(@ascii.encode("jpg"), None),
+    PdfJPEG(b"jpg", None),
   )
-  let flate_jbig2_data = @flate.pdf_flate_encode(@ascii.encode("jbig-stage"))
+  let flate_jbig2_data = @flate.pdf_flate_encode(b"jbig-stage")
   let encoded_jbig2 = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (
@@ -402,7 +402,7 @@ test "PdfDocument get_image_24bpp decodes filter stages before image extraction"
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), encoded_jbig2),
-    PdfJBIG2(@ascii.encode("jbig-stage"), None, Some(123)),
+    PdfJBIG2(b"jbig-stage", None, Some(123)),
   )
 }
 

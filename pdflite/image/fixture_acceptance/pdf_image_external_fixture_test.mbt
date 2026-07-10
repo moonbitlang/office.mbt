@@ -139,7 +139,7 @@ fn image_external_push_ascii_for_test(
 fn image_external_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = image_external_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -176,7 +176,7 @@ fn image_external_corrupt_startxref_pointer_for_test(
 
 ///|
 fn image_external_startxref_offset_for_test(bytes : Bytes) -> Int raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = image_external_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -210,11 +210,7 @@ fn image_external_corrupt_startxref_xref_header_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   let xref_offset = image_external_startxref_offset_for_test(bytes)
-  guard image_external_bytes_start_with_at_for_test(
-    bytes,
-    @ascii.encode("xref"),
-    xref_offset,
-  ) else {
+  guard image_external_bytes_start_with_at_for_test(bytes, b"xref", xref_offset) else {
     fail("expected startxref to point at a classic xref table")
   }
   let output : Array[Byte] = []
@@ -231,9 +227,7 @@ fn image_external_corrupt_startxref_trailer_keyword_for_test(
 ) -> Bytes raise {
   let xref_offset = image_external_startxref_offset_for_test(bytes)
   let trailer_position = image_external_find_bytes_after_for_test(
-    bytes,
-    @ascii.encode("trailer"),
-    xref_offset,
+    bytes, b"trailer", xref_offset,
   )
   if trailer_position < 0 {
     fail("expected classic xref trailer keyword after startxref target")
@@ -250,7 +244,7 @@ fn image_external_corrupt_startxref_trailer_keyword_for_test(
 fn image_external_first_in_use_xref_row_start_for_test(
   bytes : Bytes,
 ) -> Int raise {
-  let free_row = @ascii.encode("0000000000 65535 f")
+  let free_row = b"0000000000 65535 f"
   let free_row_position = image_external_find_bytes_for_test(bytes, free_row)
   if free_row_position < 0 {
     fail("expected classic xref free row")
@@ -325,7 +319,7 @@ fn image_external_corrupt_first_in_use_xref_generation_for_test(
 fn image_external_first_xref_subsection_spans_for_test(
   bytes : Bytes,
 ) -> (Int, Int, Int, Int) raise {
-  let header = @ascii.encode("xref")
+  let header = b"xref"
   let header_position = image_external_find_bytes_for_test(bytes, header)
   if header_position < 0 {
     fail("expected first classic xref header")
@@ -727,7 +721,7 @@ fn image_external_cpdf_source_hello_with_inline_image_for_test(
     Op_InlineImage(
       image_external_cpdf_source_inline_image_dictionary_for_test(),
       None,
-      @ascii.encode("abcdefghijklmnopqr"),
+      b"abcdefghijklmnopqr",
     ),
   ]
   let updated_page = document.postpend_operators(pages[0], image_ops, fast=true)
