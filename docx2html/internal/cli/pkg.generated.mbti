@@ -1,0 +1,37 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/internal/cli"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn parse_output_format(String) -> CliOutputFormat raise CliError
+
+pub async fn run_conversion(CliOptions, program? : String) -> Unit
+
+// Errors
+pub(all) suberror CliError {
+  CliError(String)
+} derive(Eq)
+pub impl Show for CliError
+
+// Types and methods
+pub(all) struct CliOptions {
+  input_path : String
+  output_path : String?
+  output_dir : String?
+  style_map_path : String?
+  output_format : CliOutputFormat
+  pretty_print : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) enum CliOutputFormat {
+  Html
+  Markdown
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
+

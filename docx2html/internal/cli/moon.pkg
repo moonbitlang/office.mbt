@@ -1,0 +1,12 @@
+import {
+  "bobzhang/docx2html" @docx,
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+}
+
+import {
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/encoding/utf8" @encoding/utf8,
+} for "wbtest"
+
+supported_targets = "native+wasm"

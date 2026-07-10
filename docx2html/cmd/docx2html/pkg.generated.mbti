@@ -8,14 +8,9 @@ import {
 // Values
 
 // Errors
-type CliError derive(Eq)
 
 // Types and methods
 type CliCommand derive(Eq, @debug.Debug)
-
-type CliOptions derive(Eq, @debug.Debug)
-
-type CliOutputFormat derive(Eq, @debug.Debug)
 
 // Type aliases
 
