@@ -170,10 +170,12 @@ jobs:
             {"op": "merge", "params": {"sheet": "Data", "cell_range": "C1:D1"}}
           ]}
           JSON
-          # The bad param name must fail with an indexed error and leave the file valid.
-          if moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json; then
-            echo "expected the bad script to fail"; exit 1
-          fi
+          # The bad param name must fail with the op-indexed error, and the
+          # file must be byte-identical afterwards (no write on failure).
+          cp ci.xlsx ci-before.xlsx
+          out=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>&1) && { echo "expected the bad script to fail"; exit 1; } || true
+          echo "$out" | grep -q "error: op 2 (merge): unknown param 'cell_range'"
+          cmp ci.xlsx ci-before.xlsx
           sed -i 's/"cell_range"/"range"/' ci-batch.json
           b=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>/dev/null)
           echo "batch -> $b"; test "$b" = "applied 3 op(s) to ci.xlsx"

@@ -77,9 +77,30 @@ test "a script covering every op kind applies like its CLI twins" {
   )
   inspect(workbook.get_col_width("Data", 1).unwrap_or(0), content="16")
   inspect(workbook.get_col_width("Data", 2).unwrap_or(0), content="16")
+  match style.number_format {
+    Some(Custom(code)) => inspect(code, content="#,##0.00")
+    other => fail("expected the custom number format, got \{to_repr(other)}")
+  }
+  match style.fill {
+    Some(fill) =>
+      debug_inspect(
+        fill.colors,
+        content=(
+          #|Some(["4472C4"])
+        ),
+      )
+    None => fail("style should carry a fill")
+  }
+  match style.alignment {
+    Some(alignment) =>
+      inspect(alignment.horizontal.unwrap_or(""), content="center")
+    None => fail("style should carry an alignment")
+  }
   let panes = workbook.get_panes("Data")
   assert_true(panes.freeze)
   inspect(panes.y_split, content="1")
+  inspect(panes.x_split, content="0")
+  inspect(panes.top_left_cell, content="A2")
   match workbook.get_auto_filter("Data") {
     Some(auto_filter) => inspect(auto_filter.range_ref, content="A1:C3")
     None => fail("auto-filter should be set")
@@ -90,11 +111,93 @@ test "a script covering every op kind applies like its CLI twins" {
       #|["Data", "Summary"]
     ),
   )
-  let mut charts = 0
+  let mut chart_xml = ""
   for sheet in workbook.sheets() {
-    charts += sheet.charts().length()
+    for chart in sheet.charts() {
+      chart_xml = chart.xml
+    }
   }
-  inspect(charts, content="1")
+  // Line type, sheet-qualified series ranges, series name, and title all
+  // survive into the chart part.
+  assert_true(chart_xml.contains("<c:lineChart>"))
+  assert_true(chart_xml.contains("'Data'!A1:A3"))
+  assert_true(chart_xml.contains("'Data'!B1:B3"))
+  assert_true(chart_xml.contains("Sales"))
+  assert_true(chart_xml.contains("Trend"))
+}
+
+///|
+test "a chart op requires categories and values" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let ops = parse_ops(
+    (
+      #|{"schema": "xlsx.batch/1",
+      #| "ops": [{"op": "chart", "params": {"sheet": "Data", "anchor": "E2", "categories": "", "values": "B1:B3"}}]}
+    ),
+  )
+  try @batch.apply_op(workbook, ops[0]) catch {
+    @batch.BatchError(message) =>
+      inspect(
+        message,
+        content="chart requires non-empty 'categories' and 'values'",
+      )
+    err => fail("expected a BatchError, got \{err}")
+  } noraise {
+    _ => fail("expected the chart op to be rejected")
+  }
+}
+
+///|
+test "non-representable numbers are rejected, not corrupted" {
+  for
+    case in [
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "set", "params": {"sheet": "S", "cell": "A1", "value": 1e309}}]}
+        ),
+        "op 0 (set): 'value' is not exactly representable as a number",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "set", "params": {"sheet": "S", "cell": "A1", "value": 9007199254740993}}]}
+        ),
+        "op 0 (set): 'value' is not exactly representable as a number",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "width", "params": {"sheet": "S", "column": "A", "width": 1e309}}]}
+        ),
+        "op 0 (width): 'width' is not exactly representable as a number",
+      ),
+    ] {
+    let (script, expected) = case
+    try ignore(parse_ops(script)) catch {
+      @batch.BatchError(message) => assert_eq(message, expected)
+      err => fail("expected BatchError, got \{err}")
+    } noraise {
+      _ => fail("expected rejection: \{script}")
+    }
+  }
+}
+
+///|
+test "a non-string op name has its own diagnostic" {
+  try
+    ignore(
+      parse_ops(
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": 5, "params": {}}]}
+        ),
+      ),
+    )
+  catch {
+    @batch.BatchError(message) =>
+      inspect(message, content="op 0: \"op\" must be a string")
+    err => fail("expected BatchError, got \{err}")
+  } noraise {
+    _ => fail("expected rejection")
+  }
 }
 
 ///|
@@ -218,12 +321,14 @@ test "apply failures carry the underlying library error" {
       #| "ops": [{"op": "merge", "params": {"sheet": "Nope", "range": "A1:B2"}}]}
     ),
   )
-  try {
-    for op in ops {
-      @batch.apply_op(workbook, op)
+  let mut failed = false
+  for op in ops {
+    @batch.apply_op(workbook, op) catch {
+      _ => {
+        failed = true
+        break
+      }
     }
-    fail("expected a missing-sheet failure")
-  } catch {
-    _ => ()
   }
+  assert_true(failed)
 }

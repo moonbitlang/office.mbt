@@ -146,7 +146,8 @@ fn parse_op(index : Int, item : Json) -> BatchOp raise BatchError {
   }
   let name = match entry.get("op") {
     Some(String(name)) => name
-    _ => raise BatchError("op \{index}: missing \"op\" name")
+    Some(_) => raise BatchError("op \{index}: \"op\" must be a string")
+    None => raise BatchError("op \{index}: missing \"op\" name")
   }
   for key, _ in entry {
     if key != "op" && key != "params" {
@@ -286,9 +287,32 @@ fn ParamReader::number(
   key : String,
 ) -> Double raise BatchError {
   match self.take(key) {
-    Some(Number(value, ..)) => value
+    Some(Number(value, repr~)) => {
+      self.check_representable(key, value, repr)
+      value
+    }
     Some(_) => raise op_error(self.index, self.op, "'\{key}' must be a number")
     None => raise op_error(self.index, self.op, "missing param '\{key}'")
+  }
+}
+
+///|
+/// Core JSON keeps the source text (`repr`) when a literal cannot be
+/// represented exactly as a Double (e.g. 1e309 becomes infinity,
+/// 9007199254740993 rounds); accepting the sentinel would silently
+/// corrupt the workbook, so such numbers are rejected outright.
+fn ParamReader::check_representable(
+  self : ParamReader,
+  key : String,
+  value : Double,
+  repr : String?,
+) -> Unit raise BatchError {
+  if repr is Some(_) || value != value || value.is_inf() {
+    raise op_error(
+      self.index,
+      self.op,
+      "'\{key}' is not exactly representable as a number",
+    )
   }
 }
 
@@ -299,7 +323,10 @@ fn ParamReader::value(
 ) -> BatchValue raise BatchError {
   match self.take(key) {
     Some(String(text)) => Text(text)
-    Some(Number(value, ..)) => Number(value)
+    Some(Number(value, repr~)) => {
+      self.check_representable(key, value, repr)
+      Number(value)
+    }
     Some(True) => Flag(true)
     Some(False) => Flag(false)
     Some(Null) => Clear

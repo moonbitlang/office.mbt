@@ -16,8 +16,11 @@ the source of truth and this document has a bug.
   in `docx2html/inspect/schema.mbt`.
 - **Evolution is additive-only**: new optional keys may appear under an
   existing identifier; keys are never renamed, removed, or retyped. A
-  breaking change mints a new identifier with a bumped major. Consumers must
-  ignore keys they do not recognize.
+  breaking change mints a new identifier with a bumped major. Consumers of
+  **emitted** payloads (`outline`, `get --json`) must ignore keys they do
+  not recognize. Schemas the tool **consumes** (`xlsx.batch/1`) are the
+  opposite: validated strictly, unknown keys are errors — a typo must fail
+  loudly, not silently no-op.
 - **`null` is never emitted.** An absent key means "unset / not present".
   Top-level inventory lists (`sheets`, `merges`, `tables`, `charts`,
   `images`, `pivot_tables`, `defined_names`, `cells`) are always present
@@ -152,12 +155,17 @@ Envelope:
 - `set.value` accepts string, number, bool, or null. JSON types are honored:
   a number becomes a numeric cell, a string a text cell (no
   reclassification), a bool a boolean cell, and null clears the cell.
-- Validation is strict: a missing/unknown `schema`, an unknown `op`, an
-  unknown param key, or a wrong param type fails with an error naming the
-  0-based op index, and the file is not touched.
+- Validation is strict, and the file is never touched on failure.
+  Envelope errors (missing/unsupported `schema`, malformed `ops`) carry no
+  index; op-level errors (unknown op, unknown param key, wrong param type)
+  name the 0-based op index, e.g. `op 1 (style): unknown param 'colour'`.
+- Numbers must be exactly representable as IEEE doubles: literals such as
+  `1e309` or `9007199254740993` are rejected rather than silently rounded
+  or stored as infinity.
 - Application is all-or-nothing: ops apply to the in-memory workbook and the
   file is written (temp file + rename) only after every op succeeds.
-- Zero ops is a valid no-op. Scripts are capped at 10,000 ops.
+- Zero ops is a valid no-op and writes nothing. Scripts are capped at
+  10,000 ops.
 - `--dry-run` parses and applies in memory but never writes.
 
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
