@@ -14,5 +14,9 @@ import {
 
 import {
   "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+  "moonbitlang/async/process",
+  "moonbitlang/core/env",
   "moonbitlang/core/random",
 } for "test"
