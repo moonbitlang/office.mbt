@@ -208,3 +208,8 @@ jobs:
           moon run --target wasm docx2html/cmd/docx -- create ci-blank.docx 2>docx-wasm.err || { echo "docx create failed; stderr:"; cat docx-wasm.err; exit 1; }
           c=$(moon run --target wasm docx2html/cmd/docx -- validate ci-blank.docx 2>docx-wasm.err) || { echo "blank validate failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "blank validate -> $c"; test "$c" = "valid"
+          # Authoring surface: batch a document from an op script on wasm.
+          printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "Hi", "style": "Heading1"}}]}' > ci-batch.json
+          moon run --target wasm docx2html/cmd/docx -- batch ci-batch.docx ci-batch.json 2>docx-wasm.err || { echo "docx batch failed; stderr:"; cat docx-wasm.err; exit 1; }
+          b=$(moon run --target wasm docx2html/cmd/docx -- validate ci-batch.docx 2>docx-wasm.err) || { echo "batch validate failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "batch validate -> $b"; test "$b" = "valid"

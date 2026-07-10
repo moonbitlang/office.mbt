@@ -1,0 +1,9 @@
+import {
+  "bobzhang/docx2html/document",
+  "moonbitlang/core/json",
+}
+
+import {
+  "bobzhang/docx2html/document",
+  "moonbitlang/core/json",
+} for "test"

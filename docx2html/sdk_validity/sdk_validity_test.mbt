@@ -231,3 +231,58 @@ async test "docx fixtures and embed_style_map output are Microsoft OpenXML schem
   let restyled = @docx2html.embed_style_map(single_paragraph, "p => h1:fresh")
   validate_docx_via_sdk(dir, "embedded_style_map", restyled)
 }
+
+///|
+/// End-to-end gate for the `docx batch` surface: a script exercising every
+/// batch op and run spec (styles, flags, link, list levels, spanned table,
+/// inline image) must build a package the Microsoft SDK accepts. The batch
+/// package's own tests pin parsing; this pins that the surface COMPOSES
+/// into schema-valid OOXML (enforced-sequence regressions surface here).
+async test "a full-surface docx.batch/1 script is Microsoft OpenXML schema-valid" {
+  let dir = fresh_scratch_dir()
+  let tiny_png = @afs.read_file("tests/cram/fixtures/tiny-picture.docx").binary()
+  let png = @docx2html.read_docx_package(tiny_png)
+  let mut image_bytes : Bytes = b""
+  fn find_image(element : @docx2html.DocumentElement) -> Unit {
+    match element {
+      Image(image) => image_bytes = image.data
+      Document(children~, ..) | Paragraph(children~, ..) | Run(children~, ..) =>
+        for child in children {
+          find_image(child)
+        }
+      _ => ()
+    }
+  }
+  find_image(png.document)
+  let script = @batch.parse_batch(
+    @json.parse(
+      (
+        #|{
+        #|  "schema": "docx.batch/1",
+        #|  "ops": [
+        #|    {"op": "paragraph", "params": {"text": "Title", "style": "Heading1"}},
+        #|    {"op": "paragraph", "params": {"align": "center", "runs": [
+        #|      {"text": "flags", "bold": true, "italic": true, "underline": true,
+        #|       "strike": true, "small_caps": true, "font": "Arial", "size": 14,
+        #|       "highlight": "yellow"},
+        #|      {"text": "sup", "vertical": "superscript"},
+        #|      {"link": {"href": "https://example.com/a?b=1&c=2", "text": "site"}},
+        #|      {"link": {"anchor": "top", "target_frame": "_blank", "text": "up"}},
+        #|      {"image": {"path": "dot.png", "alt": "a dot"}}
+        #|    ]}},
+        #|    {"op": "paragraph", "params": {"text": "one", "list": {"ordered": true}}},
+        #|    {"op": "paragraph", "params": {"text": "deep", "list": {"ordered": false, "level": 9}}},
+        #|    {"op": "table", "params": {"header_rows": 1, "rows": [
+        #|      [{"text": "H1"}, {"text": "H2"}],
+        #|      [{"text": "wide", "col_span": 2}],
+        #|      [{"text": "tall", "row_span": 2}, {"paragraphs": [{"text": "a"}, {"text": "b"}]}],
+        #|      [{"text": "x"}]
+        #|    ]}}
+        #|  ]
+        #|}
+      ),
+    ),
+  )
+  let body = script.build_body({ "dot.png": image_bytes })
+  validate_docx_via_sdk(dir, "batch_full_surface", @docx2html.write_docx(body))
+}
