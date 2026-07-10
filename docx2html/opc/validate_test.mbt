@@ -216,7 +216,7 @@ test "duplicate names and CRC corruption are findings" {
   let mut at = -1
   let haystack = Bytes::from_array(bytes)
   for i in 0..<(haystack.length() - marker.length()) {
-    if haystack[i:i + marker.length()] == marker[:] {
+    if haystack[i:i + marker.length()] == marker {
       at = i
       break
     }
@@ -227,6 +227,22 @@ test "duplicate names and CRC corruption are findings" {
     @opc.validate_docx_package(Bytes::from_array(bytes)),
     content=(
       #|["entry data does not match its stored CRC-32: word/document.xml"]
+    ),
+  )
+}
+
+///|
+test "an empty or slash-less Override PartName is a finding, not a crash" {
+  let types =
+    #|<?xml version="1.0"?>
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="" ContentType="application/xml"/><Override PartName="w" ContentType="application/xml"/></Types>
+  debug_inspect(
+    @opc.validate_docx_package(minimal_docx(content_types=Some(types))),
+    content=(
+      #|[
+      #|  "[Content_Types].xml: Override PartName must start with '/': ",
+      #|  "[Content_Types].xml: Override PartName must start with '/': w",
+      #|]
     ),
   )
 }
