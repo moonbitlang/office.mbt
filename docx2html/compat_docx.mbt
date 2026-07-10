@@ -161,6 +161,14 @@ pub fn new_blank_docx() -> Bytes {
 }
 
 ///|
+/// Serializes semantic body content (paragraphs and runs, F1 surface) into
+/// a schema-valid docx. Fail-closed: unsupported elements raise
+/// `Unsupported` rather than dropping content. See `@docx.write_docx`.
+pub fn write_docx(body : Array[DocumentElement]) -> Bytes raise DocxError {
+  bridge_core_error(() => @docx_impl.write_docx(body))
+}
+
+///|
 /// Reads DOCX bytes into the package-level representation: the body
 /// document (identical to `read_docx_with_messages`) plus sections and
 /// header/footer stories. See `@docx.read_docx_package`.

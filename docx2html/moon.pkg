@@ -13,6 +13,7 @@ import {
 }
 
 import {
+  "bobzhang/docx2html/inspect",
   "bobzhang/docx2html/opc",
   "bobzhang/mbtexcel/zip" @mbtzip,
   "moonbitlang/core/random",
