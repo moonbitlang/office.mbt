@@ -216,8 +216,8 @@ only when true; `null` is never emitted):
   `style_id`, `style_name`, `numbering` (`{ordered, level}`), `alignment`
 - `r`: `text`, `style_id`, `style_name`, `bold`, `italic`, `underline`,
   `strikethrough`, `all_caps`, `small_caps`, `vertical_alignment`
-  (`superscript`/`subscript`), `font`, `font_size` (half-points as parsed),
-  `highlight`
+  (`superscript`/`subscript`), `font`, `font_size` (**points** — the reader
+  halves OOXML's `w:sz` half-points, truncating odd values), `highlight`
 - `tbl`: `style_id`, `style_name`
 - `tr`: `header` (true for header rows)
 - `tc`: `col_span`, `row_span` (present only when ≠ 1)
