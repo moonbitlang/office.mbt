@@ -139,7 +139,7 @@ test "the F1 writer fails closed on everything it cannot serialize yet" {
         ),
       ),
     ],
-    "the paragraph writer cannot serialize list numbering yet",
+    "list levels must be 1..9 (got 0)",
   )
   expect_unsupported(
     [
@@ -417,5 +417,60 @@ test "review round 1 (F2): merge-overlap rejection and the empty-cell asymmetry"
       #|  ),
       #|]
     ),
+  )
+}
+
+///|
+test "lists round-trip: ordered and unordered at several levels" {
+  let body = [
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("first")])],
+      properties=@docx2html.paragraph_properties(
+        numbering=Some(@docx2html.numbering(true, 1)),
+      ),
+    ),
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("nested bullet")])],
+      properties=@docx2html.paragraph_properties(
+        numbering=Some(@docx2html.numbering(false, 2)),
+      ),
+    ),
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("deep ordered")])],
+      properties=@docx2html.paragraph_properties(
+        numbering=Some(@docx2html.numbering(true, 9)),
+      ),
+    ),
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("plain after")])]),
+  ]
+  let bytes = @docx2html.write_docx(body)
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let result = @docx2html.read_docx_package(bytes)
+  debug_inspect(result.messages, content="[]")
+  guard result.document is Document(children~, ..)
+  assert_eq(children, body)
+  // The converter renders the shallow levels as real lists; its deep-level
+  // fallback to a plain paragraph for level 9 is pre-existing Mammoth
+  // parity, pinned here as documentation.
+  inspect(
+    @docx2html.convert_to_html(bytes).value,
+    content=(
+      #|<ol><li>first<ul><li>nested bullet</li></ul></li></ol><p>deep ordered</p><p>plain after</p>
+    ),
+  )
+}
+
+///|
+test "list levels outside 1..9 fail closed" {
+  expect_unsupported(
+    [
+      @docx2html.paragraph(
+        [@docx2html.run([@docx2html.text("x")])],
+        properties=@docx2html.paragraph_properties(
+          numbering=Some(@docx2html.numbering(false, 10)),
+        ),
+      ),
+    ],
+    "list levels must be 1..9 (got 10)",
   )
 }

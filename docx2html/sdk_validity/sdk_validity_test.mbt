@@ -170,6 +170,29 @@ async test "docx fixtures and embed_style_map output are Microsoft OpenXML schem
     ]),
   ])
   validate_docx_via_sdk(dir, "written_table", table)
+  // F3: ordered + unordered lists at several levels — CT_Numbering/CT_Lvl
+  // are enforced sequences like CT_RPr was.
+  let lists = @docx2html.write_docx([
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("one")])],
+      properties=@docx2html.paragraph_properties(
+        numbering=Some(@docx2html.numbering(true, 1)),
+      ),
+    ),
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("bullet")])],
+      properties=@docx2html.paragraph_properties(
+        numbering=Some(@docx2html.numbering(false, 3)),
+      ),
+    ),
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("deep")])],
+      properties=@docx2html.paragraph_properties(
+        numbering=Some(@docx2html.numbering(true, 9)),
+      ),
+    ),
+  ])
+  validate_docx_via_sdk(dir, "written_lists", lists)
   let restyled = @docx2html.embed_style_map(single_paragraph, "p => h1:fresh")
   validate_docx_via_sdk(dir, "embedded_style_map", restyled)
 }

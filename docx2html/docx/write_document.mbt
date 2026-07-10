@@ -7,17 +7,28 @@
 // in F3, hyperlinks/images in F4).
 
 ///|
+/// Shared state of one `write_docx` invocation: which styles the body used
+/// (drives the styles part) and whether any list numbering was written
+/// (drives the numbering part and its wiring).
+priv struct WriteContext {
+  used_styles : Set[String]
+  mut uses_lists : Bool
+}
+
+///|
 /// Serializes body content into a complete docx package. Supported today:
-/// paragraphs (style id, alignment) containing runs (bold, italic,
-/// underline, strikethrough, caps, super/subscript, font, size, highlight),
-/// text, tabs, and line breaks. Headings use the `Heading1`..`Heading6`
-/// style ids, which are emitted into the styles part so Word's outline and
-/// this repo's own `outline` command both recognize them.
+/// paragraphs (style id, alignment, list numbering) containing runs (bold,
+/// italic, underline, strikethrough, caps, super/subscript, font, size,
+/// highlight), text, tabs, line breaks; and tables with spans. Headings use
+/// the `Heading1`..`Heading6` style ids, emitted into the styles part so
+/// Word's outline and this repo's own `outline` command both recognize
+/// them; list paragraphs reference the fixed bullet/decimal definitions in
+/// the numbering part.
 pub fn write_docx(body : Array[DocumentElement]) -> Bytes raise DocxError {
   let paragraphs : Array[XmlNode] = []
-  let used_styles : Set[String] = Set([])
+  let ctx : WriteContext = { used_styles: Set([]), uses_lists: false }
   for element in body {
-    paragraphs.push(XmlElement(write_block(element, used_styles)))
+    paragraphs.push(XmlElement(write_block(element, ctx)))
   }
   paragraphs.push(XmlElement(blank_section_properties()))
   let document = @xml.write_xml_string(
@@ -27,7 +38,12 @@ pub fn write_docx(body : Array[DocumentElement]) -> Bytes raise DocxError {
     namespaces={ "w": WORDPROCESSINGML_NAMESPACE },
   )
   let builder = @opc.PackageBuilder::new()
-  build_docx_package(builder, document, styles_xml_for(used_styles)) catch {
+  build_docx_package(
+    builder,
+    document,
+    styles_xml_for(ctx.used_styles),
+    with_numbering=ctx.uses_lists,
+  ) catch {
     err =>
       raise Unsupported(
         message="could not assemble the document package: \{err}",
@@ -43,6 +59,7 @@ fn build_docx_package(
   builder : @opc.PackageBuilder,
   document_xml : String,
   styles_xml : String,
+  with_numbering? : Bool = false,
 ) -> Bytes raise @opc.PackageBuildError {
   builder.add_default(
     "rels", "application/vnd.openxmlformats-package.relationships+xml",
@@ -64,6 +81,18 @@ fn build_docx_package(
     "styles.xml",
     source="word/document.xml",
   )
+  if with_numbering {
+    builder.add_override(
+      "/word/numbering.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
+    )
+    builder.add_relationship(
+      "rId2",
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
+      "numbering.xml",
+      source="word/document.xml",
+    )
+    builder.add_part("word/numbering.xml", @utf8.encode(numbering_xml()))
+  }
   builder.add_part("word/document.xml", @utf8.encode(document_xml))
   builder.add_part("word/styles.xml", @utf8.encode(styles_xml))
   builder.build()
@@ -72,13 +101,12 @@ fn build_docx_package(
 ///|
 fn write_block(
   element : DocumentElement,
-  used_styles : Set[String],
+  ctx : WriteContext,
 ) -> XmlElement raise DocxError {
   match element {
     Paragraph(children~, properties~) =>
-      write_paragraph(children, properties, used_styles)
-    Table(children~, properties~) =>
-      write_table(children, properties, used_styles)
+      write_paragraph(children, properties, ctx)
+    Table(children~, properties~) => write_table(children, properties, ctx)
     other =>
       raise Unsupported(
         message="the paragraph writer cannot serialize this element yet: \{block_kind_name(other)} (lists arrive in F3, media in F4)",
@@ -90,7 +118,7 @@ fn write_block(
 fn write_paragraph(
   children : Array[DocumentElement],
   properties : ParagraphProperties,
-  used_styles : Set[String],
+  ctx : WriteContext,
 ) -> XmlElement raise DocxError {
   let nodes : Array[XmlNode] = []
   let ppr_children : Array[XmlNode] = []
@@ -101,10 +129,42 @@ fn write_paragraph(
           message="unsupported paragraph style id for the writer: '\{style_id}' (Heading1..Heading6 and Normal are supported)",
         )
       }
-      used_styles.add(style_id)
+      ctx.used_styles.add(style_id)
       ppr_children.push(
         XmlElement(
           @xml.xml_element("w:pStyle", attributes={ "w:val": style_id }),
+        ),
+      )
+    }
+    None => ()
+  }
+  match properties.numbering {
+    Some(numbering) => {
+      // The reader maps w:ilvl to level = ilvl + 1, so levels are 1-based
+      // here and written back as ilvl = level - 1. OOXML allows ilvl 0..8.
+      if numbering.level < 1 || numbering.level > 9 {
+        raise Unsupported(
+          message="list levels must be 1..9 (got \{numbering.level})",
+        )
+      }
+      ctx.uses_lists = true
+      let num_id = if numbering.is_ordered {
+        ORDERED_NUM_ID
+      } else {
+        UNORDERED_NUM_ID
+      }
+      ppr_children.push(
+        XmlElement(
+          @xml.xml_element("w:numPr", children=[
+            XmlElement(
+              @xml.xml_element("w:ilvl", attributes={
+                "w:val": (numbering.level - 1).to_string(),
+              }),
+            ),
+            XmlElement(
+              @xml.xml_element("w:numId", attributes={ "w:val": num_id }),
+            ),
+          ]),
         ),
       )
     }
@@ -134,11 +194,6 @@ fn write_paragraph(
   }
   // Anything else the AST can carry on a paragraph is not writable yet —
   // fail closed rather than silently dropping reader-producible data.
-  if properties.numbering is Some(_) {
-    raise Unsupported(
-      message="the paragraph writer cannot serialize list numbering yet (F3)",
-    )
-  }
   if properties.indent.start is Some(_) ||
     properties.indent.end is Some(_) ||
     properties.indent.first_line is Some(_) ||
