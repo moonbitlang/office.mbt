@@ -182,3 +182,5 @@ jobs:
           echo "$g" | jq -e '.schema == "docx.element/1"
             and (.kind == "image")
             and (.path == "/body/p[1]/r[1]/image[1]")'
+          v=$(moon run --target wasm docx2html/cmd/docx -- validate docx2html/tests/cram/fixtures/single-paragraph.docx 2>docx-wasm.err) || { echo "docx validate failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "docx validate -> $v"; test "$v" = "valid"

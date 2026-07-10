@@ -6,6 +6,7 @@
 ///   docx outline <file>                     print a document map as JSON
 ///   docx text <file>                        print path-tagged plain text
 ///   docx get <file> <path> [--json]         print one element by path
+///   docx validate <file>                    check package structure
 ///
 /// The `convert` subcommand is the same operation as the published
 /// `docx2html` binary (both call the shared runner in `internal/cli`); this
@@ -51,6 +52,7 @@ async fn run_cli() -> Unit {
     Some(("outline", m)) => run_outline(m)
     Some(("text", m)) => run_text(m)
     Some(("get", m)) => run_get(m)
+    Some(("validate", m)) => run_validate(m)
     _ => println(command.render_help())
   }
 }
@@ -67,6 +69,7 @@ fn build_command() -> @argparse.Command {
       outline_command(),
       text_command(),
       get_command(),
+      validate_command(),
     ],
   )
 }

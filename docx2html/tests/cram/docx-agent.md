@@ -123,3 +123,25 @@ $ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/header[1]/p[1]'
 error: path root '/header[1]' is reserved but not yet addressable; only '/body' paths are supported today
 [1]
 ```
+
+## Validate: Package Structure (Non-Zero Exit When Invalid)
+
+`docx validate` checks package structure portably (archive integrity
+including entry CRCs, content-type coverage, relationship resolution, and
+the main-part root — the document is found by following the officeDocument
+relationship, never by a hardcoded path):
+
+```mooncram
+$ docx.exe validate "$TESTDIR/fixtures/single-paragraph.docx"
+valid
+```
+
+Invalid input prints one finding per line and exits non-zero — unlike a
+read command, this is a gate scripts can trust:
+
+```mooncram
+$ printf 'garbage' > broken.docx; docx.exe validate broken.docx
+invalid ZIP archive: MissingEndOfCentral
+docx: invalid package: 1 finding(s)
+[1]
+```

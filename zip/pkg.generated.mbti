@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn crc32(BytesView) -> UInt
+
 pub fn gunzip(BytesView) -> Bytes raise ZipError
 
 pub fn gzip(BytesView) -> Bytes raise ZipError
@@ -39,6 +41,7 @@ pub(all) enum Compression {
 
 type Entry
 pub fn Entry::compression(Self) -> Compression
+pub fn Entry::crc32(Self) -> UInt
 pub fn Entry::data(Self) -> Bytes
 pub fn Entry::data_descriptor(Self) -> Bool
 pub fn Entry::name(Self) -> String

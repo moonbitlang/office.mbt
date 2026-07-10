@@ -21,7 +21,8 @@ fn crc32_make_table() -> FixedArray[UInt] {
 }
 
 ///|
-fn crc32(bytes : BytesView) -> UInt {
+/// Computes the CRC-32 (IEEE, as used by ZIP) of a byte view.
+pub fn crc32(bytes : BytesView) -> UInt {
   let mut crc : UInt = 0xFFFFFFFF
   for b in bytes {
     crc = crc32_table[((crc ^ b.to_uint()) & 0xFF).reinterpret_as_int()] ^
