@@ -7,7 +7,11 @@
 // GIF — anything else fails closed), rendered at 96 DPI.
 
 ///|
-const EMU_PER_PIXEL : Int = 9525
+const EMU_PER_PIXEL : Int64 = 9525
+
+///|
+/// ST_PositiveCoordinate's upper bound (EMUs).
+const MAX_EMU : Int64 = 27273042316900
 
 ///|
 fn write_hyperlink(
@@ -31,12 +35,26 @@ fn write_hyperlink(
       )
       attributes["r:id"] = rel_id
     }
-    (None, Some(anchor)) => attributes["w:anchor"] = anchor
+    (None, Some(anchor)) => {
+      if anchor == "" {
+        raise Unsupported(
+          message="a hyperlink anchor must not be empty (the reader treats blank attributes as absent)",
+        )
+      }
+      attributes["w:anchor"] = anchor
+    }
     (None, None) =>
       raise Unsupported(message="a hyperlink needs an href or an anchor")
   }
   match target_frame {
-    Some(frame) => attributes["w:tgtFrame"] = frame
+    Some(frame) => {
+      if frame == "" {
+        raise Unsupported(
+          message="a hyperlink target frame must not be empty (the reader treats blank attributes as absent)",
+        )
+      }
+      attributes["w:tgtFrame"] = frame
+    }
     None => ()
   }
   let nodes : Array[XmlNode] = []
@@ -58,8 +76,17 @@ fn write_image(image : Image, ctx : WriteContext) -> XmlElement raise DocxError 
       )
   }
   let (width, height) = image_dimensions(image.content_type, image.data)
-  let cx = (width * EMU_PER_PIXEL).to_string()
-  let cy = (height * EMU_PER_PIXEL).to_string()
+  // Extents in Int64: a 32-bit Int overflows at ~225k px, and OOXML bounds
+  // coordinates at ST_PositiveCoordinate's max.
+  let cx_emu = width.to_int64() * EMU_PER_PIXEL
+  let cy_emu = height.to_int64() * EMU_PER_PIXEL
+  if cx_emu <= 0 || cy_emu <= 0 || cx_emu > MAX_EMU || cy_emu > MAX_EMU {
+    raise Unsupported(
+      message="image dimensions \{width}x\{height} px are outside OOXML coordinate bounds",
+    )
+  }
+  let cx = cx_emu.to_string()
+  let cy = cy_emu.to_string()
   let index = ctx.media.length() + 1
   let part_name = "media/image\{index}.\{extension}"
   ctx.media.push((part_name, extension, image.content_type, image.data))
@@ -76,6 +103,11 @@ fn write_image(image : Image, ctx : WriteContext) -> XmlElement raise DocxError 
   let c_nv_pr_attributes : Map[String, String] = { "id": "0", "name": name }
   match image.alt_text {
     Some(alt) => {
+      if alt.trim(chars=" \t\r\n") == "" {
+        raise Unsupported(
+          message="image alt text must not be blank (the reader treats blank descr as absent)",
+        )
+      }
       doc_pr_attributes["descr"] = alt
       c_nv_pr_attributes["descr"] = alt
     }
@@ -198,12 +230,22 @@ fn be_u32(data : Bytes, offset : Int) -> Int {
 
 ///|
 fn png_dimensions(data : Bytes) -> (Int, Int)? {
-  // 8-byte signature, then the IHDR chunk: length(4) 'IHDR'(4) width(4)
-  // height(4).
+  // Full 8-byte signature, then the IHDR chunk: length(4)=13, 'IHDR'(4),
+  // width(4), height(4).
   if data.length() < 24 {
     return None
   }
-  if data[0] != 0x89 || data[1] != b'P' || data[2] != b'N' || data[3] != b'G' {
+  if data[0] != 0x89 ||
+    data[1] != b'P' ||
+    data[2] != b'N' ||
+    data[3] != b'G' ||
+    data[4] != 0x0D ||
+    data[5] != 0x0A ||
+    data[6] != 0x1A ||
+    data[7] != 0x0A {
+    return None
+  }
+  if be_u32(data, 8) != 13 {
     return None
   }
   if data[12] != b'I' ||
@@ -217,12 +259,17 @@ fn png_dimensions(data : Bytes) -> (Int, Int)? {
 
 ///|
 fn gif_dimensions(data : Bytes) -> (Int, Int)? {
-  // 'GIF87a'/'GIF89a', then the logical screen descriptor (little-endian
-  // u16 width, height).
-  if data.length() < 10 {
+  // Exactly 'GIF87a' or 'GIF89a', then the complete 7-byte logical screen
+  // descriptor (little-endian u16 width, height lead it).
+  if data.length() < 13 {
     return None
   }
-  if data[0] != b'G' || data[1] != b'I' || data[2] != b'F' {
+  if data[0] != b'G' ||
+    data[1] != b'I' ||
+    data[2] != b'F' ||
+    data[3] != b'8' ||
+    !(data[4] is (b'7' | b'9')) ||
+    data[5] != b'a' {
     return None
   }
   let width = data[6].to_int() | (data[7].to_int() << 8)
@@ -233,26 +280,46 @@ fn gif_dimensions(data : Bytes) -> (Int, Int)? {
 ///|
 fn jpeg_dimensions(data : Bytes) -> (Int, Int)? {
   // Scan JPEG segments for a start-of-frame marker (SOF0..SOF15 except
-  // DHT/JPG/DAC), whose payload is precision(1) height(2) width(2).
+  // DHT/JPG/DAC). Reads are bounded by each segment's DECLARED length —
+  // dimension bytes must lie inside the SOF segment and inside the data —
+  // legal 0xFF fill bytes are skipped, TEM (0x01) and RSTn/SOI are
+  // standalone, and EOI terminates the scan.
   if data.length() < 4 || data[0] != 0xFF || data[1] != 0xD8 {
     return None
   }
   let mut offset = 2
-  while offset + 3 < data.length() {
+  while offset + 1 < data.length() {
     if data[offset] != 0xFF {
       return None
     }
-    let marker = data[offset + 1].to_int()
-    if marker == 0xD8 || (marker >= 0xD0 && marker <= 0xD9) {
-      // Standalone markers without a length field.
-      offset += 2
-      continue
+    // Skip marker fill bytes (any number of 0xFF before the marker code).
+    let mut marker_at = offset + 1
+    while marker_at < data.length() && data[marker_at] == 0xFF {
+      marker_at += 1
     }
-    if offset + 3 >= data.length() {
+    if marker_at >= data.length() {
       return None
     }
-    let length = (data[offset + 2].to_int() << 8) | data[offset + 3].to_int()
+    let marker = data[marker_at].to_int()
+    if marker == 0xD9 {
+      // EOI: no frame header seen.
+      return None
+    }
+    if marker == 0x01 || (marker >= 0xD0 && marker <= 0xD8) {
+      // TEM / RSTn / SOI: standalone, no length field.
+      offset = marker_at + 1
+      continue
+    }
+    if marker_at + 2 >= data.length() {
+      return None
+    }
+    let length = (data[marker_at + 1].to_int() << 8) |
+      data[marker_at + 2].to_int()
     if length < 2 {
+      return None
+    }
+    let segment_end = marker_at + 1 + length
+    if segment_end > data.length() {
       return None
     }
     let is_sof = marker >= 0xC0 &&
@@ -261,14 +328,18 @@ fn jpeg_dimensions(data : Bytes) -> (Int, Int)? {
       marker != 0xC8 &&
       marker != 0xCC
     if is_sof {
-      if offset + 8 >= data.length() {
+      // Payload: precision(1) height(2) width(2) — must fit the declared
+      // segment (length covers the 2 length bytes + payload).
+      if length < 7 || marker_at + 7 >= data.length() {
         return None
       }
-      let height = (data[offset + 5].to_int() << 8) | data[offset + 6].to_int()
-      let width = (data[offset + 7].to_int() << 8) | data[offset + 8].to_int()
+      let height = (data[marker_at + 4].to_int() << 8) |
+        data[marker_at + 5].to_int()
+      let width = (data[marker_at + 6].to_int() << 8) |
+        data[marker_at + 7].to_int()
       return Some((width, height))
     }
-    offset += 2 + length
+    offset = segment_end
   }
   None
 }
