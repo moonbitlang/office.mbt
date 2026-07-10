@@ -201,6 +201,56 @@ test "references are validated strictly at parse time" {
       _ => fail("expected rejection: \{script}")
     }
   }
+  // Round-4 apply-equivalence pins: range spelling for cell params,
+  // colon requirement for merge/filter, strict column grammar, and
+  // series anchors validated exactly as emitted.
+  for
+    case in [
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "set", "params": {"sheet": "S", "cell": "A1:A1", "value": 1}}]}
+        ),
+        "op 0 (set): 'cell' must be a single cell, not a range: 'A1:A1'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "merge", "params": {"sheet": "S", "range": "A1"}}]}
+        ),
+        "op 0 (merge): 'range' must be an A1:B2-style range: 'A1'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "filter", "params": {"sheet": "S", "range": "B2"}}]}
+        ),
+        "op 0 (filter): 'range' must be an A1:B2-style range: 'B2'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "width", "params": {"sheet": "S", "column": "$A", "width": 9}}]}
+        ),
+        "op 0 (width): 'column' is not a valid column or column range: '$A'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "width", "params": {"sheet": "S", "column": "D:B", "width": 9}}]}
+        ),
+        "op 0 (width): 'column' is not a valid column or column range: 'D:B'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "Data!A$B1:A$B2", "values": "B1:B3"}}]}
+        ),
+        "op 0 (chart): 'categories' is not a valid series range: 'Data!A$B1:A$B2'",
+      ),
+    ] {
+    let (script, expected) = case
+    try ignore(parse_ops(script)) catch {
+      @batch.BatchError(message) => assert_eq(message, expected)
+      err => fail("expected BatchError, got \{err}")
+    } noraise {
+      _ => fail("expected rejection: \{script}")
+    }
+  }
   // Qualified series ranges with anchors stay valid.
   let ok =
     #|{"schema": "xlsx.batch/1",

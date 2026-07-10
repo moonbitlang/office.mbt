@@ -179,8 +179,12 @@ Envelope:
 
 - The save resolves a symlinked workbook to its target first (native),
   writes a uniquely-named temp through its exclusive handle, and renames
-  it over the target. The saved file is created owner-only (0600) —
-  never wider than the original; chmod afterwards for group access.
+
+  it over the target, syncing the bytes to stable storage first. On
+  POSIX the saved file is created owner-only (0600) — never wider than
+  the original (Windows follows directory ACLs); chmod afterwards for
+  group access.
+
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
 
 A metadata-priced orientation payload: no document text is emitted beyond

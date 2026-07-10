@@ -210,7 +210,7 @@ fn parse_op(
       )
     }
     "merge" =>
-      OpMerge(sheet=reader.string("sheet"), range=reader.range("range").0)
+      OpMerge(sheet=reader.string("sheet"), range=reader.colon_range("range"))
     "width" =>
       OpWidth(
         sheet=reader.string("sheet"),
@@ -219,7 +219,7 @@ fn parse_op(
       )
     "freeze" => OpFreeze(sheet=reader.string("sheet"), cell=reader.cell("cell"))
     "filter" =>
-      OpFilter(sheet=reader.string("sheet"), range=reader.range("range").0)
+      OpFilter(sheet=reader.string("sheet"), range=reader.colon_range("range"))
     "add-sheet" => OpAddSheet(name=reader.string("name"))
     "chart" =>
       OpChart(
@@ -378,11 +378,31 @@ fn ParamReader::cell(
         "'\{key}' is not a valid cell reference: '\{text}'",
       )
   }
-  if range.cell_count() != 1 {
+  // The downstream cell APIs take a bare cell name: `A1:A1` covers one
+  // cell but is still range syntax, so reject on the spelling too.
+  if text.contains(":") || range.cell_count() != 1 {
     raise op_error(
       self.index,
       self.op,
       "'\{key}' must be a single cell, not a range: '\{text}'",
+    )
+  }
+  text
+}
+
+///|
+/// A param that must be an `A1:B2`-style range WITH a colon (merge and
+/// filter reject bare cells at apply time; fail at parse time instead).
+fn ParamReader::colon_range(
+  self : ParamReader,
+  key : String,
+) -> String raise BatchError {
+  let (text, _) = self.range(key)
+  if !text.contains(":") {
+    raise op_error(
+      self.index,
+      self.op,
+      "'\{key}' must be an A1:B2-style range: '\{text}'",
     )
   }
   text
@@ -410,29 +430,66 @@ fn ParamReader::range(
 }
 
 ///|
-/// A param that must be a column (`A`) or column range (`A:C`), validated
-/// by grafting row 1 onto the letters.
+/// A param that must be a column (`A`) or an ascending column range
+/// (`A:C`), letters only — exactly what the width APIs accept at apply
+/// time (no `$` anchors, no digits, no descending ranges).
 fn ParamReader::column(
   self : ParamReader,
   key : String,
 ) -> String raise BatchError {
   let text = self.string(key)
-  let probe = match text.find(":") {
-    Some(index) =>
-      text[:index].to_owned() + "1:" + text[index + 1:].to_owned() + "1"
-    None => text + "1"
-  }
-  ignore(
-    @inspect.parse_range(probe) catch {
-      _ =>
+  match text.find(":") {
+    None => ignore(self.column_number(key, text, text))
+    Some(index) => {
+      let lo = self.column_number(key, text[:index].to_owned(), text)
+      let hi = self.column_number(key, text[index + 1:].to_owned(), text)
+      if lo > hi {
         raise op_error(
           self.index,
           self.op,
           "'\{key}' is not a valid column or column range: '\{text}'",
         )
-    },
-  )
+      }
+    }
+  }
   text
+}
+
+///|
+fn ParamReader::column_number(
+  self : ParamReader,
+  key : String,
+  letters : String,
+  full : String,
+) -> Int raise BatchError {
+  if letters.length() < 1 || letters.length() > 3 {
+    raise op_error(
+      self.index,
+      self.op,
+      "'\{key}' is not a valid column or column range: '\{full}'",
+    )
+  }
+  let mut col = 0
+  for i in 0..<letters.length() {
+    let c = letters[i].to_int()
+    let upper = if c >= 'a'.to_int() && c <= 'z'.to_int() { c - 32 } else { c }
+    if upper < 'A'.to_int() || upper > 'Z'.to_int() {
+      raise op_error(
+        self.index,
+        self.op,
+        "'\{key}' is not a valid column or column range: '\{full}'",
+      )
+    }
+    col = col * 26 + (upper - 'A'.to_int() + 1)
+  }
+  if col > 16384 {
+    raise op_error(
+      self.index,
+      self.op,
+      "'\{key}' is not a valid column or column range: '\{full}'",
+    )
+  }
+  col
 }
 
 ///|
@@ -448,8 +505,11 @@ fn ParamReader::series_range(
     Some(index) => text[index + 1:].to_owned()
     None => text
   }
+  // Validate exactly what will be emitted: `parse_range` accepts correctly
+  // placed `$` anchors, so misplaced ones (`A$B1`) must fail here rather
+  // than reach the chart XML.
   ignore(
-    @inspect.parse_range(range_part.replace_all(old="$", new="")) catch {
+    @inspect.parse_range(range_part) catch {
       _ =>
         raise op_error(
           self.index,

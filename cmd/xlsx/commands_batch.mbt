@@ -4,9 +4,10 @@
 // through an exclusively-created unique temp file — written through the
 // exclusive handle itself — then renamed over the resolved target, so a
 // failed write cannot truncate the original and no other process can
-// interpose on the temp path. (Rename replaces the inode: the saved file
-// is created owner-only, 0600 — never wider than the original; ACLs and
-// xattrs are not carried over. chmod afterwards for wider access.)
+// interpose on the temp path. (Rename replaces the inode: on POSIX the
+// saved file is created owner-only, 0600 — never wider than the
+// original; Windows ignores the mode and follows directory ACLs. ACLs
+// and xattrs are not carried over. chmod afterwards for wider access.)
 
 ///|
 async fn run_batch(m : @argparse.Matches) -> Unit {
@@ -123,6 +124,18 @@ async fn write_file_replacing(target : String, bytes : Bytes) -> Unit {
       raise err
     }
   }
+  // Flush to stable storage before the rename: with delayed writeback, an
+  // ENOSPC/EIO surfacing after a NoSync close could replace the last good
+  // copy with a corrupt one.
+  file.sync() catch {
+    err => {
+      file.close()
+      @async/fs.remove(temp) catch {
+        _ => ()
+      }
+      raise err
+    }
+  }
   file.close()
   @async/fs.rename(temp, target, replace=true) catch {
     err => {
@@ -132,6 +145,23 @@ async fn write_file_replacing(target : String, bytes : Bytes) -> Unit {
       raise err
     }
   }
+  // Best-effort parent-directory sync so the rename itself is durable;
+  // some platforms cannot fsync a directory, which is not worth failing
+  // a successful save over.
+  sync_parent_dir(target)
+}
+
+///|
+async fn sync_parent_dir(target : String) -> Unit noraise {
+  let dir = match target.rev_find("/") {
+    Some(index) if index > 0 => target[:index].to_owned()
+    _ => "."
+  }
+  let handle = @async/fs.open(dir, mode=ReadOnly) catch { _ => return }
+  handle.sync() catch {
+    _ => ()
+  }
+  handle.close()
 }
 
 ///|
