@@ -34,13 +34,13 @@ test "private content operator helpers cover malformed operand fallbacks" {
   @test.assert_eq(
     pdf_content_tj_array_from_operand(
       PdfArray([
-        PdfString(@ascii.encode("A")),
+        PdfString(b"A"),
         PdfInteger(-3),
         PdfArray([PdfInteger(1)]),
         PdfReal(2.5),
       ]),
     ),
-    Some(PdfArray([PdfString(@ascii.encode("A")), PdfReal(-3.0), PdfReal(2.5)])),
+    Some(PdfArray([PdfString(b"A"), PdfReal(-3.0), PdfReal(2.5)])),
   )
   @test.assert_eq(pdf_content_tj_array_from_operand(PdfInteger(1)), None)
 
@@ -78,7 +78,7 @@ test "private content operator helpers cover malformed operand fallbacks" {
   let bad_dash : Result[PdfContentOp?, Error] = try
     pdf_content_parse_known_section(
       [PdfArray([PdfNameObject(name)]), PdfInteger(0)],
-      @ascii.encode("d"),
+      b"d",
     )
   catch {
     err => Err(err)

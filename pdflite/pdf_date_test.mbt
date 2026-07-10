@@ -24,7 +24,7 @@ test "pdf_date_of_string parses full PDF dates" {
 
 ///|
 test "pdf_date byte APIs parse borrowed PDF date slices" {
-  let wrapped = @ascii.encode("xxD:20240203040506+08'30'yy")
+  let wrapped = b"xxD:20240203040506+08'30'yy"
   let view = wrapped[2:wrapped.length() - 2]
   let expected : @date.PdfDate = {
     year: 2024,
@@ -40,15 +40,13 @@ test "pdf_date byte APIs parse borrowed PDF date slices" {
   @test.assert_eq(try! @date.pdf_date_of_bytes(view.to_owned()), expected)
   @test.assert_eq(
     try! @date.pdf_bytes_of_date(expected),
-    @ascii.encode("D:20240203040506+08'30'"),
+    b"D:20240203040506+08'30'",
   )
 }
 
 ///|
 test "pdf_date object APIs bridge PDF strings and typed dates" {
-  let object : @syntax.PdfObject = PdfString(
-    @ascii.encode("D:20240203040506+08'30'"),
-  )
+  let object : @syntax.PdfObject = PdfString(b"D:20240203040506+08'30'")
   let expected : @date.PdfDate = {
     year: 2024,
     month: 2,
@@ -62,11 +60,11 @@ test "pdf_date object APIs bridge PDF strings and typed dates" {
   @test.assert_eq(try! @pdflite.pdf_date_of_object(object), expected)
   @test.assert_eq(
     try! @pdflite.pdf_object_of_date(expected),
-    PdfString(@ascii.encode("D:20240203040506+08'30'")),
+    PdfString(b"D:20240203040506+08'30'"),
   )
   let non_string : Result[@date.PdfDate, Error] = try
     @pdflite.pdf_date_of_object(
-      PdfNameObject(@core.pdf_name_of_bytes(@ascii.encode("/Date"))),
+      PdfNameObject(@core.pdf_name_of_bytes(b"/Date")),
     )
   catch {
     err => Err(err)

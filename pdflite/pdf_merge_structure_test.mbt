@@ -292,13 +292,13 @@ test "pdf_merge_documents merges structure root metadata" {
     first,
     30,
     key_namespaces,
-    PdfArray([PdfString(@ascii.encode("ns-a"))]),
+    PdfArray([PdfString(b"ns-a")]),
   )
   let first = merge_structure_add_object_entry_for_test(
     first,
     30,
     key_id_tree,
-    first.build_name_tree([(@ascii.encode("id-a"), PdfIndirect(31))]),
+    first.build_name_tree([(b"id-a", PdfIndirect(31))]),
   )
   let second = merge_structure_parent_tree_doc_for_test()
   let second = merge_structure_add_object_entry_for_test(
@@ -313,25 +313,25 @@ test "pdf_merge_documents merges structure root metadata" {
     second,
     30,
     key_class_map,
-    PdfDictionary([(key_important, PdfString(@ascii.encode("class-b")))]),
+    PdfDictionary([(key_important, PdfString(b"class-b"))]),
   )
   let second = merge_structure_add_object_entry_for_test(
     second,
     30,
     key_namespaces,
-    PdfArray([PdfString(@ascii.encode("ns-b"))]),
+    PdfArray([PdfString(b"ns-b")]),
   )
   let second = merge_structure_add_object_entry_for_test(
     second,
     30,
     key_af,
-    PdfArray([PdfString(@ascii.encode("af-b"))]),
+    PdfArray([PdfString(b"af-b")]),
   )
   let second = merge_structure_add_object_entry_for_test(
     second,
     30,
     key_id_tree,
-    second.build_name_tree([(@ascii.encode("id-b"), PdfIndirect(31))]),
+    second.build_name_tree([(b"id-b", PdfIndirect(31))]),
   )
   let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
   let root = merged.lookup_object_or_null(merged.root())
@@ -356,27 +356,21 @@ test "pdf_merge_documents merges structure root metadata" {
   }
   @test.assert_eq(
     class_map.lookup_immediate(key_important),
-    Some(PdfString(@ascii.encode("class-b"))),
+    Some(PdfString(b"class-b")),
   )
   @test.assert_eq(
     merged.lookup_direct(key_namespaces, struct_root),
-    Some(
-      PdfArray([
-        PdfString(@ascii.encode("ns-a")),
-        PdfString(@ascii.encode("ns-b")),
-      ]),
-    ),
+    Some(PdfArray([PdfString(b"ns-a"), PdfString(b"ns-b")])),
   )
   @test.assert_eq(
     merged.lookup_direct(key_af, struct_root),
-    Some(PdfArray([PdfString(@ascii.encode("af-b"))])),
+    Some(PdfArray([PdfString(b"af-b")])),
   )
   guard merged.lookup_direct(key_id_tree, struct_root) is Some(id_tree) else {
     fail("expected merged IDTree")
   }
   @test.assert_eq([ for entry in merged.read_name_tree(id_tree) => entry.0 ], [
-    @ascii.encode("id-a"),
-    @ascii.encode("id-b"),
+    b"id-a", b"id-b",
   ])
 }
 
@@ -442,7 +436,7 @@ test "pdf_merge_documents can add top-level document structure element" {
   }
   @test.assert_eq(
     merged.lookup_object_or_null(namespace_number).lookup_immediate(key_ns),
-    Some(PdfString(@ascii.encode("http://iso.org/pdf2/ssn"))),
+    Some(PdfString(b"http://iso.org/pdf2/ssn")),
   )
   @test.assert_eq(
     document.lookup_immediate(key_ns),

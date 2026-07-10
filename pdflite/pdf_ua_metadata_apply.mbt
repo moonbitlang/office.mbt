@@ -41,7 +41,7 @@ fn PdfDocument::pdf_ua_apply_subformat_metadata(
   )
   self.replace_chain(
     [pdf_ua_root_key(), pdf_ua_lang_key()],
-    PdfString(@ascii.encode("en-US")),
+    PdfString(b"en-US"),
   )
   self.replace_chain(
     [

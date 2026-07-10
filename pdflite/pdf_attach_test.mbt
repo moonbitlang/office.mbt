@@ -90,7 +90,7 @@ fn attach_md5_abc_for_test() -> @core.PdfBytes {
 
 ///|
 test "PdfDocument attach_file creates document-level embedded file metadata" {
-  let payload = @ascii.encode("abc")
+  let payload = b"abc"
   let original = attach_blank_document_for_test()
   let document = try! original.attach_file(
     "fixtures/report.txt",
@@ -103,7 +103,7 @@ test "PdfDocument attach_file creates document-level embedded file metadata" {
   @test.assert_eq(try! original.list_attached_files(), [])
   let entries = document.read_name_tree(attach_embedded_tree_for_test(document))
   @test.assert_eq(entries.length(), 1)
-  @test.assert_eq(entries[0].0, @ascii.encode("report.txt"))
+  @test.assert_eq(entries[0].0, b"report.txt")
   let file_spec = document.direct(entries[0].1)
   @test.assert_eq(
     attach_lookup_for_test(document, "/Type", file_spec),
@@ -169,7 +169,7 @@ test "pdf_attach_file wrapper can keep the original PDF version" {
   let document = try! @pdflite.pdf_attach_file(
     attach_blank_document_for_test(),
     "note.bin",
-    @ascii.encode("payload"),
+    b"payload",
     keep_version=true,
   )
   @test.assert_eq(document.version(), (1, 0))
@@ -178,7 +178,7 @@ test "pdf_attach_file wrapper can keep the original PDF version" {
 
 ///|
 test "pdf_attach_file_cpdf_order preserves source argument order" {
-  let payload = @ascii.encode("payload")
+  let payload = b"payload"
   let document = try! @pdflite.pdf_attach_file_cpdf_order(
     false,
     Some(1),
@@ -203,7 +203,7 @@ test "pdf_attach_file_cpdf_order preserves source argument order" {
 test "PdfDocument attach_file preserves other name trees and accepts slash relationships" {
   let original = attach_blank_document_for_test()
   let javascript_tree = original.build_name_tree([
-    (@ascii.encode("script"), PdfString(@ascii.encode("payload"))),
+    (b"script", PdfString(b"payload")),
   ])
   original.replace_chain(
     [
@@ -216,15 +216,15 @@ test "PdfDocument attach_file preserves other name trees and accepts slash relat
   @test.assert_eq(try! original.size_attached_files(), 0)
   let document = try! original.attach_file(
     "source.txt",
-    @ascii.encode("x"),
+    b"x",
     relationship=Some("/Source"),
   )
-  let with_two = try! document.attach_file("second.txt", @ascii.encode("y"))
+  let with_two = try! document.attach_file("second.txt", b"y")
   let catalog = attach_catalog_for_test(document)
   let names = attach_lookup_for_test(document, "/Names", catalog)
   let retained = attach_lookup_for_test(document, "/JavaScript", names)
   @test.assert_eq(document.read_name_tree(retained), [
-    (@ascii.encode("script"), PdfString(@ascii.encode("payload"))),
+    (b"script", PdfString(b"payload")),
   ])
   @test.assert_eq(
     document.read_name_tree(attach_embedded_tree_for_test(with_two)).length(),
@@ -243,7 +243,7 @@ test "PdfDocument attach_file adds page attachment annotation and preserves exis
   let key_rect = attach_name_for_test("/Rect")
   let non_file : @syntax.PdfObject = PdfDictionary([
     (key_subtype, PdfNameObject(attach_name_for_test("/Text"))),
-    (attach_name_for_test("/Contents"), PdfString(@ascii.encode("kept"))),
+    (attach_name_for_test("/Contents"), PdfString(b"kept")),
   ])
   let second = {
     ..attach_page_for_test(0.0, 0.0, 50.0, 120.0),
@@ -253,7 +253,7 @@ test "PdfDocument attach_file adds page attachment annotation and preserves exis
     attach_page_for_test(0.0, 0.0, 100.0, 100.0),
     second,
   ])
-  let payload = @ascii.encode("page payload")
+  let payload = b"page payload"
   let attached = try! document.attach_file(
     "pages/note.bin",
     payload,
@@ -296,7 +296,7 @@ test "PdfDocument attach_file adds page attachment annotation and preserves exis
 
 ///|
 test "PdfDocument attach_file can add the first page annotation" {
-  let payload = @ascii.encode("first")
+  let payload = b"first"
   let attached = try! attach_blank_document_for_test().attach_file(
     "first.bin",
     payload,
@@ -325,13 +325,10 @@ test "PdfDocument remove_attached_files removes document and page attachments on
     rest: PdfDictionary([(key_annots, PdfArray([non_file]))]),
   }
   let document = attach_document_for_test([page])
-  let with_document_file = try! document.attach_file(
-    "doc.txt",
-    @ascii.encode("doc"),
-  )
+  let with_document_file = try! document.attach_file("doc.txt", b"doc")
   let with_both = try! with_document_file.attach_file(
     "page.txt",
-    @ascii.encode("page"),
+    b"page",
     page_number=Some(1),
   )
   @test.assert_eq((try! with_both.list_attached_files()).length(), 2)
@@ -364,7 +361,7 @@ test "PdfDocument attach_file rejects non-array page Annots" {
   }
   let document = attach_document_for_test([page])
   let result : Result[@pdflite.PdfDocument, Error] = try
-    document.attach_file("bad.txt", @ascii.encode("bad"), page_number=Some(1))
+    document.attach_file("bad.txt", b"bad", page_number=Some(1))
   catch {
     err => Err(err)
   } noraise {
@@ -396,7 +393,7 @@ test "pdf_attachment_remove_unsafe_characters mirrors cpdf filtering" {
 test "PdfDocument attach_file rejects missing page numbers" {
   let document = attach_blank_document_for_test()
   let low : Result[@pdflite.PdfDocument, Error] = try
-    document.attach_file("bad.txt", @ascii.encode("bad"), page_number=Some(0))
+    document.attach_file("bad.txt", b"bad", page_number=Some(0))
   catch {
     err => Err(err)
   } noraise {
@@ -407,7 +404,7 @@ test "PdfDocument attach_file rejects missing page numbers" {
     fail("expected low page error")
   }
   let high : Result[@pdflite.PdfDocument, Error] = try
-    document.attach_file("bad.txt", @ascii.encode("bad"), page_number=Some(2))
+    document.attach_file("bad.txt", b"bad", page_number=Some(2))
   catch {
     err => Err(err)
   } noraise {
@@ -434,21 +431,21 @@ test "PdfDocument list_attached_files keeps malformed page attachment without da
       attach_name_for_test("/Subtype"),
       PdfNameObject(attach_name_for_test("/FileAttachment")),
     ),
-    (attach_name_for_test("/Contents"), PdfString(@ascii.encode("no-fs.bin"))),
+    (attach_name_for_test("/Contents"), PdfString(b"no-fs.bin")),
   ])
   let file_spec : @syntax.PdfObject = PdfDictionary([
     (
       attach_name_for_test("/Type"),
       PdfNameObject(attach_name_for_test("/Filespec")),
     ),
-    (attach_name_for_test("/F"), PdfString(@ascii.encode("missing.bin"))),
+    (attach_name_for_test("/F"), PdfString(b"missing.bin")),
   ])
   let annotation : @syntax.PdfObject = PdfDictionary([
     (
       attach_name_for_test("/Subtype"),
       PdfNameObject(attach_name_for_test("/FileAttachment")),
     ),
-    (attach_name_for_test("/Contents"), PdfString(@ascii.encode("missing.bin"))),
+    (attach_name_for_test("/Contents"), PdfString(b"missing.bin")),
     (attach_name_for_test("/FS"), file_spec),
   ])
   let page = {
@@ -481,7 +478,7 @@ test "PdfDocument list_attached_files keeps malformed page attachment without da
 
 ///|
 test "PdfDocument list_attached_files ignores non-ASCII relationship names" {
-  let payload = @ascii.encode("ok")
+  let payload = b"ok"
   let stream = @syntax.pdf_stream(
     PdfDictionary([
       (attach_name_for_test("/Length"), PdfInteger(payload.length())),
@@ -503,7 +500,7 @@ test "PdfDocument list_attached_files ignores non-ASCII relationship names" {
       attach_name_for_test("/Subtype"),
       PdfNameObject(attach_name_for_test("/FileAttachment")),
     ),
-    (attach_name_for_test("/Contents"), PdfString(@ascii.encode("bad-rel.bin"))),
+    (attach_name_for_test("/Contents"), PdfString(b"bad-rel.bin")),
     (attach_name_for_test("/FS"), file_spec),
   ])
   let page = {
@@ -527,13 +524,11 @@ test "PdfDocument list_attached_files rejects malformed document attachment data
         attach_name_for_test("/Type"),
         PdfNameObject(attach_name_for_test("/Filespec")),
       ),
-      (attach_name_for_test("/F"), PdfString(@ascii.encode("broken.bin"))),
+      (attach_name_for_test("/F"), PdfString(b"broken.bin")),
     ]),
   )
   let tree_number = document.add_object(
-    document.build_name_tree([
-      (@ascii.encode("broken.bin"), PdfIndirect(file_spec_number)),
-    ]),
+    document.build_name_tree([(b"broken.bin", PdfIndirect(file_spec_number))]),
   )
   document.replace_chain(
     [
@@ -566,7 +561,7 @@ test "PdfDocument list and size reject file specs with EF but no F stream" {
       attach_name_for_test("/Subtype"),
       PdfNameObject(attach_name_for_test("/FileAttachment")),
     ),
-    (attach_name_for_test("/Contents"), PdfString(@ascii.encode("bad.bin"))),
+    (attach_name_for_test("/Contents"), PdfString(b"bad.bin")),
     (attach_name_for_test("/FS"), file_spec),
   ])
   let page = {

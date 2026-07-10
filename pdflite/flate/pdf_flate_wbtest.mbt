@@ -129,7 +129,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   guard bad_flate_distance is Err(@core.PdfError::InvalidFlateData) else {
     fail("expected @core.PdfError::InvalidFlateData")
   }
-  let shadowed_match = @ascii.encode("ABCDEFGHIJABCXABCDEFGHIJ")
+  let shadowed_match = b"ABCDEFGHIJABCXABCDEFGHIJ"
   let last_by_prefix : Array[Int] = Array::make(65536, -1)
   let previous_by_position : Array[Int] = Array::make(
     shadowed_match.length(),
@@ -145,7 +145,7 @@ test "private flate bit reader and huffman guards reject malformed inputs" {
   )
   @test.assert_eq(shadowed_length, 10)
   @test.assert_eq(shadowed_distance, 14)
-  let deep_phrase = @ascii.encode("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+  let deep_phrase = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
   let deep_match_data : Array[Byte] = []
   for byte in deep_phrase[:] {
     deep_match_data.push(byte)
@@ -396,7 +396,7 @@ test "private flate dynamic encoder helpers cover RLE and guards" {
   )
   @test.assert_eq(match_frequencies[257], 1)
   @test.assert_eq(match_distance_frequencies[0], 1)
-  let data = @ascii.encode("ABCDABCDABCD")
+  let data = b"ABCDABCDABCD"
   let tokens = pdf_flate_match_tokens(data, 64)
   guard tokens[4] is PdfFlateLengthDistance(length, distance) else {
     fail("expected a length-distance token")

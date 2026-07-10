@@ -814,7 +814,7 @@ fn ua_matterhorn_embedded_files_root_for_test(
           PdfDictionary([
             (
               ua_matterhorn_name_for_test("/Names"),
-              PdfArray([PdfString(@ascii.encode("attachment.bin")), file_spec]),
+              PdfArray([PdfString(b"attachment.bin"), file_spec]),
             ),
           ]),
         ),
@@ -954,9 +954,7 @@ fn ua_matterhorn_xfa_root_for_test(
 fn ua_matterhorn_xfa_config_root_for_test(
   config : @syntax.PdfObject,
 ) -> Array[(@core.PdfName, @syntax.PdfObject)] {
-  ua_matterhorn_xfa_root_for_test(
-    PdfArray([PdfString(@ascii.encode("config")), config]),
-  )
+  ua_matterhorn_xfa_root_for_test(PdfArray([PdfString(b"config"), config]))
 }
 
 ///|

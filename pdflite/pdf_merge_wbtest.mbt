@@ -16,7 +16,7 @@ test "private merge helpers cover guards and membership branches" {
   seen_names.add(key)
   @test.assert_eq(seen_names.contains(key), true)
   let seen_bytes = pdf_merge_bytes_set()
-  let bytes_key = @ascii.encode("shared")
+  let bytes_key = b"shared"
   @test.assert_eq(seen_bytes.contains(bytes_key), false)
   seen_bytes.add(bytes_key)
   @test.assert_eq(seen_bytes.contains(bytes_key), true)
@@ -42,22 +42,22 @@ test "private merge helpers cover guards and membership branches" {
   let first = pdf_document_empty()
   first.add_object_given_number(
     1,
-    PdfDictionary([(duplicate_key, PdfString(@ascii.encode("first")))]),
+    PdfDictionary([(duplicate_key, PdfString(b"first"))]),
   )
   first.set_root(1)
   let second = pdf_document_empty()
   second.add_object_given_number(
     1,
-    PdfDictionary([(duplicate_key, PdfString(@ascii.encode("second")))]),
+    PdfDictionary([(duplicate_key, PdfString(b"second"))]),
   )
   second.set_root(1)
   @test.assert_eq(try! pdf_merge_catalog_extra_entries([first, second]), [
-    (duplicate_key, PdfString(@ascii.encode("first"))),
+    (duplicate_key, PdfString(b"first")),
   ])
   @test.assert_eq(
     pdf_merge_destination_name_changes_are_unique([
       [(bytes_key, bytes_key)],
-      [(@ascii.encode("other"), bytes_key)],
+      [(b"other", bytes_key)],
     ]),
     false,
   )
@@ -72,9 +72,9 @@ test "private merge helpers cover guards and membership branches" {
 
 ///|
 test "private merge destination-name lookup preserves local and global precedence" {
-  let old_name = @ascii.encode("shared")
-  let local_name = @ascii.encode("shared-f0")
-  let global_name = @ascii.encode("shared-f1")
+  let old_name = b"shared"
+  let local_name = b"shared-f0"
+  let global_name = b"shared-f1"
   @test.assert_eq(
     pdf_merge_destination_name_lookup([(old_name, local_name)], [
       (old_name, global_name),
@@ -124,8 +124,8 @@ test "private merge destination-name lookup preserves local and global precedenc
 
 ///|
 test "private merge destination-name rewrite covers action and stream callsites" {
-  let old_name = @ascii.encode("shared")
-  let new_name = @ascii.encode("shared-f0")
+  let old_name = b"shared"
+  let new_name = b"shared-f0"
   let changes : ReadOnlyArray[(@core.PdfBytes, @core.PdfBytes)] = [
     (old_name, new_name),
   ]
@@ -150,14 +150,14 @@ test "private merge destination-name rewrite covers action and stream callsites"
     try! pdf_merge_rewrite_destination_callsite_object(
       @syntax.pdf_stream(
         PdfDictionary([(pdf_merge_dest_key(), PdfString(old_name))]),
-        StreamGot(@ascii.encode("data")),
+        StreamGot(b"data"),
       ),
       name_lookup,
       empty_catalog_lookup,
     ),
     @syntax.pdf_stream(
       PdfDictionary([(pdf_merge_dest_key(), PdfString(new_name))]),
-      StreamGot(@ascii.encode("data")),
+      StreamGot(b"data"),
     ),
   )
   let old_catalog_name = pdf_merge_name("/Shared")
@@ -221,13 +221,13 @@ test "private merge structure helpers cover direct variants" {
 
   let stream = @syntax.pdf_stream(
     PdfDictionary([(struct_parent, PdfInteger(1))]),
-    StreamGot(@ascii.encode("x")),
+    StreamGot(b"x"),
   )
   @test.assert_eq(
     pdf_merge_renumber_struct_parent_object(stream, parent_changes),
     @syntax.pdf_stream(
       PdfDictionary([(struct_parent, PdfInteger(7))]),
-      StreamGot(@ascii.encode("x")),
+      StreamGot(b"x"),
     ),
   )
 
@@ -269,10 +269,7 @@ test "private merge structure helpers cover direct variants" {
   )
 
   let root_with_lexicon = @syntax.PdfDictionary([
-    (
-      pdf_merge_pronunciation_lexicon_key(),
-      PdfArray([PdfString(@ascii.encode("lex"))]),
-    ),
+    (pdf_merge_pronunciation_lexicon_key(), PdfArray([PdfString(b"lex")])),
   ])
   let merged = try! doc.pdf_merge_structure_tree_root(
     [root_with_lexicon, root_with_lexicon],
@@ -286,7 +283,7 @@ test "private merge structure helpers cover direct variants" {
     doc
     .lookup_object_or_null(merged_root_number)
     .lookup_immediate(pdf_merge_pronunciation_lexicon_key()),
-    Some(PdfArray([PdfString(@ascii.encode("lex"))])),
+    Some(PdfArray([PdfString(b"lex")])),
   )
 }
 
@@ -319,21 +316,21 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
   conflict.set_root(1)
   conflict.add_object_given_number(
     1,
-    PdfDictionary([(key, PdfString(@ascii.encode("root")))]),
+    PdfDictionary([(key, PdfString(b"root"))]),
   )
   conflict.add_object_given_number(
     10,
-    PdfDictionary([(key, PdfString(@ascii.encode("trailer")))]),
+    PdfDictionary([(key, PdfString(b"trailer"))]),
   )
   conflict.set_trailer_dict(
     PdfDictionary([(pdf_merge_root_key(), PdfIndirect(10))]),
   )
   @test.assert_eq(
     try! conflict.pdf_merge_catalog_entry(key),
-    Some(PdfString(@ascii.encode("trailer"))),
+    Some(PdfString(b"trailer")),
   )
   @test.assert_eq(try! pdf_merge_catalog_extra_entries([conflict]), [
-    (key, PdfString(@ascii.encode("trailer"))),
+    (key, PdfString(b"trailer")),
   ])
   let added_key = pdf_merge_name("/PageMode")
   let updated = try! conflict.pdf_merge_add_catalog_entry(
@@ -343,7 +340,7 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
   let updated_root = updated.lookup_object_or_null(updated.root())
   @test.assert_eq(
     updated_root.lookup_immediate(key),
-    Some(PdfString(@ascii.encode("trailer"))),
+    Some(PdfString(b"trailer")),
   )
   @test.assert_eq(
     updated_root.lookup_immediate(added_key),
@@ -368,7 +365,7 @@ test "private merge catalog and AcroForm helpers cover malformed roots" {
   unresolved.set_root(1)
   unresolved.add_object_given_number(
     1,
-    PdfDictionary([(key, PdfString(@ascii.encode("root")))]),
+    PdfDictionary([(key, PdfString(b"root"))]),
   )
   unresolved.set_trailer_dict(
     PdfDictionary([(pdf_merge_root_key(), PdfIndirect(99))]),
@@ -432,11 +429,8 @@ test "private merge destination renumbering covers all target variants" {
     DestNamed(pdf_merge_name("/Named")),
   )
   @test.assert_eq(
-    pdf_merge_renumber_destination_with_map(
-      DestString(@ascii.encode("named")),
-      change_map,
-    ),
-    DestString(@ascii.encode("named")),
+    pdf_merge_renumber_destination_with_map(DestString(b"named"), change_map),
+    DestString(b"named"),
   )
   @test.assert_eq(
     pdf_merge_renumber_destination_with_map(

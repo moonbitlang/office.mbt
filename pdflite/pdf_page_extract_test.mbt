@@ -283,7 +283,7 @@ test "PdfDocument pdf_of_pages handles page labels" {
   let labelled = try! doc.write_page_labels([
     {
       label_style: PageLabelLowercaseRoman,
-      label_prefix: Some(@ascii.encode("intro-")),
+      label_prefix: Some(b"intro-"),
       start_page: 1,
       start_value: 1,
     },
@@ -306,7 +306,7 @@ test "PdfDocument pdf_of_pages handles page labels" {
     },
     {
       label_style: PageLabelLowercaseRoman,
-      label_prefix: Some(@ascii.encode("intro-")),
+      label_prefix: Some(b"intro-"),
       start_page: 2,
       start_value: 1,
     },
@@ -316,7 +316,7 @@ test "PdfDocument pdf_of_pages handles page labels" {
       2,
       try! retained.read_page_labels(),
     ),
-    Some(@ascii.encode("intro-i")),
+    Some(b"intro-i"),
   )
 }
 
@@ -333,7 +333,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
   let bookmarked = try! doc.add_bookmarks([
     {
       level: 0,
-      text: @ascii.encode("Parent"),
+      text: b"Parent",
       target: DestFit(TargetPageObject(page_refs[0])),
       is_open: true,
       colour: @bookmark.pdf_bookmark_black,
@@ -341,7 +341,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
     },
     {
       level: 1,
-      text: @ascii.encode("Dropped"),
+      text: b"Dropped",
       target: DestFit(TargetPageObject(page_refs[1])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -349,7 +349,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
     },
     {
       level: 1,
-      text: @ascii.encode("Kept"),
+      text: b"Kept",
       target: DestFit(TargetPageObject(page_refs[2])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -361,7 +361,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
   @test.assert_eq(try! extracted.read_bookmarks(preserve_actions=true), [
     {
       level: 0,
-      text: @ascii.encode("Parent"),
+      text: b"Parent",
       target: DestNull,
       is_open: true,
       colour: @bookmark.pdf_bookmark_black,
@@ -369,7 +369,7 @@ test "PdfDocument pdf_of_pages filters bookmarks with ancestor context" {
     },
     {
       level: 1,
-      text: @ascii.encode("Kept"),
+      text: b"Kept",
       target: DestFit(TargetPageObject(extracted_page_refs[0])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -384,7 +384,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
   let key_names = page_extract_name_for_test("/Names")
   let type_fit = page_extract_name_for_test("/Fit")
   let catalog_name = page_extract_name_for_test("/CatalogKeep")
-  let string_name = @ascii.encode("string-keep")
+  let string_name = b"string-keep"
   let doc = @pdflite.pdf_document_empty()
   let page_root = try! doc.add_pagetree([
     page_extract_indexed_blank_for_test(0),
@@ -416,7 +416,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
   let bookmarked = try! doc.add_bookmarks([
     {
       level: 0,
-      text: @ascii.encode("String"),
+      text: b"String",
       target: DestString(string_name),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -424,7 +424,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
     },
     {
       level: 0,
-      text: @ascii.encode("Named"),
+      text: b"Named",
       target: DestNamed(catalog_name),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -436,7 +436,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
   @test.assert_eq(try! extracted.read_bookmarks(preserve_actions=true), [
     {
       level: 0,
-      text: @ascii.encode("String"),
+      text: b"String",
       target: DestString(string_name),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -444,7 +444,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
     },
     {
       level: 0,
-      text: @ascii.encode("Named"),
+      text: b"Named",
       target: DestNamed(catalog_name),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -454,7 +454,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
   @test.assert_eq(try! extracted.read_bookmarks(), [
     {
       level: 0,
-      text: @ascii.encode("String"),
+      text: b"String",
       target: DestFit(TargetPageObject(extracted_page_refs[0])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -462,7 +462,7 @@ test "PdfDocument pdf_of_pages retains bookmarks with named destinations" {
     },
     {
       level: 0,
-      text: @ascii.encode("Named"),
+      text: b"Named",
       target: DestFit(TargetPageObject(extracted_page_refs[0])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -637,11 +637,11 @@ test "PdfDocument pdf_of_pages rewrites and prunes named destinations" {
   let old_page_numbers = try! doc.page_reference_numbers()
   let dest_tree = doc.build_name_tree([
     (
-      @ascii.encode("drop"),
+      b"drop",
       PdfArray([PdfIndirect(old_page_numbers[1]), PdfNameObject(type_fit)]),
     ),
     (
-      @ascii.encode("keep"),
+      b"keep",
       PdfArray([PdfIndirect(old_page_numbers[0]), PdfNameObject(type_fit)]),
     ),
   ])
@@ -655,7 +655,7 @@ test "PdfDocument pdf_of_pages rewrites and prunes named destinations" {
   let new_page_numbers = try! extracted.page_reference_numbers()
   @test.assert_eq(page_extract_destination_entries_for_test(extracted), [
     (
-      @ascii.encode("keep"),
+      b"keep",
       PdfArray([PdfIndirect(new_page_numbers[0]), PdfNameObject(type_fit)]),
     ),
   ])
@@ -734,8 +734,8 @@ test "PdfDocument pdf_of_pages rejects empty and invalid ranges" {
 test "PdfDocument remove_unreferenced drops detached objects" {
   let key_metadata = page_extract_name_for_test("/Metadata")
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
-  let kept = doc.add_object(PdfString(@ascii.encode("kept")))
-  let removed = doc.add_object(PdfString(@ascii.encode("removed")))
+  let kept = doc.add_object(PdfString(b"kept"))
+  let removed = doc.add_object(PdfString(b"removed"))
   doc.add_object_given_number(
     doc.root(),
     try! doc
@@ -743,10 +743,7 @@ test "PdfDocument remove_unreferenced drops detached objects" {
     .add_dict_entry(key_metadata, PdfIndirect(kept)),
   )
   try! doc.remove_unreferenced()
-  @test.assert_eq(
-    doc.lookup_object_or_null(kept),
-    PdfString(@ascii.encode("kept")),
-  )
+  @test.assert_eq(doc.lookup_object_or_null(kept), PdfString(b"kept"))
   @test.assert_eq(doc.lookup_object_or_null(removed), PdfNull)
   @test.assert_eq(try! doc.endpage(), 1)
 
@@ -774,15 +771,12 @@ test "PdfDocument remove_unreferenced drops detached objects" {
       (page_extract_name_for_test("/Count"), PdfInteger(0)),
     ]),
   )
-  fallback.add_object_given_number(4, PdfString(@ascii.encode("fallback-kept")))
-  fallback.add_object_given_number(
-    5,
-    PdfString(@ascii.encode("fallback-removed")),
-  )
+  fallback.add_object_given_number(4, PdfString(b"fallback-kept"))
+  fallback.add_object_given_number(5, PdfString(b"fallback-removed"))
   try! fallback.remove_unreferenced()
   @test.assert_eq(
     fallback.lookup_object_or_null(4),
-    PdfString(@ascii.encode("fallback-kept")),
+    PdfString(b"fallback-kept"),
   )
   @test.assert_eq(fallback.lookup_object_or_null(5), PdfNull)
 }

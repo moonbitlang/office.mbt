@@ -1,5 +1,4 @@
 import {
   "bobzhang/pdflite/core",
-  "moonbitlang/core/encoding/ascii",
   "moonbitlang/core/json",
 }

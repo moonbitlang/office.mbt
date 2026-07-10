@@ -40,7 +40,7 @@ test "private codec dictionary and predictor guards report malformed inputs" {
     fail("expected @core.PdfError::PredictorExpected")
   }
   let bad_png_predictor : Result[Int, Error] = try
-    pdf_encode_png_predictor_value(5, @ascii.encode("x"), 0, 0, 1, 1)
+    pdf_encode_png_predictor_value(5, b"x", 0, 0, 1, 1)
   catch {
     err => Err(err)
   } noraise {

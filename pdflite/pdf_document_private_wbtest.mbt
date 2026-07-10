@@ -39,10 +39,7 @@ test "pdf duplicate stream candidates reject non-stream objects" {
     pdf_duplicate_stream_candidate(1, PdfInteger(1)) is None,
     true,
   )
-  let stream = @syntax.pdf_stream(
-    PdfDictionary([]),
-    StreamGot(@ascii.encode("a")),
-  )
+  let stream = @syntax.pdf_stream(PdfDictionary([]), StreamGot(b"a"))
   guard pdf_duplicate_stream_candidate(2, stream) is Some(candidate) else {
     fail("expected stream candidate")
   }
@@ -79,13 +76,13 @@ test "PdfDocument copy preserves parser-private object states" {
 
 ///|
 test "PdfDocument stream decompression preserves already-decrypted state" {
-  let length = @core.pdf_name_of_bytes(@ascii.encode("/Length"))
-  let filter = @core.pdf_name_of_bytes(@ascii.encode("/Filter"))
-  let encoded = @codec.pdf_ascii_hex_encode(@ascii.encode("Hi"))
+  let length = @core.pdf_name_of_bytes(b"/Length")
+  let filter = @core.pdf_name_of_bytes(b"/Filter")
+  let encoded = @codec.pdf_ascii_hex_encode(b"Hi")
   let stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (length, PdfInteger(encoded.length())),
-      (filter, PdfNameObject(@core.pdf_name_of_bytes(@ascii.encode("/AHx")))),
+      (filter, PdfNameObject(@core.pdf_name_of_bytes(b"/AHx"))),
     ]),
     StreamGot(encoded),
   )
@@ -104,7 +101,7 @@ test "PdfDocument stream decompression preserves already-decrypted state" {
     ) else {
     fail("expected already-decrypted stream")
   }
-  @test.assert_eq(decoded.data, StreamGot(@ascii.encode("Hi")))
+  @test.assert_eq(decoded.data, StreamGot(b"Hi"))
   @test.assert_eq(
     decoded.dictionary.lookup_immediate(length),
     Some(PdfInteger(2)),
@@ -130,9 +127,7 @@ test "PdfDocument ARC4 crypt preserves parser-private object states" {
   let doc = pdf_document_empty()
   doc.objects.set_entry(
     1,
-    pdf_object_entry(
-      ObjectParsedAlreadyDecrypted(PdfString(@ascii.encode("plain"))),
-    ),
+    pdf_object_entry(ObjectParsedAlreadyDecrypted(PdfString(b"plain"))),
   )
   doc.objects.set_entry(2, pdf_object_entry(ObjectToParse))
   doc.objects.set_entry(

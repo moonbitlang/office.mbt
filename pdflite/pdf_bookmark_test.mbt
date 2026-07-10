@@ -212,13 +212,13 @@ test "pdf_string_of_bookmark renders CamlPDF debug line as bytes" {
 test "PdfDocument list_bookmarks renders selected cpdf bookmark lines" {
   let document = try! bookmark_listing_document_for_test()
   let expected = bookmark_join_bytes_for_test([
-    @ascii.encode("0 \"Top\\nQuote\\\"\" 1 open \""),
+    b"0 \"Top\\nQuote\\\"\" 1 open \"",
     try! @pdflite.pdf_write_object(
       PdfArray([PdfInteger(1), PdfNameObject(bookmark_name_for_test("/Fit"))]),
     ),
-    @ascii.encode("\"\n0 \"Named\" 0 \""),
+    b"\"\n0 \"Named\" 0 \"",
     try! @pdflite.pdf_write_object(PdfString(bookmark_bytes_for_test("named"))),
-    @ascii.encode("\"\n"),
+    b"\"\n",
   ])
   @test.assert_eq(
     try! document.list_bookmarks([1], encoding=PdfMetadataUTF8),
@@ -261,11 +261,11 @@ test "PdfDocument list_bookmarks escapes cpdf backslash titles" {
     },
   ])
   let expected = bookmark_join_bytes_for_test([
-    @ascii.encode("0 \"Slash\\\\Marker\" 1 \""),
+    b"0 \"Slash\\\\Marker\" 1 \"",
     try! @pdflite.pdf_write_object(
       PdfArray([PdfInteger(1), PdfNameObject(bookmark_name_for_test("/Fit"))]),
     ),
-    @ascii.encode("\"\n"),
+    b"\"\n",
   ])
   @test.assert_eq(
     try! bookmarked.list_bookmarks([1], encoding=PdfMetadataUTF8),
@@ -301,11 +301,11 @@ test "PdfDocument list_bookmarks strips non-ASCII bookmark title bytes" {
     },
   ])
   let expected = bookmark_join_bytes_for_test([
-    @ascii.encode("0 \"Rsum\\nQuote\\\"\" 1 \""),
+    b"0 \"Rsum\\nQuote\\\"\" 1 \"",
     try! @pdflite.pdf_write_object(
       PdfArray([PdfInteger(1), PdfNameObject(bookmark_name_for_test("/Fit"))]),
     ),
-    @ascii.encode("\"\n"),
+    b"\"\n",
   ])
   @test.assert_eq(
     try! bookmarked.list_bookmarks([1], encoding=PdfMetadataStripped),
@@ -547,7 +547,7 @@ test "PdfDocument parse_bookmark_text reads cpdf plain text bookmarks" {
 test "PdfDocument parse_bookmark_text validates plain text structure" {
   let document = try! @pdflite.pdf_blank_document(100.0, 100.0, 2)
   let bad_first_level : Result[Array[@bookmark.PdfBookmark], Error] = try
-    document.parse_bookmark_text(@ascii.encode("1 \"Bad\" 1\n"))
+    document.parse_bookmark_text(b"1 \"Bad\" 1\n")
   catch {
     err => Err(err)
   } noraise {
@@ -557,7 +557,7 @@ test "PdfDocument parse_bookmark_text validates plain text structure" {
     fail("expected @core.PdfError::SoftError for first level")
   }
   let bad_jump : Result[Array[@bookmark.PdfBookmark], Error] = try
-    document.parse_bookmark_text(@ascii.encode("0 \"Top\" 1\n2 \"Bad\" 1\n"))
+    document.parse_bookmark_text(b"0 \"Top\" 1\n2 \"Bad\" 1\n")
   catch {
     err => Err(err)
   } noraise {
@@ -567,7 +567,7 @@ test "PdfDocument parse_bookmark_text validates plain text structure" {
     fail("expected @core.PdfError::SoftError for level jump")
   }
   let malformed : Result[Array[@bookmark.PdfBookmark], Error] = try
-    document.parse_bookmark_text(@ascii.encode("0 not-a-string 1\n"))
+    document.parse_bookmark_text(b"0 not-a-string 1\n")
   catch {
     err => Err(err)
   } noraise {
@@ -577,7 +577,7 @@ test "PdfDocument parse_bookmark_text validates plain text structure" {
     fail("expected @core.PdfError::SoftError for malformed line")
   }
   let unterminated : Result[Array[@bookmark.PdfBookmark], Error] = try
-    document.parse_bookmark_text(@ascii.encode("0 \"Missing end 1\n"))
+    document.parse_bookmark_text(b"0 \"Missing end 1\n")
   catch {
     err => Err(err)
   } noraise {
@@ -588,7 +588,7 @@ test "PdfDocument parse_bookmark_text validates plain text structure" {
   }
   @test.assert_eq(
     (try! document.parse_bookmark_text(
-      @ascii.encode("0 \"Top\" 1\n2 \"Allowed\" 1\n"),
+      b"0 \"Top\" 1\n2 \"Allowed\" 1\n",
       verify=false,
     )).length(),
     2,

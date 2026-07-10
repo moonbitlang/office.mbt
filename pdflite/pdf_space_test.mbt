@@ -431,7 +431,7 @@ test "PdfDocument colour_space_components counts special spaces" {
   let resources = @syntax.pdf_dictionary([])
   let icc = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(4))]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   @test.assert_eq(
     try! doc.colour_space_components(
@@ -514,10 +514,7 @@ test "PdfDocument colour_space_components rejects malformed spaces" {
       resources,
       PdfArray([
         PdfNameObject(space_name_for_test("/ICCBased")),
-        @syntax.pdf_stream(
-          @syntax.pdf_dictionary([]),
-          StreamGot(@ascii.encode("icc")),
-        ),
+        @syntax.pdf_stream(@syntax.pdf_dictionary([]), StreamGot(b"icc")),
       ]),
     )
   catch {
@@ -671,7 +668,7 @@ test "PdfDocument read_colour_space parses ICCBased streams" {
   let empty_resources = @syntax.pdf_dictionary([])
   let default_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   @test.assert_eq(
     try! doc.read_colour_space(
@@ -688,7 +685,7 @@ test "PdfDocument read_colour_space parses ICCBased streams" {
       ),
     ),
   )
-  let metadata : @syntax.PdfObject = PdfString(@ascii.encode("meta"))
+  let metadata : @syntax.PdfObject = PdfString(b"meta")
   let explicit_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
       (space_name_for_test("/N"), PdfInteger(1)),
@@ -699,7 +696,7 @@ test "PdfDocument read_colour_space parses ICCBased streams" {
       (space_name_for_test("/Range"), PdfArray([PdfReal(0.1), PdfReal(0.9)])),
       (space_name_for_test("/Metadata"), metadata),
     ]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   @test.assert_eq(
     try! doc.read_colour_space(
@@ -715,7 +712,7 @@ test "PdfDocument read_colour_space parses ICCBased streams" {
   )
   let cmyk_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(4))]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   @test.assert_eq(
     try! doc.read_colour_space(
@@ -740,7 +737,7 @@ test "PdfDocument read_colour_space rejects unsupported ICCBased shapes" {
   let empty_resources = @syntax.pdf_dictionary([])
   let bad_n_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(2))]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   @test.assert_eq(
     try! doc.read_colour_space(
@@ -751,7 +748,7 @@ test "PdfDocument read_colour_space rejects unsupported ICCBased shapes" {
   )
   let missing_n_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   @test.assert_eq(
     try! doc.read_colour_space(
@@ -781,7 +778,7 @@ test "PdfDocument read_colour_space rejects unsupported ICCBased shapes" {
         PdfNameObject(space_name_for_test("/Missing")),
       ),
     ]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   @test.assert_eq(
     try! doc.read_colour_space(
@@ -806,7 +803,7 @@ test "PdfDocument read_colour_space reports malformed ICCBased range numbers" {
         PdfArray([PdfNameObject(space_name_for_test("/Bad")), PdfInteger(1)]),
       ),
     ]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   let result : Result[@pdflite.PdfColourSpace?, Error] = try
     doc.read_colour_space(
@@ -892,7 +889,7 @@ test "PdfDocument read_colour_space parses Indexed through ICCBased alternate" {
   let empty_resources = @syntax.pdf_dictionary([])
   let icc_base = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   @test.assert_eq(
     try! doc.read_colour_space(
@@ -1243,7 +1240,7 @@ test "pdf_object_of_colour_space writes supported colour spaces" {
   )
   let icc_stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(space_name_for_test("/N"), PdfInteger(3))]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   @test.assert_eq(
     @pdflite.pdf_object_of_colour_space(

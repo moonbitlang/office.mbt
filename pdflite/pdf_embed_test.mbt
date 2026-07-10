@@ -332,7 +332,7 @@ test "pdf_embed_truetype skips parsing for empty codepoints" {
   let document = @pdflite.pdf_document_empty()
   let pack = try! @pdflite.pdf_embed_truetype(
     document,
-    @ascii.encode("not a real font"),
+    b"not a real font",
     "UnitTT",
     [],
     PdfWinAnsiEncoding,
@@ -476,16 +476,13 @@ test "PdfEmbedFontSource variants preserve cpdfembed font source shape" {
   let pack = try! @pdflite.pdf_fontpack_of_standardfont(font)
   let premade : @pdflite.PdfEmbedFontSource = PdfEmbedPreMadeFontPack(pack)
   let embed : @pdflite.PdfEmbedFontSource = PdfEmbedInfo(
-    @ascii.encode("ttf"),
+    b"ttf",
     "NimbusSans",
     PdfWinAnsiEncoding,
   )
   let existing : @pdflite.PdfEmbedFontSource = PdfEmbedExistingNamedFont
   @test.assert_eq(premade, PdfEmbedPreMadeFontPack(pack))
-  @test.assert_eq(
-    embed,
-    PdfEmbedInfo(@ascii.encode("ttf"), "NimbusSans", PdfWinAnsiEncoding),
-  )
+  @test.assert_eq(embed, PdfEmbedInfo(b"ttf", "NimbusSans", PdfWinAnsiEncoding))
   @test.assert_eq(existing, PdfEmbedExistingNamedFont)
 }
 

@@ -96,7 +96,7 @@ pub(all) struct PdfOptionalContent {
 
 ///|
 fn pdf_ocg_default_view_name() -> PdfName {
-  @core.pdf_name_of_bytes(@ascii.encode("/View"))
+  @core.pdf_name_of_bytes(b"/View")
 }
 
 ///|

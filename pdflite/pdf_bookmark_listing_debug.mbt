@@ -6,7 +6,7 @@
 pub fn pdf_string_of_bookmark(
   bookmark : @bookmark.PdfBookmark,
 ) -> @core.PdfBytes raise @core.PdfError {
-  let space = @ascii.encode(" ")
+  let space = b" "
   @core.pdf_bytes_concat_views([
     @ascii.encode(bookmark.level.to_string()),
     space,
@@ -15,6 +15,6 @@ pub fn pdf_string_of_bookmark(
     pdf_write_object(pdf_object_of_destination(bookmark.target)),
     space,
     @ascii.encode(if bookmark.is_open { "true" } else { "false" }),
-    @ascii.encode("\n"),
+    b"\n",
   ])
 }

@@ -160,7 +160,7 @@ test "@core.PdfName stores names as bytes" {
 
 ///|
 test "@core.PdfName can be built from and inspected as borrowed byte views" {
-  let wrapped = @ascii.encode("xx/Typeyy")
+  let wrapped = b"xx/Typeyy"
   let name = @core.pdf_name_of_view(wrapped[2:wrapped.length() - 2])
   @test.assert_eq(name.byte_length(), 5)
   @test.assert_eq([ for byte in name.view() => byte.to_int() ], [

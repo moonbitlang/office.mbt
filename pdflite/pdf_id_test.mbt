@@ -1,6 +1,6 @@
 ///|
 fn id_name_for_test() -> @core.PdfName {
-  @core.pdf_name_of_bytes(@ascii.encode("/ID"))
+  @core.pdf_name_of_bytes(b"/ID")
 }
 
 ///|
@@ -89,7 +89,7 @@ test "PdfDocument change_id installs trailer ID" {
   let previous = @env.get_env_var("CAMLPDF_REPRODUCIBLE_IDS")
   @env.unset_env_var("CAMLPDF_REPRODUCIBLE_IDS")
   let key_id = id_name_for_test()
-  let key_info = @core.pdf_name_of_bytes(@ascii.encode("/Info"))
+  let key_info = @core.pdf_name_of_bytes(b"/Info")
   let doc = @pdflite.pdf_document_empty()
   doc.set_trailer_dict(
     PdfDictionary([(key_id, PdfInteger(1)), (key_info, PdfIndirect(7))]),

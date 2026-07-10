@@ -212,7 +212,7 @@ fn font_external_push_ascii_for_test(
 fn font_external_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = font_external_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -246,7 +246,7 @@ fn font_external_corrupt_startxref_pointer_for_test(
 
 ///|
 fn font_external_startxref_offset_for_test(bytes : Bytes) -> Int raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = font_external_find_last_bytes_for_test(bytes, marker)
   if marker_position < 0 {
     fail("expected startxref marker")
@@ -280,11 +280,7 @@ fn font_external_corrupt_startxref_xref_header_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
   let xref_offset = font_external_startxref_offset_for_test(bytes)
-  guard font_external_bytes_start_with_at_for_test(
-    bytes,
-    @ascii.encode("xref"),
-    xref_offset,
-  ) else {
+  guard font_external_bytes_start_with_at_for_test(bytes, b"xref", xref_offset) else {
     fail("expected startxref to point at a classic xref table")
   }
   let output : Array[Byte] = []
@@ -301,9 +297,7 @@ fn font_external_corrupt_startxref_trailer_keyword_for_test(
 ) -> Bytes raise {
   let xref_offset = font_external_startxref_offset_for_test(bytes)
   let trailer_position = font_external_find_bytes_after_for_test(
-    bytes,
-    @ascii.encode("trailer"),
-    xref_offset,
+    bytes, b"trailer", xref_offset,
   )
   if trailer_position < 0 {
     fail("expected classic xref trailer keyword after startxref target")
@@ -320,7 +314,7 @@ fn font_external_corrupt_startxref_trailer_keyword_for_test(
 fn font_external_first_in_use_xref_row_start_for_test(
   bytes : Bytes,
 ) -> Int raise {
-  let free_row = @ascii.encode("0000000000 65535 f")
+  let free_row = b"0000000000 65535 f"
   let free_row_position = font_external_find_bytes_for_test(bytes, free_row)
   if free_row_position < 0 {
     fail("expected classic xref free row")
@@ -395,7 +389,7 @@ fn font_external_corrupt_first_in_use_xref_generation_for_test(
 fn font_external_first_xref_subsection_spans_for_test(
   bytes : Bytes,
 ) -> (Int, Int, Int, Int) raise {
-  let header = @ascii.encode("xref")
+  let header = b"xref"
   let header_position = font_external_find_bytes_for_test(bytes, header)
   if header_position < 0 {
     fail("expected first classic xref header")

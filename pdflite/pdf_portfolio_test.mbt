@@ -109,9 +109,9 @@ fn portfolio_assert_file_spec_for_test(
 
 ///|
 test "PdfDocument portfolio builds embedded files name tree" {
-  let mod_date = @ascii.encode("D:20240102030405")
-  let first_payload = @ascii.encode("first payload")
-  let second_payload = @ascii.encode("second payload")
+  let mod_date = b"D:20240102030405"
+  let first_payload = b"first payload"
+  let second_payload = b"second payload"
   let document = try! portfolio_blank_doc_for_test().portfolio(
     [
       @portfolio.pdf_portfolio_entry(
@@ -159,7 +159,7 @@ test "PdfDocument portfolio builds embedded files name tree" {
 test "PdfDocument portfolio preserves other root name trees" {
   let original = portfolio_blank_doc_for_test()
   let javascript_tree = original.build_name_tree([
-    (@ascii.encode("script"), PdfString(@ascii.encode("payload"))),
+    (b"script", PdfString(b"payload")),
   ])
   original.replace_chain(
     [
@@ -170,8 +170,8 @@ test "PdfDocument portfolio preserves other root name trees" {
     javascript_tree,
   )
   let document = try! original.portfolio(
-    [@portfolio.pdf_portfolio_entry("attached.txt", @ascii.encode("attached"))],
-    mod_date=Some(@ascii.encode("D:20240102030405")),
+    [@portfolio.pdf_portfolio_entry("attached.txt", b"attached")],
+    mod_date=Some(b"D:20240102030405"),
   )
   let catalog = portfolio_catalog_for_test(document)
   let names = portfolio_lookup_for_test(document, "/Names", catalog)
@@ -181,7 +181,7 @@ test "PdfDocument portfolio preserves other root name trees" {
   }
   let retained = portfolio_lookup_for_test(document, "/JavaScript", names)
   @test.assert_eq(document.read_name_tree(retained), [
-    (@ascii.encode("script"), PdfString(@ascii.encode("payload"))),
+    (b"script", PdfString(b"payload")),
   ])
 }
 
@@ -189,7 +189,7 @@ test "PdfDocument portfolio preserves other root name trees" {
 test "PdfDocument portfolio handles empty entries" {
   let document = try! portfolio_blank_doc_for_test().portfolio(
     [],
-    mod_date=Some(@ascii.encode("D:20240102030405")),
+    mod_date=Some(b"D:20240102030405"),
   )
   @test.assert_eq(
     document.read_name_tree(portfolio_embedded_tree_for_test(document)),
@@ -206,8 +206,8 @@ test "PdfDocument portfolio handles empty entries" {
 test "PdfDocument portfolio rejects documents without a catalog" {
   let result : Result[@pdflite.PdfDocument, Error] = try
     @pdflite.pdf_document_empty().portfolio(
-      [@portfolio.pdf_portfolio_entry("file.txt", @ascii.encode("payload"))],
-      mod_date=Some(@ascii.encode("D:20240102030405")),
+      [@portfolio.pdf_portfolio_entry("file.txt", b"payload")],
+      mod_date=Some(b"D:20240102030405"),
     )
   catch {
     err => Err(err)

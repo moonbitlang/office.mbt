@@ -78,7 +78,7 @@ fn annotation_fixture_push_ascii_for_test(
 fn annotation_fixture_corrupt_startxref_pointer_for_test(
   bytes : Bytes,
 ) -> Bytes raise {
-  let marker = @ascii.encode("startxref")
+  let marker = b"startxref"
   let marker_position = annotation_fixture_find_last_bytes_for_test(
     bytes, marker,
   )

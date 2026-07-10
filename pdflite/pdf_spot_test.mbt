@@ -91,7 +91,7 @@ test "pdf_list_spot_colours wrapper returns spot colourant names" {
 ///|
 test "pdf_list_spot_colours_blob returns cpdf stdout bytes" {
   let document = spot_document_for_test()
-  let expected = @ascii.encode("/Spot\n/IndirectSpot\n")
+  let expected = b"/Spot\n/IndirectSpot\n"
   @test.assert_eq(document.list_spot_colours_blob(), expected)
   @test.assert_eq(@pdflite.pdf_list_spot_colours_blob(document), expected)
   @test.assert_eq(

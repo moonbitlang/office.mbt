@@ -110,7 +110,7 @@ fn composition_sample_document_for_test() -> @pdflite.PdfDocument {
       (key_child, PdfIndirect(51)),
     ]),
   )
-  doc.add_object_given_number(51, PdfString(@ascii.encode("structure")))
+  doc.add_object_given_number(51, PdfString(b"structure"))
   doc.add_object_given_number(
     60,
     composition_stream_for_test(
@@ -118,7 +118,7 @@ fn composition_sample_document_for_test() -> @pdflite.PdfDocument {
       "q Q",
     ),
   )
-  doc.add_object_given_number(61, PdfString(@ascii.encode("piece")))
+  doc.add_object_given_number(61, PdfString(b"piece"))
   doc.add_object_given_number(
     70,
     composition_dictionary_for_test([

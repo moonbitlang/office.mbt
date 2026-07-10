@@ -152,7 +152,7 @@ test "cpdf pagespec resolves page labels" {
     },
     {
       label_style: PageLabelDecimalArabic,
-      label_prefix: Some(@ascii.encode("A-")),
+      label_prefix: Some(b"A-"),
       start_page: 4,
       start_value: 1,
     },
@@ -181,13 +181,13 @@ test "cpdf pagespec resolves escaped bracket page labels" {
   let labels : Array[@label.PdfPageLabel] = [
     {
       label_style: PageLabelDecimalArabic,
-      label_prefix: Some(@ascii.encode("A]")),
+      label_prefix: Some(b"A]"),
       start_page: 1,
       start_value: 1,
     },
     {
       label_style: PageLabelDecimalArabic,
-      label_prefix: Some(@ascii.encode("B[")),
+      label_prefix: Some(b"B["),
       start_page: 2,
       start_value: 1,
     },

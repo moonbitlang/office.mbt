@@ -7,7 +7,7 @@ fn squeeze_name_for_test(text : String) -> @core.PdfName {
 fn squeeze_data_for_test() -> @core.PdfBytes {
   let output : Array[Byte] = []
   for _ in 0..<128 {
-    for byte in @ascii.encode("stream data repeats well\n")[:] {
+    for byte in b"stream data repeats well\n"[:] {
       output.push(byte)
     }
   }
@@ -358,7 +358,7 @@ test "squeeze stream helpers leave encrypted documents unchanged" {
 
 ///|
 test "PdfDocument recompress skips malformed old-filter streams" {
-  let invalid = @ascii.encode("not valid hex data")
+  let invalid = b"not valid hex data"
   let malformed = squeeze_stream_for_test(
     [
       (
@@ -380,7 +380,7 @@ test "PdfDocument recompress skips malformed old-filter streams" {
 test "PdfDocument squeeze removes duplicate objects and rewrites references" {
   let key_info = squeeze_name_for_test("/Info")
   let first : @syntax.PdfObject = PdfDictionary([
-    (squeeze_name_for_test("/Name"), PdfString(@ascii.encode("same"))),
+    (squeeze_name_for_test("/Name"), PdfString(b"same")),
   ])
   let second = first
   let holder : @syntax.PdfObject = PdfArray([PdfIndirect(2), PdfIndirect(1)])
@@ -407,7 +407,7 @@ test "PdfDocument squeeze removes duplicate objects and rewrites references" {
 
 ///|
 test "squeeze reaches duplicate-object fixed point" {
-  let same : @syntax.PdfObject = PdfString(@ascii.encode("fixed point"))
+  let same : @syntax.PdfObject = PdfString(b"fixed point")
   let document = @pdflite.pdf_document_empty()
   document.add_object_given_number(1, PdfArray([PdfIndirect(4)]))
   document.add_object_given_number(2, PdfArray([PdfIndirect(5)]))
@@ -584,10 +584,7 @@ test "squeeze normalizes form xobject streams" {
     (squeeze_name_for_test("/Resources"), PdfDictionary([])),
     (squeeze_name_for_test("/Length"), PdfInteger(3)),
   ])
-  let form_stream = @syntax.pdf_stream(
-    form_dictionary,
-    StreamGot(@ascii.encode("q Q")),
-  )
+  let form_stream = @syntax.pdf_stream(form_dictionary, StreamGot(b"q Q"))
   let encoded_form = try! @pdflite.pdf_encode_stream_with_filter(
     squeeze_name_for_test("/ASCIIHexDecode"),
     form_stream,
@@ -639,7 +636,7 @@ test "squeeze skips non-page page-tree leaves" {
   let key_parent = squeeze_name_for_test("/Parent")
   let leaf : @syntax.PdfObject = PdfDictionary([
     (key_parent, PdfIndirect(1)),
-    (squeeze_name_for_test("/Marker"), PdfString(@ascii.encode("not page"))),
+    (squeeze_name_for_test("/Marker"), PdfString(b"not page")),
   ])
   let document = squeeze_manual_page_document_for_test(leaf)
 

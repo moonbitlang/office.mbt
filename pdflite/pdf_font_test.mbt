@@ -27,9 +27,9 @@ fn font_document_for_test() -> @pdflite.PdfDocument {
     ]),
   )
   doc.add_object_given_number(3, font_descriptor_for_test())
-  doc.add_object_given_number(4, PdfString(@ascii.encode("font one")))
-  doc.add_object_given_number(5, PdfString(@ascii.encode("font two")))
-  doc.add_object_given_number(6, PdfString(@ascii.encode("font three")))
+  doc.add_object_given_number(4, PdfString(b"font one"))
+  doc.add_object_given_number(5, PdfString(b"font two"))
+  doc.add_object_given_number(6, PdfString(b"font three"))
   doc.add_object_given_number(
     7,
     PdfDictionary([(key_font_descriptor, font_descriptor_for_test())]),
@@ -239,9 +239,9 @@ fn font_missing_document_for_test() -> @pdflite.PdfDocument {
   let key_font = font_name_for_test("/Font")
   let key_xobject = font_name_for_test("/XObject")
   let doc = @pdflite.pdf_document_empty()
-  doc.add_object_given_number(4, PdfString(@ascii.encode("font one")))
-  doc.add_object_given_number(5, PdfString(@ascii.encode("font two")))
-  doc.add_object_given_number(6, PdfString(@ascii.encode("font three")))
+  doc.add_object_given_number(4, PdfString(b"font one"))
+  doc.add_object_given_number(5, PdfString(b"font two"))
+  doc.add_object_given_number(6, PdfString(b"font three"))
   doc.add_object_given_number(
     40,
     font_font_object_for_test("/Type1", "/MissingOne", None),
@@ -748,11 +748,11 @@ test "PdfDocument extract_fontfile_bytes returns decoded embedded bytes" {
   let doc = font_extraction_document_for_test()
   @test.assert_eq(
     try! doc.extract_fontfile_bytes(1, "/F1"),
-    Some(@ascii.encode("outer-font")),
+    Some(b"outer-font"),
   )
   @test.assert_eq(
     try! @pdflite.pdf_extract_fontfile_bytes(doc, 1, "/Fm/FX"),
-    Some(@ascii.encode("nested-font")),
+    Some(b"nested-font"),
   )
   @test.assert_eq(try! doc.extract_fontfile_bytes(1, "/FNo"), None)
   @test.assert_eq(try! doc.extract_fontfile_bytes(1, "/Missing"), None)
@@ -795,7 +795,7 @@ test "PdfDocument copy_font_from adds source font to selected target pages" {
   let font_file = try! font_required_lookup_for_test(
     copied, "/FontFile2", descriptor,
   )
-  @test.assert_eq(try! font_file.stream_bytes(), @ascii.encode("copy-font"))
+  @test.assert_eq(try! font_file.stream_bytes(), b"copy-font")
   let wrapped = try! @pdflite.pdf_copy_font(source, "/FSrc", 1, [2], target)
   let wrapped_pages = try! wrapped.pages_of_pagetree()
   let wrapped_fonts = try! font_required_lookup_for_test(

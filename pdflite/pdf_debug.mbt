@@ -46,7 +46,7 @@ fn pdf_debug_object_line(
   @core.pdf_bytes_concat_views([
     @ascii.encode(prefix),
     pdf_string_of_pdf(object),
-    @ascii.encode("\n"),
+    b"\n",
   ])
 }
 
@@ -70,16 +70,16 @@ pub fn PdfDocument::debug_objects(
       chunks.push(pdf_debug_object_line("Catalog: ", catalog))
       match self.lookup_direct(pdf_debug_pages_key(), catalog) {
         Some(pages) => chunks.push(pdf_debug_object_line("Pages: ", pages))
-        None => chunks.push(@ascii.encode("no catalog\n"))
+        None => chunks.push(b"no catalog\n")
       }
     }
-    None => chunks.push(@ascii.encode("No catalog!\n"))
+    None => chunks.push(b"No catalog!\n")
   }
   for entry in object_entries {
     let (number, _, object) = entry
     chunks.push(@ascii.encode(number.to_string() + " 0 obj:\n\n"))
     chunks.push(pdf_string_of_pdf(object))
-    chunks.push(@ascii.encode("\n"))
+    chunks.push(b"\n")
   }
   pdf_debug_concat_chunks(chunks)
 }

@@ -26,7 +26,7 @@ test "PdfDocument contains_javascript follows cpdf string and URI checks" {
   let key_uri = javascript_name_for_test("/URI")
   @test.assert_eq(
     javascript_document_with_object_for_test(
-      PdfDictionary([(key_s, PdfString(@ascii.encode("/JavaScript")))]),
+      PdfDictionary([(key_s, PdfString(b"/JavaScript"))]),
     ).contains_javascript(),
     true,
   )
@@ -40,13 +40,13 @@ test "PdfDocument contains_javascript follows cpdf string and URI checks" {
   )
   @test.assert_eq(
     javascript_document_with_object_for_test(
-      PdfDictionary([(key_uri, PdfString(@ascii.encode("javascript:alert(1)")))]),
+      PdfDictionary([(key_uri, PdfString(b"javascript:alert(1)"))]),
     ).contains_javascript(),
     true,
   )
   @test.assert_eq(
     javascript_document_with_object_for_test(
-      PdfDictionary([(key_uri, PdfString(@ascii.encode("JavaScript:alert(1)")))]),
+      PdfDictionary([(key_uri, PdfString(b"JavaScript:alert(1)"))]),
     ).contains_javascript(),
     false,
   )
@@ -57,10 +57,8 @@ test "PdfDocument contains_javascript scans stream dictionaries" {
   let key_s = javascript_name_for_test("/S")
   let document = javascript_document_with_object_for_test(
     PdfStreamObject({
-      dictionary: PdfDictionary([
-        (key_s, PdfString(@ascii.encode("/JavaScript"))),
-      ]),
-      data: StreamGot(@ascii.encode("payload")),
+      dictionary: PdfDictionary([(key_s, PdfString(b"/JavaScript"))]),
+      data: StreamGot(b"payload"),
     }),
   )
   @test.assert_eq(document.contains_javascript(), true)
@@ -93,23 +91,19 @@ fn javascript_removal_document_for_test() -> @pdflite.PdfDocument {
   document.add_object_given_number(
     1,
     PdfDictionary([
-      (key_js, PdfString(@ascii.encode("app.alert('x')"))),
+      (key_js, PdfString(b"app.alert('x')")),
       (javascript_name_for_test("/Keep"), PdfInteger(7)),
     ]),
   )
   document.add_object_given_number(
     2,
-    PdfArray([
-      PdfDictionary([(key_uri, PdfString(@ascii.encode("javascript:alert(1)")))]),
-    ]),
+    PdfArray([PdfDictionary([(key_uri, PdfString(b"javascript:alert(1)"))])]),
   )
   document.add_object_given_number(
     3,
     PdfStreamObject({
-      dictionary: PdfDictionary([
-        (key_js, PdfString(@ascii.encode("stream alert"))),
-      ]),
-      data: StreamGot(@ascii.encode("payload")),
+      dictionary: PdfDictionary([(key_js, PdfString(b"stream alert"))]),
+      data: StreamGot(b"payload"),
     }),
   )
   document.add_object_given_number(
@@ -134,7 +128,7 @@ test "PdfDocument remove_javascript empties JS and URI entries and removes name 
   let key_javascript = javascript_name_for_test("/JavaScript")
   @test.assert_eq(
     javascript_lookup_for_test(document.lookup_object_or_null(1), key_js),
-    Some(PdfString(@ascii.encode(""))),
+    Some(PdfString(b"")),
   )
   guard document.lookup_object_or_null(2) is PdfArray([PdfDictionary(entries)]) else {
     fail("expected nested URI dictionary")
@@ -142,14 +136,14 @@ test "PdfDocument remove_javascript empties JS and URI entries and removes name 
   let nested : @syntax.PdfObject = PdfDictionary(entries)
   @test.assert_eq(
     javascript_lookup_for_test(nested, key_uri),
-    Some(PdfString(@ascii.encode(""))),
+    Some(PdfString(b"")),
   )
   guard document.lookup_object_or_null(3) is PdfStreamObject(stream) else {
     fail("expected stream object")
   }
   @test.assert_eq(
     javascript_lookup_for_test(stream.dictionary, key_js),
-    Some(PdfString(@ascii.encode(""))),
+    Some(PdfString(b"")),
   )
   @test.assert_eq(
     document.lookup_chain(document.trailer_dict(), [

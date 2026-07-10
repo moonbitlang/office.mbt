@@ -24,7 +24,7 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
         PdfNameObject(image_raw_name_for_test("/DCTDecode")),
       ),
     ]),
-    StreamGot(@ascii.encode("jpg")),
+    StreamGot(b"jpg"),
   )
   let width_result : Result[@pdflite.PdfImage, Error] = try
     doc.get_image_24bpp(empty_resources, bad_width)
@@ -74,7 +74,7 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
         PdfNameObject(image_raw_name_for_test("/Bad")),
       ),
     ]),
-    StreamGot(@ascii.encode("jpg")),
+    StreamGot(b"jpg"),
   )
   let decode_result : Result[@pdflite.PdfImage, Error] = try
     doc.get_image_24bpp(empty_resources, bad_decode)
@@ -94,7 +94,7 @@ test "PdfDocument get_image_24bpp validates malformed image dictionary values" {
         PdfNameObject(image_raw_name_for_test("/DCTDecode")),
       ),
     ]),
-    StreamGot(@ascii.encode("jpg")),
+    StreamGot(b"jpg"),
   )
   let missing_width_result : Result[@pdflite.PdfImage, Error] = try
     doc.get_image_24bpp(empty_resources, missing_width)
@@ -171,11 +171,11 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
       ),
       (image_raw_name_for_test("/ColorSpace"), lab_space),
     ]),
-    StreamGot(@ascii.encode("lab")),
+    StreamGot(b"lab"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), lab_jpeg),
-    PdfJPEG(@ascii.encode("lab"), Some([0.0, 1.0, -80.0, 90.0, -70.0, 85.0])),
+    PdfJPEG(b"lab", Some([0.0, 1.0, -80.0, 90.0, -70.0, 85.0])),
   )
   let tint = @syntax.pdf_dictionary([
     (image_raw_name_for_test("/FunctionType"), PdfInteger(2)),
@@ -199,11 +199,11 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
       ),
       (image_raw_name_for_test("/ColorSpace"), device_n_space),
     ]),
-    StreamGot(@ascii.encode("device-n")),
+    StreamGot(b"device-n"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), device_n_jpeg),
-    PdfJPEG(@ascii.encode("device-n"), Some([0.0, 1.0, 0.0, 1.0])),
+    PdfJPEG(b"device-n", Some([0.0, 1.0, 0.0, 1.0])),
   )
   let indexed_rgb : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),
@@ -225,11 +225,11 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
         PdfArray([PdfInteger(0), PdfInteger(1)]),
       ),
     ]),
-    StreamGot(@ascii.encode("indexed")),
+    StreamGot(b"indexed"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), indexed_jpeg),
-    PdfJPEG(@ascii.encode("indexed"), Some([0.0, 1.0])),
+    PdfJPEG(b"indexed", Some([0.0, 1.0])),
   )
   let pattern_jpeg = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
@@ -244,11 +244,11 @@ test "PdfDocument get_image_24bpp derives encoded image decode defaults" {
         PdfNameObject(image_raw_name_for_test("/Pattern")),
       ),
     ]),
-    StreamGot(@ascii.encode("pattern")),
+    StreamGot(b"pattern"),
   )
   @test.assert_eq(
     try! doc.get_image_24bpp(@syntax.pdf_dictionary([]), pattern_jpeg),
-    PdfJPEG(@ascii.encode("pattern"), None),
+    PdfJPEG(b"pattern", None),
   )
 }
 
@@ -343,7 +343,7 @@ test "PdfDocument get_image_24bpp reads raw ICCBased images through alternate sp
     PdfNameObject(image_raw_name_for_test("/ICCBased")),
     @syntax.pdf_stream(
       @syntax.pdf_dictionary([(image_raw_name_for_test("/N"), PdfInteger(1))]),
-      StreamGot(@ascii.encode("icc")),
+      StreamGot(b"icc"),
     ),
   ])
   let image = @syntax.pdf_stream(
@@ -1106,7 +1106,7 @@ test "PdfDocument get_image_24bpp reads indexed image tables" {
   )
   let icc_rgb_base = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(image_raw_name_for_test("/N"), PdfInteger(3))]),
-    StreamGot(@ascii.encode("icc")),
+    StreamGot(b"icc"),
   )
   let indexed_icc_rgb : @syntax.PdfObject = PdfArray([
     PdfNameObject(image_raw_name_for_test("/Indexed")),

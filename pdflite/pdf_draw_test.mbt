@@ -316,7 +316,7 @@ test "pdf draw special text expands page-local replacements" {
   @test.assert_eq(ops, [
     Op_BT,
     Op_Tf(f1, 10.0),
-    Op_Tj(@ascii.encode("3|5|p.3|p.5|Chapter|0100|2023")),
+    Op_Tj(b"3|5|p.3|p.5|Chapter|0100|2023"),
     Op_ET,
   ])
 }
@@ -327,7 +327,7 @@ test "PdfDocument draw_special_text_context derives add-text replacements" {
   let labelled = try! document.write_page_labels([
     {
       label_style: PageLabelDecimalArabic,
-      label_prefix: Some(@ascii.encode("p.")),
+      label_prefix: Some(b"p."),
       start_page: 1,
       start_value: 10,
     },
@@ -517,7 +517,7 @@ test "pdf draw structure metadata ops are content-empty" {
     PdfDrawSTag("P"),
     PdfDrawEndSTag,
     PdfDrawNamespace("http://iso.org/pdf/ssn"),
-    PdfDrawEltInfo("Lang", PdfString(@ascii.encode("en-US"))),
+    PdfDrawEltInfo("Lang", PdfString(b"en-US")),
     PdfDrawEndEltInfo("Lang"),
     PdfDrawAutoTag(false),
   ])
@@ -877,13 +877,13 @@ test "PdfDocument draw expands special text per selected page" {
   @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [
     Op_BT,
     Op_Tf(f1, 10.0),
-    Op_Tj(@ascii.encode("1")),
+    Op_Tj(b"1"),
     Op_ET,
   ])
   @test.assert_eq(try! draw_page_ops_for_test(drawn, 2), [
     Op_BT,
     Op_Tf(f1, 10.0),
-    Op_Tj(@ascii.encode("2")),
+    Op_Tj(b"2"),
     Op_ET,
   ])
 }
@@ -914,7 +914,7 @@ test "PdfDocument draw starts resource names above selected page resources" {
   @test.assert_eq(try! draw_page_ops_for_test(drawn, 1), [
     Op_BT,
     Op_Tf(new_font, 10.0),
-    Op_Tj(@ascii.encode("A")),
+    Op_Tj(b"A"),
     Op_ET,
   ])
   let drawn_page = (try! drawn.pages_of_pagetree())[0]
@@ -1021,7 +1021,7 @@ test "PdfDocument draw structure-tree mode preserves nesting and namespaces" {
     [1],
     [
       PdfDrawNamespace("http://iso.org/pdf2/ssn"),
-      PdfDrawEltInfo("Lang", PdfString(@ascii.encode("en-US"))),
+      PdfDrawEltInfo("Lang", PdfString(b"en-US")),
       PdfDrawSTag("Document"),
       PdfDrawTag("Span"),
       PdfDrawEndTag,
@@ -1048,7 +1048,7 @@ test "PdfDocument draw structure-tree mode preserves nesting and namespaces" {
   }
   @test.assert_eq(
     drawn.lookup_object_or_null(namespace_number).lookup_immediate(key_ns),
-    Some(PdfString(@ascii.encode("http://iso.org/pdf2/ssn"))),
+    Some(PdfString(b"http://iso.org/pdf2/ssn")),
   )
   guard root.lookup_immediate(key_k)
     is Some(PdfArray([PdfIndirect(document_number)])) else {
@@ -1065,7 +1065,7 @@ test "PdfDocument draw structure-tree mode preserves nesting and namespaces" {
   )
   @test.assert_eq(
     document_node.lookup_immediate(key_lang),
-    Some(PdfString(@ascii.encode("en-US"))),
+    Some(PdfString(b"en-US")),
   )
   guard document_node.lookup_immediate(key_k)
     is Some(PdfArray([PdfIndirect(span_number)])) else {

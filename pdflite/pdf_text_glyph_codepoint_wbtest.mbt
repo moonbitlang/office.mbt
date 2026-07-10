@@ -1270,14 +1270,8 @@ test "private text glyph codepoint tables cover representative names" {
     ),
     Some(0x0192),
   )
-  @test.assert_eq(
-    pdf_text_parse_hex_codepoint(@ascii.encode("D800"), 0, 4),
-    None,
-  )
-  @test.assert_eq(
-    pdf_text_uni_glyphname_codepoints(@ascii.encode("/uniD800")),
-    None,
-  )
+  @test.assert_eq(pdf_text_parse_hex_codepoint(b"D800", 0, 4), None)
+  @test.assert_eq(pdf_text_uni_glyphname_codepoints(b"/uniD800"), None)
   @test.assert_eq(
     pdf_text_codepoints_of_glyphname(
       glyph_codepoint_wbtest_name("/twosuperior.alt"),

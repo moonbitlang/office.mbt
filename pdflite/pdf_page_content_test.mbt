@@ -100,7 +100,7 @@ fn page_content_prefix_content_ops_for_test(
         (page_content_name_for_test("/W"), PdfInteger(1)),
       ]),
       None,
-      @ascii.encode("x"),
+      b"x",
     ),
   ]
 }
@@ -133,7 +133,7 @@ fn page_content_renumber_content_ops_for_test() -> Array[@content.PdfContentOp] 
         (page_content_name_for_test("/W"), PdfInteger(1)),
       ]),
       None,
-      @ascii.encode("x"),
+      b"x",
     ),
   ]
 }

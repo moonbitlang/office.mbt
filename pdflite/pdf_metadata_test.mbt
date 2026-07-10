@@ -73,11 +73,11 @@ test "pdf_metadata_encode_output preserves raw utf8 and stripped forms" {
   )
   @test.assert_eq(
     try! @pdflite.pdf_metadata_encode_output(PdfMetadataStripped, snowman),
-    @ascii.encode("A  B"),
+    b"A  B",
   )
   @test.assert_eq(
     try! @pdflite.pdf_encode_output(PdfMetadataStripped, snowman),
-    @ascii.encode("A  B"),
+    b"A  B",
   )
 }
 
@@ -86,8 +86,8 @@ test "PdfDocument copy_id_from copies trailer ID and bumps version" {
   let key_id = metadata_name_for_test("/ID")
   let source = try! @pdflite.pdf_minimum_valid_pdf()
   let id : @syntax.PdfObject = PdfArray([
-    PdfString(@ascii.encode("first-id")),
-    PdfString(@ascii.encode("second-id")),
+    PdfString(b"first-id"),
+    PdfString(b"second-id"),
   ])
   source.set_trailer_dict(source.trailer_dict().add_dict_entry(key_id, id))
   let target = try! @pdflite.pdf_minimum_valid_pdf()
@@ -406,9 +406,7 @@ test "PdfDocument metadata report helpers cover mark info XFA version language" 
   )
   let catalog_with_xfa = try! catalog_with_mark.add_dict_entry(
     metadata_name_for_test("/AcroForm"),
-    @syntax.pdf_dictionary([
-      (metadata_name_for_test("/XFA"), PdfString(@ascii.encode("xfa"))),
-    ]),
+    @syntax.pdf_dictionary([(metadata_name_for_test("/XFA"), PdfString(b"xfa"))]),
   )
   let reported = metadata_replace_catalog_for_test(doc, catalog_with_xfa)
   @test.assert_eq(
@@ -428,11 +426,8 @@ test "PdfDocument metadata report helpers cover mark info XFA version language" 
   let version_doc = try! @pdflite.pdf_minimum_valid_pdf()
   @pdflite.pdf_set_version(7, version_doc)
   @test.assert_eq(version_doc.version(), (1, 7))
-  let language_doc = try! @pdflite.pdf_set_language(doc, @ascii.encode("fr-FR"))
-  @test.assert_eq(
-    @pdflite.pdf_language(language_doc),
-    Some(@ascii.encode("fr-FR")),
-  )
+  let language_doc = try! @pdflite.pdf_set_language(doc, b"fr-FR")
+  @test.assert_eq(@pdflite.pdf_language(language_doc), Some(b"fr-FR"))
 }
 
 ///|
@@ -480,43 +475,43 @@ test "PdfDocument info_json reports document fields and page boxes" {
     )
     .set_info_entry(
       metadata_name_for_test("/Author"),
-      PdfString(@ascii.encode("Ada")),
+      PdfString(b"Ada"),
       4,
       keep_version=true,
     )
     .set_info_entry(
       metadata_name_for_test("/Subject"),
-      PdfString(@ascii.encode("Metadata")),
+      PdfString(b"Metadata"),
       4,
       keep_version=true,
     )
     .set_info_entry(
       metadata_name_for_test("/Keywords"),
-      PdfString(@ascii.encode("pdf,test")),
+      PdfString(b"pdf,test"),
       4,
       keep_version=true,
     )
     .set_info_entry(
       metadata_name_for_test("/Creator"),
-      PdfString(@ascii.encode("pdflite-test")),
+      PdfString(b"pdflite-test"),
       4,
       keep_version=true,
     )
     .set_info_entry(
       metadata_name_for_test("/Producer"),
-      PdfString(@ascii.encode("pdflite")),
+      PdfString(b"pdflite"),
       4,
       keep_version=true,
     )
     .set_info_entry(
       metadata_name_for_test("/CreationDate"),
-      PdfString(@ascii.encode("D:20260517010203Z")),
+      PdfString(b"D:20260517010203Z"),
       4,
       keep_version=true,
     )
     .set_info_entry(
       metadata_name_for_test("/ModDate"),
-      PdfString(@ascii.encode("D:20260518040506Z")),
+      PdfString(b"D:20260518040506Z"),
       4,
       keep_version=true,
     )
@@ -553,9 +548,7 @@ test "PdfDocument info_json reports document fields and page boxes" {
   )
   let catalog_with_acroform = try! catalog_with_mark.add_dict_entry(
     metadata_name_for_test("/AcroForm"),
-    @syntax.pdf_dictionary([
-      (metadata_name_for_test("/XFA"), PdfString(@ascii.encode("xfa"))),
-    ]),
+    @syntax.pdf_dictionary([(metadata_name_for_test("/XFA"), PdfString(b"xfa"))]),
   )
   let reported = metadata_replace_catalog_for_test(
     with_preferences, catalog_with_acroform,
@@ -660,8 +653,8 @@ test "PdfDocument language getter and setter preserve original document" {
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
   @test.assert_eq(doc.language(), None)
   @test.assert_eq(doc.language_string(), None)
-  let updated = try! doc.set_language(@ascii.encode("en-US"))
-  @test.assert_eq(updated.language(), Some(@ascii.encode("en-US")))
+  let updated = try! doc.set_language(b"en-US")
+  @test.assert_eq(updated.language(), Some(b"en-US"))
   @test.assert_eq(updated.language_string(), Some("en-US"))
   @test.assert_eq(doc.language(), None)
   let wrapped = try! @pdflite.pdf_set_language_string(doc, "fr-FR")
@@ -671,7 +664,7 @@ test "PdfDocument language getter and setter preserve original document" {
 ///|
 test "PdfDocument metadata stream set get remove and remove_all" {
   let doc = try! @pdflite.pdf_minimum_valid_pdf()
-  let data = @ascii.encode("<xmp>metadata</xmp>")
+  let data = b"<xmp>metadata</xmp>"
   let no_metadata = try! doc.remove_metadata()
   @test.assert_eq(try! no_metadata.metadata(), None)
   let updated = try! doc.set_metadata_from_bytes(data)
@@ -735,7 +728,7 @@ test "PdfDocument metadata stream set get remove and remove_all" {
           PdfNameObject(metadata_name_for_test("/Metadata")),
         ),
       ]),
-      StreamGot(@ascii.encode("stray")),
+      StreamGot(b"stray"),
     ),
   )
   let cleaned = try! stray.remove_all_metadata()
@@ -831,13 +824,13 @@ test "PdfDocument create_metadata builds cpdf XMP template from Info" {
   )
   let with_creator = try! with_title.set_info_entry(
     metadata_name_for_test("/Creator"),
-    PdfString(@ascii.encode("pdflite-test")),
+    PdfString(b"pdflite-test"),
     4,
     keep_version=true,
   )
   let with_created = try! with_creator.set_info_entry(
     metadata_name_for_test("/CreationDate"),
-    PdfString(@ascii.encode("D:20260517010203+08'30'")),
+    PdfString(b"D:20260517010203+08'30'"),
     4,
     keep_version=true,
   )
@@ -936,7 +929,7 @@ test "PdfDocument determine_subformats falls back to Info PDFX marker" {
   let key_pdfx = metadata_name_for_test("/GTS_PDFXVersion")
   let with_info = try! doc.set_info_entry(
     key_pdfx,
-    PdfString(@ascii.encode("PDF/X-1a:2003")),
+    PdfString(b"PDF/X-1a:2003"),
     3,
   )
   @test.assert_eq(try! with_info.determine_subformats(), ["PDF/X-1a:2003"])
@@ -1199,7 +1192,7 @@ test "PdfDocument xmp_info_json reports cpdf XMP fields" {
     #| <pdfuaid:amd>1</pdfuaid:amd>
     #|</x:xmpmeta>
   let with_metadata = try! empty
-    .set_language(@ascii.encode("en-US"))
+    .set_language(b"en-US")
     .set_metadata_from_bytes(@ascii.encode(metadata_text))
   let expected : Json = {
     "Language": "en-US",
@@ -1272,7 +1265,7 @@ test "PdfDocument set_info_entry can synchronize XMP metadata" {
   let key_creator = metadata_name_for_test("/Creator")
   let creator_doc = try! @pdflite.pdf_set_pdf_info(
     key_creator,
-    PdfString(@ascii.encode("tool")),
+    PdfString(b"tool"),
     4,
     with_metadata,
     xmp_also=true,
@@ -1294,7 +1287,7 @@ test "PdfDocument set_info_entry can synchronize XMP metadata" {
   let key_creation = metadata_name_for_test("/CreationDate")
   let date_doc = try! with_metadata.set_info_entry(
     key_creation,
-    PdfString(@ascii.encode("D:20260517010203+08'30'")),
+    PdfString(b"D:20260517010203+08'30'"),
     4,
     xmp_also=true,
     xmp_just_set=true,
@@ -1344,7 +1337,7 @@ test "pdf metadata compatibility wrappers keep cpdf argument order" {
   let key_producer = metadata_name_for_test("/Producer")
   let with_info = try! @pdflite.pdf_set_pdf_info(
     key_producer,
-    PdfString(@ascii.encode("pdflite")),
+    PdfString(b"pdflite"),
     3,
     doc,
   )
@@ -1353,7 +1346,7 @@ test "pdf metadata compatibility wrappers keep cpdf argument order" {
     "pdflite",
   )
   let with_title = try! @pdflite.pdf_set_pdf_info_cpdf_order(
-    ("/Title", PdfString(@ascii.encode("Tuple title")), 4),
+    ("/Title", PdfString(b"Tuple title"), 4),
     with_info,
   )
   @test.assert_eq(
@@ -1361,23 +1354,15 @@ test "pdf metadata compatibility wrappers keep cpdf argument order" {
     "Tuple title",
   )
   let with_author = try! @pdflite.pdf_set_pdf_info_string(
-    ("/Author", PdfString(@ascii.encode("Tuple author")), 4),
+    ("/Author", PdfString(b"Tuple author"), 4),
     with_title,
   )
   @test.assert_eq(with_author.info_utf8_string("/Author"), "Tuple author")
   let with_metadata = try! @pdflite.pdf_set_metadata_from_bytes(
-    false,
-    @ascii.encode("<m/>"),
-    with_author,
+    false, b"<m/>", with_author,
   )
-  @test.assert_eq(
-    try! @pdflite.pdf_get_metadata(with_metadata),
-    Some(@ascii.encode("<m/>")),
-  )
-  @test.assert_eq(
-    try! @pdflite.pdf_print_metadata(with_metadata),
-    @ascii.encode("<m/>"),
-  )
+  @test.assert_eq(try! @pdflite.pdf_get_metadata(with_metadata), Some(b"<m/>"))
+  @test.assert_eq(try! @pdflite.pdf_print_metadata(with_metadata), b"<m/>")
   @test.assert_eq(
     try! @pdflite.pdf_get_metadata(
       try! @pdflite.pdf_remove_metadata(with_metadata),

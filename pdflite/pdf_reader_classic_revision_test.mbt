@@ -128,7 +128,7 @@ test "pdf_read_document_revision_with_passwords reads older revisions" {
   let view_result_option = try! @pdflite.pdf_read_document_revision_from_view_with_passwords(
     wrapped[3:wrapped.length() - 3],
     2,
-    owner_password=Some(@ascii.encode("unused")),
+    owner_password=Some(b"unused"),
   )
   guard view_result_option is Some(view_result) else {
     fail("expected borrowed-view decryption result")

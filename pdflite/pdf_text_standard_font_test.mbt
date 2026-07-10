@@ -183,7 +183,7 @@ test "PdfStandardFont exposes Standard14 AFM data tables" {
   }
   @test.assert_eq(
     @pdflite.PdfCourier.afm_data().headers[5],
-    (@ascii.encode("FontName"), @ascii.encode("Courier")),
+    (b"FontName", b"Courier"),
   )
 }
 

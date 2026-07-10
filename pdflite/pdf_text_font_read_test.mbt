@@ -184,10 +184,7 @@ test "PdfDocument read_font_descriptor accepts FontFile3 and stops malformed cha
   let doc = @pdflite.pdf_document_empty()
   let descriptor = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/FontFile3"), PdfIndirect(12)),
-    (
-      text_font_read_name_for_test("/CharSet"),
-      PdfString(@ascii.encode("/A 7 /B")),
-    ),
+    (text_font_read_name_for_test("/CharSet"), PdfString(b"/A 7 /B")),
   ])
   let font = @syntax.pdf_dictionary([
     (text_font_read_name_for_test("/FontDescriptor"), descriptor),

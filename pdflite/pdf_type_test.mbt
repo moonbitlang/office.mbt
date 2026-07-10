@@ -105,34 +105,34 @@ test "pdf_string_of_type_element preserves cpdftype debug spellings" {
   )
   @test.assert_eq(
     @pdflite.pdf_string_of_type_element(PdfTypeHGlue(1.0)),
-    @ascii.encode("HGLUE1."),
+    b"HGLUE1.",
   )
   @test.assert_eq(
     @pdflite.pdf_string_of_type_element(PdfTypeVGlue(12.5)),
-    @ascii.encode("VGLUE"),
+    b"VGLUE",
   )
   @test.assert_eq(
     @pdflite.pdf_string_of_type_element(
       PdfTypeFont("body", type_standard_font_for_test(), 12.0),
     ),
-    @ascii.encode("Font"),
+    b"Font",
   )
   @test.assert_eq(
     @pdflite.pdf_string_of_type_element(
       PdfTypeBeginDest(DestFit(TargetPageObject(1)), Some("chapter")),
     ),
-    @ascii.encode("BeginDest"),
+    b"BeginDest",
   )
   @test.assert_eq(
     @pdflite.pdf_string_of_type_element(PdfTypeTag("P", 7)),
-    @ascii.encode("Tag P 7"),
+    b"Tag P 7",
   )
 }
 
 ///|
 test "pdf_string_of_type keeps CamlPDF leading newline format" {
   let elements : Array[@pdflite.PdfTypeElement] = [
-    PdfTypeText(@ascii.encode("A")),
+    PdfTypeText(b"A"),
     PdfTypeNewLine,
     PdfTypeNewPage,
     PdfTypeBeginDocument,
@@ -141,16 +141,16 @@ test "pdf_string_of_type keeps CamlPDF leading newline format" {
   ]
   @test.assert_eq(
     @pdflite.pdf_string_of_type(elements),
-    @ascii.encode("\nA\nNewLine\nNewPage\nBeginDocument\nEndDest\nEndTag"),
+    b"\nA\nNewLine\nNewPage\nBeginDocument\nEndDest\nEndTag",
   )
   @test.assert_eq(
     @pdflite.pdf_type_to_string(elements),
     @pdflite.pdf_string_of_type(elements),
   )
-  @test.assert_eq(@pdflite.pdf_string_of_type([]), @ascii.encode(""))
+  @test.assert_eq(@pdflite.pdf_string_of_type([]), b"")
   @test.assert_eq(
-    @pdflite.pdf_type_add_artifacts([Op_Tj(@ascii.encode("artifact"))]),
-    @content.pdf_content_add_artifacts([Op_Tj(@ascii.encode("artifact"))]),
+    @pdflite.pdf_type_add_artifacts([Op_Tj(b"artifact")]),
+    @content.pdf_content_add_artifacts([Op_Tj(b"artifact")]),
   )
 }
 
@@ -227,29 +227,23 @@ test "pdf_type helpers reject unsupported fonts and short width tables" {
 test "pdf_type_split_text preserves CamlPDF word splitting edge cases" {
   let widths = Array::make(256, 1.0)
   let (line, needs_newline, rest) = try! @pdflite.pdf_type_split_text(
-    8.0,
-    widths,
-    @ascii.encode("one two three"),
+    8.0, widths, b"one two three",
   )
-  @test.assert_eq(line, @ascii.encode("one two "))
+  @test.assert_eq(line, b"one two ")
   @test.assert_eq(needs_newline, true)
-  @test.assert_eq(rest, @ascii.encode("three"))
+  @test.assert_eq(rest, b"three")
   let (wide_line, wide_needs_newline, wide_rest) = try! @pdflite.pdf_type_split_text(
-    2.0,
-    widths,
-    @ascii.encode("abcdef rest"),
+    2.0, widths, b"abcdef rest",
   )
-  @test.assert_eq(wide_line, @ascii.encode("abcdef "))
+  @test.assert_eq(wide_line, b"abcdef ")
   @test.assert_eq(wide_needs_newline, true)
-  @test.assert_eq(wide_rest, @ascii.encode("rest"))
+  @test.assert_eq(wide_rest, b"rest")
   let (full_line, full_needs_newline, full_rest) = try! @pdflite.pdf_type_split_text(
-    20.0,
-    widths,
-    @ascii.encode("ok now"),
+    20.0, widths, b"ok now",
   )
-  @test.assert_eq(full_line, @ascii.encode("ok now"))
+  @test.assert_eq(full_line, b"ok now")
   @test.assert_eq(full_needs_newline, false)
-  @test.assert_eq(full_rest, @ascii.encode(""))
+  @test.assert_eq(full_rest, b"")
   let (narrow_line, narrow_needs_newline, narrow_rest) = try! @pdflite.pdf_type_split_text(
     2.0,
     [1.0],
@@ -257,7 +251,7 @@ test "pdf_type_split_text preserves CamlPDF word splitting edge cases" {
   )
   @test.assert_eq(narrow_line, type_bytes_for_test([0]))
   @test.assert_eq(narrow_needs_newline, false)
-  @test.assert_eq(narrow_rest, @ascii.encode(""))
+  @test.assert_eq(narrow_rest, b"")
 }
 
 ///|
@@ -266,18 +260,18 @@ test "pdf_type_layout wraps text and glue with CamlPDF margin behavior" {
   let paper = @geometry.paper_size_make(PdfPoint, 10.0, 100.0)
   let laid_out = try! @pdflite.pdf_type_layout(1.0, 1000.0, paper, [
     PdfTypeFont("body", font, 10.0),
-    PdfTypeText(@ascii.encode("one two three")),
+    PdfTypeText(b"one two three"),
     PdfTypeHGlue(8.0),
-    PdfTypeText(@ascii.encode("x")),
+    PdfTypeText(b"x"),
   ])
   @test.assert_eq(laid_out, [
     PdfTypeFont("body", font, 10.0),
-    PdfTypeText(@ascii.encode("one two ")),
+    PdfTypeText(b"one two "),
     PdfTypeNewLine,
-    PdfTypeText(@ascii.encode("three")),
+    PdfTypeText(b"three"),
     PdfTypeHGlue(8.0),
     PdfTypeNewLine,
-    PdfTypeText(@ascii.encode("x")),
+    PdfTypeText(b"x"),
   ])
 }
 
@@ -321,11 +315,7 @@ test "pdf_type_typeset writes page content and font resources" {
     20.0,
     10.0,
     paper,
-    [
-      PdfTypeFont("body", font, 10.0),
-      PdfTypeBeginDocument,
-      PdfTypeText(@ascii.encode("Hi")),
-    ],
+    [PdfTypeFont("body", font, 10.0), PdfTypeBeginDocument, PdfTypeText(b"Hi")],
   )
   @test.assert_eq(result.pages.length(), 1)
   @test.assert_eq(result.tags, [[]])
@@ -345,7 +335,7 @@ test "pdf_type_typeset writes page content and font resources" {
     Op_q,
     Op_cm(@geometry.transform_translate(10.0, 70.0)),
     Op_BT,
-    Op_Tj(@ascii.encode("Hi")),
+    Op_Tj(b"Hi"),
     Op_ET,
     Op_Q,
   ])
@@ -359,9 +349,9 @@ test "pdf_type_typeset reuses fonts across explicit page breaks" {
   let elements : Array[@pdflite.PdfTypeElement] = [
     PdfTypeFont("body", font, 10.0),
     PdfTypeBeginDocument,
-    PdfTypeText(@ascii.encode("A")),
+    PdfTypeText(b"A"),
     PdfTypeNewPage,
-    PdfTypeText(@ascii.encode("B")),
+    PdfTypeText(b"B"),
   ]
   let result = try! @pdflite.pdf_type_typeset(
     document, false, 10.0, 0.0, 20.0, 10.0, paper, elements,
@@ -385,7 +375,7 @@ test "pdf_type_typeset reuses fonts across explicit page breaks" {
     Op_q,
     Op_cm(@geometry.transform_translate(10.0, 70.0)),
     Op_BT,
-    Op_Tj(@ascii.encode("B")),
+    Op_Tj(b"B"),
     Op_ET,
     Op_Q,
   ])
@@ -400,7 +390,7 @@ test "pdf_type_typeset creates link annotations and numbered marked content" {
   let document = @pdflite.pdf_document_empty()
   let font = type_standard_font_for_test()
   let paper = @geometry.paper_size_make(PdfPoint, 100.0, 100.0)
-  let link_text = @ascii.encode("Go")
+  let link_text = b"Go"
   let widths = try! @pdflite.pdf_type_font_widths(font, 10.0)
   let link_width = try! @pdflite.pdf_type_width_of_bytes(widths, link_text)
   let result = try! document.pdf_type_typeset(
@@ -417,7 +407,7 @@ test "pdf_type_typeset creates link annotations and numbered marked content" {
       PdfTypeText(link_text),
       PdfTypeEndDest,
       PdfTypeTag("Span", 123),
-      PdfTypeText(@ascii.encode("T")),
+      PdfTypeText(b"T"),
       PdfTypeEndTag,
     ],
   )
@@ -433,7 +423,7 @@ test "pdf_type_typeset creates link annotations and numbered marked content" {
   let annotation = document.lookup_object_or_null(2)
   @test.assert_eq(
     try! type_lookup_for_test(annotation, "/Contents"),
-    PdfString(@ascii.encode("go")),
+    PdfString(b"go"),
   )
   @test.assert_eq(
     try! type_lookup_for_test(annotation, "/Subtype"),
@@ -467,7 +457,7 @@ test "pdf_type_typeset creates link annotations and numbered marked content" {
     Op_q,
     Op_cm(@geometry.transform_translate(10.0 + link_width, 70.0)),
     Op_BT,
-    Op_Tj(@ascii.encode("T")),
+    Op_Tj(b"T"),
     Op_ET,
     Op_Q,
     Op_EMC,

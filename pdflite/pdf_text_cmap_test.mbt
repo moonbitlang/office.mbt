@@ -95,15 +95,10 @@ test "pdf_parse_cmap_data returns ToUnicode map and WMode" {
     (34, text_cmap_bytes_for_test([0x00, 0x42])),
   ])
   @test.assert_eq(parsed.usecmap, Some(text_cmap_name_for_test("/Identity-H")))
-  let malformed_wmode = @pdflite.pdf_parse_cmap_data(
-    @ascii.encode("/WMode invalid\n"),
-  )
+  let malformed_wmode = @pdflite.pdf_parse_cmap_data(b"/WMode invalid\n")
   @test.assert_eq(malformed_wmode.wmode, None)
   @test.assert_eq(malformed_wmode.map, [])
-  @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(@ascii.encode("/XMode 1\n")).wmode,
-    None,
-  )
+  @test.assert_eq(@pdflite.pdf_parse_cmap_data(b"/XMode 1\n").wmode, None)
 }
 
 ///|
@@ -120,27 +115,22 @@ test "pdf_parse_cmap_data reads WMode across PDF whitespace" {
   @test.assert_eq(parsed.wmode, Some(1))
   @test.assert_eq(parsed.map, [(33, text_cmap_bytes_for_test([0x00, 0x41]))])
   @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(@ascii.encode("/WMode\nbad\n/WMode\t0 def\n")).wmode,
+    @pdflite.pdf_parse_cmap_data(b"/WMode\nbad\n/WMode\t0 def\n").wmode,
     Some(0),
   )
 }
 
 ///|
 test "pdf_parse_cmap_data reads UseCMap names across PDF whitespace" {
-  let parsed = @pdflite.pdf_parse_cmap_data(
-    @ascii.encode("/Identity-V\r\nusecmap\n"),
-  )
+  let parsed = @pdflite.pdf_parse_cmap_data(b"/Identity-V\r\nusecmap\n")
   @test.assert_eq(parsed.usecmap, Some(text_cmap_name_for_test("/Identity-V")))
+  @test.assert_eq(@pdflite.pdf_parse_cmap_data(b"usecmap\n").usecmap, None)
   @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(@ascii.encode("usecmap\n")).usecmap,
-    None,
-  )
-  @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(@ascii.encode("/Bad#2dName usecmap\n")).usecmap,
+    @pdflite.pdf_parse_cmap_data(b"/Bad#2dName usecmap\n").usecmap,
     Some(text_cmap_name_for_test("/Bad-Name")),
   )
   @test.assert_eq(
-    @pdflite.pdf_parse_cmap_data(@ascii.encode("/Bad#xxName usecmap\n")).usecmap,
+    @pdflite.pdf_parse_cmap_data(b"/Bad#xxName usecmap\n").usecmap,
     None,
   )
 }
@@ -165,11 +155,7 @@ test "pdf_parse_cmap_data reads CMap header metadata" {
   @test.assert_eq(parsed.cmap_type, Some(2))
   @test.assert_eq(
     parsed.cid_system_info,
-    Some({
-      registry: @ascii.encode("Adobe"),
-      ordering: @ascii.encode("UCS"),
-      supplement: 0,
-    }),
+    Some({ registry: b"Adobe", ordering: b"UCS", supplement: 0 }),
   )
   let dict_style = @pdflite.pdf_parse_cmap_data(
     @ascii.encode(
@@ -182,11 +168,7 @@ test "pdf_parse_cmap_data reads CMap header metadata" {
   )
   @test.assert_eq(
     dict_style.cid_system_info,
-    Some({
-      registry: @ascii.encode("Adobe"),
-      ordering: @ascii.encode("Japan1"),
-      supplement: 6,
-    }),
+    Some({ registry: b"Adobe", ordering: b"Japan1", supplement: 6 }),
   )
   let malformed = @pdflite.pdf_parse_cmap_data(
     @ascii.encode(
@@ -266,14 +248,8 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
       (
         text_cmap_name_for_test("/CIDSystemInfo"),
         @syntax.pdf_dictionary([
-          (
-            text_cmap_name_for_test("/Registry"),
-            PdfString(@ascii.encode("DictRegistry")),
-          ),
-          (
-            text_cmap_name_for_test("/Ordering"),
-            PdfString(@ascii.encode("DictOrdering")),
-          ),
+          (text_cmap_name_for_test("/Registry"), PdfString(b"DictRegistry")),
+          (text_cmap_name_for_test("/Ordering"), PdfString(b"DictOrdering")),
           (text_cmap_name_for_test("/Supplement"), PdfInteger(4)),
         ]),
       ),
@@ -296,11 +272,7 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   @test.assert_eq(parsed.cmap_type, Some(1))
   @test.assert_eq(
     parsed.cid_system_info,
-    Some({
-      registry: @ascii.encode("DictRegistry"),
-      ordering: @ascii.encode("DictOrdering"),
-      supplement: 4,
-    }),
+    Some({ registry: b"DictRegistry", ordering: b"DictOrdering", supplement: 4 }),
   )
 
   let overriding_data = @ascii.encode(
@@ -326,14 +298,8 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
         (
           text_cmap_name_for_test("/CIDSystemInfo"),
           @syntax.pdf_dictionary([
-            (
-              text_cmap_name_for_test("/Registry"),
-              PdfString(@ascii.encode("DictRegistry")),
-            ),
-            (
-              text_cmap_name_for_test("/Ordering"),
-              PdfString(@ascii.encode("DictOrdering")),
-            ),
+            (text_cmap_name_for_test("/Registry"), PdfString(b"DictRegistry")),
+            (text_cmap_name_for_test("/Ordering"), PdfString(b"DictOrdering")),
             (text_cmap_name_for_test("/Supplement"), PdfInteger(4)),
           ]),
         ),
@@ -350,11 +316,7 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   @test.assert_eq(overridden.cmap_type, Some(2))
   @test.assert_eq(
     overridden.cid_system_info,
-    Some({
-      registry: @ascii.encode("ProgRegistry"),
-      ordering: @ascii.encode("ProgOrdering"),
-      supplement: 5,
-    }),
+    Some({ registry: b"ProgRegistry", ordering: b"ProgOrdering", supplement: 5 }),
   )
 
   doc.add_object_given_number(
@@ -378,14 +340,8 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   doc.add_object_given_number(
     24,
     @syntax.pdf_dictionary([
-      (
-        text_cmap_name_for_test("/Registry"),
-        PdfString(@ascii.encode("IndirectRegistry")),
-      ),
-      (
-        text_cmap_name_for_test("/Ordering"),
-        PdfString(@ascii.encode("IndirectOrdering")),
-      ),
+      (text_cmap_name_for_test("/Registry"), PdfString(b"IndirectRegistry")),
+      (text_cmap_name_for_test("/Ordering"), PdfString(b"IndirectOrdering")),
       (text_cmap_name_for_test("/Supplement"), PdfInteger(6)),
     ]),
   )
@@ -421,8 +377,8 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
   @test.assert_eq(
     indirect.cid_system_info,
     Some({
-      registry: @ascii.encode("IndirectRegistry"),
-      ordering: @ascii.encode("IndirectOrdering"),
+      registry: b"IndirectRegistry",
+      ordering: b"IndirectOrdering",
       supplement: 6,
     }),
   )
@@ -624,7 +580,7 @@ test "PdfDocument applies external CMap predefined UseCMap fallback" {
   @test.assert_eq(extractor.charcode_of_codepoint(0x3000), None)
   @test.assert_eq(extractor.charcode_of_codepoint(0x20AC), None)
 
-  let one_byte_cmap_data = @ascii.encode("/NoSuch-H usecmap\n")
+  let one_byte_cmap_data = b"/NoSuch-H usecmap\n"
   doc.add_object_given_number(
     6,
     @syntax.pdf_stream(
@@ -718,11 +674,7 @@ test "PdfDocument composes external CMap UseCMap stream bases" {
   @test.assert_eq(parsed.cmap_type, Some(2))
   @test.assert_eq(
     parsed.cid_system_info,
-    Some({
-      registry: @ascii.encode("Adobe"),
-      ordering: @ascii.encode("Test"),
-      supplement: 3,
-    }),
+    Some({ registry: b"Adobe", ordering: b"Test", supplement: 3 }),
   )
   @test.assert_eq(parsed.codespaces, [
     { length: 2, first: 0x0000, last: 0x00FF },
@@ -1292,21 +1244,21 @@ test "PdfDocument reads ToUnicode hex strings with whitespace and odd nibbles" {
 test "PdfDocument reads ToUnicode CMaps with PDF whitespace separators" {
   let doc = @pdflite.pdf_document_empty()
   let cmap = text_cmap_concat_for_test([
-    @ascii.encode("2 beginbfchar"),
+    b"2 beginbfchar",
     text_cmap_bytes_for_test([12]),
-    @ascii.encode("<41>"),
+    b"<41>",
     text_cmap_bytes_for_test([0]),
-    @ascii.encode("<0041>"),
+    b"<0041>",
     text_cmap_bytes_for_test([12]),
-    @ascii.encode("<42>"),
+    b"<42>",
     text_cmap_bytes_for_test([0]),
-    @ascii.encode("<0042> endbfchar\n1 beginbfrange"),
+    b"<0042> endbfchar\n1 beginbfrange",
     text_cmap_bytes_for_test([12]),
-    @ascii.encode("<43>"),
+    b"<43>",
     text_cmap_bytes_for_test([0]),
-    @ascii.encode("<44>"),
+    b"<44>",
     text_cmap_bytes_for_test([12]),
-    @ascii.encode("<0043> endbfrange\n"),
+    b"<0043> endbfrange\n",
   ])
   let tounicode = @syntax.pdf_stream(
     @syntax.pdf_dictionary([]),
@@ -1352,15 +1304,15 @@ test "PdfDocument reads ToUnicode CMaps with PDF whitespace separators" {
 ///|
 test "pdf_parse_cmap_data reads whitespace-split CMap markers" {
   let cmap = text_cmap_concat_for_test([
-    @ascii.encode("/WMode 1 def\n1 begin"),
+    b"/WMode 1 def\n1 begin",
     text_cmap_bytes_for_test([9, 10]),
-    @ascii.encode("bfchar<41><0041>end"),
+    b"bfchar<41><0041>end",
     text_cmap_bytes_for_test([12]),
-    @ascii.encode("bfchar\n1 begin"),
+    b"bfchar\n1 begin",
     text_cmap_bytes_for_test([0, 13, 10]),
-    @ascii.encode("bfrange<42><43><0042>end"),
+    b"bfrange<42><43><0042>end",
     text_cmap_bytes_for_test([32]),
-    @ascii.encode("bfrange\n"),
+    b"bfrange\n",
   ])
   let parsed = @pdflite.pdf_parse_cmap_data(cmap)
   @test.assert_eq(parsed.wmode, Some(1))
@@ -1374,11 +1326,11 @@ test "pdf_parse_cmap_data reads whitespace-split CMap markers" {
 ///|
 test "pdf_parse_cmap_data augments partial CMap marker parsing" {
   let cmap = text_cmap_concat_for_test([
-    @ascii.encode("1 beginbfchar\n<40><0040>\nendbfchar\n1 begin"),
+    b"1 beginbfchar\n<40><0040>\nendbfchar\n1 begin",
     text_cmap_bytes_for_test([10]),
-    @ascii.encode("bfchar<41><0041>end"),
+    b"bfchar<41><0041>end",
     text_cmap_bytes_for_test([10]),
-    @ascii.encode("bfchar\n"),
+    b"bfchar\n",
   ])
   @test.assert_eq(@pdflite.pdf_parse_cmap_data(cmap).map, [
     (64, text_cmap_bytes_for_test([0x00, 0x40])),
@@ -1422,11 +1374,7 @@ test "pdf_parse_cmap_data ignores PDF comments in CMap programs" {
   @test.assert_eq(parsed.cmap_type, Some(2))
   @test.assert_eq(
     parsed.cid_system_info,
-    Some({
-      registry: @ascii.encode("Ad%obe"),
-      ordering: @ascii.encode("UCS"),
-      supplement: 0,
-    }),
+    Some({ registry: b"Ad%obe", ordering: b"UCS", supplement: 0 }),
   )
   @test.assert_eq(parsed.codespaces, [{ length: 1, first: 0x00, last: 0x7F }])
   @test.assert_eq(parsed.map, [
@@ -1444,18 +1392,14 @@ test "pdf_parse_cmap_data ignores PDF comments in CMap programs" {
   )
   @test.assert_eq(
     escaped_literal.cid_system_info,
-    Some({
-      registry: @ascii.encode("Ad%o(be)"),
-      ordering: @ascii.encode("UCS"),
-      supplement: 1,
-    }),
+    Some({ registry: b"Ad%o(be)", ordering: b"UCS", supplement: 1 }),
   )
 }
 
 ///|
 test "PdfDocument decodes filtered ToUnicode CMap streams" {
   let doc = @pdflite.pdf_document_empty()
-  let cmap = @ascii.encode("1 beginbfchar\n<41><005A>\nendbfchar\n")
+  let cmap = b"1 beginbfchar\n<41><005A>\nendbfchar\n"
   let encoded = @codec.pdf_ascii_hex_encode(cmap)
   let tounicode = @syntax.pdf_stream(
     @syntax.pdf_dictionary([

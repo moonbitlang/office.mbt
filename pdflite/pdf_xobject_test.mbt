@@ -131,7 +131,7 @@ test "PdfDocument stamp_as_xobject embeds first overlay page as form resource" {
 ///|
 test "PdfDocument stamp_as_xobject preserves bookmarks and trailer ID" {
   let key_id = xobject_name_for_test("/ID")
-  let id = @ascii.encode("stable-file-id")
+  let id = b"stable-file-id"
   let doc = xobject_base_document_for_test()
   doc.set_trailer_dict(
     doc
@@ -142,7 +142,7 @@ test "PdfDocument stamp_as_xobject preserves bookmarks and trailer ID" {
   let bookmarked = try! doc.add_bookmarks([
     {
       level: 0,
-      text: @ascii.encode("Second"),
+      text: b"Second",
       target: DestFit(TargetPageObject(page_numbers[1])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -163,7 +163,7 @@ test "PdfDocument stamp_as_xobject preserves bookmarks and trailer ID" {
   @test.assert_eq(try! stamped.read_bookmarks(preserve_actions=true), [
     {
       level: 0,
-      text: @ascii.encode("Second"),
+      text: b"Second",
       target: DestFit(TargetPageObject(new_page_numbers[1])),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,

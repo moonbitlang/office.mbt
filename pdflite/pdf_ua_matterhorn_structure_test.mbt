@@ -320,10 +320,7 @@ test "PdfDocument test_matterhorn_json checks structure attribute requirements" 
     [],
     root_extras=ua_matterhorn_struct_tree_root_for_test([
       ua_matterhorn_structure_element_for_test("/Figure", extras=[
-        (
-          ua_matterhorn_name_for_test("/ActualText"),
-          PdfString(@ascii.encode("figure")),
-        ),
+        (ua_matterhorn_name_for_test("/ActualText"), PdfString(b"figure")),
       ]),
       ua_matterhorn_structure_element_for_test("/TH", extras=[
         (
@@ -337,10 +334,10 @@ test "PdfDocument test_matterhorn_json checks structure attribute requirements" 
         ),
       ]),
       ua_matterhorn_structure_element_for_test("/Formula", extras=[
-        (ua_matterhorn_name_for_test("/Alt"), PdfString(@ascii.encode("x"))),
+        (ua_matterhorn_name_for_test("/Alt"), PdfString(b"x")),
       ]),
       ua_matterhorn_structure_element_for_test("/Note", extras=[
-        (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("n1"))),
+        (ua_matterhorn_name_for_test("/ID"), PdfString(b"n1")),
       ]),
     ]),
   )
@@ -438,13 +435,13 @@ test "PdfDocument test_matterhorn_json detects duplicate note IDs" {
   duplicate.add_object_given_number(
     40,
     ua_matterhorn_structure_element_for_test("/Note", extras=[
-      (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("same"))),
+      (ua_matterhorn_name_for_test("/ID"), PdfString(b"same")),
     ]),
   )
   duplicate.add_object_given_number(
     41,
     ua_matterhorn_structure_element_for_test("/Note", extras=[
-      (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("same"))),
+      (ua_matterhorn_name_for_test("/ID"), PdfString(b"same")),
     ]),
   )
   @test.assert_eq(
@@ -456,13 +453,13 @@ test "PdfDocument test_matterhorn_json detects duplicate note IDs" {
   unique.add_object_given_number(
     40,
     ua_matterhorn_structure_element_for_test("/Note", extras=[
-      (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("a"))),
+      (ua_matterhorn_name_for_test("/ID"), PdfString(b"a")),
     ]),
   )
   unique.add_object_given_number(
     41,
     ua_matterhorn_structure_element_for_test("/Note", extras=[
-      (ua_matterhorn_name_for_test("/ID"), PdfString(@ascii.encode("b"))),
+      (ua_matterhorn_name_for_test("/ID"), PdfString(b"b")),
     ]),
   )
   @test.assert_eq(try! unique.test_matterhorn_json("19-004"), Json::array([]))

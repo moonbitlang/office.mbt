@@ -365,7 +365,7 @@ test "pdf_merge_documents concatenates selected pages from renumbered inputs" {
 
 ///|
 test "pdfmergeexample-style workflow renumbers copies and roundtrips" {
-  let detached : @syntax.PdfObject = PdfString(@ascii.encode("detached"))
+  let detached : @syntax.PdfObject = PdfString(b"detached")
   let first = merge_one_page_doc_for_test(1, 4)
   first.add_object_given_number(99, detached)
   let second = merge_one_page_doc_for_test(1, 7)
@@ -393,7 +393,7 @@ test "pdf_merge_documents optionally retains merged page labels" {
   let first = try! merge_one_page_doc_for_test(1, 4).write_page_labels([
     {
       label_style: PageLabelDecimalArabic,
-      label_prefix: Some(@ascii.encode("A-")),
+      label_prefix: Some(b"A-"),
       start_page: 1,
       start_value: 1,
     },
@@ -401,7 +401,7 @@ test "pdf_merge_documents optionally retains merged page labels" {
   let second = try! merge_one_page_doc_for_test(1, 4).write_page_labels([
     {
       label_style: PageLabelLowercaseRoman,
-      label_prefix: Some(@ascii.encode("B-")),
+      label_prefix: Some(b"B-"),
       start_page: 1,
       start_value: 4,
     },
@@ -427,7 +427,7 @@ test "pdf_merge_pdfs exposes CamlPDF-shaped merge wrapper" {
   let first = try! merge_one_page_doc_for_test(1, 4).write_page_labels([
     {
       label_style: PageLabelDecimalArabic,
-      label_prefix: Some(@ascii.encode("A-")),
+      label_prefix: Some(b"A-"),
       start_page: 1,
       start_value: 1,
     },
@@ -435,7 +435,7 @@ test "pdf_merge_pdfs exposes CamlPDF-shaped merge wrapper" {
   let second = try! merge_one_page_doc_for_test(1, 5).write_page_labels([
     {
       label_style: PageLabelLowercaseRoman,
-      label_prefix: Some(@ascii.encode("B-")),
+      label_prefix: Some(b"B-"),
       start_page: 1,
       start_value: 4,
     },
@@ -477,8 +477,8 @@ test "pdf_merge_pdfs repeated names preserve per-inclusion destinations" {
     [[1], [1]],
     process_struct_trees=false,
   )
-  let first_name = @ascii.encode("shared-f0")
-  let second_name = @ascii.encode("shared-f1")
+  let first_name = b"shared-f0"
+  let second_name = b"shared-f1"
   @test.assert_eq(try! merged.endpage(), 2)
   @test.assert_eq(
     [
@@ -514,10 +514,7 @@ test "pdf_merge_documents retargets retained bookmarks to merged pages" {
   let second = merge_bookmarked_doc_for_test("B")
   let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
   let bookmarks = try! merged.read_bookmarks()
-  @test.assert_eq([ for bookmark in bookmarks => bookmark.text ], [
-    @ascii.encode("A"),
-    @ascii.encode("B"),
-  ])
+  @test.assert_eq([ for bookmark in bookmarks => bookmark.text ], [b"A", b"B"])
   @test.assert_eq(try! merged.page_number_of_target(bookmarks[0].target), 1)
   @test.assert_eq(try! merged.page_number_of_target(bookmarks[1].target), 2)
   let without_bookmarks = try! @pdflite.pdf_merge_documents(
@@ -548,7 +545,7 @@ test "pdf_merge_documents ignores malformed source bookmarks" {
     41,
     PdfDictionary([
       (key_parent, PdfIndirect(40)),
-      (key_title, PdfString(@ascii.encode("bad"))),
+      (key_title, PdfString(b"bad")),
       (
         key_dest,
         PdfArray([
@@ -570,9 +567,7 @@ test "pdf_merge_documents ignores malformed source bookmarks" {
   let second = merge_bookmarked_doc_for_test("B")
   let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
   let bookmarks = try! merged.read_bookmarks()
-  @test.assert_eq([ for bookmark in bookmarks => bookmark.text ], [
-    @ascii.encode("B"),
-  ])
+  @test.assert_eq([ for bookmark in bookmarks => bookmark.text ], [b"B"])
   @test.assert_eq(try! merged.page_number_of_target(bookmarks[0].target), 2)
 }
 
@@ -585,8 +580,8 @@ test "pdf_merge_documents retains optional content groups before pruning" {
     fail("expected optional content")
   }
   @test.assert_eq(content.ocgs.length(), 2)
-  @test.assert_eq(content.ocgs[0].1.name, @ascii.encode("Layer A"))
-  @test.assert_eq(content.ocgs[1].1.name, @ascii.encode("Layer B"))
+  @test.assert_eq(content.ocgs[0].1.name, b"Layer A")
+  @test.assert_eq(content.ocgs[1].1.name, b"Layer B")
   @test.assert_eq(content.default_config.on.length(), 2)
   let without_ocg = try! @pdflite.pdf_merge_documents(
     [first, second],
@@ -639,11 +634,11 @@ test "pdf_merge_documents merges AcroForm fields" {
   }
   @test.assert_eq(
     merged.lookup_object_or_null(first_field).lookup_immediate(key_t),
-    Some(PdfString(@ascii.encode("first"))),
+    Some(PdfString(b"first")),
   )
   @test.assert_eq(
     merged.lookup_object_or_null(second_field).lookup_immediate(key_t),
-    Some(PdfString(@ascii.encode("second"))),
+    Some(PdfString(b"second")),
   )
   guard form.dictionary_view() is Some(form_entries) else {
     fail("expected AcroForm dictionary")
@@ -684,7 +679,7 @@ test "pdf_merge_documents retains and retargets named destinations" {
   )
   @test.assert_eq(
     try! merged.page_number_of_target(
-      try! merged.read_destination(PdfString(@ascii.encode("second"))),
+      try! merged.read_destination(PdfString(b"second")),
     ),
     2,
   )
@@ -698,10 +693,8 @@ test "pdf_merge_documents retains and retargets named destinations" {
     DestNamed(oldstyle_name),
   )
   @test.assert_eq(
-    try! without_destinations.read_destination(
-      PdfString(@ascii.encode("second")),
-    ),
-    DestString(@ascii.encode("second")),
+    try! without_destinations.read_destination(PdfString(b"second")),
+    DestString(b"second"),
   )
 }
 
@@ -712,7 +705,7 @@ test "pdf_merge_documents tolerates malformed named destinations" {
   let type_fitr = merge_name_for_test("/FitR")
   let bad_coordinate = merge_name_for_test("/Bad")
   let catalog_name = merge_name_for_test("/BadCatalog")
-  let string_name = @ascii.encode("bad-string")
+  let string_name = b"bad-string"
   let doc = merge_one_page_doc_for_test(1, 4)
   let page_refs = try! doc.page_reference_numbers()
   let bad_destination : @syntax.PdfObject = PdfArray([
@@ -759,8 +752,8 @@ test "pdf_merge_documents renames colliding string destinations" {
   let first = merge_nametree_dest_callsite_doc_for_test("shared", "First")
   let second = merge_nametree_dest_callsite_doc_for_test("shared", "Second")
   let merged = try! @pdflite.pdf_merge_documents([first, second], [[1], [1]])
-  let first_name = @ascii.encode("shared-f0")
-  let second_name = @ascii.encode("shared-f1")
+  let first_name = b"shared-f0"
+  let second_name = b"shared-f1"
   @test.assert_eq(
     [
       for entry in merge_destination_name_entries_for_test(merged) => entry.0
@@ -778,7 +771,7 @@ test "pdf_merge_documents renames colliding string destinations" {
   @test.assert_eq(try! merged.read_bookmarks(preserve_actions=true), [
     {
       level: 0,
-      text: @ascii.encode("First"),
+      text: b"First",
       target: DestString(first_name),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -786,7 +779,7 @@ test "pdf_merge_documents renames colliding string destinations" {
     },
     {
       level: 0,
-      text: @ascii.encode("Second"),
+      text: b"Second",
       target: DestString(second_name),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -831,7 +824,7 @@ test "pdf_merge_documents renames colliding catalog destinations" {
   @test.assert_eq(try! merged.read_bookmarks(preserve_actions=true), [
     {
       level: 0,
-      text: @ascii.encode("First"),
+      text: b"First",
       target: DestNamed(first_name),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -839,7 +832,7 @@ test "pdf_merge_documents renames colliding catalog destinations" {
     },
     {
       level: 0,
-      text: @ascii.encode("Second"),
+      text: b"Second",
       target: DestNamed(second_name),
       is_open: false,
       colour: @bookmark.pdf_bookmark_black,
@@ -863,7 +856,7 @@ test "pdf_merge_documents renames colliding catalog destinations" {
 ///|
 test "pdf_merge_documents rewrites external destination callsites" {
   let string_caller = merge_external_dest_callsite_doc_for_test(
-    PdfString(@ascii.encode("shared")),
+    PdfString(b"shared"),
   )
   let string_first = merge_nametree_dest_doc_for_test("shared")
   let string_second = merge_nametree_dest_doc_for_test("shared")
@@ -871,7 +864,7 @@ test "pdf_merge_documents rewrites external destination callsites" {
     [string_caller, string_first, string_second],
     [[1], [1], [1]],
   )
-  let first_string_name = @ascii.encode("shared-f1")
+  let first_string_name = b"shared-f1"
   @test.assert_eq(
     merge_first_annotation_dest_for_test(string_merged, 0),
     Some(PdfString(first_string_name)),
@@ -929,10 +922,10 @@ test "pdf_merge_documents retains non-destination name trees" {
     fail("expected JavaScript tree")
   }
   @test.assert_eq(merged.read_name_tree(embedded_tree), [
-    (@ascii.encode("file-a"), PdfString(@ascii.encode("payload-a"))),
+    (b"file-a", PdfString(b"payload-a")),
   ])
   @test.assert_eq(merged.read_name_tree(javascript_tree), [
-    (@ascii.encode("script-b"), PdfString(@ascii.encode("payload-b"))),
+    (b"script-b", PdfString(b"payload-b")),
   ])
   let without_names = try! @pdflite.pdf_merge_documents(
     [first, second],
@@ -953,10 +946,7 @@ test "pdf_merge_documents retains first document info dictionary" {
   guard merged.lookup_direct(key_info, merged.trailer_dict()) is Some(info) else {
     fail("expected Info")
   }
-  @test.assert_eq(
-    info.lookup_immediate(key_title),
-    Some(PdfString(@ascii.encode("first"))),
-  )
+  @test.assert_eq(info.lookup_immediate(key_title), Some(PdfString(b"first")))
   let without_info = try! @pdflite.pdf_merge_documents(
     [first, second],
     [[1], [1]],
@@ -1000,7 +990,7 @@ test "pdf_merge_documents retains safe catalog entries" {
   let first = merge_add_catalog_entry_for_test(
     first,
     key_open_action,
-    PdfString(@ascii.encode("drop")),
+    PdfString(b"drop"),
   )
   let preferences : @syntax.PdfObject = PdfDictionary([
     (merge_name_for_test("/HideToolbar"), PdfBoolean(true)),
@@ -1090,7 +1080,7 @@ test "pdf_merge_documents keeps first valid OpenAction action" {
   let first = merge_add_catalog_entry_for_test(
     merge_one_page_doc_for_test(1, 4),
     key_open_action,
-    PdfString(@ascii.encode("drop")),
+    PdfString(b"drop"),
   )
   let second = merge_one_page_doc_for_test(1, 4)
   let second_page_refs = try! second.page_reference_numbers()
@@ -1174,10 +1164,10 @@ test "pdf_merge_documents rewrites named OpenAction destinations" {
   let key_s = merge_name_for_test("/S")
   let key_d = merge_name_for_test("/D")
   let type_goto = merge_name_for_test("/GoTo")
-  let first_name = @ascii.encode("shared-f0")
+  let first_name = b"shared-f0"
   let first_action : @syntax.PdfObject = PdfDictionary([
     (key_s, PdfNameObject(type_goto)),
-    (key_d, PdfString(@ascii.encode("shared"))),
+    (key_d, PdfString(b"shared")),
   ])
   let first = merge_add_catalog_entry_for_test(
     merge_nametree_dest_doc_for_test("shared"),

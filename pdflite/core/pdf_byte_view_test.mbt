@@ -1,6 +1,6 @@
 ///|
 test "byte view ascii search helpers cover boundaries" {
-  let view = @ascii.encode("abc")[:]
+  let view = b"abc"[:]
   @test.assert_eq(@core.pdf_view_matches_ascii_at(view, -1, [97]), false)
   @test.assert_eq(@core.pdf_view_matches_ascii_at(view, 2, [98, 99]), false)
   @test.assert_eq(@core.pdf_find_last_ascii(view, []), 3)
@@ -21,7 +21,7 @@ test "byte view ascii integer parser rejects malformed input" {
     fail("expected PdfError::NumberExpected")
   }
   let bad_number : Result[Int, Error] = try
-    @core.pdf_parse_ascii_int_view(@ascii.encode("12a"))
+    @core.pdf_parse_ascii_int_view(b"12a")
   catch {
     err => Err(err)
   } noraise {
@@ -31,7 +31,7 @@ test "byte view ascii integer parser rejects malformed input" {
     fail("expected PdfError::NumberExpected")
   }
   let overflow_number : Result[Int, Error] = try
-    @core.pdf_parse_ascii_int_view(@ascii.encode("2147483648"))
+    @core.pdf_parse_ascii_int_view(b"2147483648")
   catch {
     err => Err(err)
   } noraise {
@@ -41,14 +41,14 @@ test "byte view ascii integer parser rejects malformed input" {
     fail("expected PdfError::NumberExpected")
   }
   @test.assert_eq(
-    try! @core.pdf_parse_ascii_int_view(@ascii.encode("2147483647")),
+    try! @core.pdf_parse_ascii_int_view(b"2147483647"),
     2147483647,
   )
 }
 
 ///|
 test "byte view whitespace splitter returns borrowed token slices" {
-  let tokens = @core.pdf_split_whitespace_tokens(@ascii.encode(" one\t two\n"))
+  let tokens = @core.pdf_split_whitespace_tokens(b" one\t two\n")
   @test.assert_eq(tokens.length(), 2)
   @test.assert_eq(@core.pdf_view_equals_ascii(tokens[0], [111, 110, 101]), true)
   @test.assert_eq(@core.pdf_view_equals_ascii(tokens[1], [116, 119, 111]), true)

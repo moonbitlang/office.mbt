@@ -27,7 +27,7 @@ fn structure_struct_tree_doc_for_test() -> @pdflite.PdfDocument raise {
     @syntax.pdf_dictionary([
       (key_pg, PdfIndirect(page_numbers[0])),
       (key_k, PdfInteger(0)),
-      (key_label, PdfString(@ascii.encode("figure"))),
+      (key_label, PdfString(b"figure")),
     ]),
   )
   doc
@@ -249,7 +249,7 @@ test "PdfDocument replace_struct_tree imports new negative objects" {
     30,
     @syntax.pdf_dictionary([
       (key_k, PdfInteger(0)),
-      (key_label, PdfString(@ascii.encode("old"))),
+      (key_label, PdfString(b"old")),
     ]),
   )
   let replacement = Json::array([
@@ -266,7 +266,7 @@ test "PdfDocument replace_struct_tree imports new negative objects" {
       try! doc.json_of_object(
         @syntax.pdf_dictionary([
           (key_k, PdfInteger(0)),
-          (key_label, PdfString(@ascii.encode("new"))),
+          (key_label, PdfString(b"new")),
         ]),
         utf8=true,
       ),
@@ -275,7 +275,7 @@ test "PdfDocument replace_struct_tree imports new negative objects" {
   let replaced = try! @pdflite.pdf_ua_replace_struct_tree(doc, replacement)
   @test.assert_eq(
     doc.lookup_object_or_null(30).lookup_immediate(key_label),
-    Some(PdfString(@ascii.encode("old"))),
+    Some(PdfString(b"old")),
   )
   @test.assert_eq(
     replaced.lookup_object_or_null(30).lookup_immediate(key_k),
@@ -283,7 +283,7 @@ test "PdfDocument replace_struct_tree imports new negative objects" {
   )
   @test.assert_eq(
     replaced.lookup_object_or_null(31).lookup_immediate(key_label),
-    Some(PdfString(@ascii.encode("new"))),
+    Some(PdfString(b"new")),
   )
   let bad : Result[@pdflite.PdfDocument, Error] = try
     doc.replace_struct_tree(Json::null())
@@ -312,10 +312,7 @@ test "pdf_renumber_parent_trees uses trailer root parent trees" {
   first.add_object_given_number(
     11,
     @syntax.pdf_dictionary([
-      (
-        key_parent_tree,
-        first.build_number_tree([(5, PdfString(@ascii.encode("root")))]),
-      ),
+      (key_parent_tree, first.build_number_tree([(5, PdfString(b"root"))])),
     ]),
   )
   first.add_object_given_number(
@@ -325,10 +322,7 @@ test "pdf_renumber_parent_trees uses trailer root parent trees" {
   first.add_object_given_number(
     12,
     @syntax.pdf_dictionary([
-      (
-        key_parent_tree,
-        first.build_number_tree([(7, PdfString(@ascii.encode("trailer")))]),
-      ),
+      (key_parent_tree, first.build_number_tree([(7, PdfString(b"trailer"))])),
     ]),
   )
   first.add_object_given_number(
@@ -336,9 +330,7 @@ test "pdf_renumber_parent_trees uses trailer root parent trees" {
     @syntax.pdf_dictionary([(key_struct_parent, PdfInteger(7))]),
   )
   first.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(10))]))
-  let second = structure_parent_tree_doc_for_test([
-    (2, PdfString(@ascii.encode("second"))),
-  ])
+  let second = structure_parent_tree_doc_for_test([(2, PdfString(b"second"))])
   second.add_object_given_number(
     20,
     @syntax.pdf_dictionary([(key_struct_parent, PdfInteger(2))]),
@@ -370,17 +362,13 @@ test "pdf_renumber_parent_trees uses trailer root parent trees" {
 test "pdf_renumber_parent_trees ignores unresolved trailer root parent tree" {
   let key_root = structure_name_for_test("/Root")
   let key_struct_parent = structure_name_for_test("/StructParent")
-  let first = structure_parent_tree_doc_for_test([
-    (5, PdfString(@ascii.encode("root"))),
-  ])
+  let first = structure_parent_tree_doc_for_test([(5, PdfString(b"root"))])
   first.add_object_given_number(
     20,
     @syntax.pdf_dictionary([(key_struct_parent, PdfInteger(5))]),
   )
   first.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(99))]))
-  let second = structure_parent_tree_doc_for_test([
-    (2, PdfString(@ascii.encode("second"))),
-  ])
+  let second = structure_parent_tree_doc_for_test([(2, PdfString(b"second"))])
   second.add_object_given_number(
     20,
     @syntax.pdf_dictionary([(key_struct_parent, PdfInteger(2))]),
@@ -420,9 +408,7 @@ test "pdf_renumber_parent_trees skips catalogs without structure trees" {
     @syntax.pdf_dictionary([(key_struct_parent, PdfInteger(5))]),
   )
   first.set_trailer_dict(@syntax.pdf_dictionary([(key_root, PdfIndirect(1))]))
-  let second = structure_parent_tree_doc_for_test([
-    (2, PdfString(@ascii.encode("second"))),
-  ])
+  let second = structure_parent_tree_doc_for_test([(2, PdfString(b"second"))])
   second.add_object_given_number(
     20,
     @syntax.pdf_dictionary([(key_struct_parent, PdfInteger(2))]),
@@ -463,12 +449,12 @@ test "pdf_renumber_parent_trees rewrites parent tree keys and object metadata" {
     21,
     @syntax.pdf_stream(
       @syntax.pdf_dictionary([(key_struct_parents, PdfInteger(5))]),
-      StreamGot(@ascii.encode("x")),
+      StreamGot(b"x"),
     ),
   )
   let second = structure_parent_tree_doc_for_test([
-    (2, PdfString(@ascii.encode("two"))),
-    (9, PdfString(@ascii.encode("nine"))),
+    (2, PdfString(b"two")),
+    (9, PdfString(b"nine")),
   ])
   second.add_object_given_number(
     20,
@@ -524,9 +510,7 @@ test "pdf_renumber_parent_trees rewrites parent tree keys and object metadata" {
 ///|
 test "pdf_renumber_parent_trees leaves a single document unchanged" {
   let key_struct_parent = structure_name_for_test("/StructParent")
-  let doc = structure_parent_tree_doc_for_test([
-    (5, PdfString(@ascii.encode("five"))),
-  ])
+  let doc = structure_parent_tree_doc_for_test([(5, PdfString(b"five"))])
   doc.add_object_given_number(
     20,
     @syntax.pdf_dictionary([(key_struct_parent, PdfInteger(5))]),
@@ -654,7 +638,7 @@ test "pdf_merge_structure_trees can add a top-level Document node" {
   }
   @test.assert_eq(
     target.lookup_object_or_null(namespace_number).lookup_immediate(key_ns),
-    Some(PdfString(@ascii.encode("http://iso.org/pdf2/ssn"))),
+    Some(PdfString(b"http://iso.org/pdf2/ssn")),
   )
 }
 

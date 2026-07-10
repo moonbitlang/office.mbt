@@ -5,7 +5,7 @@ fn PdfDocument::pdf_bookmark_title(
 ) -> @core.PdfBytes {
   match self.lookup_direct(pdf_bookmark_title_key(), outline) {
     Some(PdfString(title)) => title
-    _ => @ascii.encode("")
+    _ => b""
   }
 }
 

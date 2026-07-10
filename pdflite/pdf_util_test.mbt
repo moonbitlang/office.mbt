@@ -210,13 +210,13 @@ test "cpdfutil string-key dictionary wrappers match source argument shape" {
 
   doc.replace_dict_entry_string(
     "/Target",
-    PdfString(@ascii.encode("updated")),
+    PdfString(b"updated"),
     search=Some(PdfInteger(2)),
   )
 
   @test.assert_eq(
     util_lookup_for_test(doc.trailer_dict(), key_target),
-    Some(PdfString(@ascii.encode("updated"))),
+    Some(PdfString(b"updated")),
   )
   @test.assert_eq(
     util_lookup_for_test(doc.lookup_object_or_null(1), key_keep),
@@ -235,12 +235,7 @@ test "PdfDocument dict_entry_values scans dictionaries arrays streams and traile
     1,
     @syntax.pdf_dictionary([
       (key_target, PdfInteger(1)),
-      (
-        key_nested,
-        @syntax.pdf_dictionary([
-          (key_target, PdfString(@ascii.encode("nested"))),
-        ]),
-      ),
+      (key_nested, @syntax.pdf_dictionary([(key_target, PdfString(b"nested"))])),
     ]),
   )
   doc.add_object_given_number(
@@ -251,17 +246,17 @@ test "PdfDocument dict_entry_values scans dictionaries arrays streams and traile
     3,
     @syntax.pdf_stream(
       @syntax.pdf_dictionary([(key_target, PdfNameObject(key_stream_value))]),
-      StreamGot(@ascii.encode("stream")),
+      StreamGot(b"stream"),
     ),
   )
   doc.add_object_given_number(
     4,
-    @syntax.pdf_stream(PdfInteger(0), StreamGot(@ascii.encode("bad"))),
+    @syntax.pdf_stream(PdfInteger(0), StreamGot(b"bad")),
   )
   doc.set_trailer_dict(@syntax.pdf_dictionary([(key_target, PdfIndirect(9))]))
 
   @test.assert_eq(@pdflite.pdf_dict_entry_values(doc, key_target), [
-    PdfString(@ascii.encode("nested")),
+    PdfString(b"nested"),
     PdfInteger(1),
     PdfReal(2.5),
     PdfNameObject(key_stream_value),
@@ -281,12 +276,11 @@ test "pdf_print_dict_entry renders resolved values as PDF syntax" {
   )
   doc.add_object_given_number(
     2,
-    @syntax.pdf_dictionary([(key_target, PdfString(@ascii.encode("plain")))]),
+    @syntax.pdf_dictionary([(key_target, PdfString(b"plain"))]),
   )
 
   @test.assert_eq(try! @pdflite.pdf_print_dict_entry(doc, key_target), [
-    @ascii.encode("/Value"),
-    @ascii.encode("(plain)"),
+    b"/Value", b"(plain)",
   ])
 }
 
@@ -302,7 +296,7 @@ test "cpdftweak print_dict_entry source-order wrapper accepts string keys" {
   )
   doc.add_object_given_number(
     2,
-    @syntax.pdf_dictionary([(key_target, PdfString(@ascii.encode("plain")))]),
+    @syntax.pdf_dictionary([(key_target, PdfString(b"plain"))]),
   )
 
   let expected = try! @pdflite.pdf_print_dict_entry(doc, key_target)
@@ -351,7 +345,7 @@ test "pdf_get_dict_entries renders cpdf style JSON wrappers" {
     5,
     @syntax.pdf_stream(
       @syntax.pdf_dictionary([(key_other, PdfInteger(1))]),
-      StreamGot(@ascii.encode("payload")),
+      StreamGot(b"payload"),
     ),
   )
   let expected : Json = [
@@ -373,7 +367,7 @@ test "cpdftweak get_dict_entries source-order wrapper accepts string keys" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @syntax.pdf_dictionary([(key_target, PdfString(@ascii.encode("hello")))]),
+    @syntax.pdf_dictionary([(key_target, PdfString(b"hello"))]),
   )
 
   let expected = try! @pdflite.pdf_get_dict_entries(doc, key_target, utf8=true)
@@ -437,7 +431,7 @@ test "PdfDocument json_of_object emits streams and utf8 string wrappers" {
   let doc = @pdflite.pdf_document_empty()
   let stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(key_other, PdfInteger(1))]),
-    StreamGot(@ascii.encode("payload")),
+    StreamGot(b"payload"),
   )
   let stream_expected = Json::object(
     Map([
@@ -461,7 +455,7 @@ test "PdfDocument json_of_object emits streams and utf8 string wrappers" {
 
   @test.assert_eq(try! doc.json_of_object(stream), stream_expected)
   @test.assert_eq(
-    try! doc.json_of_object(PdfString(@ascii.encode("hello")), utf8=true),
+    try! doc.json_of_object(PdfString(b"hello"), utf8=true),
     utf8_expected,
   )
 }
@@ -530,7 +524,7 @@ test "PdfDocument CPDFJSON output honors no_stream_data option" {
   let doc = @pdflite.pdf_document_empty()
   let stream = @syntax.pdf_stream(
     @syntax.pdf_dictionary([(key_other, PdfInteger(1))]),
-    StreamGot(@ascii.encode("payload")),
+    StreamGot(b"payload"),
   )
   let stream_json = try! doc.json_of_object(stream, no_stream_data=true)
   @test.assert_eq(
@@ -734,7 +728,7 @@ test "PdfDocument CPDFJSON document output honors decompress_streams option" {
         (key_length, PdfInteger(5)),
         (key_filter, PdfNameObject(util_name_for_test("/ASCIIHexDecode"))),
       ]),
-      StreamGot(@ascii.encode("4869>")),
+      StreamGot(b"4869>"),
     ),
   )
 
@@ -792,17 +786,14 @@ test "PdfDocument CPDFJSON document output omits unreachable objects" {
   let document = try! @pdflite.pdf_document_of_json(
     util_cpdfjson_document_for_test(),
   )
-  document.add_object_given_number(99, PdfString(@ascii.encode("detached")))
+  document.add_object_given_number(99, PdfString(b"detached"))
   @test.assert_eq(document.object_numbers(), [1, 2, 3, 4, 99])
 
   let exported = try! document.json_of_document()
   @test.assert_eq(try! @pdflite.pdf_json_of_document(document), exported)
   @test.assert_eq(util_cpdfjson_entry_for_test(exported, 99), None)
   @test.assert_eq(document.object_numbers(), [1, 2, 3, 4, 99])
-  @test.assert_eq(
-    document.lookup_object_or_null(99),
-    PdfString(@ascii.encode("detached")),
-  )
+  @test.assert_eq(document.lookup_object_or_null(99), PdfString(b"detached"))
 
   let roundtripped = try! @pdflite.pdf_document_of_json(exported)
   @test.assert_eq(roundtripped.object_numbers(), [1, 2, 3, 4])
@@ -831,7 +822,7 @@ test "pdf_object_of_json decodes cpdf single-object wrappers" {
   )
   @test.assert_eq(
     util_lookup_for_test(object, key_string),
-    Some(PdfString(@ascii.encode("plain"))),
+    Some(PdfString(b"plain")),
   )
   guard util_lookup_for_test(object, key_array)
     is Some(PdfArray([PdfBoolean(true), PdfNull, PdfReal(1.5), PdfIndirect(8)])) else {
@@ -851,7 +842,7 @@ test "pdf_object_of_json decodes streams and utf8 string wrappers" {
     is PdfStreamObject(stream) else {
     fail("expected decoded stream object")
   }
-  @test.assert_eq(stream.data, StreamGot(@ascii.encode("payload")))
+  @test.assert_eq(stream.data, StreamGot(b"payload"))
   @test.assert_eq(
     util_lookup_for_test(stream.dictionary, key_length),
     Some(PdfInteger(7)),
@@ -863,7 +854,7 @@ test "pdf_object_of_json decodes streams and utf8 string wrappers" {
 
   @test.assert_eq(
     try! @pdflite.pdf_object_of_json({ "U": "hello" }),
-    PdfString(@ascii.encode("hello")),
+    PdfString(b"hello"),
   )
   @test.assert_eq(
     try! @pdflite.pdf_object_of_json({ "U": "Résumé" }),
@@ -905,7 +896,7 @@ test "pdf_object_of_json decodes parsed content-stream operation arrays" {
     Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
-    Op_Tj(@ascii.encode("Hello")),
+    Op_Tj(b"Hello"),
     Op_ET,
     Op_RG(0.1, 0.2, 0.3),
     Op_d([3.0, 1.0], 0.0),
@@ -1060,7 +1051,7 @@ test "pdf_document_of_json imports cpdf top-level document arrays" {
     Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
-    Op_Tj(@ascii.encode("Hello")),
+    Op_Tj(b"Hello"),
     Op_ET,
   ])
 }
@@ -1126,7 +1117,7 @@ test "PdfDocument json_of_document emits cpdf top-level arrays and round trips" 
     Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
-    Op_Tj(@ascii.encode("Hello")),
+    Op_Tj(b"Hello"),
     Op_ET,
   ])
 }
@@ -1174,7 +1165,7 @@ test "pdf_document_of_json_blob imports UTF-8 CPDFJSON bytes" {
     Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
-    Op_Tj(@ascii.encode("Hello")),
+    Op_Tj(b"Hello"),
     Op_ET,
   ])
 
@@ -1255,7 +1246,7 @@ test "PdfDocument json_of_document parses content streams into operation arrays"
     Op_cm({ a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 50.0, f: 770.0 }),
     Op_BT,
     Op_Tf(util_name_for_test("/F0"), 36.0),
-    Op_Tj(@ascii.encode("Hello")),
+    Op_Tj(b"Hello"),
     Op_ET,
   ]
   guard (try! @pdflite.pdf_object_of_json(Json::object(stream_wrapper)))
@@ -1291,14 +1282,14 @@ test "PdfDocument json_of_document precombines split content before parsing" {
     2,
     @syntax.pdf_stream(
       PdfDictionary([(key_length, PdfInteger(6))]),
-      StreamGot(@ascii.encode("BT /F0")),
+      StreamGot(b"BT /F0"),
     ),
   )
   document.add_object_given_number(
     3,
     @syntax.pdf_stream(
       PdfDictionary([(key_length, PdfInteger(8))]),
-      StreamGot(@ascii.encode("36 Tf ET")),
+      StreamGot(b"36 Tf ET"),
     ),
   )
   let page = {
@@ -1422,7 +1413,7 @@ test "pdf_get_dict_entries emits utf8 string wrappers when requested" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @syntax.pdf_dictionary([(key_target, PdfString(@ascii.encode("hello")))]),
+    @syntax.pdf_dictionary([(key_target, PdfString(b"hello"))]),
   )
   let expected : Json = [{ "U": "hello" }]
 
@@ -1478,7 +1469,7 @@ test "pdf_remove_dict_entry skips malformed stream dictionaries" {
   let doc = @pdflite.pdf_document_empty()
   doc.add_object_given_number(
     1,
-    @syntax.pdf_stream(PdfInteger(1), StreamGot(@ascii.encode("x"))),
+    @syntax.pdf_stream(PdfInteger(1), StreamGot(b"x")),
   )
   doc.add_object_given_number(
     2,
@@ -1491,7 +1482,7 @@ test "pdf_remove_dict_entry skips malformed stream dictionaries" {
     fail("expected malformed stream object")
   }
   @test.assert_eq(stream.dictionary, PdfInteger(1))
-  @test.assert_eq(stream.data, StreamGot(@ascii.encode("x")))
+  @test.assert_eq(stream.data, StreamGot(b"x"))
   @test.assert_eq(
     util_lookup_for_test(doc.lookup_object_or_null(2), key_remove),
     None,

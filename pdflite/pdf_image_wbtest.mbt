@@ -165,17 +165,12 @@ test "private image decode helpers cover scalar edge behavior" {
 
   let filters : Array[@syntax.PdfObject] = []
   for _ in 0..<1025 {
-    filters.push(
-      PdfNameObject(@core.pdf_name_of_bytes(@ascii.encode("/Crypt"))),
-    )
+    filters.push(PdfNameObject(@core.pdf_name_of_bytes(b"/Crypt")))
   }
   let too_many_stages = @syntax.pdf_stream(
     @syntax.pdf_dictionary([
-      (
-        @core.pdf_name_of_bytes(@ascii.encode("/Length")),
-        PdfInteger(sample.length()),
-      ),
-      (@core.pdf_name_of_bytes(@ascii.encode("/Filter")), PdfArray(filters)),
+      (@core.pdf_name_of_bytes(b"/Length"), PdfInteger(sample.length())),
+      (@core.pdf_name_of_bytes(b"/Filter"), PdfArray(filters)),
     ]),
     StreamGot(sample),
   )

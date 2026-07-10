@@ -1,87 +1,73 @@
 ///|
 let pdf_addtext_cpdf_stamp_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/CPDFSTAMP"),
+  b"/CPDFSTAMP",
 )
 
 ///|
 let pdf_addtext_extgstate_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/ExtGState"),
+  b"/ExtGState",
 )
 
 ///|
 let pdf_addtext_font_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/Font"),
+  b"/Font",
 )
 
 ///|
 let pdf_addtext_annots_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/Annots"),
+  b"/Annots",
 )
 
 ///|
-let pdf_addtext_ca_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/ca"),
-)
+let pdf_addtext_ca_key_name : @core.PdfName = @core.pdf_name_of_bytes(b"/ca")
 
 ///|
 let pdf_addtext_ca_stroke_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/CA"),
+  b"/CA",
 )
 
 ///|
 let pdf_addtext_subtype_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/Subtype"),
+  b"/Subtype",
 )
 
 ///|
-let pdf_addtext_link_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/Link"),
-)
+let pdf_addtext_link_name : @core.PdfName = @core.pdf_name_of_bytes(b"/Link")
 
 ///|
 let pdf_addtext_quadpoints_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/QuadPoints"),
+  b"/QuadPoints",
 )
 
 ///|
 let pdf_addtext_rect_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/Rect"),
+  b"/Rect",
 )
 
 ///|
-let pdf_addtext_bs_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/BS"),
-)
+let pdf_addtext_bs_key_name : @core.PdfName = @core.pdf_name_of_bytes(b"/BS")
 
 ///|
-let pdf_addtext_w_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/W"),
-)
+let pdf_addtext_w_key_name : @core.PdfName = @core.pdf_name_of_bytes(b"/W")
 
 ///|
-let pdf_addtext_a_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/A"),
-)
+let pdf_addtext_a_key_name : @core.PdfName = @core.pdf_name_of_bytes(b"/A")
 
 ///|
-let pdf_addtext_uri_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/URI"),
-)
+let pdf_addtext_uri_key_name : @core.PdfName = @core.pdf_name_of_bytes(b"/URI")
 
 ///|
 let pdf_addtext_type_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/Type"),
+  b"/Type",
 )
 
 ///|
 let pdf_addtext_action_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/Action"),
+  b"/Action",
 )
 
 ///|
-let pdf_addtext_s_key_name : @core.PdfName = @core.pdf_name_of_bytes(
-  @ascii.encode("/S"),
-)
+let pdf_addtext_s_key_name : @core.PdfName = @core.pdf_name_of_bytes(b"/S")
 
 ///|
 fn pdf_addtext_cpdf_stamp() -> @core.PdfName {

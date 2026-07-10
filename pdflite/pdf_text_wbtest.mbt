@@ -77,7 +77,7 @@ test "private text glyph extraction falls back for malformed ToUnicode bytes" {
     text_wbtest_simple_font(
       Some(text_wbtest_name("/Helvetica")),
       None,
-      Some(text_wbtest_descriptor(Some([(65, @ascii.encode("x"))]))),
+      Some(text_wbtest_descriptor(Some([(65, b"x")]))),
     ),
   )
   let extractor = font.text_extractor()

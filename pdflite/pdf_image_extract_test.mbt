@@ -62,18 +62,12 @@ test "PdfDocument extract_single_image_files emits cpdf payload names" {
   @test.assert_eq(files.length(), 2)
   @test.assert_eq(files[0].path, "extract/out.pnm")
   let expected_image : Array[Byte] = []
-  image_extract_append_bytes_for_test(
-    expected_image,
-    @ascii.encode("P6 2 1 255\n"),
-  )
+  image_extract_append_bytes_for_test(expected_image, b"P6 2 1 255\n")
   image_extract_append_bytes_for_test(expected_image, image_data)
   @test.assert_eq(files[0].data, Bytes::from_array(expected_image))
   @test.assert_eq(files[1].path, "extract/out-smask.pnm")
   let expected_mask : Array[Byte] = []
-  image_extract_append_bytes_for_test(
-    expected_mask,
-    @ascii.encode("P6 1 1 255\n"),
-  )
+  image_extract_append_bytes_for_test(expected_mask, b"P6 1 1 255\n")
   image_extract_append_bytes_for_test(
     expected_mask,
     image_extract_bytes_for_test([128, 128, 128]),
@@ -95,11 +89,11 @@ test "PdfDocument extract_single_image_files preserves encoded image streams" {
           PdfNameObject(image_extract_name_for_test("/DCTDecode")),
         ),
       ]),
-      StreamGot(@ascii.encode("jpg")),
+      StreamGot(b"jpg"),
     ),
   )
   @test.assert_eq(try! doc.extract_single_image_files(20, "one"), [
-    { path: "one.jpg", data: @ascii.encode("jpg") },
+    { path: "one.jpg", data: b"jpg" },
   ])
 
   doc.add_object_given_number(
@@ -108,7 +102,7 @@ test "PdfDocument extract_single_image_files preserves encoded image streams" {
       @syntax.pdf_dictionary([
         (image_extract_name_for_test("/Length"), PdfInteger(7)),
       ]),
-      StreamGot(@ascii.encode("globals")),
+      StreamGot(b"globals"),
     ),
   )
   doc.add_object_given_number(
@@ -128,12 +122,12 @@ test "PdfDocument extract_single_image_files preserves encoded image streams" {
           ]),
         ),
       ]),
-      StreamGot(@ascii.encode("jbig")),
+      StreamGot(b"jbig"),
     ),
   )
   @test.assert_eq(try! doc.extract_single_image_files(31, "dir/image"), [
-    { path: "dir/1.jbig2global", data: @ascii.encode("globals") },
-    { path: "dir/image.jbig2__1", data: @ascii.encode("jbig") },
+    { path: "dir/1.jbig2global", data: b"globals" },
+    { path: "dir/image.jbig2__1", data: b"jbig" },
   ])
 }
 
@@ -210,7 +204,7 @@ test "PdfDocument extract_images_files walks page images masks and form images i
       StreamGot(second_mask_data),
     ),
   )
-  let second_jpeg_data = @ascii.encode("jpg2")
+  let second_jpeg_data = b"jpg2"
   doc.add_object_given_number(
     13,
     @syntax.pdf_stream(
@@ -234,7 +228,7 @@ test "PdfDocument extract_images_files walks page images masks and form images i
       StreamGot(second_jpeg_data),
     ),
   )
-  let jpeg_data = @ascii.encode("jpg")
+  let jpeg_data = b"jpg"
   doc.add_object_given_number(
     12,
     @syntax.pdf_stream(
@@ -308,25 +302,16 @@ test "PdfDocument extract_images_files walks page images masks and form images i
     files,
   )
   let expected_image : Array[Byte] = []
-  image_extract_append_bytes_for_test(
-    expected_image,
-    @ascii.encode("P6 1 1 255\n"),
-  )
+  image_extract_append_bytes_for_test(expected_image, b"P6 1 1 255\n")
   image_extract_append_bytes_for_test(expected_image, image_data)
   let expected_mask : Array[Byte] = []
-  image_extract_append_bytes_for_test(
-    expected_mask,
-    @ascii.encode("P6 1 1 255\n"),
-  )
+  image_extract_append_bytes_for_test(expected_mask, b"P6 1 1 255\n")
   image_extract_append_bytes_for_test(
     expected_mask,
     image_extract_bytes_for_test([128, 128, 128]),
   )
   let expected_second_mask : Array[Byte] = []
-  image_extract_append_bytes_for_test(
-    expected_second_mask,
-    @ascii.encode("P6 1 1 255\n"),
-  )
+  image_extract_append_bytes_for_test(expected_second_mask, b"P6 1 1 255\n")
   image_extract_append_bytes_for_test(
     expected_second_mask,
     image_extract_bytes_for_test([64, 64, 64]),
@@ -346,7 +331,7 @@ test "PdfDocument extract_images_files walks page images masks and form images i
 ///|
 test "PdfDocument extract_images_files honors global and per-page dedup" {
   let doc = @pdflite.pdf_document_empty()
-  let jpeg_data = @ascii.encode("jpg")
+  let jpeg_data = b"jpg"
   doc.add_object_given_number(
     10,
     @syntax.pdf_stream(
@@ -415,7 +400,7 @@ test "PdfDocument extract_images_files honors global and per-page dedup" {
 ///|
 test "PdfDocument extract_images_files expands object number stem marker" {
   let doc = @pdflite.pdf_document_empty()
-  let jpeg_data = @ascii.encode("jpg")
+  let jpeg_data = b"jpg"
   doc.add_object_given_number(
     10,
     @syntax.pdf_stream(
@@ -479,7 +464,7 @@ test "PdfDocument extract_images_files optionally emits inline images" {
 
   @test.assert_eq(try! doc.extract_images_files([1], "ii-%"), [])
   let expected : Array[Byte] = []
-  image_extract_append_bytes_for_test(expected, @ascii.encode("P6 1 1 255\n"))
+  image_extract_append_bytes_for_test(expected, b"P6 1 1 255\n")
   image_extract_append_bytes_for_test(expected, inline_data)
   @test.assert_eq(try! doc.extract_images_files([1], "ii-%", inline=true), [
     { path: "ii-0-p1-inline.pnm", data: Bytes::from_array(expected) },

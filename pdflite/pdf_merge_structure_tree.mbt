@@ -88,10 +88,7 @@ fn PdfDocument::pdf_merge_structure_tree_root(
     let pdf2_namespace_number = if add_toplevel_document {
       let number = self.add_object(
         PdfDictionary([
-          (
-            pdf_merge_ns_key(),
-            PdfString(@ascii.encode("http://iso.org/pdf2/ssn")),
-          ),
+          (pdf_merge_ns_key(), PdfString(b"http://iso.org/pdf2/ssn")),
         ]),
       )
       namespaces.insert(0, PdfIndirect(number))
