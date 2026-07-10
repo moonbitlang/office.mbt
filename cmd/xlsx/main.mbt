@@ -13,7 +13,9 @@
 ///   xlsx filter <file> <sheet> <range>         add an auto-filter over a range
 ///   xlsx add-sheet <file> <name>               add a sheet to a workbook
 ///   xlsx chart <file> <sheet> <anchor> [opts]  add a chart from a data range
-///   xlsx get <file> <sheet> <cell>             print a cell value
+///   xlsx get <file> <sheet> <cell> [--json]    print a cell value (or a
+///                                              cell/range as JSON)
+///   xlsx outline <file>                        print a workbook map as JSON
 ///   xlsx calc <file> <sheet> <cell> [--raw]    evaluate a cell's formula
 ///   xlsx sheets <file>                         list sheet names
 ///   xlsx rows <file> [--sheet NAME]            print a sheet as CSV
@@ -78,6 +80,7 @@ async fn run_cli() -> Unit {
     Some(("add-sheet", m)) => run_add_sheet(m)
     Some(("chart", m)) => run_chart(m)
     Some(("get", m)) => run_get(m)
+    Some(("outline", m)) => run_outline(m)
     Some(("calc", m)) => run_calc(m)
     Some(("sheets", m)) => run_sheets(m)
     Some(("rows", m)) => run_rows(m)
@@ -262,11 +265,30 @@ fn build_command() -> @argparse.Command {
           @argparse.OptionArg("title", long="title", about="chart title"),
         ],
       ),
-      @argparse.Command("get", about="Print a single cell value", positionals=[
-        @argparse.PositionArg("file"),
-        @argparse.PositionArg("sheet"),
-        @argparse.PositionArg("cell"),
-      ]),
+      @argparse.Command(
+        "get",
+        about="Print a single cell value (or a cell/range as JSON)",
+        positionals=[
+          @argparse.PositionArg("file"),
+          @argparse.PositionArg("sheet"),
+          @argparse.PositionArg(
+            "cell",
+            about="a cell (A1) or, with --json, a range (A1:B2)",
+          ),
+        ],
+        flags=[
+          @argparse.FlagArg(
+            "json",
+            long="json",
+            about="print the cell or range as a structured JSON payload",
+          ),
+        ],
+      ),
+      @argparse.Command(
+        "outline",
+        about="Print a workbook structure map as JSON",
+        positionals=[@argparse.PositionArg("file")],
+      ),
       @argparse.Command(
         "calc",
         about="Evaluate a cell's formula and print the computed value",

@@ -21,34 +21,22 @@ fn colon_index(s : String) -> Int? {
 
 ///|
 /// Expand a single cell (`A1`) or an `A1:B2`-style range into the list of
-/// individual cell references it covers, in row-major order. Bounded to guard
-/// against a pathological range exhausting memory.
+/// individual cell references it covers, in row-major order. The shared
+/// bounded parser (`@inspect.parse_range`) guards against a pathological
+/// range exhausting memory; a bare cell name passes through untouched, as
+/// before.
 fn expand_range(target : String) -> Array[String] raise {
   match colon_index(target) {
     None => [target]
-    Some(index) => {
-      let (c1, r1) = @lib.cell_name_to_coordinates(target[:index])
-      let (c2, r2) = @lib.cell_name_to_coordinates(target[index + 1:])
-      let col_lo = if c1 < c2 { c1 } else { c2 }
-      let col_hi = if c1 > c2 { c1 } else { c2 }
-      let row_lo = if r1 < r2 { r1 } else { r2 }
-      let row_hi = if r1 > r2 { r1 } else { r2 }
-      // Count in Int64: a full A1:XFD1048576 range is ~1.7e10, which would
-      // overflow 32-bit Int and wrap past the cap, defeating the guard.
-      let count = (col_hi - col_lo + 1).to_int64() *
-        (row_hi - row_lo + 1).to_int64()
-      if count > 100_000L {
-        raise CliError(
-          "error: range \{target} covers \{count} cells; max is 100000",
-        )
+    Some(_) => {
+      let range = @inspect.parse_range(target) catch {
+        @inspect.RangeTooLarge(count~, ..) =>
+          raise CliError(
+            "error: range \{target} covers \{count} cells; max is 100000",
+          )
+        err => raise err
       }
-      let cells = []
-      for r in row_lo..<=row_hi {
-        for c in col_lo..<=col_hi {
-          cells.push(@lib.coordinates_to_cell_name(c, r))
-        }
-      }
-      cells
+      range.cells()
     }
   }
 }

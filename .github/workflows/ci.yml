@@ -137,5 +137,9 @@ jobs:
           got=$(moon run --target wasm cmd/xlsx -- get ci.xlsx Data A1 2>/dev/null)
           echo "get -> $got"; test "$got" = "Hello"
           moon run --target wasm cmd/xlsx -- view ci.xlsx
+          o=$(moon run --target wasm cmd/xlsx -- outline ci.xlsx 2>/dev/null)
+          echo "$o" | head -2; echo "$o" | grep -q '"schema": "xlsx.outline/1"'
+          j=$(moon run --target wasm cmd/xlsx -- get ci.xlsx Data A1:B2 --json 2>/dev/null)
+          echo "$j" | head -2; echo "$j" | grep -q '"schema": "xlsx.cells/1"'
           v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"

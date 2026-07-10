@@ -54,6 +54,8 @@ When unsure of a command's exact arguments, ask the tool itself:
 | `add-sheet <file> <name>` | Add a sheet to an existing workbook | `added sheet <name>` |
 | `chart <file> <sheet> <anchor> [--type … --categories … --values … --title … --name …]` | Add a chart from a data range | `added <type> chart to <sheet>!<anchor>` |
 | `get <file> <sheet> <cell>` | Print a cell's stored value | the value, or its formula text |
+| `get <file> <sheet> <cell-or-range> --json` | Structured read of a cell/range | an `xlsx.cells/1` JSON payload |
+| `outline <file>` | Workbook structure map | an `xlsx.outline/1` JSON payload |
 | `sheets <file>` | List sheet names | one name per line |
 | `rows <file> [--sheet NAME]` | Dump a sheet as CSV | RFC 4180 CSV |
 | `view <file> [--sheet NAME]` | Render a sheet as a table | an ASCII table |
@@ -136,8 +138,30 @@ When unsure of a command's exact arguments, ask the tool itself:
   **Size and placement.** Each chart is a fixed footprint of ~7 columns wide ×
   14 rows tall from its anchor (there is no size flag). To stack several charts
   on one sheet without silent overlap, space their anchors by ≥15 rows (e.g.
-  `H2`, `H18`, `H34`) or ≥8 columns. Charts are write-only here (no command
-  reads them back); confirm the file with `validate`.
+  `H2`, `H18`, `H34`) or ≥8 columns. `outline` reads a chart's kind and series
+  ranges back; confirm the file with `validate`.
+
+### Structured JSON reads (`outline`, `get --json`)
+
+These two commands are the machine-readable inspection surface; prefer them
+when a program (or an agent) consumes the output. Payloads are versioned —
+`"schema": "xlsx.outline/1"` / `"xlsx.cells/1"` — and evolve additively only;
+the normative field-by-field spec is `docs/agent-json-schemas.md`, and
+`cmd/xlsx/cram/agent.t` shows complete real outputs.
+
+- **`outline <file>`** maps the workbook before you edit it: every sheet (in
+  tab order, with `kind` `worksheet`/`chart_sheet` and `state`
+  `visible`/`hidden`/`very_hidden`), live extents (`used_range`, `max_row`,
+  `max_col` — trust these over `declared_dimension`, which is the file's
+  retained value and may be stale), merges, tables, charts (kinds + series
+  ranges), images, pivot tables, defined names, and per-sheet counts of
+  validations/conditional formats/comments/hyperlinks/slicers.
+- **`get <file> <sheet> <cell-or-range> --json`** reads a cell or range
+  structurally: for each non-blank cell its formatted display `value`, typed
+  `raw` value (`string`/`number`/`bool`/`error`), `formula` text, and
+  `style_id` into a deduplicated `styles` map (font/fill/border/alignment/
+  number format). Blank unstyled cells are omitted. Ranges accept either
+  corner order and are capped at 100,000 cells.
 
 ### Reading whole sheets
 
@@ -159,6 +183,8 @@ When unsure of a command's exact arguments, ask the tool itself:
   then `set`/`formula`.
 - Read a cell's stored value or formula text → `get`. Read a formula's *computed
   result* → `calc`.
+- See what's in an unfamiliar workbook before editing → `outline`. Read
+  values + styles + formulas programmatically → `get … --json`.
 - Read a whole sheet as data → `rows` (CSV). Eyeball a sheet → `view`.
 - Make a data dump look like a real report → `style` (bold header, number
   formats), `width`, `freeze` (header row), `filter`.

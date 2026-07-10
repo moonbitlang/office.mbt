@@ -1,0 +1,10 @@
+import {
+  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/core/debug",
+}
+
+import {
+  "bobzhang/mbtexcel/xlsx",
+} for "test"
+
+supported_targets = "native+js+wasm"
