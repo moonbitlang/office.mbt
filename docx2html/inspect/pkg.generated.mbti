@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/inspect"
+
+import {
+  "bobzhang/docx2html/core",
+  "bobzhang/docx2html/document",
+}
+
+// Values
+pub const SCHEMA_OUTLINE : String = "docx.outline/1"
+
+pub fn outline(@document.DocumentElement, file~ : String, messages? : Array[@core.Message]) -> Json
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

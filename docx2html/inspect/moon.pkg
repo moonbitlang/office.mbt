@@ -1,0 +1,9 @@
+import {
+  "bobzhang/docx2html/core",
+  "bobzhang/docx2html/document",
+}
+
+import {
+  "bobzhang/docx2html/core",
+  "bobzhang/docx2html/document",
+} for "test"

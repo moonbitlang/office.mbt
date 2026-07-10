@@ -1,16 +1,19 @@
-# Agent JSON Schemas (xlsx CLI)
+# Agent JSON Schemas (xlsx and docx CLIs)
 
 This is the normative specification of the versioned JSON payloads the
-`cmd/xlsx` CLI exchanges with agents. The executable examples live in
-`cmd/xlsx/cram/agent.t`; the snapshot tests in `inspect/*_test.mbt` pin the
-exact serialized shapes. If this document and those tests disagree, the tests
-are the source of truth and this document has a bug.
+`cmd/xlsx` and `docx2html/cmd/docx` CLIs exchange with agents. The executable
+examples live in `cmd/xlsx/cram/agent.t` and
+`docx2html/tests/cram/docx-agent.md`; the snapshot tests in
+`inspect/*_test.mbt` and `docx2html/inspect/*_test.mbt` pin the exact
+serialized shapes. If this document and those tests disagree, the tests are
+the source of truth and this document has a bug.
 
 ## Conventions (all schemas)
 
 - Every payload's first key is `"schema"`, holding an identifier of the form
   `<domain>.<kind>/<major>` (e.g. `xlsx.outline/1`). Identifiers are declared
-  once, in `inspect/schema.mbt`.
+  once per module: xlsx identifiers in `inspect/schema.mbt`, docx identifiers
+  in `docx2html/inspect/schema.mbt`.
 - **Evolution is additive-only**: new optional keys may appear under an
   existing identifier; keys are never renamed, removed, or retyped. A
   breaking change mints a new identifier with a bumped major. Consumers must
@@ -145,3 +148,21 @@ theme/indexed/tint fields are numeric theme-palette references, not hex.
   file is written (temp file + rename) only after every op succeeds.
 - Zero ops is a valid no-op. Scripts are capped at 10,000 ops.
 - `--dry-run` parses and applies in memory but never writes.
+
+## `docx.outline/1` — document structure map (`docx outline <file>`)
+
+A metadata-priced orientation payload: no document text is emitted beyond
+heading lines. Counts and headings cover the **main body story only** —
+footnote/endnote/comment bodies are counted as units, not folded into
+`paragraphs` — while nested body content (paragraphs inside table cells) is
+included. All top-level keys are always present (possibly `[]`).
+
+| key | type | notes |
+|---|---|---|
+| `schema` | string | `"docx.outline/1"` |
+| `file` | string | the path argument, echoed verbatim |
+| `counts` | object | `{paragraphs, tables, images, hyperlinks, bookmarks, footnotes, endnotes, comments}`, all numbers. `bookmarks` counts bookmark starts; `footnotes`/`endnotes` count note definitions |
+| `headings` | array | in document order: `{level, text, style_id?, style_name?}`. Heading detection follows the Mammoth default style-map convention: style id `Heading1`..`Heading6` or bare `Heading` (level 1), or style name `Heading N` / `heading N` for N in 1..6 — exactly the paragraphs `convert` would render as `<h1>`..`<h6>`. `text` is the paragraph's raw text without the trailing paragraph separator |
+| `styles_in_use` | array | unique `{kind, id?, name?}` in first-use order; `kind` ∈ `paragraph` \| `run` \| `table`. Only styles the reader resolved on body elements (unstyled elements contribute nothing) |
+| `images` | array | `{content_type, bytes}` per embedded image, in document order; `bytes` is the image part's byte length — no image data is emitted |
+| `messages` | array | reader diagnostics: `{severity, text}` with `severity` ∈ `warning` \| `error` (e.g. ignored unrecognised elements) |
