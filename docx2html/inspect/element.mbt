@@ -196,7 +196,11 @@ fn collect_text_lines(
         counters[kind] = index
         let path = "\{parent_path}/\{kind}[\{index}]"
         match child {
-          Paragraph(..) => lines.push("[\{path}] \{element_text(child)}")
+          // Literal newlines inside w:t (crafted files; Word itself uses
+          // w:br) would break the one-line-per-paragraph format that path
+          // scraping depends on — flatten them to spaces in this view only.
+          Paragraph(..) =>
+            lines.push("[\{path}] \{single_line(element_text(child))}")
           // Paragraphs never nest inside paragraphs in this AST; only
           // containers (tables and their parts) are descended into.
           Table(..) | TableRow(..) | TableCell(..) =>
@@ -207,4 +211,20 @@ fn collect_text_lines(
       None => ()
     }
   }
+}
+
+///|
+fn single_line(text : String) -> String {
+  if text.find("\n") is None && text.find("\r") is None {
+    return text
+  }
+  let builder = StringBuilder()
+  for unit in text {
+    if unit is ('\n' | '\r') {
+      builder.write_char(' ')
+    } else {
+      builder.write_char(unit)
+    }
+  }
+  builder.to_string()
 }

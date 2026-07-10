@@ -238,3 +238,33 @@ test "resolve_path returns the element itself" {
   let element = @inspect.resolve_path(sample_document(), "/body/tbl[1]")
   guard element is Table(..)
 }
+
+///|
+test "numbering surfaces on paragraph payloads; text view stays one line" {
+  let doc = @document.document([
+    @document.paragraph(
+      [@document.run([@document.text("item")])],
+      properties=@document.paragraph_properties(
+        numbering=Some(@document.numbering(true, 1)),
+      ),
+    ),
+    @document.paragraph([@document.run([@document.text("line one\nline two")])]),
+  ])
+  json_inspect(@inspect.element(doc, file="list.docx", path="/body/p[1]"), content={
+    "schema": "docx.element/1",
+    "file": "list.docx",
+    "path": "/body/p[1]",
+    "kind": "p",
+    "text": "item",
+    "numbering": { "ordered": true, "level": 1 },
+    "children": [{ "kind": "r", "path": "/body/p[1]/r[1]" }],
+  })
+  // A literal newline inside w:t is flattened in the line-oriented view
+  // (get still returns the raw text).
+  debug_inspect(
+    @inspect.text_lines(doc)[1],
+    content=(
+      #|"[/body/p[2]] line one line two"
+    ),
+  )
+}
