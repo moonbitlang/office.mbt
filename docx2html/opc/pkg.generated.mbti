@@ -2,6 +2,8 @@
 package "bobzhang/docx2html/opc"
 
 // Values
+pub fn resolve_target(String, String) -> String
+
 pub fn validate_docx_package(BytesView) -> Array[String]
 
 // Errors

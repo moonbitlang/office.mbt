@@ -101,3 +101,153 @@ test "a body-only document yields its empty final section and no parts" {
   debug_inspect(plain.headers, content="[]")
   debug_inspect(plain.footers, content="[]")
 }
+
+///|
+fn utf8_part(text : String) -> Bytes {
+  @utf8.encode(text)
+}
+
+///|
+fn hf_package(
+  document~ : String,
+  extra? : Array[(String, String)] = [],
+) -> Bytes {
+  let archive = @mbtzip.Archive::new()
+  archive.add(
+    "[Content_Types].xml",
+    utf8_part(
+      (
+        #|<?xml version="1.0"?>
+        #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>
+      ),
+    ),
+  )
+  archive.add(
+    "_rels/.rels",
+    utf8_part(
+      (
+        #|<?xml version="1.0"?>
+        #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+      ),
+    ),
+  )
+  archive.add("word/document.xml", utf8_part(document))
+  for entry in extra {
+    let (name, text) = entry
+    archive.add(name, utf8_part(text))
+  }
+  try! @mbtzip.write(archive)
+}
+
+///|
+const HF_DOC_RELS : String =
+  #|<?xml version="1.0"?>
+  #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>
+
+///|
+test "a document without any sectPr still projects one section" {
+  let bytes = hf_package(
+    document=(
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>only</w:t></w:r></w:p></w:body></w:document>
+    ),
+  )
+  let result = @docx2html.read_docx_package(bytes)
+  debug_inspect(
+    result.sections,
+    content=(
+      #|[{ ends_after_paragraph: None, headers: [], footers: [] }]
+    ),
+  )
+}
+
+///|
+test "later sections inherit header variants they do not override" {
+  // Section 1 (break after p1) carries the default header; section 2 has no
+  // explicit reference and must inherit it (OOXML inheritance, exposed as
+  // EFFECTIVE refs).
+  let bytes = hf_package(
+    document=(
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:pPr><w:sectPr><w:headerReference w:type="default" r:id="rId1"/></w:sectPr></w:pPr><w:r><w:t>one</w:t></w:r></w:p><w:p><w:r><w:t>two</w:t></w:r></w:p><w:sectPr/></w:body></w:document>
+    ),
+    extra=[
+      ("word/_rels/document.xml.rels", HF_DOC_RELS),
+      (
+        "word/header1.xml",
+        (
+          #|<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>H</w:t></w:r></w:p></w:hdr>
+        ),
+      ),
+    ],
+  )
+  let result = @docx2html.read_docx_package(bytes)
+  debug_inspect(
+    result.sections,
+    content=(
+      #|[
+      #|  {
+      #|    ends_after_paragraph: Some(1),
+      #|    headers: [{ variant: "default", part: 0 }],
+      #|    footers: [],
+      #|  },
+      #|  {
+      #|    ends_after_paragraph: None,
+      #|    headers: [{ variant: "default", part: 0 }],
+      #|    footers: [],
+      #|  },
+      #|]
+    ),
+  )
+  debug_inspect(result.headers.length(), content="1")
+}
+
+///|
+test "a malformed header part warns and is skipped, not fatal" {
+  let bytes = hf_package(
+    document=(
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t>body</w:t></w:r></w:p><w:sectPr><w:headerReference w:type="default" r:id="rId1"/></w:sectPr></w:body></w:document>
+    ),
+    extra=[
+      ("word/_rels/document.xml.rels", HF_DOC_RELS),
+      (
+        "word/header1.xml",
+        (
+          #|<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>broken
+        ),
+      ),
+    ],
+  )
+  let result = @docx2html.read_docx_package(bytes)
+  debug_inspect(result.headers, content="[]")
+  guard result.sections is [section]
+  debug_inspect(section.headers, content="[]")
+  debug_inspect(
+    result.messages,
+    content=(
+      #|[Warning("A header part could not be read and was ignored: word/header1.xml")]
+    ),
+  )
+}
+
+///|
+test "relationship targets with dot segments resolve like validation does" {
+  let rels_with_dots =
+    #|<?xml version="1.0"?>
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="sub/../header1.xml"/></Relationships>
+  let bytes = hf_package(
+    document=(
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t>body</w:t></w:r></w:p><w:sectPr><w:headerReference w:type="default" r:id="rId1"/></w:sectPr></w:body></w:document>
+    ),
+    extra=[
+      ("word/_rels/document.xml.rels", rels_with_dots),
+      (
+        "word/header1.xml",
+        (
+          #|<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>H</w:t></w:r></w:p></w:hdr>
+        ),
+      ),
+    ],
+  )
+  let result = @docx2html.read_docx_package(bytes)
+  debug_inspect(result.messages, content="[]")
+  debug_inspect(result.headers.length(), content="1")
+}
