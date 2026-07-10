@@ -446,6 +446,10 @@ pub fn StreamWriter::set_row_cells(
     })
     col = col + 1
   }
+  // Streamed cells bypass the indexed insert path; a previously built cell
+  // index (e.g. from a read on the then-empty sheet) would go stale and
+  // make indexed getters miss every streamed cell.
+  self.sheet.invalidate_cell_index()
   match row_opts {
     Some(opts) => apply_row_opts(self.sheet, row, opts)
     None => ()

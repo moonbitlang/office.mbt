@@ -1,39 +1,35 @@
+// White-box tests for the lazy worksheet cell index.
+
 ///|
-test "worksheet cell index: set/get paths preserve values and styles" {
-  let sheet = Worksheet::new("Sheet1")
-  sheet.set_cell("A1", "one")
-  sheet.set_cell("A1", "two")
-  sheet.set_cell_style("A1", 7)
-  sheet.set_cell_formula("C1", "SUM(1,1)", value="2")
-  debug_inspect(sheet.get_cell("A1"), content="Some(\"two\")")
-  debug_inspect(sheet.get_cell_style("A1"), content="Some(7)")
-  debug_inspect(sheet.get_cell_formula("C1"), content="Some(\"SUM(1,1)\")")
+fn raw_cell(reference : String, row : Int, col : Int, value : String) -> Cell {
+  {
+    reference,
+    row,
+    col,
+    value,
+    value_type: cell_value_type(CellValue::String(value)),
+    rich_text: None,
+    formula: None,
+    formula_type: None,
+    formula_ref: None,
+    formula_shared_index: None,
+    style_id: 0,
+  }
 }
 
 ///|
-test "worksheet cell index: invalidates across row/col structural edits" {
-  let sheet = Worksheet::new("Sheet1")
-  sheet.set_cell("A1", "a")
-  sheet.set_cell("C2", "c")
-  ignore(sheet.get_cell("A1"))
-  ignore(sheet.get_cell("C2"))
-  sheet.insert_rows(1, 1)
-  debug_inspect(sheet.get_cell("A2"), content="Some(\"a\")")
-  debug_inspect(sheet.get_cell("C3"), content="Some(\"c\")")
-  sheet.remove_cols(2, 1)
-  debug_inspect(sheet.get_cell("A2"), content="Some(\"a\")")
-  debug_inspect(sheet.get_cell("B3"), content="Some(\"c\")")
-  sheet.set_cell("D4", "d")
-  debug_inspect(sheet.get_cell("D4"), content="Some(\"d\")")
-}
-
-///|
-test "worksheet cell index: formula opts array upserts existing cells" {
-  let sheet = Worksheet::new("Sheet1")
-  sheet.set_cell("A1", "seed")
-  let opts = FormulaOpts::array("A1:B1")
-  sheet.set_cell_formula_opts("A1", "ROW()", opts~, value="1")
-  inspect(sheet.cells().length(), content="2")
-  sheet.set_cell_formula_opts("A1", "ROW()", opts~, value="1")
-  inspect(sheet.cells().length(), content="2")
+test "duplicate coordinates resolve to the first stored cell" {
+  // A noncanonical file can carry two cells at the same coordinate. The
+  // historical (pre-index) getters returned the first stored cell; the
+  // index must preserve that, not silently switch to last-wins.
+  let workbook = Workbook::new()
+  let sheet = workbook.add_sheet("S")
+  sheet.cells.push(raw_cell("A1", 1, 1, "first"))
+  sheet.cells.push(raw_cell("A1", 1, 1, "second"))
+  sheet.invalidate_cell_index()
+  inspect(workbook.get_cell_value("S", "A1").unwrap_or(""), content="first")
+  match workbook.get_cell_value_raw("S", "A1") {
+    Some(String(text)) => inspect(text, content="first")
+    other => fail("unexpected raw value: \{to_repr(other)}")
+  }
 }

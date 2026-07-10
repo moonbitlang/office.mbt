@@ -69,7 +69,7 @@ test "chart_series tolerates malformed fragments" {
   debug_inspect(
     @inspect.chart_series("<c:ser><c:val><c:f>Data!$B$2</c:f>"),
     content=(
-      #|[]
+      #|[{ name: None, categories: None, values: None }]
     ),
   )
   // Empty ref and missing f: both dropped.
@@ -152,6 +152,75 @@ test "chart refs are XML-entity-decoded" {
     @inspect.chart_series(odd),
     content=(
       #|[{ name: None, categories: None, values: Some("A&unknown;B&amp") }]
+    ),
+  )
+}
+
+///|
+test "scanner ignores comments and reads CDATA as text" {
+  // A commented-out chart kind is not a kind; markup inside CDATA is data.
+  debug_inspect(
+    @inspect.chart_kinds(
+      "<!-- <c:barChart> --><c:lineChart><c:ser/></c:lineChart>",
+    ),
+    content=(
+      #|["lineChart"]
+    ),
+  )
+  debug_inspect(
+    @inspect.chart_kinds("<x><![CDATA[<c:barChart>]]></x>"),
+    content=(
+      #|[]
+    ),
+  )
+  // A CDATA-wrapped c:f still yields its (decoded) text.
+  let xml =
+    #|<c:ser><c:val><c:numRef><c:f><![CDATA['A&B <raw>'!$A$1]]></c:f></c:numRef></c:val></c:ser>
+  debug_inspect(
+    @inspect.chart_series(xml),
+    content=(
+      #|[{ name: None, categories: None, values: Some("'A&B <raw>'!$A$1") }]
+    ),
+  )
+}
+
+///|
+test "quoted attribute values may contain markup characters" {
+  // The `/>` inside the attribute must not read as self-closing, and the
+  // series content after it must be found.
+  let xml =
+    #|<c:ser note="/>"><c:val><c:numRef><c:f>D!$B$1</c:f></c:numRef></c:val></c:ser>
+  debug_inspect(
+    @inspect.chart_series(xml),
+    content=(
+      #|[{ name: None, categories: None, values: Some("D!$B$1") }]
+    ),
+  )
+}
+
+///|
+test "a self-closing series does not swallow later series" {
+  let xml =
+    #|<c:ser/><c:ser><c:val><c:numRef><c:f>D!$C$1</c:f></c:numRef></c:val></c:ser>
+  debug_inspect(
+    @inspect.chart_series(xml),
+    content=(
+      #|[
+      #|  { name: None, categories: None, values: None },
+      #|  { name: None, categories: None, values: Some("D!$C$1") },
+      #|]
+    ),
+  )
+}
+
+///|
+test "numeric character references decode across the full Unicode range" {
+  let xml =
+    #|<c:ser><c:val><c:f>&#0000065;&#1114111;&#x10FFFF;&#1114112;</c:f></c:val></c:ser>
+  debug_inspect(
+    @inspect.chart_series(xml),
+    content=(
+      #|[{ name: None, categories: None, values: Some("A􏿿􏿿&#1114112;") }]
     ),
   )
 }

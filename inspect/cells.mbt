@@ -5,9 +5,10 @@
 ///|
 /// Builds the `xlsx.cells/1` JSON payload for `range` (a single cell or an
 /// `A1:B2`-style range) on `sheet`. A cell appears in `cells` when it has a
-/// stored value, a formula, or a style; fully-absent cells are omitted, so
-/// absence means blank-and-unstyled. Raises `@xlsx.XlsxError` for malformed
-/// references or a missing sheet and `RangeError` for an oversized range.
+/// stored non-empty value, a formula, or a style; fully-absent cells are
+/// omitted, so absence means blank-and-unstyled. Raises `RangeError` for a
+/// malformed reference or an oversized range and `@xlsx.XlsxError` for a
+/// missing sheet.
 pub fn cells(
   workbook : @xlsx.Workbook,
   file~ : String,

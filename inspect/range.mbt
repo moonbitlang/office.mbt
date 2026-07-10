@@ -124,20 +124,24 @@ fn parse_cell_ref(
   if pos < len && at(pos) == '$' {
     pos += 1
   }
-  // Row digits: at most 7 (1048576 is the last row), no other trailing text.
+  // Row digits: any zero-padding is fine, but the value must stay in the
+  // grid, and nothing may trail the digits. The in-loop bound also keeps
+  // long digit runs from overflowing `Int`.
   let row_start = pos
   while pos < len && at(pos) is ('0'..='9') {
     pos += 1
   }
-  let digits = pos - row_start
-  if digits < 1 || digits > 7 || pos != len {
+  if pos - row_start < 1 || pos != len {
     raise MalformedRef(ref_=full)
   }
   let mut row = 0
   for i in row_start..<pos {
     row = row * 10 + (at(i).to_int() - '0'.to_int())
+    if row > MAX_ROW {
+      raise MalformedRef(ref_=full)
+    }
   }
-  if row < 1 || row > MAX_ROW || col > MAX_COL {
+  if row < 1 || col > MAX_COL {
     raise MalformedRef(ref_=full)
   }
   (col, row)

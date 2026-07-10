@@ -6,8 +6,9 @@
 // Scope: the scanner matches the conventional `c:` namespace prefix (what
 // the library writes and what Office emits); a file bound to a different
 // prefix yields empty metadata, never an error. Tags are matched with
-// proper delimiters, so attributes, whitespace, and self-closing forms are
-// handled; `<c:f>` text is XML-entity-decoded.
+// proper delimiters, comments are ignored, CDATA text participates as
+// text, quoted attribute values may contain `>`, and `<c:f>` text is
+// XML-entity-decoded.
 
 ///|
 /// The closed set of DrawingML plot-kind element names the scanner looks
@@ -32,8 +33,9 @@ pub struct ChartSeriesMeta {
 /// in `chart_kind_tags` order, each at most once.
 pub fn chart_kinds(xml : String) -> Array[String] {
   let kinds = []
+  let cleaned = preprocess_chart_xml(xml)
   for tag in chart_kind_tags {
-    if find_tag_open(xml[:], "c:" + tag, 0) is Some(_) {
+    if find_tag_open(cleaned[:], "c:" + tag, 0) is Some(_) {
       kinds.push(tag)
     }
   }
@@ -47,12 +49,30 @@ pub fn chart_kinds(xml : String) -> Array[String] {
 /// which map to categories/values respectively.
 pub fn chart_series(xml : String) -> Array[ChartSeriesMeta] {
   let series : Array[ChartSeriesMeta] = []
-  let view = xml[:]
+  let cleaned = preprocess_chart_xml(xml)
+  let view = cleaned[:]
+  let tag = "c:ser"
   for from = 0 {
-    match element_content(view, "c:ser", from) {
+    let open_pos = match find_tag_open(view, tag, from) {
+      Some(pos) => pos
       None => break
-      Some((start, end)) => {
-        let block = view[start:end]
+    }
+    match tag_end(view, open_pos + tag.length() + 1) {
+      // Unterminated opening tag: nothing scannable remains.
+      None => break
+      Some((content_start, self_closing)) => {
+        if self_closing {
+          // `<c:ser/>` is a valid, empty series — record it and keep
+          // scanning; it must not swallow the series after it.
+          series.push({ name: None, categories: None, values: None })
+          continue content_start
+        }
+        let end = match find_tag_close(view, tag, content_start) {
+          Some(close_pos) => close_pos
+          // Unclosed block in malformed XML: scan to the end, then stop.
+          None => view.length()
+        }
+        let block = view[content_start:end]
         series.push({
           name: element_ref(block, "c:tx"),
           categories: first_present(block, "c:cat", "c:xVal"),
@@ -102,6 +122,32 @@ fn find_tag_close(view : StringView, tag : String, from : Int) -> Int? {
 }
 
 ///|
+/// The index just past the `>` that ends an opening tag whose name ends at
+/// `from`, plus whether the tag is self-closing. Quoted attribute values
+/// may contain `>` or `/` without ending the tag. `None` when the tag is
+/// never closed.
+fn tag_end(view : StringView, from : Int) -> (Int, Bool)? {
+  let mut quote : Int = 0
+  let mut prev_slash = false
+  for i in from..<view.length() {
+    let c = view[i].to_int()
+    if quote != 0 {
+      if c == quote {
+        quote = 0
+      }
+    } else if c == '"'.to_int() || c == '\''.to_int() {
+      quote = c
+      prev_slash = false
+    } else if c == '>'.to_int() {
+      return Some((i + 1, prev_slash))
+    } else {
+      prev_slash = c == '/'.to_int()
+    }
+  }
+  None
+}
+
+///|
 /// The `(content_start, content_end)` of the first `<tag …>…</tag>` element
 /// at or after `from`. `None` when the element is absent, self-closing, or
 /// unclosed (malformed XML degrades to "no metadata", never an error).
@@ -110,19 +156,84 @@ fn element_content(view : StringView, tag : String, from : Int) -> (Int, Int)? {
     Some(pos) => pos
     None => return None
   }
-  // Find the '>' that ends the opening tag; reject a self-closing `…/>`.
-  let mut i = open_pos + tag.length() + 1
-  while i < view.length() && view[i] != '>' {
-    i += 1
-  }
-  if i >= view.length() || view[i - 1] == '/' {
-    return None
-  }
-  let content_start = i + 1
-  match find_tag_close(view, tag, content_start) {
-    Some(close_pos) => Some((content_start, close_pos))
+  match tag_end(view, open_pos + tag.length() + 1) {
     None => None
+    Some((_, true)) => None
+    Some((content_start, false)) =>
+      match find_tag_close(view, tag, content_start) {
+        Some(close_pos) => Some((content_start, close_pos))
+        None => None
+      }
   }
+}
+
+///|
+/// Strips XML comments and unwraps CDATA sections (re-escaping their text
+/// so it participates as ordinary character data). This keeps the tag
+/// scanner honest: markup inside a comment or CDATA block is data, not
+/// structure. Unterminated constructs consume the rest of the input.
+fn preprocess_chart_xml(xml : String) -> String {
+  if !xml.contains("<!--") && !xml.contains("<![CDATA[") {
+    return xml
+  }
+  let view = xml[:]
+  let out = StringBuilder()
+  for pos = 0 {
+    if pos >= view.length() {
+      break
+    }
+    let rest = view[pos:]
+    let comment = rest.find("<!--")
+    let cdata = rest.find("<![CDATA[")
+    let (offset, is_comment) = match (comment, cdata) {
+      (None, None) => {
+        out.write_string(rest.to_owned())
+        break
+      }
+      (Some(c), None) => (c, true)
+      (None, Some(d)) => (d, false)
+      (Some(c), Some(d)) => if c < d { (c, true) } else { (d, false) }
+    }
+    out.write_string(view[pos:pos + offset].to_owned())
+    if is_comment {
+      let body_start = pos + offset + "<!--".length()
+      match view[body_start:].find("-->") {
+        Some(close) => continue body_start + close + "-->".length()
+        None => break
+      }
+    } else {
+      let body_start = pos + offset + "<![CDATA[".length()
+      match view[body_start:].find("]]>") {
+        Some(close) => {
+          write_xml_escaped(out, view[body_start:body_start + close])
+          continue body_start + close + "]]>".length()
+        }
+        None => {
+          write_xml_escaped(out, view[body_start:])
+          break
+        }
+      }
+    }
+  }
+  out.to_string()
+}
+
+///|
+/// Writes `text` with `&`, `<`, and `>` escaped, in surrogate-safe chunks.
+fn write_xml_escaped(out : StringBuilder, text : StringView) -> Unit {
+  let mut start = 0
+  for i in 0..<text.length() {
+    let replacement = match text[i] {
+      '&' => "&amp;"
+      '<' => "&lt;"
+      '>' => "&gt;"
+      _ => continue
+    }
+    out.write_string(text[start:i].to_owned())
+    out.write_string(replacement)
+    start = i + 1
+  }
+  out.write_string(text[start:].to_owned())
 }
 
 ///|
@@ -213,7 +324,7 @@ fn decode_entity(entity : StringView) -> Char? {
 
 ///|
 fn decode_char_code(digits : StringView, base : Int) -> Char? {
-  if digits.length() == 0 || digits.length() > 6 {
+  if digits.length() == 0 {
     return None
   }
   let mut code = 0
@@ -229,6 +340,11 @@ fn decode_char_code(digits : StringView, base : Int) -> Char? {
       return None
     }
     code = code * base + digit
+    // Beyond the Unicode range: reject early, which also makes arbitrary
+    // zero-padding safe from overflow.
+    if code > 0x10FFFF {
+      return None
+    }
   }
   code.to_char()
 }

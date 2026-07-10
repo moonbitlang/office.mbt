@@ -15,7 +15,13 @@ fn Worksheet::ensure_cell_index(self : Worksheet) -> Unit {
   }
   self.cell_index.clear()
   for i, cell in self.cells {
-    self.cell_index[cell_index_key(cell.row, cell.col)] = i
+    let key = cell_index_key(cell.row, cell.col)
+    // First occurrence wins: a noncanonical file can carry duplicate
+    // coordinates, and the historical (pre-index) getters returned the
+    // first stored cell — keep that semantic for every indexed getter.
+    if !self.cell_index.contains(key) {
+      self.cell_index[key] = i
+    }
   }
   self.cell_index_valid = true
 }

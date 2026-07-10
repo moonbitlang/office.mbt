@@ -16,8 +16,8 @@ When unsure of a command's exact arguments, ask the tool itself:
 - **`<file>` is modified in place.** `set`, `formula`, `style`, `merge`,
   `width`, `freeze`, `filter`, `add-sheet`, `chart` open `<file>`, change it,
   and overwrite it. `create` and `csv` instead take an `<output>` path and
-  write a new file. Read-only commands (`get`, `calc`, `sheets`, `rows`,
-  `view`, `validate`) never modify the file.
+  write a new file. Read-only commands (`get`, `outline`, `calc`, `sheets`,
+  `rows`, `view`, `validate`) never modify the file.
 - **`<cell>`** is an A1-style reference: a column letter(s) then a row number,
   e.g. `A1`, `B2`, `AA10`. Columns and rows are 1-based.
 - **`<range>`** is `<cell>:<cell>`, e.g. `A1:C10`.
@@ -27,9 +27,9 @@ When unsure of a command's exact arguments, ask the tool itself:
 - **On success, mutating commands** (`create`, `csv`, `set`, `formula`,
   `style`, `merge`, `width`, `freeze`, `filter`, `add-sheet`, `chart`) print
   one confirmation line and exit `0` — the exact line is in the command table
-  below; match it, don't assume. **Read commands** (`get`, `calc`, `sheets`,
-  `rows`, `view`, `validate`) print their data/result instead, which may be
-  multiple lines.
+  below; match it, don't assume. **Read commands** (`get`, `outline`, `calc`,
+  `sheets`, `rows`, `view`, `validate`) print their data/result instead, which
+  may be multiple lines.
 - **Failure** prints one diagnostic line and exits **non-zero**. `cmd/xlsx`
   diagnostics start with `error:`. Because the wasm backend has no stderr, the
   diagnostic arrives on stdout — so **check the exit code**, not just output.
@@ -157,9 +157,10 @@ the normative field-by-field spec is `docs/agent-json-schemas.md`, and
   ranges), images, pivot tables, defined names, and per-sheet counts of
   validations/conditional formats/comments/hyperlinks/slicers.
 - **`get <file> <sheet> <cell-or-range> --json`** reads a cell or range
-  structurally: for each non-blank cell its formatted display `value`, typed
-  `raw` value (`string`/`number`/`bool`/`error`), `formula` text, and
-  `style_id` into a deduplicated `styles` map (font/fill/border/alignment/
+  structurally: per cell a formatted display `value`, typed `raw` value
+  (`string`/`number`/`bool`/`error`), `formula` text, and `style_id` into a
+  deduplicated `styles` map. A styled blank appears as `{ref, style_id}` and
+  an uncached formula as `{ref, formula}` — no fake empty `value` (font/fill/border/alignment/
   number format). Blank unstyled cells are omitted. Ranges accept either
   corner order and are capped at 100,000 cells.
 

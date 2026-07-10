@@ -124,3 +124,25 @@ test "parse_range rejects references the tolerant parser would alias" {
     _ => fail("expected 'A1:XFE9' to be rejected")
   }
 }
+
+///|
+test "parse_range accepts zero-padded rows of any width, still in-grid" {
+  debug_inspect(
+    @inspect.parse_range("A00000001"),
+    content=(
+      #|{ col_lo: 1, row_lo: 1, col_hi: 1, row_hi: 1 }
+    ),
+  )
+  debug_inspect(
+    @inspect.parse_range("A0001048576"),
+    content=(
+      #|{ col_lo: 1, row_lo: 1048576, col_hi: 1, row_hi: 1048576 }
+    ),
+  )
+  // Padding does not smuggle out-of-grid rows past the bound.
+  try ignore(@inspect.parse_range("A0001048577")) catch {
+    err => inspect(err, content="invalid cell reference 'A0001048577'")
+  } noraise {
+    _ => fail("expected the padded out-of-grid row to be rejected")
+  }
+}
