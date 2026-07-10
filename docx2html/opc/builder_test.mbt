@@ -98,3 +98,64 @@ test "relationship targets resolve against their source part's directory" {
   let bytes = builder.build()
   debug_inspect(@opc.validate_docx_package(bytes), content="[]")
 }
+
+///|
+test "builder round 1 hardening: reserved names, orphan sources, metadata, determinism" {
+  // Reserved / builder-owned names.
+  expect_build_error(
+    builder => builder.add_part("[Content_Types].xml", b"x"),
+    "reserved part name '[Content_Types].xml'",
+  )
+  expect_build_error(
+    builder => builder.add_part("_rels/.rels", b"x"),
+    "reserved part name '_rels/.rels'",
+  )
+  expect_build_error(
+    builder => builder.add_part("word/_rels/document.xml.rels", b"x"),
+    "reserved part name 'word/_rels/document.xml.rels'",
+  )
+  // Trailing slash is a directory, not a part.
+  expect_build_error(
+    builder => builder.add_part("word/media/", b"x"),
+    "invalid part name 'word/media/'",
+  )
+  // Orphan relationship source.
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rId1",
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+        "/word/document.xml",
+        source="ghost.xml",
+      )
+    },
+    "relationships declared for source 'ghost.xml'",
+  )
+  // Duplicate relationship id per source.
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+        "word/document.xml",
+      )
+    },
+    "duplicate relationship Id 'rId1' for source ''",
+  )
+  // XML-illegal control character in metadata.
+  expect_build_error(
+    builder => {
+      builder.add_relationship(
+        "rId7", "http://example.com/rel", "word/docu\u{01}ment.xml",
+      )
+    },
+    "relationship Target contains an XML-illegal control character",
+  )
+  expect_build_error(
+    builder => builder.add_default("", "application/xml"),
+    "Default extension must not be empty",
+  )
+  // Determinism: two identical call sequences produce identical bytes.
+  let first = minimal_builder().build()
+  let second = minimal_builder().build()
+  assert_eq(first, second)
+}
