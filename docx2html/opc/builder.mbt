@@ -161,10 +161,17 @@ pub fn PackageBuilder::build(
         "relationships declared for source '\{source}', which was not added as a part",
       )
     }
+    let seen_ids : Set[String] = Set([])
     for relationship in rels {
       check_metadata("relationship Id", relationship.id)
       check_metadata("relationship Type", relationship.relationship_type)
       check_metadata("relationship Target", relationship.target)
+      if seen_ids.contains(relationship.id) {
+        raise PackageBuildError(
+          "duplicate relationship Id '\{relationship.id}' for source '\{source}'",
+        )
+      }
+      seen_ids.add(relationship.id)
     }
     let name = if source == "" { ROOT_RELS_PART } else { rels_part_for(source) }
     if part_names.contains(name) {
