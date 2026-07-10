@@ -90,7 +90,7 @@ fn decode_utf16(
   } else if bytes.length() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe {
     (@encoding/utf16.Endian::Little, bytes[2:])
   } else {
-    (default_endian, bytes[:])
+    (default_endian, bytes)
   }
   match
     (Ok(@encoding/utf16.decode(body, endianness=endian, ignore_bom=false)) catch {

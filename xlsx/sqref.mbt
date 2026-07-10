@@ -120,7 +120,7 @@ fn delete_cells_from_sqref(
   cols.sort_by((a, b) => a - b)
   for col in cols {
     match col_cells.get(col) {
-      Some(entries) => refs.append(squash_sqref(entries)[:])
+      Some(entries) => refs.append(squash_sqref(entries))
       None => ()
     }
   }

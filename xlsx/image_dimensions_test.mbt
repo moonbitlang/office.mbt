@@ -243,13 +243,13 @@ test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
   )
 
   // EMZ/WMZ: gzip-compressed EMF/WMF.
-  let emz = @zip.gzip(Bytes::from_array(emf)[:])
+  let emz = @zip.gzip(Bytes::from_array(emf))
   sheet.add_image("A13", emz, "emz", "application/octet-stream")
   debug_inspect(
     last_image_emu(sheet),
     content="\{repr(expected_image_emu(96, 96))}",
   )
-  let wmz = @zip.gzip(Bytes::from_array(wmf)[:])
+  let wmz = @zip.gzip(Bytes::from_array(wmf))
   sheet.add_image("A14", wmz, "wmz", "application/octet-stream")
   debug_inspect(
     last_image_emu(sheet),

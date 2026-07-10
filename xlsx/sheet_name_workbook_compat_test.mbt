@@ -3,13 +3,13 @@ test "workbook_compat APIs validate sheet name" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let set_row_result : Result[Unit, Error] = Ok(
-    workbook.set_sheet_row("Sheet:1", "A1", ["a", "b"][:]),
+    workbook.set_sheet_row("Sheet:1", "A1", ["a", "b"]),
   ) catch {
     e => Err(e)
   }
   inspect(set_row_result is Err(XlsxError::InvalidSheetName(_)), content="true")
   let set_col_result : Result[Unit, Error] = Ok(
-    workbook.set_sheet_col("Sheet:1", "A1", ["a", "b"][:]),
+    workbook.set_sheet_col("Sheet:1", "A1", ["a", "b"]),
   ) catch {
     e => Err(e)
   }
@@ -40,13 +40,13 @@ test "workbook_compat APIs validate sheet name" {
   inspect(style_result is Err(XlsxError::InvalidSheetName(_)), content="true")
 
   let missing_row : Result[Unit, Error] = Ok(
-    workbook.set_sheet_row("Missing", "A1", ["a", "b"][:]),
+    workbook.set_sheet_row("Missing", "A1", ["a", "b"]),
   ) catch {
     e => Err(e)
   }
   inspect(missing_row is Err(XlsxError::SheetNotFound(_)), content="true")
   let missing_col : Result[Unit, Error] = Ok(
-    workbook.set_sheet_col("Missing", "A1", ["a", "b"][:]),
+    workbook.set_sheet_col("Missing", "A1", ["a", "b"]),
   ) catch {
     e => Err(e)
   }

@@ -46,33 +46,33 @@ fn assert_demo_dashboard_archive(bytes : Bytes) -> Unit raise {
   let sheet2_targets = demo_rel_attr_values(sheet2_rels, "Target")
   let drawing_ids = demo_rel_attr_values(drawing_rels, "Id")
   let drawing_targets = demo_rel_attr_values(drawing_rels, "Target")
-  inspect(demo_unique(workbook_ids[:]), content="true")
-  inspect(demo_unique(sheet1_ids[:]), content="true")
-  inspect(demo_unique(sheet2_ids[:]), content="true")
-  inspect(demo_unique(drawing_ids[:]), content="true")
+  inspect(demo_unique(workbook_ids), content="true")
+  inspect(demo_unique(sheet1_ids), content="true")
+  inspect(demo_unique(sheet2_ids), content="true")
+  inspect(demo_unique(drawing_ids), content="true")
   inspect(
-    demo_has_value(workbook_targets[:], "worksheets/sheet1.xml"),
+    demo_has_value(workbook_targets, "worksheets/sheet1.xml"),
     content="true",
   )
   inspect(
-    demo_has_value(workbook_targets[:], "worksheets/sheet2.xml"),
+    demo_has_value(workbook_targets, "worksheets/sheet2.xml"),
     content="true",
   )
-  inspect(demo_has_value(workbook_targets[:], "calcChain.xml"), content="true")
+  inspect(demo_has_value(workbook_targets, "calcChain.xml"), content="true")
   inspect(
-    demo_has_value(sheet1_targets[:], "../tables/table1.xml"),
-    content="true",
-  )
-  inspect(
-    demo_has_value(sheet2_targets[:], "../drawings/drawing2.xml"),
+    demo_has_value(sheet1_targets, "../tables/table1.xml"),
     content="true",
   )
   inspect(
-    demo_has_value(drawing_targets[:], "../media/image1.png"),
+    demo_has_value(sheet2_targets, "../drawings/drawing2.xml"),
     content="true",
   )
   inspect(
-    demo_has_value(drawing_targets[:], "../charts/chart1.xml"),
+    demo_has_value(drawing_targets, "../media/image1.png"),
+    content="true",
+  )
+  inspect(
+    demo_has_value(drawing_targets, "../charts/chart1.xml"),
     content="true",
   )
 

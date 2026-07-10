@@ -31,22 +31,22 @@ fn assert_demo_pivot_slicer_archive(bytes : Bytes) -> Unit raise {
   let workbook_ids = demo_rel_attr_values(workbook_rels, "Id")
   let sheet_targets = demo_rel_attr_values(sheet_rels, "Target")
   let sheet_ids = demo_rel_attr_values(sheet_rels, "Id")
-  inspect(demo_unique(workbook_ids[:]), content="true")
-  inspect(demo_unique(sheet_ids[:]), content="true")
+  inspect(demo_unique(workbook_ids), content="true")
+  inspect(demo_unique(sheet_ids), content="true")
   inspect(
-    demo_has_value(workbook_targets[:], "slicerCaches/slicerCache1.xml"),
+    demo_has_value(workbook_targets, "slicerCaches/slicerCache1.xml"),
     content="true",
   )
   inspect(
-    demo_has_value(workbook_targets[:], "pivotCache/pivotCacheDefinition1.xml"),
+    demo_has_value(workbook_targets, "pivotCache/pivotCacheDefinition1.xml"),
     content="true",
   )
   inspect(
-    demo_has_value(sheet_targets[:], "../slicers/slicer1.xml"),
+    demo_has_value(sheet_targets, "../slicers/slicer1.xml"),
     content="true",
   )
   inspect(
-    demo_has_value(sheet_targets[:], "../pivotTables/pivotTable1.xml"),
+    demo_has_value(sheet_targets, "../pivotTables/pivotTable1.xml"),
     content="true",
   )
 

@@ -66,7 +66,7 @@ async fn run_cli() -> Unit {
   let argv = @env.args()
   let args = if argv.length() > 0 { argv[1:].to_owned() } else { [] }
   let command = build_command()
-  let matches = command.parse(argv=args[:], env={})
+  let matches = command.parse(argv=args, env={})
   match matches.subcommand {
     Some(("create", m)) => run_create(m)
     Some(("csv", m)) => run_import_csv(m)

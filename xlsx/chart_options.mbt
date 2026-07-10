@@ -905,13 +905,13 @@ fn write_chart_title(
         return
       }
       sb.write_view("    <c:title>\n")
-      write_chart_rich_tx(sb, "      ", runs[:])
+      write_chart_rich_tx(sb, "      ", runs)
       sb.write_view("    </c:title>\n")
     }
     None =>
       if title != "" {
         sb.write_view("    <c:title>\n")
-        write_chart_rich_tx(sb, "      ", [{ text: title, font: None }][:])
+        write_chart_rich_tx(sb, "      ", [{ text: title, font: None }])
         sb.write_view("    </c:title>\n")
       }
   }
@@ -1462,13 +1462,13 @@ fn write_axis_title(
         return
       }
       sb.write_view("        <c:title>\n")
-      write_chart_rich_tx(sb, "          ", runs[:])
+      write_chart_rich_tx(sb, "          ", runs)
       sb.write_view("        </c:title>\n")
     }
     None =>
       if title != "" {
         sb.write_view("        <c:title>\n")
-        write_chart_rich_tx(sb, "          ", [{ text: title, font: None }][:])
+        write_chart_rich_tx(sb, "          ", [{ text: title, font: None }])
         sb.write_view("        </c:title>\n")
       }
   }

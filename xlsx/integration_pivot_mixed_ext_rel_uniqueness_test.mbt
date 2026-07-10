@@ -79,10 +79,10 @@ test "integration three-cycle mixed ext relationship ids remain unique" {
   let drawing_ids = integration_rel_attr_values(drawing_rels_xml, "Id")
   let drawing_targets = integration_rel_attr_values(drawing_rels_xml, "Target")
 
-  inspect(integration_unique_values(sheet_ids[:]), content="true")
-  inspect(integration_unique_values(drawing_ids[:]), content="true")
+  inspect(integration_unique_values(sheet_ids), content="true")
+  inspect(integration_unique_values(drawing_ids), content="true")
   inspect(
-    integration_has_value(drawing_targets[:], "../charts/chart1.xml"),
+    integration_has_value(drawing_targets, "../charts/chart1.xml"),
     content="true",
   )
 
@@ -95,7 +95,7 @@ test "integration three-cycle mixed ext relationship ids remain unique" {
   }
   inspect(has_drawing_target, content="true")
   inspect(
-    integration_has_value(sheet_targets[:], "../slicers/slicer1.xml"),
+    integration_has_value(sheet_targets, "../slicers/slicer1.xml"),
     content="true",
   )
 

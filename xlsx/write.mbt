@@ -1889,7 +1889,7 @@ fn write_worksheet_xml(
       slicer_rel_ids_x15,
       sheet.sparkline_groups(),
       sheet.x14_data_bars,
-      sheet.unknown_ext_blocks[:],
+      sheet.unknown_ext_blocks,
     ) {
     Some(xml) => sb.write_view(xml)
     None => ()

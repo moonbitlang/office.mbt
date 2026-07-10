@@ -624,7 +624,7 @@ test "validate package" {
   let wb = Workbook::new()
   ignore(wb.add_sheet("Sheet1"))
   wb.set_cell("Sheet1", "A1", "hello")
-  debug_inspect(validate_ooxml_package(write(wb)[:]), content="[]")
+  debug_inspect(validate_ooxml_package(write(wb)), content="[]")
 }
 ```
 

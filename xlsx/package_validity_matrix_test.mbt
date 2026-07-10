@@ -2,7 +2,7 @@
 /// Asserts a freshly built workbook is a structurally valid OOXML
 /// package, failing with the problem list otherwise.
 fn assert_valid_package(name : String, workbook : @xlsx.Workbook) -> Unit raise {
-  let problems = @xlsx.validate_ooxml_package(@xlsx.write(workbook)[:])
+  let problems = @xlsx.validate_ooxml_package(@xlsx.write(workbook))
   if problems.length() != 0 {
     fail("\{name} is not a valid package: \{repr(problems)}")
   }

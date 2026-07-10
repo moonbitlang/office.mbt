@@ -4,7 +4,7 @@ test "validate_ooxml_package accepts a well-formed workbook" {
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("hello"))
   sheet.set_cell_value("B2", Numeric(42.0))
-  let problems = @xlsx.validate_ooxml_package(@xlsx.write(workbook)[:])
+  let problems = @xlsx.validate_ooxml_package(@xlsx.write(workbook))
   debug_inspect(
     problems,
     content=(
@@ -25,7 +25,7 @@ test "validate_ooxml_package flags a missing relationship target" {
       broken.add(entry.name(), entry.data())
     }
   }
-  let problems = @xlsx.validate_ooxml_package(@zip.write(broken)[:])
+  let problems = @xlsx.validate_ooxml_package(@zip.write(broken))
   inspect(
     problems.iter().any(fn(p) { p.contains("missing required part") }),
     content="true",
@@ -47,7 +47,7 @@ test "validate_ooxml_package flags an undeclared content type" {
   }
   // add a part with an extension no Default/Override covers
   broken.add("xl/mystery.dat", b"\x00\x01\x02")
-  let problems = @xlsx.validate_ooxml_package(@zip.write(broken)[:])
+  let problems = @xlsx.validate_ooxml_package(@zip.write(broken))
   inspect(
     problems
     .iter()
@@ -60,7 +60,7 @@ test "validate_ooxml_package flags an undeclared content type" {
 
 ///|
 test "validate_ooxml_package flags a corrupt archive" {
-  let problems = @xlsx.validate_ooxml_package(b"not a zip at all"[:])
+  let problems = @xlsx.validate_ooxml_package(b"not a zip at all")
   inspect(
     problems.iter().any(fn(p) { p.contains("not a readable zip") }),
     content="true",

@@ -175,10 +175,10 @@ test "picture dimension parsing (emz/wmz)" {
     0xD7, 0xCD, 0xC6, 0x9A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x05, 0xD0,
     0x02, 0xA0, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   ]
-  let emz = @zip.gzip(emf[:]) catch {
+  let emz = @zip.gzip(emf) catch {
     err => fail("gzip emf failed: \{repr(err)}")
   }
-  let wmz = @zip.gzip(wmf[:]) catch {
+  let wmz = @zip.gzip(wmf) catch {
     err => fail("gzip wmf failed: \{repr(err)}")
   }
   workbook.add_picture_from_bytes("Sheet1", "A1", emz, ".emz")

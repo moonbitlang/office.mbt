@@ -59,7 +59,7 @@ pub fn Worksheet::set_panes(
     selections.push(item)
   }
   view.selection.clear()
-  view.selection.append(selections[:])
+  view.selection.append(selections)
 }
 
 ///|

@@ -366,7 +366,7 @@ fn set_panes_stream(sheet : Worksheet, panes : Panes) -> Unit {
     selections.push(item)
   }
   view.selection.clear()
-  view.selection.append(selections[:])
+  view.selection.append(selections)
 }
 
 ///|

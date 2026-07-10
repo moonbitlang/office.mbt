@@ -12,7 +12,7 @@ test "sparkline APIs validate sheet name" {
     content="true",
   )
   let add_group_result : Result[Unit, Error] = Ok(
-    workbook.add_sparkline_group("Sheet:1", ["B2"][:], ["A1:A3"][:]),
+    workbook.add_sparkline_group("Sheet:1", ["B2"], ["A1:A3"]),
   ) catch {
     e => Err(e)
   }

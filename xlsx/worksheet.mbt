@@ -734,7 +734,7 @@ pub fn Worksheet::remove_cell_hyperlink(
     updated.push(link)
   }
   self.hyperlinks.clear()
-  self.hyperlinks.append(updated[:])
+  self.hyperlinks.append(updated)
 }
 
 ///|
@@ -787,7 +787,7 @@ pub fn Worksheet::delete_comment(
     updated.push(entry)
   }
   self.comments.clear()
-  self.comments.append(updated[:])
+  self.comments.append(updated)
 }
 
 ///|
@@ -998,7 +998,7 @@ pub fn Worksheet::delete_table(
     raise TableNotFound(name=target)
   }
   self.tables.clear()
-  self.tables.append(updated[:])
+  self.tables.append(updated)
 }
 
 ///|
@@ -1334,7 +1334,7 @@ pub fn Worksheet::add_header_footer_image(
   }
   updated.push(image)
   self.header_footer_images.clear()
-  self.header_footer_images.append(updated[:])
+  self.header_footer_images.append(updated)
 }
 
 ///|
@@ -1601,8 +1601,7 @@ pub fn Worksheet::add_image(
   } else {
     (row, col, 0, 0)
   }
-  let (img_w_px, img_h_px) = match
-    image_dimensions_px(data[:], ext.to_lower()) {
+  let (img_w_px, img_h_px) = match image_dimensions_px(data, ext.to_lower()) {
     Some((w, h)) => (w, h)
     None => (default_picture_width_px, default_picture_height_px)
   }
@@ -1747,7 +1746,7 @@ fn Worksheet::delete_picture(
     updated.push(image)
   }
   self.images.clear()
-  self.images.append(updated[:])
+  self.images.append(updated)
 }
 
 ///|
@@ -1853,7 +1852,7 @@ pub fn Worksheet::delete_chart(
     updated.push(chart)
   }
   self.charts.clear()
-  self.charts.append(updated[:])
+  self.charts.append(updated)
 }
 
 ///|
@@ -1898,7 +1897,7 @@ pub fn Worksheet::add_form_control(
 
 ///|
 fn Worksheet::get_form_controls(self : Worksheet) -> ArrayView[FormControl] {
-  self.form_controls[:]
+  self.form_controls
 }
 
 ///|
@@ -1938,7 +1937,7 @@ pub fn Worksheet::add_slicer(
 
 ///|
 fn Worksheet::get_slicers(self : Worksheet) -> ArrayView[Slicer] {
-  self.slicers[:]
+  self.slicers
 }
 
 ///|
@@ -2043,7 +2042,7 @@ pub fn Worksheet::delete_data_validation(
     }
   }
   self.data_validations.clear()
-  self.data_validations.append(updated[:])
+  self.data_validations.append(updated)
 }
 
 ///|
@@ -2194,7 +2193,7 @@ pub fn Worksheet::get_conditional_formats(
     let (sqref, opts) = parse_conditional_format_xml(xml, self.x14_data_bars)
     match formats.get(sqref) {
       Some(existing) => {
-        existing.append(opts[:])
+        existing.append(opts)
         formats[sqref] = existing
       }
       None => formats[sqref] = opts
@@ -2973,7 +2972,7 @@ fn Worksheet::insert_rows(
     updated_merges.push(adjust_range_after_row_insert(range_ref, row, count))
   }
   self.merged_cells.clear()
-  self.merged_cells.append(updated_merges[:])
+  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
   for link in self.hyperlinks {
     let reference = adjust_hyperlink_ref_after_row_insert(
@@ -2991,7 +2990,7 @@ fn Worksheet::insert_rows(
     })
   }
   self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links[:])
+  self.hyperlinks.append(updated_links)
   match self.auto_filter {
     Some(filter) =>
       self.auto_filter = Some(
@@ -3004,7 +3003,7 @@ fn Worksheet::insert_rows(
     updated_tables.push(adjust_table_after_row_insert(table, row, count))
   }
   self.tables.clear()
-  self.tables.append(updated_tables[:])
+  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
   for group in self.sparkline_groups {
     let adjusted = adjust_sparkline_group_after_row_insert(group, row, count)
@@ -3013,21 +3012,21 @@ fn Worksheet::insert_rows(
     }
   }
   self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines[:])
+  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
   for image in self.images {
     let reference = adjust_cell_after_row_insert(image.reference, row, count)
     updated_images.push(image_with_reference(image, reference))
   }
   self.images.clear()
-  self.images.append(updated_images[:])
+  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     let reference = adjust_cell_after_row_insert(chart.reference, row, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
   self.charts.clear()
-  self.charts.append(updated_charts[:])
+  self.charts.append(updated_charts)
   let updated_rows : Map[Int, RowDimension] = {}
   for row_index, dim in self.row_dimensions {
     let new_row = if row_index >= row { row_index + count } else { row_index }
@@ -3044,7 +3043,7 @@ fn Worksheet::insert_rows(
     count,
   )
   self.row_breaks.clear()
-  self.row_breaks.append(updated_breaks[:])
+  self.row_breaks.append(updated_breaks)
 }
 
 ///|
@@ -3088,7 +3087,7 @@ fn Worksheet::remove_rows(
     })
   }
   self.cells.clear()
-  self.cells.append(updated_cells[:])
+  self.cells.append(updated_cells)
   let updated_merges : Array[String] = []
   for range_ref in self.merged_cells {
     match adjust_range_after_row_remove(range_ref, row, count) {
@@ -3097,7 +3096,7 @@ fn Worksheet::remove_rows(
     }
   }
   self.merged_cells.clear()
-  self.merged_cells.append(updated_merges[:])
+  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
   for link in self.hyperlinks {
     match adjust_hyperlink_ref_after_row_remove(link.reference, row, count) {
@@ -3114,7 +3113,7 @@ fn Worksheet::remove_rows(
     }
   }
   self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links[:])
+  self.hyperlinks.append(updated_links)
   match self.auto_filter {
     Some(filter) =>
       match adjust_auto_filter_after_row_remove(filter, row, count) {
@@ -3131,7 +3130,7 @@ fn Worksheet::remove_rows(
     }
   }
   self.tables.clear()
-  self.tables.append(updated_tables[:])
+  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
   for group in self.sparkline_groups {
     let adjusted = adjust_sparkline_group_after_row_remove(group, row, count)
@@ -3140,7 +3139,7 @@ fn Worksheet::remove_rows(
     }
   }
   self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines[:])
+  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
   for image in self.images {
     match adjust_cell_after_row_remove(image.reference, row, count) {
@@ -3150,7 +3149,7 @@ fn Worksheet::remove_rows(
     }
   }
   self.images.clear()
-  self.images.append(updated_images[:])
+  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     match adjust_cell_after_row_remove(chart.reference, row, count) {
@@ -3160,7 +3159,7 @@ fn Worksheet::remove_rows(
     }
   }
   self.charts.clear()
-  self.charts.append(updated_charts[:])
+  self.charts.append(updated_charts)
   let updated_rows : Map[Int, RowDimension] = {}
   for row_index, dim in self.row_dimensions {
     if row_index < row {
@@ -3180,7 +3179,7 @@ fn Worksheet::remove_rows(
     count,
   )
   self.row_breaks.clear()
-  self.row_breaks.append(updated_breaks[:])
+  self.row_breaks.append(updated_breaks)
 }
 
 ///|
@@ -3350,7 +3349,7 @@ fn Worksheet::duplicate_conditional_formats(
     }
   }
   if copies.length() > 0 {
-    self.conditional_formats.append(copies[:])
+    self.conditional_formats.append(copies)
   }
 }
 
@@ -3368,7 +3367,7 @@ fn Worksheet::duplicate_data_validations(
     }
   }
   if copies.length() > 0 {
-    self.data_validations.append(copies[:])
+    self.data_validations.append(copies)
   }
 }
 
@@ -3483,7 +3482,7 @@ fn Worksheet::insert_cols(
     updated_merges.push(adjust_range_after_col_insert(range_ref, col, count))
   }
   self.merged_cells.clear()
-  self.merged_cells.append(updated_merges[:])
+  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
   for link in self.hyperlinks {
     let reference = adjust_hyperlink_ref_after_col_insert(
@@ -3501,7 +3500,7 @@ fn Worksheet::insert_cols(
     })
   }
   self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links[:])
+  self.hyperlinks.append(updated_links)
   match self.auto_filter {
     Some(filter) =>
       self.auto_filter = Some(
@@ -3514,7 +3513,7 @@ fn Worksheet::insert_cols(
     updated_tables.push(adjust_table_after_col_insert(table, col, count))
   }
   self.tables.clear()
-  self.tables.append(updated_tables[:])
+  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
   for group in self.sparkline_groups {
     let adjusted = adjust_sparkline_group_after_col_insert(group, col, count)
@@ -3523,21 +3522,21 @@ fn Worksheet::insert_cols(
     }
   }
   self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines[:])
+  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
   for image in self.images {
     let reference = adjust_cell_after_col_insert(image.reference, col, count)
     updated_images.push(image_with_reference(image, reference))
   }
   self.images.clear()
-  self.images.append(updated_images[:])
+  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     let reference = adjust_cell_after_col_insert(chart.reference, col, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
   self.charts.clear()
-  self.charts.append(updated_charts[:])
+  self.charts.append(updated_charts)
   let updated_cols : Map[Int, ColDimension] = {}
   for col_index, dim in self.col_dimensions {
     let new_col = if col_index >= col { col_index + count } else { col_index }
@@ -3554,7 +3553,7 @@ fn Worksheet::insert_cols(
     count,
   )
   self.col_breaks.clear()
-  self.col_breaks.append(updated_breaks[:])
+  self.col_breaks.append(updated_breaks)
 }
 
 ///|
@@ -3598,7 +3597,7 @@ fn Worksheet::remove_cols(
     })
   }
   self.cells.clear()
-  self.cells.append(updated_cells[:])
+  self.cells.append(updated_cells)
   let updated_merges : Array[String] = []
   for range_ref in self.merged_cells {
     match adjust_range_after_col_remove(range_ref, col, count) {
@@ -3607,7 +3606,7 @@ fn Worksheet::remove_cols(
     }
   }
   self.merged_cells.clear()
-  self.merged_cells.append(updated_merges[:])
+  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
   for link in self.hyperlinks {
     match adjust_hyperlink_ref_after_col_remove(link.reference, col, count) {
@@ -3624,7 +3623,7 @@ fn Worksheet::remove_cols(
     }
   }
   self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links[:])
+  self.hyperlinks.append(updated_links)
   match self.auto_filter {
     Some(filter) =>
       match adjust_auto_filter_after_col_remove(filter, col, count) {
@@ -3641,7 +3640,7 @@ fn Worksheet::remove_cols(
     }
   }
   self.tables.clear()
-  self.tables.append(updated_tables[:])
+  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
   for group in self.sparkline_groups {
     let adjusted = adjust_sparkline_group_after_col_remove(group, col, count)
@@ -3650,7 +3649,7 @@ fn Worksheet::remove_cols(
     }
   }
   self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines[:])
+  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
   for image in self.images {
     match adjust_cell_after_col_remove(image.reference, col, count) {
@@ -3660,7 +3659,7 @@ fn Worksheet::remove_cols(
     }
   }
   self.images.clear()
-  self.images.append(updated_images[:])
+  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     match adjust_cell_after_col_remove(chart.reference, col, count) {
@@ -3670,7 +3669,7 @@ fn Worksheet::remove_cols(
     }
   }
   self.charts.clear()
-  self.charts.append(updated_charts[:])
+  self.charts.append(updated_charts)
   let updated_cols : Map[Int, ColDimension] = {}
   for col_index, dim in self.col_dimensions {
     if col_index < col {
@@ -3690,7 +3689,7 @@ fn Worksheet::remove_cols(
     count,
   )
   self.col_breaks.clear()
-  self.col_breaks.append(updated_breaks[:])
+  self.col_breaks.append(updated_breaks)
 }
 
 ///|

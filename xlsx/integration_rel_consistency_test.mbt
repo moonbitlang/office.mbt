@@ -40,18 +40,18 @@ test "integration ooxml relationship consistency for mixed drawing parts" {
   let drawing_rel_ids = integration_rel_attr_values(drawing_rels, "Id")
   let drawing_targets = integration_rel_attr_values(drawing_rels, "Target")
 
-  inspect(integration_unique_values(sheet_rel_ids[:]), content="true")
-  inspect(integration_unique_values(drawing_rel_ids[:]), content="true")
+  inspect(integration_unique_values(sheet_rel_ids), content="true")
+  inspect(integration_unique_values(drawing_rel_ids), content="true")
   inspect(
-    integration_has_value(sheet_targets[:], "../drawings/drawing1.xml"),
+    integration_has_value(sheet_targets, "../drawings/drawing1.xml"),
     content="true",
   )
   inspect(
-    integration_has_value(sheet_targets[:], "../tables/table1.xml"),
+    integration_has_value(sheet_targets, "../tables/table1.xml"),
     content="true",
   )
   inspect(
-    integration_has_value(drawing_targets[:], "../charts/chart1.xml"),
+    integration_has_value(drawing_targets, "../charts/chart1.xml"),
     content="true",
   )
 

@@ -601,7 +601,7 @@ test "standard decryption accepts RC4-style verifier layout" {
   info.write_u32_le(0) // reserved2
   // RC4-style verifier: salt size + salt + verifier(16) + hash size + hash(20)
   info.write_u32_le(16)
-  info.write_bytes(salt_bytes[:])
+  info.write_bytes(salt_bytes)
   for _i in 0..<16 {
     info.buf.push((0xaa).to_byte())
   }
@@ -611,14 +611,14 @@ test "standard decryption accepts RC4-style verifier layout" {
   }
   let info_buf = info.to_bytes()
   // package encrypted with the key derived exactly like the reader will
-  let key = standard_convert_password_to_key(128, salt_bytes[:], password)
+  let key = standard_convert_password_to_key(128, salt_bytes, password)
   let plaintext : Bytes = b"legacy standard payload!\x00\x00\x00\x00\x00\x00\x00\x00"
-  let encrypted = aes_ecb_encrypt(key[:], plaintext[:])
+  let encrypted = aes_ecb_encrypt(key, plaintext)
   let package_writer = ByteWriter::new()
   package_writer.write_u64_le(24) // real payload length before padding
-  package_writer.write_bytes(encrypted[:])
+  package_writer.write_bytes(encrypted)
   let package_buf = package_writer.to_bytes()
-  let decrypted = standard_decrypt(info_buf[:], package_buf[:], password)
+  let decrypted = standard_decrypt(info_buf, package_buf, password)
   inspect(decrypted.length(), content="24")
   debug_inspect(
     @encoding/utf8.decode(decrypted[:24]),
@@ -629,7 +629,7 @@ test "standard decryption accepts RC4-style verifier layout" {
 
   // truncated RC4-style verifier still raises
   let truncated = info_buf[:info_buf.length() - 4]
-  try standard_decrypt(truncated, package_buf[:], password) catch {
+  try standard_decrypt(truncated, package_buf, password) catch {
     XlsxError::InvalidEncryptionInfo(msg~) =>
       inspect(msg, content="invalid verifier block")
     e => fail("unexpected error \{repr(e)}")

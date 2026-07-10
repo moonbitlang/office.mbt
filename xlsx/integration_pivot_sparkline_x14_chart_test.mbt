@@ -141,7 +141,7 @@ test "integration chart with pivot-backed mixed ext worksheet" {
 
   let sheet_targets = rel_attr_values_pivot_chart(sheet_rels_xml, "Target")
   inspect(
-    has_value_pivot_chart(sheet_targets[:], "../slicers/slicer1.xml"),
+    has_value_pivot_chart(sheet_targets, "../slicers/slicer1.xml"),
     content="true",
   )
   inspect(sheet_rels_xml.contains("../drawings/drawing"), content="true")

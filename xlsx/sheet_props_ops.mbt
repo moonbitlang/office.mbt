@@ -366,21 +366,21 @@ fn Worksheet::remove_page_break(
   if row_count > 0 && col_count > 0 && row_count == col_count {
     let updated_rows = remove_break_by_id(self.row_breaks, row_id)
     self.row_breaks.clear()
-    self.row_breaks.append(updated_rows[:])
+    self.row_breaks.append(updated_rows)
     let updated_cols = remove_break_by_id(self.col_breaks, col_id)
     self.col_breaks.clear()
-    self.col_breaks.append(updated_cols[:])
+    self.col_breaks.append(updated_cols)
     return
   }
   if row_count > col_count {
     let updated_rows = remove_break_by_id(self.row_breaks, row_id)
     self.row_breaks.clear()
-    self.row_breaks.append(updated_rows[:])
+    self.row_breaks.append(updated_rows)
     return
   }
   if col_count > row_count {
     let updated_cols = remove_break_by_id(self.col_breaks, col_id)
     self.col_breaks.clear()
-    self.col_breaks.append(updated_cols[:])
+    self.col_breaks.append(updated_cols)
   }
 }

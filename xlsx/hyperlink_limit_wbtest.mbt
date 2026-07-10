@@ -10,7 +10,7 @@ test "hyperlink limit exceeded" {
     tooltip: None,
   }
   let many : Array[Hyperlink] = Array::make(65530, dummy)
-  sheet.hyperlinks.append(many[:])
+  sheet.hyperlinks.append(many)
   let result : Result[Unit, Error] = Ok(
     sheet.set_cell_hyperlink("A1", "https://example.com", External),
   ) catch {

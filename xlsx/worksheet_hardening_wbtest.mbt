@@ -522,11 +522,11 @@ test "worksheet wb: rc cell api update branches and row/col basic guards" {
   }
   inspect(bad_get_raw_rc is Err(XlsxError::InvalidCellRef(_)), content="true")
 
-  let bad_set_row : Result[Unit, Error] = Ok(sheet.set_row(0, ["A"][:])) catch {
+  let bad_set_row : Result[Unit, Error] = Ok(sheet.set_row(0, ["A"])) catch {
     e => Err(e)
   }
   inspect(bad_set_row is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let bad_set_col : Result[Unit, Error] = Ok(sheet.set_col(0, ["A"][:])) catch {
+  let bad_set_col : Result[Unit, Error] = Ok(sheet.set_col(0, ["A"])) catch {
     e => Err(e)
   }
   inspect(bad_set_col is Err(XlsxError::InvalidCellRef(_)), content="true")
@@ -880,7 +880,7 @@ test "worksheet wb: duplicate-row helper edge branches" {
   inspect(merge_shift.merged_cells().contains("A1:B1"), content="true")
 
   let duplicate = Worksheet::new("Duplicate")
-  duplicate.set_row(1, ["A"][:])
+  duplicate.set_row(1, ["A"])
   duplicate.duplicate_row_to(1, 2)
   debug_inspect(duplicate.get_row(2), content="[\"A\"]")
   let bad_target : Result[Unit, Error] = Ok(duplicate.duplicate_row_to(1, 1)) catch {

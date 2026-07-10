@@ -227,14 +227,8 @@ fn seeded_random_rng() -> @random.Rand {
     Some(rng) => rng
     None => {
       let tag : Bytes = b"mbtexcel-random-bytes-seed"
-      let first = @crypto.hash_concat("sha256", [
-        u64_le_bytes(@env.now())[:],
-        tag[:],
-      ])
-      let seed = @crypto.hash_concat("sha256", [
-        first[:],
-        u64_le_bytes(@env.now())[:],
-      ])
+      let first = @crypto.hash_concat("sha256", [u64_le_bytes(@env.now()), tag])
+      let seed = @crypto.hash_concat("sha256", [first, u64_le_bytes(@env.now())])
       let rng = @random.Rand::chacha8(seed~)
       random_bytes_rng.val = Some(rng)
       rng

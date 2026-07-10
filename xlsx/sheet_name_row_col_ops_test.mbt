@@ -30,7 +30,7 @@ test "row/col + rc ops validate sheet name" {
     content="true",
   )
   let set_row_result : Result[Unit, Error] = Ok(
-    workbook.set_row("Sheet:1", 1, ["A"][:]),
+    workbook.set_row("Sheet:1", 1, ["A"]),
   ) catch {
     e => Err(e)
   }
@@ -42,7 +42,7 @@ test "row/col + rc ops validate sheet name" {
   }
   inspect(get_row_result is Err(XlsxError::InvalidSheetName(_)), content="true")
   let set_col_result : Result[Unit, Error] = Ok(
-    workbook.set_col("Sheet:1", 1, ["A"][:]),
+    workbook.set_col("Sheet:1", 1, ["A"]),
   ) catch {
     e => Err(e)
   }

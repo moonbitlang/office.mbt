@@ -1123,7 +1123,7 @@ fn parse_data_validations_x14(
     match extract_tag_body_from(full, "x14:formula1") {
       Some(value) => {
         let body = value.to_string()
-        match extract_tag_body_from(body[:], "xm:f") {
+        match extract_tag_body_from(body, "xm:f") {
           Some(f) => formula1 = unescape_xml_text(f)
           None => formula1 = unescape_xml_text(value)
         }
@@ -1134,7 +1134,7 @@ fn parse_data_validations_x14(
     match extract_tag_body_from(full, "x14:formula2") {
       Some(value) => {
         let body = value.to_string()
-        match extract_tag_body_from(body[:], "xm:f") {
+        match extract_tag_body_from(body, "xm:f") {
           Some(f) => formula2 = unescape_xml_text(f)
           None => formula2 = unescape_xml_text(value)
         }
@@ -1872,7 +1872,7 @@ fn parse_sheet_views(xml : StringView) -> Array[SheetView] raise XlsxError {
         view.pane = parse_sheet_view_pane(inner)
         let selections = parse_sheet_view_selections(inner)
         view.selection.clear()
-        view.selection.append(selections[:])
+        view.selection.append(selections)
       }
     }
     views.push(view)
@@ -2625,7 +2625,7 @@ fn parse_legacy_drawing_rel_id(
   let mut pos = 0
   while pos < xml_str.length() {
     let tail = xml_str[pos:]
-    let rel = match tail.find(marker[:]) {
+    let rel = match tail.find(marker) {
       Some(value) => value
       None => break
     }
@@ -3201,7 +3201,7 @@ fn read_zip_bytes(
             None => raise MissingPart(path=slicer_path)
           }
           let slicer_xml = decode(slicer_bytes)
-          parsed.append(parse_slicer_part_entries(slicer_xml)[:])
+          parsed.append(parse_slicer_part_entries(slicer_xml))
         }
         parsed
       }
@@ -3479,7 +3479,7 @@ fn read_zip_bytes(
           }
           let comment_xml = decode(comment_bytes)
           let entries = parse_comments_xml(comment_xml)
-          parsed_comments.append(entries[:])
+          parsed_comments.append(entries)
         }
         parsed_comments
       }
@@ -3565,13 +3565,13 @@ fn read_zip_bytes(
           let drawing_images = parse_drawing_images(
             drawing_xml, drawing_rels_xml, sheet, archive,
           )
-          sheet.images.append(drawing_images[:])
+          sheet.images.append(drawing_images)
           let drawing_charts = parse_drawing_charts(
             drawing_xml, drawing_rels_xml, sheet, archive,
           )
-          sheet.charts.append(drawing_charts[:])
+          sheet.charts.append(drawing_charts)
           let drawing_shapes = parse_drawing_shapes(drawing_xml)
-          sheet.shapes.append(drawing_shapes[:])
+          sheet.shapes.append(drawing_shapes)
         }
         None => ()
       }
