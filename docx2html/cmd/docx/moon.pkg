@@ -1,5 +1,5 @@
 import {
-  "bobzhang/docx2html" @docx,
+  "bobzhang/docx2html",
   "bobzhang/docx2html/internal/cli",
   "moonbitlang/async",
   "moonbitlang/core/argparse",

@@ -107,19 +107,20 @@ jobs:
       - name: Test (native)
         run: moon test --target native
 
-      # Build only the three CLIs the cram docs exercise. Deliberately NOT
+      # Build only the CLIs the cram docs exercise. Deliberately NOT
       # `moon build --target native` for the whole workspace: pdflite's
       # markdown CLI generates an 87MB C file that takes gcc/clang the better
       # part of an hour (moonc expands the CJK cmapdata constants into code) —
       # a cost no CI run should pay. See the repo quality roadmap.
       - name: Build CLIs (native)
-        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html pdflite/cmd/main
+        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx pdflite/cmd/main
 
       # Run the cram docs from a stub project so `moon cram test` does not
       # trigger a build of every workspace executable (which would include the
       # pathological markdown CLI above — this is also how pdflite's own CI
-      # runs its cram). PATH supplies xlsx.exe/docx2html.exe for the docs that
-      # invoke them by name; pdflite's doc takes its CLI and fixture via env.
+      # runs its cram). PATH supplies xlsx.exe/docx2html.exe/docx.exe for the
+      # docs that invoke them by name; pdflite's doc takes its CLI and fixture
+      # via env.
       - name: Cram tests (xlsx, docx2html, pdflite CLIs)
         env:
           PDFLITE_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/pdflite/cmd/main/main.exe
@@ -128,7 +129,7 @@ jobs:
           STUB="$RUNNER_TEMP/moon-cram-stub"
           mkdir -p "$STUB"
           printf 'name = "bobzhang/cramstub"\nversion = "0.1.0"\n' > "$STUB/moon.mod"
-          export PATH="$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/mbtexcel/cmd/xlsx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx2html:$PATH"
+          export PATH="$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/mbtexcel/cmd/xlsx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx2html:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx:$PATH"
           cd "$STUB"
           moon cram test "$GITHUB_WORKSPACE/cmd/xlsx/cram"
           moon cram test "$GITHUB_WORKSPACE/docx2html/tests/cram"
@@ -163,3 +164,8 @@ jobs:
             and (.styles[.cells[0].style_id | tostring].fill.colors == ["4472C4"])'
           v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"
+          # The docx agent CLI also targets wasm end to end: build it and
+          # drive its convert subcommand over a committed fixture.
+          moon build --target wasm docx2html/cmd/docx
+          d=$(moon run --target wasm docx2html/cmd/docx -- convert docx2html/tests/cram/fixtures/single-paragraph.docx 2>/dev/null)
+          echo "docx convert -> $d"; test "$d" = "<p>Walking on imported air</p>"
