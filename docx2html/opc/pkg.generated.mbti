@@ -19,7 +19,7 @@ pub struct PackageBuilder {
 pub fn PackageBuilder::add_default(Self, String, String) -> Unit raise PackageBuildError
 pub fn PackageBuilder::add_override(Self, String, String) -> Unit raise PackageBuildError
 pub fn PackageBuilder::add_part(Self, String, Bytes) -> Unit raise PackageBuildError
-pub fn PackageBuilder::add_relationship(Self, String, String, String, source? : String) -> Unit raise PackageBuildError
+pub fn PackageBuilder::add_relationship(Self, String, String, String, source? : String, external? : Bool) -> Unit raise PackageBuildError
 pub fn PackageBuilder::build(Self) -> Bytes raise PackageBuildError
 pub fn PackageBuilder::new() -> Self
 

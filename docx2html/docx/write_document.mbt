@@ -13,6 +13,25 @@
 priv struct WriteContext {
   used_styles : Set[String]
   mut uses_lists : Bool
+  // Dynamically allocated document relationships (hyperlinks, images);
+  // rId1/rId2 are reserved for styles/numbering.
+  mut next_relationship : Int
+  document_relationships : Array[(String, String, String, Bool)]
+  // (part name under word/, extension, content type, bytes) per image.
+  media : Array[(String, String, String, Bytes)]
+}
+
+///|
+fn WriteContext::allocate_relationship(
+  self : WriteContext,
+  relationship_type : String,
+  target : String,
+  external~ : Bool,
+) -> String {
+  let id = "rId\{self.next_relationship}"
+  self.next_relationship += 1
+  self.document_relationships.push((id, relationship_type, target, external))
+  id
 }
 
 ///|
@@ -26,24 +45,36 @@ priv struct WriteContext {
 /// the numbering part.
 pub fn write_docx(body : Array[DocumentElement]) -> Bytes raise DocxError {
   let paragraphs : Array[XmlNode] = []
-  let ctx : WriteContext = { used_styles: Set([]), uses_lists: false }
+  let ctx : WriteContext = {
+    used_styles: Set([]),
+    uses_lists: false,
+    next_relationship: 3,
+    document_relationships: [],
+    media: [],
+  }
   for element in body {
     paragraphs.push(XmlElement(write_block(element, ctx)))
   }
   paragraphs.push(XmlElement(blank_section_properties()))
+  let namespaces : Map[String, String] = { "w": WORDPROCESSINGML_NAMESPACE }
+  // r: is needed for hyperlink/image relationship references; the drawing
+  // namespaces only when pictures were written.
+  if ctx.document_relationships.length() > 0 {
+    namespaces["r"] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  }
+  if ctx.media.length() > 0 {
+    namespaces["wp"] = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+    namespaces["a"] = "http://schemas.openxmlformats.org/drawingml/2006/main"
+    namespaces["pic"] = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+  }
   let document = @xml.write_xml_string(
     @xml.xml_element("w:document", children=[
       XmlElement(@xml.xml_element("w:body", children=paragraphs)),
     ]),
-    namespaces={ "w": WORDPROCESSINGML_NAMESPACE },
+    namespaces~,
   )
   let builder = @opc.PackageBuilder::new()
-  build_docx_package(
-    builder,
-    document,
-    styles_xml_for(ctx.used_styles),
-    with_numbering=ctx.uses_lists,
-  ) catch {
+  build_docx_package(builder, document, styles_xml_for(ctx.used_styles), ctx) catch {
     err =>
       raise Unsupported(
         message="could not assemble the document package: \{err}",
@@ -59,7 +90,7 @@ fn build_docx_package(
   builder : @opc.PackageBuilder,
   document_xml : String,
   styles_xml : String,
-  with_numbering? : Bool = false,
+  ctx : WriteContext,
 ) -> Bytes raise @opc.PackageBuildError {
   builder.add_default(
     "rels", "application/vnd.openxmlformats-package.relationships+xml",
@@ -81,7 +112,7 @@ fn build_docx_package(
     "styles.xml",
     source="word/document.xml",
   )
-  if with_numbering {
+  if ctx.uses_lists {
     builder.add_override(
       "/word/numbering.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
     )
@@ -92,6 +123,25 @@ fn build_docx_package(
       source="word/document.xml",
     )
     builder.add_part("word/numbering.xml", @utf8.encode(numbering_xml()))
+  }
+  let media_extensions : Set[String] = Set([])
+  for entry in ctx.media {
+    let (part_name, extension, content_type, data) = entry
+    if !media_extensions.contains(extension) {
+      media_extensions.add(extension)
+      builder.add_default(extension, content_type)
+    }
+    builder.add_part("word/\{part_name}", data)
+  }
+  for relationship in ctx.document_relationships {
+    let (id, relationship_type, target, external) = relationship
+    builder.add_relationship(
+      id,
+      relationship_type,
+      target,
+      source="word/document.xml",
+      external~,
+    )
   }
   builder.add_part("word/document.xml", @utf8.encode(document_xml))
   builder.add_part("word/styles.xml", @utf8.encode(styles_xml))
@@ -211,15 +261,20 @@ fn write_paragraph(
     nodes.push(XmlElement(@xml.xml_element("w:pPr", children=ppr_children)))
   }
   for child in children {
-    nodes.push(XmlElement(write_inline(child)))
+    nodes.push(XmlElement(write_inline(child, ctx)))
   }
   @xml.xml_element("w:p", children=nodes)
 }
 
 ///|
-fn write_inline(element : DocumentElement) -> XmlElement raise DocxError {
+fn write_inline(
+  element : DocumentElement,
+  ctx : WriteContext,
+) -> XmlElement raise DocxError {
   match element {
-    Run(children~, properties~) => write_run(children, properties)
+    Run(children~, properties~) => write_run(children, properties, ctx)
+    Hyperlink(children~, href~, anchor~, target_frame~) =>
+      write_hyperlink(children, href, anchor, target_frame, ctx)
     other =>
       raise Unsupported(
         message="the paragraph writer cannot serialize this inline element yet: \{block_kind_name(other)}",
@@ -231,6 +286,7 @@ fn write_inline(element : DocumentElement) -> XmlElement raise DocxError {
 fn write_run(
   children : Array[DocumentElement],
   properties : RunProperties,
+  ctx : WriteContext,
 ) -> XmlElement raise DocxError {
   let nodes : Array[XmlNode] = []
   // CT_RPr is an ENFORCED sequence — the Microsoft SDK rejects out-of-order
@@ -345,6 +401,7 @@ fn write_run(
       }
       Tab => nodes.push(XmlElement(@xml.xml_element("w:tab")))
       Break(Line) => nodes.push(XmlElement(@xml.xml_element("w:br")))
+      Image(image) => nodes.push(XmlElement(write_image(image, ctx)))
       other =>
         raise Unsupported(
           message="the run writer cannot serialize this content yet: \{block_kind_name(other)}",

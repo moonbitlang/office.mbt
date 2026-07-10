@@ -30,6 +30,7 @@ priv struct PackageRelationship {
   id : String
   relationship_type : String
   target : String
+  external : Bool
 }
 
 ///|
@@ -101,12 +102,16 @@ pub fn PackageBuilder::add_override(
 /// Adds a relationship. `source~` is the part the relationship belongs to
 /// (`""` = the package root `_rels/.rels`); `target` is source-relative (or
 /// pack-absolute with a leading `/`). Ids must be unique per source.
+/// `external~` marks a `TargetMode="External"` relationship (e.g. a
+/// hyperlink URL); external targets are emitted verbatim and exempt from
+/// the internal-target resolution check.
 pub fn PackageBuilder::add_relationship(
   self : PackageBuilder,
   id : String,
   relationship_type : String,
   target : String,
   source? : String = "",
+  external? : Bool = false,
 ) -> Unit raise PackageBuildError {
   check_metadata("relationship Id", id)
   check_metadata("relationship Type", relationship_type)
@@ -126,7 +131,7 @@ pub fn PackageBuilder::add_relationship(
       )
     }
   }
-  rels.push({ id, relationship_type, target })
+  rels.push({ id, relationship_type, target, external })
 }
 
 ///|
@@ -210,6 +215,9 @@ pub fn PackageBuilder::build(
   for source, rels in self.relationships {
     let base = split_part_dir(source)
     for relationship in rels {
+      if relationship.external {
+        continue
+      }
       let resolved = resolve_target(base, relationship.target)
       if !part_names.contains(resolved) {
         raise PackageBuildError(
@@ -359,15 +367,15 @@ fn PackageBuilder::content_types_xml(self : PackageBuilder) -> String {
 fn relationships_xml(rels : Array[PackageRelationship]) -> String {
   let children : Array[@xml.XmlNode] = []
   for relationship in rels {
-    children.push(
-      XmlElement(
-        @xml.xml_element("Relationship", attributes={
-          "Id": relationship.id,
-          "Type": relationship.relationship_type,
-          "Target": relationship.target,
-        }),
-      ),
-    )
+    let attributes : Map[String, String] = {
+      "Id": relationship.id,
+      "Type": relationship.relationship_type,
+      "Target": relationship.target,
+    }
+    if relationship.external {
+      attributes["TargetMode"] = "External"
+    }
+    children.push(XmlElement(@xml.xml_element("Relationship", attributes~)))
   }
   @xml.write_xml_string(@xml.xml_element("Relationships", children~), namespaces={
     "": "http://schemas.openxmlformats.org/package/2006/relationships",

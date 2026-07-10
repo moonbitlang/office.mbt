@@ -193,6 +193,41 @@ async test "docx fixtures and embed_style_map output are Microsoft OpenXML schem
     ),
   ])
   validate_docx_via_sdk(dir, "written_lists", lists)
+  // F4: hyperlinks (external rel + anchor) and an inline DrawingML picture
+  // — wp:inline/pic:pic are enforced sequences and the media part, its
+  // content-type default, and the r:embed relationship must all line up.
+  let tiny_png = @afs.read_file("tests/cram/fixtures/tiny-picture.docx").binary()
+  let png = @docx2html.read_docx_package(tiny_png)
+  let mut image_bytes : Bytes = b""
+  fn find_image(element : @docx2html.DocumentElement) -> Unit {
+    match element {
+      Image(image) => image_bytes = image.data
+      Document(children~, ..) | Paragraph(children~, ..) | Run(children~, ..) =>
+        for child in children {
+          find_image(child)
+        }
+      _ => ()
+    }
+  }
+  find_image(png.document)
+  let media = @docx2html.write_docx([
+    @docx2html.paragraph([
+      @docx2html.hyperlink(
+        [@docx2html.run([@docx2html.text("site")])],
+        href=Some("https://example.com/x?y=1&z=2"),
+      ),
+      @docx2html.hyperlink(
+        [@docx2html.run([@docx2html.text("go")])],
+        anchor=Some("top"),
+      ),
+    ]),
+    @docx2html.paragraph([
+      @docx2html.run([
+        @docx2html.image("image/png", image_bytes, alt_text=Some("dot")),
+      ]),
+    ]),
+  ])
+  validate_docx_via_sdk(dir, "written_media", media)
   let restyled = @docx2html.embed_style_map(single_paragraph, "p => h1:fresh")
   validate_docx_via_sdk(dir, "embedded_style_map", restyled)
 }
