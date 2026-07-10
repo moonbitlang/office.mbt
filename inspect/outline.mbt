@@ -20,14 +20,18 @@ pub fn outline(
     "file": Json::string(file),
     "sheet_count": Json::number(names.length().to_double()),
   }
-  let active_index = workbook.get_active_sheet_index()
-  match workbook.get_sheet_name(active_index) {
-    Some(active_name) =>
-      out["active_sheet"] = Json::object({
-        "name": Json::string(active_name),
-        "index": Json::number(active_index.to_double()),
-      })
-    None => ()
+  // A zero-sheet workbook has no active sheet; the compatibility getter
+  // would answer `Some("")` for index 0, which must not become an entry.
+  if names.length() > 0 {
+    let active_index = workbook.get_active_sheet_index()
+    match workbook.get_sheet_name(active_index) {
+      Some(active_name) if active_name != "" =>
+        out["active_sheet"] = Json::object({
+          "name": Json::string(active_name),
+          "index": Json::number(active_index.to_double()),
+        })
+      _ => ()
+    }
   }
   let defined_names = []
   for defined in workbook.get_defined_names() {

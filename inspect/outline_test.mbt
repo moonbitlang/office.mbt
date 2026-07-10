@@ -449,3 +449,20 @@ test "outline counts space-separated sqref ranges, not rule blocks" {
     ),
   )
 }
+
+///|
+test "outline of a zero-sheet workbook has no active sheet" {
+  let workbook = @xlsx.Workbook::new()
+  inspect(
+    @inspect.outline(workbook, file="none.xlsx").stringify(indent=2),
+    content=(
+      #|{
+      #|  "schema": "xlsx.outline/1",
+      #|  "file": "none.xlsx",
+      #|  "sheet_count": 0,
+      #|  "defined_names": [],
+      #|  "sheets": []
+      #|}
+    ),
+  )
+}

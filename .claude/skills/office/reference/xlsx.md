@@ -159,8 +159,9 @@ the normative field-by-field spec is `docs/agent-json-schemas.md`, and
 - **`get <file> <sheet> <cell-or-range> --json`** reads a cell or range
   structurally: per cell a formatted display `value`, typed `raw` value
   (`string`/`number`/`bool`/`error`), `formula` text, and `style_id` into a
-  deduplicated `styles` map. A styled blank appears as `{ref, style_id}` and
-  an uncached formula as `{ref, formula}` — no fake empty `value` (font/fill/border/alignment/
+  deduplicated `styles` map (`style_id` is the effective style: cell, else
+  row, else column). A styled blank appears as `{ref, style_id}` and an
+  uncached formula as `{ref, formula, …}` — no fake empty `value` (font/fill/border/alignment/
   number format). Blank unstyled cells are omitted. Ranges accept either
   corner order and are capped at 100,000 cells.
 

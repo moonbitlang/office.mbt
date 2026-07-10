@@ -60,6 +60,11 @@ pub fn style_to_json(style : @xlsx.Style) -> Json {
       set_string(f, "underline", font.underline)
       set_double(f, "size", font.size)
       set_string(f, "color", font.color)
+      // Theme/indexed colors are how most real files color text; without
+      // them a themed font would look unset.
+      set_int(f, "color_theme", font.color_theme)
+      set_int(f, "color_indexed", font.color_indexed)
+      set_double(f, "color_tint", font.color_tint)
       set_string(f, "family", font.family)
       if f.length() > 0 {
         out["font"] = Json::object(f)
@@ -76,6 +81,12 @@ pub fn style_to_json(style : @xlsx.Style) -> Json {
         Some(colors) => f["colors"] = Json::array(colors.map(Json::string))
         None => ()
       }
+      set_int(f, "fg_theme", fill.fg_theme)
+      set_int(f, "fg_indexed", fill.fg_indexed)
+      set_double(f, "fg_tint", fill.fg_tint)
+      set_int(f, "bg_theme", fill.bg_theme)
+      set_int(f, "bg_indexed", fill.bg_indexed)
+      set_double(f, "bg_tint", fill.bg_tint)
       if f.length() > 0 {
         out["fill"] = Json::object(f)
       }

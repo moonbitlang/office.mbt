@@ -37,8 +37,7 @@ test "cells over a mixed range" {
       #|      "raw": {
       #|        "type": "string",
       #|        "value": "Label"
-      #|      },
-      #|      "style_id": 0
+      #|      }
       #|    },
       #|    {
       #|      "ref": "B1",
@@ -55,8 +54,7 @@ test "cells over a mixed range" {
       #|      "raw": {
       #|        "type": "number",
       #|        "value": 42
-      #|      },
-      #|      "style_id": 0
+      #|      }
       #|    },
       #|    {
       #|      "ref": "B2",
@@ -64,13 +62,11 @@ test "cells over a mixed range" {
       #|      "raw": {
       #|        "type": "bool",
       #|        "value": true
-      #|      },
-      #|      "style_id": 0
+      #|      }
       #|    },
       #|    {
       #|      "ref": "A3",
-      #|      "formula": "SUM(A2:B2)",
-      #|      "style_id": 0
+      #|      "formula": "SUM(A2:B2)"
       #|    },
       #|    {
       #|      "ref": "B3",
@@ -78,7 +74,6 @@ test "cells over a mixed range" {
       #|    }
       #|  ],
       #|  "styles": {
-      #|    "0": {},
       #|    "1": {
       #|      "number_format": "#,##0.00",
       #|      "font": {
@@ -111,13 +106,10 @@ test "cells of a single cell normalizes the range ref" {
       #|      "raw": {
       #|        "type": "number",
       #|        "value": 7
-      #|      },
-      #|      "style_id": 0
+      #|      }
       #|    }
       #|  ],
-      #|  "styles": {
-      #|    "0": {}
-      #|  }
+      #|  "styles": {}
       #|}
     ),
   )
@@ -182,6 +174,127 @@ test "cells serializes alignment style fields" {
       #|        "vertical": "top",
       #|        "wrap_text": true,
       #|        "text_rotation": 45
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "cells reports effective row and column styles" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let banded = workbook.new_style(
+    @xlsx.Style::new().with_fill(@xlsx.Fill::solid("EEEEEE")),
+  )
+  let priced = workbook.new_style(@xlsx.Style::number_format("#,##0.00"))
+  workbook.set_row_style("Data", 2, banded)
+  workbook.set_col_style("Data", 3, priced)
+  // A2: blank in a styled row -> {ref, style_id}. B2: value in the styled
+  // row inherits its style id (the display value keeps the cell's own
+  // format, excelize-parity). C1: blank in a styled column. B1: plain cell,
+  // no style_id key at all.
+  workbook.set_cell_int("Data", "B2", 5)
+  workbook.set_cell("Data", "B1", "plain")
+  inspect(
+    @inspect.cells(workbook, file="rowcol.xlsx", "Data", "A1:C2").stringify(
+      indent=2,
+    ),
+    content=(
+      #|{
+      #|  "schema": "xlsx.cells/1",
+      #|  "file": "rowcol.xlsx",
+      #|  "sheet": "Data",
+      #|  "range": "A1:C2",
+      #|  "cells": [
+      #|    {
+      #|      "ref": "B1",
+      #|      "value": "plain",
+      #|      "raw": {
+      #|        "type": "string",
+      #|        "value": "plain"
+      #|      }
+      #|    },
+      #|    {
+      #|      "ref": "C1",
+      #|      "style_id": 2
+      #|    },
+      #|    {
+      #|      "ref": "A2",
+      #|      "style_id": 1
+      #|    },
+      #|    {
+      #|      "ref": "B2",
+      #|      "value": "5",
+      #|      "raw": {
+      #|        "type": "number",
+      #|        "value": 5
+      #|      },
+      #|      "style_id": 1
+      #|    },
+      #|    {
+      #|      "ref": "C2",
+      #|      "style_id": 1
+      #|    }
+      #|  ],
+      #|  "styles": {
+      #|    "2": {
+      #|      "number_format": "#,##0.00"
+      #|    },
+      #|    "1": {
+      #|      "fill": {
+      #|        "type": "pattern",
+      #|        "pattern": 1,
+      #|        "colors": [
+      #|          "EEEEEE"
+      #|        ]
+      #|      }
+      #|    }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "cells serializes theme and indexed colors" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  workbook.set_cell("Data", "A1", "themed")
+  let themed = workbook.new_style(
+    @xlsx.Style::new().with_font(
+      @xlsx.Font::with_values(color_theme=1, color_tint=-0.25),
+    ),
+  )
+  workbook.set_cell_style("Data", "A1", themed)
+  inspect(
+    @inspect.cells(workbook, file="theme.xlsx", "Data", "A1").stringify(
+      indent=2,
+    ),
+    content=(
+      #|{
+      #|  "schema": "xlsx.cells/1",
+      #|  "file": "theme.xlsx",
+      #|  "sheet": "Data",
+      #|  "range": "A1",
+      #|  "cells": [
+      #|    {
+      #|      "ref": "A1",
+      #|      "value": "themed",
+      #|      "raw": {
+      #|        "type": "string",
+      #|        "value": "themed"
+      #|      },
+      #|      "style_id": 1
+      #|    }
+      #|  ],
+      #|  "styles": {
+      #|    "1": {
+      #|      "font": {
+      #|        "color_theme": 1,
+      #|        "color_tint": -0.25
       #|      }
       #|    }
       #|  }

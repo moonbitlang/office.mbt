@@ -224,3 +224,30 @@ test "numeric character references decode across the full Unicode range" {
     ),
   )
 }
+
+///|
+test "processing instructions are not chart structure" {
+  // A PI whose data contains "<!--" must not open a phantom comment that
+  // swallows the real chart, and markup inside a PI is not structure.
+  debug_inspect(
+    @inspect.chart_kinds(
+      "<?agent <!--?><c:chart><c:barChart><c:ser/></c:barChart></c:chart>",
+    ),
+    content=(
+      #|["barChart"]
+    ),
+  )
+  debug_inspect(
+    @inspect.chart_kinds("<?pi <c:lineChart> ?>"),
+    content=(
+      #|[]
+    ),
+  )
+  // Unterminated PI: the rest is PI data.
+  debug_inspect(
+    @inspect.chart_kinds("<?pi <c:barChart>"),
+    content=(
+      #|[]
+    ),
+  )
+}

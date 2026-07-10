@@ -76,8 +76,9 @@ charts, images, and object counts:
 
 `get --json` reads a cell or range structurally: formatted display value,
 typed raw value, formula text, and a deduplicated style map. Blank unstyled
-cells (A2 here) are omitted — absence means blank — and a formula with no
-cached result carries only its formula text, no fake empty value:
+cells (A2 here) are omitted — absence means blank — a plain cell carries no
+style_id, and a formula with no cached result carries only its formula
+text, no fake empty value:
 
   $ xlsx.exe get book.xlsx Data A1:B2 --json
   {
@@ -101,13 +102,11 @@ cached result carries only its formula text, no fake empty value:
         "raw": {
           "type": "number",
           "value": 100
-        },
-        "style_id": 0
+        }
       },
       {
         "ref": "B2",
-        "formula": "B1*2",
-        "style_id": 0
+        "formula": "B1*2"
       }
     ],
     "styles": {
@@ -125,8 +124,7 @@ cached result carries only its formula text, no fake empty value:
             "4472C4"
           ]
         }
-      },
-      "0": {}
+      }
     }
   }
 

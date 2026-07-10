@@ -79,29 +79,35 @@ a clean error and no output.
 | `file`, `sheet` | string | echoed |
 | `range` | string | **normalized** ref (top-left first; single cell stays a single name) |
 | `cells` | array | row-major; one entry per non-absent cell |
-| `styles` | object | style id (decimal string) → style object; only ids referenced by `cells` |
+| `styles` | object | style id (decimal string) → style object; only non-zero ids referenced by `cells`, in first-reference order |
 
 A cell appears in `cells` when it has a stored non-empty value, a formula,
-or a style; fully-absent cells are omitted (absence ⇒ blank and unstyled).
-An **empty-string cell is treated as a synthetic blank** — styling a bare
-cell and setting an uncached formula both store one — so such a cell carries
-no `value`/`raw`: a styled blank appears as `{ref, style_id}`, an uncached
-formula as `{ref, formula, style_id?}`. Entry keys:
+or a **non-zero effective style** (cell → row → column precedence, matching
+the write-side `prepareCellStyle` rule — so a blank cell inside a styled row
+or column is reported); fully-absent cells are omitted (absence ⇒ blank and
+unstyled). An **empty-string cell is treated as a synthetic blank** —
+styling a bare cell and setting an uncached formula both store one — so such
+a cell carries no `value`/`raw`: a styled blank appears as
+`{ref, style_id}`, an uncached formula as `{ref, formula, style_id?}`.
+Entry keys:
 
 | key | type | notes |
 |---|---|---|
 | `ref` | string | A1-style |
-| `value` | string? | the **formatted display string** (number format applied); present iff the cell stores a non-empty value |
+| `value` | string? | the **formatted display string**; present iff the cell stores a non-empty value. The number format applied is the cell's **own** style's (excelize `GetCellValue` parity) — a row/column-inherited format is reported via `style_id` but not applied to `value` |
 | `raw` | object? | `{type, value}` with `type` ∈ `string` \| `number` \| `bool` \| `error`; `value` is the matching JSON type (`error` carries the code as a string) |
 | `formula` | string? | stored formula text, without a leading `=` |
-| `style_id` | number? | key into `styles` |
+| `style_id` | number? | the **effective** style id (cell → row → column precedence), present only when non-zero; key into `styles` |
 
 Style objects (all keys optional; absent ⇒ property unset):
 
 - `num_fmt_id` (number, builtin format id) / `number_format` (string, custom
   format code)
-- `font`: `{bold?, italic?, strike?, underline?, size?, color?, family?}`
-- `fill`: `{type?, pattern?, colors?[]}`
+- `font`: `{bold?, italic?, strike?, underline?, size?, color?,
+  color_theme?, color_indexed?, color_tint?, family?}`
+- `fill`: `{type?, pattern?, colors?[], fg_theme?, fg_indexed?, fg_tint?,
+  bg_theme?, bg_indexed?, bg_tint?}` (theme/indexed color slots are how most
+  real files carry color — a themed fill has no literal `colors` entry)
 - `border`: array of `{side, style?, color?}` (`side` ∈ `left`/`right`/`top`/
   `bottom`/`diagonal…`)
 - `alignment`: `{horizontal?, vertical?, wrap_text?, text_rotation?, indent?,

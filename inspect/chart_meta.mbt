@@ -168,12 +168,23 @@ fn element_content(view : StringView, tag : String, from : Int) -> (Int, Int)? {
 }
 
 ///|
-/// Strips XML comments and unwraps CDATA sections (re-escaping their text
-/// so it participates as ordinary character data). This keeps the tag
-/// scanner honest: markup inside a comment or CDATA block is data, not
-/// structure. Unterminated constructs consume the rest of the input.
+/// One non-element lexical construct the tag scanner must not read
+/// through: comments and processing instructions are dropped, CDATA text
+/// is unwrapped and re-escaped so it participates as character data.
+priv enum XmlLexical {
+  Comment
+  Cdata
+  ProcessingInstruction
+}
+
+///|
+/// Strips XML comments and processing instructions and unwraps CDATA
+/// sections. This keeps the tag scanner honest: markup inside a comment,
+/// a PI, or a CDATA block is data, not structure. The earliest opener
+/// wins ownership (a PI may contain `<!--`, a comment may contain `<?`).
+/// Unterminated constructs consume the rest of the input.
 fn preprocess_chart_xml(xml : String) -> String {
-  if !xml.contains("<!--") && !xml.contains("<![CDATA[") {
+  if !xml.contains("<!--") && !xml.contains("<![CDATA[") && !xml.contains("<?") {
     return xml
   }
   let view = xml[:]
@@ -183,34 +194,60 @@ fn preprocess_chart_xml(xml : String) -> String {
       break
     }
     let rest = view[pos:]
-    let comment = rest.find("<!--")
-    let cdata = rest.find("<![CDATA[")
-    let (offset, is_comment) = match (comment, cdata) {
-      (None, None) => {
-        out.write_string(rest.to_owned())
-        break
+    let mut offset = rest.length()
+    let mut kind = Comment
+    match rest.find("<!--") {
+      Some(found) if found < offset => {
+        offset = found
+        kind = Comment
       }
-      (Some(c), None) => (c, true)
-      (None, Some(d)) => (d, false)
-      (Some(c), Some(d)) => if c < d { (c, true) } else { (d, false) }
+      _ => ()
+    }
+    match rest.find("<![CDATA[") {
+      Some(found) if found < offset => {
+        offset = found
+        kind = Cdata
+      }
+      _ => ()
+    }
+    match rest.find("<?") {
+      Some(found) if found < offset => {
+        offset = found
+        kind = ProcessingInstruction
+      }
+      _ => ()
+    }
+    if offset >= rest.length() {
+      out.write_string(rest.to_owned())
+      break
     }
     out.write_string(view[pos:pos + offset].to_owned())
-    if is_comment {
-      let body_start = pos + offset + "<!--".length()
-      match view[body_start:].find("-->") {
-        Some(close) => continue body_start + close + "-->".length()
-        None => break
-      }
-    } else {
-      let body_start = pos + offset + "<![CDATA[".length()
-      match view[body_start:].find("]]>") {
-        Some(close) => {
-          write_xml_escaped(out, view[body_start:body_start + close])
-          continue body_start + close + "]]>".length()
+    match kind {
+      Comment => {
+        let body_start = pos + offset + "<!--".length()
+        match view[body_start:].find("-->") {
+          Some(close) => continue body_start + close + "-->".length()
+          None => break
         }
-        None => {
-          write_xml_escaped(out, view[body_start:])
-          break
+      }
+      ProcessingInstruction => {
+        let body_start = pos + offset + "<?".length()
+        match view[body_start:].find("?>") {
+          Some(close) => continue body_start + close + "?>".length()
+          None => break
+        }
+      }
+      Cdata => {
+        let body_start = pos + offset + "<![CDATA[".length()
+        match view[body_start:].find("]]>") {
+          Some(close) => {
+            write_xml_escaped(out, view[body_start:body_start + close])
+            continue body_start + close + "]]>".length()
+          }
+          None => {
+            write_xml_escaped(out, view[body_start:])
+            break
+          }
         }
       }
     }
