@@ -1,24 +1,24 @@
 ///|
 test "mbtexcel cell reference helpers" {
-  let (col, row) = split_cell_name("BC12")
+  let (col, row) = @mbtexcel.split_cell_name("BC12")
   debug_inspect((col, row), content="(\"BC\", 12)")
-  inspect(join_cell_name("BC", 12), content="BC12")
-  let abs = coordinates_to_cell_name(27, 12, abs=true)
+  inspect(@mbtexcel.join_cell_name("BC", 12), content="BC12")
+  let abs = @mbtexcel.coordinates_to_cell_name(27, 12, abs=true)
   inspect(abs, content="$AA$12")
-  @test.assert_raise(() => split_cell_name("1A"))
-  @test.assert_raise(() => join_cell_name("", 0))
+  @test.assert_raise(() => @mbtexcel.split_cell_name("1A"))
+  @test.assert_raise(() => @mbtexcel.join_cell_name("", 0))
 }
 
 ///|
 test "mbtexcel password wrappers" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "secret")
-  let bytes = write_with_password(workbook, "pass")
-  let parsed = read_with_password(bytes, "pass")
+  let bytes = @mbtexcel.write_with_password(workbook, "pass")
+  let parsed = @mbtexcel.read_with_password(bytes, "pass")
   debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"secret\")")
   let bad : Result[@xlsx.Workbook, Error] = Ok(
-    read_with_password(bytes, "wrong"),
+    @mbtexcel.read_with_password(bytes, "wrong"),
   ) catch {
     e => Err(e)
   }
@@ -29,34 +29,37 @@ test "mbtexcel password wrappers" {
 
 ///|
 async test "mbtexcel open_reader wrapper" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "reader")
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let (reader, writer) = @async/io.pipe()
   let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)
     })
-    open_reader(reader)
+    @mbtexcel.open_reader(reader)
   })
   debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"reader\")")
 }
 
 ///|
 async test "mbtexcel open_reader wrapper with transcoder branch" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "reader")
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let (reader, writer) = @async/io.pipe()
   let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)
     })
-    open_reader(reader, transcoder=fn(_charset : String, b : Bytes) -> String {
+    @mbtexcel.open_reader(reader, transcoder=fn(
+      _charset : String,
+      b : Bytes,
+    ) -> String {
       @encoding/utf8.decode(b) catch {
         _ => ""
       }
@@ -67,34 +70,34 @@ async test "mbtexcel open_reader wrapper with transcoder branch" {
 
 ///|
 async test "mbtexcel read_zip_reader wrapper" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "B2", "zip")
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let (reader, writer) = @async/io.pipe()
   let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)
     })
-    read_zip_reader(reader)
+    @mbtexcel.read_zip_reader(reader)
   })
   debug_inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"zip\")")
 }
 
 ///|
 async test "mbtexcel read_zip_reader wrapper with transcoder branch" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "B2", "zip")
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let (reader, writer) = @async/io.pipe()
   let parsed = @async.with_task_group(group => {
     group.spawn_bg(() => {
       defer writer.close()
       writer.write(bytes)
     })
-    read_zip_reader(reader, transcoder=fn(
+    @mbtexcel.read_zip_reader(reader, transcoder=fn(
       _charset : String,
       b : Bytes,
     ) -> String {
@@ -109,10 +112,10 @@ async test "mbtexcel read_zip_reader wrapper with transcoder branch" {
 ///|
 #cfg(target="native")
 async test "mbtexcel open_file wrapper" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "C3", "file")
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let stamp = @env.now().to_string()
   let path = "mbtexcel_open_file_\{stamp}.xlsx"
   @async/fs.write_file(
@@ -123,7 +126,7 @@ async test "mbtexcel open_file wrapper" {
   ) catch {
     err => fail("write file failed: \{err}")
   }
-  let parsed = open_file(path)
+  let parsed = @mbtexcel.open_file(path)
   debug_inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"file\")")
   @async/fs.remove(path) catch {
     err => fail("remove file failed: \{err}")
@@ -133,10 +136,10 @@ async test "mbtexcel open_file wrapper" {
 ///|
 #cfg(target="native")
 async test "mbtexcel open_file wrapper with transcoder branch" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "C3", "file")
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let stamp = @env.now().to_string()
   let path = "mbtexcel_open_file_transcoder_\{stamp}.xlsx"
   @async/fs.write_file(
@@ -147,7 +150,7 @@ async test "mbtexcel open_file wrapper with transcoder branch" {
   ) catch {
     err => fail("write file failed: \{err}")
   }
-  let parsed = open_file(path, transcoder=fn(
+  let parsed = @mbtexcel.open_file(path, transcoder=fn(
     _charset : String,
     b : Bytes,
   ) -> String {
@@ -163,7 +166,7 @@ async test "mbtexcel open_file wrapper with transcoder branch" {
 
 ///|
 test "mbtexcel e2e multi-feature roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Summary"))
   ignore(workbook.add_sheet("Data"))
   workbook.set_cell("Summary", "A1", "Item")
@@ -178,12 +181,12 @@ test "mbtexcel e2e multi-feature roundtrip" {
   workbook.set_cell("Summary", "A4", "Merged")
   let style_id = workbook.add_style(@xlsx.Style::number_format("0.00"))
   workbook.set_cell_style("Summary", "E2", style_id)
-  let dv = new_data_validation(false)
+  let dv = @mbtexcel.new_data_validation(false)
   dv.set_sqref("F2:F3")
   dv.set_drop_list(["Yes", "No"])
   workbook.add_data_validation("Summary", dv)
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @mbtexcel.write(workbook)
+  let parsed = @mbtexcel.read(bytes)
   debug_inspect(parsed.sheet_name(0), content="Some(\"Summary\")")
   debug_inspect(parsed.sheet_name(1), content="Some(\"Data\")")
   debug_inspect(parsed.get_cell("Summary", "A2"), content="Some(\"Apples\")")
@@ -209,7 +212,7 @@ test "mbtexcel e2e multi-feature roundtrip" {
 
 ///|
 test "mbtexcel e2e tables sparklines hyperlinks" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "Name")
   workbook.set_cell("Sheet1", "B1", "Value")
@@ -229,7 +232,7 @@ test "mbtexcel e2e tables sparklines hyperlinks" {
     External,
     display="Example",
   )
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   inspect(parsed.get_tables("Sheet1").length(), content="1")
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
@@ -255,7 +258,7 @@ test "mbtexcel e2e tables sparklines hyperlinks" {
 
 ///|
 test "mbtexcel e2e stream writer" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
   writer.set_row("A1", ["A", "B"])
@@ -264,7 +267,7 @@ test "mbtexcel e2e stream writer" {
     @xlsx.StreamCell::new("4"),
   ])
   writer.flush()
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"A\")")
   debug_inspect(
     parsed.get_cell_formula("Sheet1", "A2"),
@@ -274,7 +277,7 @@ test "mbtexcel e2e stream writer" {
 
 ///|
 test "mbtexcel e2e header footer images" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_header_footer(
     "Sheet1",
@@ -291,7 +294,7 @@ test "mbtexcel e2e header footer images" {
       height="32pt",
     ),
   )
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let images = parsed.get_header_footer_images("Sheet1")
   inspect(images.length(), content="1")
   let first = images[0]
@@ -311,11 +314,11 @@ test "mbtexcel e2e header footer images" {
 
 ///|
 test "mbtexcel e2e sheet background" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let bg : Bytes = [1, 2, 3, 4, 5]
   workbook.set_sheet_background("Sheet1", bg, ".png")
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -332,14 +335,14 @@ test "mbtexcel e2e sheet background" {
 
 ///|
 test "mbtexcel e2e auto filter roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let options : Array[@xlsx.AutoFilterOption] = [
     { column: "B", expression: "x == 10" },
     { column: "C", expression: "x > 5" },
   ]
   workbook.set_auto_filter("Sheet1", "A1:C3", options)
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   debug_inspect(
     parsed.get_auto_filter("Sheet1"),
     content=(
@@ -367,14 +370,14 @@ test "mbtexcel e2e auto filter roundtrip" {
 
 ///|
 test "mbtexcel e2e sheet protection" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let opts = @xlsx.SheetProtectionOptions::with_values(
     password="secret",
     auto_filter=true,
   )
   workbook.protect_sheet("Sheet1", opts)
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -384,11 +387,11 @@ test "mbtexcel e2e sheet protection" {
 
 ///|
 test "mbtexcel e2e defined names" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let dn = @xlsx.DefinedName::new("MyName", "Sheet1!$A$1")
   workbook.set_defined_name(dn)
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let names = parsed.get_defined_names()
   inspect(names.length(), content="1")
   debug_inspect(
@@ -399,7 +402,7 @@ test "mbtexcel e2e defined names" {
 
 ///|
 test "mbtexcel e2e row/col insert remove shifts" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "alpha")
   workbook.set_cell("Sheet1", "B2", "beta")
@@ -415,7 +418,7 @@ test "mbtexcel e2e row/col insert remove shifts" {
 
 ///|
 test "mbtexcel e2e comments" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let comment : @xlsx.Comment = {
     cell: "A1",
@@ -427,7 +430,7 @@ test "mbtexcel e2e comments" {
     height: None,
   }
   workbook.add_comment("Sheet1", comment)
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let comments = parsed.get_comments("Sheet1")
   inspect(comments.length(), content="1")
   debug_inspect(
@@ -438,13 +441,13 @@ test "mbtexcel e2e comments" {
 
 ///|
 test "mbtexcel e2e conditional format roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = ">"
   opt.value = "6"
   workbook.set_conditional_format("Sheet1", "A1:A2", [opt])
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -457,7 +460,7 @@ test "mbtexcel e2e conditional format roundtrip" {
 
 ///|
 test "mbtexcel e2e sheet props roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let props = @xlsx.SheetPropsOptions::with_values(
     code_name="SheetCode",
@@ -465,7 +468,7 @@ test "mbtexcel e2e sheet props roundtrip" {
     tab_color_rgb="FF0000",
   )
   workbook.set_sheet_props("Sheet1", Some(props))
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let parsed_props = parsed.get_sheet_props("Sheet1")
   debug_inspect(parsed_props.code_name, content="Some(\"SheetCode\")")
   debug_inspect(parsed_props.fit_to_page, content="Some(true)")
@@ -474,14 +477,14 @@ test "mbtexcel e2e sheet props roundtrip" {
 
 ///|
 test "mbtexcel e2e workbook props roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   let props = @xlsx.WorkbookPropsOptions::with_values(
     date_1904=true,
     filter_privacy=true,
     code_name="BookCode",
   )
   workbook.set_workbook_props(Some(props))
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let parsed_props = parsed.get_workbook_props()
   debug_inspect(parsed_props.date_1904, content="Some(true)")
   debug_inspect(parsed_props.filter_privacy, content="Some(true)")
@@ -490,13 +493,13 @@ test "mbtexcel e2e workbook props roundtrip" {
 
 ///|
 test "mbtexcel e2e workbook protection xml" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   let opts = @xlsx.WorkbookProtectionOptions::with_values(
     password="secret",
     lock_structure=true,
   )
   workbook.protect_workbook(options=opts)
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let archive = @zip.read(bytes)
   let workbook_xml = match archive.get("xl/workbook.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -508,10 +511,10 @@ test "mbtexcel e2e workbook protection xml" {
 
 ///|
 test "mbtexcel e2e page breaks" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.insert_page_break("Sheet1", "B2")
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -522,14 +525,14 @@ test "mbtexcel e2e page breaks" {
 
 ///|
 test "mbtexcel e2e custom properties" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   workbook.set_custom_props(
     @xlsx.CustomProperty::new("Text", Some(Text("hello"))),
   )
   workbook.set_custom_props(
     @xlsx.CustomProperty::new("Count", Some(Integer(3))),
   )
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let props = parsed.get_custom_props()
   inspect(props.length(), content="2")
   debug_inspect((props[0].name, props[1].name), content="(\"Text\", \"Count\")")
@@ -537,7 +540,7 @@ test "mbtexcel e2e custom properties" {
 
 ///|
 test "mbtexcel e2e core and app properties" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   let core = @xlsx.CoreProperties::with_values(title="Title", creator="Author")
   let app = @xlsx.AppProperties::with_values(
     application="mbtexcel",
@@ -545,7 +548,7 @@ test "mbtexcel e2e core and app properties" {
   )
   workbook.set_core_properties(core)
   workbook.set_app_properties(app)
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let parsed_core = parsed.core_properties()
   let parsed_app = parsed.app_properties()
   inspect(parsed_core.title, content="Title")
@@ -556,7 +559,7 @@ test "mbtexcel e2e core and app properties" {
 
 ///|
 test "mbtexcel e2e page layout and margins" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let margins = @xlsx.PageLayoutMarginsOptions::with_values(
     top=0.5,
@@ -576,7 +579,7 @@ test "mbtexcel e2e page layout and margins" {
   )
   workbook.set_page_margins("Sheet1", Some(margins))
   workbook.set_page_layout("Sheet1", Some(layout))
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let parsed_margins = parsed.get_page_margins("Sheet1")
   let parsed_layout = parsed.get_page_layout("Sheet1")
   debug_inspect(parsed_margins.top, content="Some(0.5)")
@@ -589,7 +592,7 @@ test "mbtexcel e2e page layout and margins" {
 
 ///|
 test "mbtexcel e2e sheet view panes and dimension" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let view = @xlsx.SheetViewOptions::with_values(
     show_grid_lines=false,
@@ -613,7 +616,7 @@ test "mbtexcel e2e sheet view panes and dimension" {
   )
   workbook.set_panes("Sheet1", panes)
   workbook.set_sheet_dimension("Sheet1", "A1:C3")
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let parsed_view = parsed.get_sheet_view("Sheet1", 0)
   inspect(parsed_view.show_grid_lines == Some(false), content="true")
   inspect(parsed_view.top_left_cell == Some("B2"), content="true")
@@ -628,7 +631,7 @@ test "mbtexcel e2e sheet view panes and dimension" {
 
 ///|
 test "mbtexcel e2e calc props and default font" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   let calc = @xlsx.CalcPropsOptions::with_values(
     calc_id=123,
     calc_mode="manual",
@@ -641,7 +644,7 @@ test "mbtexcel e2e calc props and default font" {
   )
   workbook.set_calc_props(Some(calc))
   workbook.set_default_font("Courier New")
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let parsed_calc = parsed.get_calc_props()
   inspect(parsed_calc.calc_id == Some(123), content="true")
   inspect(parsed_calc.calc_mode == Some("manual"), content="true")
@@ -656,21 +659,21 @@ test "mbtexcel e2e calc props and default font" {
 
 ///|
 test "mbtexcel e2e sheet visibility" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Hidden"))
   workbook.set_sheet_visible("Hidden", false)
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   inspect(parsed.sheet_visible("Hidden"), content="false")
 }
 
 ///|
 test "mbtexcel e2e active sheet index" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   workbook.set_active_sheet(1)
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   inspect(parsed.active_sheet_index(), content="1")
   parsed.set_active_sheet(99)
   inspect(parsed.active_sheet_index(), content="0")
@@ -678,16 +681,16 @@ test "mbtexcel e2e active sheet index" {
 
 ///|
 test "mbtexcel e2e vba project roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let vba_header : Array[Byte] = [
     0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
   ]
   let vba_bytes : Bytes = Bytes::from_array(vba_header)
   workbook.add_vba_project(vba_bytes)
-  let bytes = write(workbook)
-  let parsed = read(bytes)
-  let bytes2 = write(parsed)
+  let bytes = @mbtexcel.write(workbook)
+  let parsed = @mbtexcel.read(bytes)
+  let bytes2 = @mbtexcel.write(parsed)
   let archive = @zip.read(bytes2)
   let vba_part = match archive.get("xl/vbaProject.bin") {
     Some(value) => value
@@ -706,11 +709,11 @@ test "mbtexcel e2e vba project roundtrip" {
 
 ///|
 test "mbtexcel e2e ignored errors roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.add_ignored_errors("Sheet1", "A1", EvalError)
   workbook.add_ignored_errors("Sheet1", "B2:C3", NumberStoredAsText)
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -725,7 +728,7 @@ test "mbtexcel e2e ignored errors roundtrip" {
 
 ///|
 test "mbtexcel e2e pivot table roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
     workbook.add_pivot_table_xml(
@@ -735,7 +738,7 @@ test "mbtexcel e2e pivot table roundtrip" {
       cache_records_xml="<pivotCacheRecords count=\"0\"/>",
     ),
   )
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let pivots = parsed.get_pivot_tables("Sheet1")
   inspect(pivots.length(), content="1")
   inspect(pivots[0].name, content="PivotE2E")
@@ -755,11 +758,11 @@ test "mbtexcel e2e pivot table roundtrip" {
 
 ///|
 test "mbtexcel e2e vml drawing roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.add_vml_drawing_xml("Sheet1", "<xml>vml</xml>")
   workbook.add_vml_drawing_hf_xml("Sheet1", "<xml>hf</xml>")
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -770,7 +773,7 @@ test "mbtexcel e2e vml drawing roundtrip" {
 
 ///|
 test "mbtexcel e2e form control and slicer" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
     workbook.add_table_with_columns("Sheet1", "A1:B2", "Table1", [
@@ -786,7 +789,7 @@ test "mbtexcel e2e form control and slicer" {
   workbook.add_slicer("Sheet1", slicer_opts)
   inspect(workbook.get_form_controls("Sheet1").length(), content="1")
   inspect(workbook.get_slicers("Sheet1").length(), content="1")
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let archive = @zip.read(bytes)
   let vml_xml = match archive.get("xl/drawings/vmlDrawing1.vml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -802,7 +805,7 @@ test "mbtexcel e2e form control and slicer" {
 
 ///|
 test "mbtexcel e2e delete table and slicer/form control" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let table = workbook.add_table_with_columns("Sheet1", "A1:B2", "TableE2E", [
     "SlicerDel", "B",
@@ -828,7 +831,7 @@ test "mbtexcel e2e delete table and slicer/form control" {
 
 ///|
 test "mbtexcel e2e group and ungroup sheets" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   ignore(workbook.add_sheet("Sheet3"))
@@ -840,7 +843,7 @@ test "mbtexcel e2e group and ungroup sheets" {
   }
   inspect(bad_group is Err(@xlsx.InvalidSheetOperation(_)), content="true")
   workbook.group_sheets(["Sheet2", "Sheet3"])
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let archive = @zip.read(bytes)
   let sheet2_xml = match archive.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -848,7 +851,7 @@ test "mbtexcel e2e group and ungroup sheets" {
   }
   inspect(sheet2_xml.contains("tabSelected=\"1\""), content="true")
   workbook.ungroup_sheets()
-  let bytes2 = write(workbook)
+  let bytes2 = @mbtexcel.write(workbook)
   let archive2 = @zip.read(bytes2)
   let sheet3_xml = match archive2.get("xl/worksheets/sheet3.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -859,18 +862,18 @@ test "mbtexcel e2e group and ungroup sheets" {
 
 ///|
 test "mbtexcel e2e row and col helpers" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_row("Sheet1", 1, ["A", "B", "C"])
   workbook.set_col("Sheet1", 2, ["X", "Y"])
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   debug_inspect(parsed.get_row("Sheet1", 1), content="[\"A\", \"X\", \"C\"]")
   debug_inspect(parsed.get_col("Sheet1", 2), content="[\"X\", \"Y\"]")
 }
 
 ///|
 test "mbtexcel e2e merge cells info and calc" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "10")
   workbook.set_cell("Sheet1", "A2", "5")
@@ -885,13 +888,13 @@ test "mbtexcel e2e merge cells info and calc" {
   let merges_wo = workbook.get_merge_cells_info("Sheet1", without_values=true)
   inspect(merges_wo[0].value, content="")
   inspect(workbook.calc_cell_value("Sheet1", "B1"), content="15")
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   inspect(parsed.calc_cell_value("Sheet1", "B1"), content="15")
 }
 
 ///|
 test "mbtexcel e2e chart and shape via workbook api" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let chart_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -901,7 +904,7 @@ test "mbtexcel e2e chart and shape via workbook api" {
   workbook.add_chart("Sheet1", "C3", chart_xml)
   let shape = @xlsx.Shape::new("A1", "rect", text="Hello")
   workbook.add_shape("Sheet1", shape)
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let archive = @zip.read(bytes)
   let chart = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -918,14 +921,14 @@ test "mbtexcel e2e chart and shape via workbook api" {
 
 ///|
 test "mbtexcel e2e chart sheet roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   let chart_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
     #|  <c:chart/>
     #|</c:chartSpace>
   ignore(workbook.add_chart_sheet("Chart1", chart_xml))
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   let chart = match parsed.chart_sheet("Chart1") {
     Some(value) => value
     None => fail("missing chart sheet")
@@ -936,11 +939,11 @@ test "mbtexcel e2e chart sheet roundtrip" {
 
 ///|
 test "mbtexcel e2e picture via workbook api" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   let img : Bytes = [1, 2, 3, 4]
   workbook.add_picture_from_bytes("Sheet1", "B2", img, ".png")
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let archive = @zip.read(bytes)
   let stored = match archive.get("xl/media/image1.png") {
     Some(value) => value

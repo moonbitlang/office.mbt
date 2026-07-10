@@ -1,12 +1,12 @@
 ///|
 test "conditional formats parsed on read" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opt = ConditionalFormatOptions::new("cell")
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.set_criteria(">")
   opt.set_value("6")
   workbook.set_conditional_format("Sheet1", "A1:A2", [opt])
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let formats = parsed.get_conditional_formats("Sheet1")
   let opts = match formats.get("A1:A2") {
     Some(value) => value

@@ -104,6 +104,6 @@ test "demo pivot slicer: writer output remains consistent after roundtrip" {
   let bytes = @demos.demo_pivot_slicer_bytes()
   assert_demo_pivot_slicer_archive(bytes)
 
-  let roundtrip_bytes = write(read(bytes))
+  let roundtrip_bytes = @mbtexcel.write(@mbtexcel.read(bytes))
   assert_demo_pivot_slicer_archive(roundtrip_bytes)
 }

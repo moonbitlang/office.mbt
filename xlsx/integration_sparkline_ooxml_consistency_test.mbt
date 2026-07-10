@@ -14,7 +14,7 @@ fn count_xml_tag_sparkline(xml : String, tag : String) -> Int {
 
 ///|
 test "integration sparkline ooxml consistency" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Trend Data")
 
   sheet.set_cell_value("B2", Numeric(12.0))
@@ -26,7 +26,7 @@ test "integration sparkline ooxml consistency" {
   sheet.set_cell_value("D3", Numeric(10.0))
   sheet.set_cell_value("E3", Numeric(16.0))
 
-  let options = SparklineOptions::new(["F2", "F3"], ["B2:E2", "B3:E3"])
+  let options = @xlsx.SparklineOptions::new(["F2", "F3"], ["B2:E2", "B3:E3"])
   options.set_type(Column)
   options.set_date_axis(true)
   options.set_markers(true)
@@ -40,7 +40,7 @@ test "integration sparkline ooxml consistency" {
   options.set_high_color("9BBB59")
   sheet.add_sparkline_options(options)
 
-  let archive = @zip.read(write(workbook))
+  let archive = @zip.read(@xlsx.write(workbook))
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing sheet1.xml")

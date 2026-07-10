@@ -50,18 +50,22 @@ fn fuzz_payload(rng : @random.Rand, max : Int) -> Bytes {
 test "property: zip write then read preserves every entry" {
   let rng = fuzz_rng(b"zip-write-read-roundtrip")
   for _round in 0..<400 {
-    let archive = Archive::new()
+    let archive = @zip.Archive::new()
     let expected : Array[(String, Bytes)] = []
     let count = rng.int(limit=8) + 1
     for i in 0..<count {
       // Distinct names (avoid last-write-wins ambiguity within one archive).
       let name = "e\{i}_\{rng.int(limit=100000)}.dat"
       let data = fuzz_payload(rng, 1500)
-      let compression = if rng.boolean() { Compression::Deflate } else { Store }
+      let compression = if rng.boolean() {
+        @zip.Compression::Deflate
+      } else {
+        Store
+      }
       archive.add(name, data, compression~)
       expected.push((name, data))
     }
-    let decoded = read(write(archive))
+    let decoded = @zip.read(@zip.write(archive))
     for pair in expected {
       let (name, data) = pair
       guard decoded.get(name) is Some(got) && got == data else {
@@ -76,11 +80,13 @@ test "property: gzip then gunzip round-trips" {
   let rng = fuzz_rng(b"gzip-roundtrip")
   for _round in 0..<300 {
     let data = fuzz_payload(rng, 3000)
-    guard gunzip(gzip(data)) == data else { fail("gzip round-trip mismatch") }
+    guard @zip.gunzip(@zip.gzip(data)) == data else {
+      fail("gzip round-trip mismatch")
+    }
   }
   // Explicit small-size edges.
-  guard gunzip(gzip(b"")) == b"" else { fail("gzip empty") }
-  guard gunzip(gzip(b"a")) == b"a" else { fail("gzip single byte") }
+  guard @zip.gunzip(@zip.gzip(b"")) == b"" else { fail("gzip empty") }
+  guard @zip.gunzip(@zip.gzip(b"a")) == b"a" else { fail("gzip single byte") }
 }
 
 // ---- Fuzz: readers tolerate arbitrary input --------------------------------
@@ -89,7 +95,7 @@ test "property: gzip then gunzip round-trips" {
 /// Run `f` and swallow any `ZipError`. A malformed input must resolve to a
 /// typed error (or a value); if `f` instead aborts/panics the test process
 /// dies, which is exactly the failure we want surfaced.
-fn expect_no_crash(f : () -> Unit raise ZipError) -> Unit {
+fn expect_no_crash(f : () -> Unit raise @zip.ZipError) -> Unit {
   f() catch {
     _ => ()
   }
@@ -100,7 +106,7 @@ test "fuzz: read tolerates arbitrary bytes" {
   let rng = fuzz_rng(b"read-arbitrary")
   for _iter in 0..<15000 {
     let bytes = fuzz_random_bytes(rng, rng.int(limit=300))
-    expect_no_crash(() => read(bytes) |> ignore)
+    expect_no_crash(() => @zip.read(bytes) |> ignore)
   }
 }
 
@@ -115,31 +121,31 @@ test "fuzz: read tolerates corrupted valid archives" {
   // >4GB inputs, which is impractical to materialize in a unit test.)
   let bases = [
     {
-      let a = Archive::new()
+      let a = @zip.Archive::new()
       a.add("hello.txt", @encoding/utf8.encode("hello, world"))
       a.add(
         "data/blob.bin",
         Bytes::from_array(Array::makei(400, fn(i) { (i % 251).to_byte() })),
         compression=Deflate,
       )
-      write(a)
+      @zip.write(a)
     },
     {
-      let a = Archive::new()
+      let a = @zip.Archive::new()
       a.add(
         "stream.txt",
         @encoding/utf8.encode("data descriptor payload, streamed"),
         compression=Deflate,
         data_descriptor=true,
       )
-      write(a)
+      @zip.write(a)
     },
     {
-      let a = Archive::new()
+      let a = @zip.Archive::new()
       for i in 0..<12 {
         a.add("dir/f\{i}.txt", @encoding/utf8.encode("entry number \{i}"))
       }
-      write(a)
+      @zip.write(a)
     },
   ]
   let base_arrays = bases.map(fn(b) { b.to_array() })
@@ -150,7 +156,7 @@ test "fuzz: read tolerates corrupted valid archives" {
       arr[rng.int(limit=arr.length())] = rng.int(limit=256).to_byte()
     }
     let corrupted = Bytes::from_array(arr)
-    expect_no_crash(() => read(corrupted) |> ignore)
+    expect_no_crash(() => @zip.read(corrupted) |> ignore)
   }
 }
 
@@ -159,6 +165,6 @@ test "fuzz: gunzip tolerates arbitrary bytes" {
   let rng = fuzz_rng(b"gunzip-arbitrary")
   for _iter in 0..<10000 {
     let bytes = fuzz_random_bytes(rng, rng.int(limit=300))
-    expect_no_crash(() => gunzip(bytes) |> ignore)
+    expect_no_crash(() => @zip.gunzip(bytes) |> ignore)
   }
 }

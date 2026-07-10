@@ -1,7 +1,7 @@
 ///|
 #cfg(target="native")
 async test "mbtexcel mutation-heavy workbook remains OpenXML-valid" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Data"))
 
@@ -52,8 +52,8 @@ async test "mbtexcel mutation-heavy workbook remains OpenXML-valid" {
   workbook.set_cell("Data", "A1", "ref")
   workbook.set_defined_name(@xlsx.DefinedName::new("MutRef", "Data!$A$1"))
 
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @mbtexcel.write(workbook)
+  let parsed = @mbtexcel.read(bytes)
   debug_inspect(parsed.get_cell("Data", "A1"), content="Some(\"ref\")")
 
   let stamp = @env.now()

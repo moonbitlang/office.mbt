@@ -1,8 +1,8 @@
 ///|
 test "x14 conditional formatting invalid extLst rejects read" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -33,12 +33,12 @@ test "x14 conditional formatting invalid extLst rejects read" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {
+  let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(updated_bytes)) catch {
     e => Err(e)
   }
   match result {
     Ok(_) => fail("expected invalid xml error")
-    Err(XlsxError::InvalidXml(_)) => ()
+    Err(@xlsx.XlsxError::InvalidXml(_)) => ()
     Err(err) => fail("unexpected error: \{err}")
   }
 }

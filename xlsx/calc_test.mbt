@@ -1,6 +1,6 @@
 ///|
 test "calc basic operators" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(4.0))
@@ -31,7 +31,7 @@ test "calc basic operators" {
 
 ///|
 test "calc basic functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(4.0))
@@ -53,7 +53,7 @@ test "calc basic functions" {
 
 ///|
 test "calc product and sumproduct functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -98,7 +98,7 @@ test "calc product and sumproduct functions" {
 
 ///|
 test "calc sumsq and sumx functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -143,7 +143,7 @@ test "calc sumsq and sumx functions" {
 
 ///|
 test "calc mod and quotient functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "MOD(6,4)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="2")
@@ -177,7 +177,7 @@ test "calc mod and quotient functions" {
 
 ///|
 test "calc even odd and mround functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "EVEN(23)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="24")
@@ -247,7 +247,7 @@ test "calc even odd and mround functions" {
 
 ///|
 test "calc matrix functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(4.0))
@@ -296,7 +296,7 @@ test "calc matrix functions" {
 
 ///|
 test "calc stdev functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "STDEV(1,2,3)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1")
@@ -312,7 +312,7 @@ test "calc stdev functions" {
 
 ///|
 test "calc var functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -344,7 +344,7 @@ test "calc var functions" {
 
 ///|
 test "calc weibull functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "WEIBULL(1,3,1,FALSE)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1.10363832351433")
@@ -358,7 +358,7 @@ test "calc weibull functions" {
 
 ///|
 test "calc trimmean functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(4.0))
@@ -374,7 +374,7 @@ test "calc trimmean functions" {
 
 ///|
 test "calc beta functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BETA.DIST(0.4,4,5,TRUE,0,1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0.4059136")
@@ -420,7 +420,7 @@ test "calc beta functions" {
 
 ///|
 test "calc t distribution functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "T.DIST(1,10,TRUE)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0.82955343384897")
@@ -466,7 +466,7 @@ test "calc t distribution functions" {
 
 ///|
 test "calc chi-square functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "CHIDIST(0.5,3)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0.918891411654676")
@@ -591,7 +591,7 @@ test "calc chi-square functions" {
 
 ///|
 test "calc chi-square test functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("B3", Numeric(33.0))
   sheet.set_cell_value("C3", Numeric(39.0))
@@ -667,7 +667,7 @@ test "calc chi-square test functions" {
 
 ///|
 test "calc f distribution functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "FDIST(5,1,2)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0.154845745271483")
@@ -700,7 +700,7 @@ test "calc f distribution functions" {
 
 ///|
 test "calc f test functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A2", Numeric(3.5))
   sheet.set_cell_value("B2", Numeric(9.2))
@@ -730,7 +730,7 @@ test "calc f test functions" {
 
 ///|
 test "calc gcd and lcm functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "GCD(0)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0")
@@ -786,7 +786,7 @@ test "calc gcd and lcm functions" {
 
 ///|
 test "calc combin and combina functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "COMBIN(6,1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="6")
@@ -842,7 +842,7 @@ test "calc combin and combina functions" {
 
 ///|
 test "calc factorial and multinomial functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "FACT(3)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="6")
@@ -884,7 +884,7 @@ test "calc factorial and multinomial functions" {
 
 ///|
 test "calc decimal function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "_xlfn.DECIMAL(\"1100\",2)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="12")
@@ -906,7 +906,7 @@ test "calc decimal function" {
 
 ///|
 test "calc roman function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "ROMAN(499,0)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="CDXCIX")
@@ -940,7 +940,7 @@ test "calc roman function" {
 
 ///|
 test "calc base function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BASE(12,2)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1100")
@@ -966,7 +966,7 @@ test "calc base function" {
 
 ///|
 test "calc base conversion functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BIN2DEC(\"10\")")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="2")
@@ -1102,7 +1102,7 @@ test "calc base conversion functions" {
 
 ///|
 test "calc unit conversion functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "CONVERT(20.2,\"m\",\"yd\")")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="22.0909886264217")
@@ -1184,7 +1184,7 @@ test "calc unit conversion functions" {
 
 ///|
 test "calc base conversion error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BIN2DEC()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -1322,7 +1322,7 @@ test "calc base conversion error functions" {
 
 ///|
 test "calc unit conversion error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "CONVERT()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -1356,7 +1356,7 @@ test "calc unit conversion error functions" {
 
 ///|
 test "calc char clean code unicode choose functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "CHAR(65)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="A")
@@ -1412,7 +1412,7 @@ test "calc char clean code unicode choose functions" {
 
 ///|
 test "calc char clean code unicode choose error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "CHAR()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -1454,7 +1454,7 @@ test "calc char clean code unicode choose error functions" {
 
 ///|
 test "calc bahttext function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BAHTTEXT(-1.1)")
   inspect(
@@ -1570,7 +1570,7 @@ test "calc bahttext function" {
 
 ///|
 test "calc bahttext error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BAHTTEXT()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -1580,7 +1580,7 @@ test "calc bahttext error functions" {
 
 ///|
 test "calc bessel functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BESSELI(4.5,1)")
   inspect(
@@ -1683,7 +1683,7 @@ test "calc bessel functions" {
 
 ///|
 test "calc bessel error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BESSELI()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -1721,7 +1721,7 @@ test "calc bessel error functions" {
 
 ///|
 test "calc delta erf erfc gestep functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "DELTA(5,4)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0")
@@ -1794,7 +1794,7 @@ test "calc delta erf erfc gestep functions" {
 
 ///|
 test "calc delta erf erfc gestep error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "DELTA()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -1836,7 +1836,7 @@ test "calc delta erf erfc gestep error functions" {
 
 ///|
 test "calc arabic function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "_xlfn.ARABIC(\"IV\")")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="4")
@@ -1857,7 +1857,7 @@ test "calc arabic function" {
 
 ///|
 test "calc bitwise functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BITAND(13,14)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="12")
@@ -1909,7 +1909,7 @@ test "calc bitwise functions" {
 
 ///|
 test "calc bitwise function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BITAND()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -1985,7 +1985,7 @@ test "calc bitwise function errors" {
 
 ///|
 test "calc trig functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "ACOS(-1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="3.141592653589793")
@@ -2260,7 +2260,7 @@ test "calc trig functions" {
 
 ///|
 test "calc trig function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "ACOS()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -2364,7 +2364,7 @@ test "calc trig function errors" {
 
 ///|
 test "calc permutation functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "PERMUT(6,6)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="720")
@@ -2398,7 +2398,7 @@ test "calc permutation functions" {
 
 ///|
 test "calc floor and iso ceiling functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "FLOOR(26.75,0.5)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="26.5")
@@ -2494,7 +2494,7 @@ test "calc floor and iso ceiling functions" {
 
 ///|
 test "calc ceiling functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "CEILING(22.25,0.1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="22.3")
@@ -2590,7 +2590,7 @@ test "calc ceiling functions" {
 
 ///|
 test "calc log and ln functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "LN(1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0")
@@ -2664,7 +2664,7 @@ test "calc log and ln functions" {
 
 ///|
 test "calc exp radians degrees pi sqrtpi functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "DEGREES(1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="57.29577951308232")
@@ -2749,7 +2749,7 @@ test "calc exp radians degrees pi sqrtpi functions" {
 
 ///|
 test "calc random functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "RAND()")
   let rand_text = workbook.calc_cell_value("Sheet1", "A1")
@@ -2784,7 +2784,7 @@ test "calc random functions" {
 
 ///|
 test "calc string coercion" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "SUM(\"1\",\"2\")")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="3")
@@ -2796,7 +2796,7 @@ test "calc string coercion" {
 
 ///|
 test "calc math and text functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "ABS(-6.5)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="6.5")
@@ -3001,7 +3001,7 @@ test "calc math and text functions" {
 
 ///|
 test "calc text b error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "LEFTB(\"\",-1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -3021,8 +3021,8 @@ test "calc text b error functions" {
 
 ///|
 test "calc dbcs locale functions" {
-  let workbook = Workbook::new()
-  let props = CoreProperties::with_values(language="zh-cn")
+  let workbook = @xlsx.Workbook::new()
+  let props = @xlsx.CoreProperties::with_values(language="zh-cn")
   workbook.set_core_properties(props)
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "DBCS(\"ABC 123\")")
@@ -3036,7 +3036,7 @@ test "calc dbcs locale functions" {
 
 ///|
 test "calc textsplit functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula(
     "A1", "TEXTJOIN(\",\",TRUE(),TEXTSPLIT(\"a,b,c\",\",\"))",
@@ -3062,7 +3062,7 @@ test "calc textsplit functions" {
 
 ///|
 test "calc textsplit error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "TEXTSPLIT()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -3074,7 +3074,7 @@ test "calc textsplit error functions" {
 
 ///|
 test "calc unique functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("Jan"))
   sheet.set_cell_value("A2", String("Feb"))
@@ -3113,7 +3113,7 @@ test "calc unique functions" {
 
 ///|
 test "calc unique error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("B1", String("A"))
   sheet.set_cell_value("B2", String("B"))
@@ -3129,7 +3129,7 @@ test "calc unique error functions" {
 
 ///|
 test "calc sequence functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "TEXTJOIN(\",\",TRUE(),SEQUENCE(3))")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1,2,3")
@@ -3143,7 +3143,7 @@ test "calc sequence functions" {
 
 ///|
 test "calc sequence error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "SEQUENCE()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -3155,7 +3155,7 @@ test "calc sequence error functions" {
 
 ///|
 test "calc sort functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(3.0))
   sheet.set_cell_value("B1", Numeric(20.0))
@@ -3179,7 +3179,7 @@ test "calc sort functions" {
 
 ///|
 test "calc sort error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -3191,7 +3191,7 @@ test "calc sort error functions" {
 
 ///|
 test "calc sortby functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("A"))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -3211,7 +3211,7 @@ test "calc sortby functions" {
 
 ///|
 test "calc sortby error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -3235,7 +3235,7 @@ test "calc sortby error functions" {
 
 ///|
 test "calc take functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let mut value = 1.0
   for row in 1..<=3 {
@@ -3254,7 +3254,7 @@ test "calc take functions" {
 
 ///|
 test "calc take error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -3267,7 +3267,7 @@ test "calc take error functions" {
 
 ///|
 test "calc drop functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let mut value = 1.0
   for row in 1..<=3 {
@@ -3286,7 +3286,7 @@ test "calc drop functions" {
 
 ///|
 test "calc drop error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -3299,7 +3299,7 @@ test "calc drop error functions" {
 
 ///|
 test "calc tocol torow functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(3.0))
@@ -3317,7 +3317,7 @@ test "calc tocol torow functions" {
 
 ///|
 test "calc tocol torow error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(3.0))
@@ -3338,7 +3338,7 @@ test "calc tocol torow error functions" {
 
 ///|
 test "calc choosecols chooserows functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let mut value = 1.0
   for row in 1..<=3 {
@@ -3359,7 +3359,7 @@ test "calc choosecols chooserows functions" {
 
 ///|
 test "calc choosecols chooserows error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -3375,7 +3375,7 @@ test "calc choosecols chooserows error functions" {
 
 ///|
 test "calc stack functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -3396,7 +3396,7 @@ test "calc stack functions" {
 
 ///|
 test "calc stack error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "HSTACK()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -3406,7 +3406,7 @@ test "calc stack error functions" {
 
 ///|
 test "calc expand functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -3420,7 +3420,7 @@ test "calc expand functions" {
 
 ///|
 test "calc expand error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -3432,7 +3432,7 @@ test "calc expand error functions" {
 
 ///|
 test "calc wrap functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -3449,7 +3449,7 @@ test "calc wrap functions" {
 
 ///|
 test "calc wrap error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -3463,7 +3463,7 @@ test "calc wrap error functions" {
 
 ///|
 test "calc filter functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -3488,7 +3488,7 @@ test "calc filter functions" {
 
 ///|
 test "calc filter error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -3504,7 +3504,7 @@ test "calc filter error functions" {
 
 ///|
 test "calc randarray functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "TEXTJOIN(\",\",TRUE(),RANDARRAY(2,3,5,5,TRUE))")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="5,5,5,5,5,5")
@@ -3514,7 +3514,7 @@ test "calc randarray functions" {
 
 ///|
 test "calc randarray error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "RANDARRAY(0,1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -3526,7 +3526,7 @@ test "calc randarray error functions" {
 
 ///|
 test "calc row and column functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("B2", "ROW()")
   inspect(workbook.calc_cell_value("Sheet1", "B2"), content="2")
@@ -3554,7 +3554,7 @@ test "calc row and column functions" {
 
 ///|
 test "calc date and time functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "TEXT(DATE(2020,1,2),\"m/d/yy\")")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1/2/20")
@@ -3664,7 +3664,7 @@ test "calc date and time functions" {
 
 ///|
 test "calc lookup functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -3792,7 +3792,7 @@ test "calc lookup functions" {
 
 ///|
 test "calc a functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "AVERAGEA(TRUE(),FALSE(),2)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1")
@@ -3814,7 +3814,7 @@ test "calc a functions" {
 
 ///|
 test "calc median function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "MEDIAN(1,2,3)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="2")
@@ -3830,7 +3830,7 @@ test "calc median function" {
 
 ///|
 test "calc counta function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", String("text"))
@@ -3847,7 +3847,7 @@ test "calc counta function" {
 
 ///|
 test "calc error functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "IFERROR(1/0,2)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="2")
@@ -3863,7 +3863,7 @@ test "calc error functions" {
 
 ///|
 test "calc matrix function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -3897,7 +3897,7 @@ test "calc matrix function errors" {
 
 ///|
 test "calc stdev function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "STDEV()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -3919,7 +3919,7 @@ test "calc stdev function errors" {
 
 ///|
 test "calc var function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "VAR()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -3941,7 +3941,7 @@ test "calc var function errors" {
 
 ///|
 test "calc weibull function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "WEIBULL()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -3963,7 +3963,7 @@ test "calc weibull function errors" {
 
 ///|
 test "calc trimmean function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "TRIMMEAN()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -3977,7 +3977,7 @@ test "calc trimmean function errors" {
 
 ///|
 test "calc beta function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BETA.DIST()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -4033,7 +4033,7 @@ test "calc beta function errors" {
 
 ///|
 test "calc betainv function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "BETAINV()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -4087,7 +4087,7 @@ test "calc betainv function errors" {
 
 ///|
 test "calc t distribution function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "T.DIST()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -4171,7 +4171,7 @@ test "calc t distribution function errors" {
 
 ///|
 test "calc chi-square function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "CHIDIST()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -4239,7 +4239,7 @@ test "calc chi-square function errors" {
 
 ///|
 test "calc f distribution function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "FDIST()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
@@ -4329,7 +4329,7 @@ test "calc f distribution function errors" {
 
 ///|
 test "calc f test function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A2", Numeric(3.5))
   sheet.set_cell_value("B2", Numeric(9.2))
@@ -4361,7 +4361,7 @@ test "calc f test function errors" {
 
 ///|
 test "calc ifs function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_formula("B1", "IFS(A1>1,\"big\",A1=1,\"one\")")
@@ -4376,7 +4376,7 @@ test "calc ifs function" {
 
 ///|
 test "calc is functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", String("text"))
@@ -4419,7 +4419,7 @@ test "calc is functions" {
 
 ///|
 test "calc iseven isodd and n functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "ISEVEN(2)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="TRUE")
@@ -4457,7 +4457,7 @@ test "calc iseven isodd and n functions" {
 
 ///|
 test "calc ref functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let other = workbook.add_sheet("Other")
   sheet.set_cell_value("A1", Numeric(1.0))
@@ -4481,7 +4481,7 @@ test "calc ref functions" {
 
 ///|
 test "calc error type function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("B1", Error("#NULL!"))
   sheet.set_cell_value("B2", Error("#SPILL!"))
@@ -4499,7 +4499,7 @@ test "calc error type function" {
 
 ///|
 test "calc na function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "NA()")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#N/A")
@@ -4509,7 +4509,7 @@ test "calc na function" {
 
 ///|
 test "calc sheet functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet1 = workbook.add_sheet("Sheet1")
   let sheet2 = workbook.add_sheet("Sheet2")
   sheet1.set_cell_formula("A1", "SHEET()")
@@ -4534,7 +4534,7 @@ test "calc sheet functions" {
 
 ///|
 test "calc type and t functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "TYPE(1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1")
@@ -4556,7 +4556,7 @@ test "calc type and t functions" {
 
 ///|
 test "calc criteria functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -4616,7 +4616,9 @@ test "calc criteria functions" {
 }
 
 ///|
-fn set_calc_database_base_data(sheet : Worksheet) -> Unit raise XlsxError {
+fn set_calc_database_base_data(
+  sheet : @xlsx.Worksheet,
+) -> Unit raise @xlsx.XlsxError {
   sheet.set_cell_value("A1", String("Tree"))
   sheet.set_cell_value("B1", String("Height"))
   sheet.set_cell_value("C1", String("Age"))
@@ -4735,7 +4737,7 @@ fn calc_database_error_checks() -> Array[(String, String)] {
 
 ///|
 test "calc database functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_calc_database_base_data(sheet)
   let checks = calc_database_checks()
@@ -4754,7 +4756,7 @@ test "calc database functions" {
 
 ///|
 test "calc quoted sheet refs" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let main = workbook.add_sheet("Main")
   let spaced = workbook.add_sheet("My Sheet")
   let apostrophe = workbook.add_sheet("O'Brien")
@@ -4771,7 +4773,7 @@ test "calc quoted sheet refs" {
 
 ///|
 test "calc basic formula refs" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -4798,16 +4800,20 @@ test "calc basic formula refs" {
 
 ///|
 test "calc defined name functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("A1_as_string"))
   sheet.set_cell_value("B1", String("B1_as_string"))
   sheet.set_cell_value("C1", Numeric(123.0))
-  workbook.set_defined_name(DefinedName::new("defined_name1", "Sheet1!A1"))
   workbook.set_defined_name(
-    DefinedName::new("defined_name1", "Sheet1!B1", scope="Sheet1"),
+    @xlsx.DefinedName::new("defined_name1", "Sheet1!A1"),
   )
-  workbook.set_defined_name(DefinedName::new("defined_name2", "Sheet1!C1"))
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new("defined_name1", "Sheet1!B1", scope="Sheet1"),
+  )
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new("defined_name2", "Sheet1!C1"),
+  )
   sheet.set_cell_formula("D1", "defined_name1")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="B1_as_string")
   sheet.set_cell_formula("D1", "CONCATENATE(\"<\",defined_name1,\">\")")
@@ -4824,7 +4830,7 @@ test "calc defined name functions" {
 
 ///|
 test "calc array formula multiplication" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -4833,7 +4839,9 @@ test "calc array formula multiplication" {
   sheet.set_cell_formula("C1", "A1:A2*B1:B2")
   inspect(workbook.calc_cell_value("Sheet1", "C1"), content="2")
   inspect(workbook.calc_cell_value("Sheet1", "C2"), content="12")
-  workbook.set_defined_name(DefinedName::new("matrix", "Sheet1!$A$1:$A$2"))
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new("matrix", "Sheet1!$A$1:$A$2"),
+  )
   sheet.set_cell_formula("D1", "matrix*B1:B2+\"1\"")
   inspect(workbook.calc_cell_value("Sheet1", "D1"), content="3")
   inspect(workbook.calc_cell_value("Sheet1", "D2"), content="13")
@@ -4841,7 +4849,7 @@ test "calc array formula multiplication" {
 
 ///|
 test "calc spill array functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -4864,7 +4872,7 @@ test "calc spill array functions" {
 
 ///|
 test "calc spill dynamic array shapes" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(3.0))
   sheet.set_cell_value("A2", Numeric(1.0))
@@ -4903,7 +4911,7 @@ test "calc spill dynamic array shapes" {
 
 ///|
 test "calc spill matrix and textsplit" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -4935,7 +4943,7 @@ test "calc spill matrix and textsplit" {
 
 ///|
 test "calc xlfn dynamic array functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(3.0))
   sheet.set_cell_value("A2", Numeric(1.0))
@@ -4961,7 +4969,7 @@ test "calc xlfn dynamic array functions" {
 
 ///|
 test "calc spill frequency and trend" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -4987,7 +4995,7 @@ test "calc spill frequency and trend" {
 
 ///|
 test "calc row and column range formulas" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let col_sheet = workbook.add_sheet("Cols")
   col_sheet.set_cell_value("A1", Numeric(1.0))
   col_sheet.set_cell_value("B1", Numeric(2.0))
@@ -5010,7 +5018,7 @@ test "calc row and column range formulas" {
 
 ///|
 test "calc financial functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -5053,7 +5061,7 @@ test "calc financial functions" {
 
 ///|
 test "calc amortization and euroconvert functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("AMORDEGRC(150,\"01/01/2015\",\"09/30/2015\",20,1,20%)", "42"),
@@ -5084,7 +5092,7 @@ test "calc amortization and euroconvert functions" {
 
 ///|
 test "calc dollar functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("DOLLAR(1234.56)", "$1,234.56"),
@@ -5109,7 +5117,7 @@ test "calc dollar functions" {
 
 ///|
 test "calc rate conversion functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("EFFECT(0.1,4)", "0.103812890625"),
@@ -5128,7 +5136,7 @@ test "calc rate conversion functions" {
 
 ///|
 test "calc received function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula(
     "A1", "RECEIVED(\"04/01/2011\",\"03/31/2016\",1000,4.5%)",
@@ -5150,7 +5158,7 @@ test "calc received function" {
 
 ///|
 test "calc loan functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("NPER(0.04,-6000,50000)", "10.3380350715077"),
@@ -5176,7 +5184,7 @@ test "calc loan functions" {
 
 ///|
 test "calc depreciation functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("SLN(10000,1000,5)", "1800"),
@@ -5193,7 +5201,7 @@ test "calc depreciation functions" {
 
 ///|
 test "calc bond functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     (
@@ -5329,7 +5337,7 @@ test "calc bond functions" {
 
 ///|
 test "calc irr and mirr functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let irr_values : Array[Double] = [-1.0, 0.2, 0.24, 0.288, 0.3456, 0.4147]
   for idx, value in irr_values {
@@ -5359,7 +5367,7 @@ test "calc irr and mirr functions" {
 
 ///|
 test "calc xirr and xnpv functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let xirr_values : Array[Double] = [
     -100.0, 20.0, 40.0, 25.0, 8.0, 15.0, -1.0e-10,
@@ -5406,7 +5414,7 @@ test "calc xirr and xnpv functions" {
 
 ///|
 test "calc financial function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("FV()", "#VALUE!"),
@@ -5484,7 +5492,7 @@ test "calc financial function errors" {
 
 ///|
 test "calc dollar function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("DOLLAR()", "#VALUE!"),
@@ -5513,7 +5521,7 @@ test "calc dollar function errors" {
 
 ///|
 test "calc rate conversion errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("EFFECT()", "#VALUE!"),
@@ -5547,7 +5555,7 @@ test "calc rate conversion errors" {
 
 ///|
 test "calc loan function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("NPER()", "#VALUE!"),
@@ -5605,7 +5613,7 @@ test "calc loan function errors" {
 
 ///|
 test "calc depreciation errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("SLN()", "#VALUE!"),
@@ -5627,7 +5635,7 @@ test "calc depreciation errors" {
 
 ///|
 test "calc bond function errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("ACCRINT()", "#VALUE!"),
@@ -5699,7 +5707,7 @@ test "calc bond function errors" {
 
 ///|
 test "calc irr and mirr errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let irr_values : Array[Double] = [-1.0, 0.2, 0.24, 0.288, 0.3456, 0.4147]
   for idx, value in irr_values {
@@ -5731,7 +5739,7 @@ test "calc irr and mirr errors" {
 
 ///|
 test "calc xirr errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let xirr_values : Array[Double] = [
     -100.0, 20.0, 40.0, 25.0, 8.0, 15.0, -1.0e-10,
@@ -5766,7 +5774,7 @@ test "calc xirr errors" {
 
 ///|
 test "calc xnpv errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("B1", Numeric(0.05))
   sheet.set_cell_value("A2", Numeric(42370.0))
@@ -5804,7 +5812,7 @@ test "calc xnpv errors" {
 
 ///|
 test "calc growth and trend functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("known_x's"))
   sheet.set_cell_value("B1", String("known_y's"))
@@ -5965,7 +5973,7 @@ fn assert_complex_result(actual : String, expected : String) -> Unit raise {
 
 ///|
 test "calc complex functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -6087,7 +6095,7 @@ test "calc complex functions" {
 
 ///|
 test "calc complex errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(2.0))
@@ -6170,7 +6178,7 @@ test "calc complex errors" {
 }
 
 ///|
-fn set_calc_base_data(sheet : Worksheet) -> Unit raise XlsxError {
+fn set_calc_base_data(sheet : @xlsx.Worksheet) -> Unit raise @xlsx.XlsxError {
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(4.0))
   sheet.set_cell_value("D1", String("Month"))
@@ -6208,7 +6216,7 @@ fn set_calc_base_data(sheet : Worksheet) -> Unit raise XlsxError {
 
 ///|
 test "calc series and sign functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -6236,7 +6244,7 @@ test "calc series and sign functions" {
 
 ///|
 test "calc series and sign errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_calc_base_data(sheet)
   let cases : Array[(String, String)] = [
@@ -6258,7 +6266,7 @@ test "calc series and sign errors" {
 
 ///|
 test "calc stats functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_calc_base_data(sheet)
   let cases : Array[(String, String)] = [
@@ -6337,7 +6345,7 @@ test "calc stats functions" {
 
 ///|
 test "calc stats errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_calc_base_data(sheet)
   let cases : Array[(String, String)] = [
@@ -6448,7 +6456,7 @@ test "calc stats errors" {
 
 ///|
 test "calc mode functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let col_a : Array[Double] = [1, 1, 2, 2, 3, 3, 3, 4, 4, 4]
   for i in 0..<col_a.length() {
@@ -6477,7 +6485,7 @@ test "calc mode functions" {
 
 ///|
 test "calc spill mode.mult" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let values : Array[Double] = [1, 1, 2, 2, 3]
   for i in 0..<values.length() {
@@ -6491,7 +6499,7 @@ test "calc spill mode.mult" {
 
 ///|
 test "calc spill indirect and anchorarray" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -6509,7 +6517,7 @@ test "calc spill indirect and anchorarray" {
 
 ///|
 test "calc dynamic array range shapes" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "CHOOSECOLS(SEQUENCE(2,3),1)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="1")
@@ -6524,7 +6532,7 @@ test "calc dynamic array range shapes" {
 
 ///|
 test "calc mode errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(1.0))
@@ -6550,7 +6558,7 @@ test "calc mode errors" {
 
 ///|
 test "calc covar functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("array1"))
   sheet.set_cell_value("B1", String("array2"))
@@ -6602,7 +6610,7 @@ test "calc covar functions" {
 
 ///|
 test "calc pearson functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("x"))
   sheet.set_cell_value("B1", String("y"))
@@ -6641,7 +6649,7 @@ test "calc pearson functions" {
 
 ///|
 test "calc rsq functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("known_y's"))
   sheet.set_cell_value("B1", String("known_x's"))
@@ -6667,7 +6675,7 @@ test "calc rsq functions" {
 
 ///|
 test "calc slope functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("known_x's"))
   sheet.set_cell_value("B1", String("known_y's"))
@@ -6691,7 +6699,7 @@ test "calc slope functions" {
 
 ///|
 test "calc steyx functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("known_x's"))
   sheet.set_cell_value("B1", String("known_y's"))
@@ -6729,7 +6737,7 @@ test "calc steyx functions" {
 
 ///|
 test "calc hyperlink and encodeurl functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula(
     "A1", "HYPERLINK(\"https://example.com\", \"Example\")",
@@ -6763,7 +6771,7 @@ test "calc hyperlink and encodeurl functions" {
 
 ///|
 test "calc formulatext function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "SUM(1,2)")
   sheet.set_cell_value("A2", Numeric(5.0))
@@ -6779,7 +6787,7 @@ test "calc formulatext function" {
 
 ///|
 test "calc anchorarray function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A2", Numeric(2.0))
@@ -6798,7 +6806,7 @@ test "calc anchorarray function" {
 
 ///|
 test "calc subtotal and frequency functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let data : Array[Double] = [1.0, 2.0, 2.0, 3.0]
   for i in 0..<data.length() {
@@ -6854,7 +6862,7 @@ test "calc subtotal and frequency functions" {
 
 ///|
 test "calc fisher functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "FISHER(0.5)")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="0.549306144334055")
@@ -6868,7 +6876,7 @@ test "calc fisher functions" {
 
 ///|
 test "calc normal and lognormal distribution functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("GAUSS(-5)", "-0.499999713348562"),
@@ -6927,7 +6935,7 @@ test "calc normal and lognormal distribution functions" {
 
 ///|
 test "calc poisson and exponential distribution functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("POISSON.DIST(20,25,FALSE)", "0.0519174686084913"),
@@ -6967,7 +6975,7 @@ test "calc poisson and exponential distribution functions" {
 
 ///|
 test "calc negbinom distribution functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("NEGBINOM.DIST(6,12,0.5,FALSE)", "0.047210693359375"),
@@ -7004,7 +7012,7 @@ test "calc negbinom distribution functions" {
 
 ///|
 test "calc binomial distribution functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("BINOMDIST(10,100,0.5,FALSE)", "1.36554263874631e-17"),
@@ -7072,7 +7080,7 @@ test "calc binomial distribution functions" {
 
 ///|
 test "calc binomial inverse functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("BINOM.INV(0,0.5,0.75)", "0"),
@@ -7128,7 +7136,7 @@ test "calc binomial inverse functions" {
 
 ///|
 test "calc hypergeometric distribution functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("HYPGEOM.DIST(0,3,3,9,TRUE)", "0.238095238095238"),
@@ -7189,7 +7197,7 @@ test "calc hypergeometric distribution functions" {
 
 ///|
 test "calc confidence functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("CONFIDENCE(0.05,0.07,100)", "0.0137197479028414"),
@@ -7239,7 +7247,7 @@ test "calc confidence functions" {
 
 ///|
 test "calc gamma functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("GAMMA(0.1)", "9.51350769866873"),
@@ -7319,7 +7327,7 @@ test "calc gamma functions" {
 }
 
 ///|
-fn set_ttest_base_data(sheet : Worksheet) -> Unit raise XlsxError {
+fn set_ttest_base_data(sheet : @xlsx.Worksheet) -> Unit raise @xlsx.XlsxError {
   let col_a : Array[Double] = [
     4.0, 5.0, 2.0, 5.0, 8.0, 9.0, 3.0, 2.0, 3.0, 8.0, 9.0, 5.0,
   ]
@@ -7339,7 +7347,7 @@ fn set_ttest_base_data(sheet : Worksheet) -> Unit raise XlsxError {
 
 ///|
 test "calc ttest functions (part 1)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   let cases : Array[(String, String)] = [
@@ -7360,7 +7368,7 @@ test "calc ttest functions (part 1)" {
 
 ///|
 test "calc ttest functions (part 2)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   let cases : Array[(String, String)] = [
@@ -7381,7 +7389,7 @@ test "calc ttest functions (part 2)" {
 
 ///|
 test "calc ttest errors (TTEST) bad args" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   let error_cases : Array[(String, String)] = [
@@ -7403,7 +7411,7 @@ test "calc ttest errors (TTEST) bad args" {
 
 ///|
 test "calc ttest errors (TTEST) range mismatch" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "TTEST(A1:A2,B1:B1,1,1)")
@@ -7412,7 +7420,7 @@ test "calc ttest errors (TTEST) range mismatch" {
 
 ///|
 test "calc ttest errors (TTEST) empty ranges" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "TTEST(A13:A14,B13:B14,1,1)")
@@ -7421,7 +7429,7 @@ test "calc ttest errors (TTEST) empty ranges" {
 
 ///|
 test "calc ttest errors (TTEST) div0" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "TTEST(A12:A13,B12:B13,1,1)")
@@ -7430,7 +7438,7 @@ test "calc ttest errors (TTEST) div0" {
 
 ///|
 test "calc ttest errors (TTEST) empty ranges (tails=2)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "TTEST(A13:A14,B13:B14,1,2)")
@@ -7439,7 +7447,7 @@ test "calc ttest errors (TTEST) empty ranges (tails=2)" {
 
 ///|
 test "calc ttest errors (TTEST) unequal variance df" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "TTEST(D1:D4,E1:E4,1,3)")
@@ -7448,7 +7456,7 @@ test "calc ttest errors (TTEST) unequal variance df" {
 
 ///|
 test "calc ttest errors (T.TEST) bad args" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   let error_cases : Array[(String, String)] = [
@@ -7470,7 +7478,7 @@ test "calc ttest errors (T.TEST) bad args" {
 
 ///|
 test "calc ttest errors (T.TEST) range mismatch" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "T.TEST(A1:A2,B1:B1,1,1)")
@@ -7479,7 +7487,7 @@ test "calc ttest errors (T.TEST) range mismatch" {
 
 ///|
 test "calc ttest errors (T.TEST) empty ranges" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "T.TEST(A13:A14,B13:B14,1,1)")
@@ -7488,7 +7496,7 @@ test "calc ttest errors (T.TEST) empty ranges" {
 
 ///|
 test "calc ttest errors (T.TEST) div0" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "T.TEST(A12:A13,B12:B13,1,1)")
@@ -7497,7 +7505,7 @@ test "calc ttest errors (T.TEST) div0" {
 
 ///|
 test "calc ttest errors (T.TEST) empty ranges (tails=2)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "T.TEST(A13:A14,B13:B14,1,2)")
@@ -7506,7 +7514,7 @@ test "calc ttest errors (T.TEST) empty ranges (tails=2)" {
 
 ///|
 test "calc ttest errors (T.TEST) unequal variance df" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   set_ttest_base_data(sheet)
   sheet.set_cell_formula("F1", "T.TEST(D1:D4,E1:E4,1,3)")
@@ -7515,7 +7523,7 @@ test "calc ttest errors (T.TEST) unequal variance df" {
 
 ///|
 test "calc ztest functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let data : Array[Double] = [
     4.0, 5.0, 2.0, 5.0, 8.0, 9.0, 3.0, 2.0, 3.0, 8.0, 9.0, 5.0,
@@ -7541,7 +7549,7 @@ test "calc ztest functions" {
     sheet.set_cell_formula(cell, formula)
     inspect(workbook.calc_cell_value("Sheet1", cell), content=expected)
   }
-  let error_book = Workbook::new()
+  let error_book = @xlsx.Workbook::new()
   let error_sheet = error_book.add_sheet("Sheet1")
   error_sheet.set_cell_value("A1", Numeric(1.0))
   let error_cases : Array[(String, String)] = [
@@ -7568,7 +7576,7 @@ test "calc ztest functions" {
 
 ///|
 test "calc prob function" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("x"))
   sheet.set_cell_value("B1", String("probability"))
@@ -7613,7 +7621,7 @@ test "calc prob function" {
 
 ///|
 test "calc cumulative payment functions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("CUMIPMT(0.05/12,60,50000,1,12,0)", "-2294.97753732664"),
@@ -7659,7 +7667,7 @@ test "calc cumulative payment functions" {
 
 ///|
 test "calc depreciation functions db ddb vdb" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let cases : Array[(String, String)] = [
     ("DB(0,1000,5,1)", "0"),

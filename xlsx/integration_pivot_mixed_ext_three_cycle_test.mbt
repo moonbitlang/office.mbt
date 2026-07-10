@@ -14,7 +14,7 @@ fn count_xml_tag_three_cycle(xml : String, tag : String) -> Int {
 
 ///|
 test "integration pivot mixed ext stable across three roundtrip cycles" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let data = workbook.add_sheet("Data")
   let dash = workbook.add_sheet("Dash")
 
@@ -39,21 +39,21 @@ test "integration pivot mixed ext stable across three roundtrip cycles" {
   )
   workbook.add_slicer(
     "Dash",
-    SlicerOptions::new("Region", "A1", "Data", "PivotData"),
+    @xlsx.SlicerOptions::new("Region", "A1", "Data", "PivotData"),
   )
 
   dash.set_cell_value("C2", Numeric(10.0))
   dash.set_cell_value("C3", Numeric(24.0))
   dash.set_cell_value("C4", Numeric(18.0))
 
-  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+  let sparkline_opts = @xlsx.SparklineOptions::new(["G2", "G3", "G4"], [
     "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
   ])
   sparkline_opts.set_markers(true)
   sparkline_opts.set_series_color("4F81BD")
   workbook.add_sparkline_options("Dash", sparkline_opts)
 
-  let cf_opt = ConditionalFormatOptions::new("data_bar")
+  let cf_opt = @xlsx.ConditionalFormatOptions::new("data_bar")
   cf_opt.set_min_type("min")
   cf_opt.set_max_type("max")
   cf_opt.set_bar_color("#638EC6")
@@ -62,13 +62,13 @@ test "integration pivot mixed ext stable across three roundtrip cycles" {
   cf_opt.set_bar_border_color("#0000FF")
   workbook.set_conditional_format("Dash", "C2:C4", [cf_opt])
 
-  let chart_opts = ChartOptions::new(Line)
+  let chart_opts = @xlsx.ChartOptions::new(Line)
   chart_opts.series.push(
-    ChartSeries::new("Data!$A$2:$A$5", "Data!$B$2:$B$5", name="Series1"),
+    @xlsx.ChartSeries::new("Data!$A$2:$A$5", "Data!$B$2:$B$5", name="Series1"),
   )
   workbook.add_chart_with_options("Dash", "J2", chart_opts)
 
-  let bytes1 = write(workbook)
+  let bytes1 = @xlsx.write(workbook)
   let archive1 = @zip.read(bytes1)
   let sheet_xml1 = match archive1.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -81,10 +81,10 @@ test "integration pivot mixed ext stable across three roundtrip cycles" {
     content="1",
   )
 
-  let workbook2 = read(bytes1)
-  let bytes2 = write(workbook2)
-  let workbook3 = read(bytes2)
-  let bytes3 = write(workbook3)
+  let workbook2 = @xlsx.read(bytes1)
+  let bytes2 = @xlsx.write(workbook2)
+  let workbook3 = @xlsx.read(bytes2)
+  let bytes3 = @xlsx.write(workbook3)
   let archive3 = @zip.read(bytes3)
   let sheet_xml3 = match archive3.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -132,7 +132,7 @@ test "integration pivot mixed ext stable across three roundtrip cycles" {
     content="true",
   )
 
-  let parsed3 = read(bytes3)
+  let parsed3 = @xlsx.read(bytes3)
   let parsed_dash = match parsed3.sheet("Dash") {
     Some(value) => value
     None => fail("missing parsed dash after cycle 3")

@@ -1,6 +1,6 @@
 ///|
 test "hyperlink roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_hyperlink(
     "Sheet1",
@@ -11,7 +11,7 @@ test "hyperlink roundtrip" {
     tooltip="Tip",
   )
   workbook.set_cell_hyperlink("Sheet1", "B2", "Sheet1!C3", Location)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "A1"),
     content=(
@@ -46,7 +46,7 @@ test "hyperlink roundtrip" {
 
 ///|
 test "hyperlink resolves merged cell anchor" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.merge_cells("A1:C3")
   sheet.set_cell_hyperlink("B2", "https://example.com", External)
@@ -70,7 +70,7 @@ test "hyperlink resolves merged cell anchor" {
 
 ///|
 test "hyperlink remove keeps other links" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_hyperlink("A1", "https://a.example", External)
   sheet.set_cell_hyperlink("B2", "https://b.example", External)
@@ -95,7 +95,7 @@ test "hyperlink remove keeps other links" {
 
 ///|
 test "hyperlink updates on insert" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_hyperlink("Sheet1", "B2", "https://example.com", External)
   workbook.insert_rows("Sheet1", 1, 1)
@@ -136,7 +136,7 @@ test "hyperlink updates on insert" {
 
 ///|
 test "hyperlink alias methods" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_hyper_link("Sheet1", "C3", "https://example.com", External)
   debug_inspect(
@@ -158,9 +158,9 @@ test "hyperlink alias methods" {
 
 ///|
 test "hyperlink opts helper" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = HyperlinkOpts::with_values(tooltip="Tip")
+  let opts = @xlsx.HyperlinkOpts::with_values(tooltip="Tip")
   workbook.set_cell_hyperlink_opts(
     "Sheet1",
     "A1",
@@ -168,7 +168,7 @@ test "hyperlink opts helper" {
     External,
     opts~,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -181,7 +181,7 @@ test "hyperlink opts helper" {
   }
   inspect(sheet_xml.contains("tooltip=\"Tip\""), content="true")
   inspect(sheet_xml.contains("display="), content="false")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "A1"),
     content=(
@@ -201,9 +201,9 @@ test "hyperlink opts helper" {
 
 ///|
 test "hyperlink opts helper (display only)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = HyperlinkOpts::with_values(display="Shown")
+  let opts = @xlsx.HyperlinkOpts::with_values(display="Shown")
   workbook.set_cell_hyperlink_opts(
     "Sheet1",
     "A1",
@@ -211,7 +211,7 @@ test "hyperlink opts helper (display only)" {
     External,
     opts~,
   )
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "A1"),
     content=(
@@ -231,7 +231,7 @@ test "hyperlink opts helper (display only)" {
 
 ///|
 test "hyperlink update existing reference" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_hyperlink("Sheet1", "A1", "https://github.com", External)
   workbook.set_cell_hyperlink(
@@ -259,31 +259,34 @@ test "hyperlink update existing reference" {
 
 ///|
 test "hyperlink validates cell reference" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let set_result : Result[Unit, Error] = Ok(
     workbook.set_cell_hyperlink("Sheet1", "", "https://example.com", External),
   ) catch {
     e => Err(e)
   }
-  inspect(set_result is Err(XlsxError::InvalidCellRef(_)), content="true")
-  let get_result : Result[Hyperlink?, Error] = Ok(
+  inspect(set_result is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
+  let get_result : Result[@xlsx.Hyperlink?, Error] = Ok(
     workbook.get_cell_hyperlink("Sheet1", ""),
   ) catch {
     e => Err(e)
   }
-  inspect(get_result is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(get_result is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
   let remove_result : Result[Unit, Error] = Ok(
     workbook.remove_cell_hyperlink("Sheet1", ""),
   ) catch {
     e => Err(e)
   }
-  inspect(remove_result is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(
+    remove_result is Err(@xlsx.XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
 }
 
 ///|
 test "hyperlink remove clears range reference" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_hyperlink(
     "Sheet1",
@@ -291,7 +294,7 @@ test "hyperlink remove clears range reference" {
     "https://github.com/xuri/excelize",
     External,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -324,7 +327,7 @@ test "hyperlink remove clears range reference" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let parsed = read(updated_bytes)
+  let parsed = @xlsx.read(updated_bytes)
   debug_inspect(
     parsed.get_cell_hyperlink("Sheet1", "B2"),
     content=(
@@ -347,7 +350,7 @@ test "hyperlink remove clears range reference" {
 
 ///|
 test "hyperlink invalid ref tolerated on read" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_hyperlink(
     "Sheet1",
@@ -355,7 +358,7 @@ test "hyperlink invalid ref tolerated on read" {
     "https://github.com/xuri/excelize",
     External,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -388,19 +391,22 @@ test "hyperlink invalid ref tolerated on read" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let parsed = read(updated_bytes)
-  let get_result : Result[Hyperlink?, Error] = Ok(
+  let parsed = @xlsx.read(updated_bytes)
+  let get_result : Result[@xlsx.Hyperlink?, Error] = Ok(
     parsed.get_cell_hyperlink("Sheet1", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_result is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(get_result is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
   let remove_result : Result[Unit, Error] = Ok(
     parsed.set_cell_hyperlink("Sheet1", "B2", "", Unset),
   ) catch {
     e => Err(e)
   }
-  inspect(remove_result is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(
+    remove_result is Err(@xlsx.XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
 }
 
 ///|

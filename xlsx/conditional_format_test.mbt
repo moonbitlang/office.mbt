@@ -1,8 +1,8 @@
 ///|
 test "conditional format set/get/unset" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let opt = ConditionalFormatOptions::new("cell")
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.set_criteria(">")
   opt.set_value("6")
   sheet.set_conditional_format("A1:A2", [opt])
@@ -27,9 +27,9 @@ test "conditional format set/get/unset" {
 
 ///|
 test "conditional format color scale, data bar, icon set" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let scale = ConditionalFormatOptions::new("3_color_scale")
+  let scale = @xlsx.ConditionalFormatOptions::new("3_color_scale")
   scale.set_criteria("=")
   scale.set_min_type("num")
   scale.set_mid_type("num")
@@ -41,12 +41,12 @@ test "conditional format color scale, data bar, icon set" {
   scale.set_mid_color("00ff00")
   scale.set_max_color("0000ff")
   sheet.set_conditional_format("B1:B2", [scale])
-  let data_bar = ConditionalFormatOptions::new("data_bar")
+  let data_bar = @xlsx.ConditionalFormatOptions::new("data_bar")
   data_bar.set_min_type("min")
   data_bar.set_max_type("max")
   data_bar.set_bar_color("#638EC6")
   sheet.set_conditional_format("C1:C2", [data_bar])
-  let icons = ConditionalFormatOptions::new("icon_set")
+  let icons = @xlsx.ConditionalFormatOptions::new("icon_set")
   icons.set_icon_style("3Stars")
   sheet.set_conditional_format("D1:D2", [icons])
   let formats = sheet.conditional_formats()
@@ -68,24 +68,24 @@ test "conditional format color scale, data bar, icon set" {
 
 ///|
 test "conditional format invalid type" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let opt = ConditionalFormatOptions::new("unsupported")
+  let opt = @xlsx.ConditionalFormatOptions::new("unsupported")
   let result : Result[Unit, Error] = Ok(
     sheet.set_conditional_format("A1", [opt]),
   ) catch {
     e => Err(e)
   }
-  guard result is Err(XlsxError::InvalidConditionalFormat(_)) else {
+  guard result is Err(@xlsx.XlsxError::InvalidConditionalFormat(_)) else {
     fail("expected invalid type")
   }
 }
 
 ///|
 test "conditional format setters: stopIfTrue and dxfId" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let opt = ConditionalFormatOptions::new("cell")
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.set_criteria(">")
   opt.set_value("1")
   opt.set_format(Some(3))

@@ -1,6 +1,6 @@
 ///|
 test "conditional format + merge APIs validate sheet name" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let ignored_errors_result : Result[Unit, Error] = Ok(
     workbook.add_ignored_errors("Sheet:1", "A1", NumberStoredAsText),
@@ -8,7 +8,7 @@ test "conditional format + merge APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    ignored_errors_result is Err(XlsxError::InvalidSheetName(_)),
+    ignored_errors_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let add_cf_xml_result : Result[Unit, Error] = Ok(
@@ -19,7 +19,7 @@ test "conditional format + merge APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    add_cf_xml_result is Err(XlsxError::InvalidSheetName(_)),
+    add_cf_xml_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let set_cf_result : Result[Unit, Error] = Ok(
@@ -27,19 +27,25 @@ test "conditional format + merge APIs validate sheet name" {
   ) catch {
     e => Err(e)
   }
-  inspect(set_cf_result is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(
+    set_cf_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
+    content="true",
+  )
   let get_cf_result : Result[
-    Map[String, Array[ConditionalFormatOptions]],
+    Map[String, Array[@xlsx.ConditionalFormatOptions]],
     Error,
   ] = Ok(workbook.get_conditional_formats("Sheet:1")) catch { e => Err(e) }
-  inspect(get_cf_result is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(
+    get_cf_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
+    content="true",
+  )
   let unset_cf_result : Result[Unit, Error] = Ok(
     workbook.unset_conditional_format("Sheet:1", "A1:A1"),
   ) catch {
     e => Err(e)
   }
   inspect(
-    unset_cf_result is Err(XlsxError::InvalidSheetName(_)),
+    unset_cf_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let merge_cells_result : Result[Unit, Error] = Ok(
@@ -48,7 +54,7 @@ test "conditional format + merge APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    merge_cells_result is Err(XlsxError::InvalidSheetName(_)),
+    merge_cells_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let merge_cell_result : Result[Unit, Error] = Ok(
@@ -57,7 +63,7 @@ test "conditional format + merge APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    merge_cell_result is Err(XlsxError::InvalidSheetName(_)),
+    merge_cell_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let unmerge_cells_result : Result[Unit, Error] = Ok(
@@ -66,7 +72,7 @@ test "conditional format + merge APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    unmerge_cells_result is Err(XlsxError::InvalidSheetName(_)),
+    unmerge_cells_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let unmerge_cell_result : Result[Unit, Error] = Ok(
@@ -75,7 +81,7 @@ test "conditional format + merge APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    unmerge_cell_result is Err(XlsxError::InvalidSheetName(_)),
+    unmerge_cell_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let get_merges_result : Result[Array[String], Error] = Ok(
@@ -84,16 +90,16 @@ test "conditional format + merge APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    get_merges_result is Err(XlsxError::InvalidSheetName(_)),
+    get_merges_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
-  let get_merge_info_result : Result[Array[MergeCell], Error] = Ok(
+  let get_merge_info_result : Result[Array[@xlsx.MergeCell], Error] = Ok(
     workbook.get_merge_cells_info("Sheet:1"),
   ) catch {
     e => Err(e)
   }
   inspect(
-    get_merge_info_result is Err(XlsxError::InvalidSheetName(_)),
+    get_merge_info_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
 }

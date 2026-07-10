@@ -1,11 +1,11 @@
 ///|
 test "row style range setters" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let style_id = workbook.add_style(Style::new())
+  let style_id = workbook.add_style(@xlsx.Style::new())
   workbook.set_row_style_range("Sheet1", 2, 4, style_id)
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(
     [
       parsed.get_row_style("Sheet1", 2),

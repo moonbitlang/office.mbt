@@ -110,10 +110,10 @@ test "demo interactive controls: writer output remains consistent after roundtri
   let bytes = @demos.demo_interactive_controls_bytes()
   assert_demo_interactive_controls_archive(bytes)
 
-  let parsed = read(bytes)
+  let parsed = @mbtexcel.read(bytes)
   debug_inspect(parsed.sheet_name(0), content="Some(\"UI\")")
   debug_inspect(parsed.sheet_name(1), content="Some(\"Model\")")
 
-  let roundtrip_bytes = write(parsed)
+  let roundtrip_bytes = @mbtexcel.write(parsed)
   assert_demo_interactive_controls_archive(roundtrip_bytes)
 }

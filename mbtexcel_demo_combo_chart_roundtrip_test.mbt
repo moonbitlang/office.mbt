@@ -84,6 +84,6 @@ test "demo combo chart: writer output remains consistent after roundtrip" {
   let bytes = @demos.demo_combo_chart_bytes()
   assert_demo_combo_chart_archive(bytes)
 
-  let roundtrip_bytes = write(read(bytes))
+  let roundtrip_bytes = @mbtexcel.write(@mbtexcel.read(bytes))
   assert_demo_combo_chart_archive(roundtrip_bytes)
 }

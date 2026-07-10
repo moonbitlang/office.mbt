@@ -21,14 +21,14 @@ fn count_occurrences(text : StringView, needle : StringView) -> Int {
 
 ///|
 test "formula opts array writes typed formula" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula_opts(
     "A1",
     "{1,2;3,4}",
-    opts=FormulaOpts::array("A1:B2"),
+    opts=@xlsx.FormulaOpts::array("A1:B2"),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -51,7 +51,7 @@ test "formula opts array writes typed formula" {
   }
   inspect(calc_xml.contains("<c r=\"A1\" i=\"1\"/>"), content="true")
   inspect(calc_xml.contains("r=\"B2\""), content="false")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(
     parsed.get_cell_formula("Sheet1", "A1"),
     content="Some(\"{1,2;3,4}\")",
@@ -61,10 +61,14 @@ test "formula opts array writes typed formula" {
 
 ///|
 test "formula opts shared writes typed formula" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  sheet.set_cell_formula_opts("C1", "A1+B1", opts=FormulaOpts::shared("C1:C3"))
-  let bytes = write(workbook)
+  sheet.set_cell_formula_opts(
+    "C1",
+    "A1+B1",
+    opts=@xlsx.FormulaOpts::shared("C1:C3"),
+  )
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -88,7 +92,7 @@ test "formula opts shared writes typed formula" {
   }
   inspect(calc_xml.contains("<c r=\"C1\" i=\"1\"/>"), content="true")
   inspect(calc_xml.contains("r=\"C2\""), content="false")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(
     parsed.get_cell_formula("Sheet1", "C1"),
     content="Some(\"A1+B1\")",
@@ -98,14 +102,14 @@ test "formula opts shared writes typed formula" {
 
 ///|
 test "formula opts dataTable behaves like normal formula" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula_opts(
     "A1",
     "SUM(1,2)",
-    opts=FormulaOpts::with_values(formula_type=DataTable),
+    opts=@xlsx.FormulaOpts::with_values(formula_type=DataTable),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -117,7 +121,7 @@ test "formula opts dataTable behaves like normal formula" {
     None => fail("missing sheet1.xml")
   }
   inspect(sheet_xml.contains("t=\"dataTable\""), content="false")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(
     parsed.get_cell_formula("Sheet1", "A1"),
     content="Some(\"SUM(1,2)\")",
@@ -126,7 +130,7 @@ test "formula opts dataTable behaves like normal formula" {
 
 ///|
 test "formula opts: worksheet edge cases" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
 
   // formula_type = None (default).
@@ -136,7 +140,7 @@ test "formula opts: worksheet edge cases" {
   sheet.set_cell_formula_opts(
     "A2",
     "1+2",
-    opts=FormulaOpts::with_values(formula_type=Normal),
+    opts=@xlsx.FormulaOpts::with_values(formula_type=Normal),
   )
 
   // Array: missing range_ref.
@@ -144,7 +148,7 @@ test "formula opts: worksheet edge cases" {
     sheet.set_cell_formula_opts(
       "B1",
       "{1}",
-      opts=FormulaOpts::with_values(formula_type=Array),
+      opts=@xlsx.FormulaOpts::with_values(formula_type=Array),
     ),
   ) catch {
     e => Err(e)
@@ -158,7 +162,11 @@ test "formula opts: worksheet edge cases" {
 
   // Array: master must be top-left.
   let bad_array_master : Result[Unit, Error] = Ok(
-    sheet.set_cell_formula_opts("A1", "{1,2}", opts=FormulaOpts::array("B1:C1")),
+    sheet.set_cell_formula_opts(
+      "A1",
+      "{1,2}",
+      opts=@xlsx.FormulaOpts::array("B1:C1"),
+    ),
   ) catch {
     e => Err(e)
   }
@@ -171,7 +179,11 @@ test "formula opts: worksheet edge cases" {
 
   // Array: update existing cells.
   sheet.set_cell("C1", "x")
-  sheet.set_cell_formula_opts("C1", "{1,2}", opts=FormulaOpts::array("C1:D1"))
+  sheet.set_cell_formula_opts(
+    "C1",
+    "{1,2}",
+    opts=@xlsx.FormulaOpts::array("C1:D1"),
+  )
   debug_inspect(sheet.get_cell_formula("C1"), content="Some(\"{1,2}\")")
 
   // Shared: missing range_ref.
@@ -179,7 +191,7 @@ test "formula opts: worksheet edge cases" {
     sheet.set_cell_formula_opts(
       "E1",
       "A1",
-      opts=FormulaOpts::with_values(formula_type=Shared),
+      opts=@xlsx.FormulaOpts::with_values(formula_type=Shared),
     ),
   ) catch {
     e => Err(e)
@@ -196,7 +208,7 @@ test "formula opts: worksheet edge cases" {
     sheet.set_cell_formula_opts(
       "F1",
       "A1+B1",
-      opts=FormulaOpts::shared("F2:F3"),
+      opts=@xlsx.FormulaOpts::shared("F2:F3"),
     ),
   ) catch {
     e => Err(e)
@@ -210,8 +222,16 @@ test "formula opts: worksheet edge cases" {
 
   // Shared: update existing cells + max shared index scan.
   sheet.set_cell("G1", "x")
-  sheet.set_cell_formula_opts("G1", "A1+B1", opts=FormulaOpts::shared("G1:G2"))
-  sheet.set_cell_formula_opts("H1", "A1+B1", opts=FormulaOpts::shared("H1:H2"))
+  sheet.set_cell_formula_opts(
+    "G1",
+    "A1+B1",
+    opts=@xlsx.FormulaOpts::shared("G1:G2"),
+  )
+  sheet.set_cell_formula_opts(
+    "H1",
+    "A1+B1",
+    opts=@xlsx.FormulaOpts::shared("H1:H2"),
+  )
   debug_inspect(sheet.get_cell_formula("G2"), content="None")
   debug_inspect(sheet.get_cell_formula("H2"), content="None")
 }

@@ -1,6 +1,6 @@
 ///|
 test "integration x14 icon-set with sparkline and slicer coexistence" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let data = workbook.add_sheet("Data")
   ignore(workbook.add_sheet("Dash"))
 
@@ -22,16 +22,16 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
   )
   workbook.add_slicer(
     "Dash",
-    SlicerOptions::new("Region", "A1", "Data", "MixTable"),
+    @xlsx.SlicerOptions::new("Region", "A1", "Data", "MixTable"),
   )
 
-  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+  let sparkline_opts = @xlsx.SparklineOptions::new(["G2", "G3", "G4"], [
     "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
   ])
   sparkline_opts.set_markers(true)
   workbook.add_sparkline_options("Dash", sparkline_opts)
 
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -95,7 +95,7 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
   inspect(updated_sheet_xml.contains("x14:sparklineGroups"), content="true")
   inspect(updated_sheet_xml.contains("x14:slicerList"), content="true")
 
-  let parsed = read(updated_bytes)
+  let parsed = @xlsx.read(updated_bytes)
   let dash = match parsed.sheet("Dash") {
     Some(value) => value
     None => fail("missing parsed dash")

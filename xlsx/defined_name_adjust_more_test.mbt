@@ -1,29 +1,29 @@
 ///|
 test "defined name adjust: row insert (cell/row ranges + quoted prefix + invalid refs)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_defined_name(
-    DefinedName::new("R1", "Sheet1!A1:B2", scope="Sheet1"),
+    @xlsx.DefinedName::new("R1", "Sheet1!A1:B2", scope="Sheet1"),
   )
   workbook.set_defined_name(
-    DefinedName::new("R2", "Sheet1!1:3", scope="Sheet1"),
+    @xlsx.DefinedName::new("R2", "Sheet1!1:3", scope="Sheet1"),
   )
   workbook.set_defined_name(
-    DefinedName::new("R3", "'Sheet1'!A2", scope="Sheet1"),
+    @xlsx.DefinedName::new("R3", "'Sheet1'!A2", scope="Sheet1"),
   )
 
   // These are intentionally malformed but should not crash adjustment logic.
   workbook.set_defined_name(
-    DefinedName::new("Bad1", "Sheet1!$", scope="Sheet1"),
+    @xlsx.DefinedName::new("Bad1", "Sheet1!$", scope="Sheet1"),
   )
   workbook.set_defined_name(
-    DefinedName::new("Bad2", "Sheet1!$0", scope="Sheet1"),
+    @xlsx.DefinedName::new("Bad2", "Sheet1!$0", scope="Sheet1"),
   )
   workbook.set_defined_name(
-    DefinedName::new("Bad3", "Sheet1!A$", scope="Sheet1"),
+    @xlsx.DefinedName::new("Bad3", "Sheet1!A$", scope="Sheet1"),
   )
   workbook.set_defined_name(
-    DefinedName::new("Bad4", "Sheet1!A0", scope="Sheet1"),
+    @xlsx.DefinedName::new("Bad4", "Sheet1!A0", scope="Sheet1"),
   )
   workbook.insert_rows("Sheet1", 2, 2)
   let dns = workbook.get_defined_names()
@@ -38,17 +38,19 @@ test "defined name adjust: row insert (cell/row ranges + quoted prefix + invalid
 
 ///|
 test "defined name adjust: row remove produces #REF! and adjusts multiple refs" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.set_defined_name(DefinedName::new("S1", "Sheet1!A1", scope="Sheet1"))
   workbook.set_defined_name(
-    DefinedName::new("S2", "Sheet1!A1:A2", scope="Sheet1"),
+    @xlsx.DefinedName::new("S1", "Sheet1!A1", scope="Sheet1"),
   )
   workbook.set_defined_name(
-    DefinedName::new("S3", "Sheet1!1:2", scope="Sheet1"),
+    @xlsx.DefinedName::new("S2", "Sheet1!A1:A2", scope="Sheet1"),
   )
   workbook.set_defined_name(
-    DefinedName::new("S4", "Sheet1!A1+Sheet1!A3", scope="Sheet1"),
+    @xlsx.DefinedName::new("S3", "Sheet1!1:2", scope="Sheet1"),
+  )
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new("S4", "Sheet1!A1+Sheet1!A3", scope="Sheet1"),
   )
   workbook.remove_rows("Sheet1", 1, 2)
   let dns = workbook.get_defined_names()
@@ -60,14 +62,16 @@ test "defined name adjust: row remove produces #REF! and adjusts multiple refs" 
 
 ///|
 test "defined name adjust: col insert/remove (cell/col ranges)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_defined_name(
-    DefinedName::new("C1", "Sheet1!A:B", scope="Sheet1"),
+    @xlsx.DefinedName::new("C1", "Sheet1!A:B", scope="Sheet1"),
   )
-  workbook.set_defined_name(DefinedName::new("C2", "Sheet1!B1", scope="Sheet1"))
   workbook.set_defined_name(
-    DefinedName::new("C3", "'Sheet1'!B1", scope="Sheet1"),
+    @xlsx.DefinedName::new("C2", "Sheet1!B1", scope="Sheet1"),
+  )
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new("C3", "'Sheet1'!B1", scope="Sheet1"),
   )
   workbook.insert_cols("Sheet1", 2, 1)
   let after_insert = workbook.get_defined_names()

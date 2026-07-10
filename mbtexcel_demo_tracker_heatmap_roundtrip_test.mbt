@@ -66,7 +66,7 @@ test "demo tracker heatmap: writer output remains consistent after roundtrip" {
   let bytes = @demos.demo_tracker_heatmap_bytes()
   assert_demo_tracker_heatmap_archive(bytes)
 
-  let parsed = read(bytes)
+  let parsed = @mbtexcel.read(bytes)
   let tracker = match parsed.sheet("Tracker") {
     Some(value) => value
     None => fail("missing Tracker sheet")
@@ -76,6 +76,6 @@ test "demo tracker heatmap: writer output remains consistent after roundtrip" {
   let formats = parsed.get_conditional_formats("Tracker")
   inspect(formats.get("B2:AF13") is Some(_), content="true")
 
-  let roundtrip_bytes = write(parsed)
+  let roundtrip_bytes = @mbtexcel.write(parsed)
   assert_demo_tracker_heatmap_archive(roundtrip_bytes)
 }

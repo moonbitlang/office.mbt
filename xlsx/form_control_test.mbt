@@ -1,12 +1,12 @@
 ///|
 test "form control excelize-like add/get" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let form_controls : Array[FormControl] = []
-  let d1 = FormControl::new("D1", "Button")
+  let form_controls : Array[@xlsx.FormControl] = []
+  let d1 = @xlsx.FormControl::new("D1", "Button")
   d1.set_macro_name("Button1_Click")
   form_controls.push(d1)
-  let a1 = FormControl::new("A1", "Button", text="Button 1\n")
+  let a1 = @xlsx.FormControl::new("A1", "Button", text="Button 1\n")
   a1.set_macro_name("Button1_Click")
   a1.set_width(140)
   a1.set_height(60)
@@ -36,33 +36,33 @@ test "form control excelize-like add/get" {
     },
   ])
   a1.set_format(
-    GraphicOptions::with_values(print_object=true, positioning=Absolute),
+    @xlsx.GraphicOptions::with_values(print_object=true, positioning=Absolute),
   )
   form_controls.push(a1)
-  let a5 = FormControl::new("A5", "CheckBox", text="Check Box 1")
+  let a5 = @xlsx.FormControl::new("A5", "CheckBox", text="Check Box 1")
   a5.set_checked(true)
   a5.set_format(
-    GraphicOptions::with_values(print_object=false, positioning=OneCell),
+    @xlsx.GraphicOptions::with_values(print_object=false, positioning=OneCell),
   )
   form_controls.push(a5)
-  let a6 = FormControl::new("A6", "CheckBox", text="Check Box 2")
+  let a6 = @xlsx.FormControl::new("A6", "CheckBox", text="Check Box 2")
   a6.set_cell_link("C5")
-  a6.set_format(GraphicOptions::with_values(positioning=TwoCell))
+  a6.set_format(@xlsx.GraphicOptions::with_values(positioning=TwoCell))
   form_controls.push(a6)
-  let a7 = FormControl::new("A7", "OptionButton", text="Option Button 1")
+  let a7 = @xlsx.FormControl::new("A7", "OptionButton", text="Option Button 1")
   a7.set_checked(true)
   form_controls.push(a7)
   form_controls.push(
-    FormControl::new("A8", "OptionButton", text="Option Button 2"),
+    @xlsx.FormControl::new("A8", "OptionButton", text="Option Button 2"),
   )
-  let d3 = FormControl::new("D3", "GroupBox", text="Group Box 1")
+  let d3 = @xlsx.FormControl::new("D3", "GroupBox", text="Group Box 1")
   d3.set_width(140)
   d3.set_height(60)
   form_controls.push(d3)
-  let a9 = FormControl::new("A9", "Label", text="Label 1")
+  let a9 = @xlsx.FormControl::new("A9", "Label", text="Label 1")
   a9.set_width(140)
   form_controls.push(a9)
-  let c5 = FormControl::new("C5", "SpinButton")
+  let c5 = @xlsx.FormControl::new("C5", "SpinButton")
   c5.set_width(40)
   c5.set_height(60)
   c5.set_current_val(7)
@@ -71,7 +71,7 @@ test "form control excelize-like add/get" {
   c5.set_inc_change(1)
   c5.set_cell_link("C2")
   form_controls.push(c5)
-  let d7 = FormControl::new("D7", "ScrollBar")
+  let d7 = @xlsx.FormControl::new("D7", "ScrollBar")
   d7.set_width(140)
   d7.set_height(20)
   d7.set_current_val(50)
@@ -82,7 +82,7 @@ test "form control excelize-like add/get" {
   d7.set_horizontally(true)
   d7.set_cell_link("C3")
   form_controls.push(d7)
-  let g1 = FormControl::new("G1", "ScrollBar")
+  let g1 = @xlsx.FormControl::new("G1", "ScrollBar")
   g1.set_width(20)
   g1.set_height(140)
   g1.set_current_val(50)
@@ -116,9 +116,9 @@ test "form control excelize-like add/get" {
 
 ///|
 test "form control roundtrip preserves basic fields" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let a1 = FormControl::new("A1", "Button", text="Button 1\n")
+  let a1 = @xlsx.FormControl::new("A1", "Button", text="Button 1\n")
   a1.set_macro_name("Button1_Click")
   a1.set_paragraph([
     {
@@ -146,17 +146,17 @@ test "form control roundtrip preserves basic fields" {
     },
   ])
   workbook.add_form_control("Sheet1", a1)
-  let a7 = FormControl::new("A7", "OptionButton", text="Option Button 1")
+  let a7 = @xlsx.FormControl::new("A7", "OptionButton", text="Option Button 1")
   a7.set_checked(true)
   workbook.add_form_control("Sheet1", a7)
-  let c5 = FormControl::new("C5", "SpinButton")
+  let c5 = @xlsx.FormControl::new("C5", "SpinButton")
   c5.set_current_val(7)
   c5.set_min_val(5)
   c5.set_max_val(10)
   c5.set_inc_change(1)
   c5.set_cell_link("C2")
   workbook.add_form_control("Sheet1", c5)
-  let d7 = FormControl::new("D7", "ScrollBar")
+  let d7 = @xlsx.FormControl::new("D7", "ScrollBar")
   d7.set_current_val(50)
   d7.set_min_val(10)
   d7.set_max_val(100)
@@ -165,8 +165,8 @@ test "form control roundtrip preserves basic fields" {
   d7.set_horizontally(true)
   d7.set_cell_link("C3")
   workbook.add_form_control("Sheet1", d7)
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let controls = parsed.get_form_controls("Sheet1")
   assert_eq(controls.length(), 4)
   let pairs : Array[String] = []
@@ -181,22 +181,28 @@ test "form control roundtrip preserves basic fields" {
 
 ///|
 test "form control invalid inputs and delete no-op" {
-  let bad_type : Result[FormControl, Error] = Ok(
-    FormControl::new("A1", "Unknown"),
+  let bad_type : Result[@xlsx.FormControl, Error] = Ok(
+    @xlsx.FormControl::new("A1", "Unknown"),
   ) catch {
     e => Err(e)
   }
-  inspect(bad_type is Err(XlsxError::InvalidSheetOperation(_)), content="true")
-  let spin = FormControl::new("C5", "SpinButton")
+  inspect(
+    bad_type is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let spin = @xlsx.FormControl::new("C5", "SpinButton")
   let bad_link : Result[Unit, Error] = Ok(spin.set_cell_link("*")) catch {
     e => Err(e)
   }
-  inspect(bad_link is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(bad_link is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
   let bad_value : Result[Unit, Error] = Ok(spin.set_current_val(30001)) catch {
     e => Err(e)
   }
-  inspect(bad_value is Err(XlsxError::InvalidSheetOperation(_)), content="true")
-  let workbook = Workbook::new()
+  inspect(
+    bad_value is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let del_empty : Result[Unit, Error] = Ok(
     workbook.delete_form_control("Sheet1", "A1"),
@@ -209,11 +215,17 @@ test "form control invalid inputs and delete no-op" {
   ) catch {
     e => Err(e)
   }
-  inspect(del_bad_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    del_bad_sheet is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let del_bad_cell : Result[Unit, Error] = Ok(
     workbook.delete_form_control("Sheet1", "A"),
   ) catch {
     e => Err(e)
   }
-  inspect(del_bad_cell is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(
+    del_bad_cell is Err(@xlsx.XlsxError::InvalidCellRef(_)),
+    content="true",
+  )
 }

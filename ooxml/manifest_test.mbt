@@ -1,6 +1,6 @@
 ///|
 test "workbook manifest basics" {
-  let manifest = WorkbookManifest::new(2)
+  let manifest = @ooxml.WorkbookManifest::new(2)
   let content_types = manifest.content_types_xml()
   inspect(content_types.contains("/xl/worksheets/sheet1.xml"), content="true")
   inspect(content_types.contains("/xl/worksheets/sheet2.xml"), content="true")
@@ -23,7 +23,7 @@ test "workbook manifest basics" {
 
 ///|
 test "workbook manifest options and customization" {
-  let manifest = WorkbookManifest::new(
+  let manifest = @ooxml.WorkbookManifest::new(
     -1,
     include_shared_strings=false,
     include_calc_chain=true,

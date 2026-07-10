@@ -1,9 +1,9 @@
 ///|
 test "vml drawing write and relationships" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_vml_drawing_xml("<xml>vml</xml>")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -36,10 +36,10 @@ test "vml drawing write and relationships" {
 
 ///|
 test "vml drawing roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_vml_drawing_xml("<xml>vml</xml>")
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -52,10 +52,10 @@ test "vml drawing roundtrip" {
 
 ///|
 test "vml drawing hf roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_vml_drawing_hf_xml("<xml>hf</xml>")
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -68,7 +68,7 @@ test "vml drawing hf roundtrip" {
 
 ///|
 test "vml drawing validation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let result = try sheet.add_vml_drawing_xml("") catch {
     err => Err(err)

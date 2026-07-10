@@ -1,13 +1,13 @@
 ///|
 test "workbook protection roundtrip" {
-  let workbook = Workbook::new()
-  let opts = WorkbookProtectionOptions::with_values(
+  let workbook = @xlsx.Workbook::new()
+  let opts = @xlsx.WorkbookProtectionOptions::with_values(
     password="secret",
     lock_structure=true,
     lock_windows=true,
   )
   workbook.protect_workbook(options=opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -25,7 +25,7 @@ test "workbook protection roundtrip" {
     workbook_xml.contains("workbookAlgorithmName=\"SHA-512\""),
     content="true",
   )
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let bad = Ok(parsed.unprotect_workbook(password="bad")) catch { e => Err(e) }
   debug_inspect(
     bad,
@@ -39,26 +39,29 @@ test "workbook protection roundtrip" {
 
 ///|
 test "workbook protection mismatched password on no-hash protection" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   workbook.protect_workbook()
   let bad : Result[Unit, Error] = Ok(
     workbook.unprotect_workbook(password="secret"),
   ) catch {
     e => Err(e)
   }
-  inspect(bad is Err(XlsxError::InvalidWorkbookProtection(_)), content="true")
+  inspect(
+    bad is Err(@xlsx.XlsxError::InvalidWorkbookProtection(_)),
+    content="true",
+  )
 }
 
 ///|
 test "workbook protection with explicit algorithm option" {
-  let workbook = Workbook::new()
-  let opts = WorkbookProtectionOptions::with_values(
+  let workbook = @xlsx.Workbook::new()
+  let opts = @xlsx.WorkbookProtectionOptions::with_values(
     password="secret",
     algorithm_name="SHA-512",
     lock_structure=true,
   )
   workbook.protect_workbook(options=opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -73,7 +76,7 @@ test "workbook protection with explicit algorithm option" {
     workbook_xml.contains("workbookAlgorithmName=\"SHA-512\""),
     content="true",
   )
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let ok = Ok(parsed.unprotect_workbook(password="secret")) catch {
     e => Err(e)
   }

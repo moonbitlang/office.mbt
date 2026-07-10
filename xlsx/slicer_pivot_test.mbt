@@ -1,16 +1,21 @@
 ///|
 test "slicer: Slicer::new validation and cache sanitization" {
-  let empty : Result[Slicer, Error] = Ok(Slicer::new("")) catch { e => Err(e) }
-  inspect(empty is Err(XlsxError::InvalidSheetOperation(_)), content="true")
-  let s1 = Slicer::new("1.a")
+  let empty : Result[@xlsx.Slicer, Error] = Ok(@xlsx.Slicer::new("")) catch {
+    e => Err(e)
+  }
+  inspect(
+    empty is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let s1 = @xlsx.Slicer::new("1.a")
   inspect(s1.cache, content="Slicer__.a")
-  let s2 = Slicer::new("A-1")
+  let s2 = @xlsx.Slicer::new("A-1")
   inspect(s2.cache, content="Slicer_A_1")
 }
 
 ///|
 test "slicer: pivot cache xml generation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   // Minimal pivot that exposes a cacheField named \"Region\" for slicer discovery.
   ignore(
@@ -20,10 +25,10 @@ test "slicer: pivot cache xml generation" {
       name="Pivot1",
     ),
   )
-  let opts = SlicerOptions::new("Region", "E1", "Sheet1", "Pivot1")
+  let opts = @xlsx.SlicerOptions::new("Region", "E1", "Sheet1", "Pivot1")
   opts.set_item_desc(true)
   workbook.add_slicer("Sheet1", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let cache_xml = match archive.get("xl/slicerCaches/slicerCache1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -70,7 +75,7 @@ test "slicer: pivot cache xml generation" {
     pivot_cache_xml.contains("<x14:pivotCacheDefinition pivotCacheId=\"1\"/>"),
     content="true",
   )
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let slicers = parsed.get_slicers("Sheet1")
   inspect(slicers.length(), content="1")
   inspect(slicers[0].source_name, content="Region")
@@ -79,7 +84,7 @@ test "slicer: pivot cache xml generation" {
 
 ///|
 test "slicer: preserves and allocates pivot cache slicer ids" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   ignore(
     sheet.add_pivot_table_xml(
@@ -97,13 +102,13 @@ test "slicer: preserves and allocates pivot cache slicer ids" {
   )
   workbook.add_slicer(
     "Sheet1",
-    SlicerOptions::new("Region", "E1", "Sheet1", "PivotA"),
+    @xlsx.SlicerOptions::new("Region", "E1", "Sheet1", "PivotA"),
   )
   workbook.add_slicer(
     "Sheet1",
-    SlicerOptions::new("Region", "J1", "Sheet1", "PivotB"),
+    @xlsx.SlicerOptions::new("Region", "J1", "Sheet1", "PivotB"),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let slicer_cache1 = match archive.get("xl/slicerCaches/slicerCache1.xml") {
     Some(value) => @encoding/utf8.decode(value)

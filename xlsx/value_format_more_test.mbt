@@ -1,72 +1,72 @@
 ///|
 test "value format builtin ids coverage" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_float("Sheet1", "A1", 1234.5)
   workbook.set_cell_style(
     "Sheet1",
     "A1",
-    workbook.add_style(Style::builtin_number_format(0)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(0)),
   )
   workbook.set_cell_float("Sheet1", "A2", 1234.5)
   workbook.set_cell_style(
     "Sheet1",
     "A2",
-    workbook.add_style(Style::builtin_number_format(3)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(3)),
   )
   workbook.set_cell_float("Sheet1", "A3", 1234.5)
   workbook.set_cell_style(
     "Sheet1",
     "A3",
-    workbook.add_style(Style::builtin_number_format(4)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(4)),
   )
   workbook.set_cell_float("Sheet1", "A4", 0.125)
   workbook.set_cell_style(
     "Sheet1",
     "A4",
-    workbook.add_style(Style::builtin_number_format(9)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(9)),
   )
   workbook.set_cell_float("Sheet1", "A5", 0.125)
   workbook.set_cell_style(
     "Sheet1",
     "A5",
-    workbook.add_style(Style::builtin_number_format(10)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(10)),
   )
   workbook.set_cell_float("Sheet1", "A6", 2.0)
   workbook.set_cell_style(
     "Sheet1",
     "A6",
-    workbook.add_style(Style::builtin_number_format(16)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(16)),
   )
   workbook.set_cell_float("Sheet1", "A7", 2.0)
   workbook.set_cell_style(
     "Sheet1",
     "A7",
-    workbook.add_style(Style::builtin_number_format(17)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(17)),
   )
   workbook.set_cell_float("Sheet1", "A8", 0.75)
   workbook.set_cell_style(
     "Sheet1",
     "A8",
-    workbook.add_style(Style::builtin_number_format(18)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(18)),
   )
   workbook.set_cell_float("Sheet1", "A9", 0.75)
   workbook.set_cell_style(
     "Sheet1",
     "A9",
-    workbook.add_style(Style::builtin_number_format(19)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(19)),
   )
   workbook.set_cell_float("Sheet1", "A10", 0.75)
   workbook.set_cell_style(
     "Sheet1",
     "A10",
-    workbook.add_style(Style::builtin_number_format(20)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(20)),
   )
   workbook.set_cell_float("Sheet1", "A11", 0.75)
   workbook.set_cell_style(
     "Sheet1",
     "A11",
-    workbook.add_style(Style::builtin_number_format(22)),
+    workbook.add_style(@xlsx.Style::builtin_number_format(22)),
   )
   debug_inspect(
     workbook.get_cell_value("Sheet1", "A1"),
@@ -138,76 +138,76 @@ test "value format builtin ids coverage" {
 
 ///|
 test "value format custom sections metadata and patterns" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_float("Sheet1", "B1", -1.0)
   workbook.set_cell_style(
     "Sheet1",
     "B1",
-    workbook.add_style(Style::number_format("0")),
+    workbook.add_style(@xlsx.Style::number_format("0")),
   )
   workbook.set_cell_float("Sheet1", "B2", -1.0)
   workbook.set_cell_style(
     "Sheet1",
     "B2",
-    workbook.add_style(Style::number_format("0;0;0")),
+    workbook.add_style(@xlsx.Style::number_format("0;0;0")),
   )
   workbook.set_cell_float("Sheet1", "B3", 0.0)
   workbook.set_cell_style(
     "Sheet1",
     "B3",
-    workbook.add_style(Style::number_format("0;0;\"ZERO\"")),
+    workbook.add_style(@xlsx.Style::number_format("0;0;\"ZERO\"")),
   )
   workbook.set_cell_value("Sheet1", "B4", String("abc"))
   workbook.set_cell_style(
     "Sheet1",
     "B4",
-    workbook.add_style(Style::number_format("\"PRE\"@\"SUF\"")),
+    workbook.add_style(@xlsx.Style::number_format("\"PRE\"@\"SUF\"")),
   )
   workbook.set_cell_float("Sheet1", "B5", 1.25)
   workbook.set_cell_style(
     "Sheet1",
     "B5",
-    workbook.add_style(Style::number_format("# ?/?")),
+    workbook.add_style(@xlsx.Style::number_format("# ?/?")),
   )
   workbook.set_cell_float("Sheet1", "B6", 0.5)
   workbook.set_cell_style(
     "Sheet1",
     "B6",
-    workbook.add_style(Style::number_format("0%")),
+    workbook.add_style(@xlsx.Style::number_format("0%")),
   )
   workbook.set_cell_float("Sheet1", "B7", 0.0)
   workbook.set_cell_style(
     "Sheet1",
     "B7",
-    workbook.add_style(Style::number_format("0.00E+00")),
+    workbook.add_style(@xlsx.Style::number_format("0.00E+00")),
   )
   workbook.set_cell_float("Sheet1", "B8", 9.99)
   workbook.set_cell_style(
     "Sheet1",
     "B8",
-    workbook.add_style(Style::number_format("0.0E+00")),
+    workbook.add_style(@xlsx.Style::number_format("0.0E+00")),
   )
   workbook.set_cell_float("Sheet1", "B9", 2.0)
   workbook.set_cell_style(
     "Sheet1",
     "B9",
-    workbook.add_style(Style::number_format("[$$-0409]yyyy-mm-dd")),
+    workbook.add_style(@xlsx.Style::number_format("[$$-0409]yyyy-mm-dd")),
   )
   workbook.set_cell_float("Sheet1", "B10", 2.0)
   workbook.set_cell_style(
     "Sheet1",
     "B10",
-    workbook.add_style(Style::number_format("[$$-999]yyyy-mm-dd")),
+    workbook.add_style(@xlsx.Style::number_format("[$$-999]yyyy-mm-dd")),
   )
   workbook.set_cell_float("Sheet1", "B11", 1.0)
-  let style_b11 = workbook.add_style(Style::number_format("0_);0*_)"))
+  let style_b11 = workbook.add_style(@xlsx.Style::number_format("0_);0*_)"))
   workbook.set_cell_style("Sheet1", "B11", style_b11)
   workbook.set_cell_float("Sheet1", "B12", 0.75)
   workbook.set_cell_style(
     "Sheet1",
     "B12",
-    workbook.add_style(Style::number_format("[H]:mm:ss")),
+    workbook.add_style(@xlsx.Style::number_format("[H]:mm:ss")),
   )
   debug_inspect(
     workbook.get_cell_value("Sheet1", "B1"),

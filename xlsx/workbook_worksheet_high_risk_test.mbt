@@ -1,24 +1,30 @@
 ///|
 test "workbook cell setters: missing sheet errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let set_cell_missing : Result[Unit, Error] = Ok(
     workbook.set_cell("Missing", "A1", "x"),
   ) catch {
     e => Err(e)
   }
-  inspect(set_cell_missing is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    set_cell_missing is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let set_value_missing : Result[Unit, Error] = Ok(
     workbook.set_cell_value("Missing", "A1", Bool(true)),
   ) catch {
     e => Err(e)
   }
-  inspect(set_value_missing is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    set_value_missing is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
 }
 
 ///|
 test "worksheet delete table/pivot edge branches" {
-  let sheet = Worksheet::new("Sheet1")
+  let sheet = @xlsx.Worksheet::new("Sheet1")
   ignore(sheet.add_table("A1:B2", "Table1", ["A", "B"]))
   ignore(sheet.add_table("D1:E2", "Table2", ["C", "D"]))
   sheet.delete_table("Table1")

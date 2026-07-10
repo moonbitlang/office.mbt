@@ -1,8 +1,8 @@
 ///|
 test "shape parsed on read" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let shape = Shape::new(
+  let shape = @xlsx.Shape::new(
     "C3",
     "rect",
     macro_name="MyMacro",
@@ -18,7 +18,7 @@ test "shape parsed on read" {
     positioning=TwoCell,
   )
   workbook.add_shape("Sheet1", shape)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")

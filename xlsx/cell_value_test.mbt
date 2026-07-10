@@ -1,12 +1,12 @@
 ///|
 test "typed cell values roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_value("Sheet1", "A1", Numeric(1.5))
   workbook.set_cell_value("Sheet1", "B1", Bool(true))
   workbook.set_cell_value("Sheet1", "C1", Error("#DIV/0!"))
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(
     parsed.get_cell_value_raw("Sheet1", "A1"),
     content="Some(Numeric(1.5))",
@@ -24,10 +24,10 @@ test "typed cell values roundtrip" {
 
 ///|
 test "formatted cell value" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_value("Sheet1", "A1", Numeric(1.234))
-  let style_id = workbook.add_style(Style::number_format("0.00"))
+  let style_id = workbook.add_style(@xlsx.Style::number_format("0.00"))
   workbook.set_cell_style("Sheet1", "A1", style_id)
   debug_inspect(
     workbook.get_cell_value("Sheet1", "A1"),
@@ -41,12 +41,12 @@ test "formatted cell value" {
 
 ///|
 test "formatted cell value roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_value("Sheet1", "A1", Numeric(1234.5))
-  let style_id = workbook.add_style(Style::number_format("#,##0.0"))
+  let style_id = workbook.add_style(@xlsx.Style::number_format("#,##0.0"))
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   debug_inspect(
     parsed.get_cell_value("Sheet1", "A1"),
     content="Some(\"1,234.5\")",
@@ -59,13 +59,13 @@ test "formatted cell value roundtrip" {
 
 ///|
 test "formatted percent and date" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_value("Sheet1", "A1", Numeric(0.256))
-  let pct_style = workbook.add_style(Style::number_format("0%"))
+  let pct_style = workbook.add_style(@xlsx.Style::number_format("0%"))
   workbook.set_cell_style("Sheet1", "A1", pct_style)
   workbook.set_cell_value("Sheet1", "B1", Numeric(2.0))
-  let date_style = workbook.add_style(Style::builtin_number_format(14))
+  let date_style = workbook.add_style(@xlsx.Style::builtin_number_format(14))
   workbook.set_cell_style("Sheet1", "B1", date_style)
   workbook.set_cell_value("Sheet1", "C1", Bool(true))
   debug_inspect(
@@ -84,7 +84,7 @@ test "formatted percent and date" {
 
 ///|
 test "typed setters and cell type" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let value_uint : UInt = 7
   workbook.set_cell_bool("Sheet1", "A1", true)

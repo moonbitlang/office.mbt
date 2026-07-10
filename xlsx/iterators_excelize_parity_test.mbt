@@ -48,23 +48,29 @@ fn eq_2d(a : Array[Array[String]], b : Array[Array[String]]) -> Bool {
 
 ///|
 test "rows/cols/get_rows/get_cols validate sheet name" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let rows_result : Result[Rows, Error] = Ok(workbook.rows("Sheet:1")) catch {
+  let rows_result : Result[@xlsx.Rows, Error] = Ok(workbook.rows("Sheet:1")) catch {
     e => Err(e)
   }
-  inspect(rows_result is Err(XlsxError::InvalidSheetName(_)), content="true")
-  let cols_result : Result[Cols, Error] = Ok(workbook.cols("Sheet:1")) catch {
+  inspect(
+    rows_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
+    content="true",
+  )
+  let cols_result : Result[@xlsx.Cols, Error] = Ok(workbook.cols("Sheet:1")) catch {
     e => Err(e)
   }
-  inspect(cols_result is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(
+    cols_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
+    content="true",
+  )
   let get_rows_result : Result[Array[Array[String]], Error] = Ok(
     workbook.get_rows("Sheet:1"),
   ) catch {
     e => Err(e)
   }
   inspect(
-    get_rows_result is Err(XlsxError::InvalidSheetName(_)),
+    get_rows_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let get_cols_result : Result[Array[Array[String]], Error] = Ok(
@@ -73,7 +79,7 @@ test "rows/cols/get_rows/get_cols validate sheet name" {
     e => Err(e)
   }
   inspect(
-    get_cols_result is Err(XlsxError::InvalidSheetName(_)),
+    get_cols_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
 }
@@ -82,7 +88,7 @@ test "rows/cols/get_rows/get_cols validate sheet name" {
 #cfg(target="native")
 async test "excelize Book1 iterators match get_rows/get_cols" {
   let path = "fixtures/excelize/test/Book1.xlsx"
-  let workbook = open_file(path)
+  let workbook = @xlsx.open_file(path)
   let total = workbook.get_cell_value("Sheet1", "A19") catch {
     err => fail("get_cell_value failed: \{repr(err)}")
   }

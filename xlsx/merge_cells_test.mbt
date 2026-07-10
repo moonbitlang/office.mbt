@@ -1,9 +1,9 @@
 ///|
 test "merge cells write and dimension" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.merge_cells("B2:A1")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -21,11 +21,11 @@ test "merge cells write and dimension" {
 
 ///|
 test "merge cells roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("C3", "x")
   sheet.merge_cells("C3:D4")
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -37,7 +37,7 @@ test "merge cells roundtrip" {
 
 ///|
 test "workbook merge cell wrappers" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.merge_cell("Sheet1", "B2", "A1")
   debug_inspect(workbook.get_merge_cells("Sheet1"), content="[\"A1:B2\"]")
@@ -47,7 +47,7 @@ test "workbook merge cell wrappers" {
 
 ///|
 test "merge cells info includes value" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "hello")
   workbook.merge_cells("Sheet1", "A1:B2")
@@ -59,7 +59,7 @@ test "merge cells info includes value" {
 
 ///|
 test "merge cells info without values" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "hello")
   workbook.merge_cells("Sheet1", "A1:B2")
@@ -71,7 +71,7 @@ test "merge cells info without values" {
 
 ///|
 test "merge cells info merges overlap" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.merge_cells("Sheet1", "A1:B2")
   workbook.merge_cells("Sheet1", "B2:C3")
@@ -83,17 +83,17 @@ test "merge cells info merges overlap" {
 
 ///|
 test "merge cells invalid range reference" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let result : Result[Unit, Error] = Ok(sheet.merge_cells("A1:B2:C3")) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(result is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
 }
 
 ///|
 test "merge cells duplicate is no-op" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.merge_cells("A1:B2")
   sheet.merge_cells("B2:A1")

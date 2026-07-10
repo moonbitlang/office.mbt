@@ -1,8 +1,8 @@
 ///|
 test "page margins and layout roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let margins = PageLayoutMarginsOptions::with_values(
+  let margins = @xlsx.PageLayoutMarginsOptions::with_values(
     top=1.1,
     bottom=1.2,
     left=0.9,
@@ -10,14 +10,14 @@ test "page margins and layout roundtrip" {
     horizontally=true,
   )
   workbook.set_page_margins("Sheet1", Some(margins))
-  let layout = PageLayoutOptions::with_values(
+  let layout = @xlsx.PageLayoutOptions::with_values(
     orientation="landscape",
     adjust_to=120,
     page_order="overThenDown",
   )
   workbook.set_page_layout("Sheet1", Some(layout))
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let parsed_margins = parsed.get_page_margins("Sheet1")
   debug_inspect(parsed_margins.top, content="Some(1.1)")
   debug_inspect(parsed_margins.bottom, content="Some(1.2)")
@@ -41,36 +41,38 @@ test "page margins and layout roundtrip" {
 
 ///|
 test "page layout validation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bad_orientation = PageLayoutOptions::with_values(orientation="sideways")
+  let bad_orientation = @xlsx.PageLayoutOptions::with_values(
+    orientation="sideways",
+  )
   let result : Result[Unit, Error] = Ok(
     workbook.set_page_layout("Sheet1", Some(bad_orientation)),
   ) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidPageLayout(_)), content="true")
-  let bad_adjust = PageLayoutOptions::with_values(adjust_to=5)
+  inspect(result is Err(@xlsx.XlsxError::InvalidPageLayout(_)), content="true")
+  let bad_adjust = @xlsx.PageLayoutOptions::with_values(adjust_to=5)
   let result2 : Result[Unit, Error] = Ok(
     workbook.set_page_layout("Sheet1", Some(bad_adjust)),
   ) catch {
     e => Err(e)
   }
-  inspect(result2 is Err(XlsxError::InvalidPageLayout(_)), content="true")
+  inspect(result2 is Err(@xlsx.XlsxError::InvalidPageLayout(_)), content="true")
 }
 
 ///|
 test "header footer roundtrip and limits" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let options = HeaderFooterOptions::with_values(
+  let options = @xlsx.HeaderFooterOptions::with_values(
     different_first=true,
     odd_header="&R&P",
     even_footer="&L&D",
   )
   workbook.set_header_footer("Sheet1", Some(options))
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let parsed_opts = match parsed.get_header_footer("Sheet1") {
     Some(value) => value
     None => fail("missing header footer")
@@ -79,22 +81,25 @@ test "header footer roundtrip and limits" {
   inspect(parsed_opts.odd_header, content="&R&P")
   inspect(parsed_opts.even_footer, content="&L&D")
   let long_text = "a".repeat(256)
-  let bad_opts = HeaderFooterOptions::with_values(odd_header=long_text)
+  let bad_opts = @xlsx.HeaderFooterOptions::with_values(odd_header=long_text)
   let result : Result[Unit, Error] = Ok(
     workbook.set_header_footer("Sheet1", Some(bad_opts)),
   ) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidHeaderFooter(_)), content="true")
+  inspect(
+    result is Err(@xlsx.XlsxError::InvalidHeaderFooter(_)),
+    content="true",
+  )
   workbook.set_header_footer("Sheet1", None)
   debug_inspect(workbook.get_header_footer("Sheet1"), content="None")
 }
 
 ///|
 test "sheet protection xor and sha512" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let xor_opts = SheetProtectionOptions::with_values(password="secret")
+  let xor_opts = @xlsx.SheetProtectionOptions::with_values(password="secret")
   workbook.protect_sheet("Sheet1", xor_opts)
   let sheet = match workbook.sheet("Sheet1") {
     Some(value) => value
@@ -111,12 +116,12 @@ test "sheet protection xor and sha512" {
     e => Err(e)
   }
   inspect(
-    bad_unprotect is Err(XlsxError::InvalidSheetProtection(_)),
+    bad_unprotect is Err(@xlsx.XlsxError::InvalidSheetProtection(_)),
     content="true",
   )
   workbook.unprotect_sheet("Sheet1")
   debug_inspect(sheet.sheet_protection(), content="None")
-  let sha_opts = SheetProtectionOptions::with_values(
+  let sha_opts = @xlsx.SheetProtectionOptions::with_values(
     algorithm_name="SHA-512",
     password="secret",
     select_locked_cells=true,
@@ -136,12 +141,12 @@ test "sheet protection xor and sha512" {
 
 ///|
 test "sheet background roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let data = Bytes::from_array([0x89, 0x50, 0x4e, 0x47])
   workbook.set_sheet_background("Sheet1", data, ".png")
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing Sheet1")
@@ -157,20 +162,22 @@ test "sheet background roundtrip" {
 
 ///|
 test "defined names set delete and adjust" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
-  workbook.set_defined_name(DefinedName::new("Amount", "Sheet1!$A$1:$B$2"))
   workbook.set_defined_name(
-    DefinedName::new("Scoped", "Sheet1!$C$1", scope="Sheet1"),
+    @xlsx.DefinedName::new("Amount", "Sheet1!$A$1:$B$2"),
+  )
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new("Scoped", "Sheet1!$C$1", scope="Sheet1"),
   )
   inspect(workbook.get_defined_names().length(), content="2")
   let dup : Result[Unit, Error] = Ok(
-    workbook.set_defined_name(DefinedName::new("Amount", "Sheet1!$A$1")),
+    workbook.set_defined_name(@xlsx.DefinedName::new("Amount", "Sheet1!$A$1")),
   ) catch {
     e => Err(e)
   }
-  inspect(dup is Err(XlsxError::DefinedNameDuplicate(_)), content="true")
+  inspect(dup is Err(@xlsx.XlsxError::DefinedNameDuplicate(_)), content="true")
   workbook.insert_rows("Sheet1", 1, 1)
   let mut amount_ref = ""
   for dn in workbook.get_defined_names() {
@@ -191,20 +198,22 @@ test "defined names set delete and adjust" {
   inspect(scoped_scope, content="Main")
   inspect(scoped_ref, content="Main!$C$2")
   workbook.delete_defined_name(
-    DefinedName::new("Scoped", "Main!$C$1", scope="Main"),
+    @xlsx.DefinedName::new("Scoped", "Main!$C$1", scope="Main"),
   )
   inspect(workbook.get_defined_names().length(), content="1")
   let missing : Result[Unit, Error] = Ok(
-    workbook.delete_defined_name(DefinedName::new("Missing", "Sheet1!$A$1")),
+    workbook.delete_defined_name(
+      @xlsx.DefinedName::new("Missing", "Sheet1!$A$1"),
+    ),
   ) catch {
     e => Err(e)
   }
-  inspect(missing is Err(XlsxError::DefinedNameScope(_)), content="true")
+  inspect(missing is Err(@xlsx.XlsxError::DefinedNameScope(_)), content="true")
 }
 
 ///|
 test "page break insert remove and shift" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   workbook.insert_page_break("Sheet1", "A1")
   workbook.insert_page_break("Sheet1", "B2")
@@ -224,9 +233,9 @@ test "page break insert remove and shift" {
 
 ///|
 test "sheet props roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let props = SheetPropsOptions::with_values(
+  let props = @xlsx.SheetPropsOptions::with_values(
     code_name="SheetCode",
     enable_format_conditions_calculation=false,
     published=false,
@@ -246,8 +255,8 @@ test "sheet props roundtrip" {
     thick_bottom=false,
   )
   workbook.set_sheet_props("Sheet1", Some(props))
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let parsed_props = parsed.get_sheet_props("Sheet1")
   debug_inspect(parsed_props.code_name, content="Some(\"SheetCode\")")
   debug_inspect(
@@ -273,11 +282,11 @@ test "sheet props roundtrip" {
 
 ///|
 test "sheet props defaults on set" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_sheet_props(
     "Sheet1",
-    Some(SheetPropsOptions::with_values(code_name="OnlyCode")),
+    Some(@xlsx.SheetPropsOptions::with_values(code_name="OnlyCode")),
   )
   let props = workbook.get_sheet_props("Sheet1")
   debug_inspect(props.code_name, content="Some(\"OnlyCode\")")

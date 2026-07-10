@@ -9,9 +9,9 @@ fn repeat_rich_text(text : String, count : Int) -> String {
 
 ///|
 test "rich text set/get" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let font : RichTextFont = {
+  let font : @xlsx.RichTextFont = {
     bold: true,
     italic: false,
     strike: false,
@@ -31,7 +31,7 @@ test "rich text set/get" {
     vert_align: None,
     family: Some("Calibri"),
   }
-  let runs : Array[RichTextRun] = [
+  let runs : Array[@xlsx.RichTextRun] = [
     { text: "Hello ", font: None },
     { text: "World", font: Some(font) },
   ]
@@ -81,7 +81,7 @@ test "rich text set/get" {
 
 ///|
 test "rich text get on plain string cell returns single run" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "plain")
   debug_inspect(
@@ -94,7 +94,7 @@ test "rich text get on plain string cell returns single run" {
 
 ///|
 test "rich text get on non-string cell returns None" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   debug_inspect(sheet.get_cell_rich_text("A1"), content="None")
@@ -102,7 +102,7 @@ test "rich text get on non-string cell returns None" {
 
 ///|
 test "rich text set updates existing cell" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v1", font: None }])
   workbook.set_cell_rich_text("Sheet1", "A1", [{ text: "v2", font: None }])
@@ -111,9 +111,9 @@ test "rich text set updates existing cell" {
 
 ///|
 test "rich text roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let font : RichTextFont = {
+  let font : @xlsx.RichTextFont = {
     bold: true,
     italic: true,
     strike: false,
@@ -133,12 +133,12 @@ test "rich text roundtrip" {
     vert_align: None,
     family: Some("Arial"),
   }
-  let runs : Array[RichTextRun] = [
+  let runs : Array[@xlsx.RichTextRun] = [
     { text: "Moon", font: Some(font) },
     { text: "Bit", font: None },
   ]
   workbook.set_cell_rich_text("Sheet1", "B2", runs)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   debug_inspect(
     parsed.get_cell_rich_text("Sheet1", "B2"),
     content=(
@@ -184,12 +184,12 @@ test "rich text roundtrip" {
 
 ///|
 test "rich text length limit uses utf16" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let emoji_bytes : Bytes = [0xf0, 0x9f, 0x98, 0x80]
   let emoji = @encoding/utf8.decode(emoji_bytes)
   let text = repeat_rich_text(emoji, 16384)
-  let runs : Array[RichTextRun] = [{ text, font: None }]
+  let runs : Array[@xlsx.RichTextRun] = [{ text, font: None }]
   let result : Result[Unit, Error] = Ok(
     workbook.set_cell_rich_text("Sheet1", "A1", runs),
   ) catch {
@@ -200,9 +200,9 @@ test "rich text length limit uses utf16" {
 
 ///|
 test "rich text font extended fields roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let font : RichTextFont = {
+  let font : @xlsx.RichTextFont = {
     bold: true,
     italic: false,
     strike: true,
@@ -222,9 +222,9 @@ test "rich text font extended fields roundtrip" {
     vert_align: Some("superscript"),
     family: Some("Calibri"),
   }
-  let runs : Array[RichTextRun] = [{ text: "X", font: Some(font) }]
+  let runs : Array[@xlsx.RichTextRun] = [{ text: "X", font: Some(font) }]
   workbook.set_cell_rich_text("Sheet1", "C3", runs)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let shared_xml = match archive.get("xl/sharedStrings.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -242,7 +242,7 @@ test "rich text font extended fields roundtrip" {
     content="true",
   )
   inspect(shared_xml.contains("<scheme val=\"minor\"/>"), content="true")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let parsed_runs = match parsed.get_cell_rich_text("Sheet1", "C3") {
     Some(value) => value
     None => fail("missing rich text")
@@ -281,9 +281,9 @@ test "rich text font extended fields roundtrip" {
 
 ///|
 test "rich text color theme/indexed/tint roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let font_theme : RichTextFont = {
+  let font_theme : @xlsx.RichTextFont = {
     bold: false,
     italic: false,
     strike: false,
@@ -303,7 +303,7 @@ test "rich text color theme/indexed/tint roundtrip" {
     vert_align: None,
     family: None,
   }
-  let font_indexed : RichTextFont = {
+  let font_indexed : @xlsx.RichTextFont = {
     bold: false,
     italic: false,
     strike: false,
@@ -327,7 +327,7 @@ test "rich text color theme/indexed/tint roundtrip" {
     { text: "T", font: Some(font_theme) },
     { text: "I", font: Some(font_indexed) },
   ])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let shared_xml = match archive.get("xl/sharedStrings.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -336,7 +336,7 @@ test "rich text color theme/indexed/tint roundtrip" {
   inspect(shared_xml.contains("theme=\"1\""), content="true")
   inspect(shared_xml.contains("tint=\"0.5\""), content="true")
   inspect(shared_xml.contains("indexed=\"64\""), content="true")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(
     parsed.get_cell_rich_text("Sheet1", "D4"),
     content=(

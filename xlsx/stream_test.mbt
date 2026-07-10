@@ -1,15 +1,15 @@
 ///|
 test "stream writer basic" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
   writer.set_row("A1", ["A", "B"])
   writer.set_row_cells("A2", [
-    StreamCell::new("3", formula="SUM(A1,B1)"),
-    StreamCell::new("4"),
+    @xlsx.StreamCell::new("3", formula="SUM(A1,B1)"),
+    @xlsx.StreamCell::new("4"),
   ])
   writer.flush()
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -21,7 +21,7 @@ test "stream writer basic" {
 
 ///|
 test "stream writer sheet id follows workbook order" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_chart_sheet("Chart1", "<chart/>"))
   ignore(workbook.add_sheet("Sheet2"))
@@ -32,7 +32,7 @@ test "stream writer sheet id follows workbook order" {
 
 ///|
 test "stream writer row order" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
   writer.set_row("A2", ["A"])
@@ -46,7 +46,7 @@ test "stream writer row order" {
 
 ///|
 test "stream writer closed" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
   writer.set_row("A1", ["A"])
@@ -61,15 +61,15 @@ test "stream writer closed" {
 
 ///|
 test "stream writer column helpers and panes" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
-  let style_id = workbook.new_style(Style::number_format("0%"))
+  let style_id = workbook.new_style(@xlsx.Style::number_format("0%"))
   writer.set_col_width(2, 3, 20.0)
   writer.set_col_visible(2, 2, false)
   writer.set_col_style(2, 3, style_id)
   writer.set_col_outline_level(3, 2)
-  let panes = Panes::with_values(
+  let panes = @xlsx.Panes::with_values(
     freeze=true,
     x_split=1,
     y_split=1,
@@ -79,7 +79,7 @@ test "stream writer column helpers and panes" {
   writer.set_panes(panes)
   writer.set_row("A1", ["A"])
   writer.flush()
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -98,17 +98,17 @@ test "stream writer column helpers and panes" {
 
 ///|
 test "stream writer table merge and row opts" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
-  let style_id = workbook.new_style(Style::number_format("0.0"))
-  let opts = RowOpts::with_values(height=22.0, hidden=true, style_id~)
+  let style_id = workbook.new_style(@xlsx.Style::number_format("0.0"))
+  let opts = @xlsx.RowOpts::with_values(height=22.0, hidden=true, style_id~)
   writer.set_row("A1", ["A", "B"], row_opts=opts)
   writer.set_row("A2", ["1", "2"])
   ignore(writer.add_table("A1:B2", "Table1", ["A", "B"]))
   writer.merge_cell("A1", "B1")
   writer.flush()
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -126,7 +126,7 @@ test "stream writer table merge and row opts" {
 
 ///|
 test "stream writer column helpers require pre-row" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
   writer.set_row("A1", ["A"])
@@ -139,7 +139,7 @@ test "stream writer column helpers require pre-row" {
     col_result,
     content="Err(StreamModeConflict(msg=\"set_col_width must be called before set_row\"))",
   )
-  let panes = Panes::new()
+  let panes = @xlsx.Panes::new()
   let pane_result = try writer.set_panes(panes) catch {
     err => Err(err)
   } noraise {
@@ -153,7 +153,7 @@ test "stream writer column helpers require pre-row" {
 
 ///|
 test "stream writer mode conflict" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let writer = workbook.new_stream_writer("Sheet1")
   let result = try sheet.set_cell("A1", "X") catch {
@@ -170,7 +170,7 @@ test "stream writer mode conflict" {
 
 ///|
 test "row stream iterates" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_row(1, ["A", "B"])
   sheet.set_row(3, ["C"])
@@ -182,7 +182,7 @@ test "row stream iterates" {
 
 ///|
 test "workbook row stream" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_row(1, ["A"])
   let stream = workbook.row_stream("Sheet1")

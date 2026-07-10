@@ -1,8 +1,8 @@
 ///|
 test "auto filter set and roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let options : Array[AutoFilterOption] = [
+  let options : Array[@xlsx.AutoFilterOption] = [
     { column: "B", expression: "x == 10" },
     { column: "C", expression: "x > 5" },
   ]
@@ -30,7 +30,7 @@ test "auto filter set and roundtrip" {
       #|)
     ),
   )
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   debug_inspect(
     parsed.get_auto_filter("Sheet1"),
     content=(
@@ -58,9 +58,9 @@ test "auto filter set and roundtrip" {
 
 ///|
 test "auto filter or expression" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let options : Array[AutoFilterOption] = [
+  let options : Array[@xlsx.AutoFilterOption] = [
     { column: "A", expression: "x == 1 or x == 3" },
   ]
   workbook.set_auto_filter("Sheet1", "A1:B5", options)
@@ -79,9 +79,9 @@ test "auto filter or expression" {
 
 ///|
 test "auto filter adjusts on insert" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let options : Array[AutoFilterOption] = [
+  let options : Array[@xlsx.AutoFilterOption] = [
     { column: "C", expression: "x >= 5" },
   ]
   workbook.set_auto_filter("Sheet1", "A1:C3", options)
@@ -112,9 +112,9 @@ test "auto filter adjusts on insert" {
 
 ///|
 test "auto filter invalid expression" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let options : Array[AutoFilterOption] = [
+  let options : Array[@xlsx.AutoFilterOption] = [
     { column: "A", expression: "x >< 1" },
   ]
   let result : Result[Unit, Error] = Ok(
@@ -132,7 +132,7 @@ test "auto filter invalid expression" {
 
 ///|
 test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
 
   // Tokenize quotes + escaped quotes inside quotes.
@@ -182,7 +182,7 @@ test "auto filter: quoted tokens, wildcards, blanks/nonblanks" {
 
 ///|
 test "auto filter: invalid token count and blanks operator" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bad_tokens : Result[Unit, Error] = Ok(
     workbook.set_auto_filter("Sheet1", "A1:A2", [
@@ -227,7 +227,7 @@ test "auto filter: invalid token count and blanks operator" {
 
 ///|
 test "auto filter: custom operators, and-expression, and column validation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
 
   // < and <= map to custom filter operators.
@@ -376,7 +376,7 @@ test "auto filter: custom operators, and-expression, and column validation" {
 
 ///|
 test "auto filter clear" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.clear_auto_filter()
   debug_inspect(sheet.auto_filter(), content="None")

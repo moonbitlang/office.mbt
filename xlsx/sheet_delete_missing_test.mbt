@@ -1,6 +1,6 @@
 ///|
 test "delete_sheet is no-op when missing" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result : Result[Unit, Error] = Ok(workbook.delete_sheet("SheetN")) catch {
     e => Err(e)

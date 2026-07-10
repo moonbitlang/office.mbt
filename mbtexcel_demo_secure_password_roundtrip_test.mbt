@@ -4,13 +4,13 @@ test "demo secure password: encrypted read/write roundtrip remains stable" {
   let bytes = @demos.demo_secure_bytes(password~)
 
   let bad : Result[@xlsx.Workbook, Error] = Ok(
-    read_with_password(bytes, "wrong-password"),
+    @mbtexcel.read_with_password(bytes, "wrong-password"),
   ) catch {
     e => Err(e)
   }
   inspect(bad is Err(_), content="true")
 
-  let parsed = read_with_password(bytes, password)
+  let parsed = @mbtexcel.read_with_password(bytes, password)
   debug_inspect(parsed.sheet_name(0), content="Some(\"Secure\")")
   debug_inspect(
     parsed.get_cell("Secure", "A1"),
@@ -18,8 +18,10 @@ test "demo secure password: encrypted read/write roundtrip remains stable" {
   )
   debug_inspect(parsed.get_cell("Secure", "B4"), content="Some(\"moonbit\")")
 
-  let encrypted_roundtrip = write_with_password(parsed, password)
-  let parsed_roundtrip = read_with_password(encrypted_roundtrip, password)
+  let encrypted_roundtrip = @mbtexcel.write_with_password(parsed, password)
+  let parsed_roundtrip = @mbtexcel.read_with_password(
+    encrypted_roundtrip, password,
+  )
   debug_inspect(parsed_roundtrip.sheet_name(0), content="Some(\"Secure\")")
   debug_inspect(
     parsed_roundtrip.get_cell("Secure", "A2"),

@@ -1,6 +1,6 @@
 ///|
 test "get base color priority" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   inspect(workbook.get_base_color("AABBCC", 0), content="AABBCC")
   inspect(workbook.get_base_color("FFAABBCC", 0), content="AABBCC")
   inspect(workbook.get_base_color("", 2), content="FF0000")
@@ -9,9 +9,9 @@ test "get base color priority" {
 
 ///|
 test "get base color from theme and indexed colors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let archive = @zip.read(write(workbook)) catch {
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
     err => fail("zip read failed: \{err}")
   }
   let theme_xml =
@@ -63,10 +63,10 @@ test "get base color from theme and indexed colors" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let parsed = read(updated_bytes)
+  let parsed = @xlsx.read(updated_bytes)
   inspect(parsed.get_base_color("", 0, theme_color=4), content="ABCDEF")
   inspect(parsed.get_base_color("", 1), content="654321")
-  let roundtrip = write(parsed)
+  let roundtrip = @xlsx.write(parsed)
   let roundtrip_archive = @zip.read(roundtrip) catch {
     err => fail("zip read failed: \{repr(err)}")
   }

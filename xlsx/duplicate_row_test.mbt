@@ -1,6 +1,6 @@
 ///|
 test "duplicate row basic" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_row(1, ["A1", "B1"])
   sheet.set_row(2, ["A2", "B2"])
@@ -12,7 +12,7 @@ test "duplicate row basic" {
 
 ///|
 test "duplicate row to target position" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_row(1, ["A1"])
   sheet.set_row(2, ["A2"])
@@ -26,7 +26,7 @@ test "duplicate row to target position" {
 
 ///|
 test "duplicate row copies validations and merges" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_row(1, ["A", "B"])
   sheet.set_row_height(1, 20.0)
@@ -56,10 +56,10 @@ test "duplicate row copies validations and merges" {
 
 ///|
 test "duplicate row invalid index" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result : Result[Unit, Error] = Ok(workbook.duplicate_row("Sheet1", 0)) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(result is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
 }

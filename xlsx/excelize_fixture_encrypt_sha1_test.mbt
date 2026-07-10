@@ -1,7 +1,7 @@
 ///|
 #cfg(target="native")
 async test "excelize fixture encryptSHA1.xlsx opens with password" {
-  let workbook = open_file(
+  let workbook = @xlsx.open_file(
     "fixtures/excelize/test/encryptSHA1.xlsx",
     password="password",
   )
@@ -14,10 +14,13 @@ async test "excelize fixture encryptSHA1.xlsx opens with password" {
 ///|
 #cfg(target="native")
 async test "excelize fixture encryptSHA1.xlsx wrong password errors" {
-  let result : Result[Workbook, Error] = Ok(
-    open_file("fixtures/excelize/test/encryptSHA1.xlsx", password="passwd"),
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.open_file(
+      "fixtures/excelize/test/encryptSHA1.xlsx",
+      password="passwd",
+    ),
   ) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidPassword), content="true")
+  inspect(result is Err(@xlsx.XlsxError::InvalidPassword), content="true")
 }

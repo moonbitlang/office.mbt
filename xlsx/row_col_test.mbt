@@ -1,6 +1,6 @@
 ///|
 test "worksheet row and column ops" {
-  let sheet = Worksheet::new("Sheet1")
+  let sheet = @xlsx.Worksheet::new("Sheet1")
   sheet.set_row(1, ["a", "b", "c"])
   sheet.set_col(2, ["x", "y"])
   debug_inspect(sheet.get_row(1), content="[\"a\", \"x\", \"c\"]")
@@ -12,7 +12,7 @@ test "worksheet row and column ops" {
 
 ///|
 test "workbook row and column ops" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_row("Sheet1", 1, ["a", "b"])
   workbook.set_col("Sheet1", 1, ["x", "y", "z"])

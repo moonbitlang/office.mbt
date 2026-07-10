@@ -1,9 +1,9 @@
 ///|
 test "image drawing package" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_image("B2", b"img", "png", "image/png")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let image = match archive.get("xl/media/image1.png") {
     Some(value) => value

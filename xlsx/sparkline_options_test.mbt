@@ -1,8 +1,8 @@
 ///|
 test "sparkline options write" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let opts = SparklineOptions::new(["B2"], ["A1:A3"])
+  let opts = @xlsx.SparklineOptions::new(["B2"], ["A1:A3"])
   opts.set_type(WinLoss)
   opts.set_style(31)
   opts.set_markers(true)
@@ -17,7 +17,7 @@ test "sparkline options write" {
   opts.set_high_color("778899")
   opts.set_low_color("AABBCC")
   sheet.add_sparkline_options(opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -54,9 +54,9 @@ test "sparkline options write" {
 
 ///|
 test "sparkline options roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let opts = SparklineOptions::new(["B2"], ["A1:A3"])
+  let opts = @xlsx.SparklineOptions::new(["B2"], ["A1:A3"])
   opts.set_type(WinLoss)
   opts.set_style(31)
   opts.set_markers(true)
@@ -71,7 +71,7 @@ test "sparkline options roundtrip" {
   opts.set_high_color("778899")
   opts.set_low_color("AABBCC")
   sheet.add_sparkline_options(opts)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -119,9 +119,9 @@ test "sparkline options roundtrip" {
 
 ///|
 test "sparkline options style out of range" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let opts = SparklineOptions::new(["B2"], ["A1:A3"])
+  let opts = @xlsx.SparklineOptions::new(["B2"], ["A1:A3"])
   opts.set_style(36)
   let result = try sheet.add_sparkline_options(opts) catch {
     err => Err(err)
@@ -136,9 +136,9 @@ test "sparkline options style out of range" {
 
 ///|
 test "sparkline options followups" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let opts = SparklineOptions::new(["B2"], ["A1:A3"])
+  let opts = @xlsx.SparklineOptions::new(["B2"], ["A1:A3"])
   opts.set_date_axis(true)
   opts.set_hidden(true)
   opts.set_weight(2.0)
@@ -146,7 +146,7 @@ test "sparkline options followups" {
   opts.set_manual_max(9)
   opts.set_empty_cells("zero")
   sheet.add_sparkline_options(opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -163,7 +163,7 @@ test "sparkline options followups" {
   inspect(sheet_xml.contains("manualMin=\"1\""), content="true")
   inspect(sheet_xml.contains("manualMax=\"9\""), content="true")
   inspect(sheet_xml.contains("displayEmptyCellsAs=\"zero\""), content="true")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -179,7 +179,7 @@ test "sparkline options followups" {
 
 ///|
 test "sparkline options alias fields" {
-  let opts = SparklineOptions::new(["B2"], ["A1:A3"])
+  let opts = @xlsx.SparklineOptions::new(["B2"], ["A1:A3"])
   debug_inspect(opts.location, content="[\"B2\"]")
   debug_inspect(opts.range, content="[\"A1:A3\"]")
   debug_inspect(

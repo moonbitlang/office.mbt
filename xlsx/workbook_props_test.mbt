@@ -1,13 +1,13 @@
 ///|
 test "workbook and calc props roundtrip" {
-  let workbook = Workbook::new()
-  let wb_opts = WorkbookPropsOptions::with_values(
+  let workbook = @xlsx.Workbook::new()
+  let wb_opts = @xlsx.WorkbookPropsOptions::with_values(
     date_1904=true,
     filter_privacy=true,
     code_name="CodeName",
   )
   workbook.set_workbook_props(Some(wb_opts))
-  let calc_opts = CalcPropsOptions::with_values(
+  let calc_opts = @xlsx.CalcPropsOptions::with_values(
     calc_id=1,
     calc_mode="manual",
     full_calc_on_load=true,
@@ -23,8 +23,8 @@ test "workbook and calc props roundtrip" {
     force_full_calc=true,
   )
   workbook.set_calc_props(Some(calc_opts))
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let parsed_wb = parsed.get_workbook_props()
   debug_inspect(parsed_wb.date_1904, content="Some(true)")
   debug_inspect(parsed_wb.filter_privacy, content="Some(true)")
@@ -54,8 +54,8 @@ test "workbook and calc props roundtrip" {
 
 ///|
 test "invalid calc props" {
-  let workbook = Workbook::new()
-  let bad = CalcPropsOptions::with_values(calc_mode="bad")
+  let workbook = @xlsx.Workbook::new()
+  let bad = @xlsx.CalcPropsOptions::with_values(calc_mode="bad")
   let result = Ok(workbook.set_calc_props(Some(bad))) catch { e => Err(e) }
   debug_inspect(
     result,
@@ -65,14 +65,14 @@ test "invalid calc props" {
 
 ///|
 test "calc props normalize auto + r1c1 variants" {
-  let workbook = Workbook::new()
-  let calc_opts = CalcPropsOptions::with_values(
+  let workbook = @xlsx.Workbook::new()
+  let calc_opts = @xlsx.CalcPropsOptions::with_values(
     calc_mode="AUTO",
     ref_mode="r1c1",
   )
   workbook.set_calc_props(Some(calc_opts))
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let props = parsed.get_calc_props()
   debug_inspect(props.calc_mode, content="Some(\"auto\")")
   debug_inspect(props.ref_mode, content="Some(\"R1C1\")")
@@ -80,11 +80,11 @@ test "calc props normalize auto + r1c1 variants" {
 
 ///|
 test "calc props normalize autonotable variant" {
-  let workbook = Workbook::new()
-  let calc_opts = CalcPropsOptions::with_values(calc_mode="AUTONOTABLE")
+  let workbook = @xlsx.Workbook::new()
+  let calc_opts = @xlsx.CalcPropsOptions::with_values(calc_mode="AUTONOTABLE")
   workbook.set_calc_props(Some(calc_opts))
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let props = parsed.get_calc_props()
   debug_inspect(props.calc_mode, content="Some(\"autoNoTable\")")
 }

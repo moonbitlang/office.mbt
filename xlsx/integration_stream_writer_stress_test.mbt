@@ -1,10 +1,10 @@
 ///|
 test "integration stream writer stress with styles formulas and table" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Data"))
 
   let writer = workbook.new_stream_writer("Data")
-  let style_id = workbook.new_style(Style::number_format("0.00"))
+  let style_id = workbook.new_style(@xlsx.Style::number_format("0.00"))
   writer.set_col_width(1, 4, 12.0)
   writer.set_col_style(4, 4, style_id)
   writer.set_row("A1", ["N", "Double", "Triple", "Total"])
@@ -14,10 +14,14 @@ test "integration stream writer stress with styles formulas and table" {
     let triple = n * 3
     let total = double + triple
     writer.set_row_cells("A\{row}", [
-      StreamCell::new("\{n}"),
-      StreamCell::new("\{double}"),
-      StreamCell::new("\{triple}"),
-      StreamCell::new("\{total}", formula="SUM(B\{row}:C\{row})", style_id~),
+      @xlsx.StreamCell::new("\{n}"),
+      @xlsx.StreamCell::new("\{double}"),
+      @xlsx.StreamCell::new("\{triple}"),
+      @xlsx.StreamCell::new(
+        "\{total}",
+        formula="SUM(B\{row}:C\{row})",
+        style_id~,
+      ),
     ])
   }
   ignore(
@@ -27,7 +31,7 @@ test "integration stream writer stress with styles formulas and table" {
   )
   writer.flush()
 
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -46,7 +50,7 @@ test "integration stream writer stress with styles formulas and table" {
   inspect(table_xml.contains("name=\"StreamStress\""), content="true")
   inspect(table_xml.contains("ref=\"A1:D1201\""), content="true")
 
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let sheet = match parsed.sheet("Data") {
     Some(value) => value
     None => fail("missing parsed Data sheet")

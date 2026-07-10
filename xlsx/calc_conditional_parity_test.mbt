@@ -1,6 +1,6 @@
 ///|
 test "calc conditional parity cases" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("A4", Numeric(0.4))
@@ -32,7 +32,7 @@ test "calc conditional parity cases" {
 
 ///|
 test "calc conditional parity errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("D1", String("Month"))
 
@@ -59,7 +59,7 @@ test "calc conditional parity errors" {
 
 ///|
 test "calc logical parity cases" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(4.0))
@@ -95,7 +95,7 @@ test "calc logical parity cases" {
 
 ///|
 test "calc logical parity errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(1.0))
   sheet.set_cell_value("B1", Numeric(4.0))

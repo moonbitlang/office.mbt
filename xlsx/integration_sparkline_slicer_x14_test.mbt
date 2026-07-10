@@ -58,7 +58,7 @@ fn has_value_sparkline_slicer(
 
 ///|
 test "integration sparkline slicer and x14 conditional formatting coexistence" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let data = workbook.add_sheet("Data")
   let dashboard = workbook.add_sheet("Dashboard")
 
@@ -80,21 +80,21 @@ test "integration sparkline slicer and x14 conditional formatting coexistence" {
   )
   workbook.add_slicer(
     "Dashboard",
-    SlicerOptions::new("Region", "B2", "Data", "MixTable"),
+    @xlsx.SlicerOptions::new("Region", "B2", "Data", "MixTable"),
   )
 
   dashboard.set_cell_value("C2", Numeric(10.0))
   dashboard.set_cell_value("C3", Numeric(24.0))
   dashboard.set_cell_value("C4", Numeric(18.0))
 
-  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+  let sparkline_opts = @xlsx.SparklineOptions::new(["G2", "G3", "G4"], [
     "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
   ])
   sparkline_opts.set_markers(true)
   sparkline_opts.set_series_color("4F81BD")
   workbook.add_sparkline_options("Dashboard", sparkline_opts)
 
-  let cf_opt = ConditionalFormatOptions::new("data_bar")
+  let cf_opt = @xlsx.ConditionalFormatOptions::new("data_bar")
   cf_opt.set_min_type("min")
   cf_opt.set_max_type("max")
   cf_opt.set_bar_color("#638EC6")
@@ -103,7 +103,7 @@ test "integration sparkline slicer and x14 conditional formatting coexistence" {
   cf_opt.set_bar_border_color("#0000FF")
   workbook.set_conditional_format("Dashboard", "C2:C4", [cf_opt])
 
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -150,7 +150,7 @@ test "integration sparkline slicer and x14 conditional formatting coexistence" {
   )
   inspect(archive.get("xl/slicers/slicer1.xml") is Some(_), content="true")
 
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let parsed_dashboard = match parsed.sheet("Dashboard") {
     Some(value) => value
     None => fail("missing parsed dashboard")

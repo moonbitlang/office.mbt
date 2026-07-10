@@ -1,8 +1,8 @@
 ///|
 test "row and column dimensions roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let style_id = workbook.add_style(Style::new())
+  let style_id = workbook.add_style(@xlsx.Style::new())
   workbook.set_row_height("Sheet1", 2, 18.5)
   workbook.set_row_visible("Sheet1", 2, false)
   workbook.set_row_outline_level("Sheet1", 2, 3)
@@ -11,8 +11,8 @@ test "row and column dimensions roundtrip" {
   workbook.set_col_visible("Sheet1", 3, false)
   workbook.set_col_outline_level("Sheet1", 3, 2)
   workbook.set_col_style("Sheet1", 3, style_id)
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(parsed.get_row_height("Sheet1", 2), content="Some(18.5)")
   inspect(parsed.row_visible("Sheet1", 2), content="false")
   inspect(parsed.row_outline_level("Sheet1", 2), content="3")
@@ -25,13 +25,13 @@ test "row and column dimensions roundtrip" {
 
 ///|
 test "row/col getters get_* aliases" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_row_visible("Sheet1", 2, false)
   workbook.set_row_outline_level("Sheet1", 2, 3)
   workbook.set_col_visible("Sheet1", 3, false)
   workbook.set_col_outline_level("Sheet1", 3, 2)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   inspect(parsed.get_row_visible("Sheet1", 2), content="false")
   inspect(parsed.get_row_outline_level("Sheet1", 2), content="3")
   inspect(parsed.get_col_visible("Sheet1", 3), content="false")
@@ -40,7 +40,7 @@ test "row/col getters get_* aliases" {
 
 ///|
 test "remove_row alias shifts cells" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "a")
   workbook.set_cell("Sheet1", "A2", "b")
@@ -53,7 +53,7 @@ test "remove_row alias shifts cells" {
 
 ///|
 test "remove_col alias shifts cells" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "a")
   workbook.set_cell("Sheet1", "B1", "b")
@@ -66,7 +66,7 @@ test "remove_col alias shifts cells" {
 
 ///|
 test "insert and remove rows adjust ranges" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "a")
   workbook.set_cell("Sheet1", "B3", "b")
@@ -74,7 +74,7 @@ test "insert and remove rows adjust ranges" {
   ignore(
     workbook.add_table_with_columns("Sheet1", "C1:D3", "Table1", ["c1", "c2"]),
   )
-  let spark_opts = SparklineOptions::new(["E1"], ["A1:A3"])
+  let spark_opts = @xlsx.SparklineOptions::new(["E1"], ["A1:A3"])
   workbook.add_sparkline("Sheet1", spark_opts)
   workbook.set_row_height("Sheet1", 3, 15.0)
   workbook.insert_rows("Sheet1", 2, 1)
@@ -121,7 +121,7 @@ test "insert and remove rows adjust ranges" {
 
 ///|
 test "insert and remove cols adjust ranges" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "a")
   workbook.set_cell("Sheet1", "C1", "c")
@@ -129,7 +129,7 @@ test "insert and remove cols adjust ranges" {
   ignore(
     workbook.add_table_with_columns("Sheet1", "B1:C3", "Table1", ["b1", "c1"]),
   )
-  let spark_opts = SparklineOptions::new(["D1"], ["A1:C1"])
+  let spark_opts = @xlsx.SparklineOptions::new(["D1"], ["A1:C1"])
   workbook.add_sparkline("Sheet1", spark_opts)
   workbook.set_col_width("Sheet1", 3, 11.0)
   workbook.insert_cols("Sheet1", 2, 1)

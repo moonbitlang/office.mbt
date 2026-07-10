@@ -61,9 +61,9 @@ fn first_drawing_rels_path(archive : @zip.Archive) -> String raise Error {
 
 ///|
 test "ooxml rels: relationship tag not closed" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -75,7 +75,7 @@ test "ooxml rels: relationship tag not closed" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(bad),
   )
-  let result = Ok(read(updated)) catch { e => Err(e) }
+  let result = Ok(@xlsx.read(updated)) catch { e => Err(e) }
   match result {
     Err(InvalidXml(msg~)) => inspect(msg, content="relationship tag not closed")
     _ => fail("expected InvalidXml for relationship tag not closed")
@@ -84,9 +84,9 @@ test "ooxml rels: relationship tag not closed" {
 
 ///|
 test "ooxml rels: relationship id missing" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -99,7 +99,7 @@ test "ooxml rels: relationship id missing" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(bad),
   )
-  let result = Ok(read(updated)) catch { e => Err(e) }
+  let result = Ok(@xlsx.read(updated)) catch { e => Err(e) }
   match result {
     Err(InvalidXml(msg~)) => inspect(msg, content="relationship id missing")
     _ => fail("expected InvalidXml for relationship id missing")
@@ -108,9 +108,9 @@ test "ooxml rels: relationship id missing" {
 
 ///|
 test "ooxml rels: relationship target missing" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -123,7 +123,7 @@ test "ooxml rels: relationship target missing" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(bad),
   )
-  let result = Ok(read(updated)) catch { e => Err(e) }
+  let result = Ok(@xlsx.read(updated)) catch { e => Err(e) }
   match result {
     Err(InvalidXml(msg~)) => inspect(msg, content="relationship target missing")
     _ => fail("expected InvalidXml for relationship target missing")
@@ -132,9 +132,9 @@ test "ooxml rels: relationship target missing" {
 
 ///|
 test "ooxml rels: expanded Relationship tags still read" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -151,15 +151,15 @@ test "ooxml rels: expanded Relationship tags still read" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(expanded),
   )
-  let parsed = read(updated)
+  let parsed = @xlsx.read(updated)
   debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
 }
 
 ///|
 test "ooxml rels: workbook targets with ../ prefix" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -176,15 +176,15 @@ test "ooxml rels: workbook targets with ../ prefix" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(patched),
   )
-  let parsed = read(updated)
+  let parsed = @xlsx.read(updated)
   debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
 }
 
 ///|
 test "ooxml rels: workbook targets with xl/ prefix" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -201,15 +201,15 @@ test "ooxml rels: workbook targets with xl/ prefix" {
     "xl/_rels/workbook.xml.rels",
     @encoding/utf8.encode(patched),
   )
-  let parsed = read(updated)
+  let parsed = @xlsx.read(updated)
   debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
 }
 
 ///|
 test "ooxml rels: workbook part path discovered from [Content_Types]" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -255,13 +255,13 @@ test "ooxml rels: workbook part path discovered from [Content_Types]" {
   let updated_bytes = @zip.write(updated) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let parsed = read(updated_bytes)
+  let parsed = @xlsx.read(updated_bytes)
   debug_inspect(parsed.get_sheet_list(), content="[\"Sheet1\"]")
 }
 
 ///|
 test "ooxml rels: pivot cache rels tolerate stale first entries and mixed targets" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   ignore(
     sheet.add_pivot_table_xml(
@@ -270,7 +270,7 @@ test "ooxml rels: pivot cache rels tolerate stale first entries and mixed target
       cache_records_xml="<pivotCacheRecords count=\"0\"/>",
     ),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -311,7 +311,7 @@ test "ooxml rels: pivot cache rels tolerate stale first entries and mixed target
   ) catch {
     err => fail("zip rewrite failed: \{err}")
   }
-  let parsed = read(updated)
+  let parsed = @xlsx.read(updated)
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet after read")
@@ -324,7 +324,7 @@ test "ooxml rels: pivot cache rels tolerate stale first entries and mixed target
 
 ///|
 test "ooxml rels: chartsheet chart rels tolerate stale first entries and mixed targets" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let chart_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -332,7 +332,7 @@ test "ooxml rels: chartsheet chart rels tolerate stale first entries and mixed t
     #|  <c:chart/>
     #|</c:chartSpace>
   ignore(workbook.add_chart_sheet("Chart1", chart_xml))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -352,7 +352,7 @@ test "ooxml rels: chartsheet chart rels tolerate stale first entries and mixed t
   ) catch {
     err => fail("zip rewrite failed: \{err}")
   }
-  let parsed = read(updated)
+  let parsed = @xlsx.read(updated)
   inspect(parsed.chart_sheets().length(), content="1")
   let parsed_chart = parsed.chart_sheets()[0]
   inspect(parsed_chart.name(), content="Chart1")

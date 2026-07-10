@@ -1,20 +1,20 @@
 ///|
 test "slicer roundtrip read" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
     workbook.add_table_with_columns("Sheet1", "A1:C4", "Table1", [
       "Region", "Type", "Sales",
     ]),
   )
-  let opts = SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
+  let opts = @xlsx.SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
   opts.set_caption("Region caption")
   opts.set_display_header(Some(false))
   opts.set_item_desc(true)
   opts.set_macro_name("Macro1")
   opts.set_size(300, 160)
   opts.set_format(
-    GraphicOptions::with_values(
+    @xlsx.GraphicOptions::with_values(
       offset_x=5,
       offset_y=7,
       alt_text="Slicer alt",
@@ -24,7 +24,7 @@ test "slicer roundtrip read" {
     ),
   )
   workbook.add_slicer("Sheet1", opts)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let slicers = parsed.get_slicers("Sheet1")
   inspect(slicers.length(), content="1")
   let slicer = slicers[0]
