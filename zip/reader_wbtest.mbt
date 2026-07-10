@@ -154,32 +154,32 @@ test "zip read zip64 extra sizes" {
 test "zip reader wb: direct guard error branches" {
   let reader = Reader::new(b"", 0)
   try reader.read_bytes(-1) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read_bytes to raise")
   }
   try reader.skip(-1) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected skip to raise")
   }
   try u64_to_int(0x1_0000_0000) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected u64_to_int to raise")
   }
   try read_u16_le_at(b"\x00", 0) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read_u16_le_at to raise")
   }
   try read_u32_le_at_raw(b"\x00\x01", 0) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read_u32_le_at_raw to raise")
   }
   try read_u64_le_at(b"\x00\x01\x02", 0) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read_u64_le_at to raise")
   }

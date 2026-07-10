@@ -4,7 +4,7 @@ fn parse_relationship_targets(
   rel_type : StringView,
 ) -> Map[String, String] raise XlsxError {
   @ooxml.parse_relationship_targets(xml, rel_type) catch {
-    @ooxml.ParseXmlError::InvalidXml(msg~) => raise InvalidXml(msg~)
+    InvalidXml(msg~) => raise InvalidXml(msg~)
   }
 }
 

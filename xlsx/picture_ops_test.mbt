@@ -658,7 +658,7 @@ async test "picture with options file path explicit values" {
   @async/fs.write_file(
     path,
     b"img",
-    create_mode=@async/fs.CreateOrTruncate,
+    create_mode=CreateOrTruncate,
     permission=0o644,
   ) catch {
     err => fail("write image failed: \{err}")
@@ -710,7 +710,7 @@ async test "picture from file path" {
   @async/fs.write_file(
     path,
     b"img",
-    create_mode=@async/fs.CreateOrTruncate,
+    create_mode=CreateOrTruncate,
     permission=0o644,
   ) catch {
     err => fail("write image failed: \{err}")

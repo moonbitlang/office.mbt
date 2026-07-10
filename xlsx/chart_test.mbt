@@ -1226,7 +1226,7 @@ test "chart line type solid emits scheme color line fill" {
     "Sheet1!$B$2:$B$4",
     name="Series1",
   )
-  series.line.typ = ChartLineType::Solid
+  series.line.typ = Solid
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
   let bytes = write(workbook)
@@ -1251,7 +1251,7 @@ test "chart line type solid emits scheme color line fill" {
     "Sheet1!$B$2:$B$4",
     name="Series1",
   )
-  series2.line.typ = ChartLineType::Solid
+  series2.line.typ = Solid
   series2.line.color = "#FF0000"
   opts2.series.push(series2)
   workbook2.add_chart_with_options("Sheet1", "C3", opts2)

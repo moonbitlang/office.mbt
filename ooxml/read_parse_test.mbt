@@ -26,8 +26,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|</Relationships>
     #|
   try parse_relationship_targets(missing_id, "t1") catch {
-    ParseXmlError::InvalidXml(msg~) =>
-      inspect(msg, content="relationship id missing")
+    InvalidXml(msg~) => inspect(msg, content="relationship id missing")
   } noraise {
     _ => fail("expected relationship id missing")
   }
@@ -39,8 +38,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|</Relationships>
     #|
   try parse_relationship_targets(missing_target, "t1") catch {
-    ParseXmlError::InvalidXml(msg~) =>
-      inspect(msg, content="relationship target missing")
+    InvalidXml(msg~) => inspect(msg, content="relationship target missing")
   } noraise {
     _ => fail("expected relationship target missing")
   }
@@ -52,8 +50,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|</Relationships>
     #|
   try parse_relationship_targets(malformed, "t1") catch {
-    ParseXmlError::InvalidXml(msg~) =>
-      inspect(msg, content="relationship tag not closed")
+    InvalidXml(msg~) => inspect(msg, content="relationship tag not closed")
   } noraise {
     _ => fail("expected relationship tag not closed")
   }
@@ -92,7 +89,7 @@ test "ooxml read_parse: parse_content_type_overrides reports malformed override 
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
     ])
   catch {
-    ParseXmlError::InvalidXml(msg~) =>
+    InvalidXml(msg~) =>
       inspect(msg, content="content type override tag not closed")
   } noraise {
     _ => fail("expected content type override tag not closed")

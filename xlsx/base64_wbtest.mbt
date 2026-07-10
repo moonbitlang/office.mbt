@@ -46,7 +46,7 @@ test "base64_decode canonical-form semantics (differs from old on edge input)" {
 ///|
 fn assert_base64_rejects(text : String) -> Unit raise {
   try base64_decode(text) |> ignore catch {
-    XlsxError::InvalidBase64(_) => ()
+    InvalidBase64(_) => ()
     _ => fail("expected InvalidBase64 for \{text}")
   } noraise {
     _ => fail("expected base64_decode to raise for \{text}")

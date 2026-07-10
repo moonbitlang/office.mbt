@@ -230,7 +230,7 @@ pub async fn Workbook::save_as(
   @async/fs.write_file(
     path,
     bytes,
-    create_mode=@async/fs.CreateOrTruncate,
+    create_mode=CreateOrTruncate,
     permission=0o644,
   ) catch {
     err => raise InvalidSheetOperation(msg="write file failed: \{err}")

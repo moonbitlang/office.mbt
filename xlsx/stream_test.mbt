@@ -297,8 +297,7 @@ test "stream time cells respect row and column style inheritance" {
   inspect(style_of("A2"), content="0")
   // and the workbook-level style it registered is numFmt 22
   inspect(
-    workbook.get_style(time_style).number_format
-    is Some(@xlsx.NumberFormat::Builtin(22)),
+    workbook.get_style(time_style).number_format is Some(Builtin(22)),
     content="true",
   )
 }

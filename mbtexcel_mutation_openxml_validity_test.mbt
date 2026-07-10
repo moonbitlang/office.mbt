@@ -68,7 +68,7 @@ async test "mbtexcel mutation-heavy workbook remains OpenXML-valid" {
   @async/fs.write_file(
     path,
     bytes,
-    create_mode=@async/fs.CreateOrTruncate,
+    create_mode=CreateOrTruncate,
     permission=0o644,
   ) catch {
     err => fail("write xlsx failed: \{err}")

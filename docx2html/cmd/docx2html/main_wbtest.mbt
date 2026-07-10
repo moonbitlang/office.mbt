@@ -1,8 +1,7 @@
 ///|
 fn expect_cli_error(args : Array[String], prefix : String) -> Unit raise {
   try parse_cli_args(args) catch {
-    @cli.CliError(message) =>
-      inspect(message.has_prefix(prefix), content="true")
+    CliError(message) => inspect(message.has_prefix(prefix), content="true")
   } noraise {
     _ => fail("expected CLI error")
   }
@@ -121,7 +120,7 @@ test "CLI parser rejects output path with output dir" {
       "docx2html", "--output-dir", "out", "input.docx", "output.html",
     ])
   catch {
-    @cli.CliError(message) =>
+    CliError(message) =>
       inspect(
         message.has_prefix(
           "error: output path and --output-dir are mutually exclusive",

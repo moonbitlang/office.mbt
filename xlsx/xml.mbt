@@ -34,6 +34,6 @@ fn is_attr_space(ch : Char) -> Bool {
 ///|
 fn attr_value(tag : StringView, name : StringView) -> String? raise XlsxError {
   @ooxml.attr_value(tag, name) catch {
-    @ooxml.ParseXmlError::InvalidXml(msg~) => raise InvalidXml(msg~)
+    InvalidXml(msg~) => raise InvalidXml(msg~)
   }
 }

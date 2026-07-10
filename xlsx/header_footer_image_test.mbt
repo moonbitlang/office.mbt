@@ -210,7 +210,7 @@ async test "header footer image from file path" {
   @async/fs.write_file(
     path,
     img,
-    create_mode=@async/fs.CreateOrTruncate,
+    create_mode=CreateOrTruncate,
     permission=0o644,
   ) catch {
     err => fail("write file failed: \{err}")

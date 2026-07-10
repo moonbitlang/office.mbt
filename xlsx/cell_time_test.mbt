@@ -57,7 +57,7 @@ test "set_cell_time stores serial and default date style" {
       None => fail("missing style for \{reference}")
     }
     let style = workbook.get_style(idx)
-    guard style.number_format is Some(@xlsx.NumberFormat::Builtin(id)) else {
+    guard style.number_format is Some(Builtin(id)) else {
       fail("missing builtin number_format for \{reference}")
     }
     guard style.num_fmt is Some(mirror) && mirror == id else {
@@ -121,7 +121,7 @@ test "set_cell_duration stores day fraction and elapsed style" {
       None => fail("missing style for \{reference}")
     }
     let style = workbook.get_style(idx)
-    guard style.number_format is Some(@xlsx.NumberFormat::Builtin(id)) else {
+    guard style.number_format is Some(Builtin(id)) else {
       fail("missing builtin number_format for \{reference}")
     }
     guard style.num_fmt is Some(mirror) && mirror == id else {

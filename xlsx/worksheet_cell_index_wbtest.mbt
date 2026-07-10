@@ -7,7 +7,7 @@ fn raw_cell(reference : String, row : Int, col : Int, value : String) -> Cell {
     row,
     col,
     value,
-    value_type: cell_value_type(CellValue::String(value)),
+    value_type: cell_value_type(String(value)),
     rich_text: None,
     formula: None,
     formula_type: None,

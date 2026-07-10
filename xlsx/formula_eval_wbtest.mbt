@@ -40,7 +40,7 @@ test "formula eval wb: anchorarray and range guards" {
     workbook,
     "Sheet1",
     [Cell("", "bad_ref")],
-    [FormulaValue::Number(1.0)],
+    [Number(1.0)],
   )
   inspect(
     match anchor_err {
@@ -183,8 +183,19 @@ test "formula eval wb: matrix and trend helper guards" {
 ///|
 test "formula eval wb: sequence randarray and slice guards" {
   inspect(
+    wb_is_error(sequence_values([String("bad-rows")]), formula_error_value),
+    content="true",
+  )
+  inspect(
     wb_is_error(
-      sequence_values([FormulaValue::String("bad-rows")]),
+      sequence_values([Number(1.0), String("bad-cols")]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_is_error(
+      sequence_values([Number(1.0), Number(1.0), String("bad-start")]),
       formula_error_value,
     ),
     content="true",
@@ -192,31 +203,10 @@ test "formula eval wb: sequence randarray and slice guards" {
   inspect(
     wb_is_error(
       sequence_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-cols"),
-      ]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    wb_is_error(
-      sequence_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-start"),
-      ]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    wb_is_error(
-      sequence_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-step"),
+        Number(1.0),
+        Number(1.0),
+        Number(1.0),
+        String("bad-step"),
       ]),
       formula_error_value,
     ),
@@ -234,20 +224,31 @@ test "formula eval wb: sequence randarray and slice guards" {
   )
 
   let rand_float = randarray_values([
-    FormulaValue::Number(1.0),
-    FormulaValue::Number(2.0),
-    FormulaValue::Number(0.0),
-    FormulaValue::Number(1.0),
-    FormulaValue::Bool(false),
+    Number(1.0),
+    Number(2.0),
+    Number(0.0),
+    Number(1.0),
+    Bool(false),
   ])
   let rand_float_ok = match rand_float {
-    FormulaValue::List(list) => list.length() == 2 && wb_is_number(list[0])
+    List(list) => list.length() == 2 && wb_is_number(list[0])
     _ => false
   }
   inspect(rand_float_ok, content="true")
   inspect(
+    wb_is_error(randarray_values([String("bad-rows")]), formula_error_value),
+    content="true",
+  )
+  inspect(
     wb_is_error(
-      randarray_values([FormulaValue::String("bad-rows")]),
+      randarray_values([Number(1.0), String("bad-cols")]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    wb_is_error(
+      randarray_values([Number(1.0), Number(1.0), String("bad-min")]),
       formula_error_value,
     ),
     content="true",
@@ -255,8 +256,10 @@ test "formula eval wb: sequence randarray and slice guards" {
   inspect(
     wb_is_error(
       randarray_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-cols"),
+        Number(1.0),
+        Number(1.0),
+        Number(0.0),
+        String("bad-max"),
       ]),
       formula_error_value,
     ),
@@ -265,34 +268,11 @@ test "formula eval wb: sequence randarray and slice guards" {
   inspect(
     wb_is_error(
       randarray_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-min"),
-      ]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    wb_is_error(
-      randarray_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::String("bad-max"),
-      ]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    wb_is_error(
-      randarray_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::String("bad-whole"),
+        Number(1.0),
+        Number(1.0),
+        Number(0.0),
+        Number(1.0),
+        String("bad-whole"),
       ]),
       formula_error_value,
     ),
@@ -345,8 +325,8 @@ test "formula eval wb: range transforms and index guards" {
       take_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)],
-        [base_list, FormulaValue::String("bad-rows")],
+        [base_expr, Number(0.0)],
+        [base_list, String("bad-rows")],
         ctx,
       ),
       formula_error_value,
@@ -358,8 +338,8 @@ test "formula eval wb: range transforms and index guards" {
       take_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0)],
-        [base_list, Number(1.0), FormulaValue::String("bad-cols")],
+        [base_expr, Number(0.0), Number(0.0)],
+        [base_list, Number(1.0), String("bad-cols")],
         ctx,
       ),
       formula_error_value,
@@ -371,8 +351,8 @@ test "formula eval wb: range transforms and index guards" {
       drop_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)],
-        [base_list, FormulaValue::String("bad-rows")],
+        [base_expr, Number(0.0)],
+        [base_list, String("bad-rows")],
         ctx,
       ),
       formula_error_value,
@@ -384,8 +364,8 @@ test "formula eval wb: range transforms and index guards" {
       drop_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0)],
-        [base_list, Number(1.0), FormulaValue::String("bad-cols")],
+        [base_expr, Number(0.0), Number(0.0)],
+        [base_list, Number(1.0), String("bad-cols")],
         ctx,
       ),
       formula_error_value,
@@ -397,7 +377,7 @@ test "formula eval wb: range transforms and index guards" {
       drop_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)],
+        [base_expr, Number(0.0)],
         [base_list, Number(1.0)],
         ctx,
       ),
@@ -411,8 +391,8 @@ test "formula eval wb: range transforms and index guards" {
       expand_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)],
-        [base_list, FormulaValue::String("bad-rows")],
+        [base_expr, Number(0.0)],
+        [base_list, String("bad-rows")],
         ctx,
       ),
       formula_error_value,
@@ -424,8 +404,8 @@ test "formula eval wb: range transforms and index guards" {
       expand_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0)],
-        [base_list, Number(1.0), FormulaValue::String("bad-cols")],
+        [base_expr, Number(0.0), Number(0.0)],
+        [base_list, Number(1.0), String("bad-cols")],
         ctx,
       ),
       formula_error_value,
@@ -437,7 +417,7 @@ test "formula eval wb: range transforms and index guards" {
       expand_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)],
+        [base_expr, Number(0.0), Number(0.0), Number(0.0)],
         [base_list, Number(1.0), Number(4.0), Error(formula_error_ref)],
         ctx,
       ),
@@ -457,8 +437,8 @@ test "formula eval wb: range transforms and index guards" {
       wrap_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)],
-        [base_list, FormulaValue::String("bad-count")],
+        [base_expr, Number(0.0)],
+        [base_list, String("bad-count")],
         ctx,
         true,
       ),
@@ -471,7 +451,7 @@ test "formula eval wb: range transforms and index guards" {
       wrap_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0)],
+        [base_expr, Number(0.0), Number(0.0)],
         [base_list, Number(2.0), Error(formula_error_ref)],
         ctx,
         false,
@@ -483,7 +463,7 @@ test "formula eval wb: range transforms and index guards" {
   let wrapped_default_pad = wrap_values(
     workbook,
     "Sheet1",
-    [base_expr, Expr::Number(0.0)],
+    [base_expr, Number(0.0)],
     [base_list, Number(3.0)],
     ctx,
     true,
@@ -520,7 +500,7 @@ test "formula eval wb: range transforms and index guards" {
   )
 
   inspect(
-    match choose_indices([FormulaValue::String("bad-idx")], 3) {
+    match choose_indices([String("bad-idx")], 3) {
       Err(Error(err)) => err == formula_error_value
       _ => false
     },
@@ -588,23 +568,15 @@ test "formula eval wb: sort filter and tocol-torow guards" {
   let sortby_cols = sortby_values(
     workbook,
     "Sheet1",
-    [Expr::Number(0.0), Expr::Number(0.0)],
+    [Number(0.0), Number(0.0)],
     [
-      FormulaValue::List([
-        FormulaValue::Number(30.0),
-        FormulaValue::Number(10.0),
-        FormulaValue::Number(20.0),
-      ]),
-      FormulaValue::List([
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(1.0),
-      ]),
+      List([Number(30.0), Number(10.0), Number(20.0)]),
+      List([Number(2.0), Number(3.0), Number(1.0)]),
     ],
     ctx,
   )
   let sortby_cols_ok = match sortby_cols {
-    FormulaValue::List(list) =>
+    List(list) =>
       list.length() == 3 &&
       wb_number_eq(list[0], 20.0) &&
       wb_number_eq(list[1], 30.0) &&
@@ -618,14 +590,8 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       sort_values(
         workbook,
         "Sheet1",
-        [Expr::Number(0.0), Expr::Number(0.0)],
-        [
-          FormulaValue::List([
-            FormulaValue::Number(1.0),
-            FormulaValue::Number(2.0),
-          ]),
-          FormulaValue::String("bad-index"),
-        ],
+        [Number(0.0), Number(0.0)],
+        [List([Number(1.0), Number(2.0)]), String("bad-index")],
         ctx,
       ),
       formula_error_value,
@@ -637,15 +603,8 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       sort_values(
         workbook,
         "Sheet1",
-        [Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)],
-        [
-          FormulaValue::List([
-            FormulaValue::Number(1.0),
-            FormulaValue::Number(2.0),
-          ]),
-          FormulaValue::Number(1.0),
-          FormulaValue::String("bad-order"),
-        ],
+        [Number(0.0), Number(0.0), Number(0.0)],
+        [List([Number(1.0), Number(2.0)]), Number(1.0), String("bad-order")],
         ctx,
       ),
       formula_error_value,
@@ -657,20 +616,12 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       sort_values(
         workbook,
         "Sheet1",
+        [Number(0.0), Number(0.0), Number(0.0), Number(0.0)],
         [
-          Expr::Number(0.0),
-          Expr::Number(0.0),
-          Expr::Number(0.0),
-          Expr::Number(0.0),
-        ],
-        [
-          FormulaValue::List([
-            FormulaValue::Number(1.0),
-            FormulaValue::Number(2.0),
-          ]),
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-          FormulaValue::String("bad-by-col"),
+          List([Number(1.0), Number(2.0)]),
+          Number(1.0),
+          Number(1.0),
+          String("bad-by-col"),
         ],
         ctx,
       ),
@@ -697,7 +648,7 @@ test "formula eval wb: sort filter and tocol-torow guards" {
     wb_is_error(
       filter_range_values(
         vec_range,
-        wb_range([FormulaValue::String("bad"), Bool(true)], 1, 2),
+        wb_range([String("bad"), Bool(true)], 1, 2),
         None,
       ),
       formula_error_value,
@@ -710,11 +661,8 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       tocol_torow_values(
         workbook,
         "Sheet1",
-        [Expr::Number(0.0), Expr::Number(0.0)],
-        [
-          FormulaValue::List([FormulaValue::Number(1.0)]),
-          FormulaValue::String("bad-ignore"),
-        ],
+        [Number(0.0), Number(0.0)],
+        [List([Number(1.0)]), String("bad-ignore")],
         ctx,
         true,
       ),
@@ -727,12 +675,8 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       tocol_torow_values(
         workbook,
         "Sheet1",
-        [Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)],
-        [
-          FormulaValue::List([FormulaValue::Number(1.0)]),
-          FormulaValue::Number(0.0),
-          FormulaValue::String("bad-scan"),
-        ],
+        [Number(0.0), Number(0.0), Number(0.0)],
+        [List([Number(1.0)]), Number(0.0), String("bad-scan")],
         ctx,
         false,
       ),
@@ -809,8 +753,8 @@ test "formula eval wb: shape helper branches part 3" {
   let empty_list_range = range_from_expr_or_value(
     workbook,
     "Sheet1",
-    Expr::Number(1.0),
-    FormulaValue::List(empty_values),
+    Number(1.0),
+    List(empty_values),
     CalcContext::new(),
   )
   inspect(empty_list_range.rows, content="1")
@@ -826,8 +770,8 @@ test "formula eval wb: shape helper branches part 3" {
   let transpose_bad = range_from_expr_or_value(
     workbook,
     "Sheet1",
-    Expr::FuncCall("TRANSPOSE", [Expr::Number(1.0), Expr::Number(2.0)]),
-    FormulaValue::List([FormulaValue::Number(1.0)]),
+    FuncCall("TRANSPOSE", [Number(1.0), Number(2.0)]),
+    List([Number(1.0)]),
     CalcContext::new(),
   )
   inspect(transpose_bad.rows, content="1")
@@ -843,8 +787,8 @@ test "formula eval wb: shape helper branches part 3" {
   let seq_mismatch = range_from_expr_or_value(
     workbook,
     "Sheet1",
-    Expr::FuncCall("SEQUENCE", [Expr::Number(1.0), Expr::Number(2.0)]),
-    FormulaValue::List([FormulaValue::Number(1.0)]),
+    FuncCall("SEQUENCE", [Number(1.0), Number(2.0)]),
+    List([Number(1.0)]),
     CalcContext::new(),
   )
   inspect(seq_mismatch.rows, content="1")
@@ -853,8 +797,8 @@ test "formula eval wb: shape helper branches part 3" {
   let seq_shape_none = range_from_expr_or_value(
     workbook,
     "Sheet1",
-    Expr::FuncCall("SEQUENCE", [Expr::String("bad")]),
-    FormulaValue::List([FormulaValue::Number(1.0)]),
+    FuncCall("SEQUENCE", [String("bad")]),
+    List([Number(1.0)]),
     CalcContext::new(),
   )
   inspect(seq_shape_none.rows, content="1")
@@ -862,28 +806,28 @@ test "formula eval wb: shape helper branches part 3" {
 
   inspect(
     wb_is_error(
-      eval_numeric_binary(BinaryOp::Concat, Number(1.0), Number(2.0)),
+      eval_numeric_binary(Concat, Number(1.0), Number(2.0)),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      eval_numeric_binary(BinaryOp::Add, String("bad"), Number(2.0)),
+      eval_numeric_binary(Add, String("bad"), Number(2.0)),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      eval_numeric_binary(BinaryOp::Add, Number(1.0), String("bad")),
+      eval_numeric_binary(Add, Number(1.0), String("bad")),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      eval_list_binary(BinaryOp::Add, Number(1.0), Number(2.0)),
+      eval_list_binary(Add, Number(1.0), Number(2.0)),
       formula_error_value,
     ),
     content="true",
@@ -912,15 +856,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
   sheet1.set_cell_formula("A5", "1+")
 
   inspect(
-    wb_shape_eq(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::Unary(UnaryOp::Plus, Expr::Number(1.0)),
-      ),
-      1,
-      1,
-    ),
+    wb_shape_eq(wb_shape(workbook, "Sheet1", Unary(Plus, Number(1.0))), 1, 1),
     content="true",
   )
   inspect(
@@ -928,7 +864,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
+        List([Number(1.0), Number(2.0), Number(3.0)]),
       ),
       1,
       3,
@@ -941,8 +877,14 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TRANSPOSE", [Expr::Number(1.0), Expr::Number(2.0)]),
+        FuncCall("TRANSPOSE", [Number(1.0), Number(2.0)]),
       ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(workbook, "Sheet1", FuncCall("_XLFN.MUNIT", [String("bad")])),
     ),
     content="true",
   )
@@ -951,8 +893,18 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("_XLFN.MUNIT", [Expr::String("bad")]),
+        FuncCall("MUNIT", [Number(2.0), Number(3.0)]),
       ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(wb_shape(workbook, "Sheet1", FuncCall("SEQUENCE", []))),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(workbook, "Sheet1", FuncCall("SEQUENCE", [String("bad")])),
     ),
     content="true",
   )
@@ -961,42 +913,14 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("MUNIT", [Expr::Number(2.0), Expr::Number(3.0)]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("SEQUENCE", []))),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("SEQUENCE", [Expr::String("bad")]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("SEQUENCE", [Expr::Number(1.0), Expr::String("bad")]),
+        FuncCall("SEQUENCE", [Number(1.0), String("bad")]),
       ),
     ),
     content="true",
   )
   inspect(
     wb_shape_eq(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("SEQUENCE", [Expr::Number(2.0)]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("SEQUENCE", [Number(2.0)])),
       2,
       1,
     ),
@@ -1007,14 +931,20 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("SEQUENCE", [Expr::Number(0.0), Expr::Number(1.0)]),
+        FuncCall("SEQUENCE", [Number(0.0), Number(1.0)]),
       ),
     ),
     content="true",
   )
 
   inspect(
-    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("RANDARRAY", []))),
+    wb_shape_none(wb_shape(workbook, "Sheet1", FuncCall("RANDARRAY", []))),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(workbook, "Sheet1", FuncCall("RANDARRAY", [String("bad")])),
+    ),
     content="true",
   )
   inspect(
@@ -1022,7 +952,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("RANDARRAY", [Expr::String("bad")]),
+        FuncCall("RANDARRAY", [Number(1.0), String("bad")]),
       ),
     ),
     content="true",
@@ -1032,17 +962,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("RANDARRAY", [Expr::Number(1.0), Expr::String("bad")]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("RANDARRAY", [Expr::Number(0.0), Expr::Number(1.0)]),
+        FuncCall("RANDARRAY", [Number(0.0), Number(1.0)]),
       ),
     ),
     content="true",
@@ -1052,7 +972,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("RANDARRAY", [Expr::Number(2.0), Expr::Number(3.0)]),
+        FuncCall("RANDARRAY", [Number(2.0), Number(3.0)]),
       ),
       2,
       3,
@@ -1064,13 +984,13 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("RANDARRAY", [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(0.0),
-          Expr::Number(1.0),
-          Expr::Bool(true),
-          Expr::Number(7.0),
+        FuncCall("RANDARRAY", [
+          Number(1.0),
+          Number(1.0),
+          Number(0.0),
+          Number(1.0),
+          Bool(true),
+          Number(7.0),
         ]),
       ),
     ),
@@ -1082,7 +1002,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("MINVERSE", [Expr::Range("", "A1", "B2")]),
+        FuncCall("MINVERSE", [Range("", "A1", "B2")]),
       ),
       2,
       2,
@@ -1094,7 +1014,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("MINVERSE", [Expr::Range("", "A1", "B3")]),
+        FuncCall("MINVERSE", [Range("", "A1", "B3")]),
       ),
     ),
     content="true",
@@ -1104,11 +1024,14 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("MINVERSE", [
-          Expr::Range("", "A1", "B2"),
-          Expr::Number(1.0),
-        ]),
+        FuncCall("MINVERSE", [Range("", "A1", "B2"), Number(1.0)]),
       ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(workbook, "Sheet1", FuncCall("MMULT", [Range("", "A1", "B2")])),
     ),
     content="true",
   )
@@ -1117,20 +1040,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("MMULT", [Expr::Range("", "A1", "B2")]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("MMULT", [
-          Expr::Range("", "A1", "B2"),
-          Expr::Range("", "A1", "A1"),
-        ]),
+        FuncCall("MMULT", [Range("", "A1", "B2"), Range("", "A1", "A1")]),
       ),
     ),
     content="true",
@@ -1141,7 +1051,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [Expr::Cell("", "D1"), Expr::String(",")]),
+        FuncCall("TEXTSPLIT", [Cell("", "D1"), String(",")]),
       ),
     ),
     content="true",
@@ -1151,7 +1061,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [Expr::String("a,b"), Expr::Cell("", "D1")]),
+        FuncCall("TEXTSPLIT", [String("a,b"), Cell("", "D1")]),
       ),
     ),
     content="true",
@@ -1161,7 +1071,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [Expr::String("a,b"), Expr::String("")]),
+        FuncCall("TEXTSPLIT", [String("a,b"), String("")]),
       ),
     ),
     content="true",
@@ -1171,10 +1081,21 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [
-          Expr::String("a,b"),
-          Expr::String(","),
-          Expr::Cell("", "D1"),
+        FuncCall("TEXTSPLIT", [String("a,b"), String(","), Cell("", "D1")]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        FuncCall("TEXTSPLIT", [
+          String("a,b"),
+          String(","),
+          String(""),
+          String("bad"),
         ]),
       ),
     ),
@@ -1185,11 +1106,12 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [
-          Expr::String("a,b"),
-          Expr::String(","),
-          Expr::String(""),
-          Expr::String("bad"),
+        FuncCall("TEXTSPLIT", [
+          String("a,b"),
+          String(","),
+          String(""),
+          Bool(false),
+          String("bad"),
         ]),
       ),
     ),
@@ -1200,12 +1122,12 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [
-          Expr::String("a,b"),
-          Expr::String(","),
-          Expr::String(""),
-          Expr::Bool(false),
-          Expr::String("bad"),
+        FuncCall("TEXTSPLIT", [
+          String("a,b"),
+          String(","),
+          String(""),
+          Bool(false),
+          Number(2.0),
         ]),
       ),
     ),
@@ -1216,28 +1138,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [
-          Expr::String("a,b"),
-          Expr::String(","),
-          Expr::String(""),
-          Expr::Bool(false),
-          Expr::Number(2.0),
-        ]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [
-          Expr::String(""),
-          Expr::String(","),
-          Expr::String(""),
-          Expr::Bool(true),
-        ]),
+        FuncCall("TEXTSPLIT", [String(""), String(","), String(""), Bool(true)]),
       ),
     ),
     content="true",
@@ -1247,7 +1148,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [Expr::String("a,b"), Expr::String(",")]),
+        FuncCall("TEXTSPLIT", [String("a,b"), String(",")]),
       ),
       1,
       2,
@@ -1256,11 +1157,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("TEXTSPLIT", [Expr::String("a,b")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("TEXTSPLIT", [String("a,b")])),
     ),
     content="true",
   )
@@ -1270,31 +1167,20 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("FREQUENCY", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::Range("", "D1", "D1"),
-        ]),
+        FuncCall("FREQUENCY", [List([Number(1.0)]), Range("", "D1", "D1")]),
       ),
     ),
     content="true",
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("FREQUENCY", [Expr::List([Expr::Number(1.0)])]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("FREQUENCY", [List([Number(1.0)])])),
     ),
     content="true",
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("MODE.MULT", [Expr::Number(1.0)]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("MODE.MULT", [Number(1.0)])),
     ),
     content="true",
   )
@@ -1303,50 +1189,42 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("MODE.MULT", [
-          Expr::List([Expr::Number(1.0), Expr::Number(1.0), Expr::Number(2.0)]),
-        ]),
+        FuncCall("MODE.MULT", [List([Number(1.0), Number(1.0), Number(2.0)])]),
       ),
     ),
     content="true",
   )
   inspect(
-    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("MODE.MULT", []))),
+    wb_shape_none(wb_shape(workbook, "Sheet1", FuncCall("MODE.MULT", []))),
     content="true",
   )
 
   inspect(
     wb_shape_none(
+      wb_shape(workbook, "Sheet1", FuncCall("ANCHORARRAY", [Number(1.0)])),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(wb_shape(workbook, "Sheet1", FuncCall("ANCHORARRAY", []))),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("ANCHORARRAY", [Expr::Number(1.0)]),
+        FuncCall("ANCHORARRAY", [Cell("Missing", "A1")]),
       ),
     ),
     content="true",
   )
   inspect(
     wb_shape_none(
-      wb_shape(workbook, "Sheet1", Expr::FuncCall("ANCHORARRAY", [])),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("Missing", "A1")]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("", "bad_ref")]),
+        FuncCall("ANCHORARRAY", [Cell("", "bad_ref")]),
       ),
     ),
     content="true",
@@ -1356,7 +1234,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("Sheet1", "A1")]),
+        FuncCall("ANCHORARRAY", [Cell("Sheet1", "A1")]),
       ),
       1,
       1,
@@ -1365,21 +1243,13 @@ test "formula eval wb: array shape dispatcher guards part 3" {
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("", "A5")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("ANCHORARRAY", [Cell("", "A5")])),
     ),
     content="true",
   )
   inspect(
     wb_shape_eq(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("ANCHORARRAY", [Expr::Cell("", "A4")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("ANCHORARRAY", [Cell("", "A4")])),
       2,
       3,
     ),
@@ -1388,11 +1258,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
 
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::Bool(true)]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("INDIRECT", [Bool(true)])),
     ),
     content="true",
   )
@@ -1401,18 +1267,14 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("A1"), Expr::String("bad")]),
+        FuncCall("INDIRECT", [String("A1"), String("bad")]),
       ),
     ),
     content="true",
   )
   inspect(
     wb_shape_eq(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("Data!A1:B2")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("INDIRECT", [String("Data!A1:B2")])),
       2,
       2,
     ),
@@ -1420,31 +1282,19 @@ test "formula eval wb: array shape dispatcher guards part 3" {
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("bad!:A1")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("INDIRECT", [String("bad!:A1")])),
     ),
     content="true",
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("A1:bad!")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("INDIRECT", [String("A1:bad!")])),
     ),
     content="true",
   )
   inspect(
     wb_shape_eq(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("A1")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("INDIRECT", [String("A1")])),
       1,
       1,
     ),
@@ -1452,21 +1302,13 @@ test "formula eval wb: array shape dispatcher guards part 3" {
   )
   inspect(
     wb_shape_some(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("A")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("INDIRECT", [String("A")])),
     ),
     content="true",
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("bad!")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("INDIRECT", [String("bad!")])),
     ),
     content="true",
   )
@@ -1475,10 +1317,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("INDIRECT", [
-          Expr::String("R1C1:R2C2"),
-          Expr::Bool(false),
-        ]),
+        FuncCall("INDIRECT", [String("R1C1:R2C2"), Bool(false)]),
       ),
       2,
       2,
@@ -1490,7 +1329,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("BAD:R2C2"), Expr::Bool(false)]),
+        FuncCall("INDIRECT", [String("BAD:R2C2"), Bool(false)]),
       ),
     ),
     content="true",
@@ -1500,7 +1339,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("R1C1:BAD"), Expr::Bool(false)]),
+        FuncCall("INDIRECT", [String("R1C1:BAD"), Bool(false)]),
       ),
     ),
     content="true",
@@ -1510,10 +1349,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("INDIRECT", [
-          Expr::String("R0C1:R1C1"),
-          Expr::Bool(false),
-        ]),
+        FuncCall("INDIRECT", [String("R0C1:R1C1"), Bool(false)]),
       ),
     ),
     content="true",
@@ -1523,10 +1359,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("INDIRECT", [
-          Expr::String("R1C1:R0C1"),
-          Expr::Bool(false),
-        ]),
+        FuncCall("INDIRECT", [String("R1C1:R0C1"), Bool(false)]),
       ),
     ),
     content="true",
@@ -1536,7 +1369,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("R1C1"), Expr::Bool(false)]),
+        FuncCall("INDIRECT", [String("R1C1"), Bool(false)]),
       ),
       1,
       1,
@@ -1548,7 +1381,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("INDIRECT", [Expr::String("BAD"), Expr::Bool(false)]),
+        FuncCall("INDIRECT", [String("BAD"), Bool(false)]),
       ),
     ),
     content="true",
@@ -1558,11 +1391,7 @@ test "formula eval wb: array shape dispatcher guards part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("INDIRECT", [
-          Expr::String("A1"),
-          Expr::Bool(false),
-          Expr::Number(1.0),
-        ]),
+        FuncCall("INDIRECT", [String("A1"), Bool(false), Number(1.0)]),
       ),
     ),
     content="true",
@@ -1589,7 +1418,13 @@ test "formula eval wb: array shape advanced function branches part 3" {
   sheet.set_cell_value("C1", Error(formula_error_ref))
 
   inspect(
-    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("TREND", []))),
+    wb_shape_none(wb_shape(workbook, "Sheet1", FuncCall("TREND", []))),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(workbook, "Sheet1", FuncCall("TREND", [String("bad")])),
+    ),
     content="true",
   )
   inspect(
@@ -1597,7 +1432,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TREND", [Expr::String("bad")]),
+        FuncCall("TREND", [Range("", "A1", "A3"), String("bad")]),
       ),
     ),
     content="true",
@@ -1607,9 +1442,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TREND", [
-          Expr::Range("", "A1", "A3"),
-          Expr::String("bad"),
+        FuncCall("TREND", [
+          Range("", "A1", "A3"),
+          Range("", "A1", "A3"),
+          String("bad"),
         ]),
       ),
     ),
@@ -1620,10 +1456,11 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TREND", [
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "A1", "A3"),
-          Expr::String("bad"),
+        FuncCall("TREND", [
+          Range("", "A1", "A3"),
+          Range("", "A1", "A3"),
+          Range("", "A1", "A3"),
+          String("bad"),
         ]),
       ),
     ),
@@ -1634,32 +1471,14 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TREND", [
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "A1", "A3"),
-          Expr::String("bad"),
-        ]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("TREND", [
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "A1", "A2"),
-        ]),
+        FuncCall("TREND", [Range("", "A1", "A3"), Range("", "A1", "A2")]),
       ),
     ),
     content="true",
   )
 
   inspect(
-    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("SORT", []))),
+    wb_shape_none(wb_shape(workbook, "Sheet1", FuncCall("SORT", []))),
     content="true",
   )
   inspect(
@@ -1667,13 +1486,9 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("SORTBY", [
-          Expr::List([Expr::Number(3.0), Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::List([
-            Expr::Number(30.0),
-            Expr::Number(10.0),
-            Expr::Number(20.0),
-          ]),
+        FuncCall("SORTBY", [
+          List([Number(3.0), Number(1.0), Number(2.0)]),
+          List([Number(30.0), Number(10.0), Number(20.0)]),
         ]),
       ),
       1,
@@ -1683,11 +1498,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("SORTBY", [Expr::List([Expr::Number(1.0)])]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("SORTBY", [List([Number(1.0)])])),
     ),
     content="true",
   )
@@ -1697,10 +1508,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("UNIQUE", [
-          Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
-          Expr::String("bad"),
-        ]),
+        FuncCall("UNIQUE", [List([Number(1.0), Number(1.0)]), String("bad")]),
       ),
     ),
     content="true",
@@ -1710,10 +1518,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("UNIQUE", [
-          Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
-          Expr::Bool(false),
-          Expr::String("bad"),
+        FuncCall("UNIQUE", [
+          List([Number(1.0), Number(1.0)]),
+          Bool(false),
+          String("bad"),
         ]),
       ),
     ),
@@ -1721,16 +1529,12 @@ test "formula eval wb: array shape advanced function branches part 3" {
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("UNIQUE", [Expr::Range("", "C1", "C1")]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("UNIQUE", [Range("", "C1", "C1")])),
     ),
     content="true",
   )
   inspect(
-    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("UNIQUE", []))),
+    wb_shape_none(wb_shape(workbook, "Sheet1", FuncCall("UNIQUE", []))),
     content="true",
   )
 
@@ -1739,9 +1543,9 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("FILTER", [
-          Expr::FuncCall("SEQUENCE", [Expr::Number(2.0), Expr::Number(2.0)]),
-          Expr::List([Expr::Bool(true), Expr::Bool(false)]),
+        FuncCall("FILTER", [
+          FuncCall("SEQUENCE", [Number(2.0), Number(2.0)]),
+          List([Bool(true), Bool(false)]),
         ]),
       ),
     ),
@@ -1752,9 +1556,9 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("FILTER", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::List([Expr::Bool(true), Expr::Bool(false)]),
+        FuncCall("FILTER", [
+          List([Number(1.0), Number(2.0)]),
+          List([Bool(true), Bool(false)]),
         ]),
       ),
       1,
@@ -1767,9 +1571,9 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("FILTER", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::List([Expr::String("bad"), Expr::Bool(true)]),
+        FuncCall("FILTER", [
+          List([Number(1.0), Number(2.0)]),
+          List([String("bad"), Bool(true)]),
         ]),
       ),
     ),
@@ -1780,10 +1584,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("FILTER", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::List([Expr::Bool(false), Expr::Bool(false)]),
-          Expr::Number(99.0),
+        FuncCall("FILTER", [
+          List([Number(1.0), Number(2.0)]),
+          List([Bool(false), Bool(false)]),
+          Number(99.0),
         ]),
       ),
       1,
@@ -1793,11 +1597,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("FILTER", [Expr::List([Expr::Number(1.0)])]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("FILTER", [List([Number(1.0)])])),
     ),
     content="true",
   )
@@ -1807,9 +1607,20 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("XLOOKUP", [
-          Expr::Number(1.0),
-          Expr::List([Expr::Number(1.0)]),
+        FuncCall("XLOOKUP", [Number(1.0), List([Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        FuncCall("XLOOKUP", [
+          Number(1.0),
+          FuncCall("SEQUENCE", [Number(2.0), Number(2.0)]),
+          List([Number(1.0), Number(2.0)]),
         ]),
       ),
     ),
@@ -1820,24 +1631,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("XLOOKUP", [
-          Expr::Number(1.0),
-          Expr::FuncCall("SEQUENCE", [Expr::Number(2.0), Expr::Number(2.0)]),
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-        ]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("XLOOKUP", [
-          Expr::Number(1.0),
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
+        FuncCall("XLOOKUP", [
+          Number(1.0),
+          List([Number(1.0), Number(2.0)]),
+          List([Number(1.0), Number(2.0), Number(3.0)]),
         ]),
       ),
     ),
@@ -1848,10 +1645,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("XLOOKUP", [
-          Expr::Number(1.0),
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::List([Expr::Number(10.0), Expr::Number(20.0)]),
+        FuncCall("XLOOKUP", [
+          Number(1.0),
+          List([Number(1.0), Number(2.0)]),
+          List([Number(10.0), Number(20.0)]),
         ]),
       ),
       1,
@@ -1864,12 +1661,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("XLOOKUP", [
-          Expr::Number(1.0),
-          Expr::FuncCall("TRANSPOSE", [
-            Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          ]),
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+        FuncCall("XLOOKUP", [
+          Number(1.0),
+          FuncCall("TRANSPOSE", [List([Number(1.0), Number(2.0)])]),
+          List([Number(1.0), Number(2.0)]),
         ]),
       ),
     ),
@@ -1880,14 +1675,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("XLOOKUP", [
-          Expr::Number(1.0),
-          Expr::FuncCall("TRANSPOSE", [
-            Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          ]),
-          Expr::FuncCall("TRANSPOSE", [
-            Expr::List([Expr::Number(10.0), Expr::Number(20.0)]),
-          ]),
+        FuncCall("XLOOKUP", [
+          Number(1.0),
+          FuncCall("TRANSPOSE", [List([Number(1.0), Number(2.0)])]),
+          FuncCall("TRANSPOSE", [List([Number(10.0), Number(20.0)])]),
         ]),
       ),
       1,
@@ -1900,12 +1691,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("XLOOKUP", [
-          Expr::Number(1.0),
-          Expr::FuncCall("TRANSPOSE", [
-            Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          ]),
-          Expr::FuncCall("SEQUENCE", [Expr::Number(2.0), Expr::Number(2.0)]),
+        FuncCall("XLOOKUP", [
+          Number(1.0),
+          FuncCall("TRANSPOSE", [List([Number(1.0), Number(2.0)])]),
+          FuncCall("SEQUENCE", [Number(2.0), Number(2.0)]),
         ]),
       ),
       1,
@@ -1919,10 +1708,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TAKE", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::String("bad"),
-        ]),
+        FuncCall("TAKE", [List([Number(1.0)]), String("bad")]),
       ),
     ),
     content="true",
@@ -1932,11 +1718,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TAKE", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::Number(1.0),
-          Expr::String("bad"),
-        ]),
+        FuncCall("TAKE", [List([Number(1.0)]), Number(1.0), String("bad")]),
       ),
     ),
     content="true",
@@ -1946,10 +1728,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TAKE", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::Number(0.0),
-        ]),
+        FuncCall("TAKE", [List([Number(1.0), Number(2.0)]), Number(0.0)]),
       ),
       1,
       2,
@@ -1961,10 +1740,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TAKE", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::Number(1.0),
-          Expr::Number(0.0),
+        FuncCall("TAKE", [
+          List([Number(1.0), Number(2.0)]),
+          Number(1.0),
+          Number(0.0),
         ]),
       ),
       1,
@@ -1977,21 +1756,14 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TAKE", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::Number(3.0),
-        ]),
+        FuncCall("TAKE", [List([Number(1.0), Number(2.0)]), Number(3.0)]),
       ),
     ),
     content="true",
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("TAKE", [Expr::List([Expr::Number(1.0)])]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("TAKE", [List([Number(1.0)])])),
     ),
     content="true",
   )
@@ -2001,10 +1773,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("DROP", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::String("bad"),
-        ]),
+        FuncCall("DROP", [List([Number(1.0)]), String("bad")]),
       ),
     ),
     content="true",
@@ -2014,11 +1783,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("DROP", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::Number(1.0),
-          Expr::String("bad"),
-        ]),
+        FuncCall("DROP", [List([Number(1.0)]), Number(1.0), String("bad")]),
       ),
     ),
     content="true",
@@ -2028,10 +1793,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("DROP", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::Number(2.0),
-        ]),
+        FuncCall("DROP", [List([Number(1.0), Number(2.0)]), Number(2.0)]),
       ),
     ),
     content="true",
@@ -2041,10 +1803,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("DROP", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::Number(0.0),
-        ]),
+        FuncCall("DROP", [List([Number(1.0), Number(2.0)]), Number(0.0)]),
       ),
       1,
       2,
@@ -2053,11 +1812,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("DROP", [Expr::List([Expr::Number(1.0)])]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("DROP", [List([Number(1.0)])])),
     ),
     content="true",
   )
@@ -2067,9 +1822,29 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("CHOOSECOLS", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::Number(0.0),
+        FuncCall("CHOOSECOLS", [List([Number(1.0), Number(2.0)]), Number(0.0)]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        FuncCall("CHOOSECOLS", [List([Number(1.0)])]),
+      ),
+    ),
+    content="true",
+  )
+  inspect(
+    wb_shape_none(
+      wb_shape(
+        workbook,
+        "Sheet1",
+        FuncCall("CHOOSEROWS", [
+          FuncCall("TRANSPOSE", [List([Number(1.0), Number(2.0)])]),
+          Number(0.0),
         ]),
       ),
     ),
@@ -2080,39 +1855,14 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("CHOOSECOLS", [Expr::List([Expr::Number(1.0)])]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("CHOOSEROWS", [
-          Expr::FuncCall("TRANSPOSE", [
-            Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          ]),
-          Expr::Number(0.0),
-        ]),
-      ),
-    ),
-    content="true",
-  )
-  inspect(
-    wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("CHOOSEROWS", [Expr::List([Expr::Number(1.0)])]),
+        FuncCall("CHOOSEROWS", [List([Number(1.0)])]),
       ),
     ),
     content="true",
   )
 
   inspect(
-    wb_shape_none(wb_shape(workbook, "Sheet1", Expr::FuncCall("HSTACK", []))),
+    wb_shape_none(wb_shape(workbook, "Sheet1", FuncCall("HSTACK", []))),
     content="true",
   )
   inspect(
@@ -2120,10 +1870,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("EXPAND", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::String("bad"),
-        ]),
+        FuncCall("EXPAND", [List([Number(1.0)]), String("bad")]),
       ),
     ),
     content="true",
@@ -2133,11 +1880,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("EXPAND", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::Number(1.0),
-          Expr::String("bad"),
-        ]),
+        FuncCall("EXPAND", [List([Number(1.0)]), Number(1.0), String("bad")]),
       ),
     ),
     content="true",
@@ -2147,10 +1890,10 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("EXPAND", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
+        FuncCall("EXPAND", [
+          List([Number(1.0), Number(2.0)]),
+          Number(1.0),
+          Number(1.0),
         ]),
       ),
     ),
@@ -2158,22 +1901,14 @@ test "formula eval wb: array shape advanced function branches part 3" {
   )
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("EXPAND", [Expr::List([Expr::Number(1.0)])]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("EXPAND", [List([Number(1.0)])])),
     ),
     content="true",
   )
 
   inspect(
     wb_shape_none(
-      wb_shape(
-        workbook,
-        "Sheet1",
-        Expr::FuncCall("WRAPROWS", [Expr::List([Expr::Number(1.0)])]),
-      ),
+      wb_shape(workbook, "Sheet1", FuncCall("WRAPROWS", [List([Number(1.0)])])),
     ),
     content="true",
   )
@@ -2182,9 +1917,9 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("WRAPROWS", [
-          Expr::FuncCall("SEQUENCE", [Expr::Number(2.0), Expr::Number(2.0)]),
-          Expr::Number(2.0),
+        FuncCall("WRAPROWS", [
+          FuncCall("SEQUENCE", [Number(2.0), Number(2.0)]),
+          Number(2.0),
         ]),
       ),
     ),
@@ -2195,10 +1930,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("WRAPROWS", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::String("bad"),
-        ]),
+        FuncCall("WRAPROWS", [List([Number(1.0)]), String("bad")]),
       ),
     ),
     content="true",
@@ -2208,10 +1940,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("WRAPROWS", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::Number(0.0),
-        ]),
+        FuncCall("WRAPROWS", [List([Number(1.0)]), Number(0.0)]),
       ),
     ),
     content="true",
@@ -2221,9 +1950,9 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("WRAPROWS", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
-          Expr::Number(2.0),
+        FuncCall("WRAPROWS", [
+          List([Number(1.0), Number(2.0), Number(3.0)]),
+          Number(2.0),
         ]),
       ),
       2,
@@ -2236,9 +1965,9 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("WRAPCOLS", [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
-          Expr::Number(2.0),
+        FuncCall("WRAPCOLS", [
+          List([Number(1.0), Number(2.0), Number(3.0)]),
+          Number(2.0),
         ]),
       ),
       2,
@@ -2252,10 +1981,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TOCOL", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::String("bad"),
-        ]),
+        FuncCall("TOCOL", [List([Number(1.0)]), String("bad")]),
       ),
     ),
     content="true",
@@ -2265,10 +1991,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TOCOL", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::Number(4.0),
-        ]),
+        FuncCall("TOCOL", [List([Number(1.0)]), Number(4.0)]),
       ),
     ),
     content="true",
@@ -2278,11 +2001,7 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TOCOL", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::Number(0.0),
-          Expr::String("bad"),
-        ]),
+        FuncCall("TOCOL", [List([Number(1.0)]), Number(0.0), String("bad")]),
       ),
     ),
     content="true",
@@ -2292,11 +2011,11 @@ test "formula eval wb: array shape advanced function branches part 3" {
       wb_shape(
         workbook,
         "Sheet1",
-        Expr::FuncCall("TOCOL", [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::Number(0.0),
-          Expr::Bool(false),
-          Expr::Number(1.0),
+        FuncCall("TOCOL", [
+          List([Number(1.0)]),
+          Number(0.0),
+          Bool(false),
+          Number(1.0),
         ]),
       ),
     ),

@@ -70,20 +70,14 @@ test "formula builtins wb: row column and formulatxt guards" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ROW",
-        [Expr::Number(1.0), Expr::Number(2.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ROW", [Number(1.0), Number(2.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ROW", [Expr::String("x")], ctx),
+      eval_function(workbook, "Sheet1", "ROW", [String("x")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -97,7 +91,7 @@ test "formula builtins wb: row column and formulatxt guards" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COLUMN", [Expr::String("x")], ctx),
+      eval_function(workbook, "Sheet1", "COLUMN", [String("x")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -108,7 +102,7 @@ test "formula builtins wb: row column and formulatxt guards" {
         workbook,
         "Sheet1",
         "COLUMN",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -117,7 +111,7 @@ test "formula builtins wb: row column and formulatxt guards" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ROWS", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "ROWS", [Bool(true)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -131,7 +125,7 @@ test "formula builtins wb: row column and formulatxt guards" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COLUMNS", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "COLUMNS", [Bool(true)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -166,7 +160,7 @@ test "formula builtins wb: percentile inc k guards" {
     workbook,
     "Sheet1",
     "PERCENTILE.INC",
-    [Expr::Number(1.0), Expr::Number(2.0)],
+    [Number(1.0), Number(2.0)],
     ctx,
   )
   inspect(is_formula_error(out_of_range, formula_error_na), content="true")
@@ -175,7 +169,7 @@ test "formula builtins wb: percentile inc k guards" {
     workbook,
     "Sheet1",
     "PERCENTILE.INC",
-    [Expr::Number(1.0), Expr::String("bad")],
+    [Number(1.0), String("bad")],
     ctx,
   )
   inspect(is_formula_error(bad_k, formula_error_value), content="true")
@@ -191,7 +185,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "QUARTILE.INC",
-    [Expr::Number(1.0), Expr::String("bad")],
+    [Number(1.0), String("bad")],
     ctx,
   )
   inspect(is_formula_error(quartile_bad, formula_error_value), content="true")
@@ -200,7 +194,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "RANK",
-    [Expr::Number(1.0), Expr::Number(2.0), Expr::String("bad")],
+    [Number(1.0), Number(2.0), String("bad")],
     ctx,
   )
   inspect(is_formula_error(rank_bad_order, formula_error_value), content="true")
@@ -209,7 +203,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "TRUNC",
-    [Expr::Number(1.25), Expr::String("bad")],
+    [Number(1.25), String("bad")],
     ctx,
   )
   inspect(
@@ -221,7 +215,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "TRUNC",
-    [Expr::Number(1.99)],
+    [Number(1.99)],
     ctx,
   )
   inspect(is_formula_number(trunc_default_digits, 1.0), content="true")
@@ -230,7 +224,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "ROUND",
-    [Expr::String("bad"), Expr::Number(1.0)],
+    [String("bad"), Number(1.0)],
     ctx,
   )
   inspect(is_formula_error(round_bad_left, formula_error_value), content="true")
@@ -239,7 +233,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "ROUND",
-    [Expr::Number(1.0), Expr::String("bad")],
+    [Number(1.0), String("bad")],
     ctx,
   )
   inspect(
@@ -251,7 +245,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "ROUNDUP",
-    [Expr::String("bad"), Expr::Number(1.0)],
+    [String("bad"), Number(1.0)],
     ctx,
   )
   inspect(
@@ -263,7 +257,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "ROUNDUP",
-    [Expr::Number(1.0), Expr::String("bad")],
+    [Number(1.0), String("bad")],
     ctx,
   )
   inspect(
@@ -275,7 +269,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "ROUNDDOWN",
-    [Expr::String("bad"), Expr::Number(1.0)],
+    [String("bad"), Number(1.0)],
     ctx,
   )
   inspect(
@@ -287,7 +281,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "ROUNDDOWN",
-    [Expr::Number(1.0), Expr::String("bad")],
+    [Number(1.0), String("bad")],
     ctx,
   )
   inspect(
@@ -295,20 +289,14 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     content="true",
   )
 
-  let sqrt_neg = eval_function(
-    workbook,
-    "Sheet1",
-    "SQRT",
-    [Expr::Number(-1.0)],
-    ctx,
-  )
+  let sqrt_neg = eval_function(workbook, "Sheet1", "SQRT", [Number(-1.0)], ctx)
   inspect(is_formula_error(sqrt_neg, formula_error_num), content="true")
 
   let power_bad_left = eval_function(
     workbook,
     "Sheet1",
     "POWER",
-    [Expr::String("bad"), Expr::Number(2.0)],
+    [String("bad"), Number(2.0)],
     ctx,
   )
   inspect(is_formula_error(power_bad_left, formula_error_value), content="true")
@@ -317,7 +305,7 @@ test "formula builtins wb: quartile rank and rounding guard paths" {
     workbook,
     "Sheet1",
     "POWER",
-    [Expr::Number(2.0), Expr::String("bad")],
+    [Number(2.0), String("bad")],
     ctx,
   )
   inspect(
@@ -346,7 +334,7 @@ test "formula builtins wb: dcount sumproduct sumifs guard paths" {
     workbook,
     "Sheet1",
     "DCOUNT",
-    [Expr::Range("", "A1", "A2"), Expr::Range("", "C1", "C2")],
+    [Range("", "A1", "A2"), Range("", "C1", "C2")],
     ctx,
   )
   inspect(is_formula_number(dcount_two_args, 1.0), content="true")
@@ -355,7 +343,7 @@ test "formula builtins wb: dcount sumproduct sumifs guard paths" {
     workbook,
     "Sheet1",
     "SUMPRODUCT",
-    [Expr::Range("", "A2", "A2"), Expr::Number(3.0)],
+    [Range("", "A2", "A2"), Number(3.0)],
     ctx,
   )
   inspect(
@@ -367,7 +355,7 @@ test "formula builtins wb: dcount sumproduct sumifs guard paths" {
     workbook,
     "Sheet1",
     "SUMIFS",
-    [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+    [Number(1.0), Number(1.0), Number(1.0), Number(1.0)],
     ctx,
   )
   inspect(is_formula_error(sumifs_even_arity, formula_error_na), content="true")
@@ -377,11 +365,7 @@ test "formula builtins wb: dcount sumproduct sumifs guard paths" {
     workbook,
     "Sheet1",
     "SUMIFS",
-    [
-      Expr::Range("", "A1", "A1"),
-      Expr::Range("", "B1", "B1"),
-      Expr::Number(1.0),
-    ],
+    [Range("", "A1", "A1"), Range("", "B1", "B1"), Number(1.0)],
     ctx,
   )
   inspect(is_formula_number(sumifs_non_numeric_sum, 0.0), content="true")
@@ -391,11 +375,7 @@ test "formula builtins wb: dcount sumproduct sumifs guard paths" {
     workbook,
     "Sheet1",
     "SUMIFS",
-    [
-      Expr::Range("", "A1", "A1"),
-      Expr::Range("", "B1", "B2"),
-      Expr::Number(1.0),
-    ],
+    [Range("", "A1", "A1"), Range("", "B1", "B2"), Number(1.0)],
     ctx,
   )
   inspect(
@@ -414,12 +394,7 @@ test "formula builtins wb: complex aggregate mixed input paths" {
     workbook,
     "Sheet1",
     "IMPRODUCT",
-    [
-      Expr::Cell("", "Z99"),
-      Expr::Number(2.0),
-      Expr::Bool(true),
-      Expr::List([Expr::List([Expr::Number(3.0)])]),
-    ],
+    [Cell("", "Z99"), Number(2.0), Bool(true), List([List([Number(3.0)])])],
     ctx,
   )
   inspect(
@@ -434,7 +409,7 @@ test "formula builtins wb: complex aggregate mixed input paths" {
     workbook,
     "Sheet1",
     "IMSUM",
-    [Expr::FuncCall("NA", [])],
+    [FuncCall("NA", [])],
     ctx,
   )
   inspect(is_formula_error(imsum_error, formula_error_na), content="true")
@@ -458,12 +433,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "AVERAGEIFS",
-    [
-      Expr::Range("", "A1", "A1"),
-      Expr::Range("", "B1", "B1"),
-      Expr::Number(1.0),
-      Expr::Number(1.0),
-    ],
+    [Range("", "A1", "A1"), Range("", "B1", "B1"), Number(1.0), Number(1.0)],
     ctx,
   )
   inspect(is_formula_error(averageifs_even, formula_error_na), content="true")
@@ -472,11 +442,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "AVERAGEIFS",
-    [
-      Expr::Range("", "A1", "A1"),
-      Expr::Range("", "B1", "B1"),
-      Expr::Number(1.0),
-    ],
+    [Range("", "A1", "A1"), Range("", "B1", "B1"), Number(1.0)],
     ctx,
   )
   inspect(is_formula_error(averageifs_div, formula_error_div), content="true")
@@ -485,11 +451,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "AVERAGEIFS",
-    [
-      Expr::Range("", "A1", "A1"),
-      Expr::Range("", "B1", "B2"),
-      Expr::Number(1.0),
-    ],
+    [Range("", "A1", "A1"), Range("", "B1", "B2"), Number(1.0)],
     ctx,
   )
   inspect(is_formula_error(averageifs_oob, formula_error_value), content="true")
@@ -498,7 +460,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "MAXIFS",
-    [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+    [Number(1.0), Number(1.0), Number(1.0), Number(1.0)],
     ctx,
   )
   inspect(is_formula_error(maxifs_even, formula_error_na), content="true")
@@ -507,7 +469,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "MAXIFS",
-    [Expr::Number(1.0), Expr::Number(1.0)],
+    [Number(1.0), Number(1.0)],
     ctx,
   )
   inspect(
@@ -519,7 +481,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "MINIFS",
-    [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+    [Number(1.0), Number(1.0), Number(1.0), Number(1.0)],
     ctx,
   )
   inspect(is_formula_error(minifs_even, formula_error_na), content="true")
@@ -528,7 +490,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "MINIFS",
-    [Expr::Number(1.0), Expr::Number(1.0)],
+    [Number(1.0), Number(1.0)],
     ctx,
   )
   inspect(
@@ -540,7 +502,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "ABS",
-    [Expr::FuncCall("NA", [])],
+    [FuncCall("NA", [])],
     ctx,
   )
   inspect(is_formula_error(abs_bad, formula_error_na), content="true")
@@ -549,7 +511,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "INT",
-    [Expr::FuncCall("NA", [])],
+    [FuncCall("NA", [])],
     ctx,
   )
   inspect(is_formula_error(int_bad, formula_error_na), content="true")
@@ -558,7 +520,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "DECIMAL",
-    [Expr::FuncCall("NA", []), Expr::Number(2.0)],
+    [FuncCall("NA", []), Number(2.0)],
     ctx,
   )
   inspect(is_formula_error(decimal_bad_text, formula_error_na), content="true")
@@ -567,7 +529,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "DECIMAL",
-    [Expr::String("10"), Expr::FuncCall("NA", [])],
+    [String("10"), FuncCall("NA", [])],
     ctx,
   )
   inspect(is_formula_error(decimal_bad_radix, formula_error_na), content="true")
@@ -576,7 +538,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "ARABIC",
-    [Expr::FuncCall("NA", [])],
+    [FuncCall("NA", [])],
     ctx,
   )
   inspect(is_formula_error(arabic_bad, formula_error_na), content="true")
@@ -585,7 +547,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "HEX2BIN",
-    [Expr::FuncCall("NA", [])],
+    [FuncCall("NA", [])],
     ctx,
   )
   inspect(is_formula_error(hex2bin_bad, formula_error_na), content="true")
@@ -594,7 +556,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "HEX2DEC",
-    [Expr::FuncCall("NA", [])],
+    [FuncCall("NA", [])],
     ctx,
   )
   inspect(is_formula_error(hex2dec_bad, formula_error_na), content="true")
@@ -603,7 +565,7 @@ test "formula builtins wb: ifs and conversion guard branches part 3" {
     workbook,
     "Sheet1",
     "HEX2OCT",
-    [Expr::FuncCall("NA", [])],
+    [FuncCall("NA", [])],
     ctx,
   )
   inspect(is_formula_error(hex2oct_bad, formula_error_na), content="true")
@@ -628,7 +590,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::FuncCall("NA", []), Expr::String("abc")],
+        [FuncCall("NA", []), String("abc")],
         ctx,
       ),
       formula_error_na,
@@ -641,10 +603,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [
-          Expr::FuncCall("MUNIT", [Expr::Number(0.0)]),
-          Expr::FuncCall("MUNIT", [Expr::Number(0.0)]),
-        ],
+        [FuncCall("MUNIT", [Number(0.0)]), FuncCall("MUNIT", [Number(0.0)])],
         ctx,
       ),
       formula_error_value,
@@ -657,7 +616,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [Expr::String("abc"), Expr::String("a")],
+        [String("abc"), String("a")],
         ctx,
       ),
       formula_error_value,
@@ -670,7 +629,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String("a"), Expr::FuncCall("NA", [])],
+        [String("a"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -683,7 +642,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String("a"), Expr::String("abc"), Expr::FuncCall("NA", [])],
+        [String("a"), String("abc"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -696,7 +655,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(0.0)],
+        [String("a"), String("abc"), Number(0.0)],
         ctx,
       ),
       formula_error_value,
@@ -709,7 +668,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(10.0)],
+        [String("a"), String("abc"), Number(10.0)],
         ctx,
       ),
       formula_error_value,
@@ -722,7 +681,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String(""), Expr::String("abc"), Expr::Number(2.0)],
+        [String(""), String("abc"), Number(2.0)],
         ctx,
       ),
       2.0,
@@ -735,7 +694,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String("z"), Expr::String("abc")],
+        [String("z"), String("abc")],
         ctx,
       ),
       formula_error_value,
@@ -744,60 +703,7 @@ test "formula builtins wb: text/search guard branches part 4" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "FIND", [Expr::String("a")], ctx),
-      formula_error_value,
-    ),
-    content="true",
-  )
-
-  inspect(
-    is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FINDB",
-        [Expr::FuncCall("NA", []), Expr::String("abc")],
-        ctx,
-      ),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FINDB",
-        [Expr::String("a"), Expr::FuncCall("NA", [])],
-        ctx,
-      ),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FINDB",
-        [Expr::String("a"), Expr::String("abc"), Expr::FuncCall("NA", [])],
-        ctx,
-      ),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FINDB",
-        [Expr::String("z"), Expr::String("abc")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "FIND", [String("a")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -808,8 +714,61 @@ test "formula builtins wb: text/search guard branches part 4" {
       eval_function(
         workbook,
         "Sheet1",
+        "FINDB",
+        [FuncCall("NA", []), String("abc")],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FINDB",
+        [String("a"), FuncCall("NA", [])],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FINDB",
+        [String("a"), String("abc"), FuncCall("NA", [])],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "FINDB",
+        [String("z"), String("abc")],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
         "SEARCH",
-        [Expr::FuncCall("NA", []), Expr::String("abc")],
+        [FuncCall("NA", []), String("abc")],
         ctx,
       ),
       formula_error_na,
@@ -822,7 +781,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("a"), Expr::FuncCall("NA", [])],
+        [String("a"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -835,7 +794,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("a"), Expr::String("abc"), Expr::FuncCall("NA", [])],
+        [String("a"), String("abc"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -848,7 +807,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(0.0)],
+        [String("a"), String("abc"), Number(0.0)],
         ctx,
       ),
       formula_error_value,
@@ -861,7 +820,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(10.0)],
+        [String("a"), String("abc"), Number(10.0)],
         ctx,
       ),
       formula_error_value,
@@ -874,7 +833,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String(""), Expr::String("abc"), Expr::Number(2.0)],
+        [String(""), String("abc"), Number(2.0)],
         ctx,
       ),
       2.0,
@@ -887,7 +846,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("z"), Expr::String("abc")],
+        [String("z"), String("abc")],
         ctx,
       ),
       formula_error_value,
@@ -901,7 +860,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCHB",
-        [Expr::FuncCall("NA", []), Expr::String("abc")],
+        [FuncCall("NA", []), String("abc")],
         ctx,
       ),
       formula_error_na,
@@ -914,7 +873,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCHB",
-        [Expr::String("a"), Expr::FuncCall("NA", [])],
+        [String("a"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -927,7 +886,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCHB",
-        [Expr::String("a"), Expr::String("abc"), Expr::FuncCall("NA", [])],
+        [String("a"), String("abc"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -940,7 +899,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "SEARCHB",
-        [Expr::String("z"), Expr::String("abc")],
+        [String("z"), String("abc")],
         ctx,
       ),
       formula_error_value,
@@ -954,7 +913,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIXED",
-        [Expr::Number(1.23), Expr::FuncCall("NA", [])],
+        [Number(1.23), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -967,7 +926,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIXED",
-        [Expr::Number(1.23), Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(1.23), Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -980,7 +939,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "FIXED",
-        [Expr::Number(12.34), Expr::Number(-2.0)],
+        [Number(12.34), Number(-2.0)],
         ctx,
       ),
       "12",
@@ -994,7 +953,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "VALUETOTEXT",
-        [Expr::String("a"), Expr::FuncCall("NA", [])],
+        [String("a"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1007,7 +966,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "VALUETOTEXT",
-        [Expr::String("a"), Expr::Number(2.0)],
+        [String("a"), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -1020,7 +979,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "VALUETOTEXT",
-        [Expr::String("a"), Expr::Number(1.0)],
+        [String("a"), Number(1.0)],
         ctx,
       ),
       "\"a\"",
@@ -1034,7 +993,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXT",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1047,7 +1006,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXT",
-        [Expr::String("abc"), Expr::String("0")],
+        [String("abc"), String("0")],
         ctx,
       ),
       formula_error_value,
@@ -1061,7 +1020,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::String("a"), Expr::FuncCall("NA", [])],
+        [String("a"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1074,7 +1033,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::String("a"), Expr::Number(2.0)],
+        [String("a"), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -1087,7 +1046,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::Cell("", "A1"), Expr::Number(1.0)],
+        [Cell("", "A1"), Number(1.0)],
         ctx,
       ),
       formula_error_ref,
@@ -1100,7 +1059,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::String("a"), Expr::Number(1.0)],
+        [String("a"), Number(1.0)],
         ctx,
       ) {
       String(text) => text.contains("\"a\"")
@@ -1114,7 +1073,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTAFTER",
-        [Expr::FuncCall("NA", []), Expr::String("-")],
+        [FuncCall("NA", []), String("-")],
         ctx,
       ),
       formula_error_na,
@@ -1127,7 +1086,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTAFTER",
-        [Expr::String("a-b"), Expr::FuncCall("NA", [])],
+        [String("a-b"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1140,7 +1099,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTAFTER",
-        [Expr::String(""), Expr::String("-")],
+        [String(""), String("-")],
         ctx,
       ),
       formula_error_na,
@@ -1153,7 +1112,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTAFTER",
-        [Expr::String("a-b"), Expr::String("-"), Expr::FuncCall("NA", [])],
+        [String("a-b"), String("-"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1166,7 +1125,33 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTAFTER",
-        [Expr::String("a-b"), Expr::String("-"), Expr::Number(0.0)],
+        [String("a-b"), String("-"), Number(0.0)],
+        ctx,
+      ),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [String("a-b"), String("-"), Number(1.0), FuncCall("NA", [])],
+        ctx,
+      ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(
+        workbook,
+        "Sheet1",
+        "TEXTAFTER",
+        [String("a-b"), String("-"), Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -1180,47 +1165,11 @@ test "formula builtins wb: text/search guard branches part 4" {
         "Sheet1",
         "TEXTAFTER",
         [
-          Expr::String("a-b"),
-          Expr::String("-"),
-          Expr::Number(1.0),
-          Expr::FuncCall("NA", []),
-        ],
-        ctx,
-      ),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TEXTAFTER",
-        [
-          Expr::String("a-b"),
-          Expr::String("-"),
-          Expr::Number(1.0),
-          Expr::Number(2.0),
-        ],
-        ctx,
-      ),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TEXTAFTER",
-        [
-          Expr::String("a-b"),
-          Expr::String("-"),
-          Expr::Number(1.0),
-          Expr::Number(0.0),
-          Expr::FuncCall("NA", []),
+          String("a-b"),
+          String("-"),
+          Number(1.0),
+          Number(0.0),
+          FuncCall("NA", []),
         ],
         ctx,
       ),
@@ -1235,12 +1184,12 @@ test "formula builtins wb: text/search guard branches part 4" {
         "Sheet1",
         "TEXTAFTER",
         [
-          Expr::String("a,b"),
-          Expr::String("|"),
-          Expr::Number(1.0),
-          Expr::Number(0.0),
-          Expr::Bool(false),
-          Expr::String("nf"),
+          String("a,b"),
+          String("|"),
+          Number(1.0),
+          Number(0.0),
+          Bool(false),
+          String("nf"),
         ],
         ctx,
       ),
@@ -1254,7 +1203,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTAFTER",
-        [Expr::String("a-"), Expr::String("-")],
+        [String("a-"), String("-")],
         ctx,
       ) {
       Empty => true
@@ -1268,7 +1217,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTBEFORE",
-        [Expr::String("-a"), Expr::String("-")],
+        [String("-a"), String("-")],
         ctx,
       ),
       "",
@@ -1282,7 +1231,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTJOIN",
-        [Expr::FuncCall("NA", []), Expr::Bool(true), Expr::String("a")],
+        [FuncCall("NA", []), Bool(true), String("a")],
         ctx,
       ),
       formula_error_na,
@@ -1295,7 +1244,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTJOIN",
-        [Expr::String(","), Expr::FuncCall("NA", []), Expr::String("a")],
+        [String(","), FuncCall("NA", []), String("a")],
         ctx,
       ),
       formula_error_na,
@@ -1308,7 +1257,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTJOIN",
-        [Expr::String(","), Expr::Bool(true), Expr::FuncCall("NA", [])],
+        [String(","), Bool(true), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1321,7 +1270,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTJOIN",
-        [Expr::String(""), Expr::Bool(false), Expr::String(long_text)],
+        [String(""), Bool(false), String(long_text)],
         ctx,
       ),
       formula_error_value,
@@ -1334,7 +1283,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "TEXTJOIN",
-        [Expr::String(","), Expr::Bool(true)],
+        [String(","), Bool(true)],
         ctx,
       ),
       formula_error_value,
@@ -1348,7 +1297,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "UNIQUE",
-        [Expr::List([Expr::Number(1.0)]), Expr::FuncCall("NA", [])],
+        [List([Number(1.0)]), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1361,11 +1310,7 @@ test "formula builtins wb: text/search guard branches part 4" {
         workbook,
         "Sheet1",
         "UNIQUE",
-        [
-          Expr::List([Expr::Number(1.0)]),
-          Expr::Bool(false),
-          Expr::FuncCall("NA", []),
-        ],
+        [List([Number(1.0)]), Bool(false), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1374,13 +1319,7 @@ test "formula builtins wb: text/search guard branches part 4" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "UNIQUE",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "UNIQUE", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -1388,13 +1327,7 @@ test "formula builtins wb: text/search guard branches part 4" {
   let empty_exprs : Array[Expr] = []
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "UNIQUE",
-        [Expr::List(empty_exprs)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "UNIQUE", [List(empty_exprs)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -1414,7 +1347,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MOD",
-        [Expr::Number(10.0), Expr::FuncCall("NA", [])],
+        [Number(10.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1427,7 +1360,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "QUOTIENT",
-        [Expr::Number(10.0), Expr::FuncCall("NA", [])],
+        [Number(10.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1441,7 +1374,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "AND",
-        [Expr::Cell("", "Z99"), Expr::Bool(true)],
+        [Cell("", "Z99"), Bool(true)],
         ctx,
       ),
       true,
@@ -1454,7 +1387,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "AND",
-        [Expr::FuncCall("NA", []), Expr::Bool(true)],
+        [FuncCall("NA", []), Bool(true)],
         ctx,
       ),
       formula_error_na,
@@ -1463,13 +1396,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "AND",
-        [Expr::Range("", "A1", "A1")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "AND", [Range("", "A1", "A1")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -1481,7 +1408,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "OR",
-        [Expr::Cell("", "Z99"), Expr::String("FALSE")],
+        [Cell("", "Z99"), String("FALSE")],
         ctx,
       ),
       false,
@@ -1494,7 +1421,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "OR",
-        [Expr::FuncCall("NA", []), Expr::String("FALSE")],
+        [FuncCall("NA", []), String("FALSE")],
         ctx,
       ),
       formula_error_na,
@@ -1507,7 +1434,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "OR",
-        [Expr::Range("", "A1", "A1"), Expr::String("FALSE")],
+        [Range("", "A1", "A1"), String("FALSE")],
         ctx,
       ),
       false,
@@ -1517,28 +1444,28 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::String("TRUE")], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [String("TRUE")], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::String("FALSE")], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [String("FALSE")], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::Cell("", "Z99")], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [Cell("", "Z99")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -1546,13 +1473,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
 
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "XOR",
-        [Expr::Number(1.0), Expr::Number(0.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "XOR", [Number(1.0), Number(0.0)], ctx),
       true,
     ),
     content="true",
@@ -1563,7 +1484,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "XOR",
-        [Expr::Cell("", "Z99"), Expr::Number(0.0)],
+        [Cell("", "Z99"), Number(0.0)],
         ctx,
       ),
       false,
@@ -1573,67 +1494,49 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "LEN", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "LEN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "LENB", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "LENB", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "LOWER",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "LOWER", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "UPPER",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "UPPER", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "PROPER",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "PROPER", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "DBCS", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "DBCS", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "TRIM", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "TRIM", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -1645,7 +1548,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "LEFT",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -1658,7 +1561,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "LEFT",
-        [Expr::String("abc"), Expr::FuncCall("NA", [])],
+        [String("abc"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1672,7 +1575,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "LEFTB",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -1685,7 +1588,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "LEFTB",
-        [Expr::String("abc"), Expr::FuncCall("NA", [])],
+        [String("abc"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1694,7 +1597,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "LEFTB", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "LEFTB", [String("abc")], ctx),
       "a",
     ),
     content="true",
@@ -1705,7 +1608,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "LEFTB",
-        [Expr::String("abc"), Expr::Number(10.0)],
+        [String("abc"), Number(10.0)],
         ctx,
       ),
       "abc",
@@ -1719,7 +1622,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "RIGHT",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -1732,7 +1635,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "RIGHT",
-        [Expr::String("abc"), Expr::FuncCall("NA", [])],
+        [String("abc"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1745,7 +1648,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "RIGHTB",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -1758,7 +1661,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "RIGHTB",
-        [Expr::String("abc"), Expr::FuncCall("NA", [])],
+        [String("abc"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1767,7 +1670,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "RIGHTB", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "RIGHTB", [String("abc")], ctx),
       "c",
     ),
     content="true",
@@ -1778,7 +1681,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "RIGHTB",
-        [Expr::String("abc"), Expr::Number(10.0)],
+        [String("abc"), Number(10.0)],
         ctx,
       ),
       "abc",
@@ -1792,7 +1695,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MID",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -1805,7 +1708,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MID",
-        [Expr::String("abc"), Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [String("abc"), FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -1818,7 +1721,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MID",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [String("abc"), Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1831,7 +1734,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MID",
-        [Expr::String("abc"), Expr::Number(2.0), Expr::Number(10.0)],
+        [String("abc"), Number(2.0), Number(10.0)],
         ctx,
       ),
       "bc",
@@ -1845,7 +1748,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -1858,7 +1761,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("abc"), Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [String("abc"), FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -1871,7 +1774,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [String("abc"), Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1884,7 +1787,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(0.0)],
+        [String("abc"), Number(1.0), Number(0.0)],
         ctx,
       ),
       "",
@@ -1897,7 +1800,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("abc"), Expr::Number(10.0), Expr::Number(1.0)],
+        [String("abc"), Number(10.0), Number(1.0)],
         ctx,
       ),
       "",
@@ -1910,7 +1813,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("你a"), Expr::Number(1.0), Expr::Number(1.0)],
+        [String("你a"), Number(1.0), Number(1.0)],
         ctx,
       ) {
       String(_) => true
@@ -1924,7 +1827,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("你a"), Expr::Number(1.0), Expr::Number(2.0)],
+        [String("你a"), Number(1.0), Number(2.0)],
         ctx,
       ),
       "你",
@@ -1938,7 +1841,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPT",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -1951,7 +1854,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPT",
-        [Expr::String("x"), Expr::FuncCall("NA", [])],
+        [String("x"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -1964,7 +1867,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPT",
-        [Expr::String(long_rept_text), Expr::Number(2.0)],
+        [String(long_rept_text), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -1978,12 +1881,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACE",
-        [
-          Expr::FuncCall("NA", []),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::String("x"),
-        ],
+        [FuncCall("NA", []), Number(1.0), Number(1.0), String("x")],
         ctx,
       ),
       formula_error_na,
@@ -1996,12 +1894,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACE",
-        [
-          Expr::String("abc"),
-          Expr::FuncCall("NA", []),
-          Expr::Number(1.0),
-          Expr::String("x"),
-        ],
+        [String("abc"), FuncCall("NA", []), Number(1.0), String("x")],
         ctx,
       ),
       formula_error_na,
@@ -2014,12 +1907,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACE",
-        [
-          Expr::String("abc"),
-          Expr::Number(1.0),
-          Expr::FuncCall("NA", []),
-          Expr::String("x"),
-        ],
+        [String("abc"), Number(1.0), FuncCall("NA", []), String("x")],
         ctx,
       ),
       formula_error_na,
@@ -2032,12 +1920,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACE",
-        [
-          Expr::String("abc"),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::FuncCall("NA", []),
-        ],
+        [String("abc"), Number(1.0), Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -2050,12 +1933,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACE",
-        [
-          Expr::String("abc"),
-          Expr::Number(10.0),
-          Expr::Number(1.0),
-          Expr::String("x"),
-        ],
+        [String("abc"), Number(10.0), Number(1.0), String("x")],
         ctx,
       ),
       "abcx",
@@ -2069,12 +1947,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACEB",
-        [
-          Expr::FuncCall("NA", []),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::String("x"),
-        ],
+        [FuncCall("NA", []), Number(1.0), Number(1.0), String("x")],
         ctx,
       ),
       formula_error_na,
@@ -2087,12 +1960,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACEB",
-        [
-          Expr::String("abc"),
-          Expr::FuncCall("NA", []),
-          Expr::Number(1.0),
-          Expr::String("x"),
-        ],
+        [String("abc"), FuncCall("NA", []), Number(1.0), String("x")],
         ctx,
       ),
       formula_error_na,
@@ -2105,12 +1973,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACEB",
-        [
-          Expr::String("abc"),
-          Expr::Number(1.0),
-          Expr::FuncCall("NA", []),
-          Expr::String("x"),
-        ],
+        [String("abc"), Number(1.0), FuncCall("NA", []), String("x")],
         ctx,
       ),
       formula_error_na,
@@ -2123,12 +1986,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACEB",
-        [
-          Expr::String("abc"),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::FuncCall("NA", []),
-        ],
+        [String("abc"), Number(1.0), Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -2141,12 +1999,7 @@ test "formula builtins wb: logical and text primitive guard branches part 5" {
         workbook,
         "Sheet1",
         "REPLACEB",
-        [
-          Expr::String("abc"),
-          Expr::Number(10.0),
-          Expr::Number(1.0),
-          Expr::String("x"),
-        ],
+        [String("abc"), Number(10.0), Number(1.0), String("x")],
         ctx,
       ),
       "abcx",
@@ -2167,7 +2020,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [Expr::FuncCall("NA", []), Expr::String("a"), Expr::String("b")],
+        [FuncCall("NA", []), String("a"), String("b")],
         ctx,
       ),
       formula_error_na,
@@ -2180,7 +2033,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [Expr::String("abc"), Expr::FuncCall("NA", []), Expr::String("b")],
+        [String("abc"), FuncCall("NA", []), String("b")],
         ctx,
       ),
       formula_error_na,
@@ -2193,7 +2046,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [Expr::String("abc"), Expr::String("a"), Expr::FuncCall("NA", [])],
+        [String("abc"), String("a"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -2206,12 +2059,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [
-          Expr::String("abc"),
-          Expr::String("a"),
-          Expr::String("b"),
-          Expr::FuncCall("NA", []),
-        ],
+        [String("abc"), String("a"), String("b"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -2224,7 +2072,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [Expr::String("abc"), Expr::String(""), Expr::String("x")],
+        [String("abc"), String(""), String("x")],
         ctx,
       ),
       formula_error_value,
@@ -2237,12 +2085,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [
-          Expr::String("abc"),
-          Expr::String("z"),
-          Expr::String("x"),
-          Expr::Number(1.0),
-        ],
+        [String("abc"), String("z"), String("x"), Number(1.0)],
         ctx,
       ),
       "abc",
@@ -2255,12 +2098,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [
-          Expr::String("a-a-a"),
-          Expr::String("a"),
-          Expr::String("x"),
-          Expr::Number(2.0),
-        ],
+        [String("a-a-a"), String("a"), String("x"), Number(2.0)],
         ctx,
       ),
       "a-x-a",
@@ -2274,7 +2112,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "FINDB",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(2.0)],
+        [String("a"), String("abc"), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -2283,7 +2121,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SEARCH", [Expr::String("a")], ctx),
+      eval_function(workbook, "Sheet1", "SEARCH", [String("a")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -2294,7 +2132,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "SEARCHB",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(2.0)],
+        [String("a"), String("abc"), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -2303,7 +2141,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SEARCHB", [Expr::String("a")], ctx),
+      eval_function(workbook, "Sheet1", "SEARCHB", [String("a")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -2315,7 +2153,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "EXACT",
-        [Expr::FuncCall("NA", []), Expr::String("a")],
+        [FuncCall("NA", []), String("a")],
         ctx,
       ),
       formula_error_na,
@@ -2328,7 +2166,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "EXACT",
-        [Expr::String("a"), Expr::FuncCall("NA", [])],
+        [String("a"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -2338,20 +2176,14 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FIXED",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "FIXED", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "FIXED", [Expr::String("12.345")], ctx),
+      eval_function(workbook, "Sheet1", "FIXED", [String("12.345")], ctx),
       "12.345",
     ),
     content="true",
@@ -2359,13 +2191,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
 
   inspect(
     is_formula_string(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "VALUETOTEXT",
-        [Expr::String("alpha")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "VALUETOTEXT", [String("alpha")], ctx),
       "alpha",
     ),
     content="true",
@@ -2384,7 +2210,7 @@ test "formula builtins wb: substitute and conversion guard branches part 6" {
         workbook,
         "Sheet1",
         "LOGINV",
-        [Expr::Number(0.5), Expr::Number(0.0), Expr::Number(1.0)],
+        [Number(0.5), Number(0.0), Number(1.0)],
         ctx,
       ) {
       Number(_) => true
@@ -2422,7 +2248,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "UNIQUE",
-        [Expr::List([Expr::Number(1.0), Expr::Number(1.0), Expr::Number(2.0)])],
+        [List([Number(1.0), Number(1.0), Number(2.0)])],
         ctx,
       ) {
       List(list) => list.length() == 3
@@ -2431,8 +2257,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "UNIQUE", [Expr::Number(7.0)], ctx) {
+    match eval_function(workbook, "Sheet1", "UNIQUE", [Number(7.0)], ctx) {
       List(list) => list.length() == 1 && is_formula_number(list[0], 7.0)
       _ => false
     },
@@ -2444,7 +2269,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "UNIQUE",
-        [Expr::List([Expr::FuncCall("NA", [])])],
+        [List([FuncCall("NA", [])])],
         ctx,
       ),
       formula_error_na,
@@ -2458,7 +2283,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATE",
-        [Expr::Number(10000.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(10000.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_num,
@@ -2471,7 +2296,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATE",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -2484,9 +2309,16 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "TIME",
-        [Expr::FuncCall("NA", []), Expr::Number(0.0), Expr::Number(0.0)],
+        [FuncCall("NA", []), Number(0.0), Number(0.0)],
         ctx,
       ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "DATEVALUE", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -2497,20 +2329,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEVALUE",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "DATEVALUE",
-        [Expr::String("9999-13-01")],
+        [String("9999-13-01")],
         ctx,
       ),
       formula_error_value,
@@ -2519,26 +2338,14 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TIMEVALUE",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "TIMEVALUE", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TIMEVALUE",
-        [Expr::String("-1:00:00")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "TIMEVALUE", [String("-1:00:00")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -2550,11 +2357,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::FuncCall("NA", []),
-          Expr::String("2024-01-01"),
-          Expr::String("D"),
-        ],
+        [FuncCall("NA", []), String("2024-01-01"), String("D")],
         ctx,
       ),
       formula_error_na,
@@ -2567,11 +2370,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-01-01"),
-          Expr::FuncCall("NA", []),
-          Expr::String("D"),
-        ],
+        [String("2024-01-01"), FuncCall("NA", []), String("D")],
         ctx,
       ),
       formula_error_na,
@@ -2584,11 +2383,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-01-01"),
-          Expr::String("2024-01-01"),
-          Expr::String("D"),
-        ],
+        [String("2024-01-01"), String("2024-01-01"), String("D")],
         ctx,
       ),
       0.0,
@@ -2601,11 +2396,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-01-01"),
-          Expr::String("2024-01-02"),
-          Expr::FuncCall("NA", []),
-        ],
+        [String("2024-01-01"), String("2024-01-02"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -2618,7 +2409,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [Expr::Number(1.0e20), Expr::Number(1.0e20 + 1.0), Expr::String("D")],
+        [Number(1.0e20), Number(1.0e20 + 1.0), String("D")],
         ctx,
       ) {
       Number(_) => true
@@ -2632,7 +2423,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [Expr::Number(1.0), Expr::Number(1.0e20), Expr::String("D")],
+        [Number(1.0), Number(1.0e20), String("D")],
         ctx,
       ) {
       Number(_) => true
@@ -2646,11 +2437,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-06-30"),
-          Expr::String("2025-01-01"),
-          Expr::String("Y"),
-        ],
+        [String("2024-06-30"), String("2025-01-01"), String("Y")],
         ctx,
       ),
       0.0,
@@ -2663,11 +2450,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-01-31"),
-          Expr::String("2024-03-01"),
-          Expr::String("M"),
-        ],
+        [String("2024-01-31"), String("2024-03-01"), String("M")],
         ctx,
       ),
       1.0,
@@ -2680,11 +2463,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-01-31"),
-          Expr::String("2024-03-01"),
-          Expr::String("YM"),
-        ],
+        [String("2024-01-31"), String("2024-03-01"), String("YM")],
         ctx,
       ),
       1.0,
@@ -2697,11 +2476,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-11-15"),
-          Expr::String("2025-02-14"),
-          Expr::String("YM"),
-        ],
+        [String("2024-11-15"), String("2025-02-14"), String("YM")],
         ctx,
       ),
       2.0,
@@ -2714,11 +2489,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-11-15"),
-          Expr::String("2025-02-14"),
-          Expr::String("YD"),
-        ],
+        [String("2024-11-15"), String("2025-02-14"), String("YD")],
         ctx,
       ) {
       Number(_) => true
@@ -2732,11 +2503,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-03-20"),
-          Expr::String("2024-04-10"),
-          Expr::String("MD"),
-        ],
+        [String("2024-03-20"), String("2024-04-10"), String("MD")],
         ctx,
       ),
       21.0,
@@ -2749,11 +2516,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [
-          Expr::String("2024-01-01"),
-          Expr::String("2024-01-02"),
-          Expr::String("BAD"),
-        ],
+        [String("2024-01-01"), String("2024-01-02"), String("BAD")],
         ctx,
       ),
       formula_error_value,
@@ -2767,7 +2530,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -2780,7 +2543,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -2794,7 +2557,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [Expr::FuncCall("NA", []), Expr::String("2024-01-31"), Expr::Bool(true)],
+        [FuncCall("NA", []), String("2024-01-31"), Bool(true)],
         ctx,
       ),
       formula_error_na,
@@ -2807,7 +2570,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [Expr::String("2024-01-31"), Expr::FuncCall("NA", []), Expr::Bool(true)],
+        [String("2024-01-31"), FuncCall("NA", []), Bool(true)],
         ctx,
       ),
       formula_error_na,
@@ -2820,7 +2583,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [Expr::Number(1.0e20), Expr::String("2024-01-31"), Expr::Bool(true)],
+        [Number(1.0e20), String("2024-01-31"), Bool(true)],
         ctx,
       ) {
       Number(_) => true
@@ -2834,7 +2597,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [Expr::String("2024-01-31"), Expr::Number(1.0e20), Expr::Bool(true)],
+        [String("2024-01-31"), Number(1.0e20), Bool(true)],
         ctx,
       ) {
       Number(_) => true
@@ -2848,11 +2611,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [
-          Expr::String("2024-01-31"),
-          Expr::String("2024-03-31"),
-          Expr::FuncCall("NA", []),
-        ],
+        [String("2024-01-31"), String("2024-03-31"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -2865,11 +2624,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [
-          Expr::String("2024-01-31"),
-          Expr::String("2024-03-31"),
-          Expr::Bool(true),
-        ],
+        [String("2024-01-31"), String("2024-03-31"), Bool(true)],
         ctx,
       ) {
       Number(_) => true
@@ -2883,11 +2638,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [
-          Expr::String("2024-02-29"),
-          Expr::String("2024-03-15"),
-          Expr::Bool(false),
-        ],
+        [String("2024-02-29"), String("2024-03-15"), Bool(false)],
         ctx,
       ) {
       Number(_) => true
@@ -2901,11 +2652,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [
-          Expr::String("2024-01-15"),
-          Expr::String("2024-01-31"),
-          Expr::Bool(false),
-        ],
+        [String("2024-01-15"), String("2024-01-31"), Bool(false)],
         ctx,
       ) {
       Number(_) => true
@@ -2919,11 +2666,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [
-          Expr::String("2024-01-30"),
-          Expr::String("2024-01-31"),
-          Expr::Bool(false),
-        ],
+        [String("2024-01-30"), String("2024-01-31"), Bool(false)],
         ctx,
       ) {
       Number(_) => true
@@ -2933,13 +2676,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ISOWEEKNUM",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ISOWEEKNUM", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -2958,7 +2695,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "EDATE",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -2971,7 +2708,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "EDATE",
-        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])],
+        [String("2024-01-01"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -2984,7 +2721,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "EDATE",
-        [Expr::String("9999-12-31"), Expr::Number(1.0)],
+        [String("9999-12-31"), Number(1.0)],
         ctx,
       ),
       formula_error_num,
@@ -2998,7 +2735,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "EOMONTH",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -3011,7 +2748,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "EOMONTH",
-        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])],
+        [String("2024-01-01"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3024,7 +2761,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "EOMONTH",
-        [Expr::String("9999-12-01"), Expr::Number(1.0)],
+        [String("9999-12-01"), Number(1.0)],
         ctx,
       ),
       formula_error_num,
@@ -3038,7 +2775,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "YEARFRAC",
-        [Expr::FuncCall("NA", []), Expr::String("2024-01-02")],
+        [FuncCall("NA", []), String("2024-01-02")],
         ctx,
       ),
       formula_error_na,
@@ -3051,7 +2788,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "YEARFRAC",
-        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])],
+        [String("2024-01-01"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3064,11 +2801,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "YEARFRAC",
-        [
-          Expr::String("2024-01-01"),
-          Expr::String("2024-01-02"),
-          Expr::FuncCall("NA", []),
-        ],
+        [String("2024-01-01"), String("2024-01-02"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3081,7 +2814,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "YEARFRAC",
-        [Expr::String("2024-01-01"), Expr::String("2024-01-31")],
+        [String("2024-01-01"), String("2024-01-31")],
         ctx,
       ) {
       Number(_) => true
@@ -3091,13 +2824,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "YEARFRAC",
-        [Expr::String("2024-01-01")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "YEARFRAC", [String("2024-01-01")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -3105,11 +2832,18 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
 
   inspect(
     is_formula_error(
+      eval_function(workbook, "Sheet1", "WEEKDAY", [FuncCall("NA", [])], ctx),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
       eval_function(
         workbook,
         "Sheet1",
         "WEEKDAY",
-        [Expr::FuncCall("NA", [])],
+        [String("2024-01-01"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3122,20 +2856,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "WEEKDAY",
-        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])],
-        ctx,
-      ),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "WEEKDAY",
-        [Expr::String("2024-01-01"), Expr::Number(99.0)],
+        [String("2024-01-01"), Number(99.0)],
         ctx,
       ),
       formula_error_value,
@@ -3145,13 +2866,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "WEEKNUM",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "WEEKNUM", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -3162,7 +2877,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "WEEKNUM",
-        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])],
+        [String("2024-01-01"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3175,7 +2890,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "WEEKNUM",
-        [Expr::String("2023-01-07"), Expr::Number(16.0)],
+        [String("2023-01-07"), Number(16.0)],
         ctx,
       ) {
       Number(_) => true
@@ -3189,7 +2904,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "WEEKNUM",
-        [Expr::String("2021-01-01"), Expr::Number(21.0)],
+        [String("2021-01-01"), Number(21.0)],
         ctx,
       ) {
       Number(_) => true
@@ -3204,7 +2919,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "NETWORKDAYS",
-        [Expr::FuncCall("NA", []), Expr::String("2024-01-02")],
+        [FuncCall("NA", []), String("2024-01-02")],
         ctx,
       ),
       formula_error_na,
@@ -3217,7 +2932,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "NETWORKDAYS",
-        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])],
+        [String("2024-01-01"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3231,7 +2946,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "NETWORKDAYS.INTL",
-        [Expr::FuncCall("NA", []), Expr::String("2024-01-02")],
+        [FuncCall("NA", []), String("2024-01-02")],
         ctx,
       ),
       formula_error_na,
@@ -3244,7 +2959,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "NETWORKDAYS.INTL",
-        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])],
+        [String("2024-01-01"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3257,7 +2972,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "NETWORKDAYS.INTL",
-        [Expr::String("2024-01-01"), Expr::String("2024-01-07")],
+        [String("2024-01-01"), String("2024-01-07")],
         ctx,
       ) {
       Number(_) => true
@@ -3272,10 +2987,10 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         "Sheet1",
         "NETWORKDAYS.INTL",
         [
-          Expr::String("2024-01-01"),
-          Expr::String("2024-01-07"),
-          Expr::Number(1.0),
-          Expr::List([Expr::String("2024-01-03")]),
+          String("2024-01-01"),
+          String("2024-01-07"),
+          Number(1.0),
+          List([String("2024-01-03")]),
         ],
         ctx,
       ) {
@@ -3290,7 +3005,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "NETWORKDAYS.INTL",
-        [Expr::String("2024-01-01")],
+        [String("2024-01-01")],
         ctx,
       ),
       formula_error_value,
@@ -3304,7 +3019,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "WORKDAY",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -3317,7 +3032,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "WORKDAY",
-        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])],
+        [String("2024-01-01"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3331,7 +3046,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "WORKDAY.INTL",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -3344,7 +3059,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "WORKDAY.INTL",
-        [Expr::String("2024-01-01"), Expr::FuncCall("NA", [])],
+        [String("2024-01-01"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3357,7 +3072,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "WORKDAY.INTL",
-        [Expr::String("2024-01-01"), Expr::Number(1.0)],
+        [String("2024-01-01"), Number(1.0)],
         ctx,
       ) {
       Number(_) => true
@@ -3372,10 +3087,10 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         "Sheet1",
         "WORKDAY.INTL",
         [
-          Expr::String("2024-01-01"),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::List([Expr::String("2024-01-03")]),
+          String("2024-01-01"),
+          Number(1.0),
+          Number(1.0),
+          List([String("2024-01-03")]),
         ],
         ctx,
       ) {
@@ -3386,13 +3101,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "WORKDAY.INTL",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "WORKDAY.INTL", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -3400,14 +3109,14 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "NOW", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "NOW", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "TODAY", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "TODAY", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -3461,7 +3170,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "INDEX",
-        [Expr::Range("", "A1", "B3"), Expr::FuncCall("NA", [])],
+        [Range("", "A1", "B3"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3474,11 +3183,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "INDEX",
-        [
-          Expr::Range("", "A1", "B3"),
-          Expr::Number(1.0),
-          Expr::FuncCall("NA", []),
-        ],
+        [Range("", "A1", "B3"), Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3492,11 +3197,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "MATCH",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::FuncCall("NA", []),
-        ],
+        [Number(2.0), Range("", "A1", "A3"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3509,7 +3210,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "MATCH",
-        [Expr::Number(2.0), Expr::Range("", "A1", "A3")],
+        [Number(2.0), Range("", "A1", "A3")],
         ctx,
       ),
       2.0,
@@ -3523,11 +3224,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "VLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "B3"),
-          Expr::FuncCall("NA", []),
-        ],
+        [Number(2.0), Range("", "A1", "B3"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3540,12 +3237,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "VLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "B3"),
-          Expr::Number(2.0),
-          Expr::FuncCall("NA", []),
-        ],
+        [Number(2.0), Range("", "A1", "B3"), Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3559,11 +3251,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "HLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "D1", "F2"),
-          Expr::FuncCall("NA", []),
-        ],
+        [Number(2.0), Range("", "D1", "F2"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3576,12 +3264,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "HLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "D1", "F2"),
-          Expr::Number(2.0),
-          Expr::FuncCall("NA", []),
-        ],
+        [Number(2.0), Range("", "D1", "F2"), Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -3595,7 +3278,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [Expr::FuncCall("NA", []), Expr::Range("", "A1", "A3")],
+        [FuncCall("NA", []), Range("", "A1", "A3")],
         ctx,
       ),
       formula_error_na,
@@ -3608,7 +3291,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [Expr::Number(0.0), Expr::Range("", "A1", "A3")],
+        [Number(0.0), Range("", "A1", "A3")],
         ctx,
       ),
       formula_error_na,
@@ -3621,7 +3304,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [Expr::Number(0.0), Expr::Range("", "D1", "F2")],
+        [Number(0.0), Range("", "D1", "F2")],
         ctx,
       ),
       formula_error_na,
@@ -3634,7 +3317,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [Expr::FuncCall("NA", []), Expr::Range("", "D1", "F2")],
+        [FuncCall("NA", []), Range("", "D1", "F2")],
         ctx,
       ),
       formula_error_na,
@@ -3648,11 +3331,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "B2"),
-          Expr::Range("", "B1", "B2"),
-        ],
+        [Number(2.0), Range("", "A1", "B2"), Range("", "B1", "B2")],
         ctx,
       ),
       formula_error_na,
@@ -3665,11 +3344,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A2"),
-          Expr::Range("", "A1", "B2"),
-        ],
+        [Number(2.0), Range("", "A1", "A2"), Range("", "A1", "B2")],
         ctx,
       ),
       formula_error_na,
@@ -3682,11 +3357,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B2"),
-        ],
+        [Number(2.0), Range("", "A1", "A3"), Range("", "B1", "B2")],
         ctx,
       ),
       formula_error_na,
@@ -3699,11 +3370,7 @@ test "formula builtins wb: date-time and lookup guard branches part 7" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [
-          Expr::FuncCall("NA", []),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-        ],
+        [FuncCall("NA", []), Range("", "A1", "A3"), Range("", "B1", "B3")],
         ctx,
       ),
       formula_error_na,
@@ -3746,7 +3413,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "DATE",
-        [Expr::Number(2024.0), Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [Number(2024.0), FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -3759,7 +3426,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "TIME",
-        [Expr::Number(1.0), Expr::FuncCall("NA", []), Expr::Number(0.0)],
+        [Number(1.0), FuncCall("NA", []), Number(0.0)],
         ctx,
       ),
       formula_error_na,
@@ -3772,7 +3439,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "WEEKNUM",
-        [Expr::String("2024-01-01"), Expr::Number(99.0)],
+        [String("2024-01-01"), Number(99.0)],
         ctx,
       ),
       formula_error_num,
@@ -3781,53 +3448,35 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "MONTH",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "MONTH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "DAY", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "DAY", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "HOUR", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "HOUR", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "MINUTE",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "MINUTE", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SECOND",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SECOND", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -3839,7 +3488,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [Expr::Number(2.0), Expr::Range("", "A1", "A3")],
+        [Number(2.0), Range("", "A1", "A3")],
         ctx,
       ),
       formula_error_value,
@@ -3853,11 +3502,11 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         "Sheet1",
         "XLOOKUP",
         [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-          Expr::String("nf"),
-          Expr::FuncCall("NA", []),
+          Number(2.0),
+          Range("", "A1", "A3"),
+          Range("", "B1", "B3"),
+          String("nf"),
+          FuncCall("NA", []),
         ],
         ctx,
       ),
@@ -3872,12 +3521,12 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         "Sheet1",
         "XLOOKUP",
         [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-          Expr::String("nf"),
-          Expr::Number(0.0),
-          Expr::FuncCall("NA", []),
+          Number(2.0),
+          Range("", "A1", "A3"),
+          Range("", "B1", "B3"),
+          String("nf"),
+          Number(0.0),
+          FuncCall("NA", []),
         ],
         ctx,
       ),
@@ -3892,11 +3541,11 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         "Sheet1",
         "XLOOKUP",
         [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-          Expr::String("nf"),
-          Expr::Number(3.0),
+          Number(2.0),
+          Range("", "A1", "A3"),
+          Range("", "B1", "B3"),
+          String("nf"),
+          Number(3.0),
         ],
         ctx,
       ),
@@ -3911,12 +3560,12 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         "Sheet1",
         "XLOOKUP",
         [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-          Expr::String("nf"),
-          Expr::Number(0.0),
-          Expr::Number(0.0),
+          Number(2.0),
+          Range("", "A1", "A3"),
+          Range("", "B1", "B3"),
+          String("nf"),
+          Number(0.0),
+          Number(0.0),
         ],
         ctx,
       ),
@@ -3930,11 +3579,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "B2"),
-          Expr::Range("", "B1", "B2"),
-        ],
+        [Number(2.0), Range("", "A1", "B2"), Range("", "B1", "B2")],
         ctx,
       ),
       formula_error_value,
@@ -3947,11 +3592,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [
-          Expr::FuncCall("NA", []),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-        ],
+        [FuncCall("NA", []), Range("", "A1", "A3"), Range("", "B1", "B3")],
         ctx,
       ),
       formula_error_na,
@@ -3964,11 +3605,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "C1"),
-          Expr::Range("", "A2", "B2"),
-        ],
+        [Number(2.0), Range("", "A1", "C1"), Range("", "A2", "B2")],
         ctx,
       ),
       formula_error_value,
@@ -3981,11 +3618,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "C1"),
-          Expr::Range("", "A2", "C2"),
-        ],
+        [Number(2.0), Range("", "A1", "C1"), Range("", "A2", "C2")],
         ctx,
       ),
       "b",
@@ -3998,11 +3631,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "D1", "D3"),
-          Expr::Range("", "E1", "F2"),
-        ],
+        [Number(2.0), Range("", "D1", "D3"), Range("", "E1", "F2")],
         ctx,
       ) {
       Error(_) => true
@@ -4016,11 +3645,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "D1", "D3"),
-          Expr::Range("", "E1", "F3"),
-        ],
+        [Number(2.0), Range("", "D1", "D3"), Range("", "E1", "F3")],
         ctx,
       ) {
       List(list) => list.length() == 2
@@ -4035,7 +3660,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -4048,7 +3673,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -4061,7 +3686,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [Expr::Number(0.0), Expr::Number(1.0)],
+        [Number(0.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -4074,7 +3699,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -4087,7 +3712,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(5.0)],
+        [Number(1.0), Number(1.0), Number(5.0)],
         ctx,
       ),
       formula_error_value,
@@ -4100,12 +3725,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::FuncCall("NA", []),
-        ],
+        [Number(1.0), Number(1.0), Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -4118,13 +3738,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Bool(true),
-          Expr::FuncCall("NA", []),
-        ],
+        [Number(1.0), Number(1.0), Number(1.0), Bool(true), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -4134,13 +3748,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "INDIRECT",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "INDIRECT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -4151,7 +3759,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "INDIRECT",
-        [Expr::String("A1"), Expr::FuncCall("NA", [])],
+        [String("A1"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -4160,39 +3768,21 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "INDIRECT",
-        [Expr::String("Sheet1!A1")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "INDIRECT", [String("Sheet1!A1")], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "INDIRECT",
-        [Expr::String("[]:A1")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "INDIRECT", [String("[]:A1")], ctx),
       formula_error_ref,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "INDIRECT",
-        [Expr::String("A1:[]")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "INDIRECT", [String("A1:[]")], ctx),
       formula_error_ref,
     ),
     content="true",
@@ -4203,7 +3793,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "INDIRECT",
-        [Expr::String("R1C1:R1C2"), Expr::Bool(false)],
+        [String("R1C1:R1C2"), Bool(false)],
         ctx,
       ) {
       List(list) => list.length() == 2
@@ -4217,7 +3807,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "INDIRECT",
-        [Expr::String("BAD:R1C2"), Expr::Bool(false)],
+        [String("BAD:R1C2"), Bool(false)],
         ctx,
       ),
       formula_error_ref,
@@ -4230,7 +3820,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "INDIRECT",
-        [Expr::String("R1C1:BAD"), Expr::Bool(false)],
+        [String("R1C1:BAD"), Bool(false)],
         ctx,
       ),
       formula_error_ref,
@@ -4243,7 +3833,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "INDIRECT",
-        [Expr::String("R0C1:R1C1"), Expr::Bool(false)],
+        [String("R0C1:R1C1"), Bool(false)],
         ctx,
       ),
       formula_error_ref,
@@ -4256,7 +3846,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "INDIRECT",
-        [Expr::String("R1C1:R0C1"), Expr::Bool(false)],
+        [String("R1C1:R0C1"), Bool(false)],
         ctx,
       ),
       formula_error_ref,
@@ -4269,7 +3859,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "INDIRECT",
-        [Expr::String("R0C1"), Expr::Bool(false)],
+        [String("R0C1"), Bool(false)],
         ctx,
       ),
       formula_error_ref,
@@ -4282,7 +3872,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "INDIRECT",
-        [Expr::String("BAD"), Expr::Bool(false)],
+        [String("BAD"), Bool(false)],
         ctx,
       ),
       formula_error_ref,
@@ -4292,13 +3882,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "HYPERLINK",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "HYPERLINK", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -4309,7 +3893,7 @@ test "formula builtins wb: xlookup address indirect guard branches part 8" {
         workbook,
         "Sheet1",
         "CHOOSE",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0), Expr::Number(2.0)],
+        [FuncCall("NA", []), Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -4330,7 +3914,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
         workbook,
         "Sheet1",
         "CHOOSE",
-        [Expr::Number(0.0), Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(0.0), Number(1.0), Number(2.0)],
         ctx,
       ),
       0.0,
@@ -4339,13 +3923,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
   )
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IF",
-        [Expr::Bool(false), Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IF", [Bool(false), Number(1.0)], ctx),
       false,
     ),
     content="true",
@@ -4356,7 +3934,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
         workbook,
         "Sheet1",
         "IFERROR",
-        [Expr::Bool(true), Expr::Number(99.0)],
+        [Bool(true), Number(99.0)],
         ctx,
       ),
       true,
@@ -4369,7 +3947,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
         workbook,
         "Sheet1",
         "IFNA",
-        [Expr::Number(1.0), Expr::Number(99.0)],
+        [Number(1.0), Number(99.0)],
         ctx,
       ),
       1.0,
@@ -4382,13 +3960,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
         workbook,
         "Sheet1",
         "SWITCH",
-        [
-          Expr::FuncCall("NA", []),
-          Expr::Number(1.0),
-          Expr::String("a"),
-          Expr::Number(2.0),
-          Expr::String("b"),
-        ],
+        [FuncCall("NA", []), Number(1.0), String("a"), Number(2.0), String("b")],
         ctx,
       ),
       formula_error_na,
@@ -4397,55 +3969,49 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISBLANK", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISBLANK", [Number(1.0)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISERR", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISERR", [Number(1.0)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISERROR", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISERROR", [Number(1.0)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ISLOGICAL",
-        [Expr::String("TRUE")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ISLOGICAL", [String("TRUE")], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISNA", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISNA", [Number(1.0)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISTEXT", [Number(1.0)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISNONTEXT", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISNONTEXT", [Number(1.0)], ctx),
       true,
     ),
     content="true",
@@ -4464,7 +4030,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
         workbook,
         "Sheet1",
         "SHEET",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -4477,7 +4043,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
         workbook,
         "Sheet1",
         "SHEETS",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -4487,7 +4053,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
 
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "T", [Expr::Cell("", "Z99")], ctx),
+      eval_function(workbook, "Sheet1", "T", [Cell("", "Z99")], ctx),
       "",
     ),
     content="true",
@@ -4498,7 +4064,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
         workbook,
         "Sheet1",
         "N",
-        [Expr::List([Expr::Number(1.0), Expr::Number(2.0)])],
+        [List([Number(1.0), Number(2.0)])],
         ctx,
       ),
       1.0,
@@ -4512,7 +4078,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
         workbook,
         "Sheet1",
         "SUM",
-        [Expr::Bool(true), Expr::Number(1.0), Expr::Cell("", "Z99")],
+        [Bool(true), Number(1.0), Cell("", "Z99")],
         ctx,
       ),
       2.0,
@@ -4521,59 +4087,35 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SUMSQ",
-        [Expr::List([Expr::String("")])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SUMSQ", [List([String("")])], ctx),
       0.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SUMSQ",
-        [Expr::List([Expr::String("2")])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SUMSQ", [List([String("2")])], ctx),
       4.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SUMSQ",
-        [Expr::List([Expr::Bool(true)])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SUMSQ", [List([Bool(true)])], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "SUMSQ", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "SUMSQ", [Bool(true)], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SUMSQ",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SUMSQ", [FuncCall("NA", [])], ctx),
       0.0,
     ),
     content="true",
@@ -4582,14 +4124,14 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
   let empty_exprs : Array[Expr] = []
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "GCD", [Expr::List(empty_exprs)], ctx),
+      eval_function(workbook, "Sheet1", "GCD", [List(empty_exprs)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "GCD", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "GCD", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -4600,7 +4142,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
         workbook,
         "Sheet1",
         "GCD",
-        [Expr::Bool(true), Expr::Number(2.0), Expr::Cell("", "Z99")],
+        [Bool(true), Number(2.0), Cell("", "Z99")],
         ctx,
       ),
       1.0,
@@ -4609,7 +4151,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "LCM", [Expr::List(empty_exprs)], ctx),
+      eval_function(workbook, "Sheet1", "LCM", [List(empty_exprs)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -4617,10 +4159,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
 
   inspect(
     is_formula_number(
-      bitwise_values("BITUNKNOWN", [
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-      ]),
+      bitwise_values("BITUNKNOWN", [Number(1.0), Number(1.0)]),
       0.0,
     ),
     content="true",
@@ -4629,11 +4168,7 @@ test "formula builtins wb: logical info and conversion helper branches part 9" {
   inspect(is_formula_number(arabic_string_value("-"), 0.0), content="true")
   inspect(
     is_formula_error(
-      base_values([
-        FormulaValue::Number(10.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      base_values([Number(10.0), Number(2.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -4651,10 +4186,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       normdist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
+        Error(formula_error_na),
+        Number(0.0),
+        Number(1.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -4663,10 +4198,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       normdist_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
+        Number(0.0),
+        Error(formula_error_na),
+        Number(1.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -4675,10 +4210,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       normdist_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
+        Number(0.0),
+        Number(0.0),
+        Error(formula_error_na),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -4687,10 +4222,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       normdist_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
+        Number(0.0),
+        Number(0.0),
+        Number(1.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -4698,12 +4233,7 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   )
   inspect(
     is_formula_error(
-      normdist_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(-1.0),
-        FormulaValue::Bool(true),
-      ]),
+      normdist_values([Number(0.0), Number(0.0), Number(-1.0), Bool(true)]),
       formula_error_na,
     ),
     content="true",
@@ -4711,44 +4241,28 @@ test "formula builtins wb: distribution helper guard branches part 10" {
 
   inspect(
     is_formula_error(
-      norminv_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      norminv_values([Error(formula_error_na), Number(0.0), Number(1.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      norminv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-      ]),
+      norminv_values([Number(0.5), Error(formula_error_na), Number(1.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      norminv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      norminv_values([Number(0.5), Number(0.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      norminv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(-1.0),
-      ]),
+      norminv_values([Number(0.5), Number(0.0), Number(-1.0)]),
       formula_error_na,
     ),
     content="true",
@@ -4756,89 +4270,65 @@ test "formula builtins wb: distribution helper guard branches part 10" {
 
   inspect(
     is_formula_error(
-      norm_s_dist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
-      ]),
+      norm_s_dist_values([Error(formula_error_na), Bool(true)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      norm_s_dist_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      norm_s_dist_values([Number(0.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      norms_dist_values([FormulaValue::Error(formula_error_na)]),
+      norms_dist_values([Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      norm_s_inv_values([FormulaValue::Error(formula_error_na)]),
+      norm_s_inv_values([Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
-    is_formula_error(
-      norm_s_inv_values([FormulaValue::Number(2.0)]),
-      formula_error_na,
-    ),
+    is_formula_error(norm_s_inv_values([Number(2.0)]), formula_error_na),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      loginv_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      loginv_values([Error(formula_error_na), Number(0.0), Number(1.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      loginv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-      ]),
+      loginv_values([Number(0.5), Error(formula_error_na), Number(1.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      loginv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      loginv_values([Number(0.5), Number(0.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
-    is_formula_error(
-      gamma_value([FormulaValue::Error(formula_error_na)]),
-      formula_error_na,
-    ),
+    is_formula_error(gamma_value([Error(formula_error_na)]), formula_error_na),
     content="true",
   )
   inspect(
     is_formula_error(
-      gammaln_values([FormulaValue::Error(formula_error_na)]),
+      gammaln_values([Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -4847,10 +4337,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       lognorm_dist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
+        Error(formula_error_na),
+        Number(0.0),
+        Number(1.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -4859,10 +4349,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       lognorm_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Error(formula_error_na),
+        Number(1.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -4871,10 +4361,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       lognorm_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Number(0.0),
+        Error(formula_error_na),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -4883,10 +4373,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       lognorm_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
+        Number(1.0),
+        Number(0.0),
+        Number(1.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -4895,33 +4385,21 @@ test "formula builtins wb: distribution helper guard branches part 10" {
 
   inspect(
     is_formula_error(
-      lognormdist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      lognormdist_values([Error(formula_error_na), Number(0.0), Number(1.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      lognormdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-      ]),
+      lognormdist_values([Number(1.0), Error(formula_error_na), Number(1.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      lognormdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      lognormdist_values([Number(1.0), Number(0.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -4929,33 +4407,21 @@ test "formula builtins wb: distribution helper guard branches part 10" {
 
   inspect(
     is_formula_error(
-      expon_dist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
-      ]),
+      expon_dist_values([Error(formula_error_na), Number(1.0), Bool(true)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      expon_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
-      ]),
+      expon_dist_values([Number(1.0), Error(formula_error_na), Bool(true)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      expon_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      expon_dist_values([Number(1.0), Number(1.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -4963,33 +4429,21 @@ test "formula builtins wb: distribution helper guard branches part 10" {
 
   inspect(
     is_formula_error(
-      poisson_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
-      ]),
+      poisson_values([Error(formula_error_na), Number(1.0), Bool(true)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      poisson_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
-      ]),
+      poisson_values([Number(1.0), Error(formula_error_na), Bool(true)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      poisson_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      poisson_values([Number(1.0), Number(1.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -4998,10 +4452,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       negbinom_dist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(true),
+        Error(formula_error_na),
+        Number(1.0),
+        Number(0.5),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -5010,10 +4464,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       negbinom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Error(formula_error_na),
+        Number(0.5),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -5022,10 +4476,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       negbinom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Number(2.0),
+        Error(formula_error_na),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -5034,10 +4488,10 @@ test "formula builtins wb: distribution helper guard branches part 10" {
   inspect(
     is_formula_error(
       negbinom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
+        Number(1.0),
+        Number(2.0),
+        Number(0.5),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -5046,50 +4500,32 @@ test "formula builtins wb: distribution helper guard branches part 10" {
 
   inspect(
     is_formula_error(
-      negbinomdist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.5),
-      ]),
+      negbinomdist_values([Error(formula_error_na), Number(2.0), Number(0.5)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      negbinomdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.5),
-      ]),
+      negbinomdist_values([Number(1.0), Error(formula_error_na), Number(0.5)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      negbinomdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      negbinomdist_values([Number(1.0), Number(2.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
 
   inspect(
-    is_formula_error(
-      gauss_value([FormulaValue::Error(formula_error_na)]),
-      formula_error_na,
-    ),
+    is_formula_error(gauss_value([Error(formula_error_na)]), formula_error_na),
     content="true",
   )
   inspect(
-    is_formula_error(
-      phi_value([FormulaValue::Error(formula_error_na)]),
-      formula_error_na,
-    ),
+    is_formula_error(phi_value([Error(formula_error_na)]), formula_error_na),
     content="true",
   )
 }
@@ -5102,20 +4538,14 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISLOGICAL", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISLOGICAL", [Number(1.0)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SHEET",
-        [Expr::Range("", "A1", "A1")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SHEET", [Range("", "A1", "A1")], ctx),
       1.0,
     ),
     content="true",
@@ -5123,24 +4553,16 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
 
   inspect(
     is_formula_error(
-      sumsq_values([FormulaValue::List([FormulaValue::Error(formula_error_na)])]),
+      sumsq_values([List([Error(formula_error_na)])]),
       formula_error_value,
     ),
     content="true",
   )
-  inspect(
-    is_formula_number(sumsq_values([FormulaValue::Empty]), 0.0),
-    content="true",
-  )
+  inspect(is_formula_number(sumsq_values([Empty]), 0.0), content="true")
 
   let gcd_numbers : Array[Double] = []
   inspect(
-    match
-      gcd_lcm_collect(
-        FormulaValue::List([FormulaValue::Number(3.0)]),
-        gcd_numbers,
-        false,
-      ) {
+    match gcd_lcm_collect(List([Number(3.0)]), gcd_numbers, false) {
       Ok(_) => gcd_numbers.length() == 1 && gcd_numbers[0] == 3.0
       Err(_) => false
     },
@@ -5148,21 +4570,21 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
   )
 
   inspect(
-    match bitwise_number(FormulaValue::Bool(true)) {
+    match bitwise_number(Bool(true)) {
       Ok(num) => num == 1.0
       Err(_) => false
     },
     content="true",
   )
   inspect(
-    match bitwise_number(FormulaValue::String("2")) {
+    match bitwise_number(String("2")) {
       Ok(num) => num == 2.0
       Err(_) => false
     },
     content="true",
   )
   inspect(
-    match bitwise_number(FormulaValue::Error(formula_error_na)) {
+    match bitwise_number(Error(formula_error_na)) {
       Ok(_) => false
       Err(err) => is_formula_error(err, formula_error_na)
     },
@@ -5171,11 +4593,7 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
 
   let multinomial_numbers1 : Array[Double] = []
   inspect(
-    match
-      multinomial_collect(
-        FormulaValue::List([FormulaValue::Number(2.0)]),
-        multinomial_numbers1,
-      ) {
+    match multinomial_collect(List([Number(2.0)]), multinomial_numbers1) {
       Ok(_) =>
         multinomial_numbers1.length() == 1 && multinomial_numbers1[0] == 2.0
       Err(_) => false
@@ -5184,11 +4602,7 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
   )
   let multinomial_numbers2 : Array[Double] = []
   inspect(
-    match
-      multinomial_collect(
-        FormulaValue::Error(formula_error_na),
-        multinomial_numbers2,
-      ) {
+    match multinomial_collect(Error(formula_error_na), multinomial_numbers2) {
       Ok(_) => false
       Err(err) => is_formula_error(err, formula_error_na)
     },
@@ -5196,7 +4610,7 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
   )
   let multinomial_numbers3 : Array[Double] = []
   inspect(
-    match multinomial_collect(FormulaValue::Bool(true), multinomial_numbers3) {
+    match multinomial_collect(Bool(true), multinomial_numbers3) {
       Ok(_) =>
         multinomial_numbers3.length() == 1 && multinomial_numbers3[0] == 1.0
       Err(_) => false
@@ -5205,7 +4619,7 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
   )
   let multinomial_numbers4 : Array[Double] = []
   inspect(
-    match multinomial_collect(FormulaValue::String("2"), multinomial_numbers4) {
+    match multinomial_collect(String("2"), multinomial_numbers4) {
       Ok(_) =>
         multinomial_numbers4.length() == 1 && multinomial_numbers4[0] == 2.0
       Err(_) => false
@@ -5214,7 +4628,7 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
   )
   let multinomial_numbers5 : Array[Double] = []
   inspect(
-    match multinomial_collect(FormulaValue::Empty, multinomial_numbers5) {
+    match multinomial_collect(Empty, multinomial_numbers5) {
       Ok(_) => multinomial_numbers5.length() == 0
       Err(_) => false
     },
@@ -5223,74 +4637,51 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
 
   inspect(
     is_formula_error(
-      product_values([
-        FormulaValue::List([FormulaValue::Error(formula_error_na)]),
-      ]),
+      product_values([List([Error(formula_error_na)])]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
-    is_formula_number(
-      product_values([
-        FormulaValue::List([FormulaValue::Bool(true), FormulaValue::Empty]),
-      ]),
-      1.0,
-    ),
+    is_formula_number(product_values([List([Bool(true), Empty])]), 1.0),
     content="true",
   )
   inspect(
     is_formula_error(
-      product_values([FormulaValue::Error(formula_error_na)]),
+      product_values([Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(is_formula_number(product_values([Bool(false)]), 0.0), content="true")
+  inspect(is_formula_number(product_values([Empty]), 1.0), content="true")
+
+  inspect(
+    is_formula_error(
+      average_values([Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
-    is_formula_number(product_values([FormulaValue::Bool(false)]), 0.0),
+    is_formula_number(average_values([String("2"), Bool(true), Empty]), 2.0),
     content="true",
   )
   inspect(
-    is_formula_number(product_values([FormulaValue::Empty]), 1.0),
+    is_formula_error(
+      averagea_values([Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(averagea_values([String("2"), Empty]), 2.0),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      average_values([FormulaValue::Error(formula_error_na)]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number(
-      average_values([
-        FormulaValue::String("2"),
-        FormulaValue::Bool(true),
-        FormulaValue::Empty,
-      ]),
-      2.0,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      averagea_values([FormulaValue::Error(formula_error_na)]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number(
-      averagea_values([FormulaValue::String("2"), FormulaValue::Empty]),
-      2.0,
-    ),
-    content="true",
-  )
-
-  inspect(
-    is_formula_error(
-      stdev_values(false, [FormulaValue::Error(formula_error_na)]),
+      stdev_values(false, [Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -5298,12 +4689,12 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
   inspect(
     match
       stdev_values(true, [
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
-        FormulaValue::String("TRUE"),
-        FormulaValue::String("2"),
-        FormulaValue::String("abc"),
-        FormulaValue::Empty,
+        Number(1.0),
+        Bool(true),
+        String("TRUE"),
+        String("2"),
+        String("abc"),
+        Empty,
       ]) {
       Number(_) => true
       _ => false
@@ -5313,18 +4704,13 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
 
   inspect(
     is_formula_error(
-      variance_values([FormulaValue::Error(formula_error_na)], true, false),
+      variance_values([Error(formula_error_na)], true, false),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
-    match
-      variance_values(
-        [FormulaValue::String("TRUE"), FormulaValue::String("2")],
-        false,
-        true,
-      ) {
+    match variance_values([String("TRUE"), String("2")], false, true) {
       Number(_) => true
       _ => false
     },
@@ -5333,7 +4719,7 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
 
   inspect(
     is_formula_error(
-      trimmean_values([FormulaValue::String("abc"), FormulaValue::Number(0.2)]),
+      trimmean_values([String("abc"), Number(0.2)]),
       formula_error_div,
     ),
     content="true",
@@ -5341,14 +4727,7 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
 
   inspect(
     is_formula_error(
-      ztest_values([
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-        ]),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-      ]),
+      ztest_values([List([Number(1.0), Number(1.0)]), Number(1.0), Number(0.0)]),
       formula_error_div,
     ),
     content="true",
@@ -5356,56 +4735,38 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
 
   inspect(
     is_formula_error(
-      prob_values([
-        FormulaValue::List([]),
-        FormulaValue::List([]),
-        FormulaValue::Number(1.0),
-      ]),
+      prob_values([List([]), List([]), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      prob_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(2.0)]),
-        FormulaValue::Number(1.0),
-      ]),
+      prob_values([List([Number(1.0)]), List([Number(2.0)]), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      prob_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(0.5)]),
-        FormulaValue::Number(1.0),
-      ]),
+      prob_values([List([Number(1.0)]), List([Number(0.5)]), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
 
   inspect(
-    is_formula_number(
-      chiinv_values([FormulaValue::Number(1.0), FormulaValue::Number(2.0)]),
-      0.0,
-    ),
+    is_formula_number(chiinv_values([Number(1.0), Number(2.0)]), 0.0),
     content="true",
   )
 
   let args_a : Array[Expr] = [
-    Expr::List([Expr::String("x"), Expr::Number(1.0)]),
-    Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
+    List([String("x"), Number(1.0)]),
+    List([Number(1.0), Number(1.0)]),
   ]
   let values_a : Array[FormulaValue] = [
-    FormulaValue::List([
-      FormulaValue::Error(formula_error_na),
-      FormulaValue::Number(1.0),
-    ]),
-    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(1.0)]),
+    List([Error(formula_error_na), Number(1.0)]),
+    List([Number(1.0), Number(1.0)]),
   ]
   inspect(
     is_formula_error(
@@ -5416,15 +4777,12 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
   )
 
   let args_b : Array[Expr] = [
-    Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
-    Expr::List([Expr::String("x"), Expr::Number(1.0)]),
+    List([Number(1.0), Number(1.0)]),
+    List([String("x"), Number(1.0)]),
   ]
   let values_b : Array[FormulaValue] = [
-    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(1.0)]),
-    FormulaValue::List([
-      FormulaValue::Error(formula_error_na),
-      FormulaValue::Number(1.0),
-    ]),
+    List([Number(1.0), Number(1.0)]),
+    List([Error(formula_error_na), Number(1.0)]),
   ]
   inspect(
     is_formula_error(
@@ -5435,12 +4793,12 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
   )
 
   let args_c : Array[Expr] = [
-    Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
-    Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+    List([Number(1.0), Number(1.0)]),
+    List([Number(1.0), Number(2.0)]),
   ]
   let values_c : Array[FormulaValue] = [
-    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(1.0)]),
-    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(2.0)]),
+    List([Number(1.0), Number(1.0)]),
+    List([Number(1.0), Number(2.0)]),
   ]
   inspect(
     is_formula_error(
@@ -5451,12 +4809,12 @@ test "formula builtins wb: stats and chi/f helper branches part 11" {
   )
 
   let args_d : Array[Expr] = [
-    Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
-    Expr::List([Expr::Number(1.0), Expr::Number(1.0)]),
+    List([Number(1.0), Number(2.0)]),
+    List([Number(1.0), Number(1.0)]),
   ]
   let values_d : Array[FormulaValue] = [
-    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(2.0)]),
-    FormulaValue::List([FormulaValue::Number(1.0), FormulaValue::Number(1.0)]),
+    List([Number(1.0), Number(2.0)]),
+    List([Number(1.0), Number(1.0)]),
   ]
   inspect(
     is_formula_error(
@@ -5496,7 +4854,7 @@ test "formula builtins wb: residual reachable guards part 12" {
         workbook,
         "Sheet1",
         "COMPLEX",
-        [Expr::Number(1.0), Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -5510,7 +4868,7 @@ test "formula builtins wb: residual reachable guards part 12" {
         workbook,
         "Sheet1",
         "MINVERSE",
-        [Expr::Range("", "A1", "B2")],
+        [Range("", "A1", "B2")],
         ctx,
       ) {
       List(_) => true
@@ -5524,7 +4882,7 @@ test "formula builtins wb: residual reachable guards part 12" {
         workbook,
         "Sheet1",
         "MINVERSE",
-        [Expr::Range("", "G1", "H2")],
+        [Range("", "G1", "H2")],
         ctx,
       ) {
       List(_) => true
@@ -5539,7 +4897,7 @@ test "formula builtins wb: residual reachable guards part 12" {
         workbook,
         "Sheet1",
         "MMULT",
-        [Expr::Range("", "E1", "F2"), Expr::Range("", "G1", "H2")],
+        [Range("", "E1", "F2"), Range("", "G1", "H2")],
         ctx,
       ),
       formula_error_value,
@@ -5553,7 +4911,7 @@ test "formula builtins wb: residual reachable guards part 12" {
         workbook,
         "Sheet1",
         "IMPRODUCT",
-        [Expr::FuncCall("NA", []), Expr::Number(2.0)],
+        [FuncCall("NA", []), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -5567,7 +4925,7 @@ test "formula builtins wb: residual reachable guards part 12" {
         workbook,
         "Sheet1",
         "FLOOR",
-        [Expr::FuncCall("NA", []), Expr::Number(2.0)],
+        [FuncCall("NA", []), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -5577,13 +4935,7 @@ test "formula builtins wb: residual reachable guards part 12" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TRUNC",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "TRUNC", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -5591,7 +4943,7 @@ test "formula builtins wb: residual reachable guards part 12" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SQRT", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "SQRT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -5603,7 +4955,7 @@ test "formula builtins wb: residual reachable guards part 12" {
         workbook,
         "Sheet1",
         "DATE",
-        [Expr::Number(2024.0), Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(2024.0), Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -5616,7 +4968,7 @@ test "formula builtins wb: residual reachable guards part 12" {
         workbook,
         "Sheet1",
         "TIME",
-        [Expr::Number(1.0), Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -5625,8 +4977,7 @@ test "formula builtins wb: residual reachable guards part 12" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "INDIRECT", [Expr::String("1")], ctx) {
+    match eval_function(workbook, "Sheet1", "INDIRECT", [String("1")], ctx) {
       List(_) => true
       _ => false
     },
@@ -5635,12 +4986,7 @@ test "formula builtins wb: residual reachable guards part 12" {
 
   let gcd_numbers : Array[Double] = []
   inspect(
-    match
-      gcd_lcm_collect(
-        FormulaValue::List([FormulaValue::String("bad")]),
-        gcd_numbers,
-        false,
-      ) {
+    match gcd_lcm_collect(List([String("bad")]), gcd_numbers, false) {
       Err(Error(err)) => err == formula_error_value
       _ => false
     },
@@ -5649,11 +4995,7 @@ test "formula builtins wb: residual reachable guards part 12" {
 
   let multinomial_numbers : Array[Double] = []
   inspect(
-    match
-      multinomial_collect(
-        FormulaValue::List([FormulaValue::String("bad")]),
-        multinomial_numbers,
-      ) {
+    match multinomial_collect(List([String("bad")]), multinomial_numbers) {
       Err(Error(err)) => err == formula_error_value
       _ => false
     },
@@ -5661,7 +5003,7 @@ test "formula builtins wb: residual reachable guards part 12" {
   )
 
   inspect(
-    match bitwise_number(FormulaValue::Empty) {
+    match bitwise_number(Empty) {
       Ok(num) => num == 0.0
       _ => false
     },
@@ -5669,12 +5011,7 @@ test "formula builtins wb: residual reachable guards part 12" {
   )
 
   inspect(
-    match
-      betainv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]) {
+    match betainv_values([Number(0.5), Number(2.0), Number(2.0)]) {
       Number(_) => true
       _ => false
     },
@@ -5682,10 +5019,7 @@ test "formula builtins wb: residual reachable guards part 12" {
   )
 
   inspect(
-    is_formula_error(
-      norm_s_inv_values([FormulaValue::Number(0.0)]),
-      formula_error_num,
-    ),
+    is_formula_error(norm_s_inv_values([Number(0.0)]), formula_error_num),
     content="true",
   )
 }
@@ -5695,18 +5029,8 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let ctx = CalcContext::new()
-  let data = Expr::List([
-    Expr::Number(1.0),
-    Expr::Number(2.0),
-    Expr::Number(3.0),
-    Expr::Number(4.0),
-  ])
-  let dup_data = Expr::List([
-    Expr::Number(1.0),
-    Expr::Number(1.0),
-    Expr::Number(2.0),
-    Expr::Number(3.0),
-  ])
+  let data = Expr::List([Number(1.0), Number(2.0), Number(3.0), Number(4.0)])
+  let dup_data = Expr::List([Number(1.0), Number(1.0), Number(2.0), Number(3.0)])
 
   inspect(
     is_formula_bool(eval_function(workbook, "Sheet1", "TRUE", [], ctx), true),
@@ -5806,13 +5130,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TRIMMEAN",
-        [data, Expr::Number(0.25)],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "TRIMMEAN", [data, Number(0.25)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -5874,7 +5192,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "STANDARDIZE",
-        [Expr::Number(2.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(2.0), Number(1.0), Number(1.0)],
         ctx,
       ) {
       Number(_) => true
@@ -5883,16 +5201,14 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "LARGE", [data, Expr::Number(2.0)], ctx) {
+    match eval_function(workbook, "Sheet1", "LARGE", [data, Number(2.0)], ctx) {
       Number(_) => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "SMALL", [data, Expr::Number(2.0)], ctx) {
+    match eval_function(workbook, "Sheet1", "SMALL", [data, Number(2.0)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -5922,13 +5238,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "PERCENTILE",
-        [data, Expr::Number(0.5)],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "PERCENTILE", [data, Number(0.5)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -5940,7 +5250,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "PERCENTILE.INC",
-        [data, Expr::Number(0.5)],
+        [data, Number(0.5)],
         ctx,
       ) {
       Number(_) => true
@@ -5954,7 +5264,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "PERCENTILE.EXC",
-        [data, Expr::Number(0.5)],
+        [data, Number(0.5)],
         ctx,
       ) {
       Number(_) => true
@@ -5965,13 +5275,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "PERCENTRANK",
-        [data, Expr::Number(2.0)],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "PERCENTRANK", [data, Number(2.0)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -5983,7 +5287,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "PERCENTRANK",
-        [data, Expr::Number(2.0), Expr::Number(3.0)],
+        [data, Number(2.0), Number(3.0)],
         ctx,
       ) {
       Number(_) => true
@@ -5997,7 +5301,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "PERCENTRANK.INC",
-        [data, Expr::Number(2.0)],
+        [data, Number(2.0)],
         ctx,
       ) {
       Number(_) => true
@@ -6011,7 +5315,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "PERCENTRANK.INC",
-        [data, Expr::Number(2.0), Expr::Number(3.0)],
+        [data, Number(2.0), Number(3.0)],
         ctx,
       ) {
       Number(_) => true
@@ -6025,7 +5329,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "PERCENTRANK.EXC",
-        [data, Expr::Number(2.0)],
+        [data, Number(2.0)],
         ctx,
       ) {
       Number(_) => true
@@ -6039,7 +5343,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "PERCENTRANK.EXC",
-        [data, Expr::Number(2.0), Expr::Number(3.0)],
+        [data, Number(2.0), Number(3.0)],
         ctx,
       ) {
       Number(_) => true
@@ -6050,13 +5354,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "QUARTILE",
-        [data, Expr::Number(1.0)],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "QUARTILE", [data, Number(1.0)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -6068,7 +5366,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "QUARTILE.INC",
-        [data, Expr::Number(1.0)],
+        [data, Number(1.0)],
         ctx,
       ) {
       Number(_) => true
@@ -6082,7 +5380,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "QUARTILE.EXC",
-        [data, Expr::Number(1.0)],
+        [data, Number(1.0)],
         ctx,
       ) {
       Number(_) => true
@@ -6092,8 +5390,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "RANK", [Expr::Number(3.0), data], ctx) {
+    match eval_function(workbook, "Sheet1", "RANK", [Number(3.0), data], ctx) {
       Number(_) => true
       _ => false
     },
@@ -6105,7 +5402,7 @@ test "formula builtins wb: statistical dispatch happy paths part 13" {
         workbook,
         "Sheet1",
         "RANK.EQ",
-        [Expr::Number(3.0), data, Expr::Number(0.0)],
+        [Number(3.0), data, Number(0.0)],
         ctx,
       ) {
       Number(_) => true
@@ -6120,22 +5417,12 @@ test "formula builtins wb: correl forecast and stats dispatch part 14" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let ctx = CalcContext::new()
-  let x_data = Expr::List([
-    Expr::Number(1.0),
-    Expr::Number(2.0),
-    Expr::Number(3.0),
-    Expr::Number(4.0),
-  ])
-  let y_data = Expr::List([
-    Expr::Number(2.0),
-    Expr::Number(4.0),
-    Expr::Number(6.0),
-    Expr::Number(8.0),
-  ])
+  let x_data = Expr::List([Number(1.0), Number(2.0), Number(3.0), Number(4.0)])
+  let y_data = Expr::List([Number(2.0), Number(4.0), Number(6.0), Number(8.0)])
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "SIGN", [Expr::Number(-7.0)], ctx),
+      eval_function(workbook, "Sheet1", "SIGN", [Number(-7.0)], ctx),
       -1.0,
     ),
     content="true",
@@ -6147,10 +5434,10 @@ test "formula builtins wb: correl forecast and stats dispatch part 14" {
         "Sheet1",
         "SERIESSUM",
         [
-          Expr::Number(2.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
+          Number(2.0),
+          Number(1.0),
+          Number(1.0),
+          List([Number(1.0), Number(2.0), Number(3.0)]),
         ],
         ctx,
       ),
@@ -6224,7 +5511,7 @@ test "formula builtins wb: correl forecast and stats dispatch part 14" {
         workbook,
         "Sheet1",
         "FORECAST",
-        [Expr::Number(5.0), y_data, x_data],
+        [Number(5.0), y_data, x_data],
         ctx,
       ),
       10.0,
@@ -6237,7 +5524,7 @@ test "formula builtins wb: correl forecast and stats dispatch part 14" {
         workbook,
         "Sheet1",
         "FORECAST.LINEAR",
-        [Expr::Number(5.0), y_data, x_data],
+        [Number(5.0), y_data, x_data],
         ctx,
       ),
       10.0,
@@ -6246,16 +5533,14 @@ test "formula builtins wb: correl forecast and stats dispatch part 14" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "FISHER", [Expr::Number(0.5)], ctx) {
+    match eval_function(workbook, "Sheet1", "FISHER", [Number(0.5)], ctx) {
       Number(_) => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "FISHERINV", [Expr::Number(0.5)], ctx) {
+    match eval_function(workbook, "Sheet1", "FISHERINV", [Number(0.5)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -6314,42 +5599,42 @@ test "formula builtins wb: text dispatch happy paths part 15" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "LEN", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "LEN", [String("abc")], ctx),
       3.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "LENB", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "LENB", [String("abc")], ctx),
       3.0,
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "LOWER", [Expr::String("AbC")], ctx),
+      eval_function(workbook, "Sheet1", "LOWER", [String("AbC")], ctx),
       "abc",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "UPPER", [Expr::String("AbC")], ctx),
+      eval_function(workbook, "Sheet1", "UPPER", [String("AbC")], ctx),
       "ABC",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "PROPER", [Expr::String("hELLo")], ctx),
+      eval_function(workbook, "Sheet1", "PROPER", [String("hELLo")], ctx),
       "Hello",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "DBCS", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "DBCS", [String("abc")], ctx),
       "abc",
     ),
     content="true",
@@ -6363,20 +5648,14 @@ test "formula builtins wb: text dispatch happy paths part 15" {
   ])
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "DBCS", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "DBCS", [String("abc")], ctx),
       fullwidth_abc,
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TRIM",
-        [Expr::String("  a   b  ")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "TRIM", [String("  a   b  ")], ctx),
       "a b",
     ),
     content="true",
@@ -6388,7 +5667,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "LEFT",
-        [Expr::String("abcde"), Expr::Number(2.0)],
+        [String("abcde"), Number(2.0)],
         ctx,
       ),
       "ab",
@@ -6401,7 +5680,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "LEFTB",
-        [Expr::String("abcde"), Expr::Number(2.0)],
+        [String("abcde"), Number(2.0)],
         ctx,
       ),
       "ab",
@@ -6414,7 +5693,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "RIGHT",
-        [Expr::String("abcde"), Expr::Number(2.0)],
+        [String("abcde"), Number(2.0)],
         ctx,
       ),
       "de",
@@ -6427,7 +5706,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "RIGHTB",
-        [Expr::String("abcde"), Expr::Number(2.0)],
+        [String("abcde"), Number(2.0)],
         ctx,
       ),
       "de",
@@ -6440,7 +5719,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "MID",
-        [Expr::String("abcde"), Expr::Number(2.0), Expr::Number(2.0)],
+        [String("abcde"), Number(2.0), Number(2.0)],
         ctx,
       ),
       "bc",
@@ -6453,7 +5732,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("abcde"), Expr::Number(2.0), Expr::Number(2.0)],
+        [String("abcde"), Number(2.0), Number(2.0)],
         ctx,
       ),
       "bc",
@@ -6467,7 +5746,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "REPT",
-        [Expr::String("ab"), Expr::Number(3.0)],
+        [String("ab"), Number(3.0)],
         ctx,
       ),
       "ababab",
@@ -6480,12 +5759,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "REPLACE",
-        [
-          Expr::String("abcdef"),
-          Expr::Number(2.0),
-          Expr::Number(3.0),
-          Expr::String("Z"),
-        ],
+        [String("abcdef"), Number(2.0), Number(3.0), String("Z")],
         ctx,
       ),
       "aZef",
@@ -6498,12 +5772,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "REPLACEB",
-        [
-          Expr::String("abcdef"),
-          Expr::Number(2.0),
-          Expr::Number(3.0),
-          Expr::String("Z"),
-        ],
+        [String("abcdef"), Number(2.0), Number(3.0), String("Z")],
         ctx,
       ),
       "aZef",
@@ -6516,7 +5785,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [Expr::String("a-b-c"), Expr::String("-"), Expr::String("+")],
+        [String("a-b-c"), String("-"), String("+")],
         ctx,
       ),
       "a+b+c",
@@ -6529,12 +5798,7 @@ test "formula builtins wb: text dispatch happy paths part 15" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [
-          Expr::String("a-b-c"),
-          Expr::String("-"),
-          Expr::String("+"),
-          Expr::Number(2.0),
-        ],
+        [String("a-b-c"), String("-"), String("+"), Number(2.0)],
         ctx,
       ),
       "a-b+c",
@@ -6573,7 +5837,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "COUNTBLANK",
-        [Expr::Range("", "D1", "D3")],
+        [Range("", "D1", "D3")],
         ctx,
       ),
       2.0,
@@ -6587,7 +5851,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "COUNTIF",
-        [Expr::Range("", "A1", "A4"), Expr::String(">2")],
+        [Range("", "A1", "A4"), String(">2")],
         ctx,
       ),
       2.0,
@@ -6601,10 +5865,10 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         "Sheet1",
         "COUNTIFS",
         [
-          Expr::Range("", "A1", "A4"),
-          Expr::String(">=2"),
-          Expr::Range("", "C1", "C4"),
-          Expr::String("x"),
+          Range("", "A1", "A4"),
+          String(">=2"),
+          Range("", "C1", "C4"),
+          String("x"),
         ],
         ctx,
       ),
@@ -6619,11 +5883,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "SUMIF",
-        [
-          Expr::Range("", "C1", "C4"),
-          Expr::String("x"),
-          Expr::Range("", "B1", "B4"),
-        ],
+        [Range("", "C1", "C4"), String("x"), Range("", "B1", "B4")],
         ctx,
       ),
       40.0,
@@ -6637,11 +5897,11 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         "Sheet1",
         "SUMIFS",
         [
-          Expr::Range("", "B1", "B4"),
-          Expr::Range("", "C1", "C4"),
-          Expr::String("x"),
-          Expr::Range("", "A1", "A4"),
-          Expr::String(">1"),
+          Range("", "B1", "B4"),
+          Range("", "C1", "C4"),
+          String("x"),
+          Range("", "A1", "A4"),
+          String(">1"),
         ],
         ctx,
       ),
@@ -6656,11 +5916,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "AVERAGEIF",
-        [
-          Expr::Range("", "C1", "C4"),
-          Expr::String("x"),
-          Expr::Range("", "B1", "B4"),
-        ],
+        [Range("", "C1", "C4"), String("x"), Range("", "B1", "B4")],
         ctx,
       ),
       20.0,
@@ -6674,11 +5930,11 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         "Sheet1",
         "AVERAGEIFS",
         [
-          Expr::Range("", "B1", "B4"),
-          Expr::Range("", "C1", "C4"),
-          Expr::String("y"),
-          Expr::Range("", "A1", "A4"),
-          Expr::String(">1"),
+          Range("", "B1", "B4"),
+          Range("", "C1", "C4"),
+          String("y"),
+          Range("", "A1", "A4"),
+          String(">1"),
         ],
         ctx,
       ),
@@ -6693,11 +5949,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "MAXIFS",
-        [
-          Expr::Range("", "B1", "B4"),
-          Expr::Range("", "C1", "C4"),
-          Expr::String("x"),
-        ],
+        [Range("", "B1", "B4"), Range("", "C1", "C4"), String("x")],
         ctx,
       ),
       30.0,
@@ -6710,11 +5962,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "MINIFS",
-        [
-          Expr::Range("", "B1", "B4"),
-          Expr::Range("", "C1", "C4"),
-          Expr::String("y"),
-        ],
+        [Range("", "B1", "B4"), Range("", "C1", "C4"), String("y")],
         ctx,
       ),
       20.0,
@@ -6728,7 +5976,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "SUMPRODUCT",
-        [Expr::Range("", "A1", "A4"), Expr::Range("", "B1", "B4")],
+        [Range("", "A1", "A4"), Range("", "B1", "B4")],
         ctx,
       ),
       300.0,
@@ -6741,7 +5989,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "SUMX2MY2",
-        [Expr::Range("", "A1", "A2"), Expr::Range("", "B1", "B2")],
+        [Range("", "A1", "A2"), Range("", "B1", "B2")],
         ctx,
       ),
       -495.0,
@@ -6754,7 +6002,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "SUMX2PY2",
-        [Expr::Range("", "A1", "A2"), Expr::Range("", "B1", "B2")],
+        [Range("", "A1", "A2"), Range("", "B1", "B2")],
         ctx,
       ),
       505.0,
@@ -6767,7 +6015,7 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         workbook,
         "Sheet1",
         "SUMXMY2",
-        [Expr::Range("", "A1", "A2"), Expr::Range("", "B1", "B2")],
+        [Range("", "A1", "A2"), Range("", "B1", "B2")],
         ctx,
       ),
       405.0,
@@ -6782,8 +6030,8 @@ test "formula builtins wb: ifs and sumx dispatch happy paths part 16" {
         "Sheet1",
         "FREQUENCY",
         [
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)]),
-          Expr::List([Expr::Number(1.0), Expr::Number(2.0)]),
+          List([Number(1.0), Number(2.0), Number(3.0)]),
+          List([Number(1.0), Number(2.0)]),
         ],
         ctx,
       ),
@@ -6804,7 +6052,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "PERMUT",
-        [Expr::Number(5.0), Expr::Number(2.0)],
+        [Number(5.0), Number(2.0)],
         ctx,
       ),
       20.0,
@@ -6817,7 +6065,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "PERMUTATIONA",
-        [Expr::Number(5.0), Expr::Number(2.0)],
+        [Number(5.0), Number(2.0)],
         ctx,
       ),
       25.0,
@@ -6826,27 +6074,27 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "ABS", [Expr::Number(-2.0)], ctx),
+      eval_function(workbook, "Sheet1", "ABS", [Number(-2.0)], ctx),
       2.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "INT", [Expr::Number(2.8)], ctx),
+      eval_function(workbook, "Sheet1", "INT", [Number(2.8)], ctx),
       2.0,
     ),
     content="true",
   )
   inspect(
-    match eval_function(workbook, "Sheet1", "LN", [Expr::Number(2.0)], ctx) {
+    match eval_function(workbook, "Sheet1", "LN", [Number(2.0)], ctx) {
       Number(_) => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match eval_function(workbook, "Sheet1", "EXP", [Expr::Number(1.0)], ctx) {
+    match eval_function(workbook, "Sheet1", "EXP", [Number(1.0)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -6858,7 +6106,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "DECIMAL",
-        [Expr::String("10"), Expr::Number(2.0)],
+        [String("10"), Number(2.0)],
         ctx,
       ),
       2.0,
@@ -6872,7 +6120,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "ROMAN",
-        [Expr::Number(9.0), Expr::Number(0.0)],
+        [Number(9.0), Number(0.0)],
         ctx,
       ),
       "IX",
@@ -6881,7 +6129,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "ARABIC", [Expr::String("IX")], ctx),
+      eval_function(workbook, "Sheet1", "ARABIC", [String("IX")], ctx),
       9.0,
     ),
     content="true",
@@ -6892,7 +6140,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "BASE",
-        [Expr::Number(10.0), Expr::Number(2.0)],
+        [Number(10.0), Number(2.0)],
         ctx,
       ),
       "1010",
@@ -6902,84 +6150,84 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "BIN2DEC", [Expr::String("1010")], ctx),
+      eval_function(workbook, "Sheet1", "BIN2DEC", [String("1010")], ctx),
       10.0,
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "BIN2HEX", [Expr::String("1010")], ctx),
+      eval_function(workbook, "Sheet1", "BIN2HEX", [String("1010")], ctx),
       "A",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "BIN2OCT", [Expr::String("1010")], ctx),
+      eval_function(workbook, "Sheet1", "BIN2OCT", [String("1010")], ctx),
       "12",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "DEC2BIN", [Expr::Number(10.0)], ctx),
+      eval_function(workbook, "Sheet1", "DEC2BIN", [Number(10.0)], ctx),
       "1010",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "DEC2HEX", [Expr::Number(10.0)], ctx),
+      eval_function(workbook, "Sheet1", "DEC2HEX", [Number(10.0)], ctx),
       "A",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "DEC2OCT", [Expr::Number(10.0)], ctx),
+      eval_function(workbook, "Sheet1", "DEC2OCT", [Number(10.0)], ctx),
       "12",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "HEX2BIN", [Expr::String("A")], ctx),
+      eval_function(workbook, "Sheet1", "HEX2BIN", [String("A")], ctx),
       "1010",
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "HEX2DEC", [Expr::String("A")], ctx),
+      eval_function(workbook, "Sheet1", "HEX2DEC", [String("A")], ctx),
       10.0,
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "HEX2OCT", [Expr::String("A")], ctx),
+      eval_function(workbook, "Sheet1", "HEX2OCT", [String("A")], ctx),
       "12",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "OCT2BIN", [Expr::String("12")], ctx),
+      eval_function(workbook, "Sheet1", "OCT2BIN", [String("12")], ctx),
       "1010",
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "OCT2DEC", [Expr::String("12")], ctx),
+      eval_function(workbook, "Sheet1", "OCT2DEC", [String("12")], ctx),
       10.0,
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "OCT2HEX", [Expr::String("12")], ctx),
+      eval_function(workbook, "Sheet1", "OCT2HEX", [String("12")], ctx),
       "A",
     ),
     content="true",
@@ -6991,7 +6239,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "BESSELI",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ) {
       Number(_) => true
@@ -7005,7 +6253,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "BESSELJ",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ) {
       Number(_) => true
@@ -7019,7 +6267,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "BESSELK",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ) {
       Number(_) => true
@@ -7033,7 +6281,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "BESSELY",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ) {
       Number(_) => true
@@ -7048,7 +6296,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
         workbook,
         "Sheet1",
         "DELTA",
-        [Expr::Number(3.0), Expr::Number(3.0)],
+        [Number(3.0), Number(3.0)],
         ctx,
       ),
       1.0,
@@ -7056,7 +6304,21 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
     content="true",
   )
   inspect(
-    match eval_function(workbook, "Sheet1", "ERF", [Expr::Number(0.5)], ctx) {
+    match eval_function(workbook, "Sheet1", "ERF", [Number(0.5)], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "ERF.PRECISE", [Number(0.5)], ctx) {
+      Number(_) => true
+      _ => false
+    },
+    content="true",
+  )
+  inspect(
+    match eval_function(workbook, "Sheet1", "ERFC", [Number(0.5)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -7064,28 +6326,7 @@ test "formula builtins wb: engineering dispatch happy paths part 17" {
   )
   inspect(
     match
-      eval_function(workbook, "Sheet1", "ERF.PRECISE", [Expr::Number(0.5)], ctx) {
-      Number(_) => true
-      _ => false
-    },
-    content="true",
-  )
-  inspect(
-    match eval_function(workbook, "Sheet1", "ERFC", [Expr::Number(0.5)], ctx) {
-      Number(_) => true
-      _ => false
-    },
-    content="true",
-  )
-  inspect(
-    match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ERFC.PRECISE",
-        [Expr::Number(0.5)],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "ERFC.PRECISE", [Number(0.5)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -7112,20 +6353,14 @@ test "formula builtins wb: reference and aggregate dispatch happy paths part 18"
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "ROW", [Expr::Cell("", "B7")], ctx),
+      eval_function(workbook, "Sheet1", "ROW", [Cell("", "B7")], ctx),
       7.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ROW",
-        [Expr::Range("", "D2", "A9")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ROW", [Range("", "D2", "A9")], ctx),
       2.0,
     ),
     content="true",
@@ -7137,20 +6372,14 @@ test "formula builtins wb: reference and aggregate dispatch happy paths part 18"
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "COLUMN", [Expr::Cell("", "B7")], ctx),
+      eval_function(workbook, "Sheet1", "COLUMN", [Cell("", "B7")], ctx),
       2.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "COLUMN",
-        [Expr::Range("", "D2", "A9")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "COLUMN", [Range("", "D2", "A9")], ctx),
       1.0,
     ),
     content="true",
@@ -7158,26 +6387,14 @@ test "formula builtins wb: reference and aggregate dispatch happy paths part 18"
 
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ROWS",
-        [Expr::Range("", "D2", "A9")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ROWS", [Range("", "D2", "A9")], ctx),
       8.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "COLUMNS",
-        [Expr::Range("", "D2", "A9")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "COLUMNS", [Range("", "D2", "A9")], ctx),
       4.0,
     ),
     content="true",
@@ -7185,13 +6402,7 @@ test "formula builtins wb: reference and aggregate dispatch happy paths part 18"
 
   inspect(
     is_formula_string(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FORMULATEXT",
-        [Expr::Cell("", "B2")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "FORMULATEXT", [Cell("", "B2")], ctx),
       "SUM(1,2)",
     ),
     content="true",
@@ -7202,7 +6413,7 @@ test "formula builtins wb: reference and aggregate dispatch happy paths part 18"
         workbook,
         "Sheet1",
         "FORMULATEXT",
-        [Expr::Range("", "B2", "C2")],
+        [Range("", "B2", "C2")],
         ctx,
       ),
       "SUM(1,2)",
@@ -7211,13 +6422,7 @@ test "formula builtins wb: reference and aggregate dispatch happy paths part 18"
   )
   inspect(
     is_formula_string(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FORMULATEXT",
-        [Expr::Cell("", "C3")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "FORMULATEXT", [Cell("", "C3")], ctx),
       "",
     ),
     content="true",
@@ -7229,7 +6434,7 @@ test "formula builtins wb: reference and aggregate dispatch happy paths part 18"
         workbook,
         "Sheet1",
         "SUBTOTAL",
-        [Expr::Number(9.0), Expr::Number(2.0), Expr::Number(3.0)],
+        [Number(9.0), Number(2.0), Number(3.0)],
         ctx,
       ),
       5.0,
@@ -7242,12 +6447,7 @@ test "formula builtins wb: reference and aggregate dispatch happy paths part 18"
         workbook,
         "Sheet1",
         "AGGREGATE",
-        [
-          Expr::Number(9.0),
-          Expr::Number(0.0),
-          Expr::Number(2.0),
-          Expr::Number(3.0),
-        ],
+        [Number(9.0), Number(0.0), Number(2.0), Number(3.0)],
         ctx,
       ),
       5.0,
@@ -7286,11 +6486,7 @@ test "formula builtins wb: database dispatch happy paths part 19" {
         workbook,
         "Sheet1",
         "DSUM",
-        [
-          Expr::Range("", "A1", "B4"),
-          Expr::String("Qty"),
-          Expr::Range("", "D1", "D2"),
-        ],
+        [Range("", "A1", "B4"), String("Qty"), Range("", "D1", "D2")],
         ctx,
       ),
       40.0,
@@ -7303,11 +6499,7 @@ test "formula builtins wb: database dispatch happy paths part 19" {
         workbook,
         "Sheet1",
         "DAVERAGE",
-        [
-          Expr::Range("", "A1", "B4"),
-          Expr::String("Qty"),
-          Expr::Range("", "D1", "D2"),
-        ],
+        [Range("", "A1", "B4"), String("Qty"), Range("", "D1", "D2")],
         ctx,
       ),
       20.0,
@@ -7320,11 +6512,7 @@ test "formula builtins wb: database dispatch happy paths part 19" {
         workbook,
         "Sheet1",
         "DMAX",
-        [
-          Expr::Range("", "A1", "B4"),
-          Expr::String("Qty"),
-          Expr::Range("", "D1", "D2"),
-        ],
+        [Range("", "A1", "B4"), String("Qty"), Range("", "D1", "D2")],
         ctx,
       ),
       30.0,
@@ -7337,11 +6525,7 @@ test "formula builtins wb: database dispatch happy paths part 19" {
         workbook,
         "Sheet1",
         "DMIN",
-        [
-          Expr::Range("", "A1", "B4"),
-          Expr::String("Qty"),
-          Expr::Range("", "D1", "D2"),
-        ],
+        [Range("", "A1", "B4"), String("Qty"), Range("", "D1", "D2")],
         ctx,
       ),
       10.0,
@@ -7354,11 +6538,7 @@ test "formula builtins wb: database dispatch happy paths part 19" {
         workbook,
         "Sheet1",
         "DPRODUCT",
-        [
-          Expr::Range("", "A1", "B4"),
-          Expr::String("Qty"),
-          Expr::Range("", "D1", "D2"),
-        ],
+        [Range("", "A1", "B4"), String("Qty"), Range("", "D1", "D2")],
         ctx,
       ),
       300.0,
@@ -7372,11 +6552,7 @@ test "formula builtins wb: database dispatch happy paths part 19" {
         workbook,
         "Sheet1",
         "DCOUNT",
-        [
-          Expr::Range("", "A1", "B4"),
-          Expr::String("Qty"),
-          Expr::Range("", "D1", "D2"),
-        ],
+        [Range("", "A1", "B4"), String("Qty"), Range("", "D1", "D2")],
         ctx,
       ),
       2.0,
@@ -7389,11 +6565,7 @@ test "formula builtins wb: database dispatch happy paths part 19" {
         workbook,
         "Sheet1",
         "DCOUNTA",
-        [
-          Expr::Range("", "A1", "B4"),
-          Expr::String("Field"),
-          Expr::Range("", "D1", "D2"),
-        ],
+        [Range("", "A1", "B4"), String("Field"), Range("", "D1", "D2")],
         ctx,
       ),
       2.0,
@@ -7406,11 +6578,7 @@ test "formula builtins wb: database dispatch happy paths part 19" {
         workbook,
         "Sheet1",
         "DGET",
-        [
-          Expr::Range("", "A1", "B4"),
-          Expr::String("Qty"),
-          Expr::Range("", "F1", "F2"),
-        ],
+        [Range("", "A1", "B4"), String("Qty"), Range("", "F1", "F2")],
         ctx,
       ),
       20.0,
@@ -7448,13 +6616,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "STDEVP",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "STDEVP", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -7468,13 +6630,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "STDEVPA",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "STDEVPA", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -7558,21 +6714,21 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "STANDARDIZE", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "STANDARDIZE", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "LARGE", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "LARGE", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SMALL", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "SMALL", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -7605,7 +6761,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "PERCENTILE",
-        [Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -7614,7 +6770,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "PERCENTILE", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "PERCENTILE", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -7625,7 +6781,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "PERCENTILE.EXC",
-        [Expr::Number(1.0), Expr::Number(0.0)],
+        [Number(1.0), Number(0.0)],
         ctx,
       ),
       formula_error_num,
@@ -7639,7 +6795,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "PERCENTRANK",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -7652,7 +6808,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "PERCENTRANK.INC",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -7665,7 +6821,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "PERCENTRANK.EXC",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -7674,20 +6830,14 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "PERCENTRANK", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "PERCENTRANK", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "PERCENTRANK.INC",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "PERCENTRANK.INC", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -7699,7 +6849,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "QUARTILE",
-        [Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -7708,7 +6858,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "QUARTILE", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "QUARTILE", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -7719,7 +6869,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "QUARTILE.EXC",
-        [Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -7729,14 +6879,14 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "RANK", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "RANK", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "SIGN", [Expr::Number(-3.0)], ctx),
+      eval_function(workbook, "Sheet1", "SIGN", [Number(-3.0)], ctx),
       -1.0,
     ),
     content="true",
@@ -7748,12 +6898,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "SERIESSUM",
-        [
-          Expr::String("bad"),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::List([Expr::Number(1.0)]),
-        ],
+        [String("bad"), Number(1.0), Number(1.0), List([Number(1.0)])],
         ctx,
       ),
       formula_error_value,
@@ -7766,12 +6911,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "SERIESSUM",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::List([Expr::String("bad")]),
-        ],
+        [Number(1.0), Number(1.0), Number(1.0), List([String("bad")])],
         ctx,
       ),
       formula_error_value,
@@ -7784,7 +6924,7 @@ test "formula builtins wb: statistical dispatch guard paths part 20" {
         workbook,
         "Sheet1",
         "SERIESSUM",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -7805,68 +6945,56 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "CORREL", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "CORREL", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COVAR", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "COVAR", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "COVARIANCE.P",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "COVARIANCE.P", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "COVARIANCE.S",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "COVARIANCE.S", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "PEARSON", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "PEARSON", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "RSQ", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "RSQ", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SLOPE", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "SLOPE", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "INTERCEPT", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "INTERCEPT", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -7877,7 +7005,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
         workbook,
         "Sheet1",
         "FORECAST",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -7890,7 +7018,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
         workbook,
         "Sheet1",
         "FORECAST.LINEAR",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -7913,7 +7041,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "STEYX", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "STEYX", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -7921,13 +7049,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "MINA",
-        [Expr::Number(1.0), Expr::Bool(true)],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "MINA", [Number(1.0), Bool(true)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -7935,13 +7057,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
   )
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "MAXA",
-        [Expr::Number(1.0), Expr::Bool(true)],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "MAXA", [Number(1.0), Bool(true)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -7957,7 +7073,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COUNTIF", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "COUNTIF", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -7968,7 +7084,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
         workbook,
         "Sheet1",
         "COUNTIFS",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -7985,7 +7101,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
         workbook,
         "Sheet1",
         "SUMIF",
-        [Expr::Range("", "A1", "A2"), Expr::String(">1")],
+        [Range("", "A1", "A2"), String(">1")],
         ctx,
       ),
       2.0,
@@ -7994,7 +7110,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SUMIF", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "SUMIF", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8002,13 +7118,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SUMPRODUCT",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SUMPRODUCT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -8019,7 +7129,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
         workbook,
         "Sheet1",
         "SUMPRODUCT",
-        [Expr::Number(2.0), Expr::Number(3.0), Expr::Number(4.0)],
+        [Number(2.0), Number(3.0), Number(4.0)],
         ctx,
       ),
       24.0,
@@ -8036,21 +7146,21 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SUMX2MY2", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "SUMX2MY2", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SUMX2PY2", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "SUMX2PY2", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SUMXMY2", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "SUMXMY2", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8062,7 +7172,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
         workbook,
         "Sheet1",
         "SUMIFS",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -8075,7 +7185,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
         workbook,
         "Sheet1",
         "AVERAGEIF",
-        [Expr::Range("", "A1", "A2"), Expr::String(">1")],
+        [Range("", "A1", "A2"), String(">1")],
         ctx,
       ),
       2.0,
@@ -8084,7 +7194,7 @@ test "formula builtins wb: correlation and sumif dispatch branches part 21" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "AVERAGEIF", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "AVERAGEIF", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8107,7 +7217,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "PERCENTILE",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -8116,13 +7226,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "PERCENTILE.INC",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "PERCENTILE.INC", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8133,7 +7237,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "PERCENTILE.EXC",
-        [Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -8142,13 +7246,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "PERCENTILE.EXC",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "PERCENTILE.EXC", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8160,7 +7258,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "PERCENTRANK",
-        [Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -8173,7 +7271,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "PERCENTRANK.INC",
-        [Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -8186,7 +7284,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "PERCENTRANK.EXC",
-        [Expr::Number(1.0), Expr::String("bad")],
+        [Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -8195,13 +7293,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "PERCENTRANK.EXC",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "PERCENTRANK.EXC", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8209,26 +7301,14 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "QUARTILE.INC",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "QUARTILE.INC", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "QUARTILE.EXC",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "QUARTILE.EXC", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8236,14 +7316,14 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "SIGN", [Expr::Number(4.0)], ctx),
+      eval_function(workbook, "Sheet1", "SIGN", [Number(4.0)], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SIGN", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "SIGN", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8262,12 +7342,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "SERIESSUM",
-        [
-          Expr::Number(1.0),
-          Expr::String("bad"),
-          Expr::Number(1.0),
-          Expr::List([Expr::Number(1.0)]),
-        ],
+        [Number(1.0), String("bad"), Number(1.0), List([Number(1.0)])],
         ctx,
       ),
       formula_error_value,
@@ -8280,12 +7355,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "SERIESSUM",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::String("bad"),
-          Expr::List([Expr::Number(1.0)]),
-        ],
+        [Number(1.0), Number(1.0), String("bad"), List([Number(1.0)])],
         ctx,
       ),
       formula_error_value,
@@ -8298,12 +7368,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "SERIESSUM",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::List([Expr::String("")]),
-        ],
+        [Number(1.0), Number(1.0), Number(1.0), List([String("")])],
         ctx,
       ),
       0.0,
@@ -8328,7 +7393,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COUNTIFS", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "COUNTIFS", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8339,7 +7404,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "AVERAGEIFS",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -8348,33 +7413,21 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "DSUM",
-        [Expr::Number(1.0), Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "DSUM", [Number(1.0), Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "DCOUNT", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "DCOUNT", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "DGET",
-        [Expr::Number(1.0), Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "DGET", [Number(1.0), Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8393,11 +7446,7 @@ test "formula builtins wb: percentile trend and database edge dispatch part 22" 
         workbook,
         "Sheet1",
         "DCOUNT",
-        [
-          Expr::Range("", "A1", "B2"),
-          Expr::FuncCall("", []),
-          Expr::Range("", "D1", "D2"),
-        ],
+        [Range("", "A1", "B2"), FuncCall("", []), Range("", "D1", "D2")],
         ctx,
       ),
       1.0,
@@ -8427,7 +7476,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COMBIN", [Expr::Number(5.0)], ctx),
+      eval_function(workbook, "Sheet1", "COMBIN", [Number(5.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8438,7 +7487,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "COMBIN",
-        [Expr::FuncCall("NA", []), Expr::Number(2.0)],
+        [FuncCall("NA", []), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -8451,7 +7500,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "COMBIN",
-        [Expr::Number(5.0), Expr::FuncCall("NA", [])],
+        [Number(5.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -8465,7 +7514,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "COMBINA",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -8478,7 +7527,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "COMBINA",
-        [Expr::Number(0.0), Expr::Number(0.0)],
+        [Number(0.0), Number(0.0)],
         ctx,
       ),
       0.0,
@@ -8487,7 +7536,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COMBINA", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "COMBINA", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8495,7 +7544,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COMPLEX", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "COMPLEX", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8506,12 +7555,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "COMPLEX",
-        [
-          Expr::Number(1.0),
-          Expr::Number(2.0),
-          Expr::String("i"),
-          Expr::Number(0.0),
-        ],
+        [Number(1.0), Number(2.0), String("i"), Number(0.0)],
         ctx,
       ),
       formula_error_value,
@@ -8524,7 +7568,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "COMPLEX",
-        [Expr::Number(1.0), Expr::Number(2.0), Expr::String("x")],
+        [Number(1.0), Number(2.0), String("x")],
         ctx,
       ),
       formula_error_value,
@@ -8534,7 +7578,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "FACT", [Expr::Number(-1.0)], ctx),
+      eval_function(workbook, "Sheet1", "FACT", [Number(-1.0)], ctx),
       formula_error_num,
     ),
     content="true",
@@ -8548,7 +7592,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "FACTDOUBLE", [Expr::Number(-1.0)], ctx),
+      eval_function(workbook, "Sheet1", "FACTDOUBLE", [Number(-1.0)], ctx),
       formula_error_num,
     ),
     content="true",
@@ -8563,13 +7607,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "MDETERM",
-        [Expr::Range("", "C1", "D2")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "MDETERM", [Range("", "C1", "D2")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8588,7 +7626,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "MINVERSE",
-        [Expr::Range("", "A1", "B2")],
+        [Range("", "A1", "B2")],
         ctx,
       ),
       formula_error_num,
@@ -8609,7 +7647,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "MMULT",
-        [Expr::Number(2.0), Expr::Number(3.0)],
+        [Number(2.0), Number(3.0)],
         ctx,
       ),
       6.0,
@@ -8618,7 +7656,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "MMULT", [Expr::Number(2.0)], ctx),
+      eval_function(workbook, "Sheet1", "MMULT", [Number(2.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8626,7 +7664,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "MUNIT", [Expr::Number(-1.0)], ctx),
+      eval_function(workbook, "Sheet1", "MUNIT", [Number(-1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8637,7 +7675,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "MUNIT",
-        [Expr::Number(2.0), Expr::Number(2.0)],
+        [Number(2.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -8650,7 +7688,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "TRANSPOSE",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -8664,7 +7702,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "PERMUT",
-        [Expr::Number(2.0), Expr::Number(3.0)],
+        [Number(2.0), Number(3.0)],
         ctx,
       ),
       formula_error_na,
@@ -8677,7 +7715,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "PERMUT",
-        [Expr::FuncCall("NA", []), Expr::Number(3.0)],
+        [FuncCall("NA", []), Number(3.0)],
         ctx,
       ),
       formula_error_na,
@@ -8690,7 +7728,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "PERMUT",
-        [Expr::Number(3.0), Expr::FuncCall("NA", [])],
+        [Number(3.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -8699,7 +7737,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "PERMUT", [Expr::Number(3.0)], ctx),
+      eval_function(workbook, "Sheet1", "PERMUT", [Number(3.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8711,7 +7749,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "PERMUTATIONA",
-        [Expr::Number(-1.0), Expr::Number(2.0)],
+        [Number(-1.0), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -8724,7 +7762,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "PERMUTATIONA",
-        [Expr::FuncCall("NA", []), Expr::Number(2.0)],
+        [FuncCall("NA", []), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -8737,7 +7775,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "PERMUTATIONA",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -8746,13 +7784,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "PERMUTATIONA",
-        [Expr::Number(2.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "PERMUTATIONA", [Number(2.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8781,7 +7813,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "LN", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "LN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -8795,7 +7827,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "EXP", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "EXP", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -8807,7 +7839,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "DECIMAL",
-        [Expr::String("2"), Expr::Number(2.0)],
+        [String("2"), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -8816,7 +7848,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "DECIMAL", [Expr::String("10")], ctx),
+      eval_function(workbook, "Sheet1", "DECIMAL", [String("10")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8835,7 +7867,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "ROMAN",
-        [Expr::Number(9.0), Expr::Number(0.0), Expr::Number(0.0)],
+        [Number(9.0), Number(0.0), Number(0.0)],
         ctx,
       ),
       formula_error_value,
@@ -8848,7 +7880,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "ROMAN",
-        [Expr::Number(9.0), Expr::Number(-1.0)],
+        [Number(9.0), Number(-1.0)],
         ctx,
       ) {
       String(_) => true
@@ -8862,7 +7894,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "ROMAN",
-        [Expr::Number(9.0), Expr::Number(9.0)],
+        [Number(9.0), Number(9.0)],
         ctx,
       ) {
       String(_) => true
@@ -8876,7 +7908,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "ROMAN",
-        [Expr::Number(9.0), Expr::FuncCall("NA", [])],
+        [Number(9.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -8901,7 +7933,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "BIN2DEC", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "BIN2DEC", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8920,7 +7952,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "BIN2HEX",
-        [Expr::String("1010"), Expr::Number(2.0), Expr::Number(1.0)],
+        [String("1010"), Number(2.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -8929,14 +7961,14 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "BIN2HEX", [Expr::String("2")], ctx),
+      eval_function(workbook, "Sheet1", "BIN2HEX", [String("2")], ctx),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "BIN2HEX", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "BIN2HEX", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8955,7 +7987,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "BIN2OCT",
-        [Expr::String("1010"), Expr::Number(2.0), Expr::Number(1.0)],
+        [String("1010"), Number(2.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -8964,14 +7996,14 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "BIN2OCT", [Expr::String("2")], ctx),
+      eval_function(workbook, "Sheet1", "BIN2OCT", [String("2")], ctx),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "BIN2OCT", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "BIN2OCT", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -8990,7 +8022,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "HEX2BIN",
-        [Expr::String("A"), Expr::Number(2.0), Expr::Number(1.0)],
+        [String("A"), Number(2.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -8999,7 +8031,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "HEX2BIN", [Expr::String("G")], ctx),
+      eval_function(workbook, "Sheet1", "HEX2BIN", [String("G")], ctx),
       formula_error_num,
     ),
     content="true",
@@ -9011,7 +8043,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "HEX2DEC",
-        [Expr::String("A"), Expr::Number(2.0)],
+        [String("A"), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -9032,7 +8064,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "HEX2OCT",
-        [Expr::String("A"), Expr::Number(2.0), Expr::Number(1.0)],
+        [String("A"), Number(2.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -9041,7 +8073,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "HEX2OCT", [Expr::String("G")], ctx),
+      eval_function(workbook, "Sheet1", "HEX2OCT", [String("G")], ctx),
       formula_error_num,
     ),
     content="true",
@@ -9052,7 +8084,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "HEX2OCT",
-        [Expr::String("A"), Expr::Number(4.0)],
+        [String("A"), Number(4.0)],
         ctx,
       ),
       "0012",
@@ -9073,7 +8105,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "OCT2BIN",
-        [Expr::String("12"), Expr::Number(2.0), Expr::Number(1.0)],
+        [String("12"), Number(2.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -9086,7 +8118,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "OCT2BIN",
-        [Expr::String("12"), Expr::Number(8.0)],
+        [String("12"), Number(8.0)],
         ctx,
       ),
       "00001010",
@@ -9095,7 +8127,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "OCT2BIN", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "OCT2BIN", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9110,7 +8142,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "OCT2DEC", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "OCT2DEC", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9121,7 +8153,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "OCT2DEC",
-        [Expr::String("12"), Expr::Number(2.0)],
+        [String("12"), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -9142,7 +8174,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "OCT2HEX",
-        [Expr::String("12"), Expr::Number(2.0), Expr::Number(1.0)],
+        [String("12"), Number(2.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -9151,7 +8183,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "OCT2HEX", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "OCT2HEX", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9159,7 +8191,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "BESSELI", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "BESSELI", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9170,7 +8202,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "BESSELI",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -9179,7 +8211,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "BESSELJ", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "BESSELJ", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9190,7 +8222,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "BESSELJ",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -9203,7 +8235,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "BESSELK",
-        [Expr::Number(0.0), Expr::Number(1.0)],
+        [Number(0.0), Number(1.0)],
         ctx,
       ),
       formula_error_num,
@@ -9212,7 +8244,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "BESSELK", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "BESSELK", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9223,7 +8255,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "BESSELY",
-        [Expr::Number(0.0), Expr::Number(1.0)],
+        [Number(0.0), Number(1.0)],
         ctx,
       ),
       formula_error_num,
@@ -9232,7 +8264,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "BESSELY", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "BESSELY", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9251,7 +8283,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "DELTA",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -9264,7 +8296,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "DELTA",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -9285,7 +8317,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "ERF",
-        [Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)],
+        [Number(1.0), Number(2.0), Number(3.0)],
         ctx,
       ),
       formula_error_value,
@@ -9298,7 +8330,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "ERF",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -9329,7 +8361,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ERFC", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "ERFC", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -9340,7 +8372,7 @@ test "formula builtins wb: engineering and matrix guard dispatch part 23" {
         workbook,
         "Sheet1",
         "ERFC.PRECISE",
-        [Expr::FuncCall("NA", [])],
+        [FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -9368,7 +8400,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "GESTEP",
-        [Expr::Number(1.0), Expr::Number(2.0), Expr::Number(3.0)],
+        [Number(1.0), Number(2.0), Number(3.0)],
         ctx,
       ),
       formula_error_value,
@@ -9377,13 +8409,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "GESTEP",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "GESTEP", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -9394,7 +8420,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "GESTEP",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -9403,7 +8429,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "GESTEP", [Expr::Number(2.0)], ctx),
+      eval_function(workbook, "Sheet1", "GESTEP", [Number(2.0)], ctx),
       1.0,
     ),
     content="true",
@@ -9414,7 +8440,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "GESTEP",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       0.0,
@@ -9428,7 +8454,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "BITAND",
-        [Expr::Number(6.0), Expr::Number(3.0)],
+        [Number(6.0), Number(3.0)],
         ctx,
       ),
       2.0,
@@ -9441,7 +8467,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "BITLSHIFT",
-        [Expr::Number(3.0), Expr::Number(1.0)],
+        [Number(3.0), Number(1.0)],
         ctx,
       ),
       6.0,
@@ -9454,7 +8480,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "BITOR",
-        [Expr::Number(6.0), Expr::Number(3.0)],
+        [Number(6.0), Number(3.0)],
         ctx,
       ),
       7.0,
@@ -9467,7 +8493,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "BITRSHIFT",
-        [Expr::Number(6.0), Expr::Number(1.0)],
+        [Number(6.0), Number(1.0)],
         ctx,
       ),
       3.0,
@@ -9480,7 +8506,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "BITXOR",
-        [Expr::Number(6.0), Expr::Number(3.0)],
+        [Number(6.0), Number(3.0)],
         ctx,
       ),
       5.0,
@@ -9497,7 +8523,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ACOS", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "ACOS", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -9511,15 +8537,14 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
 
   inspect(
-    match eval_function(workbook, "Sheet1", "ACOT", [Expr::Number(1.0)], ctx) {
+    match eval_function(workbook, "Sheet1", "ACOT", [Number(1.0)], ctx) {
       Number(_) => true
       _ => false
     },
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "_XLFN.ACOT", [Expr::Number(1.0)], ctx) {
+    match eval_function(workbook, "Sheet1", "_XLFN.ACOT", [Number(1.0)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -9533,8 +8558,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "_XLFN.ACOTH", [Expr::Number(2.0)], ctx) {
+    match eval_function(workbook, "Sheet1", "_XLFN.ACOTH", [Number(2.0)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -9571,7 +8595,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ATAN2", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ATAN2", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9582,7 +8606,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "ATAN2",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -9595,7 +8619,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "ATAN2",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -9648,7 +8672,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COT", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "COT", [Number(0.0)], ctx),
       formula_error_div,
     ),
     content="true",
@@ -9662,7 +8686,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COTH", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "COTH", [Number(0.0)], ctx),
       formula_error_div,
     ),
     content="true",
@@ -9676,7 +8700,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "CSC", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "CSC", [Number(0.0)], ctx),
       formula_error_div,
     ),
     content="true",
@@ -9690,7 +8714,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "CSCH", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "CSCH", [Number(0.0)], ctx),
       formula_error_div,
     ),
     content="true",
@@ -9733,20 +8757,14 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "DEGREES", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "DEGREES", [Number(0.0)], ctx),
       formula_error_div,
     ),
     content="true",
   )
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "DEGREES",
-        [Expr::Number(@math.PI)],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "DEGREES", [Number(@math.PI)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -9760,8 +8778,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "RADIANS", [Expr::Number(180.0)], ctx) {
+    match eval_function(workbook, "Sheet1", "RADIANS", [Number(180.0)], ctx) {
       Number(_) => true
       _ => false
     },
@@ -9784,7 +8801,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "RAND", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "RAND", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9798,7 +8815,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "RANDBETWEEN",
-        [Expr::Number(5.0), Expr::Number(1.0)],
+        [Number(5.0), Number(1.0)],
         ctx,
       ),
       formula_error_num,
@@ -9811,7 +8828,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "RANDBETWEEN",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -9820,7 +8837,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "RANDBETWEEN", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "RANDBETWEEN", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9831,7 +8848,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "RANDBETWEEN",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
       1.0,
@@ -9848,7 +8865,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "PI", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "PI", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -9863,13 +8880,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SQRTPI",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SQRTPI", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -9888,7 +8899,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "LOG",
-        [Expr::Number(10.0), Expr::Number(2.0), Expr::Number(3.0)],
+        [Number(10.0), Number(2.0), Number(3.0)],
         ctx,
       ),
       formula_error_value,
@@ -9897,20 +8908,14 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "LOG", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "LOG", [Number(0.0)], ctx),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "LOG",
-        [Expr::Number(10.0), Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "LOG", [Number(10.0), Number(1.0)], ctx),
       formula_error_div,
     ),
     content="true",
@@ -9921,7 +8926,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
         workbook,
         "Sheet1",
         "LOG",
-        [Expr::Number(10.0), Expr::FuncCall("NA", [])],
+        [Number(10.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -9930,7 +8935,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "LOG", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "LOG", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -9945,13 +8950,7 @@ test "formula builtins wb: trig bitwise random dispatch branches part 24" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "LOG10",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "LOG10", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -10012,8 +9011,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
   let ctx = CalcContext::new()
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMABS", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMABS", [String("1+2i")], ctx) {
       Number(_) => true
       _ => false
     },
@@ -10028,13 +9026,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMABS",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMABS", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -10042,13 +9034,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMAGINARY",
-        [Expr::String("1+2i")],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "IMAGINARY", [String("1+2i")], ctx) {
       Number(_) => true
       _ => false
     },
@@ -10064,13 +9050,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMARGUMENT",
-        [Expr::String("1+2i")],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "IMARGUMENT", [String("1+2i")], ctx) {
       Number(_) => true
       _ => false
     },
@@ -10086,13 +9066,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMCONJUGATE",
-        [Expr::String("1+2i")],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "IMCONJUGATE", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10107,8 +9081,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMCOS", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMCOS", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10123,8 +9096,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMCOSH", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMCOSH", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10139,8 +9111,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMCOT", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMCOT", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10156,14 +9127,13 @@ test "formula builtins wb: complex function dispatch branches part 26" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IMCSC", [Expr::String("0")], ctx),
+      eval_function(workbook, "Sheet1", "IMCSC", [String("0")], ctx),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMCSC", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMCSC", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10179,14 +9149,13 @@ test "formula builtins wb: complex function dispatch branches part 26" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IMCSCH", [Expr::String("0")], ctx),
+      eval_function(workbook, "Sheet1", "IMCSCH", [String("0")], ctx),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMCSCH", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMCSCH", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10206,7 +9175,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
         workbook,
         "Sheet1",
         "IMDIV",
-        [Expr::String("1+2i"), Expr::String("0")],
+        [String("1+2i"), String("0")],
         ctx,
       ),
       formula_error_num,
@@ -10219,7 +9188,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
         workbook,
         "Sheet1",
         "IMDIV",
-        [Expr::String("1+2i"), Expr::String("1+i")],
+        [String("1+2i"), String("1+i")],
         ctx,
       ) {
       String(_) => true
@@ -10229,7 +9198,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IMDIV", [Expr::String("1+2i")], ctx),
+      eval_function(workbook, "Sheet1", "IMDIV", [String("1+2i")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -10240,7 +9209,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
         workbook,
         "Sheet1",
         "IMDIV",
-        [Expr::FuncCall("NA", []), Expr::String("1+i")],
+        [FuncCall("NA", []), String("1+i")],
         ctx,
       ),
       formula_error_na,
@@ -10249,8 +9218,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMEXP", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMEXP", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10266,14 +9234,13 @@ test "formula builtins wb: complex function dispatch branches part 26" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IMLN", [Expr::String("0")], ctx),
+      eval_function(workbook, "Sheet1", "IMLN", [String("0")], ctx),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMLN", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMLN", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10289,14 +9256,13 @@ test "formula builtins wb: complex function dispatch branches part 26" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IMLOG10", [Expr::String("0")], ctx),
+      eval_function(workbook, "Sheet1", "IMLOG10", [String("0")], ctx),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMLOG10", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMLOG10", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10312,14 +9278,13 @@ test "formula builtins wb: complex function dispatch branches part 26" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IMLOG2", [Expr::String("0")], ctx),
+      eval_function(workbook, "Sheet1", "IMLOG2", [String("0")], ctx),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMLOG2", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMLOG2", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10339,7 +9304,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
         workbook,
         "Sheet1",
         "IMPOWER",
-        [Expr::String("0"), Expr::String("0")],
+        [String("0"), String("0")],
         ctx,
       ),
       formula_error_num,
@@ -10352,7 +9317,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
         workbook,
         "Sheet1",
         "IMPOWER",
-        [Expr::String("1+i"), Expr::String("2")],
+        [String("1+i"), String("2")],
         ctx,
       ) {
       String(_) => true
@@ -10362,7 +9327,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IMPOWER", [Expr::String("1+i")], ctx),
+      eval_function(workbook, "Sheet1", "IMPOWER", [String("1+i")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -10373,7 +9338,7 @@ test "formula builtins wb: complex function dispatch branches part 26" {
         workbook,
         "Sheet1",
         "IMPOWER",
-        [Expr::FuncCall("NA", []), Expr::String("2")],
+        [FuncCall("NA", []), String("2")],
         ctx,
       ),
       formula_error_na,
@@ -10402,11 +9367,11 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
         "Sheet1",
         "IMPRODUCT",
         [
-          Expr::String("1+i"),
-          Expr::Number(2.0),
-          Expr::Bool(true),
-          Expr::String(""),
-          Expr::List([Expr::List([Expr::Number(3.0)])]),
+          String("1+i"),
+          Number(2.0),
+          Bool(true),
+          String(""),
+          List([List([Number(3.0)])]),
         ],
         ctx,
       ) {
@@ -10421,7 +9386,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
         workbook,
         "Sheet1",
         "IMPRODUCT",
-        [Expr::String("1+i"), Expr::String("bad")],
+        [String("1+i"), String("bad")],
         ctx,
       ) {
       Error(_) => true
@@ -10435,7 +9400,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
         workbook,
         "Sheet1",
         "IMPRODUCT",
-        [Expr::FuncCall("NA", []), Expr::String("1+i")],
+        [FuncCall("NA", []), String("1+i")],
         ctx,
       ),
       formula_error_na,
@@ -10444,8 +9409,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMREAL", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMREAL", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10459,8 +9423,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMREAL", [Expr::String("bad")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMREAL", [String("bad")], ctx) {
       Error(_) => true
       _ => false
     },
@@ -10468,8 +9431,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSEC", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSEC", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10483,8 +9445,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSEC", [Expr::String("bad")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSEC", [String("bad")], ctx) {
       Error(_) => true
       _ => false
     },
@@ -10492,8 +9453,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSECH", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSECH", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10507,8 +9467,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSECH", [Expr::String("bad")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSECH", [String("bad")], ctx) {
       Error(_) => true
       _ => false
     },
@@ -10516,8 +9475,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSIN", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSIN", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10531,8 +9489,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSIN", [Expr::String("bad")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSIN", [String("bad")], ctx) {
       Error(_) => true
       _ => false
     },
@@ -10540,8 +9497,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSINH", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSINH", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10555,8 +9511,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSINH", [Expr::String("bad")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSINH", [String("bad")], ctx) {
       Error(_) => true
       _ => false
     },
@@ -10564,8 +9519,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSQRT", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSQRT", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10579,8 +9533,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSQRT", [Expr::String("bad")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSQRT", [String("bad")], ctx) {
       Error(_) => true
       _ => false
     },
@@ -10593,7 +9546,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
         workbook,
         "Sheet1",
         "IMSUB",
-        [Expr::String("2+3i"), Expr::String("1+i")],
+        [String("2+3i"), String("1+i")],
         ctx,
       ) {
       String(_) => true
@@ -10603,7 +9556,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IMSUB", [Expr::String("2+3i")], ctx),
+      eval_function(workbook, "Sheet1", "IMSUB", [String("2+3i")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -10614,7 +9567,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
         workbook,
         "Sheet1",
         "IMSUB",
-        [Expr::String("bad"), Expr::String("1+i")],
+        [String("bad"), String("1+i")],
         ctx,
       ) {
       Error(_) => true
@@ -10628,7 +9581,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
         workbook,
         "Sheet1",
         "IMSUB",
-        [Expr::String("1+i"), Expr::String("bad")],
+        [String("1+i"), String("bad")],
         ctx,
       ) {
       Error(_) => true
@@ -10650,7 +9603,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
         workbook,
         "Sheet1",
         "IMSUM",
-        [Expr::String("1+i"), Expr::Number(2.0)],
+        [String("1+i"), Number(2.0)],
         ctx,
       ) {
       String(_) => true
@@ -10660,20 +9613,13 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMSUM",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMSUM", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMSUM", [Expr::String("bad")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMSUM", [String("bad")], ctx) {
       Error(_) => true
       _ => false
     },
@@ -10681,8 +9627,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
   )
 
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMTAN", [Expr::String("1+2i")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMTAN", [String("1+2i")], ctx) {
       String(_) => true
       _ => false
     },
@@ -10696,8 +9641,7 @@ test "formula builtins wb: complex aggregate dispatch branches part 27" {
     content="true",
   )
   inspect(
-    match
-      eval_function(workbook, "Sheet1", "IMTAN", [Expr::String("bad")], ctx) {
+    match eval_function(workbook, "Sheet1", "IMTAN", [String("bad")], ctx) {
       Error(_) => true
       _ => false
     },
@@ -10713,7 +9657,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "FLOOR", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "FLOOR", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -10724,7 +9668,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR",
-        [Expr::Number(2.0), Expr::Number(-1.0)],
+        [Number(2.0), Number(-1.0)],
         ctx,
       ),
       formula_error_num,
@@ -10737,7 +9681,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -10750,7 +9694,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -10763,7 +9707,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR",
-        [Expr::Number(-2.5), Expr::Number(2.0)],
+        [Number(-2.5), Number(2.0)],
         ctx,
       ),
       -4.0,
@@ -10784,7 +9728,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -10793,7 +9737,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "CEILING", [Expr::Number(-2.1)], ctx),
+      eval_function(workbook, "Sheet1", "CEILING", [Number(-2.1)], ctx),
       -2.0,
     ),
     content="true",
@@ -10804,7 +9748,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING",
-        [Expr::Number(2.0), Expr::Number(-1.0)],
+        [Number(2.0), Number(-1.0)],
         ctx,
       ),
       formula_error_value,
@@ -10817,7 +9761,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING",
-        [Expr::Number(2.1), Expr::Number(2.0)],
+        [Number(2.1), Number(2.0)],
         ctx,
       ),
       4.0,
@@ -10830,7 +9774,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -10839,13 +9783,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "CEILING",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "CEILING", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -10864,12 +9802,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.MATH",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-        ],
+        [Number(1.0), Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -10878,13 +9811,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "CEILING.MATH",
-        [Expr::Number(-2.1)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "CEILING.MATH", [Number(-2.1)], ctx),
       -2.0,
     ),
     content="true",
@@ -10895,7 +9822,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.MATH",
-        [Expr::Number(2.1), Expr::Number(2.0)],
+        [Number(2.1), Number(2.0)],
         ctx,
       ),
       4.0,
@@ -10908,7 +9835,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.MATH",
-        [Expr::Number(-2.1), Expr::Number(2.0), Expr::Number(-1.0)],
+        [Number(-2.1), Number(2.0), Number(-1.0)],
         ctx,
       ),
       -4.0,
@@ -10921,7 +9848,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.MATH",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -10934,7 +9861,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.MATH",
-        [Expr::Number(2.0), Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -10947,7 +9874,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.MATH",
-        [Expr::FuncCall("NA", [])],
+        [FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -10960,7 +9887,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "_XLFN.CEILING.MATH",
-        [Expr::Number(2.1), Expr::Number(2.0)],
+        [Number(2.1), Number(2.0)],
         ctx,
       ),
       4.0,
@@ -10981,7 +9908,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.PRECISE",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -10990,13 +9917,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "CEILING.PRECISE",
-        [Expr::Number(-2.1)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "CEILING.PRECISE", [Number(-2.1)], ctx),
       -2.0,
     ),
     content="true",
@@ -11007,7 +9928,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.PRECISE",
-        [Expr::Number(2.1), Expr::Number(0.0)],
+        [Number(2.1), Number(0.0)],
         ctx,
       ),
       0.0,
@@ -11020,7 +9941,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.PRECISE",
-        [Expr::Number(2.1), Expr::Number(2.0)],
+        [Number(2.1), Number(2.0)],
         ctx,
       ),
       4.0,
@@ -11033,7 +9954,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.PRECISE",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11046,7 +9967,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "CEILING.PRECISE",
-        [Expr::FuncCall("NA", [])],
+        [FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11059,7 +9980,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "_XLFN.CEILING.PRECISE",
-        [Expr::Number(2.1), Expr::Number(2.0)],
+        [Number(2.1), Number(2.0)],
         ctx,
       ),
       4.0,
@@ -11080,12 +10001,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR.MATH",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-        ],
+        [Number(1.0), Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -11094,7 +10010,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "FLOOR.MATH", [Expr::Number(2.9)], ctx),
+      eval_function(workbook, "Sheet1", "FLOOR.MATH", [Number(2.9)], ctx),
       2.0,
     ),
     content="true",
@@ -11105,7 +10021,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR.MATH",
-        [Expr::Number(-2.1), Expr::Number(2.0), Expr::Number(1.0)],
+        [Number(-2.1), Number(2.0), Number(1.0)],
         ctx,
       ),
       -4.0,
@@ -11118,7 +10034,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR.MATH",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11131,7 +10047,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR.MATH",
-        [Expr::Number(2.0), Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11140,13 +10056,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FLOOR.MATH",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "FLOOR.MATH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -11157,7 +10067,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "_XLFN.FLOOR.MATH",
-        [Expr::Number(-2.1), Expr::Number(2.0), Expr::Number(1.0)],
+        [Number(-2.1), Number(2.0), Number(1.0)],
         ctx,
       ),
       -4.0,
@@ -11178,7 +10088,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR.PRECISE",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -11187,13 +10097,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FLOOR.PRECISE",
-        [Expr::Number(-2.1)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "FLOOR.PRECISE", [Number(-2.1)], ctx),
       -3.0,
     ),
     content="true",
@@ -11204,7 +10108,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR.PRECISE",
-        [Expr::Number(2.1), Expr::Number(0.0)],
+        [Number(2.1), Number(0.0)],
         ctx,
       ),
       0.0,
@@ -11217,7 +10121,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR.PRECISE",
-        [Expr::Number(-2.1), Expr::Number(2.0)],
+        [Number(-2.1), Number(2.0)],
         ctx,
       ),
       -4.0,
@@ -11230,7 +10134,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR.PRECISE",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11243,7 +10147,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "FLOOR.PRECISE",
-        [Expr::FuncCall("NA", [])],
+        [FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11256,7 +10160,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "_XLFN.FLOOR.PRECISE",
-        [Expr::Number(-2.1), Expr::Number(2.0)],
+        [Number(-2.1), Number(2.0)],
         ctx,
       ),
       -4.0,
@@ -11277,7 +10181,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "ISO.CEILING",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -11286,13 +10190,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ISO.CEILING",
-        [Expr::Number(-2.1)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ISO.CEILING", [Number(-2.1)], ctx),
       -2.0,
     ),
     content="true",
@@ -11303,7 +10201,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "ISO.CEILING",
-        [Expr::Number(2.1), Expr::Number(0.0)],
+        [Number(2.1), Number(0.0)],
         ctx,
       ),
       0.0,
@@ -11316,7 +10214,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "ISO.CEILING",
-        [Expr::Number(2.1), Expr::Number(2.0)],
+        [Number(2.1), Number(2.0)],
         ctx,
       ),
       4.0,
@@ -11329,7 +10227,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "ISO.CEILING",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11342,7 +10240,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "ISO.CEILING",
-        [Expr::FuncCall("NA", [])],
+        [FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11355,7 +10253,7 @@ test "formula builtins wb: floor and ceiling dispatch branches part 28" {
         workbook,
         "Sheet1",
         "_XLFN.ISO.CEILING",
-        [Expr::Number(2.1), Expr::Number(2.0)],
+        [Number(2.1), Number(2.0)],
         ctx,
       ),
       4.0,
@@ -11372,7 +10270,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "TRUNC", [Expr::Number(1.29)], ctx),
+      eval_function(workbook, "Sheet1", "TRUNC", [Number(1.29)], ctx),
       1.0,
     ),
     content="true",
@@ -11383,7 +10281,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "TRUNC",
-        [Expr::Number(1.29), Expr::Number(1.0)],
+        [Number(1.29), Number(1.0)],
         ctx,
       ),
       1.2,
@@ -11396,9 +10294,16 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "TRUNC",
-        [Expr::Number(1.29), Expr::FuncCall("NA", [])],
+        [Number(1.29), FuncCall("NA", [])],
         ctx,
       ),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      eval_function(workbook, "Sheet1", "TRUNC", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -11409,20 +10314,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "TRUNC",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TRUNC",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -11436,7 +10328,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "ROUND",
-        [Expr::Number(1.24), Expr::Number(1.0)],
+        [Number(1.24), Number(1.0)],
         ctx,
       ),
       1.2,
@@ -11449,7 +10341,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "ROUND",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -11462,7 +10354,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "ROUND",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11471,7 +10363,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ROUND", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ROUND", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -11483,7 +10375,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "ROUNDUP",
-        [Expr::Number(1.21), Expr::Number(1.0)],
+        [Number(1.21), Number(1.0)],
         ctx,
       ),
       1.3,
@@ -11496,7 +10388,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "ROUNDUP",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -11509,7 +10401,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "ROUNDUP",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11518,7 +10410,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ROUNDUP", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ROUNDUP", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -11530,7 +10422,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "ROUNDDOWN",
-        [Expr::Number(1.29), Expr::Number(1.0)],
+        [Number(1.29), Number(1.0)],
         ctx,
       ),
       1.2,
@@ -11543,7 +10435,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "ROUNDDOWN",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -11556,7 +10448,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "ROUNDDOWN",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11565,7 +10457,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ROUNDDOWN", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ROUNDDOWN", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -11573,21 +10465,21 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "SQRT", [Expr::Number(4.0)], ctx),
+      eval_function(workbook, "Sheet1", "SQRT", [Number(4.0)], ctx),
       2.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SQRT", [Expr::Number(-1.0)], ctx),
+      eval_function(workbook, "Sheet1", "SQRT", [Number(-1.0)], ctx),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SQRT", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "SQRT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -11606,7 +10498,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "POWER",
-        [Expr::Number(2.0), Expr::Number(3.0)],
+        [Number(2.0), Number(3.0)],
         ctx,
       ),
       8.0,
@@ -11619,7 +10511,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "POWER",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -11632,7 +10524,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "POWER",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11641,7 +10533,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "POWER", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "POWER", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -11649,21 +10541,21 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "EVEN", [Expr::Number(1.2)], ctx),
+      eval_function(workbook, "Sheet1", "EVEN", [Number(1.2)], ctx),
       2.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "EVEN", [Expr::Number(-1.2)], ctx),
+      eval_function(workbook, "Sheet1", "EVEN", [Number(-1.2)], ctx),
       -2.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "EVEN", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "EVEN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -11678,28 +10570,28 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "ODD", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "ODD", [Number(0.0)], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "ODD", [Expr::Number(2.2)], ctx),
+      eval_function(workbook, "Sheet1", "ODD", [Number(2.2)], ctx),
       3.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "ODD", [Expr::Number(-2.2)], ctx),
+      eval_function(workbook, "Sheet1", "ODD", [Number(-2.2)], ctx),
       -3.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ODD", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "ODD", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -11718,7 +10610,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "MROUND",
-        [Expr::Number(2.0), Expr::Number(0.0)],
+        [Number(2.0), Number(0.0)],
         ctx,
       ),
       formula_error_num,
@@ -11731,7 +10623,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "MROUND",
-        [Expr::Number(-2.0), Expr::Number(1.0)],
+        [Number(-2.0), Number(1.0)],
         ctx,
       ),
       formula_error_num,
@@ -11744,7 +10636,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "MROUND",
-        [Expr::Number(3.2), Expr::Number(2.0)],
+        [Number(3.2), Number(2.0)],
         ctx,
       ),
       4.0,
@@ -11757,7 +10649,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "MROUND",
-        [Expr::FuncCall("NA", []), Expr::Number(2.0)],
+        [FuncCall("NA", []), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -11770,7 +10662,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "MROUND",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11779,7 +10671,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "MROUND", [Expr::Number(2.0)], ctx),
+      eval_function(workbook, "Sheet1", "MROUND", [Number(2.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -11787,26 +10679,14 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "MOD",
-        [Expr::Number(2.0), Expr::Number(0.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "MOD", [Number(2.0), Number(0.0)], ctx),
       formula_error_div,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "MOD",
-        [Expr::Number(5.0), Expr::Number(2.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "MOD", [Number(5.0), Number(2.0)], ctx),
       1.0,
     ),
     content="true",
@@ -11817,7 +10697,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "MOD",
-        [Expr::FuncCall("NA", []), Expr::Number(2.0)],
+        [FuncCall("NA", []), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -11830,7 +10710,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "MOD",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11839,7 +10719,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "MOD", [Expr::Number(2.0)], ctx),
+      eval_function(workbook, "Sheet1", "MOD", [Number(2.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -11851,7 +10731,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "QUOTIENT",
-        [Expr::Number(2.0), Expr::Number(0.0)],
+        [Number(2.0), Number(0.0)],
         ctx,
       ),
       formula_error_div,
@@ -11864,7 +10744,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "QUOTIENT",
-        [Expr::Number(5.0), Expr::Number(2.0)],
+        [Number(5.0), Number(2.0)],
         ctx,
       ),
       2.0,
@@ -11877,7 +10757,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "QUOTIENT",
-        [Expr::FuncCall("NA", []), Expr::Number(2.0)],
+        [FuncCall("NA", []), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -11890,7 +10770,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
         workbook,
         "Sheet1",
         "QUOTIENT",
-        [Expr::Number(2.0), Expr::FuncCall("NA", [])],
+        [Number(2.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -11899,7 +10779,7 @@ test "formula builtins wb: rounding and division dispatch branches part 29" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "QUOTIENT", [Expr::Number(2.0)], ctx),
+      eval_function(workbook, "Sheet1", "QUOTIENT", [Number(2.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -11925,7 +10805,7 @@ test "formula builtins wb: logical dispatch branches part 30" {
         workbook,
         "Sheet1",
         "AND",
-        [Expr::Number(1.0), Expr::Bool(true), Expr::String("TRUE")],
+        [Number(1.0), Bool(true), String("TRUE")],
         ctx,
       ),
       true,
@@ -11934,48 +10814,42 @@ test "formula builtins wb: logical dispatch branches part 30" {
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "AND", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "AND", [Number(0.0)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "AND", [Expr::Bool(false)], ctx),
+      eval_function(workbook, "Sheet1", "AND", [Bool(false)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "AND", [Expr::String("FALSE")], ctx),
+      eval_function(workbook, "Sheet1", "AND", [String("FALSE")], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "AND", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "AND", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "AND", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "AND", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "AND",
-        [Expr::List([Expr::Number(1.0)])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "AND", [List([Number(1.0)])], ctx),
       formula_error_value,
     ),
     content="true",
@@ -11990,21 +10864,21 @@ test "formula builtins wb: logical dispatch branches part 30" {
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "OR", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "OR", [Number(1.0)], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "OR", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "OR", [Bool(true)], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "OR", [Expr::String("TRUE")], ctx),
+      eval_function(workbook, "Sheet1", "OR", [String("TRUE")], ctx),
       true,
     ),
     content="true",
@@ -12015,7 +10889,7 @@ test "formula builtins wb: logical dispatch branches part 30" {
         workbook,
         "Sheet1",
         "OR",
-        [Expr::String("FALSE"), Expr::Number(0.0)],
+        [String("FALSE"), Number(0.0)],
         ctx,
       ),
       false,
@@ -12024,14 +10898,14 @@ test "formula builtins wb: logical dispatch branches part 30" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "OR", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "OR", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "OR", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "OR", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -12046,56 +10920,56 @@ test "formula builtins wb: logical dispatch branches part 30" {
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [Bool(true)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [Number(0.0)], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [Number(1.0)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::String("TRUE")], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [String("TRUE")], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::String("FALSE")], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [String("FALSE")], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "NOT", [Expr::Cell("", "Z99")], ctx),
+      eval_function(workbook, "Sheet1", "NOT", [Cell("", "Z99")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -12110,26 +10984,14 @@ test "formula builtins wb: logical dispatch branches part 30" {
   )
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "XOR",
-        [Expr::Number(1.0), Expr::Bool(false)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "XOR", [Number(1.0), Bool(false)], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "XOR",
-        [Expr::Number(1.0), Expr::Bool(true)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "XOR", [Number(1.0), Bool(true)], ctx),
       false,
     ),
     content="true",
@@ -12140,7 +11002,7 @@ test "formula builtins wb: logical dispatch branches part 30" {
         workbook,
         "Sheet1",
         "XOR",
-        [Expr::String("ignored"), Expr::Number(1.0)],
+        [String("ignored"), Number(1.0)],
         ctx,
       ),
       true,
@@ -12149,14 +11011,14 @@ test "formula builtins wb: logical dispatch branches part 30" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "XOR", [Expr::String("only")], ctx),
+      eval_function(workbook, "Sheet1", "XOR", [String("only")], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "XOR", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "XOR", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -12184,7 +11046,7 @@ test "formula builtins wb: trig and log success dispatch part 31" {
       1.0
     }
     inspect(
-      match eval_function(workbook, "Sheet1", name, [Expr::Number(arg)], ctx) {
+      match eval_function(workbook, "Sheet1", name, [Number(arg)], ctx) {
         Number(_) => true
         _ => false
       },
@@ -12198,7 +11060,7 @@ test "formula builtins wb: trig and log success dispatch part 31" {
         workbook,
         "Sheet1",
         "ATAN2",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ) {
       Number(_) => true
@@ -12219,7 +11081,7 @@ test "formula builtins wb: trig and log success dispatch part 31" {
         workbook,
         "Sheet1",
         "RANDBETWEEN",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ) {
       Number(_) => true
@@ -12240,7 +11102,7 @@ test "formula builtins wb: trig and log success dispatch part 31" {
         workbook,
         "Sheet1",
         "LOG",
-        [Expr::Number(100.0), Expr::Number(10.0)],
+        [Number(100.0), Number(10.0)],
         ctx,
       ) {
       Number(_) => true
@@ -12251,26 +11113,14 @@ test "formula builtins wb: trig and log success dispatch part 31" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "DEGREES",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "DEGREES", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "RADIANS",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "RADIANS", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -12281,7 +11131,7 @@ test "formula builtins wb: trig and log success dispatch part 31" {
         workbook,
         "Sheet1",
         "RANDBETWEEN",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -12348,7 +11198,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
 
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "LEFT", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "LEFT", [String("abc")], ctx),
       "a",
     ),
     content="true",
@@ -12359,7 +11209,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "LEFT",
-        [Expr::String("abc"), Expr::Number(-1.0)],
+        [String("abc"), Number(-1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12372,7 +11222,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "LEFT",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)],
+        [String("abc"), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12382,7 +11232,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
 
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "LEFTB", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "LEFTB", [String("abc")], ctx),
       "a",
     ),
     content="true",
@@ -12393,7 +11243,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "LEFTB",
-        [Expr::String("abc"), Expr::Number(-1.0)],
+        [String("abc"), Number(-1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12406,7 +11256,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "LEFTB",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)],
+        [String("abc"), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12416,7 +11266,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
 
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "RIGHT", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "RIGHT", [String("abc")], ctx),
       "c",
     ),
     content="true",
@@ -12427,7 +11277,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "RIGHT",
-        [Expr::String("abc"), Expr::Number(-1.0)],
+        [String("abc"), Number(-1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12440,7 +11290,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "RIGHT",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)],
+        [String("abc"), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12450,7 +11300,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
 
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "RIGHTB", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "RIGHTB", [String("abc")], ctx),
       "c",
     ),
     content="true",
@@ -12461,7 +11311,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "RIGHTB",
-        [Expr::String("abc"), Expr::Number(-1.0)],
+        [String("abc"), Number(-1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12474,7 +11324,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "RIGHTB",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)],
+        [String("abc"), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12488,7 +11338,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "MID",
-        [Expr::String("abc"), Expr::Number(0.0), Expr::Number(1.0)],
+        [String("abc"), Number(0.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12501,7 +11351,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "MID",
-        [Expr::String("abc"), Expr::Number(10.0), Expr::Number(1.0)],
+        [String("abc"), Number(10.0), Number(1.0)],
         ctx,
       ),
       "",
@@ -12510,7 +11360,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "MID", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "MID", [String("abc")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -12522,7 +11372,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("abc"), Expr::Number(0.0), Expr::Number(1.0)],
+        [String("abc"), Number(0.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12535,7 +11385,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(0.0)],
+        [String("abc"), Number(1.0), Number(0.0)],
         ctx,
       ),
       "",
@@ -12548,7 +11398,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "MIDB",
-        [Expr::String("abc"), Expr::Number(10.0), Expr::Number(1.0)],
+        [String("abc"), Number(10.0), Number(1.0)],
         ctx,
       ),
       "",
@@ -12557,7 +11407,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "MIDB", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "MIDB", [String("abc")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -12569,7 +11419,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "REPT",
-        [Expr::String("x"), Expr::Number(-1.0)],
+        [String("x"), Number(-1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12578,13 +11428,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
   )
   inspect(
     is_formula_string(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "REPT",
-        [Expr::String("x"), Expr::Number(0.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "REPT", [String("x"), Number(0.0)], ctx),
       "",
     ),
     content="true",
@@ -12595,7 +11439,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "REPT",
-        [Expr::String("a".repeat(100)), Expr::Number(400.0)],
+        [String("a".repeat(100)), Number(400.0)],
         ctx,
       ),
       formula_error_value,
@@ -12604,7 +11448,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "REPT", [Expr::String("x")], ctx),
+      eval_function(workbook, "Sheet1", "REPT", [String("x")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -12616,12 +11460,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "REPLACE",
-        [
-          Expr::String("abc"),
-          Expr::Number(0.0),
-          Expr::Number(1.0),
-          Expr::String("x"),
-        ],
+        [String("abc"), Number(0.0), Number(1.0), String("x")],
         ctx,
       ),
       formula_error_value,
@@ -12634,7 +11473,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "REPLACE",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)],
+        [String("abc"), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12648,12 +11487,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "REPLACEB",
-        [
-          Expr::String("abc"),
-          Expr::Number(0.0),
-          Expr::Number(1.0),
-          Expr::String("x"),
-        ],
+        [String("abc"), Number(0.0), Number(1.0), String("x")],
         ctx,
       ),
       formula_error_value,
@@ -12666,7 +11500,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "REPLACEB",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)],
+        [String("abc"), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -12680,7 +11514,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [Expr::String("abc"), Expr::String(""), Expr::String("x")],
+        [String("abc"), String(""), String("x")],
         ctx,
       ),
       formula_error_value,
@@ -12693,12 +11527,7 @@ test "formula builtins wb: text wrapper edge dispatch part 32" {
         workbook,
         "Sheet1",
         "SUBSTITUTE",
-        [
-          Expr::String("abc"),
-          Expr::String("a"),
-          Expr::String("x"),
-          Expr::Number(0.0),
-        ],
+        [String("abc"), String("a"), String("x"), Number(0.0)],
         ctx,
       ),
       formula_error_value,
@@ -12727,7 +11556,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String("b"), Expr::String("abc")],
+        [String("b"), String("abc")],
         ctx,
       ),
       2.0,
@@ -12740,7 +11569,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String(""), Expr::String("abc"), Expr::Number(2.0)],
+        [String(""), String("abc"), Number(2.0)],
         ctx,
       ),
       2.0,
@@ -12753,7 +11582,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String("z"), Expr::String("abc")],
+        [String("z"), String("abc")],
         ctx,
       ),
       formula_error_value,
@@ -12766,7 +11595,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(0.0)],
+        [String("a"), String("abc"), Number(0.0)],
         ctx,
       ),
       formula_error_value,
@@ -12779,7 +11608,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIND",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(10.0)],
+        [String("a"), String("abc"), Number(10.0)],
         ctx,
       ),
       formula_error_value,
@@ -12788,7 +11617,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "FIND", [Expr::String("a")], ctx),
+      eval_function(workbook, "Sheet1", "FIND", [String("a")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -12800,7 +11629,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FINDB",
-        [Expr::String("b"), Expr::String("abc")],
+        [String("b"), String("abc")],
         ctx,
       ),
       2.0,
@@ -12813,7 +11642,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FINDB",
-        [Expr::String("z"), Expr::String("abc")],
+        [String("z"), String("abc")],
         ctx,
       ),
       formula_error_value,
@@ -12822,7 +11651,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "FINDB", [Expr::String("a")], ctx),
+      eval_function(workbook, "Sheet1", "FINDB", [String("a")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -12834,7 +11663,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("B"), Expr::String("abc")],
+        [String("B"), String("abc")],
         ctx,
       ),
       2.0,
@@ -12847,7 +11676,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("*b*"), Expr::String("abc"), Expr::Number(1.0)],
+        [String("*b*"), String("abc"), Number(1.0)],
         ctx,
       ),
       1.0,
@@ -12860,7 +11689,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String(""), Expr::String("abc"), Expr::Number(2.0)],
+        [String(""), String("abc"), Number(2.0)],
         ctx,
       ),
       2.0,
@@ -12873,7 +11702,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(0.0)],
+        [String("a"), String("abc"), Number(0.0)],
         ctx,
       ),
       formula_error_value,
@@ -12886,7 +11715,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("a"), Expr::String("abc"), Expr::Number(10.0)],
+        [String("a"), String("abc"), Number(10.0)],
         ctx,
       ),
       formula_error_value,
@@ -12899,7 +11728,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "SEARCH",
-        [Expr::String("z"), Expr::String("abc")],
+        [String("z"), String("abc")],
         ctx,
       ),
       formula_error_value,
@@ -12908,7 +11737,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SEARCH", [Expr::String("a")], ctx),
+      eval_function(workbook, "Sheet1", "SEARCH", [String("a")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -12920,7 +11749,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "SEARCHB",
-        [Expr::String("b"), Expr::String("abc")],
+        [String("b"), String("abc")],
         ctx,
       ),
       2.0,
@@ -12933,7 +11762,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "SEARCHB",
-        [Expr::String("z"), Expr::String("abc")],
+        [String("z"), String("abc")],
         ctx,
       ),
       formula_error_value,
@@ -12942,7 +11771,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SEARCHB", [Expr::String("a")], ctx),
+      eval_function(workbook, "Sheet1", "SEARCHB", [String("a")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -12954,7 +11783,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "EXACT",
-        [Expr::String("abc"), Expr::String("abc")],
+        [String("abc"), String("abc")],
         ctx,
       ),
       true,
@@ -12967,7 +11796,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "EXACT",
-        [Expr::String("abc"), Expr::String("ABC")],
+        [String("abc"), String("ABC")],
         ctx,
       ),
       false,
@@ -12980,7 +11809,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "EXACT",
-        [Expr::String("abc"), Expr::FuncCall("NA", [])],
+        [String("abc"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -12989,7 +11818,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "EXACT", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "EXACT", [String("abc")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -13001,7 +11830,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIXED",
-        [Expr::Number(12.34), Expr::Number(1.0), Expr::Bool(true)],
+        [Number(12.34), Number(1.0), Bool(true)],
         ctx,
       ),
       "12.3",
@@ -13014,7 +11843,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIXED",
-        [Expr::Number(12.34), Expr::Number(-2.0)],
+        [Number(12.34), Number(-2.0)],
         ctx,
       ),
       "12",
@@ -13027,7 +11856,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIXED",
-        [Expr::Number(12.34), Expr::FuncCall("NA", [])],
+        [Number(12.34), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -13040,7 +11869,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIXED",
-        [Expr::Number(12.34), Expr::Number(1.0), Expr::String("bad")],
+        [Number(12.34), Number(1.0), String("bad")],
         ctx,
       ),
       formula_error_value,
@@ -13053,12 +11882,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "FIXED",
-        [
-          Expr::Number(12.34),
-          Expr::Number(1.0),
-          Expr::Bool(true),
-          Expr::Number(0.0),
-        ],
+        [Number(12.34), Number(1.0), Bool(true), Number(0.0)],
         ctx,
       ),
       formula_error_value,
@@ -13068,14 +11892,14 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "VALUE", [Expr::String("12.5")], ctx),
+      eval_function(workbook, "Sheet1", "VALUE", [String("12.5")], ctx),
       12.5,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "VALUE", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "VALUE", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -13086,7 +11910,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "VALUE",
-        [Expr::String("12"), Expr::String("x")],
+        [String("12"), String("x")],
         ctx,
       ),
       formula_error_value,
@@ -13096,13 +11920,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
 
   inspect(
     is_formula_string(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "VALUETOTEXT",
-        [Expr::Number(12.5)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "VALUETOTEXT", [Number(12.5)], ctx),
       "12.5",
     ),
     content="true",
@@ -13113,7 +11931,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "VALUETOTEXT",
-        [Expr::String("abc"), Expr::Number(1.0)],
+        [String("abc"), Number(1.0)],
         ctx,
       ),
       "\"abc\"",
@@ -13126,7 +11944,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "VALUETOTEXT",
-        [Expr::String("abc"), Expr::Number(2.0)],
+        [String("abc"), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -13139,7 +11957,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "VALUETOTEXT",
-        [Expr::String("abc"), Expr::FuncCall("NA", [])],
+        [String("abc"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -13152,7 +11970,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "VALUETOTEXT",
-        [Expr::String("abc"), Expr::Number(1.0), Expr::Number(1.0)],
+        [String("abc"), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -13166,7 +11984,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXT",
-        [Expr::Number(12.5), Expr::String("0.0")],
+        [Number(12.5), String("0.0")],
         ctx,
       ),
       "12.5",
@@ -13179,7 +11997,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXT",
-        [Expr::String("bad"), Expr::String("0.0")],
+        [String("bad"), String("0.0")],
         ctx,
       ),
       formula_error_value,
@@ -13192,7 +12010,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXT",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -13201,7 +12019,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "TEXT", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "TEXT", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -13213,7 +12031,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::Range("", "A1", "B1")],
+        [Range("", "A1", "B1")],
         ctx,
       ),
       "1, x",
@@ -13226,7 +12044,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::Range("", "A1", "B1"), Expr::Number(1.0)],
+        [Range("", "A1", "B1"), Number(1.0)],
         ctx,
       ),
       "{1,\"x\"}",
@@ -13239,7 +12057,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::Range("", "A1", "B1"), Expr::Number(0.0)],
+        [Range("", "A1", "B1"), Number(0.0)],
         ctx,
       ),
       "1, x",
@@ -13252,7 +12070,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -13265,7 +12083,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -13278,7 +12096,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "ARRAYTOTEXT",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -13292,7 +12110,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXTAFTER",
-        [Expr::String("a-b-c"), Expr::String("-")],
+        [String("a-b-c"), String("-")],
         ctx,
       ),
       "b-c",
@@ -13305,7 +12123,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXTBEFORE",
-        [Expr::String("a-b-c"), Expr::String("-")],
+        [String("a-b-c"), String("-")],
         ctx,
       ),
       "a",
@@ -13318,7 +12136,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXTBEFORE",
-        [Expr::String("-abc"), Expr::String("-")],
+        [String("-abc"), String("-")],
         ctx,
       ),
       "",
@@ -13332,12 +12150,12 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         "Sheet1",
         "TEXTAFTER",
         [
-          Expr::String("abc"),
-          Expr::String("-"),
-          Expr::Number(1.0),
-          Expr::Number(0.0),
-          Expr::Bool(false),
-          Expr::String("NF"),
+          String("abc"),
+          String("-"),
+          Number(1.0),
+          Number(0.0),
+          Bool(false),
+          String("NF"),
         ],
         ctx,
       ),
@@ -13351,7 +12169,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "_XLFN.TEXTAFTER",
-        [Expr::String("a-b"), Expr::String("-")],
+        [String("a-b"), String("-")],
         ctx,
       ),
       "b",
@@ -13360,7 +12178,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "TEXTAFTER", [Expr::String("a")], ctx),
+      eval_function(workbook, "Sheet1", "TEXTAFTER", [String("a")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -13372,7 +12190,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXTSPLIT",
-        [Expr::String("a,b"), Expr::String(",")],
+        [String("a,b"), String(",")],
         ctx,
       ),
     ),
@@ -13380,7 +12198,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "TEXTSPLIT", [Expr::String("a")], ctx),
+      eval_function(workbook, "Sheet1", "TEXTSPLIT", [String("a")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -13392,12 +12210,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXTJOIN",
-        [
-          Expr::String(","),
-          Expr::Bool(true),
-          Expr::String("a"),
-          Expr::String(""),
-        ],
+        [String(","), Bool(true), String("a"), String("")],
         ctx,
       ),
       "a",
@@ -13410,7 +12223,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXTJOIN",
-        [Expr::FuncCall("NA", []), Expr::Bool(true), Expr::String("a")],
+        [FuncCall("NA", []), Bool(true), String("a")],
         ctx,
       ),
       formula_error_na,
@@ -13423,7 +12236,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXTJOIN",
-        [Expr::String(","), Expr::String("bad"), Expr::String("a")],
+        [String(","), String("bad"), String("a")],
         ctx,
       ),
       formula_error_value,
@@ -13436,7 +12249,7 @@ test "formula builtins wb: search and text conversion dispatch part 33" {
         workbook,
         "Sheet1",
         "TEXTJOIN",
-        [Expr::String(","), Expr::Bool(true)],
+        [String(","), Bool(true)],
         ctx,
       ),
       formula_error_value,
@@ -13471,7 +12284,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "SEQUENCE",
-        [Expr::Number(2.0), Expr::Number(2.0), Expr::Number(1.0)],
+        [Number(2.0), Number(2.0), Number(1.0)],
         ctx,
       ),
     ),
@@ -13491,7 +12304,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "TAKE",
-        [Expr::Range("", "A1", "B2"), Expr::Number(1.0), Expr::Number(1.0)],
+        [Range("", "A1", "B2"), Number(1.0), Number(1.0)],
         ctx,
       ),
     ),
@@ -13499,13 +12312,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TAKE",
-        [Expr::Range("", "A1", "B2")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "TAKE", [Range("", "A1", "B2")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -13517,7 +12324,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "DROP",
-        [Expr::Range("", "A1", "B2"), Expr::Number(1.0), Expr::Number(1.0)],
+        [Range("", "A1", "B2"), Number(1.0), Number(1.0)],
         ctx,
       ),
     ),
@@ -13525,13 +12332,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "DROP",
-        [Expr::Range("", "A1", "B2")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "DROP", [Range("", "A1", "B2")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -13543,7 +12344,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "CHOOSECOLS",
-        [Expr::Range("", "A1", "B2"), Expr::Number(2.0)],
+        [Range("", "A1", "B2"), Number(2.0)],
         ctx,
       ),
     ),
@@ -13555,7 +12356,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "CHOOSEROWS",
-        [Expr::Range("", "A1", "B2"), Expr::Number(2.0)],
+        [Range("", "A1", "B2"), Number(2.0)],
         ctx,
       ),
     ),
@@ -13567,7 +12368,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "CHOOSECOLS",
-        [Expr::Range("", "A1", "B2")],
+        [Range("", "A1", "B2")],
         ctx,
       ),
       formula_error_value,
@@ -13580,7 +12381,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "CHOOSEROWS",
-        [Expr::Range("", "A1", "B2")],
+        [Range("", "A1", "B2")],
         ctx,
       ),
       formula_error_value,
@@ -13594,7 +12395,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "HSTACK",
-        [Expr::Range("", "A1", "A2"), Expr::Range("", "B1", "B2")],
+        [Range("", "A1", "A2"), Range("", "B1", "B2")],
         ctx,
       ),
     ),
@@ -13606,7 +12407,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "VSTACK",
-        [Expr::Range("", "A1", "B1"), Expr::Range("", "A2", "B2")],
+        [Range("", "A1", "B1"), Range("", "A2", "B2")],
         ctx,
       ),
     ),
@@ -13626,12 +12427,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "EXPAND",
-        [
-          Expr::Range("", "A1", "B2"),
-          Expr::Number(3.0),
-          Expr::Number(3.0),
-          Expr::Number(0.0),
-        ],
+        [Range("", "A1", "B2"), Number(3.0), Number(3.0), Number(0.0)],
         ctx,
       ),
     ),
@@ -13643,7 +12439,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "EXPAND",
-        [Expr::Range("", "A1", "B2"), Expr::Number(1.0)],
+        [Range("", "A1", "B2"), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -13657,7 +12453,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "WRAPROWS",
-        [Expr::Range("", "A1", "B1"), Expr::Number(1.0)],
+        [Range("", "A1", "B1"), Number(1.0)],
         ctx,
       ),
     ),
@@ -13669,7 +12465,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "WRAPCOLS",
-        [Expr::Range("", "A1", "B1"), Expr::Number(1.0)],
+        [Range("", "A1", "B1"), Number(1.0)],
         ctx,
       ),
     ),
@@ -13681,7 +12477,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "WRAPROWS",
-        [Expr::Range("", "A1", "B2"), Expr::Number(0.0)],
+        [Range("", "A1", "B2"), Number(0.0)],
         ctx,
       ),
       formula_error_value,
@@ -13691,25 +12487,13 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
 
   inspect(
     is_formula_list(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TOCOL",
-        [Expr::Range("", "A1", "B2")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "TOCOL", [Range("", "A1", "B2")], ctx),
     ),
     content="true",
   )
   inspect(
     is_formula_list(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TOROW",
-        [Expr::Range("", "A1", "B2")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "TOROW", [Range("", "A1", "B2")], ctx),
     ),
     content="true",
   )
@@ -13719,7 +12503,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "TOCOL",
-        [Expr::Range("", "A1", "B2"), Expr::Number(9.0)],
+        [Range("", "A1", "B2"), Number(9.0)],
         ctx,
       ),
       formula_error_value,
@@ -13733,7 +12517,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "SORT",
-        [Expr::Range("", "A1", "B2"), Expr::Number(1.0), Expr::Number(-1.0)],
+        [Range("", "A1", "B2"), Number(1.0), Number(-1.0)],
         ctx,
       ),
     ),
@@ -13745,11 +12529,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "SORTBY",
-        [
-          Expr::Range("", "A1", "B2"),
-          Expr::Range("", "B1", "B2"),
-          Expr::Number(-1.0),
-        ],
+        [Range("", "A1", "B2"), Range("", "B1", "B2"), Number(-1.0)],
         ctx,
       ),
     ),
@@ -13761,7 +12541,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "FILTER",
-        [Expr::Range("", "A1", "A2"), Expr::Range("", "C1", "C2")],
+        [Range("", "A1", "A2"), Range("", "C1", "C2")],
         ctx,
       ),
     ),
@@ -13769,13 +12549,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FILTER",
-        [Expr::Range("", "A1", "A2")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "FILTER", [Range("", "A1", "A2")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -13787,7 +12561,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "UNIQUE",
-        [Expr::Range("", "D1", "D3"), Expr::Bool(false), Expr::Bool(true)],
+        [Range("", "D1", "D3"), Bool(false), Bool(true)],
         ctx,
       ),
     ),
@@ -13807,7 +12581,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "DATE",
-        [Expr::Number(1900.0), Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1900.0), Number(1.0), Number(1.0)],
         ctx,
       ),
       1.0,
@@ -13820,7 +12594,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "DATE",
-        [Expr::Number(1900.0), Expr::Number(1.0)],
+        [Number(1900.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -13834,7 +12608,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "TIME",
-        [Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)],
+        [Number(0.0), Number(0.0), Number(0.0)],
         ctx,
       ),
       0.0,
@@ -13847,7 +12621,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "TIME",
-        [Expr::Number(-1.0), Expr::Number(0.0), Expr::Number(0.0)],
+        [Number(-1.0), Number(0.0), Number(0.0)],
         ctx,
       ),
       formula_error_num,
@@ -13856,13 +12630,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TIME",
-        [Expr::Number(0.0), Expr::Number(0.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "TIME", [Number(0.0), Number(0.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -13874,7 +12642,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "DATEVALUE",
-        [Expr::String("1900-01-01")],
+        [String("1900-01-01")],
         ctx,
       ),
       1.0,
@@ -13887,7 +12655,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "DATEVALUE",
-        [Expr::String("not-a-date")],
+        [String("not-a-date")],
         ctx,
       ),
       formula_error_value,
@@ -13900,7 +12668,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "DATEVALUE",
-        [Expr::String("1900-01-01"), Expr::String("x")],
+        [String("1900-01-01"), String("x")],
         ctx,
       ),
       formula_error_value,
@@ -13910,13 +12678,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
 
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "TIMEVALUE",
-        [Expr::String("00:00:00")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "TIMEVALUE", [String("00:00:00")], ctx),
       0.0,
     ),
     content="true",
@@ -13927,7 +12689,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "TIMEVALUE",
-        [Expr::String("not-a-time")],
+        [String("not-a-time")],
         ctx,
       ),
       formula_error_value,
@@ -13940,7 +12702,7 @@ test "formula builtins wb: dynamic-array and date-time dispatch part 34" {
         workbook,
         "Sheet1",
         "TIMEVALUE",
-        [Expr::String("00:00:00"), Expr::String("x")],
+        [String("00:00:00"), String("x")],
         ctx,
       ),
       formula_error_value,
@@ -13961,7 +12723,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [Expr::Number(1.0), Expr::Number(2.0), Expr::String("d")],
+        [Number(1.0), Number(2.0), String("d")],
         ctx,
       ),
       1.0,
@@ -13974,7 +12736,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [Expr::Number(1.0), Expr::Number(31.0), Expr::String("md")],
+        [Number(1.0), Number(31.0), String("md")],
         ctx,
       ),
       30.0,
@@ -13987,7 +12749,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [Expr::Number(2.0), Expr::Number(1.0), Expr::String("d")],
+        [Number(2.0), Number(1.0), String("d")],
         ctx,
       ),
       formula_error_num,
@@ -14000,7 +12762,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "DATEDIF",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -14010,20 +12772,14 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
 
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "DAYS",
-        [Expr::Number(2.0), Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "DAYS", [Number(2.0), Number(1.0)], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "DAYS", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "DAYS", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14035,7 +12791,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [Expr::Number(1.0), Expr::Number(31.0)],
+        [Number(1.0), Number(31.0)],
         ctx,
       ),
       30.0,
@@ -14048,7 +12804,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "DAYS360",
-        [Expr::Number(1.0), Expr::Number(31.0), Expr::Bool(true)],
+        [Number(1.0), Number(31.0), Bool(true)],
         ctx,
       ),
       29.0,
@@ -14057,7 +12813,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "DAYS360", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "DAYS360", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14065,7 +12821,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
 
   inspect(
     is_formula_number_any(
-      eval_function(workbook, "Sheet1", "ISOWEEKNUM", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISOWEEKNUM", [Number(1.0)], ctx),
     ),
     content="true",
   )
@@ -14083,7 +12839,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "EDATE",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
       32.0,
@@ -14092,7 +12848,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "EDATE", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "EDATE", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14104,7 +12860,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "EOMONTH",
-        [Expr::Number(1.0), Expr::Number(0.0)],
+        [Number(1.0), Number(0.0)],
         ctx,
       ),
       31.0,
@@ -14113,7 +12869,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "EOMONTH", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "EOMONTH", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14125,7 +12881,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "YEARFRAC",
-        [Expr::Number(1.0), Expr::Number(2.0), Expr::Number(1.0)],
+        [Number(1.0), Number(2.0), Number(1.0)],
         ctx,
       ),
     ),
@@ -14133,7 +12889,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "YEARFRAC", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "YEARFRAC", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14145,7 +12901,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WEEKDAY",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
       2.0,
@@ -14158,7 +12914,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WEEKDAY",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       1.0,
@@ -14171,7 +12927,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WEEKDAY",
-        [Expr::Number(1.0), Expr::Number(3.0)],
+        [Number(1.0), Number(3.0)],
         ctx,
       ),
       0.0,
@@ -14184,7 +12940,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WEEKDAY",
-        [Expr::Number(1.0), Expr::Number(17.0)],
+        [Number(1.0), Number(17.0)],
         ctx,
       ),
     ),
@@ -14196,7 +12952,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WEEKDAY",
-        [Expr::Number(1.0), Expr::Number(9.0)],
+        [Number(1.0), Number(9.0)],
         ctx,
       ),
       formula_error_value,
@@ -14217,7 +12973,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WEEKNUM",
-        [Expr::Number(1.0), Expr::Number(17.0)],
+        [Number(1.0), Number(17.0)],
         ctx,
       ),
     ),
@@ -14229,7 +12985,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WEEKNUM",
-        [Expr::Number(1.0), Expr::Number(99.0)],
+        [Number(1.0), Number(99.0)],
         ctx,
       ),
       formula_error_num,
@@ -14250,7 +13006,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "NETWORKDAYS",
-        [Expr::Number(1.0), Expr::Number(5.0)],
+        [Number(1.0), Number(5.0)],
         ctx,
       ),
     ),
@@ -14262,7 +13018,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "NETWORKDAYS",
-        [Expr::Number(1.0), Expr::Number(5.0), Expr::Number(3.0)],
+        [Number(1.0), Number(5.0), Number(3.0)],
         ctx,
       ),
     ),
@@ -14270,7 +13026,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "NETWORKDAYS", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "NETWORKDAYS", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14282,7 +13038,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "NETWORKDAYS.INTL",
-        [Expr::Number(1.0), Expr::Number(5.0)],
+        [Number(1.0), Number(5.0)],
         ctx,
       ),
     ),
@@ -14294,12 +13050,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "NETWORKDAYS.INTL",
-        [
-          Expr::Number(1.0),
-          Expr::Number(5.0),
-          Expr::Number(2.0),
-          Expr::Number(3.0),
-        ],
+        [Number(1.0), Number(5.0), Number(2.0), Number(3.0)],
         ctx,
       ),
     ),
@@ -14307,13 +13058,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "NETWORKDAYS.INTL",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "NETWORKDAYS.INTL", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14325,7 +13070,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WORKDAY",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
     ),
@@ -14337,7 +13082,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WORKDAY",
-        [Expr::Number(1.0), Expr::Number(1.0), Expr::Number(3.0)],
+        [Number(1.0), Number(1.0), Number(3.0)],
         ctx,
       ),
     ),
@@ -14345,7 +13090,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "WORKDAY", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "WORKDAY", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14357,7 +13102,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WORKDAY.INTL",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
     ),
@@ -14369,12 +13114,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
         workbook,
         "Sheet1",
         "WORKDAY.INTL",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(2.0),
-          Expr::Number(3.0),
-        ],
+        [Number(1.0), Number(1.0), Number(2.0), Number(3.0)],
         ctx,
       ),
     ),
@@ -14382,13 +13122,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "WORKDAY.INTL",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "WORKDAY.INTL", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14400,7 +13134,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "NOW", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "NOW", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14411,7 +13145,7 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "TODAY", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "TODAY", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14419,49 +13153,49 @@ test "formula builtins wb: date-time and calendar dispatch part 35" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "YEAR", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "YEAR", [Number(1.0)], ctx),
       1900.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "MONTH", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "MONTH", [Number(1.0)], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "DAY", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "DAY", [Number(1.0)], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "HOUR", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "HOUR", [Number(0.0)], ctx),
       0.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "MINUTE", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "MINUTE", [Number(0.0)], ctx),
       0.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "SECOND", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "SECOND", [Number(0.0)], ctx),
       0.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "YEAR", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "YEAR", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14486,7 +13220,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "CHOOSE",
-        [Expr::Number(2.0), Expr::String("a"), Expr::String("b")],
+        [Number(2.0), String("a"), String("b")],
         ctx,
       ),
       "b",
@@ -14499,7 +13233,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "CHOOSE",
-        [Expr::Number(0.0), Expr::String("a"), Expr::String("b")],
+        [Number(0.0), String("a"), String("b")],
         ctx,
       ),
       0.0,
@@ -14512,7 +13246,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "CHOOSE",
-        [Expr::String("x"), Expr::String("a"), Expr::String("b")],
+        [String("x"), String("a"), String("b")],
         ctx,
       ),
       formula_error_value,
@@ -14525,7 +13259,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "CHOOSE",
-        [Expr::Number(5.0), Expr::String("a"), Expr::String("b")],
+        [Number(5.0), String("a"), String("b")],
         ctx,
       ),
       formula_error_value,
@@ -14546,7 +13280,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "CONCAT",
-        [Expr::String("a"), Expr::String("b")],
+        [String("a"), String("b")],
         ctx,
       ),
       "ab",
@@ -14563,7 +13297,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "IF", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "IF", [Bool(true)], ctx),
       true,
     ),
     content="true",
@@ -14574,7 +13308,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IF",
-        [Expr::Bool(true), Expr::Number(1.0), Expr::Number(2.0)],
+        [Bool(true), Number(1.0), Number(2.0)],
         ctx,
       ),
       1.0,
@@ -14587,7 +13321,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IF",
-        [Expr::Bool(false), Expr::Number(1.0), Expr::Number(2.0)],
+        [Bool(false), Number(1.0), Number(2.0)],
         ctx,
       ),
       2.0,
@@ -14596,13 +13330,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IF",
-        [Expr::String("bad"), Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IF", [String("bad"), Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14614,7 +13342,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IFERROR",
-        [Expr::FuncCall("NA", []), Expr::String("fallback")],
+        [FuncCall("NA", []), String("fallback")],
         ctx,
       ),
       "fallback",
@@ -14627,7 +13355,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IFERROR",
-        [Expr::Cell("", "Z99"), Expr::String("fallback")],
+        [Cell("", "Z99"), String("fallback")],
         ctx,
       ),
       0.0,
@@ -14640,7 +13368,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IFERROR",
-        [Expr::Number(1.0), Expr::String("fallback")],
+        [Number(1.0), String("fallback")],
         ctx,
       ),
       1.0,
@@ -14649,7 +13377,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IFERROR", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "IFERROR", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14661,7 +13389,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IFNA",
-        [Expr::FuncCall("NA", []), Expr::String("fallback")],
+        [FuncCall("NA", []), String("fallback")],
         ctx,
       ),
       "fallback",
@@ -14674,10 +13402,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IFNA",
-        [
-          Expr::FuncCall("VALUE", [Expr::String("bad")]),
-          Expr::String("fallback"),
-        ],
+        [FuncCall("VALUE", [String("bad")]), String("fallback")],
         ctx,
       ),
       formula_error_value,
@@ -14686,7 +13411,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IFNA", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "IFNA", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14694,7 +13419,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IFS", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "IFS", [Bool(true)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14705,12 +13430,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IFS",
-        [
-          Expr::Bool(true),
-          Expr::String("a"),
-          Expr::Bool(false),
-          Expr::String("b"),
-        ],
+        [Bool(true), String("a"), Bool(false), String("b")],
         ctx,
       ),
       "a",
@@ -14723,12 +13443,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IFS",
-        [
-          Expr::Bool(false),
-          Expr::String("a"),
-          Expr::Bool(false),
-          Expr::String("b"),
-        ],
+        [Bool(false), String("a"), Bool(false), String("b")],
         ctx,
       ),
       formula_error_na,
@@ -14741,7 +13456,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "IFS",
-        [Expr::String("bad"), Expr::String("a")],
+        [String("bad"), String("a")],
         ctx,
       ),
       formula_error_value,
@@ -14755,7 +13470,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "SWITCH",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -14768,12 +13483,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "SWITCH",
-        [
-          Expr::Number(2.0),
-          Expr::Number(1.0),
-          Expr::String("a"),
-          Expr::String("d"),
-        ],
+        [Number(2.0), Number(1.0), String("a"), String("d")],
         ctx,
       ),
       "d",
@@ -14786,12 +13496,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "SWITCH",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::String("a"),
-          Expr::String("d"),
-        ],
+        [Number(1.0), Number(1.0), String("a"), String("d")],
         ctx,
       ),
       "a",
@@ -14804,7 +13509,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "SWITCH",
-        [Expr::Number(2.0), Expr::Number(1.0), Expr::String("a")],
+        [Number(2.0), Number(1.0), String("a")],
         ctx,
       ),
       formula_error_na,
@@ -14814,14 +13519,14 @@ test "formula builtins wb: logical-info dispatch part 36" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISBLANK", [Expr::Cell("", "Z99")], ctx),
+      eval_function(workbook, "Sheet1", "ISBLANK", [Cell("", "Z99")], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISBLANK", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISBLANK", [Number(1.0)], ctx),
       false,
     ),
     content="true",
@@ -14840,7 +13545,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "ISERR",
-        [Expr::FuncCall("VALUE", [Expr::String("bad")])],
+        [FuncCall("VALUE", [String("bad")])],
         ctx,
       ),
       true,
@@ -14849,13 +13554,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
   )
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ISERR",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ISERR", [FuncCall("NA", [])], ctx),
       false,
     ),
     content="true",
@@ -14870,28 +13569,28 @@ test "formula builtins wb: logical-info dispatch part 36" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISEVEN", [Expr::Cell("", "Z99")], ctx),
+      eval_function(workbook, "Sheet1", "ISEVEN", [Cell("", "Z99")], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISEVEN", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISEVEN", [Number(1.0)], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISEVEN", [Expr::Number(2.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISEVEN", [Number(2.0)], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ISEVEN", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "ISEVEN", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14906,14 +13605,14 @@ test "formula builtins wb: logical-info dispatch part 36" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISODD", [Expr::Number(3.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISODD", [Number(3.0)], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ISODD", [Expr::String("bad")], ctx),
+      eval_function(workbook, "Sheet1", "ISODD", [String("bad")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -14928,20 +13627,14 @@ test "formula builtins wb: logical-info dispatch part 36" {
 
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ISERROR",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ISERROR", [FuncCall("NA", [])], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISERROR", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISERROR", [Number(1.0)], ctx),
       false,
     ),
     content="true",
@@ -14956,27 +13649,21 @@ test "formula builtins wb: logical-info dispatch part 36" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISLOGICAL", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "ISLOGICAL", [Bool(true)], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ISLOGICAL",
-        [Expr::String("TRUE")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ISLOGICAL", [String("TRUE")], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISLOGICAL", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISLOGICAL", [Number(1.0)], ctx),
       false,
     ),
     content="true",
@@ -14991,7 +13678,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISNA", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "ISNA", [FuncCall("NA", [])], ctx),
       true,
     ),
     content="true",
@@ -15002,7 +13689,7 @@ test "formula builtins wb: logical-info dispatch part 36" {
         workbook,
         "Sheet1",
         "ISNA",
-        [Expr::FuncCall("VALUE", [Expr::String("bad")])],
+        [FuncCall("VALUE", [String("bad")])],
         ctx,
       ),
       false,
@@ -15019,14 +13706,14 @@ test "formula builtins wb: logical-info dispatch part 36" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISNUMBER", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISNUMBER", [Number(1.0)], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISNUMBER", [Expr::String("1")], ctx),
+      eval_function(workbook, "Sheet1", "ISNUMBER", [String("1")], ctx),
       false,
     ),
     content="true",
@@ -15048,28 +13735,28 @@ test "formula builtins wb: text utility dispatch part 37" {
 
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "CHAR", [Expr::Number(65.0)], ctx),
+      eval_function(workbook, "Sheet1", "CHAR", [Number(65.0)], ctx),
       "A",
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "CHAR", [Expr::Number(-1.0)], ctx),
+      eval_function(workbook, "Sheet1", "CHAR", [Number(-1.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "CHAR", [Expr::Number(40000.0)], ctx),
+      eval_function(workbook, "Sheet1", "CHAR", [Number(40000.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "CHAR", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "CHAR", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -15084,34 +13771,28 @@ test "formula builtins wb: text utility dispatch part 37" {
 
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "UNICHAR", [Expr::Number(65.0)], ctx),
+      eval_function(workbook, "Sheet1", "UNICHAR", [Number(65.0)], ctx),
       "A",
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "UNICHAR", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "UNICHAR", [Number(0.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "UNICHAR", [Expr::Number(60000.0)], ctx),
+      eval_function(workbook, "Sheet1", "UNICHAR", [Number(60000.0)], ctx),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "UNICHAR",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "UNICHAR", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -15126,20 +13807,14 @@ test "formula builtins wb: text utility dispatch part 37" {
 
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "CLEAN", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "CLEAN", [String("abc")], ctx),
       "abc",
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "CLEAN",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "CLEAN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -15154,20 +13829,14 @@ test "formula builtins wb: text utility dispatch part 37" {
 
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "ENCODEURL", [Expr::String("a b")], ctx),
+      eval_function(workbook, "Sheet1", "ENCODEURL", [String("a b")], ctx),
       "a%20b",
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ENCODEURL",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ENCODEURL", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -15182,19 +13851,13 @@ test "formula builtins wb: text utility dispatch part 37" {
 
   inspect(
     is_formula_string_any(
-      eval_function(workbook, "Sheet1", "BAHTTEXT", [Expr::Number(12.5)], ctx),
+      eval_function(workbook, "Sheet1", "BAHTTEXT", [Number(12.5)], ctx),
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "BAHTTEXT",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "BAHTTEXT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -15209,14 +13872,14 @@ test "formula builtins wb: text utility dispatch part 37" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "CODE", [Expr::String("A")], ctx),
+      eval_function(workbook, "Sheet1", "CODE", [String("A")], ctx),
       65.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "CODE", [Expr::String("")], ctx),
+      eval_function(workbook, "Sheet1", "CODE", [String("")], ctx),
       0.0,
     ),
     content="true",
@@ -15231,14 +13894,14 @@ test "formula builtins wb: text utility dispatch part 37" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "UNICODE", [Expr::String("A")], ctx),
+      eval_function(workbook, "Sheet1", "UNICODE", [String("A")], ctx),
       65.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "UNICODE", [Expr::String("")], ctx),
+      eval_function(workbook, "Sheet1", "UNICODE", [String("")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -15257,7 +13920,7 @@ test "formula builtins wb: text utility dispatch part 37" {
         workbook,
         "Sheet1",
         "HYPERLINK",
-        [Expr::String("https://example.com")],
+        [String("https://example.com")],
         ctx,
       ),
       "https://example.com",
@@ -15270,7 +13933,7 @@ test "formula builtins wb: text utility dispatch part 37" {
         workbook,
         "Sheet1",
         "HYPERLINK",
-        [Expr::String("https://example.com"), Expr::String("label")],
+        [String("https://example.com"), String("label")],
         ctx,
       ),
       "label",
@@ -15283,7 +13946,7 @@ test "formula builtins wb: text utility dispatch part 37" {
         workbook,
         "Sheet1",
         "HYPERLINK",
-        [Expr::String("https://example.com"), Expr::FuncCall("NA", [])],
+        [String("https://example.com"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -15296,11 +13959,7 @@ test "formula builtins wb: text utility dispatch part 37" {
         workbook,
         "Sheet1",
         "HYPERLINK",
-        [
-          Expr::String("https://example.com"),
-          Expr::String("label"),
-          Expr::String("extra"),
-        ],
+        [String("https://example.com"), String("label"), String("extra")],
         ctx,
       ),
       formula_error_value,
@@ -15314,7 +13973,7 @@ test "formula builtins wb: text utility dispatch part 37" {
         workbook,
         "Sheet1",
         "DISPIMG",
-        [Expr::Number(7.0), Expr::String("img-id")],
+        [Number(7.0), String("img-id")],
         ctx,
       ),
       7.0,
@@ -15327,7 +13986,7 @@ test "formula builtins wb: text utility dispatch part 37" {
         workbook,
         "Sheet1",
         "_XLFN.DISPIMG",
-        [Expr::Number(9.0), Expr::String("img-id2")],
+        [Number(9.0), String("img-id2")],
         ctx,
       ),
       9.0,
@@ -15336,7 +13995,7 @@ test "formula builtins wb: text utility dispatch part 37" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "DISPIMG", [Expr::Number(7.0)], ctx),
+      eval_function(workbook, "Sheet1", "DISPIMG", [Number(7.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -15379,7 +14038,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "INDEX",
-        [Expr::Range("", "A1", "C3"), Expr::Number(2.0), Expr::Number(3.0)],
+        [Range("", "A1", "C3"), Number(2.0), Number(3.0)],
         ctx,
       ),
       200.0,
@@ -15392,7 +14051,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "INDEX",
-        [Expr::Range("", "A1", "C3"), Expr::Number(2.0)],
+        [Range("", "A1", "C3"), Number(2.0)],
         ctx,
       ),
       2.0,
@@ -15405,7 +14064,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "INDEX",
-        [Expr::Range("", "A1", "C3"), Expr::Number(0.0), Expr::Number(1.0)],
+        [Range("", "A1", "C3"), Number(0.0), Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -15418,7 +14077,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "INDEX",
-        [Expr::Range("", "A1", "C3"), Expr::Number(5.0), Expr::Number(1.0)],
+        [Range("", "A1", "C3"), Number(5.0), Number(1.0)],
         ctx,
       ),
       formula_error_ref,
@@ -15427,13 +14086,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "INDEX",
-        [Expr::Range("", "A1", "C3")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "INDEX", [Range("", "A1", "C3")], ctx),
       formula_error_value,
     ),
     content="true",
@@ -15445,7 +14098,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "MATCH",
-        [Expr::Number(2.0), Expr::Range("", "A1", "A3"), Expr::Number(0.0)],
+        [Number(2.0), Range("", "A1", "A3"), Number(0.0)],
         ctx,
       ),
       2.0,
@@ -15454,7 +14107,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "MATCH", [Expr::Number(2.0)], ctx),
+      eval_function(workbook, "Sheet1", "MATCH", [Number(2.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -15466,12 +14119,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "VLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "B3"),
-          Expr::Number(2.0),
-          Expr::Bool(false),
-        ],
+        [Number(2.0), Range("", "A1", "B3"), Number(2.0), Bool(false)],
         ctx,
       ),
       20.0,
@@ -15484,7 +14132,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "VLOOKUP",
-        [Expr::Number(2.0), Expr::Range("", "A1", "B3"), Expr::Number(2.0)],
+        [Number(2.0), Range("", "A1", "B3"), Number(2.0)],
         ctx,
       ),
       20.0,
@@ -15497,7 +14145,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "VLOOKUP",
-        [Expr::Number(2.0), Expr::Range("", "A1", "B3")],
+        [Number(2.0), Range("", "A1", "B3")],
         ctx,
       ),
       formula_error_value,
@@ -15511,12 +14159,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "HLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "D1", "F2"),
-          Expr::Number(2.0),
-          Expr::Bool(false),
-        ],
+        [Number(2.0), Range("", "D1", "F2"), Number(2.0), Bool(false)],
         ctx,
       ),
       22.0,
@@ -15529,7 +14172,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "HLOOKUP",
-        [Expr::Number(2.0), Expr::Range("", "D1", "F2"), Expr::Number(2.0)],
+        [Number(2.0), Range("", "D1", "F2"), Number(2.0)],
         ctx,
       ),
       22.0,
@@ -15542,7 +14185,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "HLOOKUP",
-        [Expr::Number(2.0), Expr::Range("", "D1", "F2")],
+        [Number(2.0), Range("", "D1", "F2")],
         ctx,
       ),
       formula_error_value,
@@ -15556,7 +14199,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [Expr::Number(2.0), Expr::Range("", "A1", "A3")],
+        [Number(2.0), Range("", "A1", "A3")],
         ctx,
       ),
       2.0,
@@ -15569,7 +14212,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [Expr::Number(2.0), Expr::Range("", "A1", "B3")],
+        [Number(2.0), Range("", "A1", "B3")],
         ctx,
       ),
       20.0,
@@ -15582,11 +14225,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-        ],
+        [Number(2.0), Range("", "A1", "A3"), Range("", "B1", "B3")],
         ctx,
       ),
       20.0,
@@ -15599,11 +14238,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [
-          Expr::Number(-1.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-        ],
+        [Number(-1.0), Range("", "A1", "A3"), Range("", "B1", "B3")],
         ctx,
       ),
       formula_error_na,
@@ -15616,7 +14251,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [Expr::Number(1.0), Expr::FuncCall("MUNIT", [Expr::Number(0.0)])],
+        [Number(1.0), FuncCall("MUNIT", [Number(0.0)])],
         ctx,
       ),
       formula_error_value,
@@ -15630,9 +14265,9 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         "Sheet1",
         "LOOKUP",
         [
-          Expr::Number(1.0),
-          Expr::FuncCall("MUNIT", [Expr::Number(0.0)]),
-          Expr::FuncCall("MUNIT", [Expr::Number(0.0)]),
+          Number(1.0),
+          FuncCall("MUNIT", [Number(0.0)]),
+          FuncCall("MUNIT", [Number(0.0)]),
         ],
         ctx,
       ),
@@ -15642,7 +14277,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "LOOKUP", [Expr::Number(2.0)], ctx),
+      eval_function(workbook, "Sheet1", "LOOKUP", [Number(2.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -15655,10 +14290,10 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         "Sheet1",
         "XLOOKUP",
         [
-          Expr::Number(9.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-          Expr::String("NF"),
+          Number(9.0),
+          Range("", "A1", "A3"),
+          Range("", "B1", "B3"),
+          String("NF"),
         ],
         ctx,
       ),
@@ -15672,11 +14307,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "B3"),
-        ],
+        [Number(2.0), Range("", "A1", "A3"), Range("", "B1", "B3")],
         ctx,
       ),
       20.0,
@@ -15689,11 +14320,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "A1", "A3"),
-          Expr::Range("", "B1", "C3"),
-        ],
+        [Number(2.0), Range("", "A1", "A3"), Range("", "B1", "C3")],
         ctx,
       ) {
       List(list) => list.length() == 2
@@ -15707,11 +14334,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [
-          Expr::Number(2.0),
-          Expr::Range("", "D1", "F1"),
-          Expr::Range("", "D2", "F3"),
-        ],
+        [Number(2.0), Range("", "D1", "F1"), Range("", "D2", "F3")],
         ctx,
       ) {
       List(list) => list.length() == 2
@@ -15725,7 +14348,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "XLOOKUP",
-        [Expr::Number(2.0), Expr::Range("", "A1", "A3")],
+        [Number(2.0), Range("", "A1", "A3")],
         ctx,
       ),
       formula_error_value,
@@ -15735,13 +14358,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ANCHORARRAY",
-        [Expr::Cell("", "G1")],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "ANCHORARRAY", [Cell("", "G1")], ctx) {
       List(list) => list.length() == 1
       _ => false
     },
@@ -15754,7 +14371,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [Expr::Number(1.0), Expr::Number(1.0)],
+        [Number(1.0), Number(1.0)],
         ctx,
       ),
       "$A$1",
@@ -15767,13 +14384,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Number(1.0),
-          Expr::Bool(true),
-          Expr::String("Sheet1"),
-        ],
+        [Number(1.0), Number(1.0), Number(1.0), Bool(true), String("Sheet1")],
         ctx,
       ),
       "Sheet1!$A$1",
@@ -15786,12 +14397,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [
-          Expr::Number(1.0),
-          Expr::Number(2.0),
-          Expr::Number(1.0),
-          Expr::Bool(false),
-        ],
+        [Number(1.0), Number(2.0), Number(1.0), Bool(false)],
         ctx,
       ),
       "R1C2",
@@ -15804,12 +14410,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "ADDRESS",
-        [
-          Expr::Number(1.0),
-          Expr::Number(20000.0),
-          Expr::Number(1.0),
-          Expr::Bool(true),
-        ],
+        [Number(1.0), Number(20000.0), Number(1.0), Bool(true)],
         ctx,
       ),
     ),
@@ -15817,7 +14418,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ADDRESS", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ADDRESS", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -15825,13 +14426,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
 
   inspect(
     match
-      eval_function(
-        workbook,
-        "Sheet1",
-        "INDIRECT",
-        [Expr::String("A1:B2")],
-        ctx,
-      ) {
+      eval_function(workbook, "Sheet1", "INDIRECT", [String("A1:B2")], ctx) {
       List(list) => list.length() == 4
       _ => false
     },
@@ -15839,7 +14434,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "INDIRECT", [Expr::String("[]")], ctx),
+      eval_function(workbook, "Sheet1", "INDIRECT", [String("[]")], ctx),
       formula_error_ref,
     ),
     content="true",
@@ -15850,7 +14445,7 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
         workbook,
         "Sheet1",
         "INDIRECT",
-        [Expr::String("R1C1"), Expr::Bool(false)],
+        [String("R1C1"), Bool(false)],
         ctx,
       ),
       1.0,
@@ -15867,14 +14462,14 @@ test "formula builtins wb: lookup and reference dispatch part 38" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::String("1")], ctx),
+      eval_function(workbook, "Sheet1", "ISTEXT", [String("1")], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "ISTEXT", [String("abc")], ctx),
       true,
     ),
     content="true",
@@ -15899,55 +14494,33 @@ test "formula builtins wb: finv and ftest helper branches part 39" {
   sheet.set_cell_value("B3", Numeric(3.0))
 
   inspect(
-    is_formula_number_any(
-      finv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(6.0),
-      ]),
-    ),
+    is_formula_number_any(finv_values([Number(0.5), Number(5.0), Number(6.0)])),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(6.0),
-      ]),
+      finv_values([Number(0.0), Number(5.0), Number(6.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(6.0),
-      ]),
+      finv_values([Number(0.5), Number(0.0), Number(6.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(0.0),
-      ]),
+      finv_values([Number(0.5), Number(5.0), Number(0.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(6.0),
-      ]),
+      finv_values([Error(formula_error_na), Number(5.0), Number(6.0)]),
       formula_error_na,
     ),
     content="true",
@@ -15955,63 +14528,43 @@ test "formula builtins wb: finv and ftest helper branches part 39" {
 
   inspect(
     is_formula_number_any(
-      finv_rt_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(6.0),
-      ]),
+      finv_rt_values([Number(0.5), Number(5.0), Number(6.0)]),
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_rt_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(6.0),
-      ]),
+      finv_rt_values([Number(0.0), Number(5.0), Number(6.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_rt_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(6.0),
-      ]),
+      finv_rt_values([Number(0.5), Number(0.0), Number(6.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_rt_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(0.0),
-      ]),
+      finv_rt_values([Number(0.5), Number(5.0), Number(0.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_rt_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(6.0),
-      ]),
+      finv_rt_values([Error(formula_error_na), Number(5.0), Number(6.0)]),
       formula_error_na,
     ),
     content="true",
   )
 
   let (n_collect, accu_collect) = ftest_collect([
-    FormulaValue::Number(1.0),
-    FormulaValue::String("x"),
-    FormulaValue::Number(3.0),
+    Number(1.0),
+    String("x"),
+    Number(3.0),
   ])
   inspect(n_collect == 2.0, content="true")
   inspect(accu_collect != 0.0, content="true")
@@ -16021,8 +14574,8 @@ test "formula builtins wb: finv and ftest helper branches part 39" {
       ftest_values(
         workbook,
         "Sheet1",
-        [Expr::Range("", "A1", "A1"), Expr::Range("", "B1", "B3")],
-        [FormulaValue::Empty, FormulaValue::Empty],
+        [Range("", "A1", "A1"), Range("", "B1", "B3")],
+        [Empty, Empty],
         ctx,
       ),
       formula_error_div,
@@ -16034,8 +14587,8 @@ test "formula builtins wb: finv and ftest helper branches part 39" {
       ftest_values(
         workbook,
         "Sheet1",
-        [Expr::Range("", "A1", "A3"), Expr::Range("", "B1", "B1")],
-        [FormulaValue::Empty, FormulaValue::Empty],
+        [Range("", "A1", "A3"), Range("", "B1", "B1")],
+        [Empty, Empty],
         ctx,
       ),
       formula_error_div,
@@ -16047,8 +14600,8 @@ test "formula builtins wb: finv and ftest helper branches part 39" {
       ftest_values(
         workbook,
         "Sheet1",
-        [Expr::Range("", "A1", "A3"), Expr::Range("", "B1", "B3")],
-        [FormulaValue::Empty, FormulaValue::Empty],
+        [Range("", "A1", "A3"), Range("", "B1", "B3")],
+        [Empty, Empty],
         ctx,
       ),
     ),
@@ -16085,7 +14638,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "COMBIN",
-        [Expr::Number(5.0), Expr::Number(2.0)],
+        [Number(5.0), Number(2.0)],
         ctx,
       ),
       10.0,
@@ -16098,7 +14651,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "COMBINA",
-        [Expr::Number(3.0), Expr::Number(2.0)],
+        [Number(3.0), Number(2.0)],
         ctx,
       ),
     ),
@@ -16110,7 +14663,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "COMBINA",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -16123,7 +14676,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "COMBINA",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -16137,7 +14690,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "COMPLEX",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       "1+2i",
@@ -16150,7 +14703,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "COMPLEX",
-        [Expr::FuncCall("NA", []), Expr::Number(2.0)],
+        [FuncCall("NA", []), Number(2.0)],
         ctx,
       ),
       formula_error_na,
@@ -16163,7 +14716,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "COMPLEX",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -16173,34 +14726,28 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "FACT", [Expr::Number(5.0)], ctx),
+      eval_function(workbook, "Sheet1", "FACT", [Number(5.0)], ctx),
       120.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "FACT", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "FACT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "FACTDOUBLE", [Expr::Number(6.0)], ctx),
+      eval_function(workbook, "Sheet1", "FACTDOUBLE", [Number(6.0)], ctx),
       48.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "FACTDOUBLE",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "FACTDOUBLE", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16212,7 +14759,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "MULTINOMIAL",
-        [Expr::Number(2.0), Expr::Number(1.0)],
+        [Number(2.0), Number(1.0)],
         ctx,
       ),
       3.0,
@@ -16222,13 +14769,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
 
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "MDETERM",
-        [Expr::Range("", "A1", "B2")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "MDETERM", [Range("", "A1", "B2")], ctx),
       -2.0,
     ),
     content="true",
@@ -16240,7 +14781,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "MINVERSE",
-        [Expr::Range("", "A1", "B2")],
+        [Range("", "A1", "B2")],
         ctx,
       ),
     ),
@@ -16252,7 +14793,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "MINVERSE",
-        [Expr::Range("", "A3", "B3")],
+        [Range("", "A3", "B3")],
         ctx,
       ),
       formula_error_value,
@@ -16266,7 +14807,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "MMULT",
-        [Expr::Range("", "A1", "B2"), Expr::Range("", "C1", "D2")],
+        [Range("", "A1", "B2"), Range("", "C1", "D2")],
         ctx,
       ),
     ),
@@ -16278,7 +14819,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "MMULT",
-        [Expr::Range("", "A1", "B1"), Expr::Range("", "C1", "D1")],
+        [Range("", "A1", "B1"), Range("", "C1", "D1")],
         ctx,
       ),
       formula_error_value,
@@ -16291,7 +14832,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "MMULT",
-        [Expr::Range("", "A1", "B1"), Expr::Range("", "C3", "D3")],
+        [Range("", "A1", "B1"), Range("", "C3", "D3")],
         ctx,
       ),
       formula_error_value,
@@ -16301,7 +14842,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
 
   inspect(
     is_formula_list(
-      eval_function(workbook, "Sheet1", "MUNIT", [Expr::Number(2.0)], ctx),
+      eval_function(workbook, "Sheet1", "MUNIT", [Number(2.0)], ctx),
     ),
     content="true",
   )
@@ -16311,7 +14852,7 @@ test "formula builtins wb: matrix and combin dispatch branches part 52" {
         workbook,
         "Sheet1",
         "TRANSPOSE",
-        [Expr::Range("", "A1", "B2")],
+        [Range("", "A1", "B2")],
         ctx,
       ),
     ),
@@ -16331,7 +14872,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "OCT2HEX",
-        [Expr::Number(7.0), Expr::Number(2.0)],
+        [Number(7.0), Number(2.0)],
         ctx,
       ),
     ),
@@ -16344,7 +14885,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELI",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -16357,7 +14898,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELJ",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -16371,7 +14912,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELK",
-        [Expr::Number(1.0), Expr::Number(0.0)],
+        [Number(1.0), Number(0.0)],
         ctx,
       ),
     ),
@@ -16383,7 +14924,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELK",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
     ),
@@ -16395,7 +14936,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELK",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -16408,7 +14949,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELK",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -16422,7 +14963,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELY",
-        [Expr::Number(1.0), Expr::Number(0.0)],
+        [Number(1.0), Number(0.0)],
         ctx,
       ),
     ),
@@ -16434,7 +14975,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELY",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
     ),
@@ -16446,7 +14987,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELY",
-        [Expr::FuncCall("NA", []), Expr::Number(1.0)],
+        [FuncCall("NA", []), Number(1.0)],
         ctx,
       ),
       formula_error_na,
@@ -16459,7 +15000,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "BESSELY",
-        [Expr::Number(1.0), Expr::FuncCall("NA", [])],
+        [Number(1.0), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -16469,20 +15010,14 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "DELTA",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "DELTA", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "DELTA", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "DELTA", [Number(0.0)], ctx),
       1.0,
     ),
     content="true",
@@ -16490,19 +15025,13 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
 
   inspect(
     is_formula_number_any(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ERF",
-        [Expr::Number(0.0), Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ERF", [Number(0.0), Number(1.0)], ctx),
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ERF", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "ERF", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16513,7 +15042,7 @@ test "formula builtins wb: bessel and delta/erf dispatch branches part 53" {
         workbook,
         "Sheet1",
         "ERF.PRECISE",
-        [Expr::FuncCall("NA", [])],
+        [FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -16530,13 +15059,7 @@ test "formula builtins wb: trig parse-error dispatch branches part 54" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ACOSH",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ACOSH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16550,60 +15073,42 @@ test "formula builtins wb: trig parse-error dispatch branches part 54" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ACOT", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "ACOT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ACOTH",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ACOTH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ASIN", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "ASIN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ASINH",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ASINH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ATAN", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "ATAN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ATANH",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ATANH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16611,42 +15116,42 @@ test "formula builtins wb: trig parse-error dispatch branches part 54" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COS", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "COS", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COSH", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "COSH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SIN", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "SIN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SINH", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "SINH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "TAN", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "TAN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "TANH", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "TANH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16654,21 +15159,21 @@ test "formula builtins wb: trig parse-error dispatch branches part 54" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COT", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "COT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "COTH", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "COTH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "CSC", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "CSC", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16683,13 +15188,7 @@ test "formula builtins wb: radix dispatch forwarding branches part 55" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ROMAN",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ROMAN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16701,7 +15200,7 @@ test "formula builtins wb: radix dispatch forwarding branches part 55" {
         workbook,
         "Sheet1",
         "BIN2HEX",
-        [Expr::String("1010"), Expr::Number(4.0)],
+        [String("1010"), Number(4.0)],
         ctx,
       ),
       "000A",
@@ -16714,7 +15213,7 @@ test "formula builtins wb: radix dispatch forwarding branches part 55" {
         workbook,
         "Sheet1",
         "BIN2OCT",
-        [Expr::String("1010"), Expr::Number(4.0)],
+        [String("1010"), Number(4.0)],
         ctx,
       ),
       "0012",
@@ -16727,7 +15226,7 @@ test "formula builtins wb: radix dispatch forwarding branches part 55" {
         workbook,
         "Sheet1",
         "HEX2BIN",
-        [Expr::String("A"), Expr::Number(8.0)],
+        [String("A"), Number(8.0)],
         ctx,
       ),
       "00001010",
@@ -16744,21 +15243,21 @@ test "formula builtins wb: complex and csch parse branches part 56" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "CSCH", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "CSCH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SEC", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "SEC", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SECH", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "SECH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16766,26 +15265,14 @@ test "formula builtins wb: complex and csch parse branches part 56" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMAGINARY",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMAGINARY", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMARGUMENT",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMARGUMENT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16796,7 +15283,7 @@ test "formula builtins wb: complex and csch parse branches part 56" {
         workbook,
         "Sheet1",
         "IMCONJUGATE",
-        [Expr::FuncCall("NA", [])],
+        [FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -16805,65 +15292,35 @@ test "formula builtins wb: complex and csch parse branches part 56" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMCOS",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMCOS", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMCOSH",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMCOSH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMCOT",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMCOT", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMCSC",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMCSC", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMCSCH",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMCSCH", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16874,7 +15331,7 @@ test "formula builtins wb: complex and csch parse branches part 56" {
         workbook,
         "Sheet1",
         "IMDIV",
-        [Expr::String("1+2i"), Expr::FuncCall("NA", [])],
+        [String("1+2i"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -16891,46 +15348,28 @@ test "formula builtins wb: complex log/power parse branches part 57" {
 
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMEXP",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMEXP", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "IMLN", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "IMLN", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMLOG10",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMLOG10", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "IMLOG2",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "IMLOG2", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
@@ -16942,7 +15381,7 @@ test "formula builtins wb: complex log/power parse branches part 57" {
         workbook,
         "Sheet1",
         "IMPOWER",
-        [Expr::String("1+i"), Expr::FuncCall("NA", [])],
+        [String("1+i"), FuncCall("NA", [])],
         ctx,
       ),
       formula_error_na,
@@ -16955,7 +15394,7 @@ test "formula builtins wb: complex log/power parse branches part 57" {
         workbook,
         "Sheet1",
         "IMPOWER",
-        [Expr::String("0"), Expr::String("-1")],
+        [String("0"), String("-1")],
         ctx,
       ),
       formula_error_num,
@@ -16980,21 +15419,21 @@ test "formula builtins wb: info type and meta dispatch part 40" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::String("1")], ctx),
+      eval_function(workbook, "Sheet1", "ISTEXT", [String("1")], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "ISTEXT", [String("abc")], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISTEXT", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISTEXT", [Number(1.0)], ctx),
       false,
     ),
     content="true",
@@ -17009,14 +15448,14 @@ test "formula builtins wb: info type and meta dispatch part 40" {
 
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISNONTEXT", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "ISNONTEXT", [String("abc")], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISNONTEXT", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISNONTEXT", [Number(1.0)], ctx),
       true,
     ),
     content="true",
@@ -17031,20 +15470,14 @@ test "formula builtins wb: info type and meta dispatch part 40" {
 
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ISREF",
-        [Expr::Range("", "A1", "A1")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ISREF", [Range("", "A1", "A1")], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISREF", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISREF", [Number(1.0)], ctx),
       false,
     ),
     content="true",
@@ -17059,33 +15492,21 @@ test "formula builtins wb: info type and meta dispatch part 40" {
 
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ISFORMULA",
-        [Expr::Cell("", "A1")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ISFORMULA", [Cell("", "A1")], ctx),
       true,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ISFORMULA",
-        [Expr::Cell("", "B1")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ISFORMULA", [Cell("", "B1")], ctx),
       false,
     ),
     content="true",
   )
   inspect(
     is_formula_bool(
-      eval_function(workbook, "Sheet1", "ISFORMULA", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISFORMULA", [Number(1.0)], ctx),
       false,
     ),
     content="true",
@@ -17100,20 +15521,14 @@ test "formula builtins wb: info type and meta dispatch part 40" {
 
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "ERROR.TYPE",
-        [Expr::FuncCall("NA", [])],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "ERROR.TYPE", [FuncCall("NA", [])], ctx),
       7.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ERROR.TYPE", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "ERROR.TYPE", [Number(1.0)], ctx),
       formula_error_na,
     ),
     content="true",
@@ -17132,26 +15547,14 @@ test "formula builtins wb: info type and meta dispatch part 40" {
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SHEET",
-        [Expr::Cell("Sheet2", "A1")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SHEET", [Cell("Sheet2", "A1")], ctx),
       2.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SHEET",
-        [Expr::String("NoSuchSheet")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SHEET", [String("NoSuchSheet")], ctx),
       formula_error_na,
     ),
     content="true",
@@ -17162,7 +15565,7 @@ test "formula builtins wb: info type and meta dispatch part 40" {
         workbook,
         "Sheet1",
         "SHEET",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -17176,20 +15579,14 @@ test "formula builtins wb: info type and meta dispatch part 40" {
   )
   inspect(
     is_formula_number(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "SHEETS",
-        [Expr::Range("", "A1", "A1")],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "SHEETS", [Range("", "A1", "A1")], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "SHEETS", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "SHEETS", [Number(1.0)], ctx),
       formula_error_na,
     ),
     content="true",
@@ -17200,7 +15597,7 @@ test "formula builtins wb: info type and meta dispatch part 40" {
         workbook,
         "Sheet1",
         "SHEETS",
-        [Expr::Number(1.0), Expr::Number(2.0)],
+        [Number(1.0), Number(2.0)],
         ctx,
       ),
       formula_error_value,
@@ -17210,7 +15607,7 @@ test "formula builtins wb: info type and meta dispatch part 40" {
 
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "TYPE", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "TYPE", [Number(1.0)], ctx),
       1.0,
     ),
     content="true",
@@ -17221,7 +15618,7 @@ test "formula builtins wb: info type and meta dispatch part 40" {
         workbook,
         "Sheet1",
         "TYPE",
-        [Expr::List([Expr::Number(1.0), Expr::Number(2.0)])],
+        [List([Number(1.0), Number(2.0)])],
         ctx,
       ),
       64.0,
@@ -17230,7 +15627,7 @@ test "formula builtins wb: info type and meta dispatch part 40" {
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "TYPE", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "TYPE", [FuncCall("NA", [])], ctx),
       16.0,
     ),
     content="true",
@@ -17245,35 +15642,35 @@ test "formula builtins wb: info type and meta dispatch part 40" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "T", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "T", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "T", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "T", [Number(1.0)], ctx),
       "",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "T", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "T", [String("abc")], ctx),
       "abc",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "T", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "T", [Bool(true)], ctx),
       "TRUE",
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      eval_function(workbook, "Sheet1", "T", [Expr::Cell("", "Z99")], ctx),
+      eval_function(workbook, "Sheet1", "T", [Cell("", "Z99")], ctx),
       "",
     ),
     content="true",
@@ -17284,7 +15681,7 @@ test "formula builtins wb: info type and meta dispatch part 40" {
         workbook,
         "Sheet1",
         "T",
-        [Expr::List([Expr::Number(1.0), Expr::Number(2.0)])],
+        [List([Number(1.0), Number(2.0)])],
         ctx,
       ),
       "",
@@ -17308,7 +15705,7 @@ test "formula builtins wb: info type and meta dispatch part 40" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "NA", [Expr::Number(1.0)], ctx),
+      eval_function(workbook, "Sheet1", "NA", [Number(1.0)], ctx),
       formula_error_value,
     ),
     content="true",
@@ -17316,49 +15713,49 @@ test "formula builtins wb: info type and meta dispatch part 40" {
 
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "N", [Expr::FuncCall("NA", [])], ctx),
+      eval_function(workbook, "Sheet1", "N", [FuncCall("NA", [])], ctx),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "N", [Expr::Number(3.0)], ctx),
+      eval_function(workbook, "Sheet1", "N", [Number(3.0)], ctx),
       3.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "N", [Expr::Bool(true)], ctx),
+      eval_function(workbook, "Sheet1", "N", [Bool(true)], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "N", [Expr::String("12.5")], ctx),
+      eval_function(workbook, "Sheet1", "N", [String("12.5")], ctx),
       12.5,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "N", [Expr::String("TRUE")], ctx),
+      eval_function(workbook, "Sheet1", "N", [String("TRUE")], ctx),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "N", [Expr::String("abc")], ctx),
+      eval_function(workbook, "Sheet1", "N", [String("abc")], ctx),
       0.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      eval_function(workbook, "Sheet1", "N", [Expr::Cell("", "Z99")], ctx),
+      eval_function(workbook, "Sheet1", "N", [Cell("", "Z99")], ctx),
       0.0,
     ),
     content="true",
@@ -17369,7 +15766,7 @@ test "formula builtins wb: info type and meta dispatch part 40" {
         workbook,
         "Sheet1",
         "N",
-        [Expr::List([Expr::Number(1.0), Expr::Number(2.0)])],
+        [List([Number(1.0), Number(2.0)])],
         ctx,
       ),
       1.0,
@@ -17393,13 +15790,7 @@ test "formula builtins wb: info type and meta dispatch part 40" {
   )
   inspect(
     is_formula_error(
-      eval_function(
-        workbook,
-        "Sheet1",
-        "NO_SUCH_DEFINED",
-        [Expr::Number(1.0)],
-        ctx,
-      ),
+      eval_function(workbook, "Sheet1", "NO_SUCH_DEFINED", [Number(1.0)], ctx),
       formula_error_name,
     ),
     content="true",
@@ -17409,21 +15800,18 @@ test "formula builtins wb: info type and meta dispatch part 40" {
 ///|
 test "formula builtins wb: aggregation helper branches part 41" {
   inspect(
-    is_formula_error(
-      sum_values([FormulaValue::Error(formula_error_na)]),
-      formula_error_na,
-    ),
+    is_formula_error(sum_values([Error(formula_error_na)]), formula_error_na),
     content="true",
   )
   inspect(
     is_formula_number(
       sum_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
-        FormulaValue::Bool(false),
-        FormulaValue::String("2.5"),
-        FormulaValue::String("bad"),
-        FormulaValue::Empty,
+        Number(1.0),
+        Bool(true),
+        Bool(false),
+        String("2.5"),
+        String("bad"),
+        Empty,
       ]),
       4.5,
     ),
@@ -17432,35 +15820,22 @@ test "formula builtins wb: aggregation helper branches part 41" {
 
   inspect(
     is_formula_number(
-      sumsq_values([
-        FormulaValue::List([
-          FormulaValue::Number(2.0),
-          FormulaValue::String("3"),
-          FormulaValue::Empty,
-          FormulaValue::List([]),
-        ]),
-      ]),
+      sumsq_values([List([Number(2.0), String("3"), Empty, List([])])]),
       13.0,
     ),
     content="true",
   )
   inspect(
-    is_formula_error(
-      sumsq_values([FormulaValue::List([FormulaValue::String("bad")])]),
-      formula_error_value,
-    ),
+    is_formula_error(sumsq_values([List([String("bad")])]), formula_error_value),
+    content="true",
+  )
+  inspect(
+    is_formula_error(sumsq_values([List([Bool(true)])]), formula_error_value),
     content="true",
   )
   inspect(
     is_formula_error(
-      sumsq_values([FormulaValue::List([FormulaValue::Bool(true)])]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      sumsq_values([FormulaValue::List([FormulaValue::Error(formula_error_na)])]),
+      sumsq_values([List([Error(formula_error_na)])]),
       formula_error_value,
     ),
     content="true",
@@ -17468,29 +15843,25 @@ test "formula builtins wb: aggregation helper branches part 41" {
   inspect(
     is_formula_number(
       sumsq_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-        FormulaValue::String(""),
-        FormulaValue::String("3"),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Empty,
+        Number(2.0),
+        Bool(true),
+        String(""),
+        String("3"),
+        Error(formula_error_na),
+        Empty,
       ]),
       14.0,
     ),
     content="true",
   )
   inspect(
-    is_formula_error(
-      sumsq_values([FormulaValue::String("bad")]),
-      formula_error_value,
-    ),
+    is_formula_error(sumsq_values([String("bad")]), formula_error_value),
     content="true",
   )
 
   let numbers_empty_allowed : Array[Double] = []
   inspect(
-    match
-      gcd_lcm_collect(FormulaValue::String(""), numbers_empty_allowed, true) {
+    match gcd_lcm_collect(String(""), numbers_empty_allowed, true) {
       Ok(_) => true
       _ => false
     },
@@ -17500,8 +15871,7 @@ test "formula builtins wb: aggregation helper branches part 41" {
 
   let numbers_parse_some : Array[Double] = []
   inspect(
-    match
-      gcd_lcm_collect(FormulaValue::String("2.5"), numbers_parse_some, true) {
+    match gcd_lcm_collect(String("2.5"), numbers_parse_some, true) {
       Ok(_) => true
       _ => false
     },
@@ -17512,8 +15882,7 @@ test "formula builtins wb: aggregation helper branches part 41" {
 
   let numbers_empty_disallowed : Array[Double] = []
   inspect(
-    match
-      gcd_lcm_collect(FormulaValue::String(""), numbers_empty_disallowed, false) {
+    match gcd_lcm_collect(String(""), numbers_empty_disallowed, false) {
       Err(Error(err)) => err == formula_error_value
       _ => false
     },
@@ -17522,62 +15891,41 @@ test "formula builtins wb: aggregation helper branches part 41" {
 
   inspect(is_formula_error(gcd_values([]), formula_error_value), content="true")
   inspect(
+    is_formula_error(gcd_values([Number(-1.0)]), formula_error_value),
+    content="true",
+  )
+  inspect(is_formula_number(gcd_values([Number(6.0)]), 6.0), content="true")
+  inspect(
     is_formula_error(
-      gcd_values([FormulaValue::Number(-1.0)]),
+      gcd_values([Number(6.0), Number(-2.0)]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
-    is_formula_number(gcd_values([FormulaValue::Number(6.0)]), 6.0),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      gcd_values([FormulaValue::Number(6.0), FormulaValue::Number(-2.0)]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number(
-      gcd_values([FormulaValue::Number(6.0), FormulaValue::Number(4.0)]),
-      2.0,
-    ),
+    is_formula_number(gcd_values([Number(6.0), Number(4.0)]), 2.0),
     content="true",
   )
 
   inspect(is_formula_error(lcm_values([]), formula_error_value), content="true")
   inspect(
+    is_formula_error(lcm_values([String("bad")]), formula_error_value),
+    content="true",
+  )
+  inspect(
+    is_formula_error(lcm_values([Number(-1.0)]), formula_error_value),
+    content="true",
+  )
+  inspect(is_formula_number(lcm_values([Number(6.0)]), 6.0), content="true")
+  inspect(
     is_formula_error(
-      lcm_values([FormulaValue::String("bad")]),
+      lcm_values([Number(6.0), Number(-2.0)]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
-    is_formula_error(
-      lcm_values([FormulaValue::Number(-1.0)]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number(lcm_values([FormulaValue::Number(6.0)]), 6.0),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      lcm_values([FormulaValue::Number(6.0), FormulaValue::Number(-2.0)]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number(
-      lcm_values([FormulaValue::Number(2.0), FormulaValue::Number(3.0)]),
-      6.0,
-    ),
+    is_formula_number(lcm_values([Number(2.0), Number(3.0)]), 6.0),
     content="true",
   )
 }
@@ -17585,45 +15933,42 @@ test "formula builtins wb: aggregation helper branches part 41" {
 ///|
 test "formula builtins wb: bitwise/radix helper branches part 42" {
   inspect(
-    match bitwise_number(FormulaValue::Bool(true)) {
+    match bitwise_number(Bool(true)) {
       Ok(num) => num == 1.0
       _ => false
     },
     content="true",
   )
   inspect(
-    match bitwise_number(FormulaValue::Empty) {
+    match bitwise_number(Empty) {
       Ok(num) => num == 0.0
       _ => false
     },
     content="true",
   )
   inspect(
-    match bitwise_number(FormulaValue::String("5")) {
+    match bitwise_number(String("5")) {
       Ok(num) => num == 5.0
       _ => false
     },
     content="true",
   )
   inspect(
-    match bitwise_number(FormulaValue::String("bad")) {
+    match bitwise_number(String("bad")) {
       Err(Error(err)) => err == formula_error_num
       _ => false
     },
     content="true",
   )
   inspect(
-    match bitwise_number(FormulaValue::List([])) {
+    match bitwise_number(List([])) {
       Ok(num) => num == 0.0
       _ => false
     },
     content="true",
   )
   inspect(
-    match
-      bitwise_number(
-        FormulaValue::List([FormulaValue::List([FormulaValue::String("bad")])]),
-      ) {
+    match bitwise_number(List([List([String("bad")])])) {
       Err(Error(err)) => err == formula_error_num
       _ => false
     },
@@ -17631,87 +15976,54 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
   )
   inspect(
     is_formula_error(
-      bitwise_values("BITAND", [FormulaValue::Number(1.0)]),
+      bitwise_values("BITAND", [Number(1.0)]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      bitwise_values("BITAND", [
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(1.0),
-      ]),
+      bitwise_values("BITAND", [Number(-1.0), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
-    is_formula_number(
-      bitwise_values("BITAND", [
-        FormulaValue::Number(6.0),
-        FormulaValue::Number(3.0),
-      ]),
-      2.0,
-    ),
+    is_formula_number(bitwise_values("BITAND", [Number(6.0), Number(3.0)]), 2.0),
+    content="true",
+  )
+  inspect(
+    is_formula_number(bitwise_values("BITOR", [Number(6.0), Number(3.0)]), 7.0),
+    content="true",
+  )
+  inspect(
+    is_formula_number(bitwise_values("BITXOR", [Number(6.0), Number(3.0)]), 5.0),
     content="true",
   )
   inspect(
     is_formula_number(
-      bitwise_values("BITOR", [
-        FormulaValue::Number(6.0),
-        FormulaValue::Number(3.0),
-      ]),
-      7.0,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number(
-      bitwise_values("BITXOR", [
-        FormulaValue::Number(6.0),
-        FormulaValue::Number(3.0),
-      ]),
-      5.0,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number(
-      bitwise_values("BITLSHIFT", [
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]),
+      bitwise_values("BITLSHIFT", [Number(2.0), Number(2.0)]),
       8.0,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      bitwise_values("BITRSHIFT", [
-        FormulaValue::Number(8.0),
-        FormulaValue::Number(2.0),
-      ]),
+      bitwise_values("BITRSHIFT", [Number(8.0), Number(2.0)]),
       2.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      bitwise_values("BITAND", [
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-      ]),
+      bitwise_values("BITAND", [Error(formula_error_na), Number(1.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      bitwise_values("BITAND", [
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      bitwise_values("BITAND", [Number(1.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -17735,69 +16047,47 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
   )
 
   inspect(
+    is_formula_error(base_values([Number(10.0)]), formula_error_value),
+    content="true",
+  )
+  inspect(
     is_formula_error(
-      base_values([FormulaValue::Number(10.0)]),
+      base_values([Number(10.0), Number(2.0), String("2"), String("extra")]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      base_values([
-        FormulaValue::Number(10.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::String("2"),
-        FormulaValue::String("extra"),
-      ]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      base_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-      ]),
+      base_values([Error(formula_error_na), Number(2.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      base_values([
-        FormulaValue::Number(10.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      base_values([Number(10.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      base_values([FormulaValue::Number(10.0), FormulaValue::Number(1.0)]),
+      base_values([Number(10.0), Number(1.0)]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      base_values([
-        FormulaValue::Number(10.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::String("bad"),
-      ]),
+      base_values([Number(10.0), Number(2.0), String("bad")]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      base_values([
-        FormulaValue::Number(31.0),
-        FormulaValue::Number(16.0),
-        FormulaValue::String("4"),
-      ]),
+      base_values([Number(31.0), Number(16.0), String("4")]),
       "001F",
     ),
     content="true",
@@ -17818,74 +16108,55 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
   )
   inspect(
     is_formula_error(
-      dec2x_values("DEC2BIN", [
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-      ]),
+      dec2x_values("DEC2BIN", [Number(1.0), Number(1.0), Number(1.0)]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      dec2x_values("DEC2BIN", [FormulaValue::Number(600.0)]),
+      dec2x_values("DEC2BIN", [Number(600.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      dec2x_values("DEC2BIN", [FormulaValue::Error(formula_error_na)]),
+      dec2x_values("DEC2BIN", [Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      dec2x_values("DEC2BIN", [
-        FormulaValue::Number(5.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      dec2x_values("DEC2BIN", [Number(5.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      dec2x_values("DEC2BIN", [
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(-1.0),
-      ]),
+      dec2x_values("DEC2BIN", [Number(5.0), Number(-1.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      dec2x_values("DEC2BIN", [
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(1.0),
-      ]),
+      dec2x_values("DEC2BIN", [Number(5.0), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_string(
-      dec2x_values("DEC2HEX", [
-        FormulaValue::Number(26.0),
-        FormulaValue::Number(4.0),
-      ]),
+      dec2x_values("DEC2HEX", [Number(26.0), Number(4.0)]),
       "001A",
     ),
     content="true",
   )
   inspect(
-    is_formula_string(
-      dec2x_values("DEC2HEX", [FormulaValue::Number(-1.0)]),
-      "FFFFFFFFFF",
-    ),
+    is_formula_string(dec2x_values("DEC2HEX", [Number(-1.0)]), "FFFFFFFFFF"),
     content="true",
   )
 
@@ -17934,107 +16205,75 @@ test "formula builtins wb: bitwise/radix helper branches part 42" {
 test "formula builtins wb: stats/beta helper branches part 43" {
   let multinomial_numbers_empty_text : Array[Double] = []
   inspect(
-    match
-      multinomial_collect(
-        FormulaValue::String(""),
-        multinomial_numbers_empty_text,
-      ) {
+    match multinomial_collect(String(""), multinomial_numbers_empty_text) {
       Ok(_) => multinomial_numbers_empty_text.length() == 0
       _ => false
     },
     content="true",
   )
   inspect(
-    is_formula_number(
-      multinomial_values([FormulaValue::Number(2.0), FormulaValue::Number(1.0)]),
-      3.0,
-    ),
+    is_formula_number(multinomial_values([Number(2.0), Number(1.0)]), 3.0),
     content="true",
   )
   inspect(
     is_formula_error(
-      multinomial_values([FormulaValue::Error(formula_error_na)]),
+      multinomial_values([Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
 
   inspect(
-    is_formula_number(
-      product_values([FormulaValue::String("2"), FormulaValue::Number(3.0)]),
-      6.0,
-    ),
+    is_formula_number(product_values([String("2"), Number(3.0)]), 6.0),
     content="true",
   )
   inspect(
-    is_formula_error(
-      product_values([FormulaValue::String("bad")]),
-      formula_error_value,
-    ),
+    is_formula_error(product_values([String("bad")]), formula_error_value),
     content="true",
   )
   inspect(
     is_formula_number(
-      product_values([
-        FormulaValue::List([FormulaValue::String("2"), FormulaValue::Bool(true)]),
-        FormulaValue::Number(4.0),
-      ]),
+      product_values([List([String("2"), Bool(true)]), Number(4.0)]),
       4.0,
     ),
     content="true",
   )
 
   inspect(
-    is_formula_number(
-      average_values([FormulaValue::String("bad"), FormulaValue::Number(2.0)]),
-      2.0,
-    ),
+    is_formula_number(average_values([String("bad"), Number(2.0)]), 2.0),
     content="true",
   )
   inspect(
     is_formula_error(
-      average_values([FormulaValue::String("bad"), FormulaValue::Bool(true)]),
+      average_values([String("bad"), Bool(true)]),
       formula_error_div,
     ),
     content="true",
   )
 
   inspect(
-    is_formula_number(
-      averagea_values([FormulaValue::String(""), FormulaValue::Number(2.0)]),
-      2.0,
-    ),
+    is_formula_number(averagea_values([String(""), Number(2.0)]), 2.0),
     content="true",
   )
   inspect(
-    is_formula_error(
-      averagea_values([FormulaValue::String(""), FormulaValue::Empty]),
-      formula_error_div,
-    ),
+    is_formula_error(averagea_values([String(""), Empty]), formula_error_div),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      stdev_values(true, [FormulaValue::Error(formula_error_na)]),
+      stdev_values(true, [Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
-    is_formula_error(
-      stdev_values(false, [FormulaValue::Number(1.0)]),
-      formula_error_div,
-    ),
+    is_formula_error(stdev_values(false, [Number(1.0)]), formula_error_div),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      stdev_values(false, [
-        FormulaValue::Number(1.0),
-        FormulaValue::Empty,
-        FormulaValue::Number(2.0),
-      ]),
+      stdev_values(false, [Number(1.0), Empty, Number(2.0)]),
     ),
     content="true",
   )
@@ -18042,13 +16281,7 @@ test "formula builtins wb: stats/beta helper branches part 43" {
   inspect(
     is_formula_number_any(
       variance_values(
-        [
-          FormulaValue::Number(2.0),
-          FormulaValue::Bool(true),
-          FormulaValue::String(""),
-          FormulaValue::String("bad"),
-          FormulaValue::Empty,
-        ],
+        [Number(2.0), Bool(true), String(""), String("bad"), Empty],
         false,
         true,
       ),
@@ -18057,29 +16290,26 @@ test "formula builtins wb: stats/beta helper branches part 43" {
   )
   inspect(
     is_formula_error(
-      variance_values([FormulaValue::Number(2.0)], true, false),
+      variance_values([Number(2.0)], true, false),
       formula_error_div,
     ),
     content="true",
   )
 
   inspect(
+    is_formula_error(trimmean_values([Number(1.0)]), formula_error_value),
+    content="true",
+  )
+  inspect(
     is_formula_error(
-      trimmean_values([FormulaValue::Number(1.0)]),
+      trimmean_values([Number(1.0), String("bad")]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      trimmean_values([FormulaValue::Number(1.0), FormulaValue::String("bad")]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      trimmean_values([FormulaValue::Number(1.0), FormulaValue::Number(-0.1)]),
+      trimmean_values([Number(1.0), Number(-0.1)]),
       formula_error_num,
     ),
     content="true",
@@ -18087,13 +16317,8 @@ test "formula builtins wb: stats/beta helper branches part 43" {
   inspect(
     is_formula_number(
       trimmean_values([
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(2.0),
-          FormulaValue::Number(100.0),
-          FormulaValue::Number(101.0),
-        ]),
-        FormulaValue::Number(0.5),
+        List([Number(1.0), Number(2.0), Number(100.0), Number(101.0)]),
+        Number(0.5),
       ]),
       51.0,
     ),
@@ -18102,11 +16327,14 @@ test "formula builtins wb: stats/beta helper branches part 43" {
 
   inspect(
     is_formula_error(
-      beta_dist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]),
+      beta_dist_values([Number(0.5), Number(2.0), Number(2.0)]),
+      formula_error_value,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      beta_dist_values([String("bad"), Number(2.0), Number(2.0), Bool(true)]),
       formula_error_value,
     ),
     content="true",
@@ -18114,22 +16342,10 @@ test "formula builtins wb: stats/beta helper branches part 43" {
   inspect(
     is_formula_error(
       beta_dist_values([
-        FormulaValue::String("bad"),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
-      formula_error_value,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      beta_dist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
+        Number(0.5),
+        Error(formula_error_na),
+        Number(2.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -18138,10 +16354,10 @@ test "formula builtins wb: stats/beta helper branches part 43" {
   inspect(
     is_formula_error(
       beta_dist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
+        Number(0.5),
+        Number(2.0),
+        Error(formula_error_na),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -18149,24 +16365,14 @@ test "formula builtins wb: stats/beta helper branches part 43" {
   )
   inspect(
     is_formula_error(
-      beta_dist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
+      beta_dist_values([Number(0.5), Number(0.0), Number(2.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      beta_dist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::String("bad"),
-      ]),
+      beta_dist_values([Number(0.5), Number(2.0), Number(2.0), String("bad")]),
       formula_error_value,
     ),
     content="true",
@@ -18174,11 +16380,11 @@ test "formula builtins wb: stats/beta helper branches part 43" {
   inspect(
     is_formula_error(
       beta_dist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-        FormulaValue::Error(formula_error_na),
+        Number(0.5),
+        Number(2.0),
+        Number(2.0),
+        Bool(true),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -18186,24 +16392,19 @@ test "formula builtins wb: stats/beta helper branches part 43" {
   )
   inspect(
     is_formula_number_any(
-      beta_dist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
+      beta_dist_values([Number(0.5), Number(2.0), Number(2.0), Bool(true)]),
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
       beta_dist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(false),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
+        Number(0.5),
+        Number(2.0),
+        Number(2.0),
+        Bool(false),
+        Number(0.0),
+        Number(1.0),
       ]),
     ),
     content="true",
@@ -18215,12 +16416,12 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   inspect(
     is_formula_error(
       beta_dist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
+        Number(0.5),
+        Number(2.0),
+        Number(2.0),
+        Bool(true),
+        Number(0.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -18229,12 +16430,12 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   inspect(
     is_formula_error(
       beta_dist_values([
-        FormulaValue::Number(0.1),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-        FormulaValue::Number(0.2),
-        FormulaValue::Number(1.0),
+        Number(0.1),
+        Number(2.0),
+        Number(2.0),
+        Bool(true),
+        Number(0.2),
+        Number(1.0),
       ]),
       formula_error_num,
     ),
@@ -18243,12 +16444,12 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   inspect(
     is_formula_error(
       beta_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
+        Number(1.0),
+        Number(2.0),
+        Number(2.0),
+        Bool(true),
+        Number(1.0),
+        Number(1.0),
       ]),
       formula_error_num,
     ),
@@ -18257,21 +16458,39 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
 
   inspect(
     is_formula_error(
-      betadist_values([
-        FormulaValue::String("bad"),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]),
+      betadist_values([String("bad"), Number(2.0), Number(2.0)]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
+      betadist_values([Number(0.5), Error(formula_error_na), Number(2.0)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      betadist_values([Number(0.5), Number(2.0), Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      betadist_values([Number(0.5), Number(0.0), Number(2.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
       betadist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
+        Number(0.5),
+        Number(2.0),
+        Number(2.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -18280,9 +16499,11 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   inspect(
     is_formula_error(
       betadist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
+        Number(0.5),
+        Number(2.0),
+        Number(2.0),
+        Number(0.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -18291,9 +16512,11 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   inspect(
     is_formula_error(
       betadist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(2.0),
+        Number(2.0),
+        Number(2.0),
+        Number(2.0),
+        Number(0.0),
+        Number(1.0),
       ]),
       formula_error_num,
     ),
@@ -18302,49 +16525,11 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   inspect(
     is_formula_error(
       betadist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      betadist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      betadist_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      betadist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
+        Number(1.0),
+        Number(2.0),
+        Number(2.0),
+        Number(1.0),
+        Number(1.0),
       ]),
       formula_error_num,
     ),
@@ -18352,11 +16537,7 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   )
   inspect(
     is_formula_number_any(
-      betadist_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]),
+      betadist_values([Number(0.5), Number(2.0), Number(2.0)]),
     ),
     content="true",
   )
@@ -18366,22 +16547,35 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
 
   inspect(
     is_formula_error(
-      betainv_values([
-        FormulaValue::String("bad"),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]),
+      betainv_values([String("bad"), Number(2.0), Number(2.0)]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      betainv_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]),
+      betainv_values([Number(0.0), Number(2.0), Number(2.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      betainv_values([Number(0.5), Error(formula_error_na), Number(2.0)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      betainv_values([Number(0.5), Number(2.0), Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      betainv_values([Number(0.5), Number(0.0), Number(2.0)]),
       formula_error_num,
     ),
     content="true",
@@ -18389,9 +16583,10 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   inspect(
     is_formula_error(
       betainv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
+        Number(0.5),
+        Number(2.0),
+        Number(2.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -18400,9 +16595,11 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   inspect(
     is_formula_error(
       betainv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
+        Number(0.5),
+        Number(2.0),
+        Number(2.0),
+        Number(0.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -18411,47 +16608,11 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
   inspect(
     is_formula_error(
       betainv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(2.0),
-      ]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      betainv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      betainv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      betainv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
+        Number(0.5),
+        Number(2.0),
+        Number(2.0),
+        Number(1.0),
+        Number(1.0),
       ]),
       formula_error_num,
     ),
@@ -18463,140 +16624,90 @@ test "formula builtins wb: beta inverse/legacy helper branches part 44" {
 test "formula builtins wb: normal/confidence helper branches part 45" {
   inspect(
     is_formula_number_any(
-      normdist_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
-      ]),
+      normdist_values([Number(0.0), Number(0.0), Number(1.0), Bool(true)]),
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      normdist_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(false),
-      ]),
+      normdist_values([Number(0.0), Number(0.0), Number(1.0), Bool(false)]),
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      norminv_values([
-        FormulaValue::Number(1.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      norminv_values([Number(1.5), Number(0.0), Number(1.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      norminv_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      norminv_values([Number(0.0), Number(0.0), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      norminv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      norminv_values([Number(0.5), Number(0.0), Number(1.0)]),
     ),
     content="true",
   )
   inspect(
-    is_formula_number_any(
-      norm_s_dist_values([FormulaValue::Number(0.0), FormulaValue::Bool(true)]),
-    ),
+    is_formula_number_any(norm_s_dist_values([Number(0.0), Bool(true)])),
     content="true",
   )
   inspect(
-    is_formula_number_any(
-      norm_s_dist_values([FormulaValue::Number(0.0), FormulaValue::Bool(false)]),
-    ),
+    is_formula_number_any(norm_s_dist_values([Number(0.0), Bool(false)])),
     content="true",
   )
   inspect(
-    is_formula_number_any(norms_dist_values([FormulaValue::Number(0.0)])),
+    is_formula_number_any(norms_dist_values([Number(0.0)])),
     content="true",
   )
   inspect(
-    is_formula_number_any(norm_s_inv_values([FormulaValue::Number(0.5)])),
+    is_formula_number_any(norm_s_inv_values([Number(0.5)])),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      confidence_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10.0),
-      ]),
+      confidence_values([Error(formula_error_na), Number(1.0), Number(10.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      confidence_values([
-        FormulaValue::Number(0.05),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(10.0),
-      ]),
+      confidence_values([Number(0.05), Error(formula_error_na), Number(10.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      confidence_values([
-        FormulaValue::Number(0.05),
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      confidence_values([Number(0.05), Number(1.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      confidence_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10.0),
-      ]),
+      confidence_values([Number(0.0), Number(1.0), Number(10.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      confidence_values([
-        FormulaValue::Number(0.05),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10.0),
-      ]),
+      confidence_values([Number(0.05), Number(1.0), Number(10.0)]),
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      confidence_values([
-        FormulaValue::Number(0.0 / 0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10.0),
-      ]),
+      confidence_values([Number(0.0 / 0.0), Number(1.0), Number(10.0)]),
       formula_error_num,
     ),
     content="true",
@@ -18604,66 +16715,42 @@ test "formula builtins wb: normal/confidence helper branches part 45" {
 
   inspect(
     is_formula_error(
-      confidence_t_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10.0),
-      ]),
+      confidence_t_values([Error(formula_error_na), Number(1.0), Number(10.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      confidence_t_values([
-        FormulaValue::Number(0.05),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(10.0),
-      ]),
+      confidence_t_values([Number(0.05), Error(formula_error_na), Number(10.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      confidence_t_values([
-        FormulaValue::Number(0.05),
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      confidence_t_values([Number(0.05), Number(1.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      confidence_t_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10.0),
-      ]),
+      confidence_t_values([Number(0.0), Number(1.0), Number(10.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      confidence_t_values([
-        FormulaValue::Number(0.05),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-      ]),
+      confidence_t_values([Number(0.05), Number(1.0), Number(1.0)]),
       formula_error_div,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      confidence_t_values([
-        FormulaValue::Number(0.05),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10.0),
-      ]),
+      confidence_t_values([Number(0.05), Number(1.0), Number(10.0)]),
     ),
     content="true",
   )
@@ -18673,67 +16760,48 @@ test "formula builtins wb: normal/confidence helper branches part 45" {
 test "formula builtins wb: gamma/loginv helper branches part 46" {
   inspect(
     is_formula_error(
-      loginv_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      loginv_values([Number(0.0), Number(0.0), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      loginv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-      ]),
+      loginv_values([Number(0.5), Number(0.0), Number(0.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      loginv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      loginv_values([Number(0.5), Number(0.0), Number(1.0)]),
       1.0,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      loginv_values([
-        FormulaValue::Number(0.0 / 0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      loginv_values([Number(0.0 / 0.0), Number(0.0), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
 
   inspect(
-    is_formula_error(gamma_value([FormulaValue::Number(0.0)]), formula_error_na),
+    is_formula_error(gamma_value([Number(0.0)]), formula_error_na),
     content="true",
   )
-  inspect(
-    is_formula_number_any(gamma_value([FormulaValue::Number(2.0)])),
-    content="true",
-  )
+  inspect(is_formula_number_any(gamma_value([Number(2.0)])), content="true")
   inspect(gamma_pdf(1.0, 2.0, 2.0) > 0.0, content="true")
   inspect(gamma_cdf(1.0, 2.0, 2.0) > 0.0, content="true")
 
   inspect(
     is_formula_error(
       gamma_dist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
+        Error(formula_error_na),
+        Number(2.0),
+        Number(2.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -18742,10 +16810,10 @@ test "formula builtins wb: gamma/loginv helper branches part 46" {
   inspect(
     is_formula_error(
       gamma_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Error(formula_error_na),
+        Number(2.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -18754,10 +16822,10 @@ test "formula builtins wb: gamma/loginv helper branches part 46" {
   inspect(
     is_formula_error(
       gamma_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Number(2.0),
+        Error(formula_error_na),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -18766,10 +16834,10 @@ test "formula builtins wb: gamma/loginv helper branches part 46" {
   inspect(
     is_formula_error(
       gamma_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
+        Number(1.0),
+        Number(2.0),
+        Number(2.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -18777,47 +16845,27 @@ test "formula builtins wb: gamma/loginv helper branches part 46" {
   )
   inspect(
     is_formula_error(
-      gamma_dist_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
+      gamma_dist_values([Number(-1.0), Number(2.0), Number(2.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      gamma_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
+      gamma_dist_values([Number(1.0), Number(0.0), Number(2.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      gamma_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
+      gamma_dist_values([Number(1.0), Number(2.0), Number(2.0), Bool(true)]),
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      gamma_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(false),
-      ]),
+      gamma_dist_values([Number(1.0), Number(2.0), Number(2.0), Bool(false)]),
     ),
     content="true",
   )
@@ -18826,99 +16874,66 @@ test "formula builtins wb: gamma/loginv helper branches part 46" {
 
   inspect(
     is_formula_error(
-      gamma_inv_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]),
+      gamma_inv_values([Error(formula_error_na), Number(2.0), Number(2.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      gamma_inv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-      ]),
+      gamma_inv_values([Number(0.5), Error(formula_error_na), Number(2.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      gamma_inv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      gamma_inv_values([Number(0.5), Number(2.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      gamma_inv_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]),
+      gamma_inv_values([Number(1.0), Number(2.0), Number(2.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      gamma_inv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(2.0),
-      ]),
+      gamma_inv_values([Number(0.5), Number(0.0), Number(2.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      gamma_inv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
-      ]),
+      gamma_inv_values([Number(0.5), Number(2.0), Number(2.0)]),
     ),
     content="true",
   )
 
   inspect(
-    is_formula_error(
-      gammaln_values([FormulaValue::Number(0.0)]),
-      formula_error_na,
-    ),
+    is_formula_error(gammaln_values([Number(0.0)]), formula_error_na),
     content="true",
   )
-  inspect(
-    is_formula_number_any(gammaln_values([FormulaValue::Number(2.0)])),
-    content="true",
-  )
+  inspect(is_formula_number_any(gammaln_values([Number(2.0)])), content="true")
 }
 
 ///|
 test "formula builtins wb: lognorm/expon/poisson/binom helper branches part 47" {
   inspect(
-    is_formula_error(
-      gammaln_precise_values([FormulaValue::Number(0.0)]),
-      formula_error_num,
-    ),
+    is_formula_error(gammaln_precise_values([Number(0.0)]), formula_error_num),
     content="true",
   )
   inspect(
-    is_formula_number_any(gammaln_precise_values([FormulaValue::Number(2.0)])),
+    is_formula_number_any(gammaln_precise_values([Number(2.0)])),
     content="true",
   )
   inspect(
     is_formula_error(
-      gammaln_precise_values([FormulaValue::Error(formula_error_na)]),
+      gammaln_precise_values([Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -18926,81 +16941,49 @@ test "formula builtins wb: lognorm/expon/poisson/binom helper branches part 47" 
 
   inspect(
     is_formula_error(
-      lognorm_dist_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
-      ]),
+      lognorm_dist_values([Number(0.0), Number(0.0), Number(1.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      lognorm_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Bool(true),
-      ]),
+      lognorm_dist_values([Number(1.0), Number(0.0), Number(0.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      lognorm_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
-      ]),
+      lognorm_dist_values([Number(1.0), Number(0.0), Number(1.0), Bool(true)]),
       0.5,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      lognorm_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(false),
-      ]),
+      lognorm_dist_values([Number(1.0), Number(0.0), Number(1.0), Bool(false)]),
     ),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      lognormdist_values([
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      lognormdist_values([Number(0.0), Number(0.0), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      lognormdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.0),
-      ]),
+      lognormdist_values([Number(1.0), Number(0.0), Number(0.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      lognormdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(1.0),
-      ]),
+      lognormdist_values([Number(1.0), Number(0.0), Number(1.0)]),
       0.5,
     ),
     content="true",
@@ -19008,86 +16991,54 @@ test "formula builtins wb: lognorm/expon/poisson/binom helper branches part 47" 
 
   inspect(
     is_formula_error(
-      expon_dist_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
-      ]),
+      expon_dist_values([Number(-1.0), Number(1.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      expon_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Bool(true),
-      ]),
+      expon_dist_values([Number(1.0), Number(0.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      expon_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
+      expon_dist_values([Number(1.0), Number(2.0), Bool(true)]),
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      expon_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(false),
-      ]),
+      expon_dist_values([Number(1.0), Number(2.0), Bool(false)]),
     ),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      poisson_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Bool(true),
-      ]),
+      poisson_values([Number(-1.0), Number(1.0), Bool(true)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      poisson_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Bool(true),
-      ]),
+      poisson_values([Number(1.0), Number(0.0), Bool(true)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      poisson_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Bool(true),
-      ]),
+      poisson_values([Number(2.0), Number(3.0), Bool(true)]),
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      poisson_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Bool(false),
-      ]),
+      poisson_values([Number(2.0), Number(3.0), Bool(false)]),
     ),
     content="true",
   )
@@ -19099,10 +17050,10 @@ test "formula builtins wb: lognorm/expon/poisson/binom helper branches part 47" 
   inspect(
     is_formula_error(
       binomdist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(false),
+        Error(formula_error_na),
+        Number(4.0),
+        Number(0.5),
+        Bool(false),
       ]),
       formula_error_na,
     ),
@@ -19111,10 +17062,10 @@ test "formula builtins wb: lognorm/expon/poisson/binom helper branches part 47" 
   inspect(
     is_formula_error(
       binomdist_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(false),
+        Number(2.0),
+        Error(formula_error_na),
+        Number(0.5),
+        Bool(false),
       ]),
       formula_error_na,
     ),
@@ -19123,10 +17074,10 @@ test "formula builtins wb: lognorm/expon/poisson/binom helper branches part 47" 
   inspect(
     is_formula_error(
       binomdist_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(4.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(false),
+        Number(2.0),
+        Number(4.0),
+        Error(formula_error_na),
+        Bool(false),
       ]),
       formula_error_na,
     ),
@@ -19135,10 +17086,10 @@ test "formula builtins wb: lognorm/expon/poisson/binom helper branches part 47" 
   inspect(
     is_formula_error(
       binomdist_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
+        Number(2.0),
+        Number(4.0),
+        Number(0.5),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -19146,48 +17097,28 @@ test "formula builtins wb: lognorm/expon/poisson/binom helper branches part 47" 
   )
   inspect(
     is_formula_error(
-      binomdist_values([
-        FormulaValue::Number(5.0),
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(false),
-      ]),
+      binomdist_values([Number(5.0), Number(4.0), Number(0.5), Bool(false)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      binomdist_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(1.5),
-        FormulaValue::Bool(false),
-      ]),
+      binomdist_values([Number(2.0), Number(4.0), Number(1.5), Bool(false)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      binomdist_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(false),
-      ]),
+      binomdist_values([Number(2.0), Number(4.0), Number(0.5), Bool(false)]),
       0.375,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      binomdist_values([
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(true),
-      ]),
+      binomdist_values([Number(2.0), Number(4.0), Number(0.5), Bool(true)]),
       0.6875,
     ),
     content="true",
@@ -19199,11 +17130,11 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       binom_dist_range_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
+        Number(4.0),
+        Number(0.5),
+        Number(1.0),
+        Number(2.0),
+        Number(3.0),
       ]),
       formula_error_value,
     ),
@@ -19212,9 +17143,9 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       binom_dist_range_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
+        Error(formula_error_na),
+        Number(0.5),
+        Number(2.0),
       ]),
       formula_error_na,
     ),
@@ -19223,9 +17154,9 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       binom_dist_range_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
+        Number(4.0),
+        Error(formula_error_na),
+        Number(2.0),
       ]),
       formula_error_na,
     ),
@@ -19234,9 +17165,9 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       binom_dist_range_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
+        Number(4.0),
+        Number(0.5),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -19245,10 +17176,10 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       binom_dist_range_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
+        Number(4.0),
+        Number(0.5),
+        Number(1.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -19256,11 +17187,14 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   )
   inspect(
     is_formula_error(
-      binom_dist_range_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(1.5),
-        FormulaValue::Number(1.0),
-      ]),
+      binom_dist_range_values([Number(4.0), Number(1.5), Number(1.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      binom_dist_range_values([Number(4.0), Number(0.5), Number(5.0)]),
       formula_error_num,
     ),
     content="true",
@@ -19268,21 +17202,10 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       binom_dist_range_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(5.0),
-      ]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      binom_dist_range_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(5.0),
+        Number(4.0),
+        Number(0.5),
+        Number(1.0),
+        Number(5.0),
       ]),
       formula_error_num,
     ),
@@ -19290,11 +17213,7 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   )
   inspect(
     is_formula_number(
-      binom_dist_range_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(2.0),
-      ]),
+      binom_dist_range_values([Number(4.0), Number(0.5), Number(2.0)]),
       0.375,
     ),
     content="true",
@@ -19302,10 +17221,10 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_number(
       binom_dist_range_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
+        Number(4.0),
+        Number(0.5),
+        Number(1.0),
+        Number(2.0),
       ]),
       0.625,
     ),
@@ -19314,77 +17233,49 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
 
   inspect(
     is_formula_error(
-      binom_inv_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.5),
-      ]),
+      binom_inv_values([Error(formula_error_na), Number(0.5), Number(0.5)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      binom_inv_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(0.5),
-      ]),
+      binom_inv_values([Number(4.0), Error(formula_error_na), Number(0.5)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      binom_inv_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      binom_inv_values([Number(4.0), Number(0.5), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      binom_inv_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(0.5),
-      ]),
+      binom_inv_values([Number(-1.0), Number(0.5), Number(0.5)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      binom_inv_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.5),
-      ]),
+      binom_inv_values([Number(4.0), Number(1.0), Number(0.5)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      binom_inv_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(1.0),
-      ]),
+      binom_inv_values([Number(4.0), Number(0.5), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      binom_inv_values([
-        FormulaValue::Number(4.0),
-        FormulaValue::Number(0.2),
-        FormulaValue::Number(0.9),
-      ]),
+      binom_inv_values([Number(4.0), Number(0.2), Number(0.9)]),
       2.0,
     ),
     content="true",
@@ -19398,11 +17289,11 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeom_dist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
-        FormulaValue::Bool(true),
+        Error(formula_error_na),
+        Number(3.0),
+        Number(2.0),
+        Number(5.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -19411,11 +17302,11 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Error(formula_error_na),
+        Number(2.0),
+        Number(5.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -19424,11 +17315,11 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(5.0),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Number(3.0),
+        Error(formula_error_na),
+        Number(5.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -19437,11 +17328,11 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Number(3.0),
+        Number(2.0),
+        Error(formula_error_na),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -19450,11 +17341,11 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
-        FormulaValue::Error(formula_error_na),
+        Number(1.0),
+        Number(3.0),
+        Number(2.0),
+        Number(5.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -19463,11 +17354,11 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeom_dist_values([
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
-        FormulaValue::Bool(true),
+        Number(3.0),
+        Number(3.0),
+        Number(2.0),
+        Number(5.0),
+        Bool(true),
       ]),
       formula_error_num,
     ),
@@ -19476,11 +17367,11 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_number(
       hypgeom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Number(3.0),
+        Number(2.0),
+        Number(5.0),
+        Bool(true),
       ]),
       0.7,
     ),
@@ -19489,11 +17380,11 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_number(
       hypgeom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
-        FormulaValue::Bool(false),
+        Number(1.0),
+        Number(3.0),
+        Number(2.0),
+        Number(5.0),
+        Bool(false),
       ]),
       0.6,
     ),
@@ -19503,10 +17394,10 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeomdist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
+        Error(formula_error_na),
+        Number(3.0),
+        Number(2.0),
+        Number(5.0),
       ]),
       formula_error_na,
     ),
@@ -19515,10 +17406,10 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeomdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
+        Number(1.0),
+        Error(formula_error_na),
+        Number(2.0),
+        Number(5.0),
       ]),
       formula_error_na,
     ),
@@ -19527,10 +17418,10 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeomdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(5.0),
+        Number(1.0),
+        Number(3.0),
+        Error(formula_error_na),
+        Number(5.0),
       ]),
       formula_error_na,
     ),
@@ -19539,10 +17430,10 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   inspect(
     is_formula_error(
       hypgeomdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
+        Number(1.0),
+        Number(3.0),
+        Number(2.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -19550,24 +17441,14 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
   )
   inspect(
     is_formula_error(
-      hypgeomdist_values([
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
-      ]),
+      hypgeomdist_values([Number(3.0), Number(3.0), Number(2.0), Number(5.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      hypgeomdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(5.0),
-      ]),
+      hypgeomdist_values([Number(1.0), Number(3.0), Number(2.0), Number(5.0)]),
       0.6,
     ),
     content="true",
@@ -19578,60 +17459,35 @@ test "formula builtins wb: binom range/inv and hypgeom helper branches part 48" 
 test "formula builtins wb: negbinom and tdist helper branches part 49" {
   inspect(
     is_formula_error(
-      negbinom_dist_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(true),
-      ]),
+      negbinom_dist_values([Number(-1.0), Number(2.0), Number(0.5), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      negbinom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(true),
-      ]),
+      negbinom_dist_values([Number(1.0), Number(0.0), Number(0.5), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      negbinom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.5),
-        FormulaValue::Bool(true),
-      ]),
+      negbinom_dist_values([Number(1.0), Number(2.0), Number(1.5), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      negbinom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(true),
-      ]),
+      negbinom_dist_values([Number(1.0), Number(2.0), Number(0.5), Bool(true)]),
       0.5,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      negbinom_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.5),
-        FormulaValue::Bool(false),
-      ]),
+      negbinom_dist_values([Number(1.0), Number(2.0), Number(0.5), Bool(false)]),
       0.25,
     ),
     content="true",
@@ -19639,377 +17495,253 @@ test "formula builtins wb: negbinom and tdist helper branches part 49" {
 
   inspect(
     is_formula_error(
-      negbinomdist_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.5),
-      ]),
+      negbinomdist_values([Number(-1.0), Number(2.0), Number(0.5)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      negbinomdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Number(0.5),
-      ]),
+      negbinomdist_values([Number(1.0), Number(0.0), Number(0.5)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      negbinomdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.5),
-      ]),
+      negbinomdist_values([Number(1.0), Number(2.0), Number(1.5)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number(
-      negbinomdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(0.5),
-      ]),
+      negbinomdist_values([Number(1.0), Number(2.0), Number(0.5)]),
       0.25,
     ),
     content="true",
   )
 
-  inspect(
-    is_formula_number(gauss_value([FormulaValue::Number(0.0)]), 0.0),
-    content="true",
-  )
-  inspect(
-    is_formula_number_any(phi_value([FormulaValue::Number(0.0)])),
-    content="true",
-  )
+  inspect(is_formula_number(gauss_value([Number(0.0)]), 0.0), content="true")
+  inspect(is_formula_number_any(phi_value([Number(0.0)])), content="true")
 
   inspect(
     is_formula_error(
-      tdist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
+      tdist_values([Error(formula_error_na), Number(2.0), Bool(true)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      tdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
-      ]),
+      tdist_values([Number(1.0), Error(formula_error_na), Bool(true)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      tdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      tdist_values([Number(1.0), Number(2.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      tdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Bool(true),
-      ]),
+      tdist_values([Number(1.0), Number(0.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      tdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(-1.0),
-        FormulaValue::Bool(false),
-      ]),
+      tdist_values([Number(1.0), Number(-1.0), Bool(false)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      tdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(0.0),
-        FormulaValue::Bool(false),
-      ]),
+      tdist_values([Number(1.0), Number(0.0), Bool(false)]),
       formula_error_div,
     ),
     content="true",
   )
   inspect(
-    is_formula_number_any(
-      tdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
+    is_formula_number_any(tdist_values([Number(1.0), Number(2.0), Bool(true)])),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(tdist_values([Number(1.0), Number(2.0), Bool(false)])),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      tdist_2t_values([Number(-1.0), Number(2.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_2t_values([Error(formula_error_na), Number(2.0)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_2t_values([Number(1.0), Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_2t_values([Number(1.0), Number(0.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(tdist_2t_values([Number(1.0), Number(2.0)])),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      tdist_rt_values([Number(1.0), Number(0.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_rt_values([Error(formula_error_na), Number(2.0)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_rt_values([Number(1.0), Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(tdist_rt_values([Number(1.0), Number(2.0)])),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(tdist_rt_values([Number(-1.0), Number(2.0)])),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      tdist_legacy_values([Number(-1.0), Number(2.0), Number(1.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_legacy_values([Error(formula_error_na), Number(2.0), Number(1.0)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_legacy_values([Number(1.0), Error(formula_error_na), Number(1.0)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_legacy_values([Number(1.0), Number(2.0), Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tdist_legacy_values([Number(1.0), Number(2.0), Number(3.0)]),
+      formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      tdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(false),
-      ]),
+      tdist_legacy_values([Number(1.0), Number(2.0), Number(1.0)]),
     ),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      tdist_2t_values([FormulaValue::Number(-1.0), FormulaValue::Number(2.0)]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tdist_2t_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-      ]),
+      tinv_values([Error(formula_error_na), Number(2.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      tdist_2t_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      tinv_values([Number(0.5), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
-    is_formula_error(
-      tdist_2t_values([FormulaValue::Number(1.0), FormulaValue::Number(0.0)]),
-      formula_error_num,
-    ),
+    is_formula_error(tinv_values([Number(0.0), Number(2.0)]), formula_error_num),
     content="true",
   )
   inspect(
-    is_formula_number_any(
-      tdist_2t_values([FormulaValue::Number(1.0), FormulaValue::Number(2.0)]),
-    ),
+    is_formula_number_any(tinv_values([Number(0.25), Number(10.0)])),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(tinv_values([Number(0.75), Number(10.0)])),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      tdist_rt_values([FormulaValue::Number(1.0), FormulaValue::Number(0.0)]),
+      tinv_2t_values([Error(formula_error_na), Number(2.0)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tinv_2t_values([Number(0.5), Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      tinv_2t_values([Number(0.0), Number(2.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
-    is_formula_error(
-      tdist_rt_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tdist_rt_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number_any(
-      tdist_rt_values([FormulaValue::Number(1.0), FormulaValue::Number(2.0)]),
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number_any(
-      tdist_rt_values([FormulaValue::Number(-1.0), FormulaValue::Number(2.0)]),
-    ),
-    content="true",
-  )
-
-  inspect(
-    is_formula_error(
-      tdist_legacy_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
-      ]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tdist_legacy_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tdist_legacy_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tdist_legacy_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tdist_legacy_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-      ]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number_any(
-      tdist_legacy_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
-      ]),
-    ),
-    content="true",
-  )
-
-  inspect(
-    is_formula_error(
-      tinv_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tinv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tinv_values([FormulaValue::Number(0.0), FormulaValue::Number(2.0)]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number_any(
-      tinv_values([FormulaValue::Number(0.25), FormulaValue::Number(10.0)]),
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number_any(
-      tinv_values([FormulaValue::Number(0.75), FormulaValue::Number(10.0)]),
-    ),
-    content="true",
-  )
-
-  inspect(
-    is_formula_error(
-      tinv_2t_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tinv_2t_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      tinv_2t_values([FormulaValue::Number(0.0), FormulaValue::Number(2.0)]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number_any(
-      tinv_2t_values([FormulaValue::Number(0.5), FormulaValue::Number(10.0)]),
-    ),
+    is_formula_number_any(tinv_2t_values([Number(0.5), Number(10.0)])),
     content="true",
   )
 }
 
 ///|
 test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
-  inspect(
-    number_strict_opt(FormulaValue::Number(2.0)) == Some(2.0),
-    content="true",
-  )
-  inspect(number_strict_opt(FormulaValue::String("2")) == None, content="true")
+  inspect(number_strict_opt(Number(2.0)) == Some(2.0), content="true")
+  inspect(number_strict_opt(String("2")) == None, content="true")
 
-  let ttest_short_left : Array[FormulaValue] = [FormulaValue::Number(1.0)]
-  let ttest_short_right : Array[FormulaValue] = [FormulaValue::Number(2.0)]
+  let ttest_short_left : Array[FormulaValue] = [Number(1.0)]
+  let ttest_short_right : Array[FormulaValue] = [Number(2.0)]
   inspect(
     match ttest_unpaired(ttest_short_left, ttest_short_right, false) {
       (0.0, 0.0, false) => true
@@ -20017,14 +17749,8 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
     },
     content="true",
   )
-  let ttest_equal_left : Array[FormulaValue] = [
-    FormulaValue::Number(1.0),
-    FormulaValue::Number(1.0),
-  ]
-  let ttest_equal_right : Array[FormulaValue] = [
-    FormulaValue::Number(1.0),
-    FormulaValue::Number(1.0),
-  ]
+  let ttest_equal_left : Array[FormulaValue] = [Number(1.0), Number(1.0)]
+  let ttest_equal_right : Array[FormulaValue] = [Number(1.0), Number(1.0)]
   inspect(
     match ttest_unpaired(ttest_equal_left, ttest_equal_right, true) {
       (0.0, 0.0, false) => true
@@ -20033,14 +17759,14 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
     content="true",
   )
   let ttest_mixed_left : Array[FormulaValue] = [
-    FormulaValue::Number(1.0),
-    FormulaValue::String("bad"),
-    FormulaValue::Number(3.0),
+    Number(1.0),
+    String("bad"),
+    Number(3.0),
   ]
   let ttest_mixed_right : Array[FormulaValue] = [
-    FormulaValue::Number(2.0),
-    FormulaValue::Number(4.0),
-    FormulaValue::String("bad"),
+    Number(2.0),
+    Number(4.0),
+    String("bad"),
   ]
   inspect(
     match ttest_unpaired(ttest_mixed_left, ttest_mixed_right, false) {
@@ -20059,12 +17785,7 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
 
   inspect(
     is_formula_error(
-      ttest_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
-      ]),
+      ttest_values([Number(1.0), List([Number(1.0)]), Number(2.0), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
@@ -20072,10 +17793,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       ttest_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(1.0),
+        List([Number(1.0)]),
+        List([Number(1.0)]),
+        Error(formula_error_na),
+        Number(1.0),
       ]),
       formula_error_na,
     ),
@@ -20084,10 +17805,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       ttest_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
+        List([Number(1.0)]),
+        List([Number(1.0)]),
+        Number(2.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -20096,10 +17817,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       ttest_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(3.0),
-        FormulaValue::Number(1.0),
+        List([Number(1.0)]),
+        List([Number(1.0)]),
+        Number(3.0),
+        Number(1.0),
       ]),
       formula_error_num,
     ),
@@ -20108,10 +17829,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       ttest_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(4.0),
+        List([Number(1.0)]),
+        List([Number(1.0)]),
+        Number(2.0),
+        Number(4.0),
       ]),
       formula_error_num,
     ),
@@ -20120,13 +17841,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       ttest_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(2.0),
-        ]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
+        List([Number(1.0)]),
+        List([Number(1.0), Number(2.0)]),
+        Number(2.0),
+        Number(1.0),
       ]),
       formula_error_na,
     ),
@@ -20135,10 +17853,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       ttest_values([
-        FormulaValue::List([FormulaValue::String("bad")]),
-        FormulaValue::List([FormulaValue::String("bad")]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
+        List([String("bad")]),
+        List([String("bad")]),
+        Number(2.0),
+        Number(1.0),
       ]),
       formula_error_num,
     ),
@@ -20147,16 +17865,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       ttest_values([
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-        ]),
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-        ]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
+        List([Number(1.0), Number(1.0)]),
+        List([Number(1.0), Number(1.0)]),
+        Number(2.0),
+        Number(1.0),
       ]),
       formula_error_div,
     ),
@@ -20165,10 +17877,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       ttest_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(2.0),
+        List([Number(1.0)]),
+        List([Number(1.0)]),
+        Number(2.0),
+        Number(2.0),
       ]),
       formula_error_num,
     ),
@@ -20177,16 +17889,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_number_any(
       ttest_values([
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(2.0),
-        ]),
-        FormulaValue::List([
-          FormulaValue::Number(2.0),
-          FormulaValue::Number(4.0),
-        ]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
+        List([Number(1.0), Number(2.0)]),
+        List([Number(2.0), Number(4.0)]),
+        Number(2.0),
+        Number(1.0),
       ]),
     ),
     content="true",
@@ -20194,46 +17900,36 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_number_any(
       ttest_values([
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(3.0),
-        ]),
-        FormulaValue::List([
-          FormulaValue::Number(2.0),
-          FormulaValue::Number(4.0),
-        ]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
+        List([Number(1.0), Number(3.0)]),
+        List([Number(2.0), Number(4.0)]),
+        Number(2.0),
+        Number(3.0),
       ]),
     ),
     content="true",
   )
 
   inspect(
+    is_formula_error(ztest_values([List([Number(1.0)])]), formula_error_value),
+    content="true",
+  )
+  inspect(
     is_formula_error(
-      ztest_values([FormulaValue::List([FormulaValue::Number(1.0)])]),
+      ztest_values([List([Number(1.0)]), Number(1.0), Number(1.0), Number(1.0)]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      ztest_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-      ]),
-      formula_error_value,
+      ztest_values([List([String("bad")]), Number(1.0)]),
+      formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      ztest_values([
-        FormulaValue::List([FormulaValue::String("bad")]),
-        FormulaValue::Number(1.0),
-      ]),
+      ztest_values([List([Number(1.0)]), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -20241,8 +17937,9 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       ztest_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Error(formula_error_na),
+        List([Number(1.0), Number(2.0)]),
+        Number(1.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -20250,70 +17947,40 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   )
   inspect(
     is_formula_error(
-      ztest_values([
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(2.0),
-        ]),
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      ztest_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(1.0),
-      ]),
+      ztest_values([List([Number(1.0)]), Number(1.0)]),
       formula_error_div,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      ztest_values([
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(2.0),
-        ]),
-        FormulaValue::Number(1.0),
-      ]),
+      ztest_values([List([Number(1.0), Number(2.0)]), Number(1.0)]),
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
       ztest_values([
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(2.0),
-          FormulaValue::Number(3.0),
-        ]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(1.0),
+        List([Number(1.0), Number(2.0), Number(3.0)]),
+        Number(2.0),
+        Number(1.0),
       ]),
     ),
     content="true",
   )
 
   inspect(
-    is_formula_error(
-      prob_values([FormulaValue::List([]), FormulaValue::List([])]),
-      formula_error_value,
-    ),
+    is_formula_error(prob_values([List([]), List([])]), formula_error_value),
     content="true",
   )
   inspect(
     is_formula_error(
       prob_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(1.0),
+        List([Number(1.0)]),
+        List([Number(1.0)]),
+        Number(1.0),
+        Number(1.0),
+        Number(1.0),
       ]),
       formula_error_value,
     ),
@@ -20321,11 +17988,7 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   )
   inspect(
     is_formula_error(
-      prob_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(1.0),
-      ]),
+      prob_values([Number(1.0), List([Number(1.0)]), Number(1.0)]),
       formula_error_num,
     ),
     content="true",
@@ -20333,12 +17996,27 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       prob_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(0.0),
-        ]),
-        FormulaValue::Number(1.0),
+        List([Number(1.0)]),
+        List([Number(1.0), Number(0.0)]),
+        Number(1.0),
+      ]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      prob_values([List([String("x")]), List([Number(1.0)]), Number(1.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      prob_values([
+        List([Number(1.0)]),
+        List([Number(1.0)]),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -20347,32 +18025,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_error(
       prob_values([
-        FormulaValue::List([FormulaValue::String("x")]),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(1.0),
-      ]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      prob_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      prob_values([
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::List([FormulaValue::Number(1.0)]),
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
+        List([Number(1.0)]),
+        List([Number(1.0)]),
+        Number(1.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -20381,18 +18037,10 @@ test "formula builtins wb: ttest/ztest/prob helper branches part 50" {
   inspect(
     is_formula_number(
       prob_values([
-        FormulaValue::List([
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(2.0),
-          FormulaValue::Number(3.0),
-        ]),
-        FormulaValue::List([
-          FormulaValue::Number(0.2),
-          FormulaValue::Number(0.3),
-          FormulaValue::Number(0.5),
-        ]),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
+        List([Number(1.0), Number(2.0), Number(3.0)]),
+        List([Number(0.2), Number(0.3), Number(0.5)]),
+        Number(2.0),
+        Number(3.0),
       ]),
       0.8,
     ),
@@ -20451,210 +18099,149 @@ test "formula builtins wb: chi and f helper branches part 51" {
 
   inspect(
     is_formula_error(
-      chidist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-      ]),
+      chidist_values([Error(formula_error_na), Number(2.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      chidist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      chidist_values([Number(1.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
+    is_formula_number_any(chidist_values([Number(1.0), Number(2.0)])),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      chiinv_values([Error(formula_error_na), Number(2.0)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chiinv_values([Number(0.5), Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chiinv_values([Number(0.0), Number(2.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chiinv_values([Number(0.5), Number(0.0)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number(chiinv_values([Number(1.0), Number(2.0)]), 0.0),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(chiinv_values([Number(0.5), Number(2.0)])),
+    content="true",
+  )
+
+  inspect(
+    is_formula_error(
+      chisq_dist_values([Error(formula_error_na), Number(2.0), Bool(true)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_dist_values([Number(1.0), Error(formula_error_na), Bool(true)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_dist_values([Number(1.0), Number(2.0), Error(formula_error_na)]),
+      formula_error_na,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_dist_values([Number(-1.0), Number(2.0), Bool(true)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_error(
+      chisq_dist_values([Number(1.0), Number(10000000000.0), Bool(true)]),
+      formula_error_num,
+    ),
+    content="true",
+  )
+  inspect(
     is_formula_number_any(
-      chidist_values([FormulaValue::Number(1.0), FormulaValue::Number(2.0)]),
+      chisq_dist_values([Number(1.0), Number(2.0), Bool(true)]),
+    ),
+    content="true",
+  )
+  inspect(
+    is_formula_number_any(
+      chisq_dist_values([Number(1.0), Number(2.0), Bool(false)]),
     ),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      chiinv_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-      ]),
+      chisq_inv_values([Error(formula_error_na), Number(2.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      chiinv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      chisq_inv_values([Number(0.5), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      chiinv_values([FormulaValue::Number(0.0), FormulaValue::Number(2.0)]),
+      chisq_inv_values([Number(-0.1), Number(2.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      chiinv_values([FormulaValue::Number(0.5), FormulaValue::Number(0.0)]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number(
-      chiinv_values([FormulaValue::Number(1.0), FormulaValue::Number(2.0)]),
-      0.0,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number_any(
-      chiinv_values([FormulaValue::Number(0.5), FormulaValue::Number(2.0)]),
-    ),
-    content="true",
-  )
-
-  inspect(
-    is_formula_error(
-      chisq_dist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      chisq_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      chisq_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      chisq_dist_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
+      chisq_inv_values([Number(0.5), Number(0.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      chisq_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10000000000.0),
-        FormulaValue::Bool(true),
-      ]),
+      chisq_inv_values([Number(0.5), Number(10000000001.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
-    is_formula_number_any(
-      chisq_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(true),
-      ]),
-    ),
+    is_formula_number(chisq_inv_values([Number(0.0), Number(2.0)]), 0.0),
     content="true",
   )
   inspect(
-    is_formula_number_any(
-      chisq_dist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Bool(false),
-      ]),
-    ),
-    content="true",
-  )
-
-  inspect(
-    is_formula_error(
-      chisq_inv_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      chisq_inv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-      ]),
-      formula_error_na,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      chisq_inv_values([FormulaValue::Number(-0.1), FormulaValue::Number(2.0)]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      chisq_inv_values([FormulaValue::Number(0.5), FormulaValue::Number(0.0)]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_error(
-      chisq_inv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(10000000001.0),
-      ]),
-      formula_error_num,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number(
-      chisq_inv_values([FormulaValue::Number(0.0), FormulaValue::Number(2.0)]),
-      0.0,
-    ),
-    content="true",
-  )
-  inspect(
-    is_formula_number_any(
-      chisq_inv_values([FormulaValue::Number(0.5), FormulaValue::Number(2.0)]),
-    ),
+    is_formula_number_any(chisq_inv_values([Number(0.5), Number(2.0)])),
     content="true",
   )
 
@@ -20664,7 +18251,7 @@ test "formula builtins wb: chi and f helper branches part 51" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [Expr::Range("", "A1", "B1"), Expr::Range("", "C2", "C3")],
+        [Range("", "A1", "B1"), Range("", "C2", "C3")],
         ctx,
       ),
       formula_error_na,
@@ -20677,7 +18264,7 @@ test "formula builtins wb: chi and f helper branches part 51" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [Expr::Range("", "A1", "A1"), Expr::Range("", "C1", "C1")],
+        [Range("", "A1", "A1"), Range("", "C1", "C1")],
         ctx,
       ),
       formula_error_na,
@@ -20690,7 +18277,7 @@ test "formula builtins wb: chi and f helper branches part 51" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [Expr::Range("", "A6", "B6"), Expr::Range("", "C6", "D6")],
+        [Range("", "A6", "B6"), Range("", "C6", "D6")],
         ctx,
       ),
       formula_error_div,
@@ -20703,7 +18290,7 @@ test "formula builtins wb: chi and f helper branches part 51" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [Expr::Range("", "A7", "B7"), Expr::Range("", "C7", "D7")],
+        [Range("", "A7", "B7"), Range("", "C7", "D7")],
         ctx,
       ),
       formula_error_num,
@@ -20716,7 +18303,7 @@ test "formula builtins wb: chi and f helper branches part 51" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [Expr::Range("", "A8", "B8"), Expr::Range("", "C8", "D8")],
+        [Range("", "A8", "B8"), Range("", "C8", "D8")],
         ctx,
       ),
       formula_error_value,
@@ -20729,7 +18316,7 @@ test "formula builtins wb: chi and f helper branches part 51" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [Expr::Range("", "A9", "B9"), Expr::Range("", "C9", "D9")],
+        [Range("", "A9", "B9"), Range("", "C9", "D9")],
         ctx,
       ),
       formula_error_value,
@@ -20742,7 +18329,7 @@ test "formula builtins wb: chi and f helper branches part 51" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [Expr::Range("", "A1", "B1"), Expr::Range("", "C1", "D1")],
+        [Range("", "A1", "B1"), Range("", "C1", "D1")],
         ctx,
       ),
     ),
@@ -20754,7 +18341,7 @@ test "formula builtins wb: chi and f helper branches part 51" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [Expr::Range("", "A2", "A3"), Expr::Range("", "C2", "C3")],
+        [Range("", "A2", "A3"), Range("", "C2", "C3")],
         ctx,
       ),
     ),
@@ -20766,7 +18353,7 @@ test "formula builtins wb: chi and f helper branches part 51" {
         workbook,
         "Sheet1",
         "CHITEST",
-        [Expr::Range("", "A4", "B5"), Expr::Range("", "C4", "D5")],
+        [Range("", "A4", "B5"), Range("", "C4", "D5")],
         ctx,
       ),
     ),
@@ -20776,10 +18363,10 @@ test "formula builtins wb: chi and f helper branches part 51" {
   inspect(
     is_formula_error(
       fdist_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Bool(true),
+        Error(formula_error_na),
+        Number(2.0),
+        Number(3.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -20788,10 +18375,10 @@ test "formula builtins wb: chi and f helper branches part 51" {
   inspect(
     is_formula_error(
       fdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(3.0),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Error(formula_error_na),
+        Number(3.0),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -20800,10 +18387,10 @@ test "formula builtins wb: chi and f helper branches part 51" {
   inspect(
     is_formula_error(
       fdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Bool(true),
+        Number(1.0),
+        Number(2.0),
+        Error(formula_error_na),
+        Bool(true),
       ]),
       formula_error_na,
     ),
@@ -20812,10 +18399,10 @@ test "formula builtins wb: chi and f helper branches part 51" {
   inspect(
     is_formula_error(
       fdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Error(formula_error_na),
+        Number(1.0),
+        Number(2.0),
+        Number(3.0),
+        Error(formula_error_na),
       ]),
       formula_error_na,
     ),
@@ -20823,180 +18410,111 @@ test "formula builtins wb: chi and f helper branches part 51" {
   )
   inspect(
     is_formula_error(
-      fdist_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Bool(true),
-      ]),
+      fdist_values([Number(-1.0), Number(2.0), Number(3.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      fdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10000000000.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Bool(true),
-      ]),
+      fdist_values([Number(1.0), Number(10000000000.0), Number(3.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      fdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(10000000000.0),
-        FormulaValue::Bool(true),
-      ]),
+      fdist_values([Number(1.0), Number(2.0), Number(10000000000.0), Bool(true)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      fdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Bool(true),
-      ]),
+      fdist_values([Number(1.0), Number(2.0), Number(3.0), Bool(true)]),
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      fdist_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-        FormulaValue::Bool(false),
-      ]),
+      fdist_values([Number(1.0), Number(2.0), Number(3.0), Bool(false)]),
     ),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      fdist_rt_values([
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-      ]),
+      fdist_rt_values([Error(formula_error_na), Number(2.0), Number(3.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      fdist_rt_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(3.0),
-      ]),
+      fdist_rt_values([Number(1.0), Error(formula_error_na), Number(3.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      fdist_rt_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      fdist_rt_values([Number(1.0), Number(2.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      fdist_rt_values([
-        FormulaValue::Number(-1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-      ]),
+      fdist_rt_values([Number(-1.0), Number(2.0), Number(3.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      fdist_rt_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(10000000000.0),
-        FormulaValue::Number(3.0),
-      ]),
+      fdist_rt_values([Number(1.0), Number(10000000000.0), Number(3.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      fdist_rt_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(10000000000.0),
-      ]),
+      fdist_rt_values([Number(1.0), Number(2.0), Number(10000000000.0)]),
       formula_error_num,
     ),
     content="true",
   )
   inspect(
     is_formula_number_any(
-      fdist_rt_values([
-        FormulaValue::Number(1.0),
-        FormulaValue::Number(2.0),
-        FormulaValue::Number(3.0),
-      ]),
+      fdist_rt_values([Number(1.0), Number(2.0), Number(3.0)]),
     ),
     content="true",
   )
 
   inspect(
     is_formula_error(
-      finv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(6.0),
-      ]),
+      finv_values([Number(0.5), Error(formula_error_na), Number(6.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(5.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      finv_values([Number(0.5), Number(5.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_rt_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Error(formula_error_na),
-        FormulaValue::Number(6.0),
-      ]),
+      finv_rt_values([Number(0.5), Error(formula_error_na), Number(6.0)]),
       formula_error_na,
     ),
     content="true",
   )
   inspect(
     is_formula_error(
-      finv_rt_values([
-        FormulaValue::Number(0.5),
-        FormulaValue::Number(5.0),
-        FormulaValue::Error(formula_error_na),
-      ]),
+      finv_rt_values([Number(0.5), Number(5.0), Error(formula_error_na)]),
       formula_error_na,
     ),
     content="true",
@@ -21019,7 +18537,7 @@ test "formula builtins wb: residual hotspot probes part 75" {
         workbook,
         "Sheet1",
         "LOOKUP",
-        [Expr::Number(2.5), Expr::Range("", "A1", "C1")],
+        [Number(2.5), Range("", "A1", "C1")],
         ctx,
       ),
       2.0,
@@ -21028,7 +18546,7 @@ test "formula builtins wb: residual hotspot probes part 75" {
   )
   inspect(
     is_formula_error(
-      eval_function(workbook, "Sheet1", "ISOWEEKNUM", [Expr::Number(0.0)], ctx),
+      eval_function(workbook, "Sheet1", "ISOWEEKNUM", [Number(0.0)], ctx),
       formula_error_num,
     ),
     content="true",
@@ -21039,7 +18557,7 @@ test "formula builtins wb: residual hotspot probes part 75" {
         workbook,
         "Sheet1",
         "RANDBETWEEN",
-        [Expr::Number(1.0e20), Expr::Number(1.0e20 + 65536.0)],
+        [Number(1.0e20), Number(1.0e20 + 65536.0)],
         ctx,
       ) {
       Number(value) =>

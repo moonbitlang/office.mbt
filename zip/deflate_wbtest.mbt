@@ -70,33 +70,33 @@ fn wb_single_symbol_table(symbol : Int) -> HuffmanTable {
 test "deflate wb: direct guard error branches" {
   let reader = BitReader::new(b"")
   try reader.ensure_bits(-1) catch {
-    e => inspect(e is ZipError::OutOfBounds(_), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected ensure_bits to raise")
   }
   try length_to_symbol(2) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected length_to_symbol to raise")
   }
   try distance_to_symbol(0) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected distance_to_symbol to raise")
   }
   try build_huffman([16]) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected build_huffman to raise")
   }
   let writer = BitWriter::new()
   try writer.write_bits(1, -1) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected write_bits to raise")
   }
   try fixed_literal_code(288) catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected fixed_literal_code to raise")
   }
@@ -130,7 +130,7 @@ test "deflate wb: dynamic table repeat-without-previous branch" {
   ignore(writer.write_bits(0, 1))
   let reader = BitReader::new(writer.finish())
   try read_dynamic_tables(reader) catch {
-    ZipError::UnsupportedFeature(msg~) =>
+    UnsupportedFeature(msg~) =>
       inspect(msg, content="repeat with no previous length")
     _ => fail("expected repeat-with-no-previous-length error")
   } noraise {
@@ -150,7 +150,7 @@ test "deflate wb: decode_huffman_block validation branches" {
       [],
     )
   catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected decode_huffman_block to raise")
   }
@@ -162,7 +162,7 @@ test "deflate wb: decode_huffman_block validation branches" {
       [],
     )
   catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected decode_huffman_block to raise")
   }
@@ -174,7 +174,7 @@ test "deflate wb: decode_huffman_block validation branches" {
       [],
     )
   catch {
-    e => inspect(e is ZipError::UnsupportedFeature(_), content="true")
+    e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
     _ => fail("expected decode_huffman_block to raise")
   }
@@ -185,7 +185,7 @@ test "deflate decode enforces max_output for stored blocks" {
   // Stored block declaring 2 bytes ("hi") against a cap of 1.
   let stream : Bytes = [0x01, 0x02, 0x00, 0xFD, 0xFF, 0x68, 0x69]
   try deflate_decode(stream, max_output=1) catch {
-    ZipError::OutputLimitExceeded(limit~) => inspect(limit, content="1")
+    OutputLimitExceeded(limit~) => inspect(limit, content="1")
     _ => fail("expected OutputLimitExceeded")
   } noraise {
     _ => fail("expected deflate_decode to raise")
@@ -197,7 +197,7 @@ test "deflate decode enforces max_output for huffman literals" {
   // Fixed-Huffman block decoding to "hello" against a cap of 4.
   let stream : Bytes = [0xCB, 0x48, 0xCD, 0xC9, 0xC9, 0x07, 0x00]
   try deflate_decode(stream, max_output=4) catch {
-    ZipError::OutputLimitExceeded(limit~) => inspect(limit, content="4")
+    OutputLimitExceeded(limit~) => inspect(limit, content="4")
     _ => fail("expected OutputLimitExceeded")
   } noraise {
     _ => fail("expected deflate_decode to raise")
@@ -212,7 +212,7 @@ test "deflate decode enforces max_output for back-references" {
   }
   let compressed = deflate_encode(Bytes::from_array(data))
   try deflate_decode(compressed, max_output=100) catch {
-    ZipError::OutputLimitExceeded(limit~) => inspect(limit, content="100")
+    OutputLimitExceeded(limit~) => inspect(limit, content="100")
     _ => fail("expected OutputLimitExceeded")
   } noraise {
     _ => fail("expected deflate_decode to raise")
@@ -226,7 +226,7 @@ test "deflate wb: build_huffman rejects oversubscribed length sets" {
   // canonical codes overwrite one another and decode bit pattern `10` as
   // symbol 0, where a strict decoder rejects the table outright.
   try build_huffman([1, 2, 1]) catch {
-    ZipError::UnsupportedFeature(msg~) =>
+    UnsupportedFeature(msg~) =>
       inspect(msg, content="oversubscribed huffman table")
     _ => fail("expected UnsupportedFeature")
   } noraise {

@@ -630,7 +630,7 @@ test "standard decryption accepts RC4-style verifier layout" {
   // truncated RC4-style verifier still raises
   let truncated = info_buf[:info_buf.length() - 4]
   try standard_decrypt(truncated, package_buf, password) catch {
-    XlsxError::InvalidEncryptionInfo(msg~) =>
+    InvalidEncryptionInfo(msg~) =>
       inspect(msg, content="invalid verifier block")
     e => fail("unexpected error \{repr(e)}")
   } noraise {
