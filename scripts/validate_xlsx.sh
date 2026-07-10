@@ -15,10 +15,24 @@ acquire_lock() {
       exit 1
     fi
   done
+  LOCK_HELD=1
 }
 
+# Idempotent: only ever removes the lock THIS process created, once. A
+# plain rmdir in both an INT/TERM handler and the EXIT trap could fire
+# twice and delete a lock a NEW owner acquired in between.
+LOCK_HELD=0
 release_lock() {
-  rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
+  if [[ "$LOCK_HELD" == 1 ]]; then
+    LOCK_HELD=0
+    rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
+  fi
+}
+
+handle_signal() {
+  release_lock
+  trap - EXIT
+  exit 1
 }
 
 mkdir -p "$ROOT/.tools/openxml-validator"
@@ -108,7 +122,8 @@ done
 
 DOTNET_PROJECT="$ROOT/tools/openxml-validator/OpenXmlValidator.csproj"
 acquire_lock
-trap release_lock EXIT INT TERM
+trap release_lock EXIT
+trap handle_signal INT TERM
 "$DOTNET" build "$DOTNET_PROJECT" -p:UseAppHost=false >/dev/null
 VALIDATOR_DLL="$ROOT/tools/openxml-validator/bin/Debug/net8.0/OpenXmlValidator.dll"
 "$DOTNET" "$VALIDATOR_DLL" "$XLSX"
