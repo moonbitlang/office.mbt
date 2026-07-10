@@ -3,6 +3,11 @@
 pub type DocxReadResult = @docx_impl.DocxReadResult
 
 ///|
+/// Package-level read result: body document plus sections and header/footer
+/// stories. Returned by `read_docx_package`.
+pub type DocxPackageResult = @docx_impl.DocxPackageResult
+
+///|
 /// Converts DOCX bytes to HTML.
 pub fn convert_to_html(
   docx : BytesView,
@@ -141,6 +146,24 @@ pub fn read_docx_with_messages(
 ) -> DocxReadResult raise DocxError {
   bridge_core_error(() => {
     @docx_impl.read_docx_with_messages(
+      docx,
+      external_file_access~,
+      read_external_file~,
+    )
+  })
+}
+
+///|
+/// Reads DOCX bytes into the package-level representation: the body
+/// document (identical to `read_docx_with_messages`) plus sections and
+/// header/footer stories. See `@docx.read_docx_package`.
+pub fn read_docx_package(
+  docx : BytesView,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+) -> DocxPackageResult raise DocxError {
+  bridge_core_error(() => {
+    @docx_impl.read_docx_package(
       docx,
       external_file_access~,
       read_external_file~,

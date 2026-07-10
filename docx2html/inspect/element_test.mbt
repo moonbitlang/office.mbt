@@ -202,7 +202,7 @@ test "path indices normalize and count same-kind siblings only" {
 ///|
 fn expect_path_error(path : String, expected_prefix : String) -> Unit raise {
   try @inspect.element(sample_document(), file="s.docx", path~) catch {
-    @inspect.PathError(message) =>
+    PathError(message) =>
       if !message.has_prefix(expected_prefix) {
         fail("unexpected message: \{message}")
       }
@@ -219,7 +219,14 @@ test "path errors are agent-correctable" {
   expect_path_error(
     "/document/p[1]", "invalid path '/document/p[1]': unknown root",
   )
-  expect_path_error("/header[1]/p[1]", "path root '/header[1]' is reserved")
+  // header/footer roots are live now: with no parts supplied, the error is
+  // a not-found naming the part count.
+  expect_path_error(
+    "/header[1]/p[1]", "path '/header[1]/p[1]' not found: the document has 0 header part(s)",
+  )
+  expect_path_error(
+    "/footer[2]", "path '/footer[2]' not found: the document has 0 footer part(s)",
+  )
   expect_path_error("/footnotes/note[1]", "path root '/footnotes' is reserved")
   expect_path_error("/body/para[1]", "invalid path segment 'para[1]'")
   expect_path_error("/body/p[0]", "invalid path segment 'p[0]'")
@@ -266,5 +273,63 @@ test "numbering surfaces on paragraph payloads; text view stays one line" {
     content=(
       #|"[/body/p[2]] line one line two"
     ),
+  )
+}
+
+///|
+test "header and footer roots resolve when parts are supplied" {
+  let headers : Array[@document.HeaderFooterPart] = [
+    {
+      body: [
+        @document.paragraph([@document.run([@document.text("Page header")])]),
+      ],
+    },
+  ]
+  let footers : Array[@document.HeaderFooterPart] = [
+    {
+      body: [
+        @document.paragraph([@document.run([@document.text("Page footer")])]),
+      ],
+    },
+  ]
+  let doc = @document.document([
+    @document.paragraph([@document.run([@document.text("Body")])]),
+  ])
+  debug_inspect(
+    @inspect.text_lines(doc, headers~, footers~),
+    content=(
+      #|[
+      #|  "[/body/p[1]] Body",
+      #|  "[/header[1]/p[1]] Page header",
+      #|  "[/footer[1]/p[1]] Page footer",
+      #|]
+    ),
+  )
+  json_inspect(
+    @inspect.element(doc, file="hf.docx", path="/header[1]", headers~, footers~),
+    content={
+      "schema": "docx.element/1",
+      "file": "hf.docx",
+      "path": "/header[1]",
+      "kind": "header",
+      "children": [{ "kind": "p", "path": "/header[1]/p[1]" }],
+    },
+  )
+  json_inspect(
+    @inspect.element(
+      doc,
+      file="hf.docx",
+      path="/footer[1]/p[1]",
+      headers~,
+      footers~,
+    ),
+    content={
+      "schema": "docx.element/1",
+      "file": "hf.docx",
+      "path": "/footer[1]/p[1]",
+      "kind": "p",
+      "text": "Page footer",
+      "children": [{ "kind": "r", "path": "/footer[1]/p[1]/r[1]" }],
+    },
   )
 }

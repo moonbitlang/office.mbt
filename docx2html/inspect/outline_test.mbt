@@ -12,10 +12,14 @@ test "outline of an empty document has zeroed counts and empty inventories" {
       "footnotes": 0,
       "endnotes": 0,
       "comments": 0,
+      "headers": 0,
+      "footers": 0,
+      "sections": 0,
     },
     "headings": [],
     "styles_in_use": [],
     "images": [],
+    "sections": [],
     "messages": [],
   })
 }
@@ -72,6 +76,9 @@ test "outline counts body content including inside table cells" {
       "footnotes": 1,
       "endnotes": 1,
       "comments": 1,
+      "headers": 0,
+      "footers": 0,
+      "sections": 0,
     },
     "headings": [
       {
@@ -85,6 +92,7 @@ test "outline counts body content including inside table cells" {
       { "kind": "paragraph", "id": "Heading1", "name": "Heading 1" },
     ],
     "images": [{ "content_type": "image/png", "bytes": 5 }],
+    "sections": [],
     "messages": [
       {
         "severity": "warning",

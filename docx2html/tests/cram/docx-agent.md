@@ -25,11 +25,20 @@ $ docx.exe outline "$TESTDIR/fixtures/single-paragraph.docx" | sed "s|$TESTDIR|T
     "bookmarks": 0,
     "footnotes": 0,
     "endnotes": 0,
-    "comments": 0
+    "comments": 0,
+    "headers": 0,
+    "footers": 0,
+    "sections": 1
   },
   "headings": [],
   "styles_in_use": [],
   "images": [],
+  "sections": [
+    {
+      "headers": [],
+      "footers": []
+    }
+  ],
   "messages": []
 }
 ```
@@ -50,7 +59,10 @@ $ docx.exe outline "$TESTDIR/fixtures/tiny-picture.docx" | sed "s|$TESTDIR|TESTD
     "bookmarks": 0,
     "footnotes": 0,
     "endnotes": 0,
-    "comments": 0
+    "comments": 0,
+    "headers": 0,
+    "footers": 0,
+    "sections": 1
   },
   "headings": [],
   "styles_in_use": [],
@@ -58,6 +70,12 @@ $ docx.exe outline "$TESTDIR/fixtures/tiny-picture.docx" | sed "s|$TESTDIR|TESTD
     {
       "content_type": "image/png",
       "bytes": 110
+    }
+  ],
+  "sections": [
+    {
+      "headers": [],
+      "footers": []
     }
   ],
   "messages": []
@@ -116,11 +134,12 @@ error: path '/body/p[9]' not found: '/body' has 1 'p' children (wanted index 9)
 [1]
 ```
 
-Reserved roots (headers/footers/notes/comments) are named as such:
+Reserved roots (notes/comments — header/footer roots are live) are named
+as such:
 
 ```mooncram
-$ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/header[1]/p[1]'
-error: path root '/header[1]' is reserved but not yet addressable; only '/body' paths are supported today
+$ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/footnotes/note[1]'
+error: path root '/footnotes' is reserved but not yet addressable
 [1]
 ```
 
@@ -143,5 +162,80 @@ read command, this is a gate scripts can trust:
 $ printf 'garbage' > broken.docx; docx.exe validate broken.docx
 invalid ZIP archive: MissingEndOfCentral
 docx: invalid package: 1 finding(s)
+[1]
+```
+
+## Headers, Footers, And Sections
+
+A document's header/footer stories surface in the outline (counts plus the
+section map — `part` indexes the `/header[n]` / `/footer[n]` path space):
+
+```mooncram
+$ docx.exe outline "$TESTDIR/fixtures/header-footer.docx" | sed "s|$TESTDIR|TESTDIR|"
+{
+  "schema": "docx.outline/1",
+  "file": "TESTDIR/fixtures/header-footer.docx",
+  "counts": {
+    "paragraphs": 2,
+    "tables": 0,
+    "images": 0,
+    "hyperlinks": 0,
+    "bookmarks": 0,
+    "footnotes": 0,
+    "endnotes": 0,
+    "comments": 0,
+    "headers": 2,
+    "footers": 1,
+    "sections": 1
+  },
+  "headings": [],
+  "styles_in_use": [],
+  "images": [],
+  "sections": [
+    {
+      "headers": [
+        {
+          "variant": "default",
+          "part": 1
+        },
+        {
+          "variant": "first",
+          "part": 2
+        }
+      ],
+      "footers": [
+        {
+          "variant": "default",
+          "part": 1
+        }
+      ]
+    }
+  ],
+  "messages": []
+}
+```
+
+`text` emits header/footer paragraphs after the body, each under its own
+path root, and `get` resolves those paths:
+
+```mooncram
+$ docx.exe text "$TESTDIR/fixtures/header-footer.docx"
+[/body/p[1]] Body first paragraph
+[/body/p[2]] Body second paragraph
+[/header[1]/p[1]] Default header text
+[/header[2]/p[1]] First page header
+[/footer[1]/p[1]] Footer text
+```
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/header-footer.docx" '/footer[1]/p[1]'
+Footer text
+```
+
+A part index past what the document has is an ordinary not-found:
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/header-footer.docx" '/header[3]'
+error: path '/header[3]' not found: the document has 2 header part(s) (wanted index 3)
 [1]
 ```

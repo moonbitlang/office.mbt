@@ -161,10 +161,11 @@ included. All top-level keys are always present (possibly `[]`).
 |---|---|---|
 | `schema` | string | `"docx.outline/1"` |
 | `file` | string | the path argument, echoed verbatim |
-| `counts` | object | `{paragraphs, tables, images, hyperlinks, bookmarks, footnotes, endnotes, comments}`, all numbers. `bookmarks` counts bookmark starts (Word's transient `_GoBack` is dropped by the reader); `footnotes`/`endnotes` count note definitions. `hyperlinks` counts link spans in the parsed document: a multi-run field hyperlink (e.g. a Word TOC entry) contributes one span per run, so this can exceed the rendered `<a>` count |
+| `counts` | object | `{paragraphs, tables, images, hyperlinks, bookmarks, footnotes, endnotes, comments, headers, footers, sections}`, all numbers. `headers`/`footers` count distinct parts, `sections` counts section definitions. `bookmarks` counts bookmark starts (Word's transient `_GoBack` is dropped by the reader); `footnotes`/`endnotes` count note definitions. `hyperlinks` counts link spans in the parsed document: a multi-run field hyperlink (e.g. a Word TOC entry) contributes one span per run, so this can exceed the rendered `<a>` count |
 | `headings` | array | in document order: `{level, text, style_id?, style_name?}`. Heading detection follows the Mammoth default style-map convention with its rule order and matching semantics — style ids compare exactly, style names case-insensitively: id `Heading1`..`Heading6`; else name equal (ignoring case) to `heading 1`..`heading 6`; else bare id `Heading` / bare name `heading` (level 1). Headings whose text is empty are omitted. `text` is the paragraph's raw text without the trailing paragraph separator |
 | `styles_in_use` | array | unique `{kind, id?, name?}` in first-use order; `kind` ∈ `paragraph` \| `run` \| `table`. Only styles the reader resolved on body elements (unstyled elements contribute nothing) |
 | `images` | array | `{content_type, bytes}` per embedded image, in document order; `bytes` is the image part's byte length — no image data is emitted |
+| `sections` | array | in document order: `{ends_after_paragraph?, headers, footers}`. `ends_after_paragraph` is the 1-based index of the section's last direct body paragraph (absent = the body-final section); `headers`/`footers` are `{variant, part}` with `variant` ∈ `default` \| `first` \| `even` and `part` the 1-based index into the `/header[n]` / `/footer[n]` path space |
 | `messages` | array | reader diagnostics: `{severity, text}` with `severity` ∈ `warning` \| `error` (e.g. ignored unrecognised elements) |
 
 ## docx element paths (shared by `docx text`, `docx get`, and future mutations)
@@ -186,8 +187,10 @@ document — not literal source-XML paths, and not stable anchors:
   any edit. Because the reader flattens some OOXML nodes (content controls,
   revisions), kinds are the parsed document's semantic kinds with OOXML-like
   spellings.
-- Reserved roots for the upcoming header/footer/notes surface —
-  `/header[n]`, `/footer[n]`, `/footnotes/note[id]`, `/endnotes/note[id]`,
+- Roots: `/body` (the main story) and `/header[n]` / `/footer[n]` (1-based
+  index into the outline's part space; a too-large index is an ordinary
+  not-found naming the part count). Reserved roots for the upcoming
+  notes/comments surface — `/footnotes/note[id]`, `/endnotes/note[id]`,
   `/comments/comment[id]` — fail with a dedicated "reserved but not yet
   addressable" error rather than `not found`.
 - Future batch mutations will resolve each path against the document state
@@ -206,7 +209,7 @@ Without `--json`, `get` prints the element's raw text only. The JSON payload:
 | `schema` | string | `"docx.element/1"` |
 | `file` | string | echoed |
 | `path` | string | **normalized** (`p[02]` → `p[2]`); `/body` for the body itself |
-| `kind` | string | `body` \| `p` \| `r` \| `tbl` \| `tr` \| `tc` \| `hyperlink` \| `image` |
+| `kind` | string | `body` \| `header` \| `footer` (path roots) \| `p` \| `r` \| `tbl` \| `tr` \| `tc` \| `hyperlink` \| `image` |
 | `children` | array | `{kind, path}` per addressable direct child, in document order |
 
 Kind-specific keys (all optional — absent means unset; boolean flags appear

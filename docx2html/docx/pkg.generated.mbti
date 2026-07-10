@@ -21,6 +21,8 @@ pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_f
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 
+pub fn read_docx_package(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxPackageResult raise @core.DocxError
+
 pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxReadResult raise @core.DocxError
 
 pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
@@ -28,6 +30,14 @@ pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
 // Errors
 
 // Types and methods
+pub(all) struct DocxPackageResult {
+  document : @document.DocumentElement
+  headers : Array[@document.HeaderFooterPart]
+  footers : Array[@document.HeaderFooterPart]
+  sections : Array[@document.DocumentSection]
+  messages : Array[@core.Message]
+} derive(Eq, @debug.Debug)
+
 pub(all) struct DocxReadResult {
   document : @document.DocumentElement
   messages : Array[@core.Message]

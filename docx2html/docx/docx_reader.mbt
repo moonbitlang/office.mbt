@@ -302,11 +302,30 @@ pub fn read_docx_with_messages(
 }
 
 ///|
-fn read_docx_zip_with_messages(
+/// The assembled per-document reading context: every part-derived input the
+/// body/story readers need. Shared by `read_docx_zip_with_messages` (the
+/// frozen body-only surface) and `read_docx_package` (body + sections +
+/// header/footer stories).
+priv struct DocumentParts {
+  zip : ZipArchive
+  root : XmlElement
+  styles : Map[String, StyleInfo]
+  numbering : NumberingMap
+  content_types : ContentTypes
+  relationships : Relationships
+  base_path : String
+  notes_result : NotesReadResult
+  comments_result : CommentsReadResult
+  external_files : ExternalFileAccess
+  read_images : Bool
+}
+
+///|
+fn DocumentParts::build(
   zip : ZipArchive,
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
-) -> DocxReadResult raise DocxError {
+) -> DocumentParts raise DocxError {
   let main_document_path = find_main_document_path(zip)
   let relationships = read_relationships(
     zip,
@@ -347,23 +366,52 @@ fn read_docx_zip_with_messages(
     external_files~,
     read_images~,
   )
-  let xml = read_xml_part(zip, main_document_path)
-  let document_result = read_document_xml_with_messages(
-    xml,
+  let root = read_xml_part(zip, main_document_path)
+  {
+    zip,
+    root,
     styles,
     numbering,
-    zip,
-    relationships,
     content_types,
+    relationships,
     base_path,
-    notes_result.notes,
-    comments_result.comments,
-    external_files~,
-    read_images~,
+    notes_result,
+    comments_result,
+    external_files,
+    read_images,
+  }
+}
+
+///|
+fn DocumentParts::read_document(
+  self : DocumentParts,
+) -> DocxReadResult raise DocxError {
+  read_document_xml_with_messages(
+    self.root,
+    self.styles,
+    self.numbering,
+    self.zip,
+    self.relationships,
+    self.content_types,
+    self.base_path,
+    self.notes_result.notes,
+    self.comments_result.comments,
+    external_files=self.external_files,
+    read_images=self.read_images,
   )
+}
+
+///|
+fn read_docx_zip_with_messages(
+  zip : ZipArchive,
+  external_files? : ExternalFileAccess = default_external_file_access(),
+  read_images? : Bool = true,
+) -> DocxReadResult raise DocxError {
+  let parts = DocumentParts::build(zip, external_files~, read_images~)
+  let document_result = parts.read_document()
   let messages : Array[Message] = []
-  messages.append(notes_result.messages)
-  messages.append(comments_result.messages)
+  messages.append(parts.notes_result.messages)
+  messages.append(parts.comments_result.messages)
   messages.append(document_result.messages)
   {
     document: document_result.document,
