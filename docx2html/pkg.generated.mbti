@@ -108,6 +108,8 @@ pub fn parse_style_map_string(String) -> @style_map.StyleMapParseResult
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise DocxError
 
+pub fn read_docx_package(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @docx.DocxPackageResult raise DocxError
+
 pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @docx.DocxReadResult raise DocxError
 
 pub fn read_embedded_style_map(BytesView) -> String? raise DocxError
@@ -180,6 +182,8 @@ pub using @core {type ConversionResult}
 pub using @document {type DocumentElement}
 
 pub using @style_map {type DocumentMatcher}
+
+pub using @docx {type DocxPackageResult}
 
 pub using @docx {type DocxReadResult}
 

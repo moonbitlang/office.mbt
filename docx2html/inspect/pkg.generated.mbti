@@ -11,13 +11,13 @@ pub const SCHEMA_ELEMENT : String = "docx.element/1"
 
 pub const SCHEMA_OUTLINE : String = "docx.outline/1"
 
-pub fn element(@document.DocumentElement, file~ : String, path~ : String) -> Json raise PathError
+pub fn element(@document.DocumentElement, file~ : String, path~ : String, headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart]) -> Json raise PathError
 
-pub fn outline(@document.DocumentElement, file~ : String, messages? : Array[@core.Message]) -> Json
+pub fn outline(@document.DocumentElement, file~ : String, messages? : Array[@core.Message], headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart], sections? : Array[@document.DocumentSection]) -> Json
 
-pub fn resolve_path(@document.DocumentElement, String) -> @document.DocumentElement raise PathError
+pub fn resolve_path(@document.DocumentElement, String, headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart]) -> @document.DocumentElement raise PathError
 
-pub fn text_lines(@document.DocumentElement) -> Array[String]
+pub fn text_lines(@document.DocumentElement, headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart]) -> Array[String]
 
 // Errors
 pub(all) suberror PathError {

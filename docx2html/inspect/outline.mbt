@@ -18,6 +18,9 @@ pub fn outline(
   document : @document.DocumentElement,
   file~ : String,
   messages? : Array[@core.Message] = [],
+  headers? : Array[@document.HeaderFooterPart] = [],
+  footers? : Array[@document.HeaderFooterPart] = [],
+  sections? : Array[@document.DocumentSection] = [],
 ) -> Json {
   let walk = Walk::new()
   let (children, notes, comments) = match document {
@@ -38,6 +41,9 @@ pub fn outline(
     "footnotes": count_json(count_notes(notes, "footnote")),
     "endnotes": count_json(count_notes(notes, "endnote")),
     "comments": count_json(comments.length()),
+    "headers": count_json(headers.length()),
+    "footers": count_json(footers.length()),
+    "sections": count_json(sections.length()),
   }
   let images = []
   for image in walk.images {
@@ -68,7 +74,31 @@ pub fn outline(
     "headings": Json::array(walk.headings),
     "styles_in_use": Json::array(walk.styles),
     "images": Json::array(images),
+    "sections": Json::array(sections.map(section_json)),
     "messages": Json::array(message_entries),
+  })
+}
+
+///|
+/// One section entry: which body paragraph it ends after (absent = runs to
+/// the body end) and its header/footer references (`part` indexes the
+/// 1-based `/header[n]` / `/footer[n]` path space).
+fn section_json(section : @document.DocumentSection) -> Json {
+  let out : Map[String, Json] = Map([])
+  match section.ends_after_paragraph {
+    Some(index) => out["ends_after_paragraph"] = count_json(index)
+    None => ()
+  }
+  out["headers"] = Json::array(section.headers.map(section_ref_json))
+  out["footers"] = Json::array(section.footers.map(section_ref_json))
+  Json::object(out)
+}
+
+///|
+fn section_ref_json(section_ref : @document.SectionRef) -> Json {
+  Json::object({
+    "variant": Json::string(section_ref.variant),
+    "part": count_json(section_ref.part + 1),
   })
 }
 

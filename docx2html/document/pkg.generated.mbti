@@ -104,6 +104,16 @@ pub(all) enum DocumentElement {
 } derive(Eq, @debug.Debug)
 pub fn DocumentElement::to_raw_text(Self) -> String
 
+pub(all) struct DocumentSection {
+  ends_after_paragraph : Int?
+  headers : Array[SectionRef]
+  footers : Array[SectionRef]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct HeaderFooterPart {
+  body : Array[DocumentElement]
+} derive(Eq, @debug.Debug)
+
 pub(all) struct Image {
   content_type : String
   alt_text : String?
@@ -153,6 +163,11 @@ pub(all) struct RunProperties {
   highlight : String?
 } derive(Eq, @debug.Debug)
 pub fn RunProperties::default() -> Self
+
+pub(all) struct SectionRef {
+  variant : String
+  part : Int
+} derive(Eq, @debug.Debug)
 
 pub(all) struct TableProperties {
   style_id : String?

@@ -7,11 +7,16 @@
 async fn run_outline(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let data = @afs.read_file(file).binary()
-  let result = @docx2html.read_docx_with_messages(data)
+  let result = @docx2html.read_docx_package(data)
   println(
-    @inspect.outline(result.document, file~, messages=result.messages).stringify(
-      indent=2,
-    ),
+    @inspect.outline(
+      result.document,
+      file~,
+      messages=result.messages,
+      headers=result.headers,
+      footers=result.footers,
+      sections=result.sections,
+    ).stringify(indent=2),
   )
 }
 
@@ -33,8 +38,13 @@ fn outline_command() -> @argparse.Command {
 async fn run_text(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let data = @afs.read_file(file).binary()
-  let result = @docx2html.read_docx_with_messages(data)
-  for line in @inspect.text_lines(result.document) {
+  let result = @docx2html.read_docx_package(data)
+  for
+    line in @inspect.text_lines(
+      result.document,
+      headers=result.headers,
+      footers=result.footers,
+    ) {
     println(line)
   }
 }
@@ -46,16 +56,27 @@ async fn run_get(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let path = required_value(matches, "path")
   let data = @afs.read_file(file).binary()
-  let result = @docx2html.read_docx_with_messages(data)
+  let result = @docx2html.read_docx_package(data)
   // Path problems are usage errors, not document errors: agent-facing
   // messages already explain themselves, so give them the `error:` prefix.
   if matches.flags.get_or_default("json", false) {
-    let payload = @inspect.element(result.document, file~, path~) catch {
+    let payload = @inspect.element(
+      result.document,
+      file~,
+      path~,
+      headers=result.headers,
+      footers=result.footers,
+    ) catch {
       @inspect.PathError(message) => raise @cli.CliError("error: " + message)
     }
     println(payload.stringify(indent=2))
   } else {
-    let element = @inspect.resolve_path(result.document, path) catch {
+    let element = @inspect.resolve_path(
+      result.document,
+      path,
+      headers=result.headers,
+      footers=result.footers,
+    ) catch {
       @inspect.PathError(message) => raise @cli.CliError("error: " + message)
     }
     println(element.to_raw_text().trim_end(chars="\n"))

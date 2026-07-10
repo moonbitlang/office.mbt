@@ -8,22 +8,24 @@ pub fn element(
   document : @document.DocumentElement,
   file~ : String,
   path~ : String,
+  headers? : Array[@document.HeaderFooterPart] = [],
+  footers? : Array[@document.HeaderFooterPart] = [],
 ) -> Json raise PathError {
-  let steps = parse_path(path)
-  let target = if steps.length() == 0 {
-    match document {
-      Document(..) => document
-      other => @document.document([other])
-    }
+  let parsed = parse_path(path)
+  let (container, prefix) = root_container(
+    document, parsed, path, headers, footers,
+  )
+  let target = if parsed.steps.length() == 0 {
+    container
   } else {
-    resolve_steps(document, steps, path)
+    resolve_steps(container, parsed.steps, path, root_prefix=prefix)
   }
-  let normalized = normalized_path(steps)
+  let normalized = normalized_path(prefix, parsed.steps)
   let out : Map[String, Json] = {
     "schema": Json::string(SCHEMA_ELEMENT),
     "file": Json::string(file),
     "path": Json::string(normalized),
-    "kind": Json::string(element_kind_name(target)),
+    "kind": Json::string(element_kind_name(target, parsed.root)),
   }
   element_attributes(target, out)
   out["children"] = children_json(target, normalized)
@@ -31,9 +33,9 @@ pub fn element(
 }
 
 ///|
-fn normalized_path(steps : Array[PathStep]) -> String {
+fn normalized_path(prefix : String, steps : Array[PathStep]) -> String {
   let builder = StringBuilder()
-  builder.write_string("/body")
+  builder.write_string(prefix)
   for step in steps {
     builder.write_string("/\{step.kind}[\{step.index}]")
   }
@@ -41,10 +43,18 @@ fn normalized_path(steps : Array[PathStep]) -> String {
 }
 
 ///|
-fn element_kind_name(element : @document.DocumentElement) -> String {
+fn element_kind_name(
+  element : @document.DocumentElement,
+  root : PathRoot,
+) -> String {
   match segment_kind(element) {
     Some(kind) => kind
-    None => "body"
+    None =>
+      match root {
+        Body => "body"
+        Header(_) => "header"
+        Footer(_) => "footer"
+      }
   }
 }
 
@@ -172,13 +182,25 @@ fn children_json(
 /// depth, each prefixed with its full path — `[/body/p[1]] Hello`. Empty
 /// paragraphs are emitted too (their paths are how an agent learns valid
 /// indices).
-pub fn text_lines(document : @document.DocumentElement) -> Array[String] {
+pub fn text_lines(
+  document : @document.DocumentElement,
+  headers? : Array[@document.HeaderFooterPart] = [],
+  footers? : Array[@document.HeaderFooterPart] = [],
+) -> Array[String] {
   let lines = []
   let children = match document {
     Document(children~, ..) => children
     other => [other]
   }
   collect_text_lines(children, "/body", lines)
+  // Header/footer stories follow the body, each under its own path root, so
+  // every emitted path resolves via `get`.
+  for index, part in headers {
+    collect_text_lines(part.body, "/header[\{index + 1}]", lines)
+  }
+  for index, part in footers {
+    collect_text_lines(part.body, "/footer[\{index + 1}]", lines)
+  }
   lines
 }
 

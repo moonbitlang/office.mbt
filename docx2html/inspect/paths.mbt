@@ -9,10 +9,11 @@
 // - A path is valid for one document snapshot; positional paths shift after
 //   any edit. They are projections over the (lossy) parsed document, not
 //   literal source-XML paths.
-// - `/body` is the only root implemented today. `/header[n]`, `/footer[n]`,
+// - Roots: `/body` (the main story) and, when the caller supplies the
+//   package's parts, `/header[n]` / `/footer[n]` (1-based part index).
 //   `/footnotes/note[id]`, `/endnotes/note[id]`, and `/comments/comment[id]`
-//   are RESERVED for the header/footer/notes read surface; resolving them
-//   fails with a clear "not yet addressable" error rather than `not found`.
+//   remain RESERVED for the notes/comments surface; resolving them fails
+//   with a clear "not yet addressable" error rather than `not found`.
 
 ///|
 /// A path that cannot be parsed or resolved. Its message is agent-facing.
@@ -32,6 +33,20 @@ pub impl Show for PathError with fn output(self, logger) {
 priv struct PathStep {
   kind : String
   index : Int
+}
+
+///|
+/// The story a path addresses. Header/Footer carry the 1-based part index.
+priv enum PathRoot {
+  Body
+  Header(Int)
+  Footer(Int)
+}
+
+///|
+priv struct ParsedPath {
+  root : PathRoot
+  steps : Array[PathStep]
 }
 
 ///|
@@ -71,13 +86,13 @@ fn element_children(
 
 ///|
 let reserved_roots : ReadOnlyArray[String] = [
-  "header", "footer", "footnotes", "endnotes", "comments",
+  "footnotes", "endnotes", "comments",
 ]
 
 ///|
-/// Parses a `/body/kind[i]/...` path into steps. The `/body` root is
-/// required; reserved roots fail with a dedicated diagnostic.
-fn parse_path(path : String) -> Array[PathStep] raise PathError {
+/// Parses a `/body/kind[i]/...`, `/header[n]/...`, or `/footer[n]/...` path.
+/// Reserved roots (notes/comments) fail with a dedicated diagnostic.
+fn parse_path(path : String) -> ParsedPath raise PathError {
   if !path.has_prefix("/") {
     raise PathError("invalid path '\{path}': a path starts with '/'")
   }
@@ -89,22 +104,43 @@ fn parse_path(path : String) -> Array[PathStep] raise PathError {
   if segments.length() == 0 || segments[0] == "" {
     raise PathError("invalid path '\{path}': expected '/body/...'")
   }
-  let root = segments[0]
-  if root != "body" {
+  let root_segment = segments[0]
+  let root = if root_segment == "body" {
+    Body
+  } else if root_segment.has_prefix("header[") || root_segment == "header" {
+    Header(parse_root_index(root_segment, "header", path))
+  } else if root_segment.has_prefix("footer[") || root_segment == "footer" {
+    Footer(parse_root_index(root_segment, "footer", path))
+  } else {
     for reserved in reserved_roots {
-      if root == reserved || root.has_prefix(reserved + "[") {
+      if root_segment == reserved || root_segment.has_prefix(reserved + "[") {
         raise PathError(
-          "path root '/\{root}' is reserved but not yet addressable; only '/body' paths are supported today",
+          "path root '/\{root_segment}' is reserved but not yet addressable",
         )
       }
     }
-    raise PathError("invalid path '\{path}': unknown root '/\{root}'")
+    raise PathError("invalid path '\{path}': unknown root '/\{root_segment}'")
   }
   let steps = []
   for i in 1..<segments.length() {
     steps.push(parse_step(segments[i], path))
   }
-  steps
+  { root, steps }
+}
+
+///|
+fn parse_root_index(
+  segment : String,
+  kind : String,
+  path : String,
+) -> Int raise PathError {
+  let step = parse_step(segment, path) catch {
+    _ =>
+      raise PathError(
+        "invalid path root '/\{segment}' in '\{path}': expected \{kind}[index], e.g. /\{kind}[1]",
+      )
+  }
+  step.index
 }
 
 ///|
@@ -132,7 +168,19 @@ fn parse_step(segment : String, path : String) -> PathStep raise PathError {
 
 ///|
 fn known_kind(kind : String) -> Bool {
-  kind is ("p" | "r" | "tbl" | "tr" | "tc" | "hyperlink" | "image")
+  // header/footer appear only as path ROOTS; parse_root_index reuses
+  // parse_step, so they must be known kinds. resolve_steps never sees them
+  // as child kinds (no element projects to them).
+  kind
+  is ("p"
+  | "r"
+  | "tbl"
+  | "tr"
+  | "tc"
+  | "hyperlink"
+  | "image"
+  | "header"
+  | "footer")
 }
 
 ///|
@@ -167,12 +215,13 @@ fn resolve_steps(
   document : @document.DocumentElement,
   steps : Array[PathStep],
   path : String,
+  root_prefix? : String = "/body",
 ) -> @document.DocumentElement raise PathError {
   let mut current = match document {
     Document(..) => document
     other => @document.document([other])
   }
-  let mut prefix = "/body"
+  let mut prefix = root_prefix
   for step in steps {
     let mut seen = 0
     let mut found : @document.DocumentElement? = None
@@ -200,19 +249,61 @@ fn resolve_steps(
 }
 
 ///|
-/// Parses and resolves an agent path against a document.
+/// Resolves a parsed root to its story container plus the path prefix its
+/// steps resolve under.
+fn root_container(
+  document : @document.DocumentElement,
+  parsed : ParsedPath,
+  path : String,
+  headers : Array[@document.HeaderFooterPart],
+  footers : Array[@document.HeaderFooterPart],
+) -> (@document.DocumentElement, String) raise PathError {
+  match parsed.root {
+    Body =>
+      (
+        match document {
+          Document(..) => document
+          other => @document.document([other])
+        },
+        "/body",
+      )
+    Header(index) =>
+      (part_container(headers, index, "header", path), "/header[\{index}]")
+    Footer(index) =>
+      (part_container(footers, index, "footer", path), "/footer[\{index}]")
+  }
+}
+
+///|
+fn part_container(
+  parts : Array[@document.HeaderFooterPart],
+  index : Int,
+  kind : String,
+  path : String,
+) -> @document.DocumentElement raise PathError {
+  if index < 1 || index > parts.length() {
+    raise PathError(
+      "path '\{path}' not found: the document has \{parts.length()} \{kind} part(s) (wanted index \{index})",
+    )
+  }
+  @document.document(parts[index - 1].body)
+}
+
+///|
+/// Parses and resolves an agent path against a document (and, when
+/// supplied, its header/footer parts).
 pub fn resolve_path(
   document : @document.DocumentElement,
   path : String,
+  headers? : Array[@document.HeaderFooterPart] = [],
+  footers? : Array[@document.HeaderFooterPart] = [],
 ) -> @document.DocumentElement raise PathError {
-  let steps = parse_path(path)
-  if steps.length() == 0 {
-    // `/body` itself: return the document node (its element JSON is the
-    // body summary).
-    return match document {
-      Document(..) => document
-      other => @document.document([other])
-    }
+  let parsed = parse_path(path)
+  let (container, prefix) = root_container(
+    document, parsed, path, headers, footers,
+  )
+  if parsed.steps.length() == 0 {
+    return container
   }
-  resolve_steps(document, steps, path)
+  resolve_steps(container, parsed.steps, path, root_prefix=prefix)
 }
