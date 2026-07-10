@@ -533,3 +533,117 @@ test "image dimensions are parsed from real headers" {
   let text = @utf8.decode(doc, ignore_bom=true)
   inspect(text.find("cx=\"95250\" cy=\"95250\"") is Some(_), content="true")
 }
+
+///|
+test "F4 review round 1: empty metadata and malformed headers fail closed" {
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.hyperlink(
+          [@docx2html.run([@docx2html.text("x")])],
+          anchor=Some(""),
+        ),
+      ]),
+    ],
+    "a hyperlink anchor must not be empty",
+  )
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.hyperlink(
+          [@docx2html.run([@docx2html.text("x")])],
+          href=Some("https://example.com"),
+          target_frame=Some(""),
+        ),
+      ]),
+    ],
+    "a hyperlink target frame must not be empty",
+  )
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([
+          @docx2html.image("image/png", tiny_png(), alt_text=Some("  ")),
+        ]),
+      ]),
+    ],
+    "image alt text must not be blank",
+  )
+  // Wrong PNG signature tail (bytes 4..8) and truncated GIF both fail.
+  let bad_png = Bytes::from_array(tiny_png().to_array())
+  let mutated = bad_png.to_array()
+  mutated[5] = b'X'
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([
+          @docx2html.image("image/png", Bytes::from_array(mutated)),
+        ]),
+      ]),
+    ],
+    "could not read the image's dimensions",
+  )
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([
+          @docx2html.image("image/gif", b"GIFxxx\x0a\x00\x0a\x00\x00\x00\x00"),
+        ]),
+      ]),
+    ],
+    "could not read the image's dimensions",
+  )
+  // A JPEG whose SOF segment declares too little length for the dimension
+  // bytes is rejected (segment-bounded scan).
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([
+          @docx2html.image(
+            "image/jpeg", b"\xff\xd8\xff\xc0\x00\x02\x08\x00\x0a\x00\x14",
+          ),
+        ]),
+      ]),
+    ],
+    "could not read the image's dimensions",
+  )
+}
+
+///|
+test "multiple images and images inside hyperlinks and cells round-trip" {
+  let body = [
+    @docx2html.paragraph([
+      @docx2html.hyperlink(
+        [@docx2html.run([@docx2html.image("image/png", tiny_png())])],
+        href=Some("https://example.com/img"),
+      ),
+      @docx2html.run([
+        @docx2html.image("image/png", tiny_png(), alt_text=Some("second")),
+      ]),
+    ]),
+    @docx2html.table([
+      @docx2html.table_row([
+        @docx2html.table_cell([
+          @docx2html.paragraph([
+            @docx2html.run([@docx2html.image("image/png", tiny_png())]),
+          ]),
+        ]),
+      ]),
+    ]),
+  ]
+  let bytes = @docx2html.write_docx(body)
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let result = @docx2html.read_docx_package(bytes)
+  debug_inspect(result.messages, content="[]")
+  guard result.document is Document(children~, ..)
+  assert_eq(children, body)
+  // Three distinct media parts were emitted.
+  let archive = @mbtzip.read(bytes)
+  let mut media_count = 0
+  for entry in archive.entries() {
+    if entry.name().has_prefix("word/media/") {
+      media_count += 1
+    }
+  }
+  debug_inspect(media_count, content="3")
+}
