@@ -117,7 +117,7 @@ fn expect_unsupported(
 test "the F1 writer fails closed on everything it cannot serialize yet" {
   expect_unsupported(
     [@docx2html.table([])],
-    "the paragraph writer cannot serialize this element yet: table",
+    "the table writer cannot serialize an empty table",
   )
   expect_unsupported(
     [
@@ -234,4 +234,111 @@ test "all-flags formatting round-trips exactly" {
   let result = @docx2html.read_docx_package(@docx2html.write_docx(body))
   guard result.document is Document(children~, ..)
   assert_eq(children, body)
+}
+
+///|
+test "tables round-trip: header rows, column spans, and row spans" {
+  let body = [
+    @docx2html.table([
+      @docx2html.table_row(
+        [
+          @docx2html.table_cell([
+            @docx2html.paragraph([@docx2html.run([@docx2html.text("Name")])]),
+          ]),
+          @docx2html.table_cell([
+            @docx2html.paragraph([@docx2html.run([@docx2html.text("Value")])]),
+          ]),
+        ],
+        is_header=true,
+      ),
+      @docx2html.table_row([
+        @docx2html.table_cell(
+          [@docx2html.paragraph([@docx2html.run([@docx2html.text("wide")])])],
+          col_span=2,
+        ),
+      ]),
+      @docx2html.table_row([
+        @docx2html.table_cell(
+          [@docx2html.paragraph([@docx2html.run([@docx2html.text("tall")])])],
+          row_span=2,
+        ),
+        @docx2html.table_cell([
+          @docx2html.paragraph([@docx2html.run([@docx2html.text("b1")])]),
+        ]),
+      ]),
+      @docx2html.table_row([
+        @docx2html.table_cell([
+          @docx2html.paragraph([@docx2html.run([@docx2html.text("b2")])]),
+        ]),
+      ]),
+    ]),
+  ]
+  let bytes = @docx2html.write_docx(body)
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let result = @docx2html.read_docx_package(bytes)
+  debug_inspect(result.messages, content="[]")
+  // The reader strips vMerge continuation cells and reconstructs row_span —
+  // exactly the input body.
+  guard result.document is Document(children~, ..)
+  assert_eq(children, body)
+}
+
+///|
+test "the table writer fails closed on malformed shapes" {
+  expect_unsupported(
+    [
+      @docx2html.table([
+        @docx2html.table_row([
+          @docx2html.table_cell([
+            @docx2html.paragraph([@docx2html.run([@docx2html.text("a")])]),
+          ]),
+          @docx2html.table_cell([
+            @docx2html.paragraph([@docx2html.run([@docx2html.text("b")])]),
+          ]),
+        ]),
+        @docx2html.table_row([
+          @docx2html.table_cell([
+            @docx2html.paragraph([@docx2html.run([@docx2html.text("only")])]),
+          ]),
+        ]),
+      ]),
+    ],
+    "row 2 covers 1 of 2 grid column(s); ragged tables are not serializable",
+  )
+  expect_unsupported(
+    [
+      @docx2html.table([
+        @docx2html.table_row([
+          @docx2html.table_cell(
+            [@docx2html.paragraph([@docx2html.run([@docx2html.text("x")])])],
+            row_span=3,
+          ),
+        ]),
+      ]),
+    ],
+    "a row span of 3 starting at row 1 exceeds the table's 1 row(s)",
+  )
+  expect_unsupported(
+    [
+      @docx2html.table([
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("stray")])]),
+      ]),
+    ],
+    "a table can only contain rows; cannot serialize: paragraph",
+  )
+  expect_unsupported(
+    [
+      @docx2html.table(
+        [
+          @docx2html.table_row([
+            @docx2html.table_cell([
+              @docx2html.paragraph([@docx2html.run([@docx2html.text("x")])]),
+            ]),
+          ]),
+        ],
+        properties=@docx2html.table_properties(style_id=Some("TableGrid")),
+      ),
+    ],
+    "the table writer cannot serialize table styles yet",
+  )
 }
