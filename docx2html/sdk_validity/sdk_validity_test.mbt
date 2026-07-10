@@ -71,8 +71,10 @@ async test "docx fixtures and embed_style_map output are Microsoft OpenXML schem
     "tests/cram/fixtures/single-paragraph.docx",
   ).binary()
   let tiny_picture = @afs.read_file("tests/cram/fixtures/tiny-picture.docx").binary()
+  let header_footer = @afs.read_file("tests/cram/fixtures/header-footer.docx").binary()
   validate_docx_via_sdk(dir, "single_paragraph", single_paragraph)
   validate_docx_via_sdk(dir, "tiny_picture", tiny_picture)
+  validate_docx_via_sdk(dir, "header_footer", header_footer)
   let restyled = @docx2html.embed_style_map(single_paragraph, "p => h1:fresh")
   validate_docx_via_sdk(dir, "embedded_style_map", restyled)
 }

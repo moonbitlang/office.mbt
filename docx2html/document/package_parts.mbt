@@ -22,9 +22,15 @@ pub(all) struct SectionRef {
 ///|
 /// One document section. `ends_after_paragraph` is the 1-based index of the
 /// section's last direct body paragraph (a paragraph-level `w:sectPr`
-/// section break); `None` means the section runs to the end of the body
-/// (the body-final `w:sectPr`). Indices count the raw body's direct
-/// paragraphs in document order.
+/// section break); `None` means the section runs to the end of the body.
+/// Indices count the raw body's direct paragraphs in document order. Every
+/// document has at least one section (the final section exists even without
+/// an explicit body-final `w:sectPr`). `headers`/`footers` are the
+/// section's EFFECTIVE references — OOXML inheritance applied: a section
+/// without an explicit reference for a variant uses the previous section's,
+/// and an explicit-but-unreadable reference blocks inheritance for that
+/// variant. Ordering is deterministic: explicit references in XML order,
+/// then inherited entries in the previous section's effective order.
 pub(all) struct DocumentSection {
   ends_after_paragraph : Int?
   headers : Array[SectionRef]

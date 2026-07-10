@@ -55,16 +55,28 @@ pub fn read_docx_package(
 /// (inside `w:pPr`) closes a section after that paragraph; the body-final
 /// `w:sectPr` closes the last section. Direct body paragraphs are counted
 /// in document order.
+/// One scanned section plus the variants it DECLARED explicitly (readable
+/// or not): an explicit-but-unreadable reference must still block
+/// inheritance of that variant — the author overrode it, we just could not
+/// read the override.
+priv struct SectionScan {
+  section : @document.DocumentSection
+  declared_headers : Array[String]
+  declared_footers : Array[String]
+}
+
+///|
 fn collect_sections(
   root : XmlElement,
   collector : HeaderFooterCollector,
 ) -> Array[@document.DocumentSection] raise DocxError {
-  let sections : Array[@document.DocumentSection] = []
+  let scans : Array[SectionScan] = []
   guard root.first("w:body") is Some(body) else {
-    // Even a bodyless document projects one section covering nothing:
-    // "each body range maps to exactly one section".
-    sections.push({ ends_after_paragraph: None, headers: [], footers: [] })
-    return sections
+    // Defensive only: the public entry point reads the body first and
+    // raises on a missing one, so this branch is unreachable from
+    // read_docx_package. Kept so the section invariant ("each body range
+    // maps to exactly one section") holds for any caller.
+    return [{ ends_after_paragraph: None, headers: [], footers: [] }]
   }
   let mut paragraph_index = 0
   let mut trailing_sect_pr : XmlElement? = None
@@ -75,7 +87,7 @@ fn collect_sections(
         paragraph_index += 1
         match paragraph_sect_pr(element) {
           Some(sect_pr) =>
-            sections.push(collector.section(sect_pr, Some(paragraph_index)))
+            scans.push(collector.section(sect_pr, Some(paragraph_index)))
           None => ()
         }
       }
@@ -84,14 +96,18 @@ fn collect_sections(
     }
   }
   match trailing_sect_pr {
-    Some(sect_pr) => sections.push(collector.section(sect_pr, None))
+    Some(sect_pr) => scans.push(collector.section(sect_pr, None))
     // A document without a body-final sectPr still has a final section
     // running to the body end.
     None =>
-      sections.push({ ends_after_paragraph: None, headers: [], footers: [] })
+      scans.push({
+        section: { ends_after_paragraph: None, headers: [], footers: [] },
+        declared_headers: [],
+        declared_footers: [],
+      })
   }
-  apply_header_inheritance(sections)
-  sections
+  apply_header_inheritance(scans)
+  scans.map(scan => scan.section)
 }
 
 ///|
@@ -100,21 +116,35 @@ fn collect_sections(
 /// reference for that variant. The projection exposes EFFECTIVE
 /// associations, so an agent reading `sections[1].headers` sees what the
 /// section actually renders with.
-fn apply_header_inheritance(
-  sections : Array[@document.DocumentSection],
-) -> Unit {
-  for i in 1..<sections.length() {
-    inherit_missing_variants(sections[i].headers, sections[i - 1].headers)
-    inherit_missing_variants(sections[i].footers, sections[i - 1].footers)
+fn apply_header_inheritance(scans : Array[SectionScan]) -> Unit {
+  for i in 1..<scans.length() {
+    inherit_missing_variants(
+      scans[i].section.headers,
+      scans[i].declared_headers,
+      scans[i - 1].section.headers,
+    )
+    inherit_missing_variants(
+      scans[i].section.footers,
+      scans[i].declared_footers,
+      scans[i - 1].section.footers,
+    )
   }
 }
 
 ///|
+/// Appends the previous section's effective refs for variants this section
+/// neither carries nor DECLARED (a declared-but-unreadable override blocks
+/// inheritance). Ordering: explicit refs stay in XML order; inherited
+/// entries follow in the previous section's effective order.
 fn inherit_missing_variants(
   current : Array[@document.SectionRef],
+  declared : Array[String],
   previous : Array[@document.SectionRef],
 ) -> Unit {
   for candidate in previous {
+    if declared.search(candidate.variant) is Some(_) {
+      continue
+    }
     let mut present = false
     for existing in current {
       if existing.variant == candidate.variant {
@@ -165,9 +195,11 @@ fn HeaderFooterCollector::section(
   self : HeaderFooterCollector,
   sect_pr : XmlElement,
   ends_after_paragraph : Int?,
-) -> @document.DocumentSection raise DocxError {
+) -> SectionScan raise DocxError {
   let headers : Array[@document.SectionRef] = []
   let footers : Array[@document.SectionRef] = []
+  let declared_headers : Array[String] = []
+  let declared_footers : Array[String] = []
   for node in sect_pr.children {
     guard node is XmlElement(element) else { continue }
     let is_header = element.name == "w:headerReference"
@@ -176,6 +208,13 @@ fn HeaderFooterCollector::section(
       continue
     }
     let variant = element.attributes.get("w:type").unwrap_or("default")
+    // Declared regardless of resolvability: an explicit override blocks
+    // inheritance even when its part cannot be read.
+    if is_header {
+      declared_headers.push(variant)
+    } else {
+      declared_footers.push(variant)
+    }
     guard element.attributes.get("r:id") is Some(rel_id) else {
       self.messages.push(
         Warning("A header/footer reference without r:id was ignored"),
@@ -194,7 +233,11 @@ fn HeaderFooterCollector::section(
       None => ()
     }
   }
-  { ends_after_paragraph, headers, footers }
+  {
+    section: { ends_after_paragraph, headers, footers },
+    declared_headers,
+    declared_footers,
+  }
 }
 
 ///|
