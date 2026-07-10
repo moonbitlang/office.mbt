@@ -53,9 +53,9 @@ test "integration pivot+slicer relationship consistency" {
     None => ()
   }
 
-  inspect(integration_unique_values(workbook_ids[:]), content="true")
-  inspect(integration_unique_values(dash_ids[:]), content="true")
-  inspect(integration_unique_values(cache_ids[:]), content="true")
+  inspect(integration_unique_values(workbook_ids), content="true")
+  inspect(integration_unique_values(dash_ids), content="true")
+  inspect(integration_unique_values(cache_ids), content="true")
 
   let all_targets = workbook_targets + dash_targets + cache_targets
   let mut all_exist = true

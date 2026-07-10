@@ -15,16 +15,13 @@ fn assert_demo_invoice_archive(bytes : Bytes) -> Unit raise {
   }
   let workbook_ids = demo_rel_attr_values(workbook_rels, "Id")
   let workbook_targets = demo_rel_attr_values(workbook_rels, "Target")
-  inspect(demo_unique(workbook_ids[:]), content="true")
+  inspect(demo_unique(workbook_ids), content="true")
   inspect(
-    demo_has_value(workbook_targets[:], "worksheets/sheet1.xml"),
+    demo_has_value(workbook_targets, "worksheets/sheet1.xml"),
     content="true",
   )
-  inspect(
-    demo_has_value(workbook_targets[:], "sharedStrings.xml"),
-    content="true",
-  )
-  inspect(demo_has_value(workbook_targets[:], "calcChain.xml"), content="true")
+  inspect(demo_has_value(workbook_targets, "sharedStrings.xml"), content="true")
+  inspect(demo_has_value(workbook_targets, "calcChain.xml"), content="true")
 
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)

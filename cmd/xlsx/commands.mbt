@@ -154,7 +154,7 @@ async fn run_validate(m : @argparse.Matches) -> Unit {
   // Validate the file's own bytes, not a re-serialized copy: opening and
   // rewriting would hide input-package defects the reader tolerates.
   let bytes = @async/fs.read_file(arg(m, "file")).binary()
-  let problems = @xl.validate_ooxml_package(bytes[:])
+  let problems = @xl.validate_ooxml_package(bytes)
   if problems.length() == 0 {
     println("valid")
   } else {

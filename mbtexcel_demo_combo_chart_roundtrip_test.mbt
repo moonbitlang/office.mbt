@@ -30,15 +30,15 @@ fn assert_demo_combo_chart_archive(bytes : Bytes) -> Unit raise {
   let drawing_ids = demo_rel_attr_values(drawing_rels, "Id")
   let sheet_targets = demo_rel_attr_values(sheet_rels, "Target")
   let drawing_targets = demo_rel_attr_values(drawing_rels, "Target")
-  inspect(demo_unique(workbook_ids[:]), content="true")
-  inspect(demo_unique(sheet_ids[:]), content="true")
-  inspect(demo_unique(drawing_ids[:]), content="true")
+  inspect(demo_unique(workbook_ids), content="true")
+  inspect(demo_unique(sheet_ids), content="true")
+  inspect(demo_unique(drawing_ids), content="true")
   inspect(
-    demo_has_value(sheet_targets[:], "../drawings/drawing1.xml"),
+    demo_has_value(sheet_targets, "../drawings/drawing1.xml"),
     content="true",
   )
   inspect(
-    demo_has_value(drawing_targets[:], "../charts/chart1.xml"),
+    demo_has_value(drawing_targets, "../charts/chart1.xml"),
     content="true",
   )
 

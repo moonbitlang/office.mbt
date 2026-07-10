@@ -65,7 +65,7 @@ test "property: zip write then read preserves every entry" {
       archive.add(name, data, compression~)
       expected.push((name, data))
     }
-    let decoded = read(write(archive)[:])
+    let decoded = read(write(archive))
     for pair in expected {
       let (name, data) = pair
       guard decoded.get(name) is Some(got) && got == data else {
@@ -80,13 +80,11 @@ test "property: gzip then gunzip round-trips" {
   let rng = fuzz_rng(b"gzip-roundtrip")
   for _round in 0..<300 {
     let data = fuzz_payload(rng, 3000)
-    guard gunzip(gzip(data[:])[:]) == data else {
-      fail("gzip round-trip mismatch")
-    }
+    guard gunzip(gzip(data)) == data else { fail("gzip round-trip mismatch") }
   }
   // Explicit small-size edges.
-  guard gunzip(gzip(b""[:])[:]) == b"" else { fail("gzip empty") }
-  guard gunzip(gzip(b"a"[:])[:]) == b"a" else { fail("gzip single byte") }
+  guard gunzip(gzip(b"")) == b"" else { fail("gzip empty") }
+  guard gunzip(gzip(b"a")) == b"a" else { fail("gzip single byte") }
 }
 
 // ---- Fuzz: readers tolerate arbitrary input --------------------------------
@@ -106,7 +104,7 @@ test "fuzz: read tolerates arbitrary bytes" {
   let rng = fuzz_rng(b"read-arbitrary")
   for _iter in 0..<15000 {
     let bytes = fuzz_random_bytes(rng, rng.int(limit=300))
-    expect_no_crash(() => read(bytes[:]) |> ignore)
+    expect_no_crash(() => read(bytes) |> ignore)
   }
 }
 
@@ -156,7 +154,7 @@ test "fuzz: read tolerates corrupted valid archives" {
       arr[rng.int(limit=arr.length())] = rng.int(limit=256).to_byte()
     }
     let corrupted = Bytes::from_array(arr)
-    expect_no_crash(() => read(corrupted[:]) |> ignore)
+    expect_no_crash(() => read(corrupted) |> ignore)
   }
 }
 
@@ -165,6 +163,6 @@ test "fuzz: gunzip tolerates arbitrary bytes" {
   let rng = fuzz_rng(b"gunzip-arbitrary")
   for _iter in 0..<10000 {
     let bytes = fuzz_random_bytes(rng, rng.int(limit=300))
-    expect_no_crash(() => gunzip(bytes[:]) |> ignore)
+    expect_no_crash(() => gunzip(bytes) |> ignore)
   }
 }

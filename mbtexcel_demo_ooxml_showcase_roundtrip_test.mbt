@@ -36,38 +36,32 @@ fn assert_demo_ooxml_showcase_archive(bytes : Bytes) -> Unit raise {
   let sheet1_targets = demo_rel_attr_values(sheet1_rels, "Target")
   let vml2_ids = demo_rel_attr_values(vml2_rels, "Id")
   let vml2_targets = demo_rel_attr_values(vml2_rels, "Target")
-  inspect(demo_unique(workbook_ids[:]), content="true")
-  inspect(demo_unique(sheet1_ids[:]), content="true")
-  inspect(demo_unique(vml2_ids[:]), content="true")
+  inspect(demo_unique(workbook_ids), content="true")
+  inspect(demo_unique(sheet1_ids), content="true")
+  inspect(demo_unique(vml2_ids), content="true")
   inspect(
-    demo_has_value(workbook_targets[:], "worksheets/sheet1.xml"),
+    demo_has_value(workbook_targets, "worksheets/sheet1.xml"),
     content="true",
   )
   inspect(
-    demo_has_value(workbook_targets[:], "worksheets/sheet2.xml"),
+    demo_has_value(workbook_targets, "worksheets/sheet2.xml"),
     content="true",
   )
-  inspect(demo_has_value(sheet1_targets[:], "../comments1.xml"), content="true")
+  inspect(demo_has_value(sheet1_targets, "../comments1.xml"), content="true")
   inspect(
-    demo_has_value(sheet1_targets[:], "../drawings/vmlDrawing1.vml"),
-    content="true",
-  )
-  inspect(
-    demo_has_value(sheet1_targets[:], "../drawings/vmlDrawing2.vml"),
+    demo_has_value(sheet1_targets, "../drawings/vmlDrawing1.vml"),
     content="true",
   )
   inspect(
-    demo_has_value(sheet1_targets[:], "../media/image2.png"),
+    demo_has_value(sheet1_targets, "../drawings/vmlDrawing2.vml"),
     content="true",
   )
+  inspect(demo_has_value(sheet1_targets, "../media/image2.png"), content="true")
   inspect(
-    demo_has_value(sheet1_targets[:], "https://github.com/xuri/excelize"),
+    demo_has_value(sheet1_targets, "https://github.com/xuri/excelize"),
     content="true",
   )
-  inspect(
-    demo_has_value(vml2_targets[:], "../media/image1.png"),
-    content="true",
-  )
+  inspect(demo_has_value(vml2_targets, "../media/image1.png"), content="true")
 
   let sheet1_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)

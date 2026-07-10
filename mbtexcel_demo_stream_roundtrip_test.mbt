@@ -20,12 +20,9 @@ fn assert_demo_stream_archive(bytes : Bytes, rows : Int) -> Unit raise {
   let workbook_ids = demo_rel_attr_values(workbook_rels, "Id")
   let sheet_ids = demo_rel_attr_values(sheet_rels, "Id")
   let sheet_targets = demo_rel_attr_values(sheet_rels, "Target")
-  inspect(demo_unique(workbook_ids[:]), content="true")
-  inspect(demo_unique(sheet_ids[:]), content="true")
-  inspect(
-    demo_has_value(sheet_targets[:], "../tables/table1.xml"),
-    content="true",
-  )
+  inspect(demo_unique(workbook_ids), content="true")
+  inspect(demo_unique(sheet_ids), content="true")
+  inspect(demo_has_value(sheet_targets, "../tables/table1.xml"), content="true")
 
   let end_row = rows + 1
   let range_ref = "A1:E\{end_row}"

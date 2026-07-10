@@ -553,13 +553,13 @@ fn image_dimensions_px(
       try @zip.gunzip(data) catch {
         _ => None
       } noraise {
-        bytes => emf_dimensions(bytes[:])
+        bytes => emf_dimensions(bytes)
       }
     "wmz" =>
       try @zip.gunzip(data) catch {
         _ => None
       } noraise {
-        bytes => wmf_dimensions(bytes[:])
+        bytes => wmf_dimensions(bytes)
       }
     _ => None
   }

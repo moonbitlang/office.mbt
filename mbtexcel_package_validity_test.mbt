@@ -19,7 +19,7 @@ test "demo workbooks are structurally valid OOXML packages" {
   ]
   for entry in cases {
     let (name, bytes) = entry
-    let problems = @xlsx.validate_ooxml_package(bytes[:])
+    let problems = @xlsx.validate_ooxml_package(bytes)
     if problems.length() != 0 {
       fail("demo \{name} is not a valid package: \{repr(problems)}")
     }
@@ -32,7 +32,7 @@ test "demo workbooks are structurally valid OOXML packages" {
 /// rather than silently passing.
 test "encrypted demo is not a plain OOXML zip" {
   let bytes = @demos.demo_secure_bytes(password="p@ss")
-  let problems = @xlsx.validate_ooxml_package(bytes[:])
+  let problems = @xlsx.validate_ooxml_package(bytes)
   guard problems.length() > 0 else {
     fail("expected encrypted package to be flagged as non-zip")
   }

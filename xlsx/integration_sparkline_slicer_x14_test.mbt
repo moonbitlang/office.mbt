@@ -141,7 +141,7 @@ test "integration sparkline slicer and x14 conditional formatting coexistence" {
 
   let sheet_targets = rel_attr_values_sparkline_slicer(rels_xml, "Target")
   inspect(
-    has_value_sparkline_slicer(sheet_targets[:], "../slicers/slicer1.xml"),
+    has_value_sparkline_slicer(sheet_targets, "../slicers/slicer1.xml"),
     content="true",
   )
   inspect(

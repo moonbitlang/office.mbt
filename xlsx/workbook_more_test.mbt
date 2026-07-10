@@ -582,7 +582,7 @@ test "workbook: missing-sheet cell/media wrapper guards" {
   let image_opts = GraphicOptions::new()
 
   let set_rich : Result[Unit, Error] = Ok(
-    workbook.set_cell_rich_text("Missing", "A1", rich[:]),
+    workbook.set_cell_rich_text("Missing", "A1", rich),
   ) catch {
     e => Err(e)
   }
@@ -1013,7 +1013,7 @@ test "workbook: validation merge sparkline and rc/style wrapper coverage" {
   workbook.unmerge_cells("Sheet1", "D1:E1")
 
   workbook.set_cell("Sheet1", "A1", "10")
-  workbook.add_sparkline_group("Sheet1", ["F2"][:], ["A1:A1"][:])
+  workbook.add_sparkline_group("Sheet1", ["F2"], ["A1:A1"])
   workbook.add_sparkline_basic("Sheet1", "F3", "A1:A1")
 
   workbook.set_cell_value_rc("Sheet1", 2, 2, String("rc"))
@@ -1066,28 +1066,19 @@ test "workbook: table naming and slicer wrapper/error branches" {
   ignore(workbook.add_sheet("Sheet1"))
 
   ignore(
-    workbook.add_table_with_columns(
-      "Sheet1",
-      "A1:B2",
-      "Table",
-      ["Region", "Type"][:],
-    ),
+    workbook.add_table_with_columns("Sheet1", "A1:B2", "Table", [
+      "Region", "Type",
+    ]),
   )
   ignore(
-    workbook.add_table_with_columns(
-      "Sheet1",
-      "D1:E2",
-      "TableA",
-      ["Region", "Type"][:],
-    ),
+    workbook.add_table_with_columns("Sheet1", "D1:E2", "TableA", [
+      "Region", "Type",
+    ]),
   )
   ignore(
-    workbook.add_table_with_columns(
-      "Sheet1",
-      "G1:H2",
-      "Table3",
-      ["Region", "Type"][:],
-    ),
+    workbook.add_table_with_columns("Sheet1", "G1:H2", "Table3", [
+      "Region", "Type",
+    ]),
   )
 
   let auto_name_opts = TableOptions::new("J1:K2") catch {
@@ -1147,12 +1138,9 @@ test "workbook: table naming and slicer wrapper/error branches" {
   )
 
   ignore(
-    workbook.add_table_with_columns(
-      "Sheet1",
-      "N1:O2",
-      "TableDigits",
-      ["1Region", "Type"][:],
-    ),
+    workbook.add_table_with_columns("Sheet1", "N1:O2", "TableDigits", [
+      "1Region", "Type",
+    ]),
   )
   let digit_field_opts = SlicerOptions::new(
     "1Region", "N3", "Sheet1", "TableDigits",

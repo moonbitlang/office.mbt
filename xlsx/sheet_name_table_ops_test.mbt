@@ -3,12 +3,9 @@ test "table APIs validate sheet name" {
   let workbook = Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let add_table_cols_result : Result[Table, Error] = Ok(
-    workbook.add_table_with_columns(
-      "Sheet:1",
-      "A1:B2",
-      "Table1",
-      ["Column1", "Column2"][:],
-    ),
+    workbook.add_table_with_columns("Sheet:1", "A1:B2", "Table1", [
+      "Column1", "Column2",
+    ]),
   ) catch {
     e => Err(e)
   }

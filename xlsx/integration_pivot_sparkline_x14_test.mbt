@@ -135,7 +135,7 @@ test "integration pivot-backed slicer with sparkline and x14 data bar" {
 
   let targets = rel_attr_values_pivot_mix(rels_xml, "Target")
   inspect(
-    has_value_pivot_mix(targets[:], "../slicers/slicer1.xml"),
+    has_value_pivot_mix(targets, "../slicers/slicer1.xml"),
     content="true",
   )
   inspect(

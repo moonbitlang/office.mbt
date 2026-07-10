@@ -163,27 +163,27 @@ pub fn Workbook::sheet_index(
 /// were created (not necessarily tab order, and excluding chart sheets). Use
 /// `sheet` to look one up by name, or `get_sheet_list` for names in tab order.
 pub fn Workbook::sheets(self : Workbook) -> ArrayView[Worksheet] {
-  self.sheets[:]
+  self.sheets
 }
 
 ///|
 pub fn Workbook::chart_sheets(self : Workbook) -> ArrayView[ChartSheet] {
-  self.chart_sheets[:]
+  self.chart_sheets
 }
 
 ///|
 pub fn Workbook::styles(self : Workbook) -> ArrayView[Style] {
-  self.styles[:]
+  self.styles
 }
 
 ///|
 fn Workbook::conditional_styles(self : Workbook) -> ArrayView[Style] {
-  self.conditional_styles[:]
+  self.conditional_styles
 }
 
 ///|
 pub fn Workbook::defined_names(self : Workbook) -> ArrayView[DefinedName] {
-  self.defined_names[:]
+  self.defined_names
 }
 
 ///|
@@ -464,7 +464,7 @@ pub fn Workbook::set_sheet_name(
       updated.push({ name: dn.name, refers_to, scope, comment: dn.comment })
     }
     self.defined_names.clear()
-    self.defined_names.append(updated[:])
+    self.defined_names.append(updated)
   }
 }
 
@@ -506,7 +506,7 @@ pub fn Workbook::delete_sheet(
         }
       }
       self.sheet_order.clear()
-      self.sheet_order.append(updated[:])
+      self.sheet_order.append(updated)
     }
     ChartSheet(idx) => {
       ignore(self.chart_sheets.remove(idx))
@@ -523,7 +523,7 @@ pub fn Workbook::delete_sheet(
         }
       }
       self.sheet_order.clear()
-      self.sheet_order.append(updated[:])
+      self.sheet_order.append(updated)
     }
   }
   if self.defined_names.length() > 0 {
@@ -536,7 +536,7 @@ pub fn Workbook::delete_sheet(
       updated.push(dn)
     }
     self.defined_names.clear()
-    self.defined_names.append(updated[:])
+    self.defined_names.append(updated)
   }
   if self.active_sheet_index == order_index {
     let fallback = if order_index >= self.sheet_order.length() {
@@ -932,7 +932,7 @@ pub fn Workbook::delete_defined_name(
     raise DefinedNameScope(name=defined_name.name)
   }
   self.defined_names.clear()
-  self.defined_names.append(updated[:])
+  self.defined_names.append(updated)
 }
 
 ///|
@@ -1030,7 +1030,7 @@ fn Workbook::adjust_defined_names_for_sheet(
     })
   }
   self.defined_names.clear()
-  self.defined_names.append(updated[:])
+  self.defined_names.append(updated)
 }
 
 ///|
@@ -2613,7 +2613,7 @@ fn remove_defined_name_for_scope(
     updated.push(dn)
   }
   workbook.defined_names.clear()
-  workbook.defined_names.append(updated[:])
+  workbook.defined_names.append(updated)
 }
 
 ///|

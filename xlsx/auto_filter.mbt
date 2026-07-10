@@ -171,7 +171,7 @@ fn auto_filter_column_from_expression(
   expression : StringView,
 ) -> AutoFilterColumn raise XlsxError {
   let tokens = tokenize_filter_expression(expression)
-  let (ops, values) = parse_filter_expression(tokens[:])
+  let (ops, values) = parse_filter_expression(tokens)
   if ops.length() == 1 && ops[0] == 2 {
     return { col, filters: Some(values), custom_filters: None }
   }

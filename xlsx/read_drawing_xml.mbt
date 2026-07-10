@@ -92,7 +92,7 @@ fn parse_drawing_anchors(
     }
     let slice = text[:end]
     let full = "<xdr:twoCellAnchor\{slice.to_owned()}"
-    let positioning = match tag_attributes_in(full[:], "xdr:twoCellAnchor") {
+    let positioning = match tag_attributes_in(full, "xdr:twoCellAnchor") {
       Some(tag) =>
         match attr_value(tag, "editAs") {
           Some(value) =>
@@ -131,40 +131,32 @@ fn parse_drawing_images(
   let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
     let (anchor_xml, positioning) = entry
-    let pic_body = match extract_tag_body_from(anchor_xml[:], "xdr:pic") {
+    let pic_body = match extract_tag_body_from(anchor_xml, "xdr:pic") {
       Some(value) => value
       None => continue
     }
-    let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
+    let from_body = match extract_tag_body_from(anchor_xml, "xdr:from") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing anchor from missing")
     }
     let col_idx0 = parse_xml_int_tag(
-      from_body[:],
-      "xdr:col",
-      "drawing col invalid",
+      from_body, "xdr:col", "drawing col invalid",
     )
     let row_idx0 = parse_xml_int_tag(
-      from_body[:],
-      "xdr:row",
-      "drawing row invalid",
+      from_body, "xdr:row", "drawing row invalid",
     )
     let col_off_emu = parse_xml_int_tag(
-      from_body[:],
-      "xdr:colOff",
-      "drawing colOff invalid",
+      from_body, "xdr:colOff", "drawing colOff invalid",
     )
     let row_off_emu = parse_xml_int_tag(
-      from_body[:],
-      "xdr:rowOff",
-      "drawing rowOff invalid",
+      from_body, "xdr:rowOff", "drawing rowOff invalid",
     )
     let reference = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
     let offset_x = col_off_emu / picture_emu_per_pixel
     let offset_y = row_off_emu / picture_emu_per_pixel
     let (width_emu, height_emu) = match positioning {
       OneCell => {
-        let ext_tag = match tag_attributes_in(anchor_xml[:], "xdr:ext") {
+        let ext_tag = match tag_attributes_in(anchor_xml, "xdr:ext") {
           Some(value) => value
           None => raise InvalidXml(msg="drawing ext missing")
         }
@@ -185,29 +177,21 @@ fn parse_drawing_images(
         (cx, cy)
       }
       _ => {
-        let to_body = match extract_tag_body_from(anchor_xml[:], "xdr:to") {
+        let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
           Some(value) => value
           None => raise InvalidXml(msg="drawing anchor to missing")
         }
         let to_col_idx0 = parse_xml_int_tag(
-          to_body[:],
-          "xdr:col",
-          "drawing to col invalid",
+          to_body, "xdr:col", "drawing to col invalid",
         )
         let to_row_idx0 = parse_xml_int_tag(
-          to_body[:],
-          "xdr:row",
-          "drawing to row invalid",
+          to_body, "xdr:row", "drawing to row invalid",
         )
         let to_col_off = parse_xml_int_tag(
-          to_body[:],
-          "xdr:colOff",
-          "drawing to colOff invalid",
+          to_body, "xdr:colOff", "drawing to colOff invalid",
         )
         let to_row_off = parse_xml_int_tag(
-          to_body[:],
-          "xdr:rowOff",
-          "drawing to rowOff invalid",
+          to_body, "xdr:rowOff", "drawing to rowOff invalid",
         )
         let cx = drawing_axis_span_emu(
           sheet, "col", col_idx0, col_off_emu, to_col_idx0, to_col_off,
@@ -218,7 +202,7 @@ fn parse_drawing_images(
         (cx, cy)
       }
     }
-    let c_nv_pr_tag = match tag_attributes_in(pic_body[:], "xdr:cNvPr") {
+    let c_nv_pr_tag = match tag_attributes_in(pic_body, "xdr:cNvPr") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing cNvPr missing")
     }
@@ -231,7 +215,7 @@ fn parse_drawing_images(
       None => ""
     }
     let lock_aspect_ratio = pic_body.contains("noChangeAspect=\"1\"")
-    let client_tag = match tag_attributes_in(anchor_xml[:], "xdr:clientData") {
+    let client_tag = match tag_attributes_in(anchor_xml, "xdr:clientData") {
       Some(value) => value
       None => ""
     }
@@ -243,7 +227,7 @@ fn parse_drawing_images(
       Some(value) => parse_bool_attr(value)
       None => true
     }
-    let blip_tag = match tag_attributes_in(pic_body[:], "a:blip") {
+    let blip_tag = match tag_attributes_in(pic_body, "a:blip") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing blip missing")
     }
@@ -276,7 +260,7 @@ fn parse_drawing_images(
     }
     let mut hyperlink = ""
     let mut hyperlink_type = HyperlinkType::Unset
-    match tag_attributes_in(pic_body[:], "a:hlinkClick") {
+    match tag_attributes_in(pic_body, "a:hlinkClick") {
       Some(tag) =>
         match attr_value(tag, "r:id") {
           Some(rel_id) =>
@@ -335,7 +319,7 @@ fn parse_drawing_charts(
   let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
     let (anchor_xml, positioning) = entry
-    let chart_tag = match tag_attributes_in(anchor_xml[:], "c:chart") {
+    let chart_tag = match tag_attributes_in(anchor_xml, "c:chart") {
       Some(value) => value
       None => continue
     }
@@ -355,36 +339,28 @@ fn parse_drawing_charts(
     let xml = @encoding/utf8.decode(chart_bytes) catch {
       _ => raise InvalidXml(msg="drawing chart xml decode failed")
     }
-    let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
+    let from_body = match extract_tag_body_from(anchor_xml, "xdr:from") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing anchor from missing")
     }
     let col_idx0 = parse_xml_int_tag(
-      from_body[:],
-      "xdr:col",
-      "drawing col invalid",
+      from_body, "xdr:col", "drawing col invalid",
     )
     let row_idx0 = parse_xml_int_tag(
-      from_body[:],
-      "xdr:row",
-      "drawing row invalid",
+      from_body, "xdr:row", "drawing row invalid",
     )
     let col_off_emu = parse_xml_int_tag(
-      from_body[:],
-      "xdr:colOff",
-      "drawing colOff invalid",
+      from_body, "xdr:colOff", "drawing colOff invalid",
     )
     let row_off_emu = parse_xml_int_tag(
-      from_body[:],
-      "xdr:rowOff",
-      "drawing rowOff invalid",
+      from_body, "xdr:rowOff", "drawing rowOff invalid",
     )
     let reference = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
     let offset_x = col_off_emu / picture_emu_per_pixel
     let offset_y = row_off_emu / picture_emu_per_pixel
     let (width_emu, height_emu) = match positioning {
       OneCell => {
-        let ext_tag = match tag_attributes_in(anchor_xml[:], "xdr:ext") {
+        let ext_tag = match tag_attributes_in(anchor_xml, "xdr:ext") {
           Some(value) => value
           None => raise InvalidXml(msg="drawing ext missing")
         }
@@ -405,29 +381,21 @@ fn parse_drawing_charts(
         (cx, cy)
       }
       _ => {
-        let to_body = match extract_tag_body_from(anchor_xml[:], "xdr:to") {
+        let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
           Some(value) => value
           None => raise InvalidXml(msg="drawing anchor to missing")
         }
         let to_col_idx0 = parse_xml_int_tag(
-          to_body[:],
-          "xdr:col",
-          "drawing to col invalid",
+          to_body, "xdr:col", "drawing to col invalid",
         )
         let to_row_idx0 = parse_xml_int_tag(
-          to_body[:],
-          "xdr:row",
-          "drawing to row invalid",
+          to_body, "xdr:row", "drawing to row invalid",
         )
         let to_col_off = parse_xml_int_tag(
-          to_body[:],
-          "xdr:colOff",
-          "drawing to colOff invalid",
+          to_body, "xdr:colOff", "drawing to colOff invalid",
         )
         let to_row_off = parse_xml_int_tag(
-          to_body[:],
-          "xdr:rowOff",
-          "drawing to rowOff invalid",
+          to_body, "xdr:rowOff", "drawing to rowOff invalid",
         )
         let cx = drawing_axis_span_emu(
           sheet, "col", col_idx0, col_off_emu, to_col_idx0, to_col_off,
@@ -438,7 +406,7 @@ fn parse_drawing_charts(
         (cx, cy)
       }
     }
-    let client_tag = match tag_attributes_in(anchor_xml[:], "xdr:clientData") {
+    let client_tag = match tag_attributes_in(anchor_xml, "xdr:clientData") {
       Some(value) => value
       None => ""
     }
@@ -476,29 +444,25 @@ fn parse_drawing_shapes(
     if anchor_xml.contains("<mc:AlternateContent") {
       continue
     }
-    let sp_body = match extract_tag_body_from(anchor_xml[:], "xdr:sp") {
+    let sp_body = match extract_tag_body_from(anchor_xml, "xdr:sp") {
       Some(value) => value
       None => continue
     }
     if !sp_body.contains("<a:prstGeom") {
       continue
     }
-    let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
+    let from_body = match extract_tag_body_from(anchor_xml, "xdr:from") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing anchor from missing")
     }
     let col_idx0 = parse_xml_int_tag(
-      from_body[:],
-      "xdr:col",
-      "drawing col invalid",
+      from_body, "xdr:col", "drawing col invalid",
     )
     let row_idx0 = parse_xml_int_tag(
-      from_body[:],
-      "xdr:row",
-      "drawing row invalid",
+      from_body, "xdr:row", "drawing row invalid",
     )
     let reference = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
-    let c_nv_pr_tag = match tag_attributes_in(sp_body[:], "xdr:cNvPr") {
+    let c_nv_pr_tag = match tag_attributes_in(sp_body, "xdr:cNvPr") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing shape cNvPr missing")
     }
@@ -514,7 +478,7 @@ fn parse_drawing_shapes(
       Some(value) => unescape_xml_text(value)
       None => ""
     }
-    let client_tag = match tag_attributes_in(anchor_xml[:], "xdr:clientData") {
+    let client_tag = match tag_attributes_in(anchor_xml, "xdr:clientData") {
       Some(value) => value
       None => ""
     }
@@ -526,15 +490,15 @@ fn parse_drawing_shapes(
       Some(value) => parse_bool_attr(value)
       None => true
     }
-    let sppr_body = match extract_tag_body_from(sp_body[:], "xdr:spPr") {
+    let sppr_body = match extract_tag_body_from(sp_body, "xdr:spPr") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing shape spPr missing")
     }
-    let xfrm_body = match extract_tag_body_from(sppr_body[:], "a:xfrm") {
+    let xfrm_body = match extract_tag_body_from(sppr_body, "a:xfrm") {
       Some(value) => value
       None => sppr_body
     }
-    let ext_tag = match tag_attributes_in(xfrm_body[:], "a:ext") {
+    let ext_tag = match tag_attributes_in(xfrm_body, "a:ext") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing shape ext missing")
     }
@@ -558,7 +522,7 @@ fn parse_drawing_shapes(
     let height = (cy.to_double() / picture_emu_per_pixel.to_double())
       .round()
       .to_int()
-    let geom_tag = match tag_attributes_in(sppr_body[:], "a:prstGeom") {
+    let geom_tag = match tag_attributes_in(sppr_body, "a:prstGeom") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing shape prstGeom missing")
     }
@@ -568,14 +532,14 @@ fn parse_drawing_shapes(
     }
     let mut fill_color = ""
     let mut fill_transparency = 0
-    match extract_tag_body_from(sppr_body[:], "a:solidFill") {
+    match extract_tag_body_from(sppr_body, "a:solidFill") {
       Some(fill_body) =>
-        match tag_attributes_in(fill_body[:], "a:srgbClr") {
+        match tag_attributes_in(fill_body, "a:srgbClr") {
           Some(tag) =>
             match attr_value(tag, "val") {
               Some(value) => {
                 fill_color = unescape_xml_text(value)
-                match tag_attributes_in(fill_body[:], "a:alpha") {
+                match tag_attributes_in(fill_body, "a:alpha") {
                   Some(alpha_tag) =>
                     match attr_value(alpha_tag, "val") {
                       Some(alpha) =>
@@ -603,7 +567,7 @@ fn parse_drawing_shapes(
     }
     let mut line_color = ""
     let mut line_width = 1.0
-    match tag_attributes_in(sppr_body[:], "a:ln") {
+    match tag_attributes_in(sppr_body, "a:ln") {
       Some(tag) => {
         match attr_value(tag, "w") {
           Some(value) =>
@@ -614,9 +578,9 @@ fn parse_drawing_shapes(
             }
           None => ()
         }
-        match extract_tag_body_from(sppr_body[:], "a:ln") {
+        match extract_tag_body_from(sppr_body, "a:ln") {
           Some(ln_body) =>
-            match tag_attributes_in(ln_body[:], "a:srgbClr") {
+            match tag_attributes_in(ln_body, "a:srgbClr") {
               Some(color_tag) =>
                 match attr_value(color_tag, "val") {
                   Some(value) => line_color = unescape_xml_text(value)
@@ -630,7 +594,7 @@ fn parse_drawing_shapes(
       None => ()
     }
     let paragraph : Array[RichTextRun] = []
-    match extract_tag_body_from(sp_body[:], "xdr:txBody") {
+    match extract_tag_body_from(sp_body, "xdr:txBody") {
       Some(tx_body) => {
         let tx = tx_body.to_string()
         let mut first = true
@@ -708,7 +672,7 @@ fn parse_drawing_slicer_anchors(
   let anchors = parse_drawing_anchors(drawing_xml)
   for entry in anchors {
     let (anchor_xml, positioning) = entry
-    let slicer_tag = match tag_attributes_in(anchor_xml[:], "sle:slicer") {
+    let slicer_tag = match tag_attributes_in(anchor_xml, "sle:slicer") {
       Some(value) => value
       None => continue
     }
@@ -716,36 +680,28 @@ fn parse_drawing_slicer_anchors(
       Some(value) => unescape_xml_text(value)
       None => continue
     }
-    let from_body = match extract_tag_body_from(anchor_xml[:], "xdr:from") {
+    let from_body = match extract_tag_body_from(anchor_xml, "xdr:from") {
       Some(value) => value
       None => raise InvalidXml(msg="drawing slicer from missing")
     }
     let col_idx0 = parse_xml_int_tag(
-      from_body[:],
-      "xdr:col",
-      "drawing slicer col invalid",
+      from_body, "xdr:col", "drawing slicer col invalid",
     )
     let row_idx0 = parse_xml_int_tag(
-      from_body[:],
-      "xdr:row",
-      "drawing slicer row invalid",
+      from_body, "xdr:row", "drawing slicer row invalid",
     )
     let col_off_emu = parse_xml_int_tag(
-      from_body[:],
-      "xdr:colOff",
-      "drawing slicer colOff invalid",
+      from_body, "xdr:colOff", "drawing slicer colOff invalid",
     )
     let row_off_emu = parse_xml_int_tag(
-      from_body[:],
-      "xdr:rowOff",
-      "drawing slicer rowOff invalid",
+      from_body, "xdr:rowOff", "drawing slicer rowOff invalid",
     )
     let cell = cell_ref_from(row_idx0 + 1, col_idx0 + 1)
     let offset_x = col_off_emu / picture_emu_per_pixel
     let offset_y = row_off_emu / picture_emu_per_pixel
     let (width_emu, height_emu) = match positioning {
       OneCell => {
-        let ext_tag = match tag_attributes_in(anchor_xml[:], "xdr:ext") {
+        let ext_tag = match tag_attributes_in(anchor_xml, "xdr:ext") {
           Some(value) => value
           None => raise InvalidXml(msg="drawing slicer ext missing")
         }
@@ -766,29 +722,21 @@ fn parse_drawing_slicer_anchors(
         (cx, cy)
       }
       _ => {
-        let to_body = match extract_tag_body_from(anchor_xml[:], "xdr:to") {
+        let to_body = match extract_tag_body_from(anchor_xml, "xdr:to") {
           Some(value) => value
           None => raise InvalidXml(msg="drawing slicer to missing")
         }
         let to_col_idx0 = parse_xml_int_tag(
-          to_body[:],
-          "xdr:col",
-          "drawing slicer to col invalid",
+          to_body, "xdr:col", "drawing slicer to col invalid",
         )
         let to_row_idx0 = parse_xml_int_tag(
-          to_body[:],
-          "xdr:row",
-          "drawing slicer to row invalid",
+          to_body, "xdr:row", "drawing slicer to row invalid",
         )
         let to_col_off = parse_xml_int_tag(
-          to_body[:],
-          "xdr:colOff",
-          "drawing slicer to colOff invalid",
+          to_body, "xdr:colOff", "drawing slicer to colOff invalid",
         )
         let to_row_off = parse_xml_int_tag(
-          to_body[:],
-          "xdr:rowOff",
-          "drawing slicer to rowOff invalid",
+          to_body, "xdr:rowOff", "drawing slicer to rowOff invalid",
         )
         let cx = drawing_axis_span_emu(
           sheet, "col", col_idx0, col_off_emu, to_col_idx0, to_col_off,
@@ -806,7 +754,7 @@ fn parse_drawing_slicer_anchors(
       .round()
       .to_int()
     let graphic_frame_tag = match
-      tag_attributes_in(anchor_xml[:], "xdr:graphicFrame") {
+      tag_attributes_in(anchor_xml, "xdr:graphicFrame") {
       Some(value) => value
       None => ""
     }
@@ -814,7 +762,7 @@ fn parse_drawing_slicer_anchors(
       Some(value) => unescape_xml_text(value)
       None => ""
     }
-    let c_nv_pr_tag = match tag_attributes_in(anchor_xml[:], "xdr:cNvPr") {
+    let c_nv_pr_tag = match tag_attributes_in(anchor_xml, "xdr:cNvPr") {
       Some(value) => value
       None => ""
     }
@@ -822,7 +770,7 @@ fn parse_drawing_slicer_anchors(
       Some(value) => unescape_xml_text(value)
       None => ""
     }
-    let client_tag = match tag_attributes_in(anchor_xml[:], "xdr:clientData") {
+    let client_tag = match tag_attributes_in(anchor_xml, "xdr:clientData") {
       Some(value) => value
       None => ""
     }

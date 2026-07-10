@@ -176,79 +176,79 @@ pub fn Worksheet::state(self : Worksheet) -> SheetState {
 
 ///|
 fn Worksheet::cells(self : Worksheet) -> ArrayView[Cell] {
-  self.cells[:]
+  self.cells
 }
 
 ///|
 pub fn Worksheet::merged_cells(self : Worksheet) -> ArrayView[String] {
-  self.merged_cells[:]
+  self.merged_cells
 }
 
 ///|
 fn Worksheet::hyperlinks(self : Worksheet) -> ArrayView[Hyperlink] {
-  self.hyperlinks[:]
+  self.hyperlinks
 }
 
 ///|
 pub fn Worksheet::tables(self : Worksheet) -> ArrayView[Table] {
-  self.tables[:]
+  self.tables
 }
 
 ///|
 pub fn Worksheet::sparkline_groups(
   self : Worksheet,
 ) -> ArrayView[SparklineGroup] {
-  self.sparkline_groups[:]
+  self.sparkline_groups
 }
 
 ///|
 pub fn Worksheet::pivot_tables(self : Worksheet) -> ArrayView[PivotTable] {
-  self.pivot_tables[:]
+  self.pivot_tables
 }
 
 ///|
 pub fn Worksheet::images(self : Worksheet) -> ArrayView[Image] {
-  self.images[:]
+  self.images
 }
 
 ///|
 pub fn Worksheet::charts(self : Worksheet) -> ArrayView[Chart] {
-  self.charts[:]
+  self.charts
 }
 
 ///|
 pub fn Worksheet::shapes(self : Worksheet) -> ArrayView[Shape] {
-  self.shapes[:]
+  self.shapes
 }
 
 ///|
 fn Worksheet::form_controls(self : Worksheet) -> ArrayView[FormControl] {
-  self.form_controls[:]
+  self.form_controls
 }
 
 ///|
 fn Worksheet::slicers(self : Worksheet) -> ArrayView[Slicer] {
-  self.slicers[:]
+  self.slicers
 }
 
 ///|
 pub fn Worksheet::data_validations(self : Worksheet) -> ArrayView[String] {
-  self.data_validations[:]
+  self.data_validations
 }
 
 ///|
 pub fn Worksheet::conditional_formats(self : Worksheet) -> ArrayView[String] {
-  self.conditional_formats[:]
+  self.conditional_formats
 }
 
 ///|
 pub fn Worksheet::ignored_errors(self : Worksheet) -> ArrayView[IgnoredError] {
-  self.ignored_errors[:]
+  self.ignored_errors
 }
 
 ///|
 pub fn Worksheet::comments(self : Worksheet) -> ArrayView[Comment] {
-  self.comments[:]
+  self.comments
 }
 
 ///|
@@ -312,12 +312,12 @@ pub fn Worksheet::sheet_background(self : Worksheet) -> SheetBackground? {
 
 ///|
 pub fn Worksheet::row_breaks(self : Worksheet) -> ArrayView[PageBreak] {
-  self.row_breaks[:]
+  self.row_breaks
 }
 
 ///|
 pub fn Worksheet::col_breaks(self : Worksheet) -> ArrayView[PageBreak] {
-  self.col_breaks[:]
+  self.col_breaks
 }
 
 ///|

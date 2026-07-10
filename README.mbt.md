@@ -300,7 +300,7 @@ test "validate output" {
   let workbook = new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "hello")
-  debug_inspect(@xlsx.validate_ooxml_package(write(workbook)[:]), content="[]")
+  debug_inspect(@xlsx.validate_ooxml_package(write(workbook)), content="[]")
 }
 ```
 

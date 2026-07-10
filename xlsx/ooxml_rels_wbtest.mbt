@@ -8,7 +8,7 @@ test "ooxml_rels: parse_relationship_targets filters by Type and maps Id->Target
     #|  <Relationship Id="rId3" Type="t1" Target="c.xml"/>
     #|</Relationships>
     #|
-  let targets = parse_relationship_targets(xml[:], "t1")
+  let targets = parse_relationship_targets(xml, "t1")
   debug_inspect(
     targets,
     content=(

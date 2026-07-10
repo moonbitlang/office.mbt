@@ -749,11 +749,9 @@ test "read wb: x14 validation and icon-set helper guard branches" {
   let opt_percent = ConditionalFormatOptions::new("icon_set")
   opt_percent.icon_style = "3Arrows"
   opt_percent.percent = true
-  let icon_rule_with_cfvo = build_icon_set_rule_xml_from_x14(
-    opt_percent,
-    3,
-    ["<cfvo type=\"num\" val=\"1\"/>"][:],
-  )
+  let icon_rule_with_cfvo = build_icon_set_rule_xml_from_x14(opt_percent, 3, [
+    "<cfvo type=\"num\" val=\"1\"/>",
+  ])
   inspect(icon_rule_with_cfvo.contains("percent=\"1\""), content="true")
   inspect(
     icon_rule_with_cfvo.contains("<cfvo type=\"num\" val=\"1\"/>"),

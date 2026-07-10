@@ -39,8 +39,8 @@ test "formula eval wb: anchorarray and range guards" {
   let anchor_err = anchorarray_values(
     workbook,
     "Sheet1",
-    [Cell("", "bad_ref")][:],
-    [FormulaValue::Number(1.0)][:],
+    [Cell("", "bad_ref")],
+    [FormulaValue::Number(1.0)],
   )
   inspect(
     match anchor_err {
@@ -184,50 +184,47 @@ test "formula eval wb: matrix and trend helper guards" {
 test "formula eval wb: sequence randarray and slice guards" {
   inspect(
     wb_is_error(
-      sequence_values([FormulaValue::String("bad-rows")][:]),
+      sequence_values([FormulaValue::String("bad-rows")]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      sequence_values(
-        [FormulaValue::Number(1.0), FormulaValue::String("bad-cols")][:],
-      ),
+      sequence_values([
+        FormulaValue::Number(1.0),
+        FormulaValue::String("bad-cols"),
+      ]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      sequence_values(
-        [
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-          FormulaValue::String("bad-start"),
-        ][:],
-      ),
+      sequence_values([
+        FormulaValue::Number(1.0),
+        FormulaValue::Number(1.0),
+        FormulaValue::String("bad-start"),
+      ]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      sequence_values(
-        [
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-          FormulaValue::String("bad-step"),
-        ][:],
-      ),
+      sequence_values([
+        FormulaValue::Number(1.0),
+        FormulaValue::Number(1.0),
+        FormulaValue::Number(1.0),
+        FormulaValue::String("bad-step"),
+      ]),
       formula_error_value,
     ),
     content="true",
   )
 
   let empty_rand_args : Array[FormulaValue] = []
-  let rand_default = randarray_values(empty_rand_args[:])
+  let rand_default = randarray_values(empty_rand_args)
   inspect(
     match rand_default {
       List(list) => list.length() == 1
@@ -236,15 +233,13 @@ test "formula eval wb: sequence randarray and slice guards" {
     content="true",
   )
 
-  let rand_float = randarray_values(
-    [
-      FormulaValue::Number(1.0),
-      FormulaValue::Number(2.0),
-      FormulaValue::Number(0.0),
-      FormulaValue::Number(1.0),
-      FormulaValue::Bool(false),
-    ][:],
-  )
+  let rand_float = randarray_values([
+    FormulaValue::Number(1.0),
+    FormulaValue::Number(2.0),
+    FormulaValue::Number(0.0),
+    FormulaValue::Number(1.0),
+    FormulaValue::Bool(false),
+  ])
   let rand_float_ok = match rand_float {
     FormulaValue::List(list) => list.length() == 2 && wb_is_number(list[0])
     _ => false
@@ -252,58 +247,53 @@ test "formula eval wb: sequence randarray and slice guards" {
   inspect(rand_float_ok, content="true")
   inspect(
     wb_is_error(
-      randarray_values([FormulaValue::String("bad-rows")][:]),
+      randarray_values([FormulaValue::String("bad-rows")]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      randarray_values(
-        [FormulaValue::Number(1.0), FormulaValue::String("bad-cols")][:],
-      ),
+      randarray_values([
+        FormulaValue::Number(1.0),
+        FormulaValue::String("bad-cols"),
+      ]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      randarray_values(
-        [
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-          FormulaValue::String("bad-min"),
-        ][:],
-      ),
+      randarray_values([
+        FormulaValue::Number(1.0),
+        FormulaValue::Number(1.0),
+        FormulaValue::String("bad-min"),
+      ]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      randarray_values(
-        [
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(0.0),
-          FormulaValue::String("bad-max"),
-        ][:],
-      ),
+      randarray_values([
+        FormulaValue::Number(1.0),
+        FormulaValue::Number(1.0),
+        FormulaValue::Number(0.0),
+        FormulaValue::String("bad-max"),
+      ]),
       formula_error_value,
     ),
     content="true",
   )
   inspect(
     wb_is_error(
-      randarray_values(
-        [
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(1.0),
-          FormulaValue::Number(0.0),
-          FormulaValue::Number(1.0),
-          FormulaValue::String("bad-whole"),
-        ][:],
-      ),
+      randarray_values([
+        FormulaValue::Number(1.0),
+        FormulaValue::Number(1.0),
+        FormulaValue::Number(0.0),
+        FormulaValue::Number(1.0),
+        FormulaValue::String("bad-whole"),
+      ]),
       formula_error_value,
     ),
     content="true",
@@ -355,8 +345,8 @@ test "formula eval wb: range transforms and index guards" {
       take_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)][:],
-        [base_list, FormulaValue::String("bad-rows")][:],
+        [base_expr, Expr::Number(0.0)],
+        [base_list, FormulaValue::String("bad-rows")],
         ctx,
       ),
       formula_error_value,
@@ -368,8 +358,8 @@ test "formula eval wb: range transforms and index guards" {
       take_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0)][:],
-        [base_list, Number(1.0), FormulaValue::String("bad-cols")][:],
+        [base_expr, Expr::Number(0.0), Expr::Number(0.0)],
+        [base_list, Number(1.0), FormulaValue::String("bad-cols")],
         ctx,
       ),
       formula_error_value,
@@ -381,8 +371,8 @@ test "formula eval wb: range transforms and index guards" {
       drop_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)][:],
-        [base_list, FormulaValue::String("bad-rows")][:],
+        [base_expr, Expr::Number(0.0)],
+        [base_list, FormulaValue::String("bad-rows")],
         ctx,
       ),
       formula_error_value,
@@ -394,8 +384,8 @@ test "formula eval wb: range transforms and index guards" {
       drop_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0)][:],
-        [base_list, Number(1.0), FormulaValue::String("bad-cols")][:],
+        [base_expr, Expr::Number(0.0), Expr::Number(0.0)],
+        [base_list, Number(1.0), FormulaValue::String("bad-cols")],
         ctx,
       ),
       formula_error_value,
@@ -407,8 +397,8 @@ test "formula eval wb: range transforms and index guards" {
       drop_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)][:],
-        [base_list, Number(1.0)][:],
+        [base_expr, Expr::Number(0.0)],
+        [base_list, Number(1.0)],
         ctx,
       ),
       formula_error_value,
@@ -421,8 +411,8 @@ test "formula eval wb: range transforms and index guards" {
       expand_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)][:],
-        [base_list, FormulaValue::String("bad-rows")][:],
+        [base_expr, Expr::Number(0.0)],
+        [base_list, FormulaValue::String("bad-rows")],
         ctx,
       ),
       formula_error_value,
@@ -434,8 +424,8 @@ test "formula eval wb: range transforms and index guards" {
       expand_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0)][:],
-        [base_list, Number(1.0), FormulaValue::String("bad-cols")][:],
+        [base_expr, Expr::Number(0.0), Expr::Number(0.0)],
+        [base_list, Number(1.0), FormulaValue::String("bad-cols")],
         ctx,
       ),
       formula_error_value,
@@ -447,8 +437,8 @@ test "formula eval wb: range transforms and index guards" {
       expand_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)][:],
-        [base_list, Number(1.0), Number(4.0), Error(formula_error_ref)][:],
+        [base_expr, Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)],
+        [base_list, Number(1.0), Number(4.0), Error(formula_error_ref)],
         ctx,
       ),
       formula_error_ref,
@@ -457,7 +447,7 @@ test "formula eval wb: range transforms and index guards" {
   )
   inspect(
     wb_is_error(
-      wrap_values(workbook, "Sheet1", [base_expr][:], [base_list][:], ctx, true),
+      wrap_values(workbook, "Sheet1", [base_expr], [base_list], ctx, true),
       formula_error_value,
     ),
     content="true",
@@ -467,8 +457,8 @@ test "formula eval wb: range transforms and index guards" {
       wrap_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0)][:],
-        [base_list, FormulaValue::String("bad-count")][:],
+        [base_expr, Expr::Number(0.0)],
+        [base_list, FormulaValue::String("bad-count")],
         ctx,
         true,
       ),
@@ -481,8 +471,8 @@ test "formula eval wb: range transforms and index guards" {
       wrap_values(
         workbook,
         "Sheet1",
-        [base_expr, Expr::Number(0.0), Expr::Number(0.0)][:],
-        [base_list, Number(2.0), Error(formula_error_ref)][:],
+        [base_expr, Expr::Number(0.0), Expr::Number(0.0)],
+        [base_list, Number(2.0), Error(formula_error_ref)],
         ctx,
         false,
       ),
@@ -493,8 +483,8 @@ test "formula eval wb: range transforms and index guards" {
   let wrapped_default_pad = wrap_values(
     workbook,
     "Sheet1",
-    [base_expr, Expr::Number(0.0)][:],
-    [base_list, Number(3.0)][:],
+    [base_expr, Expr::Number(0.0)],
+    [base_list, Number(3.0)],
     ctx,
     true,
   )
@@ -530,7 +520,7 @@ test "formula eval wb: range transforms and index guards" {
   )
 
   inspect(
-    match choose_indices([FormulaValue::String("bad-idx")][:], 3) {
+    match choose_indices([FormulaValue::String("bad-idx")], 3) {
       Err(Error(err)) => err == formula_error_value
       _ => false
     },
@@ -538,7 +528,7 @@ test "formula eval wb: range transforms and index guards" {
   )
   let no_indices : Array[FormulaValue] = []
   inspect(
-    match choose_indices(no_indices[:], 3) {
+    match choose_indices(no_indices, 3) {
       Err(Error(err)) => err == formula_error_value
       _ => false
     },
@@ -598,7 +588,7 @@ test "formula eval wb: sort filter and tocol-torow guards" {
   let sortby_cols = sortby_values(
     workbook,
     "Sheet1",
-    [Expr::Number(0.0), Expr::Number(0.0)][:],
+    [Expr::Number(0.0), Expr::Number(0.0)],
     [
       FormulaValue::List([
         FormulaValue::Number(30.0),
@@ -610,7 +600,7 @@ test "formula eval wb: sort filter and tocol-torow guards" {
         FormulaValue::Number(3.0),
         FormulaValue::Number(1.0),
       ]),
-    ][:],
+    ],
     ctx,
   )
   let sortby_cols_ok = match sortby_cols {
@@ -628,14 +618,14 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       sort_values(
         workbook,
         "Sheet1",
-        [Expr::Number(0.0), Expr::Number(0.0)][:],
+        [Expr::Number(0.0), Expr::Number(0.0)],
         [
           FormulaValue::List([
             FormulaValue::Number(1.0),
             FormulaValue::Number(2.0),
           ]),
           FormulaValue::String("bad-index"),
-        ][:],
+        ],
         ctx,
       ),
       formula_error_value,
@@ -647,7 +637,7 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       sort_values(
         workbook,
         "Sheet1",
-        [Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)][:],
+        [Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)],
         [
           FormulaValue::List([
             FormulaValue::Number(1.0),
@@ -655,7 +645,7 @@ test "formula eval wb: sort filter and tocol-torow guards" {
           ]),
           FormulaValue::Number(1.0),
           FormulaValue::String("bad-order"),
-        ][:],
+        ],
         ctx,
       ),
       formula_error_value,
@@ -672,7 +662,7 @@ test "formula eval wb: sort filter and tocol-torow guards" {
           Expr::Number(0.0),
           Expr::Number(0.0),
           Expr::Number(0.0),
-        ][:],
+        ],
         [
           FormulaValue::List([
             FormulaValue::Number(1.0),
@@ -681,7 +671,7 @@ test "formula eval wb: sort filter and tocol-torow guards" {
           FormulaValue::Number(1.0),
           FormulaValue::Number(1.0),
           FormulaValue::String("bad-by-col"),
-        ][:],
+        ],
         ctx,
       ),
       formula_error_value,
@@ -720,11 +710,11 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       tocol_torow_values(
         workbook,
         "Sheet1",
-        [Expr::Number(0.0), Expr::Number(0.0)][:],
+        [Expr::Number(0.0), Expr::Number(0.0)],
         [
           FormulaValue::List([FormulaValue::Number(1.0)]),
           FormulaValue::String("bad-ignore"),
-        ][:],
+        ],
         ctx,
         true,
       ),
@@ -737,12 +727,12 @@ test "formula eval wb: sort filter and tocol-torow guards" {
       tocol_torow_values(
         workbook,
         "Sheet1",
-        [Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)][:],
+        [Expr::Number(0.0), Expr::Number(0.0), Expr::Number(0.0)],
         [
           FormulaValue::List([FormulaValue::Number(1.0)]),
           FormulaValue::Number(0.0),
           FormulaValue::String("bad-scan"),
-        ][:],
+        ],
         ctx,
         false,
       ),

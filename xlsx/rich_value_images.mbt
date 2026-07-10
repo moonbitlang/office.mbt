@@ -111,7 +111,7 @@ fn parse_web_image_blip_ids(xml : String) -> Array[String] raise XlsxError {
 /// the first record value of each block (the rich value index).
 fn parse_value_metadata(xml : String) -> Array[Int] raise XlsxError {
   let result : Array[Int] = []
-  let body = match extract_tag_body_from(xml[:], "valueMetadata") {
+  let body = match extract_tag_body_from(xml, "valueMetadata") {
     Some(value) => value
     None => return result
   }
@@ -150,7 +150,7 @@ fn parse_rich_values(
   // Extract the rvData body first so the split does not also match the
   // "<rvData" container element (which would insert a phantom entry and
   // shift every rich value index by one).
-  let body = match extract_tag_body_from(xml[:], "rvData") {
+  let body = match extract_tag_body_from(xml, "rvData") {
     Some(value) => value
     None => return result
   }
