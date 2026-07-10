@@ -1,27 +1,27 @@
 ///|
 test "conditional format: more rule types (time/text/top/bottom/blanks/errors/formula/icon)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let time = ConditionalFormatOptions::new("time_period")
+  let time = @xlsx.ConditionalFormatOptions::new("time_period")
   time.set_criteria("today")
   time.set_stop_if_true(true)
-  let text = ConditionalFormatOptions::new("text")
+  let text = @xlsx.ConditionalFormatOptions::new("text")
   text.set_criteria("containing")
   text.set_value("hi")
-  let top = ConditionalFormatOptions::new("top")
+  let top = @xlsx.ConditionalFormatOptions::new("top")
   top.set_percent(true)
   top.set_value("5")
-  let bottom = ConditionalFormatOptions::new("bottom")
+  let bottom = @xlsx.ConditionalFormatOptions::new("bottom")
   bottom.set_value("3")
-  let avg = ConditionalFormatOptions::new("average")
+  let avg = @xlsx.ConditionalFormatOptions::new("average")
   avg.set_above_average(true)
-  let blanks = ConditionalFormatOptions::new("blanks")
-  let no_blanks = ConditionalFormatOptions::new("no_blanks")
-  let errors = ConditionalFormatOptions::new("errors")
-  let no_errors = ConditionalFormatOptions::new("no_errors")
-  let formula = ConditionalFormatOptions::new("formula")
+  let blanks = @xlsx.ConditionalFormatOptions::new("blanks")
+  let no_blanks = @xlsx.ConditionalFormatOptions::new("no_blanks")
+  let errors = @xlsx.ConditionalFormatOptions::new("errors")
+  let no_errors = @xlsx.ConditionalFormatOptions::new("no_errors")
+  let formula = @xlsx.ConditionalFormatOptions::new("formula")
   formula.set_criteria("A1>0")
-  let icon = ConditionalFormatOptions::new("icon_set")
+  let icon = @xlsx.ConditionalFormatOptions::new("icon_set")
   icon.set_icon_style("3Stars")
   icon.set_reverse_icons(true)
   icon.set_icons_only(true)
@@ -50,14 +50,17 @@ test "conditional format: more rule types (time/text/top/bottom/blanks/errors/fo
 
 ///|
 test "conditional format: invalid time_period criteria" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let time = ConditionalFormatOptions::new("time_period")
+  let time = @xlsx.ConditionalFormatOptions::new("time_period")
   time.set_criteria("nope")
   let result : Result[Unit, Error] = Ok(
     sheet.set_conditional_format("A1", [time]),
   ) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidConditionalFormat(_)), content="true")
+  inspect(
+    result is Err(@xlsx.XlsxError::InvalidConditionalFormat(_)),
+    content="true",
+  )
 }

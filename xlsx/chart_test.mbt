@@ -10,7 +10,7 @@ fn find_chart_index_or_fail(xml : String, needle : String) -> Int raise Error {
 
 ///|
 test "chart package" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let chart_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -18,7 +18,7 @@ test "chart package" {
     #|  <c:chart/>
     #|</c:chartSpace>
   sheet.add_chart("C3", chart_xml)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -45,7 +45,7 @@ test "chart package" {
 
 ///|
 test "chart delete" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let chart_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -59,28 +59,32 @@ test "chart delete" {
   inspect(sheet.charts().length(), content="1")
   workbook.delete_chart("Sheet1", "C3")
   inspect(sheet.charts().length(), content="0")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   inspect(archive.get("xl/charts/chart1.xml") is None, content="true")
 }
 
 ///|
 test "chart options write" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Sheet1!$B$1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Sheet1!$B$1",
+    ),
   )
   opts.title = "Sales"
-  opts.format = GraphicOptions::with_values(
+  opts.format = @xlsx.GraphicOptions::with_values(
     offset_x=10,
     offset_y=20,
     locked=false,
     print_object=false,
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -113,7 +117,7 @@ test "chart options write" {
 
 ///|
 test "chart size twoCellAnchor computes to cell" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A2", "Small")
   sheet.set_cell("A3", "Normal")
@@ -130,19 +134,31 @@ test "chart size twoCellAnchor computes to cell" {
   sheet.set_cell("B4", "6")
   sheet.set_cell("C4", "7")
   sheet.set_cell("D4", "8")
-  let opts = ChartOptions::new(Col3DClustered)
-  opts.dimension = ChartDimension::with_values(640, 480)
+  let opts = @xlsx.ChartOptions::new(Col3DClustered)
+  opts.dimension = @xlsx.ChartDimension::with_values(640, 480)
   opts.series.push(
-    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$2:$D$2", name="Sheet1!$A$2"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$B$1:$D$1",
+      "Sheet1!$B$2:$D$2",
+      name="Sheet1!$A$2",
+    ),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$3:$D$3", name="Sheet1!$A$3"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$B$1:$D$1",
+      "Sheet1!$B$3:$D$3",
+      name="Sheet1!$A$3",
+    ),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$4:$D$4", name="Sheet1!$A$4"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$B$1:$D$1",
+      "Sheet1!$B$4:$D$4",
+      name="Sheet1!$A$4",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "E4", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -157,20 +173,28 @@ test "chart size twoCellAnchor computes to cell" {
 
 ///|
 test "chart options combo (col + line) secondary axis" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
-  let combo = ChartOptions::new(Line)
+  let combo = @xlsx.ChartOptions::new(Line)
   combo.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="Series2"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$C$2:$C$4",
+      name="Series2",
+    ),
   )
   combo.y_axis.secondary = true
   opts.add_combo_chart(combo)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -197,19 +221,27 @@ test "chart options combo (col + line) secondary axis" {
 
 ///|
 test "chart options combo (scatter + col)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Scatter)
+  let opts = @xlsx.ChartOptions::new(Scatter)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
-  let combo = ChartOptions::new(Col)
+  let combo = @xlsx.ChartOptions::new(Col)
   combo.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="Series2"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$C$2:$C$4",
+      name="Series2",
+    ),
   )
   opts.add_combo_chart(combo)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -234,30 +266,30 @@ test "chart options combo (scatter + col)" {
 
 ///|
 test "chart options combo (stock + line) uses dateAx" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(StockOpenHighLowClose)
+  let opts = @xlsx.ChartOptions::new(StockOpenHighLowClose)
   opts.plot_area.up_bars.fill_color = "00FF00"
   opts.plot_area.down_bars.fill_color = "FF0000"
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Open"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Open"),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="High"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="High"),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$D$2:$D$4", name="Low"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$D$2:$D$4", name="Low"),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$E$2:$E$4", name="Close"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$E$2:$E$4", name="Close"),
   )
-  let combo = ChartOptions::new(Line)
+  let combo = @xlsx.ChartOptions::new(Line)
   combo.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$F$2:$F$4", name="MA"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$F$2:$F$4", name="MA"),
   )
   opts.add_combo_chart(combo)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -281,15 +313,19 @@ test "chart options combo (stock + line) uses dateAx" {
 
 ///|
 test "chart options legend none omits legend" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   opts.legend.position = "none"
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -300,15 +336,19 @@ test "chart options legend none omits legend" {
 
 ///|
 test "chart options legend font emits txPr" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   opts.legend.position = "right"
   opts.legend.font = Some(
-    Font::with_values(
+    @xlsx.Font::with_values(
       bold=true,
       underline="sng",
       size=9.0,
@@ -317,7 +357,7 @@ test "chart options legend font emits txPr" {
     ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -335,14 +375,18 @@ test "chart options legend font emits txPr" {
 
 ///|
 test "chart options default legend maps to OOXML short value" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -353,18 +397,22 @@ test "chart options default legend maps to OOXML short value" {
 
 ///|
 test "chart options plotArea fill + dTable" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   opts.plot_area.fill_color = "#112233"
   opts.plot_area.fill_transparency = 25
   opts.plot_area.show_data_table = true
   opts.plot_area.show_data_table_keys = true
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -380,15 +428,15 @@ test "chart options plotArea fill + dTable" {
 
 ///|
 test "chart options series data label font + fill emits txPr/spPr" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
-  let series = ChartSeries::new(
+  let opts = @xlsx.ChartOptions::new(Col)
+  let series = @xlsx.ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
     name="Series1",
   )
-  series.data_label.font = Font::with_values(
+  series.data_label.font = @xlsx.Font::with_values(
     bold=true,
     underline="sng",
     size=10.0,
@@ -399,7 +447,7 @@ test "chart options series data label font + fill emits txPr/spPr" {
   series.data_label.fill_transparency = 60
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -416,11 +464,15 @@ test "chart options series data label font + fill emits txPr/spPr" {
 
 ///|
 test "chart options chart root fill + border emits spPr" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   opts.fill_color = "#112233"
   opts.fill_transparency = 25
@@ -429,7 +481,7 @@ test "chart options chart root fill + border emits spPr" {
   opts.border.dash = Dot
   opts.border.transparency = 60
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -447,11 +499,15 @@ test "chart options chart root fill + border emits spPr" {
 
 ///|
 test "chart options stacked + axis + blanks + gap/overlap" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(ColStacked)
+  let opts = @xlsx.ChartOptions::new(ColStacked)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   opts.gap_width = Some(200)
   opts.overlap = Some(-20)
@@ -461,12 +517,12 @@ test "chart options stacked + axis + blanks + gap/overlap" {
   opts.y_axis.title = "Y Axis"
   opts.y_axis.minor_grid_lines = true
   opts.y_axis.tick_label_position = High
-  opts.y_axis.num_fmt = ChartNumFmt::new(
+  opts.y_axis.num_fmt = @xlsx.ChartNumFmt::new(
     custom_num_fmt="0.00",
     source_linked=false,
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -502,9 +558,9 @@ test "chart options stacked + axis + blanks + gap/overlap" {
 
 ///|
 test "chart options rich title + axis title runs" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let font : RichTextFont = {
+  let font : @xlsx.RichTextFont = {
     bold: true,
     italic: false,
     strike: false,
@@ -524,9 +580,13 @@ test "chart options rich title + axis title runs" {
     vert_align: None,
     family: Some("Calibri"),
   }
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   opts.title_rich = Some([
     { text: "Hello ", font: None },
@@ -537,7 +597,7 @@ test "chart options rich title + axis title runs" {
     { text: "Axis", font: Some(font) },
   ])
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -555,25 +615,29 @@ test "chart options rich title + axis title runs" {
 
 ///|
 test "chart options axis txPr font + alignment" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
-  opts.x_axis.font = Font::with_values(
+  opts.x_axis.font = @xlsx.Font::with_values(
     bold=true,
     underline="sng",
     size=10.0,
     color="#00AA00",
     family="Arial",
   )
-  opts.x_axis.alignment = Alignment::with_values(
+  opts.x_axis.alignment = @xlsx.Alignment::with_values(
     text_rotation=45,
     vertical="vert270",
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -591,14 +655,18 @@ test "chart options axis txPr font + alignment" {
 
 ///|
 test "chart options pie has no axes" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Pie)
+  let opts = @xlsx.ChartOptions::new(Pie)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -611,14 +679,18 @@ test "chart options pie has no axes" {
 
 ///|
 test "chart options pie3D has no axes" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Pie3D)
+  let opts = @xlsx.ChartOptions::new(Pie3D)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -631,15 +703,19 @@ test "chart options pie3D has no axes" {
 
 ///|
 test "chart options doughnut holeSize" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Doughnut)
+  let opts = @xlsx.ChartOptions::new(Doughnut)
   opts.hole_size = Some(60)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -652,15 +728,19 @@ test "chart options doughnut holeSize" {
 
 ///|
 test "chart options ofPie splitPos" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(PieOfPie)
+  let opts = @xlsx.ChartOptions::new(PieOfPie)
   opts.plot_area.second_plot_values = 5
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -672,9 +752,9 @@ test "chart options ofPie splitPos" {
 
 ///|
 test "chart options plotArea dLbls flags" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Pie)
+  let opts = @xlsx.ChartOptions::new(Pie)
   opts.plot_area.show_cat_name = true
   opts.plot_area.show_ser_name = true
   opts.plot_area.show_percent = true
@@ -682,10 +762,14 @@ test "chart options plotArea dLbls flags" {
   opts.plot_area.show_val = true
   opts.plot_area.show_bubble_size = true
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -701,14 +785,18 @@ test "chart options plotArea dLbls flags" {
 
 ///|
 test "chart options pieOfPie has no axes" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(PieOfPie)
+  let opts = @xlsx.ChartOptions::new(PieOfPie)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -722,14 +810,18 @@ test "chart options pieOfPie has no axes" {
 
 ///|
 test "chart options barOfPie emits ofPieType bar" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(BarOfPie)
+  let opts = @xlsx.ChartOptions::new(BarOfPie)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -741,14 +833,18 @@ test "chart options barOfPie emits ofPieType bar" {
 
 ///|
 test "chart options line3D emits line3DChart" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Line3D)
+  let opts = @xlsx.ChartOptions::new(Line3D)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -761,16 +857,16 @@ test "chart options line3D emits line3DChart" {
 
 ///|
 test "chart options series styling emits spPr/marker/dLbls/dPt" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Line)
+  let opts = @xlsx.ChartOptions::new(Line)
   opts.plot_area.show_val = true
-  opts.plot_area.num_fmt = ChartNumFmt::new(
+  opts.plot_area.num_fmt = @xlsx.ChartNumFmt::new(
     custom_num_fmt="0.00",
     source_linked=false,
   )
   opts.legend.show_legend_key = true
-  let series = ChartSeries::new(
+  let series = @xlsx.ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
     name="Series1",
@@ -789,10 +885,10 @@ test "chart options series styling emits spPr/marker/dLbls/dPt" {
   series.marker.border.dash = Dot
   series.marker.border.transparency = 25
   series.data_label_position = Top
-  series.data_point.push(ChartDataPoint::new(0, fill_color="00FF00"))
+  series.data_point.push(@xlsx.ChartDataPoint::new(0, fill_color="00FF00"))
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -826,14 +922,18 @@ test "chart options series styling emits spPr/marker/dLbls/dPt" {
 
 ///|
 test "chart options col3D cone emits shape" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col3DConeClustered)
+  let opts = @xlsx.ChartOptions::new(Col3DConeClustered)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -846,14 +946,18 @@ test "chart options col3D cone emits shape" {
 
 ///|
 test "chart options surface3D wireframe emits serAx" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(WireframeSurface3D)
+  let opts = @xlsx.ChartOptions::new(WireframeSurface3D)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -866,14 +970,18 @@ test "chart options surface3D wireframe emits serAx" {
 
 ///|
 test "chart options scatter uses xVal/yVal" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Scatter)
+  let opts = @xlsx.ChartOptions::new(Scatter)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -898,14 +1006,18 @@ test "chart options scatter uses xVal/yVal" {
 
 ///|
 test "chart options radar emits radarStyle" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Radar)
+  let opts = @xlsx.ChartOptions::new(Radar)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -917,11 +1029,11 @@ test "chart options radar emits radarStyle" {
 
 ///|
 test "chart options bubble3D uses bubbleSize" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Bubble3D)
+  let opts = @xlsx.ChartOptions::new(Bubble3D)
   opts.bubble_scale = Some(200)
-  let series = ChartSeries::new(
+  let series = @xlsx.ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
     name="Series1",
@@ -929,7 +1041,7 @@ test "chart options bubble3D uses bubbleSize" {
   series.set_bubble_size("Sheet1!$C$2:$C$4")
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -944,10 +1056,10 @@ test "chart options bubble3D uses bubbleSize" {
 
 ///|
 test "chart options bubble uses sizes alias" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Bubble)
-  let series = ChartSeries::new(
+  let opts = @xlsx.ChartOptions::new(Bubble)
+  let series = @xlsx.ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
     name="Series1",
@@ -955,7 +1067,7 @@ test "chart options bubble uses sizes alias" {
   series.sizes = "Sheet1!$C$2:$C$4"
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -967,18 +1079,22 @@ test "chart options bubble uses sizes alias" {
 
 ///|
 test "chart options bubble missing size errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Bubble)
+  let opts = @xlsx.ChartOptions::new(Bubble)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   let result : Result[Unit, Error] = Ok(
     workbook.add_chart_with_options("Sheet1", "C3", opts),
   ) catch {
     e => Err(e)
   }
-  guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
+  guard result is Err(@xlsx.XlsxError::InvalidSheetOperation(msg~)) else {
     fail("expected bubble size error")
   }
   inspect(msg, content="bubble size missing")
@@ -986,20 +1102,20 @@ test "chart options bubble missing size errors" {
 
 ///|
 test "chart options stock high-low-close" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(StockHighLowClose)
+  let opts = @xlsx.ChartOptions::new(StockHighLowClose)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="High"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="High"),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="Low"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="Low"),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$D$2:$D$4", name="Close"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$D$2:$D$4", name="Close"),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1013,25 +1129,25 @@ test "chart options stock high-low-close" {
 
 ///|
 test "chart options stock open-high-low-close uses upDownBars" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(StockOpenHighLowClose)
+  let opts = @xlsx.ChartOptions::new(StockOpenHighLowClose)
   opts.plot_area.up_bars.fill_color = "00FF00"
   opts.plot_area.down_bars.fill_color = "FF0000"
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Open"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Open"),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="High"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$C$2:$C$4", name="High"),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$D$2:$D$4", name="Low"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$D$2:$D$4", name="Low"),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$E$2:$E$4", name="Close"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$E$2:$E$4", name="Close"),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1046,18 +1162,18 @@ test "chart options stock open-high-low-close uses upDownBars" {
 
 ///|
 test "chart options stock invalid series count" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(StockHighLowClose)
+  let opts = @xlsx.ChartOptions::new(StockHighLowClose)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="High"),
+    @xlsx.ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="High"),
   )
   let result : Result[Unit, Error] = Ok(
     workbook.add_chart_with_options("Sheet1", "C3", opts),
   ) catch {
     e => Err(e)
   }
-  guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
+  guard result is Err(@xlsx.XlsxError::InvalidSheetOperation(msg~)) else {
     fail("expected stock series count error")
   }
   inspect(msg.contains("stock chart requires"), content="true")
@@ -1065,19 +1181,22 @@ test "chart options stock invalid series count" {
 
 ///|
 test "chart data label alignment emits txPr paragraph align" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
-  let series = ChartSeries::new(
+  let opts = @xlsx.ChartOptions::new(Col)
+  let series = @xlsx.ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
     name="Series1",
   )
-  let align = Alignment::with_values(horizontal="center", text_rotation=45)
+  let align = @xlsx.Alignment::with_values(
+    horizontal="center",
+    text_rotation=45,
+  )
   series.data_label.alignment = align
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1090,15 +1209,19 @@ test "chart data label alignment emits txPr paragraph align" {
 
 ///|
 test "chart axis none emits delete without dropping axis" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   opts.x_axis.none = true
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1112,16 +1235,20 @@ test "chart axis none emits delete without dropping axis" {
 
 ///|
 test "chart axis reverse order emits flipped positions and crossing tags" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
+  let opts = @xlsx.ChartOptions::new(Col)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   opts.x_axis.reverse_order = true
   opts.y_axis.reverse_order = true
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1138,14 +1265,18 @@ test "chart axis reverse order emits flipped positions and crossing tags" {
 
 ///|
 test "chart options contour uses none tick labels and midCat crossBetween" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Contour)
+  let opts = @xlsx.ChartOptions::new(Contour)
   opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1161,16 +1292,20 @@ test "chart options contour uses none tick labels and midCat crossBetween" {
 
 ///|
 test "chart axis drop lines and high low lines emission" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let line_opts = ChartOptions::new(Line)
+  let line_opts = @xlsx.ChartOptions::new(Line)
   line_opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   line_opts.x_axis.drop_lines = true
   line_opts.x_axis.high_low_lines = true
   workbook.add_chart_with_options("Sheet1", "C3", line_opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let line_chart = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1180,16 +1315,20 @@ test "chart axis drop lines and high low lines emission" {
   inspect(line_chart.contains("<c:hiLowLines/>"), content="true")
 
   // high-low lines only apply to 2D line charts; area charts keep drop lines
-  let workbook2 = Workbook::new()
+  let workbook2 = @xlsx.Workbook::new()
   ignore(workbook2.add_sheet("Sheet1"))
-  let area_opts = ChartOptions::new(Area)
+  let area_opts = @xlsx.ChartOptions::new(Area)
   area_opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   area_opts.x_axis.drop_lines = true
   area_opts.x_axis.high_low_lines = true
   workbook2.add_chart_with_options("Sheet1", "C3", area_opts)
-  let bytes2 = write(workbook2)
+  let bytes2 = @xlsx.write(workbook2)
   let archive2 = @zip.read(bytes2)
   let area_chart = match archive2.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1199,14 +1338,18 @@ test "chart axis drop lines and high low lines emission" {
   inspect(area_chart.contains("<c:hiLowLines/>"), content="false")
 
   // defaults stay off
-  let workbook3 = Workbook::new()
+  let workbook3 = @xlsx.Workbook::new()
   ignore(workbook3.add_sheet("Sheet1"))
-  let default_opts = ChartOptions::new(Line)
+  let default_opts = @xlsx.ChartOptions::new(Line)
   default_opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$4",
+      "Sheet1!$B$2:$B$4",
+      name="Series1",
+    ),
   )
   workbook3.add_chart_with_options("Sheet1", "C3", default_opts)
-  let bytes3 = write(workbook3)
+  let bytes3 = @xlsx.write(workbook3)
   let archive3 = @zip.read(bytes3)
   let default_chart = match archive3.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1218,10 +1361,10 @@ test "chart axis drop lines and high low lines emission" {
 
 ///|
 test "chart line type solid emits scheme color line fill" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Line)
-  let series = ChartSeries::new(
+  let opts = @xlsx.ChartOptions::new(Line)
+  let series = @xlsx.ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
     name="Series1",
@@ -1229,7 +1372,7 @@ test "chart line type solid emits scheme color line fill" {
   series.line.typ = Solid
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_xml = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1243,10 +1386,10 @@ test "chart line type solid emits scheme color line fill" {
   )
 
   // explicit color takes precedence over the scheme default
-  let workbook2 = Workbook::new()
+  let workbook2 = @xlsx.Workbook::new()
   ignore(workbook2.add_sheet("Sheet1"))
-  let opts2 = ChartOptions::new(Line)
-  let series2 = ChartSeries::new(
+  let opts2 = @xlsx.ChartOptions::new(Line)
+  let series2 = @xlsx.ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
     name="Series1",
@@ -1255,7 +1398,7 @@ test "chart line type solid emits scheme color line fill" {
   series2.line.color = "#FF0000"
   opts2.series.push(series2)
   workbook2.add_chart_with_options("Sheet1", "C3", opts2)
-  let bytes2 = write(workbook2)
+  let bytes2 = @xlsx.write(workbook2)
   let archive2 = @zip.read(bytes2)
   let chart_xml2 = match archive2.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -1276,16 +1419,21 @@ test "chart line type solid emits scheme color line fill" {
 ///|
 test "chart series ChartFill override: solid, no-fill, and inert" {
   // pattern fill index 1 with one color renders a solid fill
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
-  let series = ChartSeries::new(
+  let opts = @xlsx.ChartOptions::new(Col)
+  let series = @xlsx.ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
     name="S1",
   )
   series.fill = Some(
-    ChartFill::new(typ="pattern", pattern=1, color=["#00FF00"], transparency=25),
+    @xlsx.ChartFill::new(
+      typ="pattern",
+      pattern=1,
+      color=["#00FF00"],
+      transparency=25,
+    ),
   )
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
@@ -1298,11 +1446,15 @@ test "chart series ChartFill override: solid, no-fill, and inert" {
   )
 
   // pattern index 1 with an empty color list renders an explicit no-fill
-  let wb2 = Workbook::new()
+  let wb2 = @xlsx.Workbook::new()
   ignore(wb2.add_sheet("Sheet1"))
-  let opts2 = ChartOptions::new(Col)
-  let s2 = ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="S1")
-  s2.fill = Some(ChartFill::new(typ="pattern", pattern=1))
+  let opts2 = @xlsx.ChartOptions::new(Col)
+  let s2 = @xlsx.ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="S1",
+  )
+  s2.fill = Some(@xlsx.ChartFill::new(typ="pattern", pattern=1))
   opts2.series.push(s2)
   wb2.add_chart_with_options("Sheet1", "C3", opts2)
   let nofill_chart = get_chart_xml(wb2)
@@ -1313,11 +1465,17 @@ test "chart series ChartFill override: solid, no-fill, and inert" {
 
   // a ChartFill that is not pattern-index-1 is inert and falls back to
   // the flattened fill_color
-  let wb3 = Workbook::new()
+  let wb3 = @xlsx.Workbook::new()
   ignore(wb3.add_sheet("Sheet1"))
-  let opts3 = ChartOptions::new(Col)
-  let s3 = ChartSeries::new("Sheet1!$A$2:$A$4", "Sheet1!$B$2:$B$4", name="S1")
-  s3.fill = Some(ChartFill::new(typ="gradient", pattern=2, color=["#111111"]))
+  let opts3 = @xlsx.ChartOptions::new(Col)
+  let s3 = @xlsx.ChartSeries::new(
+    "Sheet1!$A$2:$A$4",
+    "Sheet1!$B$2:$B$4",
+    name="S1",
+  )
+  s3.fill = Some(
+    @xlsx.ChartFill::new(typ="gradient", pattern=2, color=["#111111"]),
+  )
   s3.fill_color = "#FF0000"
   opts3.series.push(s3)
   wb3.add_chart_with_options("Sheet1", "C3", opts3)
@@ -1332,8 +1490,8 @@ test "chart series ChartFill override: solid, no-fill, and inert" {
 }
 
 ///|
-fn get_chart_xml(workbook : Workbook) -> String raise {
-  let archive = @zip.read(write(workbook))
+fn get_chart_xml(workbook : @xlsx.Workbook) -> String raise {
+  let archive = @zip.read(@xlsx.write(workbook))
   match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing chart1.xml")
@@ -1342,14 +1500,14 @@ fn get_chart_xml(workbook : Workbook) -> String raise {
 
 ///|
 test "chart ChartFill no-fill override across marker, data label, point, areas" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(Col)
-  let no_fill = ChartFill::new(typ="pattern", pattern=1)
+  let opts = @xlsx.ChartOptions::new(Col)
+  let no_fill = @xlsx.ChartFill::new(typ="pattern", pattern=1)
   // chart area and plot area explicit no-fill
   opts.fill = Some(no_fill)
   opts.plot_area.fill = Some(no_fill)
-  let series = ChartSeries::new(
+  let series = @xlsx.ChartSeries::new(
     "Sheet1!$A$2:$A$4",
     "Sheet1!$B$2:$B$4",
     name="S1",
@@ -1359,10 +1517,13 @@ test "chart ChartFill no-fill override across marker, data label, point, areas" 
   series.marker.size = 5
   series.marker.fill = Some(no_fill)
   series.data_label.fill = Some(
-    ChartFill::new(typ="pattern", pattern=1, color=["#0000FF"]),
+    @xlsx.ChartFill::new(typ="pattern", pattern=1, color=["#0000FF"]),
   )
   series.data_point.push(
-    ChartDataPoint::new(0, fill=ChartFill::new(typ="pattern", pattern=1)),
+    @xlsx.ChartDataPoint::new(
+      0,
+      fill=@xlsx.ChartFill::new(typ="pattern", pattern=1),
+    ),
   )
   opts.series.push(series)
   workbook.add_chart_with_options("Sheet1", "C3", opts)
@@ -1384,19 +1545,21 @@ test "chart ChartFill no-fill override across marker, data label, point, areas" 
 
 ///|
 test "chart up-down bar ChartFill no-fill override" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = ChartOptions::new(StockOpenHighLowClose)
+  let opts = @xlsx.ChartOptions::new(StockOpenHighLowClose)
   for i in 0..<4 {
     opts.series.push(
-      ChartSeries::new(
+      @xlsx.ChartSeries::new(
         "Sheet1!$A$2:$A$4",
         "Sheet1!$B$\{i + 2}:$B$4",
         name="S\{i}",
       ),
     )
   }
-  opts.plot_area.up_bars.fill = Some(ChartFill::new(typ="pattern", pattern=1))
+  opts.plot_area.up_bars.fill = Some(
+    @xlsx.ChartFill::new(typ="pattern", pattern=1),
+  )
   workbook.add_chart_with_options("Sheet1", "C3", opts)
   let xml = get_chart_xml(workbook)
   inspect(xml.contains("<c:upBars>"), content="true")

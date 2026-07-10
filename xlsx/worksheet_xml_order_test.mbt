@@ -8,7 +8,7 @@ fn find_index_or_fail(xml : String, needle : String) -> Int raise Error {
 
 ///|
 test "worksheet xml order: conditional formatting is written before table parts and pivots stay in rels" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "Name")
   sheet.set_cell("B1", "Value")
@@ -20,11 +20,11 @@ test "worksheet xml order: conditional formatting is written before table parts 
       "<pivotTableDefinition name=\"Pivot1\"/>", "<pivotCacheDefinition/>",
     ),
   )
-  let opt = ConditionalFormatOptions::new("cell")
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.set_criteria(">")
   opt.set_value("0")
   sheet.set_conditional_format("B2:B2", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -51,12 +51,12 @@ test "worksheet xml order: conditional formatting is written before table parts 
 
 ///|
 test "worksheet xml order: hyperlinks are written before ignoredErrors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "123")
   sheet.set_cell_hyperlink("A1", "https://example.com", External)
   sheet.add_ignored_errors("A1", NumberStoredAsText)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }

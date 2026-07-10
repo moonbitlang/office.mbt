@@ -9,9 +9,9 @@ fn repeat_comment_text(text : String, count : Int) -> String {
 
 ///|
 test "comment add/delete" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let comment : Comment = {
+  let comment : @xlsx.Comment = {
     cell: "A1",
     author: "Alice",
     author_id: None,
@@ -43,7 +43,7 @@ test "comment add/delete" {
 
 ///|
 test "comment delete keeps other comments" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_comment({
     cell: "A1",
@@ -84,9 +84,9 @@ test "comment delete keeps other comments" {
 
 ///|
 test "comment roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let font : RichTextFont = {
+  let font : @xlsx.RichTextFont = {
     bold: true,
     italic: false,
     strike: false,
@@ -106,11 +106,11 @@ test "comment roundtrip" {
     vert_align: None,
     family: None,
   }
-  let runs : Array[RichTextRun] = [
+  let runs : Array[@xlsx.RichTextRun] = [
     { text: "Note", font: Some(font) },
     { text: " 1", font: None },
   ]
-  let comment : Comment = {
+  let comment : @xlsx.Comment = {
     cell: "B2",
     author: "Bob",
     author_id: None,
@@ -120,7 +120,7 @@ test "comment roundtrip" {
     height: None,
   }
   workbook.add_comment("Sheet1", comment)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   debug_inspect(
     parsed.get_comments("Sheet1"),
     content=(
@@ -168,10 +168,10 @@ test "comment roundtrip" {
 
 ///|
 test "comment author truncation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let author = repeat_comment_text("a", 300)
-  let comment : Comment = {
+  let comment : @xlsx.Comment = {
     cell: "C3",
     author,
     author_id: None,
@@ -191,9 +191,9 @@ test "comment author truncation" {
 
 ///|
 test "comment rich text truncation preserves run prefix" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let font : RichTextFont = {
+  let font : @xlsx.RichTextFont = {
     bold: true,
     italic: false,
     strike: false,
@@ -213,7 +213,7 @@ test "comment rich text truncation preserves run prefix" {
     vert_align: None,
     family: None,
   }
-  let comment : Comment = {
+  let comment : @xlsx.Comment = {
     cell: "D4",
     author: "Alice",
     author_id: None,
@@ -223,7 +223,7 @@ test "comment rich text truncation preserves run prefix" {
     height: None,
   }
   workbook.add_comment("Sheet1", comment)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let comments = parsed.get_comments("Sheet1")
   inspect(comments.length(), content="1")
   inspect(comments[0].text.length(), content="32767")
@@ -234,9 +234,9 @@ test "comment rich text truncation preserves run prefix" {
 
 ///|
 test "comment duplicate + invalid sheet name" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let comment : Comment = {
+  let comment : @xlsx.Comment = {
     cell: "A1",
     author: "Alice",
     author_id: None,
@@ -249,9 +249,9 @@ test "comment duplicate + invalid sheet name" {
   let dup : Result[Unit, Error] = Ok(workbook.add_comment("Sheet1", comment)) catch {
     e => Err(e)
   }
-  inspect(dup is Err(XlsxError::CommentAlreadyExists(_)), content="true")
+  inspect(dup is Err(@xlsx.XlsxError::CommentAlreadyExists(_)), content="true")
   let bad : Result[Unit, Error] = Ok(workbook.add_comment("Sheet:1", comment)) catch {
     e => Err(e)
   }
-  inspect(bad is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(bad is Err(@xlsx.XlsxError::InvalidSheetName(_)), content="true")
 }

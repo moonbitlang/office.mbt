@@ -1,81 +1,85 @@
 ///|
 test "shape workbook sheet name validation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.add_shape("Sheet1", Shape::new("A1", "rect"))
+  workbook.add_shape("Sheet1", @xlsx.Shape::new("A1", "rect"))
   let bad_name : Result[Unit, Error] = Ok(
-    workbook.add_shape("Sheet:1", Shape::new("A1", "rect")),
+    workbook.add_shape("Sheet:1", @xlsx.Shape::new("A1", "rect")),
   ) catch {
     e => Err(e)
   }
-  inspect(bad_name is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(bad_name is Err(@xlsx.XlsxError::InvalidSheetName(_)), content="true")
   let missing : Result[Unit, Error] = Ok(
-    workbook.add_shape("SheetN", Shape::new("A1", "rect")),
+    workbook.add_shape("SheetN", @xlsx.Shape::new("A1", "rect")),
   ) catch {
     e => Err(e)
   }
-  inspect(missing is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(missing is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 }
 
 ///|
 test "shape new validates basic fields" {
   inspect(
-    (Ok(Shape::new("", "rect")) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("", "rect")) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(Shape::new("A1", "")) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("A1", "")) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(Shape::new("A1", "rect", width=0)) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("A1", "rect", width=0)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(Shape::new("A1", "rect", height=-1)) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("A1", "rect", height=-1)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(Shape::new("A1", "rect", scale_x=0.0)) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("A1", "rect", scale_x=0.0)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(Shape::new("A1", "rect", scale_y=-1.0)) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("A1", "rect", scale_y=-1.0)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(Shape::new("A1", "rect", fill_transparency=-1)) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("A1", "rect", fill_transparency=-1)) catch {
+      e => Err(e)
+    })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(Shape::new("A1", "rect", fill_transparency=101)) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("A1", "rect", fill_transparency=101)) catch {
+      e => Err(e)
+    })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(Shape::new("A1", "rect", line_width=0.0)) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("A1", "rect", line_width=0.0)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(Shape::new("??", "rect")) catch { e => Err(e) })
+    (Ok(@xlsx.Shape::new("??", "rect")) catch { e => Err(e) })
     is Err(InvalidCellRef(_)),
     content="true",
   )
   inspect(
-    (Ok(ShapeFill::with_values(transparency=-1)) catch { e => Err(e) })
+    (Ok(@xlsx.ShapeFill::with_values(transparency=-1)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
   inspect(
-    (Ok(ShapeFill::with_values(transparency=101)) catch { e => Err(e) })
+    (Ok(@xlsx.ShapeFill::with_values(transparency=101)) catch { e => Err(e) })
     is Err(InvalidSheetOperation(_)),
     content="true",
   )
@@ -83,19 +87,19 @@ test "shape new validates basic fields" {
 
 ///|
 test "shape new happy path with options" {
-  let line = ShapeLine::with_values(color="FF0000", width=2.0)
+  let line = @xlsx.ShapeLine::with_values(color="FF0000", width=2.0)
   debug_inspect(line.color, content="Some(\"FF0000\")")
   debug_inspect(line.width, content="Some(2)")
-  let line2 = ShapeLine::with_values()
+  let line2 = @xlsx.ShapeLine::with_values()
   debug_inspect(line2.color, content="None")
   debug_inspect(line2.width, content="None")
-  let fill = ShapeFill::with_values(color="00FF00", transparency=25)
+  let fill = @xlsx.ShapeFill::with_values(color="00FF00", transparency=25)
   debug_inspect(fill.color, content="Some(\"00FF00\")")
   debug_inspect(fill.transparency, content="Some(25)")
-  let fill2 = ShapeFill::with_values()
+  let fill2 = @xlsx.ShapeFill::with_values()
   debug_inspect(fill2.color, content="None")
   debug_inspect(fill2.transparency, content="None")
-  let shape = Shape::new(
+  let shape = @xlsx.Shape::new(
     "B2",
     "rect",
     macro_name="Macro1",

@@ -1,6 +1,6 @@
 ///|
 test "search_sheet: regex basics (anchors, escapes, classes, repeats)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "abc123")
   sheet.set_cell("A2", "hello-world")

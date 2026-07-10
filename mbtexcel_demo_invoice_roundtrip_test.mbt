@@ -61,11 +61,11 @@ test "demo invoice: writer output remains consistent after roundtrip" {
   let bytes = @demos.demo_invoice_bytes()
   assert_demo_invoice_archive(bytes)
 
-  let parsed = read(bytes)
+  let parsed = @mbtexcel.read(bytes)
   debug_inspect(parsed.sheet_name(0), content="Some(\"Invoice\")")
   debug_inspect(parsed.get_cell("Invoice", "F5"), content="Some(\"Draft\")")
   debug_inspect(parsed.get_cell("Invoice", "F15"), content="Some(\"0\")")
 
-  let roundtrip_bytes = write(parsed)
+  let roundtrip_bytes = @mbtexcel.write(parsed)
   assert_demo_invoice_archive(roundtrip_bytes)
 }

@@ -1,8 +1,8 @@
 ///|
 test "conditional format data bar x14 extLst roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let opt = ConditionalFormatOptions::new("data_bar")
+  let opt = @xlsx.ConditionalFormatOptions::new("data_bar")
   opt.set_min_type("min")
   opt.set_max_type("max")
   opt.set_bar_color("#638EC6")
@@ -10,7 +10,7 @@ test "conditional format data bar x14 extLst roundtrip" {
   opt.set_bar_direction("rightToLeft")
   opt.set_bar_solid(true)
   sheet.set_conditional_format("A1:A3", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -39,7 +39,7 @@ test "conditional format data bar x14 extLst roundtrip" {
     sheet_xml.contains("x14:borderColor rgb=\"FF0000FF\""),
     content="true",
   )
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let formats = parsed.get_conditional_formats("Sheet1")
   let opts = match formats.get("A1:A3") {
     Some(value) => value

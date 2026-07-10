@@ -1,8 +1,8 @@
 ///|
 test "add_table options auto name and columns" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = TableOptions::new("B26:A21")
+  let opts = @xlsx.TableOptions::new("B26:A21")
   let table = workbook.add_table("Sheet1", opts)
   inspect(table.name, content="Table1")
   inspect(table.range_ref, content="A21:B26")
@@ -19,11 +19,11 @@ test "add_table options auto name and columns" {
 
 ///|
 test "add_table options style and header row hidden" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet2"))
   workbook.set_cell("Sheet2", "A2", "Date")
   workbook.set_cell("Sheet2", "B2", "Values")
-  let opts = TableOptions::new("A2:B5")
+  let opts = @xlsx.TableOptions::new("A2:B5")
   opts.set_name("table")
   opts.set_style_name("TableStyleMedium2")
   opts.set_show_column_stripes(true)
@@ -34,7 +34,7 @@ test "add_table options style and header row hidden" {
   inspect(t1.name, content="table")
   inspect(t1.style_name, content="TableStyleMedium2")
   debug_inspect(t1.columns, content="[\"Date\", \"Values\"]")
-  let opts2 = TableOptions::new("D1:D11")
+  let opts2 = @xlsx.TableOptions::new("D1:D11")
   opts2.set_show_header_row(Some(false))
   let t2 = workbook.add_table("Sheet2", opts2)
   inspect(t2.show_header_row, content="false")
@@ -44,9 +44,9 @@ test "add_table options style and header row hidden" {
 
 ///|
 test "add_table options single cell range expands" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = TableOptions::new("F1:F1")
+  let opts = @xlsx.TableOptions::new("F1:F1")
   let table = workbook.add_table("Sheet1", opts)
   inspect(table.range_ref, content="F1:F2")
   debug_inspect(table.columns, content="[\"Column1\"]")
@@ -54,19 +54,21 @@ test "add_table options single cell range expands" {
 
 ///|
 test "add_table options duplicate name and overlap errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts1 = TableOptions::new("A1:B2")
+  let opts1 = @xlsx.TableOptions::new("A1:B2")
   opts1.set_name("Dup")
   ignore(workbook.add_table("Sheet1", opts1))
-  let opts2 = TableOptions::new("C1:D2")
+  let opts2 = @xlsx.TableOptions::new("C1:D2")
   opts2.set_name("Dup")
-  let dup : Result[Table, Error] = Ok(workbook.add_table("Sheet1", opts2)) catch {
+  let dup : Result[@xlsx.Table, Error] = Ok(workbook.add_table("Sheet1", opts2)) catch {
     e => Err(e)
   }
   inspect(dup is Err(@xlsx.InvalidTable(_)), content="true")
-  let opts3 = TableOptions::new("B2:C3")
-  let overlap : Result[Table, Error] = Ok(workbook.add_table("Sheet1", opts3)) catch {
+  let opts3 = @xlsx.TableOptions::new("B2:C3")
+  let overlap : Result[@xlsx.Table, Error] = Ok(
+    workbook.add_table("Sheet1", opts3),
+  ) catch {
     e => Err(e)
   }
   inspect(overlap is Err(@xlsx.InvalidTable(_)), content="true")

@@ -1,7 +1,7 @@
 ///|
 #cfg(target="native")
 async test "set sheet background from file" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let stamp = @env.now().to_string()
   let path = "mbtexcel_sheet_bg_\{stamp}.png"

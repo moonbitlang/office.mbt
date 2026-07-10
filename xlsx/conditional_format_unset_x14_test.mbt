@@ -1,8 +1,8 @@
 ///|
 test "unset_conditional_format updates x14 data bar sqref" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opt = ConditionalFormatOptions::new("data_bar")
+  let opt = @xlsx.ConditionalFormatOptions::new("data_bar")
   opt.set_min_type("min")
   opt.set_max_type("max")
   opt.set_bar_color("#638EC6")
@@ -14,7 +14,7 @@ test "unset_conditional_format updates x14 data bar sqref" {
   let formats = workbook.get_conditional_formats("Sheet1")
   inspect(formats.length(), content="1")
   inspect(formats.get("A3:A6 A8:A10 A15:A20") is Some(_), content="true")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }

@@ -43,12 +43,12 @@ Call the library through its default alias `@mbtexcel` (e.g. `@mbtexcel.new_work
 ```mbt check
 ///|
 test "workbook roundtrip" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "hello")
   sheet.set_cell_formula("B1", "A1", value="hello")
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @mbtexcel.write(workbook)
+  let parsed = @mbtexcel.read(bytes)
   debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"hello\")")
   debug_inspect(parsed.get_cell_formula("Sheet1", "B1"), content="Some(\"A1\")")
 }
@@ -59,7 +59,7 @@ test "workbook roundtrip" {
 ```mbt check
 ///|
 test "row and column helpers" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_row("Sheet1", 1, ["a", "b", "c"])
   workbook.set_col("Sheet1", 2, ["x", "y"])
@@ -79,21 +79,21 @@ test "row and column helpers" {
 ///|
 test "cell reference conversion" {
   // Split cell name into column and row
-  debug_inspect(split_cell_name("AB123"), content="(\"AB\", 123)")
+  debug_inspect(@mbtexcel.split_cell_name("AB123"), content="(\"AB\", 123)")
 
   // Join column and row into cell name
-  inspect(join_cell_name("AB", 123), content="AB123")
+  inspect(@mbtexcel.join_cell_name("AB", 123), content="AB123")
 
   // Convert between cell name and coordinates (1-indexed)
-  debug_inspect(cell_name_to_coordinates("B3"), content="(2, 3)")
-  inspect(coordinates_to_cell_name(2, 3), content="B3")
+  debug_inspect(@mbtexcel.cell_name_to_coordinates("B3"), content="(2, 3)")
+  inspect(@mbtexcel.coordinates_to_cell_name(2, 3), content="B3")
 
   // Absolute references
-  inspect(coordinates_to_cell_name(2, 3, abs=true), content="$B$3")
+  inspect(@mbtexcel.coordinates_to_cell_name(2, 3, abs=true), content="$B$3")
 
   // Column name/number conversion
-  inspect(column_name_to_number("AB"), content="28")
-  inspect(column_number_to_name(28), content="AB")
+  inspect(@mbtexcel.column_name_to_number("AB"), content="28")
+  inspect(@mbtexcel.column_number_to_name(28), content="AB")
 }
 ```
 
@@ -102,7 +102,7 @@ test "cell reference conversion" {
 ```mbt check
 ///|
 test "multiple sheets" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sales"))
   ignore(workbook.add_sheet("Expenses"))
   ignore(workbook.add_sheet("Summary"))
@@ -125,7 +125,7 @@ test "multiple sheets" {
 ```mbt check
 ///|
 test "cell value types" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   let sheet = workbook.add_sheet("Data")
 
   // String values
@@ -153,7 +153,7 @@ test "cell value types" {
 ```mbt check
 ///|
 test "formulas" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   let sheet = workbook.add_sheet("Calc")
 
   // Set some values
@@ -177,7 +177,7 @@ test "formulas" {
 ```mbt check
 ///|
 test "merged cells" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   let sheet = workbook.add_sheet("Report")
 
   // Set value before merging
@@ -196,7 +196,7 @@ test "merged cells" {
 ```mbt check
 ///|
 test "cell styling" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "1234.5")
 
@@ -218,7 +218,7 @@ test "cell styling" {
 ```mbt check
 ///|
 test "typed dates" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
 
   // Store a datetime; it is written as an Excel date serial with a default
@@ -233,7 +233,7 @@ test "typed dates" {
 
   // The reverse conversion is available directly.
   inspect(
-    time_to_excel_date(@time.date_time(2021, 1, 1, hour=12)),
+    @mbtexcel.time_to_excel_date(@time.date_time(2021, 1, 1, hour=12)),
     content="44197.5",
   )
 }
@@ -247,7 +247,7 @@ cell in memory at once.
 ```mbt check
 ///|
 test "streaming writer" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Big"))
   let stream = workbook.new_stream_writer("Big")
   for r in 1..<=1000 {
@@ -257,7 +257,7 @@ test "streaming writer" {
     ])
   }
   stream.flush()
-  let parsed = read(write(workbook))
+  let parsed = @mbtexcel.read(@mbtexcel.write(workbook))
   debug_inspect(
     parsed.get_cell("Big", "B1000"),
     content=(
@@ -272,12 +272,12 @@ test "streaming writer" {
 ```mbt check
 ///|
 test "password protection" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Secret"))
   workbook.set_cell("Secret", "A1", "classified")
 
-  let encrypted = write_with_password(workbook, "s3cret")
-  let reopened = read_with_password(encrypted, "s3cret")
+  let encrypted = @mbtexcel.write_with_password(workbook, "s3cret")
+  let reopened = @mbtexcel.read_with_password(encrypted, "s3cret")
   debug_inspect(
     reopened.get_cell("Secret", "A1"),
     content=(
@@ -297,10 +297,13 @@ dialog. An empty result means the package is well-formed.
 ```mbt check
 ///|
 test "validate output" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "hello")
-  debug_inspect(@xlsx.validate_ooxml_package(write(workbook)), content="[]")
+  debug_inspect(
+    @xlsx.validate_ooxml_package(@mbtexcel.write(workbook)),
+    content="[]",
+  )
 }
 ```
 

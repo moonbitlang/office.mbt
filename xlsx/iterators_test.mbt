@@ -1,6 +1,6 @@
 ///|
 test "rows iterator includes dimension-only rows" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_row(1, ["A"])
   sheet.set_row_height(2, 18.0)
@@ -29,7 +29,7 @@ test "rows iterator includes dimension-only rows" {
 
 ///|
 test "rows get_row_opts reflects dimensions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "A")
   sheet.set_row_height(2, 18.5)
@@ -55,7 +55,7 @@ test "rows get_row_opts reflects dimensions" {
 
 ///|
 test "rows error and close are no-ops" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let rows = workbook.rows("Sheet1")
   debug_inspect(rows.error(), content="None")
@@ -65,10 +65,10 @@ test "rows error and close are no-ops" {
 
 ///|
 test "rows columns honors options" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_float("Sheet1", "A1", 1.0)
-  let style_id = workbook.add_style(Style::builtin_number_format(2))
+  let style_id = workbook.add_style(@xlsx.Style::builtin_number_format(2))
   workbook.set_cell_style("Sheet1", "A1", style_id)
   let rows = workbook.rows("Sheet1")
   inspect(rows.next(), content="true")
@@ -76,7 +76,7 @@ test "rows columns honors options" {
     err => fail("formatted columns failed: \{repr(err)}")
   }
   debug_inspect(formatted, content="[\"1.00\"]")
-  let raw_opts = Options::with_values(raw_cell_value=true)
+  let raw_opts = @xlsx.Options::with_values(raw_cell_value=true)
   let raw_values = rows.columns(options=raw_opts) catch {
     err => fail("raw columns failed: \{repr(err)}")
   }
@@ -85,7 +85,7 @@ test "rows columns honors options" {
 
 ///|
 test "cols iterator yields columns by max cell col" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "A")
   sheet.set_cell("C2", "C")
@@ -104,7 +104,7 @@ test "cols iterator yields columns by max cell col" {
 
 ///|
 test "get_rows and get_cols expand gaps" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_row(1, ["A"])
   sheet.set_row(3, ["C"])

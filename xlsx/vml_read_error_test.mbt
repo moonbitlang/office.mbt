@@ -1,9 +1,9 @@
 ///|
 test "read: missing legacyDrawing vml relationship errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  workbook.add_form_control("Sheet1", FormControl::new("A1", "Button"))
-  let bytes = write(workbook)
+  workbook.add_form_control("Sheet1", @xlsx.FormControl::new("A1", "Button"))
+  let bytes = @xlsx.write(workbook)
 
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
@@ -31,11 +31,11 @@ test "read: missing legacyDrawing vml relationship errors" {
     err => fail("zip write failed: \{repr(err)}")
   }
 
-  let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {
+  let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(updated_bytes)) catch {
     e => Err(e)
   }
   match result {
-    Err(XlsxError::InvalidXml(msg~)) =>
+    Err(@xlsx.XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="vml drawing relationship missing")
     _ => fail("expected InvalidXml for missing legacyDrawing vml relationship")
   }
@@ -43,13 +43,13 @@ test "read: missing legacyDrawing vml relationship errors" {
 
 ///|
 test "read: missing legacyDrawingHF vml relationship errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_header_footer(
-    Some(HeaderFooterOptions::with_values(odd_header="&L&G")),
+    Some(@xlsx.HeaderFooterOptions::with_values(odd_header="&L&G")),
   )
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Left,
       [1, 2, 3],
       ".png",
@@ -57,7 +57,7 @@ test "read: missing legacyDrawingHF vml relationship errors" {
       height="10pt",
     ),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
 
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
@@ -85,11 +85,11 @@ test "read: missing legacyDrawingHF vml relationship errors" {
     err => fail("zip write failed: \{repr(err)}")
   }
 
-  let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {
+  let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(updated_bytes)) catch {
     e => Err(e)
   }
   match result {
-    Err(XlsxError::InvalidXml(msg~)) =>
+    Err(@xlsx.XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="vml drawing hf relationship missing")
     _ =>
       fail("expected InvalidXml for missing legacyDrawingHF vml relationship")

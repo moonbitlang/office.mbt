@@ -1,6 +1,6 @@
 ///|
 test "calc behavior parity pack1 cases" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
 
   let cases : Array[(String, String)] = [
@@ -37,7 +37,7 @@ test "calc behavior parity pack1 cases" {
 
 ///|
 test "calc behavior parity pack1 errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
 
   let cases : Array[(String, String)] = [

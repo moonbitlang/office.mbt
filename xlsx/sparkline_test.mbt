@@ -1,9 +1,9 @@
 ///|
 test "sparkline write" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_sparkline("B2", "A1:A3")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -34,10 +34,10 @@ test "sparkline write" {
 
 ///|
 test "sparkline roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_sparkline("C3", "A1:A2", sparkline_type=Column)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -55,7 +55,7 @@ test "sparkline roundtrip" {
 
 ///|
 test "sparkline inputs mismatch" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let result = try sheet.add_sparkline_group(["A1"], ["A1", "A2"]) catch {
     err => Err(err)

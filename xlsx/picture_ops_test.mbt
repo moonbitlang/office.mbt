@@ -1,6 +1,6 @@
 ///|
 test "picture get and delete" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let img1 : Bytes = [1, 2, 3]
   let img2 : Bytes = [4, 5, 6, 7]
@@ -24,7 +24,7 @@ test "picture get and delete" {
 
 ///|
 test "picture delete empty cell" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.delete_picture("Sheet1", "C3")
   debug_inspect(workbook.get_picture_cells("Sheet1"), content="[]")
@@ -32,7 +32,7 @@ test "picture delete empty cell" {
 
 ///|
 test "picture from bytes add and write" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let img : Bytes = [9, 8, 7, 6]
   workbook.add_picture_from_bytes("Sheet1", "A1", img, ".png")
@@ -40,7 +40,7 @@ test "picture from bytes add and write" {
     workbook.get_pictures("Sheet1", "A1").map(image => image.extension),
     content="[\"png\"]",
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let stored = match archive.get("xl/media/image1.png") {
     Some(value) => value
@@ -56,7 +56,7 @@ test "picture from bytes add and write" {
 
 ///|
 test "picture dimension parsing (bmp/tiff/ico)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   // Minimal BMP header with width=10, height=20.
   let bmp : Bytes = [
@@ -80,7 +80,7 @@ test "picture dimension parsing (bmp/tiff/ico)" {
   workbook.add_picture_from_bytes("Sheet1", "A1", bmp, ".bmp")
   workbook.add_picture_from_bytes("Sheet1", "B2", tiff, ".tiff")
   workbook.add_picture_from_bytes("Sheet1", "C3", ico, ".ico")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -104,12 +104,12 @@ test "picture dimension parsing (bmp/tiff/ico)" {
 
 ///|
 test "picture dimension parsing (svg)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let svg_text = "<svg width=\"11\" height=\"13\" xmlns=\"http://www.w3.org/2000/svg\"></svg>"
   let svg_bytes = @encoding/utf8.encode(svg_text)
   workbook.add_picture_from_bytes("Sheet1", "A1", svg_bytes, ".svg")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -126,7 +126,7 @@ test "picture dimension parsing (svg)" {
 
 ///|
 test "picture dimension parsing (emf/wmf)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   // Minimal EMF header with rclFrame width=2540 (.01mm) and height=1270 (.01mm)
   // => 1.0in x 0.5in => 96px x 48px.
@@ -144,7 +144,7 @@ test "picture dimension parsing (emf/wmf)" {
   ]
   workbook.add_picture_from_bytes("Sheet1", "A1", emf, ".emf")
   workbook.add_picture_from_bytes("Sheet1", "B2", wmf, ".wmf")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -162,7 +162,7 @@ test "picture dimension parsing (emf/wmf)" {
 
 ///|
 test "picture dimension parsing (emz/wmz)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   // Same test payloads as emf/wmf, but gzip-compressed.
   let emf : Bytes = [
@@ -183,7 +183,7 @@ test "picture dimension parsing (emz/wmz)" {
   }
   workbook.add_picture_from_bytes("Sheet1", "A1", emz, ".emz")
   workbook.add_picture_from_bytes("Sheet1", "B2", wmz, ".wmz")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -201,7 +201,7 @@ test "picture dimension parsing (emz/wmz)" {
 
 ///|
 test "picture from bytes invalid extension" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result = try
     workbook.add_picture_from_bytes("Sheet1", "A1", [1, 2], ".nope")
@@ -220,7 +220,7 @@ test "picture from bytes invalid extension" {
 
 ///|
 test "picture from bytes extension requires dot" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result = try
     workbook.add_picture_from_bytes("Sheet1", "A1", [1, 2], "png")
@@ -239,25 +239,25 @@ test "picture from bytes extension requires dot" {
 
 ///|
 test "picture from bytes invalid cell and sheet" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let bad_cell : Result[Unit, Error] = Ok(
     workbook.add_picture_from_bytes("Sheet1", "A", [1], ".png"),
   ) catch {
     e => Err(e)
   }
-  inspect(bad_cell is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(bad_cell is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
   let bad_sheet : Result[Unit, Error] = Ok(
     workbook.add_picture_from_bytes("SheetN", "A1", [1], ".png"),
   ) catch {
     e => Err(e)
   }
-  inspect(bad_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(bad_sheet is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 }
 
 ///|
 test "picture options write drawing and rels" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let img : Bytes = [9, 1, 2, 3]
   workbook.add_picture_from_bytes(
@@ -272,7 +272,7 @@ test "picture options write drawing and rels" {
     hyperlink="https://example.com",
     hyperlink_type=External,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -301,10 +301,10 @@ test "picture options write drawing and rels" {
 
 ///|
 test "picture options via GraphicOptions" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let img : Bytes = [9, 1, 2, 3]
-  let opts = GraphicOptions::with_values(
+  let opts = @xlsx.GraphicOptions::with_values(
     offset_x=10,
     offset_y=20,
     scale_x=0.5,
@@ -321,7 +321,7 @@ test "picture options via GraphicOptions" {
   workbook.add_picture_from_bytes_with_options(
     "Sheet1", "C3", img, ".png", opts,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -349,7 +349,7 @@ test "picture options via GraphicOptions" {
 
 ///|
 test "picture clientData flags" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.add_picture_from_bytes(
     "Sheet1",
@@ -359,7 +359,7 @@ test "picture clientData flags" {
     locked=false,
     print_object=false,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -371,7 +371,7 @@ test "picture clientData flags" {
 
 ///|
 test "picture name and alt text" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.add_picture_from_bytes(
     "Sheet1",
@@ -381,7 +381,7 @@ test "picture name and alt text" {
     name="Logo",
     alt_text="Excel Logo",
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -393,7 +393,7 @@ test "picture name and alt text" {
 
 ///|
 test "picture lock aspect ratio" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.add_picture_from_bytes(
     "Sheet1",
@@ -402,7 +402,7 @@ test "picture lock aspect ratio" {
     ".png",
     lock_aspect_ratio=true,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -414,7 +414,7 @@ test "picture lock aspect ratio" {
 
 ///|
 test "picture positioning twoCell" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.add_picture_from_bytes(
     "Sheet1",
@@ -423,7 +423,7 @@ test "picture positioning twoCell" {
     ".png",
     positioning=TwoCell,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -435,7 +435,7 @@ test "picture positioning twoCell" {
 
 ///|
 test "picture positioning absolute" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.add_picture_from_bytes(
     "Sheet1",
@@ -444,7 +444,7 @@ test "picture positioning absolute" {
     ".png",
     positioning=Absolute,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -460,7 +460,7 @@ test "picture positioning absolute" {
 ///|
 #cfg(target="native")
 async test "picture autofit preserves aspect" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_col_width(1, 1.0)
   sheet.set_row_height(1, 10.0)
@@ -470,7 +470,7 @@ async test "picture autofit preserves aspect" {
     "fixtures/excelize/logo.png",
     auto_fit=true,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -483,7 +483,7 @@ async test "picture autofit preserves aspect" {
 ///|
 #cfg(target="native")
 async test "picture autofit ignore aspect" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_col_width(1, 1.0)
   sheet.set_row_height(1, 10.0)
@@ -494,7 +494,7 @@ async test "picture autofit ignore aspect" {
     auto_fit=true,
     auto_fit_ignore_aspect=true,
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let drawing_xml = match archive.get("xl/drawings/drawing1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -506,7 +506,7 @@ async test "picture autofit ignore aspect" {
 
 ///|
 test "picture options validation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result = try
     workbook.add_picture_from_bytes("Sheet1", "A1", [1, 2], ".png", offset_x=-1)
@@ -543,14 +543,20 @@ test "picture options validation" {
   ) catch {
     e => Err(e)
   }
-  inspect(bad_sheet is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(
+    bad_sheet is Err(@xlsx.XlsxError::InvalidSheetName(_)),
+    content="true",
+  )
   let long_name = "s".repeat(255)
   let name_result : Result[Unit, Error] = Ok(
     workbook.add_picture_from_bytes("Sheet1", "A1", [1], ".png", name=long_name),
   ) catch {
     e => Err(e)
   }
-  inspect(name_result is Err(XlsxError::GraphicNameTooLong(..)), content="true")
+  inspect(
+    name_result is Err(@xlsx.XlsxError::GraphicNameTooLong(..)),
+    content="true",
+  )
   let long_alt = "a".repeat(65536)
   let alt_result : Result[Unit, Error] = Ok(
     workbook.add_picture_from_bytes(
@@ -564,7 +570,7 @@ test "picture options validation" {
     e => Err(e)
   }
   inspect(
-    alt_result is Err(XlsxError::GraphicAltTextTooLong(..)),
+    alt_result is Err(@xlsx.XlsxError::GraphicAltTextTooLong(..)),
     content="true",
   )
 }
@@ -572,7 +578,7 @@ test "picture options validation" {
 ///|
 #cfg(target="native")
 async test "picture invalid sheet name (from file path)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result = try
     workbook.add_picture("Sheet:1", "A1", "fixtures/excelize/logo.png")
@@ -587,7 +593,7 @@ async test "picture invalid sheet name (from file path)" {
 ///|
 #cfg(target="native")
 async test "picture file path guards: missing extension and missing file" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let missing_extension : Result[Unit, Error] = Ok(
     workbook.add_picture("Sheet1", "A1", "missing_extension"),
@@ -606,7 +612,7 @@ async test "picture file path guards: missing extension and missing file" {
     e => Err(e)
   }
   inspect(
-    missing_file is Err(XlsxError::InvalidSheetOperation(_)),
+    missing_file is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
 }
@@ -614,14 +620,14 @@ async test "picture file path guards: missing extension and missing file" {
 ///|
 #cfg(target="native")
 async test "picture with options file path guards" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let missing_extension : Result[Unit, Error] = Ok(
     workbook.add_picture_with_options(
       "Sheet1",
       "A1",
       "missing_extension",
-      GraphicOptions::new(),
+      @xlsx.GraphicOptions::new(),
     ),
   ) catch {
     e => Err(e)
@@ -637,13 +643,13 @@ async test "picture with options file path guards" {
       "Sheet1",
       "A1",
       "__missing_picture_with_opts__.png",
-      GraphicOptions::new(),
+      @xlsx.GraphicOptions::new(),
     ),
   ) catch {
     e => Err(e)
   }
   inspect(
-    missing_file is Err(XlsxError::InvalidSheetOperation(_)),
+    missing_file is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
 }
@@ -651,7 +657,7 @@ async test "picture with options file path guards" {
 ///|
 #cfg(target="native")
 async test "picture with options file path explicit values" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let stamp = @env.now().to_string()
   let path = "mbtexcel_picture_opts_\{stamp}.png"
@@ -663,7 +669,7 @@ async test "picture with options file path explicit values" {
   ) catch {
     err => fail("write image failed: \{err}")
   }
-  let opts = GraphicOptions::with_values(
+  let opts = @xlsx.GraphicOptions::with_values(
     offset_x=11,
     offset_y=13,
     scale_x=0.75,
@@ -703,7 +709,7 @@ async test "picture with options file path explicit values" {
 ///|
 #cfg(target="native")
 async test "picture from file path" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let stamp = @env.now().to_string()
   let path = "mbtexcel_picture_\{stamp}.png"
@@ -716,7 +722,7 @@ async test "picture from file path" {
     err => fail("write image failed: \{err}")
   }
   workbook.add_picture("Sheet1", "A1", path)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let stored = match archive.get("xl/media/image1.png") {
     Some(value) => value

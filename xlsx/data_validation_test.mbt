@@ -1,8 +1,8 @@
 ///|
 test "data validation drop list roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let dv = DataValidation::new(false)
+  let dv = @xlsx.DataValidation::new(false)
   dv.set_sqref("A1:B2")
   dv.set_drop_list(["Yes", "No"])
   sheet.add_data_validation(dv)
@@ -17,38 +17,38 @@ test "data validation drop list roundtrip" {
 
 ///|
 test "data validation drop list length limit" {
-  let dv = DataValidation::new(true)
+  let dv = @xlsx.DataValidation::new(true)
   let long = "a".repeat(260)
   let result : Result[Unit, Error] = Ok(dv.set_drop_list([long])) catch {
     e => Err(e)
   }
-  guard result is Err(XlsxError::InvalidDataValidation(_)) else {
+  guard result is Err(@xlsx.XlsxError::InvalidDataValidation(_)) else {
     fail("expected length error")
   }
 }
 
 ///|
 test "data validation range value bounds" {
-  let dv = DataValidation::new(true)
+  let dv = @xlsx.DataValidation::new(true)
   let result : Result[Unit, Error] = Ok(
     dv.set_range(DoubleValue(1.0e39), IntValue(10), Whole, Between),
   ) catch {
     e => Err(e)
   }
-  guard result is Err(XlsxError::InvalidDataValidation(_)) else {
+  guard result is Err(@xlsx.XlsxError::InvalidDataValidation(_)) else {
     fail("expected range error")
   }
 }
 
 ///|
 test "data validation delete by sqref" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let dv1 = DataValidation::new(true)
+  let dv1 = @xlsx.DataValidation::new(true)
   dv1.set_sqref("A1:A3")
   dv1.set_drop_list(["Yes"])
   sheet.add_data_validation(dv1)
-  let dv2 = DataValidation::new(true)
+  let dv2 = @xlsx.DataValidation::new(true)
   dv2.set_sqref("B1")
   dv2.set_drop_list(["No"])
   sheet.add_data_validation(dv2)
@@ -64,9 +64,9 @@ test "data validation delete by sqref" {
 
 ///|
 test "data validation workbook invalid sheet name" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let dv = DataValidation::new(true)
+  let dv = @xlsx.DataValidation::new(true)
   dv.set_sqref("A1")
   dv.set_drop_list(["Yes"])
   let add_result : Result[Unit, Error] = Ok(
@@ -74,20 +74,26 @@ test "data validation workbook invalid sheet name" {
   ) catch {
     e => Err(e)
   }
-  inspect(add_result is Err(XlsxError::InvalidSheetName(_)), content="true")
-  let get_result : Result[Array[DataValidation], Error] = Ok(
+  inspect(
+    add_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
+    content="true",
+  )
+  let get_result : Result[Array[@xlsx.DataValidation], Error] = Ok(
     workbook.get_data_validations("Sheet:1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_result is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(
+    get_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
+    content="true",
+  )
 }
 
 ///|
 test "data validation read x14 extLst" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let out = @zip.Archive::new()
   for entry in archive.entries() {
@@ -124,7 +130,7 @@ test "data validation read x14 extLst" {
     }
   }
   let new_bytes = @zip.write(out)
-  let parsed = read(new_bytes)
+  let parsed = @xlsx.read(new_bytes)
   let dvs = parsed.get_data_validations("Sheet1")
   inspect(dvs.length(), content="1")
   inspect(dvs[0].validation_type, content="list")
@@ -135,9 +141,9 @@ test "data validation read x14 extLst" {
 
 ///|
 test "data validation enum/operator/style coverage" {
-  let dv = DataValidation::new(true)
+  let dv = @xlsx.DataValidation::new(true)
   dv.set_sqref("A1")
-  let types : Array[DataValidationType] = [
+  let types : Array[@xlsx.DataValidationType] = [
     NoneType,
     Custom,
     Date,
@@ -150,7 +156,7 @@ test "data validation enum/operator/style coverage" {
   for t in types {
     dv.set_range(IntValue(1), IntValue(2), t, Between)
   }
-  let ops : Array[DataValidationOperator] = [
+  let ops : Array[@xlsx.DataValidationOperator] = [
     Between,
     Equal,
     GreaterThan,
@@ -163,7 +169,11 @@ test "data validation enum/operator/style coverage" {
   for op in ops {
     dv.set_range(IntValue(1), IntValue(2), Whole, op)
   }
-  let styles : Array[DataValidationErrorStyle] = [Stop, Warning, Information]
+  let styles : Array[@xlsx.DataValidationErrorStyle] = [
+    Stop,
+    Warning,
+    Information,
+  ]
   for style in styles {
     dv.set_error(style, "Title", "Message")
   }
@@ -173,7 +183,7 @@ test "data validation enum/operator/style coverage" {
   dv.set_sqref_drop_list("Sheet1!$A$1:$A$2")
   dv.set_drop_list(["=Sheet1!$B$1:$B$3"])
   dv.set_input("PromptTitle", "PromptMessage")
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_data_validation(dv)
   inspect(sheet.get_data_validations().length(), content="1")

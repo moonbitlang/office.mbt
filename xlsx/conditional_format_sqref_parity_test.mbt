@@ -1,8 +1,8 @@
 ///|
 test "conditional format sqref parity: reversed/row/col refs" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let opt1 = ConditionalFormatOptions::new("data_bar")
+  let opt1 = @xlsx.ConditionalFormatOptions::new("data_bar")
   opt1.set_criteria("=")
   opt1.set_min_type("num")
   opt1.set_max_type("num")
@@ -13,7 +13,7 @@ test "conditional format sqref parity: reversed/row/col refs" {
   opt1.set_bar_only(true)
   opt1.set_bar_solid(true)
   opt1.set_stop_if_true(true)
-  let opt2 = ConditionalFormatOptions::new("data_bar")
+  let opt2 = @xlsx.ConditionalFormatOptions::new("data_bar")
   opt2.set_criteria("=")
   opt2.set_min_type("min")
   opt2.set_max_type("max")

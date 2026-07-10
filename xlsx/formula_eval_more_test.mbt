@@ -1,15 +1,15 @@
 ///|
 test "calc: defined name with invalid refers_to returns #VALUE!" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  workbook.set_defined_name(DefinedName::new("BadName", "1+"))
+  workbook.set_defined_name(@xlsx.DefinedName::new("BadName", "1+"))
   sheet.set_cell_formula("A1", "BadName")
   inspect(workbook.calc_cell_value("Sheet1", "A1"), content="#VALUE!")
 }
 
 ///|
 test "calc: ANCHORARRAY error/empty/list/value paths" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", Numeric(42.0))
   sheet.set_cell_formula("B1", "ANCHORARRAY(A1)")

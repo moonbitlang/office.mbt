@@ -1,12 +1,12 @@
 ///|
 test "data validation and conditional formatting" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_data_validation_list("A1:A2", ["Yes", "No"], allow_blank=false)
   sheet.add_conditional_format_xml(
     "<conditionalFormatting sqref=\"A1\"><cfRule type=\"expression\" priority=\"1\"><formula>A1>0</formula></cfRule></conditionalFormatting>",
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)

@@ -1,8 +1,8 @@
 ///|
 test "x14 conditional formatting iconSet read" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -33,7 +33,7 @@ test "x14 conditional formatting iconSet read" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let parsed = read(updated_bytes)
+  let parsed = @xlsx.read(updated_bytes)
   let formats = parsed.get_conditional_formats("Sheet1")
   let opts = match formats.get("A1:A3") {
     Some(value) => value

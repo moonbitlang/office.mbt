@@ -1,6 +1,6 @@
 ///|
 test "compat sheet aliases and row or col setters" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.new_sheet("Sheet1")
   workbook.set_sheet_row("Sheet1", "B2", ["x", "y"])
   workbook.set_sheet_col("Sheet1", "A1", ["1", "2"])
@@ -12,24 +12,24 @@ test "compat sheet aliases and row or col setters" {
   debug_inspect(workbook.get_sheet_name(0), content="Some(\"Sheet1\")")
   inspect(workbook.get_active_sheet_index(), content="0")
   inspect(workbook.get_sheet_visible("Sheet1"), content="true")
-  workbook.set_defined_name(DefinedName::new("Total", "Sheet1!$A$1"))
+  workbook.set_defined_name(@xlsx.DefinedName::new("Total", "Sheet1!$A$1"))
   inspect(workbook.get_defined_name().length(), content="1")
 }
 
 ///|
 test "compat get_sheet_index missing returns -1" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   inspect(workbook.get_sheet_index("SheetN"), content="-1")
   let invalid : Result[Int, Error] = Ok(workbook.get_sheet_index("Sheet:1")) catch {
     e => Err(e)
   }
-  inspect(invalid is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(invalid is Err(@xlsx.XlsxError::InvalidSheetName(_)), content="true")
 }
 
 ///|
 test "compat auto filter and background bytes" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   workbook.auto_filter("Sheet1", "A1:B2", [])
   inspect(sheet.auto_filter() is Some(_), content="true")
@@ -44,7 +44,7 @@ test "compat auto filter and background bytes" {
 
 ///|
 test "compat get_sheet_visible/get_sheet_name missing behave like excelize" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   inspect(workbook.get_sheet_visible("SheetN"), content="false")
   debug_inspect(workbook.get_sheet_name(99), content="Some(\"\")")
@@ -52,7 +52,7 @@ test "compat get_sheet_visible/get_sheet_name missing behave like excelize" {
 
 ///|
 test "search sheet exact and regex" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "100")
   sheet.set_cell("B2", "abc")
@@ -66,12 +66,12 @@ test "search sheet exact and regex" {
 
 ///|
 test "update linked value clears formula cache" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   workbook.set_cell_formula("Sheet1", "A1", "SUM(1,2)", value="3")
   workbook.set_cell("Sheet1", "B1", "keep")
   workbook.set_calc_props(
-    Some(CalcPropsOptions::with_values(calc_mode="manual")),
+    Some(@xlsx.CalcPropsOptions::with_values(calc_mode="manual")),
   )
   workbook.update_linked_value()
   debug_inspect(sheet.get_cell("A1"), content="Some(\"\")")

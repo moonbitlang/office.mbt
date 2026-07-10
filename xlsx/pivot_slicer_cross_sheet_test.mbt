@@ -16,7 +16,7 @@ fn count_substr(text : StringView, needle : StringView) -> Int {
 
 ///|
 test "pivot+slicer cross-sheet multi-cache corpus" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet_a = workbook.add_sheet("DataA")
   let sheet_b = workbook.add_sheet("DataB")
   ignore(workbook.add_sheet("Dash"))
@@ -56,17 +56,17 @@ test "pivot+slicer cross-sheet multi-cache corpus" {
     ),
   )
 
-  let table_a = SlicerOptions::new("Region", "A1", "DataA", "TableA")
-  let table_b = SlicerOptions::new("Region", "A20", "DataB", "TableB")
-  let pivot_a = SlicerOptions::new("Region", "H1", "DataA", "PivotA")
-  let pivot_b = SlicerOptions::new("Region", "H20", "DataB", "PivotB")
+  let table_a = @xlsx.SlicerOptions::new("Region", "A1", "DataA", "TableA")
+  let table_b = @xlsx.SlicerOptions::new("Region", "A20", "DataB", "TableB")
+  let pivot_a = @xlsx.SlicerOptions::new("Region", "H1", "DataA", "PivotA")
+  let pivot_b = @xlsx.SlicerOptions::new("Region", "H20", "DataB", "PivotB")
 
   workbook.add_slicer("Dash", table_a)
   workbook.add_slicer("Dash", table_b)
   workbook.add_slicer("Dash", pivot_a)
   workbook.add_slicer("Dash", pivot_b)
 
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
 
   let workbook_xml = match archive.get("xl/workbook.xml") {
@@ -110,7 +110,7 @@ test "pivot+slicer cross-sheet multi-cache corpus" {
   inspect(slicer_parts, content="2")
   inspect(slicer_entry_count, content="4")
 
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let slicers = parsed.get_slicers("Dash")
   inspect(slicers.length(), content="4")
 

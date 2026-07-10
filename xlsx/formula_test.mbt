@@ -1,9 +1,9 @@
 ///|
 test "formula write and calc chain" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula("A1", "SUM(B1,B2)", value="5")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -30,11 +30,11 @@ test "formula write and calc chain" {
 
 ///|
 test "formula roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_formula_rc(2, 2, "A1*2", value="10")
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"10\")")
   debug_inspect(
     parsed.get_cell_formula("Sheet1", "B2"),

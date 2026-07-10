@@ -1,7 +1,7 @@
 ///|
 #cfg(target="native")
 async test "xlsx writer generates OpenXML-valid package" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "Hello")
   workbook.set_cell_int("Sheet1", "B1", 123)
@@ -19,7 +19,7 @@ async test "xlsx writer generates OpenXML-valid package" {
     External,
     display="Example",
   )
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
   let stamp = @env.now()
     .to_string()
     .replace(old=":", new="_")

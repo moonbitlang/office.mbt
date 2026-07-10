@@ -1,8 +1,8 @@
 ///|
 test "sheet view set and get" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let options = SheetViewOptions::with_values(
+  let options = @xlsx.SheetViewOptions::with_values(
     default_grid_color=false,
     right_to_left=true,
     show_formulas=false,
@@ -61,14 +61,17 @@ test "sheet view set and get" {
   ) catch {
     e => Err(e)
   }
-  inspect(bad_view is Err(XlsxError::InvalidSheetOperation(_)), content="true")
+  inspect(
+    bad_view is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
 }
 
 ///|
 test "panes set and get" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let panes = Panes::with_values(
+  let panes = @xlsx.Panes::with_values(
     freeze=true,
     split=false,
     x_split=1,
@@ -76,7 +79,11 @@ test "panes set and get" {
     top_left_cell="B1",
     active_pane="topRight",
     selection=[
-      Selection::with_values(sqref="K16", active_cell="K16", pane="topRight"),
+      @xlsx.Selection::with_values(
+        sqref="K16",
+        active_cell="K16",
+        pane="topRight",
+      ),
     ],
   )
   workbook.set_panes("Sheet1", panes)
@@ -95,7 +102,7 @@ test "panes set and get" {
 
 ///|
 test "panes default when worksheet has no views" {
-  let sheet = Worksheet::new("Sheet1")
+  let sheet = @xlsx.Worksheet::new("Sheet1")
   let panes = sheet.get_panes()
   inspect(panes.freeze, content="false")
   inspect(panes.split, content="false")
@@ -106,11 +113,11 @@ test "panes default when worksheet has no views" {
 
 ///|
 test "sheet dimension override write" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_sheet_dimension("Sheet1", "B2:D4")
   inspect(workbook.get_sheet_dimension("Sheet1"), content="B2:D4")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -121,12 +128,12 @@ test "sheet dimension override write" {
 
 ///|
 test "sheet dimension clear" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_sheet_dimension("Sheet1", "B2:D4")
   workbook.set_sheet_dimension("Sheet1", "")
   inspect(workbook.get_sheet_dimension("Sheet1"), content="")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -137,15 +144,15 @@ test "sheet dimension clear" {
 
 ///|
 test "sheet view and panes roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let view_opts = SheetViewOptions::with_values(
+  let view_opts = @xlsx.SheetViewOptions::with_values(
     default_grid_color=false,
     top_left_cell="C3",
     view="pageBreakPreview",
   )
   workbook.set_sheet_view("Sheet1", 0, view_opts)
-  let panes = Panes::with_values(
+  let panes = @xlsx.Panes::with_values(
     freeze=true,
     split=false,
     x_split=0,
@@ -153,11 +160,15 @@ test "sheet view and panes roundtrip" {
     top_left_cell="A3",
     active_pane="bottomLeft",
     selection=[
-      Selection::with_values(sqref="A3", active_cell="A3", pane="bottomLeft"),
+      @xlsx.Selection::with_values(
+        sqref="A3",
+        active_cell="A3",
+        pane="bottomLeft",
+      ),
     ],
   )
   workbook.set_panes("Sheet1", panes)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let view = parsed.get_sheet_view("Sheet1", 0)
   match view.default_grid_color {
     Some(value) => inspect(value, content="false")

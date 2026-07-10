@@ -14,7 +14,7 @@ fn count_xml_tag_roundtrip(xml : String, tag : String) -> Int {
 
 ///|
 test "integration mixed ext features stable across repeated roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let data = workbook.add_sheet("Data")
   let dashboard = workbook.add_sheet("Dashboard")
 
@@ -36,21 +36,21 @@ test "integration mixed ext features stable across repeated roundtrip" {
   )
   workbook.add_slicer(
     "Dashboard",
-    SlicerOptions::new("Region", "B2", "Data", "MixTable"),
+    @xlsx.SlicerOptions::new("Region", "B2", "Data", "MixTable"),
   )
 
   dashboard.set_cell_value("C2", Numeric(10.0))
   dashboard.set_cell_value("C3", Numeric(24.0))
   dashboard.set_cell_value("C4", Numeric(18.0))
 
-  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+  let sparkline_opts = @xlsx.SparklineOptions::new(["G2", "G3", "G4"], [
     "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
   ])
   sparkline_opts.set_markers(true)
   sparkline_opts.set_series_color("4F81BD")
   workbook.add_sparkline_options("Dashboard", sparkline_opts)
 
-  let cf_opt = ConditionalFormatOptions::new("data_bar")
+  let cf_opt = @xlsx.ConditionalFormatOptions::new("data_bar")
   cf_opt.set_min_type("min")
   cf_opt.set_max_type("max")
   cf_opt.set_bar_color("#638EC6")
@@ -59,7 +59,7 @@ test "integration mixed ext features stable across repeated roundtrip" {
   cf_opt.set_bar_border_color("#0000FF")
   workbook.set_conditional_format("Dashboard", "C2:C4", [cf_opt])
 
-  let bytes_once = write(workbook)
+  let bytes_once = @xlsx.write(workbook)
   let archive_once = @zip.read(bytes_once)
   let dashboard_xml_once = match archive_once.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -88,8 +88,8 @@ test "integration mixed ext features stable across repeated roundtrip" {
     content="1",
   )
 
-  let parsed_once = read(bytes_once)
-  let bytes_twice = write(parsed_once)
+  let parsed_once = @xlsx.read(bytes_once)
+  let bytes_twice = @xlsx.write(parsed_once)
   let archive_twice = @zip.read(bytes_twice)
   let dashboard_xml_twice = match
     archive_twice.get("xl/worksheets/sheet2.xml") {
@@ -127,7 +127,7 @@ test "integration mixed ext features stable across repeated roundtrip" {
     content="true",
   )
 
-  let parsed_twice = read(bytes_twice)
+  let parsed_twice = @xlsx.read(bytes_twice)
   let parsed_dashboard = match parsed_twice.sheet("Dashboard") {
     Some(value) => value
     None => fail("missing parsed dashboard")

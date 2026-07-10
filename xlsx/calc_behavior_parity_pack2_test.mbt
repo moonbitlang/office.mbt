@@ -1,6 +1,6 @@
 ///|
 test "calc behavior parity pack2 lookup cases" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
 
   sheet.set_cell_value("A1", Numeric(1.0))
@@ -33,7 +33,7 @@ test "calc behavior parity pack2 lookup cases" {
 
 ///|
 test "calc behavior parity pack2 financial cases" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
 
   let cases : Array[(String, String)] = [
@@ -54,7 +54,7 @@ test "calc behavior parity pack2 financial cases" {
 
 ///|
 test "calc behavior parity pack2 financial errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
 
   let cases : Array[(String, String)] = [

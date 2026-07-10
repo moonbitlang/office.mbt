@@ -1,49 +1,56 @@
 ///|
 test "workbook: add_sheet duplicate + stream writer conflicts" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let dup : Result[Worksheet, Error] = Ok(workbook.add_sheet("Sheet1")) catch {
+  let dup : Result[@xlsx.Worksheet, Error] = Ok(workbook.add_sheet("Sheet1")) catch {
     e => Err(e)
   }
-  inspect(dup is Err(XlsxError::SheetAlreadyExists(_)), content="true")
-  let missing : Result[StreamWriter, Error] = Ok(
+  inspect(dup is Err(@xlsx.XlsxError::SheetAlreadyExists(_)), content="true")
+  let missing : Result[@xlsx.StreamWriter, Error] = Ok(
     workbook.new_stream_writer("Missing"),
   ) catch {
     e => Err(e)
   }
-  inspect(missing is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(missing is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 
   // Stream writer already active.
-  let w2 = Workbook::new()
+  let w2 = @xlsx.Workbook::new()
   ignore(w2.add_sheet("Sheet1"))
-  let first : Result[StreamWriter, Error] = Ok(w2.new_stream_writer("Sheet1")) catch {
+  let first : Result[@xlsx.StreamWriter, Error] = Ok(
+    w2.new_stream_writer("Sheet1"),
+  ) catch {
     e => Err(e)
   }
   inspect(first is Ok(_), content="true")
-  let second : Result[StreamWriter, Error] = Ok(w2.new_stream_writer("Sheet1")) catch {
+  let second : Result[@xlsx.StreamWriter, Error] = Ok(
+    w2.new_stream_writer("Sheet1"),
+  ) catch {
     e => Err(e)
   }
-  inspect(second is Err(XlsxError::StreamModeConflict(_)), content="true")
+  inspect(second is Err(@xlsx.XlsxError::StreamModeConflict(_)), content="true")
 
   // Worksheet already has data.
-  let w3 = Workbook::new()
+  let w3 = @xlsx.Workbook::new()
   let s3 = w3.add_sheet("Sheet1")
   s3.set_cell("A1", "x")
-  let has_data : Result[StreamWriter, Error] = Ok(
+  let has_data : Result[@xlsx.StreamWriter, Error] = Ok(
     w3.new_stream_writer("Sheet1"),
   ) catch {
     e => Err(e)
   }
-  inspect(has_data is Err(XlsxError::StreamModeConflict(_)), content="true")
+  inspect(
+    has_data is Err(@xlsx.XlsxError::StreamModeConflict(_)),
+    content="true",
+  )
 }
 
 ///|
 test "workbook: properties + custom properties replace/remove" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
 
   // Ensure these simple getters are exercised.
   inspect(workbook.defined_names().length(), content="0")
-  let p = CoreProperties::with_values(title="t", creator="c")
+  let p = @xlsx.CoreProperties::with_values(title="t", creator="c")
   workbook.set_doc_properties(p)
   inspect(workbook.doc_properties().title, content="t")
   inspect(workbook.core_properties().creator, content="c")
@@ -54,18 +61,18 @@ test "workbook: properties + custom properties replace/remove" {
 
   // custom prop name missing.
   let bad_name : Result[Unit, Error] = Ok(
-    workbook.set_custom_props(CustomProperty::new("", Some(Text("x")))),
+    workbook.set_custom_props(@xlsx.CustomProperty::new("", Some(Text("x")))),
   ) catch {
     e => Err(e)
   }
   inspect(
-    bad_name is Err(XlsxError::InvalidWorkbookProperty(_)),
+    bad_name is Err(@xlsx.XlsxError::InvalidWorkbookProperty(_)),
     content="true",
   )
 
   // add + replace.
-  workbook.set_custom_props(CustomProperty::new("k", Some(Text("v1"))))
-  workbook.set_custom_props(CustomProperty::new("k", Some(Text("v2"))))
+  workbook.set_custom_props(@xlsx.CustomProperty::new("k", Some(Text("v1"))))
+  workbook.set_custom_props(@xlsx.CustomProperty::new("k", Some(Text("v2"))))
   debug_inspect(
     workbook.get_custom_props(),
     content=(
@@ -74,19 +81,22 @@ test "workbook: properties + custom properties replace/remove" {
   )
 
   // remove existing + remove non-existing (no-op).
-  workbook.set_custom_props(CustomProperty::new("k", None))
-  workbook.set_custom_props(CustomProperty::new("missing", None))
+  workbook.set_custom_props(@xlsx.CustomProperty::new("k", None))
+  workbook.set_custom_props(@xlsx.CustomProperty::new("missing", None))
   inspect(workbook.custom_properties().length(), content="0")
 
   // set_*_props default None branches.
   workbook.set_workbook_props(None)
   workbook.set_calc_props(None)
-  inspect(workbook.get_calc_props() == CalcPropsOptions::new(), content="true")
+  inspect(
+    workbook.get_calc_props() == @xlsx.CalcPropsOptions::new(),
+    content="true",
+  )
 }
 
 ///|
 test "workbook: protect/unprotect, rename, delete, move, copy, visibility" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   ignore(workbook.add_chart_sheet("Chart1", "<chart/>"))
@@ -96,7 +106,7 @@ test "workbook: protect/unprotect, rename, delete, move, copy, visibility" {
     e => Err(e)
   }
   inspect(
-    unprot is Err(XlsxError::InvalidWorkbookProtection(_)),
+    unprot is Err(@xlsx.XlsxError::InvalidWorkbookProtection(_)),
     content="true",
   )
   workbook.protect_workbook()
@@ -109,14 +119,17 @@ test "workbook: protect/unprotect, rename, delete, move, copy, visibility" {
   ) catch {
     e => Err(e)
   }
-  inspect(rename_missing is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    rename_missing is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let rename_exists : Result[Unit, Error] = Ok(
     workbook.set_sheet_name("Sheet1", "Sheet2"),
   ) catch {
     e => Err(e)
   }
   inspect(
-    rename_exists is Err(XlsxError::SheetAlreadyExists(_)),
+    rename_exists is Err(@xlsx.XlsxError::SheetAlreadyExists(_)),
     content="true",
   )
 
@@ -126,7 +139,7 @@ test "workbook: protect/unprotect, rename, delete, move, copy, visibility" {
 
   // defined names updated on rename, and removed on delete.
   workbook.set_defined_name(
-    DefinedName::new("Dn", "Sheet1!$A$1", scope="Sheet1"),
+    @xlsx.DefinedName::new("Dn", "Sheet1!$A$1", scope="Sheet1"),
   )
   workbook.set_sheet_name("Sheet1", "S1")
   inspect(workbook.defined_names().length(), content="1")
@@ -134,28 +147,28 @@ test "workbook: protect/unprotect, rename, delete, move, copy, visibility" {
   inspect(workbook.defined_names()[0].refers_to.contains("S1!"), content="true")
 
   // delete no-op when only one sheet left.
-  let single = Workbook::new()
+  let single = @xlsx.Workbook::new()
   ignore(single.add_sheet("Only"))
   single.delete_sheet("Only")
   inspect(single.get_sheet_list().length(), content="1")
 
   // delete chart sheet branch + defined name removal.
   workbook.set_defined_name(
-    DefinedName::new("Dn2", "ChartRenamed!$A$1", scope="ChartRenamed"),
+    @xlsx.DefinedName::new("Dn2", "ChartRenamed!$A$1", scope="ChartRenamed"),
   )
   workbook.delete_sheet("ChartRenamed")
   inspect(workbook.get_sheet_list().contains("ChartRenamed"), content="false")
 
   // defined names removed for deleted worksheet scope.
   workbook.set_defined_name(
-    DefinedName::new("Dn3", "Sheet2!$A$1", scope="Sheet2"),
+    @xlsx.DefinedName::new("Dn3", "Sheet2!$A$1", scope="Sheet2"),
   )
   workbook.delete_sheet("Sheet2")
   inspect(workbook.defined_names().length(), content="2")
 
   // move_sheet: early return + active sheet adjustments.
   workbook.move_sheet("S1", "S1")
-  let m1 = Workbook::new()
+  let m1 = @xlsx.Workbook::new()
   ignore(m1.add_sheet("A"))
   ignore(m1.add_sheet("B"))
   ignore(m1.add_sheet("C"))
@@ -163,7 +176,7 @@ test "workbook: protect/unprotect, rename, delete, move, copy, visibility" {
   m1.set_active_sheet(2)
   m1.move_sheet("A", "D")
   inspect(m1.active_sheet_index(), content="1")
-  let m2 = Workbook::new()
+  let m2 = @xlsx.Workbook::new()
   ignore(m2.add_sheet("A"))
   ignore(m2.add_sheet("B"))
   ignore(m2.add_sheet("C"))
@@ -176,24 +189,30 @@ test "workbook: protect/unprotect, rename, delete, move, copy, visibility" {
   let bad_copy : Result[Unit, Error] = Ok(workbook.copy_sheet(0, 0)) catch {
     e => Err(e)
   }
-  inspect(bad_copy is Err(XlsxError::InvalidSheetIndex(_)), content="true")
+  inspect(
+    bad_copy is Err(@xlsx.XlsxError::InvalidSheetIndex(_)),
+    content="true",
+  )
   let combo : Result[Unit, Error] = Ok(workbook.copy_sheet(2, 0)) catch {
     e => Err(e)
   }
-  inspect(combo is Err(XlsxError::InvalidSheetIndex(_)), content="true")
+  inspect(combo is Err(@xlsx.XlsxError::InvalidSheetIndex(_)), content="true")
 
   // visibility checks.
   let vis_missing : Result[Bool, Error] = Ok(workbook.sheet_visible("Missing")) catch {
     e => Err(e)
   }
-  inspect(vis_missing is Err(XlsxError::SheetNotFound(_)), content="true")
-  let one = Workbook::new()
+  inspect(vis_missing is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let one = @xlsx.Workbook::new()
   ignore(one.add_sheet("Only"))
   let hide_all : Result[Unit, Error] = Ok(one.set_sheet_visible("Only", false)) catch {
     e => Err(e)
   }
-  inspect(hide_all is Err(XlsxError::InvalidSheetOperation(_)), content="true")
-  let vis = Workbook::new()
+  inspect(
+    hide_all is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let vis = @xlsx.Workbook::new()
   ignore(vis.add_sheet("A"))
   ignore(vis.add_sheet("B"))
   vis.set_sheet_visible("A", false, very_hidden=true)
@@ -203,16 +222,16 @@ test "workbook: protect/unprotect, rename, delete, move, copy, visibility" {
   let pm : Result[Unit, Error] = Ok(workbook.set_page_margins("Missing", None)) catch {
     e => Err(e)
   }
-  inspect(pm is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(pm is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let pl : Result[Unit, Error] = Ok(workbook.set_page_layout("Missing", None)) catch {
     e => Err(e)
   }
-  inspect(pl is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(pl is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 }
 
 ///|
 test "workbook: delete/move edge cases (chart sheets + active fallback)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("S1"))
   ignore(workbook.add_sheet("S2"))
   ignore(workbook.add_chart_sheet("C1", "<chart/>"))
@@ -237,7 +256,7 @@ test "workbook: delete/move edge cases (chart sheets + active fallback)" {
   debug_inspect(workbook.get_sheet_list(), content="[\"S1\", \"C1\", \"C3\"]")
 
   // move_sheet: active == source branch.
-  let m = Workbook::new()
+  let m = @xlsx.Workbook::new()
   ignore(m.add_sheet("A"))
   ignore(m.add_sheet("B"))
   ignore(m.add_sheet("C"))
@@ -247,7 +266,7 @@ test "workbook: delete/move edge cases (chart sheets + active fallback)" {
   inspect(m.active_sheet_index(), content="1")
 
   // set_sheet_visible: visible==true branch.
-  let v = Workbook::new()
+  let v = @xlsx.Workbook::new()
   ignore(v.add_sheet("A"))
   ignore(v.add_sheet("B"))
   v.set_sheet_visible("A", false)
@@ -255,35 +274,39 @@ test "workbook: delete/move edge cases (chart sheets + active fallback)" {
   inspect(v.sheet_visible("A"), content="true")
 
   // Wrapper getters: missing sheet -> SheetNotFound.
-  let pm : Result[PageLayoutMarginsOptions, Error] = Ok(
+  let pm : Result[@xlsx.PageLayoutMarginsOptions, Error] = Ok(
     v.get_page_margins("Missing"),
   ) catch {
     e => Err(e)
   }
-  inspect(pm is Err(XlsxError::SheetNotFound(_)), content="true")
-  let pl : Result[PageLayoutOptions, Error] = Ok(v.get_page_layout("Missing")) catch {
+  inspect(pm is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let pl : Result[@xlsx.PageLayoutOptions, Error] = Ok(
+    v.get_page_layout("Missing"),
+  ) catch {
     e => Err(e)
   }
-  inspect(pl is Err(XlsxError::SheetNotFound(_)), content="true")
-  let hf : Result[HeaderFooterOptions?, Error] = Ok(
+  inspect(pl is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let hf : Result[@xlsx.HeaderFooterOptions?, Error] = Ok(
     v.get_header_footer("Missing"),
   ) catch {
     e => Err(e)
   }
-  inspect(hf is Err(XlsxError::SheetNotFound(_)), content="true")
-  let hfi : Result[Array[HeaderFooterImageOptions], Error] = Ok(
+  inspect(hf is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let hfi : Result[Array[@xlsx.HeaderFooterImageOptions], Error] = Ok(
     v.get_header_footer_images("Missing"),
   ) catch {
     e => Err(e)
   }
-  inspect(hfi is Err(XlsxError::SheetNotFound(_)), content="true")
-  let sp : Result[SheetPropsOptions, Error] = Ok(v.get_sheet_props("Missing")) catch {
+  inspect(hfi is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let sp : Result[@xlsx.SheetPropsOptions, Error] = Ok(
+    v.get_sheet_props("Missing"),
+  ) catch {
     e => Err(e)
   }
-  inspect(sp is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(sp is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 
   // Delete active sheet in the middle -> fallback uses order_index (not last).
-  let mid = Workbook::new()
+  let mid = @xlsx.Workbook::new()
   ignore(mid.add_sheet("A"))
   ignore(mid.add_sheet("B"))
   ignore(mid.add_sheet("C"))
@@ -293,118 +316,130 @@ test "workbook: delete/move edge cases (chart sheets + active fallback)" {
   inspect(mid.active_sheet_index(), content="1")
 
   // copy_sheet: invalid entry kind combination (worksheet -> chart sheet).
-  let combo = Workbook::new()
+  let combo = @xlsx.Workbook::new()
   ignore(combo.add_sheet("A"))
   ignore(combo.add_chart_sheet("C", "<chart/>"))
   ignore(combo.add_sheet("B"))
   let copy_result : Result[Unit, Error] = Ok(combo.copy_sheet(0, 1)) catch {
     e => Err(e)
   }
-  inspect(copy_result is Err(XlsxError::InvalidSheetIndex(_)), content="true")
+  inspect(
+    copy_result is Err(@xlsx.XlsxError::InvalidSheetIndex(_)),
+    content="true",
+  )
 
   // set_sheet_visible: missing sheet.
   let set_vis : Result[Unit, Error] = Ok(v.set_sheet_visible("Missing", false)) catch {
     e => Err(e)
   }
-  inspect(set_vis is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_vis is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 
   // Wrapper setters: missing sheet -> SheetNotFound.
   let set_hf : Result[Unit, Error] = Ok(v.set_header_footer("Missing", None)) catch {
     e => Err(e)
   }
-  inspect(set_hf is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_hf is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_sp : Result[Unit, Error] = Ok(v.set_sheet_props("Missing", None)) catch {
     e => Err(e)
   }
-  inspect(set_sp is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_sp is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_sv : Result[Unit, Error] = Ok(
-    v.set_sheet_view("Missing", 0, SheetViewOptions::new()),
+    v.set_sheet_view("Missing", 0, @xlsx.SheetViewOptions::new()),
   ) catch {
     e => Err(e)
   }
-  inspect(set_sv is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_sv is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 }
 
 ///|
 test "workbook: missing-sheet wrappers raise SheetNotFound" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let panes = Panes::new()
-  let get_view : Result[SheetViewOptions, Error] = Ok(
+  let panes = @xlsx.Panes::new()
+  let get_view : Result[@xlsx.SheetViewOptions, Error] = Ok(
     workbook.get_sheet_view("Missing", 0),
   ) catch {
     e => Err(e)
   }
-  inspect(get_view is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(get_view is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_panes : Result[Unit, Error] = Ok(workbook.set_panes("Missing", panes)) catch {
     e => Err(e)
   }
-  inspect(set_panes is Err(XlsxError::SheetNotFound(_)), content="true")
-  let get_panes : Result[Panes, Error] = Ok(workbook.get_panes("Missing")) catch {
+  inspect(set_panes is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let get_panes : Result[@xlsx.Panes, Error] = Ok(workbook.get_panes("Missing")) catch {
     e => Err(e)
   }
-  inspect(get_panes is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(get_panes is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_dim : Result[Unit, Error] = Ok(
     workbook.set_sheet_dimension("Missing", "A1:B2"),
   ) catch {
     e => Err(e)
   }
-  inspect(set_dim is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_dim is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let get_dim : Result[String, Error] = Ok(
     workbook.get_sheet_dimension("Missing"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_dim is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(get_dim is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let protect : Result[Unit, Error] = Ok(
-    workbook.protect_sheet("Missing", SheetProtectionOptions::new()),
+    workbook.protect_sheet("Missing", @xlsx.SheetProtectionOptions::new()),
   ) catch {
     e => Err(e)
   }
-  inspect(protect is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(protect is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let unprotect : Result[Unit, Error] = Ok(workbook.unprotect_sheet("Missing")) catch {
     e => Err(e)
   }
-  inspect(unprotect is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(unprotect is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_bg : Result[Unit, Error] = Ok(
     workbook.set_sheet_background("Missing", Bytes::from_array([0]), "png"),
   ) catch {
     e => Err(e)
   }
-  inspect(set_bg is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_bg is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let clear_bg : Result[Unit, Error] = Ok(
     workbook.clear_sheet_background("Missing"),
   ) catch {
     e => Err(e)
   }
-  inspect(clear_bg is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(clear_bg is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let insert_break : Result[Unit, Error] = Ok(
     workbook.insert_page_break("Missing", "B2"),
   ) catch {
     e => Err(e)
   }
-  inspect(insert_break is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    insert_break is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let remove_break : Result[Unit, Error] = Ok(
     workbook.remove_page_break("Missing", "B2"),
   ) catch {
     e => Err(e)
   }
-  inspect(remove_break is Err(XlsxError::SheetNotFound(_)), content="true")
-  let rs : Result[RowStream, Error] = Ok(workbook.row_stream("Missing")) catch {
+  inspect(
+    remove_break is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
+  let rs : Result[@xlsx.RowStream, Error] = Ok(workbook.row_stream("Missing")) catch {
     e => Err(e)
   }
-  inspect(rs is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(rs is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 }
 
 ///|
 test "workbook: group/ungroup edge cases" {
   // active sheet index out of range (no sheets) -> active_name == "" branch.
-  let empty = Workbook::new()
+  let empty = @xlsx.Workbook::new()
   let no_active : Result[Unit, Error] = Ok(empty.group_sheets(["A"])) catch {
     e => Err(e)
   }
-  inspect(no_active is Err(XlsxError::InvalidSheetOperation(_)), content="true")
-  let workbook = Workbook::new()
+  inspect(
+    no_active is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("A"))
   ignore(workbook.add_chart_sheet("C1", "<chart/>"))
   ignore(workbook.add_sheet("B"))
@@ -416,7 +451,7 @@ test "workbook: group/ungroup edge cases" {
   ) catch {
     e => Err(e)
   }
-  inspect(missing is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(missing is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 
   // Successful group then ungroup should ignore chart sheets.
   workbook.group_sheets(["A", "B"])
@@ -425,21 +460,24 @@ test "workbook: group/ungroup edge cases" {
 
 ///|
 test "workbook: invalid defined name/style ids and chart sheet set_cell" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   ignore(workbook.add_chart_sheet("Chart1", "<chart/>"))
   let bad_dn : Result[Unit, Error] = Ok(
-    workbook.set_defined_name(DefinedName::new("", "Sheet1!$A$1")),
+    workbook.set_defined_name(@xlsx.DefinedName::new("", "Sheet1!$A$1")),
   ) catch {
     e => Err(e)
   }
-  inspect(bad_dn is Err(XlsxError::InvalidDefinedName(_)), content="true")
-  let bad_cond_style : Result[Style, Error] = Ok(
+  inspect(bad_dn is Err(@xlsx.XlsxError::InvalidDefinedName(_)), content="true")
+  let bad_cond_style : Result[@xlsx.Style, Error] = Ok(
     workbook.get_conditional_style(0),
   ) catch {
     e => Err(e)
   }
-  inspect(bad_cond_style is Err(XlsxError::InvalidStyleId(_)), content="true")
+  inspect(
+    bad_cond_style is Err(@xlsx.XlsxError::InvalidStyleId(_)),
+    content="true",
+  )
   sheet.set_cell("A1", "x")
   sheet.set_cell_style("A1", 999)
   let bad_fmt : Result[String?, Error] = Ok(
@@ -447,20 +485,23 @@ test "workbook: invalid defined name/style ids and chart sheet set_cell" {
   ) catch {
     e => Err(e)
   }
-  inspect(bad_fmt is Err(XlsxError::InvalidStyleId(_)), content="true")
+  inspect(bad_fmt is Err(@xlsx.XlsxError::InvalidStyleId(_)), content="true")
   let chart_set : Result[Unit, Error] = Ok(
     workbook.set_cell("Chart1", "A1", "x"),
   ) catch {
     e => Err(e)
   }
-  inspect(chart_set is Err(XlsxError::InvalidSheetOperation(_)), content="true")
+  inspect(
+    chart_set is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
   workbook.set_cell_float("Sheet1", "B2", 1.2345, bit_size=32)
   workbook.set_cell_float("Sheet1", "C3", 1.2345, precision=2, bit_size=32)
 }
 
 ///|
 test "workbook: copy_sheet clones complex worksheet state" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let src = workbook.add_sheet("Src")
   ignore(workbook.add_sheet("Dst"))
 
@@ -513,10 +554,10 @@ test "workbook: copy_sheet clones complex worksheet state" {
   workbook.set_sheet_view(
     "Src",
     0,
-    SheetViewOptions::with_values(zoom_scale=120.0),
+    @xlsx.SheetViewOptions::with_values(zoom_scale=120.0),
   )
   src.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Left,
       [1, 2, 3],
       ".png",
@@ -526,12 +567,12 @@ test "workbook: copy_sheet clones complex worksheet state" {
   )
   src.add_image("E5", b"img", "png", "image/png")
   src.add_chart("F6", "<chart/>")
-  src.add_shape(try! Shape::new("G7", "rect"))
-  src.add_form_control(try! FormControl::new("H8", "checkbox"))
-  src.add_slicer(try! Slicer::new("S1"))
+  src.add_shape(try! @xlsx.Shape::new("G7", "rect"))
+  src.add_form_control(try! @xlsx.FormControl::new("H8", "checkbox"))
+  src.add_slicer(try! @xlsx.Slicer::new("S1"))
   workbook.set_panes(
     "Src",
-    Panes::with_values(
+    @xlsx.Panes::with_values(
       freeze=false,
       split=false,
       x_split=1,
@@ -539,7 +580,11 @@ test "workbook: copy_sheet clones complex worksheet state" {
       top_left_cell="B2",
       active_pane="bottomRight",
       selection=[
-        Selection::with_values(sqref="B2", active_cell="B2", pane="bottomRight"),
+        @xlsx.Selection::with_values(
+          sqref="B2",
+          active_cell="B2",
+          pane="bottomRight",
+        ),
       ],
     ),
   )
@@ -566,27 +611,27 @@ test "workbook: copy_sheet clones complex worksheet state" {
 
 ///|
 test "workbook: missing-sheet cell/media wrapper guards" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let rich : Array[RichTextRun] = [{ text: "x", font: None }]
-  let shape = Shape::new("A1", "rect") catch {
+  let rich : Array[@xlsx.RichTextRun] = [{ text: "x", font: None }]
+  let shape = @xlsx.Shape::new("A1", "rect") catch {
     err => fail("shape init failed: \{repr(err)}")
   }
-  let control = FormControl::new("A1", "checkbox") catch {
+  let control = @xlsx.FormControl::new("A1", "checkbox") catch {
     err => fail("form control init failed: \{repr(err)}")
   }
-  let slicer_opts = SlicerOptions::new("Field", "A1", "Sheet1", "Table1") catch {
+  let slicer_opts = @xlsx.SlicerOptions::new("Field", "A1", "Sheet1", "Table1") catch {
     err => fail("slicer options init failed: \{repr(err)}")
   }
-  let chart_opts = ChartOptions::new(Bar)
-  let image_opts = GraphicOptions::new()
+  let chart_opts = @xlsx.ChartOptions::new(Bar)
+  let image_opts = @xlsx.GraphicOptions::new()
 
   let set_rich : Result[Unit, Error] = Ok(
     workbook.set_cell_rich_text("Missing", "A1", rich),
   ) catch {
     e => Err(e)
   }
-  inspect(set_rich is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_rich is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_link : Result[Unit, Error] = Ok(
     workbook.set_cell_hyperlink(
       "Missing",
@@ -597,116 +642,122 @@ test "workbook: missing-sheet cell/media wrapper guards" {
   ) catch {
     e => Err(e)
   }
-  inspect(set_link is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_link is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_link_opts : Result[Unit, Error] = Ok(
     workbook.set_cell_hyperlink_opts(
       "Missing",
       "A1",
       "https://example.com",
       External,
-      opts=HyperlinkOpts::new(),
+      opts=@xlsx.HyperlinkOpts::new(),
     ),
   ) catch {
     e => Err(e)
   }
-  inspect(set_link_opts is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    set_link_opts is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let remove_link : Result[Unit, Error] = Ok(
     workbook.remove_cell_hyperlink("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(remove_link is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(remove_link is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let get_cell : Result[String?, Error] = Ok(workbook.get_cell("Missing", "A1")) catch {
     e => Err(e)
   }
-  inspect(get_cell is Err(XlsxError::SheetNotFound(_)), content="true")
-  let get_rich : Result[Array[RichTextRun]?, Error] = Ok(
+  inspect(get_cell is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let get_rich : Result[Array[@xlsx.RichTextRun]?, Error] = Ok(
     workbook.get_cell_rich_text("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_rich is Err(XlsxError::SheetNotFound(_)), content="true")
-  let get_link : Result[Hyperlink?, Error] = Ok(
+  inspect(get_rich is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let get_link : Result[@xlsx.Hyperlink?, Error] = Ok(
     workbook.get_cell_hyperlink("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_link is Err(XlsxError::SheetNotFound(_)), content="true")
-  let get_raw : Result[CellValue?, Error] = Ok(
+  inspect(get_link is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let get_raw : Result[@xlsx.CellValue?, Error] = Ok(
     workbook.get_cell_value_raw("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_raw is Err(XlsxError::SheetNotFound(_)), content="true")
-  let get_type : Result[CellValueType?, Error] = Ok(
+  inspect(get_raw is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let get_type : Result[@xlsx.CellValueType?, Error] = Ok(
     workbook.get_cell_type("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_type is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(get_type is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let get_value : Result[String?, Error] = Ok(
     workbook.get_cell_value("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_value is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(get_value is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let calc_value : Result[String, Error] = Ok(
     workbook.calc_cell_value(
       "Missing",
       "A1",
-      options=Options::with_values(raw_cell_value=true),
+      options=@xlsx.Options::with_values(raw_cell_value=true),
     ),
   ) catch {
     e => Err(e)
   }
-  inspect(calc_value is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(calc_value is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let calc_rc : Result[String, Error] = Ok(
     workbook.calc_cell_value_rc(
       "Missing",
       1,
       1,
-      options=Options::with_values(raw_cell_value=true),
+      options=@xlsx.Options::with_values(raw_cell_value=true),
     ),
   ) catch {
     e => Err(e)
   }
-  inspect(calc_rc is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(calc_rc is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_formula : Result[Unit, Error] = Ok(
     workbook.set_cell_formula("Missing", "A1", "1+1"),
   ) catch {
     e => Err(e)
   }
-  inspect(set_formula is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_formula is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_formula_opts : Result[Unit, Error] = Ok(
     workbook.set_cell_formula_opts("Missing", "A1", "1+1"),
   ) catch {
     e => Err(e)
   }
-  inspect(set_formula_opts is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    set_formula_opts is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let get_formula : Result[String?, Error] = Ok(
     workbook.get_cell_formula("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_formula is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(get_formula is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let set_style : Result[Unit, Error] = Ok(
     workbook.set_cell_style("Missing", "A1", 0),
   ) catch {
     e => Err(e)
   }
-  inspect(set_style is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(set_style is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let get_style : Result[Int?, Error] = Ok(
     workbook.get_cell_style("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_style is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(get_style is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let add_image : Result[Unit, Error] = Ok(
     workbook.add_image("Missing", "A1", [1], ".png", "image/png"),
   ) catch {
     e => Err(e)
   }
-  inspect(add_image is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(add_image is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let add_image_opts : Result[Unit, Error] = Ok(
     workbook.add_image_with_options(
       "Missing",
@@ -719,120 +770,141 @@ test "workbook: missing-sheet cell/media wrapper guards" {
   ) catch {
     e => Err(e)
   }
-  inspect(add_image_opts is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    add_image_opts is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let add_picture_bytes : Result[Unit, Error] = Ok(
     workbook.add_picture_from_bytes("Missing", "A1", [1], ".png"),
   ) catch {
     e => Err(e)
   }
-  inspect(add_picture_bytes is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    add_picture_bytes is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let add_picture_bytes_opts : Result[Unit, Error] = Ok(
     workbook.add_picture_from_bytes_with_options(
       "Missing",
       "A1",
       [1],
       ".png",
-      GraphicOptions::new(),
+      @xlsx.GraphicOptions::new(),
     ),
   ) catch {
     e => Err(e)
   }
   inspect(
-    add_picture_bytes_opts is Err(XlsxError::SheetNotFound(_)),
+    add_picture_bytes_opts is Err(@xlsx.XlsxError::SheetNotFound(_)),
     content="true",
   )
   let add_hf_image : Result[Unit, Error] = Ok(
     workbook.add_header_footer_image(
       "Missing",
-      HeaderFooterImageOptions::new(Left, [1], ".png"),
+      @xlsx.HeaderFooterImageOptions::new(Left, [1], ".png"),
     ),
   ) catch {
     e => Err(e)
   }
-  inspect(add_hf_image is Err(XlsxError::SheetNotFound(_)), content="true")
-  let get_pictures : Result[Array[Image], Error] = Ok(
+  inspect(
+    add_hf_image is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
+  let get_pictures : Result[Array[@xlsx.Image], Error] = Ok(
     workbook.get_pictures("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_pictures is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    get_pictures is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let get_picture_cells : Result[Array[String], Error] = Ok(
     workbook.get_picture_cells("Missing"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_picture_cells is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    get_picture_cells is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let del_picture : Result[Unit, Error] = Ok(
     workbook.delete_picture("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(del_picture is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(del_picture is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let add_chart : Result[Unit, Error] = Ok(
     workbook.add_chart("Missing", "A1", "<chart/>"),
   ) catch {
     e => Err(e)
   }
-  inspect(add_chart is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(add_chart is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let add_chart_opts : Result[Unit, Error] = Ok(
     workbook.add_chart_with_options("Missing", "A1", chart_opts),
   ) catch {
     e => Err(e)
   }
-  inspect(add_chart_opts is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    add_chart_opts is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let del_chart : Result[Unit, Error] = Ok(
     workbook.delete_chart("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(del_chart is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(del_chart is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let add_shape : Result[Unit, Error] = Ok(workbook.add_shape("Missing", shape)) catch {
     e => Err(e)
   }
-  inspect(add_shape is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(add_shape is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let add_vml : Result[Unit, Error] = Ok(
     workbook.add_vml_drawing_xml("Missing", "<xml/>"),
   ) catch {
     e => Err(e)
   }
-  inspect(add_vml is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(add_vml is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let add_vml_hf : Result[Unit, Error] = Ok(
     workbook.add_vml_drawing_hf_xml("Missing", "<xml/>"),
   ) catch {
     e => Err(e)
   }
-  inspect(add_vml_hf is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(add_vml_hf is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let add_control : Result[Unit, Error] = Ok(
     workbook.add_form_control("Missing", control),
   ) catch {
     e => Err(e)
   }
-  inspect(add_control is Err(XlsxError::SheetNotFound(_)), content="true")
-  let get_controls : Result[Array[FormControl], Error] = Ok(
+  inspect(add_control is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
+  let get_controls : Result[Array[@xlsx.FormControl], Error] = Ok(
     workbook.get_form_controls("Missing"),
   ) catch {
     e => Err(e)
   }
-  inspect(get_controls is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    get_controls is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let del_control : Result[Unit, Error] = Ok(
     workbook.delete_form_control("Missing", "A1"),
   ) catch {
     e => Err(e)
   }
-  inspect(del_control is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(del_control is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
   let add_slicer : Result[Unit, Error] = Ok(
     workbook.add_slicer("Missing", slicer_opts),
   ) catch {
     e => Err(e)
   }
-  inspect(add_slicer is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(add_slicer is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 }
 
 ///|
 test "workbook: add_image_with_options applies explicit option values" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let options = GraphicOptions::with_values(
+  let options = @xlsx.GraphicOptions::with_values(
     offset_x=3,
     offset_y=4,
     scale_x=1.25,
@@ -875,10 +947,10 @@ test "workbook: add_image_with_options applies explicit option values" {
 
 ///|
 test "workbook: calc_cell_value raw/options/rc/style branches" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   workbook.set_cell_formula("Sheet1", "A1", "1+1")
-  let opts = Options::with_values(raw_cell_value=true)
+  let opts = @xlsx.Options::with_values(raw_cell_value=true)
   inspect(workbook.calc_cell_value("Sheet1", "A1", options=opts), content="2")
   inspect(
     workbook.calc_cell_value_rc("Sheet1", 1, 1, options=opts),
@@ -890,13 +962,13 @@ test "workbook: calc_cell_value raw/options/rc/style branches" {
   ) catch {
     e => Err(e)
   }
-  inspect(bad_style is Err(XlsxError::InvalidStyleId(_)), content="true")
+  inspect(bad_style is Err(@xlsx.XlsxError::InvalidStyleId(_)), content="true")
 }
 
 ///|
 #cfg(target="native")
 async test "workbook: async missing-sheet picture/header wrappers" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let add_picture_result : Result[Unit, Error] = Ok(
     workbook.add_picture("Missing", "A1", "/tmp/does-not-matter.png"),
@@ -904,7 +976,7 @@ async test "workbook: async missing-sheet picture/header wrappers" {
     e => Err(e)
   }
   inspect(
-    add_picture_result is Err(XlsxError::SheetNotFound(_)),
+    add_picture_result is Err(@xlsx.XlsxError::SheetNotFound(_)),
     content="true",
   )
   let add_picture_opts_result : Result[Unit, Error] = Ok(
@@ -912,16 +984,16 @@ async test "workbook: async missing-sheet picture/header wrappers" {
       "Missing",
       "A1",
       "/tmp/does-not-matter.png",
-      GraphicOptions::new(),
+      @xlsx.GraphicOptions::new(),
     ),
   ) catch {
     e => Err(e)
   }
   inspect(
-    add_picture_opts_result is Err(XlsxError::SheetNotFound(_)),
+    add_picture_opts_result is Err(@xlsx.XlsxError::SheetNotFound(_)),
     content="true",
   )
-  let hf_options = HeaderFooterImageOptions::from_file(
+  let hf_options = @xlsx.HeaderFooterImageOptions::from_file(
     Left,
     "/tmp/does-not-matter.png",
   ) catch {
@@ -932,12 +1004,15 @@ async test "workbook: async missing-sheet picture/header wrappers" {
   ) catch {
     e => Err(e)
   }
-  inspect(add_hf_result is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    add_hf_result is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
 }
 
 ///|
 test "workbook: default graphic options + formula rc wrapper branches" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell_formula("Sheet1", "A1", "1+1")
   workbook.set_cell_formula_opts("Sheet1", "B1", "2+2")
@@ -953,7 +1028,7 @@ test "workbook: default graphic options + formula rc wrapper branches" {
     [1, 2],
     ".png",
     "image/png",
-    GraphicOptions::new(),
+    @xlsx.GraphicOptions::new(),
   )
   let pictures = workbook.get_pictures("Sheet1", "C3")
   inspect(pictures.length(), content="1")
@@ -974,13 +1049,13 @@ test "workbook: default graphic options + formula rc wrapper branches" {
 
 ///|
 test "workbook: validation merge sparkline and rc/style wrapper coverage" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let empty = Workbook::new()
+  let empty = @xlsx.Workbook::new()
   ignore(empty.add_sheet("Empty"))
   empty.clear_auto_filter("Empty")
   workbook.set_defined_name(
-    DefinedName::new("KeepRef", "Sheet1!$Z$1", scope="Sheet1"),
+    @xlsx.DefinedName::new("KeepRef", "Sheet1!$Z$1", scope="Sheet1"),
   )
 
   workbook.set_auto_filter("Sheet1", "A1:B2", [])
@@ -988,7 +1063,7 @@ test "workbook: validation merge sparkline and rc/style wrapper coverage" {
   // Second clear hits remove-defined-name empty fast path.
   workbook.clear_auto_filter("Sheet1")
 
-  let dv = DataValidation::new(true)
+  let dv = @xlsx.DataValidation::new(true)
   dv.set_sqref("A1")
   dv.set_drop_list(["Yes", "No"])
   workbook.add_data_validation("Sheet1", dv)
@@ -1006,7 +1081,7 @@ test "workbook: validation merge sparkline and rc/style wrapper coverage" {
   workbook.merge_cells("Sheet1", "D1:E1")
   let merge_info = workbook.get_merge_cells_info(
     "Sheet1",
-    options=Options::new(),
+    options=@xlsx.Options::new(),
   )
   inspect(merge_info.length(), content="1")
   inspect(merge_info[0].value, content="")
@@ -1023,7 +1098,7 @@ test "workbook: validation merge sparkline and rc/style wrapper coverage" {
   )
   inspect(workbook.get_cell_value_rc("Sheet1", 2, 2) is Some(_), content="true")
   inspect(
-    workbook.get_cell_value_rc("Sheet1", 2, 2, options=Options::new())
+    workbook.get_cell_value_rc("Sheet1", 2, 2, options=@xlsx.Options::new())
     is Some(_),
     content="true",
   )
@@ -1038,16 +1113,22 @@ test "workbook: validation merge sparkline and rc/style wrapper coverage" {
   ) catch {
     e => Err(e)
   }
-  inspect(miss_row_style is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    miss_row_style is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
   let miss_col_style : Result[Unit, Error] = Ok(
     workbook.set_col_style("Missing", 1, 0),
   ) catch {
     e => Err(e)
   }
-  inspect(miss_col_style is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    miss_col_style is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
 
   workbook.set_defined_name(
-    DefinedName::new("ShiftRef", "Sheet1!$A$3", scope="Sheet1"),
+    @xlsx.DefinedName::new("ShiftRef", "Sheet1!$A$3", scope="Sheet1"),
   )
   workbook.duplicate_row_to("Sheet1", 1, 2)
   let mut shifted = false
@@ -1062,7 +1143,7 @@ test "workbook: validation merge sparkline and rc/style wrapper coverage" {
 
 ///|
 test "workbook: table naming and slicer wrapper/error branches" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
 
   ignore(
@@ -1081,24 +1162,27 @@ test "workbook: table naming and slicer wrapper/error branches" {
     ]),
   )
 
-  let auto_name_opts = TableOptions::new("J1:K2") catch {
+  let auto_name_opts = @xlsx.TableOptions::new("J1:K2") catch {
     err => fail("table options init failed: \{repr(err)}")
   }
   let auto_name_table = workbook.add_table("Sheet1", auto_name_opts)
   inspect(auto_name_table.name, content="Table4")
 
-  let bad_name_opts = TableOptions::new("L1:M2") catch {
+  let bad_name_opts = @xlsx.TableOptions::new("L1:M2") catch {
     err => fail("table options init failed: \{repr(err)}")
   }
   bad_name_opts.set_name("1bad")
-  let bad_name_result : Result[Table, Error] = Ok(
+  let bad_name_result : Result[@xlsx.Table, Error] = Ok(
     workbook.add_table("Sheet1", bad_name_opts),
   ) catch {
     e => Err(e)
   }
-  inspect(bad_name_result is Err(XlsxError::InvalidTable(_)), content="true")
+  inspect(
+    bad_name_result is Err(@xlsx.XlsxError::InvalidTable(_)),
+    content="true",
+  )
 
-  let missing_sheet_opts = SlicerOptions::new(
+  let missing_sheet_opts = @xlsx.SlicerOptions::new(
     "Region", "A1", "Missing", "Table",
   ) catch {
     err => fail("slicer options init failed: \{repr(err)}")
@@ -1108,9 +1192,12 @@ test "workbook: table naming and slicer wrapper/error branches" {
   ) catch {
     e => Err(e)
   }
-  inspect(missing_sheet is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(
+    missing_sheet is Err(@xlsx.XlsxError::SheetNotFound(_)),
+    content="true",
+  )
 
-  let missing_table_opts = SlicerOptions::new(
+  let missing_table_opts = @xlsx.SlicerOptions::new(
     "Region", "A1", "Sheet1", "NoSuch",
   ) catch {
     err => fail("slicer options init failed: \{repr(err)}")
@@ -1120,9 +1207,12 @@ test "workbook: table naming and slicer wrapper/error branches" {
   ) catch {
     e => Err(e)
   }
-  inspect(missing_table is Err(XlsxError::TableNotFound(_)), content="true")
+  inspect(
+    missing_table is Err(@xlsx.XlsxError::TableNotFound(_)),
+    content="true",
+  )
 
-  let missing_field_opts = SlicerOptions::new(
+  let missing_field_opts = @xlsx.SlicerOptions::new(
     "MissingField", "A1", "Sheet1", "Table",
   ) catch {
     err => fail("slicer options init failed: \{repr(err)}")
@@ -1133,7 +1223,7 @@ test "workbook: table naming and slicer wrapper/error branches" {
     e => Err(e)
   }
   inspect(
-    missing_field is Err(XlsxError::InvalidSheetOperation(_)),
+    missing_field is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
 
@@ -1142,7 +1232,7 @@ test "workbook: table naming and slicer wrapper/error branches" {
       "1Region", "Type",
     ]),
   )
-  let digit_field_opts = SlicerOptions::new(
+  let digit_field_opts = @xlsx.SlicerOptions::new(
     "1Region", "N3", "Sheet1", "TableDigits",
   ) catch {
     err => fail("slicer options init failed: \{repr(err)}")
@@ -1157,7 +1247,7 @@ test "workbook: table naming and slicer wrapper/error branches" {
       name="PivotBad",
     ),
   )
-  let pivot_field_missing_opts = SlicerOptions::new(
+  let pivot_field_missing_opts = @xlsx.SlicerOptions::new(
     "Region", "P1", "Sheet1", "PivotBad",
   ) catch {
     err => fail("slicer options init failed: \{repr(err)}")
@@ -1168,11 +1258,11 @@ test "workbook: table naming and slicer wrapper/error branches" {
     e => Err(e)
   }
   inspect(
-    pivot_field_missing is Err(XlsxError::InvalidSheetOperation(_)),
+    pivot_field_missing is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
     content="true",
   )
 
-  let raw = Slicer::new("RawSlicer") catch {
+  let raw = @xlsx.Slicer::new("RawSlicer") catch {
     err => fail("raw slicer init failed: \{repr(err)}")
   }
   workbook.add_slicer_raw("Sheet1", raw)
@@ -1181,12 +1271,12 @@ test "workbook: table naming and slicer wrapper/error branches" {
 
 ///|
 test "workbook: copy_sheet clones pane and x14 data bar maps" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Src"))
   ignore(workbook.add_sheet("Dst"))
   workbook.set_panes(
     "Src",
-    Panes::with_values(
+    @xlsx.Panes::with_values(
       freeze=true,
       split=true,
       x_split=1,
@@ -1194,11 +1284,15 @@ test "workbook: copy_sheet clones pane and x14 data bar maps" {
       top_left_cell="B2",
       active_pane="bottomRight",
       selection=[
-        Selection::with_values(sqref="B2", active_cell="B2", pane="bottomRight"),
+        @xlsx.Selection::with_values(
+          sqref="B2",
+          active_cell="B2",
+          pane="bottomRight",
+        ),
       ],
     ),
   )
-  let data_bar = ConditionalFormatOptions::new("data_bar")
+  let data_bar = @xlsx.ConditionalFormatOptions::new("data_bar")
   data_bar.set_bar_solid(true)
   data_bar.set_bar_border_color("#0000FF")
   workbook.set_conditional_format("Src", "A1:A2", [data_bar])
@@ -1208,7 +1302,7 @@ test "workbook: copy_sheet clones pane and x14 data bar maps" {
 
 ///|
 test "workbook: pivot option residual branches" {
-  let wb_name = Workbook::new()
+  let wb_name = @xlsx.Workbook::new()
   let name_sheet = wb_name.add_sheet("Sheet1")
   name_sheet.set_cell_value("A1", String("Region"))
   name_sheet.set_cell_value("B1", String("Sales"))
@@ -1238,62 +1332,69 @@ test "workbook: pivot option residual branches" {
       name="PivotTable3",
     ),
   )
-  let next_name_opts = PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!E2:H10")
-  next_name_opts.rows.push(PivotTableField::new("Region"))
-  next_name_opts.data.push(PivotTableField::new("Sales"))
+  let next_name_opts = @xlsx.PivotTableOptions::new(
+    "Sheet1!A1:B2", "Sheet1!E2:H10",
+  )
+  next_name_opts.rows.push(@xlsx.PivotTableField::new("Region"))
+  next_name_opts.data.push(@xlsx.PivotTableField::new("Sales"))
   let next_name_pivot = wb_name.add_pivot_table(next_name_opts)
   inspect(next_name_pivot.name, content="PivotTable4")
 
-  let wb_empty = Workbook::new()
+  let wb_empty = @xlsx.Workbook::new()
   let empty_sheet = wb_empty.add_sheet("Sheet1")
   empty_sheet.set_cell_value("A2", String("East"))
   empty_sheet.set_cell_value("B2", Numeric(10.0))
-  let empty_header_opts = PivotTableOptions::new(
+  let empty_header_opts = @xlsx.PivotTableOptions::new(
     "Sheet1!A1:B2", "Sheet1!E2:H10",
   )
-  let empty_header_result : Result[PivotTable, Error] = Ok(
+  let empty_header_result : Result[@xlsx.PivotTable, Error] = Ok(
     wb_empty.add_pivot_table(empty_header_opts),
   ) catch {
     e => Err(e)
   }
   inspect(
-    empty_header_result is Err(XlsxError::InvalidPivotTable(_)),
+    empty_header_result is Err(@xlsx.XlsxError::InvalidPivotTable(_)),
     content="true",
   )
 
-  let wb_missing = Workbook::new()
+  let wb_missing = @xlsx.Workbook::new()
   let missing_sheet = wb_missing.add_sheet("Sheet1")
   missing_sheet.set_cell_value("A1", String("Region"))
   missing_sheet.set_cell_value("B1", String("Sales"))
   missing_sheet.set_cell_value("A2", String("East"))
   missing_sheet.set_cell_value("B2", Numeric(10.0))
-  let missing_field_opts = PivotTableOptions::new(
+  let missing_field_opts = @xlsx.PivotTableOptions::new(
     "Sheet1!A1:B2", "Sheet1!E2:H10",
   )
-  missing_field_opts.rows.push(PivotTableField::new("Missing"))
-  let missing_field_result : Result[PivotTable, Error] = Ok(
+  missing_field_opts.rows.push(@xlsx.PivotTableField::new("Missing"))
+  let missing_field_result : Result[@xlsx.PivotTable, Error] = Ok(
     wb_missing.add_pivot_table(missing_field_opts),
   ) catch {
     e => Err(e)
   }
   inspect(
-    missing_field_result is Err(XlsxError::InvalidPivotTable(_)),
+    missing_field_result is Err(@xlsx.XlsxError::InvalidPivotTable(_)),
     content="true",
   )
 
-  let wb_filter = Workbook::new()
+  let wb_filter = @xlsx.Workbook::new()
   let filter_sheet = wb_filter.add_sheet("Sheet1")
   filter_sheet.set_cell_value("A1", String("Region"))
   filter_sheet.set_cell_value("B1", String("Sales"))
   filter_sheet.set_cell_value("A2", String("East"))
   filter_sheet.set_cell_value("B2", Numeric(10.0))
-  let filter_opts = PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!E2:H10")
-  filter_opts.filter.push(PivotTableField::new("Region"))
-  filter_opts.data.push(PivotTableField::new("Missing"))
-  let filter_result : Result[PivotTable, Error] = Ok(
+  let filter_opts = @xlsx.PivotTableOptions::new(
+    "Sheet1!A1:B2", "Sheet1!E2:H10",
+  )
+  filter_opts.filter.push(@xlsx.PivotTableField::new("Region"))
+  filter_opts.data.push(@xlsx.PivotTableField::new("Missing"))
+  let filter_result : Result[@xlsx.PivotTable, Error] = Ok(
     wb_filter.add_pivot_table(filter_opts),
   ) catch {
     e => Err(e)
   }
-  inspect(filter_result is Err(XlsxError::InvalidPivotTable(_)), content="true")
+  inspect(
+    filter_result is Err(@xlsx.XlsxError::InvalidPivotTable(_)),
+    content="true",
+  )
 }

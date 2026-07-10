@@ -106,10 +106,10 @@ test "demo ooxml showcase: writer output remains consistent after roundtrip" {
   let bytes = @demos.demo_ooxml_showcase_bytes()
   assert_demo_ooxml_showcase_archive(bytes)
 
-  let parsed = read(bytes)
+  let parsed = @mbtexcel.read(bytes)
   debug_inspect(parsed.sheet_name(0), content="Some(\"Showcase\")")
   debug_inspect(parsed.sheet_name(1), content="Some(\"Data\")")
 
-  let roundtrip_bytes = write(parsed)
+  let roundtrip_bytes = @mbtexcel.write(parsed)
   assert_demo_ooxml_showcase_archive(roundtrip_bytes)
 }

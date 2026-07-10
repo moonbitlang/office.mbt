@@ -1,6 +1,6 @@
 ///|
 test "chart sheet write and read" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let chart_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -8,7 +8,7 @@ test "chart sheet write and read" {
     #|  <c:chart/>
     #|</c:chartSpace>
   ignore(workbook.add_chart_sheet("Chart1", chart_xml))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let workbook_xml = match archive.get("xl/workbook.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -42,7 +42,7 @@ test "chart sheet write and read" {
     None => fail("missing content types")
   }
   inspect(types_xml.contains("/xl/chartsheets/sheet1.xml"), content="true")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   inspect(parsed.chart_sheets().length(), content="1")
   let parsed_chart = parsed.chart_sheets()[0]
   inspect(parsed_chart.name(), content="Chart1")
@@ -51,7 +51,7 @@ test "chart sheet write and read" {
 
 ///|
 test "chart sheet with options (excelize-like)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A2", "Small")
   sheet.set_cell("A3", "Normal")
@@ -68,16 +68,28 @@ test "chart sheet with options (excelize-like)" {
   sheet.set_cell("B4", "6")
   sheet.set_cell("C4", "7")
   sheet.set_cell("D4", "8")
-  let opts = ChartOptions::new(Col3DClustered)
+  let opts = @xlsx.ChartOptions::new(Col3DClustered)
   opts.title = "Fruit 3D Clustered Column Chart"
   opts.series.push(
-    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$2:$D$2", name="Sheet1!$A$2"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$B$1:$D$1",
+      "Sheet1!$B$2:$D$2",
+      name="Sheet1!$A$2",
+    ),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$3:$D$3", name="Sheet1!$A$3"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$B$1:$D$1",
+      "Sheet1!$B$3:$D$3",
+      name="Sheet1!$A$3",
+    ),
   )
   opts.series.push(
-    ChartSeries::new("Sheet1!$B$1:$D$1", "Sheet1!$B$4:$D$4", name="Sheet1!$A$4"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$B$1:$D$1",
+      "Sheet1!$B$4:$D$4",
+      name="Sheet1!$A$4",
+    ),
   )
   ignore(workbook.add_chart_sheet_with_options("Chart1", opts))
   let mut sheet_idx = 0
@@ -93,26 +105,29 @@ test "chart sheet with options (excelize-like)" {
   ) catch {
     e => Err(e)
   }
-  guard result is Err(XlsxError::InvalidSheetOperation(msg~)) else {
+  guard result is Err(@xlsx.XlsxError::InvalidSheetOperation(msg~)) else {
     fail("expected chartsheet not-a-worksheet error")
   }
   inspect(msg.contains("not a worksheet"), content="true")
-  let exists_result : Result[ChartSheet, Error] = Ok(
+  let exists_result : Result[@xlsx.ChartSheet, Error] = Ok(
     workbook.add_chart_sheet_with_options("Sheet1", opts),
   ) catch {
     e => Err(e)
   }
   inspect(
-    exists_result is Err(XlsxError::SheetAlreadyExists(_)),
+    exists_result is Err(@xlsx.XlsxError::SheetAlreadyExists(_)),
     content="true",
   )
-  let name_result : Result[ChartSheet, Error] = Ok(
+  let name_result : Result[@xlsx.ChartSheet, Error] = Ok(
     workbook.add_chart_sheet_with_options("Sheet:1", opts),
   ) catch {
     e => Err(e)
   }
-  inspect(name_result is Err(XlsxError::InvalidSheetName(_)), content="true")
-  let bytes = write(workbook)
+  inspect(
+    name_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
+    content="true",
+  )
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let chart_part = match archive.get("xl/charts/chart1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -126,7 +141,7 @@ test "chart sheet with options (excelize-like)" {
 
 ///|
 test "chart sheet state setter" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let chart = workbook.add_chart_sheet("Chart1", "<chart/>")
   debug_inspect(chart.state(), content="Visible")

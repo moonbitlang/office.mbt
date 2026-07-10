@@ -7,9 +7,9 @@ async test "excelize fixture encryptAES.xlsx opens with password" {
     err => fail("read file failed: \{err}")
   }
   let encrypted_bytes = encrypted_bytes.binary()
-  let decrypted = decrypt(
+  let decrypted = @xlsx.decrypt(
     encrypted_bytes,
-    options=Options::with_values(password="password"),
+    options=@xlsx.Options::with_values(password="password"),
   )
   let archive = @zip.read(decrypted) catch {
     err => fail("zip read failed: \{repr(err)}")
@@ -22,7 +22,7 @@ async test "excelize fixture encryptAES.xlsx opens with password" {
     None => fail("missing sharedStrings.xml")
   }
   inspect(shared_strings_xml.contains("SECRET"), content="true")
-  let workbook = open_file(
+  let workbook = @xlsx.open_file(
     "fixtures/excelize/test/encryptAES.xlsx",
     password="password",
   )
@@ -36,10 +36,10 @@ async test "excelize fixture encryptAES.xlsx opens with password" {
 ///|
 #cfg(target="native")
 async test "excelize fixture encryptAES.xlsx wrong password errors" {
-  let result : Result[Workbook, Error] = Ok(
-    open_file("fixtures/excelize/test/encryptAES.xlsx", password="passwd"),
+  let result : Result[@xlsx.Workbook, Error] = Ok(
+    @xlsx.open_file("fixtures/excelize/test/encryptAES.xlsx", password="passwd"),
   ) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidPassword), content="true")
+  inspect(result is Err(@xlsx.XlsxError::InvalidPassword), content="true")
 }

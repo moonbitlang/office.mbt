@@ -1,6 +1,6 @@
 ///|
 test "calc: builtins smoke (valid-arg calls are recognized)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let formulas : ReadOnlyArray[String] = [
     // Trig/hyperbolic.

@@ -14,7 +14,7 @@ fn count_xml_tag_cross_sheet(xml : String, tag : String) -> Int {
 
 ///|
 test "integration sparkline cross-sheet formula references" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let source = workbook.add_sheet("Data O'Reilly")
   let dashboard = workbook.add_sheet("Dashboard")
 
@@ -25,14 +25,14 @@ test "integration sparkline cross-sheet formula references" {
   source.set_cell_value("C3", Numeric(14.0))
   source.set_cell_value("D3", Numeric(10.0))
 
-  let options = SparklineOptions::new(["H2", "H3"], [
+  let options = @xlsx.SparklineOptions::new(["H2", "H3"], [
     "'Data O''Reilly'!B2:D2", "'Data O''Reilly'!B3:D3",
   ])
   options.set_markers(true)
   options.set_empty_cells("span")
   dashboard.add_sparkline_options(options)
 
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let dashboard_xml = match archive.get("xl/worksheets/sheet2.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -58,7 +58,7 @@ test "integration sparkline cross-sheet formula references" {
   inspect(dashboard_xml.contains("<xm:sqref>H2</xm:sqref>"), content="true")
   inspect(dashboard_xml.contains("<xm:sqref>H3</xm:sqref>"), content="true")
 
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let parsed_dashboard = match parsed.sheet("Dashboard") {
     Some(value) => value
     None => fail("missing parsed dashboard sheet")

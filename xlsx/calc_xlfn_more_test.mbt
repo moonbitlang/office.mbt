@@ -1,6 +1,6 @@
 ///|
 test "calc: _xlfn aliases (basic coverage)" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let formulas : ReadOnlyArray[String] = [
     "_xlfn.ARABIC(\"XII\")", "_xlfn.DECIMAL(\"FF\",16)", "_xlfn.CEILING.MATH(4.3,2)",

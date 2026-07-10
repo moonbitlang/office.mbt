@@ -1,11 +1,11 @@
 ///|
 test "number format style write" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let style_id = workbook.add_style(Style::number_format("0.00"))
+  let style_id = workbook.add_style(@xlsx.Style::number_format("0.00"))
   sheet.set_cell("A1", "1.23")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -30,9 +30,9 @@ test "number format style write" {
 
 ///|
 test "excelize currency num fmt decimal places + neg red" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let style = Style::excelize_currency_num_fmt(
+  let style = @xlsx.Style::excelize_currency_num_fmt(
     165,
     decimal_places=4,
     neg_red=true,
@@ -40,7 +40,7 @@ test "excelize currency num fmt decimal places + neg red" {
   let style_id = workbook.add_style(style)
   sheet.set_cell("A1", "-1.23")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -61,7 +61,7 @@ test "excelize currency num fmt decimal places + neg red" {
 
 ///|
 test "excelize custom num fmt empty rejects" {
-  let result = try Style::excelize_custom_num_fmt("") catch {
+  let result = try @xlsx.Style::excelize_custom_num_fmt("") catch {
     err => Err(err)
   } noraise {
     _ => Ok(())
@@ -74,20 +74,23 @@ test "excelize custom num fmt empty rejects" {
 
 ///|
 test "style roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let style_id = workbook.new_style(Style::number_format("0%"))
-  @test.assert_eq(workbook.get_style(style_id), Style::number_format("0%"))
+  let style_id = workbook.new_style(@xlsx.Style::number_format("0%"))
+  @test.assert_eq(
+    workbook.get_style(style_id),
+    @xlsx.Style::number_format("0%"),
+  )
   workbook.set_cell("Sheet1", "B2", "0.5")
   workbook.set_cell_style("Sheet1", "B2", style_id)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   inspect(parsed.styles().length(), content="2")
   debug_inspect(parsed.get_cell_style("Sheet1", "B2"), content="Some(1)")
 }
 
 ///|
 test "invalid style id" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result = Ok(workbook.set_cell_style("Sheet1", "A1", 1)) catch {
     e => Err(e)
@@ -97,7 +100,7 @@ test "invalid style id" {
 
 ///|
 test "worksheet set_cell_style and set_cell_style_rc" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
 
   // set_cell_style on an empty cell creates it.
@@ -108,11 +111,11 @@ test "worksheet set_cell_style and set_cell_style_rc" {
   let neg1 : Result[Unit, Error] = Ok(sheet.set_cell_style("A1", -1)) catch {
     e => Err(e)
   }
-  inspect(neg1 is Err(XlsxError::InvalidStyleId(_)), content="true")
+  inspect(neg1 is Err(@xlsx.XlsxError::InvalidStyleId(_)), content="true")
   let neg2 : Result[Unit, Error] = Ok(sheet.set_cell_style_rc(1, 1, -1)) catch {
     e => Err(e)
   }
-  inspect(neg2 is Err(XlsxError::InvalidStyleId(_)), content="true")
+  inspect(neg2 is Err(@xlsx.XlsxError::InvalidStyleId(_)), content="true")
 
   // set_cell_style_rc creates + updates existing.
   sheet.set_cell_style_rc(1, 2, 0)
@@ -123,20 +126,22 @@ test "worksheet set_cell_style and set_cell_style_rc" {
   let bad_rc : Result[Int?, Error] = Ok(sheet.get_cell_style_rc(0, 1)) catch {
     e => Err(e)
   }
-  inspect(bad_rc is Err(XlsxError::InvalidCellRef(_)), content="true")
+  inspect(bad_rc is Err(@xlsx.XlsxError::InvalidCellRef(_)), content="true")
 }
 
 ///|
 test "conditional style roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let style_id = workbook.new_conditional_style(Style::number_format("0.00"))
-  let opt = ConditionalFormatOptions::new("cell")
+  let style_id = workbook.new_conditional_style(
+    @xlsx.Style::number_format("0.00"),
+  )
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -149,15 +154,18 @@ test "conditional style roundtrip" {
   }
   inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
   inspect(styles_xml.contains("formatCode=\"0.00\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::number_format("0.00"))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(
+    parsed.get_conditional_style(0),
+    @xlsx.Style::number_format("0.00"),
+  )
 }
 
 ///|
 test "default font roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   workbook.set_default_font("Arial")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -169,15 +177,15 @@ test "default font roundtrip" {
     None => fail("missing styles.xml")
   }
   inspect(styles_xml.contains("name val=\"Arial\""), content="true")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   inspect(parsed.get_default_font(), content="Arial")
 }
 
 ///|
 test "styles extLst roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let archive = @zip.read(write(workbook)) catch {
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
     err => fail("zip read failed: \{err}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
@@ -204,8 +212,8 @@ test "styles extLst roundtrip" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let parsed = read(updated_bytes)
-  let roundtrip = write(parsed)
+  let parsed = @xlsx.read(updated_bytes)
+  let roundtrip = @xlsx.write(parsed)
   let roundtrip_archive = @zip.read(roundtrip) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -225,9 +233,9 @@ test "styles extLst roundtrip" {
 
 ///|
 test "styles tableStyles defaults roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let archive = @zip.read(write(workbook)) catch {
+  let archive = @zip.read(@xlsx.write(workbook)) catch {
     err => fail("zip read failed: \{err}")
   }
   let styles_xml = match archive.get("xl/styles.xml") {
@@ -258,8 +266,8 @@ test "styles tableStyles defaults roundtrip" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let parsed = read(updated_bytes)
-  let roundtrip = write(parsed)
+  let parsed = @xlsx.read(updated_bytes)
+  let roundtrip = @xlsx.write(parsed)
   let roundtrip_archive = @zip.read(roundtrip) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -279,9 +287,9 @@ test "styles tableStyles defaults roundtrip" {
 
 ///|
 test "cell style font write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let font = Font::with_values(
+  let font = @xlsx.Font::with_values(
     bold=true,
     strike=true,
     shadow=true,
@@ -293,10 +301,10 @@ test "cell style font write + roundtrip" {
     vert_align="superscript",
     family="Arial",
   )
-  let style_id = workbook.new_style(Style::font(font))
+  let style_id = workbook.new_style(@xlsx.Style::font(font))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -320,25 +328,25 @@ test "cell style font write + roundtrip" {
   inspect(styles_xml.contains("name val=\"Arial\""), content="true")
   inspect(styles_xml.contains("fontId=\"1\""), content="true")
   inspect(styles_xml.contains("applyFont=\"1\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::font(font))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::font(font))
 }
 
 ///|
 test "cell style font theme/indexed color write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let font = Font::with_values(
+  let font = @xlsx.Font::with_values(
     bold=true,
     size=11.0,
     family="Calibri",
     color_theme=4,
     color_tint=0.25,
   )
-  let style_id = workbook.new_style(Style::font(font))
+  let style_id = workbook.new_style(@xlsx.Style::font(font))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -353,19 +361,23 @@ test "cell style font theme/indexed color write + roundtrip" {
     styles_xml.contains("color theme=\"4\" tint=\"0.25\""),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::font(font))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::font(font))
 }
 
 ///|
 test "cell style font indexed color write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let font = Font::with_values(size=11.0, family="Calibri", color_indexed=2)
-  let style_id = workbook.new_style(Style::font(font))
+  let font = @xlsx.Font::with_values(
+    size=11.0,
+    family="Calibri",
+    color_indexed=2,
+  )
+  let style_id = workbook.new_style(@xlsx.Style::font(font))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -377,22 +389,22 @@ test "cell style font indexed color write + roundtrip" {
     None => fail("missing styles.xml")
   }
   inspect(styles_xml.contains("color indexed=\"2\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::font(font))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::font(font))
 }
 
 ///|
 test "conditional style font write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let font = Font::with_values(bold=true)
-  let style_id = workbook.new_conditional_style(Style::font(font))
-  let opt = ConditionalFormatOptions::new("cell")
+  let font = @xlsx.Font::with_values(bold=true)
+  let style_id = workbook.new_conditional_style(@xlsx.Style::font(font))
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -405,22 +417,22 @@ test "conditional style font write + roundtrip" {
   }
   inspect(styles_xml.contains("dxfs count=\"1\""), content="true")
   inspect(styles_xml.contains("<dxf><font><b/>"), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::font(font))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_conditional_style(0), @xlsx.Style::font(font))
 }
 
 ///|
 test "conditional style font theme/tint write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let font = Font::with_values(color_theme=5, color_tint=-0.3)
-  let style_id = workbook.new_conditional_style(Style::font(font))
-  let opt = ConditionalFormatOptions::new("cell")
+  let font = @xlsx.Font::with_values(color_theme=5, color_tint=-0.3)
+  let style_id = workbook.new_conditional_style(@xlsx.Style::font(font))
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -436,19 +448,19 @@ test "conditional style font theme/tint write + roundtrip" {
     styles_xml.contains("<dxf><font><color theme=\"5\" tint=\"-0.3\"/>"),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::font(font))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_conditional_style(0), @xlsx.Style::font(font))
 }
 
 ///|
 test "cell style fill write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::solid("FF0000")
-  let style_id = workbook.new_style(Style::fill(fill))
+  let fill = @xlsx.Fill::solid("FF0000")
+  let style_id = workbook.new_style(@xlsx.Style::fill(fill))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -468,19 +480,19 @@ test "cell style fill write + roundtrip" {
   )
   inspect(styles_xml.contains("fillId=\"2\""), content="true")
   inspect(styles_xml.contains("applyFill=\"1\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "cell style fill transparency write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::solid("FF0000", transparency=50)
-  let style_id = workbook.new_style(Style::fill(fill))
+  let fill = @xlsx.Fill::solid("FF0000", transparency=50)
+  let style_id = workbook.new_style(@xlsx.Style::fill(fill))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -498,19 +510,19 @@ test "cell style fill transparency write + roundtrip" {
     ),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "cell style fill theme color write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::solid_theme(4, tint=0.25)
-  let style_id = workbook.new_style(Style::fill(fill))
+  let fill = @xlsx.Fill::solid_theme(4, tint=0.25)
+  let style_id = workbook.new_style(@xlsx.Style::fill(fill))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -527,19 +539,19 @@ test "cell style fill theme color write + roundtrip" {
     ),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "cell style fill indexed color write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::solid_indexed(3, tint=0.4)
-  let style_id = workbook.new_style(Style::fill(fill))
+  let fill = @xlsx.Fill::solid_indexed(3, tint=0.4)
+  let style_id = workbook.new_style(@xlsx.Style::fill(fill))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -556,19 +568,19 @@ test "cell style fill indexed color write + roundtrip" {
     ),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "cell style gradient fill write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::gradient("FF0000", "00FF00", shading=0)
-  let style_id = workbook.new_style(Style::fill(fill))
+  let fill = @xlsx.Fill::gradient("FF0000", "00FF00", shading=0)
+  let style_id = workbook.new_style(@xlsx.Style::fill(fill))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -589,19 +601,19 @@ test "cell style gradient fill write + roundtrip" {
     styles_xml.contains("<stop position=\"1\"><color rgb=\"FF00FF00\"/>"),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "cell style gradient fill path variant write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::gradient("FF0000", "00FF00", shading=12)
-  let style_id = workbook.new_style(Style::fill(fill))
+  let fill = @xlsx.Fill::gradient("FF0000", "00FF00", shading=12)
+  let style_id = workbook.new_style(@xlsx.Style::fill(fill))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -613,22 +625,22 @@ test "cell style gradient fill path variant write + roundtrip" {
     None => fail("missing styles.xml")
   }
   inspect(styles_xml.contains("<gradientFill type=\"path\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "conditional style fill write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::solid("00FF00")
-  let style_id = workbook.new_conditional_style(Style::fill(fill))
-  let opt = ConditionalFormatOptions::new("cell")
+  let fill = @xlsx.Fill::solid("00FF00")
+  let style_id = workbook.new_conditional_style(@xlsx.Style::fill(fill))
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -646,22 +658,22 @@ test "conditional style fill write + roundtrip" {
     ),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_conditional_style(0), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "conditional style fill transparency write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::solid("00FF00", transparency=50)
-  let style_id = workbook.new_conditional_style(Style::fill(fill))
-  let opt = ConditionalFormatOptions::new("cell")
+  let fill = @xlsx.Fill::solid("00FF00", transparency=50)
+  let style_id = workbook.new_conditional_style(@xlsx.Style::fill(fill))
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -679,22 +691,22 @@ test "conditional style fill transparency write + roundtrip" {
     ),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_conditional_style(0), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "conditional style fill theme color write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::solid_bg_theme(4, tint=0.25)
-  let style_id = workbook.new_conditional_style(Style::fill(fill))
-  let opt = ConditionalFormatOptions::new("cell")
+  let fill = @xlsx.Fill::solid_bg_theme(4, tint=0.25)
+  let style_id = workbook.new_conditional_style(@xlsx.Style::fill(fill))
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -712,22 +724,22 @@ test "conditional style fill theme color write + roundtrip" {
     ),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_conditional_style(0), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "conditional style fill indexed color write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::solid_bg_indexed(5, tint=-0.1)
-  let style_id = workbook.new_conditional_style(Style::fill(fill))
-  let opt = ConditionalFormatOptions::new("cell")
+  let fill = @xlsx.Fill::solid_bg_indexed(5, tint=-0.1)
+  let style_id = workbook.new_conditional_style(@xlsx.Style::fill(fill))
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -745,22 +757,22 @@ test "conditional style fill indexed color write + roundtrip" {
     ),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_conditional_style(0), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "conditional style gradient fill write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let fill = Fill::gradient("FF0000", "00FF00", shading=0)
-  let style_id = workbook.new_conditional_style(Style::fill(fill))
-  let opt = ConditionalFormatOptions::new("cell")
+  let fill = @xlsx.Fill::gradient("FF0000", "00FF00", shading=0)
+  let style_id = workbook.new_conditional_style(@xlsx.Style::fill(fill))
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -776,22 +788,22 @@ test "conditional style gradient fill write + roundtrip" {
     styles_xml.contains("<dxf><fill><gradientFill degree=\"90\""),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::fill(fill))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_conditional_style(0), @xlsx.Style::fill(fill))
 }
 
 ///|
 test "cell style border write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let borders : Array[Border] = [
-    Border::with_values("left", style=1, color="FF0000"),
-    Border::with_values("top", style=2, color="00FF00"),
+  let borders : Array[@xlsx.Border] = [
+    @xlsx.Border::with_values("left", style=1, color="FF0000"),
+    @xlsx.Border::with_values("top", style=2, color="00FF00"),
   ]
-  let style_id = workbook.new_style(Style::border(borders))
+  let style_id = workbook.new_style(@xlsx.Style::border(borders))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -809,22 +821,22 @@ test "cell style border write + roundtrip" {
   inspect(styles_xml.contains("color rgb=\"FF00FF00\""), content="true")
   inspect(styles_xml.contains("borderId=\"1\""), content="true")
   inspect(styles_xml.contains("applyBorder=\"1\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::border(borders))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::border(borders))
 }
 
 ///|
 test "cell style diagonal border write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let borders : Array[Border] = [
-    Border::with_values("diagonalUp", style=6, color="A020F0"),
-    Border::with_values("diagonalDown", style=6, color="A020F0"),
+  let borders : Array[@xlsx.Border] = [
+    @xlsx.Border::with_values("diagonalUp", style=6, color="A020F0"),
+    @xlsx.Border::with_values("diagonalDown", style=6, color="A020F0"),
   ]
-  let style_id = workbook.new_style(Style::border(borders))
+  let style_id = workbook.new_style(@xlsx.Style::border(borders))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -839,24 +851,24 @@ test "cell style diagonal border write + roundtrip" {
   inspect(styles_xml.contains("diagonalDown=\"1\""), content="true")
   inspect(styles_xml.contains("<diagonal style=\"double\">"), content="true")
   inspect(styles_xml.contains("color rgb=\"FFA020F0\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::border(borders))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::border(borders))
 }
 
 ///|
 test "conditional style border write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let borders : Array[Border] = [
-    Border::with_values("bottom", style=5, color="0000FF"),
+  let borders : Array[@xlsx.Border] = [
+    @xlsx.Border::with_values("bottom", style=5, color="0000FF"),
   ]
-  let style_id = workbook.new_conditional_style(Style::border(borders))
-  let opt = ConditionalFormatOptions::new("cell")
+  let style_id = workbook.new_conditional_style(@xlsx.Style::border(borders))
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -871,19 +883,19 @@ test "conditional style border write + roundtrip" {
   inspect(styles_xml.contains("<dxf><border>"), content="true")
   inspect(styles_xml.contains("<bottom style=\"thick\">"), content="true")
   inspect(styles_xml.contains("color rgb=\"FF0000FF\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::border(borders))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_conditional_style(0), @xlsx.Style::border(borders))
 }
 
 ///|
 test "cell style protection write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let protection = Protection::with_values(hidden=true, locked=false)
-  let style_id = workbook.new_style(Style::protection(protection))
+  let protection = @xlsx.Protection::with_values(hidden=true, locked=false)
+  let style_id = workbook.new_style(@xlsx.Style::protection(protection))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -899,22 +911,27 @@ test "cell style protection write + roundtrip" {
     styles_xml.contains("<protection locked=\"0\" hidden=\"1\"/>"),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::protection(protection))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(
+    parsed.get_style(style_id),
+    @xlsx.Style::protection(protection),
+  )
 }
 
 ///|
 test "conditional style protection write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let protection = Protection::with_values(hidden=true)
-  let style_id = workbook.new_conditional_style(Style::protection(protection))
-  let opt = ConditionalFormatOptions::new("cell")
+  let protection = @xlsx.Protection::with_values(hidden=true)
+  let style_id = workbook.new_conditional_style(
+    @xlsx.Style::protection(protection),
+  )
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -930,18 +947,18 @@ test "conditional style protection write + roundtrip" {
     styles_xml.contains("<dxf><protection hidden=\"1\"/>"),
     content="true",
   )
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   @test.assert_eq(
     parsed.get_conditional_style(0),
-    Style::protection(protection),
+    @xlsx.Style::protection(protection),
   )
 }
 
 ///|
 test "cell style alignment write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let alignment = Alignment::with_values(
+  let alignment = @xlsx.Alignment::with_values(
     horizontal="center",
     vertical="center",
     wrap_text=true,
@@ -949,10 +966,10 @@ test "cell style alignment write + roundtrip" {
     indent=2,
     shrink_to_fit=true,
   )
-  let style_id = workbook.new_style(Style::alignment(alignment))
+  let style_id = workbook.new_style(@xlsx.Style::alignment(alignment))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -970,23 +987,23 @@ test "cell style alignment write + roundtrip" {
   inspect(styles_xml.contains("textRotation=\"45\""), content="true")
   inspect(styles_xml.contains("indent=\"2\""), content="true")
   inspect(styles_xml.contains("shrinkToFit=\"1\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::alignment(alignment))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::alignment(alignment))
 }
 
 ///|
 test "cell style alignment advanced attrs write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let alignment = Alignment::with_values(
+  let alignment = @xlsx.Alignment::with_values(
     justify_last_line=true,
     reading_order=2,
     relative_indent=3,
   )
-  let style_id = workbook.new_style(Style::alignment(alignment))
+  let style_id = workbook.new_style(@xlsx.Style::alignment(alignment))
   sheet.set_cell("A1", "hello")
   workbook.set_cell_style("Sheet1", "A1", style_id)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -1000,22 +1017,24 @@ test "cell style alignment advanced attrs write + roundtrip" {
   inspect(styles_xml.contains("justifyLastLine=\"1\""), content="true")
   inspect(styles_xml.contains("readingOrder=\"2\""), content="true")
   inspect(styles_xml.contains("relativeIndent=\"3\""), content="true")
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_style(style_id), Style::alignment(alignment))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(parsed.get_style(style_id), @xlsx.Style::alignment(alignment))
 }
 
 ///|
 test "conditional style alignment write + roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let alignment = Alignment::with_values(wrap_text=true)
-  let style_id = workbook.new_conditional_style(Style::alignment(alignment))
-  let opt = ConditionalFormatOptions::new("cell")
+  let alignment = @xlsx.Alignment::with_values(wrap_text=true)
+  let style_id = workbook.new_conditional_style(
+    @xlsx.Style::alignment(alignment),
+  )
+  let opt = @xlsx.ConditionalFormatOptions::new("cell")
   opt.criteria = "="
   opt.value = "1"
   opt.format = Some(style_id)
   sheet.set_conditional_format("A1", [opt])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -1031,6 +1050,9 @@ test "conditional style alignment write + roundtrip" {
     styles_xml.contains("<dxf><alignment wrapText=\"1\"/>"),
     content="true",
   )
-  let parsed = read(bytes)
-  @test.assert_eq(parsed.get_conditional_style(0), Style::alignment(alignment))
+  let parsed = @xlsx.read(bytes)
+  @test.assert_eq(
+    parsed.get_conditional_style(0),
+    @xlsx.Style::alignment(alignment),
+  )
 }

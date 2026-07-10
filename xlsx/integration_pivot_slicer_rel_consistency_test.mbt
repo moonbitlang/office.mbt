@@ -1,6 +1,6 @@
 ///|
 test "integration pivot+slicer relationship consistency" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let data = workbook.add_sheet("Data")
   ignore(workbook.add_sheet("Dash"))
 
@@ -25,10 +25,10 @@ test "integration pivot+slicer relationship consistency" {
     ),
   )
 
-  let slicer = SlicerOptions::new("Region", "A1", "Data", "PivotData")
+  let slicer = @xlsx.SlicerOptions::new("Region", "A1", "Data", "PivotData")
   workbook.add_slicer("Dash", slicer)
 
-  let archive = @zip.read(write(workbook))
+  let archive = @zip.read(@xlsx.write(workbook))
 
   let workbook_rels = match archive.get("xl/_rels/workbook.xml.rels") {
     Some(value) => @encoding/utf8.decode(value)

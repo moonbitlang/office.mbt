@@ -14,7 +14,7 @@ fn count_xml_tag_unknown_ext(xml : String, tag : String) -> Int {
 
 ///|
 test "integration unknown worksheet ext roundtrip with mixed known ext" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let data = workbook.add_sheet("Data")
   ignore(workbook.add_sheet("Dash"))
 
@@ -36,16 +36,16 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
   )
   workbook.add_slicer(
     "Dash",
-    SlicerOptions::new("Region", "A1", "Data", "MixTable"),
+    @xlsx.SlicerOptions::new("Region", "A1", "Data", "MixTable"),
   )
 
-  let sparkline_opts = SparklineOptions::new(["G2", "G3", "G4"], [
+  let sparkline_opts = @xlsx.SparklineOptions::new(["G2", "G3", "G4"], [
     "'Data'!B2:B5", "'Data'!B2:B5", "'Data'!B2:B5",
   ])
   sparkline_opts.set_markers(true)
   workbook.add_sparkline_options("Dash", sparkline_opts)
 
-  let cf_opt = ConditionalFormatOptions::new("data_bar")
+  let cf_opt = @xlsx.ConditionalFormatOptions::new("data_bar")
   cf_opt.set_min_type("min")
   cf_opt.set_max_type("max")
   cf_opt.set_bar_color("#638EC6")
@@ -54,7 +54,7 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
   cf_opt.set_bar_border_color("#0000FF")
   workbook.set_conditional_format("Dash", "C2:C4", [cf_opt])
 
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -91,7 +91,7 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
     err => fail("zip write failed: \{repr(err)}")
   }
 
-  let parsed = read(updated_bytes)
+  let parsed = @xlsx.read(updated_bytes)
   let parsed_dash = match parsed.sheet("Dash") {
     Some(value) => value
     None => fail("missing parsed dash")
@@ -108,7 +108,7 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
   inspect(opts[0].format_type, content="data_bar")
   inspect(opts[0].bar_direction, content="rightToLeft")
 
-  let roundtrip_archive = @zip.read(write(parsed)) catch {
+  let roundtrip_archive = @zip.read(@xlsx.write(parsed)) catch {
     err => fail("zip read failed: \{err}")
   }
   let roundtrip_sheet_xml = match

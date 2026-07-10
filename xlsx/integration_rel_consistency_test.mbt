@@ -1,6 +1,6 @@
 ///|
 test "integration ooxml relationship consistency for mixed drawing parts" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
 
   workbook.set_cell("Sheet1", "A1", "Category")
@@ -10,22 +10,26 @@ test "integration ooxml relationship consistency for mixed drawing parts" {
   workbook.set_cell("Sheet1", "A3", "B")
   workbook.set_cell("Sheet1", "B3", "2")
 
-  let table_opts = TableOptions::new("A1:B3")
+  let table_opts = @xlsx.TableOptions::new("A1:B3")
   table_opts.set_name("RelTable")
   ignore(workbook.add_table("Sheet1", table_opts))
 
-  let chart_opts = ChartOptions::new(Line)
+  let chart_opts = @xlsx.ChartOptions::new(Line)
   chart_opts.series.push(
-    ChartSeries::new("Sheet1!$A$2:$A$3", "Sheet1!$B$2:$B$3", name="Series1"),
+    @xlsx.ChartSeries::new(
+      "Sheet1!$A$2:$A$3",
+      "Sheet1!$B$2:$B$3",
+      name="Series1",
+    ),
   )
   workbook.add_chart_with_options("Sheet1", "C5", chart_opts)
 
   workbook.add_shape(
     "Sheet1",
-    Shape::new("F2", "rect", text="integration-shape"),
+    @xlsx.Shape::new("F2", "rect", text="integration-shape"),
   )
 
-  let archive = @zip.read(write(workbook))
+  let archive = @zip.read(@xlsx.write(workbook))
   let sheet_rels = match archive.get("xl/worksheets/_rels/sheet1.xml.rels") {
     Some(value) => @encoding/utf8.decode(value)
     None => fail("missing sheet rels")

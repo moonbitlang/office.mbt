@@ -8,7 +8,7 @@ test "ooxml read_parse: parse_relationship_targets supports self-closing and exp
     #|  <Relationship Id="rId3" Type="t1" Target="c.xml"/>
     #|</Relationships>
     #|
-  let targets = parse_relationship_targets(xml, "t1")
+  let targets = @ooxml.parse_relationship_targets(xml, "t1")
   debug_inspect(
     targets,
     content=(
@@ -25,7 +25,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship Type="t1" Target="a.xml"/>
     #|</Relationships>
     #|
-  try parse_relationship_targets(missing_id, "t1") catch {
+  try @ooxml.parse_relationship_targets(missing_id, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship id missing")
   } noraise {
     _ => fail("expected relationship id missing")
@@ -37,7 +37,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship Id="rId1" Type="t1"/>
     #|</Relationships>
     #|
-  try parse_relationship_targets(missing_target, "t1") catch {
+  try @ooxml.parse_relationship_targets(missing_target, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship target missing")
   } noraise {
     _ => fail("expected relationship target missing")
@@ -49,7 +49,7 @@ test "ooxml read_parse: parse_relationship_targets reports missing id/target and
     #|  <Relationship 
     #|</Relationships>
     #|
-  try parse_relationship_targets(malformed, "t1") catch {
+  try @ooxml.parse_relationship_targets(malformed, "t1") catch {
     InvalidXml(msg~) => inspect(msg, content="relationship tag not closed")
   } noraise {
     _ => fail("expected relationship tag not closed")
@@ -68,7 +68,7 @@ test "ooxml read_parse: parse_content_type_overrides and find workbook part" {
     #|</Types>
     #|
   debug_inspect(
-    find_override_part_by_content_types(xml, [
+    @ooxml.find_override_part_by_content_types(xml, [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
       "application/vnd.ms-excel.sheet.macroEnabled.main+xml",
     ]),
@@ -85,7 +85,7 @@ test "ooxml read_parse: parse_content_type_overrides reports malformed override 
     #|</Types>
     #|
   try
-    find_override_part_by_content_types(malformed, [
+    @ooxml.find_override_part_by_content_types(malformed, [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
     ])
   catch {

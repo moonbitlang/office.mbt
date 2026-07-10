@@ -1,7 +1,7 @@
 ///|
 test "doc properties roundtrip" {
-  let workbook = Workbook::new()
-  let core = CoreProperties::with_values(
+  let workbook = @xlsx.Workbook::new()
+  let core = @xlsx.CoreProperties::with_values(
     title="Title",
     creator="Creator",
     last_modified_by="Modifier",
@@ -9,7 +9,7 @@ test "doc properties roundtrip" {
     modified="2024-01-02T00:00:00Z",
   )
   workbook.set_core_properties(core)
-  let app = AppProperties::with_values(
+  let app = @xlsx.AppProperties::with_values(
     application="MyApp",
     company="Acme",
     doc_security=2,
@@ -19,7 +19,7 @@ test "doc properties roundtrip" {
     app_version="16.0000",
   )
   workbook.set_app_properties(app)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let parsed_core = parsed.core_properties()
   inspect(parsed_core.title, content="Title")
   inspect(parsed_core.creator, content="Creator")
@@ -38,7 +38,7 @@ test "doc properties roundtrip" {
 
 ///|
 test "doc properties defaults" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let core = workbook.core_properties()
   inspect(core.creator, content="mbtexcel")
   inspect(core.last_modified_by, content="mbtexcel")
@@ -48,17 +48,25 @@ test "doc properties defaults" {
 
 ///|
 test "custom properties roundtrip" {
-  let workbook = Workbook::new()
-  workbook.set_custom_props(CustomProperty::new("Text", Some(Text("hello"))))
-  workbook.set_custom_props(CustomProperty::new("Bool", Some(Boolean(true))))
-  workbook.set_custom_props(CustomProperty::new("Number", Some(Float(12.5))))
-  workbook.set_custom_props(CustomProperty::new("Int", Some(Integer(-7))))
+  let workbook = @xlsx.Workbook::new()
   workbook.set_custom_props(
-    CustomProperty::new("Date", Some(DateTime("2024-01-01T00:00:00Z"))),
+    @xlsx.CustomProperty::new("Text", Some(Text("hello"))),
   )
-  workbook.set_custom_props(CustomProperty::new("Remove", Some(Text("gone"))))
-  workbook.set_custom_props(CustomProperty::new("Remove", None))
-  let parsed = read(write(workbook))
+  workbook.set_custom_props(
+    @xlsx.CustomProperty::new("Bool", Some(Boolean(true))),
+  )
+  workbook.set_custom_props(
+    @xlsx.CustomProperty::new("Number", Some(Float(12.5))),
+  )
+  workbook.set_custom_props(@xlsx.CustomProperty::new("Int", Some(Integer(-7))))
+  workbook.set_custom_props(
+    @xlsx.CustomProperty::new("Date", Some(DateTime("2024-01-01T00:00:00Z"))),
+  )
+  workbook.set_custom_props(
+    @xlsx.CustomProperty::new("Remove", Some(Text("gone"))),
+  )
+  workbook.set_custom_props(@xlsx.CustomProperty::new("Remove", None))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let props = parsed.get_custom_props()
   debug_inspect(
     props.map(prop => prop.name),
@@ -76,8 +84,8 @@ test "custom properties roundtrip" {
 
 ///|
 test "doc props get/set aliases" {
-  let workbook = Workbook::new()
-  let core = CoreProperties::with_values(
+  let workbook = @xlsx.Workbook::new()
+  let core = @xlsx.CoreProperties::with_values(
     title="Title",
     creator="Creator",
     last_modified_by="Modifier",
@@ -95,8 +103,8 @@ test "doc props get/set aliases" {
 
 ///|
 test "app props get/set aliases" {
-  let workbook = Workbook::new()
-  let app = AppProperties::with_values(
+  let workbook = @xlsx.Workbook::new()
+  let app = @xlsx.AppProperties::with_values(
     application="MyApp",
     company="Acme",
     doc_security=2,

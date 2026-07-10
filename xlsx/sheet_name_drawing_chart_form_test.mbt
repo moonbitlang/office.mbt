@@ -1,6 +1,6 @@
 ///|
 test "drawing/chart/form-control APIs validate sheet name" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let add_image_result : Result[Unit, Error] = Ok(
     workbook.add_image(
@@ -14,7 +14,7 @@ test "drawing/chart/form-control APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    add_image_result is Err(XlsxError::InvalidSheetName(_)),
+    add_image_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let add_image_opts_result : Result[Unit, Error] = Ok(
@@ -24,16 +24,16 @@ test "drawing/chart/form-control APIs validate sheet name" {
       Bytes::from_array([]),
       "png",
       "image/png",
-      GraphicOptions::new(),
+      @xlsx.GraphicOptions::new(),
     ),
   ) catch {
     e => Err(e)
   }
   inspect(
-    add_image_opts_result is Err(XlsxError::InvalidSheetName(_)),
+    add_image_opts_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
-  let hf_opts = HeaderFooterImageOptions::new(
+  let hf_opts = @xlsx.HeaderFooterImageOptions::new(
     Left,
     Bytes::from_array([]),
     "png",
@@ -44,16 +44,16 @@ test "drawing/chart/form-control APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    add_hf_image_result is Err(XlsxError::InvalidSheetName(_)),
+    add_hf_image_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
-  let get_pictures_result : Result[Array[Image], Error] = Ok(
+  let get_pictures_result : Result[Array[@xlsx.Image], Error] = Ok(
     workbook.get_pictures("Sheet:1", "A1"),
   ) catch {
     e => Err(e)
   }
   inspect(
-    get_pictures_result is Err(XlsxError::InvalidSheetName(_)),
+    get_pictures_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let get_picture_cells_result : Result[Array[String], Error] = Ok(
@@ -62,7 +62,7 @@ test "drawing/chart/form-control APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    get_picture_cells_result is Err(XlsxError::InvalidSheetName(_)),
+    get_picture_cells_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let delete_picture_result : Result[Unit, Error] = Ok(
@@ -71,7 +71,7 @@ test "drawing/chart/form-control APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    delete_picture_result is Err(XlsxError::InvalidSheetName(_)),
+    delete_picture_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let add_chart_result : Result[Unit, Error] = Ok(
@@ -80,17 +80,17 @@ test "drawing/chart/form-control APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    add_chart_result is Err(XlsxError::InvalidSheetName(_)),
+    add_chart_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
-  let chart_opts = ChartOptions::new(Col)
+  let chart_opts = @xlsx.ChartOptions::new(Col)
   let add_chart_opts_result : Result[Unit, Error] = Ok(
     workbook.add_chart_with_options("Sheet:1", "A1", chart_opts),
   ) catch {
     e => Err(e)
   }
   inspect(
-    add_chart_opts_result is Err(XlsxError::InvalidSheetName(_)),
+    add_chart_opts_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let delete_chart_result : Result[Unit, Error] = Ok(
@@ -99,7 +99,7 @@ test "drawing/chart/form-control APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    delete_chart_result is Err(XlsxError::InvalidSheetName(_)),
+    delete_chart_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let add_vml_result : Result[Unit, Error] = Ok(
@@ -107,17 +107,20 @@ test "drawing/chart/form-control APIs validate sheet name" {
   ) catch {
     e => Err(e)
   }
-  inspect(add_vml_result is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(
+    add_vml_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
+    content="true",
+  )
   let add_vml_hf_result : Result[Unit, Error] = Ok(
     workbook.add_vml_drawing_hf_xml("Sheet:1", ""),
   ) catch {
     e => Err(e)
   }
   inspect(
-    add_vml_hf_result is Err(XlsxError::InvalidSheetName(_)),
+    add_vml_hf_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
-  let control = FormControl::new("A1", "button") catch {
+  let control = @xlsx.FormControl::new("A1", "button") catch {
     err => fail("form control init failed: \{repr(err)}")
   }
   let add_control_result : Result[Unit, Error] = Ok(
@@ -126,16 +129,16 @@ test "drawing/chart/form-control APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    add_control_result is Err(XlsxError::InvalidSheetName(_)),
+    add_control_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
-  let get_controls_result : Result[Array[FormControl], Error] = Ok(
+  let get_controls_result : Result[Array[@xlsx.FormControl], Error] = Ok(
     workbook.get_form_controls("Sheet:1"),
   ) catch {
     e => Err(e)
   }
   inspect(
-    get_controls_result is Err(XlsxError::InvalidSheetName(_)),
+    get_controls_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let delete_control_result : Result[Unit, Error] = Ok(
@@ -144,7 +147,7 @@ test "drawing/chart/form-control APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    delete_control_result is Err(XlsxError::InvalidSheetName(_)),
+    delete_control_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
 }

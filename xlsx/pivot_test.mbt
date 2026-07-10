@@ -1,6 +1,6 @@
 ///|
 test "pivot table write and relationships" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   ignore(
     sheet.add_pivot_table_xml(
@@ -9,7 +9,7 @@ test "pivot table write and relationships" {
       cache_records_xml="<pivotCacheRecords/>",
     ),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -93,7 +93,7 @@ test "pivot table write and relationships" {
 
 ///|
 test "pivot table roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   ignore(
     sheet.add_pivot_table_xml(
@@ -102,7 +102,7 @@ test "pivot table roundtrip" {
       cache_records_xml="<pivotCacheRecords count=\"0\"/>",
     ),
   )
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -125,7 +125,7 @@ test "pivot table roundtrip" {
 
 ///|
 test "pivot table validation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let result = try
     sheet.add_pivot_table_xml("", "<pivotCacheDefinition/>")
@@ -157,7 +157,7 @@ test "pivot table validation" {
 
 ///|
 test "pivot table add/get/delete" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
     workbook.add_pivot_table_xml(
@@ -176,7 +176,7 @@ test "pivot table add/get/delete" {
 
 ///|
 test "pivot table options builder write" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("Region"))
   sheet.set_cell_value("B1", String("Type"))
@@ -190,13 +190,13 @@ test "pivot table options builder write" {
   sheet.set_cell_value("A4", String("East"))
   sheet.set_cell_value("B4", String("B"))
   sheet.set_cell_value("C4", Numeric(30.0))
-  let opts = PivotTableOptions::new("Sheet1!A1:C4", "Sheet1!E2:H10")
-  opts.rows.push(PivotTableField::new("Region"))
-  opts.columns.push(PivotTableField::new("Type"))
-  opts.data.push(PivotTableField::new("Sales"))
+  let opts = @xlsx.PivotTableOptions::new("Sheet1!A1:C4", "Sheet1!E2:H10")
+  opts.rows.push(@xlsx.PivotTableField::new("Region"))
+  opts.columns.push(@xlsx.PivotTableField::new("Type"))
+  opts.data.push(@xlsx.PivotTableField::new("Sales"))
   let pivot = workbook.add_pivot_table(opts)
   inspect(pivot.name, content="PivotTable1")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let pivot_xml = match archive.get("xl/pivotTables/pivotTable1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -235,9 +235,9 @@ test "pivot table options builder write" {
 
 ///|
 test "pivot table options compactData classic layout invalid" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = PivotTableOptions::new("Sheet1!A1:C4", "Sheet1!E2:H10")
+  let opts = @xlsx.PivotTableOptions::new("Sheet1!A1:C4", "Sheet1!E2:H10")
   opts.compact_data = true
   opts.classic_layout = true
   let result : Result[Unit, Error] = try
@@ -257,7 +257,7 @@ test "pivot table options compactData classic layout invalid" {
 
 ///|
 test "pivot table options default name increments" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("Region"))
   sheet.set_cell_value("B1", String("Type"))
@@ -265,31 +265,31 @@ test "pivot table options default name increments" {
   sheet.set_cell_value("A2", String("East"))
   sheet.set_cell_value("B2", String("A"))
   sheet.set_cell_value("C2", Numeric(10.0))
-  let opts1 = PivotTableOptions::new("Sheet1!A1:C2", "Sheet1!E2:H10")
-  opts1.rows.push(PivotTableField::new("Region"))
-  opts1.data.push(PivotTableField::new("Sales"))
+  let opts1 = @xlsx.PivotTableOptions::new("Sheet1!A1:C2", "Sheet1!E2:H10")
+  opts1.rows.push(@xlsx.PivotTableField::new("Region"))
+  opts1.data.push(@xlsx.PivotTableField::new("Sales"))
   let pivot1 = workbook.add_pivot_table(opts1)
   inspect(pivot1.name, content="PivotTable1")
-  let opts2 = PivotTableOptions::new("Sheet1!A1:C2", "Sheet1!E20:H30")
-  opts2.rows.push(PivotTableField::new("Region"))
-  opts2.data.push(PivotTableField::new("Sales"))
+  let opts2 = @xlsx.PivotTableOptions::new("Sheet1!A1:C2", "Sheet1!E20:H30")
+  opts2.rows.push(@xlsx.PivotTableField::new("Region"))
+  opts2.data.push(@xlsx.PivotTableField::new("Sales"))
   let pivot2 = workbook.add_pivot_table(opts2)
   inspect(pivot2.name, content="PivotTable2")
 }
 
 ///|
 test "pivot table options name length and data range validation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("Region"))
   sheet.set_cell_value("B1", String("Sales"))
   sheet.set_cell_value("A2", String("East"))
   sheet.set_cell_value("B2", Numeric(10.0))
   let long = "c".repeat(256)
-  let opts = PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!E2:H10")
+  let opts = @xlsx.PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!E2:H10")
   opts.name = long
-  opts.rows.push(PivotTableField::new("Region"))
-  opts.data.push(PivotTableField::new("Sales"))
+  opts.rows.push(@xlsx.PivotTableField::new("Region"))
+  opts.data.push(@xlsx.PivotTableField::new("Sales"))
   let name_result : Result[Unit, Error] = try
     ignore(workbook.add_pivot_table(opts))
   catch {
@@ -297,8 +297,11 @@ test "pivot table options name length and data range validation" {
   } noraise {
     _ => Ok(())
   }
-  inspect(name_result is Err(XlsxError::InvalidPivotTable(_)), content="true")
-  let bad_opts = PivotTableOptions::new("Sheet1!A1:A1", "Sheet1!E2:H10")
+  inspect(
+    name_result is Err(@xlsx.XlsxError::InvalidPivotTable(_)),
+    content="true",
+  )
+  let bad_opts = @xlsx.PivotTableOptions::new("Sheet1!A1:A1", "Sheet1!E2:H10")
   let range_result : Result[Unit, Error] = try
     ignore(workbook.add_pivot_table(bad_opts))
   catch {
@@ -306,12 +309,15 @@ test "pivot table options name length and data range validation" {
   } noraise {
     _ => Ok(())
   }
-  inspect(range_result is Err(XlsxError::InvalidPivotTable(_)), content="true")
+  inspect(
+    range_result is Err(@xlsx.XlsxError::InvalidPivotTable(_)),
+    content="true",
+  )
 }
 
 ///|
 test "pivot data field options: numFmtId, subtotal normalization, name truncation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell_value("A1", String("Region"))
   sheet.set_cell_value("B1", String("Sales"))
@@ -319,19 +325,29 @@ test "pivot data field options: numFmtId, subtotal normalization, name truncatio
   sheet.set_cell_value("B2", Numeric(10.0))
   sheet.set_cell_value("A3", String("West"))
   sheet.set_cell_value("B3", Numeric(20.0))
-  let opts = PivotTableOptions::new("Sheet1!A1:B3", "Sheet1!D2:F10")
+  let opts = @xlsx.PivotTableOptions::new("Sheet1!A1:B3", "Sheet1!D2:F10")
   opts.rows.push(
-    PivotTableField::new("Region", compact=true, outline=true, show_all=true),
+    @xlsx.PivotTableField::new(
+      "Region",
+      compact=true,
+      outline=true,
+      show_all=true,
+    ),
   )
   let mut long_name = ""
   for _i in 0..<30 {
     long_name = long_name + "0123456789"
   }
   opts.data.push(
-    PivotTableField::new("Sales", name=long_name, subtotal="StdDev", num_fmt=10),
+    @xlsx.PivotTableField::new(
+      "Sales",
+      name=long_name,
+      subtotal="StdDev",
+      num_fmt=10,
+    ),
   )
   ignore(workbook.add_pivot_table(opts))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let pivot_xml = match archive.get("xl/pivotTables/pivotTable1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -361,17 +377,17 @@ test "pivot data field options: numFmtId, subtotal normalization, name truncatio
   )
 
   // custom number formats are dropped like Excelize
-  let workbook2 = Workbook::new()
+  let workbook2 = @xlsx.Workbook::new()
   let sheet2 = workbook2.add_sheet("Sheet1")
   sheet2.set_cell_value("A1", String("Region"))
   sheet2.set_cell_value("B1", String("Sales"))
   sheet2.set_cell_value("A2", String("East"))
   sheet2.set_cell_value("B2", Numeric(10.0))
-  let opts2 = PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!D2:F10")
-  opts2.rows.push(PivotTableField::new("Region"))
-  opts2.data.push(PivotTableField::new("Sales", num_fmt=164))
+  let opts2 = @xlsx.PivotTableOptions::new("Sheet1!A1:B2", "Sheet1!D2:F10")
+  opts2.rows.push(@xlsx.PivotTableField::new("Region"))
+  opts2.data.push(@xlsx.PivotTableField::new("Sales", num_fmt=164))
   ignore(workbook2.add_pivot_table(opts2))
-  let bytes2 = write(workbook2)
+  let bytes2 = @xlsx.write(workbook2)
   let archive2 = @zip.read(bytes2)
   let pivot_xml2 = match archive2.get("xl/pivotTables/pivotTable1.xml") {
     Some(value) => @encoding/utf8.decode(value)

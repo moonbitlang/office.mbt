@@ -31,7 +31,7 @@ fn push_u32_be(out : Array[Byte], value : Int) -> Unit {
 }
 
 ///|
-fn last_image_emu(sheet : Worksheet) -> (Int, Int) {
+fn last_image_emu(sheet : @xlsx.Worksheet) -> (Int, Int) {
   let images = sheet.images()
   let last = images[images.length() - 1]
   (last.width_emu, last.height_emu)
@@ -44,7 +44,7 @@ fn expected_image_emu(w_px : Int, h_px : Int) -> (Int, Int) {
 
 ///|
 test "image dimensions: png/gif/jpeg/bmp/ico/tiff/svg/emf/wmf/emz/wmz" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
 
   // PNG: signature + IHDR + width/height (big endian).

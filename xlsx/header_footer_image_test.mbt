@@ -1,13 +1,13 @@
 ///|
 test "header footer image vml and rels" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_header_footer(
-    Some(HeaderFooterOptions::with_values(odd_header="&L&G")),
+    Some(@xlsx.HeaderFooterOptions::with_values(odd_header="&L&G")),
   )
   let img : Bytes = [1, 2, 3, 4]
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Left,
       img,
       ".png",
@@ -15,7 +15,7 @@ test "header footer image vml and rels" {
       height="32pt",
     ),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -59,11 +59,11 @@ test "header footer image vml and rels" {
 
 ///|
 test "header footer image read roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let img : Bytes = [10, 20, 30]
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Left,
       img,
       ".png",
@@ -71,7 +71,7 @@ test "header footer image read roundtrip" {
       height="32pt",
     ),
   )
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -104,7 +104,7 @@ test "header footer image read roundtrip" {
 
 ///|
 test "header footer image options from file path" {
-  let opts = try! HeaderFooterImageOptions::from_file(
+  let opts = try! @xlsx.HeaderFooterImageOptions::from_file(
     Left,
     "tmp_logo.PNG",
     width="9pt",
@@ -117,8 +117,8 @@ test "header footer image options from file path" {
 
 ///|
 test "header footer image options from file requires extension" {
-  let result : Result[HeaderFooterImageOptions, Error] = Ok(
-    HeaderFooterImageOptions::from_file(
+  let result : Result[@xlsx.HeaderFooterImageOptions, Error] = Ok(
+    @xlsx.HeaderFooterImageOptions::from_file(
       Left,
       "tmp_logo",
       width="9pt",
@@ -137,8 +137,8 @@ test "header footer image options from file requires extension" {
 
 ///|
 test "header footer image file options require async api" {
-  let sheet = Worksheet::new("Sheet1")
-  let opts = try! HeaderFooterImageOptions::from_file(
+  let sheet = @xlsx.Worksheet::new("Sheet1")
+  let opts = try! @xlsx.HeaderFooterImageOptions::from_file(
     Left,
     "tmp_logo.png",
     width="9pt",
@@ -158,9 +158,9 @@ test "header footer image file options require async api" {
 ///|
 #cfg(target="native")
 async test "header footer image from file path requires file option" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = HeaderFooterImageOptions::new(
+  let opts = @xlsx.HeaderFooterImageOptions::new(
     Left,
     [1],
     ".png",
@@ -183,9 +183,9 @@ async test "header footer image from file path requires file option" {
 ///|
 #cfg(target="native")
 async test "header footer image from file path read failure" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
-  let opts = try! HeaderFooterImageOptions::from_file(
+  let opts = try! @xlsx.HeaderFooterImageOptions::from_file(
     Left,
     "__missing_hf__.png",
     width="9pt",
@@ -196,13 +196,16 @@ async test "header footer image from file path read failure" {
   ) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidHeaderFooter(_)), content="true")
+  inspect(
+    result is Err(@xlsx.XlsxError::InvalidHeaderFooter(_)),
+    content="true",
+  )
 }
 
 ///|
 #cfg(target="native")
 async test "header footer image from file path" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let stamp = @env.now().to_string()
   let path = "mbtexcel_hf_img_\{stamp}.png"
@@ -215,14 +218,14 @@ async test "header footer image from file path" {
   ) catch {
     err => fail("write file failed: \{err}")
   }
-  let opts = try! HeaderFooterImageOptions::from_file(
+  let opts = try! @xlsx.HeaderFooterImageOptions::from_file(
     Left,
     path,
     width="9pt",
     height="8pt",
   )
   workbook.add_header_footer_image_from_file("Sheet1", opts)
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let images = parsed.get_header_footer_images("Sheet1")
   inspect(images.length(), content="1")
   inspect(images[0].extension, content="png")
@@ -235,7 +238,7 @@ async test "header footer image from file path" {
 
 ///|
 test "header footer vml merge preserves existing shapes" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let base_vml =
     #|<xml xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
@@ -245,7 +248,7 @@ test "header footer vml merge preserves existing shapes" {
   sheet.add_vml_drawing_hf_xml(base_vml)
   let img : Bytes = [7, 8, 9]
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Left,
       img,
       ".png",
@@ -253,7 +256,7 @@ test "header footer vml merge preserves existing shapes" {
       height="10pt",
     ),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -270,10 +273,10 @@ test "header footer vml merge preserves existing shapes" {
 
 ///|
 test "header footer image invalid extension" {
-  let sheet = Worksheet::new("Sheet1")
+  let sheet = @xlsx.Worksheet::new("Sheet1")
   let result = try
     sheet.add_header_footer_image(
-      HeaderFooterImageOptions::new(
+      @xlsx.HeaderFooterImageOptions::new(
         Left,
         [1, 2],
         ".bad",
@@ -296,10 +299,10 @@ test "header footer image invalid extension" {
 
 ///|
 test "header footer image extension requires dot" {
-  let sheet = Worksheet::new("Sheet1")
+  let sheet = @xlsx.Worksheet::new("Sheet1")
   let result = try
     sheet.add_header_footer_image(
-      HeaderFooterImageOptions::new(
+      @xlsx.HeaderFooterImageOptions::new(
         Left,
         [1, 2],
         "png",
@@ -322,11 +325,11 @@ test "header footer image extension requires dot" {
 
 ///|
 test "header footer image multiple positions and first page" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_header_footer(
     Some(
-      HeaderFooterOptions::with_values(
+      @xlsx.HeaderFooterOptions::with_values(
         different_first=true,
         odd_header="&L&G&C&G&R&G",
         odd_footer="&L&G&C&G&R&G",
@@ -336,7 +339,7 @@ test "header footer image multiple positions and first page" {
     ),
   )
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Left,
       [1, 2, 3],
       ".png",
@@ -345,7 +348,7 @@ test "header footer image multiple positions and first page" {
     ),
   )
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Center,
       [4, 5],
       ".gif",
@@ -355,7 +358,7 @@ test "header footer image multiple positions and first page" {
     ),
   )
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Right,
       [6],
       ".jpg",
@@ -364,8 +367,8 @@ test "header footer image multiple positions and first page" {
       height="15pt",
     ),
   )
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let images = parsed.get_header_footer_images("Sheet1")
   inspect(images.length(), content="3")
   let ids : Array[String] = []
@@ -388,10 +391,10 @@ test "header footer image multiple positions and first page" {
 
 ///|
 test "header footer image replaces same slot" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Left,
       [9],
       ".png",
@@ -400,7 +403,7 @@ test "header footer image replaces same slot" {
     ),
   )
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Left,
       [8, 7],
       ".jpg",
@@ -408,7 +411,7 @@ test "header footer image replaces same slot" {
       height="10pt",
     ),
   )
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let images = parsed.get_header_footer_images("Sheet1")
   inspect(images.length(), content="1")
   debug_inspect(
@@ -425,12 +428,12 @@ test "header footer image replaces same slot" {
 
 ///|
 test "header footer image workbook missing sheet" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result : Result[Unit, Error] = Ok(
     workbook.add_header_footer_image(
       "SheetN",
-      HeaderFooterImageOptions::new(
+      @xlsx.HeaderFooterImageOptions::new(
         Left,
         [1],
         ".png",
@@ -441,18 +444,18 @@ test "header footer image workbook missing sheet" {
   ) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::SheetNotFound(_)), content="true")
+  inspect(result is Err(@xlsx.XlsxError::SheetNotFound(_)), content="true")
 }
 
 ///|
 test "header footer image read: missing vml relationship errors" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_header_footer(
-    Some(HeaderFooterOptions::with_values(odd_header="&L&G")),
+    Some(@xlsx.HeaderFooterOptions::with_values(odd_header="&L&G")),
   )
   sheet.add_header_footer_image(
-    HeaderFooterImageOptions::new(
+    @xlsx.HeaderFooterImageOptions::new(
       Left,
       [1, 2, 3],
       ".png",
@@ -460,7 +463,7 @@ test "header footer image read: missing vml relationship errors" {
       height="10pt",
     ),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -486,11 +489,11 @@ test "header footer image read: missing vml relationship errors" {
   let updated_bytes = @zip.write(updated_archive) catch {
     err => fail("zip write failed: \{repr(err)}")
   }
-  let result : Result[Workbook, Error] = Ok(read(updated_bytes)) catch {
+  let result : Result[@xlsx.Workbook, Error] = Ok(@xlsx.read(updated_bytes)) catch {
     e => Err(e)
   }
   match result {
-    Err(XlsxError::InvalidXml(msg~)) =>
+    Err(@xlsx.XlsxError::InvalidXml(msg~)) =>
       inspect(msg, content="header/footer image relationship missing")
     _ =>
       fail("expected InvalidXml for missing header/footer image relationship")

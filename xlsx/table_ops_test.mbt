@@ -1,6 +1,6 @@
 ///|
 test "table list and delete" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   ignore(
@@ -26,7 +26,7 @@ test "table list and delete" {
 
 ///|
 test "table delete missing" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result : Result[Unit, Error] = Ok(workbook.delete_table("Missing")) catch {
     e => Err(e)

@@ -81,17 +81,17 @@ impl @async/io.Writer for MemWriter with fn write_reader(
 ///|
 #cfg(target="native")
 async test "open file save and save_as" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "alpha")
   let stamp = @env.now().to_string()
   let path = "mbtexcel_io_\{stamp}.xlsx"
   workbook.save_as(path)
-  let parsed = open_file(path)
+  let parsed = @xlsx.open_file(path)
   debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
   parsed.set_cell("Sheet1", "A1", "beta")
   parsed.save()
-  let parsed2 = open_file(path)
+  let parsed2 = @xlsx.open_file(path)
   debug_inspect(parsed2.get_cell("Sheet1", "A1"), content="Some(\"beta\")")
   @async/fs.remove(path) catch {
     err => fail("remove file failed: \{err}")
@@ -101,13 +101,13 @@ async test "open file save and save_as" {
 ///|
 #cfg(target="native")
 async test "save_as rejects unsupported extension" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result : Result[Unit, Error] = Ok(workbook.save_as("bad.foo")) catch {
     e => Err(e)
   }
   match result {
-    Err(XlsxError::InvalidSheetOperation(msg~)) =>
+    Err(@xlsx.XlsxError::InvalidSheetOperation(msg~)) =>
       inspect(msg, content="unsupported workbook file format")
     _ => fail("expected unsupported workbook file format error")
   }
@@ -118,7 +118,7 @@ async test "save_as rejects unsupported extension" {
 async test "save_as sets workbook content type by extension" {
   let stamp = @env.now().to_string()
   let path_xltx = "mbtexcel_type_\{stamp}.xltx"
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.save_as(path_xltx)
   let types_xml = {
@@ -150,7 +150,7 @@ async test "save_as sets workbook content type by extension" {
     err => fail("remove file failed: \{err}")
   }
   let path_xlam = "mbtexcel_type_\{stamp}.xlam"
-  let workbook2 = Workbook::new()
+  let workbook2 = @xlsx.Workbook::new()
   ignore(workbook2.add_sheet("Sheet1"))
   workbook2.save_as(path_xlam)
   let types_xml2 = {
@@ -176,7 +176,7 @@ async test "save_as sets workbook content type by extension" {
     err => fail("remove file failed: \{err}")
   }
   let path_xltm = "mbtexcel_type_\{stamp}.xltm"
-  let workbook3 = Workbook::new()
+  let workbook3 = @xlsx.Workbook::new()
   ignore(workbook3.add_sheet("Sheet1"))
   workbook3.save_as(path_xltm)
   let types_xml3 = {
@@ -204,7 +204,7 @@ async test "save_as sets workbook content type by extension" {
     err => fail("remove file failed: \{err}")
   }
   let path_vba_xlsx = "mbtexcel_type_\{stamp}_vba.xlsx"
-  let workbook4 = Workbook::new()
+  let workbook4 = @xlsx.Workbook::new()
   ignore(workbook4.add_sheet("Sheet1"))
   let vba_header : Array[Byte] = [
     0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
@@ -237,7 +237,7 @@ async test "save_as sets workbook content type by extension" {
 
 ///|
 async test "open_reader from pipe" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "B2", "gamma")
   let bytes = workbook.write_to_buffer()
@@ -247,14 +247,14 @@ async test "open_reader from pipe" {
       defer writer.close()
       writer.write(bytes)
     })
-    open_reader(reader)
+    @xlsx.open_reader(reader)
   })
   debug_inspect(parsed.get_cell("Sheet1", "B2"), content="Some(\"gamma\")")
 }
 
 ///|
 async test "read_zip_reader from pipe" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "E5", "reader")
   let bytes = workbook.write_to_buffer()
@@ -264,24 +264,24 @@ async test "read_zip_reader from pipe" {
       defer writer.close()
       writer.write(bytes)
     })
-    read_zip_reader(reader)
+    @xlsx.read_zip_reader(reader)
   })
   debug_inspect(parsed.get_cell("Sheet1", "E5"), content="Some(\"reader\")")
 }
 
 ///|
 test "write_to_buffer roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "C3", "pipe")
   let bytes = workbook.write_to_buffer()
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(parsed.get_cell("Sheet1", "C3"), content="Some(\"pipe\")")
 }
 
 ///|
 test "custom zip writer used" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "alpha")
   let called = @ref.new(false)
@@ -291,25 +291,25 @@ test "custom zip writer used" {
   })
   let bytes = workbook.write_to_buffer()
   guard called.val else { fail("zip writer was not called") }
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
 }
 
 ///|
 async test "write wrapper" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "A1", "alpha")
   let writer = MemWriter::new()
   workbook.write(writer)
   let bytes = Bytes::from_array(writer.data)
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   debug_inspect(parsed.get_cell("Sheet1", "A1"), content="Some(\"alpha\")")
 }
 
 ///|
 async test "write_to returns byte length" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.set_cell("Sheet1", "D4", "delta")
   let bytes = workbook.write_to_buffer()

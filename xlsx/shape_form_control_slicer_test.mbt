@@ -1,10 +1,10 @@
 ///|
 test "shape write" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let shape = Shape::new("A1", "rect", macro_name="MyMacro", text="Hello")
+  let shape = @xlsx.Shape::new("A1", "rect", macro_name="MyMacro", text="Hello")
   sheet.add_shape(shape)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -25,9 +25,9 @@ test "shape write" {
 
 ///|
 test "shape size and rich text paragraphs" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let runs : Array[RichTextRun] = [
+  let runs : Array[@xlsx.RichTextRun] = [
     {
       text: "Rectangle",
       font: Some({
@@ -75,9 +75,15 @@ test "shape size and rich text paragraphs" {
       }),
     },
   ]
-  let shape = Shape::new("B2", "rect", paragraph=runs, width=180, height=40)
+  let shape = @xlsx.Shape::new(
+    "B2",
+    "rect",
+    paragraph=runs,
+    width=180,
+    height=40,
+  )
   sheet.add_shape(shape)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -100,9 +106,9 @@ test "shape size and rich text paragraphs" {
 
 ///|
 test "shape fill and line" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let shape = Shape::new(
+  let shape = @xlsx.Shape::new(
     "C3",
     "rect",
     text="Styled",
@@ -114,7 +120,7 @@ test "shape fill and line" {
     line_width=1.2,
   )
   sheet.add_shape(shape)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -133,9 +139,9 @@ test "shape fill and line" {
 
 ///|
 test "shape name, alt text, and clientData flags" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let shape = Shape::new(
+  let shape = @xlsx.Shape::new(
     "D4",
     "rect",
     text="Meta",
@@ -145,7 +151,7 @@ test "shape name, alt text, and clientData flags" {
     print_object=false,
   )
   sheet.add_shape(shape)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -164,11 +170,11 @@ test "shape name, alt text, and clientData flags" {
 
 ///|
 test "shape positioning twoCell" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let shape = Shape::new("E5", "rect", positioning=TwoCell)
+  let shape = @xlsx.Shape::new("E5", "rect", positioning=TwoCell)
   sheet.add_shape(shape)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -185,11 +191,11 @@ test "shape positioning twoCell" {
 
 ///|
 test "shape positioning absolute" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
-  let shape = Shape::new("F6", "rect", positioning=Absolute)
+  let shape = @xlsx.Shape::new("F6", "rect", positioning=Absolute)
   sheet.add_shape(shape)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -208,13 +214,13 @@ test "shape positioning absolute" {
 
 ///|
 test "form control add/get/delete and vml" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   workbook.add_form_control(
     "Sheet1",
-    FormControl::new("B2", "Button", text="Click"),
+    @xlsx.FormControl::new("B2", "Button", text="Click"),
   )
-  let rich_button = FormControl::new("E5", "Button", text="Button 1")
+  let rich_button = @xlsx.FormControl::new("E5", "Button", text="Button 1")
   rich_button.set_paragraph([
     {
       text: "C1=A1+B1",
@@ -241,14 +247,14 @@ test "form control add/get/delete and vml" {
     },
   ])
   workbook.add_form_control("Sheet1", rich_button)
-  let checkbox = FormControl::new("C3", "CheckBox", text="Agree")
+  let checkbox = @xlsx.FormControl::new("C3", "CheckBox", text="Agree")
   checkbox.set_width(140)
   checkbox.set_height(60)
   checkbox.set_macro_name("DoThing")
   checkbox.set_cell_link("A1")
   checkbox.set_checked(true)
   workbook.add_form_control("Sheet1", checkbox)
-  let scrollbar = FormControl::new("D4", "Scroll")
+  let scrollbar = @xlsx.FormControl::new("D4", "Scroll")
   scrollbar.set_width(140)
   scrollbar.set_height(20)
   scrollbar.set_cell_link("A1")
@@ -259,11 +265,11 @@ test "form control add/get/delete and vml" {
   scrollbar.set_page_change(1)
   scrollbar.set_horizontally(true)
   scrollbar.set_format(
-    GraphicOptions::with_values(print_object=false, positioning=Absolute),
+    @xlsx.GraphicOptions::with_values(print_object=false, positioning=Absolute),
   )
   workbook.add_form_control("Sheet1", scrollbar)
   inspect(workbook.get_form_controls("Sheet1").length(), content="4")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -311,12 +317,12 @@ test "form control add/get/delete and vml" {
   )
   inspect(vml_xml.contains("<x:MoveWithCells"), content="true")
   inspect(vml_xml.contains("<x:SizeWithCells"), content="true")
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let controls = parsed.get_form_controls("Sheet1")
   inspect(controls.length(), content="4")
-  let mut parsed_checkbox : FormControl? = None
-  let mut parsed_scrollbar : FormControl? = None
-  let mut parsed_rich_button : FormControl? = None
+  let mut parsed_checkbox : @xlsx.FormControl? = None
+  let mut parsed_scrollbar : @xlsx.FormControl? = None
+  let mut parsed_rich_button : @xlsx.FormControl? = None
   for control in controls {
     if control.control_type == "CheckBox" {
       parsed_checkbox = Some(control)
@@ -390,18 +396,18 @@ test "form control add/get/delete and vml" {
 
 ///|
 test "slicer add/get/delete and xml" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
     workbook.add_table_with_columns("Sheet1", "A1:C4", "Table1", [
       "Region", "Type", "Sales",
     ]),
   )
-  let opts = SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
+  let opts = @xlsx.SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
   opts.set_caption("Region")
   workbook.add_slicer("Sheet1", opts)
   inspect(workbook.get_slicers("Sheet1").length(), content="1")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -463,18 +469,18 @@ test "slicer add/get/delete and xml" {
 
 ///|
 test "slicer options builder write" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(
     workbook.add_table_with_columns("Sheet1", "A1:C4", "Table1", [
       "Region", "Type", "Sales",
     ]),
   )
-  let opts = SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
+  let opts = @xlsx.SlicerOptions::new("Region", "E1", "Sheet1", "Table1")
   opts.set_caption("Region")
   opts.set_display_header(Some(false))
   workbook.add_slicer("Sheet1", opts)
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let slicer_xml = match archive.get("xl/slicers/slicer1.xml") {
     Some(value) => @encoding/utf8.decode(value)

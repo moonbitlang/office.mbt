@@ -14,7 +14,7 @@ fn count_xml_tag_mixed(xml : String, tag : String) -> Int {
 
 ///|
 test "integration sparkline and x14 conditional formatting coexistence" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
 
   sheet.set_cell_value("B2", Numeric(12.0))
@@ -27,7 +27,7 @@ test "integration sparkline and x14 conditional formatting coexistence" {
   sheet.set_cell_value("C4", Numeric(11.0))
   sheet.set_cell_value("D4", Numeric(16.0))
 
-  let sparkline_opts = SparklineOptions::new(["E2", "E3", "E4"], [
+  let sparkline_opts = @xlsx.SparklineOptions::new(["E2", "E3", "E4"], [
     "B2:D2", "B3:D3", "B4:D4",
   ])
   sparkline_opts.set_markers(true)
@@ -35,7 +35,7 @@ test "integration sparkline and x14 conditional formatting coexistence" {
   sparkline_opts.set_series_color("00AA00")
   sheet.add_sparkline_options(sparkline_opts)
 
-  let cf_opt = ConditionalFormatOptions::new("data_bar")
+  let cf_opt = @xlsx.ConditionalFormatOptions::new("data_bar")
   cf_opt.set_min_type("min")
   cf_opt.set_max_type("max")
   cf_opt.set_bar_color("#638EC6")
@@ -44,7 +44,7 @@ test "integration sparkline and x14 conditional formatting coexistence" {
   cf_opt.set_bar_border_color("#0000FF")
   sheet.set_conditional_format("B2:B4", [cf_opt])
 
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let sheet_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -88,7 +88,7 @@ test "integration sparkline and x14 conditional formatting coexistence" {
     content="1",
   )
 
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing parsed sheet")

@@ -55,7 +55,7 @@ test "demo sparklines: writer output remains consistent after roundtrip" {
   let bytes = @demos.demo_sparklines_bytes()
   assert_demo_sparklines_archive(bytes)
 
-  let parsed = read(bytes)
+  let parsed = @mbtexcel.read(bytes)
   let kpi = match parsed.sheet("KPI") {
     Some(value) => value
     None => fail("missing KPI sheet")
@@ -63,6 +63,6 @@ test "demo sparklines: writer output remains consistent after roundtrip" {
   inspect(kpi.sparkline_groups().length(), content="1")
   inspect(kpi.sparkline_groups()[0].sparklines.length(), content="4")
 
-  let roundtrip_bytes = write(parsed)
+  let roundtrip_bytes = @mbtexcel.write(parsed)
   assert_demo_sparklines_archive(roundtrip_bytes)
 }

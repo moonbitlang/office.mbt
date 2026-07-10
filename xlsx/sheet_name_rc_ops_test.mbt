@@ -1,6 +1,6 @@
 ///|
 test "rc cell APIs validate sheet name" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let set_cell_rc_result : Result[Unit, Error] = Ok(
     workbook.set_cell_rc("Sheet:1", 1, 1, "alpha"),
@@ -8,7 +8,7 @@ test "rc cell APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    set_cell_rc_result is Err(XlsxError::InvalidSheetName(_)),
+    set_cell_rc_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let set_cell_value_rc_result : Result[Unit, Error] = Ok(
@@ -17,7 +17,7 @@ test "rc cell APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    set_cell_value_rc_result is Err(XlsxError::InvalidSheetName(_)),
+    set_cell_value_rc_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let get_cell_rc_result : Result[String?, Error] = Ok(
@@ -26,16 +26,16 @@ test "rc cell APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    get_cell_rc_result is Err(XlsxError::InvalidSheetName(_)),
+    get_cell_rc_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
-  let get_cell_value_raw_rc_result : Result[CellValue?, Error] = Ok(
+  let get_cell_value_raw_rc_result : Result[@xlsx.CellValue?, Error] = Ok(
     workbook.get_cell_value_raw_rc("Sheet:1", 1, 1),
   ) catch {
     e => Err(e)
   }
   inspect(
-    get_cell_value_raw_rc_result is Err(XlsxError::InvalidSheetName(_)),
+    get_cell_value_raw_rc_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
   let get_cell_value_rc_result : Result[String?, Error] = Ok(
@@ -44,7 +44,7 @@ test "rc cell APIs validate sheet name" {
     e => Err(e)
   }
   inspect(
-    get_cell_value_rc_result is Err(XlsxError::InvalidSheetName(_)),
+    get_cell_value_rc_result is Err(@xlsx.XlsxError::InvalidSheetName(_)),
     content="true",
   )
 }

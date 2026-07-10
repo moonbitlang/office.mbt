@@ -1,9 +1,9 @@
 ///|
 test "xlsx package fixtures" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   sheet.set_cell("A1", "hi")
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let workbook_xml = match archive.get("xl/workbook.xml") {
     Some(value) => @encoding/utf8.decode(value)

@@ -1,6 +1,6 @@
 ///|
 test "sheet rename and index lookup" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   workbook.set_sheet_name("Sheet1", "Main")
@@ -10,37 +10,41 @@ test "sheet rename and index lookup" {
 
 ///|
 test "sheet name validation" {
-  let workbook = Workbook::new()
-  let result : Result[Worksheet, Error] = Ok(workbook.add_sheet("Sheet:1")) catch {
+  let workbook = @xlsx.Workbook::new()
+  let result : Result[@xlsx.Worksheet, Error] = Ok(
+    workbook.add_sheet("Sheet:1"),
+  ) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(result is Err(@xlsx.XlsxError::InvalidSheetName(_)), content="true")
 }
 
 ///|
 test "sheet name validation guard branches" {
-  let workbook = Workbook::new()
-  let blank : Result[Worksheet, Error] = Ok(workbook.add_sheet("")) catch {
+  let workbook = @xlsx.Workbook::new()
+  let blank : Result[@xlsx.Worksheet, Error] = Ok(workbook.add_sheet("")) catch {
     e => Err(e)
   }
-  inspect(blank is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(blank is Err(@xlsx.XlsxError::InvalidSheetName(_)), content="true")
 
-  let too_long : Result[Worksheet, Error] = Ok(
+  let too_long : Result[@xlsx.Worksheet, Error] = Ok(
     workbook.add_sheet("a".repeat(32)),
   ) catch {
     e => Err(e)
   }
-  inspect(too_long is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(too_long is Err(@xlsx.XlsxError::InvalidSheetName(_)), content="true")
 
-  let quoted : Result[Worksheet, Error] = Ok(workbook.add_sheet("'Quoted")) catch {
+  let quoted : Result[@xlsx.Worksheet, Error] = Ok(
+    workbook.add_sheet("'Quoted"),
+  ) catch {
     e => Err(e)
   }
-  inspect(quoted is Err(XlsxError::InvalidSheetName(_)), content="true")
+  inspect(quoted is Err(@xlsx.XlsxError::InvalidSheetName(_)), content="true")
 }
 
 ///|
 test "sheet delete updates active index" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   workbook.set_active_sheet(1)
@@ -51,7 +55,7 @@ test "sheet delete updates active index" {
 
 ///|
 test "delete last sheet is no-op" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Only"))
   let result : Result[Unit, Error] = Ok(workbook.delete_sheet("Only")) catch {
     e => Err(e)
@@ -62,7 +66,7 @@ test "delete last sheet is no-op" {
 
 ///|
 test "sheet move reorders" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("A"))
   ignore(workbook.add_sheet("B"))
   ignore(workbook.add_sheet("C"))
@@ -73,7 +77,7 @@ test "sheet move reorders" {
 
 ///|
 test "sheet copy replaces target contents" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet1 = workbook.add_sheet("Sheet1")
   sheet1.set_cell("A1", "one")
   let sheet2 = workbook.add_sheet("Sheet2")
@@ -89,12 +93,12 @@ test "sheet copy replaces target contents" {
 
 ///|
 test "sheet visibility roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   workbook.set_sheet_visible("Sheet2", false)
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   let sheet2 = match parsed.sheet("Sheet2") {
     Some(value) => value
     None => fail("missing Sheet2")
@@ -105,7 +109,7 @@ test "sheet visibility roundtrip" {
 
 ///|
 test "sheet list and map" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let chart_xml =
     #|<?xml version="1.0" encoding="UTF-8"?>
@@ -126,19 +130,22 @@ test "sheet list and map" {
 
 ///|
 test "cannot hide all sheets" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let result : Result[Unit, Error] = Ok(
     workbook.set_sheet_visible("Sheet1", false),
   ) catch {
     e => Err(e)
   }
-  inspect(result is Err(XlsxError::InvalidSheetOperation(_)), content="true")
+  inspect(
+    result is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
 }
 
 ///|
 test "chart sheet visibility via workbook API" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_chart_sheet("Chart1", "<chart/>"))
   workbook.set_sheet_visible("Chart1", false, very_hidden=true)
@@ -148,18 +155,18 @@ test "chart sheet visibility via workbook API" {
 
 ///|
 test "active sheet write and read" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   workbook.set_active_sheet(1)
-  let bytes = write(workbook)
-  let parsed = read(bytes)
+  let bytes = @xlsx.write(workbook)
+  let parsed = @xlsx.read(bytes)
   inspect(parsed.active_sheet_index(), content="1")
 }
 
 ///|
 test "group and ungroup sheets" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   ignore(workbook.add_sheet("Sheet2"))
   ignore(workbook.add_sheet("Sheet3"))
@@ -168,9 +175,12 @@ test "group and ungroup sheets" {
   ) catch {
     e => Err(e)
   }
-  inspect(bad_group is Err(XlsxError::InvalidSheetOperation(_)), content="true")
+  inspect(
+    bad_group is Err(@xlsx.XlsxError::InvalidSheetOperation(_)),
+    content="true",
+  )
   workbook.group_sheets(["Sheet1", "Sheet2"])
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -199,7 +209,7 @@ test "group and ungroup sheets" {
   inspect(sheet2_xml.contains("tabSelected=\"1\""), content="true")
   inspect(sheet3_xml.contains("tabSelected=\"1\""), content="false")
   workbook.ungroup_sheets()
-  let bytes2 = write(workbook)
+  let bytes2 = @xlsx.write(workbook)
   let archive2 = @zip.read(bytes2) catch {
     err => fail("zip read failed: \{repr(err)}")
   }

@@ -1,6 +1,6 @@
 ///|
 test "integration mixed feature workbook ooxml sanity" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let data = workbook.add_sheet("Data")
   ignore(workbook.add_sheet("Dashboard"))
 
@@ -25,17 +25,20 @@ test "integration mixed feature workbook ooxml sanity" {
     ),
   )
 
-  let slicer_opts = SlicerOptions::new("Region", "A1", "Data", "PivotMix")
+  let slicer_opts = @xlsx.SlicerOptions::new("Region", "A1", "Data", "PivotMix")
   workbook.add_slicer("Dashboard", slicer_opts)
 
-  let chart_opts = ChartOptions::new(Line)
+  let chart_opts = @xlsx.ChartOptions::new(Line)
   chart_opts.series.push(
-    ChartSeries::new("Data!$A$2:$A$6", "Data!$B$2:$B$6", name="Series1"),
+    @xlsx.ChartSeries::new("Data!$A$2:$A$6", "Data!$B$2:$B$6", name="Series1"),
   )
   workbook.add_chart_with_options("Dashboard", "D2", chart_opts)
-  workbook.add_shape("Dashboard", Shape::new("H2", "rect", text="mix-shape"))
+  workbook.add_shape(
+    "Dashboard",
+    @xlsx.Shape::new("H2", "rect", text="mix-shape"),
+  )
 
-  let archive = @zip.read(write(workbook))
+  let archive = @zip.read(@xlsx.write(workbook))
 
   inspect(archive.get("xl/workbook.xml") is Some(_), content="true")
   inspect(archive.get("xl/worksheets/sheet1.xml") is Some(_), content="true")

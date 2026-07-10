@@ -1,9 +1,9 @@
 ///|
 fn format_numeric(value : Double, fmt : String) -> String {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(try! workbook.add_sheet("Sheet1"))
   try! workbook.set_cell_value("Sheet1", "A1", Numeric(value))
-  let style_id = workbook.add_style(Style::number_format(fmt))
+  let style_id = workbook.add_style(@xlsx.Style::number_format(fmt))
   try! workbook.set_cell_style("Sheet1", "A1", style_id)
   match (try! workbook.get_cell_value("Sheet1", "A1")) {
     Some(text) => text
@@ -13,10 +13,10 @@ fn format_numeric(value : Double, fmt : String) -> String {
 
 ///|
 fn format_text(value : String, fmt : String) -> String {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(try! workbook.add_sheet("Sheet1"))
   try! workbook.set_cell_str("Sheet1", "A1", value)
-  let style_id = workbook.add_style(Style::number_format(fmt))
+  let style_id = workbook.add_style(@xlsx.Style::number_format(fmt))
   try! workbook.set_cell_style("Sheet1", "A1", style_id)
   match (try! workbook.get_cell_value("Sheet1", "A1")) {
     Some(text) => text

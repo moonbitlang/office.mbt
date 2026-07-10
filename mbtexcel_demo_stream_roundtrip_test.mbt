@@ -61,10 +61,10 @@ test "demo stream big: writer output remains consistent after roundtrip" {
   let bytes = @demos.demo_stream_big_bytes(rows~)
   assert_demo_stream_archive(bytes, rows)
 
-  let parsed = read(bytes)
+  let parsed = @mbtexcel.read(bytes)
   inspect(parsed.get_cell("Big", "A1") is Some(_), content="true")
   inspect(parsed.get_cell("Big", "A3001") is Some(_), content="true")
 
-  let roundtrip_bytes = write(parsed)
+  let roundtrip_bytes = @mbtexcel.write(parsed)
   assert_demo_stream_archive(roundtrip_bytes, rows)
 }

@@ -1,6 +1,6 @@
 ///|
 test "integration stream writer ooxml consistency under row volume" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Data"))
   let summary = workbook.add_sheet("Summary")
 
@@ -12,9 +12,9 @@ test "integration stream writer ooxml consistency under row volume" {
     let b = (row - 1) * 2
     let total = a + b
     writer.set_row_cells("A\{row}", [
-      StreamCell::new("\{a}"),
-      StreamCell::new("\{b}"),
-      StreamCell::new("\{total}", formula="SUM(A\{row},B\{row})"),
+      @xlsx.StreamCell::new("\{a}"),
+      @xlsx.StreamCell::new("\{b}"),
+      @xlsx.StreamCell::new("\{total}", formula="SUM(A\{row},B\{row})"),
     ])
   }
   ignore(writer.add_table("A1:C301", "StreamTable", ["A", "B", "Total"]))
@@ -23,7 +23,7 @@ test "integration stream writer ooxml consistency under row volume" {
   summary.set_cell("A1", "Rows")
   summary.set_cell("B1", "300")
 
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes)
   let data_xml = match archive.get("xl/worksheets/sheet1.xml") {
     Some(value) => @encoding/utf8.decode(value)
@@ -46,7 +46,7 @@ test "integration stream writer ooxml consistency under row volume" {
   inspect(table_xml.contains("name=\"StreamTable\""), content="true")
   inspect(table_xml.contains("ref=\"A1:C301\""), content="true")
 
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let data = match parsed.sheet("Data") {
     Some(value) => value
     None => fail("missing parsed data sheet")

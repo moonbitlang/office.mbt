@@ -1,9 +1,9 @@
 ///|
 test "table write and relationships" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   ignore(sheet.add_table("A1:B2", "Table1", ["Name", "Value"]))
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -42,10 +42,10 @@ test "table write and relationships" {
 
 ///|
 test "table roundtrip" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   ignore(sheet.add_table("A1:C1", "TableX", ["A", "B", "C"]))
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -62,7 +62,7 @@ test "table roundtrip" {
 
 ///|
 test "table columns mismatch" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   let result = try sheet.add_table("A1:B2", "BadTable", ["OnlyOne"]) catch {
     err => Err(err)
@@ -77,7 +77,7 @@ test "table columns mismatch" {
 
 ///|
 test "table style flags and header row" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   ignore(
     sheet.add_table(
@@ -91,7 +91,7 @@ test "table style flags and header row" {
       show_header_row=false,
     ),
   )
-  let bytes = write(workbook)
+  let bytes = @xlsx.write(workbook)
   let archive = @zip.read(bytes) catch {
     err => fail("zip read failed: \{repr(err)}")
   }
@@ -111,7 +111,7 @@ test "table style flags and header row" {
     ),
     content="true",
   )
-  let parsed = read(bytes)
+  let parsed = @xlsx.read(bytes)
   let parsed_sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")

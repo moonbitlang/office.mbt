@@ -1,15 +1,15 @@
 ///|
 test "stream cell constructors cover rich text and values" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
-  let cells : Array[StreamCell] = []
-  cells.push(StreamCell::new_value(Numeric(3.0), formula="SUM(1,2)"))
-  let runs : Array[RichTextRun] = [{ text: "hi", font: None }]
-  cells.push(StreamCell::new_rich_text(runs))
+  let cells : Array[@xlsx.StreamCell] = []
+  cells.push(@xlsx.StreamCell::new_value(Numeric(3.0), formula="SUM(1,2)"))
+  let runs : Array[@xlsx.RichTextRun] = [{ text: "hi", font: None }]
+  cells.push(@xlsx.StreamCell::new_rich_text(runs))
   writer.set_row_cells("A1", cells)
   writer.flush()
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
@@ -41,8 +41,10 @@ test "stream cell rich text too long" {
     sb.write_char('a')
   }
   let too_long = sb.to_string()
-  let runs : Array[RichTextRun] = [{ text: too_long, font: None }]
-  let result : Result[StreamCell, Error] = Ok(StreamCell::new_rich_text(runs)) catch {
+  let runs : Array[@xlsx.RichTextRun] = [{ text: too_long, font: None }]
+  let result : Result[@xlsx.StreamCell, Error] = Ok(
+    @xlsx.StreamCell::new_rich_text(runs),
+  ) catch {
     e => Err(e)
   }
   inspect(
@@ -55,7 +57,7 @@ test "stream cell rich text too long" {
 
 ///|
 test "stream writer validation branches" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
   writer.set_col_width(2, 1, 10.0)
@@ -92,13 +94,13 @@ test "stream writer validation branches" {
       #|Err(InvalidSheetOperation(msg="column outline level out of range"))
     ),
   )
-  let panes = Panes::with_values(selection=[
-    Selection::with_values(sqref="A1", active_cell="A1", pane="topLeft"),
+  let panes = @xlsx.Panes::with_values(selection=[
+    @xlsx.Selection::with_values(sqref="A1", active_cell="A1", pane="topLeft"),
   ])
   writer.set_panes(panes)
   writer.set_row("A1", ["B"])
   writer.flush()
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   debug_inspect(
     parsed.get_col_width("Sheet1", 1),
     content=(
@@ -128,10 +130,10 @@ test "stream writer validation branches" {
 
 ///|
 test "stream writer row opts validation" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
-  let bad_row_opts = RowOpts::with_values(height=-1.0)
+  let bad_row_opts = @xlsx.RowOpts::with_values(height=-1.0)
   let row_opts_result = try
     writer.set_row("A1", ["A"], row_opts=bad_row_opts)
   catch {
@@ -149,10 +151,12 @@ test "stream writer row opts validation" {
 
 ///|
 test "stream writer set_row_cells invalid style id" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
-  let cells : Array[StreamCell] = [StreamCell::new("A", style_id=999)]
+  let cells : Array[@xlsx.StreamCell] = [
+    @xlsx.StreamCell::new("A", style_id=999),
+  ]
   let result = try writer.set_row_cells("A1", cells) catch {
     err => Err(err)
   } noraise {
@@ -168,7 +172,7 @@ test "stream writer set_row_cells invalid style id" {
 
 ///|
 test "stream writer column helpers validate invalid references" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
 
@@ -211,7 +215,7 @@ test "stream writer column helpers validate invalid references" {
 
 ///|
 test "stream writer set_col_style validates style id before apply" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
   let result = try writer.set_col_style(1, 1, 777) catch {
@@ -229,10 +233,10 @@ test "stream writer set_col_style validates style id before apply" {
 
 ///|
 test "stream writer row opts validate outline range" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
-  let bad_opts = RowOpts::with_values(outline_level=8)
+  let bad_opts = @xlsx.RowOpts::with_values(outline_level=8)
   let result = try writer.set_row("A1", ["A"], row_opts=bad_opts) catch {
     err => Err(err)
   } noraise {
@@ -248,7 +252,7 @@ test "stream writer row opts validate outline range" {
 
 ///|
 test "stream writer insert_page_break requires open writer" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
   writer.flush()
@@ -267,13 +271,13 @@ test "stream writer insert_page_break requires open writer" {
 
 ///|
 test "stream writer insert_page_break writes row and column breaks" {
-  let workbook = Workbook::new()
+  let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Sheet1"))
   let writer = workbook.new_stream_writer("Sheet1")
   writer.insert_page_break("A1")
   writer.insert_page_break("B2")
   writer.flush()
-  let parsed = read(write(workbook))
+  let parsed = @xlsx.read(@xlsx.write(workbook))
   let sheet = match parsed.sheet("Sheet1") {
     Some(value) => value
     None => fail("missing sheet")
