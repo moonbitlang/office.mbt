@@ -1,5 +1,6 @@
 import {
   "bobzhang/mbtexcel" @lib,
+  "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/inspect",
   "bobzhang/mbtexcel/xlsx" @xl,
   "moonbitlang/core/argparse",
@@ -8,6 +9,7 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/utf8" @encoding/utf8,
   "moonbitlang/core/string",
+  "moonbitlang/core/json",
 }
 
 supported_targets = "native+wasm"

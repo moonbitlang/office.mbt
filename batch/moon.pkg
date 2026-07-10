@@ -1,0 +1,17 @@
+import {
+  "bobzhang/mbtexcel/inspect",
+  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/core/debug",
+}
+
+import {
+  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/core/json",
+} for "test"
+
+import {
+  "moonbitlang/core/json",
+  "moonbitlang/core/random",
+} for "wbtest"
+
+supported_targets = "native+js+wasm"

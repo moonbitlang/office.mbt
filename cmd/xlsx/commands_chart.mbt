@@ -2,37 +2,19 @@
 // and a values range, using the library's structured chart API.
 
 ///|
-/// Maps a friendly `--type` name to a `ChartType`. Covers the common 2-D
-/// chart kinds; an unknown name raises a `CliError` listing the choices.
+/// Maps a friendly `--type` name to a `ChartType` via the shared batch
+/// helper, re-raising its error in the CLI's format.
 fn parse_chart_type(name : String) -> @xl.ChartType raise CliError {
-  match name {
-    "col" | "column" => Col
-    "bar" => Bar
-    "line" => Line
-    "pie" => Pie
-    "area" => Area
-    "scatter" => Scatter
-    "doughnut" | "donut" => Doughnut
-    "radar" => Radar
-    _ =>
-      raise CliError(
-        "error: unknown chart type '\{name}' (expected one of: col, bar, line, pie, area, scatter, doughnut, radar)",
-      )
+  @batch.chart_type_of(name) catch {
+    @batch.BatchError(message) => raise CliError("error: " + message)
   }
 }
 
 ///|
-/// Qualifies a cell range with its sheet for a chart series reference. A range
-/// the caller already qualified (contains `!`) is left as-is; otherwise the
-/// sheet name is prepended using the library's formula sheet-ref quoting —
-/// wrapped in single quotes with embedded apostrophes doubled — so names with
-/// spaces or punctuation (e.g. `O'Brien`, `R&D`) stay valid.
+/// Qualifies a cell range with its sheet for a chart series reference
+/// (shared with the batch `chart` op).
 fn qualify_range(sheet : String, range : String) -> String {
-  if range.contains("!") {
-    range
-  } else {
-    "'" + sheet.replace_all(old="'", new="''") + "'!" + range
-  }
+  @batch.qualify_range(sheet, range)
 }
 
 ///|

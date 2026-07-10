@@ -1,0 +1,52 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/mbtexcel/batch"
+
+import {
+  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub const MAX_BATCH_OPS : Int = 10_000
+
+pub fn apply_op(@xlsx.Workbook, BatchOp) -> Unit raise
+
+pub fn build_style(bold~ : Bool, italic~ : Bool, number_format~ : String, fill~ : String, font_color~ : String, align~ : String) -> @xlsx.Style
+
+pub fn chart_type_of(String) -> @xlsx.ChartType raise BatchError
+
+pub fn parse_script(Json) -> Array[BatchOp] raise BatchError
+
+pub fn qualify_range(String, String) -> String
+
+// Errors
+pub suberror BatchError {
+  BatchError(String)
+} derive(@debug.Debug)
+pub impl Show for BatchError
+
+// Types and methods
+pub enum BatchOp {
+  OpSet(sheet~ : String, cell~ : String, value~ : BatchValue)
+  OpFormula(sheet~ : String, cell~ : String, formula~ : String)
+  OpStyle(sheet~ : String, range~ : String, bold~ : Bool, italic~ : Bool, number_format~ : String, fill~ : String, font_color~ : String, align~ : String)
+  OpMerge(sheet~ : String, range~ : String)
+  OpWidth(sheet~ : String, column~ : String, width~ : Double)
+  OpFreeze(sheet~ : String, cell~ : String)
+  OpFilter(sheet~ : String, range~ : String)
+  OpAddSheet(name~ : String)
+  OpChart(sheet~ : String, anchor~ : String, chart_type~ : String, categories~ : String, values~ : String, series_name~ : String, title~ : String)
+} derive(@debug.Debug)
+pub fn BatchOp::name(Self) -> String
+
+pub enum BatchValue {
+  Text(String)
+  Number(Double)
+  Flag(Bool)
+  Clear
+} derive(@debug.Debug)
+
+// Type aliases
+
+// Traits
+

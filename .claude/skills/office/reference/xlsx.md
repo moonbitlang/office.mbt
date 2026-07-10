@@ -53,6 +53,7 @@ When unsure of a command's exact arguments, ask the tool itself:
 | `filter <file> <sheet> <range>` | Add an auto-filter | `added auto-filter to <sheet>!<range>` |
 | `add-sheet <file> <name>` | Add a sheet to an existing workbook | `added sheet <name>` |
 | `chart <file> <sheet> <anchor> [--type … --categories … --values … --title … --name …]` | Add a chart from a data range | `added <type> chart to <sheet>!<anchor>` |
+| `batch <file> <script.json> [--dry-run]` | Apply a JSON op script in one save | `applied <N> op(s) to <file>` |
 | `get <file> <sheet> <cell>` | Print a cell's stored value | the value, or its formula text |
 | `get <file> <sheet> <cell-or-range> --json` | Structured read of a cell/range | an `xlsx.cells/1` JSON payload |
 | `outline <file>` | Workbook structure map | an `xlsx.outline/1` JSON payload |
@@ -141,6 +142,34 @@ When unsure of a command's exact arguments, ask the tool itself:
   `H2`, `H18`, `H34`) or ≥8 columns. `outline` reads a chart's kind and series
   ranges back; confirm the file with `validate`.
 
+### Batch edits (`batch`)
+
+`batch <file> <script.json>` applies many edits in **one open → apply →
+save cycle** — the way to build or restyle a sheet without N separate
+open/write round-trips. The script is versioned JSON
+(`"schema": "xlsx.batch/1"`); ops mirror the subcommands, with snake_case
+params:
+
+| op | params |
+| --- | --- |
+| `set` | `sheet`, `cell`, `value` (string/number/bool/null — JSON types are honored: a number becomes a numeric cell, a string stays text, null clears) |
+| `formula` | `sheet`, `cell`, `formula` (leading `=` optional) |
+| `style` | `sheet`, `range`, `bold?`, `italic?`, `number_format?`, `fill?`, `font_color?`, `align?` |
+| `merge` | `sheet`, `range` |
+| `width` | `sheet`, `column` (`A` or `A:C`), `width` (number) |
+| `freeze` | `sheet`, `cell` |
+| `filter` | `sheet`, `range` |
+| `add-sheet` | `name` |
+| `chart` | `sheet`, `anchor`, `categories`, `values`, `type?`, `name?`, `title?` |
+
+Application is **all-or-nothing**: a parse error or a failing op leaves the
+file untouched (a failing op reports `error: op <i> (<name>): …; <file> not
+modified` with a 0-based index and exit 1), and the final save writes a
+temp file then renames it. `--dry-run` parses and applies in memory, writes
+nothing, and prints `dry-run ok: <N> op(s); <file> not modified`. Zero ops
+is a valid no-op; scripts are capped at 10,000 ops. Full grammar:
+`docs/agent-json-schemas.md`; runnable examples: `cmd/xlsx/cram/agent.t`.
+
 ### Structured JSON reads (`outline`, `get --json`)
 
 These two commands are the machine-readable inspection surface; prefer them
@@ -189,7 +218,8 @@ the normative field-by-field spec is `docs/agent-json-schemas.md`, and
   values + styles + formulas programmatically → `get … --json`.
 - Read a whole sheet as data → `rows` (CSV). Eyeball a sheet → `view`.
 - Make a data dump look like a real report → `style` (bold header, number
-  formats), `width`, `freeze` (header row), `filter`.
+  formats), `width`, `freeze` (header row), `filter` — or all of it in one
+  `batch` script.
 - Visualize data → `chart` (a `col`/`bar`/`line`/`pie`/`radar` over a
   categories range + a values range).
 

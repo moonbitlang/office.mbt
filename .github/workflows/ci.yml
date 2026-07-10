@@ -163,6 +163,20 @@ jobs:
             and ([.cells[].ref] == ["A1", "B1"])
             and (.styles[.cells[0].style_id | tostring].font.bold == true)
             and (.styles[.cells[0].style_id | tostring].fill.colors == ["4472C4"])'
+          cat > ci-batch.json <<'JSON'
+          {"schema": "xlsx.batch/1", "ops": [
+            {"op": "set", "params": {"sheet": "Data", "cell": "A2", "value": 7.5}},
+            {"op": "formula", "params": {"sheet": "Data", "cell": "A3", "formula": "=A2*2"}},
+            {"op": "merge", "params": {"sheet": "Data", "cell_range": "C1:D1"}}
+          ]}
+          JSON
+          # The bad param name must fail with an indexed error and leave the file valid.
+          if moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json; then
+            echo "expected the bad script to fail"; exit 1
+          fi
+          sed -i 's/"cell_range"/"range"/' ci-batch.json
+          b=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>/dev/null)
+          echo "batch -> $b"; test "$b" = "applied 3 op(s) to ci.xlsx"
           v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"
           # The docx agent CLI also targets wasm end to end: build it and

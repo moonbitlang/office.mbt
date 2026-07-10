@@ -124,7 +124,7 @@ theme/indexed/tint fields are numeric theme-palette references, not hex.
 
 ## `xlsx.batch/1` — mutation script (`xlsx batch <file> <script.json>`)
 
-*Reserved in P0; implemented by the `batch` subcommand (P1).* Envelope:
+Envelope:
 
 ```json
 {
@@ -135,9 +135,20 @@ theme/indexed/tint fields are numeric theme-palette references, not hex.
 }
 ```
 
-- Op names mirror the CLI subcommands (`set`, `formula`, `style`, `merge`,
-  `width`, `freeze`, `filter`, `add-sheet`, `chart`); params are snake_case
-  versions of the CLI arguments.
+- Op names mirror the CLI subcommands; params are snake_case versions of
+  the CLI arguments. Normative per-op params (`?` = optional):
+
+| op | params |
+| --- | --- |
+| `set` | `sheet` (string), `cell` (string), `value` (string \| number \| bool \| null) |
+| `formula` | `sheet`, `cell`, `formula` (strings; leading `=` optional) |
+| `style` | `sheet`, `range` (strings); `bold?`, `italic?` (bool); `number_format?`, `fill?`, `font_color?`, `align?` (strings) |
+| `merge` | `sheet`, `range` (strings) |
+| `width` | `sheet`, `column` (strings; `A` or `A:C`), `width` (number) |
+| `freeze` | `sheet`, `cell` (strings) |
+| `filter` | `sheet`, `range` (strings) |
+| `add-sheet` | `name` (string) |
+| `chart` | `sheet`, `anchor`, `categories`, `values` (strings, required); `type?` (default `col`), `name?`, `title?` (strings) |
 - `set.value` accepts string, number, bool, or null. JSON types are honored:
   a number becomes a numeric cell, a string a text cell (no
   reclassification), a bool a boolean cell, and null clears the cell.
