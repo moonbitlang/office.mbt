@@ -114,12 +114,16 @@ test "heading detection follows the Mammoth default style-map convention" {
     styled_paragraph("lowercase name", None, Some("heading 6")),
     styled_paragraph("bare heading id", Some("Heading"), None),
     styled_paragraph("bare heading name", None, Some("Heading")),
-    styled_paragraph("digit name beats bare id", Some("Heading"), Some(
-      "Heading 3",
-    )),
-    styled_paragraph("digit id beats digit name", Some("Heading2"), Some(
-      "Heading 5",
-    )),
+    styled_paragraph(
+      "digit name beats bare id",
+      Some("Heading"),
+      Some("Heading 3"),
+    ),
+    styled_paragraph(
+      "digit id beats digit name",
+      Some("Heading2"),
+      Some("Heading 5"),
+    ),
     styled_paragraph("beyond mammoth", Some("Heading7"), None),
     styled_paragraph("two digits", Some("Heading10"), Some("Heading 10")),
     styled_paragraph("not a heading", Some("BodyText"), Some("Body Text")),
@@ -159,12 +163,8 @@ test "field hyperlinks count one span per wrapped run" {
   let href = Some("https://example.com/x")
   let doc = @document.document([
     @document.paragraph([
-      @document.run([
-        @document.hyperlink([@document.text("part one")], href~),
-      ]),
-      @document.run([
-        @document.hyperlink([@document.text("part two")], href~),
-      ]),
+      @document.run([@document.hyperlink([@document.text("part one")], href~)]),
+      @document.run([@document.hyperlink([@document.text("part two")], href~)]),
     ]),
   ])
   let payload = @inspect.outline(doc, file="fields.docx")
