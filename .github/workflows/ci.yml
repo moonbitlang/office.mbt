@@ -174,7 +174,7 @@ jobs:
           # file must be byte-identical afterwards (no write on failure).
           cp ci.xlsx ci-before.xlsx
           out=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>&1) && { echo "expected the bad script to fail"; exit 1; } || true
-          echo "$out" | grep -q "error: op 2 (merge): unknown param 'cell_range'"
+          echo "$out" | grep -q "error: op 2 (merge): missing param 'range'"
           cmp ci.xlsx ci-before.xlsx
           sed -i 's/"cell_range"/"range"/' ci-batch.json
           b=$(moon run --target wasm cmd/xlsx -- batch ci.xlsx ci-batch.json 2>/dev/null)
