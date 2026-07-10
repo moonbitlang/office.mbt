@@ -1,0 +1,13 @@
+import {
+  "bobzhang/docx2html",
+}
+
+import {
+  "bobzhang/docx2html",
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+  "moonbitlang/async/process",
+  "moonbitlang/core/env",
+} for "test"
+
+supported_targets = "native"
