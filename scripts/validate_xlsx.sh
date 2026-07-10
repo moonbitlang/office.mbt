@@ -18,20 +18,26 @@ acquire_lock() {
   LOCK_HELD=1
 }
 
-# Idempotent: only ever removes the lock THIS process created, once. A
-# plain rmdir in both an INT/TERM handler and the EXIT trap could fire
-# twice and delete a lock a NEW owner acquired in between.
+# Lock lifecycle vs catchable signals: release runs exactly once because
+# every entry point first disarms the signals that could re-enter it; the
+# ownership flag is cleared only after the removal attempt, so a release
+# interrupted before rmdir would still remove the lock on the (now sole)
+# continuing path. Acquisition runs with INT/TERM ignored — the window
+# between the atomic mkdir and the flag assignment cannot be interrupted —
+# and the real handlers are armed immediately afterwards. Only an
+# uncatchable KILL can strand the lock.
 LOCK_HELD=0
 release_lock() {
+  trap - INT TERM
   if [[ "$LOCK_HELD" == 1 ]]; then
-    LOCK_HELD=0
     rmdir "$LOCK_DIR" >/dev/null 2>&1 || true
+    LOCK_HELD=0
   fi
 }
 
 handle_signal() {
+  trap - EXIT INT TERM
   release_lock
-  trap - EXIT
   exit 1
 }
 
@@ -121,8 +127,9 @@ for attempt in $(seq 1 "$attempts"); do
 done
 
 DOTNET_PROJECT="$ROOT/tools/openxml-validator/OpenXmlValidator.csproj"
-acquire_lock
+trap '' INT TERM
 trap release_lock EXIT
+acquire_lock
 trap handle_signal INT TERM
 "$DOTNET" build "$DOTNET_PROJECT" -p:UseAppHost=false >/dev/null
 VALIDATOR_DLL="$ROOT/tools/openxml-validator/bin/Debug/net8.0/OpenXmlValidator.dll"
