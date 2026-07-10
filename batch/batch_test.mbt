@@ -251,6 +251,29 @@ test "references are validated strictly at parse time" {
       _ => fail("expected rejection: \{script}")
     }
   }
+  for
+    case in [
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "!A1:A2", "values": "B1:B3"}}]}
+        ),
+        "op 0 (chart): 'categories' is not a valid series range: '!A1:A2'",
+      ),
+      (
+        (
+          #|{"schema": "xlsx.batch/1", "ops": [{"op": "chart", "params": {"sheet": "S", "anchor": "E2", "categories": "Data!A1!B1:B2", "values": "B1:B3"}}]}
+        ),
+        "op 0 (chart): 'categories' is not a valid series range: 'Data!A1!B1:B2'",
+      ),
+    ] {
+    let (script, expected) = case
+    try ignore(parse_ops(script)) catch {
+      @batch.BatchError(message) => assert_eq(message, expected)
+      err => fail("expected BatchError, got \{err}")
+    } noraise {
+      _ => fail("expected rejection: \{script}")
+    }
+  }
   // Qualified series ranges with anchors stay valid.
   let ok =
     #|{"schema": "xlsx.batch/1",

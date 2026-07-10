@@ -166,8 +166,9 @@ Application is **all-or-nothing**: a parse error or a failing op leaves the
 file untouched (a failing op reports `error: op <i> (<name>): …; <file> not
 modified` with a 0-based index and exit 1), and the final save writes a
 uniquely-named temp file through an exclusive handle, then renames it over
-the (symlink-resolved) target — the saved file is created owner-only
-(0600); chmod afterwards if others need to read it. `--dry-run` parses and
+the (symlink-resolved) target — on POSIX the saved file is created
+owner-only (0600; Windows follows directory ACLs); chmod afterwards if
+others need to read it. `--dry-run` parses and
 applies in memory, writes nothing, and prints
 `dry-run ok: <N> op(s); <file> not modified`. Zero ops is a valid no-op and
 writes nothing. Every reference is validated strictly at parse time (`cell`

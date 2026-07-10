@@ -167,10 +167,12 @@ Envelope:
 - Application is all-or-nothing: ops apply to the in-memory workbook and the
   file is written (temp file + rename) only after every op succeeds.
 - Every cell/range/column reference is validated at parse time against
-  the strict in-grid grammar: `cell` params must be a single cell,
-  `range` params a cell or range (each range capped at 100,000 cells),
-  `column` a column or column range, and chart `categories`/`values` an
-  optionally `Sheet!`-qualified range.
+  the strict in-grid grammar: `cell` params must be a single cell (no
+  range spelling); `merge`/`filter` `range` params must be an `A1:B2`
+  colon range; `style.range` accepts a cell or range (each range capped
+  at 100,000 cells); `column` is a letters-only column or ascending
+  column range; chart `categories`/`values` are a range with an optional
+  non-empty `Sheet!` qualification.
 - Zero ops is a valid no-op and writes nothing. Scripts are capped at
   10,000 ops, style ranges at 1,000,000 expanded cells per script in
   aggregate, and numeric literals at 40 characters (pathologically long

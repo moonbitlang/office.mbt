@@ -502,7 +502,20 @@ fn ParamReader::series_range(
 ) -> String raise BatchError {
   let text = self.string(key)
   let range_part = match text.rev_find("!") {
-    Some(index) => text[index + 1:].to_owned()
+    Some(index) => {
+      // The optional qualification before the last '!' must itself be a
+      // plausible sheet ref: non-empty and free of further '!' — else
+      // "!A1:A2" or "Data!A1!B1:B2" would flow into the chart formula.
+      let sheet_part = text[:index].to_owned()
+      if sheet_part == "" || sheet_part.contains("!") {
+        raise op_error(
+          self.index,
+          self.op,
+          "'\{key}' is not a valid series range: '\{text}'",
+        )
+      }
+      text[index + 1:].to_owned()
+    }
     None => text
   }
   // Validate exactly what will be emitted: `parse_range` accepts correctly

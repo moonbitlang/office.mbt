@@ -154,8 +154,9 @@ async fn write_file_replacing(target : String, bytes : Bytes) -> Unit {
 ///|
 async fn sync_parent_dir(target : String) -> Unit noraise {
   let dir = match target.rev_find("/") {
-    Some(index) if index > 0 => target[:index].to_owned()
-    _ => "."
+    Some(0) => "/"
+    Some(index) => target[:index].to_owned()
+    None => "."
   }
   let handle = @async/fs.open(dir, mode=ReadOnly) catch { _ => return }
   handle.sync() catch {
