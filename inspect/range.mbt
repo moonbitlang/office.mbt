@@ -54,7 +54,7 @@ pub impl Show for RangeError with fn output(self, logger) {
 pub fn parse_range(target : String) -> CellRange raise RangeError {
   match target.find(":") {
     None => {
-      let (col, row) = parse_cell_ref(target[:], full=target)
+      let (col, row) = parse_cell_ref(target, full=target)
       { col_lo: col, row_lo: row, col_hi: col, row_hi: row }
     }
     Some(index) => {

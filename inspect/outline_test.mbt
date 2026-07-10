@@ -352,7 +352,7 @@ test "outline reports live extents when the declared dimension is stale" {
   workbook.set_cell("Data", "A1", "x")
   workbook.set_cell("Data", "B3", "y")
   // Round-trip through bytes so the sheet carries a declared <dimension>.
-  let reread = @xlsx.read(@xlsx.write(workbook)[:])
+  let reread = @xlsx.read(@xlsx.write(workbook))
   // Mutating past the declared range must not fool the outline: the
   // retained dimension is reported as declared, live extents win.
   reread.set_cell("Data", "C9", "later")
