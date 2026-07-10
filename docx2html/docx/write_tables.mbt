@@ -62,6 +62,11 @@ fn write_table(
       grid_width = width
     }
   }
+  if grid_width == 0 {
+    raise Unsupported(
+      message="the table writer cannot serialize a table with no cells",
+    )
+  }
   // Active vertical merges by starting grid column.
   let pending : Map[Int, PendingMerge] = Map([])
   let row_nodes : Array[XmlNode] = []
@@ -98,6 +103,19 @@ fn write_table(
         raise Unsupported(
           message="table cell spans must be at least 1 (got col_span=\{col_span}, row_span=\{row_span})",
         )
+      }
+      // A cell's span must not stride over ANY pending-merge column — the
+      // placement loop only meets merges at their start column, so an
+      // unchecked interior collision would silently push the vMerge
+      // continuation into a later row (schema-valid, reader-masked, wrong
+      // in Word — review finding on F2).
+      for offset in 1..<col_span {
+        if pending.get(grid_column + offset) is Some(interior) &&
+          interior.remaining > 0 {
+          raise Unsupported(
+            message="row \{row_index + 1}: a cell spanning columns \{grid_column + 1}..\{grid_column + col_span} collides with a vertical merge at column \{grid_column + offset + 1}",
+          )
+        }
       }
       if row_span > 1 {
         if row_index + row_span > rows.length() {
