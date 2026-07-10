@@ -61,13 +61,20 @@ jobs:
       - name: Resolve dependencies
         run: moon update
 
-      # Format check across the whole workspace.
+      # Format check across the whole workspace. The 2026-07-10 nightly's
+      # moonfmt migrates moon.pkg `options("is-main": true)` to a new
+      # `pkgtype(kind: "executable")` form that the same nightly's default
+      # parser still REJECTS (the new syntax is behind preview feature
+      # flags), so a repo carrying either form cannot satisfy both halves.
+      # Until the parser ships by default, restore moon.pkg after fmt and
+      # gate formatting on source files only.
       - name: Format check
         run: |
           moon fmt
+          git checkout -- ':(glob)**/moon.pkg'
           if ! git diff --quiet; then
             echo "::error::moon fmt changed files; run moon fmt and commit the result."
-            git --no-pager diff --stat
+            git --no-pager diff
             exit 1
           fi
 
@@ -137,5 +144,22 @@ jobs:
           got=$(moon run --target wasm cmd/xlsx -- get ci.xlsx Data A1 2>/dev/null)
           echo "get -> $got"; test "$got" = "Hello"
           moon run --target wasm cmd/xlsx -- view ci.xlsx
+          # Agent JSON surface: exercise a styled cell and a chart, then
+          # validate the payloads structurally (not by substring).
+          moon run --target wasm cmd/xlsx -- set ci.xlsx Data B1 42
+          moon run --target wasm cmd/xlsx -- style ci.xlsx Data A1 --bold --fill 4472C4
+          moon run --target wasm cmd/xlsx -- chart ci.xlsx Data D2 --categories A1:A1 --values B1:B1 --name S
+          o=$(moon run --target wasm cmd/xlsx -- outline ci.xlsx 2>/dev/null)
+          echo "$o" | jq -e '.schema == "xlsx.outline/1"
+            and (.sheets[0].kind == "worksheet")
+            and (.sheets[0].charts | length == 1)
+            and (.sheets[0].charts[0].kinds == ["barChart"])
+            and (.sheets[0].used_range == "A1:B1")'
+          j=$(moon run --target wasm cmd/xlsx -- get ci.xlsx Data A1:B2 --json 2>/dev/null)
+          echo "$j" | jq -e '.schema == "xlsx.cells/1"
+            and (.cells | length == 2)
+            and ([.cells[].ref] == ["A1", "B1"])
+            and (.styles[.cells[0].style_id | tostring].font.bold == true)
+            and (.styles[.cells[0].style_id | tostring].fill.colors == ["4472C4"])'
           v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"

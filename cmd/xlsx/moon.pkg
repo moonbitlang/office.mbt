@@ -1,5 +1,6 @@
 import {
   "bobzhang/mbtexcel" @lib,
+  "bobzhang/mbtexcel/inspect",
   "bobzhang/mbtexcel/xlsx" @xl,
   "moonbitlang/core/argparse",
   "moonbitlang/async",

@@ -382,3 +382,21 @@ test "stream blank cells advance the column without writing" {
     ),
   )
 }
+
+///|
+test "indexed getters see streamed cells after an early read" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  // Prime the (empty) cell index before streaming: a read builds the lazy
+  // index, and streamed appends must invalidate it or every indexed getter
+  // silently misses the streamed cells.
+  assert_true(workbook.get_cell_value("S", "A1") is None)
+  let writer = workbook.new_stream_writer("S")
+  writer.set_row("A1", ["hello", "42"])
+  writer.flush()
+  inspect(
+    workbook.get_cell_value("S", "A1").unwrap_or("MISSING"),
+    content="hello",
+  )
+  inspect(workbook.get_cell_value("S", "B1").unwrap_or("MISSING"), content="42")
+}

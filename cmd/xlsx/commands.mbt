@@ -62,6 +62,10 @@ async fn run_set(m : @argparse.Matches) -> Unit {
 
 ///|
 async fn run_get(m : @argparse.Matches) -> Unit {
+  if flag(m, "json") {
+    run_get_json(m)
+    return
+  }
   let workbook = @lib.open_file(arg(m, "file"))
   let sheet = arg(m, "sheet")
   let cell = arg(m, "cell")

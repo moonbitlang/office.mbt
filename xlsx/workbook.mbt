@@ -1735,14 +1735,20 @@ pub fn Workbook::get_cell_value(
     None => raise SheetNotFound(name=sheet_name.to_owned())
   }
   let (row, col) = cell_ref_to_rc(reference)
-  for cell in sheet.cells() {
-    if cell.row == row && cell.col == col {
-      return Some(
-        format_cell_value_for_workbook(self.styles, cell, raw, resolved_options),
+  // O(1) via the worksheet's lazily-built cell index — a linear scan here
+  // makes bulk per-cell reads (e.g. a 100k-cell `get --json`) quadratic.
+  match sheet.cell_index_of(row, col) {
+    Some(index) =>
+      Some(
+        format_cell_value_for_workbook(
+          self.styles,
+          sheet.cells[index],
+          raw,
+          resolved_options,
+        ),
       )
-    }
+    None => None
   }
-  None
 }
 
 ///|
