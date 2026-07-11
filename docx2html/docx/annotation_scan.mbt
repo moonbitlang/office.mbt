@@ -22,7 +22,7 @@ fn is_wml_uri(uri : String) -> Bool {
 
 ///|
 /// A marker the scanner can locate.
-pub enum ScanMarkerKind {
+priv enum ScanMarkerKind {
   CommentStart
   CommentEnd
   CommentRef
@@ -31,7 +31,7 @@ pub enum ScanMarkerKind {
 } derive(Eq)
 
 ///|
-pub impl Show for ScanMarkerKind with fn output(self, logger) {
+impl Show for ScanMarkerKind with fn output(self, logger) {
   logger.write_string(
     match self {
       CommentStart => "commentRangeStart"
@@ -49,7 +49,7 @@ pub impl Show for ScanMarkerKind with fn output(self, logger) {
 /// ("p[2]/r[1]", story-relative) or None at story level; `after_child`
 /// is the last projection child closed inside that container before the
 /// marker (for before/after boundary rendering).
-pub struct ScannedMarker {
+priv struct ScannedMarker {
   kind : ScanMarkerKind
   id : String
   seq : Int
@@ -59,31 +59,31 @@ pub struct ScannedMarker {
 
 ///|
 /// The marker kind.
-pub fn ScannedMarker::kind(self : ScannedMarker) -> ScanMarkerKind {
+fn ScannedMarker::kind(self : ScannedMarker) -> ScanMarkerKind {
   self.kind
 }
 
 ///|
 /// The marker's w:id, as spelled.
-pub fn ScannedMarker::id(self : ScannedMarker) -> String {
+fn ScannedMarker::id(self : ScannedMarker) -> String {
   self.id
 }
 
 ///|
 /// Position in the story's total document order.
-pub fn ScannedMarker::seq(self : ScannedMarker) -> Int {
+fn ScannedMarker::seq(self : ScannedMarker) -> Int {
   self.seq
 }
 
 ///|
 /// The innermost open projection node, or None at story level.
-pub fn ScannedMarker::container_path(self : ScannedMarker) -> String? {
+fn ScannedMarker::container_path(self : ScannedMarker) -> String? {
   self.container_path
 }
 
 ///|
 /// The last projection child closed inside the container before this marker.
-pub fn ScannedMarker::after_child(self : ScannedMarker) -> String? {
+fn ScannedMarker::after_child(self : ScannedMarker) -> String? {
   self.after_child
 }
 
@@ -93,7 +93,7 @@ pub fn ScannedMarker::after_child(self : ScannedMarker) -> String? {
 /// [open_seq, close_seq] for coverage arithmetic, and the byte span of
 /// the whole element in the original part (open tag start .. close tag
 /// end, exclusive) for L0.
-pub struct ScannedNode {
+priv struct ScannedNode {
   path : String
   kind : String
   open_seq : Int
@@ -104,44 +104,44 @@ pub struct ScannedNode {
 
 ///|
 /// The story-relative projection path ("p[3]", "tbl[1]/tr[1]/tc[1]").
-pub fn ScannedNode::path(self : ScannedNode) -> String {
+fn ScannedNode::path(self : ScannedNode) -> String {
   self.path
 }
 
 ///|
 /// The projection kind (p, r, tbl, tr, tc, hyperlink).
-pub fn ScannedNode::kind(self : ScannedNode) -> String {
+fn ScannedNode::kind(self : ScannedNode) -> String {
   self.kind
 }
 
 ///|
 /// Sequence number of the node's open tag.
-pub fn ScannedNode::open_seq(self : ScannedNode) -> Int {
+fn ScannedNode::open_seq(self : ScannedNode) -> Int {
   self.open_seq
 }
 
 ///|
 /// Sequence number of the node's close tag.
-pub fn ScannedNode::close_seq(self : ScannedNode) -> Int {
+fn ScannedNode::close_seq(self : ScannedNode) -> Int {
   self.close_seq
 }
 
 ///|
 /// Byte offset of the open tag in the original part.
-pub fn ScannedNode::byte_start(self : ScannedNode) -> Int {
+fn ScannedNode::byte_start(self : ScannedNode) -> Int {
   self.byte_start
 }
 
 ///|
 /// Byte offset just past the close tag in the original part.
-pub fn ScannedNode::byte_end(self : ScannedNode) -> Int {
+fn ScannedNode::byte_end(self : ScannedNode) -> Int {
   self.byte_end
 }
 
 ///|
 /// Scanner output for one story part: nodes in OPEN order, markers in
 /// document order, and non-fatal diagnostics.
-pub struct StoryScan {
+priv struct StoryScan {
   nodes : Array[ScannedNode]
   markers : Array[ScannedMarker]
   warnings : Array[String]
@@ -149,19 +149,19 @@ pub struct StoryScan {
 
 ///|
 /// Projection nodes, in open order.
-pub fn StoryScan::nodes(self : StoryScan) -> Array[ScannedNode] {
+fn StoryScan::nodes(self : StoryScan) -> Array[ScannedNode] {
   self.nodes
 }
 
 ///|
 /// Annotation markers, in document order.
-pub fn StoryScan::markers(self : StoryScan) -> Array[ScannedMarker] {
+fn StoryScan::markers(self : StoryScan) -> Array[ScannedMarker] {
   self.markers
 }
 
 ///|
 /// Non-fatal scan diagnostics.
-pub fn StoryScan::warnings(self : StoryScan) -> Array[String] {
+fn StoryScan::warnings(self : StoryScan) -> Array[String] {
   self.warnings
 }
 
@@ -235,7 +235,7 @@ fn marker_kind(uri : String, local_name : String) -> ScanMarkerKind? {
 
 ///|
 /// Scans one story part. `part` is the ORIGINAL part bytes (UTF-8).
-pub fn scan_story(part : Bytes) -> StoryScan raise DocxError {
+fn scan_story(part : Bytes) -> StoryScan raise DocxError {
   // A UTF-16 BOM means byte-level markup scanning would be wrong.
   if part.length() >= 2 &&
     (

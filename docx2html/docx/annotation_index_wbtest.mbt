@@ -262,8 +262,9 @@ test "index negatives: duplicate definitions and duplicate commentEx records" {
       #|]
     ),
   )
-  // Both definitions exposed ordinally; anchors attach to the first;
-  // the first-wins commentEx gives done=true to the FIRST definition.
+  // Both definitions exposed ordinally, SHARING the id's anchors (round-1
+  // review: assigning them to one ordinal arbitrarily was rejected); the
+  // first-wins commentEx gives done=true to the FIRST definition.
   let summaries : Array[String] = []
   for comment in index.comments() {
     summaries.push(comment_summary(comment))
@@ -273,7 +274,7 @@ test "index negatives: duplicate definitions and duplicate commentEx records" {
     content=(
       #|[
       #|  "id=5 defined=true author=First date=- paras=1 done anchors=[-..- refs=/body/p[1]/r[1]]",
-      #|  "id=5 defined=true author=Second date=- paras=1 anchors=",
+      #|  "id=5 defined=true author=Second date=- paras=1 anchors=[-..- refs=/body/p[1]/r[1]]",
       #|]
     ),
   )

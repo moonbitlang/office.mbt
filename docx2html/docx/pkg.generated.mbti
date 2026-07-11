@@ -31,8 +31,6 @@ pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_ext
 
 pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
 
-pub fn scan_story(Bytes) -> StoryScan raise @core.DocxError
-
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
 
 // Errors
@@ -118,52 +116,6 @@ pub struct NoteInfo {
 }
 pub fn NoteInfo::id(Self) -> String
 pub fn NoteInfo::references(Self) -> Array[String]
-
-pub enum ScanMarkerKind {
-  CommentStart
-  CommentEnd
-  CommentRef
-  FootnoteRef
-  EndnoteRef
-} derive(Eq)
-pub impl Show for ScanMarkerKind
-
-pub struct ScannedMarker {
-  kind : ScanMarkerKind
-  id : String
-  seq : Int
-  container_path : String?
-  after_child : String?
-}
-pub fn ScannedMarker::after_child(Self) -> String?
-pub fn ScannedMarker::container_path(Self) -> String?
-pub fn ScannedMarker::id(Self) -> String
-pub fn ScannedMarker::kind(Self) -> ScanMarkerKind
-pub fn ScannedMarker::seq(Self) -> Int
-
-pub struct ScannedNode {
-  path : String
-  kind : String
-  open_seq : Int
-  close_seq : Int
-  byte_start : Int
-  byte_end : Int
-}
-pub fn ScannedNode::byte_end(Self) -> Int
-pub fn ScannedNode::byte_start(Self) -> Int
-pub fn ScannedNode::close_seq(Self) -> Int
-pub fn ScannedNode::kind(Self) -> String
-pub fn ScannedNode::open_seq(Self) -> Int
-pub fn ScannedNode::path(Self) -> String
-
-pub struct StoryScan {
-  nodes : Array[ScannedNode]
-  markers : Array[ScannedMarker]
-  warnings : Array[String]
-}
-pub fn StoryScan::markers(Self) -> Array[ScannedMarker]
-pub fn StoryScan::nodes(Self) -> Array[ScannedNode]
-pub fn StoryScan::warnings(Self) -> Array[String]
 
 // Type aliases
 
