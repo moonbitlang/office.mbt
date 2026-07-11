@@ -222,6 +222,11 @@ jobs:
           moon run --target wasm docx2html/cmd/docx -- annotate add ci-batch.docx ci-annotated.docx --at /body/p[1] --text "wasm annotate" --author L1 2>docx-wasm.err || { echo "annotate failed; stderr:"; cat docx-wasm.err; exit 1; }
           n=$(moon run --target wasm docx2html/cmd/docx -- outline ci-annotated.docx 2>docx-wasm.err | jq -r '.comments | length') || { echo "annotated outline failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "annotated comments -> $n"; test "$n" = "3"
+          # The L2 verbs on wasm: reply to the fresh comment, resolve it.
+          moon run --target wasm docx2html/cmd/docx -- annotate reply ci-annotated.docx ci-replied.docx --comment 2 --text "wasm reply" --author L2 2>docx-wasm.err || { echo "reply failed; stderr:"; cat docx-wasm.err; exit 1; }
+          moon run --target wasm docx2html/cmd/docx -- annotate resolve ci-replied.docx ci-resolved.docx --comment 2 2>docx-wasm.err || { echo "resolve failed; stderr:"; cat docx-wasm.err; exit 1; }
+          t=$(moon run --target wasm docx2html/cmd/docx -- outline ci-resolved.docx 2>docx-wasm.err | jq -r '[.comments[] | select(.id == "2" or .parent_id == "2")] | map(.done) | tostring') || { echo "resolved outline failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "thread done flags -> $t"; test "$t" = "[true,false]"
           # Annotation read surface on wasm (Phase-2 J2).
           a=$(moon run --target wasm docx2html/cmd/docx -- outline docx2html/tests/cram/fixtures/commented.docx 2>docx-wasm.err | jq -r '.comments[1].parent_id') || { echo "annotated outline failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "comment parent_id -> $a"; test "$a" = "0"

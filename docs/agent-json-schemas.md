@@ -663,3 +663,16 @@ text; unknown keys/types rejected with addressed errors):
   kind leave ZERO output. Files carrying Word's
   commentsIds/people/commentsExtensible sidecars are refused (this
   tool cannot keep them consistent).
+- **Reply** (`docx annotate reply <in> <out> --comment <id> …`) uses
+  the SAME two branch-exclusive forms and the same envelope. Replies
+  are ANCHORLESS (the parent's anchor is logically theirs) and thread
+  via `word/commentsExtended.xml`, keyed by last-body-paragraph
+  `w14:paraId` values; documents predating w14 are RETROFITTED (a
+  fresh paraId spliced onto the parent's last paragraph, the part
+  created and wired). `--comment` takes the comment id `outline`
+  shows.
+- **Resolve / unresolve** (`docx annotate resolve|unresolve <in> <out>
+  --comment <id>`) flip `w15:done`, creating the part and the paraId
+  key when absent. After any thread or resolution exists, every
+  comment reads back with an explicit `done` value (absent `done`
+  means the document has no commentsExtended part at all).

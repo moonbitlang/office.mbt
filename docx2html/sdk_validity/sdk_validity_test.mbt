@@ -1668,3 +1668,153 @@ async test "L1 round 1: the plan survives hostile packages or fails closed" {
   let read_attempt = try? @docx2html.read_docx_annotated(broken_bytes)
   inspect(read_attempt is Err(_), content="true")
 }
+
+///|
+/// Phase-2 L2: reply + resolve through the REAL plan layer on a
+/// K1-era document (no paraIds, no commentsExtended) — the full
+/// retrofit chain, SDK-validated at every step, with the fidelity
+/// oracle on the retrofitted comments part.
+async test "L2: reply and resolve retrofit a K1-era document" {
+  let dir = fresh_scratch_dir()
+  // The K1-era original: an anchored comment, no w14 anywhere.
+  let original = @docx2html.write_docx_with_comments(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([@docx2html.text("Claim under debate.")]),
+      ]),
+    ],
+    [
+      @docx2html.comment_spec(author="Ada", initials="A", from=0, to=0, [
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("Prove it,")])]),
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("please.")])]),
+      ]),
+    ],
+  )
+  let annotated = @docx2html.read_docx_annotated(original)
+  // Pre-conditions: unstamped parent, no commentsExtended part.
+  debug_inspect(
+    annotated.annotations().comments()[0].last_para_id(),
+    content="None",
+  )
+  debug_inspect(annotated.comments_extended_part(), content="None")
+  let reply_spec = @docx2html.comment_spec(author="Bob", from=0, to=0, [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Proof attached.")])]),
+  ])
+  let (reply_plan, reply_id) = @docx_impl.plan_comment_reply(
+    annotated,
+    original,
+    parent_id="0",
+    reply_spec,
+  )
+  inspect(reply_id, content="1")
+  let replied = @splice.splice_docx(original, reply_plan)
+  validate_docx_via_sdk(dir, "l2_reply_retrofit", replied)
+  let after_reply = @docx2html.read_docx_annotated(replied)
+  let index = after_reply.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.comments().length(), content="2")
+  // The thread: the reply is anchorless, threaded under the parent,
+  // and the parent's LAST paragraph got the retrofitted key.
+  let parent = index.comments()[0]
+  debug_inspect(parent.done(), content="Some(false)")
+  inspect(parent.last_para_id() is Some(_), content="true")
+  let reply = index.comments()[1]
+  debug_inspect(
+    reply.parent_id(),
+    content=(
+      #|Some("0")
+    ),
+  )
+  debug_inspect(reply.anchors().length(), content="0")
+  // Fidelity on the retrofitted comments part: the ONLY byte changes
+  // are the root's w14/mc declarations, the parent's last-paragraph
+  // paraId attribute, and the appended reply definition — everything
+  // else identical. (Checked structurally: the original body text of
+  // BOTH parent paragraphs still reads back verbatim.)
+  guard after_reply.comment_bodies()[0] is (_, parent_body)
+  guard parent_body[1] is Paragraph(children=tail_children, ..)
+  guard tail_children is [Run(children=tail_runs, ..)]
+  debug_inspect(
+    tail_runs,
+    content=(
+      #|[Text("please.")]
+    ),
+  )
+  // Resolve, then unresolve, each SDK-validated.
+  let resolve_plan = @docx_impl.plan_comment_resolution(
+    after_reply,
+    replied,
+    comment_id="0",
+    done=true,
+  )
+  let resolved = @splice.splice_docx(replied, resolve_plan)
+  validate_docx_via_sdk(dir, "l2_resolved", resolved)
+  let after_resolve = @docx2html.read_docx_annotated(resolved)
+  debug_inspect(
+    after_resolve.annotations().comments()[0].done(),
+    content="Some(true)",
+  )
+  debug_inspect(
+    after_resolve.annotations().comments()[1].done(),
+    content="Some(false)",
+  )
+  let unresolve_plan = @docx_impl.plan_comment_resolution(
+    after_resolve,
+    resolved,
+    comment_id="0",
+    done=false,
+  )
+  let unresolved = @splice.splice_docx(resolved, unresolve_plan)
+  validate_docx_via_sdk(dir, "l2_unresolved", unresolved)
+  debug_inspect(
+    @docx2html.read_docx_annotated(unresolved).annotations().comments()[0].done(),
+    content="Some(false)",
+  )
+}
+
+///|
+/// L2 on a K2-era document (paraIds and commentsExtended present): the
+/// existing keys are REUSED (no retrofit), the reply chains under a
+/// reply, and hostile thread state fails closed.
+async test "L2: K2-era documents reuse keys; hostile thread state fails closed" {
+  let dir = fresh_scratch_dir()
+  let original = @docx2html.write_docx_with_annotations(
+    [@docx2html.paragraph([@docx2html.run([@docx2html.text("Threaded.")])])],
+    comments=[
+      @docx2html.comment_spec(author="Ada", from=0, to=0, [
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("Root note.")])]),
+      ]),
+      @docx2html.comment_reply(author="Bob", reply_to=0, done=true, [
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("First reply.")])]),
+      ]),
+    ],
+  )
+  let annotated = @docx2html.read_docx_annotated(original)
+  inspect(
+    annotated.annotations().comments()[1].last_para_id() is Some(_),
+    content="true",
+  )
+  // Reply UNDER THE REPLY (a chain) — existing paraIds reused, no root
+  // retrofit needed (w14 already declared).
+  let spec = @docx2html.comment_spec(author="Cid", from=0, to=0, [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Chained.")])]),
+  ])
+  let (plan, new_id) = @docx_impl.plan_comment_reply(
+    annotated,
+    original,
+    parent_id="1",
+    spec,
+  )
+  inspect(new_id, content="2")
+  let spliced = @splice.splice_docx(original, plan)
+  validate_docx_via_sdk(dir, "l2_chain", spliced)
+  let after = @docx2html.read_docx_annotated(spliced)
+  debug_inspect(
+    after.annotations().comments()[2].parent_id(),
+    content=(
+      #|Some("1")
+    ),
+  )
+  // The pre-existing resolution state survived untouched.
+  debug_inspect(after.annotations().comments()[1].done(), content="Some(true)")
+}

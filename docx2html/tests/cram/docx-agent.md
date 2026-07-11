@@ -627,6 +627,52 @@ error: comment repeats the key "author" (strict scripts must not rely on last-wi
 [1]
 ```
 
+## Annotate: Reply And Resolve (Phase 2 L2)
+
+Replies are ANCHORLESS — the parent's anchor is logically theirs — and
+thread through `word/commentsExtended.xml`, which is created (and the
+parent's paragraph paraId-stamped) when the document predates it.
+
+```mooncram
+$ docx.exe annotate reply reviewed.docx threaded.docx --comment 0 --text 'Source added in the appendix.' --author 'Author'
+annotated threaded.docx (comment 1 replying to 0)
+```
+
+```mooncram
+$ docx.exe validate threaded.docx
+valid
+```
+
+```mooncram
+$ docx.exe outline threaded.docx | jq -c '.comments'
+[{"id":"0","author":"Auditor","done":false,"anchored_to":"/body/p[2]"},{"id":"1","author":"Author","done":false,"parent_id":"0"}]
+```
+
+Resolution flips `w15:done`; the review loop closes read→reply→resolve:
+
+```mooncram
+$ docx.exe annotate resolve threaded.docx closed.docx --comment 0
+annotated closed.docx (comment 0 done=true)
+```
+
+```mooncram
+$ docx.exe outline closed.docx | jq -c '[.comments[] | {id, done}]'
+[{"id":"0","done":true},{"id":"1","done":false}]
+```
+
+```mooncram
+$ docx.exe annotate unresolve closed.docx reopened.docx --comment 0
+annotated reopened.docx (comment 0 done=false)
+```
+
+Failures leave zero output; replies need an existing DEFINED comment:
+
+```mooncram
+$ docx.exe annotate reply reviewed.docx never5.docx --comment 9 --text n --author A; ls never5.docx 2>/dev/null || echo "not written"
+error: the document has no comment with id '9'
+not written
+```
+
 ## Comments And Notes (`/comments`, `/footnotes` — Phase 2)
 
 The commented fixture (a comment thread with a resolved reply, plus a
