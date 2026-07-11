@@ -1818,3 +1818,302 @@ async test "L2: K2-era documents reuse keys; hostile thread state fails closed" 
   // The pre-existing resolution state survived untouched.
   debug_inspect(after.annotations().comments()[1].done(), content="Some(true)")
 }
+
+///|
+/// L2 review round 1 — the hostile-thread matrix through the real plan
+/// layer: foreign commentsExtended content preserved VERBATIM,
+/// ST_OnOff spellings survive untouched, hex-case paraId identity,
+/// duplicate-paraId refusal without retrofit, OPC '../' target
+/// resolution in the collision scope, and the order-independent w14/mc
+/// root retrofit.
+async test "L2 round 1: entry-level splicing preserves foreign thread content" {
+  let dir = fresh_scratch_dir()
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let w15 = "http://schemas.microsoft.com/office/word/2012/wordml"
+  let w14 = "http://schemas.microsoft.com/office/word/2010/wordml"
+  let mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+  fn threaded_package(
+    comments_xml : String,
+    extended_xml : String,
+  ) -> Bytes raise {
+    let archive = @mbtzip.Archive::new()
+    archive.add(
+      "[Content_Types].xml",
+      @utf8.encode(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><Override PartName=\"/word/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/><Override PartName=\"/word/commentsExtended.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml\"/></Types>",
+      ),
+    )
+    archive.add(
+      "_rels/.rels",
+      @utf8.encode(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
+      ),
+    )
+    archive.add(
+      "word/_rels/document.xml.rels",
+      @utf8.encode(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdC\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments\" Target=\"comments.xml\"/><Relationship Id=\"rIdX\" Type=\"http://schemas.microsoft.com/office/2011/relationships/commentsExtended\" Target=\"commentsExtended.xml\"/></Relationships>",
+      ),
+    )
+    archive.add(
+      "word/document.xml",
+      @utf8.encode(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:document xmlns:w=\"" +
+        wml +
+        "\"><w:body><w:p><w:commentRangeStart w:id=\"0\"/><w:r><w:t>target</w:t></w:r><w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r></w:p><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr></w:body></w:document>",
+      ),
+    )
+    archive.add("word/comments.xml", @utf8.encode(comments_xml))
+    archive.add("word/commentsExtended.xml", @utf8.encode(extended_xml))
+    @mbtzip.write(archive)
+  }
+  // 1+2. Foreign content (vendor attribute + element + Ignorable
+  // tokens) and a done="on" spelling: resolving ANOTHER comment's
+  // entry must leave every one of those bytes verbatim.
+  let vendor_extended = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+    "<w15:commentsEx xmlns:w15=\"" +
+    w15 +
+    "\" xmlns:vx=\"urn:vendor\" xmlns:mc=\"" +
+    mc +
+    "\" mc:Ignorable=\"w15 vx\">" +
+    "<w15:commentEx w15:paraId=\"7AAA0001\" w15:done=\"on\" vx:durableId=\"abc\"/>" +
+    "<vx:threadMetadata value=\"keep-me\"/>" +
+    "<w15:commentEx w15:paraId=\"7BBB0002\" w15:done=\"0\"/>" +
+    "</w15:commentsEx>"
+  let vendor_comments = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+    "<w:comments xmlns:w=\"" +
+    wml +
+    "\" xmlns:w14=\"" +
+    w14 +
+    "\" xmlns:mc=\"" +
+    mc +
+    "\" mc:Ignorable=\"w14\">" +
+    "<w:comment w:id=\"0\" w:author=\"Ada\"><w:p w14:paraId=\"7AAA0001\"><w:r><w:t>resolved-on</w:t></w:r></w:p></w:comment>" +
+    "<w:comment w:id=\"1\" w:author=\"Bea\"><w:p w14:paraId=\"7BBB0002\"><w:r><w:t>other</w:t></w:r></w:p></w:comment>" +
+    "</w:comments>"
+  let vendor_package = threaded_package(vendor_comments, vendor_extended)
+  let annotated_v = @docx2html.read_docx_annotated(vendor_package)
+  let plan_v = @docx_impl.plan_comment_resolution(
+    annotated_v,
+    vendor_package,
+    comment_id="1",
+    done=true,
+  )
+  let resolved_v = @splice.splice_docx(vendor_package, plan_v)
+  validate_docx_via_sdk(dir, "l2r1_vendor_preserved", resolved_v)
+  let out_v = @mbtzip.read(resolved_v)
+  guard out_v.get("word/commentsExtended.xml") is Some(extended_after)
+  let extended_text = @utf8.decode(extended_after, ignore_bom=true)
+  // Vendor bytes, the "on" spelling, and Ignorable tokens all intact;
+  // only comment 1's done value flipped.
+  inspect(extended_text.find("vx:durableId=\"abc\"") is Some(_), content="true")
+  inspect(
+    extended_text.find("<vx:threadMetadata value=\"keep-me\"/>") is Some(_),
+    content="true",
+  )
+  inspect(extended_text.find("w15:done=\"on\"") is Some(_), content="true")
+  inspect(
+    extended_text.find("mc:Ignorable=\"w15 vx\"") is Some(_),
+    content="true",
+  )
+  inspect(
+    extended_text.find("w15:paraId=\"7BBB0002\" w15:done=\"1\"") is Some(_),
+    content="true",
+  )
+  let verify_v = @docx2html.read_docx_annotated(resolved_v)
+  debug_inspect(
+    verify_v.annotations().comments()[0].done(),
+    content="Some(true)",
+  )
+  debug_inspect(
+    verify_v.annotations().comments()[1].done(),
+    content="Some(true)",
+  )
+  // 4. Hex-case identity: the definition stamps lowercase, the entry
+  // uppercase — resolving flips the EXISTING entry (no duplicate).
+  let case_extended = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+    "<w15:commentsEx xmlns:w15=\"" +
+    w15 +
+    "\" xmlns:mc=\"" +
+    mc +
+    "\" mc:Ignorable=\"w15\">" +
+    "<w15:commentEx w15:paraId=\"7BCDEF01\" w15:done=\"0\"/>" +
+    "</w15:commentsEx>"
+  let case_comments = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+    "<w:comments xmlns:w=\"" +
+    wml +
+    "\" xmlns:w14=\"" +
+    w14 +
+    "\" xmlns:mc=\"" +
+    mc +
+    "\" mc:Ignorable=\"w14\">" +
+    "<w:comment w:id=\"0\" w:author=\"Ada\"><w:p w14:paraId=\"7bcdef01\"><w:r><w:t>case</w:t></w:r></w:p></w:comment>" +
+    "</w:comments>"
+  let case_package = threaded_package(case_comments, case_extended)
+  let annotated_c = @docx2html.read_docx_annotated(case_package)
+  let plan_c = @docx_impl.plan_comment_resolution(
+    annotated_c,
+    case_package,
+    comment_id="0",
+    done=true,
+  )
+  let resolved_c = @splice.splice_docx(case_package, plan_c)
+  guard @mbtzip.read(resolved_c).get("word/commentsExtended.xml")
+    is Some(case_after)
+  let case_text = @utf8.decode(case_after, ignore_bom=true)
+  inspect(
+    case_text.find("w15:paraId=\"7BCDEF01\" w15:done=\"1\"") is Some(_),
+    content="true",
+  )
+  // Exactly ONE commentEx (no case-duplicate appended).
+  guard case_text.find("commentEx") is Some(first_ex)
+  inspect(
+    case_text.view(start_offset=first_ex + 9).to_owned().find("<w15:commentEx")
+    is Some(_),
+    content="false",
+  )
+  // 3. A duplicate paraId across parts refuses resolution EVEN when
+  // the key already exists (the gate is unconditional now).
+  let dup_comments = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+    "<w:comments xmlns:w=\"" +
+    wml +
+    "\" xmlns:w14=\"" +
+    w14 +
+    "\" xmlns:mc=\"" +
+    mc +
+    "\" mc:Ignorable=\"w14\">" +
+    "<w:comment w:id=\"0\" w:author=\"Ada\"><w:p w14:paraId=\"7CCC0003\"><w:r><w:t>a</w:t></w:r></w:p></w:comment>" +
+    "<w:comment w:id=\"1\" w:author=\"Bea\"><w:p w14:paraId=\"7CCC0003\"><w:r><w:t>b</w:t></w:r></w:p></w:comment>" +
+    "</w:comments>"
+  let dup_extended = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+    "<w15:commentsEx xmlns:w15=\"" +
+    w15 +
+    "\" xmlns:mc=\"" +
+    mc +
+    "\" mc:Ignorable=\"w15\"><w15:commentEx w15:paraId=\"7CCC0003\" w15:done=\"0\"/></w15:commentsEx>"
+  let dup_package = threaded_package(dup_comments, dup_extended)
+  let annotated_d = @docx2html.read_docx_annotated(dup_package)
+  let dup_attempt : () -> @splice.SplicePlan raise @core.DocxError = () => {
+    @docx_impl.plan_comment_resolution(
+      annotated_d,
+      dup_package,
+      comment_id="0",
+      done=true,
+    )
+  }
+  try {
+    let _ = dup_attempt()
+  } catch {
+    Unsupported(message~) =>
+      inspect(
+        message.has_prefix("duplicate w14:paraId '7CCC0003'"),
+        content="true",
+      )
+    err => fail("expected Unsupported, got \{repr(err)}")
+  } noraise {
+    _ => fail("expected the duplicate paraId to fail closed")
+  }
+}
+
+///|
+/// L2 round 1, continued: '../'-relative story targets join the paraId
+/// collision scope, and the w14/mc root retrofit is attribute-order
+/// independent and reuses foreign prefixes.
+async test "L2 round 1: OPC targets and root retrofit adversaries" {
+  let dir = fresh_scratch_dir()
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let w14 = "http://schemas.microsoft.com/office/word/2010/wordml"
+  let mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+  // A header at stories/header1.xml (reached via ../stories/) holds
+  // paraId 00000001 — the retrofit must not allocate it.
+  let archive = @mbtzip.Archive::new()
+  archive.add(
+    "[Content_Types].xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><Override PartName=\"/word/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/><Override PartName=\"/stories/header1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml\"/></Types>",
+    ),
+  )
+  archive.add(
+    "_rels/.rels",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
+    ),
+  )
+  archive.add(
+    "word/_rels/document.xml.rels",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdC\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments\" Target=\"comments.xml\"/><Relationship Id=\"rIdH\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"../stories/header1.xml\"/></Relationships>",
+    ),
+  )
+  archive.add(
+    "word/document.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:document xmlns:w=\"" +
+      wml +
+      "\"><w:body><w:p><w:commentRangeStart w:id=\"0\"/><w:r><w:t>x</w:t></w:r><w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r></w:p><w:sectPr><w:headerReference w:type=\"default\" r:id=\"rIdH\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"/><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr></w:body></w:document>",
+    ),
+  )
+  archive.add(
+    "stories/header1.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:hdr xmlns:w=\"" +
+      wml +
+      "\" xmlns:w14=\"" +
+      w14 +
+      "\" xmlns:mc=\"" +
+      mc +
+      "\" mc:Ignorable=\"w14\"><w:p w14:paraId=\"00000001\"><w:r><w:t>h</w:t></w:r></w:p></w:hdr>",
+    ),
+  )
+  // The comments ROOT is the order-adversary: mc:Ignorable BEFORE its
+  // xmlns:mc declaration, and the w14 URI bound to prefix q.
+  archive.add(
+    "word/comments.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:comments mc:Ignorable=\"q\" xmlns:mc=\"" +
+      mc +
+      "\" xmlns:q=\"" +
+      w14 +
+      "\" xmlns:w=\"" +
+      wml +
+      "\"><w:comment w:id=\"0\" w:author=\"Ada\"><w:p><w:r><w:t>unstamped</w:t></w:r></w:p></w:comment></w:comments>",
+    ),
+  )
+  let package = @mbtzip.write(archive)
+  let annotated = @docx2html.read_docx_annotated(package)
+  // Resolve comment 0: the retrofit stamps the parent's paragraph with
+  // the q: prefix (the existing w14-URI binding), skips the header's
+  // 00000001, and leaves mc:Ignorable alone (q already listed).
+  let plan = @docx_impl.plan_comment_resolution(
+    annotated,
+    package,
+    comment_id="0",
+    done=true,
+  )
+  let resolved = @splice.splice_docx(package, plan)
+  validate_docx_via_sdk(dir, "l2r1_retrofit_adversaries", resolved)
+  let out = @mbtzip.read(resolved)
+  guard out.get("word/comments.xml") is Some(comments_after)
+  let comments_text = @utf8.decode(comments_after, ignore_bom=true)
+  // Stamped with the FOREIGN prefix; the header's id was avoided.
+  inspect(
+    comments_text.find("q:paraId=\"00000002\"") is Some(_),
+    content="true",
+  )
+  inspect(
+    comments_text.find("q:paraId=\"00000001\"") is Some(_),
+    content="false",
+  )
+  // No duplicate mc:Ignorable was inserted (order independence).
+  guard comments_text.find("mc:Ignorable") is Some(first_ignorable)
+  inspect(
+    comments_text
+    .view(start_offset=first_ignorable + 1)
+    .to_owned()
+    .find("mc:Ignorable")
+    is Some(_),
+    content="false",
+  )
+  let verify = @docx2html.read_docx_annotated(resolved)
+  debug_inspect(verify.annotations().comments()[0].done(), content="Some(true)")
+}

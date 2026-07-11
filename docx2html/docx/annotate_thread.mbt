@@ -53,12 +53,12 @@ pub fn plan_comment_reply(
   let mut next_para_seed = 1
   fn allocate_para_id() -> String {
     let mut candidate = format_para_id(next_para_seed)
-    while used_para_ids.contains(candidate) {
+    while used_para_ids.contains(canonical_para_id(candidate)) {
       next_para_seed += 1
       candidate = format_para_id(next_para_seed)
     }
     next_para_seed += 1
-    used_para_ids.add(candidate)
+    used_para_ids.add(canonical_para_id(candidate))
     candidate
   }
   // The comments root: which prefix carries the w14 URI (or a root
@@ -128,25 +128,41 @@ pub fn plan_comment_reply(
   guard reply_para_ids.last() is Some(reply_key) else {
     raise Unsupported(message="the reply body is empty")
   }
-  // commentsExtended: whole-part update — the parent's entry created
-  // when missing (done=false), the reply's entry appended with
-  // paraIdParent linking the thread.
-  let entries = read_comment_ex_entries(zip, annotated)
+  // commentsExtended: ENTRY-LEVEL edits — a parent entry is created
+  // only when missing (an existing one keeps its bytes, resolution
+  // state included), and the reply's entry appends with paraIdParent
+  // linking the thread.
+  let additions : Array[CommentExEntry] = []
   let mut parent_seen = false
-  for entry in entries {
-    if entry.para_id == parent_para_id {
-      parent_seen = true
-    }
+  match annotated.comments_extended_part() {
+    Some(part) =>
+      match zip.read_bytes(part) {
+        Some(bytes) => {
+          let (locations, _, _) = scan_comment_ex_part(bytes)
+          for location in locations {
+            if location.para_id == canonical_para_id(parent_para_id) {
+              parent_seen = true
+            }
+          }
+        }
+        None =>
+          raise Unsupported(message="the commentsExtended part is unreadable")
+      }
+    None => ()
   }
   if !parent_seen {
-    entries.push({ para_id: parent_para_id, done: false, parent_para_id: None })
+    additions.push({
+      para_id: canonical_para_id(parent_para_id),
+      done: false,
+      parent_para_id: None,
+    })
   }
-  entries.push({
-    para_id: reply_key,
+  additions.push({
+    para_id: canonical_para_id(reply_key),
     done: false,
-    parent_para_id: Some(parent_para_id),
+    parent_para_id: Some(canonical_para_id(parent_para_id)),
   })
-  queue_comments_extended(plan, zip, annotated, entries)
+  queue_comments_extended_edits(plan, zip, annotated, None, additions)
   (plan, new_id)
 }
 
@@ -178,13 +194,15 @@ pub fn plan_comment_resolution(
   guard zip.read_bytes(comments_part) is Some(comments_bytes) else {
     raise Unsupported(message="the comments part is unreadable")
   }
+  // The duplicate-paraId gate runs UNCONDITIONALLY (review round 1):
+  // resolving on an ambiguous key would mutate the wrong thread.
+  let used_para_ids = collect_para_ids(zip, annotated, comments_part)
   let key = match comment.last_para_id() {
     Some(existing) => existing
     None => {
-      let used_para_ids = collect_para_ids(zip, annotated, comments_part)
       let mut seed = 1
       let mut fresh = format_para_id(seed)
-      while used_para_ids.contains(fresh) {
+      while used_para_ids.contains(canonical_para_id(fresh)) {
         seed += 1
         fresh = format_para_id(seed)
       }
@@ -217,30 +235,7 @@ pub fn plan_comment_resolution(
       fresh
     }
   }
-  let entries = read_comment_ex_entries(zip, annotated)
-  let mut found = false
-  for entry in entries {
-    if entry.para_id == key {
-      // Struct fields are immutable here; rebuild below.
-      found = true
-    }
-  }
-  let updated : Array[CommentExEntry] = []
-  for entry in entries {
-    if entry.para_id == key {
-      updated.push({
-        para_id: entry.para_id,
-        done,
-        parent_para_id: entry.parent_para_id,
-      })
-    } else {
-      updated.push(entry)
-    }
-  }
-  if !found {
-    updated.push({ para_id: key, done, parent_para_id: None })
-  }
-  queue_comments_extended(plan, zip, annotated, updated)
+  queue_comments_extended_edits(plan, zip, annotated, Some((key, done)), [])
   plan
 }
 
@@ -381,11 +376,15 @@ fn collect_story_targets(
   main_dir : String,
   parts : Array[String],
 ) -> Unit {
+  // Transitional AND Strict relationship types (review round 1), with
+  // OPC-normalized target resolution ('../' forms included).
   let story_types = [
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer",
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
+    "http://purl.oclc.org/ooxml/officeDocument/relationships/header", "http://purl.oclc.org/ooxml/officeDocument/relationships/footer",
+    "http://purl.oclc.org/ooxml/officeDocument/relationships/footnotes", "http://purl.oclc.org/ooxml/officeDocument/relationships/endnotes",
   ]
   match
     (
@@ -396,13 +395,7 @@ fn collect_story_targets(
     (Some(relationship_type), Some(target), mode) =>
       if !(mode is Some("External")) &&
         story_types.search(relationship_type) is Some(_) {
-        let resolved = if target.has_prefix("/") {
-          target.view(start_offset=1).to_owned()
-        } else if main_dir == "" {
-          target
-        } else {
-          "\{main_dir}/\{target}"
-        }
+        let resolved = @opc.resolve_target(main_dir, target)
         if parts.search(resolved) is None {
           parts.push(resolved)
         }
@@ -424,12 +417,13 @@ fn collect_para_id_attributes(
 ) -> Unit raise DocxError {
   match element.attributes.get("w14:paraId") {
     Some(para_id) => {
-      if para_ids.contains(para_id) {
+      let canonical = canonical_para_id(para_id)
+      if para_ids.contains(canonical) {
         raise Unsupported(
           message="duplicate w14:paraId '\{para_id}'; the document's paraId state is not repairable",
         )
       }
-      para_ids.add(para_id)
+      para_ids.add(canonical)
     }
     None => ()
   }
@@ -442,10 +436,12 @@ fn collect_para_id_attributes(
 }
 
 ///|
-/// Ensures the w14 URI is bound on the comments ROOT and returns the
-/// prefix to stamp attributes with: an existing binding is reused; an
-/// absent one is retrofitted onto the root open tag together with the
-/// markup-compatibility declaration (mc:Ignorable gains "w14").
+/// Ensures the w14 URI is bound on the comments ROOT and that the
+/// chosen prefix is listed in mc:Ignorable, returning that prefix.
+/// TWO-PASS over the root's attributes (declarations first, then
+/// mc:Ignorable through the completed map — attribute ORDER must not
+/// matter), and the Ignorable token is ensured even when the URI was
+/// already bound (review round 1).
 fn ensure_w14_on_root(
   plan : @splice.SplicePlan,
   part : String,
@@ -453,63 +449,91 @@ fn ensure_w14_on_root(
   root_span : NodeSpan,
 ) -> String raise DocxError {
   let attributes = scan_open_tag_attributes(part_bytes, root_span.byte_start())
+  // Pass 1: every namespace declaration.
   let mut w14_prefix : String? = None
   let mut mc_prefix : String? = None
-  let mut ignorable : (String, Int, Int)? = None
   for attribute in attributes.entries {
-    let (name, value, value_start, value_end) = attribute
-    if value == W14_NAMESPACE && name.has_prefix("xmlns:") {
-      w14_prefix = Some(name.view(start_offset=6).to_owned())
-    }
-    if value == MC_NAMESPACE && name.has_prefix("xmlns:") {
-      mc_prefix = Some(name.view(start_offset=6).to_owned())
-    }
-    match mc_prefix {
-      Some(prefix) =>
-        if name == "\{prefix}:Ignorable" {
-          ignorable = Some((value, value_start, value_end))
-        }
-      None => ()
+    let (name, value, _, _) = attribute
+    if name.has_prefix("xmlns:") {
+      let prefix = name.view(start_offset=6).to_owned()
+      if value == W14_NAMESPACE && w14_prefix is None {
+        w14_prefix = Some(prefix)
+      }
+      if value == MC_NAMESPACE && mc_prefix is None {
+        mc_prefix = Some(prefix)
+      }
     }
   }
-  match w14_prefix {
-    Some(prefix) => prefix
-    None => {
-      // Retrofit: declare w14 (and mc when absent) and extend
-      // mc:Ignorable — all attribute splices on the root open tag.
-      let mut addition = " xmlns:w14=\"\{W14_NAMESPACE}\""
-      match (mc_prefix, ignorable) {
-        (Some(_), Some((value, value_start, value_end))) => {
-          // Append w14 to the EXISTING Ignorable value.
-          ignore(value)
-          plan.edit_part(
-            part,
-            @splice.span_edit(
-              start=value_end,
-              end=value_end,
-              @utf8.encode(" w14"),
-            ),
-          )
-          ignore(value_start)
-        }
-        (Some(prefix), None) => addition += " \{prefix}:Ignorable=\"w14\""
-        (None, _) => {
-          addition += " xmlns:mc=\"\{MC_NAMESPACE}\""
-          addition += " mc:Ignorable=\"w14\""
+  // Pass 2: mc:Ignorable through the resolved mc prefix.
+  let mut ignorable : (String, Int)? = None
+  match mc_prefix {
+    Some(prefix) =>
+      for attribute in attributes.entries {
+        let (name, value, _, value_end) = attribute
+        if name == "\{prefix}:Ignorable" {
+          ignorable = Some((value, value_end))
         }
       }
+    None => ()
+  }
+  let insert_at = attributes.tag_gt -
+    (if attributes.self_closing { 1 } else { 0 })
+  let chosen = match w14_prefix {
+    Some(prefix) => prefix
+    None => {
       plan.edit_part(
         part,
         @splice.span_edit(
-          start=attributes.tag_gt -
-            (if attributes.self_closing { 1 } else { 0 }),
-          end=attributes.tag_gt - (if attributes.self_closing { 1 } else { 0 }),
-          @utf8.encode(addition),
+          start=insert_at,
+          end=insert_at,
+          @utf8.encode(" xmlns:w14=\"\{W14_NAMESPACE}\""),
         ),
       )
       "w14"
     }
   }
+  // The Ignorable token, ensured in every configuration.
+  match (mc_prefix, ignorable) {
+    (Some(_), Some((value, value_end))) => {
+      let mut listed = false
+      for token in value.split(" ") {
+        if token.to_owned() == chosen {
+          listed = true
+        }
+      }
+      if !listed {
+        plan.edit_part(
+          part,
+          @splice.span_edit(
+            start=value_end,
+            end=value_end,
+            @utf8.encode(" \{chosen}"),
+          ),
+        )
+      }
+    }
+    (Some(prefix), None) =>
+      plan.edit_part(
+        part,
+        @splice.span_edit(
+          start=insert_at,
+          end=insert_at,
+          @utf8.encode(" \{prefix}:Ignorable=\"\{chosen}\""),
+        ),
+      )
+    (None, _) =>
+      plan.edit_part(
+        part,
+        @splice.span_edit(
+          start=insert_at,
+          end=insert_at,
+          @utf8.encode(
+            " xmlns:mc=\"\{MC_NAMESPACE}\" mc:Ignorable=\"\{chosen}\"",
+          ),
+        ),
+      )
+  }
+  chosen
 }
 
 ///|
@@ -613,104 +637,408 @@ fn scan_open_tag_attributes(
 }
 
 ///|
-/// Reads the commentsExtended entries (empty when the part is absent);
-/// duplicate paraId keys are unrepairable and fail closed here (the
-/// tolerant READER'S first-wins policy is for reading, not mutating).
-fn read_comment_ex_entries(
-  zip : ZipArchive,
-  annotated : DocxAnnotatedResult,
-) -> Array[CommentExEntry] raise DocxError {
-  let entries : Array[CommentExEntry] = []
-  guard annotated.comments_extended_part() is Some(part) else { return entries }
-  let part_read : String? = zip.read_text(part) catch { _ => None }
-  guard part_read is Some(text) else {
-    raise Unsupported(message="the commentsExtended part is unreadable")
-  }
-  let root = read_xml_string(text, namespace_map=office_namespace_map()) catch {
-    _ =>
-      raise Unsupported(
-        message="the commentsExtended part is not well-formed XML; refusing",
-      )
-  }
-  let seen : Set[String] = Set([])
-  for record in root.elements_by_tag_name("w15:commentEx") {
-    match record.attributes.get("w15:paraId") {
-      Some(para_id) => {
-        if seen.contains(para_id) {
-          raise Unsupported(
-            message="duplicate commentsExtended records for paraId '\{para_id}'; the thread state is not repairable",
-          )
-        }
-        seen.add(para_id)
-        entries.push({
-          para_id,
-          done: record.attributes.get("w15:done") is Some("1") ||
-          record.attributes.get("w15:done") is Some("true"),
-          parent_para_id: record.attributes.get("w15:paraIdParent"),
-        })
-      }
-      None =>
-        raise Unsupported(
-          message="a commentsExtended record has no paraId; the thread state is not repairable",
-        )
-    }
-  }
-  entries
+/// A located commentEx entry in the EXISTING part: canonical paraId,
+/// current done state, the byte span of the done attribute VALUE (when
+/// present), and the open tag's insertion offset.
+priv struct CommentExLocation {
+  para_id : String
+  done_value_span : (Int, Int)?
+  insert_at : Int
+  done_prefix : String
 }
 
 ///|
-/// Queues the commentsExtended WHOLE-PART update: rewrite when the part
-/// exists, create and wire it when absent (relationship + Override
-/// located structurally, exactly like the comments part in
-/// plan_comment_addition).
-fn queue_comments_extended(
+/// Canonical paraId identity: ST_LongHexNumber is eight hex digits, so
+/// conforming values compare case-insensitively (uppercased); anything
+/// else compares verbatim.
+fn canonical_para_id(value : String) -> String {
+  if value.length() != 8 {
+    return value
+  }
+  let builder = StringBuilder::new()
+  for unit in value {
+    let code = unit.to_int()
+    if code >= '0'.to_int() && code <= '9'.to_int() {
+      builder.write_char(code.to_char().unwrap_or('?'))
+    } else if code >= 'a'.to_int() && code <= 'f'.to_int() {
+      builder.write_char((code - 32).to_char().unwrap_or('?'))
+    } else if code >= 'A'.to_int() && code <= 'F'.to_int() {
+      builder.write_char(code.to_char().unwrap_or('?'))
+    } else {
+      return value
+    }
+  }
+  builder.to_string()
+}
+
+///|
+/// Walks the EXISTING commentsExtended part at the byte level,
+/// namespace-aware (root declarations plus each entry's own), and
+/// returns the located entries, the offset of the root's close tag
+/// (None for a self-closing root), and the root's byte span. Duplicate
+/// canonical paraIds fail closed — mutating on ambiguous keys is the
+/// unrepairable state the contract names.
+fn scan_comment_ex_part(
+  bytes : Bytes,
+) -> (Array[CommentExLocation], Int?, (Int, Int)) raise DocxError {
+  // The root open tag: the first '<' that is not a declaration,
+  // comment, or PI.
+  let limit = bytes.length()
+  let mut at = 0
+  let mut root_start = -1
+  while at < limit {
+    if bytes[at] == b'<' {
+      if at + 1 < limit && (bytes[at + 1] == b'?' || bytes[at + 1] == b'!') {
+        // Skip the declaration/PI/comment wholesale.
+        let close = if at + 3 < limit &&
+          bytes[at + 1] == b'!' &&
+          bytes[at + 2] == b'-' &&
+          bytes[at + 3] == b'-' {
+          "-->"
+        } else {
+          ">"
+        }
+        let mut scan = at + 1
+        let terminator = close.code_units()
+        while scan <= limit - terminator.length() {
+          let mut matched = true
+          for offset, unit in terminator {
+            if bytes[scan + offset].to_int() != unit.to_int() {
+              matched = false
+              break
+            }
+          }
+          if matched {
+            break
+          }
+          scan += 1
+        }
+        at = scan + close.length()
+        continue
+      }
+      root_start = at
+      break
+    }
+    at += 1
+  }
+  if root_start < 0 {
+    raise Unsupported(message="the commentsExtended part has no root element")
+  }
+  let root_scan = scan_open_tag_attributes(bytes, root_start)
+  // Root-level namespace declarations.
+  let root_declarations : Map[String, String] = Map([])
+  for attribute in root_scan.entries {
+    let (name, value, _, _) = attribute
+    if name.has_prefix("xmlns:") {
+      root_declarations[name.view(start_offset=6).to_owned()] = value
+    }
+  }
+  if root_scan.self_closing {
+    return ([], None, (root_start, root_scan.tag_gt + 1))
+  }
+  // Walk depth-1 children.
+  let locations : Array[CommentExLocation] = []
+  let seen : Set[String] = Set([])
+  let mut cursor = root_scan.tag_gt + 1
+  let mut depth = 1
+  let mut root_close = -1
+  while cursor < limit {
+    if bytes[cursor] != b'<' {
+      cursor += 1
+      continue
+    }
+    if cursor + 3 < limit &&
+      bytes[cursor + 1] == b'!' &&
+      bytes[cursor + 2] == b'-' &&
+      bytes[cursor + 3] == b'-' {
+      let mut scan = cursor + 4
+      while scan + 2 < limit {
+        if bytes[scan] == b'-' &&
+          bytes[scan + 1] == b'-' &&
+          bytes[scan + 2] == b'>' {
+          break
+        }
+        scan += 1
+      }
+      cursor = scan + 3
+      continue
+    }
+    if cursor + 1 < limit && bytes[cursor + 1] == b'?' {
+      let mut scan = cursor + 2
+      while scan + 1 < limit {
+        if bytes[scan] == b'?' && bytes[scan + 1] == b'>' {
+          break
+        }
+        scan += 1
+      }
+      cursor = scan + 2
+      continue
+    }
+    if cursor + 1 < limit && bytes[cursor + 1] == b'/' {
+      depth -= 1
+      if depth == 0 {
+        root_close = cursor
+        break
+      }
+      while cursor < limit && bytes[cursor] != b'>' {
+        cursor += 1
+      }
+      cursor += 1
+      continue
+    }
+    let tag = scan_open_tag_attributes(bytes, cursor)
+    if depth == 1 {
+      // Resolve this tag against root + its own declarations.
+      let own_declarations : Map[String, String] = Map([])
+      for attribute in tag.entries {
+        let (name, value, _, _) = attribute
+        if name.has_prefix("xmlns:") {
+          own_declarations[name.view(start_offset=6).to_owned()] = value
+        }
+      }
+      fn prefix_uri(prefix : String) -> String? {
+        match own_declarations.get(prefix) {
+          Some(uri) => Some(uri)
+          None => root_declarations.get(prefix)
+        }
+      }
+      let tag_name = ascii_slice(
+        bytes,
+        cursor + 1,
+        cursor + 1 + tag_name_length(bytes, cursor + 1),
+      )
+      let (tag_prefix, tag_local) = split_qualified(tag_name)
+      if prefix_uri(tag_prefix) is Some(uri) &&
+        uri == W15_NAMESPACE &&
+        tag_local == "commentEx" {
+        let mut para_id : String? = None
+        let mut done_span : (Int, Int)? = None
+        let mut done_prefix = tag_prefix
+        for attribute in tag.entries {
+          let (name, value, value_start, value_end) = attribute
+          let (attr_prefix, attr_local) = split_qualified(name)
+          if attr_prefix == "" {
+            continue
+          }
+          if prefix_uri(attr_prefix) is Some(attr_uri) &&
+            attr_uri == W15_NAMESPACE {
+            if attr_local == "paraId" {
+              para_id = Some(canonical_para_id(value))
+            }
+            if attr_local == "done" {
+              done_span = Some((value_start, value_end))
+              done_prefix = attr_prefix
+            }
+          }
+        }
+        match para_id {
+          Some(key) => {
+            if seen.contains(key) {
+              raise Unsupported(
+                message="duplicate commentsExtended records for paraId '\{key}'; the thread state is not repairable",
+              )
+            }
+            seen.add(key)
+            locations.push({
+              para_id: key,
+              done_value_span: done_span,
+              insert_at: tag.tag_gt - (if tag.self_closing { 1 } else { 0 }),
+              done_prefix,
+            })
+          }
+          None =>
+            raise Unsupported(
+              message="a commentsExtended record has no paraId; the thread state is not repairable",
+            )
+        }
+      }
+    }
+    if !tag.self_closing {
+      depth += 1
+    }
+    cursor = tag.tag_gt + 1
+  }
+  if root_close < 0 {
+    raise Unsupported(
+      message="the commentsExtended part's root never closes; refusing",
+    )
+  }
+  (locations, Some(root_close), (root_start, root_scan.tag_gt + 1))
+}
+
+///|
+fn tag_name_length(bytes : Bytes, name_start : Int) -> Int {
+  let mut at = name_start
+  while at < bytes.length() &&
+        bytes[at] != b' ' &&
+        bytes[at] != b'\t' &&
+        bytes[at] != b'\r' &&
+        bytes[at] != b'\n' &&
+        bytes[at] != b'/' &&
+        bytes[at] != b'>' {
+    at += 1
+  }
+  at - name_start
+}
+
+///|
+fn split_qualified(name : String) -> (String, String) {
+  match name.find(":") {
+    Some(colon) =>
+      (
+        name.view(end_offset=colon).to_owned(),
+        name.view(start_offset=colon + 1).to_owned(),
+      )
+    None => ("", name)
+  }
+}
+
+///|
+/// A self-contained commentEx fragment (its own xmlns:w15).
+fn comment_ex_fragment(entry : CommentExEntry) -> String {
+  let attributes : Map[String, String] = {
+    "w15:paraId": entry.para_id,
+    "w15:done": if entry.done {
+      "1"
+    } else {
+      "0"
+    },
+  }
+  match entry.parent_para_id {
+    Some(parent) => attributes["w15:paraIdParent"] = parent
+    None => ()
+  }
+  @xml.write_xml_fragment(@xml.xml_element("w15:commentEx", attributes~), namespaces={
+    "w15": W15_NAMESPACE,
+  })
+}
+
+///|
+/// Queues the commentsExtended mutation as ENTRY-LEVEL byte splices —
+/// foreign producer content anywhere else in the part stays verbatim
+/// (review round 1). `flip` updates one existing entry's done state;
+/// `additions` append before the root close (a self-closing root is
+/// rewritten by its own extent). When the part does not exist, it is
+/// created fresh and wired.
+fn queue_comments_extended_edits(
   plan : @splice.SplicePlan,
   zip : ZipArchive,
   annotated : DocxAnnotatedResult,
-  entries : Array[CommentExEntry],
+  flip : (String, Bool)?,
+  additions : Array[CommentExEntry],
 ) -> Unit raise DocxError {
-  let records : Array[XmlNode] = []
-  for entry in entries {
-    let attributes : Map[String, String] = {
-      "w15:paraId": entry.para_id,
-      "w15:done": if entry.done {
-        "1"
-      } else {
-        "0"
-      },
-    }
-    match entry.parent_para_id {
-      Some(parent) => attributes["w15:paraIdParent"] = parent
-      None => ()
-    }
-    records.push(XmlElement(@xml.xml_element("w15:commentEx", attributes~)))
-  }
-  let part_text = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-    @xml.write_xml_fragment(
-      @xml.xml_element(
-        "w15:commentsEx",
-        attributes={ "mc:Ignorable": "w15" },
-        children=records,
-      ),
-      namespaces={ "w15": W15_NAMESPACE, "mc": MC_NAMESPACE },
-    )
   match annotated.comments_extended_part() {
     Some(part) => {
-      guard zip.read_bytes(part) is Some(old_bytes) else {
+      guard zip.read_bytes(part) is Some(bytes) else {
         raise Unsupported(message="the commentsExtended part is unreadable")
       }
-      // Whole-part rewrite: the part holds pure linkage, so the
-      // canonical serialization IS the declared edit span.
-      plan.edit_part(
-        part,
-        @splice.span_edit(
-          start=0,
-          end=old_bytes.length(),
-          @utf8.encode(part_text),
-        ),
-      )
+      let (locations, root_close, root_span) = scan_comment_ex_part(bytes)
+      match flip {
+        Some((key, done)) => {
+          let mut flipped = false
+          for location in locations {
+            if location.para_id == canonical_para_id(key) {
+              flipped = true
+              match location.done_value_span {
+                Some((value_start, value_end)) =>
+                  plan.edit_part(
+                    part,
+                    @splice.span_edit(
+                      start=value_start,
+                      end=value_end,
+                      @utf8.encode(if done { "1" } else { "0" }),
+                    ),
+                  )
+                None =>
+                  plan.edit_part(
+                    part,
+                    @splice.span_edit(
+                      start=location.insert_at,
+                      end=location.insert_at,
+                      @utf8.encode(
+                        " \{location.done_prefix}:done=\"\{if done { "1" } else { "0" }}\"",
+                      ),
+                    ),
+                  )
+              }
+            }
+          }
+          if !flipped {
+            // No entry yet: the flip becomes an addition.
+            additions.push({
+              para_id: canonical_para_id(key),
+              done,
+              parent_para_id: None,
+            })
+          }
+        }
+        None => ()
+      }
+      if additions.length() > 0 {
+        let mut fragment = ""
+        for entry in additions {
+          fragment += comment_ex_fragment(entry)
+        }
+        match root_close {
+          Some(insert_at) =>
+            plan.edit_part(
+              part,
+              @splice.span_edit(
+                start=insert_at,
+                end=insert_at,
+                @utf8.encode(fragment),
+              ),
+            )
+          None => {
+            let (root_start, root_end) = root_span
+            plan.edit_part(
+              part,
+              self_closing_rewrite_range(bytes, root_start, root_end, fragment),
+            )
+          }
+        }
+      }
     }
     None => {
+      // Create the part fresh (fully ours) and wire it.
+      let all_entries : Array[CommentExEntry] = []
+      match flip {
+        Some((key, done)) =>
+          all_entries.push({
+            para_id: canonical_para_id(key),
+            done,
+            parent_para_id: None,
+          })
+        None => ()
+      }
+      for entry in additions {
+        all_entries.push(entry)
+      }
+      let records : Array[XmlNode] = []
+      for entry in all_entries {
+        let attributes : Map[String, String] = {
+          "w15:paraId": entry.para_id,
+          "w15:done": if entry.done {
+            "1"
+          } else {
+            "0"
+          },
+        }
+        match entry.parent_para_id {
+          Some(parent) => attributes["w15:paraIdParent"] = parent
+          None => ()
+        }
+        records.push(XmlElement(@xml.xml_element("w15:commentEx", attributes~)))
+      }
+      let part_text = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+        @xml.write_xml_fragment(
+          @xml.xml_element(
+            "w15:commentsEx",
+            attributes={ "mc:Ignorable": "w15" },
+            children=records,
+          ),
+          namespaces={ "w15": W15_NAMESPACE, "mc": MC_NAMESPACE },
+        )
       let (main_dir, main_base) = split_part_path(annotated.main_story_part())
       let part_name = if main_dir == "" {
         "commentsExtended.xml"
@@ -730,8 +1058,6 @@ fn queue_comments_extended(
       }
       let relationship_type = "http://schemas.microsoft.com/office/2011/relationships/commentsExtended"
       guard zip.read_bytes(rels_part) is Some(rels_bytes) else {
-        // A document with a wired comments part always has this rels
-        // part; its absence here is unrepairable.
         raise Unsupported(
           message="the main part has no relationships part; refusing",
         )
@@ -786,4 +1112,34 @@ fn queue_comments_extended(
       )
     }
   }
+}
+
+///|
+/// A self-closing element (raw byte range) rewritten to open form with
+/// `inner` inside — the range variant of self_closing_rewrite.
+fn self_closing_rewrite_range(
+  part_bytes : Bytes,
+  start : Int,
+  end : Int,
+  inner : String,
+) -> @splice.SpanEdit raise DocxError {
+  let slice = part_bytes[start:end]
+  let mut name_end = 1
+  while name_end < slice.length() &&
+        slice[name_end] != b' ' &&
+        slice[name_end] != b'/' &&
+        slice[name_end] != b'>' &&
+        slice[name_end] != b'\t' &&
+        slice[name_end] != b'\r' &&
+        slice[name_end] != b'\n' {
+    name_end += 1
+  }
+  let replacement = Buffer()
+  replacement.write_bytesview(slice[0:slice.length() - 2])
+  replacement.write_bytes(b">")
+  replacement.write_bytes(@utf8.encode(inner))
+  replacement.write_bytes(b"</")
+  replacement.write_bytesview(slice[1:name_end])
+  replacement.write_bytes(b">")
+  @splice.span_edit(start~, end~, replacement.contents())
 }

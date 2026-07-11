@@ -450,12 +450,16 @@ pub fn read_docx_annotated(
   // without wiring would publish disconnected definitions).
   let mut comments_part_resolved : String? = None
   for
-    target in parts.relationships.find_targets_by_type(
-      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-    ) {
-    let path = resolve_part_target(parts.base_path, target)
-    if zip.exists(path) && comments_part_resolved is None {
-      comments_part_resolved = Some(path)
+    comments_rel_type in (
+      [
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+        "http://purl.oclc.org/ooxml/officeDocument/relationships/comments",
+      ] : ReadOnlyArray[String]) {
+    for target in parts.relationships.find_targets_by_type(comments_rel_type) {
+      let path = @opc.resolve_target(parts.base_path, target)
+      if zip.exists(path) && comments_part_resolved is None {
+        comments_part_resolved = Some(path)
+      }
     }
   }
   let mut comments_extended_resolved : String? = None
@@ -463,7 +467,7 @@ pub fn read_docx_annotated(
     target in parts.relationships.find_targets_by_type(
       "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
     ) {
-    let path = resolve_part_target(parts.base_path, target)
+    let path = @opc.resolve_target(parts.base_path, target)
     if zip.exists(path) && comments_extended_resolved is None {
       comments_extended_resolved = Some(path)
     }
