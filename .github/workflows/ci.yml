@@ -213,6 +213,9 @@ jobs:
           moon run --target wasm docx2html/cmd/docx -- batch ci-batch.docx ci-batch.json 2>docx-wasm.err || { echo "docx batch failed; stderr:"; cat docx-wasm.err; exit 1; }
           b=$(moon run --target wasm docx2html/cmd/docx -- validate ci-batch.docx 2>docx-wasm.err) || { echo "batch validate failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "batch validate -> $b"; test "$b" = "valid"
+          # Annotation read surface on wasm (Phase-2 J2).
+          a=$(moon run --target wasm docx2html/cmd/docx -- outline docx2html/tests/cram/fixtures/commented.docx 2>docx-wasm.err | jq -r '.comments[1].reply_to') || { echo "annotated outline failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "comment reply_to -> $a"; test "$a" = "0"
           # The checked-in authoring acceptance scenario (see
           # docx2html/tests/acceptance/README.md) — same wasm build.
           bash docx2html/tests/acceptance/run.sh

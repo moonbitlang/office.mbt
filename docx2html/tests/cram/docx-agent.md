@@ -39,7 +39,8 @@ $ docx.exe outline "$TESTDIR/fixtures/single-paragraph.docx" | sed "s|$TESTDIR|T
       "footers": []
     }
   ],
-  "messages": []
+  "messages": [],
+  "comments": []
 }
 ```
 
@@ -78,7 +79,8 @@ $ docx.exe outline "$TESTDIR/fixtures/tiny-picture.docx" | sed "s|$TESTDIR|TESTD
       "footers": []
     }
   ],
-  "messages": []
+  "messages": [],
+  "comments": []
 }
 ```
 
@@ -134,12 +136,12 @@ error: path '/body/p[9]' not found: '/body' has 1 'p' children (wanted index 9)
 [1]
 ```
 
-Reserved roots (notes/comments — header/footer roots are live) are named
-as such:
+A document with no notes still parses annotation paths; the error is an
+ordinary not-found (the roots went live in Phase 2):
 
 ```mooncram
 $ docx.exe get "$TESTDIR/fixtures/single-paragraph.docx" '/footnotes/note[1]'
-error: path root '/footnotes' is reserved but not yet addressable
+error: path '/footnotes/note[1]' not found: /footnotes has 0 note(s) (wanted index 1)
 [1]
 ```
 
@@ -211,7 +213,8 @@ $ docx.exe outline "$TESTDIR/fixtures/header-footer.docx" | sed "s|$TESTDIR|TEST
       ]
     }
   ],
-  "messages": []
+  "messages": [],
+  "comments": []
 }
 ```
 
@@ -336,5 +339,60 @@ error: ops[0] repeats the key "op" (strict scripts must not rely on last-wins pa
 ```mooncram
 $ docx.exe batch report.docx report.json
 docx: refusing to write 'report.docx': it already exists (batch creates NEW documents only; it cannot preserve parts of an existing file)
+[1]
+```
+
+## Comments And Notes (`/comments`, `/footnotes` — Phase 2)
+
+The commented fixture (a comment thread with a resolved reply, plus a
+footnote; regenerated and SDK-validated by its self-pinning generator in
+`docx2html/sdk_validity`) shows the annotation read surface. The outline
+carries a metadata-priced inventory with threading:
+
+```mooncram
+$ docx.exe outline "$TESTDIR/fixtures/commented.docx" | jq -c '.comments'
+[{"id":"0","author":"Ada Lovelace","done":false,"anchored_to":"/body/p[2]"},{"id":"1","author":"Grace Hopper","done":true,"reply_to":"0"}]
+```
+
+Comments and notes address by DOCUMENT ID (`[@id=...]`, stable across
+edits) or by ordinal; `get` returns the annotation payload with anchors
+and threading:
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/comments/comment[@id=1]' --json | jq -c '{kind, id, author, done, reply_to}'
+{"kind":"comment","id":"1","author":"Grace Hopper","done":true,"reply_to":"0"}
+```
+
+Annotation bodies are ordinary addressable content:
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/comments/comment[@id=0]/p[1]'
+Please cite a source here.
+```
+
+`text` emits the annotation stories after the body (id-form segments when
+the id is unique):
+
+```mooncram
+$ docx.exe text "$TESTDIR/fixtures/commented.docx"
+[/body/p[1]] plain first paragraph
+[/body/p[2]] the annotated sentence
+[/body/p[3]] closing paragraph
+[/footnotes/note[@id=2]/p[1]] See the appendix for details.
+[/comments/comment[@id=0]/p[1]] Please cite a source here.
+[/comments/comment[@id=1]/p[1]] Agreed, fixed in the next draft.
+```
+
+Covered body elements report the comments that touch them, and the
+errors stay agent-correctable:
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/body/p[2]' --json | jq -c '.comment_ids'
+["0"]
+```
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/comments/comment[@id=9]'
+error: path '/comments/comment[@id=9]' not found: no comment has id '9'
 [1]
 ```
