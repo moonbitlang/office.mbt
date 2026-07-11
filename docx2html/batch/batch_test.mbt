@@ -168,7 +168,7 @@ test "review round 2: numbers must be exact in-range integers" {
     (
       #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"rows": [[{"text": "a", "row_span": 0}]]}}]}
     ),
-    "ops[0].params.rows[0][0].row_span must be between 1 and 10000",
+    "ops[0].params.rows[0][0].row_span must be between 1 and 1",
   )
   expect_batch_error(
     (
@@ -305,43 +305,156 @@ test "review round 2: enums, blanks, and XOR shapes are rejected with exact addr
 }
 
 ///|
-test "review round 2: duplicate keys are refused, not last-wins" {
-  fn expect_duplicate(script : String, key : String) raise {
-    try @batch.check_duplicate_keys(script) catch {
-      BatchError(message) =>
-        if !message.has_prefix("the script repeats the key \"\{key}\"") {
-          fail("unexpected message: \{message}")
-        }
-    } noraise {
-      _ => fail("expected duplicate key '\{key}' to be refused")
-    }
+fn expect_script_text_error(
+  script : String,
+  expected_prefix : String,
+) -> Unit raise {
+  try @batch.check_script_text(script) catch {
+    BatchError(message) =>
+      if !message.has_prefix(expected_prefix) {
+        fail("unexpected message: \{message}")
+      }
+  } noraise {
+    _ => fail("expected the script text to be refused: \{expected_prefix}")
   }
+}
 
-  expect_duplicate(
+///|
+test "review round 2: duplicate keys are refused with the object's path" {
+  expect_script_text_error(
     (
       #|{"schema": "docx.batch/1", "schema": "docx.batch/1", "ops": []}
     ),
-    "schema",
+    "the script repeats the key \"schema\"",
   )
-  expect_duplicate(
+  expect_script_text_error(
     (
-      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "op": "table", "params": {"text": "a"}}]}
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a"}}, {"op": "paragraph", "op": "table", "params": {"text": "a"}}]}
     ),
-    "op",
+    "ops[1] repeats the key \"op\"",
+  )
+  expect_script_text_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a", "text": "b"}}]}
+    ),
+    "ops[0].params repeats the key \"text\"",
   )
   // The same key on DIFFERENT objects is fine, as are key-looking strings
   // in value or array position.
-  @batch.check_duplicate_keys(
+  @batch.check_script_text(
     (
       #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "op"}}, {"op": "paragraph", "params": {"runs": [{"text": "text"}, {"text": "text"}]}}]}
     ),
   )
   // Escapes inside strings do not desync the scanner.
-  @batch.check_duplicate_keys(
+  @batch.check_script_text(
     (
       #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "quote \" and slash \\"}}]}
     ),
   )
+}
+
+///|
+test "review round 3: escape-equivalent and astral key spellings are caught" {
+  // "\u006f\u0070" decodes to "op" — @json.parse would collapse them
+  // last-wins; the scanner must compare DECODED keys.
+  expect_script_text_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "\u006f\u0070": "table", "params": {"text": "a"}}]}
+    ),
+    "ops[0] repeats the key \"op\"",
+  )
+  // A raw astral key and its escaped surrogate-pair spelling collide, and
+  // the scanner advances correctly across the raw pair.
+  expect_script_text_error(
+    (
+      #|{"😀": 1, "\ud83d\ude00": 2}
+    ),
+    "the script repeats the key \"😀\"",
+  )
+  // Astral keys that differ do not collide.
+  @batch.check_script_text(
+    (
+      #|{"😀": 1, "😁": 2}
+    ),
+  )
+}
+
+///|
+test "review round 3: number lexemes must be plain decimal integers" {
+  expect_script_text_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "size": 0.999999999999999999999999}]}}]}
+    ),
+    "ops[0].params.runs[0].size must be a plain decimal integer",
+  )
+  expect_script_text_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"header_rows": 1e2, "rows": [[{"text": "a"}]]}}]}
+    ),
+    "ops[0].params.header_rows must be a plain decimal integer",
+  )
+  expect_script_text_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a", "list": {"ordered": true, "level": 2.9}}}]}
+    ),
+    "ops[0].params.list.level must be a plain decimal integer",
+  )
+  // Plain integers (including negative ones) pass the lexical layer; range
+  // checks live in the parser.
+  @batch.check_script_text(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"header_rows": -1, "rows": [[{"text": "a"}]]}}]}
+    ),
+  )
+}
+
+///|
+test "review round 3: XML-unrepresentable characters and highlight 'none' are rejected" {
+  // A lone escaped surrogate parses into the string; the text guard
+  // rejects it before the writer would abort in UTF-8 encoding.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a\ud800b"}}]}
+    ),
+    "ops[0].params.text contains a character XML cannot represent (code 55296",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a\uffffb"}}]}
+    ),
+    "ops[0].params.text contains a character XML cannot represent (code 65535",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"link": {"href": "https://a.example/\uffff", "text": "x"}}]}}]}
+    ),
+    "ops[0].params.runs[0].link.href contains a character XML cannot represent",
+  )
+  // 'none' is normalized to absent by the reader, so it cannot round-trip.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "highlight": "none"}]}}]}
+    ),
+    "ops[0].params.runs[0].highlight: omit the key instead of 'none'",
+  )
+}
+
+///|
+test "review round 3: row_span is bounded by the remaining rows, like the writer" {
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"rows": [[{"text": "a"}], [{"text": "tall", "row_span": 2}]]}}]}
+    ),
+    "ops[0].params.rows[1][0].row_span must be between 1 and 1",
+  )
+  // A span filling the whole table from row 0 is fine.
+  let script = parse_str(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"rows": [[{"text": "tall", "row_span": 2}, {"text": "b"}], [{"text": "b2"}]]}}]}
+    ),
+  )
+  debug_inspect(script.op_count(), content="1")
 }
 
 ///|

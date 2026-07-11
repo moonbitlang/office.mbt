@@ -755,6 +755,46 @@ test "review round 2 (batch): writer fails closed on invalid run property values
 }
 
 ///|
+test "review round 3 (batch): XML-unrepresentable characters and highlight 'none' fail closed" {
+  // A lone surrogate reaches the writer only via parsed input (MoonBit
+  // literals cannot spell one), and U+FFFF is a valid scalar but outside
+  // XML 1.0's character set.
+  guard @json.parse("\"a\\ud800b\"") is String(lone_surrogate)
+  expect_unsupported(
+    [@docx2html.paragraph([@docx2html.run([@docx2html.text(lone_surrogate)])])],
+    "text contains a character XML cannot represent (code 55296",
+  )
+  expect_unsupported(
+    [@docx2html.paragraph([@docx2html.run([@docx2html.text("a\u{FFFF}b")])])],
+    "text contains a character XML cannot represent (code 65535",
+  )
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.hyperlink(
+          [@docx2html.run([@docx2html.text("x")])],
+          href=Some("https://a.example/\u{FFFF}"),
+        ),
+      ]),
+    ],
+    "a hyperlink href contains a character XML cannot represent",
+  )
+  // The reader normalizes highlight 'none' to absent, so writing it would
+  // break write -> read symmetry.
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run(
+          [@docx2html.text("x")],
+          properties=@docx2html.run_properties(highlight=Some("none")),
+        ),
+      ]),
+    ],
+    "omit the highlight property instead of 'none'",
+  )
+}
+
+///|
 test "review round 2 (batch): the table writer bounds the grid at Word's 63 columns" {
   fn cell_with(span : Int) -> @docx2html.DocumentElement {
     @docx2html.table_cell(
