@@ -303,7 +303,8 @@ async test "a commented document is schema-valid and the annotation index reads 
     #|<w:p><w:r><w:t>plain</w:t></w:r></w:p>
     #|<w:p><w:commentRangeStart w:id="0"/><w:r><w:t>first half</w:t></w:r></w:p>
     #|<w:p><w:r><w:t>second half</w:t></w:r><w:commentRangeEnd w:id="0"/><w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:commentReference w:id="0"/></w:r></w:p>
-    #|<w:p><w:commentRangeStart w:id="1"/><w:r><w:t>point-ish</w:t></w:r><w:commentRangeEnd w:id="1"/><w:r><w:commentReference w:id="1"/></w:r></w:p>
+    #|<w:p><w:r><w:commentReference w:id="1"/></w:r><w:r><w:footnoteReference w:id="2"/></w:r></w:p>
+    #|<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid><w:gridCol/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr><w:p><w:commentRangeStart w:id="5"/><w:r><w:t>cell</w:t></w:r><w:commentRangeEnd w:id="5"/><w:r><w:commentReference w:id="5"/></w:r></w:p></w:tc></w:tr></w:tbl>
     #|<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
     #|</w:body>
     #|</w:document>
@@ -317,12 +318,19 @@ async test "a commented document is schema-valid and the annotation index reads 
     #|<w:comment w:id="0" w:author="Ada" w:initials="A" w:date="2026-07-11T01:00:00Z"><w:p w14:paraId="1AAA0001"><w:r><w:t>range note</w:t></w:r></w:p><w:p w14:paraId="1AAA0002"><w:r><w:t>more</w:t></w:r></w:p></w:comment>
     #|<w:comment w:id="1" w:author="Bob"><w:p w14:paraId="1BBB0001"><w:r><w:t>point note</w:t></w:r></w:p></w:comment>
     #|<w:comment w:id="3" w:author="Cid"><w:p w14:paraId="1CCC0001"><w:r><w:t>reply</w:t></w:r></w:p></w:comment>
+    #|<w:comment w:id="5" w:author="Dee"><w:p><w:r><w:t>about the cell</w:t></w:r></w:p></w:comment>
     #|</w:comments>
   let extended =
     #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w15">
     #|<w15:commentEx w15:paraId="1AAA0002" w15:done="0"/>
     #|<w15:commentEx w15:paraId="1CCC0001" w15:paraIdParent="1AAA0002" w15:done="1"/>
     #|</w15:commentsEx>
+  let footnotes =
+    #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r></w:p></w:footnote>
+    #|<w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>
+    #|<w:footnote w:id="2"><w:p><w:r><w:t>the footnote</w:t></w:r></w:p></w:footnote>
+    #|</w:footnotes>
   let builder = @opc.PackageBuilder::new()
   builder.add_default(
     "rels", "application/vnd.openxmlformats-package.relationships+xml",
@@ -339,6 +347,9 @@ async test "a commented document is schema-valid and the annotation index reads 
   )
   builder.add_override(
     "/word/commentsExtended.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
+  )
+  builder.add_override(
+    "/word/footnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
   )
   builder.add_relationship(
     "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
@@ -362,16 +373,23 @@ async test "a commented document is schema-valid and the annotation index reads 
     "commentsExtended.xml",
     source="word/document.xml",
   )
+  builder.add_relationship(
+    "rId4",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+    "footnotes.xml",
+    source="word/document.xml",
+  )
   builder.add_part("word/document.xml", @utf8.encode(document))
   builder.add_part("word/styles.xml", @utf8.encode(styles))
   builder.add_part("word/comments.xml", @utf8.encode(comments))
   builder.add_part("word/commentsExtended.xml", @utf8.encode(extended))
+  builder.add_part("word/footnotes.xml", @utf8.encode(footnotes))
   let bytes = builder.build()
   validate_docx_via_sdk(dir, "commented_conformance", bytes)
   let annotated = @docx2html.read_docx_annotated(bytes[:])
   let index = annotated.annotations()
   debug_inspect(index.warnings(), content="[]")
-  debug_inspect(index.comments().length(), content="3")
+  debug_inspect(index.comments().length(), content="4")
   let first = index.comments()[0]
   debug_inspect(
     first.id(),
@@ -390,6 +408,31 @@ async test "a commented document is schema-valid and the annotation index reads 
     first.anchors()[0].references(),
     content=(
       #|["/body/p[3]/r[2]"]
+    ),
+  )
+  // Comment 1 is a TRUE point (reference only) covering its paragraph;
+  // comment 3 ranges a TABLE CELL paragraph.
+  let point = index.comments()[1]
+  debug_inspect(point.anchors().length(), content="1")
+  debug_inspect(point.anchors()[0].start(), content="None")
+  let cell_comment = index.comments()[3]
+  debug_inspect(
+    cell_comment.id(),
+    content=(
+      #|"5"
+    ),
+  )
+  debug_inspect(
+    index.covering_comment_ids("/body/tbl[1]/tr[1]/tc[1]/p[1]"),
+    content=(
+      #|["5"]
+    ),
+  )
+  debug_inspect(index.footnotes().length(), content="1")
+  debug_inspect(
+    index.footnotes()[0].references(),
+    content=(
+      #|["/body/p[4]/r[2]"]
     ),
   )
   let reply = index.comments()[2]

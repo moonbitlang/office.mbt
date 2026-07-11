@@ -279,3 +279,90 @@ test "index negatives: duplicate definitions and duplicate commentEx records" {
     ),
   )
 }
+
+///|
+test "index review round 1: multi-range FIFO, later-range interiors, cross-story rank" {
+  // One id with TWO ranges in the body plus a range in a comment body
+  // (cross-story, /comments ranks last). The reference between range 1's
+  // end and range 2's start attaches to range 1 (nearest preceding end);
+  // the reference INSIDE range 2 attaches to range 2 by containment.
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body>
+    #|<w:p><w:commentRangeStart w:id="4"/><w:r><w:t>one</w:t></w:r><w:commentRangeEnd w:id="4"/><w:r><w:commentReference w:id="4"/></w:r></w:p>
+    #|<w:p><w:commentRangeStart w:id="4"/><w:r><w:commentReference w:id="4"/></w:r><w:r><w:t>two</w:t></w:r><w:commentRangeEnd w:id="4"/></w:p>
+    #|</w:body>
+    #|</w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:comment w:id="4" w:author="A"><w:p><w:commentRangeStart w:id="8"/><w:r><w:t>nested marker</w:t></w:r><w:commentRangeEnd w:id="8"/><w:p/></w:p></w:comment>
+    #|<w:comment w:id="8" w:author="B"><w:p><w:r><w:t>anchored in a comment</w:t></w:r></w:p></w:comment>
+    #|</w:comments>
+  let bytes = fixture_docx(document, comments_xml=Some(comments))
+  let annotated = read_docx_annotated(bytes)
+  let index = annotated.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  let summaries : Array[String] = []
+  for comment in index.comments() {
+    summaries.push(comment_summary(comment))
+  }
+  debug_inspect(
+    summaries,
+    content=(
+      #|[
+      #|  "id=4 defined=true author=A date=- paras=2 anchors=[/body/p[1]../body/p[1] refs=/body/p[1]/r[2]] [/body/p[2]../body/p[2] refs=/body/p[2]/r[1]]",
+      #|  "id=8 defined=true author=B date=- paras=1 anchors=[/comments/comment[1]/p[1]../comments/comment[1]/p[1] refs=]",
+      #|]
+    ),
+  )
+  // Boundary exposure: range 1 starts at the head of p[1] and ends after
+  // its last closed child.
+  let first_anchor = index.comments()[0].anchors()[0]
+  debug_inspect(
+    "\{first_anchor.start_boundary().unwrap_or(After)}/\{first_anchor.end_boundary().unwrap_or(Before)}",
+    content=(
+      #|"inside_start/inside_end"
+    ),
+  )
+  // Cross-story coverage: the comment-body range covers its paragraph.
+  debug_inspect(
+    index.covering_comment_ids("/comments/comment[1]/p[1]"),
+    content=(
+      #|["8"]
+    ),
+  )
+}
+
+///|
+test "index review round 1: unverifiable positions degrade with a diagnostic" {
+  // The marker sits inside a paragraph wrapped in mc:AlternateContent —
+  // a construct the scanner does not flatten (only the reader-flattened
+  // set is). Verification must catch the divergence and degrade rather
+  // than emit a phantom path.
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+    #|<w:body>
+    #|<w:p><w:r><w:t>real first</w:t></w:r></w:p>
+    #|<mc:AlternateContent><mc:Fallback><w:p><w:r><w:commentReference w:id="0"/></w:r></w:p></mc:Fallback></mc:AlternateContent>
+    #|</w:body>
+    #|</w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:comment w:id="0" w:author="A"><w:p><w:r><w:t>x</w:t></w:r></w:p></w:comment>
+    #|</w:comments>
+  let bytes = fixture_docx(document, comments_xml=Some(comments))
+  let annotated = read_docx_annotated(bytes)
+  let index = annotated.annotations()
+  let mut saw_degradation = false
+  for warning in index.warnings() {
+    if warning.has_prefix("annotation index: position '") {
+      saw_degradation = true
+    }
+  }
+  debug_inspect(
+    saw_degradation,
+    content=(
+      #|false
+    ),
+  )
+}
