@@ -26,8 +26,9 @@ test "comment dates: the accepted xsd:dateTime subset" {
          "0001-01-01T00:00:00Z", "2026-07-11T24:00:00", // XSD end-of-day
          "2026-07-11T24:00:00.000Z", // end-of-day with zero fraction+zone
          "12345-01-01T00:00:00Z", // years may exceed four digits
-         "-0001-02-28T12:00:00", // negative (astronomical) years
-         "-0004-02-29T00:00:00", // ...with the leap rule on the digits
+         "-0001-02-28T12:00:00", // negative years (XSD 1.0: -N = astronomical 1-N)
+         "-0001-02-29T00:00:00", // -0001 is astronomical year 0: leap
+         "-0005-02-29T00:00:00", // -0005 is astronomical -4: leap
       ] : ReadOnlyArray[String]) {
     expect_date(date, ok=true)
   }
@@ -48,6 +49,7 @@ test "comment dates: the accepted xsd:dateTime subset" {
          "2026-07-11T24:00:00.5", // ...and a zero fraction
          "012345-01-01T00:00:00Z", // no leading zero past four digits
          "-0000-01-01T00:00:00", // negative zero year is still year 0000
+         "-0004-02-29T00:00:00", // -0004 is astronomical -3: NOT leap
          "123-01-01T00:00:00", // years need at least four digits
          "2026-07-11T09:60:00", "2026-07-11T09:30:60", "2026-07-11T09:30:00.", // fraction with no digits
          "2026-07-11T09:30:00.5X", // junk after the fraction
