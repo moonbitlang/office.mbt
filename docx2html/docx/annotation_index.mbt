@@ -41,7 +41,8 @@ pub fn AnnotationAnchor::end(self : AnnotationAnchor) -> String? {
 ///|
 /// Comment-reference positions attached to this anchor, in document order.
 pub fn AnnotationAnchor::references(self : AnnotationAnchor) -> Array[String] {
-  self.references
+  // Defensive copy: internal state must not be mutable through the API.
+  self.references.copy()
 }
 
 ///|
@@ -112,7 +113,8 @@ pub fn CommentInfo::body_paragraphs(self : CommentInfo) -> Int {
 ///|
 /// Anchors in the plan's total order (story rank, then position).
 pub fn CommentInfo::anchors(self : CommentInfo) -> Array[AnnotationAnchor] {
-  self.anchors
+  // Defensive copy: internal state must not be mutable through the API.
+  self.anchors.copy()
 }
 
 ///|
@@ -132,7 +134,8 @@ pub fn NoteInfo::id(self : NoteInfo) -> String {
 ///|
 /// Every body position referencing this note, in document order.
 pub fn NoteInfo::references(self : NoteInfo) -> Array[String] {
-  self.references
+  // Defensive copy: internal state must not be mutable through the API.
+  self.references.copy()
 }
 
 ///|
@@ -159,25 +162,29 @@ pub struct AnnotationIndex {
 ///|
 /// Comments: one entry per definition (comments.xml order), then marker-only ids.
 pub fn AnnotationIndex::comments(self : AnnotationIndex) -> Array[CommentInfo] {
-  self.comments
+  // Defensive copy: internal state must not be mutable through the API.
+  self.comments.copy()
 }
 
 ///|
 /// Footnotes with their reference positions.
 pub fn AnnotationIndex::footnotes(self : AnnotationIndex) -> Array[NoteInfo] {
-  self.footnotes
+  // Defensive copy: internal state must not be mutable through the API.
+  self.footnotes.copy()
 }
 
 ///|
 /// Endnotes with their reference positions.
 pub fn AnnotationIndex::endnotes(self : AnnotationIndex) -> Array[NoteInfo] {
-  self.endnotes
+  // Defensive copy: internal state must not be mutable through the API.
+  self.endnotes.copy()
 }
 
 ///|
 /// Non-fatal diagnostics gathered while building the index.
 pub fn AnnotationIndex::warnings(self : AnnotationIndex) -> Array[String] {
-  self.warnings
+  // Defensive copy: internal state must not be mutable through the API.
+  self.warnings.copy()
 }
 
 ///|
@@ -342,6 +349,18 @@ fn build_annotation_index(
       stories.push(("/\{note_kind}", path))
     }
   }
+  // The comments story ranks LAST (plan-fixed order); markers are legal
+  // inside comment bodies.
+  let comments_path = find_part_path(
+    zip,
+    parts.relationships,
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    base_path=parts.base_path,
+    fallback_path="word/comments.xml",
+  )
+  if zip.exists(comments_path) {
+    stories.push(("/comments", comments_path))
+  }
   let scans : Array[(String, StoryScan)] = []
   for story in stories {
     let (story_key, path) = story
@@ -370,7 +389,7 @@ fn build_annotation_index(
   let definitions = read_comment_definitions(zip, parts, warnings)
   let extended = read_comments_extended(zip, parts, warnings)
   let (comments, spans) = build_comments(definitions, extended, scans, warnings)
-  let (footnotes, endnotes) = build_notes(parts, scans)
+  let (footnotes, endnotes) = build_notes(parts, scans, warnings)
   { comments, footnotes, endnotes, warnings, spans, scans }
 }
 
@@ -555,18 +574,25 @@ fn build_comments(
   }
   let comments : Array[CommentInfo] = []
   let spans : Array[AnchorSpan] = []
-  // Anchors are keyed by id; with duplicate definitions they attach to
-  // the FIRST entry of that id only (documented by the duplicate warning).
-  let anchors_assigned : Set[String] = Set([])
+  // Anchors are computed ONCE per id and shared by every entry of that
+  // id (duplicate definitions each report the id's real anchors — the
+  // review rejected assigning them to one ordinal arbitrarily).
+  let anchors_by_id : Map[String, Array[AnnotationAnchor]] = Map([])
   for entry in entries {
     let (id, definition) = entry
-    let anchors : Array[AnnotationAnchor] = []
-    let assign_anchors = !anchors_assigned.contains(id)
-    anchors_assigned.add(id)
-    for story_entry in scans {
-      if !assign_anchors {
-        break
+    let anchors : Array[AnnotationAnchor] = match anchors_by_id.get(id) {
+      Some(existing) => {
+        comments.push(
+          comment_entry(
+            id, definition, existing, extended, id_by_last_para, ambiguous_para_ids,
+            warnings,
+          ),
+        )
+        continue
       }
+      None => []
+    }
+    for story_entry in scans {
       let (story, scan) = story_entry
       // FIFO pairing within this story.
       let story_anchors : Array[(Int, AnnotationAnchor)] = []
@@ -694,76 +720,93 @@ fn build_comments(
         anchors.push(pair.1)
       }
     }
-    let (done, parent_id) = match definition {
-      Some(def) =>
-        match def.last_para_id {
-          Some(para_id) =>
-            match extended.get(para_id) {
-              Some(record) =>
-                (
-                  Some(record.done),
-                  match record.parent_para_id {
-                    Some(parent_para) =>
-                      match
-                        (if ambiguous_para_ids.contains(parent_para) {
-                          None
-                        } else {
-                          id_by_last_para.get(parent_para)
-                        }) {
-                        Some(parent) => Some(parent)
-                        None => {
-                          warnings.push(
-                            "annotation index: comment '\{id}' replies to unknown paraId \{parent_para}",
-                          )
-                          None
-                        }
-                      }
-                    None => None
-                  },
-                )
-              None => (None, None)
-            }
-          None => (None, None)
-        }
-      None => (None, None)
-    }
-    comments.push({
-      id,
-      defined: definition is Some(_),
-      author: match definition {
-        Some(def) => def.author
-        None => None
-      },
-      initials: match definition {
-        Some(def) => def.initials
-        None => None
-      },
-      date: match definition {
-        Some(def) => def.date
-        None => None
-      },
-      done,
-      parent_id,
-      body_paragraphs: match definition {
-        Some(def) => def.body_paragraphs
-        None => 0
-      },
-      anchors,
-    })
-    // Orphan = a definition that OWNED the anchor search, found nothing,
-    // and is not a reply (anchorless replies are normal — they live via
-    // their parent's thread; plan-locked). Non-first duplicates never
-    // own the search, and the duplicate warning already covers them.
-    if definition is Some(_) &&
-      assign_anchors &&
-      anchors.length() == 0 &&
-      parent_id is None {
+    anchors_by_id[id] = anchors
+    let info = comment_entry(
+      id, definition, anchors, extended, id_by_last_para, ambiguous_para_ids, warnings,
+    )
+    comments.push(info)
+    // Orphan = a definition whose id has no anchors anywhere and that is
+    // not a reply (anchorless replies are normal — they live via their
+    // parent's thread; plan-locked). Emitted once per id, on the first
+    // entry (the duplicate warning covers the rest).
+    if definition is Some(_) && anchors.length() == 0 && info.parent_id is None {
       warnings.push(
         "annotation index: comment '\{id}' has no anchors in any story (orphan definition; content still exposed)",
       )
     }
   }
   (comments, spans)
+}
+
+///|
+/// Metadata assembly for one comments() entry: threading resolved via
+/// the definition's LAST-paragraph paraId (CT_CommentEx), sharing the
+/// id's anchors.
+fn comment_entry(
+  id : String,
+  definition : CommentDefinition?,
+  anchors : Array[AnnotationAnchor],
+  extended : Map[String, CommentExRecord],
+  id_by_last_para : Map[String, String],
+  ambiguous_para_ids : Set[String],
+  warnings : Array[String],
+) -> CommentInfo {
+  let (done, parent_id) = match definition {
+    Some(def) =>
+      match def.last_para_id {
+        Some(para_id) =>
+          match extended.get(para_id) {
+            Some(record) =>
+              (
+                Some(record.done),
+                match record.parent_para_id {
+                  Some(parent_para) =>
+                    match
+                      (if ambiguous_para_ids.contains(parent_para) {
+                        None
+                      } else {
+                        id_by_last_para.get(parent_para)
+                      }) {
+                      Some(parent) => Some(parent)
+                      None => {
+                        warnings.push(
+                          "annotation index: comment '\{id}' replies to unknown paraId \{parent_para}",
+                        )
+                        None
+                      }
+                    }
+                  None => None
+                },
+              )
+            None => (None, None)
+          }
+        None => (None, None)
+      }
+    None => (None, None)
+  }
+  {
+    id,
+    defined: definition is Some(_),
+    author: match definition {
+      Some(def) => def.author
+      None => None
+    },
+    initials: match definition {
+      Some(def) => def.initials
+      None => None
+    },
+    date: match definition {
+      Some(def) => def.date
+      None => None
+    },
+    done,
+    parent_id,
+    body_paragraphs: match definition {
+      Some(def) => def.body_paragraphs
+      None => 0
+    },
+    anchors,
+  }
 }
 
 ///|
@@ -871,6 +914,7 @@ fn marker_path(
 fn build_notes(
   parts : DocumentParts,
   scans : Array[(String, StoryScan)],
+  warnings : Array[String],
 ) -> (Array[NoteInfo], Array[NoteInfo]) {
   let footnotes : Array[NoteInfo] = []
   let endnotes : Array[NoteInfo] = []
@@ -896,6 +940,8 @@ fn build_notes(
       }
     }
   }
+  let seen_footnotes : Set[String] = Set([])
+  let seen_endnotes : Set[String] = Set([])
   for note in parts.notes_result.notes {
     let refs = match note.note_type {
       "footnote" => footnote_refs.get(note.note_id).unwrap_or([])
@@ -903,9 +949,29 @@ fn build_notes(
     }
     let info : NoteInfo = { id: note.note_id, references: refs }
     if note.note_type == "footnote" {
+      seen_footnotes.add(note.note_id)
       footnotes.push(info)
     } else {
+      seen_endnotes.add(note.note_id)
       endnotes.push(info)
+    }
+  }
+  // Reference-only ids (no definition) surface too — dangling references
+  // are review content an agent must see (plan: surface, don't skip).
+  for id, refs in footnote_refs {
+    if !seen_footnotes.contains(id) {
+      warnings.push(
+        "annotation index: footnote references target id '\{id}' which has no definition",
+      )
+      footnotes.push({ id, references: refs })
+    }
+  }
+  for id, refs in endnote_refs {
+    if !seen_endnotes.contains(id) {
+      warnings.push(
+        "annotation index: endnote references target id '\{id}' which has no definition",
+      )
+      endnotes.push({ id, references: refs })
     }
   }
   (footnotes, endnotes)
