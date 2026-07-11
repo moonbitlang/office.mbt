@@ -16,8 +16,11 @@ the source of truth and this document has a bug.
   in `docx2html/inspect/schema.mbt`.
 - **Evolution is additive-only**: new optional keys may appear under an
   existing identifier; keys are never renamed, removed, or retyped. A
-  breaking change mints a new identifier with a bumped major. Consumers must
-  ignore keys they do not recognize.
+  breaking change mints a new identifier with a bumped major. Consumers of
+  **emitted** payloads (`outline`, `get --json`) must ignore keys they do
+  not recognize. Schemas the tool **consumes** (`xlsx.batch/1`) are the
+  opposite: validated strictly, unknown keys are errors — a typo must fail
+  loudly, not silently no-op.
 - **`null` is never emitted.** An absent key means "unset / not present".
   Top-level inventory lists (`sheets`, `merges`, `tables`, `charts`,
   `images`, `pivot_tables`, `defined_names`, `cells`) are always present
@@ -124,7 +127,7 @@ theme/indexed/tint fields are numeric theme-palette references, not hex.
 
 ## `xlsx.batch/1` — mutation script (`xlsx batch <file> <script.json>`)
 
-*Reserved in P0; implemented by the `batch` subcommand (P1).* Envelope:
+Envelope:
 
 ```json
 {
@@ -135,19 +138,54 @@ theme/indexed/tint fields are numeric theme-palette references, not hex.
 }
 ```
 
-- Op names mirror the CLI subcommands (`set`, `formula`, `style`, `merge`,
-  `width`, `freeze`, `filter`, `add-sheet`, `chart`); params are snake_case
-  versions of the CLI arguments.
+- Op names mirror the CLI subcommands; params are snake_case versions of
+  the CLI arguments. Normative per-op params (`?` = optional):
+
+| op | params |
+| --- | --- |
+| `set` | `sheet` (string), `cell` (string), `value` (string \| number \| bool \| null) |
+| `formula` | `sheet`, `cell`, `formula` (strings; leading `=` optional) |
+| `style` | `sheet`, `range` (strings); `bold?`, `italic?` (bool); `number_format?`, `fill?`, `font_color?`, `align?` (strings) |
+| `merge` | `sheet`, `range` (strings) |
+| `width` | `sheet`, `column` (strings; `A` or `A:C`), `width` (number) |
+| `freeze` | `sheet`, `cell` (strings) |
+| `filter` | `sheet`, `range` (strings) |
+| `add-sheet` | `name` (string) |
+| `chart` | `sheet`, `anchor`, `categories`, `values` (strings, required); `type?` (default `col`), `name?`, `title?` (strings) |
 - `set.value` accepts string, number, bool, or null. JSON types are honored:
   a number becomes a numeric cell, a string a text cell (no
   reclassification), a bool a boolean cell, and null clears the cell.
-- Validation is strict: a missing/unknown `schema`, an unknown `op`, an
-  unknown param key, or a wrong param type fails with an error naming the
-  0-based op index, and the file is not touched.
+- Validation is strict, and the file is never touched on failure.
+  Envelope errors (missing/unsupported `schema`, malformed `ops`) carry no
+  index; op-level errors (unknown op, unknown param key, wrong param type)
+  name the 0-based op index, e.g. `op 1 (style): unknown param 'colour'`.
+- Numbers follow standard JSON semantics: a literal parses to the nearest
+  IEEE-754 double (about 15–17 significant digits; `9007199254740993`
+  stores `9007199254740992`, spelling-independent). Literals whose value
+  is not finite — `1e309` overflows to infinity — are rejected rather
+  than corrupting the sheet.
 - Application is all-or-nothing: ops apply to the in-memory workbook and the
   file is written (temp file + rename) only after every op succeeds.
-- Zero ops is a valid no-op. Scripts are capped at 10,000 ops.
+- Every cell/range/column reference is validated at parse time against
+  the strict in-grid grammar: `cell` params must be a single cell (no
+  range spelling); `merge`/`filter` `range` params must be an `A1:B2`
+  colon range; `style.range` accepts a cell or range (each range capped
+  at 100,000 cells); `column` is a letters-only column or ascending
+  column range; chart `categories`/`values` are a range with an optional
+  non-empty `Sheet!` qualification.
+- Zero ops is a valid no-op and writes nothing. Scripts are capped at
+  10,000 ops, style ranges at 1,000,000 expanded cells per script in
+  aggregate, and numeric literals at 40 characters (pathologically long
+  literals can round incorrectly upstream).
 - `--dry-run` parses and applies in memory but never writes.
+
+- The save resolves a symlinked workbook to its target first (native),
+  writes a uniquely-named temp through its exclusive handle, and renames
+
+  it over the target, syncing the bytes to stable storage first. On
+  POSIX the saved file is created owner-only (0600) — never wider than
+  the original (Windows follows directory ACLs); chmod afterwards for
+  group access.
 
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
 

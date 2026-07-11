@@ -159,3 +159,69 @@ The workbook the agent commands read stays a valid OOXML package:
 
   $ xlsx.exe validate book.xlsx
   valid
+
+`batch` applies an xlsx.batch/1 op script in one open -> apply -> save
+cycle (ops mirror the subcommands; JSON value types are honored). It is
+all-or-nothing: `--dry-run` writes nothing, a failing op names its 0-based
+index and leaves the file untouched, and the final save goes through a
+temp file + rename:
+
+  $ cat > report.json <<'JSON'
+  > {
+  >   "schema": "xlsx.batch/1",
+  >   "ops": [
+  >     {"op": "set", "params": {"sheet": "Data", "cell": "D1", "value": "Qty"}},
+  >     {"op": "set", "params": {"sheet": "Data", "cell": "D2", "value": 7.5}},
+  >     {"op": "formula", "params": {"sheet": "Data", "cell": "D3", "formula": "=D2*2"}},
+  >     {"op": "style", "params": {"sheet": "Data", "range": "D1", "bold": true, "align": "center"}},
+  >     {"op": "merge", "params": {"sheet": "Data", "range": "A5:B5"}},
+  >     {"op": "width", "params": {"sheet": "Data", "column": "D", "width": 12}},
+  >     {"op": "add-sheet", "params": {"name": "Notes"}}
+  >   ]
+  > }
+  > JSON
+  $ xlsx.exe batch book.xlsx report.json --dry-run
+  dry-run ok: 7 op(s); book.xlsx not modified
+  $ xlsx.exe batch book.xlsx report.json
+  applied 7 op(s) to book.xlsx
+  $ xlsx.exe get book.xlsx Data D2
+  7.5
+  $ xlsx.exe calc book.xlsx Data D3
+  15
+  $ xlsx.exe sheets book.xlsx
+  Data
+  Notes
+  $ xlsx.exe validate book.xlsx
+  valid
+
+A failing op reports its index and op name, and the file is not written —
+E9 stays empty even though the first op set it:
+
+  $ cat > bad.json <<'JSON'
+  > {"schema": "xlsx.batch/1", "ops": [
+  >   {"op": "set", "params": {"sheet": "Data", "cell": "E9", "value": "x"}},
+  >   {"op": "merge", "params": {"sheet": "Missing", "range": "A1:B1"}}
+  > ]}
+  > JSON
+  $ xlsx.exe batch book.xlsx bad.json
+  error: op 1 (merge): * (glob)
+  [1]
+  $ test "$(xlsx.exe get book.xlsx Data E9)" = ""
+
+Validation is strict — unknown params fail with the op's index, and a
+wrong schema string is rejected up front:
+
+  $ cat > typo.json <<'JSON'
+  > {"schema": "xlsx.batch/1", "ops": [
+  >   {"op": "style", "params": {"sheet": "Data", "range": "A1", "colour": "FF0000"}}
+  > ]}
+  > JSON
+  $ xlsx.exe batch book.xlsx typo.json
+  error: op 0 (style): unknown param 'colour'
+  [1]
+  $ cat > wrong.json <<'JSON'
+  > {"schema": "xlsx.batch/9", "ops": []}
+  > JSON
+  $ xlsx.exe batch book.xlsx wrong.json
+  error: unsupported schema 'xlsx.batch/9' (expected xlsx.batch/1)
+  [1]

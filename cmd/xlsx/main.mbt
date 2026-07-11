@@ -13,6 +13,7 @@
 ///   xlsx filter <file> <sheet> <range>         add an auto-filter over a range
 ///   xlsx add-sheet <file> <name>               add a sheet to a workbook
 ///   xlsx chart <file> <sheet> <anchor> [opts]  add a chart from a data range
+///   xlsx batch <file> <script.json> [--dry-run] apply a JSON op script
 ///   xlsx get <file> <sheet> <cell> [--json]    print a cell value (or a
 ///                                              cell/range as JSON)
 ///   xlsx outline <file>                        print a workbook map as JSON
@@ -79,6 +80,7 @@ async fn run_cli() -> Unit {
     Some(("filter", m)) => run_filter(m)
     Some(("add-sheet", m)) => run_add_sheet(m)
     Some(("chart", m)) => run_chart(m)
+    Some(("batch", m)) => run_batch(m)
     Some(("get", m)) => run_get(m)
     Some(("outline", m)) => run_outline(m)
     Some(("calc", m)) => run_calc(m)
@@ -250,6 +252,24 @@ fn build_command() -> @argparse.Command {
             about="series legend label (a literal; for a cell use a qualified ref like Sheet1!B1)",
           ),
           OptionArg("title", long="title", about="chart title"),
+        ],
+      ),
+      Command(
+        "batch",
+        about="Apply an xlsx.batch/1 JSON op script and save in place",
+        positionals=[
+          PositionArg("file"),
+          PositionArg(
+            "script",
+            about="path of the op script (see docs/agent-json-schemas.md)",
+          ),
+        ],
+        flags=[
+          FlagArg(
+            "dry-run",
+            long="dry-run",
+            about="parse and apply in memory but do not write the file",
+          ),
         ],
       ),
       Command(

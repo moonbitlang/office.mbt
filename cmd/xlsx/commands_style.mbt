@@ -73,31 +73,14 @@ async fn run_style(m : @argparse.Matches) -> Unit {
   let target = arg(m, "range")
   let workbook = @lib.open_file(file)
   // Build a style from the provided flags/options; unset ones are left alone.
-  let number_format = arg(m, "number-format")
-  let mut style = if number_format != "" {
-    @xl.Style::number_format(number_format)
-  } else {
-    @xl.Style::new()
-  }
-  let bold = flag(m, "bold")
-  let italic = flag(m, "italic")
-  let font_color = arg(m, "font-color")
-  if bold || italic || font_color != "" {
-    let font = if font_color != "" {
-      @xl.Font::with_values(bold~, italic~, color=font_color)
-    } else {
-      @xl.Font::with_values(bold~, italic~)
-    }
-    style = style.with_font(font)
-  }
-  let fill = arg(m, "fill")
-  if fill != "" {
-    style = style.with_fill(@xl.Fill::solid(fill))
-  }
-  let align = arg(m, "align")
-  if align != "" {
-    style = style.with_alignment(@xl.Alignment::with_values(horizontal=align))
-  }
+  let style = @batch.build_style(
+    bold=flag(m, "bold"),
+    italic=flag(m, "italic"),
+    number_format=arg(m, "number-format"),
+    fill=arg(m, "fill"),
+    font_color=arg(m, "font-color"),
+    align=arg(m, "align"),
+  )
   let style_id = workbook.new_style(style)
   let cells = expand_range(target)
   for cell in cells {
