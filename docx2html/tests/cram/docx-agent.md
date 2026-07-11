@@ -351,7 +351,7 @@ carries a metadata-priced inventory with threading:
 
 ```mooncram
 $ docx.exe outline "$TESTDIR/fixtures/commented.docx" | jq -c '.comments'
-[{"id":"0","author":"Ada Lovelace","done":false,"anchored_to":"/body/p[2]"},{"id":"1","author":"Grace Hopper","done":true,"reply_to":"0"}]
+[{"id":"0","author":"Ada Lovelace","done":false,"anchored_to":"/body/p[2]"},{"id":"1","author":"Grace Hopper","done":true,"parent_id":"0"}]
 ```
 
 Comments and notes address by DOCUMENT ID (`[@id=...]`, stable across
@@ -359,8 +359,8 @@ edits) or by ordinal; `get` returns the annotation payload with anchors
 and threading:
 
 ```mooncram
-$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/comments/comment[@id=1]' --json | jq -c '{kind, id, author, done, reply_to}'
-{"kind":"comment","id":"1","author":"Grace Hopper","done":true,"reply_to":"0"}
+$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/comments/comment[@id=1]' --json | jq -c '{kind, id, author, done, parent_id}'
+{"kind":"comment","id":"1","author":"Grace Hopper","done":true,"parent_id":"0"}
 ```
 
 Annotation bodies are ordinary addressable content:
@@ -395,4 +395,18 @@ $ docx.exe get "$TESTDIR/fixtures/commented.docx" '/body/p[2]' --json | jq -c '.
 $ docx.exe get "$TESTDIR/fixtures/commented.docx" '/comments/comment[@id=9]'
 error: path '/comments/comment[@id=9]' not found: no comment has id '9'
 [1]
+```
+
+Ordinal addressing normalizes to the id form (the emitted handle); the
+full container payload carries the anchor with boundaries; bare `get`
+reads a note's text:
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/comments/comment[1]' --json | jq -c '{path, initials, date, anchors}'
+{"path":"/comments/comment[@id=0]","initials":"AL","date":"2026-07-11T09:00:00Z","anchors":[{"story":"/body","start":"/body/p[2]","start_boundary":"inside_start","end":"/body/p[2]","end_boundary":"inside_end","references":["/body/p[2]/r[2]"]}]}
+```
+
+```mooncram
+$ docx.exe get "$TESTDIR/fixtures/commented.docx" '/footnotes/note[@id=2]'
+See the appendix for details.
 ```

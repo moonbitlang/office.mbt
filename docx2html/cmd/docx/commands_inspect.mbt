@@ -52,9 +52,13 @@ async fn run_get(matches : @argparse.Matches) -> Unit {
     println(payload.stringify(indent=2))
   } else {
     let result = annotated.result()
-    let parsed_root_is_annotation = path.has_prefix("/footnotes") ||
-      path.has_prefix("/endnotes") ||
-      path.has_prefix("/comments")
+    // Dispatch on the PARSED root (prefix sniffing would misroute
+    // "/commentsX" — J2 review round 1).
+    let parsed = @paths.parse_path(path) catch {
+      PathError(message) => raise @cli.CliError("error: " + message)
+    }
+    let parsed_root_is_annotation = parsed.root
+      is (Footnotes | Endnotes | Comments)
     let element = try {
       if parsed_root_is_annotation {
         @paths.resolve_annotation_path(

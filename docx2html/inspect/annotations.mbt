@@ -103,14 +103,18 @@ fn annotation_story_element(
       found
     }
   }
-  let head_rendered = render_container_segment(pairs, container_kind, ordinal)
+  let (head_rendered, _) = render_container_segment(
+    pairs, container_kind, ordinal,
+  )
   let normalized = normalized_path(
     "\{story}/\{head_rendered}",
     parsed.steps[1:].to_array(),
   )
   if parsed.steps.length() > 1 {
     // A body element inside the annotation: the ordinary element payload
-    // shape, with the annotation-story path echo.
+    // shape, with the annotation-story path echo — including comment_ids
+    // (J1 supports anchors in annotation stories; coverage keys on the
+    // ORDINAL rendering, so the id-form head converts back).
     let out : Map[String, Json] = {
       "schema": Json::string(SCHEMA_ELEMENT),
       "file": Json::string(file),
@@ -118,6 +122,18 @@ fn annotation_story_element(
       "kind": Json::string(element_kind_name(target, parsed.root)),
     }
     element_attributes(target, out)
+    let coverage_key = normalized_path(
+      "\{story}/\{container_kind}[\{ordinal}]",
+      parsed.steps[1:].to_array(),
+    )
+    let covering = annotated.annotations().covering_comment_ids(coverage_key)
+    if covering.length() > 0 {
+      let ids : Array[Json] = []
+      for id in covering {
+        ids.push(Json::string(id))
+      }
+      out["comment_ids"] = Json::array(ids)
+    }
     out["children"] = children_json(target, normalized)
     return Json::object(out)
   }
@@ -144,14 +160,15 @@ fn annotation_story_element(
           Some(done) => out["done"] = Json::boolean(done)
           None => ()
         }
-        set_optional(out, "reply_to", info.parent_id())
+        set_optional(out, "parent_id", info.parent_id())
         let anchors : Array[Json] = []
         for anchor in info.anchors() {
-          anchors.push(anchor_json(anchor))
+          anchors.push(anchor_json(annotated, anchor))
         }
         out["anchors"] = Json::array(anchors)
         match first_anchor_path(info) {
-          Some(anchored) => out["anchored_to"] = Json::string(anchored)
+          Some(anchored) =>
+            out["anchored_to"] = Json::string(id_form_path(annotated, anchored))
           None => ()
         }
       }
@@ -166,7 +183,7 @@ fn annotation_story_element(
         if note.id() == id {
           let references : Array[Json] = []
           for reference in note.references() {
-            references.push(Json::string(reference))
+            references.push(Json::string(id_form_path(annotated, reference)))
           }
           out["references"] = Json::array(references)
           break
@@ -186,7 +203,7 @@ fn render_container_segment(
   pairs : Array[(String, Array[@document.DocumentElement])],
   container_kind : String,
   ordinal : Int,
-) -> String {
+) -> (String, Bool) {
   let (id, _) = pairs[ordinal - 1]
   let mut occurrences = 0
   for pair in pairs {
@@ -195,32 +212,87 @@ fn render_container_segment(
       occurrences += 1
     }
   }
+  // The id form requires a UNIQUE id spelled with representable
+  // characters (']' and '=' break the grammar; '/' breaks segmentation).
   if occurrences == 1 &&
     id != "" &&
     id.find("]").is_empty() &&
-    id.find("=").is_empty() {
-    "\{container_kind}[@id=\{id}]"
+    id.find("=").is_empty() &&
+    id.find("/").is_empty() {
+    ("\{container_kind}[@id=\{id}]", false)
   } else {
-    "\{container_kind}[\{ordinal}]"
+    ("\{container_kind}[\{ordinal}]", true)
   }
 }
 
 ///|
-fn anchor_json(anchor : @docx_impl.AnnotationAnchor) -> Json {
+/// Rewrites an ordinal container segment inside a path to the id form
+/// when the id is unique (emitted paths use the agent-stable handle;
+/// the index keeps ordinal keys internally).
+fn id_form_path(
+  annotated : @docx_impl.DocxAnnotatedResult,
+  path : String,
+) -> String {
+  let (story, pairs, container_kind) = if path.has_prefix("/comments/") {
+    ("/comments", annotated.comment_bodies(), "comment")
+  } else if path.has_prefix("/footnotes/") {
+    ("/footnotes", annotated.footnote_bodies(), "note")
+  } else if path.has_prefix("/endnotes/") {
+    ("/endnotes", annotated.endnote_bodies(), "note")
+  } else {
+    return path
+  }
+  let rest = path["\{story}/".length():].to_owned()
+  let head_end = match rest.find("/") {
+    Some(slash) => slash
+    None => rest.length()
+  }
+  let head = rest[:head_end].to_owned()
+  let expected_prefix = "\{container_kind}["
+  guard head.has_prefix(expected_prefix) && head.has_suffix("]") else {
+    return path
+  }
+  let inner = head[expected_prefix.length():head.length() - 1].to_owned()
+  let mut ordinal = 0
+  for ch in inner {
+    if ch is ('0'..='9') {
+      ordinal = ordinal * 10 + (ch.to_int() - '0'.to_int())
+    } else {
+      return path
+    }
+  }
+  if ordinal < 1 || ordinal > pairs.length() {
+    return path
+  }
+  let (segment, _) = render_container_segment(pairs, container_kind, ordinal)
+  "\{story}/\{segment}\{rest[head_end:].to_owned()}"
+}
+
+///|
+fn anchor_json(
+  annotated : @docx_impl.DocxAnnotatedResult,
+  anchor : @docx_impl.AnnotationAnchor,
+) -> Json {
   let out : Map[String, Json] = { "story": Json::string(anchor.story()) }
-  set_optional(out, "start", anchor.start())
+  match anchor.start() {
+    Some(start) => out["start"] = Json::string(id_form_path(annotated, start))
+    None => ()
+  }
   match anchor.start_boundary() {
     Some(boundary) => out["start_boundary"] = Json::string("\{boundary}")
     None => ()
   }
-  set_optional(out, "end", anchor.end())
+  match anchor.end() {
+    Some(end) => out["end"] = Json::string(id_form_path(annotated, end))
+    None => ()
+  }
   match anchor.end_boundary() {
     Some(boundary) => out["end_boundary"] = Json::string("\{boundary}")
     None => ()
   }
   let references : Array[Json] = []
   for reference in anchor.references() {
-    references.push(Json::string(reference))
+    references.push(Json::string(id_form_path(annotated, reference)))
   }
   out["references"] = Json::array(references)
   Json::object(out)
@@ -235,6 +307,8 @@ fn first_anchor_path(info : @docx_impl.CommentInfo) -> String? {
     return None
   }
   let first = anchors[0]
+  // Locked: start-else-first-reference; a dangling END is not an anchor
+  // the agent should jump to.
   match first.start() {
     Some(start) => Some(start)
     None => {
@@ -242,7 +316,7 @@ fn first_anchor_path(info : @docx_impl.CommentInfo) -> String? {
       if references.length() > 0 {
         Some(references[0])
       } else {
-        first.end()
+        None
       }
     }
   }
@@ -274,9 +348,12 @@ pub fn annotated_outline(
           Some(done) => entry["done"] = Json::boolean(done)
           None => ()
         }
-        set_optional(entry, "reply_to", info.parent_id())
+        set_optional(entry, "parent_id", info.parent_id())
         match first_anchor_path(info) {
-          Some(anchored) => entry["anchored_to"] = Json::string(anchored)
+          Some(anchored) =>
+            entry["anchored_to"] = Json::string(
+              id_form_path(annotated, anchored),
+            )
           None => ()
         }
         inventory.push(Json::object(entry))
@@ -310,7 +387,7 @@ pub fn annotated_text_lines(
     let (story, container_kind, pairs) = story_entry
     for at, pair in pairs {
       let (_, body) = pair
-      let segment = render_container_segment(pairs, container_kind, at + 1)
+      let (segment, _) = render_container_segment(pairs, container_kind, at + 1)
       let container = @document.document(body)
       collect_text_lines(
         @paths.element_children(container),

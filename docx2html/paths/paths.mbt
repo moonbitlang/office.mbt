@@ -195,7 +195,7 @@ fn parse_step(segment : String, path : String) -> PathStep raise PathError {
   // matched literally and may not contain ']' or '=' (grammar-locked).
   if inner.has_prefix("@id=") {
     let token = inner[4:].to_owned()
-    if token == "" || token.find("=") is Some(_) {
+    if token == "" || token.find("=") is Some(_) || token.find("]") is Some(_) {
       raise PathError(
         "invalid path segment '\{segment}' in '\{path}': expected [@id=<token>] with a non-empty token free of ']' and '='",
       )
