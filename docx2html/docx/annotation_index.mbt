@@ -297,6 +297,9 @@ pub struct DocxAnnotatedResult {
   // The zip entry the body-story spans index into (L0), resolved via
   // the officeDocument relationship.
   priv main_part : String
+  // The comments part's zip entry when the package has one (resolved
+  // by relationship type), for L1's splice-into-existing path.
+  priv comments_part_name : String?
 }
 
 ///|
@@ -426,10 +429,22 @@ pub fn read_docx_annotated(
   let combined = @core.dedupe_messages(package_result.messages)
   package_result.messages.clear()
   package_result.messages.append(combined)
+  let comments_part_path = find_part_path(
+    zip,
+    parts.relationships,
+    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    base_path=parts.base_path,
+    fallback_path="word/comments.xml",
+  )
   {
     package_result,
     index,
     main_part: main_story_path(zip),
+    comments_part_name: if zip.exists(comments_part_path) {
+      Some(comments_part_path)
+    } else {
+      None
+    },
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,

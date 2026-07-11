@@ -106,3 +106,22 @@ test "L0 review round 1: run spans mirror paragraph spans (rPr, self-closing)" {
   // The self-closing <w:r/> has no interior.
   assert_eq(r2_content, -1)
 }
+
+///|
+test "L1: story roots project with insertion offsets" {
+  let source =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0" w:author="A"><w:p><w:r><w:t>x</w:t></w:r></w:p></w:comment></w:comments>
+  let scan = scan_story(@utf8.encode(source))
+  guard scan.root() is Some(root)
+  inspect(root.kind, content="comments")
+  assert_eq(root.close_tag_start, span_source_offset(source, "</w:comments>"))
+  assert_eq(root.content_start, span_source_offset(source, "<w:comment "))
+  // A self-closing root has no interior.
+  let empty = scan_story(
+    @utf8.encode(
+      "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+  )
+  guard empty.root() is Some(empty_root)
+  inspect(empty_root.content_start, content="-1")
+}

@@ -96,6 +96,45 @@ pub fn DocxAnnotatedResult::body_run_span(
 }
 
 ///|
+/// The ROOT element's span for a scanned story ("/body", "/comments",
+/// "/footnotes", "/endnotes"), or None when the story was not scanned.
+/// L1 splices a new comment definition just before the comments
+/// story's `close_tag_start`; a self-closing root reports no interior
+/// and must be rewritten by its own extent first.
+pub fn DocxAnnotatedResult::story_root_span(
+  self : DocxAnnotatedResult,
+  story : String,
+) -> NodeSpan? {
+  for entry in self.index.scans {
+    let (key, scan) = entry
+    if key != story {
+      continue
+    }
+    match scan.root() {
+      Some(node) =>
+        return Some({
+          byte_start: node.byte_start,
+          byte_end: node.byte_end,
+          content_start: node.content_start,
+          close_tag_start: node.close_tag_start,
+        })
+      None => return None
+    }
+  }
+  None
+}
+
+///|
+/// The zip entry holding the comments part (resolved by RELATIONSHIP
+/// TYPE from the main part, never by filename), or None when the
+/// package has no comments part yet — L1 then creates it.
+pub fn DocxAnnotatedResult::comments_part(
+  self : DocxAnnotatedResult,
+) -> String? {
+  self.comments_part_name
+}
+
+///|
 fn body_node_span_of_kind(
   annotated : DocxAnnotatedResult,
   relative_path : String,

@@ -97,10 +97,12 @@ pub fn DocxAnnotatedResult::annotations(Self) -> AnnotationIndex
 pub fn DocxAnnotatedResult::body_paragraph_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::body_run_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::comment_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
+pub fn DocxAnnotatedResult::comments_part(Self) -> String?
 pub fn DocxAnnotatedResult::endnote_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
 pub fn DocxAnnotatedResult::footnote_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
 pub fn DocxAnnotatedResult::main_story_part(Self) -> String
 pub fn DocxAnnotatedResult::result(Self) -> DocxPackageResult
+pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
 
 pub(all) struct DocxPackageResult {
   document : @document.DocumentElement
