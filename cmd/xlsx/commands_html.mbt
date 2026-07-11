@@ -43,7 +43,8 @@ async fn run_html(m : @argparse.Matches) -> Unit {
     // `slot/out.xlsx`) between the guard and the write could still
     // redirect where the temp+rename lands. Fully closing that needs
     // handle-relative openat/renameat on a pinned directory fd, which
-    // moonbitlang/async/fs does not expose. It is out of scope here: the
+    // moonbitlang/async/fs does not expose (moonbitlang/async#493). It is
+    // out of scope here: the
     // threat requires a concurrent process that already holds write
     // access to the output's directory tree — which can clobber the
     // input directly regardless — so it grants no capability a local
