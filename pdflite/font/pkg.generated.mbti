@@ -19,6 +19,15 @@ pub(all) struct PdfFontListEntry {
   encoding : String
   font : @syntax.PdfObject
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfFontListEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontListEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontListEntry::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfFontListEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfFontTableEntry {
   code : Int
@@ -27,6 +36,15 @@ pub(all) struct PdfFontTableEntry {
   unicode_name : String
   glyphnames : String
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfFontTableEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontTableEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontTableEntry::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfFontTableEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfMissingFontEntry {
   page : Int
@@ -35,6 +53,15 @@ pub(all) struct PdfMissingFontEntry {
   basefont : String
   encoding : String
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfMissingFontEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMissingFontEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMissingFontEntry::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfMissingFontEntry::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

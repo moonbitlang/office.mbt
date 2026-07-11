@@ -103,8 +103,17 @@ pub(all) struct PaperSize {
   width : Double
   height : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PaperSize::equal(Self, Self) -> Bool
 pub fn PaperSize::height(Self) -> Double
 pub fn PaperSize::landscape(Self) -> Self
+#deprecated
+pub fn PaperSize::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PaperSize::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PaperSize::to_repr(Self) -> @debug.Repr
 pub fn PaperSize::unit(Self) -> PdfUnit
 pub fn PaperSize::width(Self) -> Double
 
@@ -113,6 +122,15 @@ pub(all) struct PdfCalculatedPosition {
   y : Double
   rotation : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfCalculatedPosition::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCalculatedPosition::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCalculatedPosition::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCalculatedPosition::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfCoordRectangle {
   x : Double
@@ -120,6 +138,15 @@ pub(all) struct PdfCoordRectangle {
   width : Double
   height : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfCoordRectangle::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCoordRectangle::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCoordRectangle::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCoordRectangle::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfPosition {
   PdfPositionPosCentre(Double, Double)
@@ -137,6 +164,15 @@ pub(all) enum PdfPosition {
   PdfPositionReverseDiagonal
   PdfPositionCentre
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPosition::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPosition::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPosition::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPosition::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfRectangle {
   min_x : Double
@@ -144,6 +180,15 @@ pub(all) struct PdfRectangle {
   max_x : Double
   max_y : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfRectangle::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfRectangle::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfRectangle::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfRectangle::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfUnit {
   PdfPoint
@@ -151,11 +196,29 @@ pub(all) enum PdfUnit {
   Centimetre
   Millimetre
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfUnit::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfUnit::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfUnit::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfUnit::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Point2 {
   x : Double
   y : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn Point2::equal(Self, Self) -> Bool
+#deprecated
+pub fn Point2::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn Point2::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn Point2::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TransformDecomposition {
   scale : Double
@@ -165,6 +228,15 @@ pub(all) struct TransformDecomposition {
   translate_x : Double
   translate_y : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn TransformDecomposition::equal(Self, Self) -> Bool
+#deprecated
+pub fn TransformDecomposition::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn TransformDecomposition::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn TransformDecomposition::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TransformMatrix {
   a : Double
@@ -177,7 +249,16 @@ pub(all) struct TransformMatrix {
 pub fn TransformMatrix::apply(Self, Point2) -> Point2
 pub fn TransformMatrix::debug_string(Self) -> String
 pub fn TransformMatrix::decompose(Self) -> TransformDecomposition
+#deprecated
+pub fn TransformMatrix::equal(Self, Self) -> Bool
 pub fn TransformMatrix::invert(Self) -> Self raise @core.PdfError
+#deprecated
+pub fn TransformMatrix::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn TransformMatrix::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn TransformMatrix::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TransformOp {
   Scale(Point2, Double, Double)
@@ -187,6 +268,15 @@ pub(all) enum TransformOp {
   ShearY(Point2, Double)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn TransformOp::debug_string(Self) -> String
+#deprecated
+pub fn TransformOp::equal(Self, Self) -> Bool
+#deprecated
+pub fn TransformOp::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn TransformOp::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn TransformOp::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub using @core {type PdfError}

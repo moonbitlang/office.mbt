@@ -44,24 +44,60 @@ pub(all) struct PdfDrawnPath {
   path : PdfPath
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawnPath::content_json(Self) -> Json
+#deprecated
+pub fn PdfDrawnPath::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawnPath::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawnPath::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawnPath::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfPath {
   winding_rule : PdfPathWindingRule
   subpaths : Array[PdfPathSubpath]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfPath::bounds(Self) -> @geometry.PdfRectangle
+#deprecated
+pub fn PdfPath::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPath::not_equal(Self, Self) -> Bool
 pub fn PdfPath::pdf_path_bounds_optional(Self) -> @geometry.PdfRectangle?
+#deprecated
+pub fn PdfPath::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPath::to_repr(Self) -> @debug.Repr
 pub fn PdfPath::transform(Self, @geometry.TransformMatrix) -> Self
 
 pub(all) enum PdfPathClosure {
   PdfPathClosed
   PdfPathOpen
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPathClosure::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathClosure::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathClosure::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPathClosure::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfPathHole {
   PdfPathHole
   PdfPathNotHole
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPathHole::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathHole::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathHole::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPathHole::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfPathSegment {
   PdfPathStraight(@geometry.Point2, @geometry.Point2)
@@ -69,6 +105,15 @@ pub(all) enum PdfPathSegment {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfPathSegment::bounds(Self) -> @geometry.PdfRectangle
 pub fn PdfPathSegment::content_json(Self) -> Json
+#deprecated
+pub fn PdfPathSegment::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathSegment::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathSegment::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPathSegment::to_repr(Self) -> @debug.Repr
 pub fn PdfPathSegment::transform(Self, @geometry.TransformMatrix) -> Self
 
 pub(all) struct PdfPathSubpath {
@@ -77,11 +122,29 @@ pub(all) struct PdfPathSubpath {
   segments : Array[PdfPathSegment]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfPathSubpath::content_json(Self) -> Json
+#deprecated
+pub fn PdfPathSubpath::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathSubpath::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathSubpath::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPathSubpath::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfPathWindingRule {
   PdfPathEvenOdd
   PdfPathNonZero
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPathWindingRule::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathWindingRule::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPathWindingRule::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPathWindingRule::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub using @geometry {type PdfRectangle}

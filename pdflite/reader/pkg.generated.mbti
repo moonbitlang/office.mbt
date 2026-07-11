@@ -136,6 +136,13 @@ pub(all) struct PdfClassicXRefEntry {
   in_use : Bool
   object_stream : @xref_model.ObjectStreamReference?
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn PdfClassicXRefEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfClassicXRefEntry::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn PdfClassicXRefEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfClassicXRefIndex {
   entries : @hashmap.HashMap[Int, PdfClassicXRefEntry]
@@ -174,6 +181,15 @@ pub(all) struct PdfVersion {
   major : Int
   minor : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfVersion::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfVersion::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfVersion::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfVersion::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfXRefSection {
   entries : Array[PdfClassicXRefEntry]

@@ -22,6 +22,15 @@ pub(all) struct PdfContentClippingOpResult {
   partial_path : PdfContentPartialPath
   clipping_path : Array[@shape.PdfPath]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentClippingOpResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentClippingOpResult::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentClippingOpResult::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentClippingOpResult::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfContentPartialPath {
   PdfContentNoPartialPath
@@ -29,6 +38,15 @@ pub(all) enum PdfContentPartialPath {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentPartialPath::content_apply_clipping_op(Self, ArrayView[@shape.PdfPath], @content.PdfContentOp) -> PdfContentClippingOpResult
 pub fn PdfContentPartialPath::content_apply_path_op(Self, @content.PdfContentOp) -> PdfContentPathOpResult
+#deprecated
+pub fn PdfContentPartialPath::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPartialPath::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPartialPath::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentPartialPath::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentPartialPathState {
   start_point : @geometry.Point2
@@ -36,11 +54,29 @@ pub(all) struct PdfContentPartialPathState {
   segments : Array[@shape.PdfPathSegment]
   subpaths : Array[@shape.PdfPathSubpath]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentPartialPathState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPartialPathState::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPartialPathState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentPartialPathState::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentPathOpResult {
   partial_path : PdfContentPartialPath
   drawn_path : @shape.PdfDrawnPath?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentPathOpResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPathOpResult::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPathOpResult::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentPathOpResult::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub using @content {type PdfContentOp}

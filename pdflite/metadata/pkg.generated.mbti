@@ -68,32 +68,86 @@ pub(all) enum PdfMetadataEncoding {
   PdfMetadataUTF8
   PdfMetadataStripped
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfMetadataEncoding::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataEncoding::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataEncoding::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfMetadataEncoding::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfMetadataXmlAttribute {
   name : PdfMetadataXmlName
   value : String
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfMetadataXmlAttribute::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlAttribute::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlAttribute::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfMetadataXmlAttribute::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfMetadataXmlDocument {
   dtd : String?
   tree : PdfMetadataXmlTree
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfMetadataXmlDocument::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlDocument::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlDocument::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfMetadataXmlDocument::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfMetadataXmlName {
   uri : String
   local_name : String
   prefix : String?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfMetadataXmlName::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlName::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlName::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfMetadataXmlName::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfMetadataXmlTag {
   name : PdfMetadataXmlName
   attributes : Array[PdfMetadataXmlAttribute]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfMetadataXmlTag::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlTag::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlTag::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfMetadataXmlTag::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfMetadataXmlTree {
   PdfMetadataXmlElement(PdfMetadataXmlTag, Array[PdfMetadataXmlTree])
   PdfMetadataXmlData(String)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfMetadataXmlTree::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlTree::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfMetadataXmlTree::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfMetadataXmlTree::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

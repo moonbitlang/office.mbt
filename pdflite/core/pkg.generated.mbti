@@ -215,6 +215,15 @@ pub(all) suberror PdfError {
   PageLabelStyleExpected(String)
   EndOfInput
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfError::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfError::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfError::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct BitStream {
@@ -225,12 +234,21 @@ pub struct BitStream {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn BitStream::align(Self) -> Unit
 pub fn BitStream::bits_read(Self) -> Int
+#deprecated
+pub fn BitStream::equal(Self, Self) -> Bool
 pub fn BitStream::get_bit(Self) -> Bool raise PdfError
 pub fn BitStream::get_bit_int(Self) -> Int raise PdfError
 pub fn BitStream::get_value_int(Self, Int) -> Int raise PdfError
 pub fn BitStream::get_value_int64(Self, Int) -> Int64 raise PdfError
+#deprecated
+pub fn BitStream::not_equal(Self, Self) -> Bool
 pub fn BitStream::position(Self) -> BitStreamPosition
 pub fn BitStream::seek(Self, BitStreamPosition) -> Unit
+#deprecated
+pub fn BitStream::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn BitStream::to_repr(Self) -> @debug.Repr
 
 pub struct BitStreamPosition {
   input_position : Int
@@ -238,6 +256,15 @@ pub struct BitStreamPosition {
   bit_mask : Int
   bits_read : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn BitStreamPosition::equal(Self, Self) -> Bool
+#deprecated
+pub fn BitStreamPosition::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn BitStreamPosition::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn BitStreamPosition::to_repr(Self) -> @debug.Repr
 
 pub struct BitWriter {
   mut current_byte : Int
@@ -247,10 +274,19 @@ pub struct BitWriter {
 pub fn BitWriter::align(Self) -> Unit
 pub fn BitWriter::append_aligned(Self, Self) -> Self
 pub fn BitWriter::bit_length(Self) -> Int
+#deprecated
+pub fn BitWriter::equal(Self, Self) -> Bool
+#deprecated
+pub fn BitWriter::not_equal(Self, Self) -> Bool
 pub fn BitWriter::put_bit(Self, Int) -> Unit raise PdfError
 pub fn BitWriter::put_value_int(Self, Int, Int) -> Unit raise PdfError
 pub fn BitWriter::put_value_int64(Self, Int, Int64) -> Unit raise PdfError
 pub fn BitWriter::to_bytes(Self) -> Bytes
+#deprecated
+pub fn BitWriter::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn BitWriter::to_repr(Self) -> @debug.Repr
 
 pub struct ByteCursor {
   data : BytesView
@@ -262,10 +298,14 @@ pub fn ByteCursor::absolute_position(Self) -> Int
 pub fn ByteCursor::byte_at_absolute(Self, Int) -> Byte?
 pub fn ByteCursor::byte_int_at_absolute(Self, Int) -> Int
 pub fn ByteCursor::deep_copy(Self) -> Self
+#deprecated
+pub fn ByteCursor::equal(Self, Self) -> Bool
 pub fn ByteCursor::ignore_until(Self, (Int) -> Bool, eof_is_delimiter? : Bool) -> Unit raise PdfError
 pub fn ByteCursor::input_byte(Self) -> Int
 pub fn ByteCursor::input_pdf_error(Self, String) -> String
 pub fn ByteCursor::length(Self) -> Int
+#deprecated
+pub fn ByteCursor::not_equal(Self, Self) -> Bool
 pub fn ByteCursor::nudge(Self) -> Unit
 pub fn ByteCursor::peek(Self) -> Byte?
 pub fn ByteCursor::peek_byte(Self) -> Int
@@ -292,6 +332,11 @@ pub fn ByteCursor::seek_absolute(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::set_offset(Self, Int) -> Unit raise PdfError
 pub fn ByteCursor::source(Self) -> String
 pub fn ByteCursor::to_bytes(Self) -> Bytes
+#deprecated
+pub fn ByteCursor::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn ByteCursor::to_repr(Self) -> @debug.Repr
 pub fn ByteCursor::view(Self) -> BytesView
 pub fn ByteCursor::view_at(Self, Int, Int) -> BytesView raise PdfError
 pub fn ByteCursor::view_at_absolute(Self, Int, Int) -> BytesView raise PdfError
@@ -301,10 +346,19 @@ pub struct ByteOutput {
   mut position : Int
   mut written_length : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn ByteOutput::equal(Self, Self) -> Bool
 pub fn ByteOutput::length(Self) -> Int
+#deprecated
+pub fn ByteOutput::not_equal(Self, Self) -> Bool
 pub fn ByteOutput::position(Self) -> Int
 pub fn ByteOutput::seek(Self, Int) -> Unit raise PdfError
 pub fn ByteOutput::to_bytes(Self) -> Bytes
+#deprecated
+pub fn ByteOutput::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn ByteOutput::to_repr(Self) -> @debug.Repr
 pub fn ByteOutput::write_ascii(Self, String) -> Unit raise PdfError
 pub fn ByteOutput::write_byte(Self, Int) -> Unit raise PdfError
 pub fn ByteOutput::write_byte_at(Self, Int, Int) -> Unit raise PdfError
@@ -318,10 +372,28 @@ pub(all) enum PdfCryptType {
   PdfCryptAESV2
   PdfCryptAESV3(Bool)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfCryptType::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCryptType::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCryptType::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCryptType::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfName(Bytes) derive(Eq, ToJson, @debug.Debug)
 pub fn PdfName::byte_length(Self) -> Int
 pub fn PdfName::bytes(Self) -> Bytes
+#deprecated
+pub fn PdfName::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfName::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfName::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfName::to_repr(Self) -> @debug.Repr
 pub fn PdfName::view(Self) -> BytesView
 
 pub struct PdfNumberSet {

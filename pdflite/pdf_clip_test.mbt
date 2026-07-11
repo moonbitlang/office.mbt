@@ -104,7 +104,7 @@ test "cpdf clip polygon serializes to JSON literal shape" {
   let expected : Json = {
     "contours": [{ "hole": false, "vertices": [{ "x": 1.0, "y": 2.0 }] }],
   }
-  @test.assert_eq(polygon.to_json(), expected)
+  @test.assert_eq(ToJson::to_json(polygon), expected)
 }
 
 ///|

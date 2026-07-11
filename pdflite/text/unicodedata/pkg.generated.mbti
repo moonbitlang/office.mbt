@@ -31,6 +31,15 @@ pub(all) struct PdfUnicodeDataEntry {
   lowercase_mapping : String
   titlecase_mapping : String
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfUnicodeDataEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfUnicodeDataEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfUnicodeDataEntry::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfUnicodeDataEntry::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

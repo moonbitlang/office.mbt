@@ -17,6 +17,15 @@ pub(all) struct PdfPortfolioEntry {
   relationship : String?
   description : String?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPortfolioEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPortfolioEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPortfolioEntry::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPortfolioEntry::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub type PdfBytes = Bytes

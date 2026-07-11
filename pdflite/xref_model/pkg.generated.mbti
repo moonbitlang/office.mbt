@@ -14,6 +14,13 @@ pub(all) struct ObjectStreamReference {
   object_stream_number : Int
   index : Int
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn ObjectStreamReference::equal(Self, Self) -> Bool
+#deprecated
+pub fn ObjectStreamReference::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn ObjectStreamReference::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

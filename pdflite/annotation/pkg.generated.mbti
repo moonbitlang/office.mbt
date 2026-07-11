@@ -25,6 +25,15 @@ pub(all) struct PdfAnnotation {
   colour : PdfAnnotationColour?
   rest : @syntax.PdfObject
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfAnnotation::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotation::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotation::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfAnnotation::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfAnnotationBorder {
   width : Double
@@ -33,12 +42,30 @@ pub(all) struct PdfAnnotationBorder {
   style : PdfAnnotationStyle
   dash_array : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfAnnotationBorder::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotationBorder::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotationBorder::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfAnnotationBorder::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfAnnotationColour {
   red : Int
   green : Int
   blue : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfAnnotationColour::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotationColour::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotationColour::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfAnnotationColour::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfAnnotationStyle {
   AnnotationNoStyle
@@ -48,6 +75,15 @@ pub(all) enum PdfAnnotationStyle {
   AnnotationInset
   AnnotationUnderlineStyle
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfAnnotationStyle::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotationStyle::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotationStyle::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfAnnotationStyle::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfAnnotationSubtype {
   AnnotationText
@@ -77,6 +113,15 @@ pub(all) enum PdfAnnotationSubtype {
   AnnotationThreeDee
   AnnotationUnknown(@core.PdfName)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfAnnotationSubtype::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotationSubtype::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAnnotationSubtype::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfAnnotationSubtype::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub type PdfBytes = Bytes
