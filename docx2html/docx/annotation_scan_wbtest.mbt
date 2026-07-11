@@ -210,11 +210,9 @@ test "scanner review round 1: flattening parity — sdt, ins, del, vMerge" {
       #|  "p[2]/r[1]",
       #|  "tbl[1]/tr[1]",
       #|  "tbl[1]/tr[2]",
-      #|  "tbl[1]/tr[2]/p[1]",
       #|  "tbl[1]/tr[1]/tc[1]",
       #|  "tbl[1]/tr[1]/tc[2]",
       #|  "tbl[1]/tr[2]/tc[1]",
-      #|  "tbl[1]/tr[2]/p[1]/r[1]",
       #|  "tbl[1]/tr[1]/tc[1]/p[1]",
       #|  "tbl[1]/tr[1]/tc[2]/p[1]",
       #|  "tbl[1]/tr[2]/tc[1]/p[1]",
@@ -234,7 +232,7 @@ test "scanner review round 1: entity-decoded ids, Strict WML, CDATA immunity" {
     (
       #|<w:document xmlns:w="http://purl.oclc.org/ooxml/wordprocessingml/main">
       #|<w:body>
-      #|<w:p><w:commentRangeStart w:id="&#49;"/><w:r><w:t><![CDATA[<w:commentRangeEnd w:id="1"/>]]></w:t></w:r><w:commentRangeEnd w:id="&#x31;"/><w:r><w:commentReference w:id="1"/></w:r></w:p>
+      #|<w:p><w:commentRangeStart w:id="&#00000049;"/><w:r><w:t><![CDATA[<w:commentRangeEnd w:id="1"/>]]></w:t></w:r><w:commentRangeEnd w:id="&#x31;"/><w:r><w:commentReference w:id="1"/></w:r></w:p>
       #|</w:body>
       #|</w:document>
     ),

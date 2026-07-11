@@ -8,10 +8,10 @@
 // read-only; L0 builds mutation on the same foundation.
 //
 // Deliberate limits (revisited at L0's go/no-go gate): DOCTYPE subsets
-// are skipped naively (stories don't carry them); XML entities inside
-// attribute VALUES are not decoded (annotation ids are NMTOKEN-ish;
-// a `&#49;`-spelled id would mismatch — tolerated, ids are compared as
-// spelled); only UTF-8 parts are scanned (UTF-16 parts raise).
+// are skipped naively (stories don't carry them); attribute values ARE
+// entity-decoded (predefined + numeric references); only UTF-8 parts
+// are scanned (UTF-16 parts raise); legacy VML content is not modeled
+// (the index's verification pass degrades positions inside it).
 
 ///|
 /// Transitional and Strict WML namespace URIs — the reader supports both.
@@ -121,7 +121,8 @@ fn ScannedNode::close_seq(self : ScannedNode) -> Int {
 }
 
 ///|
-/// Scanner output for one story part: nodes in OPEN order, markers in
+/// Scanner output for one story part: nodes in CLOSE order (a node is
+/// complete only at its close tag), markers in
 /// document order, and non-fatal diagnostics.
 priv struct StoryScan {
   nodes : Array[ScannedNode]
@@ -130,7 +131,7 @@ priv struct StoryScan {
 }
 
 ///|
-/// Projection nodes, in open order.
+/// Projection nodes, in close order (see the struct doc).
 fn StoryScan::nodes(self : StoryScan) -> Array[ScannedNode] {
   self.nodes
 }
@@ -167,14 +168,23 @@ priv struct ScanFrame {
   // ancestor's counters, so projection ordinals mirror the parsed AST.
   transparent : Bool
   // SUPPRESSED subtrees (w:del content, plumbing notes) do not exist in
-  // the parsed AST: nothing inside gets a projection path.
-  suppressed : Bool
+  // the parsed AST: nothing inside gets a projection path. Mutable for
+  // vMerge retraction (tcPr precedes cell content, so flipping before
+  // any child opens is safe).
+  mut suppressed : Bool
   // Where this frame's own ordinal was bumped, for vMerge retraction.
   mut counter_owner : Map[String, Int]?
 }
 
 ///|
 fn projection_kind(uri : String, local_name : String) -> String? {
+  // Modern inline/anchored pictures are the AST's Image nodes
+  // (docx_reader: wp:inline|wp:anchor -> read_drawing_element). Legacy
+  // VML picture paths are NOT modeled; the verification pass degrades
+  // marker positions inside them.
+  if is_wp_uri(uri) && local_name is ("inline" | "anchor") {
+    return Some("image")
+  }
   if !is_wml_uri(uri) {
     return None
   }
@@ -191,13 +201,29 @@ fn projection_kind(uri : String, local_name : String) -> String? {
 ///|
 /// Containers the reader flattens into their parent flow.
 fn is_transparent_container(uri : String, local_name : String) -> Bool {
-  is_wml_uri(uri) && local_name is ("sdt" | "sdtContent" | "smartTag" | "ins")
+  (
+    is_wml_uri(uri) &&
+    local_name
+    is ("sdt" | "sdtContent" | "smartTag" | "ins" | "drawing" | "object")
+  ) ||
+  (uri == MC_URI && local_name is ("AlternateContent" | "Fallback"))
+}
+
+///|
+const MC_URI : String = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+///|
+fn is_wp_uri(uri : String) -> Bool {
+  uri ==
+  "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ||
+  uri == "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing"
 }
 
 ///|
 /// Subtrees the reader removes entirely.
 fn is_suppressed_container(uri : String, local_name : String) -> Bool {
-  is_wml_uri(uri) && local_name == "del"
+  (is_wml_uri(uri) && local_name == "del") ||
+  (uri == MC_URI && local_name == "Choice")
 }
 
 ///|
@@ -352,33 +378,6 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
       None => ("", name)
     }
     let uri = resolve(prefix)
-    match marker_kind(uri, local_name) {
-      Some(kind) => {
-        // Markers are recorded whether self-closing or not (Word emits
-        // them self-closing; a non-empty form still marks its position).
-        seq += 1
-        let id = attribute_value(attributes, "id", namespaces)
-        let (container_path, after_child) = match current_projection() {
-          Some(frame) => (frame.projection_path, frame.last_closed_child)
-          // Story level: no container; ordering comes from seq, and J2's
-          // before/after attachment uses the neighbouring node intervals.
-          None => (None, None)
-        }
-        markers.push({
-          kind,
-          id: id.unwrap_or(""),
-          seq,
-          container_path,
-          after_child,
-        })
-        if id is None {
-          warnings.push(
-            "annotation scanner: a \{kind} marker has no w:id attribute",
-          )
-        }
-      }
-      None => ()
-    }
     seq += 1
     let transparent = is_transparent_container(uri, local_name)
     // A subtree is suppressed if the reader drops it: w:del content,
@@ -398,6 +397,37 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
     let suppressed = inherited_suppression ||
       is_suppressed_container(uri, local_name) ||
       plumbing_note
+    // Markers respect suppression: the reader drops w:del content,
+    // mc:Choice branches, and plumbing notes wholesale — markers
+    // included. (A parent's suppression may have been set after its
+    // open — vMerge retraction — which this naturally observes.)
+    if !suppressed {
+      match marker_kind(uri, local_name) {
+        Some(kind) => {
+          // Recorded whether self-closing or not (Word emits them
+          // self-closing; a non-empty form still marks its position).
+          seq += 1
+          let id = attribute_value(attributes, "id", namespaces)
+          let (container_path, after_child) = match current_projection() {
+            Some(frame) => (frame.projection_path, frame.last_closed_child)
+            None => (None, None)
+          }
+          markers.push({
+            kind,
+            id: id.unwrap_or(""),
+            seq,
+            container_path,
+            after_child,
+          })
+          if id is None {
+            warnings.push(
+              "annotation scanner: a \{kind} marker has no w:id attribute",
+            )
+          }
+        }
+        None => ()
+      }
+    }
     let mut counter_owner : Map[String, Int]? = None
     let projection = if suppressed {
       None
@@ -517,6 +547,9 @@ fn retract_enclosing_cell(
           }
           frame.projection_path = None
           frame.counter_owner = None
+          // The whole cell subtree vanishes from the AST — paragraphs,
+          // runs, and markers with it.
+          frame.suppressed = true
         }
         _ => ()
       }
@@ -674,8 +707,9 @@ fn ascii_slice(part : Bytes, start : Int, end : Int) -> String {
 }
 
 ///|
-/// The marker's id attribute is namespace-qualified (`w:id`); accept any
-/// prefix bound to the WML URI, or an unprefixed `id`.
+/// The marker's id attribute is namespace-qualified (`w:id`): any prefix
+/// bound to a WML URI matches; unprefixed attributes never do (default
+/// namespaces do not apply to attributes).
 fn attribute_value(
   attributes : Array[(String, String)],
   local_name : String,
@@ -748,7 +782,7 @@ fn decode_entities(value : String) -> String {
     // Find the terminating ';' within a sane distance.
     let mut semi = -1
     let mut probe = at + 1
-    while probe < length && probe <= at + 12 {
+    while probe < length && probe <= at + 24 {
       if units[probe].to_int() == ';'.to_int() {
         semi = probe
         break
@@ -799,7 +833,10 @@ fn decode_entities(value : String) -> String {
 
 ///|
 fn parse_char_reference(digits : String, base : Int) -> Char? {
-  if digits.length() == 0 || digits.length() > 7 {
+  // Value-based, overflow-aware: leading-zero padding is valid XML
+  // (&#00000049; is "1"); anything past U+10FFFF is invalid however it
+  // is spelled.
+  if digits.length() == 0 {
     return None
   }
   let mut value = 0
@@ -814,6 +851,9 @@ fn parse_char_reference(digits : String, base : Int) -> Char? {
       return None
     }
     value = value * base + digit
+    if value > 0x10FFFF {
+      return None
+    }
   }
   value.to_char()
 }
