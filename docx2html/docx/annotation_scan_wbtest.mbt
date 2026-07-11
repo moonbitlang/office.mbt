@@ -436,17 +436,49 @@ test "scanner review round 5: span-sensitive merging, first-tcPr-only, retractio
     ),
   )
   // The purged row-4 cell left no paragraph, run, or marker behind.
+  // The row node itself survives (only the CELL was retracted), so the
+  // no-leak check targets the row's CHILDREN — round-6 review caught the
+  // earlier prefix matching the row and the pin asserting a tautology.
   let mut leaked = false
   for node in scan.nodes() {
-    if node.path().has_prefix("tbl[1]/tr[4]") {
+    if node.path().has_prefix("tbl[1]/tr[4]/") {
       leaked = true
     }
   }
-  debug_inspect(
-    leaked,
-    content=(
-      #|true
+  debug_inspect(leaked, content="false")
+  debug_inspect(scan.markers().length(), content="0")
+}
+
+///|
+test "scanner review round 6: a deleted row rolls back its origin registrations" {
+  // Row 1 is deleted AFTER its cell closed (late first trPr/w:del) —
+  // its origin at column 0 must be rolled back, so row 2's orphan
+  // continuation is KEPT (the reader excludes deleted rows before span
+  // calculation). Row 3's continuation then merges into ROW 2's cell.
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body>
+      #|<w:tbl>
+      #|<w:tr><w:tc><w:p><w:r><w:t>closes before the row is deleted</w:t></w:r></w:p></w:tc><w:trPr><w:del/></w:trPr></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>orphan kept</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p/></w:tc></w:tr>
+      #|</w:tbl>
+      #|</w:body>
+      #|</w:document>
     ),
   )
-  debug_inspect(scan.markers().length(), content="0")
+  let rows_and_cells : Array[String] = []
+  for node in scan.nodes() {
+    if node.kind is ("tr" | "tc") {
+      rows_and_cells.push("\{node.kind} \{node.path()}")
+    }
+  }
+  rows_and_cells.sort()
+  debug_inspect(
+    rows_and_cells,
+    content=(
+      #|["tr tbl[1]/tr[1]", "tr tbl[1]/tr[2]", "tc tbl[1]/tr[1]/tc[1]"]
+    ),
+  )
 }
