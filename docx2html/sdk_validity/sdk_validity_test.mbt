@@ -1542,4 +1542,67 @@ async test "L1 round 1: the plan survives hostile packages or fails closed" {
   expect_plan_failure(
     orphan, "'word/comments.xml' exists but is not wired as the comments part",
   )
+  // 8. An XML COMMENT holding the close tag cannot fool the byte
+  // locator: wiring lands at the REAL close, and the result validates.
+  let commented_rels = base_package(
+    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+    "<!-- decoy: </Relationships> -->" +
+    "<Relationship Id=\"rIdS\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>" +
+    "</Relationships>",
+    [
+      (
+        "word/styles.xml",
+        "<w:styles xmlns:w=\"" +
+        wml +
+        "\"><w:style w:type=\"paragraph\" w:styleId=\"Normal\" w:default=\"1\"><w:name w:val=\"Normal\"/></w:style></w:styles>",
+      ),
+    ],
+    "",
+  )
+  let annotated_cr = @docx2html.read_docx_annotated(commented_rels)
+  let (plan_cr, _) = @docx_impl.plan_comment_addition(
+    annotated_cr,
+    commented_rels,
+    at_relative="p[1]",
+    to_relative="p[1]",
+    note_spec_for(),
+  )
+  let spliced_cr = @splice.splice_docx(commented_rels, plan_cr)
+  validate_docx_via_sdk(dir, "l1_commented_rels", spliced_cr)
+  debug_inspect(
+    @docx2html.read_docx_annotated(spliced_cr).annotations().comments().length(),
+    content="1",
+  )
+  // 9. A content-type SIDECAR declared only via an Override refuses
+  // mutation (parsed comparison, incl. character-reference spellings).
+  let ct_sidecar = base_package(
+    "",
+    [],
+    "<Override PartName=\"/word/commentsIds.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments&#73;ds+xml\"/>",
+  )
+  expect_plan_failure(
+    ct_sidecar, "the document carries annotation sidecar parts",
+  )
+  // 10. Allocation never publishes an id it would refuse to read back:
+  // the maximum supported id fails closed instead of emitting a
+  // ten-digit successor.
+  let ceiling = base_package(
+    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+    "<Relationship Id=\"rIdC\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments\" Target=\"comments.xml\"/>" +
+    "</Relationships>",
+    [
+      (
+        "word/comments.xml",
+        "<w:comments xmlns:w=\"" +
+        wml +
+        "\"><w:comment w:id=\"999999999\" w:author=\"A\"><w:p><w:r><w:t>x</w:t></w:r></w:p></w:comment></w:comments>",
+      ),
+    ],
+    "",
+  )
+  expect_plan_failure(
+    ceiling, "cannot allocate a comment id: the document already uses the maximum supported id",
+  )
 }
