@@ -907,3 +907,113 @@ test "K2: reply ops fail closed with exact op addresses" {
     "ops[2].params.on targets another comment (ops[1]); comment anchors must be paragraph ops (to answer a comment, use reply_to)",
   )
 }
+
+///|
+test "K3: footnote and endnote inline keys parse with dense indexes" {
+  let script = parse_str(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"runs": [
+      #|    {"text": "Cited"},
+      #|    {"footnote": {"text": "First source."}},
+      #|    {"text": " twice"},
+      #|    {"footnote": {"paragraphs": [{"text": "Second,"}, {"text": "longer."}]}}
+      #|  ]}},
+      #|  {"op": "table", "params": {"rows": [[{"paragraphs": [{"runs": [
+      #|    {"text": "in a cell"},
+      #|    {"endnote": {"text": "Cell note."}}
+      #|  ]}]}]]}}
+      #|]}
+    ),
+  )
+  debug_inspect(script.note_counts(), content="(2, 1)")
+  let footnotes = script.build_footnotes()
+  inspect(footnotes.length(), content="2")
+  inspect(footnotes[0].at(), content="ops[0].params.runs[1].footnote")
+  inspect(footnotes[1].at(), content="ops[0].params.runs[3].footnote")
+  inspect(footnotes[1].body().length(), content="2")
+  let endnotes = script.build_endnotes()
+  inspect(
+    endnotes[0].at(),
+    content="ops[1].params.rows[0][0].paragraphs[0].runs[1].endnote",
+  )
+  // The built body carries the dense per-kind references.
+  let body = script.build_body(Map([]))
+  guard body[0] is Paragraph(children~, ..)
+  guard children[1] is Run(children=ref_children, ..)
+  guard ref_children[0] is NoteReference(note_type~, note_id~)
+  inspect(note_type, content="footnote")
+  inspect(note_id, content="0")
+}
+
+///|
+test "K3: note keys fail closed" {
+  // /1 scripts cannot carry notes.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [
+      #|  {"op": "paragraph", "params": {"runs": [{"footnote": {"text": "n"}}]}}
+      #|]}
+    ),
+    "ops[0].params.runs[0].footnote needs \"schema\": \"docx.batch/2\"",
+  )
+  // Notes cannot nest in comment bodies or other notes.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "author": "A",
+      #|   "paragraphs": [{"runs": [{"endnote": {"text": "n"}}]}]}}
+      #|]}
+    ),
+    "ops[1].params.paragraphs[0].runs[0]: notes cannot nest inside comment or note bodies",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"runs": [
+      #|    {"footnote": {"paragraphs": [{"runs": [{"footnote": {"text": "inner"}}]}]}}
+      #|  ]}}
+      #|]}
+    ),
+    "ops[0].params.runs[0].footnote.paragraphs[0].runs[0]: notes cannot nest inside comment or note bodies",
+  )
+  // Note objects are strict.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"runs": [{"footnote": {"text": "n", "bogus": 1}}]}}
+      #|]}
+    ),
+    "ops[0].params.runs[0].footnote has an unknown key 'bogus'",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"runs": [{"footnote": {}}]}}
+      #|]}
+    ),
+    "ops[0].params.runs[0].footnote needs text or paragraphs",
+  )
+  // A note key is exclusive within its run object.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"runs": [{"footnote": {"text": "n"}, "bold": true}]}}
+      #|]}
+    ),
+    "ops[0].params.runs[0] has an unknown key 'bold'",
+  )
+  // Links may not carry notes: the canonical write surface keeps note
+  // references at top run level.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"runs": [
+      #|    {"link": {"href": "https://a.example", "runs": [{"footnote": {"text": "n"}}]}}
+      #|  ]}}
+      #|]}
+    ),
+    "ops[0].params.runs[0].link.runs[0].footnote: notes cannot sit inside hyperlinks",
+  )
+}

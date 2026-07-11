@@ -93,7 +93,36 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
     }
     comments.push(spec)
   }
-  let bytes = @docx2html.write_docx_with_comments(body, comments) catch {
+  let batch_footnotes = script.build_footnotes() catch {
+    BatchError(message) => raise @cli.CliError("error: \{message}")
+  }
+  let batch_endnotes = script.build_endnotes() catch {
+    BatchError(message) => raise @cli.CliError("error: \{message}")
+  }
+  let footnotes = []
+  for note in batch_footnotes {
+    footnotes.push(
+      @docx2html.note_spec(note.body()) catch {
+        err =>
+          raise @cli.CliError("error: \{note.at()}: \{docx_error_message(err)}")
+      },
+    )
+  }
+  let endnotes = []
+  for note in batch_endnotes {
+    endnotes.push(
+      @docx2html.note_spec(note.body()) catch {
+        err =>
+          raise @cli.CliError("error: \{note.at()}: \{docx_error_message(err)}")
+      },
+    )
+  }
+  let bytes = @docx2html.write_docx_with_annotations(
+    body,
+    comments~,
+    footnotes~,
+    endnotes~,
+  ) catch {
     err => raise @cli.CliError(locate_writer_failure(script, body, err))
   }
   // Belt: the writer's output is dual-tier gated in tests, but re-check the
@@ -104,10 +133,16 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
       "docx: internal error — the built package failed validation: \{findings[0]}",
     )
   }
-  let ops_summary = if script.comment_count() > 0 {
-    "\{script.op_count()} op(s), \{script.comment_count()} comment(s)"
-  } else {
-    "\{script.op_count()} op(s)"
+  let mut ops_summary = "\{script.op_count()} op(s)"
+  if script.comment_count() > 0 {
+    ops_summary += ", \{script.comment_count()} comment(s)"
+  }
+  let (footnote_count, endnote_count) = script.note_counts()
+  if footnote_count > 0 {
+    ops_summary += ", \{footnote_count} footnote(s)"
+  }
+  if endnote_count > 0 {
+    ops_summary += ", \{endnote_count} endnote(s)"
   }
   if matches.flags.get_or_default("dry-run", false) {
     println("ok (dry run): \{ops_summary}, nothing written")
