@@ -71,7 +71,7 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
     )
   }
   let bytes = @docx2html.write_docx_with_comments(body, comments) catch {
-    err => raise @cli.CliError(locate_writer_failure(body, err))
+    err => raise @cli.CliError(locate_writer_failure(script, body, err))
   }
   // Belt: the writer's output is dual-tier gated in tests, but re-check the
   // structural tier before anything touches disk.
@@ -95,12 +95,6 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
 }
 
 ///|
-/// Most script problems are rejected at parse time with an `ops[i]`
-/// address; the writer only fails on DYNAMIC content (image bytes whose
-/// header will not parse, table grid geometry). Each op builds exactly one
-/// body element, so re-running the writer over each element alone
-/// attributes the failure — cheap, error-path-only, and it cannot diverge
-/// from the writer's real rules because it IS the writer.
 fn docx_error_message(err : Error) -> String {
   match err {
     @docx2html.Unsupported(message~)
@@ -112,7 +106,16 @@ fn docx_error_message(err : Error) -> String {
 }
 
 ///|
+/// Most script problems are rejected at parse time with an `ops[i]`
+/// address; the writer only fails on DYNAMIC content (image bytes whose
+/// header will not parse, table grid geometry). Every CONTENT op builds
+/// exactly one body element — comment ops build none — so re-running the
+/// writer over each element alone finds the failing BLOCK, and the
+/// script's block->op mapping names the right op even when comment ops
+/// are interleaved. Cheap, error-path-only, and it cannot diverge from
+/// the writer's real rules because it IS the writer.
 fn locate_writer_failure(
+  script : @batch.BatchScript,
   body : Array[@docx2html.DocumentElement],
   err : Error,
 ) -> String {
@@ -125,7 +128,10 @@ fn locate_writer_failure(
       _ => true
     }
     if failed {
-      return "error: ops[\{index}]: \{message}"
+      match script.block_op(index) {
+        Some(op) => return "error: ops[\{op}]: \{message}"
+        None => return "error: \{message}"
+      }
     }
   }
   "error: \{message}"

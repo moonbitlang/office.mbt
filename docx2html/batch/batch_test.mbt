@@ -562,6 +562,13 @@ test "K1: docx.batch/2 comment ops parse, map op indexes to block indexes" {
   inspect(range.from_block(), content="1")
   inspect(range.to_block(), content="3")
   inspect(range.body().length(), content="2")
+  // The reverse mapping (block -> script op) that writer-failure
+  // attribution uses: comment ops produce no blocks.
+  debug_inspect(script.block_op(0), content="Some(0)")
+  debug_inspect(script.block_op(1), content="Some(2)")
+  debug_inspect(script.block_op(2), content="Some(3)")
+  debug_inspect(script.block_op(3), content="Some(4)")
+  debug_inspect(script.block_op(4), content="None")
   // The date is NOT validated here — lexical xsd:dateTime is the
   // writer's job (attributed to the op via at()); any string parses.
   let lax = parse_str(

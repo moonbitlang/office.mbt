@@ -1242,3 +1242,47 @@ test "K1: a comment on an empty paragraph round-trips" {
     ],
   ])
 }
+
+///|
+test "K1 review round 1: plain-content holes and aliasing fail closed" {
+  let plain = [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("body")])]),
+  ]
+  // An anchor-only hyperlink allocates NO relationship, so the
+  // relationship-delta guard alone would let it through — the recursive
+  // plain-content check must reject it at construction.
+  expect_comment_failure(
+    () => {
+      @docx2html.comment_spec(author="A", from=0, to=0, [
+        @docx2html.paragraph([
+          @docx2html.hyperlink(
+            [@docx2html.run([@docx2html.text("jump")])],
+            anchor=Some("bookmark"),
+          ),
+        ]),
+      ])
+    },
+    "comment bodies are plain content: hyperlinks",
+  )
+  // The body array stays caller-mutable after construction: emptying it
+  // (or swapping a table in) through the alias must fail at WRITE time,
+  // not silently emit an empty or non-paragraph comment.
+  let aliased = [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("note")])]),
+  ]
+  let spec = @docx2html.comment_spec(author="A", from=0, to=0, aliased)
+  let _ = aliased.pop()
+  expect_comment_failure(
+    () => @docx2html.write_docx_with_comments(plain, [spec]),
+    "comments[0]: a comment needs a non-empty body",
+  )
+  aliased.push(
+    @docx2html.table([
+      @docx2html.table_row([@docx2html.table_cell(note_body("cell"))]),
+    ]),
+  )
+  expect_comment_failure(
+    () => @docx2html.write_docx_with_comments(plain, [spec]),
+    "comments[0]: comment bodies are paragraph-only in this writer",
+  )
+}
