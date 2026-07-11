@@ -37,12 +37,7 @@ pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxErr
 
 // Types and methods
 pub struct AnnotationAnchor {
-  story : String
-  start : String?
-  start_boundary : AnnotationBoundary?
-  end : String?
-  end_boundary : AnnotationBoundary?
-  references : Array[String]
+  // private fields
 }
 pub fn AnnotationAnchor::end(Self) -> String?
 pub fn AnnotationAnchor::end_boundary(Self) -> AnnotationBoundary?
@@ -69,15 +64,7 @@ pub fn AnnotationIndex::footnotes(Self) -> Array[NoteInfo]
 pub fn AnnotationIndex::warnings(Self) -> Array[String]
 
 pub struct CommentInfo {
-  id : String
-  defined : Bool
-  author : String?
-  initials : String?
-  date : String?
-  done : Bool?
-  parent_id : String?
-  body_paragraphs : Int
-  anchors : Array[AnnotationAnchor]
+  // private fields
 }
 pub fn CommentInfo::anchors(Self) -> Array[AnnotationAnchor]
 pub fn CommentInfo::author(Self) -> String?
@@ -123,8 +110,7 @@ pub fn DocxReadResult::not_equal(Self, Self) -> Bool
 pub fn DocxReadResult::to_repr(Self) -> @debug.Repr
 
 pub struct NoteInfo {
-  id : String
-  references : Array[String]
+  // private fields
 }
 pub fn NoteInfo::id(Self) -> String
 pub fn NoteInfo::references(Self) -> Array[String]

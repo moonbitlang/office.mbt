@@ -209,8 +209,8 @@ test "index negatives: dangling markers, inverted pairs, marker-only ids, orphan
       #|  "annotation index: markers reference comment id '9' which has no definition",
       #|  "annotation index: dangling commentRangeEnd for id '7' in /body",
       #|  "annotation index: dangling commentRangeStart for id '7' in /body",
-      #|  "annotation index: comment '42' has no anchors in any story (orphan definition; content still exposed)",
       #|  "annotation index: dangling commentRangeStart for id '9' in /body",
+      #|  "annotation index: comment '42' has no anchors in any story (orphan definition; content still exposed)",
       #|]
     ),
   )
@@ -334,16 +334,48 @@ test "index review round 1: multi-range FIFO, later-range interiors, cross-story
 }
 
 ///|
-test "index review round 1: unverifiable positions degrade with a diagnostic" {
-  // The marker sits inside a paragraph wrapped in mc:AlternateContent —
-  // a construct the scanner does not flatten (only the reader-flattened
-  // set is). Verification must catch the divergence and degrade rather
-  // than emit a phantom path.
+test "index review round 1: AlternateContent Fallback content maps into the parent flow" {
+  // The reader splices mc:Fallback children (dropping mc:Choice); the
+  // scanner mirrors that, so the marker paragraph is /body/p[2] — a
+  // VERIFIED path, not a phantom nested p[1]. Round-2 review caught the
+  // earlier version of this fixture resolving to the WRONG existing node.
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
     #|<w:body>
     #|<w:p><w:r><w:t>real first</w:t></w:r></w:p>
-    #|<mc:AlternateContent><mc:Fallback><w:p><w:r><w:commentReference w:id="0"/></w:r></w:p></mc:Fallback></mc:AlternateContent>
+    #|<mc:AlternateContent><mc:Choice Requires="wps"><w:p><w:r><w:commentReference w:id="9"/></w:r></w:p></mc:Choice><mc:Fallback><w:p><w:r><w:commentReference w:id="0"/></w:r></w:p></mc:Fallback></mc:AlternateContent>
+    #|</w:body>
+    #|</w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:comment w:id="0" w:author="A"><w:p><w:r><w:t>x</w:t></w:r></w:p></w:comment>
+    #|</w:comments>
+  let bytes = fixture_docx(document, comments_xml=Some(comments))
+  let annotated = read_docx_annotated(bytes)
+  let index = annotated.annotations()
+  // No degradation, no dangling-id warning for the Choice-branch marker
+  // (id 9 lives in a dropped branch and must not surface at all).
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.comments().length(), content="1")
+  debug_inspect(
+    index.comments()[0].anchors()[0].references(),
+    content=(
+      #|["/body/p[2]/r[1]"]
+    ),
+  )
+}
+
+///|
+test "index review round 1: genuinely unverifiable positions degrade with a diagnostic" {
+  // v:textbox content is spliced by the reader (VML shapes recurse) but
+  // the scanner does not model VML — a marker inside it computes a path
+  // the AST does not have, and verification must degrade it rather than
+  // expose a phantom.
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml">
+    #|<w:body>
+    #|<w:p><w:r><w:t>real first</w:t></w:r></w:p>
+    #|<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:commentReference w:id="0"/></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>
     #|</w:body>
     #|</w:document>
   let comments =
@@ -359,10 +391,42 @@ test "index review round 1: unverifiable positions degrade with a diagnostic" {
       saw_degradation = true
     }
   }
-  debug_inspect(
-    saw_degradation,
-    content=(
-      #|false
-    ),
+  debug_inspect(saw_degradation, content="true")
+}
+
+///|
+test "index review round 1: orphan detection is duplicate-order independent" {
+  // First definition of id 6 is an anchorless REPLY (normally silent);
+  // the SECOND definition of the same id is a plain orphan. The post-
+  // pass must still warn (round-2 review: the early-continue version
+  // masked this ordering).
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p><w:r><w:t>plain</w:t></w:r></w:p></w:body>
+    #|</w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml">
+    #|<w:comment w:id="0" w:author="Root"><w:p w14:paraId="2AAA0001"><w:r><w:t>root</w:t></w:r></w:p></w:comment>
+    #|<w:comment w:id="6" w:author="ReplyFirst"><w:p w14:paraId="2BBB0001"><w:r><w:t>r</w:t></w:r></w:p></w:comment>
+    #|<w:comment w:id="6" w:author="OrphanSecond"><w:p w14:paraId="2CCC0001"><w:r><w:t>o</w:t></w:r></w:p></w:comment>
+    #|</w:comments>
+  let extended =
+    #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml">
+    #|<w15:commentEx w15:paraId="2BBB0001" w15:paraIdParent="2AAA0001" w15:done="0"/>
+    #|</w15:commentsEx>
+  let bytes = fixture_docx(
+    document,
+    comments_xml=Some(comments),
+    comments_extended_xml=Some(extended),
   )
+  let annotated = read_docx_annotated(bytes)
+  let index = annotated.annotations()
+  let mut saw_orphan_6 = false
+  for warning in index.warnings() {
+    if warning ==
+      "annotation index: comment '6' has no anchors in any story (orphan definition; content still exposed)" {
+      saw_orphan_6 = true
+    }
+  }
+  debug_inspect(saw_orphan_6, content="true")
 }

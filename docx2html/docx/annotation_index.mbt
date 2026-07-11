@@ -37,12 +37,12 @@ pub impl Show for AnnotationBoundary with fn output(self, logger) {
 /// ("/body/p[2]"); `references` are the comment-reference positions
 /// attached to this anchor, in document order.
 pub struct AnnotationAnchor {
-  story : String
-  start : String?
-  start_boundary : AnnotationBoundary?
-  end : String?
-  end_boundary : AnnotationBoundary?
-  references : Array[String]
+  priv story : String
+  priv start : String?
+  priv start_boundary : AnnotationBoundary?
+  priv end : String?
+  priv end_boundary : AnnotationBoundary?
+  priv references : Array[String]
 }
 
 ///|
@@ -92,15 +92,15 @@ pub fn AnnotationAnchor::references(self : AnnotationAnchor) -> Array[String] {
 /// commentsExtended when present, and anchors from the story scans in
 /// the total order the plan fixes (story rank, then position).
 pub struct CommentInfo {
-  id : String
-  defined : Bool
-  author : String?
-  initials : String?
-  date : String?
-  done : Bool?
-  parent_id : String?
-  body_paragraphs : Int
-  anchors : Array[AnnotationAnchor]
+  priv id : String
+  priv defined : Bool
+  priv author : String?
+  priv initials : String?
+  priv date : String?
+  priv done : Bool?
+  priv parent_id : String?
+  priv body_paragraphs : Int
+  priv anchors : Array[AnnotationAnchor]
 }
 
 ///|
@@ -162,8 +162,8 @@ pub fn CommentInfo::anchors(self : CommentInfo) -> Array[AnnotationAnchor] {
 /// One footnote/endnote: its id and every body position referencing it
 /// (multi-reference notes are representable per the plan).
 pub struct NoteInfo {
-  id : String
-  references : Array[String]
+  priv id : String
+  priv references : Array[String]
 }
 
 ///|
@@ -971,13 +971,20 @@ fn build_comments(
       id, definition, anchors, extended, id_by_last_para, ambiguous_para_ids, warnings,
     )
     comments.push(info)
-    // Orphan = a definition whose id has no anchors anywhere and that is
-    // not a reply (anchorless replies are normal — they live via their
-    // parent's thread; plan-locked). Emitted once per id, on the first
-    // entry (the duplicate warning covers the rest).
-    if definition is Some(_) && anchors.length() == 0 && info.parent_id is None {
+  }
+  // Orphan = an id with no anchors anywhere whose entries include at
+  // least one defined NON-REPLY (anchorless replies are normal — they
+  // live via their parent's thread; plan-locked). A post-pass over ALL
+  // entries so duplicate ordering cannot mask it; warned once per id.
+  let orphan_warned : Set[String] = Set([])
+  for info in comments {
+    if info.defined &&
+      info.anchors.length() == 0 &&
+      info.parent_id is None &&
+      !orphan_warned.contains(info.id) {
+      orphan_warned.add(info.id)
       warnings.push(
-        "annotation index: comment '\{id}' has no anchors in any story (orphan definition; content still exposed)",
+        "annotation index: comment '\{info.id}' has no anchors in any story (orphan definition; content still exposed)",
       )
     }
   }
