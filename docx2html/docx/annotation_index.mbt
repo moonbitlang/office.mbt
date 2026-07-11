@@ -414,10 +414,15 @@ pub fn read_docx_annotated(
   let index = build_annotation_index(zip, parts, collector, verify_ctx)
   // The index's diagnostics are part of the document's message stream —
   // orphans, dangling markers, degradations, and unrepresentable ids
-  // must reach `outline`'s messages (J2 review round 1).
+  // must reach `outline`'s messages (J2 review round 1). Dedupe AFTER
+  // combining (three definitions sharing one id would otherwise emit
+  // the duplicate-id warning three times), reader-first order kept.
   for warning in index.warnings() {
     package_result.messages.push(Warning(warning))
   }
+  let combined = @core.dedupe_messages(package_result.messages)
+  package_result.messages.clear()
+  package_result.messages.append(combined)
   {
     package_result,
     index,
@@ -1301,9 +1306,21 @@ fn build_notes(
     }
     let info : NoteInfo = { id: note.note_id, references: refs }
     if note.note_type == "footnote" {
+      // Duplicate ids make [@id=...] ambiguous — the plan-locked
+      // diagnostic (comments get theirs at definition parse).
+      if seen_footnotes.contains(note.note_id) {
+        warnings.push(
+          "annotation index: duplicate footnote id '\{note.note_id}' (each is exposed; id addressing will be ambiguous)",
+        )
+      }
       seen_footnotes.add(note.note_id)
       footnotes.push(info)
     } else {
+      if seen_endnotes.contains(note.note_id) {
+        warnings.push(
+          "annotation index: duplicate endnote id '\{note.note_id}' (each is exposed; id addressing will be ambiguous)",
+        )
+      }
       seen_endnotes.add(note.note_id)
       endnotes.push(info)
     }

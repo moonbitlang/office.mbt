@@ -8,4 +8,7 @@ import {
 import {
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/document",
+  "bobzhang/docx2html/docx" @docx_impl,
+  "bobzhang/docx2html/opc",
+  "moonbitlang/core/encoding/utf8",
 } for "test"
