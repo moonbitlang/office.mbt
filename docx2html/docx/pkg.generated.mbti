@@ -39,13 +39,25 @@ pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxErr
 pub struct AnnotationAnchor {
   story : String
   start : String?
+  start_boundary : AnnotationBoundary?
   end : String?
+  end_boundary : AnnotationBoundary?
   references : Array[String]
 }
 pub fn AnnotationAnchor::end(Self) -> String?
+pub fn AnnotationAnchor::end_boundary(Self) -> AnnotationBoundary?
 pub fn AnnotationAnchor::references(Self) -> Array[String]
 pub fn AnnotationAnchor::start(Self) -> String?
+pub fn AnnotationAnchor::start_boundary(Self) -> AnnotationBoundary?
 pub fn AnnotationAnchor::story(Self) -> String
+
+pub enum AnnotationBoundary {
+  Before
+  InsideStart
+  InsideEnd
+  After
+} derive(Eq)
+pub impl Show for AnnotationBoundary
 
 pub struct AnnotationIndex {
   // private fields
