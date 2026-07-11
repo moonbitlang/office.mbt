@@ -54,26 +54,31 @@ pub struct ScannedMarker {
 }
 
 ///|
+/// The marker kind.
 pub fn ScannedMarker::kind(self : ScannedMarker) -> ScanMarkerKind {
   self.kind
 }
 
 ///|
+/// The marker's w:id, as spelled.
 pub fn ScannedMarker::id(self : ScannedMarker) -> String {
   self.id
 }
 
 ///|
+/// Position in the story's total document order.
 pub fn ScannedMarker::seq(self : ScannedMarker) -> Int {
   self.seq
 }
 
 ///|
+/// The innermost open projection node, or None at story level.
 pub fn ScannedMarker::container_path(self : ScannedMarker) -> String? {
   self.container_path
 }
 
 ///|
+/// The last projection child closed inside the container before this marker.
 pub fn ScannedMarker::after_child(self : ScannedMarker) -> String? {
   self.after_child
 }
@@ -94,31 +99,37 @@ pub struct ScannedNode {
 }
 
 ///|
+/// The story-relative projection path ("p[3]", "tbl[1]/tr[1]/tc[1]").
 pub fn ScannedNode::path(self : ScannedNode) -> String {
   self.path
 }
 
 ///|
+/// The projection kind (p, r, tbl, tr, tc, hyperlink).
 pub fn ScannedNode::kind(self : ScannedNode) -> String {
   self.kind
 }
 
 ///|
+/// Sequence number of the node's open tag.
 pub fn ScannedNode::open_seq(self : ScannedNode) -> Int {
   self.open_seq
 }
 
 ///|
+/// Sequence number of the node's close tag.
 pub fn ScannedNode::close_seq(self : ScannedNode) -> Int {
   self.close_seq
 }
 
 ///|
+/// Byte offset of the open tag in the original part.
 pub fn ScannedNode::byte_start(self : ScannedNode) -> Int {
   self.byte_start
 }
 
 ///|
+/// Byte offset just past the close tag in the original part.
 pub fn ScannedNode::byte_end(self : ScannedNode) -> Int {
   self.byte_end
 }
@@ -133,16 +144,19 @@ pub struct StoryScan {
 }
 
 ///|
+/// Projection nodes, in open order.
 pub fn StoryScan::nodes(self : StoryScan) -> Array[ScannedNode] {
   self.nodes
 }
 
 ///|
+/// Annotation markers, in document order.
 pub fn StoryScan::markers(self : StoryScan) -> Array[ScannedMarker] {
   self.markers
 }
 
 ///|
+/// Non-fatal scan diagnostics.
 pub fn StoryScan::warnings(self : StoryScan) -> Array[String] {
   self.warnings
 }
@@ -150,8 +164,8 @@ pub fn StoryScan::warnings(self : StoryScan) -> Array[String] {
 ///|
 /// One open element during the walk.
 priv struct ScanFrame {
-  // Resolved local name (for the node's kind on close).
-  local : String
+  // Resolved local_name name (for the node's kind on close).
+  local_name : String
   // Namespace prefixes THIS element declared (to pop on close).
   declared : Array[String]
   // Projection bookkeeping: Some(path) when this element is a projection
@@ -164,22 +178,22 @@ priv struct ScanFrame {
 }
 
 ///|
-fn projection_kind(uri : String, local : String) -> String? {
+fn projection_kind(uri : String, local_name : String) -> String? {
   if uri != WML_URI {
     return None
   }
-  match local {
-    "p" | "r" | "tbl" | "tr" | "tc" | "hyperlink" => Some(local)
+  match local_name {
+    "p" | "r" | "tbl" | "tr" | "tc" | "hyperlink" => Some(local_name)
     _ => None
   }
 }
 
 ///|
-fn marker_kind(uri : String, local : String) -> ScanMarkerKind? {
+fn marker_kind(uri : String, local_name : String) -> ScanMarkerKind? {
   if uri != WML_URI {
     return None
   }
-  match local {
+  match local_name {
     "commentRangeStart" => Some(CommentStart)
     "commentRangeEnd" => Some(CommentEnd)
     "commentReference" => Some(CommentRef)
@@ -306,7 +320,7 @@ pub fn scan_story(part : Bytes) -> StoryScan raise DocxError {
       let bound_prefix = if attr_name == "xmlns" {
         Some("")
       } else if attr_name.has_prefix("xmlns:") {
-        Some(attr_name.substring(start=6))
+        Some(attr_name[6:].to_owned())
       } else {
         None
       }
@@ -321,13 +335,12 @@ pub fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         None => ()
       }
     }
-    let (prefix, local) = match name.find(":") {
-      Some(colon) =>
-        (name.substring(start=0, end=colon), name.substring(start=colon + 1))
+    let (prefix, local_name) = match name.find(":") {
+      Some(colon) => (name[0:colon].to_owned(), name[colon + 1:].to_owned())
       None => ("", name)
     }
     let uri = resolve(prefix)
-    match marker_kind(uri, local) {
+    match marker_kind(uri, local_name) {
       Some(kind) => {
         // Markers are recorded whether self-closing or not (Word emits
         // them self-closing; a non-empty form still marks its position).
@@ -355,7 +368,7 @@ pub fn scan_story(part : Bytes) -> StoryScan raise DocxError {
       None => ()
     }
     seq += 1
-    let projection = match projection_kind(uri, local) {
+    let projection = match projection_kind(uri, local_name) {
       Some(kind) => {
         // Real stories root at w:document/w:hdr/w:ftr (never a projection
         // kind), so a parent frame always exists for projection nodes;
@@ -384,7 +397,7 @@ pub fn scan_story(part : Bytes) -> StoryScan raise DocxError {
       seq += 1
       match projection {
         Some(path) => {
-          let kind = local
+          let kind = local_name
           nodes.push({
             path,
             kind,
@@ -407,7 +420,7 @@ pub fn scan_story(part : Bytes) -> StoryScan raise DocxError {
       }
     } else {
       frames.push({
-        local,
+        local_name,
         declared,
         projection_path: projection,
         counters: Map([]),
@@ -451,7 +464,7 @@ fn finish_frame(
     Some(path) => {
       nodes.push({
         path,
-        kind: frame.local,
+        kind: frame.local_name,
         open_seq: frame.open_seq,
         close_seq,
         byte_start: frame.byte_start,
@@ -569,16 +582,16 @@ fn ascii_slice(part : Bytes, start : Int, end : Int) -> String {
 /// prefix bound to the WML URI, or an unprefixed `id`.
 fn attribute_value(
   attributes : Array[(String, String)],
-  local : String,
+  local_name : String,
   namespaces : Map[String, Array[String]],
 ) -> String? {
   for pair in attributes {
     let (name, value) = pair
     match name.find(":") {
       Some(colon) => {
-        let prefix = name.substring(start=0, end=colon)
-        let attr_local = name.substring(start=colon + 1)
-        if attr_local == local {
+        let prefix = name[0:colon].to_owned()
+        let attr_local = name[colon + 1:].to_owned()
+        if attr_local == local_name {
           match namespaces.get(prefix) {
             Some(stack) if stack.length() > 0 &&
               stack[stack.length() - 1] == WML_URI => return Some(value)
@@ -586,7 +599,7 @@ fn attribute_value(
           }
         }
       }
-      None => if name == local { return Some(value) }
+      None => if name == local_name { return Some(value) }
     }
   }
   None

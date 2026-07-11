@@ -329,7 +329,11 @@ land WITH each feature PR.
   position-only exposure), and starts still unmatched at story end are
   DANGLING starts. Each pair forms a range anchor. Every reference then
   attaches to the FIRST (in anchor order) paired range whose [start, end]
-  span contains it — an anchor carries `references: Array[path]` (0..n;
+  span contains it, or — implementation-discovered refinement (J1): when
+  no range contains it, to the nearest same-id range whose END precedes
+  it in the same story, because Word's canonical emission places the
+  reference run immediately AFTER commentRangeEnd — an anchor carries
+  `references: Array[path]` (0..n;
   in document order), so multiple references on one range are
   representable; a reference inside no range forms its own POINT anchor
   (references = exactly that one path, no start/end). Anchor total order:

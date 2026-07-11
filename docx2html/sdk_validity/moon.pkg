@@ -1,6 +1,8 @@
 import {
   "bobzhang/docx2html",
   "bobzhang/docx2html/batch",
+  "bobzhang/docx2html/opc",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,

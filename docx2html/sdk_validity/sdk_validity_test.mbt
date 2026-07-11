@@ -288,3 +288,122 @@ async test "a full-surface docx.batch/1 script is Microsoft OpenXML schema-valid
   let body = script.build_body({ "dot.png": image_bytes })
   validate_docx_via_sdk(dir, "batch_full_surface", @docx2html.write_docx(body))
 }
+
+///|
+/// Phase-2 J1: the annotated-comments CONFORMANCE fixture must be
+/// Microsoft-schema-valid AND the annotation index must read it back with
+/// the plan's semantics. (The tolerant-reader NEGATIVE fixtures live in
+/// docx/annotation_index_wbtest.mbt and are deliberately not SDK-green.)
+async test "a commented document is schema-valid and the annotation index reads it back" {
+  let dir = fresh_scratch_dir()
+  let document =
+    #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body>
+    #|<w:p><w:r><w:t>plain</w:t></w:r></w:p>
+    #|<w:p><w:commentRangeStart w:id="0"/><w:r><w:t>first half</w:t></w:r></w:p>
+    #|<w:p><w:r><w:t>second half</w:t></w:r><w:commentRangeEnd w:id="0"/><w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:commentReference w:id="0"/></w:r></w:p>
+    #|<w:p><w:commentRangeStart w:id="1"/><w:r><w:t>point-ish</w:t></w:r><w:commentRangeEnd w:id="1"/><w:r><w:commentReference w:id="1"/></w:r></w:p>
+    #|<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+    #|</w:body>
+    #|</w:document>
+  let styles =
+    #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:style w:type="paragraph" w:styleId="Normal" w:default="1"><w:name w:val="Normal"/></w:style>
+    #|<w:style w:type="character" w:styleId="CommentReference"><w:name w:val="annotation reference"/></w:style>
+    #|</w:styles>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w14">
+    #|<w:comment w:id="0" w:author="Ada" w:initials="A" w:date="2026-07-11T01:00:00Z"><w:p w14:paraId="1AAA0001"><w:r><w:t>range note</w:t></w:r></w:p><w:p w14:paraId="1AAA0002"><w:r><w:t>more</w:t></w:r></w:p></w:comment>
+    #|<w:comment w:id="1" w:author="Bob"><w:p w14:paraId="1BBB0001"><w:r><w:t>point note</w:t></w:r></w:p></w:comment>
+    #|<w:comment w:id="3" w:author="Cid"><w:p w14:paraId="1CCC0001"><w:r><w:t>reply</w:t></w:r></w:p></w:comment>
+    #|</w:comments>
+  let extended =
+    #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w15">
+    #|<w15:commentEx w15:paraId="1AAA0002" w15:done="0"/>
+    #|<w15:commentEx w15:paraId="1CCC0001" w15:paraIdParent="1AAA0002" w15:done="1"/>
+    #|</w15:commentsEx>
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+  )
+  builder.add_override(
+    "/word/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+  )
+  builder.add_override(
+    "/word/commentsExtended.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rId1",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    "styles.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rId2",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    "comments.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rId3",
+    "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
+    "commentsExtended.xml",
+    source="word/document.xml",
+  )
+  builder.add_part("word/document.xml", @utf8.encode(document))
+  builder.add_part("word/styles.xml", @utf8.encode(styles))
+  builder.add_part("word/comments.xml", @utf8.encode(comments))
+  builder.add_part("word/commentsExtended.xml", @utf8.encode(extended))
+  let bytes = builder.build()
+  validate_docx_via_sdk(dir, "commented_conformance", bytes)
+  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let index = annotated.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.comments().length(), content="3")
+  let first = index.comments()[0]
+  debug_inspect(
+    first.id(),
+    content=(
+      #|"0"
+    ),
+  )
+  debug_inspect(first.anchors().length(), content="1")
+  debug_inspect(
+    first.anchors()[0].start(),
+    content=(
+      #|Some("/body/p[2]")
+    ),
+  )
+  debug_inspect(
+    first.anchors()[0].references(),
+    content=(
+      #|["/body/p[3]/r[2]"]
+    ),
+  )
+  let reply = index.comments()[2]
+  debug_inspect(
+    reply.parent_id(),
+    content=(
+      #|Some("0")
+    ),
+  )
+  debug_inspect(reply.done(), content="Some(true)")
+  debug_inspect(
+    index.covering_comment_ids("/body/p[2]"),
+    content=(
+      #|["0"]
+    ),
+  )
+}
