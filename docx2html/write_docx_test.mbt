@@ -1211,3 +1211,34 @@ test "K1: comment specs and anchors fail closed" {
     "comment bodies are plain content",
   )
 }
+
+///|
+test "K1: a comment on an empty paragraph round-trips" {
+  // The markers become the paragraph's ONLY children (blank target line):
+  // still schema-valid, still indexed, reference run still r[1]. With no
+  // content between them, BOTH boundaries classify as inside_start — the
+  // index's honest reading of a zero-width range.
+  let bytes = @docx2html.write_docx_with_comments([@docx2html.paragraph([])], [
+    @docx2html.comment_spec(author="A", from=0, to=0, note_body("on blank")),
+  ])
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let annotated = @docx2html.read_docx_annotated(bytes)
+  guard @inspect.annotated_element(
+      annotated,
+      file="b.docx",
+      path="/comments/comment[@id=0]",
+    )
+    is Object(payload)
+  json_inspect(payload.get("anchors"), content=[
+    [
+      {
+        "story": "/body",
+        "start": "/body/p[1]",
+        "start_boundary": "inside_start",
+        "end": "/body/p[1]",
+        "end_boundary": "inside_start",
+        "references": ["/body/p[1]/r[1]"],
+      },
+    ],
+  ])
+}
