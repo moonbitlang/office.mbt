@@ -26,7 +26,7 @@ test "scanner: projection paths, marker containment, and document order" {
   debug_inspect(scan.warnings().length(), content="0")
   let paths : Array[String] = []
   for node in scan.nodes() {
-    paths.push("\{node.kind()} \{node.path()}")
+    paths.push("\{node.kind} \{node.path()}")
   }
   paths.sort()
   debug_inspect(
@@ -128,7 +128,7 @@ test "scanner: comments story counts each comment body separately" {
   )
   let paragraph_paths : Array[String] = []
   for node in scan.nodes() {
-    if node.kind() == "p" {
+    if node.kind == "p" {
       paragraph_paths.push(node.path())
     }
   }
