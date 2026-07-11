@@ -686,9 +686,11 @@ text; unknown keys/types rejected with addressed errors):
   for `batch` (`ok (dry run): ... , nothing written` under
   `--dry-run`) and `annotated <path> (...)` for the annotate verbs.
   Failures are ONE diagnostic line with exit 1 and NO OUTPUT FILE
-  created: `error: ...` for problems in your input (scripts, flags,
-  anchors, envelopes), `docx: ...` for environment refusals and
-  internal errors (existing output paths, unreadable files, sidecars).
+  created: `error: ...` for problems with the request or with the
+  document's annotation state (scripts, flags, anchors, envelopes,
+  sidecar and other refusing-to-annotate gates), `docx: ...` for
+  environment refusals and internal errors (existing output paths,
+  unreadable inputs, post-splice verification).
   Anchor misses include a corrective detail — the sibling count
   (`'/body/p[9]' does not name a body paragraph (the body has 3
   top-level paragraph(s))`) or the first missing ancestor
@@ -704,7 +706,7 @@ explicitly change.
 ```sh
 # 1. ORIENT: what is in the document, and what discussion exists?
 docx outline report.docx            # counts + comments inventory (id/author/done/parent_id/anchored_to)
-docx text report.docx               # every paragraph with its stable path
+docx text report.docx               # every paragraph with its path
 
 # (Paths are SNAPSHOT-RELATIVE projection paths — re-read them after
 # any mutation; they are not stable anchors. Quote them in shells.)
