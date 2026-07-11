@@ -1855,6 +1855,8 @@ pub fn Workbook::add_vml_drawing_xml(Self, StringView, String) -> Unit raise Xls
 pub fn Workbook::app_properties(Self) -> AppProperties
 pub fn Workbook::app_props(Self) -> AppProperties
 pub fn Workbook::auto_filter(Self, StringView, String, ArrayView[AutoFilterOption]) -> Unit raise XlsxError
+pub fn Workbook::calc_cell_typed(Self, StringView, StringView) -> CellValue? raise XlsxError
+pub fn Workbook::calc_cell_typed_rc(Self, StringView, Int, Int) -> CellValue? raise XlsxError
 pub fn Workbook::calc_cell_value(Self, StringView, StringView, raw? : Bool, options? : Options) -> String raise XlsxError
 pub fn Workbook::calc_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, options? : Options) -> String raise XlsxError
 pub fn Workbook::charset_transcoder(Self, (String, Bytes) -> String raise XlsxError) -> Self

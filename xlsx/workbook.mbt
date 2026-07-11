@@ -1858,6 +1858,43 @@ pub fn Workbook::calc_cell_value_rc(
 }
 
 ///|
+/// The typed computed value of a cell — the same evaluation as
+/// `calc_cell_value`, but the result is returned as a `CellValue` instead of
+/// being stringified and number-formatted (mirroring `get_cell_value_raw`,
+/// which returns the *stored* value the same way). `None` means an empty
+/// result; `Some(Numeric/String/Bool/Error)` is the typed value. A genuine
+/// formula error surfaces as `Some(Error("#…"))` (Excel stores those); only
+/// structural problems (missing sheet, invalid reference) raise `XlsxError`.
+/// Like `calc_cell_value`, this recomputes on every call with no memoization.
+pub fn Workbook::calc_cell_typed(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+) -> CellValue? raise XlsxError {
+  check_sheet_name(sheet_name)
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise SheetNotFound(name=sheet_name.to_owned())
+  }
+  let (row, col) = cell_ref_to_rc(reference)
+  let canonical = cell_ref_from(row, col)
+  let ctx = CalcContext::new()
+  formula_value_to_cell_value(
+    resolve_cell_value(self, sheet.name(), canonical, ctx),
+  )
+}
+
+///|
+pub fn Workbook::calc_cell_typed_rc(
+  self : Workbook,
+  sheet_name : StringView,
+  row : Int,
+  col : Int,
+) -> CellValue? raise XlsxError {
+  self.calc_cell_typed(sheet_name, cell_ref_from(row, col))
+}
+
+///|
 pub fn Workbook::set_cell_formula(
   self : Workbook,
   sheet_name : StringView,
