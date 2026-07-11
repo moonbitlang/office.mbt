@@ -182,10 +182,8 @@ Envelope:
   aggregate, and numeric literals at 40 characters (pathologically long
   literals can round incorrectly upstream).
 - `--dry-run` parses and applies in memory but never writes.
-
 - The save resolves a symlinked workbook to its target first (native),
   writes a uniquely-named temp through its exclusive handle, and renames
-
   it over the target, syncing the bytes to stable storage first. On
   POSIX the saved file is created owner-only (0600) — never wider than
   the original (Windows follows directory ACLs); chmod afterwards for

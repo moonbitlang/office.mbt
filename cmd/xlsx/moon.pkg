@@ -2,6 +2,7 @@ import {
   "bobzhang/mbtexcel" @lib,
   "bobzhang/mbtexcel/batch",
   "bobzhang/mbtexcel/inspect",
+  "bobzhang/mbtexcel/xlsx2html",
   "bobzhang/mbtexcel/xlsx" @xl,
   "moonbitlang/core/argparse",
   "moonbitlang/async",

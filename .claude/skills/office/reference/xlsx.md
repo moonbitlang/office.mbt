@@ -16,8 +16,8 @@ When unsure of a command's exact arguments, ask the tool itself:
 - **`<file>` is modified in place.** `set`, `formula`, `style`, `merge`,
   `width`, `freeze`, `filter`, `add-sheet`, `chart` open `<file>`, change it,
   and overwrite it. `create` and `csv` instead take an `<output>` path and
-  write a new file. Read-only commands (`get`, `outline`, `calc`, `sheets`,
-  `rows`, `view`, `validate`) never modify the file.
+  write a new file. Read-only commands (`get`, `outline`, `html`, `calc`,
+  `sheets`, `rows`, `view`, `validate`) never modify the file.
 - **`<cell>`** is an A1-style reference: a column letter(s) then a row number,
   e.g. `A1`, `B2`, `AA10`. Columns and rows are 1-based.
 - **`<range>`** is `<cell>:<cell>`, e.g. `A1:C10`.
@@ -27,9 +27,9 @@ When unsure of a command's exact arguments, ask the tool itself:
 - **On success, mutating commands** (`create`, `csv`, `set`, `formula`,
   `style`, `merge`, `width`, `freeze`, `filter`, `add-sheet`, `chart`) print
   one confirmation line and exit `0` — the exact line is in the command table
-  below; match it, don't assume. **Read commands** (`get`, `outline`, `calc`,
-  `sheets`, `rows`, `view`, `validate`) print their data/result instead, which
-  may be multiple lines.
+  below; match it, don't assume. **Read commands** (`get`, `outline`, `html`,
+  `calc`, `sheets`, `rows`, `view`, `validate`) print their data/result
+  instead, which may be multiple lines.
 - **Failure** prints one diagnostic line and exits **non-zero**. `cmd/xlsx`
   diagnostics start with `error:`. Because the wasm backend has no stderr, the
   diagnostic arrives on stdout — so **check the exit code**, not just output.
@@ -57,6 +57,7 @@ When unsure of a command's exact arguments, ask the tool itself:
 | `get <file> <sheet> <cell>` | Print a cell's stored value | the value, or its formula text |
 | `get <file> <sheet> <cell-or-range> --json` | Structured read of a cell/range | an `xlsx.cells/1` JSON payload |
 | `outline <file>` | Workbook structure map | an `xlsx.outline/1` JSON payload |
+| `html <file> [--sheet --out --max-rows --max-cols --no-images --calc]` | Render sheets as HTML | a self-contained document (or `wrote <out>`) |
 | `sheets <file>` | List sheet names | one name per line |
 | `rows <file> [--sheet NAME]` | Dump a sheet as CSV | RFC 4180 CSV |
 | `view <file> [--sheet NAME]` | Render a sheet as a table | an ASCII table |
@@ -180,6 +181,33 @@ literals over 40 characters are rejected. Scripts are capped at 10,000
 ops and 1,000,000 aggregate style-expanded cells. Full grammar:
 `docs/agent-json-schemas.md`; runnable examples: `cmd/xlsx/cram/agent.t`.
 
+### Visual rendering (`html`)
+
+`html <file>` renders sheets to one self-contained HTML document — the
+"look" half of a render → look → fix loop. Open it in a browser or read it
+directly. What renders: formatted cell values, fonts/fills/alignments/
+borders as CSS classes (one per style id), merged cells as row/col spans,
+column widths and row heights, embedded images as `data:` URIs, chart
+placeholders (kind + series ranges — no chart drawing), and a frozen-pane
+note. Fidelity limits: theme/indexed colors and gradient fills are omitted
+(never guessed); only literal hex colors render.
+
+- Each sheet is bounded to `--max-rows` (1000) × `--max-cols` (256) plus a
+  hard per-sheet cell ceiling; a visible marker reports truncation.
+- A formula with no cached result renders as its text, styled as pending;
+  `--calc` evaluates such formulas instead.
+- `--sheet NAME` (case-insensitive) renders one sheet; `--out FILE` writes
+  the document instead of stdout; `--no-images` skips image embedding.
+- Untrusted-file safe: all workbook text is HTML-escaped and colors are
+  strictly validated before entering the stylesheet.
+- `--out` is written atomically (temp + rename) and never truncates the
+  input; a symlink/hard-link at the `--out` leaf replaces that entry, not
+  its target. One residual: an adversary who swaps an *intermediate*
+  directory component of `--out` mid-write could redirect it — closing
+  that needs handle-relative `openat`/`renameat`, which the async fs
+  library does not expose. It grants no capability the adversary's
+  directory write access doesn't already give, so it is out of scope.
+
 ### Structured JSON reads (`outline`, `get --json`)
 
 These two commands are the machine-readable inspection surface; prefer them
@@ -226,7 +254,8 @@ the normative field-by-field spec is `docs/agent-json-schemas.md`, and
   result* → `calc`.
 - See what's in an unfamiliar workbook before editing → `outline`. Read
   values + styles + formulas programmatically → `get … --json`.
-- Read a whole sheet as data → `rows` (CSV). Eyeball a sheet → `view`.
+- Read a whole sheet as data → `rows` (CSV). Eyeball a sheet in the
+  terminal → `view`; see it with real formatting → `html`.
 - Make a data dump look like a real report → `style` (bold header, number
   formats), `width`, `freeze` (header row), `filter` — or all of it in one
   `batch` script.

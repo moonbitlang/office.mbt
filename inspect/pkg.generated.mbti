@@ -21,6 +21,8 @@ pub fn chart_kinds(String) -> Array[String]
 
 pub fn chart_series(String) -> Array[ChartSeriesMeta]
 
+pub fn effective_style_id(@xlsx.Workbook, String, String, row~ : Int, col~ : Int) -> Int raise @xlsx.XlsxError
+
 pub fn outline(@xlsx.Workbook, file~ : String) -> Json raise @xlsx.XlsxError
 
 pub fn parse_range(String) -> CellRange raise RangeError

@@ -967,7 +967,7 @@ pub fn Style::border(border : Array[Border]) -> Style {
 
 ///|
 /// Returns a new Style with border settings added/replaced.
-fn Style::with_border(self : Style, border : Array[Border]) -> Style {
+pub fn Style::with_border(self : Style, border : Array[Border]) -> Style {
   {
     number_format: self.number_format,
     num_fmt: self.num_fmt,
