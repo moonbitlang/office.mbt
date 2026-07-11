@@ -84,6 +84,7 @@ async fn run_cli() -> Unit {
     Some(("batch", m)) => run_batch(m)
     Some(("get", m)) => run_get(m)
     Some(("outline", m)) => run_outline(m)
+    Some(("capabilities", m)) => run_capabilities(m)
     Some(("html", m)) => run_html(m)
     Some(("calc", m)) => run_calc(m)
     Some(("sheets", m)) => run_sheets(m)
@@ -292,6 +293,10 @@ fn build_command() -> @argparse.Command {
             about="print the cell or range as a structured JSON payload",
           ),
         ],
+      ),
+      Command(
+        "capabilities",
+        about="Print the batch op catalog this build supports (JSON)",
       ),
       Command("outline", about="Print a workbook structure map as JSON", positionals=[
         PositionArg("file"),

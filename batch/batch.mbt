@@ -37,18 +37,19 @@ pub impl Show for BatchError with fn output(self, logger) {
 ///|
 /// A `set` op's value: JSON types are honored (no string
 /// re-classification; agents use batch precisely to escape that
-/// ambiguity).
-pub enum BatchValue {
+/// ambiguity). Private: only ever held inside an `OpKind`.
+priv enum BatchValue {
   Text(String)
   Number(Double)
   Flag(Bool)
   Clear
-} derive(@debug.Debug)
+}
 
 ///|
-/// One parsed batch operation. Constructor fields mirror the CLI twin's
+/// The internal representation of one parsed batch operation. **Private on
+/// purpose** — see `BatchOp`. Constructor fields mirror the CLI twin's
 /// arguments; op names in scripts are the subcommand names.
-pub enum BatchOp {
+priv enum OpKind {
   OpSet(sheet~ : String, cell~ : String, value~ : BatchValue)
   OpFormula(sheet~ : String, cell~ : String, formula~ : String)
   OpStyle(
@@ -75,12 +76,26 @@ pub enum BatchOp {
     series_name~ : String,
     title~ : String
   )
-} derive(@debug.Debug)
+}
+
+///|
+/// A parsed batch operation, **opaque by design**. Callers get these from
+/// `parse_script` and hand them to `apply_op`; they cannot construct or
+/// pattern-match them. This is deliberate: the op vocabulary grows over
+/// time (new `xlsx.batch/1` ops), and hiding the representation keeps
+/// adding a variant or a field a source-compatible change instead of a
+/// breaking one for every downstream `match`. Discover the current op set
+/// programmatically via `capabilities()`.
+///
+/// A plain (package-private) single-field struct: it appears in the public
+/// `parse_script`/`apply_op`/`name` signatures, so it exports as an
+/// abstract type — external code holds it but cannot construct or match it.
+struct BatchOp(OpKind)
 
 ///|
 /// The op's script name (also its CLI subcommand name), for error text.
 pub fn BatchOp::name(self : BatchOp) -> String {
-  match self {
+  match self.0 {
     OpSet(..) => "set"
     OpFormula(..) => "formula"
     OpStyle(..) => "style"
@@ -92,13 +107,6 @@ pub fn BatchOp::name(self : BatchOp) -> String {
     OpChart(..) => "chart"
   }
 }
-
-///|
-/// The op vocabulary, for the unknown-op error; adding an op means
-/// extending this list, `parse_op`, and `apply_op` together.
-let batch_op_names : Array[String] = [
-  "set", "formula", "style", "merge", "width", "freeze", "filter", "add-sheet", "chart",
-]
 
 ///|
 fn op_error(index : Int, op : String, message : String) -> BatchError {
@@ -174,7 +182,26 @@ fn parse_op(
     Some(_) => raise op_error(index, name, "\"params\" must be an object")
     None => raise op_error(index, name, "missing \"params\" object")
   }
-  let reader = ParamReader::{ index, op: name, params, used: Map([]) }
+  // Gate on the catalog before dispatch: an op is parseable iff it is
+  // advertised by `capabilities`, so a dispatch arm without a catalog
+  // entry is unreachable and the two cannot drift.
+  if !is_known_op(name) {
+    raise op_error(
+      index,
+      name,
+      "unknown op (expected one of: \{accepted_op_names().join(", ")})",
+    )
+  }
+  // The reader is told the op's advertised param names; reading a param
+  // outside that set aborts (see `take`). So the params a parser arm reads
+  // are exactly the catalog's — param-level drift is impossible too.
+  let reader = ParamReader::{
+    index,
+    op: name,
+    params,
+    used: Map([]),
+    declared: op_param_names(name),
+  }
   let op = match name {
     "set" =>
       OpSet(
@@ -235,11 +262,11 @@ fn parse_op(
       raise op_error(
         index,
         name,
-        "unknown op (expected one of: \{batch_op_names.join(", ")})",
+        "unknown op (expected one of: \{accepted_op_names().join(", ")})",
       )
   }
   reader.finish()
-  op
+  BatchOp(op)
 }
 
 ///|
@@ -250,10 +277,19 @@ priv struct ParamReader {
   op : String
   params : Map[String, Json]
   used : Map[String, Unit]
+  /// The op's advertised param names (from the capability catalog).
+  declared : Array[String]
 }
 
 ///|
 fn ParamReader::take(self : ParamReader, key : String) -> Json? {
+  // A parser arm may only read params the catalog advertises. Reading an
+  // undeclared param is a programming error (the catalog and parser have
+  // drifted), not a user error — abort so every parse of that op fails
+  // loudly rather than silently accepting an undocumented param.
+  if !self.declared.contains(key) {
+    abort("batch: op '\{self.op}' reads undeclared param '\{key}'")
+  }
   self.used[key] = ()
   self.params.get(key)
 }
@@ -547,7 +583,7 @@ fn ParamReader::finish(self : ParamReader) -> Unit raise BatchError {
 /// same library calls as the op's CLI twin. Never touches the
 /// filesystem; the caller owns open/write and all-or-nothing semantics.
 pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
-  match op {
+  match op.0 {
     OpSet(sheet~, cell~, value~) =>
       match value {
         Text(text) => workbook.set_cell(sheet, cell, text)

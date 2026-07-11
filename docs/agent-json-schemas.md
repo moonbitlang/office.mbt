@@ -189,6 +189,36 @@ Envelope:
   the original (Windows follows directory ACLs); chmod afterwards for
   group access.
 
+### Forward-compatibility & `xlsx.capabilities/1` (`xlsx capabilities`)
+
+The `xlsx.batch/1` *script* contract is backward-compatible: a script that
+was valid stays valid on newer builds. It is **not** forward-compatible —
+a stricter older CLI rejects an op or param it doesn't know. So an agent
+targeting an unknown build should first query what that build supports:
+
+```json
+{
+  "schema": "xlsx.capabilities/1",
+  "batch_schema": "xlsx.batch/1",
+  "limits": { "max_ops": 10000, "max_style_cells": 1000000 },
+  "ops": [
+    { "op": "set", "params": [
+        { "name": "sheet", "type": "string", "required": true },
+        { "name": "cell",  "type": "cell",   "required": true },
+        { "name": "value", "type": "value",  "required": true } ] }
+    // … one entry per op this build accepts
+  ]
+}
+```
+
+`ops[].params[].type` names the validator applied at parse time — `cell`
+(single in-grid cell), `range` / `colon_range`, `column`, `series_range`
+(optional `Sheet!` prefix), `value` (string/number/bool/null), `string`,
+`number`, `bool`. New ops appear in `ops` on newer builds; the catalog is
+the single source of truth an agent should read rather than hard-coding the
+op list. (Parsed ops are opaque in the library API too, so growing the op
+set is a source-compatible change.)
+
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
 
 A metadata-priced orientation payload: no document text is emitted beyond
