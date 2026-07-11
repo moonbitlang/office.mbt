@@ -457,11 +457,19 @@ pub fn read_docx_annotated(
     }
   }
   // The locked rule detects sidecars by relationship type AND content
-  // type: an Override can identify one even when no main-part
-  // relationship names it.
+  // type: an Override (or Default) can identify one even when no
+  // main-part relationship names it. PARSED comparison — substring
+  // scans false-positive on comments and miss character-reference
+  // spellings the parser normalizes.
   let types_text = zip.read_text("[Content_Types].xml") catch { _ => None }
   match types_text {
-    Some(text) =>
+    Some(text) => {
+      let declared_types : Set[String] = Set([])
+      let parsed_root = try? @xml.read_xml_string(text)
+      match parsed_root {
+        Ok(root) => collect_content_types(root, declared_types)
+        Err(_) => ()
+      }
       for
         sidecar_content_type in (
           [
@@ -469,11 +477,12 @@ pub fn read_docx_annotated(
             "application/vnd.openxmlformats-officedocument.wordprocessingml.people+xml",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtensible+xml",
           ] : ReadOnlyArray[String]) {
-        if text.find(sidecar_content_type) is Some(_) &&
+        if declared_types.contains(sidecar_content_type) &&
           sidecar_types.search(sidecar_content_type) is None {
           sidecar_types.push(sidecar_content_type)
         }
       }
+    }
     None => ()
   }
   {
@@ -736,6 +745,22 @@ fn build_annotation_index(
     warn_unrepresentable("endnote", note.id())
   }
   { comments, footnotes, endnotes, warnings, spans, scans }
+}
+
+///|
+/// Every ContentType attribute value declared in [Content_Types].xml
+/// (Override and Default alike), parsed — character references decoded.
+fn collect_content_types(element : XmlElement, types : Set[String]) -> Unit {
+  match element.attributes.get("ContentType") {
+    Some(content_type) => types.add(content_type)
+    None => ()
+  }
+  for child in element.children {
+    match child {
+      XmlElement(inner) => collect_content_types(inner, types)
+      _ => ()
+    }
+  }
 }
 
 ///|

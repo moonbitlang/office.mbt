@@ -89,6 +89,13 @@ pub fn plan_comment_addition(
   while used_numeric.contains(candidate) {
     candidate += 1
   }
+  // Never publish an id the allocator itself refuses to read back
+  // (nine decimal digits is the supported range).
+  if candidate > 999_999_999 {
+    raise Unsupported(
+      message="cannot allocate a comment id: the document already uses the maximum supported id",
+    )
+  }
   let new_id = candidate.to_string()
   // Fragments (namespace-self-contained per the L0 locked rule).
   let (start_fragment, end_fragment) = comment_anchor_fragments(id=new_id)
@@ -312,22 +319,48 @@ fn collect_relationship_ids(element : XmlElement, ids : Set[String]) -> Unit {
 }
 
 ///|
-/// First occurrence of an ASCII needle in raw bytes ('<'-led needles
-/// can only match real markup: '<' is illegal inside attribute values).
+/// First occurrence of an ASCII needle in raw bytes as REAL MARKUP:
+/// XML comments and CDATA sections are skipped ('<' is illegal inside
+/// attribute values, so those three region kinds are the only places a
+/// '<'-led needle could match without being markup).
 fn find_ascii_bytes(bytes : Bytes, needle : String) -> Int? {
   let needle_units = needle.code_units()
   let limit = bytes.length() - needle_units.length()
-  for at in 0..<=limit {
-    let mut matched = true
-    for offset, unit in needle_units {
+  fn starts_with(at : Int, text : String) -> Bool {
+    if at + text.length() > bytes.length() {
+      return false
+    }
+    for offset, unit in text.code_units() {
       if bytes[at + offset].to_int() != unit.to_int() {
-        matched = false
-        break
+        return false
       }
     }
-    if matched {
+    true
+  }
+  fn skip_past(from : Int, terminator : String) -> Int {
+    let mut at = from
+    while at <= bytes.length() - terminator.length() {
+      if starts_with(at, terminator) {
+        return at + terminator.length()
+      }
+      at += 1
+    }
+    bytes.length()
+  }
+  let mut at = 0
+  while at <= limit {
+    if starts_with(at, "<!--") {
+      at = skip_past(at + 4, "-->")
+      continue
+    }
+    if starts_with(at, "<![CDATA[") {
+      at = skip_past(at + 9, "]]>")
+      continue
+    }
+    if starts_with(at, needle) {
       return Some(at)
     }
+    at += 1
   }
   None
 }
