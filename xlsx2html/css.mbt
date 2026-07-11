@@ -4,19 +4,20 @@
 // never guessed, so `</style>` payloads cannot break out.
 
 ///|
-/// Excel column width (character units) to pixels.
-const COL_WIDTH_TO_PX_SCALE : Double = 7.0
-
-///|
-const COL_WIDTH_TO_PX_OFFSET : Double = 5.0
+/// The maximum digit width of the default font, per the Open XML stored
+/// column-width formula (Calibri 11 at 96dpi).
+const MAX_DIGIT_WIDTH : Double = 7.0
 
 ///|
 /// Row height is in points; CSS pixels are pt * 4/3.
 const ROW_HEIGHT_PT_TO_PX : Double = 4.0 / 3.0
 
 ///|
+/// Open XML stored width -> pixels: Truncate(((256*width +
+/// Truncate(128/MDW)) / 256) * MDW). Width 16 is 112px at MDW 7.
 pub fn col_width_px(width : Double) -> Int {
-  (width * COL_WIDTH_TO_PX_SCALE + COL_WIDTH_TO_PX_OFFSET + 0.5).to_int()
+  let fudge = (128.0 / MAX_DIGIT_WIDTH).floor()
+  ((256.0 * width + fudge) / 256.0 * MAX_DIGIT_WIDTH).floor().to_int()
 }
 
 ///|
@@ -28,12 +29,13 @@ pub fn row_height_px(points : Double) -> Int {
 /// Validates a workbook color into a `#RRGGBB` CSS literal: an 8-hex ARGB
 /// drops its alpha, a 6-hex passes, anything else is `None`.
 pub fn css_color(raw : String) -> String? {
-  let hex = if raw.length() == 8 { raw[2:].to_owned() } else { raw }
-  if hex.length() != 6 {
+  // The WHOLE value must be hex before any alpha stripping: "GG112233"
+  // is malformed, not "#112233" with a funny alpha.
+  if raw.length() != 6 && raw.length() != 8 {
     return None
   }
-  for i in 0..<hex.length() {
-    let c = hex[i].to_int()
+  for i in 0..<raw.length() {
+    let c = raw[i].to_int()
     let ok = (c >= '0'.to_int() && c <= '9'.to_int()) ||
       (c >= 'a'.to_int() && c <= 'f'.to_int()) ||
       (c >= 'A'.to_int() && c <= 'F'.to_int())
@@ -41,6 +43,7 @@ pub fn css_color(raw : String) -> String? {
       return None
     }
   }
+  let hex = if raw.length() == 8 { raw[2:].to_owned() } else { raw }
   Some("#" + hex)
 }
 
@@ -80,16 +83,20 @@ pub fn style_css(style : @xlsx.Style) -> String {
     None => ()
   }
   match style.fill {
+    // Only a solid pattern fill renders (typ "pattern", patternType
+    // solid = 1, matching what Fill::solid writes); gradients and other
+    // pattern types are omitted per the documented fidelity limits.
     Some(fill) =>
-      // Pattern fills render their first (foreground) color as a solid
-      // background; that is what the writer emits for Fill::solid.
-      match fill.colors {
-        Some(colors) if colors.length() > 0 =>
-          match css_color(colors[0]) {
-            Some(css) => out.write_string("background-color:\{css};")
-            None => ()
-          }
-        _ => ()
+      if fill.typ.unwrap_or("pattern") == "pattern" &&
+        fill.pattern.unwrap_or(1) == 1 {
+        match fill.colors {
+          Some(colors) if colors.length() > 0 =>
+            match css_color(colors[0]) {
+              Some(css) => out.write_string("background-color:\{css};")
+              None => ()
+            }
+          _ => ()
+        }
       }
     None => ()
   }
@@ -123,15 +130,17 @@ pub fn style_css(style : @xlsx.Style) -> String {
           "bottom" => "border-bottom"
           _ => continue
         }
+        // An unset color is Excel's default ink; a malformed color means
+        // the side is omitted, never guessed. Border line styles are all
+        // rendered as thin solid in v1 (documented limitation).
         let color = match border.color {
           Some(raw) =>
             match css_color(raw) {
               Some(css) => css
-              None => "#000000"
+              None => continue
             }
           None => "#000000"
         }
-        // Any set border style renders as a thin solid line in v1.
         out.write_string("\{side}:1px solid \{color};")
       }
     None => ()

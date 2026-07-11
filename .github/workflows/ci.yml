@@ -181,6 +181,11 @@ jobs:
           echo "batch -> $b"; test "$b" = "applied 3 op(s) to ci.xlsx"
           c=$(moon run --target wasm cmd/xlsx -- calc ci.xlsx Data A3 2>/dev/null)
           echo "calc A3 -> $c"; test "$c" = "15"
+          moon run --target wasm cmd/xlsx -- html ci.xlsx --out ci.html
+          test -s ci.html
+          grep -q '^<!DOCTYPE html>' ci.html
+          grep -q 'class="s' ci.html
+          grep -q 'chart-placeholder' ci.html
           v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"
           # The docx agent CLI also targets wasm end to end: build it and

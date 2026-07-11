@@ -71,7 +71,7 @@ test "full-document snapshot: styles, merge, widths, chart, image, freeze" {
       #|<h2>Report</h2>
       #|<table>
       #|<colgroup>
-      #|<col style="width:117px">
+      #|<col style="width:112px">
       #|<col>
       #|</colgroup>
       #|<tr style="height:32px"><td class="s1" colspan="2">Quarterly Report</td></tr>

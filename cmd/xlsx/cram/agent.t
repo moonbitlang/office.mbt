@@ -259,3 +259,10 @@ Errors are the CLI's usual one-liners:
   $ xlsx.exe html book.xlsx --max-rows zero
   error: invalid --max-rows 'zero' (expected a number)
   [1]
+
+`html` is read-only — writing the document over the input workbook is
+refused:
+
+  $ xlsx.exe html book.xlsx --out book.xlsx
+  error: --out must not be the input workbook
+  [1]

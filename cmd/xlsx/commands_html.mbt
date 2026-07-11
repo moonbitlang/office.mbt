@@ -21,8 +21,22 @@ async fn run_html(m : @argparse.Matches) -> Unit {
   if out == "" {
     println(document)
   } else {
+    // `html` is a read-only command: writing the document over the input
+    // workbook (directly or via a symlink alias) would destroy it.
+    if out == file || resolve_existing(out) == resolve_existing(file) {
+      raise CliError("error: --out must not be the input workbook")
+    }
     write_file(out, @encoding/utf8.encode(document[:]))
     println("wrote \{out}")
+  }
+}
+
+///|
+/// A path's resolved identity when it exists (native realpath); a path
+/// that does not exist (or a wasm path) is its own identity.
+async fn resolve_existing(path : String) -> String noraise {
+  resolve_save_target(path) catch {
+    _ => path
   }
 }
 

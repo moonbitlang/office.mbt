@@ -36,7 +36,7 @@ test "css_color admits only strict hex" {
   for
     bad in [
       "", "FFF", "4472C", "4472C44", "</style><", "expression(", "红红红红红红",
-      "4472CG", "”4472C4",
+      "4472CG", "”4472C4", "GG112233", "</style>4",
     ] {
     if @xlsx2html.css_color(bad) is Some(_) {
       fail("expected '\{bad}' to be rejected")
@@ -46,7 +46,12 @@ test "css_color admits only strict hex" {
 
 ///|
 test "pixel conversions" {
-  inspect(@xlsx2html.col_width_px(16.0), content="117")
+  inspect(
+    @xlsx2html.col_width_px(16.0),
+    content=(
+      #|112
+    ),
+  )
   inspect(@xlsx2html.row_height_px(15.0), content="20")
 }
 
@@ -74,4 +79,9 @@ test "style_css renders safe declarations and omits invalid colors" {
     @xlsx.Font::with_values(color="</style><script>alert(1)</script>"),
   )
   inspect(@xlsx2html.style_css(hostile), content="")
+  // Non-solid fills are omitted per the documented fidelity limits.
+  let gradient = @xlsx.Style::new().with_fill(
+    @xlsx.Fill::gradient("4472C4", "FFFFFF"),
+  )
+  inspect(@xlsx2html.style_css(gradient), content="")
 }
