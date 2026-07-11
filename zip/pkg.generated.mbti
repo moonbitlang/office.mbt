@@ -26,6 +26,9 @@ pub suberror ZipError {
   InvalidUtf8(offset~ : Int)
   OutputLimitExceeded(limit~ : Int)
 } derive(@debug.Debug)
+#as_free_fn
+#deprecated
+pub fn ZipError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 type Archive
@@ -38,6 +41,9 @@ pub(all) enum Compression {
   Store
   Deflate
 } derive(@debug.Debug)
+#as_free_fn
+#deprecated
+pub fn Compression::to_repr(Self) -> @debug.Repr
 
 type Entry
 pub fn Entry::compression(Self) -> Compression

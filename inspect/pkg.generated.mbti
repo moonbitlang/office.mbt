@@ -32,6 +32,13 @@ pub suberror RangeError {
   RangeTooLarge(range~ : String, count~ : Int64)
   MalformedRef(ref_~ : String)
 } derive(@debug.Debug)
+#deprecated
+pub fn RangeError::output(Self, &Logger) -> Unit
+#as_free_fn
+#deprecated
+pub fn RangeError::to_repr(Self) -> @debug.Repr
+#deprecated
+pub fn RangeError::to_string(Self) -> String
 pub impl Show for RangeError
 
 // Types and methods
@@ -43,13 +50,27 @@ pub struct CellRange {
 } derive(Eq, @debug.Debug)
 pub fn CellRange::cell_count(Self) -> Int64
 pub fn CellRange::cells(Self) -> Array[String] raise @xlsx.XlsxError
+#deprecated
+pub fn CellRange::equal(Self, Self) -> Bool
+#deprecated
+pub fn CellRange::not_equal(Self, Self) -> Bool
 pub fn CellRange::range_ref(Self) -> String raise @xlsx.XlsxError
+#as_free_fn
+#deprecated
+pub fn CellRange::to_repr(Self) -> @debug.Repr
 
 pub struct ChartSeriesMeta {
   name : String?
   categories : String?
   values : String?
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn ChartSeriesMeta::equal(Self, Self) -> Bool
+#deprecated
+pub fn ChartSeriesMeta::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn ChartSeriesMeta::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
