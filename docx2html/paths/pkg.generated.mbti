@@ -12,6 +12,8 @@ pub fn parse_path(String) -> ParsedPath raise PathError
 
 pub fn resolve_path(@document.DocumentElement, String, headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart]) -> @document.DocumentElement raise PathError
 
+pub fn resolve_relative(@document.DocumentElement, String, prefix~ : String) -> @document.DocumentElement raise PathError
+
 pub fn resolve_steps(@document.DocumentElement, Array[PathStep], String, root_prefix? : String) -> @document.DocumentElement raise PathError
 
 pub fn root_container(@document.DocumentElement, ParsedPath, String, Array[@document.HeaderFooterPart], Array[@document.HeaderFooterPart]) -> (@document.DocumentElement, String) raise PathError

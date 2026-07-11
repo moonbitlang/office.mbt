@@ -306,3 +306,23 @@ pub fn resolve_path(
   }
   resolve_steps(container, parsed.steps, path, root_prefix=prefix)
 }
+
+///|
+/// Resolves a RELATIVE step string ("p[2]/r[1]", "" = the container
+/// itself) against a container element — the verification primitive the
+/// annotation index uses to check scanner-derived positions against the
+/// parsed document. `prefix~` only shapes error messages.
+pub fn resolve_relative(
+  container : @document.DocumentElement,
+  steps_path : String,
+  prefix~ : String,
+) -> @document.DocumentElement raise PathError {
+  if steps_path == "" {
+    return container
+  }
+  let steps : Array[PathStep] = []
+  for segment in steps_path.split("/") {
+    steps.push(parse_step(segment.to_string(), "\{prefix}/\{steps_path}"))
+  }
+  resolve_steps(container, steps, "\{prefix}/\{steps_path}", root_prefix=prefix)
+}

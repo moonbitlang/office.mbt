@@ -9,6 +9,29 @@
 // degrade to warnings; `docx validate` stays the strict gate.
 
 ///|
+/// Where a marker sits relative to its rendered projection node — the
+/// plan's boundary distinction, preserved so "before p[3]" and "after
+/// p[2]" do not collapse into the same position.
+pub enum AnnotationBoundary {
+  Before
+  InsideStart
+  InsideEnd
+  After
+} derive(Eq)
+
+///|
+pub impl Show for AnnotationBoundary with fn output(self, logger) {
+  logger.write_string(
+    match self {
+      Before => "before"
+      InsideStart => "inside_start"
+      InsideEnd => "inside_end"
+      After => "after"
+    },
+  )
+}
+
+///|
 /// One anchor of a comment: a paired range (start+end), a dangling
 /// half-range, or a point (references only). Paths are full agent paths
 /// ("/body/p[2]"); `references` are the comment-reference positions
@@ -16,8 +39,26 @@
 pub struct AnnotationAnchor {
   story : String
   start : String?
+  start_boundary : AnnotationBoundary?
   end : String?
+  end_boundary : AnnotationBoundary?
   references : Array[String]
+}
+
+///|
+/// The start marker's boundary relative to `start`, when present.
+pub fn AnnotationAnchor::start_boundary(
+  self : AnnotationAnchor,
+) -> AnnotationBoundary? {
+  self.start_boundary
+}
+
+///|
+/// The end marker's boundary relative to `end`, when present.
+pub fn AnnotationAnchor::end_boundary(
+  self : AnnotationAnchor,
+) -> AnnotationBoundary? {
+  self.end_boundary
 }
 
 ///|
@@ -314,8 +355,170 @@ pub fn read_docx_annotated(
     sections,
     messages: @core.dedupe_messages(messages),
   }
-  let index = build_annotation_index(zip, parts, collector)
+  let footnote_bodies : Array[Array[DocumentElement]] = []
+  let endnote_bodies : Array[Array[DocumentElement]] = []
+  for note in parts.notes_result.notes {
+    if note.note_type == "footnote" {
+      footnote_bodies.push(note.body)
+    } else {
+      endnote_bodies.push(note.body)
+    }
+  }
+  let comment_bodies : Array[Array[DocumentElement]] = []
+  for comment in parts.comments_result.comments {
+    comment_bodies.push(comment.body)
+  }
+  let verify_ctx : VerifyContext = {
+    document: document_result.document,
+    headers: collector.headers,
+    footers: collector.footers,
+    footnote_bodies,
+    endnote_bodies,
+    comment_bodies,
+  }
+  let index = build_annotation_index(zip, parts, collector, verify_ctx)
   { package_result, index }
+}
+
+///|
+/// AST-side context for position verification: scanner paths are checked
+/// against the PARSED projection, and unverifiable positions degrade to
+/// their nearest resolvable ancestor with a diagnostic — the guarantee
+/// that anchors never point at nodes the AST does not have.
+priv struct VerifyContext {
+  document : DocumentElement
+  headers : Array[@document.HeaderFooterPart]
+  footers : Array[@document.HeaderFooterPart]
+  footnote_bodies : Array[Array[DocumentElement]]
+  endnote_bodies : Array[Array[DocumentElement]]
+  comment_bodies : Array[Array[DocumentElement]]
+}
+
+///|
+/// Verifies a story-qualified position path; on failure, trims trailing
+/// segments until resolution succeeds (worst case: the story root),
+/// warning once per distinct degradation.
+fn verify_position(
+  ctx : VerifyContext,
+  path : String,
+  warnings : Array[String],
+  degraded : Set[String],
+) -> String {
+  let (story, node_path) = split_story_path(path)
+  let mut candidate = node_path
+  while true {
+    if position_resolves(ctx, story, candidate) {
+      break
+    }
+    // Trim the last segment (no rfind on String: scan code units).
+    let units = candidate.code_units()
+    let mut last_slash = -1
+    for at in 0..<units.length() {
+      if units[at].to_int() == '/'.to_int() {
+        last_slash = at
+      }
+    }
+    if last_slash >= 0 {
+      candidate = candidate[0:last_slash].to_owned()
+    } else {
+      candidate = ""
+      break
+    }
+  }
+  let verified = if candidate == "" { story } else { "\{story}/\{candidate}" }
+  if verified != path && !degraded.contains(path) {
+    degraded.add(path)
+    warnings.push(
+      "annotation index: position '\{path}' could not be verified against the parsed document; using '\{verified}'",
+    )
+  }
+  verified
+}
+
+///|
+fn position_resolves(
+  ctx : VerifyContext,
+  story : String,
+  node_path : String,
+) -> Bool {
+  // note[k]/comment[k] container heads index the TYPE-FILTERED, reader-
+  // ordered bodies; remaining steps resolve through the shared grammar.
+  fn container_indexed(
+    bodies : Array[Array[DocumentElement]],
+    head : String,
+    kind : String,
+  ) -> (Array[DocumentElement], String)? {
+    if !head.has_prefix(kind + "[") || !head.has_suffix("]") {
+      return None
+    }
+    let digits = head[kind.length() + 1:head.length() - 1].to_owned()
+    let mut value = 0
+    for ch in digits {
+      if ch is ('0'..='9') {
+        value = value * 10 + (ch.to_int() - '0'.to_int())
+      } else {
+        return None
+      }
+    }
+    if value < 1 || value > bodies.length() {
+      return None
+    }
+    Some((bodies[value - 1], ""))
+  }
+
+  let resolved : Result[Unit, Unit] = try {
+    match story {
+      "/body" => {
+        let _ = @paths.resolve_relative(ctx.document, node_path, prefix=story)
+        Ok(())
+      }
+      "/footnotes" | "/endnotes" | "/comments" => {
+        let bodies = match story {
+          "/footnotes" => ctx.footnote_bodies
+          "/endnotes" => ctx.endnote_bodies
+          _ => ctx.comment_bodies
+        }
+        let kind = if story == "/comments" { "comment" } else { "note" }
+        if node_path == "" {
+          Ok(())
+        } else {
+          let (head, rest) = match node_path.find("/") {
+            Some(slash) =>
+              (node_path[0:slash].to_owned(), node_path[slash + 1:].to_owned())
+            None => (node_path, "")
+          }
+          match container_indexed(bodies, head, kind) {
+            Some((body, _)) => {
+              let _ = @paths.resolve_relative(
+                @document.document(body),
+                rest,
+                prefix="\{story}/\{head}",
+              )
+              Ok(())
+            }
+            None => Err(())
+          }
+        }
+      }
+      _ => {
+        // /header[n] or /footer[n]
+        let _ = @paths.resolve_path(
+          ctx.document,
+          if node_path == "" {
+            story
+          } else {
+            "\{story}/\{node_path}"
+          },
+          headers=ctx.headers,
+          footers=ctx.footers,
+        )
+        Ok(())
+      }
+    }
+  } catch {
+    _ => Err(())
+  }
+  resolved is Ok(_)
 }
 
 ///|
@@ -323,6 +526,7 @@ fn build_annotation_index(
   zip : ZipArchive,
   parts : DocumentParts,
   collector : HeaderFooterCollector,
+  ctx : VerifyContext,
 ) -> AnnotationIndex {
   let warnings : Array[String] = []
   // Story list in the plan's fixed rank order: body, header[1..],
@@ -388,8 +592,11 @@ fn build_annotation_index(
   }
   let definitions = read_comment_definitions(zip, parts, warnings)
   let extended = read_comments_extended(zip, parts, warnings)
-  let (comments, spans) = build_comments(definitions, extended, scans, warnings)
-  let (footnotes, endnotes) = build_notes(parts, scans, warnings)
+  let degraded : Set[String] = Set([])
+  let (comments, spans) = build_comments(
+    definitions, extended, scans, warnings, ctx, degraded,
+  )
+  let (footnotes, endnotes) = build_notes(parts, scans, warnings, ctx, degraded)
   { comments, footnotes, endnotes, warnings, spans, scans }
 }
 
@@ -518,6 +725,8 @@ fn build_comments(
   extended : Map[String, CommentExRecord],
   scans : Array[(String, StoryScan)],
   warnings : Array[String],
+  ctx : VerifyContext,
+  degraded : Set[String],
 ) -> (Array[CommentInfo], Array[AnchorSpan]) {
   // One CommentInfo PER DEFINITION in comments.xml order (duplicate ids
   // are each exposed ordinally per the plan; id addressing over them is
@@ -613,13 +822,17 @@ fn build_comments(
               warnings.push(
                 "annotation index: dangling commentRangeEnd for id '\{id}' in \{story}",
               )
+              let (raw_end, end_boundary) = marker_position(story, marker, scan)
+              let end_path = verify_position(ctx, raw_end, warnings, degraded)
               story_anchors.push(
                 (
                   marker.seq(),
                   {
                     story,
                     start: None,
-                    end: Some(marker_path(story, marker, scan)),
+                    start_boundary: None,
+                    end: Some(end_path),
+                    end_boundary: Some(end_boundary),
                     references: [],
                   },
                 ),
@@ -632,13 +845,17 @@ fn build_comments(
         warnings.push(
           "annotation index: dangling commentRangeStart for id '\{id}' in \{story}",
         )
+        let (raw_start, start_boundary) = marker_position(story, dangling, scan)
+        let start_path = verify_position(ctx, raw_start, warnings, degraded)
         story_anchors.push(
           (
             dangling.seq(),
             {
               story,
-              start: Some(marker_path(story, dangling, scan)),
+              start: Some(start_path),
+              start_boundary: Some(start_boundary),
               end: None,
+              end_boundary: None,
               references: [],
             },
           ),
@@ -663,7 +880,14 @@ fn build_comments(
         for pair_index, pair in pairs {
           let (start, end) = pair
           if start.seq() <= marker.seq() && marker.seq() <= end.seq() {
-            pair_references[pair_index].push(marker_path(story, marker, scan))
+            pair_references[pair_index].push(
+              verify_position(
+                ctx,
+                marker_path(story, marker, scan),
+                warnings,
+                degraded,
+              ),
+            )
             attached = true
             break
           }
@@ -679,7 +903,14 @@ fn build_comments(
             }
           }
           if best_index >= 0 {
-            pair_references[best_index].push(marker_path(story, marker, scan))
+            pair_references[best_index].push(
+              verify_position(
+                ctx,
+                marker_path(story, marker, scan),
+                warnings,
+                degraded,
+              ),
+            )
             attached = true
           }
         }
@@ -690,8 +921,17 @@ fn build_comments(
               {
                 story,
                 start: None,
+                start_boundary: None,
                 end: None,
-                references: [marker_path(story, marker, scan)],
+                end_boundary: None,
+                references: [
+                  verify_position(
+                    ctx,
+                    marker_path(story, marker, scan),
+                    warnings,
+                    degraded,
+                  ),
+                ],
               },
             ),
           )
@@ -700,13 +940,19 @@ fn build_comments(
       }
       for pair_index, pair in pairs {
         let (start, end) = pair
+        let (raw_start, start_boundary) = marker_position(story, start, scan)
+        let (raw_end, end_boundary) = marker_position(story, end, scan)
+        let start_path = verify_position(ctx, raw_start, warnings, degraded)
+        let end_path = verify_position(ctx, raw_end, warnings, degraded)
         story_anchors.push(
           (
             start.seq(),
             {
               story,
-              start: Some(marker_path(story, start, scan)),
-              end: Some(marker_path(story, end, scan)),
+              start: Some(start_path),
+              start_boundary: Some(start_boundary),
+              end: Some(end_path),
+              end_boundary: Some(end_boundary),
               references: pair_references[pair_index],
             },
           ),
@@ -869,13 +1115,19 @@ fn paragraph_prefix(container : String?) -> String? {
 /// A marker's exposed path: its containing projection node, story-
 /// qualified; a story-level marker attaches to the nearest node after it
 /// (else before it), per the plan's post-pass.
-fn marker_path(
+fn marker_position(
   story : String,
   marker : ScannedMarker,
   scan : StoryScan,
-) -> String {
+) -> (String, AnnotationBoundary) {
   match marker.container_path() {
-    Some(container) => "\{story}/\{container}"
+    Some(container) => {
+      let boundary = match marker.after_child() {
+        Some(_) => InsideEnd
+        None => InsideStart
+      }
+      ("\{story}/\{container}", boundary)
+    }
     None => {
       let mut best_after : ScannedNode? = None
       let mut best_before : ScannedNode? = None
@@ -899,11 +1151,11 @@ fn marker_path(
         }
       }
       match best_after {
-        Some(node) => "\{story}/\{node.path()}"
+        Some(node) => ("\{story}/\{node.path()}", Before)
         None =>
           match best_before {
-            Some(node) => "\{story}/\{node.path()}"
-            None => story
+            Some(node) => ("\{story}/\{node.path()}", After)
+            None => (story, InsideStart)
           }
       }
     }
@@ -911,10 +1163,21 @@ fn marker_path(
 }
 
 ///|
+fn marker_path(
+  story : String,
+  marker : ScannedMarker,
+  scan : StoryScan,
+) -> String {
+  marker_position(story, marker, scan).0
+}
+
+///|
 fn build_notes(
   parts : DocumentParts,
   scans : Array[(String, StoryScan)],
   warnings : Array[String],
+  ctx : VerifyContext,
+  degraded : Set[String],
 ) -> (Array[NoteInfo], Array[NoteInfo]) {
   let footnotes : Array[NoteInfo] = []
   let endnotes : Array[NoteInfo] = []
@@ -930,7 +1193,12 @@ fn build_notes(
       }
       match target {
         Some(refs) => {
-          let path = marker_path(story, marker, scan)
+          let path = verify_position(
+            ctx,
+            marker_path(story, marker, scan),
+            warnings,
+            degraded,
+          )
           match refs.get(marker.id()) {
             Some(existing) => existing.push(path)
             None => refs[marker.id()] = [path]
