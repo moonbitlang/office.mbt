@@ -76,7 +76,7 @@ printf '{"schema": "docx.batch/1", "ops": [{"op": "pagebreak", "params": {}}]}' 
 if err="$(docx batch "$work/never.docx" "$work/bad.json" 2>&1)"; then
   fail "unknown op accepted"
 fi
-echo "$err" | grep -qx "error: ops\[0\].op 'pagebreak' is unknown (known ops: paragraph, table)" || fail "unknown-op message: $err"
+echo "$err" | grep -qx "error: ops\[0\].op 'pagebreak' is unknown (known ops: paragraph, table, comment)" || fail "unknown-op message: $err"
 [ ! -e "$work/never.docx" ] || fail "unknown op wrote a file"
 
 # 5. Error probe: fresh-document-only refusal, exact message, and no

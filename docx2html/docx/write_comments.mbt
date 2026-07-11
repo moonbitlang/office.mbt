@@ -32,9 +32,9 @@ pub struct CommentSpec {
 /// attribute-safe author, non-empty attribute-safe initials (when
 /// given), a lexically valid xsd:dateTime date (when given), an ordered
 /// non-negative range, and a non-empty paragraph-only body. Bodies are
-/// PLAIN CONTENT by the roadmap's locked rule — hyperlinks and images
-/// are rejected at write time because they would need relationships
-/// this writer does not give the comments part.
+/// PLAIN CONTENT by the roadmap's locked rule — hyperlinks (even
+/// relationship-free anchor-only ones) and images are rejected here,
+/// and again at write time because the arrays stay caller-mutable.
 pub fn comment_spec(
   author~ : String,
   initials? : String,
@@ -69,6 +69,20 @@ pub fn comment_spec(
       message="a comment anchor cannot end at block \{to}, before its start at block \{from}",
     )
   }
+  check_comment_body(body)
+  { author, initials, date, from_block: from, to_block: to, body }
+}
+
+///|
+/// The comment-body shape rules, applied at CONSTRUCTION for early
+/// attributable errors and REPEATED at write time — the body array (and
+/// the child arrays inside its elements) stay caller-mutable after
+/// `comment_spec` returns, so construction-time validation alone can be
+/// invalidated through an alias. Non-empty, paragraph-only, and PLAIN
+/// CONTENT all the way down: hyperlinks are rejected even when they
+/// would allocate no relationship (an anchor-only link is still a
+/// hyperlink), so this cannot be left to the relationship-delta guard.
+fn check_comment_body(body : Array[DocumentElement]) -> Unit raise DocxError {
   if body.length() == 0 {
     raise Unsupported(
       message="a comment needs a non-empty body (at least one paragraph)",
@@ -80,8 +94,31 @@ pub fn comment_spec(
         message="comment bodies are paragraph-only in this writer (got \{block_kind_name(block)})",
       )
     }
+    check_comment_content(block)
   }
-  { author, initials, date, from_block: from, to_block: to, body }
+}
+
+///|
+fn check_comment_content(element : DocumentElement) -> Unit raise DocxError {
+  match element {
+    Hyperlink(..) =>
+      raise Unsupported(
+        message="comment bodies are plain content: hyperlinks cannot be serialized into word/comments.xml",
+      )
+    Image(_) =>
+      raise Unsupported(
+        message="comment bodies are plain content: images cannot be serialized into word/comments.xml",
+      )
+    Paragraph(children~, ..)
+    | Run(children~, ..)
+    | Table(children~, ..)
+    | TableRow(children~, ..)
+    | TableCell(children~, ..) =>
+      for child in children {
+        check_comment_content(child)
+      }
+    _ => ()
+  }
 }
 
 ///|
@@ -112,6 +149,13 @@ pub fn write_docx_with_comments(
           message="comments[\{index}] anchors block \{endpoint}, which is not a paragraph (comment anchors must be top-level paragraphs)",
         )
       }
+    }
+    // Re-validate the body: it is an aliased mutable array, so the
+    // constructor's guarantees may no longer hold by write time.
+    check_comment_body(comment.body) catch {
+      Unsupported(message~) =>
+        raise Unsupported(message="comments[\{index}]: \{message}")
+      err => raise err
     }
   }
   // Dense ids: the spec index is the w:id. Starts and ends are grouped
@@ -280,13 +324,16 @@ fn comment_reference_run(id : Int) -> XmlElement {
 }
 
 ///|
-/// Lexical validation of `w:date` — the practical xsd:dateTime subset
-/// Word emits: `YYYY-MM-DDThh:mm:ss`, optional fractional seconds,
-/// optional `Z` or `±hh:mm` zone. The accepted value is emitted
-/// VERBATIM (the roadmap's lexical-timestamp rule: this writer never
-/// normalizes dates), so validation is the only defense: 4-digit
-/// non-zero year, a real calendar day (leap years included), hours
-/// 00-23, minutes/seconds 00-59, zone offsets within ±14:00.
+/// Lexical validation of `w:date` against the COMPLETE xsd:dateTime
+/// (XSD 1.0) lexical space: optional leading `-`, a 4-or-more-digit
+/// year (no leading zero once longer than four digits; `0000` does not
+/// exist in XSD 1.0), a real calendar day (the Gregorian leap rule
+/// applied to the year digits — astronomical numbering for negative
+/// years), `24:00:00` allowed as end-of-day when minutes, seconds, and
+/// every fractional digit are zero, optional fractional seconds,
+/// optional `Z` or `±hh:mm` zone within ±14:00. The accepted value is
+/// emitted VERBATIM (the roadmap's lexical-timestamp rule: this writer
+/// never normalizes dates), so this check is the only defense.
 fn check_comment_date(date : String) -> Unit raise DocxError {
   let units = date.code_units()
   let length = units.length()
@@ -317,30 +364,58 @@ fn check_comment_date(date : String) -> Unit raise DocxError {
       message="the comment date '\{date}' \{reason} (expected an xsd:dateTime like 2026-07-11T09:30:00Z)",
     )
   }
-  guard number(0, 4) is Some(year) &&
-    expect(4, '-') &&
-    number(5, 2) is Some(month) &&
-    expect(7, '-') &&
-    number(8, 2) is Some(day) &&
-    expect(10, 'T') &&
-    number(11, 2) is Some(hour) &&
-    expect(13, ':') &&
-    number(14, 2) is Some(minute) &&
-    expect(16, ':') &&
-    number(17, 2) is Some(second) else {
+  let mut cursor = 0
+  if expect(cursor, '-') {
+    cursor += 1
+  }
+  // The year can be arbitrarily long, so its value never lands in an
+  // Int: the leap rule needs only year mod 400 (both %4 and %100 are
+  // determined by it), folded digit by digit.
+  let year_start = cursor
+  let mut year_mod_400 = 0
+  let mut year_is_zero = true
+  while digit(cursor) is Some(d) {
+    year_mod_400 = (year_mod_400 * 10 + d) % 400
+    if d != 0 {
+      year_is_zero = false
+    }
+    cursor += 1
+  }
+  let year_digits = cursor - year_start
+  if year_digits < 4 {
+    raise fail("needs a year of at least four digits")
+  }
+  if year_digits > 4 && expect(year_start, '0') {
+    raise fail("has a leading zero in a year longer than four digits")
+  }
+  if year_is_zero {
+    raise fail("uses year 0000, which xsd:dateTime (XSD 1.0) does not have")
+  }
+  guard expect(cursor, '-') &&
+    number(cursor + 1, 2) is Some(month) &&
+    expect(cursor + 3, '-') &&
+    number(cursor + 4, 2) is Some(day) &&
+    expect(cursor + 6, 'T') &&
+    number(cursor + 7, 2) is Some(hour) &&
+    expect(cursor + 9, ':') &&
+    number(cursor + 10, 2) is Some(minute) &&
+    expect(cursor + 12, ':') &&
+    number(cursor + 13, 2) is Some(second) else {
     raise fail("is not shaped YYYY-MM-DDThh:mm:ss")
   }
-  if year == 0 {
-    raise fail("uses year 0000, which xsd:dateTime does not have")
-  }
+  cursor += 15
   if month < 1 || month > 12 {
     raise fail("has month \{month}")
   }
-  if day < 1 || day > days_in_month(year, month) {
-    raise fail("has day \{day}, which \{year}-\{month} does not reach")
+  if day < 1 || day > days_in_month(year_mod_400, month) {
+    raise fail(
+      "has day \{day}, which that year's month \{month} does not reach",
+    )
   }
-  if hour > 23 {
-    raise fail("has hour \{hour} (00-23)")
+  // XSD end-of-day: hour 24 demands zero minutes, seconds, and fraction.
+  let end_of_day = hour == 24
+  if hour > 24 {
+    raise fail("has hour \{hour} (00-23, or 24:00:00 for end of day)")
   }
   if minute > 59 {
     raise fail("has minute \{minute}")
@@ -348,13 +423,18 @@ fn check_comment_date(date : String) -> Unit raise DocxError {
   if second > 59 {
     raise fail("has second \{second}")
   }
-  let mut cursor = 19
+  if end_of_day && (minute != 0 || second != 0) {
+    raise fail("uses hour 24 with nonzero minutes or seconds")
+  }
   if expect(cursor, '.') {
     cursor += 1
     guard digit(cursor) is Some(_) else {
       raise fail("has a fractional point with no digits")
     }
-    while digit(cursor) is Some(_) {
+    while digit(cursor) is Some(fraction_digit) {
+      if end_of_day && fraction_digit != 0 {
+        raise fail("uses hour 24 with a nonzero fraction")
+      }
       cursor += 1
     }
   }
@@ -384,12 +464,14 @@ fn check_comment_date(date : String) -> Unit raise DocxError {
 }
 
 ///|
-fn days_in_month(year : Int, month : Int) -> Int {
+/// Days per month given the year's residue mod 400 (which fixes the
+/// Gregorian leap decision: %4 and %100 both divide 400).
+fn days_in_month(year_mod_400 : Int, month : Int) -> Int {
   match month {
     1 | 3 | 5 | 7 | 8 | 10 | 12 => 31
     4 | 6 | 9 | 11 => 30
     _ =>
-      if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) {
+      if year_mod_400 % 4 == 0 && (year_mod_400 % 100 != 0 || year_mod_400 == 0) {
         29
       } else {
         28

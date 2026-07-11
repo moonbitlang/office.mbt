@@ -411,7 +411,17 @@ error: ops[1].params.on targets a table (ops[0]); comment anchors must be paragr
 
 ```mooncram
 $ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A", "date": "2026-02-30T00:00:00Z"}}]}' > baddate.json; docx.exe batch outdate.docx baddate.json
-error: ops[1]: the comment date '2026-02-30T00:00:00Z' has day 30, which 2026-2 does not reach (expected an xsd:dateTime like 2026-07-11T09:30:00Z)
+error: ops[1]: the comment date '2026-02-30T00:00:00Z' has day 30, which that year's month 2 does not reach (expected an xsd:dateTime like 2026-07-11T09:30:00Z)
+[1]
+```
+
+Dynamic writer failures (content only the writer can judge, like image
+bytes) stay attributed to the right op even with comment ops in
+between:
+
+```mooncram
+$ printf 'not a png' > bad.png; printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "target"}}, {"op": "comment", "params": {"on": 0, "text": "note", "author": "A"}}, {"op": "paragraph", "params": {"runs": [{"image": {"path": "bad.png", "content_type": "image/png"}}]}}]}' > interleaved.json; docx.exe batch outbad.docx interleaved.json
+error: ops[2]: could not read the image's dimensions from its image/png header
 [1]
 ```
 

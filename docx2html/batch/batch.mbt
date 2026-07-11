@@ -156,6 +156,9 @@ pub struct BatchScript {
   priv image_paths : Array[String]
   priv comments : Array[CommentOp]
   priv total_ops : Int
+  // The script op index behind each body BLOCK (comment ops produce no
+  // blocks, so block index i came from ops[block_ops[i]]).
+  priv block_ops : Array[Int]
 }
 
 ///|
@@ -175,6 +178,16 @@ pub fn BatchScript::op_count(self : BatchScript) -> Int {
 /// Number of `comment` ops in the script.
 pub fn BatchScript::comment_count(self : BatchScript) -> Int {
   self.comments.length()
+}
+
+///|
+/// The script op index that produced body block `block` (what
+/// `build_body` returns at that position), or None out of range.
+/// Comment ops produce no blocks, so this is NOT the identity once a
+/// script holds comments — writer failures on dynamic content must be
+/// attributed through this mapping.
+pub fn BatchScript::block_op(self : BatchScript, block : Int) -> Int? {
+  self.block_ops.get(block)
 }
 
 ///|
@@ -263,6 +276,7 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
   let seen_paths : Set[String] = Set([])
   let kinds : Array[ParsedOpKind] = []
   let comments : Array[CommentOp] = []
+  let block_ops : Array[Int] = []
   for index, op_json in ops_json {
     let at = "ops[\{index}]"
     guard op_json is Object(op) else {
@@ -280,6 +294,7 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
     match op_name {
       "paragraph" => {
         kinds.push(ParagraphAt(ops.length()))
+        block_ops.push(index)
         ops.push(
           ParagraphOp(
             parse_paragraph(params, at + ".params", image_paths, seen_paths),
@@ -288,6 +303,7 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
       }
       "table" => {
         kinds.push(Table)
+        block_ops.push(index)
         ops.push(parse_table(params, at, image_paths, seen_paths))
       }
       "comment" => {
@@ -307,7 +323,7 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
         )
     }
   }
-  { ops, image_paths, comments, total_ops: ops_json.length() }
+  { ops, image_paths, comments, total_ops: ops_json.length(), block_ops }
 }
 
 ///|
