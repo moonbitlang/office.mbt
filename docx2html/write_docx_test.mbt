@@ -1476,3 +1476,39 @@ test "K2: reply targets fail closed" {
     "comments[0] replies to comment 0, which is not an EARLIER comment",
   )
 }
+
+///|
+test "K2: resolve-without-reply triggers the extended part on its own" {
+  // A single anchored comment with done=true and no replies anywhere:
+  // the resolution alone brings in paraId stamping and commentsExtended
+  // (with no paraIdParent in the file at all).
+  let bytes = @docx2html.write_docx_with_comments(
+    [@docx2html.paragraph([@docx2html.run([@docx2html.text("done deal")])])],
+    [
+      @docx2html.comment_spec(
+        author="A",
+        from=0,
+        to=0,
+        done=true,
+        note_body("all addressed"),
+      ),
+    ],
+  )
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let archive = @mbtzip.read(bytes)
+  guard archive.get("word/commentsExtended.xml") is Some(part)
+  let extended_text = @utf8.decode(part, ignore_bom=true)
+  inspect(
+    extended_text.find(
+      "<w15:commentEx w15:paraId=\"00000001\" w15:done=\"1\"/>",
+    )
+    is Some(_),
+    content="true",
+  )
+  inspect(extended_text.find("paraIdParent") is Some(_), content="false")
+  let annotated = @docx2html.read_docx_annotated(bytes)
+  let index = annotated.annotations()
+  debug_inspect(index.comments()[0].done(), content="Some(true)")
+  debug_inspect(index.comments()[0].parent_id(), content="None")
+  debug_inspect(index.warnings(), content="[]")
+}
