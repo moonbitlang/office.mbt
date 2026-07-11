@@ -14,6 +14,15 @@ pub(all) struct PdfTrueTypeCMapGlyph {
   codepoint : Int
   glyph_index : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTrueTypeCMapGlyph::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeCMapGlyph::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeCMapGlyph::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTrueTypeCMapGlyph::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeDescriptorMetrics {
   ascent : Int
@@ -25,12 +34,30 @@ pub(all) struct PdfTrueTypeDescriptorMetrics {
   nonsymbolic_flags : Int
   symbolic_flags : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTrueTypeDescriptorMetrics::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeDescriptorMetrics::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeDescriptorMetrics::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTrueTypeDescriptorMetrics::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeGlyphByteRange {
   glyph_index : Int
   start_offset : Int
   end_offset : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTrueTypeGlyphByteRange::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeGlyphByteRange::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeGlyphByteRange::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTrueTypeGlyphByteRange::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeMetrics {
   units_per_em : Int
@@ -44,6 +71,15 @@ pub(all) struct PdfTrueTypeMetrics {
   advance_widths : Array[Int]
   max_width : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTrueTypeMetrics::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeMetrics::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeMetrics::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTrueTypeMetrics::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeParsedSubset {
   flags : Int
@@ -66,16 +102,39 @@ pub(all) struct PdfTrueTypeParsedSubset {
   subset : Array[Int]
   tounicode : Array[(Int, Bytes)]?
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn PdfTrueTypeParsedSubset::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeParsedSubset::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn PdfTrueTypeParsedSubset::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeSubsetPartition {
   main_subset : Array[Int]
   higher_subsets : Array[Array[Int]]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTrueTypeSubsetPartition::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeSubsetPartition::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeSubsetPartition::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTrueTypeSubsetPartition::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeSubsetTable {
   length : Int
   bytes : Bytes
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn PdfTrueTypeSubsetTable::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeSubsetTable::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn PdfTrueTypeSubsetTable::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTrueTypeTableRecord {
   tag : String
@@ -83,6 +142,15 @@ pub(all) struct PdfTrueTypeTableRecord {
   offset : Int
   length : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTrueTypeTableRecord::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeTableRecord::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTrueTypeTableRecord::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTrueTypeTableRecord::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

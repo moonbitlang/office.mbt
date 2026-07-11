@@ -2148,7 +2148,9 @@ fn fixture_acceptance_assert_no_structure_marking_ops_for_test(
   for op in ops {
     match op {
       Op_MP(_) | Op_DP(_, _) | Op_BMC(_) | Op_BDC(_, _) | Op_EMC =>
-        fail("unexpected structure marking op: " + op.to_json().stringify())
+        fail(
+          "unexpected structure marking op: " + ToJson::to_json(op).stringify(),
+        )
       _ => ()
     }
   }
@@ -2869,7 +2871,9 @@ fn fixture_acceptance_assert_content_op_for_test(
   expected : @content.PdfContentOp,
 ) -> Unit raise {
   if !fixture_acceptance_content_ops_contain_for_test(ops, expected) {
-    fail("missing expected content op: " + expected.to_json().stringify())
+    fail(
+      "missing expected content op: " + ToJson::to_json(expected).stringify(),
+    )
   }
 }
 
@@ -2879,7 +2883,7 @@ fn fixture_acceptance_assert_no_content_op_for_test(
   unexpected : @content.PdfContentOp,
 ) -> Unit raise {
   if fixture_acceptance_content_ops_contain_for_test(ops, unexpected) {
-    fail("unexpected content op: " + unexpected.to_json().stringify())
+    fail("unexpected content op: " + ToJson::to_json(unexpected).stringify())
   }
 }
 

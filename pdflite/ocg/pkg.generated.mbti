@@ -17,12 +17,30 @@ pub(all) struct PdfOcg {
   intent : Array[@core.PdfName]
   usage : PdfOcgUsage?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfOcg::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcg::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcg::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfOcg::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfOcgAppDict {
   event : PdfOcgEvent
   ocgs : Array[Int]
   category : Array[@core.PdfName]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfOcgAppDict::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgAppDict::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgAppDict::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfOcgAppDict::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfOcgConfig {
   name : Bytes?
@@ -37,23 +55,59 @@ pub(all) struct PdfOcgConfig {
   radio_button_groups : Array[Array[Int]]?
   locked : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfOcgConfig::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgConfig::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgConfig::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfOcgConfig::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfOcgEvent {
   OcgView
   OcgPrint
   OcgExport
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfOcgEvent::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgEvent::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgEvent::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfOcgEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfOcgListMode {
   OcgAllPages
   OcgVisiblePages
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfOcgListMode::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgListMode::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgListMode::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfOcgListMode::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfOcgState {
   OcgOn
   OcgOff
   OcgUnchanged
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfOcgState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgState::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfOcgState::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfOcgUsage {
   creator_info : (Bytes, @core.PdfName)?
@@ -67,12 +121,30 @@ pub(all) struct PdfOcgUsage {
   user : (@core.PdfName, Array[Bytes])?
   page_element_subtype : @core.PdfName?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfOcgUsage::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgUsage::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOcgUsage::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfOcgUsage::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfOptionalContent {
   ocgs : Array[(Int, PdfOcg)]
   default_config : PdfOcgConfig
   configs : Array[PdfOcgConfig]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfOptionalContent::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOptionalContent::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfOptionalContent::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfOptionalContent::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub type PdfBytes = Bytes

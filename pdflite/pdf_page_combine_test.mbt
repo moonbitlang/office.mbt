@@ -88,7 +88,7 @@ test "PdfDocument combine_pages overlays paired pages and truncates extra overla
     ),
   ])
   let combined = try under.combine_pages(overlay) catch {
-    error => fail(error.to_json().stringify())
+    error => fail(ToJson::to_json(error).stringify())
   } noraise {
     combined => combined
   }
@@ -139,7 +139,7 @@ test "pdf_combine_pages can put a padded overlay under base pages" {
   let combined = try
     @pdflite.pdf_combine_pages(under, overlay, overlay_is_under=true)
   catch {
-    error => fail(error.to_json().stringify())
+    error => fail(ToJson::to_json(error).stringify())
   } noraise {
     combined => combined
   }
@@ -187,7 +187,7 @@ test "PdfDocument combine_pages scale_to_fit centers each overlay page" {
     combine_page_for_test([Op_g(0.25)], width=20.0, height=10.0),
   ])
   let combined = try under.combine_pages(overlay, scale_to_fit=true) catch {
-    error => fail(error.to_json().stringify())
+    error => fail(ToJson::to_json(error).stringify())
   } noraise {
     combined => combined
   }

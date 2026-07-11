@@ -22,6 +22,15 @@ pub(all) struct PdfAfmData {
   kerns : Array[(Int, Int, Int)]
   char_name_widths : Array[(Bytes, Int)]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfAfmData::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAfmData::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAfmData::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfAfmData::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub type PdfBytes = Bytes

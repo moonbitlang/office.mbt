@@ -17,6 +17,15 @@ pub(all) struct PdfAttachment {
   description : String?
   relationship : String?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfAttachment::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAttachment::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAttachment::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfAttachment::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

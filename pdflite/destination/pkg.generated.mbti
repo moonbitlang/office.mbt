@@ -26,11 +26,29 @@ pub(all) enum PdfDestination {
   DestFitBH(PdfTargetPage, Double?)
   DestFitBV(PdfTargetPage, Double?)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDestination::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDestination::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDestination::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDestination::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfTargetPage {
   TargetPageObject(Int)
   TargetOtherDocPageNumber(Int)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTargetPage::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTargetPage::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTargetPage::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTargetPage::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

@@ -1738,8 +1738,26 @@ pub(all) enum PdfAddTextFontSource {
   PdfAddTextPreMadeFontPack(PdfFontPack)
   PdfAddTextExistingNamedFont
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfAddTextFontSource::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAddTextFontSource::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfAddTextFontSource::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfAddTextFontSource::to_repr(Self) -> @debug.Repr
 
 type PdfBookmarkNode derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfBookmarkNode::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfBookmarkNode::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfBookmarkNode::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfBookmarkNode::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfCIDKeyedFont {
   basefont : @core.PdfName
@@ -1747,8 +1765,17 @@ pub(all) struct PdfCIDKeyedFont {
   encoding : PdfCMapEncoding
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfCIDKeyedFont::debug_name(Self) -> String
+#deprecated
+pub fn PdfCIDKeyedFont::equal(Self, Self) -> Bool
 pub fn PdfCIDKeyedFont::is_identity_h(Self) -> Bool
 pub fn PdfCIDKeyedFont::is_identity_v(Self) -> Bool
+#deprecated
+pub fn PdfCIDKeyedFont::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCIDKeyedFont::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCIDKeyedFont::to_repr(Self) -> @debug.Repr
 pub fn PdfCIDKeyedFont::uses_two_byte_codes(Self) -> Bool
 
 pub(all) struct PdfCIDSystemInfo {
@@ -1756,31 +1783,76 @@ pub(all) struct PdfCIDSystemInfo {
   ordering : Bytes
   supplement : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfCIDSystemInfo::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCIDSystemInfo::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCIDSystemInfo::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCIDSystemInfo::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfCIDVerticalWidth {
   width : Double
   vx : Double
   vy : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfCIDVerticalWidth::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCIDVerticalWidth::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCIDVerticalWidth::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCIDVerticalWidth::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfCMapCodeSpace {
   length : Int
   first : Int
   last : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfCMapCodeSpace::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCMapCodeSpace::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCMapCodeSpace::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCMapCodeSpace::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfCMapEncoding {
   PdfPredefinedCMap(@core.PdfName)
   PdfCMap(Int)
   PdfExternalCMap(Int, PdfParsedCMap)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfCMapEncoding::equal(Self, Self) -> Bool
 pub fn PdfCMapEncoding::is_identity_h(Self) -> Bool
 pub fn PdfCMapEncoding::is_identity_v(Self) -> Bool
+#deprecated
+pub fn PdfCMapEncoding::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCMapEncoding::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCMapEncoding::to_repr(Self) -> @debug.Repr
 pub fn PdfCMapEncoding::uses_two_byte_codes(Self) -> Bool
 
 pub(all) struct PdfCalculatorFunction {
   operations : Array[PdfCalculatorOp]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfCalculatorFunction::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCalculatorFunction::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCalculatorFunction::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCalculatorFunction::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfCalculatorOp {
   PdfCalculatorInt(Int)
@@ -1828,13 +1900,31 @@ pub(all) enum PdfCalculatorOp {
   PdfCalculatorXor
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfCalculatorOp::debug_name(Self) -> String
+#deprecated
+pub fn PdfCalculatorOp::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCalculatorOp::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCalculatorOp::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCalculatorOp::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfClipContour {
   hole : Bool
   vertices : Array[PdfClipVertex]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfClipContour::equal(Self, Self) -> Bool
 pub fn PdfClipContour::hole_flag(Self) -> Int
+#deprecated
+pub fn PdfClipContour::not_equal(Self, Self) -> Bool
 pub fn PdfClipContour::num_vertices(Self) -> Int
+#deprecated
+pub fn PdfClipContour::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfClipContour::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfClipOperation {
   PdfClipDifference
@@ -1842,17 +1932,44 @@ pub(all) enum PdfClipOperation {
   PdfClipExclusiveOr
   PdfClipUnion
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfClipOperation::equal(Self, Self) -> Bool
 pub fn PdfClipOperation::gpc_code(Self) -> Int
+#deprecated
+pub fn PdfClipOperation::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfClipOperation::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfClipOperation::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfClipPolygon {
   contours : Array[PdfClipContour]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfClipPolygon::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfClipPolygon::not_equal(Self, Self) -> Bool
 pub fn PdfClipPolygon::num_contours(Self) -> Int
+#deprecated
+pub fn PdfClipPolygon::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfClipPolygon::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfClipVertex {
   x : Double
   y : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfClipVertex::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfClipVertex::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfClipVertex::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfClipVertex::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfColourSpace {
   PdfDeviceGray
@@ -1870,7 +1987,16 @@ pub(all) enum PdfColourSpace {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfColourSpace::content_json(Self) -> Json
 pub fn PdfColourSpace::debug_name(Self) -> String
+#deprecated
+pub fn PdfColourSpace::equal(Self, Self) -> Bool
 pub fn PdfColourSpace::name(Self) -> @core.PdfName?
+#deprecated
+pub fn PdfColourSpace::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfColourSpace::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfColourSpace::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfCompositeCIDFont {
   cid_system_info : PdfCIDSystemInfo
@@ -1881,6 +2007,15 @@ pub(all) struct PdfCompositeCIDFont {
   cid_default_width : Double
   cid_default_width2 : Array[Double]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfCompositeCIDFont::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCompositeCIDFont::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfCompositeCIDFont::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfCompositeCIDFont::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentAxialShading {
   axialshading_coords : (Double, Double, Double, Double)
@@ -1888,6 +2023,15 @@ pub(all) struct PdfContentAxialShading {
   axialshading_function : Array[PdfFunction]
   axialshading_extend : (Bool, Bool)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentAxialShading::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentAxialShading::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentAxialShading::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentAxialShading::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentBoundingBox {
   x0 : Double
@@ -1900,11 +2044,29 @@ pub(all) struct PdfContentBoundingBox {
   y3 : Double
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentBoundingBox::content_json(Self) -> Json
+#deprecated
+pub fn PdfContentBoundingBox::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentBoundingBox::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentBoundingBox::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentBoundingBox::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentClippingState {
   clipping_path : Array[@shape.PdfPath]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentClippingState::content_json(Self) -> Json
+#deprecated
+pub fn PdfContentClippingState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentClippingState::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentClippingState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentClippingState::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfContentColourValues {
   PdfContentColourFloats(Array[Double])
@@ -1912,18 +2074,45 @@ pub(all) enum PdfContentColourValues {
   PdfContentColourPattern
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentColourValues::content_json(Self) -> Json
+#deprecated
+pub fn PdfContentColourValues::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentColourValues::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentColourValues::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentColourValues::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentDashPattern {
   array : Array[Double]
   phase : Double
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentDashPattern::content_json(Self) -> Json
+#deprecated
+pub fn PdfContentDashPattern::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentDashPattern::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentDashPattern::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentDashPattern::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentFunctionShading {
   funshading_domain : (Double, Double, Double, Double)
   funshading_matrix : @geometry.TransformMatrix
   funshading_function : PdfFunction
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentFunctionShading::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentFunctionShading::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentFunctionShading::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentFunctionShading::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentGlyphState {
   rendering_mode : Int
@@ -1933,8 +2122,24 @@ pub(all) struct PdfContentGlyphState {
   clipping_path : Array[@shape.PdfPath]
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentGlyphState::content_json(Self) -> Json
+#deprecated
+pub fn PdfContentGlyphState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentGlyphState::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentGlyphState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentGlyphState::to_repr(Self) -> @debug.Repr
 
 type PdfContentInlineTextFilter derive(Eq, @debug.Debug)
+#deprecated
+pub fn PdfContentInlineTextFilter::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentInlineTextFilter::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn PdfContentInlineTextFilter::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentJsonEntry {
   object : PdfContentObject
@@ -1942,13 +2147,40 @@ pub(all) struct PdfContentJsonEntry {
   bounding_box : PdfContentBoundingBox
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentJsonEntry::content_json(Self) -> Json
+#deprecated
+pub fn PdfContentJsonEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentJsonEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentJsonEntry::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentJsonEntry::to_repr(Self) -> @debug.Repr
 
 type PdfContentLexeme derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentLexeme::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentLexeme::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentLexeme::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentLexeme::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentMarkedContent {
   tag : String
   properties : @syntax.PdfObject?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentMarkedContent::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentMarkedContent::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentMarkedContent::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentMarkedContent::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfContentObject {
   PdfContentGlyphObject(Int, String, String)
@@ -1958,6 +2190,15 @@ pub(all) enum PdfContentObject {
   PdfContentShadingObject(String)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentObject::content_json(Self) -> Json
+#deprecated
+pub fn PdfContentObject::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentObject::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentObject::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentObject::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentOperatorFrame {
   ctm : @geometry.TransformMatrix
@@ -1988,11 +2229,29 @@ pub(all) struct PdfContentOperatorFrame {
   type3_d0 : PdfContentType3D0?
   type3_d1 : PdfContentType3D1?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentOperatorFrame::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOperatorFrame::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOperatorFrame::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentOperatorFrame::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentOperatorResourceResult {
   state : PdfContentOperatorState
   entries : Array[PdfContentJsonEntry]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentOperatorResourceResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOperatorResourceResult::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOperatorResourceResult::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentOperatorResourceResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentOperatorState {
   ctm : @geometry.TransformMatrix
@@ -2036,11 +2295,29 @@ pub fn PdfContentOperatorState::content_path_entry(Self, Bool) -> PdfContentJson
 pub fn PdfContentOperatorState::content_shading_entry(Self, @core.PdfName, @geometry.PdfRectangle?) -> PdfContentJsonEntry?
 pub fn PdfContentOperatorState::content_text_glyph_entry(Self, PdfFont, PdfContentTextGlyphPlacement) -> PdfContentJsonEntry raise @core.PdfError
 pub fn PdfContentOperatorState::content_unit_square_bounding_box(Self) -> PdfContentBoundingBox
+#deprecated
+pub fn PdfContentOperatorState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOperatorState::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOperatorState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentOperatorState::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentOperatorTextResult {
   state : PdfContentOperatorState
   entries : Array[PdfContentJsonEntry]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentOperatorTextResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOperatorTextResult::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOperatorTextResult::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentOperatorTextResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentPathState {
   clipping_path : Array[@shape.PdfPath]
@@ -2057,12 +2334,30 @@ pub(all) struct PdfContentPathState {
 pub fn PdfContentPathState::content_apply_path_state_op(Self, @content.PdfContentOp) -> Self
 pub fn PdfContentPathState::content_json(Self) -> Json
 pub fn PdfContentPathState::content_with_clipping_path(Self, ArrayView[@shape.PdfPath]) -> Self
+#deprecated
+pub fn PdfContentPathState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPathState::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPathState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentPathState::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfContentPattern {
   PdfContentColouredTilingPattern(PdfContentTiling)
   PdfContentUncolouredTilingPattern(PdfContentTiling)
   PdfContentShadingPattern(PdfContentShading)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentPattern::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPattern::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentPattern::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentPattern::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentRadialShading {
   radialshading_coords : (Double, Double, Double, Double, Double, Double)
@@ -2070,6 +2365,15 @@ pub(all) struct PdfContentRadialShading {
   radialshading_function : Array[PdfFunction]
   radialshading_extend : (Bool, Bool)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentRadialShading::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentRadialShading::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentRadialShading::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentRadialShading::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentShading {
   shading_colourspace : @syntax.PdfObject
@@ -2080,6 +2384,15 @@ pub(all) struct PdfContentShading {
   shading_extgstate : @syntax.PdfObject
   shading : PdfContentShadingKind
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentShading::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentShading::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentShading::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentShading::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfContentShadingKind {
   PdfContentFunctionShading(PdfContentFunctionShading)
@@ -2090,6 +2403,15 @@ pub(all) enum PdfContentShadingKind {
   PdfContentCoonsPatchMesh
   PdfContentTensorProductPatchMesh
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentShadingKind::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentShadingKind::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentShadingKind::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentShadingKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfContentState {
   PdfContentStateGlyph(PdfContentGlyphState)
@@ -2097,11 +2419,29 @@ pub(all) enum PdfContentState {
   PdfContentStateClipping(PdfContentClippingState)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfContentState::content_json(Self) -> Json
+#deprecated
+pub fn PdfContentState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentState::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentState::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentTextFontCacheEntry {
   name : String
   font : PdfFont
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentTextFontCacheEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextFontCacheEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextFontCacheEntry::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentTextFontCacheEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentTextGlyphPlacement {
   charcode : Int
@@ -2113,6 +2453,15 @@ pub(all) struct PdfContentTextGlyphPlacement {
   advance_y : Double
   bounding_box : PdfContentBoundingBox
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentTextGlyphPlacement::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextGlyphPlacement::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextGlyphPlacement::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentTextGlyphPlacement::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentTextLayout {
   font_size : Double
@@ -2123,16 +2472,43 @@ pub(all) struct PdfContentTextLayout {
   ctm : @geometry.TransformMatrix
   text_matrix : @geometry.TransformMatrix
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentTextLayout::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextLayout::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextLayout::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentTextLayout::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentTextLayoutResult {
   glyphs : Array[PdfContentTextGlyphPlacement]
   text_matrix : @geometry.TransformMatrix
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentTextLayoutResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextLayoutResult::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextLayoutResult::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentTextLayoutResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentTextOpResult {
   text_state : PdfContentTextState
   glyphs : Array[PdfContentTextGlyphPlacement]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentTextOpResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextOpResult::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextOpResult::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentTextOpResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentTextState {
   character_spacing : Double
@@ -2155,15 +2531,42 @@ pub fn PdfContentTextState::content_cache_font(Self, String, PdfFont) -> Self
 pub fn PdfContentTextState::content_cached_font(Self, String) -> PdfFont?
 pub fn PdfContentTextState::content_glyph_state(Self, ArrayView[@shape.PdfPath]) -> PdfContentGlyphState
 pub fn PdfContentTextState::content_text_layout(Self, @geometry.TransformMatrix) -> PdfContentTextLayout
+#deprecated
+pub fn PdfContentTextState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextState::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTextState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentTextState::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfContentTiling {
   PdfContentTiling
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentTiling::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTiling::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentTiling::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentTiling::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentType3D0 {
   width_x : Double
   width_y : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentType3D0::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentType3D0::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentType3D0::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentType3D0::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfContentType3D1 {
   width_x : Double
@@ -2173,11 +2576,27 @@ pub(all) struct PdfContentType3D1 {
   urx : Double
   ury : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentType3D1::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentType3D1::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentType3D1::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentType3D1::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
   denied_permissions : Array[@crypt_core.PdfPermission]
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn PdfDecryptionResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDecryptionResult::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn PdfDecryptionResult::to_repr(Self) -> @debug.Repr
 
 pub struct PdfDocument {
   mut major : Int
@@ -2331,6 +2750,8 @@ pub fn PdfDocument::encrypt_256bit_aesv3_with_providers(Self, BytesView, BytesVi
 pub fn PdfDocument::encrypt_40bit(Self, BytesView, BytesView, ArrayView[@crypt_core.PdfPermission], file_id? : BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::endpage(Self) -> Int raise @core.PdfError
 pub fn PdfDocument::endpage_fast(Self) -> Int raise @core.PdfError
+#deprecated
+pub fn PdfDocument::equal(Self, Self) -> Bool
 pub fn PdfDocument::event_log(Self) -> Array[(Int, PdfObjectEvent)]
 pub fn PdfDocument::extract_fontfile_bytes(Self, Int, String) -> Bytes? raise @core.PdfError
 pub fn PdfDocument::extract_images_files(Self, ArrayView[Int], String, encoding? : @metadata.PdfMetadataEncoding, inline? : Bool, dedup? : Bool, dedup_per_page? : Bool) -> Array[PdfExtractedImageFile] raise @core.PdfError
@@ -2412,6 +2833,8 @@ pub fn PdfDocument::missing_fonts_return(Self, ArrayView[Int]) -> Array[(Int, St
 pub fn PdfDocument::missing_fonts_text(Self, ArrayView[Int]) -> Bytes raise @core.PdfError
 pub fn PdfDocument::name_tree_lookup(Self, BytesView, @syntax.PdfObject) -> @syntax.PdfObject?
 pub fn PdfDocument::name_tree_lookup_object(Self, @syntax.PdfObject, @syntax.PdfObject) -> @syntax.PdfObject?
+#deprecated
+pub fn PdfDocument::not_equal(Self, Self) -> Bool
 pub fn PdfDocument::number_tree_lookup(Self, Int, @syntax.PdfObject) -> @syntax.PdfObject?
 pub fn PdfDocument::object_count(Self) -> Int
 pub fn PdfDocument::object_numbers(Self) -> Array[Int]
@@ -2600,6 +3023,9 @@ pub fn PdfDocument::test_matterhorn_json(Self, String) -> Json raise @core.PdfEr
 pub fn PdfDocument::test_matterhorn_text(Self, String) -> Bytes raise @core.PdfError
 pub fn PdfDocument::text_extractor_of_font(Self, @syntax.PdfObject) -> PdfTextExtractor raise @core.PdfError
 pub fn PdfDocument::thin_lines(Self, ArrayView[Int], Double) -> Self raise @core.PdfError
+#as_free_fn
+#deprecated
+pub fn PdfDocument::to_repr(Self) -> @debug.Repr
 pub fn PdfDocument::toc_add_bookmark(Self, BytesView) -> Self raise @core.PdfError
 pub fn PdfDocument::toc_insert_pages(Self, ArrayView[@page.PdfPage], ArrayView[@label.PdfPageLabel]) -> Self raise @core.PdfError
 pub fn PdfDocument::toc_type_elements(Self, PdfFontPack, Double, BytesView, Bool, Bool, ArrayView[@label.PdfPageLabel], ArrayView[@bookmark.PdfBookmark], Double, Double) -> Array[PdfTypeElement] raise @core.PdfError
@@ -2694,6 +3120,8 @@ pub fn PdfDrawControl::end_structure_tag(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::end_tag(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::end_text_section(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::end_xobject(Self) -> Unit raise @core.PdfError
+#deprecated
+pub fn PdfDrawControl::equal(Self, Self) -> Bool
 pub fn PdfDrawControl::fill(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::fill_even_odd(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::font_name(Self) -> String
@@ -2704,6 +3132,8 @@ pub fn PdfDrawControl::matrix_scale(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_shear_x(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_shear_y(Self, String) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::matrix_translate(Self, String) -> Unit raise @core.PdfError
+#deprecated
+pub fn PdfDrawControl::not_equal(Self, Self) -> Bool
 pub fn PdfDrawControl::ops(Self) -> Array[PdfDrawOp]
 pub fn PdfDrawControl::paragraph_indent(Self) -> Double?
 pub fn PdfDrawControl::pop_group(Self) -> Unit raise @core.PdfError
@@ -2731,23 +3161,55 @@ pub fn PdfDrawControl::start_xobject(Self, String) -> Unit
 pub fn PdfDrawControl::stroke(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::stroke_fill(Self) -> Unit raise @core.PdfError
 pub fn PdfDrawControl::stroke_fill_even_odd(Self) -> Unit raise @core.PdfError
+#deprecated
+pub fn PdfDrawControl::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawControl::to_repr(Self) -> @debug.Repr
 pub fn PdfDrawControl::use_xobject(Self, String) -> Unit raise @core.PdfError
 
 pub(all) struct PdfDrawControlFrame {
   name : String
   ops : Array[PdfDrawOp]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDrawControlFrame::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawControlFrame::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawControlFrame::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawControlFrame::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfDrawExtGStateResource {
   kind : @core.PdfName
   value : Double
   name : @core.PdfName
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDrawExtGStateResource::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawExtGStateResource::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawExtGStateResource::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawExtGStateResource::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfDrawFontPackState {
   identifier : String
   fontpack : PdfFontPack
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDrawFontPackState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawFontPackState::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawFontPackState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawFontPackState::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfDrawFontResource {
   identifier : String
@@ -2755,12 +3217,30 @@ pub(all) struct PdfDrawFontResource {
   resource_name : @core.PdfName
   object_number : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDrawFontResource::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawFontResource::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawFontResource::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawFontResource::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfDrawJustification {
   PdfDrawLeft
   PdfDrawRight
   PdfDrawCentre
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDrawJustification::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawJustification::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawJustification::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawJustification::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfDrawOp {
   PdfDrawRect(Double, Double, Double, Double)
@@ -2818,11 +3298,20 @@ pub(all) enum PdfDrawOp {
   PdfDrawAutoTag(Bool)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfDrawOp::debug_name(Self) -> String
+#deprecated
+pub fn PdfDrawOp::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawOp::not_equal(Self, Self) -> Bool
 pub fn PdfDrawOp::to_content_ops(Self) -> Array[@content.PdfContentOp] raise @core.PdfError
 pub fn PdfDrawOp::to_content_ops_with_context(Self, PdfDrawRenderState, PdfDrawSpecialTextContext) -> Array[@content.PdfContentOp] raise @core.PdfError
 pub fn PdfDrawOp::to_content_ops_with_document(Self, PdfDrawRenderState, PdfDocument) -> Array[@content.PdfContentOp] raise @core.PdfError
 pub fn PdfDrawOp::to_content_ops_with_document_context(Self, PdfDrawRenderState, PdfDocument, PdfDrawSpecialTextContext) -> Array[@content.PdfContentOp] raise @core.PdfError
 pub fn PdfDrawOp::to_content_ops_with_state(Self, PdfDrawRenderState) -> Array[@content.PdfContentOp] raise @core.PdfError
+#deprecated
+pub fn PdfDrawOp::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawOp::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfDrawRenderState {
   mut resource_number : Int
@@ -2841,12 +3330,30 @@ pub(all) struct PdfDrawRenderState {
   structure_data : Array[PdfDrawStructureData]
   page_names : Array[@core.PdfName]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDrawRenderState::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawRenderState::not_equal(Self, Self) -> Bool
 pub fn PdfDrawRenderState::resources(Self) -> @syntax.PdfObject
+#deprecated
+pub fn PdfDrawRenderState::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawRenderState::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfDrawSpecialTextContext {
   time : @date.PdfStrftimeTime
   replacement_values : @addtext.PdfAddTextReplacementValues
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDrawSpecialTextContext::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawSpecialTextContext::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawSpecialTextContext::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawSpecialTextContext::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfDrawStructureData {
   PdfDrawStructureMCID(String, Int, Int)
@@ -2856,18 +3363,45 @@ pub(all) enum PdfDrawStructureData {
   PdfDrawStructureElementInfo(String, @syntax.PdfObject)
   PdfDrawStructureEndElementInfo(String)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDrawStructureData::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawStructureData::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawStructureData::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawStructureData::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfDrawXObjectResource {
   source_name : String
   resource_name : @core.PdfName
   object_number : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfDrawXObjectResource::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawXObjectResource::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfDrawXObjectResource::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfDrawXObjectResource::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfEmbedFontSource {
   PdfEmbedPreMadeFontPack(PdfFontPack)
   PdfEmbedInfo(Bytes, String, PdfEncoding)
   PdfEmbedExistingNamedFont
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfEmbedFontSource::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfEmbedFontSource::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfEmbedFontSource::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfEmbedFontSource::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfEncoding {
   PdfImplicitInFontFile
@@ -2879,19 +3413,46 @@ pub(all) enum PdfEncoding {
   PdfFillUndefinedWithStandard(PdfEncoding)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfEncoding::debug_name(Self) -> String
+#deprecated
+pub fn PdfEncoding::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfEncoding::not_equal(Self, Self) -> Bool
 pub fn PdfEncoding::pdf_name(Self) -> @core.PdfName?
 pub fn PdfEncoding::reverse_table(Self) -> Array[(@core.PdfName, Int)]
 pub fn PdfEncoding::table(Self) -> Array[(Int, @core.PdfName)]
+#deprecated
+pub fn PdfEncoding::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfEncoding::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfEncodingDifference {
   name : @core.PdfName
   code : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfEncodingDifference::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfEncodingDifference::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfEncodingDifference::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfEncodingDifference::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfExtractedImageFile {
   path : String
   data : Bytes
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfExtractedImageFile::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfExtractedImageFile::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfExtractedImageFile::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfExtractedImageFile::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfFont {
   PdfFontStandard(PdfStandardFontData)
@@ -2907,9 +3468,18 @@ pub fn PdfFont::content_text_layout_of_tj_array(Self, ArrayView[@syntax.PdfObjec
 pub fn PdfFont::content_width_of_charcode(Self, Int) -> (Double, Double, Double)
 pub fn PdfFont::debug_name(Self) -> String
 pub fn PdfFont::embedded_fontfile_number(Self) -> Int?
+#deprecated
+pub fn PdfFont::equal(Self, Self) -> Bool
 pub fn PdfFont::is_identity_h(Self) -> Bool
 pub fn PdfFont::is_identity_v(Self) -> Bool
+#deprecated
+pub fn PdfFont::not_equal(Self, Self) -> Bool
 pub fn PdfFont::text_extractor(Self) -> PdfTextExtractor
+#deprecated
+pub fn PdfFont::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfFont::to_repr(Self) -> @debug.Repr
 pub fn PdfFont::uses_two_byte_codes(Self) -> Bool
 
 pub(all) struct PdfFontDescriptor {
@@ -2927,25 +3497,61 @@ pub(all) struct PdfFontDescriptor {
   charset : Array[@core.PdfName]?
   tounicode : Array[(Int, Bytes)]?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfFontDescriptor::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontDescriptor::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontDescriptor::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfFontDescriptor::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfFontFile {
   PdfFontFile(Int)
   PdfFontFile2(Int)
   PdfFontFile3(Int)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfFontFile::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontFile::not_equal(Self, Self) -> Bool
 pub fn PdfFontFile::object_number(Self) -> Int
+#deprecated
+pub fn PdfFontFile::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfFontFile::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfFontPack {
   fonts : Array[PdfFont]
   entries : Array[PdfFontPackEntry]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfFontPack::equal(Self, Self) -> Bool
 pub fn PdfFontPack::get_char(Self, Int) -> (Int, Int, PdfFont)?
+#deprecated
+pub fn PdfFontPack::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontPack::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfFontPack::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfFontPackEntry {
   codepoint : Int
   font_index : Int
   charcode : Int
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfFontPackEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontPackEntry::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFontPackEntry::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfFontPackEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfFunction {
   func : PdfFunctionKind
@@ -2953,7 +3559,16 @@ pub(all) struct PdfFunction {
   range : Array[Double]?
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfFunction::debug_string(Self) -> String
+#deprecated
+pub fn PdfFunction::equal(Self, Self) -> Bool
 pub fn PdfFunction::eval(Self, ArrayView[Double]) -> Array[Double] raise @core.PdfError
+#deprecated
+pub fn PdfFunction::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFunction::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfFunction::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfFunctionKind {
   PdfFunctionSampled(PdfSampledFunction)
@@ -2961,6 +3576,15 @@ pub(all) enum PdfFunctionKind {
   PdfFunctionStitching(PdfStitchingFunction)
   PdfFunctionCalculator(PdfCalculatorFunction)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfFunctionKind::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFunctionKind::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfFunctionKind::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfFunctionKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfImage {
   PdfJPEG(Bytes, Array[Double]?)
@@ -2968,12 +3592,30 @@ pub(all) enum PdfImage {
   PdfJBIG2(Bytes, Array[Double]?, Int?)
   PdfRawImage(Int, Int, PdfPixelLayout, Bytes)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfImage::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfImage::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfImage::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfImage::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfInterpolationFunction {
   c0 : Array[Double]
   c1 : Array[Double]
   n : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfInterpolationFunction::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfInterpolationFunction::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfInterpolationFunction::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfInterpolationFunction::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfObjectData {
   ObjectParsed(@syntax.PdfObject)
@@ -2981,27 +3623,55 @@ pub(all) enum PdfObjectData {
   ObjectToParse
   ObjectToParseFromObjectStream(@xref_model.ObjectStreamReference)
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn PdfObjectData::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfObjectData::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn PdfObjectData::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfObjectEntry {
   mut data : PdfObjectData
   generation : Int
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn PdfObjectEntry::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfObjectEntry::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn PdfObjectEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfObjectEvent {
   ObjectAltered
   ObjectDeleted
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn PdfObjectEvent::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfObjectEvent::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn PdfObjectEvent::to_repr(Self) -> @debug.Repr
 
 pub struct PdfObjectMap {
   entries : @hashmap.HashMap[Int, PdfObjectEntry]
 } derive(Eq, @debug.Debug)
 pub fn PdfObjectMap::contains(Self, Int) -> Bool
+#deprecated
+pub fn PdfObjectMap::equal(Self, Self) -> Bool
 pub fn PdfObjectMap::get_entry(Self, Int) -> PdfObjectEntry?
 pub fn PdfObjectMap::length(Self) -> Int
 pub fn PdfObjectMap::lookup_parsed_or_null(Self, Int) -> @syntax.PdfObject
+#deprecated
+pub fn PdfObjectMap::not_equal(Self, Self) -> Bool
 pub fn PdfObjectMap::object_numbers(Self) -> Array[Int]
 pub fn PdfObjectMap::remove(Self, Int) -> Unit
 pub fn PdfObjectMap::set_entry(Self, Int, PdfObjectEntry) -> Unit
+#as_free_fn
+#deprecated
+pub fn PdfObjectMap::to_repr(Self) -> @debug.Repr
 
 pub struct PdfObjects {
   mut max_object_number : Int
@@ -3011,17 +3681,24 @@ pub struct PdfObjects {
 } derive(Eq, @debug.Debug)
 pub fn PdfObjects::add_object(Self, @syntax.PdfObject, generation? : Int) -> Int
 pub fn PdfObjects::add_object_given_number(Self, Int, @syntax.PdfObject, generation? : Int) -> Unit
+#deprecated
+pub fn PdfObjects::equal(Self, Self) -> Bool
 pub fn PdfObjects::get_entry(Self, Int) -> PdfObjectEntry?
 pub fn PdfObjects::length(Self) -> Int
 pub fn PdfObjects::log(Self) -> Array[(Int, PdfObjectEvent)]
 pub fn PdfObjects::lookup_object_or_null(Self, Int) -> @syntax.PdfObject
 pub fn PdfObjects::map_objects_in_place(Self, (@syntax.PdfObject) -> @syntax.PdfObject) -> Unit
 pub fn PdfObjects::max_object_number(Self) -> Int
+#deprecated
+pub fn PdfObjects::not_equal(Self, Self) -> Bool
 pub fn PdfObjects::object_numbers(Self) -> Array[Int]
 pub fn PdfObjects::parsed_entries(Self) -> Array[(Int, Int, @syntax.PdfObject)]
 pub fn PdfObjects::remove_object(Self, Int) -> Unit
 pub fn PdfObjects::set_entry(Self, Int, PdfObjectEntry) -> Unit
 pub fn PdfObjects::stream_entries(Self) -> Array[(Int, Int, @syntax.PdfStream)]
+#as_free_fn
+#deprecated
+pub fn PdfObjects::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfPNG {
   width : Int
@@ -3030,6 +3707,15 @@ pub(all) struct PdfPNG {
   color_type : Int
   idat : Bytes
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPNG::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPNG::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPNG::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPNG::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfParsedCMap {
   map : Array[(Int, Bytes)]
@@ -3042,6 +3728,15 @@ pub(all) struct PdfParsedCMap {
   cmap_type : Int?
   cid_system_info : PdfCIDSystemInfo?
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfParsedCMap::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfParsedCMap::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfParsedCMap::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfParsedCMap::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfPixelLayout {
   PdfBPP1
@@ -3049,6 +3744,15 @@ pub(all) enum PdfPixelLayout {
   PdfBPP24
   PdfBPP48
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPixelLayout::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPixelLayout::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPixelLayout::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPixelLayout::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfSampledFunction {
   size : Array[Int]
@@ -3058,6 +3762,15 @@ pub(all) struct PdfSampledFunction {
   bits_per_sample : Int
   samples : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfSampledFunction::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfSampledFunction::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfSampledFunction::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfSampledFunction::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfSimpleFont {
   fonttype : PdfSimpleFontType
@@ -3070,6 +3783,15 @@ pub(all) struct PdfSimpleFont {
   encoding : PdfEncoding
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfSimpleFont::debug_name(Self) -> String
+#deprecated
+pub fn PdfSimpleFont::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfSimpleFont::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfSimpleFont::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfSimpleFont::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfSimpleFontType {
   PdfType1
@@ -3078,6 +3800,15 @@ pub(all) enum PdfSimpleFontType {
   PdfTrueType
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfSimpleFontType::debug_name(Self) -> String
+#deprecated
+pub fn PdfSimpleFontType::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfSimpleFontType::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfSimpleFontType::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfSimpleFontType::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfStandardFont {
   PdfTimesRoman
@@ -3097,24 +3828,51 @@ pub(all) enum PdfStandardFont {
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfStandardFont::afm_data(Self) -> @afm.PdfAfmData
 pub fn PdfStandardFont::baseline_adjustment(Self) -> Int
+#deprecated
+pub fn PdfStandardFont::equal(Self, Self) -> Bool
 pub fn PdfStandardFont::flags(Self) -> Int
 pub fn PdfStandardFont::name(Self) -> String
+#deprecated
+pub fn PdfStandardFont::not_equal(Self, Self) -> Bool
 pub fn PdfStandardFont::pdf_name(Self) -> @core.PdfName
 pub fn PdfStandardFont::stemv(Self) -> Int
 pub fn PdfStandardFont::text_width(Self, PdfEncoding, BytesView, kern? : Bool) -> Int
+#deprecated
+pub fn PdfStandardFont::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfStandardFont::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfStandardFontData {
   font : PdfStandardFont
   encoding : PdfEncoding
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfStandardFontData::debug_name(Self) -> String
+#deprecated
+pub fn PdfStandardFontData::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfStandardFontData::not_equal(Self, Self) -> Bool
 pub fn PdfStandardFontData::text_width(Self, BytesView, kern? : Bool) -> Int
+#deprecated
+pub fn PdfStandardFontData::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfStandardFontData::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfStitchingFunction {
   functions : Array[PdfFunction]
   bounds : Array[Double]
   stitch_encode : Array[Double]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfStitchingFunction::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfStitchingFunction::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfStitchingFunction::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfStitchingFunction::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfStreamEncoding {
   PdfStreamASCIIHex
@@ -3124,7 +3882,16 @@ pub(all) enum PdfStreamEncoding {
   PdfStreamCCITT(Int, Int)
   PdfStreamCCITTG4(Int, Int)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfStreamEncoding::equal(Self, Self) -> Bool
 pub fn PdfStreamEncoding::filter_name(Self) -> @core.PdfName
+#deprecated
+pub fn PdfStreamEncoding::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfStreamEncoding::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfStreamEncoding::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfStreamPredictor {
   PdfStreamPredictorTIFF2
@@ -3135,32 +3902,77 @@ pub(all) enum PdfStreamPredictor {
   PdfStreamPredictorPNGPaeth
   PdfStreamPredictorPNGOptimum
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfStreamPredictor::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfStreamPredictor::not_equal(Self, Self) -> Bool
 pub fn PdfStreamPredictor::number(Self) -> Int
+#deprecated
+pub fn PdfStreamPredictor::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfStreamPredictor::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTextExtractor {
   font : PdfFont
 } derive(Eq, ToJson, @debug.Debug)
 pub fn PdfTextExtractor::charcode_of_codepoint(Self, Int) -> Int?
 pub fn PdfTextExtractor::codepoints_of_text(Self, BytesView) -> Array[Int] raise @core.PdfError
+#deprecated
+pub fn PdfTextExtractor::equal(Self, Self) -> Bool
 pub fn PdfTextExtractor::glyphnames_and_codepoints_of_text(Self, BytesView) -> Array[PdfTextGlyph] raise @core.PdfError
 pub fn PdfTextExtractor::glyphnames_of_text(Self, BytesView) -> Array[@core.PdfName] raise @core.PdfError
+#deprecated
+pub fn PdfTextExtractor::not_equal(Self, Self) -> Bool
 pub fn PdfTextExtractor::text_width(Self, BytesView) -> Double raise @core.PdfError
+#deprecated
+pub fn PdfTextExtractor::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTextExtractor::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTextGlyph {
   glyphname : @core.PdfName
   codepoints : Array[Int]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTextGlyph::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTextGlyph::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTextGlyph::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTextGlyph::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfTocFontSource {
   PdfTocPreMadeFontPack(PdfFontPack)
   PdfTocExistingNamedFont
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTocFontSource::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTocFontSource::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTocFontSource::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTocFontSource::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTristimulusPoint {
   x : Double
   y : Double
   z : Double
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTristimulusPoint::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTristimulusPoint::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTristimulusPoint::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTristimulusPoint::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfType3Glyphs {
   fontbbox : @geometry.PdfRectangle
@@ -3168,6 +3980,15 @@ pub(all) struct PdfType3Glyphs {
   charprocs : Array[(@core.PdfName, @syntax.PdfObject)]
   resources : @syntax.PdfObject
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfType3Glyphs::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfType3Glyphs::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfType3Glyphs::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfType3Glyphs::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfTypeElement {
   PdfTypeText(Bytes)
@@ -3182,16 +4003,43 @@ pub(all) enum PdfTypeElement {
   PdfTypeTag(String, Int)
   PdfTypeEndTag
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTypeElement::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTypeElement::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTypeElement::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTypeElement::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PdfTypeTypesetResult {
   pages : Array[@page.PdfPage]
   tags : Array[Array[(String, Int)]]
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfTypeTypesetResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTypeTypesetResult::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfTypeTypesetResult::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfTypeTypesetResult::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfUASubformat {
   PdfUA1
   PdfUA2
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfUASubformat::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfUASubformat::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfUASubformat::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfUASubformat::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

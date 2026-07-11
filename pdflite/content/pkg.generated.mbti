@@ -96,6 +96,15 @@ pub(all) enum PdfContentOp {
   Op_EX
   Op_Unknown(Bytes)
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfContentOp::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOp::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfContentOp::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfContentOp::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub type PdfBytes = Bytes

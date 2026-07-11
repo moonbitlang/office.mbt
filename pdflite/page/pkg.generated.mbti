@@ -29,6 +29,15 @@ pub(all) struct PdfPage {
   rotate : PdfPageRotation
   rest : @syntax.PdfObject
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPage::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPage::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPage::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPage::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PdfPageRotation {
   Rotate0
@@ -36,6 +45,15 @@ pub(all) enum PdfPageRotation {
   Rotate180
   Rotate270
 } derive(Eq, ToJson, @debug.Debug)
+#deprecated
+pub fn PdfPageRotation::equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPageRotation::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PdfPageRotation::to_json(Self) -> Json
+#as_free_fn
+#deprecated
+pub fn PdfPageRotation::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub using @geometry {type PaperSize}

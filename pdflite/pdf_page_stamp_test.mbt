@@ -117,7 +117,7 @@ test "PdfDocument stamp_pages overlays selected pages with prefixed resources an
   let stamped = try
     base.stamp_pages([1], overlay, position=PdfPositionBottomLeft(10.0, 20.0))
   catch {
-    error => fail(error.to_json().stringify())
+    error => fail(ToJson::to_json(error).stringify())
   } noraise {
     stamped => stamped
   }
@@ -172,7 +172,7 @@ test "pdf_stamp can place overlay content under the base content" {
       is_over=false,
     )
   catch {
-    error => fail(error.to_json().stringify())
+    error => fail(ToJson::to_json(error).stringify())
   } noraise {
     stamped => stamped
   }
@@ -229,7 +229,7 @@ test "PdfDocument stamp_pages scale_to_fit centers the first overlay page" {
   let stamped = try
     base.stamp_pages([1], stamp_overlay_document_for_test(), scale_to_fit=true)
   catch {
-    error => fail(error.to_json().stringify())
+    error => fail(ToJson::to_json(error).stringify())
   } noraise {
     stamped => stamped
   }
@@ -263,7 +263,7 @@ test "PdfDocument stamp_pages can mark processed overlay content as artifact" {
   let stamped = try
     base.stamp_pages([1], overlay, process_struct_tree=true)
   catch {
-    error => fail(error.to_json().stringify())
+    error => fail(ToJson::to_json(error).stringify())
   } noraise {
     stamped => stamped
   }
