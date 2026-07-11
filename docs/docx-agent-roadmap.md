@@ -632,3 +632,205 @@ fixes the order and the strategic bets.
 Non-goals remain non-goals until a phase promotes them deliberately:
 PowerPoint, mermaid/diagram rendering, template merge, HTML preview
 fidelity beyond the existing converter.
+
+---
+
+# Phase 3 — targeted edits of existing documents (reviewed plan)
+
+Phase 2 delivered annotation surgery on the L0 byte-span layer. Phase 3
+generalizes it to CONTENT surgery: find, replace, set-text, and
+insert/delete-paragraph on documents we did not author — the OfficeCLI
+`set`/find-replace core, rebuilt on preservation-safe splicing. Success
+criterion (unchanged): an agent fixes a typo in a real-world document
+without disturbing one byte it didn't touch.
+
+## What OfficeCLI ships, and where we beat it (survey, 2026-07-12)
+
+Surveyed `.repos/OfficeCLI` (`Handlers/Word/WordHandler.Set*.cs`,
+`WordHandler.Helpers.FindReplace.cs`, `Core/FindHelpers.cs`). Facts we
+design against:
+
+- All editing funnels through `set <path> --prop key=value`; find/replace
+  is `set <path> --find X --replace Y` (regex via `r"..."` prefix,
+  5-second timeout). Always case-sensitive, no whole-word, ALWAYS
+  replaces all matches (no first/nth/limit), and — decisive for agents —
+  **no dry-run/preview of any kind**, and **zero matches exits 0** with
+  only a warning. Match count is reported, match locations are not.
+- Matching runs on per-paragraph concatenated run text
+  (`BuildRunTexts`), so cross-run matches work, but `w:tab`/`w:br`/field
+  instructions contribute NO characters: `a<tab>b` is searched as `ab`
+  — patterns match across invisible glue, and patterns containing the
+  tab/newline can never match. Replacement text lands entirely in the
+  FIRST affected run (later runs' formatting is lost), emptied runs are
+  deleted, and the paragraph's `w14:paraId` is regenerated. A match
+  crossing a hyperlink boundary throws.
+- Root-scope find sweeps body + headers + footers + footnotes +
+  endnotes (comments deliberately excluded). Paragraph `set text=`
+  COLLAPSES the paragraph to a single run (all other formatting lost).
+- **It re-serializes through the OpenXML SDK DOM on save** — every
+  materialized part is rewritten even for a one-character edit, plus
+  post-save regex normalization passes on document.xml. No byte
+  preservation of any kind. No vendored test suite pins any of this.
+
+Our structural bets, in order: (1) byte preservation via L0 (they
+cannot follow without abandoning the SDK); (2) an agent-grade contract —
+dry-run hit-listing as addressed paths, `--expect N` assertions,
+zero-match fail-closed; (3) honest match semantics — non-text run
+content is an explicit MATCH BARRIER, never silent glue.
+
+## Locked design decisions (Phase-3-wide)
+
+- **Match text = the read projection.** Matching operates per paragraph
+  on exactly the text agents see in `docx text`/`get` (`to_raw_text`):
+  `w:t` content, `\t` for `w:tab`, U+2011/U+00AD for
+  noBreakHyphen/softHyphen. Elements contributing no projection
+  characters (`w:br`, note/comment references, images, checkboxes,
+  `w:sym`) are BARRIERS: a match may not span one, and the barrier
+  contributes no character, so `a<br/>b` does NOT match `ab` — unlike
+  OfficeCLI's silent gluing. Runs are invisible seams (matches cross
+  them freely); barriers split a paragraph into independently matchable
+  segments.
+- **Field regions are barriers.** The scanner tracks `w:fldChar`
+  begin/separate/end state and `w:fldSimple`/`w:instrText`; everything
+  from a field's begin to its end (instruction AND cached result) is one
+  barrier region — editing cached results is futile (Word recomputes)
+  and editing instructions is a different feature. Hit lists report
+  matches inside field regions as skipped, with the reason.
+- **Cross-run replacement is per-slice byte surgery.** Each affected
+  run's matched slice is deleted from inside its own `w:t` content; the
+  replacement text is inserted at the match start (first affected run,
+  inheriting that run's rPr — same visible outcome as OfficeCLI/Word).
+  Everything BETWEEN runs (`w:proofErr`, bookmarks, comment range
+  markers, rsids) is byte-untouched by construction. Runs left with an
+  empty `<w:t></w:t>` are KEPT (schema-legal, byte-minimal, and their
+  rPr keeps applying to nothing rather than vanishing); we do not delete
+  elements we can leave alone. A match whose span covers a `w:tab`
+  deletes that element's bytes (its `\t` matched). `w14:paraId` is NOT
+  regenerated (identity is the paragraph, not its content).
+- **Hyperlink boundaries refuse.** A match fully inside one hyperlink's
+  text is editable; a match crossing into or out of a `w:hyperlink` is
+  refused by default (reported in the hit list as boundary-crossing).
+- **Tracked-changes state refuses.** Any matched paragraph containing
+  `w:ins`/`w:del`/move markers → fail closed (whole command, zero
+  output) with a corrective error; revision-aware editing is Phase 5.
+- **Literal matching only in v1.** No regex (injection/DoS surface —
+  OfficeCLI needed a timeout), no case folding (Unicode complexity), no
+  whole-word. All three are documented non-goals with the workaround
+  (agents read exact text via `docx text` first — the dry-run loop).
+- **Zero matches fail closed.** `docx replace` with 0 matches is an
+  error (exit 1, no output file) unless `--allow-zero`; `--expect N`
+  asserts exactly N replacements. Occurrence selection via `--nth K`
+  (1-based, in document order). OfficeCLI's silent exit-0 is the
+  anti-pattern.
+- **New text is escaped, never structural.** Replacement/set text
+  rejects control characters incl. `\n`/`\t` in v1 (no silent
+  break/tab synthesis); `&<>` are entity-escaped on write;
+  `xml:space="preserve"` is added to a rewritten `w:t` whose new
+  content has leading/trailing/consecutive whitespace.
+- **No paragraph text collapse.** OfficeCLI's paragraph `set text=`
+  (destroy all runs but the first) is not replicated; the composition
+  is N3 delete + insert with a full `docx.batch` paragraph payload —
+  formatting-explicit instead of silently lossy.
+- Everything inherited from Phase 2 stays: UTF-8-only, fail-closed
+  gates (sidecars, unrepairable state), atomic zero-output publication,
+  double belt (structural validation + read-back verification),
+  `error:`/`docx:` taxonomy, body-story scope first, whole-package
+  `assert_preserved` acceptance proofs with per-verb footprints.
+
+## N0 — offset-map spike (GO/NO-GO gate for the phase)
+
+The one new hard primitive: a per-paragraph SEGMENT MAP from projection
+text to byte spans. Scanner grows run-content detail: each `w:t`'s
+content span, each `w:tab`/barrier element span, fldChar state. The map
+is `[(char_range, byte_range, kind)]` per segment, where char offsets
+are UTF-16 code units (MoonBit strings) and byte ranges index the
+part's bytes. Oracle, on a hostile matrix (entities incl. numeric char
+refs, `xml:space` variants, multi-`w:t` runs, multibyte UTF-8 +
+surrogate pairs/emoji, softHyphen/noBreakHyphen/`w:sym`, CDATA inside
+`w:t`, comments/PIs between runs, fields, hyperlinks, self-closing
+`<w:t/>`): (a) concatenated segment text equals the `docx text`
+projection exactly; (b) every char range's byte span decodes back to
+those chars; (c) barrier placement matches the barrier inventory. GO =
+oracle green on the matrix; NO-GO reverts Phase 3 to design. Like L0:
+pub surface only what N1/N2 need.
+
+## N1 — `docx edit set-text` (run-scoped)
+
+- `docx edit set-text <in> <out> --at /body/p[i]/r[j] --text '...'`:
+  replace the addressed run's textual content (its `w:t`s, via the N0
+  map), preserving rPr and every byte outside the content spans. Refuse
+  runs containing barriers (breaks, references, drawings, field chars)
+  with an error naming what was found. Multi-`w:t` runs collapse their
+  content into the first `w:t` (the others' content spans emptied,
+  elements kept). Empty `--text ''` is legal (empties the run).
+- Anchors reuse the annotate paths grammar (`--at` must end in `r[j]`;
+  same corrective sibling-count errors). Same belts; acceptance proves
+  the document.xml-only footprint and that stripping the edit
+  reproduces the original (marker-style byte proof on the changed
+  span). Batch-op counterpart is NOT added (batch authors fresh docs).
+
+## N2a — `docx find` (read-only hit lister)
+
+- `docx find <file> --text 'needle' [--in <path>]` → `docx.matches/1`:
+  one entry per match — paragraph path, segment char offset, matched
+  text, before/after context (bounded), `spans_runs` flag, and for
+  non-actionable matches a `skipped` reason (`field-region`,
+  `hyperlink-boundary`, `tracked-region`). Body story v1; `--in`
+  restricts to a paragraph/table subtree. Deterministic ordering
+  (document order). Zero matches: exit 0 with an empty list — find is a
+  read, only replace fails closed.
+- This PR ships the entire match engine (segments, barriers, ordering)
+  behind a read-only surface, so its semantics are review-hardened
+  before any mutation reuses them. The hit-list JSON is designed to be
+  the seed of the future `docx diff` payload (addressed paths +
+  before/after) — schema field names chosen with that reuse in mind.
+
+## N2b — `docx replace` (the mutation)
+
+- `docx replace <in> <out> --text 'needle' --with 'replacement'
+  [--in <path>] [--nth K] [--expect N] [--allow-zero] [--dry-run]`.
+  `--dry-run` prints the `docx.matches/1` payload replace would act on
+  and writes nothing. Actionable matches are edited per the locked
+  cross-run surgery; any skipped-reason match in scope is an error
+  (fail closed) unless `--nth` selects past it — replace never
+  silently skips what find reports. Same belts; read-back verifies the
+  replacement text at the matched paths; acceptance proves footprint +
+  reverse-replace byte-identity where text lengths permit, plus the
+  typo-fix-on-foreign-fixture scenario.
+
+## N3 — paragraph insert/delete at a path
+
+- `docx edit insert-paragraph <in> <out> (--before|--after) /body/p[i]
+  --json <docx.batch paragraph-op payload>`: the payload reuses the
+  batch/2 paragraph parser verbatim (one grammar, both surfaces);
+  fragments are namespace-self-contained (L0 rules); numbering/style
+  references are gated on the target document actually defining them
+  (else refuse — batch ids exist only in our writer's parts).
+- `docx edit delete-paragraph <in> <out> --at /body/p[i]`: consuming
+  span edit. Fail-closed inventory: refuse when the paragraph hosts a
+  comment-range marker or bookmark whose pair lies outside it, any
+  note/comment reference (orphaning), any tracked-change marker, or
+  the body's final `sectPr`-bearing paragraph. The error names the
+  blocking content and its path.
+
+## N4 — capstone (M-pattern)
+
+- docs/agent-json-schemas.md: `docx.matches/1`, edit/replace stdout
+  contracts, and a typo-fix recipe (find → dry-run → replace --expect →
+  verify by find again). Acceptance: the foreign-fixture typo scenario
+  with `assert_preserved` footprints (replace: document.xml ONLY).
+  Fresh-agent probe re-run (docs + --help only) before N4 merges; CI
+  wasm smoke: find, replace --expect, set-text, insert/delete.
+
+## Ordering and gates
+
+N0 → N1 → N2a → N2b → N3 → N4 (N3 needs only N0+N1 infrastructure and
+may land before N2b if review pacing favors it). Every PR through the
+standing gate: self-adversarial pass, subal review (xhigh features /
+high confirmations) to APPROVE, green nightly CI, review-trail comment,
+rebase-merge. The N0 GO/NO-GO verdict is recorded in this file like
+L0's. Non-goals for the phase: regex/case-insensitive/whole-word
+matching, header/footer/notes scope for find+replace (small follow-up
+once body semantics are probe-proven), comment-body editing, bookmark/
+SDT/field targets (Phase 4 candidates), any tracked-changes handling
+beyond refusal (Phase 5).
