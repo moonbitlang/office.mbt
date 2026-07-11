@@ -280,3 +280,15 @@ the --out entry, and the workbook keeps its bytes.
   wrote alias.xlsx
   $ xlsx.exe validate book.xlsx
   valid
+
+--out replaces the named entry itself: a symlink target is not followed,
+so an unrelated file the link points at is left untouched.
+
+  $ xlsx.exe create other.xlsx --sheet Keep >/dev/null
+  $ ln -s other.xlsx link.xlsx
+  $ xlsx.exe html book.xlsx --out link.xlsx
+  wrote link.xlsx
+  $ head -1 link.xlsx
+  <!DOCTYPE html>
+  $ xlsx.exe validate other.xlsx
+  valid
