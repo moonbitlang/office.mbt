@@ -109,12 +109,6 @@ fn ScannedNode::path(self : ScannedNode) -> String {
 }
 
 ///|
-/// The projection kind (p, r, tbl, tr, tc, hyperlink).
-fn ScannedNode::kind(self : ScannedNode) -> String {
-  self.kind
-}
-
-///|
 /// Sequence number of the node's open tag.
 fn ScannedNode::open_seq(self : ScannedNode) -> Int {
   self.open_seq
@@ -124,18 +118,6 @@ fn ScannedNode::open_seq(self : ScannedNode) -> Int {
 /// Sequence number of the node's close tag.
 fn ScannedNode::close_seq(self : ScannedNode) -> Int {
   self.close_seq
-}
-
-///|
-/// Byte offset of the open tag in the original part.
-fn ScannedNode::byte_start(self : ScannedNode) -> Int {
-  self.byte_start
-}
-
-///|
-/// Byte offset just past the close tag in the original part.
-fn ScannedNode::byte_end(self : ScannedNode) -> Int {
-  self.byte_end
 }
 
 ///|

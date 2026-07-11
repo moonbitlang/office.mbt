@@ -30,9 +30,10 @@ pub impl Show for PathError with fn output(self, logger) {
 
 ///|
 /// One parsed `kind[index]` segment.
+/// One parsed `kind[index]` segment.
 pub struct PathStep {
-  pub kind : String
-  pub index : Int
+  kind : String
+  index : Int
 }
 
 ///|
@@ -44,9 +45,10 @@ pub enum PathRoot {
 }
 
 ///|
+/// A parsed path: its story root plus the `kind[index]` steps.
 pub struct ParsedPath {
-  pub root : PathRoot
-  pub steps : Array[PathStep]
+  root : PathRoot
+  steps : Array[PathStep]
 }
 
 ///|
