@@ -179,16 +179,23 @@ priv struct ScanFrame {
   // Property containers (tcPr/pPr/rPr/...): the reader never surfaces
   // markers from inside them.
   in_properties : Bool
-  // Grid tracking for vMerge fidelity. On tbl frames: the set of grid
-  // columns with an open vertical merge. On tr frames: the next cell's
-  // grid column. On tc frames: this cell's column/span and its vMerge
-  // declaration, decided at tcPr close.
-  open_merges : Set[Int]
+  // Grid tracking mirroring the reader's calculate_typed_table_row_spans
+  // EXACTLY: origins are keyed by a cell's STARTING column only; every
+  // kept cell registers itself as the origin at its column; an unmatched
+  // continuation becomes an origin (fail-open); origins are never
+  // removed. tbl frames: the origin-column set. tr frames: the next
+  // cell's column (plus trPr/w:del row deletion, like read_table_row).
+  // tc frames: column/span (FIRST gridSpan via the reader's
+  // parse_grid_span) and the FIRST vMerge declaration; keep-or-retract
+  // decided at tcPr close.
+  origin_columns : Set[Int]
   mut column_cursor : Int
   grid_column : Int
   mut grid_span : Int
-  mut vmerge_restart : Bool
+  mut grid_span_seen : Bool
+  mut vmerge_seen : Bool
   mut vmerge_continue : Bool
+  mut row_deleted : Bool
 }
 
 ///|
@@ -361,10 +368,10 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
               None => ()
             }
           }
-          // vMerge DECISION at tcPr close (span final, before content):
-          // a continuation retracts ONLY when a merge is open at one of
-          // its grid columns — the reader FAIL-OPENS and keeps orphan
-          // continuations (e.g. in a first row).
+          // vMerge DECISION at tcPr close (declarations final, before any
+          // cell content): reader-exact — a continuation whose STARTING
+          // column has a registered origin is merged away (retracted);
+          // an unmatched continuation is KEPT and becomes the origin.
           if frame.is_wml && frame.local_name == "tcPr" {
             match
               (
@@ -372,24 +379,26 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
                 nearest_frame_by_kind(frames, "tbl"),
               ) {
               (Some(cell), Some(table)) =>
-                if cell.vmerge_continue && !cell.vmerge_restart {
-                  let mut merge_open = false
-                  for offset in 0..<cell.grid_span {
-                    if table.open_merges.contains(cell.grid_column + offset) {
-                      merge_open = true
-                      break
-                    }
-                  }
-                  if merge_open {
-                    retract_cell(cell)
-                  }
+                if cell.vmerge_continue &&
+                  table.origin_columns.contains(cell.grid_column) {
+                  retract_cell(cell)
                 }
               _ => ()
             }
           }
-          // Grid bookkeeping at tc close: restarts open their columns,
-          // plain cells close any merge at theirs, continuations keep
-          // them open; then the row cursor advances by the span.
+          // trPr/w:del deletes the whole row, reader-exact.
+          if frame.is_wml && frame.local_name == "trPr" {
+            match nearest_frame_by_kind(frames, "tr") {
+              Some(row) => if row.row_deleted { retract_row(row) }
+              None => ()
+            }
+          }
+          // Close bookkeeping at tc close: EVERY kept cell registers as
+          // the origin at its starting column (origins are never
+          // removed — a later continuation merges into whatever cell is
+          // above it, exactly like the reader); the row cursor advances
+          // by the span (the reader's parse can yield zero or negative
+          // spans, mirrored verbatim).
           if frame.is_wml && frame.local_name == "tc" {
             match
               (
@@ -397,13 +406,8 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
                 nearest_frame_by_kind(frames, "tbl"),
               ) {
               (Some(row), Some(table)) => {
-                for offset in 0..<frame.grid_span {
-                  let column = frame.grid_column + offset
-                  if frame.vmerge_restart {
-                    table.open_merges.add(column)
-                  } else if !frame.vmerge_continue {
-                    table.open_merges.remove(column)
-                  }
+                if !frame.suppressed {
+                  table.origin_columns.add(frame.grid_column)
                 }
                 row.column_cursor = frame.grid_column + frame.grid_span
               }
@@ -529,48 +533,66 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         None => None
       }
     }
-    // Grid declarations inside tcPr: recorded on the enclosing tc; the
-    // keep-or-retract DECISION happens at tcPr close, when the span is
-    // final and before any cell content opens.
-    if is_wml_uri(uri) && local_name == "vMerge" {
+    // Grid declarations, DIRECT tcPr children only, mirroring the
+    // reader: FIRST vMerge wins (continue iff val absent or "continue");
+    // FIRST gridSpan wins, parsed with the reader's own parse_grid_span.
+    let parent_is = fn(name : String) -> Bool {
+      match frames.last() {
+        Some(parent) => parent.is_wml && parent.local_name == name
+        None => false
+      }
+    }
+    if is_wml_uri(uri) && local_name == "vMerge" && parent_is("tcPr") {
       match nearest_frame_by_kind(frames, "tc") {
         Some(cell) =>
-          if attribute_value(attributes, "val", namespaces) is Some("restart") {
-            cell.vmerge_restart = true
-          } else {
-            cell.vmerge_continue = true
+          if !cell.vmerge_seen {
+            cell.vmerge_seen = true
+            cell.vmerge_continue = attribute_value(
+                attributes, "val", namespaces,
+              )
+              is (None | Some("continue"))
           }
         None =>
           warnings.push("annotation scanner: a vMerge outside any table cell")
       }
     }
-    if is_wml_uri(uri) && local_name == "gridSpan" {
+    if is_wml_uri(uri) && local_name == "gridSpan" && parent_is("tcPr") {
       match nearest_frame_by_kind(frames, "tc") {
         Some(cell) =>
-          match attribute_value(attributes, "val", namespaces) {
-            Some(value) => {
-              let mut span = 0
-              let mut valid = value.length() > 0
-              for ch in value {
-                if ch is ('0'..='9') {
-                  span = span * 10 + (ch.to_int() - '0'.to_int())
-                } else {
-                  valid = false
-                  break
-                }
-              }
-              if valid && span >= 1 {
-                cell.grid_span = span
-              }
-            }
-            None => ()
+          if !cell.grid_span_seen {
+            cell.grid_span_seen = true
+            cell.grid_span = parse_grid_span(
+              attribute_value(attributes, "val", namespaces).unwrap_or("1"),
+            )
           }
+        None => ()
+      }
+    }
+    // trPr/w:del deletes the WHOLE ROW (reader's read_table_row).
+    if is_wml_uri(uri) && local_name == "del" && parent_is("trPr") {
+      match nearest_frame_by_kind(frames, "tr") {
+        Some(row) => row.row_deleted = true
         None => ()
       }
     }
     if self_closing {
       // Open+close in place; only projection nodes matter for spans.
       seq += 1
+      // A self-closing <w:tc/> is a normal span-1 cell to the reader:
+      // register its origin column and advance the row cursor.
+      if projection_kind_value is Some("tc") {
+        match
+          (
+            nearest_frame_by_kind(frames, "tr"),
+            nearest_frame_by_kind(frames, "tbl"),
+          ) {
+          (Some(row), Some(table)) => {
+            table.origin_columns.add(row.column_cursor)
+            row.column_cursor = row.column_cursor + 1
+          }
+          _ => ()
+        }
+      }
       match projection {
         Some(path) => {
           let kind = projection_kind_value.unwrap_or(local_name)
@@ -623,12 +645,14 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         suppressed,
         counter_owner,
         in_properties,
-        open_merges: Set([]),
+        origin_columns: Set([]),
         column_cursor: 0,
         grid_column,
         grid_span: 1,
-        vmerge_restart: false,
+        grid_span_seen: false,
+        vmerge_seen: false,
         vmerge_continue: false,
+        row_deleted: false,
       })
     }
     index = tag_end
@@ -671,6 +695,24 @@ fn nearest_frame_by_kind(
     }
   }
   None
+}
+
+///|
+/// Retracts a deleted row (trPr/w:del): un-counts its ordinal and
+/// suppresses the whole subtree, like the reader's read_table_row.
+fn retract_row(row : ScanFrame) -> Unit {
+  match (row.projection_path, row.counter_owner) {
+    (Some(_), Some(counters)) => {
+      let current = counters.get_or_default("tr", 0)
+      if current > 0 {
+        counters["tr"] = current - 1
+      }
+      row.projection_path = None
+      row.counter_owner = None
+      row.suppressed = true
+    }
+    _ => ()
+  }
 }
 
 ///|
