@@ -134,6 +134,15 @@ priv struct StoryScan {
   nodes : Array[ScannedNode]
   markers : Array[ScannedMarker]
   warnings : Array[String]
+  // The story's ROOT element span (kind = its local name, path = "").
+  // L1 splices new definitions just before root.close_tag_start.
+  root : ScannedNode?
+}
+
+///|
+/// The story's root-element span, when the part had one.
+fn StoryScan::root(self : StoryScan) -> ScannedNode? {
+  self.root
 }
 
 ///|
@@ -296,6 +305,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
   let nodes : Array[ScannedNode] = []
   let markers : Array[ScannedMarker] = []
   let warnings : Array[String] = []
+  let mut root : ScannedNode? = None
   let frames : Array[ScanFrame] = []
   let root_counters : Map[String, Int] = Map([])
   // Prefix -> stack of URIs (innermost last). "" is the default namespace.
@@ -458,6 +468,18 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
             }
           }
           finish_frame(frame, seq, index, close_end, nodes, frames)
+          if frames.length() == 0 && root is None {
+            root = Some({
+              path: "",
+              kind: frame.local_name,
+              open_seq: frame.open_seq,
+              close_seq: seq,
+              byte_start: frame.byte_start,
+              byte_end: close_end,
+              content_start: frame.content_start,
+              close_tag_start: index,
+            })
+          }
         }
         None => warnings.push("annotation scanner: unbalanced closing tag")
       }
@@ -668,6 +690,20 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         }
         None => ()
       }
+      // A self-closing element at DEPTH ZERO is the story's (empty)
+      // root: record it so L1 can rewrite it by its own extent.
+      if frames.length() == 0 && root is None {
+        root = Some({
+          path: "",
+          kind: local_name,
+          open_seq: seq - 1,
+          close_seq: seq,
+          byte_start: index,
+          byte_end: tag_end,
+          content_start: -1,
+          close_tag_start: -1,
+        })
+      }
       // A self-closing <w:pPr/> (or <w:rPr/>) still pins its parent's
       // content start past itself (pPr/rPr lead their sequences).
       if is_wml_uri(uri) && local_name == "pPr" {
@@ -757,7 +793,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
   if frames.length() > 0 {
     warnings.push("annotation scanner: unbalanced open tags at end of part")
   }
-  { nodes, markers, warnings }
+  { nodes, markers, warnings, root }
 }
 
 ///|
