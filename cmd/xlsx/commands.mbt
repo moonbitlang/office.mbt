@@ -84,10 +84,20 @@ async fn run_get(m : @argparse.Matches) -> Unit {
 
 ///|
 async fn run_calc(m : @argparse.Matches) -> Unit {
-  let workbook = @lib.open_file(arg(m, "file"))
-  // Evaluate the cell's formula (or return a plain cell's value). `--raw`
-  // returns the unformatted result; the default applies the cell's number
+  let file = arg(m, "file")
+  let workbook = @lib.open_file(file)
+  // `--json` prints the typed computed value (xlsx.calc/1) — the gap
+  // `get --json` leaves for an uncached formula. Otherwise print the string:
+  // `--raw` is the unformatted result; the default applies the cell's number
   // format, like Excel's displayed value.
+  if flag(m, "json") {
+    println(
+      @inspect.calc(workbook, file~, arg(m, "sheet"), arg(m, "cell")).stringify(
+        indent=2,
+      ),
+    )
+    return
+  }
   println(
     workbook.calc_cell_value(
       arg(m, "sheet"),

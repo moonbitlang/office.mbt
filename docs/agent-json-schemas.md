@@ -175,6 +175,33 @@ scanning it itself. Scans the sheet's used range by default, or the
   sheet fails with a non-zero exit and a one-line `error:` message; nothing is
   written.
 
+## `xlsx.calc/1` — a cell's typed computed value (`xlsx calc <file> <sheet> <cell> --json`)
+
+Evaluates a cell's formula and returns its **computed** value, typed — the
+gap `xlsx.cells/1` leaves for a formula with no cached value (`get --json`
+reports the formula text but no value until it is recalculated). Without
+`--json`, `calc` prints the value as a string as before.
+
+```json
+{
+  "schema": "xlsx.calc/1",
+  "file": "book.xlsx",
+  "sheet": "Data",
+  "ref": "B2",
+  "result": { "type": "number", "value": 200 }
+}
+```
+
+- `ref` echoes the requested cell. `result` is `{type, value}` — the **same
+  shape** as an `xlsx.cells/1` cell's `raw` field (`type` ∈
+  `number`/`string`/`bool`/`error`; an `error` carries its code as the value).
+- `result` is **omitted** when the formula computes to an empty result
+  (absence means blank, matching the other read payloads). A genuine formula
+  error is a *present* result with `type: "error"` (e.g. `"#DIV/0!"`); only a
+  missing sheet or malformed reference fails with a non-zero exit.
+- The value is recomputed on demand and reflects the engine's evaluation; it
+  is not read from any stored cache.
+
 ## `xlsx.batch/1` — mutation script (`xlsx batch <file> <script.json>`)
 
 Envelope:
