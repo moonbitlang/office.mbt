@@ -250,13 +250,6 @@ fn is_transparent_container(uri : String, local_name : String) -> Bool {
 const MC_URI : String = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 
 ///|
-fn is_wp_uri(uri : String) -> Bool {
-  uri ==
-  "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ||
-  uri == "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing"
-}
-
-///|
 /// Subtrees the reader removes entirely.
 fn is_suppressed_container(uri : String, local_name : String) -> Bool {
   (is_wml_uri(uri) && local_name == "del") ||

@@ -10,6 +10,8 @@ pub fn element_children(@document.DocumentElement) -> Array[@document.DocumentEl
 
 pub fn parse_path(String) -> ParsedPath raise PathError
 
+pub fn resolve_annotation_path(String, footnotes? : Array[(String, Array[@document.DocumentElement])], endnotes? : Array[(String, Array[@document.DocumentElement])], comments? : Array[(String, Array[@document.DocumentElement])]) -> @document.DocumentElement raise PathError
+
 pub fn resolve_path(@document.DocumentElement, String, headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart]) -> @document.DocumentElement raise PathError
 
 pub fn resolve_relative(@document.DocumentElement, String, prefix~ : String) -> @document.DocumentElement raise PathError
@@ -44,11 +46,19 @@ pub enum PathRoot {
   Body
   Header(Int)
   Footer(Int)
+  Footnotes
+  Endnotes
+  Comments
 }
 
 pub struct PathStep {
   kind : String
-  index : Int
+  selector : StepSelector
+}
+
+pub enum StepSelector {
+  Ordinal(Int)
+  ById(String)
 }
 
 // Type aliases

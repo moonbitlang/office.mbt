@@ -29,19 +29,35 @@ pub impl Show for PathError with fn output(self, logger) {
 }
 
 ///|
-/// One parsed `kind[index]` segment.
-/// One parsed `kind[index]` segment.
-pub struct PathStep {
-  kind : String
-  index : Int
+/// How one segment selects among same-kind siblings: by 1-based ordinal
+/// (snapshot-relative, the default) or by the element's document id
+/// (`[@id=3]` — comments and notes carry document-lifetime ids, the
+/// agent-stable handle). Ids match the LITERAL id string; the token may
+/// not contain `]` or `=` (an id spelled with those is unaddressable by
+/// id and is emitted as an ordinal path plus a diagnostic).
+pub enum StepSelector {
+  Ordinal(Int)
+  ById(String)
 }
 
 ///|
-/// The story a path addresses. Header/Footer carry the 1-based part index.
+/// One parsed `kind[index]` / `kind[@id=...]` segment.
+pub struct PathStep {
+  kind : String
+  selector : StepSelector
+}
+
+///|
+/// The story a path addresses. Header/Footer carry the 1-based part
+/// index; Footnotes/Endnotes/Comments are the annotation stories
+/// (Phase-2 J2 — previously reserved).
 pub enum PathRoot {
   Body
   Header(Int)
   Footer(Int)
+  Footnotes
+  Endnotes
+  Comments
 }
 
 ///|
@@ -87,9 +103,8 @@ pub fn element_children(
 }
 
 ///|
-let reserved_roots : ReadOnlyArray[String] = [
-  "footnotes", "endnotes", "comments",
-]
+/// Roots still reserved for later surfaces (none since J2).
+let reserved_roots : ReadOnlyArray[String] = []
 
 ///|
 /// Parses a `/body/kind[i]/...`, `/header[n]/...`, or `/footer[n]/...` path.
@@ -113,6 +128,12 @@ pub fn parse_path(path : String) -> ParsedPath raise PathError {
     Header(parse_root_index(root_segment, "header", path))
   } else if root_segment.has_prefix("footer[") || root_segment == "footer" {
     Footer(parse_root_index(root_segment, "footer", path))
+  } else if root_segment == "footnotes" {
+    Footnotes
+  } else if root_segment == "endnotes" {
+    Endnotes
+  } else if root_segment == "comments" {
+    Comments
   } else {
     for reserved in reserved_roots {
       if root_segment == reserved || root_segment.has_prefix(reserved + "[") {
@@ -164,24 +185,49 @@ fn parse_step(segment : String, path : String) -> PathStep raise PathError {
     )
   }
   let kind = segment[:open].to_owned()
-  let digits = segment[open + 1:segment.length() - 1].to_owned()
-  let index = parse_positive_int(digits) catch {
+  let inner = segment[open + 1:segment.length() - 1].to_owned()
+  if !known_kind(kind) {
+    raise PathError(
+      "invalid path segment '\{segment}' in '\{path}': unknown kind '\{kind}' (known: p, r, tbl, tr, tc, hyperlink, image, note, comment)",
+    )
+  }
+  // `[@id=TOKEN]` selects by document id (comments/notes); the token is
+  // matched literally and may not contain ']' or '=' (grammar-locked).
+  if inner.has_prefix("@id=") {
+    let token = inner[4:].to_owned()
+    if token == "" || token.find("=") is Some(_) {
+      raise PathError(
+        "invalid path segment '\{segment}' in '\{path}': expected [@id=<token>] with a non-empty token free of ']' and '='",
+      )
+    }
+    if !(kind is ("note" | "comment")) {
+      raise PathError(
+        "invalid path segment '\{segment}' in '\{path}': [@id=...] selects notes and comments only (positional kinds use [index])",
+      )
+    }
+    return { kind, selector: ById(token) }
+  }
+  let index = parse_positive_int(inner) catch {
     _ =>
       raise PathError(
         "invalid path segment '\{segment}' in '\{path}': index must be a positive integer",
       )
   }
-  if !known_kind(kind) {
-    raise PathError(
-      "invalid path segment '\{segment}' in '\{path}': unknown kind '\{kind}' (known: p, r, tbl, tr, tc, hyperlink, image)",
-    )
-  }
-  { kind, index }
+  { kind, selector: Ordinal(index) }
 }
 
 ///|
 fn known_kind(kind : String) -> Bool {
-  kind is ("p" | "r" | "tbl" | "tr" | "tc" | "hyperlink" | "image")
+  kind
+  is ("p"
+  | "r"
+  | "tbl"
+  | "tr"
+  | "tc"
+  | "hyperlink"
+  | "image"
+  | "note"
+  | "comment")
 }
 
 ///|
@@ -224,12 +270,19 @@ pub fn resolve_steps(
   }
   let mut prefix = root_prefix
   for step in steps {
+    let wanted = match step.selector {
+      Ordinal(index) => index
+      ById(_) =>
+        raise PathError(
+          "path '\{path}' not resolvable: [@id=...] applies to annotation roots, not '\{prefix}'",
+        )
+    }
     let mut seen = 0
     let mut found : @document.DocumentElement? = None
     for child in element_children(current) {
       if segment_kind(child) is Some(kind) && kind == step.kind {
         seen += 1
-        if seen == step.index {
+        if seen == wanted {
           found = Some(child)
           break
         }
@@ -238,11 +291,11 @@ pub fn resolve_steps(
     match found {
       Some(element) => {
         current = element
-        prefix = "\{prefix}/\{step.kind}[\{step.index}]"
+        prefix = "\{prefix}/\{step.kind}[\{wanted}]"
       }
       None =>
         raise PathError(
-          "path '\{path}' not found: '\{prefix}' has \{seen} '\{step.kind}' children (wanted index \{step.index})",
+          "path '\{path}' not found: '\{prefix}' has \{seen} '\{step.kind}' children (wanted index \{wanted})",
         )
     }
   }
@@ -272,7 +325,93 @@ pub fn root_container(
       (part_container(headers, index, "header", path), "/header[\{index}]")
     Footer(index) =>
       (part_container(footers, index, "footer", path), "/footer[\{index}]")
+    Footnotes | Endnotes | Comments =>
+      raise PathError(
+        "path root of '\{path}' is an annotation story — resolve it via resolve_annotation_path with the document's notes/comments",
+      )
   }
+}
+
+///|
+/// Resolves a path under an annotation root against (id, body) pairs in
+/// reader order. The FIRST step must be `note[...]`/`comment[...]`
+/// (ordinal or `[@id=...]`); remaining steps resolve through the shared
+/// grammar inside that container's body. Duplicate ids make `[@id=...]`
+/// AMBIGUOUS (the error names the ordinal alternatives, per the locked
+/// selector rules).
+pub fn resolve_annotation_path(
+  path : String,
+  footnotes? : Array[(String, Array[@document.DocumentElement])] = [],
+  endnotes? : Array[(String, Array[@document.DocumentElement])] = [],
+  comments? : Array[(String, Array[@document.DocumentElement])] = [],
+) -> @document.DocumentElement raise PathError {
+  let parsed = parse_path(path)
+  let (entries, container_kind, story) = match parsed.root {
+    Footnotes => (footnotes, "note", "/footnotes")
+    Endnotes => (endnotes, "note", "/endnotes")
+    Comments => (comments, "comment", "/comments")
+    _ =>
+      raise PathError(
+        "path '\{path}' does not address an annotation story; use resolve_path",
+      )
+  }
+  guard parsed.steps.length() > 0 else {
+    raise PathError(
+      "path '\{path}' addresses the whole \{story} story; select a \{container_kind} (e.g. \{story}/\{container_kind}[1])",
+    )
+  }
+  let head = parsed.steps[0]
+  if head.kind != container_kind {
+    raise PathError(
+      "path '\{path}' must start with \{story}/\{container_kind}[...] (got '\{head.kind}')",
+    )
+  }
+  let (entry_index, rendered) = match head.selector {
+    Ordinal(index) => {
+      if index < 1 || index > entries.length() {
+        raise PathError(
+          "path '\{path}' not found: \{story} has \{entries.length()} \{container_kind}(s) (wanted index \{index})",
+        )
+      }
+      (index - 1, "\{story}/\{container_kind}[\{index}]")
+    }
+    ById(token) => {
+      let matches : Array[Int] = []
+      for at, entry in entries {
+        let (id, _) = entry
+        if id == token {
+          matches.push(at)
+        }
+      }
+      match matches.length() {
+        0 =>
+          raise PathError(
+            "path '\{path}' not found: no \{container_kind} has id '\{token}'",
+          )
+        1 => (matches[0], "\{story}/\{container_kind}[@id=\{token}]")
+        _ => {
+          let ordinals : Array[String] = []
+          for at in matches {
+            ordinals.push("\{container_kind}[\{at + 1}]")
+          }
+          raise PathError(
+            "path '\{path}' is ambiguous: id '\{token}' matches \{matches.length()} \{container_kind}s (use \{ordinals.join(" or ")})",
+          )
+        }
+      }
+    }
+  }
+  let (_, body) = entries[entry_index]
+  let container = @document.document(body)
+  if parsed.steps.length() == 1 {
+    return container
+  }
+  resolve_steps(
+    container,
+    parsed.steps[1:].to_array(),
+    path,
+    root_prefix=rendered,
+  )
 }
 
 ///|

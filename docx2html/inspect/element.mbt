@@ -37,7 +37,10 @@ fn normalized_path(prefix : String, steps : Array[@paths.PathStep]) -> String {
   let builder = StringBuilder()
   builder.write_string(prefix)
   for step in steps {
-    builder.write_string("/\{step.kind}[\{step.index}]")
+    match step.selector {
+      Ordinal(index) => builder.write_string("/\{step.kind}[\{index}]")
+      ById(id) => builder.write_string("/\{step.kind}[@id=\{id}]")
+    }
   }
   builder.to_string()
 }
@@ -54,6 +57,9 @@ fn element_kind_name(
         Body => "body"
         Header(_) => "header"
         Footer(_) => "footer"
+        Footnotes => "footnotes"
+        Endnotes => "endnotes"
+        Comments => "comments"
       }
   }
 }
