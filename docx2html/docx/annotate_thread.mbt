@@ -774,6 +774,29 @@ fn scan_comment_ex_part(
       cursor = scan + 2
       continue
     }
+    // CDATA sections (valid between or inside entries) are skipped
+    // wholesale — review round 2.
+    if cursor + 8 < limit &&
+      bytes[cursor + 1] == b'!' &&
+      bytes[cursor + 2] == b'[' &&
+      bytes[cursor + 3] == b'C' &&
+      bytes[cursor + 4] == b'D' &&
+      bytes[cursor + 5] == b'A' &&
+      bytes[cursor + 6] == b'T' &&
+      bytes[cursor + 7] == b'A' &&
+      bytes[cursor + 8] == b'[' {
+      let mut scan = cursor + 9
+      while scan + 2 < limit {
+        if bytes[scan] == b']' &&
+          bytes[scan + 1] == b']' &&
+          bytes[scan + 2] == b'>' {
+          break
+        }
+        scan += 1
+      }
+      cursor = scan + 3
+      continue
+    }
     if cursor + 1 < limit && bytes[cursor + 1] == b'/' {
       depth -= 1
       if depth == 0 {
