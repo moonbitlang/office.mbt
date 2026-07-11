@@ -9,6 +9,8 @@ import {
 }
 
 // Values
+pub fn comment_spec(author~ : String, initials? : String, date? : String, from~ : Int, to~ : Int, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
+
 pub fn convert(BytesView, output_format? : @converter.OutputFormat, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
 
 pub fn convert_to_html(BytesView, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise @core.DocxError
@@ -32,6 +34,8 @@ pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_ext
 pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
 
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
+
+pub fn write_docx_with_comments(Array[@document.DocumentElement], Array[CommentSpec]) -> Bytes raise @core.DocxError
 
 // Errors
 
@@ -75,6 +79,10 @@ pub fn CommentInfo::done(Self) -> Bool?
 pub fn CommentInfo::id(Self) -> String
 pub fn CommentInfo::initials(Self) -> String?
 pub fn CommentInfo::parent_id(Self) -> String?
+
+pub struct CommentSpec {
+  // private fields
+}
 
 pub struct DocxAnnotatedResult {
   // private fields

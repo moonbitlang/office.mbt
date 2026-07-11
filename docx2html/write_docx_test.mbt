@@ -896,3 +896,318 @@ test "review round 2 (batch): a batch-built document reads back with the scripte
   guard data_cells is [TableCell(col_span~, ..)]
   debug_inspect(col_span, content="2")
 }
+
+///|
+fn note_body(text : String) -> Array[@docx2html.DocumentElement] {
+  [@docx2html.paragraph([@docx2html.run([@docx2html.text(text)])])]
+}
+
+///|
+/// Constructor-level and write-level comment failures both surface as
+/// `Unsupported` with an agent-readable message.
+fn[T] expect_comment_failure(
+  action : () -> T raise @docx2html.DocxError,
+  expected_prefix : String,
+) -> Unit raise {
+  try {
+    let _ = action()
+  } catch {
+    Unsupported(message~) =>
+      if !message.has_prefix(expected_prefix) {
+        fail("unexpected message: \{message}")
+      }
+    err => fail("expected Unsupported, got \{repr(err)}")
+  } noraise {
+    _ => fail("expected the comment writer to fail closed")
+  }
+}
+
+///|
+test "K1: written comments round-trip through the annotation index" {
+  let body = [
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("Alpha heading")])],
+      properties=@docx2html.paragraph_properties(style_id=Some("Heading1")),
+    ),
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Bravo body")])]),
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Charlie tail")])]),
+  ]
+  let bytes = @docx2html.write_docx_with_comments(body, [
+    @docx2html.comment_spec(
+      author="Reviewer",
+      initials="R",
+      date="2026-07-11T09:30:00Z",
+      from=0,
+      to=0,
+      note_body("Point note on the heading"),
+    ),
+    @docx2html.comment_spec(author="Second Reviewer", from=1, to=2, [
+      @docx2html.paragraph([@docx2html.run([@docx2html.text("Range note,")])]),
+      @docx2html.paragraph([
+        @docx2html.run([@docx2html.text("two paragraphs long.")]),
+      ]),
+    ]),
+  ])
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let annotated = @docx2html.read_docx_annotated(bytes)
+  // The agent-facing outline inventory: both comments, dense ids, no
+  // diagnostics.
+  guard @inspect.annotated_outline(annotated, file="c.docx") is Object(outline)
+  json_inspect(outline.get("comments"), content=[
+    [
+      { "id": "0", "author": "Reviewer", "anchored_to": "/body/p[1]" },
+      { "id": "1", "author": "Second Reviewer", "anchored_to": "/body/p[2]" },
+    ],
+  ])
+  json_inspect(outline.get("messages"), content=[[]])
+  // The point comment's full element payload: metadata and an anchor
+  // wholly inside the styled from-paragraph.
+  json_inspect(
+    @inspect.annotated_element(
+      annotated,
+      file="c.docx",
+      path="/comments/comment[@id=0]",
+    ),
+    content={
+      "schema": "docx.element/1",
+      "file": "c.docx",
+      "path": "/comments/comment[@id=0]",
+      "kind": "comment",
+      "id": "0",
+      "author": "Reviewer",
+      "initials": "R",
+      "date": "2026-07-11T09:30:00Z",
+      "anchors": [
+        {
+          "story": "/body",
+          "start": "/body/p[1]",
+          "start_boundary": "inside_start",
+          "end": "/body/p[1]",
+          "end_boundary": "inside_end",
+          "references": ["/body/p[1]/r[2]"],
+        },
+      ],
+      "anchored_to": "/body/p[1]",
+      "children": [{ "kind": "p", "path": "/comments/comment[@id=0]/p[1]" }],
+    },
+  )
+  // The range comment: anchor spanning /body/p[2]../body/p[3], reference
+  // attached to the end paragraph.
+  json_inspect(
+    @inspect.annotated_element(
+      annotated,
+      file="c.docx",
+      path="/comments/comment[@id=1]",
+    ),
+    content={
+      "schema": "docx.element/1",
+      "file": "c.docx",
+      "path": "/comments/comment[@id=1]",
+      "kind": "comment",
+      "id": "1",
+      "author": "Second Reviewer",
+      "anchors": [
+        {
+          "story": "/body",
+          "start": "/body/p[2]",
+          "start_boundary": "inside_start",
+          "end": "/body/p[3]",
+          "end_boundary": "inside_end",
+          "references": ["/body/p[3]/r[2]"],
+        },
+      ],
+      "anchored_to": "/body/p[2]",
+      "children": [
+        { "kind": "p", "path": "/comments/comment[@id=1]/p[1]" },
+        { "kind": "p", "path": "/comments/comment[@id=1]/p[2]" },
+      ],
+    },
+  )
+  // Reverse link: a covered body paragraph names its covering comment.
+  guard @inspect.annotated_element(annotated, file="c.docx", path="/body/p[2]")
+    is Object(covered)
+  json_inspect(covered.get("comment_ids"), content=[["1"]])
+}
+
+///|
+test "K1: anchors are emitted in the canonical intra-paragraph shape" {
+  let body = [
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("Styled")])],
+      properties=@docx2html.paragraph_properties(style_id=Some("Heading2")),
+    ),
+  ]
+  let bytes = @docx2html.write_docx_with_comments(body, [
+    @docx2html.comment_spec(author="A", from=0, to=0, note_body("first")),
+    @docx2html.comment_spec(
+      author="B",
+      initials="BB",
+      date="2026-07-11T10:00:00Z",
+      from=0,
+      to=0,
+      note_body("second"),
+    ),
+  ])
+  let archive = @mbtzip.read(bytes)
+  guard archive.get("word/document.xml") is Some(doc)
+  let text = @utf8.decode(doc, ignore_bom=true)
+  // Range starts sit right after pPr, in ascending id order.
+  inspect(
+    text.find(
+      "</w:pPr><w:commentRangeStart w:id=\"0\"/><w:commentRangeStart w:id=\"1\"/>",
+    )
+    is Some(_),
+    content="true",
+  )
+  // Each range end is immediately followed by ITS OWN reference run.
+  inspect(
+    text.find(
+      "<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r><w:commentRangeEnd w:id=\"1\"/><w:r><w:commentReference w:id=\"1\"/></w:r></w:p>",
+    )
+    is Some(_),
+    content="true",
+  )
+  // Definitions: dense ids and verbatim metadata in word/comments.xml.
+  guard archive.get("word/comments.xml") is Some(part)
+  let comments_text = @utf8.decode(part, ignore_bom=true)
+  inspect(
+    comments_text.find("<w:comment w:id=\"0\" w:author=\"A\">") is Some(_),
+    content="true",
+  )
+  // Attribute ORDER inside a tag is the XML writer's own (insignificant
+  // per XML 1.0); pin all four attributes of the metadata-rich comment.
+  inspect(
+    comments_text.find(
+      "<w:comment w:id=\"1\" w:date=\"2026-07-11T10:00:00Z\" w:author=\"B\" w:initials=\"BB\">",
+    )
+    is Some(_),
+    content="true",
+  )
+  // The comments part hangs off the MAIN document part, found by type.
+  guard archive.get("word/_rels/document.xml.rels") is Some(rels)
+  inspect(
+    @utf8.decode(rels, ignore_bom=true).find(
+      "officeDocument/2006/relationships/comments",
+    )
+    is Some(_),
+    content="true",
+  )
+  // No r: namespace was dragged into an otherwise plain document part
+  // (the comments relationship is implicit, found by type not r:id).
+  inspect(text.find("xmlns:r=") is Some(_), content="false")
+}
+
+///|
+test "K1: an empty comment set is byte-identical to write_docx" {
+  let body = [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("plain")])]),
+  ]
+  inspect(
+    @docx2html.write_docx(body) == @docx2html.write_docx_with_comments(body, []),
+    content="true",
+  )
+}
+
+///|
+test "K1: comment specs and anchors fail closed" {
+  let plain = [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("body")])]),
+  ]
+  expect_comment_failure(
+    () => @docx2html.comment_spec(author="", from=0, to=0, note_body("x")),
+    "a comment needs a non-empty author",
+  )
+  expect_comment_failure(
+    () => {
+      @docx2html.comment_spec(
+        author="A",
+        initials="",
+        from=0,
+        to=0,
+        note_body("x"),
+      )
+    },
+    "comment initials must not be empty",
+  )
+  expect_comment_failure(
+    () => {
+      @docx2html.comment_spec(
+        author="A",
+        date="2026-02-29T00:00:00",
+        from=0,
+        to=0,
+        note_body("x"),
+      )
+    },
+    "the comment date '2026-02-29T00:00:00' has day 29",
+  )
+  expect_comment_failure(
+    () => @docx2html.comment_spec(author="A", from=2, to=1, note_body("x")),
+    "a comment anchor cannot end at block 1, before its start at block 2",
+  )
+  expect_comment_failure(
+    () => @docx2html.comment_spec(author="A", from=0, to=0, []),
+    "a comment needs a non-empty body",
+  )
+  expect_comment_failure(
+    () => {
+      @docx2html.comment_spec(author="A", from=0, to=0, [
+        @docx2html.table([
+          @docx2html.table_row([@docx2html.table_cell(note_body("x"))]),
+        ]),
+      ])
+    },
+    "comment bodies are paragraph-only in this writer",
+  )
+  // Write-time: anchors out of bounds or on a non-paragraph block.
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_comments(plain, [
+        @docx2html.comment_spec(author="A", from=0, to=5, note_body("x")),
+      ])
+    },
+    "comments[0] anchors blocks 0..5, but the body has 1 block(s)",
+  )
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_comments(
+        [
+          @docx2html.table([
+            @docx2html.table_row([@docx2html.table_cell(note_body("cell"))]),
+          ]),
+        ],
+        [@docx2html.comment_spec(author="A", from=0, to=0, note_body("x"))],
+      )
+    },
+    "comments[0] anchors block 0, which is not a paragraph",
+  )
+  // Write-time: relationship-bearing comment bodies (hyperlinks, images)
+  // cannot be serialized into the comments part.
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_comments(plain, [
+        @docx2html.comment_spec(author="A", from=0, to=0, [
+          @docx2html.paragraph([
+            @docx2html.hyperlink(
+              [@docx2html.run([@docx2html.text("link")])],
+              href=Some("https://example.com"),
+            ),
+          ]),
+        ]),
+      ])
+    },
+    "comment bodies are plain content",
+  )
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_comments(plain, [
+        @docx2html.comment_spec(author="A", from=0, to=0, [
+          @docx2html.paragraph([
+            @docx2html.run([@docx2html.image("image/png", tiny_png())]),
+          ]),
+        ]),
+      ])
+    },
+    "comment bodies are plain content",
+  )
+}
