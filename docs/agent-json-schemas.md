@@ -157,6 +157,7 @@ Envelope:
 | `add-sheet` | `name` (string) |
 | `chart` | `sheet`, `anchor`, `categories`, `values` (strings, required); `type?` (default `col`), `name?`, `title?` (strings) |
 | `table` | `sheet`, `range` (strings; `range` is an `A1:B2` colon range); `name?`, `style?` (strings); `header_row?`, `row_stripes?`, `first_column?`, `last_column?`, `column_stripes?` (bool) |
+| `validate` | `sheet`, `range` (strings; `range` is the cell/range the rule covers), `type` (required: `list`/`whole`/`decimal`/`date`/`time`/`textLength`/`custom`); `operator?`, `formula1?`, `formula2?`, `source?` (strings); `values?` (string array); `allow_blank?` (bool); `input_title?`, `input_message?`, `error_title?`, `error_message?`, `error_style?` (strings) |
 - `set.value` accepts string, number, bool, or null. JSON types are honored:
   a number becomes a numeric cell, a string a text cell (no
   reclassification), a bool a boolean cell, and null clears the cell.
@@ -176,7 +177,8 @@ Envelope:
   range spelling); `merge`/`filter` `range` params must be an `A1:B2`
   colon range; `style.range` accepts a cell or range (each range capped
   at 100,000 cells); `table.range` must be an `A1:B2` colon range but is
-  not cell-capped; `column` is a letters-only column or ascending
+  not cell-capped; `validate.range` is a cell or `A1:B2` range, also not
+  cell-capped; `column` is a letters-only column or ascending
   column range; chart `categories`/`values` are a range with an optional
   non-empty `Sheet!` qualification.
 - `table` takes its column names from the header row of `range` (set those
@@ -191,6 +193,28 @@ Envelope:
   omitting them keeps the engine defaults (both `true`), distinct from
   passing `false`. Adding a table whose range intersects an existing one, or
   reusing a table name, fails at apply time.
+- `validate` attaches one data validation to `range` (a single cell or an
+  `A1:B2` range; not cell-capped, since a whole-column rule is common). Pick
+  a `type`:
+  - `list` — a dropdown; give inline `values` (a string array; the engine
+    comma-joins and quotes them, so an individual value must not contain a
+    comma or start with `=` — use `source` for those) *or* a `source` cell
+    range (e.g. `Lists!$A$1:$A$5`). `values` win if both are given.
+  - `whole`/`decimal`/`date`/`time`/`textLength` — a comparison needing an
+    `operator` (`between`/`notBetween`/`equal`/`notEqual`/`greaterThan`/
+    `greaterThanOrEqual`/`lessThan`/`lessThanOrEqual`) and `formula1`;
+    `between`/`notBetween` also need `formula2` (the others must not carry
+    one). `formula1`/`formula2` are written verbatim (a number, a cell
+    reference, or a formula).
+  - `custom` — a boolean `formula1` (e.g. `=ISNUMBER(A1)`).
+
+  `allow_blank` defaults to `true` (omit to allow empty cells; pass `false`
+  to forbid them). Supply `input_title`/`input_message` for a hover prompt
+  and `error_title`/`error_message` (+ `error_style` `stop`/`warning`/
+  `information`, default `stop`) for the rejection alert. The `type`,
+  `operator`, and `error_style` values are checked at apply time, and a
+  param the chosen `type` does not use (e.g. `operator` on a `list`, or
+  `values` on a `whole` rule) is rejected rather than silently ignored.
 - Zero ops is a valid no-op and writes nothing. Scripts are capped at
   10,000 ops, style ranges at 1,000,000 expanded cells per script in
   aggregate, and numeric literals at 40 characters (pathologically long
@@ -228,9 +252,10 @@ targeting an unknown build should first query what that build supports:
 `ops[].params[].type` names the validator applied at parse time — `cell`
 (single in-grid cell), `range` / `colon_range` (each capped at 100,000
 cells, since the op enumerates them), `table_range` (an `A1:B2` colon range
-that is *not* cell-capped — a table reads only the header row), `column`,
+that is *not* cell-capped — a table reads only the header row), `sqref` (a
+cell or `A1:B2` range a validation covers, also not cell-capped), `column`,
 `series_range` (optional `Sheet!` prefix), `value` (string/number/bool/null),
-`string`, `number`, `bool`. New ops appear in `ops` on newer builds; the catalog is
+`string`, `string_array`, `number`, `bool`. New ops appear in `ops` on newer builds; the catalog is
 the single source of truth an agent should read rather than hard-coding the
 op list. (Parsed ops are opaque in the library API too, so growing the op
 set is a source-compatible change.)

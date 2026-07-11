@@ -253,6 +253,214 @@ test "a table op requires an A1:B2-style range, not a bare cell" {
 }
 
 ///|
+fn only_validation(
+  workbook : @xlsx.Workbook,
+  sheet : String,
+) -> @xlsx.DataValidation raise {
+  let dvs = workbook.get_data_validations(sheet)
+  assert_eq(dvs.length(), 1)
+  dvs[0]
+}
+
+///|
+test "a validate op builds an inline dropdown list" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"validate","params":{"sheet":"Data","range":"A1:A10","type":"list","values":["Yes","No","Maybe"]}}
+    #|]}
+  inspect(apply_script(workbook, script), content="1")
+  let dv = only_validation(workbook, "Data")
+  inspect(dv.validation_type, content="list")
+  // The engine quotes the CSV of the values into formula1.
+  inspect(dv.formula1, content="\"Yes,No,Maybe\"")
+  inspect(dv.sqref, content="A1:A10")
+  // allow_blank defaults to true (Excel's friendlier default).
+  inspect(dv.allow_blank, content="true")
+}
+
+///|
+test "a validate op backs a dropdown with a source range" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"validate","params":{"sheet":"Data","range":"B2","type":"list","source":"Lists!$A$1:$A$5","allow_blank":false}}
+    #|]}
+  inspect(apply_script(workbook, script), content="1")
+  let dv = only_validation(workbook, "Data")
+  inspect(dv.validation_type, content="list")
+  inspect(dv.formula1, content="Lists!$A$1:$A$5")
+  inspect(dv.allow_blank, content="false")
+}
+
+///|
+test "a validate op builds a two-bound whole-number rule with messages" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"validate","params":{"sheet":"Data","range":"C1:C3","type":"whole","operator":"between","formula1":"1","formula2":"100","error_style":"warning","error_title":"Out of range","error_message":"Enter 1-100","input_title":"Score","input_message":"1 to 100"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="1")
+  let dv = only_validation(workbook, "Data")
+  inspect(dv.validation_type, content="whole")
+  inspect(dv.operator, content="between")
+  inspect(dv.formula1, content="1")
+  inspect(dv.formula2, content="100")
+  inspect(dv.error_style.unwrap_or(""), content="warning")
+  inspect(dv.error_title.unwrap_or(""), content="Out of range")
+  inspect(dv.error.unwrap_or(""), content="Enter 1-100")
+  inspect(dv.prompt_title.unwrap_or(""), content="Score")
+  inspect(dv.prompt.unwrap_or(""), content="1 to 100")
+}
+
+///|
+test "a validate op builds a one-bound rule and a custom formula" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  // greaterThan needs only formula1; custom carries a boolean formula.
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"validate","params":{"sheet":"Data","range":"D1","type":"decimal","operator":"greaterThan","formula1":"0"}},
+    #|  {"op":"validate","params":{"sheet":"Data","range":"E1","type":"custom","formula1":"=ISNUMBER(E1)"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="2")
+  let dvs = workbook.get_data_validations("Data")
+  assert_eq(dvs.length(), 2)
+  let decimal = dvs[0]
+  inspect(decimal.validation_type, content="decimal")
+  inspect(decimal.operator, content="greaterThan")
+  inspect(decimal.formula1, content="0")
+  inspect(decimal.formula2, content="")
+  let custom = dvs[1]
+  inspect(custom.validation_type, content="custom")
+  inspect(custom.formula1, content="=ISNUMBER(E1)")
+}
+
+///|
+test "a validate op reports the workbook stays valid OOXML" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1","ops":[
+        #|  {"op":"validate","params":{"sheet":"Data","range":"A1:A10","type":"list","values":["Yes","No"]}}
+        #|]}
+      ),
+    ),
+  )
+  // A round-trip through the writer/reader keeps the validation.
+  let bytes = @xlsx.write(workbook)
+  let reopened = @xlsx.read(bytes)
+  inspect(only_validation(reopened, "Data").validation_type, content="list")
+}
+
+///|
+test "validate op apply-time errors are typed and specific" {
+  let cases = [
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"list"}}]}
+      ),
+      "validate: type 'list' requires 'values' or 'source'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"whole","operator":"between","formula1":"1"}}]}
+      ),
+      "validate: operator 'between' requires 'formula2'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"whole","operator":"greaterThan","formula1":"1","formula2":"2"}}]}
+      ),
+      "validate: operator 'greaterThan' does not take 'formula2'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"whole","formula1":"1"}}]}
+      ),
+      "validate: type 'whole' requires 'operator'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"nonsense"}}]}
+      ),
+      "validate: unknown type 'nonsense' (expected one of: list, whole, decimal, date, time, textLength, custom)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"whole","operator":"gt","formula1":"1"}}]}
+      ),
+      "validate: unknown operator 'gt' (expected one of: between, notBetween, equal, notEqual, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual)",
+    ),
+    // A type that does not use a param must reject it, not silently drop it.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"custom","formula1":"=A1>0","formula2":"=A1<9"}}]}
+      ),
+      "validate: type 'custom' does not take 'formula2'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"custom","operator":"equal","formula1":"=A1>0"}}]}
+      ),
+      "validate: type 'custom' does not take 'operator'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"list","values":["A"],"operator":"equal"}}]}
+      ),
+      "validate: type 'list' does not take 'operator'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"whole","operator":"equal","formula1":"1","values":["A"]}}]}
+      ),
+      "validate: type 'whole' does not take 'values'",
+    ),
+    // An unknown enum value is rejected even with no other trigger.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"list","values":["A"],"error_style":"loud"}}]}
+      ),
+      "validate: unknown error_style 'loud' (expected one of: stop, warning, information)",
+    ),
+    // Inline values the engine's comma-join + quote cannot represent.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"list","values":["Last, First","Other"]}}]}
+      ),
+      "validate: inline list value 'Last, First' contains a comma; use 'source' with a cell range instead",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"list","values":["=SUM(1)"]}}]}
+      ),
+      "validate: an inline list value must not start with '='; use 'source' with a cell range instead",
+    ),
+  ]
+  for case in cases {
+    let (script, want) = case
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("S"))
+    try {
+      ignore(apply_script(workbook, script))
+      fail("expected apply to reject: \{want}")
+    } catch {
+      @batch.BatchError(message) => assert_eq(message, want)
+      err => fail("expected a BatchError, got \{err}")
+    }
+    // The rejected op left no validation behind.
+    assert_eq(workbook.get_data_validations("S").length(), 0)
+  }
+}
+
+///|
 test "a chart op requires valid categories and values at parse time" {
   try
     ignore(
@@ -543,7 +751,7 @@ test "strict validation names the 0-based op index" {
       (
         #|{"schema": "xlsx.batch/1", "ops": [{"op": "nop", "params": {}}]}
       ),
-      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table)",
+      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table, validate)",
     ),
     (
       (

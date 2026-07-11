@@ -21,6 +21,7 @@ fn required_samples() -> Map[String, String] {
       "chart", "{\"sheet\":\"S\",\"anchor\":\"E2\",\"categories\":\"A1:A3\",\"values\":\"B1:B3\"}",
     ),
     ("table", "{\"sheet\":\"S\",\"range\":\"A1:B2\"}"),
+    ("validate", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\"}"),
   ])
 }
 
@@ -37,11 +38,13 @@ fn value_for_type(kind : String) -> Json {
     "range" => Json::string("A1")
     "colon_range" => Json::string("A1:B2")
     "table_range" => Json::string("A1:B2")
+    "sqref" => Json::string("A1")
     "column" => Json::string("A")
     "series_range" => Json::string("A1:A3")
     "number" => Json::number(10)
     "bool" => Json::boolean(true)
     "value" => Json::number(1)
+    "string_array" => Json::array([Json::string("a")])
     _ => Json::string("S") // "string" and any future scalar label
   }
 }
@@ -149,6 +152,7 @@ test "capabilities payload is field-exact" {
       #|add-sheet: name:string!
       #|chart: sheet:string! anchor:cell! categories:series_range! values:series_range! type:string name:string title:string
       #|table: sheet:string! range:table_range! name:string style:string header_row:bool row_stripes:bool first_column:bool last_column:bool column_stripes:bool
+      #|validate: sheet:string! range:sqref! type:string! operator:string formula1:string formula2:string values:string_array source:string allow_blank:bool input_title:string input_message:string error_title:string error_message:string error_style:string
     ),
   )
 }
