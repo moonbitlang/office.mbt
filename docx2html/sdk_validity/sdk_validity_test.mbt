@@ -2094,18 +2094,18 @@ async test "L2 round 1: OPC targets and root retrofit adversaries" {
       "\"><w:comment w:id=\"0\" w:author=\"Ada\"><w:p><w:r><w:t>unstamped</w:t></w:r></w:p></w:comment></w:comments>",
     ),
   )
-  let package = @mbtzip.write(archive)
-  let annotated = @docx2html.read_docx_annotated(package)
+  let hostile_package = @mbtzip.write(archive)
+  let annotated = @docx2html.read_docx_annotated(hostile_package)
   // Resolve comment 0: the retrofit stamps the parent's paragraph with
   // the q: prefix (the existing w14-URI binding), skips the header's
   // 00000001, and leaves mc:Ignorable alone (q already listed).
   let plan = @docx_impl.plan_comment_resolution(
     annotated,
-    package,
+    hostile_package,
     comment_id="0",
     done=true,
   )
-  let resolved = @splice.splice_docx(package, plan)
+  let resolved = @splice.splice_docx(hostile_package, plan)
   validate_docx_via_sdk(dir, "l2r1_retrofit_adversaries", resolved)
   let out = @mbtzip.read(resolved)
   guard out.get("word/comments.xml") is Some(comments_after)
@@ -2180,11 +2180,28 @@ async test "L2 round 2: Strict dot-dot comments parts resolve end to end" {
       "\" mc:Ignorable=\"w14\"><w:comment w:id=\"0\" w:author=\"Ada\"><w:p w14:paraId=\"7DDD0004\"><w:r><w:t>strictly noted</w:t></w:r></w:p></w:comment></w:comments>",
     ),
   )
-  let package = @mbtzip.write(archive)
-  let annotated = @docx2html.read_docx_annotated(package)
+  // An ORPHAN word/comments.xml rides along: the filename fallback
+  // must not mask the Strict relationship (round 3).
+  archive.add(
+    "word/comments.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:comments xmlns:w=\"" +
+      wml +
+      "\"><w:comment w:id=\"0\" w:author=\"Orphan\"><w:p><w:r><w:t>decoy</w:t></w:r></w:p></w:comment></w:comments>",
+    ),
+  )
+  let hostile_package = @mbtzip.write(archive)
+  let annotated = @docx2html.read_docx_annotated(hostile_package)
   // The definition is INDEXED (the reader resolves the Strict '../'
-  // relationship) and the mutation layer sees the same part.
+  // relationship) and the mutation layer sees the same part — the
+  // orphan's author must NOT appear.
   inspect(annotated.annotations().comments()[0].defined(), content="true")
+  debug_inspect(
+    annotated.annotations().comments()[0].author(),
+    content=(
+      #|Some("Ada")
+    ),
+  )
   debug_inspect(
     annotated.comments_part(),
     content=(
@@ -2193,11 +2210,11 @@ async test "L2 round 2: Strict dot-dot comments parts resolve end to end" {
   )
   let plan = @docx_impl.plan_comment_resolution(
     annotated,
-    package,
+    hostile_package,
     comment_id="0",
     done=true,
   )
-  let resolved = @splice.splice_docx(package, plan)
+  let resolved = @splice.splice_docx(hostile_package, plan)
   let verify = @docx2html.read_docx_annotated(resolved)
   debug_inspect(verify.annotations().comments()[0].done(), content="Some(true)")
 }
