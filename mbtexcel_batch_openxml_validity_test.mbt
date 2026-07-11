@@ -4,7 +4,8 @@
 /// calls) must satisfy the .NET DocumentFormat.OpenXml validator, the
 /// same oracle the other root validity tests use. Exercises the full op
 /// vocabulary — the original nine plus the authoring ops `cf` (all four
-/// visual families), `table`, and `validate` — so the validator proves each
+/// visual families, including an x14 extended data bar), `table`, and
+/// `validate` — so the validator proves each
 /// produces schema-valid OOXML, not just structurally-sound XML.
 #cfg(target="native")
 async test "mbtexcel batch-built workbook is OpenXML-valid" {
@@ -33,6 +34,7 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
     #|    {"op": "cf", "params": {"sheet": "Data", "range": "B2:B4", "type": "3_color_scale", "min_color": "F8696B", "mid_color": "FFEB84", "max_color": "63BE7B"}},
     #|    {"op": "cf", "params": {"sheet": "Data", "range": "B2:B4", "type": "cell", "criteria": ">=", "value": "100", "fill": "C6EFCE", "font_color": "006100"}},
     #|    {"op": "cf", "params": {"sheet": "Data", "range": "B2:B4", "type": "data_bar", "bar_color": "638EC6"}},
+    #|    {"op": "cf", "params": {"sheet": "Data", "range": "A2:A3", "type": "data_bar", "bar_color": "638EC6", "bar_solid": true, "bar_direction": "rightToLeft", "bar_border_color": "4472C4"}},
     #|    {"op": "cf", "params": {"sheet": "Data", "range": "B2:B4", "type": "icon_set", "icon_style": "3TrafficLights1"}},
     #|    {"op": "set", "params": {"sheet": "Summary", "cell": "A1", "value": "Item"}},
     #|    {"op": "set", "params": {"sheet": "Summary", "cell": "B1", "value": "Count"}},

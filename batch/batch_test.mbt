@@ -536,6 +536,33 @@ test "a cf op renders color scales, a data bar, and an icon set" {
 }
 
 ///|
+test "a cf data_bar with x14 options emits the extended data bar" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"cf","params":{"sheet":"Data","range":"A1:A9","type":"data_bar","bar_color":"638EC6","bar_solid":true,"bar_direction":"rightToLeft","bar_border_color":"4472C4"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="1")
+  let xml = only_cf_xml(workbook, "Data")
+  // Any x14 option makes the rule carry the x14 id extension (vs the basic
+  // bar, which has no x14 marker).
+  assert_true(xml.contains("dataBar"))
+  assert_true(xml.contains("x14:id"))
+  // The workbook round-trips as valid OOXML with the extended bar preserved.
+  let reopened = @xlsx.read(@xlsx.write(workbook))
+  let formats = reopened.sheets()[0].get_conditional_formats()
+  match formats.get("A1:A9") {
+    Some(opts) => {
+      assert_eq(opts.length(), 1)
+      assert_true(opts[0].bar_solid)
+      inspect(opts[0].bar_direction, content="rightToLeft")
+    }
+    None => fail("expected the x14 data bar to survive a round-trip")
+  }
+}
+
+///|
 test "stacked cf ops on one range get increasing priorities and stay valid" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Data"))
@@ -635,6 +662,26 @@ test "cf op apply-time errors are typed and specific" {
         #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","min_type":"bogus"}}]}
       ),
       "cf: 'min_type' 'bogus' is not a valid stop type (expected one of: num, min, max, percent, percentile, formula)",
+    ),
+    // x14 data-bar option guards.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","bar_direction":"sideways"}}]}
+      ),
+      "cf: bar_direction 'sideways' is not valid (expected leftToRight or rightToLeft)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","bar_border_color":"navy"}}]}
+      ),
+      "cf: 'bar_border_color' 'navy' is not a 6-digit hex RGB color (e.g. FF0000)",
+    ),
+    // An x14 bar option on a type that is not a data bar is rejected.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"cell","criteria":">","value":"1","fill":"FF0000","bar_solid":true}}]}
+      ),
+      "cf: type 'cell' does not take 'bar_solid'",
     ),
     // A color that is not a 6-digit hex RGB would be written as invalid rgb.
     (

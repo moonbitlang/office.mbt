@@ -139,6 +139,11 @@ priv enum OpKind {
     mid_color~ : String,
     max_color~ : String,
     bar_color~ : String,
+    // The x14 data-bar options: any of these makes the engine emit the
+    // extended (x14) data bar instead of the classic one.
+    bar_solid~ : Bool?,
+    bar_direction~ : String,
+    bar_border_color~ : String,
     icon_style~ : String,
     reverse_icons~ : Bool?,
     stop_if_true~ : Bool?
@@ -379,6 +384,9 @@ fn parse_op(
         mid_color=reader.optional_string("mid_color"),
         max_color=reader.optional_string("max_color"),
         bar_color=reader.optional_string("bar_color"),
+        bar_solid=reader.tristate_bool("bar_solid"),
+        bar_direction=reader.optional_string("bar_direction"),
+        bar_border_color=reader.optional_string("bar_border_color"),
         icon_style=reader.optional_string("icon_style"),
         reverse_icons=reader.tristate_bool("reverse_icons"),
         stop_if_true=reader.tristate_bool("stop_if_true"),
@@ -1095,6 +1103,9 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       mid_color~,
       max_color~,
       bar_color~,
+      bar_solid~,
+      bar_direction~,
+      bar_border_color~,
       icon_style~,
       reverse_icons~,
       stop_if_true~
@@ -1125,6 +1136,9 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
         ("mid_color", mid_color != ""),
         ("max_color", max_color != ""),
         ("bar_color", bar_color != ""),
+        ("bar_solid", bar_solid is Some(_)),
+        ("bar_direction", bar_direction != ""),
+        ("bar_border_color", bar_border_color != ""),
         ("icon_style", icon_style != ""),
         ("reverse_icons", reverse_icons is Some(_)),
         ("stop_if_true", stop_if_true is Some(_)),
@@ -1275,6 +1289,24 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
           }
           if max_value != "" {
             opt.set_max_value(max_value)
+          }
+          // x14 extended-bar options. Any of these makes the engine emit the
+          // extended (x14) data bar (solid fill / gradient axis / border /
+          // direction) instead of the classic one.
+          if bar_solid is Some(true) {
+            opt.set_bar_solid(true)
+          }
+          if bar_direction != "" {
+            if bar_direction != "leftToRight" && bar_direction != "rightToLeft" {
+              raise BatchError(
+                "cf: bar_direction '\{bar_direction}' is not valid (expected leftToRight or rightToLeft)",
+              )
+            }
+            opt.set_bar_direction(bar_direction)
+          }
+          if bar_border_color != "" {
+            check_cf_color("bar_border_color", bar_border_color)
+            opt.set_bar_border_color(bar_border_color)
           }
         }
         "icon_set" => {

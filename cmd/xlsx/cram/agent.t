@@ -296,6 +296,19 @@ column. `outline` counts the range and the package stays valid:
   $ xlsx.exe outline book.xlsx | grep -c '"conditional_format_ranges": 1'
   1
 
+A `data_bar` opts into the x14 extended bar (solid fill, direction, border)
+via the extra bar options, and the package stays valid:
+
+  $ cat > cfx14.json <<'JSON'
+  > {"schema": "xlsx.batch/1", "ops": [
+  >   {"op": "cf", "params": {"sheet": "Data", "range": "D2:D20", "type": "data_bar", "bar_color": "638EC6", "bar_solid": true, "bar_direction": "leftToRight", "bar_border_color": "4472C4"}}
+  > ]}
+  > JSON
+  $ xlsx.exe batch book.xlsx cfx14.json
+  applied 1 op(s) to book.xlsx
+  $ xlsx.exe validate book.xlsx
+  valid
+
 
 `html` renders sheets to one self-contained document — the "look" half of
 the agent's render -> look -> fix loop. Structure checks (the document is
