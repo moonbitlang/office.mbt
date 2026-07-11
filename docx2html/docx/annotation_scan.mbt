@@ -157,8 +157,10 @@ priv struct ScanFrame {
   // Namespace prefixes THIS element declared (to pop on close).
   declared : Array[String]
   // Projection bookkeeping: Some(path) when this element is a projection
-  // node; child ordinal counters per kind; last closed projection child.
+  // node (kind = the PROJECTION kind, e.g. "note" for w:footnote — not
+  // the local name); child ordinal counters; last closed child.
   mut projection_path : String?
+  projection_kind : String?
   counters : Map[String, Int]
   mut last_closed_child : String?
   open_seq : Int
@@ -174,17 +176,36 @@ priv struct ScanFrame {
   mut suppressed : Bool
   // Where this frame's own ordinal was bumped, for vMerge retraction.
   mut counter_owner : Map[String, Int]?
+  // Property containers (tcPr/pPr/rPr/...): the reader never surfaces
+  // markers from inside them.
+  in_properties : Bool
+  // Grid tracking for vMerge fidelity. On tbl frames: the set of grid
+  // columns with an open vertical merge. On tr frames: the next cell's
+  // grid column. On tc frames: this cell's column/span and its vMerge
+  // declaration, decided at tcPr close.
+  open_merges : Set[Int]
+  mut column_cursor : Int
+  grid_column : Int
+  mut grid_span : Int
+  mut vmerge_restart : Bool
+  mut vmerge_continue : Bool
+}
+
+///|
+fn is_property_container(uri : String, local_name : String) -> Bool {
+  is_wml_uri(uri) &&
+  local_name
+  is ("tcPr" | "pPr" | "rPr" | "tblPr" | "trPr" | "sectPr" | "tblGrid")
 }
 
 ///|
 fn projection_kind(uri : String, local_name : String) -> String? {
-  // Modern inline/anchored pictures are the AST's Image nodes
-  // (docx_reader: wp:inline|wp:anchor -> read_drawing_element). Legacy
-  // VML picture paths are NOT modeled; the verification pass degrades
-  // marker positions inside them.
-  if is_wp_uri(uri) && local_name is ("inline" | "anchor") {
-    return Some("image")
-  }
+  // DELIBERATE LIMIT (J1): image nodes are NOT projected. The reader
+  // emits zero..many Images per drawing (blip resolution needs the
+  // relationship graph) and wraps them in Hyperlink when a:hlinkClick is
+  // present — faithful mirroring is L0-scope work. Consequences, pinned:
+  // image-path coverage queries return empty, image byte spans arrive
+  // with L0, and markers inside drawings resolve to their RUN (correct).
   if !is_wml_uri(uri) {
     return None
   }
@@ -340,6 +361,55 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
               None => ()
             }
           }
+          // vMerge DECISION at tcPr close (span final, before content):
+          // a continuation retracts ONLY when a merge is open at one of
+          // its grid columns — the reader FAIL-OPENS and keeps orphan
+          // continuations (e.g. in a first row).
+          if frame.is_wml && frame.local_name == "tcPr" {
+            match
+              (
+                nearest_frame_by_kind(frames, "tc"),
+                nearest_frame_by_kind(frames, "tbl"),
+              ) {
+              (Some(cell), Some(table)) =>
+                if cell.vmerge_continue && !cell.vmerge_restart {
+                  let mut merge_open = false
+                  for offset in 0..<cell.grid_span {
+                    if table.open_merges.contains(cell.grid_column + offset) {
+                      merge_open = true
+                      break
+                    }
+                  }
+                  if merge_open {
+                    retract_cell(cell)
+                  }
+                }
+              _ => ()
+            }
+          }
+          // Grid bookkeeping at tc close: restarts open their columns,
+          // plain cells close any merge at theirs, continuations keep
+          // them open; then the row cursor advances by the span.
+          if frame.is_wml && frame.local_name == "tc" {
+            match
+              (
+                nearest_frame_by_kind(frames, "tr"),
+                nearest_frame_by_kind(frames, "tbl"),
+              ) {
+              (Some(row), Some(table)) => {
+                for offset in 0..<frame.grid_span {
+                  let column = frame.grid_column + offset
+                  if frame.vmerge_restart {
+                    table.open_merges.add(column)
+                  } else if !frame.vmerge_continue {
+                    table.open_merges.remove(column)
+                  }
+                }
+                row.column_cursor = frame.grid_column + frame.grid_span
+              }
+              _ => ()
+            }
+          }
           finish_frame(frame, seq, close_end, nodes, frames)
         }
         None => warnings.push("annotation scanner: unbalanced closing tag")
@@ -401,7 +471,11 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
     // mc:Choice branches, and plumbing notes wholesale — markers
     // included. (A parent's suppression may have been set after its
     // open — vMerge retraction — which this naturally observes.)
-    if !suppressed {
+    let inside_properties = match frames.last() {
+      Some(parent) => parent.in_properties
+      None => false
+    }
+    if !suppressed && !inside_properties {
       match marker_kind(uri, local_name) {
         Some(kind) => {
           // Recorded whether self-closing or not (Word emits them
@@ -429,6 +503,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
       }
     }
     let mut counter_owner : Map[String, Int]? = None
+    let mut projection_kind_value : String? = None
     let projection = if suppressed {
       None
     } else {
@@ -440,6 +515,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
           let counters = nearest_counters(frames, root_counters)
           let ordinal = bump_counter(counters, kind)
           counter_owner = Some(counters)
+          projection_kind_value = Some(kind)
           let parent_path = match current_projection() {
             Some(frame) => frame.projection_path
             None => None
@@ -453,15 +529,43 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         None => None
       }
     }
-    // A vMerge continuation cell does not exist in the parsed AST (the
-    // reader strips it; the writer re-synthesizes on save): retract the
-    // enclosing tc's ordinal. tcPr is the cell's first child, so the
-    // retraction always precedes any content inside the cell.
+    // Grid declarations inside tcPr: recorded on the enclosing tc; the
+    // keep-or-retract DECISION happens at tcPr close, when the span is
+    // final and before any cell content opens.
     if is_wml_uri(uri) && local_name == "vMerge" {
-      let restart = attribute_value(attributes, "val", namespaces)
-        is Some("restart")
-      if !restart {
-        retract_enclosing_cell(frames, warnings)
+      match nearest_frame_by_kind(frames, "tc") {
+        Some(cell) =>
+          if attribute_value(attributes, "val", namespaces) is Some("restart") {
+            cell.vmerge_restart = true
+          } else {
+            cell.vmerge_continue = true
+          }
+        None =>
+          warnings.push("annotation scanner: a vMerge outside any table cell")
+      }
+    }
+    if is_wml_uri(uri) && local_name == "gridSpan" {
+      match nearest_frame_by_kind(frames, "tc") {
+        Some(cell) =>
+          match attribute_value(attributes, "val", namespaces) {
+            Some(value) => {
+              let mut span = 0
+              let mut valid = value.length() > 0
+              for ch in value {
+                if ch is ('0'..='9') {
+                  span = span * 10 + (ch.to_int() - '0'.to_int())
+                } else {
+                  valid = false
+                  break
+                }
+              }
+              if valid && span >= 1 {
+                cell.grid_span = span
+              }
+            }
+            None => ()
+          }
+        None => ()
       }
     }
     if self_closing {
@@ -469,7 +573,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
       seq += 1
       match projection {
         Some(path) => {
-          let kind = local_name
+          let kind = projection_kind_value.unwrap_or(local_name)
           nodes.push({
             path,
             kind,
@@ -491,11 +595,26 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         }
       }
     } else {
+      let in_properties = is_property_container(uri, local_name) ||
+        (match frames.last() {
+          Some(parent) => parent.in_properties
+          None => false
+        })
+      let grid_column = if projection_kind_value is Some("tc") {
+        // Claim this cell's grid column from the enclosing row.
+        match nearest_frame_by_kind(frames, "tr") {
+          Some(row) => row.column_cursor
+          None => -1
+        }
+      } else {
+        -1
+      }
       frames.push({
         local_name,
         is_wml: is_wml_uri(uri),
         declared,
         projection_path: projection,
+        projection_kind: projection_kind_value,
         counters: Map([]),
         last_closed_child: None,
         open_seq: seq,
@@ -503,6 +622,13 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         transparent,
         suppressed,
         counter_owner,
+        in_properties,
+        open_merges: Set([]),
+        column_cursor: 0,
+        grid_column,
+        grid_span: 1,
+        vmerge_restart: false,
+        vmerge_continue: false,
       })
     }
     index = tag_end
@@ -529,36 +655,40 @@ fn nearest_counters(
 }
 
 ///|
-/// Un-counts the innermost open WML `tc` (a vMerge continuation cell the
-/// reader strips). tcPr precedes cell content, so no child consumed the
-/// retracted path.
-fn retract_enclosing_cell(
+/// The innermost open frame whose PROJECTION kind matches.
+fn nearest_frame_by_kind(
   frames : Array[ScanFrame],
-  warnings : Array[String],
-) -> Unit {
+  kind : String,
+) -> ScanFrame? {
   for at = frames.length() - 1; at >= 0; at = at - 1 {
-    let frame = frames[at]
-    if frame.is_wml && frame.local_name == "tc" {
-      match (frame.projection_path, frame.counter_owner) {
-        (Some(_), Some(counters)) => {
-          let current = counters.get_or_default("tc", 0)
-          if current > 0 {
-            counters["tc"] = current - 1
-          }
-          frame.projection_path = None
-          frame.counter_owner = None
-          // The whole cell subtree vanishes from the AST — paragraphs,
-          // runs, and markers with it.
-          frame.suppressed = true
-        }
-        _ => ()
-      }
-      return
+    if frames[at].projection_kind is Some(k) && k == kind {
+      return Some(frames[at])
+    }
+    // Also match retracted cells (projection cleared but still the
+    // structural tc frame).
+    if frames[at].is_wml && frames[at].local_name == kind {
+      return Some(frames[at])
     }
   }
-  warnings.push(
-    "annotation scanner: a vMerge continuation outside any table cell",
-  )
+  None
+}
+
+///|
+/// Retracts a continuation cell the reader strips: un-counts its
+/// ordinal and suppresses the whole subtree.
+fn retract_cell(cell : ScanFrame) -> Unit {
+  match (cell.projection_path, cell.counter_owner) {
+    (Some(_), Some(counters)) => {
+      let current = counters.get_or_default("tc", 0)
+      if current > 0 {
+        counters["tc"] = current - 1
+      }
+      cell.projection_path = None
+      cell.counter_owner = None
+      cell.suppressed = true
+    }
+    _ => ()
+  }
 }
 
 ///|
@@ -591,7 +721,7 @@ fn finish_frame(
     Some(path) => {
       nodes.push({
         path,
-        kind: frame.local_name,
+        kind: frame.projection_kind.unwrap_or(frame.local_name),
         open_seq: frame.open_seq,
         close_seq,
         byte_start: frame.byte_start,

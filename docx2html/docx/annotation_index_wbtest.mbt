@@ -430,3 +430,42 @@ test "index review round 1: orphan detection is duplicate-order independent" {
   }
   debug_inspect(saw_orphan_6, content="true")
 }
+
+///|
+test "index review round 3: drawings are opaque — run positions verified, image coverage empty" {
+  // J1 deliberately does not project image nodes (the reader's blip
+  // resolution and hlinkClick wrapping need the relationship graph — L0
+  // scope). A marker in a run that also holds a drawing resolves to the
+  // RUN (a verified AST path); coverage queries for image paths return
+  // empty rather than lying.
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+    #|<w:body>
+    #|<w:p><w:commentRangeStart w:id="0"/><w:r><w:drawing><wp:inline><wp:extent cx="9525" cy="9525"/></wp:inline></w:drawing><w:commentReference w:id="0"/></w:r><w:commentRangeEnd w:id="0"/></w:p>
+    #|</w:body>
+    #|</w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:comment w:id="0" w:author="A"><w:p><w:r><w:t>on the picture</w:t></w:r></w:p></w:comment>
+    #|</w:comments>
+  let bytes = fixture_docx(document, comments_xml=Some(comments))
+  let annotated = read_docx_annotated(bytes)
+  let index = annotated.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(
+    index.comments()[0].anchors()[0].references(),
+    content=(
+      #|["/body/p[1]/r[1]"]
+    ),
+  )
+  debug_inspect(
+    index.covering_comment_ids("/body/p[1]/r[1]/image[1]"),
+    content="[]",
+  )
+  debug_inspect(
+    index.covering_comment_ids("/body/p[1]"),
+    content=(
+      #|["0"]
+    ),
+  )
+}

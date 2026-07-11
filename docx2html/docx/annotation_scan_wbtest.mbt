@@ -277,3 +277,58 @@ test "scanner review round 1: plumbing notes are suppressed, user notes counted"
     ),
   )
 }
+
+///|
+test "scanner review round 3: vMerge fail-open, property-container markers, projection kinds" {
+  // A continuation in the FIRST row has no merge to continue — the
+  // reader keeps the cell (fail-open) and so must the scanner. A marker
+  // inside tcPr never surfaces (the reader ignores property-container
+  // content). Note containers report the PROJECTION kind "note".
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body>
+      #|<w:tbl>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge/><w:commentRangeStart w:id="9"/></w:tcPr><w:p><w:r><w:t>orphan continuation, kept</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>tall</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t/></w:r></w:p></w:tc></w:tr>
+      #|</w:tbl>
+      #|</w:body>
+      #|</w:document>
+    ),
+  )
+  debug_inspect(scan.markers().length(), content="0")
+  let cells : Array[String] = []
+  for node in scan.nodes() {
+    if node.kind == "tc" {
+      cells.push(node.path())
+    }
+  }
+  cells.sort()
+  // Row 1's orphan continuation kept; row 3's true continuation gone.
+  debug_inspect(
+    cells,
+    content=(
+      #|["tbl[1]/tr[1]/tc[1]", "tbl[1]/tr[2]/tc[1]"]
+    ),
+  )
+  let note_scan = scan_text(
+    (
+      #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:footnote w:id="2"><w:p><w:r><w:t>real</w:t></w:r></w:p></w:footnote>
+      #|</w:footnotes>
+    ),
+  )
+  let mut container_kind = ""
+  for node in note_scan.nodes() {
+    if node.path() == "note[1]" {
+      container_kind = node.kind
+    }
+  }
+  debug_inspect(
+    container_kind,
+    content=(
+      #|"note"
+    ),
+  )
+}

@@ -353,6 +353,12 @@ land WITH each feature PR.
   paraId → FIRST wins + WARN diagnostic (deterministic; pinned).
 - Reader fix: exclude `continuationNotice` plumbing notes (currently
   leaks as a user note).
+- Deliberate J1 limit (found in review round 3): IMAGE nodes are not
+  projected by the scanner — the reader emits zero..many Images per
+  drawing (blip resolution needs the relationship graph) and wraps them
+  in Hyperlink for a:hlinkClick, so faithful mirroring is L0-scope work.
+  Pinned consequences: image-path coverage queries return empty; markers
+  inside drawings resolve to their run; image byte spans arrive with L0.
 - Pins, split into two fixture classes:
   **Conformance (SDK-green, validated before commit)**: point comments;
   multi-paragraph ranges; markers under tbl/tr/tc and body; table-cell
