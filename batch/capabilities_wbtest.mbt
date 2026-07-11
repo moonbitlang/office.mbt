@@ -29,6 +29,62 @@ fn one_op_script(name : String, params : String) -> String {
 }
 
 ///|
+/// A valid JSON value for a catalog param `type` label.
+fn value_for_type(kind : String) -> Json {
+  match kind {
+    "cell" => Json::string("A1")
+    "range" => Json::string("A1")
+    "colon_range" => Json::string("A1:B2")
+    "column" => Json::string("A")
+    "series_range" => Json::string("A1:A3")
+    "number" => Json::number(10)
+    "bool" => Json::boolean(true)
+    "value" => Json::number(1)
+    _ => Json::string("S") // "string" and any future scalar label
+  }
+}
+
+///|
+/// A params object providing EVERY catalog param of `op` (required and
+/// optional) with a type-valid value, read from the emitted catalog so it
+/// cannot drift from what `capabilities` advertises.
+fn full_sample(op : String) -> String {
+  let ops = match capabilities() {
+    Object(m) =>
+      match m.get("ops") {
+        Some(Array(items)) => items
+        _ => abort("no ops")
+      }
+    _ => abort("bad payload")
+  }
+  let params : Map[String, Json] = Map([])
+  for entry in ops {
+    match entry {
+      Object(o) =>
+        if o.get("op") is Some(String(n)) && n == op {
+          match o.get("params") {
+            Some(Array(ps)) =>
+              for p in ps {
+                match p {
+                  Object(pm) =>
+                    match (pm.get("name"), pm.get("type")) {
+                      (Some(String(pn)), Some(String(pt))) =>
+                        params[pn] = value_for_type(pt)
+                      _ => ()
+                    }
+                  _ => ()
+                }
+              }
+            _ => ()
+          }
+        }
+      _ => ()
+    }
+  }
+  Json::object(params).stringify()
+}
+
+///|
 /// Field-exact snapshot of the emitted catalog: `op: pname:ptype[!] …` per
 /// op (`!` = required). Any param name, type, requiredness, or op change
 /// surfaces here — not just count changes.
@@ -39,7 +95,7 @@ test "capabilities payload is field-exact" {
   }
   match (obj.get("schema"), obj.get("batch_schema")) {
     (Some(String("xlsx.capabilities/1")), Some(String("xlsx.batch/1"))) => ()
-    other => fail("unexpected envelope: \{other}")
+    _ => fail("unexpected capabilities envelope")
   }
   let lines = []
   let ops = match obj.get("ops") {
@@ -102,9 +158,11 @@ test "capabilities payload is field-exact" {
 ///   `accepted_op_names`, failing the membership check.
 /// - **catalog → parser**: every advertised op parses with its required
 ///   params, and its parsed `name()` round-trips.
-/// - **param set exactness**: a param NOT in the op's catalog spec is
-///   rejected as unknown (so the catalog's param set is not a subset of a
-///   larger set the parser silently tolerates).
+/// - **param set exactness**: every catalog param is accepted by the
+///   parser (full-param sample parses), and a param NOT in the catalog is
+///   rejected — together with the `ParamReader` `declared` guard (which
+///   aborts if a parser arm reads an undeclared param), the catalog's param
+///   set is exactly the parser's.
 test "catalog and parser agree in both directions" {
   let samples = required_samples()
   let catalog = accepted_op_names()
@@ -126,6 +184,13 @@ test "catalog and parser agree in both directions" {
     let ops = parse_script(@json.parse(one_op_script(name, params)))
     assert_eq(ops.length(), 1)
     assert_eq(ops[0].name(), name)
+    // Every catalog param (required AND optional) is accepted — a full
+    // sample built from the catalog itself must parse. This exercises the
+    // `declared` guard for the optional params too (it aborts if the
+    // parser reads a param the catalog omits).
+    let full = full_sample(name)
+    let full_ops = parse_script(@json.parse(one_op_script(name, full)))
+    assert_eq(full_ops.length(), 1)
     // Same op with one param outside the catalog must fail unknown-param.
     // Parse the (valid) JSON outside the `try` so the catch handles only
     // parse_script's BatchError, not @json.parse's ParseError.

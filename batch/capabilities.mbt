@@ -118,6 +118,19 @@ fn is_known_op(name : String) -> Bool {
 }
 
 ///|
+/// The advertised param names for `op` (empty for an unknown op — callers
+/// gate on `is_known_op` first). The parser's `ParamReader` uses this to
+/// refuse reading any param outside the catalog.
+fn op_param_names(op : String) -> Array[String] {
+  for spec in op_specs {
+    if spec.op == op {
+      return spec.params.map(p => p.name)
+    }
+  }
+  []
+}
+
+///|
 /// The `xlsx.capabilities/1` JSON payload: the batch schema this build
 /// speaks, its limits, and every op + param it accepts.
 pub fn capabilities() -> Json {

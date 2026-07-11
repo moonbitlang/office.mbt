@@ -185,14 +185,23 @@ fn parse_op(
   // Gate on the catalog before dispatch: an op is parseable iff it is
   // advertised by `capabilities`, so a dispatch arm without a catalog
   // entry is unreachable and the two cannot drift.
-  if not(is_known_op(name)) {
+  if !is_known_op(name) {
     raise op_error(
       index,
       name,
       "unknown op (expected one of: \{accepted_op_names().join(", ")})",
     )
   }
-  let reader = ParamReader::{ index, op: name, params, used: Map([]) }
+  // The reader is told the op's advertised param names; reading a param
+  // outside that set aborts (see `take`). So the params a parser arm reads
+  // are exactly the catalog's — param-level drift is impossible too.
+  let reader = ParamReader::{
+    index,
+    op: name,
+    params,
+    used: Map([]),
+    declared: op_param_names(name),
+  }
   let op = match name {
     "set" =>
       OpSet(
@@ -268,10 +277,19 @@ priv struct ParamReader {
   op : String
   params : Map[String, Json]
   used : Map[String, Unit]
+  /// The op's advertised param names (from the capability catalog).
+  declared : Array[String]
 }
 
 ///|
 fn ParamReader::take(self : ParamReader, key : String) -> Json? {
+  // A parser arm may only read params the catalog advertises. Reading an
+  // undeclared param is a programming error (the catalog and parser have
+  // drifted), not a user error — abort so every parse of that op fails
+  // loudly rather than silently accepting an undocumented param.
+  if !self.declared.contains(key) {
+    abort("batch: op '\{self.op}' reads undeclared param '\{key}'")
+  }
   self.used[key] = ()
   self.params.get(key)
 }
