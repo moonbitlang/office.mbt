@@ -1,3 +1,4 @@
 import {
+  "moonbitlang/core/debug",
   "bobzhang/docx2html/core",
 }

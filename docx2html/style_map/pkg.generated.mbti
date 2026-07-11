@@ -36,7 +36,14 @@ pub(all) enum DocumentMatcher {
   BreakMatcher(@document.BreakType)
   CommentReferenceMatcher
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocumentMatcher::equal(Self, Self) -> Bool
 pub fn DocumentMatcher::matches(Self, @document.DocumentElement) -> Bool
+#deprecated
+pub fn DocumentMatcher::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn DocumentMatcher::to_repr(Self) -> @debug.Repr
 
 pub(all) struct HtmlPathElement {
   tag : String
@@ -44,21 +51,49 @@ pub(all) struct HtmlPathElement {
   fresh : Bool
   separator : String?
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn HtmlPathElement::equal(Self, Self) -> Bool
+#deprecated
+pub fn HtmlPathElement::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn HtmlPathElement::to_repr(Self) -> @debug.Repr
 
 pub(all) struct StyleMapParseResult {
   mappings : Array[StyleMapping]
   messages : Array[@core.Message]
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn StyleMapParseResult::equal(Self, Self) -> Bool
+#deprecated
+pub fn StyleMapParseResult::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn StyleMapParseResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct StyleMapping {
   from : DocumentMatcher
   to : Array[HtmlPathElement]
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn StyleMapping::equal(Self, Self) -> Bool
+#deprecated
+pub fn StyleMapping::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn StyleMapping::to_repr(Self) -> @debug.Repr
 
 pub(all) enum StyleNameMatcher {
   ExactStyleName(String)
   PrefixStyleName(String)
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn StyleNameMatcher::equal(Self, Self) -> Bool
+#deprecated
+pub fn StyleNameMatcher::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn StyleNameMatcher::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
