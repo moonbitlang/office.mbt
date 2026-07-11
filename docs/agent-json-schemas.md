@@ -613,3 +613,12 @@ applies verbatim. The one addition is the `comment` op — declaring
   or resolves, every comment gets a commentsExtended entry (absent
   `done` then reads back as `done: false`); if none do, the output has
   no commentsExtended part at all and `done` is absent on read-back.
+- **Notes** (`/2`, K3): a RUN entry may instead be
+  `{"footnote": {...}}` or `{"endnote": {...}}` (exclusive within its
+  run object), whose body is `text` | `paragraphs` under the same
+  plain-content rules. The run becomes that note's single reference —
+  notes may sit in body paragraphs and table cells, but not inside
+  hyperlink runs, comment bodies, or other notes. Emitted note ids are
+  dense per kind starting at 1 (`/footnotes/note[@id=1]`, …), with the
+  separator/continuationSeparator plumbing and the in-note mark run
+  handled by the writer.

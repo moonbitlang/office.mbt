@@ -211,12 +211,12 @@ jobs:
           # Authoring surface: batch a document from an op script on wasm —
           # docx.batch/2 with a comment (Phase-2 K1), read back through the
           # annotation surface of the same build.
-          printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "Hi", "style": "Heading1"}}, {"op": "comment", "params": {"on": 0, "text": "wasm note", "author": "CI"}}, {"op": "comment", "params": {"reply_to": 1, "done": true, "text": "resolved", "author": "CI2"}}]}' > ci-batch.json
+          printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "Hi"}, {"footnote": {"text": "a wasm footnote"}}], "style": "Heading1"}}, {"op": "comment", "params": {"on": 0, "text": "wasm note", "author": "CI"}}, {"op": "comment", "params": {"reply_to": 1, "done": true, "text": "resolved", "author": "CI2"}}]}' > ci-batch.json
           moon run --target wasm docx2html/cmd/docx -- batch ci-batch.docx ci-batch.json 2>docx-wasm.err || { echo "docx batch failed; stderr:"; cat docx-wasm.err; exit 1; }
           b=$(moon run --target wasm docx2html/cmd/docx -- validate ci-batch.docx 2>docx-wasm.err) || { echo "batch validate failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "batch validate -> $b"; test "$b" = "valid"
-          w=$(moon run --target wasm docx2html/cmd/docx -- outline ci-batch.docx 2>docx-wasm.err | jq -r '.comments[0].author + " " + .comments[1].parent_id + " " + (.comments[1].done | tostring)') || { echo "batch outline failed; stderr:"; cat docx-wasm.err; exit 1; }
-          echo "written thread -> $w"; test "$w" = "CI 0 true"
+          w=$(moon run --target wasm docx2html/cmd/docx -- outline ci-batch.docx 2>docx-wasm.err | jq -r '.comments[0].author + " " + .comments[1].parent_id + " " + (.comments[1].done | tostring) + " " + (.counts.footnotes | tostring)') || { echo "batch outline failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "written thread -> $w"; test "$w" = "CI 0 true 1"
           # Annotation read surface on wasm (Phase-2 J2).
           a=$(moon run --target wasm docx2html/cmd/docx -- outline docx2html/tests/cram/fixtures/commented.docx 2>docx-wasm.err | jq -r '.comments[1].parent_id') || { echo "annotated outline failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "comment parent_id -> $a"; test "$a" = "0"

@@ -444,6 +444,68 @@ error: ops[1].params.reply_to targets ops[0], which is not a comment op (replies
 [1]
 ```
 
+Footnotes and endnotes are inline run keys — the run becomes the
+note's reference, bodies land in their own parts, and the read surface
+lists them as stories:
+
+```mooncram
+$ cat > notes.json <<'SCRIPT'
+> {
+>   "schema": "docx.batch/2",
+>   "ops": [
+>     {"op": "paragraph", "params": {"runs": [
+>       {"text": "A cited claim"},
+>       {"footnote": {"text": "The primary source."}},
+>       {"text": " and a final word"},
+>       {"endnote": {"paragraphs": [{"text": "Closing thought,"}, {"text": "expanded."}]}}
+>     ]}}
+>   ]
+> }
+> SCRIPT
+```
+
+```mooncram
+$ docx.exe batch notes.docx notes.json
+created notes.docx (1 op(s), 1 footnote(s), 1 endnote(s))
+```
+
+```mooncram
+$ docx.exe validate notes.docx
+valid
+```
+
+```mooncram
+$ docx.exe outline notes.docx | jq -c '.counts | {footnotes, endnotes}'
+{"footnotes":1,"endnotes":1}
+```
+
+```mooncram
+$ docx.exe get notes.docx '/endnotes/note[@id=1]/p[2]'
+expanded.
+```
+
+```mooncram
+$ docx.exe text notes.docx
+[/body/p[1]] A cited claim and a final word
+[/footnotes/note[@id=1]/p[1]] The primary source.
+[/endnotes/note[@id=1]/p[1]] Closing thought,
+[/endnotes/note[@id=1]/p[2]] expanded.
+```
+
+Notes need `/2`, and nest in neither comments nor other notes:
+
+```mooncram
+$ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"footnote": {"text": "n"}}]}}]}' > v1n.json; docx.exe batch outv1n.docx v1n.json
+error: ops[0].params.runs[0].footnote needs "schema": "docx.batch/2"
+[1]
+```
+
+```mooncram
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"runs": [{"footnote": {"paragraphs": [{"runs": [{"footnote": {"text": "inner"}}]}]}}]}}]}' > nested.json; docx.exe batch outnested.docx nested.json
+error: ops[0].params.runs[0].footnote.paragraphs[0].runs[0]: notes cannot nest inside comment or note bodies
+[1]
+```
+
 Comment ops need the `/2` declaration; anchors must be earlier
 paragraph ops; dates are validated lexically and attributed to the op:
 
