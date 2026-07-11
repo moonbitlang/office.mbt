@@ -217,7 +217,9 @@ Envelope:
   param the chosen `type` does not use (e.g. `operator` on a `list`, or
   `values` on a `whole` rule) is rejected rather than silently ignored.
 - `cf` adds one conditional-formatting rule to `range` (repeat the op to
-  stack rules; the engine assigns increasing priorities). Pick a `type`:
+  stack rules; the engine assigns increasing priorities). Every color
+  (`fill`, `font_color`, `min_color`/`mid_color`/`max_color`, `bar_color`) is
+  a 6-digit hex RGB (an optional leading `#`). Pick a `type`:
   - `cell` — a value comparison; `criteria` is an operator (`>`, `>=`, `<`,
     `<=`, `=`, `!=`, `between`, `not between`) plus a `value` (or, for
     `between`/`not between`, `min_value` and `max_value`), and a highlight

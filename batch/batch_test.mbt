@@ -636,6 +636,34 @@ test "cf op apply-time errors are typed and specific" {
       ),
       "cf: 'min_type' 'bogus' is not a valid stop type (expected one of: num, min, max, percent, percentile, formula)",
     ),
+    // A color that is not a 6-digit hex RGB would be written as invalid rgb.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"2_color_scale","min_color":"red","max_color":"00FF00"}}]}
+      ),
+      "cf: 'min_color' 'red' is not a 6-digit hex RGB color (e.g. FF0000)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","bar_color":"FF638EC6"}}]}
+      ),
+      "cf: 'bar_color' 'FF638EC6' is not a 6-digit hex RGB color (e.g. FF0000)",
+    ),
+    // A cell criteria that is a text/time-period word, not a comparison
+    // operator, would become an invalid cellIs operator.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"cell","criteria":"today","value":"1","fill":"FF0000"}}]}
+      ),
+      "cf: cell criteria 'today' is not a comparison operator (expected one of: >, >=, <, <=, =, !=, between, not between)",
+    ),
+    // An explicit `false` flag the type does not use is still rejected.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","bar_color":"638EC6","stop_if_true":false}}]}
+      ),
+      "cf: type 'data_bar' does not take 'stop_if_true'",
+    ),
   ]
   for case in cases {
     let (script, want) = case

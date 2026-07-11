@@ -249,6 +249,58 @@ fn check_cfvo_type(param : String, value : String) -> Unit raise BatchError {
 }
 
 ///|
+/// Rejects a conditional-format color that is not a 6-digit hex RGB (an
+/// optional leading `#` is allowed). The engine prepends the alpha byte, so
+/// anything else — a name like `red`, a 3-digit shorthand, or an 8-digit
+/// ARGB — would land in the `rgb` attribute as invalid OOXML.
+fn check_cf_color(param : String, value : String) -> Unit raise BatchError {
+  let hex = if value.has_prefix("#") { value[1:].to_owned() } else { value }
+  let mut ok = hex.length() == 6
+  if ok {
+    for i in 0..<hex.length() {
+      let c = hex[i].to_int()
+      let is_num = c >= '0'.to_int() && c <= '9'.to_int()
+      let is_upper = c >= 'A'.to_int() && c <= 'F'.to_int()
+      let is_lower = c >= 'a'.to_int() && c <= 'f'.to_int()
+      if !(is_num || is_upper || is_lower) {
+        ok = false
+        break
+      }
+    }
+  }
+  if !ok {
+    raise BatchError(
+      "cf: '\{param}' '\{value}' is not a 6-digit hex RGB color (e.g. FF0000)",
+    )
+  }
+}
+
+///|
+/// Rejects a `cell` criteria outside the cellIs comparison operators. The
+/// engine's shared criteria normalizer also accepts text and time-period
+/// words (e.g. `today`, `containing`), which `build_cell_rule` would write
+/// as an invalid cellIs `operator`; keep only the documented comparators.
+fn check_cf_cell_criteria(criteria : String) -> Unit raise BatchError {
+  match criteria.to_lower() {
+    ">"
+    | ">="
+    | "<"
+    | "<="
+    | "="
+    | "=="
+    | "!="
+    | "<>"
+    | "between"
+    | "not between"
+    | "notbetween" => ()
+    _ =>
+      raise BatchError(
+        "cf: cell criteria '\{criteria}' is not a comparison operator (expected one of: >, >=, <, <=, =, !=, between, not between)",
+      )
+  }
+}
+
+///|
 /// The mode-specific params each `cf` type uses; any *other* non-default
 /// param the script supplies is rejected so an agent hears about it instead
 /// of it being silently dropped. (`sheet`/`range`/`type` are always allowed

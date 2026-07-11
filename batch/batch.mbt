@@ -126,8 +126,11 @@ priv enum OpKind {
     formula~ : String,
     fill~ : String,
     font_color~ : String,
-    bold~ : Bool,
-    italic~ : Bool,
+    // Tri-state so an explicit `false` is distinguishable from "omitted" and
+    // can be rejected for a type that does not take the flag (a plain
+    // `optional_bool` would collapse the two).
+    bold~ : Bool?,
+    italic~ : Bool?,
     min_type~ : String,
     mid_type~ : String,
     max_type~ : String,
@@ -137,8 +140,8 @@ priv enum OpKind {
     max_color~ : String,
     bar_color~ : String,
     icon_style~ : String,
-    reverse_icons~ : Bool,
-    stop_if_true~ : Bool
+    reverse_icons~ : Bool?,
+    stop_if_true~ : Bool?
   )
 }
 
@@ -366,8 +369,8 @@ fn parse_op(
         formula=reader.optional_string("formula"),
         fill=reader.optional_string("fill"),
         font_color=reader.optional_string("font_color"),
-        bold=reader.optional_bool("bold"),
-        italic=reader.optional_bool("italic"),
+        bold=reader.tristate_bool("bold"),
+        italic=reader.tristate_bool("italic"),
         min_type=reader.optional_string("min_type"),
         mid_type=reader.optional_string("mid_type"),
         max_type=reader.optional_string("max_type"),
@@ -377,8 +380,8 @@ fn parse_op(
         max_color=reader.optional_string("max_color"),
         bar_color=reader.optional_string("bar_color"),
         icon_style=reader.optional_string("icon_style"),
-        reverse_icons=reader.optional_bool("reverse_icons"),
-        stop_if_true=reader.optional_bool("stop_if_true"),
+        reverse_icons=reader.tristate_bool("reverse_icons"),
+        stop_if_true=reader.tristate_bool("stop_if_true"),
       )
     _ =>
       raise op_error(
@@ -1110,8 +1113,10 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
         ("formula", formula != ""),
         ("fill", fill != ""),
         ("font_color", font_color != ""),
-        ("bold", bold),
-        ("italic", italic),
+        // A tri-state flag counts as supplied whether it was true or an
+        // explicit false, so an unused flag is rejected either way.
+        ("bold", bold is Some(_)),
+        ("italic", italic is Some(_)),
         ("min_type", min_type != ""),
         ("mid_type", mid_type != ""),
         ("max_type", max_type != ""),
@@ -1121,8 +1126,8 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
         ("max_color", max_color != ""),
         ("bar_color", bar_color != ""),
         ("icon_style", icon_style != ""),
-        ("reverse_icons", reverse_icons),
-        ("stop_if_true", stop_if_true),
+        ("reverse_icons", reverse_icons is Some(_)),
+        ("stop_if_true", stop_if_true is Some(_)),
       ]
       let allowed = cf_allowed_params(cf_type)
       for entry in present {
@@ -1131,18 +1136,21 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
           raise BatchError("cf: type '\{cf_type}' does not take '\{pname}'")
         }
       }
+      let bold_on = bold is Some(true)
+      let italic_on = italic is Some(true)
       let opt = @xlsx.ConditionalFormatOptions::new(cf_type)
-      if stop_if_true {
+      if stop_if_true is Some(true) {
         opt.set_stop_if_true(true)
       }
       // The rule types (cell/formula) paint a dxf highlight, which needs at
       // least one attribute to be meaningful.
-      let style_set = fill != "" || font_color != "" || bold || italic
+      let style_set = fill != "" || font_color != "" || bold_on || italic_on
       match cf_type {
         "cell" => {
           if criteria == "" {
             raise BatchError("cf: type 'cell' requires 'criteria'")
           }
+          check_cf_cell_criteria(criteria)
           if !style_set {
             raise BatchError(
               "cf: type 'cell' requires a highlight (fill, font_color, bold, or italic)",
@@ -1196,6 +1204,8 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
               "cf: type '2_color_scale' requires 'min_color' and 'max_color'",
             )
           }
+          check_cf_color("min_color", min_color)
+          check_cf_color("max_color", max_color)
           check_cfvo_type("min_type", min_type)
           check_cfvo_type("max_type", max_type)
           if min_type != "" {
@@ -1219,6 +1229,9 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
               "cf: type '3_color_scale' requires 'min_color', 'mid_color', and 'max_color'",
             )
           }
+          check_cf_color("min_color", min_color)
+          check_cf_color("mid_color", mid_color)
+          check_cf_color("max_color", max_color)
           check_cfvo_type("min_type", min_type)
           check_cfvo_type("mid_type", mid_type)
           check_cfvo_type("max_type", max_type)
@@ -1248,6 +1261,7 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
           check_cfvo_type("min_type", min_type)
           check_cfvo_type("max_type", max_type)
           if bar_color != "" {
+            check_cf_color("bar_color", bar_color)
             opt.set_bar_color(bar_color)
           }
           if min_type != "" {
@@ -1269,16 +1283,24 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
           }
           check_cf_icon_style(icon_style)
           opt.set_icon_style(icon_style)
-          if reverse_icons {
+          if reverse_icons is Some(true) {
             opt.set_reverse_icons(true)
           }
         }
         _ => ()
       }
       if style_set {
+        // fill != "" implies style_set, so validating here covers every
+        // supplied highlight color.
+        if fill != "" {
+          check_cf_color("fill", fill)
+        }
+        if font_color != "" {
+          check_cf_color("font_color", font_color)
+        }
         let style = build_style(
-          bold~,
-          italic~,
+          bold=bold_on,
+          italic=italic_on,
           number_format="",
           fill~,
           font_color~,

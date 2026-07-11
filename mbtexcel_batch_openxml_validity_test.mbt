@@ -2,7 +2,10 @@
 /// Ground-truth gate for the batch engine: a workbook produced through
 /// the real `xlsx.batch/1` parse + apply path (not the individual library
 /// calls) must satisfy the .NET DocumentFormat.OpenXml validator, the
-/// same oracle the other root validity tests use.
+/// same oracle the other root validity tests use. Exercises the full op
+/// vocabulary — the original nine plus the authoring ops `cf` (all four
+/// visual families), `table`, and `validate` — so the validator proves each
+/// produces schema-valid OOXML, not just structurally-sound XML.
 #cfg(target="native")
 async test "mbtexcel batch-built workbook is OpenXML-valid" {
   let workbook = @mbtexcel.new_workbook()
@@ -26,7 +29,15 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
     #|    {"op": "freeze", "params": {"sheet": "Data", "cell": "A2"}},
     #|    {"op": "filter", "params": {"sheet": "Data", "range": "A1:B3"}},
     #|    {"op": "add-sheet", "params": {"name": "Summary"}},
-    #|    {"op": "chart", "params": {"sheet": "Data", "anchor": "E2", "type": "col", "categories": "A2:A3", "values": "B2:B3", "name": "Sales", "title": "By region"}}
+    #|    {"op": "chart", "params": {"sheet": "Data", "anchor": "E2", "type": "col", "categories": "A2:A3", "values": "B2:B3", "name": "Sales", "title": "By region"}},
+    #|    {"op": "cf", "params": {"sheet": "Data", "range": "B2:B4", "type": "3_color_scale", "min_color": "F8696B", "mid_color": "FFEB84", "max_color": "63BE7B"}},
+    #|    {"op": "cf", "params": {"sheet": "Data", "range": "B2:B4", "type": "cell", "criteria": ">=", "value": "100", "fill": "C6EFCE", "font_color": "006100"}},
+    #|    {"op": "cf", "params": {"sheet": "Data", "range": "B2:B4", "type": "data_bar", "bar_color": "638EC6"}},
+    #|    {"op": "cf", "params": {"sheet": "Data", "range": "B2:B4", "type": "icon_set", "icon_style": "3TrafficLights1"}},
+    #|    {"op": "set", "params": {"sheet": "Summary", "cell": "A1", "value": "Item"}},
+    #|    {"op": "set", "params": {"sheet": "Summary", "cell": "B1", "value": "Count"}},
+    #|    {"op": "table", "params": {"sheet": "Summary", "range": "A1:B4", "name": "Items", "style": "TableStyleMedium2"}},
+    #|    {"op": "validate", "params": {"sheet": "Summary", "range": "D2:D20", "type": "list", "values": ["Low", "High"]}}
     #|  ]
     #|}
   let ops = @batch.parse_script(@json.parse(script))
