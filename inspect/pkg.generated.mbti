@@ -15,6 +15,8 @@ pub const SCHEMA_CELLS : String = "xlsx.cells/1"
 
 pub const SCHEMA_OUTLINE : String = "xlsx.outline/1"
 
+pub const SCHEMA_QUERY : String = "xlsx.query/1"
+
 pub fn cells(@xlsx.Workbook, file~ : String, String, String) -> Json raise
 
 pub fn chart_kinds(String) -> Array[String]
@@ -29,9 +31,23 @@ pub fn parse_range(String) -> CellRange raise RangeError
 
 pub fn parse_range_unbounded(String) -> CellRange raise RangeError
 
+pub fn query(@xlsx.Workbook, file~ : String, String, range~ : String, String) -> Json raise
+
 pub fn style_to_json(@xlsx.Style) -> Json
 
 // Errors
+pub suberror QueryError {
+  QueryError(String)
+} derive(@debug.Debug)
+#deprecated
+pub fn QueryError::output(Self, &Logger) -> Unit
+#as_free_fn
+#deprecated
+pub fn QueryError::to_repr(Self) -> @debug.Repr
+#deprecated
+pub fn QueryError::to_string(Self) -> String
+pub impl Show for QueryError
+
 pub suberror RangeError {
   RangeTooLarge(range~ : String, count~ : Int64)
   MalformedRef(ref_~ : String)

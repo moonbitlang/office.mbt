@@ -129,6 +129,50 @@ the workbook's stored hex strings (typically `RRGGBB` or `AARRGGBB`),
 passed through unvalidated — consumers rendering them must validate. The
 theme/indexed/tint fields are numeric theme-palette references, not hex.
 
+## `xlsx.query/1` — content-selector cell search (`xlsx query <file> <sheet> <selector>`)
+
+Finds the cells on `sheet` matching a **content selector**, returned in the
+same per-cell shape as `xlsx.cells/1` (`ref`/`value`/`raw`/`formula`/`style_id`,
+plus the shared deduplicated `styles` map) — so an agent can filter ("every
+formula", "every value over 100") instead of reading a whole range and
+scanning it itself. Scans the sheet's used range by default, or the
+`--range A1:D100` you pass (both bounded at 100,000 cells).
+
+```json
+{
+  "schema": "xlsx.query/1",
+  "file": "book.xlsx",
+  "sheet": "Data",
+  "range": "A1:B4",
+  "selector": "cell[type=formula]",
+  "match_count": 1,
+  "matches": [ { "ref": "B4", "formula": "SUM(B1:B3)" } ],
+  "styles": {}
+}
+```
+
+- A **selector** is the literal `cell` followed by zero or more `[predicate]`
+  groups, ANDed together. `cell` alone matches every populated cell. `range`
+  echoes the scanned rectangle (the empty string for an empty sheet), and
+  `match_count` is `matches.length()`.
+- Predicates:
+  - `type=formula|number|string|bool|error` — by raw value kind (`formula` =
+    has a formula; a formula with no cached value is *not* `number`).
+  - `value>N` / `value>=N` / `value<N` / `value<=N` / `value=N` / `value!=N` —
+    numeric comparison against a cell's raw number (non-numeric cells never
+    match).
+  - `formula` — has a formula; `formula~=TEXT` — the formula contains `TEXT`.
+  - `text=TEXT` — the string cell equals `TEXT`; `text~=TEXT` — contains it.
+    A blank cell (an empty stored string) never matches a `text`/`string`
+    predicate.
+- A predicate argument (the `TEXT` after `=`/`~=`, the `N` after an operator)
+  is trimmed of surrounding whitespace and cannot contain `]` (which closes
+  the predicate). `text=`/`text~=`/`formula~=` require a non-empty value, and a
+  `value` bound must be a finite number (`NaN`/`Infinity` are rejected).
+- `query` is read-only. A malformed selector, an oversized scan, or a missing
+  sheet fails with a non-zero exit and a one-line `error:` message; nothing is
+  written.
+
 ## `xlsx.batch/1` — mutation script (`xlsx batch <file> <script.json>`)
 
 Envelope:

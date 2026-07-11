@@ -142,6 +142,24 @@ Without `--json`, `get` behaves exactly as before:
   $ xlsx.exe get book.xlsx Data A1
   Region
 
+`query` finds the cells matching a content selector — returned as JSON in the
+same per-cell shape as `get --json` — so an agent can filter (every formula,
+every value over a threshold) instead of reading a whole range and scanning
+it itself. It scans the used range by default, or a `--range`:
+
+  $ xlsx.exe query book.xlsx Data 'cell[type=formula]' | grep -o '"match_count": 1'
+  "match_count": 1
+  $ xlsx.exe query book.xlsx Data 'cell[type=formula]' | grep -o '"formula": "B1\*2"'
+  "formula": "B1*2"
+  $ xlsx.exe query book.xlsx Data 'cell[value>=100]' | grep -o '"ref": "B1"'
+  "ref": "B1"
+
+A malformed selector fails with exit 1 and no partial output:
+
+  $ xlsx.exe query book.xlsx Data 'rows[1]'
+  error: selector must be 'cell' optionally followed by [predicate] groups, e.g. cell[type=formula]
+  [1]
+
 Errors are strict and leave no partial output — an oversized range (the cap
 is 100,000 cells), a missing sheet, and a missing file all fail with exit 1:
 
