@@ -23,9 +23,9 @@ test "strict validation names the op index and key" {
   expect_batch_error("[]", "the script must be a JSON object")
   expect_batch_error(
     (
-      #|{"schema": "docx.batch/2", "ops": []}
+      #|{"schema": "docx.batch/3", "ops": []}
     ),
-    "unsupported schema 'docx.batch/2'",
+    "unsupported schema 'docx.batch/3' (this build accepts docx.batch/1 and docx.batch/2)",
   )
   expect_batch_error(
     (
@@ -518,4 +518,288 @@ test "review round 2: the ops cap is enforced at 10000" {
     script_with_ops(10001),
     "the script has 10001 ops; the cap is 10000",
   )
+}
+
+///|
+test "K1: docx.batch/2 comment ops parse, map op indexes to block indexes" {
+  let script = parse_str(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "First"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "A note",
+      #|   "author": "Reviewer", "initials": "R", "date": "2026-07-11T09:30:00Z"}},
+      #|  {"op": "paragraph", "params": {"text": "Second"}},
+      #|  {"op": "table", "params": {"rows": [[{"text": "cell"}]]}},
+      #|  {"op": "paragraph", "params": {"text": "Third"}},
+      #|  {"op": "comment", "params": {"on": {"from": 2, "to": 4},
+      #|   "paragraphs": [{"text": "Multi,"}, {"text": "paragraph."}],
+      #|   "author": "B"}}
+      #|]}
+    ),
+  )
+  // Comment ops are ops (op_count) but produce no body blocks: the body
+  // has 4 blocks and anchors are BLOCK indexes (the table at op 3 is
+  // block 2, so op 4 is block 3 — comments in between shift nothing).
+  inspect(script.op_count(), content="6")
+  inspect(script.comment_count(), content="2")
+  inspect(script.build_body(Map([])).length(), content="4")
+  let comments = script.build_comments()
+  inspect(comments.length(), content="2")
+  let point = comments[0]
+  inspect(point.at(), content="ops[1]")
+  inspect(point.author(), content="Reviewer")
+  debug_inspect(point.initials(), content="Some(\"R\")")
+  debug_inspect(point.date(), content="Some(\"2026-07-11T09:30:00Z\")")
+  inspect(point.from_block(), content="0")
+  inspect(point.to_block(), content="0")
+  inspect(point.body().length(), content="1")
+  let range = comments[1]
+  inspect(range.at(), content="ops[5]")
+  inspect(range.author(), content="B")
+  debug_inspect(range.initials(), content="None")
+  debug_inspect(range.date(), content="None")
+  // op 2 -> block 1; op 4 -> block 3: the range passes OVER the table.
+  inspect(range.from_block(), content="1")
+  inspect(range.to_block(), content="3")
+  inspect(range.body().length(), content="2")
+  // The date is NOT validated here — lexical xsd:dateTime is the
+  // writer's job (attributed to the op via at()); any string parses.
+  let lax = parse_str(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A",
+      #|   "date": "not-a-date"}}
+      #|]}
+    ),
+  )
+  debug_inspect(lax.build_comments()[0].date(), content="Some(\"not-a-date\")")
+}
+
+///|
+test "K1: comment ops fail closed with exact op addresses" {
+  // Version gate: /1 scripts cannot carry comments.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].op 'comment' needs \"schema\": \"docx.batch/2\"",
+  )
+  // WHO: author is required, non-empty, attribute-safe; initials likewise.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n"}}
+      #|]}
+    ),
+    "ops[1].params needs \"author\"",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": ""}}
+      #|]}
+    ),
+    "ops[1].params.author must not be empty",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A\tB"}}
+      #|]}
+    ),
+    "ops[1].params.author contains a control character",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A", "initials": ""}}
+      #|]}
+    ),
+    "ops[1].params.initials must not be empty",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A", "date": 5}}
+      #|]}
+    ),
+    "ops[1].params.date must be a string",
+  )
+  // K2's fields are NOT silently accepted early.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A", "done": true}}
+      #|]}
+    ),
+    "ops[1].params has an unknown key 'done'",
+  )
+  // WHERE: earlier paragraph ops only.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params needs \"on\"",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[0].params.on: ops[0] is the first op, so there is nothing earlier to anchor to",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 1, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params.on must reference an EARLIER op (0..0, got 1)",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 5, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params.on must reference an EARLIER op (0..0, got 5)",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "table", "params": {"rows": [[{"text": "c"}]]}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params.on targets a table (ops[0]); comment anchors must be paragraph ops",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}},
+      #|  {"op": "comment", "params": {"on": 1, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[2].params.on targets another comment (ops[1]); comment anchors must be paragraph ops",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "paragraph", "params": {"text": "y"}},
+      #|  {"op": "comment", "params": {"on": {"from": 1, "to": 0}, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[2].params.on: \"to\" (ops[0]) precedes \"from\" (ops[1]); the range is inclusive and must be ordered",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": {"from": 0}, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params.on needs \"to\"",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": true, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params.on must be an op index or {\"from\": i, \"to\": j}",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0.5, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params.on must be an integer (got 0.5)",
+  )
+  // WHAT: exactly one of text/paragraphs, and plain content only.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params needs text or paragraphs (the comment body)",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "paragraphs": [], "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params: text and paragraphs are mutually exclusive",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "paragraphs": [], "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params.paragraphs must not be empty",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "author": "A",
+      #|   "paragraphs": [{"runs": [{"link": {"href": "https://a.example", "text": "l"}}]}]}}
+      #|]}
+    ),
+    "ops[1].params.paragraphs[0].runs[0]: hyperlinks are not allowed in comment bodies (plain content only)",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "author": "A",
+      #|   "paragraphs": [{"runs": [{"image": {"path": "logo.png"}}]}]}}
+      #|]}
+    ),
+    "ops[1].params.paragraphs[0].runs[0]: images are not allowed in comment bodies (plain content only)",
+  )
+}
+
+///|
+test "K1: /1 and /2 accept the same content ops" {
+  // The same paragraph+table script parses under either declaration —
+  // /2 widens /1, it does not fork it.
+  for schema in (["docx.batch/1", "docx.batch/2"] : ReadOnlyArray[String]) {
+    let script = parse_str(
+      "{\"schema\": \"" +
+      schema +
+      "\", \"ops\": [" +
+      "{\"op\": \"paragraph\", \"params\": {\"text\": \"a\"}}," +
+      "{\"op\": \"table\", \"params\": {\"rows\": [[{\"text\": \"c\"}]]}}]}",
+    )
+    inspect(script.op_count(), content="2")
+    inspect(script.comment_count(), content="0")
+    inspect(script.build_body(Map([])).length(), content="2")
+  }
 }

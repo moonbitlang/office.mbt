@@ -21,8 +21,15 @@ pub impl Show for BatchError with fn output(self, logger) {
 }
 
 ///|
-/// Schema identifier accepted by `docx batch` scripts.
+/// The original schema identifier accepted by `docx batch` scripts:
+/// paragraph and table ops only.
 pub const SCHEMA_BATCH : String = "docx.batch/1"
+
+///|
+/// The current major: everything in `docx.batch/1` plus `comment` ops.
+/// Consumed schemas widen by new major (the roadmap's rule) — scripts
+/// declaring either version parse, but `comment` needs `/2`.
+pub const SCHEMA_BATCH_V2 : String = "docx.batch/2"
 
 ///|
 const MAX_OPS : Int = 10000
@@ -120,10 +127,35 @@ priv enum OpSpec {
 }
 
 ///|
+/// What each SCRIPT op (comment ops included) turned into, so comment
+/// anchors can be checked against the kind of the op they reference and
+/// mapped to the body BLOCK index it produced.
+priv enum ParsedOpKind {
+  ParagraphAt(Int)
+  Table
+  Comment
+}
+
+///|
+/// One parsed `comment` op: metadata verbatim, anchors already mapped
+/// from op indexes to body block indexes, body as paragraph specs.
+priv struct CommentOp {
+  at : String
+  author : String
+  initials : String?
+  date : String?
+  from_block : Int
+  to_block : Int
+  body : Array[ParagraphSpec]
+}
+
+///|
 /// A parsed, validated batch script.
 pub struct BatchScript {
   priv ops : Array[OpSpec]
   priv image_paths : Array[String]
+  priv comments : Array[CommentOp]
+  priv total_ops : Int
 }
 
 ///|
@@ -134,9 +166,15 @@ pub fn BatchScript::image_paths(self : BatchScript) -> Array[String] {
 }
 
 ///|
-/// Number of ops in the script.
+/// Number of ops in the script, comment ops included.
 pub fn BatchScript::op_count(self : BatchScript) -> Int {
-  self.ops.length()
+  self.total_ops
+}
+
+///|
+/// Number of `comment` ops in the script.
+pub fn BatchScript::comment_count(self : BatchScript) -> Int {
+  self.comments.length()
 }
 
 ///|
@@ -195,18 +233,21 @@ pub fn BatchScript::image_reference(
 }
 
 ///|
-/// Parses and strictly validates a `docx.batch/1` script.
+/// Parses and strictly validates a `docx.batch/1` or `docx.batch/2`
+/// script (`comment` ops need the `/2` declaration).
 pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
   guard script is Object(root) else {
     raise BatchError("the script must be a JSON object")
   }
   check_keys(root, ["schema", "ops"], "the script")
   guard root.get("schema") is Some(String(schema)) else {
-    raise BatchError("the script needs \"schema\": \"\{SCHEMA_BATCH}\"")
-  }
-  if schema != SCHEMA_BATCH {
     raise BatchError(
-      "unsupported schema '\{schema}' (this build accepts \{SCHEMA_BATCH})",
+      "the script needs \"schema\": \"\{SCHEMA_BATCH}\" or \"\{SCHEMA_BATCH_V2}\"",
+    )
+  }
+  if schema != SCHEMA_BATCH && schema != SCHEMA_BATCH_V2 {
+    raise BatchError(
+      "unsupported schema '\{schema}' (this build accepts \{SCHEMA_BATCH} and \{SCHEMA_BATCH_V2})",
     )
   }
   guard root.get("ops") is Some(Array(ops_json)) else {
@@ -220,6 +261,8 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
   let ops : Array[OpSpec] = []
   let image_paths : Array[String] = []
   let seen_paths : Set[String] = Set([])
+  let kinds : Array[ParsedOpKind] = []
+  let comments : Array[CommentOp] = []
   for index, op_json in ops_json {
     let at = "ops[\{index}]"
     guard op_json is Object(op) else {
@@ -235,20 +278,185 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
       None => Map([])
     }
     match op_name {
-      "paragraph" =>
+      "paragraph" => {
+        kinds.push(ParagraphAt(ops.length()))
         ops.push(
           ParagraphOp(
             parse_paragraph(params, at + ".params", image_paths, seen_paths),
           ),
         )
-      "table" => ops.push(parse_table(params, at, image_paths, seen_paths))
+      }
+      "table" => {
+        kinds.push(Table)
+        ops.push(parse_table(params, at, image_paths, seen_paths))
+      }
+      "comment" => {
+        if schema == SCHEMA_BATCH {
+          raise BatchError(
+            "\{at}.op 'comment' needs \"schema\": \"\{SCHEMA_BATCH_V2}\" (this script declares \{SCHEMA_BATCH})",
+          )
+        }
+        kinds.push(Comment)
+        comments.push(
+          parse_comment(params, index, at, kinds, image_paths, seen_paths),
+        )
+      }
       other =>
         raise BatchError(
-          "\{at}.op '\{other}' is unknown (known ops: paragraph, table)",
+          "\{at}.op '\{other}' is unknown (known ops: paragraph, table, comment)",
         )
     }
   }
-  { ops, image_paths }
+  { ops, image_paths, comments, total_ops: ops_json.length() }
+}
+
+///|
+/// Parses one `comment` op. `on` names the anchored range by OP index —
+/// a single integer or `{"from": i, "to": j}` (inclusive, ordered) —
+/// where every endpoint must be an EARLIER paragraph op: tables cannot
+/// carry the canonical intra-paragraph anchor shape, comments have no
+/// block of their own to anchor to, and self/forward references would
+/// name content that does not exist yet. The body (`text` or
+/// `paragraphs`) is PLAIN CONTENT: hyperlinks and images are rejected
+/// because the comments part gets no relationships.
+fn parse_comment(
+  params : Map[String, Json],
+  op_index : Int,
+  at : String,
+  kinds : Array[ParsedOpKind],
+  image_paths : Array[String],
+  seen_paths : Set[String],
+) -> CommentOp raise BatchError {
+  let at_params = at + ".params"
+  check_keys(
+    params,
+    ["on", "text", "paragraphs", "author", "initials", "date"],
+    at_params,
+  )
+  guard params.get("author") is Some(author_json) else {
+    raise BatchError("\{at_params} needs \"author\"")
+  }
+  guard author_json is String(author) else {
+    raise BatchError("\{at_params}.author must be a string")
+  }
+  if author == "" {
+    raise BatchError("\{at_params}.author must not be empty")
+  }
+  let _ = checked_attribute(Some(author), at_params + ".author")
+  let initials = checked_attribute(
+    optional_string(params, "initials", at_params),
+    at_params + ".initials",
+  )
+  // The date is validated LEXICALLY by the writer (xsd:dateTime and
+  // emitted verbatim); here it only has to be a string.
+  let date = optional_string(params, "date", at_params)
+  fn endpoint(value : Json, where_ : String) -> (Int, Int) raise BatchError {
+    guard value is Number(number, ..) else {
+      raise BatchError("\{where_} must be an op index (an integer)")
+    }
+    let idx = number.to_int()
+    if number != number || idx.to_double() != number {
+      raise BatchError("\{where_} must be an integer (got \{number})")
+    }
+    if idx < 0 || idx >= op_index {
+      if op_index == 0 {
+        raise BatchError(
+          "\{where_}: ops[0] is the first op, so there is nothing earlier to anchor to (put comments AFTER the content they annotate)",
+        )
+      }
+      raise BatchError(
+        "\{where_} must reference an EARLIER op (0..\{op_index - 1}, got \{idx}); comments anchor to content that already exists",
+      )
+    }
+    match kinds[idx] {
+      ParagraphAt(block) => (idx, block)
+      Table =>
+        raise BatchError(
+          "\{where_} targets a table (ops[\{idx}]); comment anchors must be paragraph ops",
+        )
+      Comment =>
+        raise BatchError(
+          "\{where_} targets another comment (ops[\{idx}]); comment anchors must be paragraph ops",
+        )
+    }
+  }
+  guard params.get("on") is Some(on_json) else {
+    raise BatchError(
+      "\{at_params} needs \"on\": an earlier paragraph-op index, or {\"from\": i, \"to\": j}",
+    )
+  }
+  let (from_block, to_block) = match on_json {
+    Number(_, ..) => {
+      let (_, block) = endpoint(on_json, at_params + ".on")
+      (block, block)
+    }
+    Object(range) => {
+      check_keys(range, ["from", "to"], at_params + ".on")
+      guard range.get("from") is Some(from_json) else {
+        raise BatchError("\{at_params}.on needs \"from\"")
+      }
+      guard range.get("to") is Some(to_json) else {
+        raise BatchError("\{at_params}.on needs \"to\"")
+      }
+      let (from_op, from_block) = endpoint(from_json, at_params + ".on.from")
+      let (to_op, to_block) = endpoint(to_json, at_params + ".on.to")
+      if to_block < from_block {
+        raise BatchError(
+          "\{at_params}.on: \"to\" (ops[\{to_op}]) precedes \"from\" (ops[\{from_op}]); the range is inclusive and must be ordered",
+        )
+      }
+      (from_block, to_block)
+    }
+    _ =>
+      raise BatchError(
+        "\{at_params}.on must be an op index or {\"from\": i, \"to\": j}",
+      )
+  }
+  let body : Array[ParagraphSpec] = []
+  match (params.get("text"), params.get("paragraphs")) {
+    (Some(_), Some(_)) =>
+      raise BatchError(
+        "\{at_params}: text and paragraphs are mutually exclusive",
+      )
+    (Some(String(text)), None) => {
+      check_text(text, at_params + ".text")
+      body.push({
+        style: None,
+        align: None,
+        list: None,
+        inlines: [RunSpec(@document.run_properties(), text)],
+      })
+    }
+    (Some(_), None) => raise BatchError("\{at_params}.text must be a string")
+    (None, Some(Array(paragraphs_json))) => {
+      if paragraphs_json.length() == 0 {
+        raise BatchError("\{at_params}.paragraphs must not be empty")
+      }
+      for paragraph_index, paragraph_json in paragraphs_json {
+        guard paragraph_json is Object(paragraph) else {
+          raise BatchError(
+            "\{at_params}.paragraphs[\{paragraph_index}] must be an object",
+          )
+        }
+        body.push(
+          parse_paragraph(
+            paragraph,
+            "\{at_params}.paragraphs[\{paragraph_index}]",
+            image_paths,
+            seen_paths,
+            plain=true,
+          ),
+        )
+      }
+    }
+    (None, Some(_)) =>
+      raise BatchError("\{at_params}.paragraphs must be an array")
+    (None, None) =>
+      raise BatchError(
+        "\{at_params} needs text or paragraphs (the comment body)",
+      )
+  }
+  { at, author, initials, date, from_block, to_block, body }
 }
 
 ///|
@@ -272,6 +480,7 @@ fn parse_paragraph(
   at : String,
   image_paths : Array[String],
   seen_paths : Set[String],
+  plain? : Bool = false,
 ) -> ParagraphSpec raise BatchError {
   // `at` is the address of the paragraph object itself ("ops[3].params",
   // "ops[3].params.rows[0][1].paragraphs[2]") so every message below
@@ -347,6 +556,7 @@ fn parse_paragraph(
             image_paths,
             seen_paths,
             allow_links=true,
+            plain~,
           ),
         )
       }
@@ -367,11 +577,17 @@ fn parse_inline(
   image_paths : Array[String],
   seen_paths : Set[String],
   allow_links~ : Bool,
+  plain? : Bool = false,
 ) -> InlineSpec raise BatchError {
   guard json is Object(spec) else {
     raise BatchError("\{at} must be an object")
   }
   if spec.get("link") is Some(link_json) {
+    if plain {
+      raise BatchError(
+        "\{at}: hyperlinks are not allowed in comment bodies (plain content only)",
+      )
+    }
     if !allow_links {
       raise BatchError("\{at}: links cannot nest inside links")
     }
@@ -426,6 +642,7 @@ fn parse_inline(
               image_paths,
               seen_paths,
               allow_links=false,
+              plain~,
             ),
           )
         }
@@ -438,6 +655,11 @@ fn parse_inline(
     return LinkSpec(href~, anchor~, target_frame~, runs~)
   }
   if spec.get("image") is Some(image_json) {
+    if plain {
+      raise BatchError(
+        "\{at}: images are not allowed in comment bodies (plain content only)",
+      )
+    }
     check_keys(spec, ["image"], at)
     guard image_json is Object(image) else {
       raise BatchError("\{at}.image must be an object")
@@ -1053,7 +1275,7 @@ pub fn check_script_text(text : String) -> Unit raise BatchError {
           _ => None
         }
         raise BatchError(
-          "\{render_scan_path(frames, leaf)} must be a plain decimal integer — docx.batch/1 has no fractional fields (got '\{lexeme_builder.to_string()}')",
+          "\{render_scan_path(frames, leaf)} must be a plain decimal integer — docx batch scripts have no fractional fields (got '\{lexeme_builder.to_string()}')",
         )
       }
       index = cursor
@@ -1117,6 +1339,94 @@ pub fn BatchScript::build_body(
     }
   }
   body
+}
+
+///|
+/// One built comment, ready for the writer: metadata verbatim, anchors
+/// as 0-based body BLOCK indexes (comment ops produce no blocks, so
+/// these are NOT op indexes), and the built plain-content body. `at()`
+/// is the op address ("ops[4]") so callers can attribute writer-side
+/// failures — the date's lexical xsd:dateTime check happens there — to
+/// the exact script op.
+pub struct BatchComment {
+  priv at : String
+  priv author : String
+  priv initials : String?
+  priv date : String?
+  priv from_block : Int
+  priv to_block : Int
+  priv body : Array[@document.DocumentElement]
+}
+
+///|
+/// The op address ("ops[4]") for error attribution.
+pub fn BatchComment::at(self : BatchComment) -> String {
+  self.at
+}
+
+///|
+/// The comment author, verbatim.
+pub fn BatchComment::author(self : BatchComment) -> String {
+  self.author
+}
+
+///|
+/// The author initials, when given.
+pub fn BatchComment::initials(self : BatchComment) -> String? {
+  self.initials
+}
+
+///|
+/// The lexical timestamp, when given (validated by the writer).
+pub fn BatchComment::date(self : BatchComment) -> String? {
+  self.date
+}
+
+///|
+/// First anchored body block (0-based block index, not op index).
+pub fn BatchComment::from_block(self : BatchComment) -> Int {
+  self.from_block
+}
+
+///|
+/// Last anchored body block (inclusive).
+pub fn BatchComment::to_block(self : BatchComment) -> Int {
+  self.to_block
+}
+
+///|
+/// The built plain-content body paragraphs (a fresh copy).
+pub fn BatchComment::body(
+  self : BatchComment,
+) -> Array[@document.DocumentElement] {
+  self.body.copy()
+}
+
+///|
+/// Builds the writer-facing comment list, in op order (which is also
+/// the dense-id order the writer assigns). Comment bodies are plain
+/// content, so unlike `build_body` no image bytes are needed.
+pub fn BatchScript::build_comments(
+  self : BatchScript,
+) -> Array[BatchComment] raise BatchError {
+  let built : Array[BatchComment] = []
+  let no_images : Map[String, Bytes] = Map([])
+  for comment in self.comments {
+    let body : Array[@document.DocumentElement] = []
+    for spec in comment.body {
+      body.push(build_paragraph(spec, no_images))
+    }
+    built.push({
+      at: comment.at,
+      author: comment.author,
+      initials: comment.initials,
+      date: comment.date,
+      from_block: comment.from_block,
+      to_block: comment.to_block,
+      body,
+    })
+  }
+  built
 }
 
 ///|
