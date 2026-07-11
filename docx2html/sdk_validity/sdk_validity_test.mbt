@@ -1605,4 +1605,66 @@ async test "L1 round 1: the plan survives hostile packages or fails closed" {
   expect_plan_failure(
     ceiling, "cannot allocate a comment id: the document already uses the maximum supported id",
   )
+  // 11. A PROCESSING INSTRUCTION holding the close tag cannot attract
+  // the wiring either.
+  let pi_rels = base_package(
+    "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+    "<?decoy </Relationships>?>" +
+    "<Relationship Id=\"rIdS\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>" +
+    "</Relationships>",
+    [
+      (
+        "word/styles.xml",
+        "<w:styles xmlns:w=\"" +
+        wml +
+        "\"><w:style w:type=\"paragraph\" w:styleId=\"Normal\" w:default=\"1\"><w:name w:val=\"Normal\"/></w:style></w:styles>",
+      ),
+    ],
+    "",
+  )
+  let annotated_pi = @docx2html.read_docx_annotated(pi_rels)
+  let (plan_pi, _) = @docx_impl.plan_comment_addition(
+    annotated_pi,
+    pi_rels,
+    at_relative="p[1]",
+    to_relative="p[1]",
+    note_spec_for(),
+  )
+  let spliced_pi = @splice.splice_docx(pi_rels, plan_pi)
+  debug_inspect(
+    @docx2html.read_docx_annotated(spliced_pi).annotations().comments().length(),
+    content="1",
+  )
+  // 12. An UNPARSEABLE [Content_Types].xml makes sidecar detection
+  // impossible: mutation fails closed on the sentinel. (The raw-zip
+  // package is readable enough for the tolerant reader; only the
+  // mutation gate refuses.)
+  let broken_types = @mbtzip.Archive::new()
+  broken_types.add(
+    "[Content_Types].xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><unclosed></Types>",
+    ),
+  )
+  broken_types.add(
+    "_rels/.rels",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
+    ),
+  )
+  broken_types.add(
+    "word/document.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:document xmlns:w=\"" +
+      wml +
+      "\"><w:body><w:p><w:r><w:t>target</w:t></w:r></w:p><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr></w:body></w:document>",
+    ),
+  )
+  let broken_bytes = @mbtzip.write(broken_types)
+  // The READER refuses the package outright — fail-closed one layer
+  // earlier than the plan's sentinel (which stays as a belt for any
+  // future tolerant-read path).
+  let read_attempt = try? @docx2html.read_docx_annotated(broken_bytes)
+  inspect(read_attempt is Err(_), content="true")
 }
