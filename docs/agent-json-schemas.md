@@ -224,16 +224,19 @@ Envelope:
     (`fill`, `font_color`, `bold`, `italic` — at least one).
   - `formula` — a boolean `formula` (e.g. `=$A1>0`) plus a highlight.
   - `2_color_scale` / `3_color_scale` — `min_color`/`max_color` (+ `mid_color`
-    for 3), optionally the matching `*_type`/`*_value` cfvo stops.
+    for 3), optionally the matching `*_type`/`*_value` cfvo stops. A `*_type`
+    is one of `num`/`min`/`max`/`percent`/`percentile`/`formula`.
   - `data_bar` — a basic bar; `bar_color` (defaults to a blue) and optional
-    `min_type`/`min_value`/`max_type`/`max_value`. (Solid/gradient, direction,
-    and bordered bars are the x14 extension, not this op.)
-  - `icon_set` — an `icon_style` (e.g. `3Stars`, `3TrafficLights1`,
-    `4Arrows`, `5Rating`); `reverse_icons` flips the order.
+    `min_type`/`min_value`/`max_type`/`max_value` (same stop types). (Solid/
+    gradient, direction, and bordered bars are the x14 extension, not this op.)
+  - `icon_set` — a classic `icon_style` (e.g. `3TrafficLights1`, `4Arrows`,
+    `5Rating`; the x14-only `3Stars`/`3Triangles`/`5Boxes` are not supported
+    by this op); `reverse_icons` flips the order.
 
-  `stop_if_true` stops evaluating lower-priority rules when this one matches.
-  As with `validate`, the `type` is checked at apply time and a param the
-  chosen type does not use is rejected rather than silently ignored.
+  `stop_if_true` (on `cell`/`formula` rules) stops evaluating lower-priority
+  rules when this one matches. As with `validate`, the `type` is checked at
+  apply time and a param the chosen type does not use is rejected rather than
+  silently ignored.
 - Zero ops is a valid no-op and writes nothing. Scripts are capped at
   10,000 ops, style ranges at 1,000,000 expanded cells per script in
   aggregate, and numeric literals at 40 characters (pathologically long

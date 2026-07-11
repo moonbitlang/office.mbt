@@ -1196,6 +1196,8 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
               "cf: type '2_color_scale' requires 'min_color' and 'max_color'",
             )
           }
+          check_cfvo_type("min_type", min_type)
+          check_cfvo_type("max_type", max_type)
           if min_type != "" {
             opt.set_min_type(min_type)
           }
@@ -1217,6 +1219,9 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
               "cf: type '3_color_scale' requires 'min_color', 'mid_color', and 'max_color'",
             )
           }
+          check_cfvo_type("min_type", min_type)
+          check_cfvo_type("mid_type", mid_type)
+          check_cfvo_type("max_type", max_type)
           if min_type != "" {
             opt.set_min_type(min_type)
           }
@@ -1240,6 +1245,8 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
           opt.set_max_color(max_color)
         }
         "data_bar" => {
+          check_cfvo_type("min_type", min_type)
+          check_cfvo_type("max_type", max_type)
           if bar_color != "" {
             opt.set_bar_color(bar_color)
           }
@@ -1260,6 +1267,7 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
           if icon_style == "" {
             raise BatchError("cf: type 'icon_set' requires 'icon_style'")
           }
+          check_cf_icon_style(icon_style)
           opt.set_icon_style(icon_style)
           if reverse_icons {
             opt.set_reverse_icons(true)

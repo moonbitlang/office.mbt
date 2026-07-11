@@ -214,6 +214,41 @@ fn is_supported_cf_type(cf_type : String) -> Bool {
 }
 
 ///|
+/// The classic (non-x14) icon-set styles valid in a plain `<iconSet>`.
+/// `3Stars`, `3Triangles`, and `5Boxes` are x14-only — emitting them through
+/// the classic element is schema-invalid — so the basic `cf` op excludes
+/// them (they belong to the x14 CF op).
+let cf_classic_icon_styles : Array[String] = [
+  "3Arrows", "3ArrowsGray", "3Flags", "3Signs", "3Symbols", "3Symbols2", "3TrafficLights1",
+  "3TrafficLights2", "4Arrows", "4ArrowsGray", "4Rating", "4RedToBlack", "4TrafficLights",
+  "5Arrows", "5ArrowsGray", "5Quarters", "5Rating",
+]
+
+///|
+/// Rejects an `icon_style` the classic `<iconSet>` cannot represent.
+fn check_cf_icon_style(icon_style : String) -> Unit raise BatchError {
+  if !cf_classic_icon_styles.contains(icon_style) {
+    raise BatchError(
+      "cf: icon_style '\{icon_style}' is not a classic icon set (expected one of: \{cf_classic_icon_styles.join(", ")}); 3Stars, 3Triangles, and 5Boxes are x14-only",
+    )
+  }
+}
+
+///|
+/// Rejects a color-scale / data-bar stop `type` outside the classic cfvo
+/// enum, which would otherwise be written verbatim as an invalid
+/// `<cfvo type="...">`. An empty value keeps the engine default.
+fn check_cfvo_type(param : String, value : String) -> Unit raise BatchError {
+  match value {
+    "" | "num" | "min" | "max" | "percent" | "percentile" | "formula" => ()
+    _ =>
+      raise BatchError(
+        "cf: '\{param}' '\{value}' is not a valid stop type (expected one of: num, min, max, percent, percentile, formula)",
+      )
+  }
+}
+
+///|
 /// The mode-specific params each `cf` type uses; any *other* non-default
 /// param the script supplies is rejected so an agent hears about it instead
 /// of it being silently dropped. (`sheet`/`range`/`type` are always allowed

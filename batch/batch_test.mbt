@@ -519,7 +519,7 @@ test "a cf op renders color scales, a data bar, and an icon set" {
     #|{"schema":"xlsx.batch/1","ops":[
     #|  {"op":"cf","params":{"sheet":"Data","range":"A1:A9","type":"3_color_scale","min_color":"FF0000","mid_color":"FFFF00","max_color":"00FF00"}},
     #|  {"op":"cf","params":{"sheet":"Data","range":"B1:B9","type":"data_bar","bar_color":"638EC6"}},
-    #|  {"op":"cf","params":{"sheet":"Data","range":"C1:C9","type":"icon_set","icon_style":"3Stars","reverse_icons":true}}
+    #|  {"op":"cf","params":{"sheet":"Data","range":"C1:C9","type":"icon_set","icon_style":"3TrafficLights1","reverse_icons":true}}
     #|]}
   inspect(apply_script(workbook, script), content="3")
   let xmls = workbook.sheets()[0].conditional_formats()
@@ -531,7 +531,7 @@ test "a cf op renders color scales, a data bar, and an icon set" {
   assert_true(xmls[1].contains("rgb=\"FF638EC6\""))
   // A basic data bar stays out of the x14 extension.
   assert_false(xmls[1].contains("x14"))
-  assert_true(xmls[2].contains("iconSet=\"3Stars\""))
+  assert_true(xmls[2].contains("iconSet=\"3TrafficLights1\""))
   assert_true(xmls[2].contains("reverse=\"1\""))
 }
 
@@ -621,6 +621,20 @@ test "cf op apply-time errors are typed and specific" {
         #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"cell","criteria":">","value":"1","fill":"FF0000","bar_color":"638EC6"}}]}
       ),
       "cf: type 'cell' does not take 'bar_color'",
+    ),
+    // An x14-only icon set cannot go through the classic <iconSet>.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"icon_set","icon_style":"3Stars"}}]}
+      ),
+      "cf: icon_style '3Stars' is not a classic icon set (expected one of: 3Arrows, 3ArrowsGray, 3Flags, 3Signs, 3Symbols, 3Symbols2, 3TrafficLights1, 3TrafficLights2, 4Arrows, 4ArrowsGray, 4Rating, 4RedToBlack, 4TrafficLights, 5Arrows, 5ArrowsGray, 5Quarters, 5Rating); 3Stars, 3Triangles, and 5Boxes are x14-only",
+    ),
+    // A cfvo stop type outside the classic enum would be invalid OOXML.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","min_type":"bogus"}}]}
+      ),
+      "cf: 'min_type' 'bogus' is not a valid stop type (expected one of: num, min, max, percent, percentile, formula)",
     ),
   ]
   for case in cases {
