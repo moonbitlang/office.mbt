@@ -300,6 +300,9 @@ pub struct DocxAnnotatedResult {
   // The comments part's zip entry when the package has one (resolved
   // by relationship type), for L1's splice-into-existing path.
   priv comments_part_name : String?
+  // Relationship types of known annotation sidecars present on the
+  // main part that mutating commands cannot keep consistent.
+  priv sidecar_types : Array[String]
 }
 
 ///|
@@ -436,6 +439,17 @@ pub fn read_docx_annotated(
     base_path=parts.base_path,
     fallback_path="word/comments.xml",
   )
+  let sidecar_types : Array[String] = []
+  for
+    sidecar_type in (
+      [
+        "http://schemas.microsoft.com/office/2016/09/relationships/commentsIds",
+        "http://schemas.microsoft.com/office/2011/relationships/people", "http://schemas.microsoft.com/office/2018/08/relationships/commentsExtensible",
+      ] : ReadOnlyArray[String]) {
+    if parts.relationships.find_targets_by_type(sidecar_type).length() > 0 {
+      sidecar_types.push(sidecar_type)
+    }
+  }
   {
     package_result,
     index,
@@ -445,6 +459,7 @@ pub fn read_docx_annotated(
     } else {
       None
     },
+    sidecar_types,
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,

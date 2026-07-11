@@ -143,6 +143,22 @@ pub fn write_xml_string(
 }
 
 ///|
+/// Serializes one element as a FRAGMENT: no XML declaration, with the
+/// given namespace declarations placed on the element itself — the
+/// self-contained form the L0 splice contract requires (a fragment's
+/// correctness must not depend on the destination document's own
+/// bindings).
+pub fn write_xml_fragment(
+  element : XmlElement,
+  namespaces? : Map[String, String] = Map([]),
+) -> String {
+  let writer = XmlWriter::{ namespaces, uri_to_prefix: invert_map(namespaces) }
+  let builder = StringBuilder()
+  writer.write_element(builder, element, is_root=true)
+  builder.to_string()
+}
+
+///|
 priv struct XmlWriter {
   namespaces : Map[String, String]
   uri_to_prefix : Map[String, String]
