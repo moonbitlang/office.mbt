@@ -114,8 +114,10 @@ echo "$resolved" | grep -q '"done": true' || fail "resolved done flag"
 # assert_preserved demands (a) no entry disappears, (b) every NEW entry
 # is on the expected list, (c) every entry NOT on the expected list is
 # byte-identical to the previous generation. On top of that, add's
-# document.xml (which IS expected to change) minus the three spliced
-# marker fragments must equal the original — the change is exactly the
+# document.xml (which IS expected to change) must hold each of the
+# three marker fragments EXACTLY ONCE (stripping is optional per
+# pattern — presence must be proven separately), and minus those
+# fragments must equal the original — the change is exactly the
 # markers. And mutation never edited any input in place.
 cmp -s "$work/minutes.docx" "$work/minutes.before" || fail "original mutated by annotate"
 # unzip pattern-matches member names ([Content_Types].xml would be a
@@ -151,6 +153,10 @@ assert_preserved "$work/minutes.docx" "$work/reviewed.docx" \
 assert_preserved "$work/reviewed.docx" "$work/replied.docx" \
   word/comments.xml word/commentsExtended.xml word/_rels/document.xml.rels '[Content_Types].xml'
 assert_preserved "$work/replied.docx" "$work/resolved.docx" word/commentsExtended.xml
+for marker in '<w:commentRangeStart[^>]*/>' '<w:commentRangeEnd[^>]*/>' '<w:r xmlns:w=[^>]*><w:commentReference[^>]*/></w:r>'; do
+  n="$(part "$work/reviewed.docx" word/document.xml | { grep -oE "$marker" || true; } | wc -l | tr -d ' ')"
+  [ "$n" -eq 1 ] || fail "add: expected exactly one marker matching \"$marker\" in document.xml, found $n"
+done
 part "$work/reviewed.docx" word/document.xml \
   | sed -E 's|<w:commentRangeStart[^>]*/>||; s|<w:commentRangeEnd[^>]*/>||; s|<w:r xmlns:w=[^>]*><w:commentReference[^>]*/></w:r>||' \
   > "$work/reviewed.body.stripped"
