@@ -1,0 +1,23 @@
+{
+  "schema": "docx.batch/1",
+  "ops": [
+    {"op": "paragraph", "params": {"text": "Meeting Minutes", "style": "Heading1"}},
+    {"op": "paragraph", "params": {"runs": [
+      {"text": "The team reviewed the "},
+      {"text": "quarterly budget", "bold": true},
+      {"text": " and walked through the "},
+      {"link": {"href": "https://example.org/agenda", "text": "published agenda"}},
+      {"text": "."}
+    ]}},
+    {"op": "paragraph", "params": {"text": "Approve March minutes", "list": {"ordered": false}}},
+    {"op": "paragraph", "params": {"text": "Vendor contract renewal", "list": {"ordered": false}}},
+    {"op": "paragraph", "params": {"text": "Office move logistics", "list": {"ordered": false}}},
+    {"op": "paragraph", "params": {"text": "Alice to circulate revised budget by Friday", "list": {"ordered": true, "level": 1}}},
+    {"op": "paragraph", "params": {"text": "Bob to book the Q3 offsite venue", "list": {"ordered": true, "level": 1}}},
+    {"op": "table", "params": {"header_rows": 1, "rows": [
+      [{"text": "Topic"}, {"text": "Owner"}, {"text": "Status"}],
+      [{"text": "Budget review (owner and status merged)", "col_span": 2}, {"text": "Done"}],
+      [{"text": "Office move"}, {"text": "Carol"}, {"text": "Open"}]
+    ]}}
+  ]
+}

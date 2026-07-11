@@ -4,10 +4,12 @@ description: >-
   Work with Office/OOXML documents — Excel .xlsx spreadsheets and Word .docx
   files — by running this repo's CLIs on the WebAssembly backend, a
   memory-safe sandbox with no native document libraries. Use it to generate a
-  spreadsheet, turn CSV/table data into .xlsx, read or dump cells, convert a
-  .docx to HTML or Markdown, extract a document's images, or check that a file
-  is structurally valid. Reach for this instead of openpyxl / ExcelJS /
-  python-docx / pandoc / LibreOffice.
+  spreadsheet or Word document, turn CSV/table data into .xlsx, author a
+  .docx (headings, styled text, links, images, lists, tables) from a JSON op
+  script, read a document's structure/text/elements as JSON, convert a .docx
+  to HTML or Markdown, extract images, or check that a file is structurally
+  valid. Reach for this instead of openpyxl / ExcelJS / python-docx / pandoc
+  / LibreOffice.
 ---
 
 # office — documents via the WebAssembly sandbox
@@ -25,7 +27,9 @@ Run everything from the repository root with this one pattern:
 moon run --target wasm <tool> -- <args...>
 ```
 
-- `<tool>` is `cmd/xlsx` (spreadsheets) or `docx2html/cmd/docx2html` (Word docs).
+- `<tool>` is `cmd/xlsx` (spreadsheets), `docx2html/cmd/docx` (read, inspect,
+  validate, and author Word docs), or `docx2html/cmd/docx2html` (convert Word
+  docs to HTML/Markdown).
 - The first run builds the wasm module (a few seconds); later runs are fast.
 - For trusted files where speed matters, swap `--target wasm` for
   `--target native`.
@@ -69,6 +73,12 @@ row is copy-pasteable):
 | Dump a sheet as CSV | `moon run --target wasm cmd/xlsx -- rows f.xlsx` |
 | List sheets | `moon run --target wasm cmd/xlsx -- sheets f.xlsx` |
 | Check an .xlsx is well-formed | `moon run --target wasm cmd/xlsx -- validate f.xlsx` |
+| See a .docx's structure as JSON | `moon run --target wasm docx2html/cmd/docx -- outline in.docx` |
+| Extract a .docx's text (with paths) | `moon run --target wasm docx2html/cmd/docx -- text in.docx` |
+| Read one element as JSON | `moon run --target wasm docx2html/cmd/docx -- get in.docx '/body/p[2]' --json` |
+| **Author a Word document** from JSON ops | `moon run --target wasm docx2html/cmd/docx -- batch out.docx script.json` |
+| Create a blank .docx | `moon run --target wasm docx2html/cmd/docx -- create out.docx` |
+| Check a .docx is well-formed | `moon run --target wasm docx2html/cmd/docx -- validate in.docx` |
 | Convert a .docx to HTML | `moon run --target wasm docx2html/cmd/docx2html -- in.docx out.html` |
 | Convert a .docx to Markdown | `moon run --target wasm docx2html/cmd/docx2html -- --output-format=markdown in.docx out.md` |
 | Convert a .docx + extract images | `moon run --target wasm docx2html/cmd/docx2html -- --output-dir ./out in.docx` |
@@ -77,17 +87,29 @@ Omit the output path on `docx2html` to write to stdout. Note that each `style`
 call sets a cell's **complete** style (it replaces, not merges), so combine all
 the formatting for a cell into one command and avoid overlapping styled ranges.
 
+The batch script formats — `docx.batch/1` for Word documents, `xlsx.batch/1`
+for spreadsheets — are specified normatively in `docs/agent-json-schemas.md`;
+read the matching section before writing a script (validation is strict:
+unknown keys, duplicate keys, and non-integer numbers are errors, and `docx
+batch` only creates NEW files). `recipes/author-docx.md` walks the whole
+author→verify loop.
+
 ## Going deeper
 
 The table above is the fast path. When you need exact flags, output shapes, or
 edge-case behavior, read the matching file (don't guess):
 
 - `reference/xlsx.md` — every `cmd/xlsx` subcommand, its arguments, and quirks.
-- `reference/docx.md` — every `docx2html` option, output modes, and image handling.
+- `reference/docx.md` — the `docx` agent CLI (outline/text/get/validate/
+  create/batch) and the `docx2html` converter: options, output modes, the
+  batch authoring contract, and image handling.
+- `docs/agent-json-schemas.md` (repo root) — the normative spec of every JSON
+  payload the CLIs emit or consume.
 
 For end-to-end workflows, follow a recipe:
 
 - `recipes/data-to-spreadsheet.md` — build a spreadsheet from data in the conversation.
+- `recipes/author-docx.md` — author a Word document from a JSON op script and verify it.
 - `recipes/doc-to-markdown.md` — convert a Word document to clean Markdown/HTML.
 - `recipes/inspect-untrusted.md` — safely dump and validate a file you don't trust.
 
@@ -99,11 +121,14 @@ the tool rather than guessing — it runs in the same sandbox:
 ```
 moon run --target wasm cmd/xlsx -- --help
 moon run --target wasm cmd/xlsx -- csv --help
+moon run --target wasm docx2html/cmd/docx -- --help
+moon run --target wasm docx2html/cmd/docx -- batch --help
 moon run --target wasm docx2html/cmd/docx2html -- --help
 ```
 
-A failed run prints a diagnostic and exits non-zero. `cmd/xlsx` errors are
-prefixed `error: …`. `docx2html` usage/argument errors keep their parser
-message (often `error: …`), while a failure to read the input or convert it is
-prefixed `docx2html: …`. Either way, the wasm backend has no stderr, so the
-diagnostic and any normal output both arrive on stdout — check the exit code.
+A failed run prints a diagnostic and exits non-zero. `cmd/xlsx` and `docx`
+script/usage errors are prefixed `error: …` (batch errors name the exact op:
+`ops[3].params.style 'Heading7' is unknown`), while file-level failures are
+prefixed with the program name (`docx: …` / `docx2html: …`). Either way, the
+wasm backend has no stderr, so the diagnostic and any normal output both
+arrive on stdout — check the exit code.
