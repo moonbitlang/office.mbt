@@ -182,9 +182,9 @@ fn XmlWriter::write_element(
   if is_root {
     self.write_namespace_attributes(builder)
   }
-  if !is_root {
-    write_serialized_xml_attributes(builder, element.attributes)
-  }
+  // The root's OWN attributes too — namespace declarations do not
+  // replace them (mc:Ignorable on annotation parts lives here).
+  write_serialized_xml_attributes(builder, element.attributes)
   if element.children.is_empty() {
     builder.write_string("/>")
   } else {

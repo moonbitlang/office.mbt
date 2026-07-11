@@ -251,7 +251,10 @@ test "xml writer follows Mammoth element and namespace output" {
   )
   inspect(
     @docx2html.write_xml_string(
-      @docx2html.xml_element("root", attributes={ "ignored": "yes" }, children=[
+      // Root attributes are EMITTED (since K2: mc:Ignorable on the
+      // annotation parts lives on the root), after any namespace
+      // declarations.
+      @docx2html.xml_element("root", attributes={ "kept": "yes" }, children=[
         XmlElement(
           @docx2html.xml_element("child", attributes={
             "TargetMode": "External",
@@ -262,7 +265,7 @@ test "xml writer follows Mammoth element and namespace output" {
         ),
       ]),
     ),
-    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root><child Id=\"rId1\" Type=\"type\" Target=\"target.xml\" TargetMode=\"External\"/></root>",
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><root kept=\"yes\"><child Id=\"rId1\" Type=\"type\" Target=\"target.xml\" TargetMode=\"External\"/></root>",
   )
   inspect(
     @docx2html.write_xml_string(

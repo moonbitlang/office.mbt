@@ -1373,12 +1373,7 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
   let archive = @mbtzip.read(bytes)
   guard archive.get("word/comments.xml") is Some(comments_part)
   let comments_text = @utf8.decode(comments_part, ignore_bom=true)
-  inspect(
-    comments_text.find("mc:Ignorable=\"w14\"") is Some(_),
-    content=(
-      #|false
-    ),
-  )
+  inspect(comments_text.find("mc:Ignorable=\"w14\"") is Some(_), content="true")
   // Dense paraIds: parent paragraphs 1+2, reply bodies 3 and 4.
   for
     stamp in [
@@ -1389,38 +1384,27 @@ test "K2: a threaded, resolved conversation round-trips through the index" {
   }
   guard archive.get("word/commentsExtended.xml") is Some(extended_part)
   let extended_text = @utf8.decode(extended_part, ignore_bom=true)
+  inspect(extended_text.find("mc:Ignorable=\"w15\"") is Some(_), content="true")
   inspect(
-    extended_text.find("mc:Ignorable=\"w15\"") is Some(_),
-    content=(
-      #|false
-    ),
+    extended_text.find(
+      "<w15:commentEx w15:done=\"0\" w15:paraId=\"00000002\"/>",
+    )
+    is Some(_),
+    content="true",
   )
   inspect(
     extended_text.find(
-      "<w15:commentEx w15:paraId=\"00000002\" w15:done=\"0\"/>",
+      "<w15:commentEx w15:done=\"1\" w15:paraId=\"00000003\" w15:paraIdParent=\"00000002\"/>",
     )
     is Some(_),
-    content=(
-      #|false
-    ),
+    content="true",
   )
   inspect(
     extended_text.find(
-      "<w15:commentEx w15:paraId=\"00000003\" w15:done=\"1\" w15:paraIdParent=\"00000002\"/>",
+      "<w15:commentEx w15:done=\"0\" w15:paraId=\"00000004\" w15:paraIdParent=\"00000003\"/>",
     )
     is Some(_),
-    content=(
-      #|false
-    ),
-  )
-  inspect(
-    extended_text.find(
-      "<w15:commentEx w15:paraId=\"00000004\" w15:done=\"0\" w15:paraIdParent=\"00000003\"/>",
-    )
-    is Some(_),
-    content=(
-      #|false
-    ),
+    content="true",
   )
   // Replies are anchorless: only the parent's markers exist in the body.
   guard archive.get("word/document.xml") is Some(doc)
@@ -1500,7 +1484,7 @@ test "K2: resolve-without-reply triggers the extended part on its own" {
   let extended_text = @utf8.decode(part, ignore_bom=true)
   inspect(
     extended_text.find(
-      "<w15:commentEx w15:paraId=\"00000001\" w15:done=\"1\"/>",
+      "<w15:commentEx w15:done=\"1\" w15:paraId=\"00000001\"/>",
     )
     is Some(_),
     content="true",
