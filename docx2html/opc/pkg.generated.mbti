@@ -10,6 +10,14 @@ pub fn validate_docx_package(BytesView) -> Array[String]
 pub(all) suberror PackageBuildError {
   PackageBuildError(String)
 } derive(Eq)
+#deprecated
+pub fn PackageBuildError::equal(Self, Self) -> Bool
+#deprecated
+pub fn PackageBuildError::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn PackageBuildError::output(Self, &Logger) -> Unit
+#deprecated
+pub fn PackageBuildError::to_string(Self) -> String
 pub impl Show for PackageBuildError
 
 // Types and methods

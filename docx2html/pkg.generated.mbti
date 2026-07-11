@@ -173,6 +173,13 @@ pub(all) suberror DocxError {
   MissingPart(message~ : String)
   Unsupported(message~ : String)
 } derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocxError::equal(Self, Self) -> Bool
+#deprecated
+pub fn DocxError::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn DocxError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 
