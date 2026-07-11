@@ -217,6 +217,11 @@ jobs:
           echo "batch validate -> $b"; test "$b" = "valid"
           w=$(moon run --target wasm docx2html/cmd/docx -- outline ci-batch.docx 2>docx-wasm.err | jq -r '.comments[0].author + " " + .comments[1].parent_id + " " + (.comments[1].done | tostring) + " " + (.counts.footnotes | tostring)') || { echo "batch outline failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "written thread -> $w"; test "$w" = "CI 0 true 1"
+          # Annotate an EXISTING document on wasm (Phase-2 L1): byte-span
+          # surgery through the same build, read back via its outline.
+          moon run --target wasm docx2html/cmd/docx -- annotate add ci-batch.docx ci-annotated.docx --at /body/p[1] --text "wasm annotate" --author L1 2>docx-wasm.err || { echo "annotate failed; stderr:"; cat docx-wasm.err; exit 1; }
+          n=$(moon run --target wasm docx2html/cmd/docx -- outline ci-annotated.docx 2>docx-wasm.err | jq -r '.comments | length') || { echo "annotated outline failed; stderr:"; cat docx-wasm.err; exit 1; }
+          echo "annotated comments -> $n"; test "$n" = "3"
           # Annotation read surface on wasm (Phase-2 J2).
           a=$(moon run --target wasm docx2html/cmd/docx -- outline docx2html/tests/cram/fixtures/commented.docx 2>docx-wasm.err | jq -r '.comments[1].parent_id') || { echo "annotated outline failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "comment parent_id -> $a"; test "$a" = "0"

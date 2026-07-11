@@ -1,6 +1,10 @@
 import {
   "bobzhang/docx2html",
   "bobzhang/docx2html/batch",
+  "bobzhang/docx2html/docx" @docx_impl,
+  "bobzhang/docx2html/splice",
+  "bobzhang/mbtexcel/zip" @mbtzip,
+  "moonbitlang/core/encoding/utf8",
   "bobzhang/docx2html/inspect",
   "bobzhang/docx2html/paths",
   "bobzhang/docx2html/opc",

@@ -899,7 +899,7 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   // Gate 1: Microsoft schema validity of the SURGICAL result.
   validate_docx_via_sdk(dir, "l0_spliced_comment", spliced)
   // Gate 2: the annotation surface reads the spliced comment back.
-  let after = @docx2html.read_docx_annotated(spliced[:])
+  let after = @docx2html.read_docx_annotated(spliced)
   let index = after.annotations()
   debug_inspect(index.warnings(), content="[]")
   debug_inspect(index.comments().length(), content="1")
@@ -1073,7 +1073,7 @@ async test "L0: self-contained fragments survive hostile prefix bindings" {
   )
   let spliced = @splice.splice_docx(original, plan)
   validate_docx_via_sdk(dir, "l0_hostile_prefix", spliced)
-  let after = @docx2html.read_docx_annotated(spliced[:])
+  let after = @docx2html.read_docx_annotated(spliced)
   let index = after.annotations()
   debug_inspect(index.warnings(), content="[]")
   debug_inspect(index.comments().length(), content="1")
@@ -1193,7 +1193,133 @@ async test "L0: equal-offset insertions splice in plan order" {
   guard text.find("commentRangeStart") is Some(start_at)
   guard text.find("commentRangeEnd") is Some(end_at)
   inspect(start_at < end_at, content="true")
-  let after = @docx2html.read_docx_annotated(spliced[:])
+  let after = @docx2html.read_docx_annotated(spliced)
   debug_inspect(after.annotations().warnings(), content="[]")
   debug_inspect(after.annotations().comments().length(), content="1")
+}
+
+///|
+/// Phase-2 L1: the REAL fragment builders (comment_anchor_fragments +
+/// comment_definition_fragment) driving the splice layer — the module-
+/// level twin of `docx annotate add`. SDK-valid, index-anchored, and
+/// fidelity-held.
+async test "L1: annotate fragments splice a comment into an existing document" {
+  let dir = fresh_scratch_dir()
+  let original = @docx2html.write_docx([
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("Heading")])],
+      properties=@docx2html.paragraph_properties(style_id=Some("Heading1")),
+    ),
+    @docx2html.paragraph([
+      @docx2html.run([@docx2html.text("Sentence under review.")]),
+    ]),
+  ])
+  let annotated = @docx2html.read_docx_annotated(original)
+  guard annotated.body_paragraph_span("p[2]") is Some(span)
+  guard span.content_start() is Some(content_start)
+  guard span.close_tag_start() is Some(close_start)
+  let (start_fragment, end_fragment) = @docx_impl.comment_anchor_fragments(
+    id="0",
+  )
+  let spec = @docx2html.comment_spec(
+    author="Builder",
+    initials="B",
+    date="2026-07-11T21:30:00Z",
+    from=0,
+    to=0,
+    [
+      @docx2html.paragraph([@docx2html.run([@docx2html.text("First,")])]),
+      @docx2html.paragraph([
+        @docx2html.run(
+          [@docx2html.text("bold tail.")],
+          properties=@docx2html.run_properties(is_bold=true),
+        ),
+      ]),
+    ],
+  )
+  let definition = @docx_impl.comment_definition_fragment(spec, id="0")
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part(
+    "word/document.xml",
+    @splice.span_edit(
+      start=content_start,
+      end=content_start,
+      @utf8.encode(start_fragment),
+    ),
+  )
+  plan.edit_part(
+    "word/document.xml",
+    @splice.span_edit(
+      start=close_start,
+      end=close_start,
+      @utf8.encode(end_fragment),
+    ),
+  )
+  plan.add_part(
+    "word/comments.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+      definition +
+      "</w:comments>",
+    ),
+  )
+  let archive = @mbtzip.read(original)
+  guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  guard @utf8.decode(rels_bytes, ignore_bom=true).find("</Relationships>")
+    is Some(rels_at)
+  plan.edit_part(
+    "word/_rels/document.xml.rels",
+    @splice.span_edit(
+      start=rels_at,
+      end=rels_at,
+      @utf8.encode(
+        "<Relationship Id=\"rIdAnnotate1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments\" Target=\"comments.xml\"/>",
+      ),
+    ),
+  )
+  guard archive.get("[Content_Types].xml") is Some(types_bytes)
+  guard @utf8.decode(types_bytes, ignore_bom=true).find("</Types>")
+    is Some(types_at)
+  plan.edit_part(
+    "[Content_Types].xml",
+    @splice.span_edit(
+      start=types_at,
+      end=types_at,
+      @utf8.encode(
+        "<Override PartName=\"/word/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>",
+      ),
+    ),
+  )
+  let spliced = @splice.splice_docx(original, plan)
+  validate_docx_via_sdk(dir, "l1_fragment_builders", spliced)
+  let after = @docx2html.read_docx_annotated(spliced)
+  let index = after.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.comments().length(), content="1")
+  let comment = index.comments()[0]
+  debug_inspect(
+    comment.author(),
+    content=(
+      #|Some("Builder")
+    ),
+  )
+  debug_inspect(comment.body_paragraphs(), content="2")
+  debug_inspect(
+    comment.anchors()[0].start(),
+    content=(
+      #|Some("/body/p[2]")
+    ),
+  )
+  // Fidelity: the mutated main part is the manual splice of the
+  // original bytes with exactly the two builder fragments.
+  let out = @mbtzip.read(spliced)
+  guard archive.get("word/document.xml") is Some(original_doc)
+  guard out.get("word/document.xml") is Some(spliced_doc)
+  let expected = Buffer()
+  expected.write_bytesview(original_doc[0:content_start])
+  expected.write_bytes(@utf8.encode(start_fragment))
+  expected.write_bytesview(original_doc[content_start:close_start])
+  expected.write_bytes(@utf8.encode(end_fragment))
+  expected.write_bytesview(original_doc[close_start:])
+  inspect(spliced_doc == expected.contents(), content="true")
 }

@@ -622,3 +622,44 @@ applies verbatim. The one addition is the `comment` op — declaring
   dense per kind starting at 1 (`/footnotes/note[@id=1]`, …), with the
   separator/continuationSeparator plumbing and the in-note mark run
   handled by the writer.
+
+## `docx.annotate/1` — one comment for an existing document (`docx annotate add`)
+
+The consumed envelope behind `docx annotate add <in> <out> --at <path>
+[--to <path>] --json <file>`. Same STRICT discipline as the batch
+scripts (duplicate keys and fractional lexemes rejected at the raw
+text; unknown keys/types rejected with addressed errors):
+
+```json
+{
+  "schema": "docx.annotate/1",
+  "comment": {
+    "author": "Reviewer",
+    "initials": "R",
+    "date": "2026-07-11T21:00:00Z",
+    "paragraphs": [{"text": "First,"}, {"runs": [{"text": "bold.", "bold": true}]}]
+  }
+}
+```
+
+- `paragraphs` uses the SAME plain-content grammar as `docx.batch/2`
+  comment bodies — run formatting yes; hyperlinks, images, and notes
+  no. Additionally, annotate bodies reject `style` and `list`
+  (they would reference style/numbering definitions the EXISTING
+  document may not have).
+- **Metadata ownership is branch-exclusive**: with `--json`, the
+  envelope owns author/initials/date and the `--author`/`--initials`/
+  `--date` flags are REJECTED; with `--text`, the flags own them
+  (`--author` required) and no envelope exists. No precedence, no
+  merging.
+- Anchors are CLI flags, never envelope keys: `--at` (required) and
+  `--to` (optional, same story, not before `--at`) take BODY-story
+  paragraph paths (`/body/p[2]`, `/body/tbl[1]/tr[2]/tc[1]/p[1]`),
+  ordinal selectors only.
+- The mutation is byte-preserving surgery (the L0 contract): markers
+  splice at scanner offsets, the definition into the comments part
+  (created + wired only when absent), untouched bytes stay identical;
+  ids allocate densely above every id in the document; failures of any
+  kind leave ZERO output. Files carrying Word's
+  commentsIds/people/commentsExtensible sidecars are refused (this
+  tool cannot keep them consistent).
