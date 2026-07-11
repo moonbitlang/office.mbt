@@ -80,6 +80,9 @@ pub struct DocxAnnotatedResult {
   // private fields
 }
 pub fn DocxAnnotatedResult::annotations(Self) -> AnnotationIndex
+pub fn DocxAnnotatedResult::comment_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
+pub fn DocxAnnotatedResult::endnote_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
+pub fn DocxAnnotatedResult::footnote_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
 pub fn DocxAnnotatedResult::result(Self) -> DocxPackageResult
 
 pub(all) struct DocxPackageResult {

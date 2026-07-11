@@ -450,3 +450,108 @@ async test "a commented document is schema-valid and the annotation index reads 
     ),
   )
 }
+
+///|
+/// Phase-2 J2: the committed cram fixture for the annotation read
+/// surface. This test IS the fixture's generator: it rebuilds the bytes
+/// from the reviewed XML and byte-compares against the committed file
+/// (bootstrap-writing it only when absent), so the fixture can never
+/// drift from what the SDK gate validated.
+async test "the committed commented.docx cram fixture matches its generator" {
+  let document =
+    #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body>
+    #|<w:p><w:r><w:t>plain first paragraph</w:t></w:r></w:p>
+    #|<w:p><w:commentRangeStart w:id="0"/><w:r><w:t>the annotated sentence</w:t></w:r><w:commentRangeEnd w:id="0"/><w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:commentReference w:id="0"/></w:r></w:p>
+    #|<w:p><w:r><w:t>closing paragraph</w:t></w:r><w:r><w:footnoteReference w:id="2"/></w:r></w:p>
+    #|<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+    #|</w:body>
+    #|</w:document>
+  let styles =
+    #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:style w:type="paragraph" w:styleId="Normal" w:default="1"><w:name w:val="Normal"/></w:style>
+    #|<w:style w:type="character" w:styleId="CommentReference"><w:name w:val="annotation reference"/></w:style>
+    #|</w:styles>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w14">
+    #|<w:comment w:id="0" w:author="Ada Lovelace" w:initials="AL" w:date="2026-07-11T09:00:00Z"><w:p w14:paraId="3AAA0001"><w:r><w:t>Please cite a source here.</w:t></w:r></w:p></w:comment>
+    #|<w:comment w:id="1" w:author="Grace Hopper"><w:p w14:paraId="3BBB0001"><w:r><w:t>Agreed, fixed in the next draft.</w:t></w:r></w:p></w:comment>
+    #|</w:comments>
+  let extended =
+    #|<w15:commentsEx xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="w15">
+    #|<w15:commentEx w15:paraId="3AAA0001" w15:done="0"/>
+    #|<w15:commentEx w15:paraId="3BBB0001" w15:paraIdParent="3AAA0001" w15:done="1"/>
+    #|</w15:commentsEx>
+  let footnotes =
+    #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r></w:p></w:footnote>
+    #|<w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>
+    #|<w:footnote w:id="2"><w:p><w:r><w:t>See the appendix for details.</w:t></w:r></w:p></w:footnote>
+    #|</w:footnotes>
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+  )
+  builder.add_override(
+    "/word/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+  )
+  builder.add_override(
+    "/word/commentsExtended.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
+  )
+  builder.add_override(
+    "/word/footnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rId1",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    "styles.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rId2",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    "comments.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rId3",
+    "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
+    "commentsExtended.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rId4",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+    "footnotes.xml",
+    source="word/document.xml",
+  )
+  builder.add_part("word/document.xml", @utf8.encode(document))
+  builder.add_part("word/styles.xml", @utf8.encode(styles))
+  builder.add_part("word/comments.xml", @utf8.encode(comments))
+  builder.add_part("word/commentsExtended.xml", @utf8.encode(extended))
+  builder.add_part("word/footnotes.xml", @utf8.encode(footnotes))
+  let bytes = builder.build()
+  let dir = fresh_scratch_dir()
+  validate_docx_via_sdk(dir, "commented_cram_fixture", bytes)
+  let fixture_path = "tests/cram/fixtures/commented.docx"
+  if @afs.exists(fixture_path) {
+    let committed = @afs.read_file(fixture_path).binary()
+    debug_inspect(committed == bytes, content="true")
+  } else {
+    // Bootstrap: first generation writes the fixture for committing.
+    @afs.write_file(fixture_path, bytes, create_mode=CreateNew)
+    println("BOOTSTRAP: wrote \{fixture_path}; commit it")
+  }
+}
