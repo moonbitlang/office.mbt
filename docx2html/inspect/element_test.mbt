@@ -227,7 +227,12 @@ test "path errors are agent-correctable" {
   expect_path_error(
     "/footer[2]", "path '/footer[2]' not found: the document has 0 footer part(s)",
   )
-  expect_path_error("/footnotes/note[1]", "path root '/footnotes' is reserved")
+  // J2 slice 1: the annotation roots parse (no longer reserved); the
+  // element projection routes them in the next slice — until then the
+  // body resolver redirects with an accurate error.
+  expect_path_error(
+    "/footnotes/note[1]", "path root of '/footnotes/note[1]' is an annotation story",
+  )
   expect_path_error("/body/para[1]", "invalid path segment 'para[1]'")
   expect_path_error("/body/p[0]", "invalid path segment 'p[0]'")
   expect_path_error("/body/p[x]", "invalid path segment 'p[x]'")
