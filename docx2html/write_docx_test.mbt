@@ -1303,3 +1303,176 @@ test "K1 review round 1: plain-content holes and aliasing fail closed" {
     "comments[0]: comment bodies are paragraph-only in this writer",
   )
 }
+
+///|
+test "K2: a threaded, resolved conversation round-trips through the index" {
+  let body = [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Disputed claim")])]),
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Unrelated tail")])]),
+  ]
+  let bytes = @docx2html.write_docx_with_comments(body, [
+    // A multi-paragraph parent: the commentEx key must be the LAST
+    // body paragraph's paraId (the locked, spec-backed choice).
+    @docx2html.comment_spec(
+      author="Ada",
+      initials="A",
+      date="2026-07-11T16:00:00Z",
+      from=0,
+      to=0,
+      [
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("Check this,")])]),
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("please.")])]),
+      ],
+    ),
+    @docx2html.comment_reply(
+      author="Bob",
+      reply_to=0,
+      done=true,
+      note_body("Verified and resolved."),
+    ),
+    // Chains: a reply answering a reply.
+    @docx2html.comment_reply(
+      author="Cid",
+      reply_to=1,
+      note_body("Confirming Bob's check."),
+    ),
+  ])
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let annotated = @docx2html.read_docx_annotated(bytes)
+  guard @inspect.annotated_outline(annotated, file="t.docx") is Object(outline)
+  json_inspect(outline.get("comments"), content=[
+    [
+      { "id": "0", "author": "Ada", "done": false, "anchored_to": "/body/p[1]" },
+      { "id": "1", "author": "Bob", "done": true, "parent_id": "0" },
+      { "id": "2", "author": "Cid", "done": false, "parent_id": "1" },
+    ],
+  ])
+  json_inspect(outline.get("messages"), content=[[]])
+  // The reply carries threading metadata but NO anchors of its own.
+  json_inspect(
+    @inspect.annotated_element(
+      annotated,
+      file="t.docx",
+      path="/comments/comment[@id=1]",
+    ),
+    content={
+      "schema": "docx.element/1",
+      "file": "t.docx",
+      "path": "/comments/comment[@id=1]",
+      "kind": "comment",
+      "id": "1",
+      "author": "Bob",
+      "done": true,
+      "parent_id": "0",
+      "anchors": [],
+      "children": [{ "kind": "p", "path": "/comments/comment[@id=1]/p[1]" }],
+    },
+  )
+  // Byte level: the parent's commentEx key is its SECOND paragraph's
+  // paraId; the reply links via paraIdParent; done round-trips.
+  let archive = @mbtzip.read(bytes)
+  guard archive.get("word/comments.xml") is Some(comments_part)
+  let comments_text = @utf8.decode(comments_part, ignore_bom=true)
+  inspect(
+    comments_text.find("mc:Ignorable=\"w14\"") is Some(_),
+    content=(
+      #|false
+    ),
+  )
+  // Dense paraIds: parent paragraphs 1+2, reply bodies 3 and 4.
+  for
+    stamp in [
+      "w14:paraId=\"00000001\"", "w14:paraId=\"00000002\"", "w14:paraId=\"00000003\"",
+      "w14:paraId=\"00000004\"",
+    ] {
+    inspect(comments_text.find(stamp) is Some(_), content="true")
+  }
+  guard archive.get("word/commentsExtended.xml") is Some(extended_part)
+  let extended_text = @utf8.decode(extended_part, ignore_bom=true)
+  inspect(
+    extended_text.find("mc:Ignorable=\"w15\"") is Some(_),
+    content=(
+      #|false
+    ),
+  )
+  inspect(
+    extended_text.find(
+      "<w15:commentEx w15:paraId=\"00000002\" w15:done=\"0\"/>",
+    )
+    is Some(_),
+    content=(
+      #|false
+    ),
+  )
+  inspect(
+    extended_text.find(
+      "<w15:commentEx w15:paraId=\"00000003\" w15:done=\"1\" w15:paraIdParent=\"00000002\"/>",
+    )
+    is Some(_),
+    content=(
+      #|false
+    ),
+  )
+  inspect(
+    extended_text.find(
+      "<w15:commentEx w15:paraId=\"00000004\" w15:done=\"0\" w15:paraIdParent=\"00000003\"/>",
+    )
+    is Some(_),
+    content=(
+      #|false
+    ),
+  )
+  // Replies are anchorless: only the parent's markers exist in the body.
+  guard archive.get("word/document.xml") is Some(doc)
+  let text = @utf8.decode(doc, ignore_bom=true)
+  inspect(text.find("commentRangeStart w:id=\"1\"") is Some(_), content="false")
+  inspect(text.find("commentReference w:id=\"1\"") is Some(_), content="false")
+  inspect(text.find("commentReference w:id=\"2\"") is Some(_), content="false")
+  inspect(text.find("commentReference w:id=\"0\"") is Some(_), content="true")
+}
+
+///|
+test "K2: threading-free output stays byte-identical to the K1 writer" {
+  // No reply, no done anywhere: no w14 stamps, no commentsExtended part.
+  let bytes = @docx2html.write_docx_with_comments(
+    [@docx2html.paragraph([@docx2html.run([@docx2html.text("plain")])])],
+    [@docx2html.comment_spec(author="A", from=0, to=0, note_body("note"))],
+  )
+  let archive = @mbtzip.read(bytes)
+  inspect(archive.get("word/commentsExtended.xml") is Some(_), content="false")
+  guard archive.get("word/comments.xml") is Some(part)
+  inspect(
+    @utf8.decode(part, ignore_bom=true).find("w14") is Some(_),
+    content="false",
+  )
+}
+
+///|
+test "K2: reply targets fail closed" {
+  let plain = [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("body")])]),
+  ]
+  expect_comment_failure(
+    () => @docx2html.comment_reply(author="A", reply_to=-1, note_body("x")),
+    "a reply cannot answer comment -1; comment indexes are 0-based",
+  )
+  // Self- and forward references are write-time failures (the array is
+  // only known there).
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_comments(plain, [
+        @docx2html.comment_spec(author="A", from=0, to=0, note_body("n")),
+        @docx2html.comment_reply(author="B", reply_to=1, note_body("r")),
+      ])
+    },
+    "comments[1] replies to comment 1, which is not an EARLIER comment",
+  )
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_comments(plain, [
+        @docx2html.comment_reply(author="B", reply_to=0, note_body("r")),
+      ])
+    },
+    "comments[0] replies to comment 0, which is not an EARLIER comment",
+  )
+}

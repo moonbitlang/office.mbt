@@ -684,3 +684,61 @@ async test "a docx.batch/2 script with comments is schema-valid and round-trips"
     ),
   )
 }
+
+///|
+/// Phase-2 K2: a WRITER-authored thread — multi-paragraph parent, a
+/// resolved reply, a chained reply — must be Microsoft-schema-valid
+/// (comments + commentsExtended parts, w14/w15 + mc:Ignorable) and the
+/// index must read the thread back: parent_id chain, done flags, and
+/// the reply's anchorlessness.
+async test "a written comment thread is schema-valid and reads back threaded" {
+  let dir = fresh_scratch_dir()
+  let body = [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("Claim")])]),
+  ]
+  let bytes = @docx2html.write_docx_with_comments(body, [
+    @docx2html.comment_spec(
+      author="Ada",
+      initials="A",
+      date="2026-07-11T16:00:00Z",
+      from=0,
+      to=0,
+      [
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("First,")])]),
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("second.")])]),
+      ],
+    ),
+    @docx2html.comment_reply(author="Bob", reply_to=0, done=true, [
+      @docx2html.paragraph([@docx2html.run([@docx2html.text("Resolved.")])]),
+    ]),
+    @docx2html.comment_reply(author="Cid", reply_to=1, [
+      @docx2html.paragraph([@docx2html.run([@docx2html.text("Agreed.")])]),
+    ]),
+  ])
+  validate_docx_via_sdk(dir, "k2_thread", bytes)
+  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let index = annotated.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.comments().length(), content="3")
+  let parent = index.comments()[0]
+  debug_inspect(parent.done(), content="Some(false)")
+  debug_inspect(parent.parent_id(), content="None")
+  debug_inspect(parent.body_paragraphs(), content="2")
+  let reply = index.comments()[1]
+  debug_inspect(
+    reply.parent_id(),
+    content=(
+      #|Some("0")
+    ),
+  )
+  debug_inspect(reply.done(), content="Some(true)")
+  debug_inspect(reply.anchors().length(), content="0")
+  let chained = index.comments()[2]
+  debug_inspect(
+    chained.parent_id(),
+    content=(
+      #|Some("1")
+    ),
+  )
+  debug_inspect(chained.done(), content="Some(false)")
+}
