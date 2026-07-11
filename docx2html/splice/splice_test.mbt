@@ -194,3 +194,35 @@ test "L0: duplicate zip entries and foreign encodings fail closed" {
     content="true",
   )
 }
+
+///|
+test "L0 review round 1: malformed XML declarations fail closed" {
+  // An UNQUOTED encoding value: the old gate returned None (fail-open)
+  // and the XML belt skips declarations entirely — the tri-state parse
+  // must reject it before any splice.
+  let malformed = @mbtzip.Archive::new()
+  malformed.add(
+    "m.xml",
+    @utf8.encode("<?xml version=\"1.0\" encoding=ISO-8859-1?><r></r>"),
+  )
+  let malformed_bytes = @mbtzip.write(malformed)
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part("m.xml", @splice.span_edit(start=0, end=0, b""))
+  expect_splice_failure(
+    () => @splice.splice_docx(malformed_bytes, plan),
+    "'m.xml' has a malformed XML declaration",
+  )
+  // An unterminated encoding value is equally malformed.
+  let unterminated = @mbtzip.Archive::new()
+  unterminated.add(
+    "u.xml",
+    @utf8.encode("<?xml version=\"1.0\" encoding=\"UTF-8?><r></r>"),
+  )
+  let unterminated_bytes = @mbtzip.write(unterminated)
+  let plan2 = @splice.SplicePlan::new()
+  plan2.edit_part("u.xml", @splice.span_edit(start=0, end=0, b""))
+  expect_splice_failure(
+    () => @splice.splice_docx(unterminated_bytes, plan2),
+    "'u.xml' has a malformed XML declaration",
+  )
+}

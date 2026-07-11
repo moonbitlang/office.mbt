@@ -466,14 +466,27 @@ byte-identical outside declared spans; exactly the matrix row changed;
 untouched parts payload-identical). Criteria disposition:
 
 - namespace-URI-aware matching: GO — offsets come from the J1 scanner
-  (URI-aware by construction; alternate-prefix pin), fragments bind to
-  prefixes in context.
-- self-closing forms: GO — spans flag `self_closing`; the open-form
-  rewrite is a span edit of the node's own extent (pinned end to end).
+  (URI-aware by construction; alternate-prefix pin). **Fragments must
+  be namespace-SELF-CONTAINED** (every spliced element declares the
+  bindings for its own prefixes): correctness cannot depend on what
+  the document happened to bind — pinned against a hostile document
+  that binds `w:` to a FOREIGN URI, where the self-declaration locally
+  shadows it. This is the locked fragment rule for L1/L2.
+- self-closing forms: GO for BOTH paragraphs and runs — spans flag
+  `self_closing` (`body_paragraph_span` / `body_run_span`, with
+  content_start past a leading pPr/rPr), and the open-form rewrite is
+  a span edit of the node's own extent (pinned end to end for `<w:p/>`
+  and for an alternate-prefix `<x:r/>`).
 - encoding: UTF-8 (BOM or not) spliced; **UTF-16 and every other
   declared encoding fail closed** — offsets index UTF-8 bytes and the
   J1 scanner is UTF-8-only, so this is the consistent reading of the
-  criterion; recorded as the locked decision.
+  criterion; recorded as the locked decision. MALFORMED XML
+  declarations (unquoted/unterminated encoding values) also fail
+  closed — the well-formedness belt skips declarations, so the gate
+  is the only defense.
+- deterministic edit ordering: equal-offset insertions apply in PLAN
+  order ((start, consuming-vs-insertion, plan ordinal) key) — pinned
+  on an empty open paragraph where content_start == close_tag_start.
 - fragment namespace correctness: the splice layer's well-formedness
   belt (re-parse of every edited part) catches structural breakage;
   namespace WISDOM stays the fragment author's contract, gated by the

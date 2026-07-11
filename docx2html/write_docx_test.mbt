@@ -1797,3 +1797,63 @@ test "L0: a self-closing paragraph rewrites to open form by its own span" {
   guard out.get("word/styles.xml") is Some(styles_after)
   inspect(styles_before == styles_after, content="true")
 }
+
+///|
+test "L0 review round 1: a self-closing run rewrites by its own span (alternate prefix)" {
+  let document =
+    #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?><x:document xmlns:x="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><x:body><x:p><x:r/></x:p><x:sectPr><x:pgSz x:w="12240" x:h="15840"/></x:sectPr></x:body></x:document>
+  let styles =
+    #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Normal" w:default="1"><w:name w:val="Normal"/></w:style></w:styles>
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rId1",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    "styles.xml",
+    source="word/document.xml",
+  )
+  builder.add_part("word/document.xml", @utf8.encode(document))
+  builder.add_part("word/styles.xml", @utf8.encode(styles))
+  let original = builder.build()
+  let annotated = @docx2html.read_docx_annotated(original)
+  // The run is found under the ALTERNATE prefix and flagged interiorless.
+  guard annotated.body_run_span("p[1]/r[1]") is Some(run_span)
+  inspect(run_span.self_closing(), content="true")
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part(
+    "word/document.xml",
+    @splice.span_edit(
+      start=run_span.byte_start(),
+      end=run_span.byte_end(),
+      @utf8.encode("<w:r xmlns:w=\"\{wml}\"><w:t>filled run</w:t></w:r>"),
+    ),
+  )
+  let spliced = @splice.splice_docx(original, plan)
+  debug_inspect(@opc.validate_docx_package(spliced), content="[]")
+  let after = @docx2html.read_docx_annotated(spliced[:])
+  guard after.body_run_span("p[1]/r[1]") is Some(rewritten)
+  inspect(rewritten.self_closing(), content="false")
+  guard after.result().document is Document(children~, ..)
+  guard children is [Paragraph(children=inner, ..), ..]
+  guard inner is [Run(children=run_children, ..), ..]
+  debug_inspect(
+    run_children,
+    content=(
+      #|[Text("filled run")]
+    ),
+  )
+}

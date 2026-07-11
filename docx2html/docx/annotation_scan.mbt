@@ -379,13 +379,20 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
               None => ()
             }
           }
-          // A pPr closing directly inside a paragraph moves the
-          // paragraph's earliest insertion offset past itself: CT_P is
-          // a SEQUENCE with pPr first, so run-level content (and
-          // annotation markers) must land after it.
+          // A pPr closing directly inside a paragraph (or an rPr
+          // inside a run) moves the parent's earliest insertion offset
+          // past itself: CT_P and CT_R are SEQUENCES with the property
+          // container first, so content must land after it.
           if frame.is_wml && frame.local_name == "pPr" {
             match frames.last() {
               Some(parent) if parent.is_wml && parent.local_name == "p" =>
+                parent.content_start = close_end
+              _ => ()
+            }
+          }
+          if frame.is_wml && frame.local_name == "rPr" {
+            match frames.last() {
+              Some(parent) if parent.is_wml && parent.local_name == "r" =>
                 parent.content_start = close_end
               _ => ()
             }
@@ -661,11 +668,18 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         }
         None => ()
       }
-      // A self-closing <w:pPr/> still pins its paragraph's content
-      // start past itself (CT_P: pPr leads the sequence).
+      // A self-closing <w:pPr/> (or <w:rPr/>) still pins its parent's
+      // content start past itself (pPr/rPr lead their sequences).
       if is_wml_uri(uri) && local_name == "pPr" {
         match frames.last() {
           Some(parent) if parent.is_wml && parent.local_name == "p" =>
+            parent.content_start = tag_end
+          _ => ()
+        }
+      }
+      if is_wml_uri(uri) && local_name == "rPr" {
+        match frames.last() {
+          Some(parent) if parent.is_wml && parent.local_name == "r" =>
             parent.content_start = tag_end
           _ => ()
         }
