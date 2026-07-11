@@ -158,6 +158,7 @@ Envelope:
 | `chart` | `sheet`, `anchor`, `categories`, `values` (strings, required); `type?` (default `col`), `name?`, `title?` (strings) |
 | `table` | `sheet`, `range` (strings; `range` is an `A1:B2` colon range); `name?`, `style?` (strings); `header_row?`, `row_stripes?`, `first_column?`, `last_column?`, `column_stripes?` (bool) |
 | `validate` | `sheet`, `range` (strings; `range` is the cell/range the rule covers), `type` (required: `list`/`whole`/`decimal`/`date`/`time`/`textLength`/`custom`); `operator?`, `formula1?`, `formula2?`, `source?` (strings); `values?` (string array); `allow_blank?` (bool); `input_title?`, `input_message?`, `error_title?`, `error_message?`, `error_style?` (strings) |
+| `cf` | `sheet`, `range` (strings; `range` is the cell/range the rule covers), `type` (required: `cell`/`formula`/`2_color_scale`/`3_color_scale`/`data_bar`/`icon_set`); `criteria?`, `value?`, `min_value?`, `max_value?`, `formula?` (strings); `fill?`, `font_color?` (strings), `bold?`, `italic?` (bool); `min_type?`, `mid_type?`, `max_type?`, `mid_value?`, `min_color?`, `mid_color?`, `max_color?`, `bar_color?`, `icon_style?` (strings); `reverse_icons?`, `stop_if_true?` (bool) |
 - `set.value` accepts string, number, bool, or null. JSON types are honored:
   a number becomes a numeric cell, a string a text cell (no
   reclassification), a bool a boolean cell, and null clears the cell.
@@ -177,8 +178,8 @@ Envelope:
   range spelling); `merge`/`filter` `range` params must be an `A1:B2`
   colon range; `style.range` accepts a cell or range (each range capped
   at 100,000 cells); `table.range` must be an `A1:B2` colon range but is
-  not cell-capped; `validate.range` is a cell or `A1:B2` range, also not
-  cell-capped; `column` is a letters-only column or ascending
+  not cell-capped; `validate.range` and `cf.range` are a cell or `A1:B2`
+  range, also not cell-capped; `column` is a letters-only column or ascending
   column range; chart `categories`/`values` are a range with an optional
   non-empty `Sheet!` qualification.
 - `table` takes its column names from the header row of `range` (set those
@@ -215,6 +216,29 @@ Envelope:
   `operator`, and `error_style` values are checked at apply time, and a
   param the chosen `type` does not use (e.g. `operator` on a `list`, or
   `values` on a `whole` rule) is rejected rather than silently ignored.
+- `cf` adds one conditional-formatting rule to `range` (repeat the op to
+  stack rules; the engine assigns increasing priorities). Every color
+  (`fill`, `font_color`, `min_color`/`mid_color`/`max_color`, `bar_color`) is
+  a 6-digit hex RGB (an optional leading `#`). Pick a `type`:
+  - `cell` — a value comparison; `criteria` is an operator (`>`, `>=`, `<`,
+    `<=`, `=`, `!=`, `between`, `not between`) plus a `value` (or, for
+    `between`/`not between`, `min_value` and `max_value`), and a highlight
+    (`fill`, `font_color`, `bold`, `italic` — at least one).
+  - `formula` — a boolean `formula` (e.g. `=$A1>0`) plus a highlight.
+  - `2_color_scale` / `3_color_scale` — `min_color`/`max_color` (+ `mid_color`
+    for 3), optionally the matching `*_type`/`*_value` cfvo stops. A `*_type`
+    is one of `num`/`min`/`max`/`percent`/`percentile`/`formula`.
+  - `data_bar` — a basic bar; `bar_color` (defaults to a blue) and optional
+    `min_type`/`min_value`/`max_type`/`max_value` (same stop types). (Solid/
+    gradient, direction, and bordered bars are the x14 extension, not this op.)
+  - `icon_set` — a classic `icon_style` (e.g. `3TrafficLights1`, `4Arrows`,
+    `5Rating`; the x14-only `3Stars`/`3Triangles`/`5Boxes` are not supported
+    by this op); `reverse_icons` flips the order.
+
+  `stop_if_true` (on `cell`/`formula` rules) stops evaluating lower-priority
+  rules when this one matches. As with `validate`, the `type` is checked at
+  apply time and a param the chosen type does not use is rejected rather than
+  silently ignored.
 - Zero ops is a valid no-op and writes nothing. Scripts are capped at
   10,000 ops, style ranges at 1,000,000 expanded cells per script in
   aggregate, and numeric literals at 40 characters (pathologically long

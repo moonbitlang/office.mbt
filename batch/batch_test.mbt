@@ -461,6 +461,226 @@ test "validate op apply-time errors are typed and specific" {
 }
 
 ///|
+fn only_cf_xml(workbook : @xlsx.Workbook, sheet : String) -> String raise {
+  for ws in workbook.sheets() {
+    if ws.name() == sheet {
+      let xmls = ws.conditional_formats()
+      assert_eq(xmls.length(), 1)
+      return xmls[0]
+    }
+  }
+  fail("sheet '\{sheet}' not found")
+}
+
+///|
+test "a cf cell rule paints a dxf highlight above a threshold" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"cf","params":{"sheet":"Data","range":"B2:B20","type":"cell","criteria":">","value":"100","fill":"FF0000","bold":true}}
+    #|]}
+  inspect(apply_script(workbook, script), content="1")
+  let xml = only_cf_xml(workbook, "Data")
+  assert_true(xml.contains("type=\"cellIs\""))
+  assert_true(xml.contains("operator=\"greaterThan\""))
+  assert_true(xml.contains("<formula>100</formula>"))
+  // A dxf style id was allocated and referenced.
+  assert_true(xml.contains("dxfId=\""))
+  assert_true(xml.contains("sqref=\"B2:B20\""))
+}
+
+///|
+test "a cf between rule uses min/max and an expression rule uses a formula" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"cf","params":{"sheet":"Data","range":"A1:A5","type":"cell","criteria":"between","min_value":"1","max_value":"9","fill":"FFFF00"}},
+    #|  {"op":"cf","params":{"sheet":"Data","range":"C1:C5","type":"formula","formula":"=$A1>0","font_color":"FF0000"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="2")
+  // Two separate conditionalFormatting blocks, one per range.
+  let ws = workbook.sheets()[0]
+  let xmls = ws.conditional_formats()
+  assert_eq(xmls.length(), 2)
+  assert_true(xmls[0].contains("operator=\"between\""))
+  assert_true(xmls[0].contains("<formula>1</formula>"))
+  assert_true(xmls[0].contains("<formula>9</formula>"))
+  assert_true(xmls[1].contains("type=\"expression\""))
+  assert_true(xmls[1].contains("<formula>=$A1&gt;0</formula>"))
+}
+
+///|
+test "a cf op renders color scales, a data bar, and an icon set" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"cf","params":{"sheet":"Data","range":"A1:A9","type":"3_color_scale","min_color":"FF0000","mid_color":"FFFF00","max_color":"00FF00"}},
+    #|  {"op":"cf","params":{"sheet":"Data","range":"B1:B9","type":"data_bar","bar_color":"638EC6"}},
+    #|  {"op":"cf","params":{"sheet":"Data","range":"C1:C9","type":"icon_set","icon_style":"3TrafficLights1","reverse_icons":true}}
+    #|]}
+  inspect(apply_script(workbook, script), content="3")
+  let xmls = workbook.sheets()[0].conditional_formats()
+  assert_eq(xmls.length(), 3)
+  assert_true(xmls[0].contains("colorScale"))
+  assert_true(xmls[0].contains("rgb=\"FFFF0000\""))
+  assert_true(xmls[0].contains("rgb=\"FF00FF00\""))
+  assert_true(xmls[1].contains("dataBar"))
+  assert_true(xmls[1].contains("rgb=\"FF638EC6\""))
+  // A basic data bar stays out of the x14 extension.
+  assert_false(xmls[1].contains("x14"))
+  assert_true(xmls[2].contains("iconSet=\"3TrafficLights1\""))
+  assert_true(xmls[2].contains("reverse=\"1\""))
+}
+
+///|
+test "stacked cf ops on one range get increasing priorities and stay valid" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"cf","params":{"sheet":"Data","range":"A1:A5","type":"cell","criteria":">","value":"10","fill":"00FF00"}},
+    #|  {"op":"cf","params":{"sheet":"Data","range":"A1:A5","type":"cell","criteria":"<","value":"0","fill":"FF0000"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="2")
+  let xmls = workbook.sheets()[0].conditional_formats()
+  assert_eq(xmls.length(), 2)
+  assert_true(xmls[0].contains("priority=\"1\""))
+  assert_true(xmls[1].contains("priority=\"2\""))
+  // The package round-trips.
+  let reopened = @xlsx.read(@xlsx.write(workbook))
+  let formats = reopened.sheets()[0].get_conditional_formats()
+  match formats.get("A1:A5") {
+    Some(opts) => assert_eq(opts.length(), 2)
+    None => fail("expected the stacked rules to survive a round-trip")
+  }
+}
+
+///|
+test "cf op apply-time errors are typed and specific" {
+  let cases = [
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"nope"}}]}
+      ),
+      "cf: unknown type 'nope' (expected one of: cell, formula, 2_color_scale, 3_color_scale, data_bar, icon_set)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"cell","value":"1"}}]}
+      ),
+      "cf: type 'cell' requires 'criteria'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"cell","criteria":">","value":"1"}}]}
+      ),
+      "cf: type 'cell' requires a highlight (fill, font_color, bold, or italic)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"cell","criteria":">","fill":"FF0000"}}]}
+      ),
+      "cf: type 'cell' requires 'value'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"cell","criteria":"between","min_value":"1","fill":"FF0000"}}]}
+      ),
+      "cf: a 'between' rule requires 'min_value' and 'max_value'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"formula","fill":"FF0000"}}]}
+      ),
+      "cf: type 'formula' requires 'formula'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"2_color_scale","min_color":"FF0000"}}]}
+      ),
+      "cf: type '2_color_scale' requires 'min_color' and 'max_color'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"icon_set"}}]}
+      ),
+      "cf: type 'icon_set' requires 'icon_style'",
+    ),
+    // A param the type does not use is rejected, not silently dropped.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","bar_color":"638EC6","fill":"FF0000"}}]}
+      ),
+      "cf: type 'data_bar' does not take 'fill'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"cell","criteria":">","value":"1","fill":"FF0000","bar_color":"638EC6"}}]}
+      ),
+      "cf: type 'cell' does not take 'bar_color'",
+    ),
+    // An x14-only icon set cannot go through the classic <iconSet>.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"icon_set","icon_style":"3Stars"}}]}
+      ),
+      "cf: icon_style '3Stars' is not a classic icon set (expected one of: 3Arrows, 3ArrowsGray, 3Flags, 3Signs, 3Symbols, 3Symbols2, 3TrafficLights1, 3TrafficLights2, 4Arrows, 4ArrowsGray, 4Rating, 4RedToBlack, 4TrafficLights, 5Arrows, 5ArrowsGray, 5Quarters, 5Rating); 3Stars, 3Triangles, and 5Boxes are x14-only",
+    ),
+    // A cfvo stop type outside the classic enum would be invalid OOXML.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","min_type":"bogus"}}]}
+      ),
+      "cf: 'min_type' 'bogus' is not a valid stop type (expected one of: num, min, max, percent, percentile, formula)",
+    ),
+    // A color that is not a 6-digit hex RGB would be written as invalid rgb.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"2_color_scale","min_color":"red","max_color":"00FF00"}}]}
+      ),
+      "cf: 'min_color' 'red' is not a 6-digit hex RGB color (e.g. FF0000)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","bar_color":"FF638EC6"}}]}
+      ),
+      "cf: 'bar_color' 'FF638EC6' is not a 6-digit hex RGB color (e.g. FF0000)",
+    ),
+    // A cell criteria that is a text/time-period word, not a comparison
+    // operator, would become an invalid cellIs operator.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"cell","criteria":"today","value":"1","fill":"FF0000"}}]}
+      ),
+      "cf: cell criteria 'today' is not a comparison operator (expected one of: >, >=, <, <=, =, !=, between, not between)",
+    ),
+    // An explicit `false` flag the type does not use is still rejected.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"cf","params":{"sheet":"S","range":"A1","type":"data_bar","bar_color":"638EC6","stop_if_true":false}}]}
+      ),
+      "cf: type 'data_bar' does not take 'stop_if_true'",
+    ),
+  ]
+  for case in cases {
+    let (script, want) = case
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("S"))
+    try {
+      ignore(apply_script(workbook, script))
+      fail("expected apply to reject: \{want}")
+    } catch {
+      @batch.BatchError(message) => assert_eq(message, want)
+      err => fail("expected a BatchError, got \{err}")
+    }
+    assert_eq(workbook.sheets()[0].conditional_formats().length(), 0)
+  }
+}
+
+///|
 test "a chart op requires valid categories and values at parse time" {
   try
     ignore(
@@ -751,7 +971,7 @@ test "strict validation names the 0-based op index" {
       (
         #|{"schema": "xlsx.batch/1", "ops": [{"op": "nop", "params": {}}]}
       ),
-      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table, validate)",
+      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table, validate, cf)",
     ),
     (
       (
