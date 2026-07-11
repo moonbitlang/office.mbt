@@ -82,3 +82,27 @@ test "L0: a nested pPr does not move an OUTER paragraph's content_start" {
   assert_eq(cell_content, span_source_offset(source, "<w:r><w:t>cell"))
   assert_eq(after_content, span_source_offset(source, "<w:r><w:t>after"))
 }
+
+///|
+test "L0 review round 1: run spans mirror paragraph spans (rPr, self-closing)" {
+  let source =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>bold</w:t></w:r><w:r/></w:p></w:body></w:document>
+  let scan = scan_story(@utf8.encode(source))
+  let mut r1_content = -2
+  let mut r1_close = -2
+  let mut r2_content = -2
+  for node in scan.nodes() {
+    if node.kind == "r" && node.path == "p[1]/r[1]" {
+      r1_content = node.content_start
+      r1_close = node.close_tag_start
+    }
+    if node.kind == "r" && node.path == "p[1]/r[2]" {
+      r2_content = node.content_start
+    }
+  }
+  // Content starts past the leading rPr (CT_R: rPr first).
+  assert_eq(r1_content, span_source_offset(source, "<w:t>bold"))
+  assert_eq(r1_close, span_source_offset(source, "</w:r>"))
+  // The self-closing <w:r/> has no interior.
+  assert_eq(r2_content, -1)
+}

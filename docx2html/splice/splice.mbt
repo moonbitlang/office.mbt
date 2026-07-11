@@ -176,8 +176,32 @@ fn apply_span_edits(
   edits : Array[SpanEdit],
 ) -> Bytes raise @core.DocxError {
   check_part_encoding(name, bytes)
-  let sorted = edits.copy()
-  sorted.sort_by((a, b) => a.start - b.start)
+  // Deterministic application order: by start; at EQUAL starts,
+  // zero-width insertions land before a consuming edit, and edits that
+  // still tie keep their PLAN order (Array::sort_by is unstable, so the
+  // plan ordinal is part of the key) — two markers inserted at the same
+  // offset of an empty paragraph must splice in the order planned.
+  let decorated : Array[(Int, Int, Int, SpanEdit)] = []
+  for ordinal, edit in edits {
+    let consuming = if edit.end > edit.start { 1 } else { 0 }
+    decorated.push((edit.start, consuming, ordinal, edit))
+  }
+  decorated.sort_by((a, b) => {
+    let (a_start, a_consuming, a_ordinal, _) = a
+    let (b_start, b_consuming, b_ordinal, _) = b
+    if a_start != b_start {
+      a_start - b_start
+    } else if a_consuming != b_consuming {
+      a_consuming - b_consuming
+    } else {
+      a_ordinal - b_ordinal
+    }
+  })
+  let sorted : Array[SpanEdit] = []
+  for entry in decorated {
+    let (_, _, _, edit) = entry
+    sorted.push(edit)
+  }
   let mut previous_end = 0
   for edit in sorted {
     if edit.start < previous_end {
@@ -241,22 +265,36 @@ fn check_part_encoding(
     }
   }
   // A declared encoding other than UTF-8 fails closed even when the
-  // bytes would decode: offsets and fragments assume UTF-8.
+  // bytes would decode: offsets and fragments assume UTF-8. A
+  // MALFORMED declaration (e.g. an unquoted encoding value) also fails
+  // closed — the XML belt skips declarations, so nothing downstream
+  // would catch it.
   match declared_encoding(bytes) {
-    Some(encoding) =>
+    Declared(encoding) =>
       if !is_utf8_name(encoding) {
         raise Unsupported(
           message="'\{name}' declares encoding '\{encoding}'; byte-span splicing supports UTF-8 parts only",
         )
       }
-    None => ()
+    MalformedDeclaration =>
+      raise Unsupported(
+        message="'\{name}' has a malformed XML declaration (unparseable encoding value); refusing to splice",
+      )
+    NoDeclaration => ()
   }
+}
+
+///|
+priv enum EncodingDeclaration {
+  NoDeclaration
+  Declared(String)
+  MalformedDeclaration
 }
 
 ///|
 /// The encoding pseudo-attribute of the XML declaration, when the part
 /// starts with one (BOM tolerated).
-fn declared_encoding(bytes : Bytes) -> String? {
+fn declared_encoding(bytes : Bytes) -> EncodingDeclaration {
   let mut at = 0
   // Skip a UTF-8 BOM.
   if bytes.length() >= 3 &&
@@ -266,14 +304,14 @@ fn declared_encoding(bytes : Bytes) -> String? {
     at = 3
   }
   if at + 5 > bytes.length() {
-    return None
+    return NoDeclaration
   }
   if !(bytes[at] == b'<' &&
     bytes[at + 1] == b'?' &&
     bytes[at + 2] == b'x' &&
     bytes[at + 3] == b'm' &&
     bytes[at + 4] == b'l') {
-    return None
+    return NoDeclaration
   }
   // Scan the declaration (up to '?>') for encoding="..." | '...'.
   let mut cursor = at + 5
@@ -305,14 +343,19 @@ fn declared_encoding(bytes : Bytes) -> String? {
                 bytes[offset].to_int().to_char().unwrap_or('?'),
               )
             }
-            return Some(builder.to_string())
+            return Declared(builder.to_string())
           }
         }
+        // "encoding" seen but its value is unquoted or unterminated.
+        return MalformedDeclaration
       }
+      // "encoding" not followed by '=': also malformed as a
+      // pseudo-attribute (XML declarations have a fixed grammar).
+      return MalformedDeclaration
     }
     cursor += 1
   }
-  None
+  NoDeclaration
 }
 
 ///|

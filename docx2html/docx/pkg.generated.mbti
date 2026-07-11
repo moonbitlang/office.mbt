@@ -94,7 +94,8 @@ pub struct DocxAnnotatedResult {
   // private fields
 }
 pub fn DocxAnnotatedResult::annotations(Self) -> AnnotationIndex
-pub fn DocxAnnotatedResult::body_paragraph_span(Self, String) -> ParagraphSpan?
+pub fn DocxAnnotatedResult::body_paragraph_span(Self, String) -> NodeSpan?
+pub fn DocxAnnotatedResult::body_run_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::comment_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
 pub fn DocxAnnotatedResult::endnote_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
 pub fn DocxAnnotatedResult::footnote_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
@@ -128,6 +129,15 @@ pub fn DocxReadResult::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn DocxReadResult::to_repr(Self) -> @debug.Repr
 
+pub struct NodeSpan {
+  // private fields
+}
+pub fn NodeSpan::byte_end(Self) -> Int
+pub fn NodeSpan::byte_start(Self) -> Int
+pub fn NodeSpan::close_tag_start(Self) -> Int?
+pub fn NodeSpan::content_start(Self) -> Int?
+pub fn NodeSpan::self_closing(Self) -> Bool
+
 pub struct NoteInfo {
   // private fields
 }
@@ -137,15 +147,6 @@ pub fn NoteInfo::references(Self) -> Array[String]
 pub struct NoteSpec {
   // private fields
 }
-
-pub struct ParagraphSpan {
-  // private fields
-}
-pub fn ParagraphSpan::byte_end(Self) -> Int
-pub fn ParagraphSpan::byte_start(Self) -> Int
-pub fn ParagraphSpan::close_tag_start(Self) -> Int?
-pub fn ParagraphSpan::content_start(Self) -> Int?
-pub fn ParagraphSpan::self_closing(Self) -> Bool
 
 // Type aliases
 

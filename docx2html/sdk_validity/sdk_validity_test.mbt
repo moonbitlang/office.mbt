@@ -832,15 +832,22 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   guard annotated.body_paragraph_span("p[2]") is Some(span)
   guard span.content_start() is Some(content_start)
   guard span.close_tag_start() is Some(close_start)
-  // Fragments use the w: prefix BOUND IN CONTEXT (the document's own
-  // root declaration) — the namespace-correctness criterion.
+  // Fragments are namespace-SELF-CONTAINED: every spliced element
+  // declares the WML binding for its own prefix, so correctness does
+  // not depend on what the surrounding document happened to bind (the
+  // namespace-correctness criterion; the hostile-binding test below
+  // proves the independence).
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let start_fragment = "<w:commentRangeStart xmlns:w=\"\{wml}\" w:id=\"0\"/>"
+  let end_fragment = "<w:commentRangeEnd xmlns:w=\"\{wml}\" w:id=\"0\"/>" +
+    "<w:r xmlns:w=\"\{wml}\"><w:commentReference w:id=\"0\"/></w:r>"
   let plan = @splice.SplicePlan::new()
   plan.edit_part(
     main_part,
     @splice.span_edit(
       start=content_start,
       end=content_start,
-      @utf8.encode("<w:commentRangeStart w:id=\"0\"/>"),
+      @utf8.encode(start_fragment),
     ),
   )
   plan.edit_part(
@@ -848,9 +855,7 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
     @splice.span_edit(
       start=close_start,
       end=close_start,
-      @utf8.encode(
-        "<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r>",
-      ),
+      @utf8.encode(end_fragment),
     ),
   )
   plan.add_part(
@@ -925,15 +930,34 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
   guard out.get(main_part) is Some(spliced_doc)
   let expected = Buffer()
   expected.write_bytesview(original_doc[0:content_start])
-  expected.write_bytes(@utf8.encode("<w:commentRangeStart w:id=\"0\"/>"))
+  expected.write_bytes(@utf8.encode(start_fragment))
   expected.write_bytesview(original_doc[content_start:close_start])
-  expected.write_bytes(
-    @utf8.encode(
-      "<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r>",
-    ),
-  )
+  expected.write_bytes(@utf8.encode(end_fragment))
   expected.write_bytesview(original_doc[close_start:])
   inspect(spliced_doc == expected.contents(), content="true")
+  // ...and BOTH other edited parts reconstruct the same way — a
+  // regression that canonicalizes unrelated bytes inside an allowed
+  // part would otherwise hide inside the matrix.
+  guard out.get("word/_rels/document.xml.rels") is Some(spliced_rels)
+  let expected_rels = Buffer()
+  expected_rels.write_bytesview(rels_bytes[0:rels_at])
+  expected_rels.write_bytes(
+    @utf8.encode(
+      "<Relationship Id=\"rIdSplice1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments\" Target=\"comments.xml\"/>",
+    ),
+  )
+  expected_rels.write_bytesview(rels_bytes[rels_at:])
+  inspect(spliced_rels == expected_rels.contents(), content="true")
+  guard out.get("[Content_Types].xml") is Some(spliced_types)
+  let expected_types = Buffer()
+  expected_types.write_bytesview(types_bytes[0:types_at])
+  expected_types.write_bytes(
+    @utf8.encode(
+      "<Override PartName=\"/word/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>",
+    ),
+  )
+  expected_types.write_bytesview(types_bytes[types_at:])
+  inspect(spliced_types == expected_types.contents(), content="true")
   // The mutated-part matrix: ONLY the operation's row may differ.
   let changed : Array[String] = []
   for entry in archive.entries() {
@@ -954,6 +978,222 @@ async test "L0 spike: a comment splices into an existing document byte-preservin
     ),
   )
   inspect(out.get("word/comments.xml") is Some(_), content="true")
-  // Untouched parts stay payload-identical (spot-checked above by the
-  // matrix walk: styles.xml et al. compared equal).
+  // The output's entry set is EXACTLY the original's plus the one new
+  // part — nothing dropped, nothing else invented.
+  let original_names : Array[String] = []
+  for entry in archive.entries() {
+    original_names.push(entry.name())
+  }
+  let output_names : Array[String] = []
+  for entry in out.entries() {
+    output_names.push(entry.name())
+  }
+  original_names.push("word/comments.xml")
+  assert_eq(output_names, original_names)
+}
+
+///|
+/// L0 review round 1 (High): fragment namespace correctness must not
+/// depend on the document's own bindings. This document binds the WML
+/// namespace to `x:` and deliberately binds `w:` to a FOREIGN URI —
+/// context-relying fragments would silently attach to the wrong
+/// namespace. Self-contained fragments (each element declaring its own
+/// xmlns:w, which locally SHADOWS the hostile binding) splice
+/// correctly: the SDK validates the result and the index anchors it.
+async test "L0: self-contained fragments survive hostile prefix bindings" {
+  let dir = fresh_scratch_dir()
+  let document =
+    #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?><x:document xmlns:x="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w="urn:not-wml"><x:body><x:p><x:r><x:t>hostile ground</x:t></x:r></x:p><x:sectPr><x:pgSz x:w="12240" x:h="15840"/></x:sectPr></x:body></x:document>
+  let styles =
+    #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Normal" w:default="1"><w:name w:val="Normal"/></w:style></w:styles>
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+  )
+  builder.add_override(
+    "/word/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rId1",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    "styles.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rId2",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    "comments.xml",
+    source="word/document.xml",
+  )
+  builder.add_part("word/document.xml", @utf8.encode(document))
+  builder.add_part("word/styles.xml", @utf8.encode(styles))
+  builder.add_part(
+    "word/comments.xml",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0" w:author="Hostile"><w:p><w:r><w:t>note</w:t></w:r></w:p></w:comment></w:comments>
+      ),
+    ),
+  )
+  let original = builder.build()
+  let annotated = @docx2html.read_docx_annotated(original)
+  guard annotated.body_paragraph_span("p[1]") is Some(span)
+  guard span.content_start() is Some(content_start)
+  guard span.close_tag_start() is Some(close_start)
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part(
+    "word/document.xml",
+    @splice.span_edit(
+      start=content_start,
+      end=content_start,
+      @utf8.encode("<w:commentRangeStart xmlns:w=\"\{wml}\" w:id=\"0\"/>"),
+    ),
+  )
+  plan.edit_part(
+    "word/document.xml",
+    @splice.span_edit(
+      start=close_start,
+      end=close_start,
+      @utf8.encode(
+        "<w:commentRangeEnd xmlns:w=\"\{wml}\" w:id=\"0\"/><w:r xmlns:w=\"\{wml}\"><w:commentReference w:id=\"0\"/></w:r>",
+      ),
+    ),
+  )
+  let spliced = @splice.splice_docx(original, plan)
+  validate_docx_via_sdk(dir, "l0_hostile_prefix", spliced)
+  let after = @docx2html.read_docx_annotated(spliced[:])
+  let index = after.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.comments().length(), content="1")
+  debug_inspect(
+    index.comments()[0].anchors()[0].start(),
+    content=(
+      #|Some("/body/p[1]")
+    ),
+  )
+}
+
+///|
+/// L0 review round 1 (Medium): two insertions at the SAME offset (an
+/// EMPTY open paragraph: content_start == close_tag_start) must splice
+/// in plan order — start marker first — under the deterministic
+/// (start, consuming, ordinal) key.
+async test "L0: equal-offset insertions splice in plan order" {
+  let dir = fresh_scratch_dir()
+  // An EMPTY OPEN paragraph (<w:p></w:p>) — our writer never emits one
+  // (empty elements serialize self-closing), so build the package by
+  // hand; content_start == close_tag_start is exactly the tie the
+  // deterministic sort key must break in plan order.
+  let document =
+    #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p></w:p><w:p><w:r><w:t>anchor next</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>
+  let styles =
+    #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Normal" w:default="1"><w:name w:val="Normal"/></w:style></w:styles>
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rId1",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    "styles.xml",
+    source="word/document.xml",
+  )
+  builder.add_part("word/document.xml", @utf8.encode(document))
+  builder.add_part("word/styles.xml", @utf8.encode(styles))
+  let original = builder.build()
+  let annotated = @docx2html.read_docx_annotated(original)
+  guard annotated.body_paragraph_span("p[1]") is Some(span)
+  guard span.content_start() is Some(content_start)
+  guard span.close_tag_start() is Some(close_start)
+  inspect(content_start == close_start, content="true")
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part(
+    "word/document.xml",
+    @splice.span_edit(
+      start=content_start,
+      end=content_start,
+      @utf8.encode("<w:commentRangeStart xmlns:w=\"\{wml}\" w:id=\"0\"/>"),
+    ),
+  )
+  plan.edit_part(
+    "word/document.xml",
+    @splice.span_edit(
+      start=close_start,
+      end=close_start,
+      @utf8.encode(
+        "<w:commentRangeEnd xmlns:w=\"\{wml}\" w:id=\"0\"/><w:r xmlns:w=\"\{wml}\"><w:commentReference w:id=\"0\"/></w:r>",
+      ),
+    ),
+  )
+  plan.add_part(
+    "word/comments.xml",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0" w:author="Orderly"><w:p><w:r><w:t>on empty</w:t></w:r></w:p></w:comment></w:comments>
+      ),
+    ),
+  )
+  let archive = @mbtzip.read(original)
+  guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  guard @utf8.decode(rels_bytes, ignore_bom=true).find("</Relationships>")
+    is Some(rels_at)
+  plan.edit_part(
+    "word/_rels/document.xml.rels",
+    @splice.span_edit(
+      start=rels_at,
+      end=rels_at,
+      @utf8.encode(
+        "<Relationship Id=\"rIdSplice1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments\" Target=\"comments.xml\"/>",
+      ),
+    ),
+  )
+  guard archive.get("[Content_Types].xml") is Some(types_bytes)
+  guard @utf8.decode(types_bytes, ignore_bom=true).find("</Types>")
+    is Some(types_at)
+  plan.edit_part(
+    "[Content_Types].xml",
+    @splice.span_edit(
+      start=types_at,
+      end=types_at,
+      @utf8.encode(
+        "<Override PartName=\"/word/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>",
+      ),
+    ),
+  )
+  let spliced = @splice.splice_docx(original, plan)
+  validate_docx_via_sdk(dir, "l0_equal_offset", spliced)
+  // Order proof at the byte level: start marker precedes the end marker.
+  let out = @mbtzip.read(spliced)
+  guard out.get("word/document.xml") is Some(doc)
+  let text = @utf8.decode(doc, ignore_bom=true)
+  guard text.find("commentRangeStart") is Some(start_at)
+  guard text.find("commentRangeEnd") is Some(end_at)
+  inspect(start_at < end_at, content="true")
+  let after = @docx2html.read_docx_annotated(spliced[:])
+  debug_inspect(after.annotations().warnings(), content="[]")
+  debug_inspect(after.annotations().comments().length(), content="1")
 }
