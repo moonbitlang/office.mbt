@@ -1737,3 +1737,120 @@ fn build_inline(
       @document.run([@document.note_reference(note_type, index.to_string())])
   }
 }
+
+///|
+/// The consumed schema behind `docx annotate add`: one comment for an
+/// existing document. Same STRICT discipline as the batch scripts —
+/// run `check_script_text` on the raw text first (duplicate keys,
+/// integer lexemes), then this parser rejects unknown keys and wrong
+/// types with addressed errors.
+pub const SCHEMA_ANNOTATE : String = "docx.annotate/1"
+
+///|
+/// A parsed `docx.annotate/1` envelope: WHO plus the plain-content
+/// body. Anchors are CLI flags (`--at`/`--to`), never envelope keys.
+pub struct AnnotateEnvelope {
+  priv author : String
+  priv initials : String?
+  priv date : String?
+  priv body : Array[ParagraphSpec]
+}
+
+///|
+/// The comment author, verbatim.
+pub fn AnnotateEnvelope::author(self : AnnotateEnvelope) -> String {
+  self.author
+}
+
+///|
+/// The author initials, when given.
+pub fn AnnotateEnvelope::initials(self : AnnotateEnvelope) -> String? {
+  self.initials
+}
+
+///|
+/// The lexical timestamp, when given (validated by the writer layer).
+pub fn AnnotateEnvelope::date(self : AnnotateEnvelope) -> String? {
+  self.date
+}
+
+///|
+/// Builds the plain-content body paragraphs.
+pub fn AnnotateEnvelope::build_body(
+  self : AnnotateEnvelope,
+) -> Array[@document.DocumentElement] raise BatchError {
+  let no_images : Map[String, Bytes] = Map([])
+  let body : Array[@document.DocumentElement] = []
+  for paragraph in self.body {
+    body.push(build_paragraph(paragraph, no_images))
+  }
+  body
+}
+
+///|
+/// Parses and strictly validates a `docx.annotate/1` envelope.
+pub fn parse_annotate(json : Json) -> AnnotateEnvelope raise BatchError {
+  guard json is Object(root) else {
+    raise BatchError("the envelope must be a JSON object")
+  }
+  check_keys(root, ["schema", "comment"], "the envelope")
+  guard root.get("schema") is Some(String(schema)) else {
+    raise BatchError("the envelope needs \"schema\": \"\{SCHEMA_ANNOTATE}\"")
+  }
+  if schema != SCHEMA_ANNOTATE {
+    raise BatchError(
+      "unsupported schema '\{schema}' (this build accepts \{SCHEMA_ANNOTATE})",
+    )
+  }
+  guard root.get("comment") is Some(Object(comment)) else {
+    raise BatchError("the envelope needs \"comment\": {...}")
+  }
+  check_keys(
+    comment,
+    ["author", "initials", "date", "paragraphs"],
+    "the envelope's comment",
+  )
+  guard comment.get("author") is Some(author_json) else {
+    raise BatchError("the envelope's comment needs \"author\"")
+  }
+  guard author_json is String(author) else {
+    raise BatchError("the envelope's comment.author must be a string")
+  }
+  if author == "" {
+    raise BatchError("the envelope's comment.author must not be empty")
+  }
+  let _ = checked_attribute(Some(author), "the envelope's comment.author")
+  let initials = checked_attribute(
+    optional_string(comment, "initials", "the envelope's comment"),
+    "the envelope's comment.initials",
+  )
+  let date = optional_string(comment, "date", "the envelope's comment")
+  guard comment.get("paragraphs") is Some(Array(paragraphs_json)) else {
+    raise BatchError(
+      "the envelope's comment needs \"paragraphs\": [...] (the same plain-content grammar as docx.batch/2 comment bodies)",
+    )
+  }
+  if paragraphs_json.length() == 0 {
+    raise BatchError("the envelope's comment.paragraphs must not be empty")
+  }
+  let image_paths : Array[String] = []
+  let seen_paths : Set[String] = Set([])
+  let body : Array[ParagraphSpec] = []
+  for index, paragraph_json in paragraphs_json {
+    guard paragraph_json is Object(paragraph) else {
+      raise BatchError(
+        "the envelope's comment.paragraphs[\{index}] must be an object",
+      )
+    }
+    body.push(
+      parse_paragraph(
+        paragraph,
+        "the envelope's comment.paragraphs[\{index}]",
+        image_paths,
+        seen_paths,
+        plain=true,
+      ),
+    )
+  }
+  { author, initials, date, body }
+}

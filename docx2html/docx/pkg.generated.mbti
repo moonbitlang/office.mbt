@@ -9,6 +9,10 @@ import {
 }
 
 // Values
+pub fn comment_anchor_fragments(id~ : String) -> (String, String)
+
+pub fn comment_definition_fragment(CommentSpec, id~ : String) -> String raise @core.DocxError
+
 pub fn comment_reply(author~ : String, initials? : String, date? : String, reply_to~ : Int, done? : Bool, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
 
 pub fn comment_spec(author~ : String, initials? : String, date? : String, from~ : Int, to~ : Int, done? : Bool, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
@@ -93,6 +97,7 @@ pub struct CommentSpec {
 pub struct DocxAnnotatedResult {
   // private fields
 }
+pub fn DocxAnnotatedResult::annotation_sidecars(Self) -> Array[String]
 pub fn DocxAnnotatedResult::annotations(Self) -> AnnotationIndex
 pub fn DocxAnnotatedResult::body_paragraph_span(Self, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::body_run_span(Self, String) -> NodeSpan?

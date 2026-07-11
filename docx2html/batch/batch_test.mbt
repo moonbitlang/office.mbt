@@ -1017,3 +1017,75 @@ test "K3: note keys fail closed" {
     "ops[0].params.runs[0].link.runs[0].footnote: notes cannot sit inside hyperlinks",
   )
 }
+
+///|
+test "L1: the docx.annotate/1 envelope parses strictly" {
+  let envelope = @batch.parse_annotate(
+    @json.parse(
+      (
+        #|{"schema": "docx.annotate/1", "comment": {
+        #|  "author": "Reviewer", "initials": "R",
+        #|  "date": "2026-07-11T20:00:00Z",
+        #|  "paragraphs": [{"text": "Check this."}, {"runs": [{"text": "Bold", "bold": true}]}]
+        #|}}
+      ),
+    ),
+  )
+  inspect(envelope.author(), content="Reviewer")
+  debug_inspect(envelope.initials(), content="Some(\"R\")")
+  debug_inspect(envelope.date(), content="Some(\"2026-07-11T20:00:00Z\")")
+  inspect(envelope.build_body().length(), content="2")
+  fn reject(source : String, prefix : String) -> Unit raise {
+    try {
+      let _ = @batch.parse_annotate(@json.parse(source))
+    } catch {
+      @batch.BatchError(message) =>
+        if !message.has_prefix(prefix) {
+          fail("unexpected message: \{message}")
+        }
+      err => fail("expected BatchError, got \{repr(err)}")
+    } noraise {
+      _ => fail("expected the envelope to be rejected")
+    }
+  }
+  reject(
+    (
+      #|{"schema": "docx.annotate/2", "comment": {"author": "A", "paragraphs": [{"text": "x"}]}}
+    ),
+    "unsupported schema 'docx.annotate/2'",
+  )
+  reject(
+    (
+      #|{"schema": "docx.annotate/1", "comment": {"author": "A", "paragraphs": [{"text": "x"}], "on": 0}}
+    ),
+    "the envelope's comment has an unknown key 'on'",
+  )
+  reject(
+    (
+      #|{"schema": "docx.annotate/1", "comment": {"paragraphs": [{"text": "x"}]}}
+    ),
+    "the envelope's comment needs \"author\"",
+  )
+  reject(
+    (
+      #|{"schema": "docx.annotate/1", "comment": {"author": "A", "paragraphs": []}}
+    ),
+    "the envelope's comment.paragraphs must not be empty",
+  )
+  // Plain content: links, images, and notes are rejected in envelope
+  // bodies exactly as in batch comment bodies.
+  reject(
+    (
+      #|{"schema": "docx.annotate/1", "comment": {"author": "A",
+      #| "paragraphs": [{"runs": [{"link": {"href": "https://a.example", "text": "l"}}]}]}}
+    ),
+    "the envelope's comment.paragraphs[0].runs[0]: hyperlinks are not allowed",
+  )
+  reject(
+    (
+      #|{"schema": "docx.annotate/1", "comment": {"author": "A",
+      #| "paragraphs": [{"runs": [{"footnote": {"text": "n"}}]}]}}
+    ),
+    "the envelope's comment.paragraphs[0].runs[0]: notes cannot nest",
+  )
+}

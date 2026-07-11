@@ -6,11 +6,15 @@ import {
 }
 
 // Values
+pub const SCHEMA_ANNOTATE : String = "docx.annotate/1"
+
 pub const SCHEMA_BATCH : String = "docx.batch/1"
 
 pub const SCHEMA_BATCH_V2 : String = "docx.batch/2"
 
 pub fn check_script_text(String) -> Unit raise BatchError
+
+pub fn parse_annotate(Json) -> AnnotateEnvelope raise BatchError
 
 pub fn parse_batch(Json) -> BatchScript raise BatchError
 
@@ -29,6 +33,14 @@ pub fn BatchError::to_string(Self) -> String
 pub impl Show for BatchError
 
 // Types and methods
+pub struct AnnotateEnvelope {
+  // private fields
+}
+pub fn AnnotateEnvelope::author(Self) -> String
+pub fn AnnotateEnvelope::build_body(Self) -> Array[@document.DocumentElement] raise BatchError
+pub fn AnnotateEnvelope::date(Self) -> String?
+pub fn AnnotateEnvelope::initials(Self) -> String?
+
 pub struct BatchComment {
   // private fields
 }
