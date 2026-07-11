@@ -126,9 +126,10 @@ moon run --target wasm docx2html/cmd/docx -- batch --help
 moon run --target wasm docx2html/cmd/docx2html -- --help
 ```
 
-A failed run prints a diagnostic and exits non-zero. `cmd/xlsx` and `docx`
-script/usage errors are prefixed `error: …` (batch errors name the exact op:
-`ops[3].params.style 'Heading7' is unknown`), while file-level failures are
-prefixed with the program name (`docx: …` / `docx2html: …`). Either way, the
+A failed run prints a diagnostic and exits non-zero. Batch-script errors are
+always prefixed `error: …` and name the exact op (`error: ops[3].params.style
+'Heading7' is unknown`); file-level failures are prefixed with the program
+name (`docx: …` / `docx2html: …`); other usage/argument errors keep their
+parser message, which is often but not always `error:`-prefixed. Either way, the
 wasm backend has no stderr, so the diagnostic and any normal output both
 arrive on stdout — check the exit code.

@@ -26,7 +26,7 @@ One JSON file, schema `docx.batch/1` (normative spec:
     {"op": "paragraph", "params": {"text": "Circulate revised budget", "list": {"ordered": true}}},
     {"op": "table", "params": {"header_rows": 1, "rows": [
       [{"text": "Topic"}, {"text": "Owner"}, {"text": "Status"}],
-      [{"text": "Budget (owner+status merged)", "col_span": 2}, {"text": "Done"}],
+      [{"text": "Budget review (spans Topic+Owner)", "col_span": 2}, {"text": "Done"}],
       [{"text": "Office move"}, {"text": "Carol"}, {"text": "Open"}]
     ]}}
   ]
@@ -36,7 +36,8 @@ One JSON file, schema `docx.batch/1` (normative spec:
 Things the strict validator will catch for you (errors name the exact op):
 mistyped keys, duplicate keys, non-integer numbers, unknown styles/alignments/
 highlight colors, a `col_span` that doesn't tile the grid. A cell with
-`col_span: N` occupies N columns, so that row lists fewer cells.
+`col_span: N` occupies the NEXT N columns of its row (the merged cell above
+spans Topic+Owner), so that row lists fewer cells.
 
 ## 2. Build it
 
@@ -46,8 +47,8 @@ moon run --target wasm docx2html/cmd/docx -- batch minutes.docx script.json
 
 - The output file must NOT exist (batch creates documents; it never edits).
 - Add `--dry-run` first if you only want the validation.
-- Image ops (`{"image": {"path": "logo.png", "alt": "…"}}`) read files
-  relative to the current directory.
+- Image run specs (`{"image": {"path": "logo.png", "alt": "…"}}`, inside a
+  paragraph's `runs`) read files relative to the current directory.
 
 ## 3. Verify without leaving the sandbox
 

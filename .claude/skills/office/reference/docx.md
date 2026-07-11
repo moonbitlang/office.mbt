@@ -17,8 +17,8 @@ moon run --target wasm docx2html/cmd/docx2html -- [options] <input.docx> [output
 
 | Subcommand | What it does |
 | --- | --- |
-| `outline <file>` | JSON map of the document (`docx.outline/1`): counts, heading tree, styles in use, image inventory, header/footer/section map, reader diagnostics. Run this first to orient. |
-| `text <file>` | One line per paragraph (body, then headers/footers), each prefixed with the stable path `get` accepts: `[/body/p[2]] …`, `[/body/tbl[1]/tr[1]/tc[2]/p[1]] …`, `[/header[1]/p[1]] …`. |
+| `outline <file>` | JSON map of the document (`docx.outline/1`): counts, ordered heading list, styles in use, image inventory, header/footer/section map, reader diagnostics. Run this first to orient. |
+| `text <file>` | One line per paragraph (body, then headers/footers), each prefixed with the path `get` accepts: `[/body/p[2]] …`, `[/body/tbl[1]/tr[1]/tc[2]/p[1]] …`, `[/header[1]/p[1]] …`. Paths are snapshot-relative — positions shift if the document changes. |
 | `get <file> <path> [--json]` | One element by path. Bare: its raw text. `--json`: the structured `docx.element/1` payload (kind, formatting, children). Path errors say what exists (`'/body' has 3 'p' children (wanted index 9)`), so they are self-correcting. |
 | `validate <file>` | Portable structural validation (archive + CRCs, content types, relationships, main part). Prints `valid` / one finding per line; **exit code is the gate**. |
 | `create <out.docx>` | A minimal blank, schema-valid document. |
@@ -87,9 +87,12 @@ Options:
 
 ## Diagnostics (both binaries)
 
-A failed run prints a diagnostic and exits non-zero. Script/usage problems are
-prefixed `error: …`; file-level failures are prefixed with the program name
-(`docx: …` / `docx2html: …`). The wasm backend has no stderr, so diagnostics
+A failed run prints a diagnostic and exits non-zero. Batch-script problems
+are always prefixed `error: …` (naming the op); file-level failures are
+prefixed with the program name (`docx: …` / `docx2html: …`); other
+usage/argument errors keep their parser message (often but not always
+`error: …` — e.g. `Unsupported output format: pdf` is bare). The wasm
+backend has no stderr, so diagnostics
 arrive on stdout — always check the exit code. `docx2html` conversion warnings
 print only when output went to a file, never into piped output.
 
