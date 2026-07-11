@@ -743,3 +743,63 @@ async test "a written comment thread is schema-valid and reads back threaded" {
   )
   debug_inspect(chained.done(), content="Some(false)")
 }
+
+///|
+/// Phase-2 K3: writer-authored footnotes and endnotes — plumbing notes,
+/// in-note mark runs, positive id allocation — must be Microsoft-schema-
+/// valid and read back through the index with per-run reference paths.
+async test "written footnotes and endnotes are schema-valid and read back" {
+  let dir = fresh_scratch_dir()
+  let bytes = @docx2html.write_docx_with_annotations(
+    [
+      @docx2html.paragraph([
+        @docx2html.run([
+          @docx2html.text("Cited"),
+          @docx2html.note_reference("footnote", "0"),
+        ]),
+        @docx2html.run([
+          @docx2html.text(" twice"),
+          @docx2html.note_reference("footnote", "1"),
+        ]),
+      ]),
+      @docx2html.paragraph([
+        @docx2html.run([
+          @docx2html.text("Closing"),
+          @docx2html.note_reference("endnote", "0"),
+        ]),
+      ]),
+    ],
+    footnotes=[
+      @docx2html.note_spec([
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("Source A.")])]),
+      ]),
+      @docx2html.note_spec([
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("Source B,")])]),
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("continued.")])]),
+      ]),
+    ],
+    endnotes=[
+      @docx2html.note_spec([
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("An endnote.")])]),
+      ]),
+    ],
+  )
+  validate_docx_via_sdk(dir, "k3_notes", bytes)
+  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let index = annotated.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.footnotes().length(), content="2")
+  debug_inspect(index.endnotes().length(), content="1")
+  debug_inspect(
+    index.footnotes()[1].references(),
+    content=(
+      #|["/body/p[1]/r[2]"]
+    ),
+  )
+  debug_inspect(
+    index.endnotes()[0].references(),
+    content=(
+      #|["/body/p[2]/r[1]"]
+    ),
+  )
+}

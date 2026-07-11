@@ -25,6 +25,8 @@ pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_f
 
 pub fn new_blank_docx() -> Bytes
 
+pub fn note_spec(Array[@document.DocumentElement]) -> NoteSpec raise @core.DocxError
+
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 
 pub fn read_docx_annotated(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
@@ -36,6 +38,8 @@ pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_ext
 pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
 
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
+
+pub fn write_docx_with_annotations(Array[@document.DocumentElement], comments? : Array[CommentSpec], footnotes? : Array[NoteSpec], endnotes? : Array[NoteSpec]) -> Bytes raise @core.DocxError
 
 pub fn write_docx_with_comments(Array[@document.DocumentElement], Array[CommentSpec]) -> Bytes raise @core.DocxError
 
@@ -127,6 +131,10 @@ pub struct NoteInfo {
 }
 pub fn NoteInfo::id(Self) -> String
 pub fn NoteInfo::references(Self) -> Array[String]
+
+pub struct NoteSpec {
+  // private fields
+}
 
 // Type aliases
 

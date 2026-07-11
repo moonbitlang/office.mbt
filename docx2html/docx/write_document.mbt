@@ -19,6 +19,10 @@ priv struct WriteContext {
   document_relationships : Array[(String, String, String, Bool)]
   // (part name under word/, extension, content type, bytes) per image.
   media : Array[(String, String, String, Bytes)]
+  // How many footnotes/endnotes this write supplies: a NoteReference in
+  // a run must name one of them (0-based index), else it would dangle.
+  footnote_count : Int
+  endnote_count : Int
 }
 
 ///|
@@ -60,6 +64,8 @@ fn build_docx_package(
   ctx : WriteContext,
   comments_xml~ : String?,
   comments_extended_xml~ : String?,
+  footnotes_xml~ : String?,
+  endnotes_xml~ : String?,
 ) -> Bytes raise @opc.PackageBuildError {
   builder.add_default(
     "rels", "application/vnd.openxmlformats-package.relationships+xml",
@@ -111,6 +117,24 @@ fn build_docx_package(
       )
       // Its main-part relationship is likewise in ctx.document_relationships.
       builder.add_part("word/commentsExtended.xml", @utf8.encode(xml))
+    }
+    None => ()
+  }
+  match footnotes_xml {
+    Some(xml) => {
+      builder.add_override(
+        "/word/footnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+      )
+      builder.add_part("word/footnotes.xml", @utf8.encode(xml))
+    }
+    None => ()
+  }
+  match endnotes_xml {
+    Some(xml) => {
+      builder.add_override(
+        "/word/endnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
+      )
+      builder.add_part("word/endnotes.xml", @utf8.encode(xml))
     }
     None => ()
   }
@@ -492,6 +516,38 @@ fn write_run(
       Tab => nodes.push(XmlElement(@xml.xml_element("w:tab")))
       Break(Line) => nodes.push(XmlElement(@xml.xml_element("w:br")))
       Image(image) => nodes.push(XmlElement(write_image(image, ctx)))
+      NoteReference(note_type~, note_id~) => {
+        // note_id is the 0-BASED INDEX into the notes supplied to
+        // write_docx_with_annotations; the emitted w:id is index+1
+        // (positive, clear of the -1/0 plumbing ids).
+        let count = match note_type {
+          "footnote" => ctx.footnote_count
+          "endnote" => ctx.endnote_count
+          other =>
+            raise Unsupported(
+              message="unknown note type '\{other}' (footnote or endnote)",
+            )
+        }
+        let index = match parse_note_index(note_id) {
+          Some(index) if index < count => index
+          _ =>
+            raise Unsupported(
+              message="the \{note_type} reference '\{note_id}' does not name a supplied note (this write has \{count} \{note_type}(s); references are 0-based indexes)",
+            )
+        }
+        let name = if note_type == "footnote" {
+          "w:footnoteReference"
+        } else {
+          "w:endnoteReference"
+        }
+        nodes.push(
+          XmlElement(
+            @xml.xml_element(name, attributes={
+              "w:id": (index + 1).to_string(),
+            }),
+          ),
+        )
+      }
       other =>
         raise Unsupported(
           message="the run writer cannot serialize this content yet: \{block_kind_name(other)}",
@@ -499,6 +555,23 @@ fn write_run(
     }
   }
   @xml.xml_element("w:r", children=nodes)
+}
+
+///|
+/// Strict non-negative decimal parse of a note-reference index.
+fn parse_note_index(text : String) -> Int? {
+  if text.length() == 0 || text.length() > 9 {
+    return None
+  }
+  let mut value = 0
+  for unit in text {
+    let code = unit.to_int()
+    if code < '0'.to_int() || code > '9'.to_int() {
+      return None
+    }
+    value = value * 10 + (code - '0'.to_int())
+  }
+  Some(value)
 }
 
 ///|
