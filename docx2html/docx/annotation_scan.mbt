@@ -196,6 +196,11 @@ priv struct ScanFrame {
   mut vmerge_seen : Bool
   mut vmerge_continue : Bool
   mut row_deleted : Bool
+  // The reader honors only the FIRST tcPr/trPr (first_or_empty): a tc/tr
+  // frame records having seen one; a tcPr/trPr frame records whether it
+  // IS that first one (declarations from later ones are ignored).
+  mut properties_seen : Bool
+  first_properties : Bool
 }
 
 ///|
@@ -372,7 +377,9 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
           // cell content): reader-exact — a continuation whose STARTING
           // column has a registered origin is merged away (retracted);
           // an unmatched continuation is KEPT and becomes the origin.
-          if frame.is_wml && frame.local_name == "tcPr" {
+          if frame.is_wml &&
+            frame.local_name == "tcPr" &&
+            frame.first_properties {
             match
               (
                 nearest_frame_by_kind(frames, "tc"),
@@ -381,15 +388,20 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
               (Some(cell), Some(table)) =>
                 if cell.vmerge_continue &&
                   table.origin_columns.contains(cell.grid_column) {
-                  retract_cell(cell)
+                  retract_cell(cell, nodes, markers)
                 }
               _ => ()
             }
           }
           // trPr/w:del deletes the whole row, reader-exact.
-          if frame.is_wml && frame.local_name == "trPr" {
+          if frame.is_wml &&
+            frame.local_name == "trPr" &&
+            frame.first_properties {
             match nearest_frame_by_kind(frames, "tr") {
-              Some(row) => if row.row_deleted { retract_row(row) }
+              Some(row) =>
+                if row.row_deleted {
+                  retract_row(row, nodes, markers)
+                }
               None => ()
             }
           }
@@ -538,7 +550,8 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
     // FIRST gridSpan wins, parsed with the reader's own parse_grid_span.
     let parent_is = fn(name : String) -> Bool {
       match frames.last() {
-        Some(parent) => parent.is_wml && parent.local_name == name
+        Some(parent) =>
+          parent.is_wml && parent.local_name == name && parent.first_properties
         None => false
       }
     }
@@ -578,6 +591,17 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
     if self_closing {
       // Open+close in place; only projection nodes matter for spans.
       seq += 1
+      // A self-closing <w:tcPr/> or <w:trPr/> still claims FIRST-
+      // properties status (the reader's first_or_empty picks it, so a
+      // later framed tcPr/trPr must be ignored). Its own declarations
+      // are vacuously empty and its close-decision is a no-op.
+      if is_wml_uri(uri) && local_name is ("tcPr" | "trPr") {
+        let owner_kind = if local_name == "tcPr" { "tc" } else { "tr" }
+        match nearest_frame_by_kind(frames, owner_kind) {
+          Some(owner) => owner.properties_seen = true
+          None => ()
+        }
+      }
       // A self-closing <w:tc/> is a normal span-1 cell to the reader:
       // register its origin column and advance the row cursor.
       if projection_kind_value is Some("tc") {
@@ -631,6 +655,23 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
       } else {
         -1
       }
+      // Is THIS element the first tcPr/trPr of its cell/row?
+      let first_properties = if is_wml_uri(uri) &&
+        local_name is ("tcPr" | "trPr") {
+        let owner_kind = if local_name == "tcPr" { "tc" } else { "tr" }
+        match nearest_frame_by_kind(frames, owner_kind) {
+          Some(owner) =>
+            if owner.properties_seen {
+              false
+            } else {
+              owner.properties_seen = true
+              true
+            }
+          None => false
+        }
+      } else {
+        false
+      }
       frames.push({
         local_name,
         is_wml: is_wml_uri(uri),
@@ -653,6 +694,8 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         vmerge_seen: false,
         vmerge_continue: false,
         row_deleted: false,
+        properties_seen: false,
+        first_properties,
       })
     }
     index = tag_end
@@ -698,9 +741,49 @@ fn nearest_frame_by_kind(
 }
 
 ///|
+/// Removes already-emitted nodes/markers from inside a retracted frame:
+/// the reader drops the WHOLE subtree even when properties arrive after
+/// content (tolerated malformed input), so anything recorded since the
+/// frame opened must go.
+fn purge_subtree(
+  frame : ScanFrame,
+  nodes : Array[ScannedNode],
+  markers : Array[ScannedMarker],
+) -> Unit {
+  let kept_nodes : Array[ScannedNode] = []
+  for node in nodes {
+    if node.open_seq <= frame.open_seq {
+      kept_nodes.push(node)
+    }
+  }
+  if kept_nodes.length() != nodes.length() {
+    nodes.clear()
+    for node in kept_nodes {
+      nodes.push(node)
+    }
+  }
+  let kept_markers : Array[ScannedMarker] = []
+  for marker in markers {
+    if marker.seq <= frame.open_seq {
+      kept_markers.push(marker)
+    }
+  }
+  if kept_markers.length() != markers.length() {
+    markers.clear()
+    for marker in kept_markers {
+      markers.push(marker)
+    }
+  }
+}
+
+///|
 /// Retracts a deleted row (trPr/w:del): un-counts its ordinal and
 /// suppresses the whole subtree, like the reader's read_table_row.
-fn retract_row(row : ScanFrame) -> Unit {
+fn retract_row(
+  row : ScanFrame,
+  nodes : Array[ScannedNode],
+  markers : Array[ScannedMarker],
+) -> Unit {
   match (row.projection_path, row.counter_owner) {
     (Some(_), Some(counters)) => {
       let current = counters.get_or_default("tr", 0)
@@ -710,6 +793,7 @@ fn retract_row(row : ScanFrame) -> Unit {
       row.projection_path = None
       row.counter_owner = None
       row.suppressed = true
+      purge_subtree(row, nodes, markers)
     }
     _ => ()
   }
@@ -718,7 +802,11 @@ fn retract_row(row : ScanFrame) -> Unit {
 ///|
 /// Retracts a continuation cell the reader strips: un-counts its
 /// ordinal and suppresses the whole subtree.
-fn retract_cell(cell : ScanFrame) -> Unit {
+fn retract_cell(
+  cell : ScanFrame,
+  nodes : Array[ScannedNode],
+  markers : Array[ScannedMarker],
+) -> Unit {
   match (cell.projection_path, cell.counter_owner) {
     (Some(_), Some(counters)) => {
       let current = counters.get_or_default("tc", 0)
@@ -728,6 +816,7 @@ fn retract_cell(cell : ScanFrame) -> Unit {
       cell.projection_path = None
       cell.counter_owner = None
       cell.suppressed = true
+      purge_subtree(cell, nodes, markers)
     }
     _ => ()
   }

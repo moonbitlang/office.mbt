@@ -387,3 +387,66 @@ test "scanner review round 4: reader-exact merge origins, spans, and row deletio
   // restart advanced the cursor so r3's would-be second cell (none) —
   // pinned indirectly by r4's col assignments above.
 }
+
+///|
+test "scanner review round 5: span-sensitive merging, first-tcPr-only, retraction purges" {
+  // Row 1: a span-"2abc" cell (reader's parse_grid_span -> 2) then a
+  // plain sibling — the sibling lands at column 2 ONLY if the span
+  // parsed as 2. Row 2: continuations at columns 0 and 2 — BOTH merge
+  // away iff the row-1 columns were registered at 0 and 2 (a span-1
+  // misparse would register the sibling at column 1 and leave the
+  // column-2 continuation kept). Row 3: a SECOND tcPr carrying vMerge
+  // must be ignored (reader honors only the first), so the cell is
+  // KEPT. Row 4: a first-tcPr continuation arriving AFTER content —
+  // the retraction purges the already-emitted paragraph and marker.
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body>
+      #|<w:tbl>
+      #|<w:tr><w:tc><w:tcPr><w:gridSpan w:val="2abc"/></w:tcPr><w:p><w:r><w:t>span two</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>at col 2</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p/></w:tc><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p/></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr/><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>second tcPr ignored, kept</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:p><w:r><w:t>emitted then purged</w:t></w:r><w:commentReference w:id="5"/></w:p><w:tcPr><w:vMerge/></w:tcPr></w:tc></w:tr>
+      #|</w:tbl>
+      #|</w:body>
+      #|</w:document>
+    ),
+  )
+  // Wait — row 2's second continuation sits at column 1 (cursor), not 2.
+  // The cursor claims columns in document order: cell 1 at col 0
+  // (span 1 default? no: vMerge only) then cell 2 at col 1. Column 1
+  // has NO origin (row 1 registered 0 and 2), so cell 2 is KEPT.
+  let cells : Array[String] = []
+  for node in scan.nodes() {
+    if node.kind == "tc" {
+      cells.push(node.path())
+    }
+  }
+  cells.sort()
+  debug_inspect(
+    cells,
+    content=(
+      #|[
+      #|  "tbl[1]/tr[1]/tc[1]",
+      #|  "tbl[1]/tr[1]/tc[2]",
+      #|  "tbl[1]/tr[2]/tc[1]",
+      #|  "tbl[1]/tr[3]/tc[1]",
+      #|]
+    ),
+  )
+  // The purged row-4 cell left no paragraph, run, or marker behind.
+  let mut leaked = false
+  for node in scan.nodes() {
+    if node.path().has_prefix("tbl[1]/tr[4]") {
+      leaked = true
+    }
+  }
+  debug_inspect(
+    leaked,
+    content=(
+      #|true
+    ),
+  )
+  debug_inspect(scan.markers().length(), content="0")
+}
