@@ -36,6 +36,7 @@ fn value_for_type(kind : String) -> Json {
     "cell" => Json::string("A1")
     "range" => Json::string("A1")
     "colon_range" => Json::string("A1:B2")
+    "table_range" => Json::string("A1:B2")
     "column" => Json::string("A")
     "series_range" => Json::string("A1:A3")
     "number" => Json::number(10)
@@ -147,7 +148,7 @@ test "capabilities payload is field-exact" {
       #|filter: sheet:string! range:colon_range!
       #|add-sheet: name:string!
       #|chart: sheet:string! anchor:cell! categories:series_range! values:series_range! type:string name:string title:string
-      #|table: sheet:string! range:colon_range! name:string style:string header_row:bool row_stripes:bool first_column:bool last_column:bool column_stripes:bool
+      #|table: sheet:string! range:table_range! name:string style:string header_row:bool row_stripes:bool first_column:bool last_column:bool column_stripes:bool
     ),
   )
 }

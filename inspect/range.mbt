@@ -52,6 +52,21 @@ pub impl Show for RangeError with fn output(self, logger) {
 /// anchors (`$A$1`) are accepted. Raises `RangeError` for a malformed or
 /// out-of-grid reference and for a range exceeding `MAX_RANGE_CELLS`.
 pub fn parse_range(target : String) -> CellRange raise RangeError {
+  let range = parse_range_unbounded(target)
+  if range.cell_count() > MAX_RANGE_CELLS {
+    raise RangeTooLarge(range=target, count=range.cell_count())
+  }
+  range
+}
+
+///|
+/// Like `parse_range`, but WITHOUT the `MAX_RANGE_CELLS` cap: it still
+/// requires a well-formed in-grid cell or `A1:B2` range, but does not reject
+/// a large one. For callers that only need the range's bounds and never
+/// enumerate its cells — defining a table reads only the header row, so an
+/// ordinary large table range must not be rejected as if it were an
+/// about-to-be-expanded style range.
+pub fn parse_range_unbounded(target : String) -> CellRange raise RangeError {
   match target.find(":") {
     None => {
       let (col, row) = parse_cell_ref(target, full=target)
@@ -60,7 +75,7 @@ pub fn parse_range(target : String) -> CellRange raise RangeError {
     Some(index) => {
       let (c1, r1) = parse_cell_ref(target[:index], full=target)
       let (c2, r2) = parse_cell_ref(target[index + 1:], full=target)
-      let range : CellRange = {
+      {
         col_lo: if c1 < c2 {
           c1
         } else {
@@ -82,10 +97,6 @@ pub fn parse_range(target : String) -> CellRange raise RangeError {
           r2
         },
       }
-      if range.cell_count() > MAX_RANGE_CELLS {
-        raise RangeTooLarge(range=target, count=range.cell_count())
-      }
-      range
     }
   }
 }

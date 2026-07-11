@@ -195,6 +195,42 @@ test "a table op auto-names and keeps engine defaults when options are omitted" 
 }
 
 ///|
+test "a table op accepts a large range — no expansion cap applies" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  // 100,002 cells — past the 100k cap that `style`/`merge` ranges hit, but a
+  // table never enumerates its cells, so it must be accepted.
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"table","params":{"sheet":"S","range":"A1:B50001"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="1")
+  inspect(first_table(workbook).range_ref, content="A1:B50001")
+}
+
+///|
+test "a table op rejects a single-row range on the last grid row" {
+  try
+    ignore(
+      parse_ops(
+        (
+          #|{"schema":"xlsx.batch/1", "ops": [{"op":"table", "params": {"sheet":"S", "range":"A1048576:B1048576"}}]}
+        ),
+      ),
+    )
+  catch {
+    @batch.BatchError(message) =>
+      inspect(
+        message,
+        content="op 0 (table): 'range' is a single-row range on the last grid row, leaving no room for a data row: 'A1048576:B1048576'",
+      )
+    err => fail("expected a BatchError, got \{err}")
+  } noraise {
+    _ => fail("expected the last-row table range to be rejected")
+  }
+}
+
+///|
 test "a table op requires an A1:B2-style range, not a bare cell" {
   try
     ignore(

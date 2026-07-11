@@ -275,7 +275,7 @@ fn parse_op(
     "table" =>
       OpTable(
         sheet=reader.string("sheet"),
-        range=reader.colon_range("range"),
+        range=reader.table_range("range"),
         name=reader.optional_string("name"),
         style=reader.optional_string("style"),
         header_row=reader.tristate_bool("header_row"),
@@ -483,6 +483,47 @@ fn ParamReader::colon_range(
       self.index,
       self.op,
       "'\{key}' must be an A1:B2-style range: '\{text}'",
+    )
+  }
+  text
+}
+
+///|
+/// A range param for a table: an `A1:B2` colon range validated for in-grid
+/// syntax but WITHOUT the 100k-cell expansion cap that `range`/`colon_range`
+/// apply. A table never enumerates its cells (the engine derives columns
+/// from the header row only), so an ordinary large table range must be
+/// accepted rather than rejected as an expansion. Also rejects a single-row
+/// range on the last grid row, which the engine expands downward by one row
+/// and would push off the grid — caught here with a clear message instead of
+/// failing deep in apply.
+fn ParamReader::table_range(
+  self : ParamReader,
+  key : String,
+) -> String raise BatchError {
+  let text = self.string(key)
+  let range = @inspect.parse_range_unbounded(text) catch {
+    _ =>
+      raise op_error(
+        self.index,
+        self.op,
+        "'\{key}' is not a valid cell or range reference: '\{text}'",
+      )
+  }
+  if !text.contains(":") {
+    raise op_error(
+      self.index,
+      self.op,
+      "'\{key}' must be an A1:B2-style range: '\{text}'",
+    )
+  }
+  // 1_048_576 is the last grid row; a single-row range there has no room for
+  // the data row the engine appends.
+  if range.row_lo == range.row_hi && range.row_hi >= 1_048_576 {
+    raise op_error(
+      self.index,
+      self.op,
+      "'\{key}' is a single-row range on the last grid row, leaving no room for a data row: '\{text}'",
     )
   }
   text

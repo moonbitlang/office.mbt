@@ -97,7 +97,7 @@ let op_specs : Array[OpSpec] = [
     op: "table",
     params: [
       req("sheet", "string"),
-      req("range", "colon_range"),
+      req("range", "table_range"),
       opt("name", "string"),
       opt("style", "string"),
       opt("header_row", "bool"),
