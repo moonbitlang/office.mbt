@@ -110,10 +110,32 @@ out="$(must docx annotate resolve "$work/replied.docx" "$work/resolved.docx" --c
 resolved="$(must docx get "$work/resolved.docx" '/comments/comment[@id=0]' --json)"
 echo "$resolved" | grep -q '"done": true' || fail "resolved done flag"
 
-# Byte preservation: the body story of the reviewed file differs from
-# the original ONLY by the spliced markers (the added text lines are
-# identical), and mutation never edited in place.
+# Byte preservation, PROVEN per generation (not just claimed):
+# - annotate add: document.xml minus the three spliced marker
+#   fragments is byte-identical to the original; styles.xml untouched.
+# - reply: document.xml and styles.xml are byte-identical to the
+#   PREVIOUS generation (replies are anchorless).
+# - resolve: document.xml AND comments.xml byte-identical to the
+#   previous generation (only the commentsExtended entry flips).
+# And mutation never edited any input in place.
 cmp -s "$work/minutes.docx" "$work/minutes.before" || fail "original mutated by annotate"
+part() { unzip -p "$1" "$2"; }
+part "$work/reviewed.docx" word/document.xml \
+  | sed -E 's|<w:commentRangeStart[^>]*/>||; s|<w:commentRangeEnd[^>]*/>||; s|<w:r xmlns:w=[^>]*><w:commentReference[^>]*/></w:r>||' \
+  > "$work/reviewed.body.stripped"
+part "$work/minutes.docx" word/document.xml > "$work/minutes.body"
+cmp -s "$work/reviewed.body.stripped" "$work/minutes.body" || fail "add mutated bytes beyond the marker fragments"
+part "$work/reviewed.docx" word/styles.xml > "$work/reviewed.styles"
+part "$work/minutes.docx" word/styles.xml > "$work/minutes.styles"
+cmp -s "$work/reviewed.styles" "$work/minutes.styles" || fail "add mutated styles.xml"
+part "$work/replied.docx" word/document.xml > "$work/replied.body"
+part "$work/reviewed.docx" word/document.xml > "$work/reviewed.body"
+cmp -s "$work/replied.body" "$work/reviewed.body" || fail "reply touched the main story"
+part "$work/resolved.docx" word/document.xml > "$work/resolved.body"
+cmp -s "$work/resolved.body" "$work/replied.body" || fail "resolve touched the main story"
+part "$work/resolved.docx" word/comments.xml > "$work/resolved.comments"
+part "$work/replied.docx" word/comments.xml > "$work/replied.comments"
+cmp -s "$work/resolved.comments" "$work/replied.comments" || fail "resolve touched comments.xml"
 [ "$(must docx text "$work/resolved.docx" | grep -c '^\[/body/')" -eq 15 ] || fail "body text count after review loop"
 
 echo "ACCEPTANCE PASS: authored, validated, every structural claim round-tripped, both error probes exact, review loop (comment/reply/resolve) byte-preserving"

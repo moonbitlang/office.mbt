@@ -82,7 +82,7 @@ dates), all with zero-output confirmation, using only the reference
 doc and `--help`. It reported **zero doc-vs-observed mismatches** and
 four documentation gaps, all fixed in PR M before merge: comment
 ids' JSON type (strings) was unstated; annotate anchor errors lacked
-the corrective sibling count the paths layer promises (now included:
-"the body has 3 top-level paragraph(s)"); the outline table omitted
-the `comments` key; and the stdout success-line contract was
-undocumented.
+the corrective detail the paths layer promises (now: sibling counts
+and first-missing-ancestor reporting); the outline table omitted the
+`comments` row; and the stdout contract (both diagnostic prefixes,
+the dry-run line, no-output-file semantics) was undocumented.

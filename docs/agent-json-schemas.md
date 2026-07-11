@@ -361,10 +361,6 @@ set is a source-compatible change.)
 
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
 
-Top-level keys include `comments` — the annotation inventory
-(id/author/done/parent_id/anchored_to per comment; `[]` when none) —
-specified in detail under "Annotations in the read surface" below.
-
 A metadata-priced orientation payload: no document text is emitted beyond
 heading lines. Counts and headings cover the **main body story only** —
 footnote/endnote/comment bodies are counted as units, not folded into
@@ -379,6 +375,7 @@ included. All top-level keys are always present (possibly `[]`).
 | `headings` | array | in document order: `{level, text, style_id?, style_name?}`. Heading detection follows the Mammoth default style-map convention with its rule order and matching semantics — style ids compare exactly, style names case-insensitively: id `Heading1`..`Heading6`; else name equal (ignoring case) to `heading 1`..`heading 6`; else bare id `Heading` / bare name `heading` (level 1). Headings whose text is empty are omitted. `text` is the paragraph's raw text without the trailing paragraph separator |
 | `styles_in_use` | array | unique `{kind, id?, name?}` in first-use order; `kind` ∈ `paragraph` \| `run` \| `table`. Only styles the reader resolved on body elements (unstyled elements contribute nothing) |
 | `images` | array | `{content_type, bytes}` per embedded image, in document order; `bytes` is the image part's byte length — no image data is emitted |
+| `comments` | array | the annotation inventory: `{id, author?, done?, parent_id?, anchored_to?}` per comment (always present, possibly `[]`); full semantics under "Annotations in the read surface" |
 | `sections` | array | in document order: `{ends_after_paragraph?, headers, footers}`. `ends_after_paragraph` is the 1-based index of the section's last direct body paragraph (absent = the body-final section); `headers`/`footers` are the section's **effective** references — OOXML inheritance applied: a section without an explicit reference for a variant uses the previous section's, and an explicit-but-unreadable reference blocks inheritance for that variant. Ordering is deterministic: explicit references in XML order, then inherited entries in the previous section's effective order. Entries are `{variant, part}` with `variant` ∈ `default` \| `first` \| `even` and `part` the 1-based index into the `/header[n]` / `/footer[n]` path space |
 | `messages` | array | reader diagnostics: `{severity, text}` with `severity` ∈ `warning` \| `error` (e.g. ignored unrecognised elements) |
 
@@ -686,11 +683,16 @@ text; unknown keys/types rejected with addressed errors):
   value (`--comment 0` matches id `"0"`).
 - **stdout contract**: success lines are
   `created <path> (N op(s)[, N comment(s)][, N footnote(s)][, N endnote(s)])`
-  for `batch` and `annotated <path> (...)` for the annotate verbs;
-  failures are one `error: ...` line with exit 1 and ZERO output.
-  Anchor misses include the sibling count
+  for `batch` (`ok (dry run): ... , nothing written` under
+  `--dry-run`) and `annotated <path> (...)` for the annotate verbs.
+  Failures are ONE diagnostic line with exit 1 and NO OUTPUT FILE
+  created: `error: ...` for problems in your input (scripts, flags,
+  anchors, envelopes), `docx: ...` for environment refusals and
+  internal errors (existing output paths, unreadable files, sidecars).
+  Anchor misses include a corrective detail — the sibling count
   (`'/body/p[9]' does not name a body paragraph (the body has 3
-  top-level paragraph(s))`) so the ordinal can be corrected.
+  top-level paragraph(s))`) or the first missing ancestor
+  (`'/body/tbl[9]' does not exist`).
 
 ## Recipe: the review workflow (read → comment → reply → resolve)
 
@@ -704,13 +706,15 @@ explicitly change.
 docx outline report.docx            # counts + comments inventory (id/author/done/parent_id/anchored_to)
 docx text report.docx               # every paragraph with its stable path
 
+# (Paths are SNAPSHOT-RELATIVE projection paths — re-read them after
+# any mutation; they are not stable anchors. Quote them in shells.)
 # 2. READ a thread end to end.
 docx get report.docx '/comments/comment[@id=0]' --json   # metadata + anchors + children
 docx get report.docx '/comments/comment[@id=0]/p[1]'     # a comment body paragraph, as text
 docx get report.docx '/body/p[2]' --json                 # .comment_ids lists comments covering a paragraph
 
 # 3. COMMENT on a paragraph (or a --to range) of the existing file.
-docx annotate add report.docx r1.docx --at /body/p[2] \
+docx annotate add report.docx r1.docx --at '/body/p[2]' \
   --text 'Cite the source for this figure.' --author 'Reviewer' --initials RV
 
 # 4. REPLY in the thread (anchorless; threads under the parent).
