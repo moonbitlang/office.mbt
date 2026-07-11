@@ -132,3 +132,71 @@ fn validation_error_style_of(
       )
   }
 }
+
+///|
+/// Rejects `operator`/`formula1`/`formula2` a `validate` type does not use,
+/// so an agent hears about an irrelevant param instead of it being silently
+/// dropped. Callers pass `formula1=""` for a type that legitimately uses it
+/// (e.g. `custom`) so only the truly-unused ones are checked.
+fn reject_unused_validate_params(
+  validation_type : String,
+  operator~ : String,
+  formula1~ : String,
+  formula2~ : String,
+) -> Unit raise BatchError {
+  if operator != "" {
+    raise BatchError(
+      "validate: type '\{validation_type}' does not take 'operator'",
+    )
+  }
+  if formula1 != "" {
+    raise BatchError(
+      "validate: type '\{validation_type}' does not take 'formula1'",
+    )
+  }
+  if formula2 != "" {
+    raise BatchError(
+      "validate: type '\{validation_type}' does not take 'formula2'",
+    )
+  }
+}
+
+///|
+/// Rejects the list-only params (`values`/`source`) for a non-list `validate`
+/// type.
+fn reject_list_only_validate_params(
+  validation_type : String,
+  values~ : Array[String],
+  source~ : String,
+) -> Unit raise BatchError {
+  if !values.is_empty() {
+    raise BatchError(
+      "validate: type '\{validation_type}' does not take 'values'",
+    )
+  }
+  if source != "" {
+    raise BatchError(
+      "validate: type '\{validation_type}' does not take 'source'",
+    )
+  }
+}
+
+///|
+/// Rejects inline dropdown values the engine's comma-join + quote cannot
+/// faithfully represent: a value containing a comma (it would split into two
+/// options) or a leading `=` on the first value (read as a formula, not a
+/// literal list). Steers the caller to `source` with a cell range instead.
+fn check_inline_list_values(values : Array[String]) -> Unit raise BatchError {
+  for value in values {
+    if value.contains(",") {
+      raise BatchError(
+        "validate: inline list value '\{value}' contains a comma; use 'source' with a cell range instead",
+      )
+    }
+  }
+  if values.length() > 0 && values[0].has_prefix("=") {
+    raise BatchError(
+      "validate: an inline list value must not start with '='; use 'source' with a cell range instead",
+    )
+  }
+}

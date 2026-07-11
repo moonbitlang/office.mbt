@@ -398,6 +398,51 @@ test "validate op apply-time errors are typed and specific" {
       ),
       "validate: unknown operator 'gt' (expected one of: between, notBetween, equal, notEqual, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual)",
     ),
+    // A type that does not use a param must reject it, not silently drop it.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"custom","formula1":"=A1>0","formula2":"=A1<9"}}]}
+      ),
+      "validate: type 'custom' does not take 'formula2'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"custom","operator":"equal","formula1":"=A1>0"}}]}
+      ),
+      "validate: type 'custom' does not take 'operator'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"list","values":["A"],"operator":"equal"}}]}
+      ),
+      "validate: type 'list' does not take 'operator'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"whole","operator":"equal","formula1":"1","values":["A"]}}]}
+      ),
+      "validate: type 'whole' does not take 'values'",
+    ),
+    // An unknown enum value is rejected even with no other trigger.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"list","values":["A"],"error_style":"loud"}}]}
+      ),
+      "validate: unknown error_style 'loud' (expected one of: stop, warning, information)",
+    ),
+    // Inline values the engine's comma-join + quote cannot represent.
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"list","values":["Last, First","Other"]}}]}
+      ),
+      "validate: inline list value 'Last, First' contains a comma; use 'source' with a cell range instead",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"validate","params":{"sheet":"S","range":"A1","type":"list","values":["=SUM(1)"]}}]}
+      ),
+      "validate: an inline list value must not start with '='; use 'source' with a cell range instead",
+    ),
   ]
   for case in cases {
     let (script, want) = case

@@ -196,21 +196,25 @@ Envelope:
 - `validate` attaches one data validation to `range` (a single cell or an
   `A1:B2` range; not cell-capped, since a whole-column rule is common). Pick
   a `type`:
-  - `list` — a dropdown; give inline `values` (a string array, quoted into
-    the rule for you) *or* a `source` cell range (e.g. `Lists!$A$1:$A$5`).
-    `values` win if both are given.
+  - `list` — a dropdown; give inline `values` (a string array; the engine
+    comma-joins and quotes them, so an individual value must not contain a
+    comma or start with `=` — use `source` for those) *or* a `source` cell
+    range (e.g. `Lists!$A$1:$A$5`). `values` win if both are given.
   - `whole`/`decimal`/`date`/`time`/`textLength` — a comparison needing an
     `operator` (`between`/`notBetween`/`equal`/`notEqual`/`greaterThan`/
     `greaterThanOrEqual`/`lessThan`/`lessThanOrEqual`) and `formula1`;
     `between`/`notBetween` also need `formula2` (the others must not carry
-    one). `formula1`/`formula2` are written verbatim.
+    one). `formula1`/`formula2` are written verbatim (a number, a cell
+    reference, or a formula).
   - `custom` — a boolean `formula1` (e.g. `=ISNUMBER(A1)`).
 
   `allow_blank` defaults to `true` (omit to allow empty cells; pass `false`
   to forbid them). Supply `input_title`/`input_message` for a hover prompt
   and `error_title`/`error_message` (+ `error_style` `stop`/`warning`/
   `information`, default `stop`) for the rejection alert. The `type`,
-  `operator`, and `error_style` values are checked at apply time.
+  `operator`, and `error_style` values are checked at apply time, and a
+  param the chosen `type` does not use (e.g. `operator` on a `list`, or
+  `values` on a `whole` rule) is rejected rather than silently ignored.
 - Zero ops is a valid no-op and writes nothing. Scripts are capped at
   10,000 ops, style ranges at 1,000,000 expanded cells per script in
   aggregate, and numeric literals at 40 characters (pathologically long

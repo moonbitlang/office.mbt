@@ -914,6 +914,11 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       error_message~,
       error_style~
     ) => {
+      // Validate every enum-valued string up front, independent of whether
+      // the type uses it, so an unknown value is always rejected rather than
+      // silently ignored: `error_style` here, and `operator` in each branch
+      // (rejected outright where the type does not take one).
+      let error_style_enum = validation_error_style_of(error_style)
       // Omitted allow_blank means "allow" (Excel's friendlier default).
       let allow = match allow_blank {
         Some(flag) => flag
@@ -922,10 +927,21 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       let dv = @xlsx.DataValidation::new(allow)
       dv.set_sqref(range)
       match validation_type {
-        // A dropdown: inline `values` (quoted into the formula by the
-        // engine) win over a `source` range; one of the two is required.
-        "list" =>
+        // A dropdown: inline `values` win over a `source` range; one of the
+        // two is required. The comparison params do not apply.
+        "list" => {
+          reject_unused_validate_params(
+            validation_type,
+            operator~,
+            formula1~,
+            formula2~,
+          )
           if !values.is_empty() {
+            // The engine joins the values with commas and quotes the result,
+            // so a value carrying a comma would split into two options and a
+            // leading '=' would be read as a formula — reject both and steer
+            // the caller to `source`.
+            check_inline_list_values(values)
             dv.set_drop_list(values)
           } else if source != "" {
             dv.set_sqref_drop_list(source)
@@ -934,21 +950,26 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
               "validate: type 'list' requires 'values' or 'source'",
             )
           }
-        // A boolean formula; Excel ignores the operator, so pass a fixed
-        // placeholder to satisfy the engine setter.
+        }
+        // A boolean formula. Excel ignores the operator for custom rules, so
+        // pass a fixed placeholder to satisfy the engine setter; the operator
+        // and formula2 params do not apply.
         "custom" => {
+          reject_unused_validate_params(
+            validation_type,
+            operator~,
+            formula1="",
+            formula2~,
+          )
+          reject_list_only_validate_params(validation_type, values~, source~)
           if formula1 == "" {
             raise BatchError("validate: type 'custom' requires 'formula1'")
           }
-          dv.set_range(
-            TextValue(formula1),
-            TextValue(formula2),
-            Custom,
-            Between,
-          )
+          dv.set_range(TextValue(formula1), TextValue(""), Custom, Between)
         }
         // A comparison against one or two bounds.
         "whole" | "decimal" | "date" | "time" | "textLength" => {
+          reject_list_only_validate_params(validation_type, values~, source~)
           if operator == "" {
             raise BatchError(
               "validate: type '\{validation_type}' requires 'operator'",
@@ -988,11 +1009,7 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       // An error alert or an input prompt is added only when the script
       // provides text for it.
       if error_message != "" || error_title != "" {
-        dv.set_error(
-          validation_error_style_of(error_style),
-          error_title,
-          error_message,
-        )
+        dv.set_error(error_style_enum, error_title, error_message)
       }
       if input_message != "" || input_title != "" {
         dv.set_input(input_title, input_message)
