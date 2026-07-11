@@ -103,6 +103,18 @@ priv enum InlineSpec {
     alt~ : String?,
     at~ : String
   )
+  // A run holding one footnote/endnote reference; index is the dense
+  // per-kind note index the writer consumes.
+  NoteRefSpec(note_type~ : String, index~ : Int)
+}
+
+///|
+/// Note bodies collected while parsing body runs. Present only where
+/// notes are ALLOWED: docx.batch/2 body content (including table
+/// cells), never inside comment or note bodies, never under /1.
+priv struct NoteCollector {
+  footnotes : Array[(String, Array[ParagraphSpec])]
+  endnotes : Array[(String, Array[ParagraphSpec])]
 }
 
 ///|
@@ -163,6 +175,8 @@ pub struct BatchScript {
   priv ops : Array[OpSpec]
   priv image_paths : Array[String]
   priv comments : Array[CommentOp]
+  priv footnotes : Array[(String, Array[ParagraphSpec])]
+  priv endnotes : Array[(String, Array[ParagraphSpec])]
   priv total_ops : Int
   // The script op index behind each body BLOCK (comment ops produce no
   // blocks, so block index i came from ops[block_ops[i]]).
@@ -285,6 +299,13 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
   let kinds : Array[ParsedOpKind] = []
   let comments : Array[CommentOp] = []
   let block_ops : Array[Int] = []
+  // Notes only exist in /2; a None collector makes every note key an
+  // addressed schema error under /1.
+  let notes : NoteCollector? = if schema == SCHEMA_BATCH_V2 {
+    Some({ footnotes: [], endnotes: [] })
+  } else {
+    None
+  }
   for index, op_json in ops_json {
     let at = "ops[\{index}]"
     guard op_json is Object(op) else {
@@ -305,14 +326,20 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
         block_ops.push(index)
         ops.push(
           ParagraphOp(
-            parse_paragraph(params, at + ".params", image_paths, seen_paths),
+            parse_paragraph(
+              params,
+              at + ".params",
+              image_paths,
+              seen_paths,
+              notes~,
+            ),
           ),
         )
       }
       "table" => {
         kinds.push(Table)
         block_ops.push(index)
-        ops.push(parse_table(params, at, image_paths, seen_paths))
+        ops.push(parse_table(params, at, image_paths, seen_paths, notes~))
       }
       "comment" => {
         if schema == SCHEMA_BATCH {
@@ -331,7 +358,19 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
         )
     }
   }
-  { ops, image_paths, comments, total_ops: ops_json.length(), block_ops }
+  let (footnotes, endnotes) = match notes {
+    Some(collector) => (collector.footnotes, collector.endnotes)
+    None => ([], [])
+  }
+  {
+    ops,
+    image_paths,
+    comments,
+    footnotes,
+    endnotes,
+    total_ops: ops_json.length(),
+    block_ops,
+  }
 }
 
 ///|
@@ -578,6 +617,7 @@ fn parse_paragraph(
   image_paths : Array[String],
   seen_paths : Set[String],
   plain? : Bool = false,
+  notes? : NoteCollector? = None,
 ) -> ParagraphSpec raise BatchError {
   // `at` is the address of the paragraph object itself ("ops[3].params",
   // "ops[3].params.rows[0][1].paragraphs[2]") so every message below
@@ -654,6 +694,7 @@ fn parse_paragraph(
             seen_paths,
             allow_links=true,
             plain~,
+            notes~,
           ),
         )
       }
@@ -675,6 +716,7 @@ fn parse_inline(
   seen_paths : Set[String],
   allow_links~ : Bool,
   plain? : Bool = false,
+  notes? : NoteCollector? = None,
 ) -> InlineSpec raise BatchError {
   guard json is Object(spec) else {
     raise BatchError("\{at} must be an object")
@@ -740,6 +782,7 @@ fn parse_inline(
               seen_paths,
               allow_links=false,
               plain~,
+              notes~,
             ),
           )
         }
@@ -750,6 +793,43 @@ fn parse_inline(
       (None, None) => raise BatchError("\{at}.link needs text or runs")
     }
     return LinkSpec(href~, anchor~, target_frame~, runs~)
+  }
+  for note_type in (["footnote", "endnote"] : ReadOnlyArray[String]) {
+    guard spec.get(note_type) is Some(note_json) else { continue }
+    if plain {
+      raise BatchError("\{at}: notes cannot nest inside comment or note bodies")
+    }
+    // allow_links=false means we are INSIDE a hyperlink's runs: keep
+    // note references at top run level (the canonical shape).
+    if !allow_links {
+      raise BatchError(
+        "\{at}.\{note_type}: notes cannot sit inside hyperlinks (put the note reference in a top-level run)",
+      )
+    }
+    guard notes is Some(collector) else {
+      raise BatchError(
+        "\{at}.\{note_type} needs \"schema\": \"\{SCHEMA_BATCH_V2}\"",
+      )
+    }
+    check_keys(spec, [note_type], at)
+    guard note_json is Object(note) else {
+      raise BatchError("\{at}.\{note_type} must be an object")
+    }
+    check_keys(note, ["text", "paragraphs"], "\{at}.\{note_type}")
+    let body = parse_comment_body(
+      note,
+      "\{at}.\{note_type}",
+      image_paths,
+      seen_paths,
+    )
+    let bodies = if note_type == "footnote" {
+      collector.footnotes
+    } else {
+      collector.endnotes
+    }
+    let index = bodies.length()
+    bodies.push(("\{at}.\{note_type}", body))
+    return NoteRefSpec(note_type~, index~)
   }
   if spec.get("image") is Some(image_json) {
     if plain {
@@ -872,6 +952,7 @@ fn parse_table(
   at : String,
   image_paths : Array[String],
   seen_paths : Set[String],
+  notes? : NoteCollector? = None,
 ) -> OpSpec raise BatchError {
   check_keys(params, ["rows", "header_rows"], at + ".params")
   guard params.get("rows") is Some(Array(rows_json)) else {
@@ -958,6 +1039,7 @@ fn parse_table(
                 "\{cell_where}.paragraphs[\{paragraph_index}]",
                 image_paths,
                 seen_paths,
+                notes~,
               ),
             )
           }
@@ -1523,6 +1605,65 @@ pub fn BatchComment::body(
 }
 
 ///|
+/// One built note body plus its script address for error attribution.
+pub struct BatchNote {
+  priv at : String
+  priv body : Array[@document.DocumentElement]
+}
+
+///|
+/// The script address ("ops[2].params.runs[1].footnote") of this note.
+pub fn BatchNote::at(self : BatchNote) -> String {
+  self.at
+}
+
+///|
+/// The built plain-content body paragraphs (a fresh copy).
+pub fn BatchNote::body(self : BatchNote) -> Array[@document.DocumentElement] {
+  self.body.copy()
+}
+
+///|
+/// Number of footnotes and endnotes in the script.
+pub fn BatchScript::note_counts(self : BatchScript) -> (Int, Int) {
+  (self.footnotes.length(), self.endnotes.length())
+}
+
+///|
+/// Builds the writer-facing footnote bodies, in first-reference order
+/// (the dense per-kind index the body's note references name).
+pub fn BatchScript::build_footnotes(
+  self : BatchScript,
+) -> Array[BatchNote] raise BatchError {
+  build_note_bodies(self.footnotes)
+}
+
+///|
+/// Builds the writer-facing endnote bodies (see `build_footnotes`).
+pub fn BatchScript::build_endnotes(
+  self : BatchScript,
+) -> Array[BatchNote] raise BatchError {
+  build_note_bodies(self.endnotes)
+}
+
+///|
+fn build_note_bodies(
+  specs : Array[(String, Array[ParagraphSpec])],
+) -> Array[BatchNote] raise BatchError {
+  let built : Array[BatchNote] = []
+  let no_images : Map[String, Bytes] = Map([])
+  for spec in specs {
+    let (at, paragraphs) = spec
+    let body : Array[@document.DocumentElement] = []
+    for paragraph in paragraphs {
+      body.push(build_paragraph(paragraph, no_images))
+    }
+    built.push({ at, body })
+  }
+  built
+}
+
+///|
 /// Builds the writer-facing comment list, in op order (which is also
 /// the dense-id order the writer assigns). Comment bodies are plain
 /// content, so unlike `build_body` no image bytes are needed.
@@ -1592,5 +1733,7 @@ fn build_inline(
             "\{at}.path: image bytes for '\{path}' were not provided",
           )
       }
+    NoteRefSpec(note_type~, index~) =>
+      @document.run([@document.note_reference(note_type, index.to_string())])
   }
 }
