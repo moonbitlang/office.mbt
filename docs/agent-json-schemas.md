@@ -361,6 +361,10 @@ set is a source-compatible change.)
 
 ## `docx.outline/1` — document structure map (`docx outline <file>`)
 
+Top-level keys include `comments` — the annotation inventory
+(id/author/done/parent_id/anchored_to per comment; `[]` when none) —
+specified in detail under "Annotations in the read surface" below.
+
 A metadata-priced orientation payload: no document text is emitted beyond
 heading lines. Counts and headings cover the **main body story only** —
 footnote/endnote/comment bodies are counted as units, not folded into
@@ -676,3 +680,50 @@ text; unknown keys/types rejected with addressed errors):
   key when absent. After any thread or resolution exists, every
   comment reads back with an explicit `done` value (absent `done`
   means the document has no commentsExtended part at all).
+- **Comment ids are JSON STRINGS** everywhere they are read
+  (`"id": "0"`, `"parent_id": "0"`): they are XML attribute values,
+  spelled as the document spells them. `--comment` takes that spelled
+  value (`--comment 0` matches id `"0"`).
+- **stdout contract**: success lines are
+  `created <path> (N op(s)[, N comment(s)][, N footnote(s)][, N endnote(s)])`
+  for `batch` and `annotated <path> (...)` for the annotate verbs;
+  failures are one `error: ...` line with exit 1 and ZERO output.
+  Anchor misses include the sibling count
+  (`'/body/p[9]' does not name a body paragraph (the body has 3
+  top-level paragraph(s))`) so the ordinal can be corrected.
+
+## Recipe: the review workflow (read → comment → reply → resolve)
+
+The complete annotation lifecycle on a document you did NOT author,
+using only this CLI. Every mutation writes a NEW file (never in
+place), fails with zero output, and preserves every byte it does not
+explicitly change.
+
+```sh
+# 1. ORIENT: what is in the document, and what discussion exists?
+docx outline report.docx            # counts + comments inventory (id/author/done/parent_id/anchored_to)
+docx text report.docx               # every paragraph with its stable path
+
+# 2. READ a thread end to end.
+docx get report.docx '/comments/comment[@id=0]' --json   # metadata + anchors + children
+docx get report.docx '/comments/comment[@id=0]/p[1]'     # a comment body paragraph, as text
+docx get report.docx '/body/p[2]' --json                 # .comment_ids lists comments covering a paragraph
+
+# 3. COMMENT on a paragraph (or a --to range) of the existing file.
+docx annotate add report.docx r1.docx --at /body/p[2] \
+  --text 'Cite the source for this figure.' --author 'Reviewer' --initials RV
+
+# 4. REPLY in the thread (anchorless; threads under the parent).
+docx annotate reply r1.docx r2.docx --comment 0 \
+  --text 'Source added in the appendix.' --author 'Author'
+
+# 5. RESOLVE (or unresolve) the thread.
+docx annotate resolve r2.docx r3.docx --comment 0
+docx outline r3.docx | jq '[.comments[] | {id, done, parent_id}]'
+```
+
+Multi-paragraph or formatted comment bodies use the `--json` envelope
+(`docx.annotate/1` above) instead of `--text`; the envelope then owns
+ALL metadata. New documents with built-in discussions are authored in
+one shot via `docx batch` with `docx.batch/2` `comment` ops
+(`reply_to`/`done` included) — see that section.
