@@ -25,6 +25,13 @@ pub fn qualify_range(String, String) -> String
 pub suberror BatchError {
   BatchError(String)
 } derive(@debug.Debug)
+#deprecated
+pub fn BatchError::output(Self, &Logger) -> Unit
+#as_free_fn
+#deprecated
+pub fn BatchError::to_repr(Self) -> @debug.Repr
+#deprecated
+pub fn BatchError::to_string(Self) -> String
 pub impl Show for BatchError
 
 // Types and methods
@@ -40,6 +47,9 @@ pub enum BatchOp {
   OpChart(sheet~ : String, anchor~ : String, chart_type~ : String, categories~ : String, values~ : String, series_name~ : String, title~ : String)
 } derive(@debug.Debug)
 pub fn BatchOp::name(Self) -> String
+#as_free_fn
+#deprecated
+pub fn BatchOp::to_repr(Self) -> @debug.Repr
 
 pub enum BatchValue {
   Text(String)
@@ -47,6 +57,9 @@ pub enum BatchValue {
   Flag(Bool)
   Clear
 } derive(@debug.Debug)
+#as_free_fn
+#deprecated
+pub fn BatchValue::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
