@@ -5,6 +5,7 @@ import {
   "bobzhang/docx2html/converter",
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/document",
+  "bobzhang/docx2html/splice",
   "moonbitlang/core/debug",
 }
 
@@ -30,6 +31,8 @@ pub fn extract_raw_text(BytesView, external_file_access? : Bool, read_external_f
 pub fn new_blank_docx() -> Bytes
 
 pub fn note_spec(Array[@document.DocumentElement]) -> NoteSpec raise @core.DocxError
+
+pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 

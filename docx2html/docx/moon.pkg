@@ -4,6 +4,7 @@ import {
   "bobzhang/docx2html/paths",
   "bobzhang/docx2html/converter",
   "bobzhang/docx2html/core",
+  "bobzhang/docx2html/splice",
   "bobzhang/docx2html/document",
   "bobzhang/docx2html/style_map",
   "bobzhang/docx2html/xml",

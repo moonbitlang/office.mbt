@@ -432,13 +432,19 @@ pub fn read_docx_annotated(
   let combined = @core.dedupe_messages(package_result.messages)
   package_result.messages.clear()
   package_result.messages.append(combined)
-  let comments_part_path = find_part_path(
-    zip,
-    parts.relationships,
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-    base_path=parts.base_path,
-    fallback_path="word/comments.xml",
-  )
+  // A REAL relationship match only — the reader's filename fallback
+  // must not make an orphan word/comments.xml look wired (mutating it
+  // without wiring would publish disconnected definitions).
+  let mut comments_part_resolved : String? = None
+  for
+    target in parts.relationships.find_targets_by_type(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    ) {
+    let path = resolve_part_target(parts.base_path, target)
+    if zip.exists(path) && comments_part_resolved is None {
+      comments_part_resolved = Some(path)
+    }
+  }
   let sidecar_types : Array[String] = []
   for
     sidecar_type in (
@@ -450,15 +456,31 @@ pub fn read_docx_annotated(
       sidecar_types.push(sidecar_type)
     }
   }
+  // The locked rule detects sidecars by relationship type AND content
+  // type: an Override can identify one even when no main-part
+  // relationship names it.
+  let types_text = zip.read_text("[Content_Types].xml") catch { _ => None }
+  match types_text {
+    Some(text) =>
+      for
+        sidecar_content_type in (
+          [
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsIds+xml",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.people+xml",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtensible+xml",
+          ] : ReadOnlyArray[String]) {
+        if text.find(sidecar_content_type) is Some(_) &&
+          sidecar_types.search(sidecar_content_type) is None {
+          sidecar_types.push(sidecar_content_type)
+        }
+      }
+    None => ()
+  }
   {
     package_result,
     index,
     main_part: main_story_path(zip),
-    comments_part_name: if zip.exists(comments_part_path) {
-      Some(comments_part_path)
-    } else {
-      None
-    },
+    comments_part_name: comments_part_resolved,
     sidecar_types,
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
