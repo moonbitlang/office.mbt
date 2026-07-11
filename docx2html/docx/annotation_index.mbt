@@ -825,22 +825,28 @@ fn read_comment_definitions(
   warnings : Array[String],
 ) -> Array[CommentDefinition] {
   let definitions : Array[CommentDefinition] = []
-  // Transitional first, then Strict (purl.oclc.org) — L2 round 2.
-  let mut path = find_part_path(
-    zip,
-    parts.relationships,
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-    base_path=parts.base_path,
-    fallback_path="word/comments.xml",
-  )
-  if !zip.exists(path) {
-    path = find_part_path(
-      zip,
-      parts.relationships,
-      relationship_type="http://purl.oclc.org/ooxml/officeDocument/relationships/comments",
-      base_path=parts.base_path,
-      fallback_path="word/comments.xml",
-    )
+  // RELATIONSHIPS first — Transitional then Strict — and the legacy
+  // filename fallback only when neither resolves (L2 round 3: the
+  // fallback must not mask a Strict relationship behind an orphan
+  // word/comments.xml).
+  let mut path = "word/comments.xml"
+  let mut resolved_by_relationship = false
+  for
+    comments_rel_type in (
+      [
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+        "http://purl.oclc.org/ooxml/officeDocument/relationships/comments",
+      ] : ReadOnlyArray[String]) {
+    if resolved_by_relationship {
+      continue
+    }
+    for target in parts.relationships.find_targets_by_type(comments_rel_type) {
+      let candidate = @opc.resolve_target(parts.base_path, target)
+      if zip.exists(candidate) && !resolved_by_relationship {
+        path = candidate
+        resolved_by_relationship = true
+      }
+    }
   }
   if !zip.exists(path) {
     return definitions
