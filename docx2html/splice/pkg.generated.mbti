@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/splice"
+
+import {
+  "bobzhang/docx2html/core",
+}
+
+// Values
+pub fn span_edit(start~ : Int, end~ : Int, Bytes) -> SpanEdit raise @core.DocxError
+
+pub fn splice_docx(BytesView, SplicePlan) -> Bytes raise @core.DocxError
+
+// Errors
+
+// Types and methods
+pub struct SpanEdit {
+  // private fields
+}
+
+pub struct SplicePlan {
+  // private fields
+}
+pub fn SplicePlan::add_part(Self, String, Bytes) -> Unit raise @core.DocxError
+pub fn SplicePlan::edit_part(Self, String, SpanEdit) -> Unit
+pub fn SplicePlan::new() -> Self
+
+// Type aliases
+
+// Traits
+

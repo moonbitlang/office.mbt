@@ -454,6 +454,39 @@ splice well-formed fragments, keep original bytes elsewhere.
   presence → mutating commands fail closed. Follow the officeDocument
   relationship; never hardcode word/document.xml.
 
+### L0 verdict (2026-07-11): **GO**
+
+The spike shipped as `docx2html/splice` (SpanEdit/SplicePlan/splice_docx)
+plus scanner insertion offsets (`ParagraphSpan`:
+content_start past a leading pPr / close_tag_start / self_closing) and
+the proof — a comment spliced into an existing document passes the
+Microsoft SDK, reads back through the index anchored at the right
+paths with zero warnings, and holds the fidelity oracle (mutated parts
+byte-identical outside declared spans; exactly the matrix row changed;
+untouched parts payload-identical). Criteria disposition:
+
+- namespace-URI-aware matching: GO — offsets come from the J1 scanner
+  (URI-aware by construction; alternate-prefix pin), fragments bind to
+  prefixes in context.
+- self-closing forms: GO — spans flag `self_closing`; the open-form
+  rewrite is a span edit of the node's own extent (pinned end to end).
+- encoding: UTF-8 (BOM or not) spliced; **UTF-16 and every other
+  declared encoding fail closed** — offsets index UTF-8 bytes and the
+  J1 scanner is UTF-8-only, so this is the consistent reading of the
+  criterion; recorded as the locked decision.
+- fragment namespace correctness: the splice layer's well-formedness
+  belt (re-parse of every edited part) catches structural breakage;
+  namespace WISDOM stays the fragment author's contract, gated by the
+  dual validators downstream.
+- duplicate-zip-entry rejection: GO (pinned).
+- zero output on failure: GO — `splice_docx` is pure and all-or-nothing
+  (fail-closed matrix pinned); atomic publication stays the CLI's
+  contract, identical to batch.
+
+Raw member identity is impossible (the zip layer recompresses); the
+guarantee is uncompressed-payload equality plus preserved entry order,
+names, and compression method — documented in the module header.
+
 ## L1 — `docx annotate add` (existing documents)
 
 - Contract, two branch-exclusive forms:

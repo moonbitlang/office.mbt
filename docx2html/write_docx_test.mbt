@@ -1729,3 +1729,71 @@ test "L0: body paragraph spans resolve through the public query" {
   inspect(annotated.body_paragraph_span("p[9]") is Some(_), content="false")
   inspect(annotated.body_paragraph_span("tbl[1]") is Some(_), content="false")
 }
+
+///|
+test "L0: a self-closing paragraph rewrites to open form by its own span" {
+  // Writers never emit <w:p/>, but existing documents may hold it; the
+  // span query flags it (no interior) and the splice layer rewrites the
+  // NODE'S OWN SPAN to the open form — the L0 criterion for
+  // self-closing paragraph forms.
+  let document =
+    #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/><w:p><w:r><w:t>second</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>
+  let styles =
+    #|<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Normal" w:default="1"><w:name w:val="Normal"/></w:style></w:styles>
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+  )
+  builder.add_relationship(
+    "rId1", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rId1",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+    "styles.xml",
+    source="word/document.xml",
+  )
+  builder.add_part("word/document.xml", @utf8.encode(document))
+  builder.add_part("word/styles.xml", @utf8.encode(styles))
+  let original = builder.build()
+  let annotated = @docx2html.read_docx_annotated(original)
+  guard annotated.body_paragraph_span("p[1]") is Some(span)
+  inspect(span.self_closing(), content="true")
+  inspect(span.content_start() is Some(_), content="false")
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part(
+    "word/document.xml",
+    @splice.span_edit(
+      start=span.byte_start(),
+      end=span.byte_end(),
+      @utf8.encode("<w:p><w:r><w:t>filled</w:t></w:r></w:p>"),
+    ),
+  )
+  let spliced = @splice.splice_docx(original, plan)
+  debug_inspect(@opc.validate_docx_package(spliced), content="[]")
+  let after = @docx2html.read_docx_annotated(spliced[:])
+  guard after.body_paragraph_span("p[1]") is Some(rewritten)
+  inspect(rewritten.self_closing(), content="false")
+  // Fidelity: everything outside the rewritten node's own span is the
+  // original bytes.
+  let archive = @mbtzip.read(original)
+  let out = @mbtzip.read(spliced)
+  guard archive.get("word/document.xml") is Some(before_doc)
+  guard out.get("word/document.xml") is Some(after_doc)
+  let expected = Buffer()
+  expected.write_bytesview(before_doc[0:span.byte_start()])
+  expected.write_bytes(@utf8.encode("<w:p><w:r><w:t>filled</w:t></w:r></w:p>"))
+  expected.write_bytesview(before_doc[span.byte_end():])
+  inspect(after_doc == expected.contents(), content="true")
+  guard archive.get("word/styles.xml") is Some(styles_before)
+  guard out.get("word/styles.xml") is Some(styles_after)
+  inspect(styles_before == styles_after, content="true")
+}

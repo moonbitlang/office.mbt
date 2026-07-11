@@ -803,3 +803,157 @@ async test "written footnotes and endnotes are schema-valid and read back" {
     ),
   )
 }
+
+///|
+/// Phase-2 L0 — THE SPIKE PROOF: add a comment to an EXISTING document
+/// by byte-span surgery alone (no reserialization), then hold it to
+/// every gate at once: Microsoft schema validity, annotation-index
+/// read-back, and the fidelity oracle — mutated parts byte-identical
+/// outside the declared spans, untouched parts payload-identical, and
+/// nothing mutated beyond the operation's row in the roadmap's
+/// mutated-part matrix (document.xml, its .rels, [Content_Types].xml,
+/// the new comments.xml — and NOTHING else).
+async test "L0 spike: a comment splices into an existing document byte-preservingly" {
+  let dir = fresh_scratch_dir()
+  // The "existing" document: written normally, treated as opaque bytes
+  // from here on. A styled paragraph guarantees a pPr to insert AFTER.
+  let original = @docx2html.write_docx([
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("Heading text")])],
+      properties=@docx2html.paragraph_properties(style_id=Some("Heading1")),
+    ),
+    @docx2html.paragraph([
+      @docx2html.run([@docx2html.text("The sentence under review.")]),
+    ]),
+  ])
+  let annotated = @docx2html.read_docx_annotated(original)
+  let main_part = annotated.main_story_part()
+  inspect(main_part, content="word/document.xml")
+  guard annotated.body_paragraph_span("p[2]") is Some(span)
+  guard span.content_start() is Some(content_start)
+  guard span.close_tag_start() is Some(close_start)
+  // Fragments use the w: prefix BOUND IN CONTEXT (the document's own
+  // root declaration) — the namespace-correctness criterion.
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part(
+    main_part,
+    @splice.span_edit(
+      start=content_start,
+      end=content_start,
+      @utf8.encode("<w:commentRangeStart w:id=\"0\"/>"),
+    ),
+  )
+  plan.edit_part(
+    main_part,
+    @splice.span_edit(
+      start=close_start,
+      end=close_start,
+      @utf8.encode(
+        "<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r>",
+      ),
+    ),
+  )
+  plan.add_part(
+    "word/comments.xml",
+    @utf8.encode(
+      (
+        #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="0" w:author="Surgeon" w:date="2026-07-11T18:00:00Z"><w:p><w:r><w:t>Spliced in, not rewritten.</w:t></w:r></w:p></w:comment></w:comments>
+      ),
+    ),
+  )
+  // Wire the new part: a relationship in the main part's .rels and an
+  // Override in [Content_Types].xml — themselves span edits.
+  let archive = @mbtzip.read(original)
+  guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
+  guard rels_text.find("</Relationships>") is Some(rels_at)
+  plan.edit_part(
+    "word/_rels/document.xml.rels",
+    @splice.span_edit(
+      start=rels_at,
+      end=rels_at,
+      @utf8.encode(
+        "<Relationship Id=\"rIdSplice1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments\" Target=\"comments.xml\"/>",
+      ),
+    ),
+  )
+  guard archive.get("[Content_Types].xml") is Some(types_bytes)
+  let types_text = @utf8.decode(types_bytes, ignore_bom=true)
+  guard types_text.find("</Types>") is Some(types_at)
+  plan.edit_part(
+    "[Content_Types].xml",
+    @splice.span_edit(
+      start=types_at,
+      end=types_at,
+      @utf8.encode(
+        "<Override PartName=\"/word/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/>",
+      ),
+    ),
+  )
+  let spliced = @splice.splice_docx(original, plan)
+  // Gate 1: Microsoft schema validity of the SURGICAL result.
+  validate_docx_via_sdk(dir, "l0_spliced_comment", spliced)
+  // Gate 2: the annotation surface reads the spliced comment back.
+  let after = @docx2html.read_docx_annotated(spliced[:])
+  let index = after.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.comments().length(), content="1")
+  let comment = index.comments()[0]
+  debug_inspect(
+    comment.author(),
+    content=(
+      #|Some("Surgeon")
+    ),
+  )
+  debug_inspect(
+    comment.anchors()[0].start(),
+    content=(
+      #|Some("/body/p[2]")
+    ),
+  )
+  debug_inspect(
+    comment.anchors()[0].references(),
+    content=(
+      #|["/body/p[2]/r[2]"]
+    ),
+  )
+  // Gate 3: the fidelity oracle. The mutated main part must be the
+  // MANUAL splice of the original bytes — byte-identical outside the
+  // two declared spans.
+  let out = @mbtzip.read(spliced)
+  guard archive.get(main_part) is Some(original_doc)
+  guard out.get(main_part) is Some(spliced_doc)
+  let expected = Buffer()
+  expected.write_bytesview(original_doc[0:content_start])
+  expected.write_bytes(@utf8.encode("<w:commentRangeStart w:id=\"0\"/>"))
+  expected.write_bytesview(original_doc[content_start:close_start])
+  expected.write_bytes(
+    @utf8.encode(
+      "<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r>",
+    ),
+  )
+  expected.write_bytesview(original_doc[close_start:])
+  inspect(spliced_doc == expected.contents(), content="true")
+  // The mutated-part matrix: ONLY the operation's row may differ.
+  let changed : Array[String] = []
+  for entry in archive.entries() {
+    guard out.get(entry.name()) is Some(new_bytes)
+    if new_bytes != entry.data() {
+      changed.push(entry.name())
+    }
+  }
+  // (Entry order — the walk follows the archive's original order.)
+  debug_inspect(
+    changed,
+    content=(
+      #|[
+      #|  "[Content_Types].xml",
+      #|  "word/_rels/document.xml.rels",
+      #|  "word/document.xml",
+      #|]
+    ),
+  )
+  inspect(out.get("word/comments.xml") is Some(_), content="true")
+  // Untouched parts stay payload-identical (spot-checked above by the
+  // matrix walk: styles.xml et al. compared equal).
+}

@@ -1,0 +1,196 @@
+///|
+fn tiny_package() -> Bytes raise {
+  let archive = @mbtzip.Archive::new()
+  archive.add("a.xml", @utf8.encode("<r><a/></r>"))
+  archive.add("b.bin", b"\x00\x01\x02\x03binary payload", compression=Store)
+  archive.add("c.xml", @utf8.encode("<c/>"))
+  @mbtzip.write(archive)
+}
+
+///|
+fn[T] expect_splice_failure(
+  action : () -> T raise @core.DocxError,
+  expected_prefix : String,
+) -> Unit raise {
+  try {
+    let _ = action()
+  } catch {
+    err => {
+      let message = match err {
+        Unsupported(message~)
+        | InvalidZip(message~)
+        | InvalidXml(message~)
+        | MissingPart(message~) => message
+      }
+      if !message.has_prefix(expected_prefix) {
+        fail("unexpected message: \{message}")
+      }
+    }
+  } noraise {
+    _ => fail("expected the splice to fail closed")
+  }
+}
+
+///|
+test "L0: splicing edits exactly the spans and preserves everything else" {
+  let original = tiny_package()
+  let plan = @splice.SplicePlan::new()
+  // Insert <x/> before </r> in a.xml (offset computed, not guessed).
+  let a_text = "<r><a/></r>"
+  guard a_text.find("</r>") is Some(insert_at)
+  plan.edit_part(
+    "a.xml",
+    @splice.span_edit(start=insert_at, end=insert_at, @utf8.encode("<x/>")),
+  )
+  plan.add_part("d.xml", @utf8.encode("<d/>"))
+  let spliced = @splice.splice_docx(original, plan)
+  let output = @mbtzip.read(spliced)
+  // The edited part is the manual splice of the original bytes.
+  guard output.get("a.xml") is Some(a_bytes)
+  inspect(@utf8.decode(a_bytes, ignore_bom=true), content="<r><a/><x/></r>")
+  // Untouched entries: payload equality AND kept compression method.
+  guard output.get("b.bin") is Some(b_bytes)
+  inspect(b_bytes == b"\x00\x01\x02\x03binary payload", content="true")
+  let mut b_compression = ""
+  for entry in output.entries() {
+    if entry.name() == "b.bin" {
+      b_compression = "\{to_repr(entry.compression())}"
+    }
+  }
+  inspect(b_compression, content="Store")
+  // Entry ORDER: originals in place, new parts appended.
+  let names : Array[String] = []
+  for entry in output.entries() {
+    names.push(entry.name())
+  }
+  debug_inspect(
+    names,
+    content=(
+      #|["a.xml", "b.bin", "c.xml", "d.xml"]
+    ),
+  )
+  // The empty plan is a payload-preserving repack.
+  let repacked = @mbtzip.read(
+    @splice.splice_docx(original, @splice.SplicePlan::new()),
+  )
+  guard repacked.get("c.xml") is Some(c_bytes)
+  inspect(c_bytes == @utf8.encode("<c/>"), content="true")
+}
+
+///|
+test "L0: the splice fail-closed matrix" {
+  let original = tiny_package()
+  // Overlapping edits.
+  let overlapping = @splice.SplicePlan::new()
+  overlapping.edit_part("a.xml", @splice.span_edit(start=0, end=5, b""))
+  overlapping.edit_part(
+    "a.xml",
+    @splice.span_edit(start=3, end=7, @utf8.encode("<z/>")),
+  )
+  expect_splice_failure(
+    () => @splice.splice_docx(original, overlapping),
+    "the splice plan's edits on 'a.xml' overlap",
+  )
+  // Out-of-range edit.
+  let ranged = @splice.SplicePlan::new()
+  ranged.edit_part("a.xml", @splice.span_edit(start=0, end=9999, b""))
+  expect_splice_failure(
+    () => @splice.splice_docx(original, ranged),
+    "a splice edit on 'a.xml' ends at 9999",
+  )
+  // Editing a part the package does not contain.
+  let missing = @splice.SplicePlan::new()
+  missing.edit_part("nope.xml", @splice.span_edit(start=0, end=0, b"x"))
+  expect_splice_failure(
+    () => @splice.splice_docx(original, missing),
+    "the splice plan edits 'nope.xml', which the package does not contain",
+  )
+  // Adding a part that already exists (and double-adding in the plan).
+  let clobbering = @splice.SplicePlan::new()
+  clobbering.add_part("a.xml", b"<boom/>")
+  expect_splice_failure(
+    () => @splice.splice_docx(original, clobbering),
+    "the splice plan adds 'a.xml', which already exists",
+  )
+  let doubled = @splice.SplicePlan::new()
+  doubled.add_part("d.xml", b"<d/>")
+  expect_splice_failure(
+    () => doubled.add_part("d.xml", b"<d2/>"),
+    "the splice plan already adds a part named 'd.xml'",
+  )
+  // An edit that breaks well-formedness never leaves the function.
+  let breaking = @splice.SplicePlan::new()
+  breaking.edit_part(
+    "a.xml",
+    @splice.span_edit(start=3, end=3, @utf8.encode("<unclosed")),
+  )
+  expect_splice_failure(
+    () => @splice.splice_docx(original, breaking),
+    "splicing 'a.xml' produced malformed XML",
+  )
+  // Negative spans are rejected at construction.
+  expect_splice_failure(
+    () => @splice.span_edit(start=-1, end=0, b""),
+    "a span edit cannot start at -1",
+  )
+  expect_splice_failure(
+    () => @splice.span_edit(start=5, end=2, b""),
+    "a span edit cannot end at 2, before its start at 5",
+  )
+}
+
+///|
+test "L0: duplicate zip entries and foreign encodings fail closed" {
+  // Duplicate entry names in the ORIGINAL package.
+  let doubled = @mbtzip.Archive::new()
+  doubled.add("a.xml", @utf8.encode("<r/>"))
+  doubled.add("a.xml", @utf8.encode("<r2/>"))
+  let dup_bytes = @mbtzip.write(doubled)
+  expect_splice_failure(
+    () => @splice.splice_docx(dup_bytes, @splice.SplicePlan::new()),
+    "the package holds duplicate zip entries named 'a.xml'",
+  )
+  // A UTF-16 part (BOM) cannot be spliced.
+  let utf16 = @mbtzip.Archive::new()
+  utf16.add("w.xml", b"\xFF\xFE<\x00r\x00/\x00>\x00")
+  let utf16_bytes = @mbtzip.write(utf16)
+  let plan16 = @splice.SplicePlan::new()
+  plan16.edit_part("w.xml", @splice.span_edit(start=0, end=0, b""))
+  expect_splice_failure(
+    () => @splice.splice_docx(utf16_bytes, plan16),
+    "'w.xml' is UTF-16 encoded",
+  )
+  // A declared non-UTF-8 encoding fails closed even in ASCII bytes.
+  let latin = @mbtzip.Archive::new()
+  latin.add(
+    "l.xml",
+    @utf8.encode("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><r/>"),
+  )
+  let latin_bytes = @mbtzip.write(latin)
+  let plan_latin = @splice.SplicePlan::new()
+  plan_latin.edit_part("l.xml", @splice.span_edit(start=0, end=0, b""))
+  expect_splice_failure(
+    () => @splice.splice_docx(latin_bytes, plan_latin),
+    "'l.xml' declares encoding 'ISO-8859-1'",
+  )
+  // Declared UTF-8 (any case) is accepted.
+  let utf8_decl = @mbtzip.Archive::new()
+  utf8_decl.add(
+    "u.xml",
+    @utf8.encode("<?xml version=\"1.0\" encoding=\"UTF-8\"?><r></r>"),
+  )
+  let utf8_bytes = @mbtzip.write(utf8_decl)
+  let plan_utf8 = @splice.SplicePlan::new()
+  let source = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><r></r>"
+  guard source.find("</r>") is Some(at)
+  plan_utf8.edit_part(
+    "u.xml",
+    @splice.span_edit(start=at, end=at, @utf8.encode("<ok/>")),
+  )
+  let out = @mbtzip.read(@splice.splice_docx(utf8_bytes, plan_utf8))
+  guard out.get("u.xml") is Some(u_bytes)
+  inspect(
+    @utf8.decode(u_bytes, ignore_bom=true).find("<ok/>") is Some(_),
+    content="true",
+  )
+}
