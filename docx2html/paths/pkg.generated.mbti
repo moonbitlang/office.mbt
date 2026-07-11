@@ -1,0 +1,47 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/docx2html/paths"
+
+import {
+  "bobzhang/docx2html/document",
+}
+
+// Values
+pub fn element_children(@document.DocumentElement) -> Array[@document.DocumentElement]
+
+pub fn parse_path(String) -> ParsedPath raise PathError
+
+pub fn resolve_path(@document.DocumentElement, String, headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart]) -> @document.DocumentElement raise PathError
+
+pub fn resolve_steps(@document.DocumentElement, Array[PathStep], String, root_prefix? : String) -> @document.DocumentElement raise PathError
+
+pub fn root_container(@document.DocumentElement, ParsedPath, String, Array[@document.HeaderFooterPart], Array[@document.HeaderFooterPart]) -> (@document.DocumentElement, String) raise PathError
+
+pub fn segment_kind(@document.DocumentElement) -> String?
+
+// Errors
+pub(all) suberror PathError {
+  PathError(String)
+} derive(Eq)
+pub impl Show for PathError
+
+// Types and methods
+pub struct ParsedPath {
+  root : PathRoot
+  steps : Array[PathStep]
+}
+
+pub enum PathRoot {
+  Body
+  Header(Int)
+  Footer(Int)
+}
+
+pub struct PathStep {
+  kind : String
+  index : Int
+}
+
+// Type aliases
+
+// Traits
+

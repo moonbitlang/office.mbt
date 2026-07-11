@@ -11,14 +11,14 @@ pub fn element(
   headers? : Array[@document.HeaderFooterPart] = [],
   footers? : Array[@document.HeaderFooterPart] = [],
 ) -> Json raise PathError {
-  let parsed = parse_path(path)
-  let (container, prefix) = root_container(
+  let parsed = @paths.parse_path(path)
+  let (container, prefix) = @paths.root_container(
     document, parsed, path, headers, footers,
   )
   let target = if parsed.steps.length() == 0 {
     container
   } else {
-    resolve_steps(container, parsed.steps, path, root_prefix=prefix)
+    @paths.resolve_steps(container, parsed.steps, path, root_prefix=prefix)
   }
   let normalized = normalized_path(prefix, parsed.steps)
   let out : Map[String, Json] = {
@@ -33,7 +33,7 @@ pub fn element(
 }
 
 ///|
-fn normalized_path(prefix : String, steps : Array[PathStep]) -> String {
+fn normalized_path(prefix : String, steps : Array[@paths.PathStep]) -> String {
   let builder = StringBuilder()
   builder.write_string(prefix)
   for step in steps {
@@ -45,9 +45,9 @@ fn normalized_path(prefix : String, steps : Array[PathStep]) -> String {
 ///|
 fn element_kind_name(
   element : @document.DocumentElement,
-  root : PathRoot,
+  root : @paths.PathRoot,
 ) -> String {
-  match segment_kind(element) {
+  match @paths.segment_kind(element) {
     Some(kind) => kind
     None =>
       match root {
@@ -159,8 +159,8 @@ fn children_json(
 ) -> Json {
   let entries = []
   let counters : Map[String, Int] = Map([])
-  for child in element_children(element) {
-    match segment_kind(child) {
+  for child in @paths.element_children(element) {
+    match @paths.segment_kind(child) {
       Some(kind) => {
         let index = counters.get(kind).unwrap_or(0) + 1
         counters[kind] = index
@@ -212,7 +212,7 @@ fn collect_text_lines(
 ) -> Unit {
   let counters : Map[String, Int] = Map([])
   for child in children {
-    match segment_kind(child) {
+    match @paths.segment_kind(child) {
       Some(kind) => {
         let index = counters.get(kind).unwrap_or(0) + 1
         counters[kind] = index
@@ -226,7 +226,7 @@ fn collect_text_lines(
           // Paragraphs never nest inside paragraphs in this AST; only
           // containers (tables and their parts) are descended into.
           Table(..) | TableRow(..) | TableCell(..) =>
-            collect_text_lines(element_children(child), path, lines)
+            collect_text_lines(@paths.element_children(child), path, lines)
           _ => ()
         }
       }
