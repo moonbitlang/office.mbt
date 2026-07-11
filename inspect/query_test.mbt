@@ -101,6 +101,26 @@ test "query formula and text predicates" {
   inspect(contains_refs[0], content="A1")
   inspect(run_query(workbook, "Data", "cell[text=Region]").0, content="1")
   inspect(run_query(workbook, "Data", "cell[text=region]").0, content="0")
+  // A predicate argument is trimmed (whitespace after the operator too), so
+  // this still finds "Region"; an all-whitespace argument is rejected.
+  inspect(run_query(workbook, "Data", "cell[text=  Region  ]").0, content="1")
+  inspect(run_query(workbook, "Data", "cell[formula~=  SUM ]").0, content="1")
+  try {
+    ignore(
+      @inspect.query(
+        workbook,
+        "Data",
+        "cell[text=   ]",
+        file="t.xlsx",
+        range="",
+      ),
+    )
+    fail("expected an all-whitespace argument to be rejected")
+  } catch {
+    @inspect.QueryError(message) =>
+      assert_true(message.contains("text= needs a non-empty value"))
+    err => fail("expected a QueryError, got \{err}")
+  }
 }
 
 ///|

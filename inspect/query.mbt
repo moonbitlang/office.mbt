@@ -110,14 +110,17 @@ fn parse_predicate(raw : String) -> Predicate raise QueryError {
 }
 
 ///|
-/// A predicate's text argument must be non-empty: an empty `text=`/`text~=`/
-/// `formula~=` would match every (or no) cell by accident. (It also can't
-/// contain `]`, which closes the predicate — see the docs.)
+/// Trims a predicate's text argument (whitespace right after the operator is
+/// otherwise kept — the outer trim only strips the whole predicate) and
+/// requires it to be non-empty: an empty `text=`/`text~=`/`formula~=` would
+/// match every (or no) cell by accident. (It also can't contain `]`, which
+/// closes the predicate — see the docs.)
 fn require_nonempty(label : String, value : String) -> String raise QueryError {
-  if value == "" {
+  let trimmed = value.trim().to_owned()
+  if trimmed == "" {
     raise QueryError("\{label} needs a non-empty value")
   }
-  value
+  trimmed
 }
 
 ///|
