@@ -381,6 +381,38 @@ test "review round 3: escape-equivalent and astral key spellings are caught" {
 }
 
 ///|
+test "review round 4: key comparison is lossless over UTF-16 units" {
+  // DISTINCT lone surrogates are distinct keys to @json.parse and must
+  // not be folded into a false duplicate.
+  @batch.check_script_text(
+    (
+      #|{"\ud800": 1, "\ud801": 2}
+    ),
+  )
+  // ...and a lone surrogate does not collide with a literal U+FFFD key.
+  @batch.check_script_text(
+    (
+      #|{"\ud800": 1, "�": 2}
+    ),
+  )
+  // IDENTICAL lone surrogates do collide, rendered readably.
+  expect_script_text_error(
+    (
+      #|{"\ud800": 1, "\ud800": 2}
+    ),
+    "the script repeats the key \"\\uD800\"",
+  )
+  // Escaped surrogate-pair spellings compare by unit sequence, so the
+  // duplicate renders as the recombined character.
+  expect_script_text_error(
+    (
+      #|{"\ud83d\ude00": 1, "\ud83d\ude00": 2}
+    ),
+    "the script repeats the key \"😀\"",
+  )
+}
+
+///|
 test "review round 3: number lexemes must be plain decimal integers" {
   expect_script_text_error(
     (

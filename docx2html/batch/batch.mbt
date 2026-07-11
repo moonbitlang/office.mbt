@@ -798,15 +798,37 @@ fn render_scan_path(frames : Array[ScanFrame], leaf : String?) -> String {
 }
 
 ///|
-/// Lexes the JSON string starting AFTER its opening quote, returning the
-/// DECODED value and the index just past the closing quote (None when
-/// unterminated — @json.parse's error to report). Escapes are decoded so
-/// escape-equivalent key spellings compare equal; escaped surrogate pairs
-/// recombine to one astral char exactly like raw pairs; unpaired
-/// surrogates fold to U+FFFD under BOTH spellings so equivalence is
-/// preserved for duplicate detection.
-fn lex_json_string(units : ArrayView[UInt16], start : Int) -> (String, Int?) {
+/// Renders a UTF-16 code unit as a readable \uXXXX escape (for lone
+/// surrogates in diagnostics).
+fn render_unit_escape(code : Int) -> String {
+  let digits = "0123456789ABCDEF"
   let builder = StringBuilder::new()
+  builder.write_string("\\u")
+  for shift in [12, 8, 4, 0] {
+    let nibble = (code >> shift) & 0xF
+    match digits.get_char(nibble) {
+      Some(ch) => builder.write_char(ch)
+      None => ()
+    }
+  }
+  builder.to_string()
+}
+
+///|
+/// Lexes the JSON string starting AFTER its opening quote. Returns the
+/// value in two forms — `canonical`, a lossless encoding of the decoded
+/// UTF-16 code-unit sequence (duplicate comparison sees exactly what
+/// `@json.parse` would produce: distinct lone surrogates stay distinct,
+/// and raw vs escaped spellings of the same character coincide with no
+/// pairing logic at all) — and `display`, a human-readable rendering
+/// with lone surrogates shown as \uXXXX. The third result is the index
+/// just past the closing quote (None when unterminated — @json.parse's
+/// error to report).
+fn lex_json_string(
+  units : ArrayView[UInt16],
+  start : Int,
+) -> (String, String, Int?) {
+  let decoded : Array[Int] = []
   let length = units.length()
   let mut cursor = start
   fn hex4(at : Int) -> Int? {
@@ -829,88 +851,90 @@ fn lex_json_string(units : ArrayView[UInt16], start : Int) -> (String, Int?) {
     }
     Some(value)
   }
-  fn write_code(code : Int) -> Unit {
-    match code.to_char() {
-      Some(ch) => builder.write_char(ch)
-      None => builder.write_char('\u{FFFD}')
-    }
-  }
+  let mut closed_after : Int? = None
   while cursor < length {
     let unit = units[cursor].to_int()
     if unit == '"'.to_int() {
-      return (builder.to_string(), Some(cursor + 1))
+      closed_after = Some(cursor + 1)
+      break
     }
     if unit == '\\'.to_int() {
       if cursor + 1 >= length {
-        return ("", None)
+        return ("", "", None)
       }
       let escape = units[cursor + 1].to_int()
       if escape == 'u'.to_int() {
         match hex4(cursor + 2) {
           Some(code) => {
-            if code >= 0xD800 &&
-              code <= 0xDBFF &&
-              cursor + 7 < length &&
-              units[cursor + 6].to_int() == '\\'.to_int() &&
-              units[cursor + 7].to_int() == 'u'.to_int() {
-              match hex4(cursor + 8) {
-                Some(low) if low >= 0xDC00 && low <= 0xDFFF => {
-                  write_code(0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00))
-                  cursor += 12
-                  continue
-                }
-                _ => ()
-              }
-            }
-            write_code(code)
+            decoded.push(code)
             cursor += 6
           }
           None => {
             // Malformed \u escape: @json.parse reports it; keep scanning.
-            builder.write_char('u')
+            decoded.push('u'.to_int())
             cursor += 2
           }
         }
       } else {
-        let decoded = if escape == 'n'.to_int() {
-          '\n'
+        let code = if escape == 'n'.to_int() {
+          '\n'.to_int()
         } else if escape == 't'.to_int() {
-          '\t'
+          '\t'.to_int()
         } else if escape == 'r'.to_int() {
-          '\r'
+          '\r'.to_int()
         } else if escape == 'b'.to_int() {
-          '\u{08}'
+          0x08
         } else if escape == 'f'.to_int() {
-          '\u{0C}'
+          0x0C
         } else if escape == '"'.to_int() {
-          '"'
+          '"'.to_int()
         } else if escape == '\\'.to_int() {
-          '\\'
+          '\\'.to_int()
         } else if escape == '/'.to_int() {
-          '/'
+          '/'.to_int()
         } else {
           // Invalid escape: @json.parse reports it; keep scanning.
-          '?'
+          '?'.to_int()
         }
-        builder.write_char(decoded)
+        decoded.push(code)
         cursor += 2
       }
       continue
     }
-    // Raw text: recombine surrogate pairs (astral chars are two UTF-16
-    // units); fold unpaired surrogates.
-    if unit >= 0xD800 && unit <= 0xDBFF && cursor + 1 < length {
-      let low = units[cursor + 1].to_int()
-      if low >= 0xDC00 && low <= 0xDFFF {
-        write_code(0x10000 + ((unit - 0xD800) << 10) + (low - 0xDC00))
-        cursor += 2
-        continue
-      }
-    }
-    write_code(unit)
+    decoded.push(unit)
     cursor += 1
   }
-  ("", None)
+  match closed_after {
+    None => ("", "", None)
+    Some(next) => {
+      let canonical = StringBuilder::new()
+      let display = StringBuilder::new()
+      let mut at = 0
+      while at < decoded.length() {
+        let code = decoded[at]
+        canonical.write_string("\{code};")
+        if code >= 0xD800 && code <= 0xDBFF && at + 1 < decoded.length() {
+          let low = decoded[at + 1]
+          if low >= 0xDC00 && low <= 0xDFFF {
+            canonical.write_string("\{low};")
+            match
+              (0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00)).to_char() {
+              Some(ch) => display.write_char(ch)
+              None => ()
+            }
+            at += 2
+            continue
+          }
+        }
+        match code.to_char() {
+          Some(ch) => display.write_char(ch)
+          None => display.write_string(render_unit_escape(code))
+        }
+        at += 1
+      }
+      (canonical.to_string(), display.to_string(), Some(next))
+    }
+  }
 }
 
 ///|
@@ -979,18 +1003,18 @@ pub fn check_script_text(text : String) -> Unit raise BatchError {
       }
       index += 1
     } else if unit == '"'.to_int() {
-      let (value, next) = lex_json_string(units, index + 1)
+      let (canonical, display, next) = lex_json_string(units, index + 1)
       match next {
         Some(next_index) => {
           match frames.last() {
             Some(frame) if frame.is_object && frame.expecting_key => {
-              if frame.keys.contains(value) {
+              if frame.keys.contains(canonical) {
                 raise BatchError(
-                  "\{render_scan_path(frames, None)} repeats the key \"\{value}\" (strict scripts must not rely on last-wins parsing)",
+                  "\{render_scan_path(frames, None)} repeats the key \"\{display}\" (strict scripts must not rely on last-wins parsing)",
                 )
               }
-              frame.keys.add(value)
-              frame.pending_key = value
+              frame.keys.add(canonical)
+              frame.pending_key = display
             }
             _ => ()
           }

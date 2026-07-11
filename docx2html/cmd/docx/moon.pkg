@@ -6,6 +6,7 @@ import {
   "bobzhang/docx2html/internal/cli",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
+  "moonbitlang/async/os_error",
   "moonbitlang/core/argparse",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
