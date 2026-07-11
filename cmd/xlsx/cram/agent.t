@@ -292,3 +292,16 @@ so an unrelated file the link points at is left untouched.
   <!DOCTYPE html>
   $ xlsx.exe validate other.xlsx
   valid
+
+`capabilities` prints the batch op catalog this build supports, so an agent
+can confirm its needed ops exist before generating a script (the JSON
+script contract is backward-compatible, but a stricter older CLI rejects
+ops it doesn't know):
+
+  $ xlsx.exe capabilities | head -2
+  {
+    "schema": "xlsx.capabilities/1",
+  $ xlsx.exe capabilities | grep -c '"op":'
+  9
+  $ xlsx.exe capabilities | grep -o '"batch_schema": "[^"]*"'
+  "batch_schema": "xlsx.batch/1"

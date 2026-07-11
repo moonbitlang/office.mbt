@@ -37,18 +37,19 @@ pub impl Show for BatchError with fn output(self, logger) {
 ///|
 /// A `set` op's value: JSON types are honored (no string
 /// re-classification; agents use batch precisely to escape that
-/// ambiguity).
-pub enum BatchValue {
+/// ambiguity). Private: only ever held inside an `OpKind`.
+priv enum BatchValue {
   Text(String)
   Number(Double)
   Flag(Bool)
   Clear
-} derive(@debug.Debug)
+}
 
 ///|
-/// One parsed batch operation. Constructor fields mirror the CLI twin's
+/// The internal representation of one parsed batch operation. **Private on
+/// purpose** — see `BatchOp`. Constructor fields mirror the CLI twin's
 /// arguments; op names in scripts are the subcommand names.
-pub enum BatchOp {
+priv enum OpKind {
   OpSet(sheet~ : String, cell~ : String, value~ : BatchValue)
   OpFormula(sheet~ : String, cell~ : String, formula~ : String)
   OpStyle(
@@ -75,12 +76,26 @@ pub enum BatchOp {
     series_name~ : String,
     title~ : String
   )
-} derive(@debug.Debug)
+}
+
+///|
+/// A parsed batch operation, **opaque by design**. Callers get these from
+/// `parse_script` and hand them to `apply_op`; they cannot construct or
+/// pattern-match them. This is deliberate: the op vocabulary grows over
+/// time (new `xlsx.batch/1` ops), and hiding the representation keeps
+/// adding a variant or a field a source-compatible change instead of a
+/// breaking one for every downstream `match`. Discover the current op set
+/// programmatically via `capabilities()`.
+///
+/// A plain (package-private) single-field struct: it appears in the public
+/// `parse_script`/`apply_op`/`name` signatures, so it exports as an
+/// abstract type — external code holds it but cannot construct or match it.
+struct BatchOp(OpKind)
 
 ///|
 /// The op's script name (also its CLI subcommand name), for error text.
 pub fn BatchOp::name(self : BatchOp) -> String {
-  match self {
+  match self.0 {
     OpSet(..) => "set"
     OpFormula(..) => "formula"
     OpStyle(..) => "style"
@@ -92,13 +107,6 @@ pub fn BatchOp::name(self : BatchOp) -> String {
     OpChart(..) => "chart"
   }
 }
-
-///|
-/// The op vocabulary, for the unknown-op error; adding an op means
-/// extending this list, `parse_op`, and `apply_op` together.
-let batch_op_names : Array[String] = [
-  "set", "formula", "style", "merge", "width", "freeze", "filter", "add-sheet", "chart",
-]
 
 ///|
 fn op_error(index : Int, op : String, message : String) -> BatchError {
@@ -235,11 +243,11 @@ fn parse_op(
       raise op_error(
         index,
         name,
-        "unknown op (expected one of: \{batch_op_names.join(", ")})",
+        "unknown op (expected one of: \{accepted_op_names().join(", ")})",
       )
   }
   reader.finish()
-  op
+  BatchOp(op)
 }
 
 ///|
@@ -547,7 +555,7 @@ fn ParamReader::finish(self : ParamReader) -> Unit raise BatchError {
 /// same library calls as the op's CLI twin. Never touches the
 /// filesystem; the caller owns open/write and all-or-nothing semantics.
 pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
-  match op {
+  match op.0 {
     OpSet(sheet~, cell~, value~) =>
       match value {
         Text(text) => workbook.set_cell(sheet, cell, text)

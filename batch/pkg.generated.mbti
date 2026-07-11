@@ -11,9 +11,13 @@ pub const MAX_BATCH_OPS : Int = 10_000
 
 pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
 
+pub const SCHEMA_CAPABILITIES : String = "xlsx.capabilities/1"
+
 pub fn apply_op(@xlsx.Workbook, BatchOp) -> Unit raise
 
 pub fn build_style(bold~ : Bool, italic~ : Bool, number_format~ : String, fill~ : String, font_color~ : String, align~ : String) -> @xlsx.Style
+
+pub fn capabilities() -> Json
 
 pub fn chart_type_of(String) -> @xlsx.ChartType raise BatchError
 
@@ -35,31 +39,8 @@ pub fn BatchError::to_string(Self) -> String
 pub impl Show for BatchError
 
 // Types and methods
-pub enum BatchOp {
-  OpSet(sheet~ : String, cell~ : String, value~ : BatchValue)
-  OpFormula(sheet~ : String, cell~ : String, formula~ : String)
-  OpStyle(sheet~ : String, range~ : String, bold~ : Bool, italic~ : Bool, number_format~ : String, fill~ : String, font_color~ : String, align~ : String)
-  OpMerge(sheet~ : String, range~ : String)
-  OpWidth(sheet~ : String, column~ : String, width~ : Double)
-  OpFreeze(sheet~ : String, cell~ : String)
-  OpFilter(sheet~ : String, range~ : String)
-  OpAddSheet(name~ : String)
-  OpChart(sheet~ : String, anchor~ : String, chart_type~ : String, categories~ : String, values~ : String, series_name~ : String, title~ : String)
-} derive(@debug.Debug)
+type BatchOp
 pub fn BatchOp::name(Self) -> String
-#as_free_fn
-#deprecated
-pub fn BatchOp::to_repr(Self) -> @debug.Repr
-
-pub enum BatchValue {
-  Text(String)
-  Number(Double)
-  Flag(Bool)
-  Clear
-} derive(@debug.Debug)
-#as_free_fn
-#deprecated
-pub fn BatchValue::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

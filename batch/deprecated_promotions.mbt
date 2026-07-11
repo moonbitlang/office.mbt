@@ -9,11 +9,3 @@ pub extend BatchError with @debug.Debug::{to_repr}
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
 pub extend BatchError with Show::{to_string, output}
-
-///|
-#deprecated("implicit trait-method promotion is being removed; call via the trait")
-pub extend BatchOp with @debug.Debug::{to_repr}
-
-///|
-#deprecated("implicit trait-method promotion is being removed; call via the trait")
-pub extend BatchValue with @debug.Debug::{to_repr}
