@@ -304,3 +304,43 @@ test "L0 review round 3: the declaration walker enforces the XML grammar" {
     "e.xml",
   )
 }
+
+///|
+test "L0 review round 4: the declaration grammar is positional" {
+  fn reject(source : String, name : String) -> Unit raise {
+    let archive = @mbtzip.Archive::new()
+    archive.add(name, @utf8.encode(source))
+    let bytes = @mbtzip.write(archive)
+    let plan = @splice.SplicePlan::new()
+    plan.edit_part(name, @splice.span_edit(start=0, end=0, b""))
+    expect_splice_failure(
+      () => @splice.splice_docx(bytes, plan),
+      "'\{name}' has a malformed XML declaration",
+    )
+  }
+  // VersionInfo is required and FIRST.
+  reject("<?xml encoding=\"UTF-8\"?><r></r>", "a.xml")
+  reject("<?xml bogus=\"x\"?><r></r>", "b.xml")
+  reject("<?xml encoding=\"UTF-8\" version=\"1.0\"?><r></r>", "c.xml")
+  // Nothing follows standalone; nothing unknown anywhere.
+  reject(
+    "<?xml version=\"1.0\" standalone=\"yes\" encoding=\"UTF-8\"?><r></r>", "d.xml",
+  )
+  reject("<?xml version=\"1.0\" version=\"1.1\"?><r></r>", "e.xml")
+  // version + standalone WITHOUT encoding is legal and passes.
+  let fine = @mbtzip.Archive::new()
+  let fine_source = "<?xml version=\"1.0\" standalone=\"yes\"?><r></r>"
+  fine.add("f.xml", @utf8.encode(fine_source))
+  let fine_bytes = @mbtzip.write(fine)
+  let plan_fine = @splice.SplicePlan::new()
+  guard fine_source.find("</r>") is Some(at)
+  plan_fine.edit_part(
+    "f.xml",
+    @splice.span_edit(start=at, end=at, @utf8.encode("<ok/>")),
+  )
+  inspect(
+    @mbtzip.read(@splice.splice_docx(fine_bytes, plan_fine)).get("f.xml")
+    is Some(_),
+    content="true",
+  )
+}

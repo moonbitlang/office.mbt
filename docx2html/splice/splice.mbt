@@ -326,13 +326,18 @@ fn declared_encoding(bytes : Bytes) -> EncodingDeclaration {
     return MalformedDeclaration
   }
   let mut found : EncodingDeclaration = NoDeclaration
-  let mut attributes_seen = 0
+  // The declaration grammar is POSITIONAL: VersionInfo first
+  // (required), then EncodingDecl?, then SDDecl?, nothing else —
+  // '<?xml encoding=...?>' without version is malformed (round 4).
+  // 0 = expect version; 1 = expect encoding|standalone|end;
+  // 2 = expect standalone|end; 3 = expect end.
+  let mut state = 0
   for ;; {
     while cursor < limit && is_decl_space(bytes[cursor]) {
       cursor += 1
     }
     if cursor + 1 < limit && bytes[cursor] == b'?' && bytes[cursor + 1] == b'>' {
-      if attributes_seen == 0 {
+      if state == 0 {
         return MalformedDeclaration
       }
       return found
@@ -373,22 +378,24 @@ fn declared_encoding(bytes : Bytes) -> EncodingDeclaration {
     if cursor >= limit {
       return MalformedDeclaration
     }
-    if name == "encoding" {
-      // A SECOND encoding pseudo-attribute is malformed; last-wins
-      // would let a devious first one mask the operative declaration.
-      if found is Declared(_) {
-        return MalformedDeclaration
+    match (state, name) {
+      (0, "version") => state = 1
+      (1, "encoding") => {
+        let value_builder = StringBuilder::new()
+        for offset in value_start..<cursor {
+          value_builder.write_char(
+            bytes[offset].to_int().to_char().unwrap_or('?'),
+          )
+        }
+        found = Declared(value_builder.to_string())
+        state = 2
       }
-      let value_builder = StringBuilder::new()
-      for offset in value_start..<cursor {
-        value_builder.write_char(
-          bytes[offset].to_int().to_char().unwrap_or('?'),
-        )
-      }
-      found = Declared(value_builder.to_string())
+      (1, "standalone") | (2, "standalone") => state = 3
+      // Unknown names, duplicates, and out-of-order pseudo-attributes
+      // are all grammar violations.
+      _ => return MalformedDeclaration
     }
     cursor += 1
-    attributes_seen += 1
     // The next thing after a value must be whitespace or the end of
     // the declaration — 'value"name' runs are malformed.
     if cursor < limit && !is_decl_space(bytes[cursor]) && bytes[cursor] != b'?' {
