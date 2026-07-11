@@ -30,23 +30,23 @@ pub impl Show for PathError with fn output(self, logger) {
 
 ///|
 /// One parsed `kind[index]` segment.
-priv struct PathStep {
-  kind : String
-  index : Int
+pub struct PathStep {
+  pub kind : String
+  pub index : Int
 }
 
 ///|
 /// The story a path addresses. Header/Footer carry the 1-based part index.
-priv enum PathRoot {
+pub enum PathRoot {
   Body
   Header(Int)
   Footer(Int)
 }
 
 ///|
-priv struct ParsedPath {
-  root : PathRoot
-  steps : Array[PathStep]
+pub struct ParsedPath {
+  pub root : PathRoot
+  pub steps : Array[PathStep]
 }
 
 ///|
@@ -54,7 +54,7 @@ priv struct ParsedPath {
 /// and structural nodes that are not directly addressable (text, tabs,
 /// breaks, references…). The kind table is part of the `docx.element/1`
 /// contract — extend it only additively.
-fn segment_kind(element : @document.DocumentElement) -> String? {
+pub fn segment_kind(element : @document.DocumentElement) -> String? {
   match element {
     Paragraph(..) => Some("p")
     Run(..) => Some("r")
@@ -69,7 +69,7 @@ fn segment_kind(element : @document.DocumentElement) -> String? {
 
 ///|
 /// The addressable children of an element (the lists paths descend into).
-fn element_children(
+pub fn element_children(
   element : @document.DocumentElement,
 ) -> Array[@document.DocumentElement] {
   match element {
@@ -92,7 +92,7 @@ let reserved_roots : ReadOnlyArray[String] = [
 ///|
 /// Parses a `/body/kind[i]/...`, `/header[n]/...`, or `/footer[n]/...` path.
 /// Reserved roots (notes/comments) fail with a dedicated diagnostic.
-fn parse_path(path : String) -> ParsedPath raise PathError {
+pub fn parse_path(path : String) -> ParsedPath raise PathError {
   if !path.has_prefix("/") {
     raise PathError("invalid path '\{path}': a path starts with '/'")
   }
@@ -210,7 +210,7 @@ fn parse_positive_int(digits : String) -> Int raise NotAPositiveInt {
 /// Resolves a parsed path against a document, returning the element. The
 /// error names the failing segment and how many same-kind siblings exist,
 /// so an agent can self-correct.
-fn resolve_steps(
+pub fn resolve_steps(
   document : @document.DocumentElement,
   steps : Array[PathStep],
   path : String,
@@ -250,7 +250,7 @@ fn resolve_steps(
 ///|
 /// Resolves a parsed root to its story container plus the path prefix its
 /// steps resolve under.
-fn root_container(
+pub fn root_container(
   document : @document.DocumentElement,
   parsed : ParsedPath,
   path : String,
