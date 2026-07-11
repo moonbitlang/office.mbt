@@ -684,3 +684,175 @@ test "F4 round 2: wide-image extents and direct header truncation pins" {
     "could not read the image's dimensions",
   )
 }
+
+///|
+test "review round 2 (batch): writer fails closed on invalid run property values" {
+  // w:highlight/@w:val is the closed ST_HighlightColor enum.
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run(
+          [@docx2html.text("x")],
+          properties=@docx2html.run_properties(highlight=Some("banana")),
+        ),
+      ]),
+    ],
+    "unsupported highlight color 'banana'",
+  )
+  // ST_HpsMeasure is positive and Word caps font size at 1638pt.
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run(
+          [@docx2html.text("x")],
+          properties=@docx2html.run_properties(font_size=Some(0)),
+        ),
+      ]),
+    ],
+    "font size 0pt is outside the supported range",
+  )
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run(
+          [@docx2html.text("x")],
+          properties=@docx2html.run_properties(font_size=Some(1639)),
+        ),
+      ]),
+    ],
+    "font size 1639pt is outside the supported range",
+  )
+  // C0 controls (other than tab) are XML-1.0-illegal in text and the
+  // escaper would pass them through.
+  expect_unsupported(
+    [@docx2html.paragraph([@docx2html.run([@docx2html.text("a\u{01}b")])])],
+    "text contains an XML-illegal control character (code 1)",
+  )
+  // Attribute-destined strings reject ALL C0 controls (attribute-value
+  // normalization mutates even tab).
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.run(
+          [@docx2html.text("x")],
+          properties=@docx2html.run_properties(font=Some("Arial\tBlack")),
+        ),
+      ]),
+    ],
+    "a run font name contains a control character",
+  )
+  expect_unsupported(
+    [
+      @docx2html.paragraph([
+        @docx2html.hyperlink(
+          [@docx2html.run([@docx2html.text("x")])],
+          href=Some(""),
+        ),
+      ]),
+    ],
+    "a hyperlink href must not be empty",
+  )
+}
+
+///|
+test "review round 2 (batch): the table writer bounds the grid at Word's 63 columns" {
+  fn cell_with(span : Int) -> @docx2html.DocumentElement {
+    @docx2html.table_cell(
+      [@docx2html.paragraph([@docx2html.run([@docx2html.text("x")])])],
+      col_span=span,
+    )
+  }
+
+  // 63 columns is fine...
+  let ok = @docx2html.write_docx([
+    @docx2html.table([@docx2html.table_row([cell_with(63)])]),
+  ])
+  debug_inspect(ok.length() > 0, content="true")
+  // ...64 (and astronomically large spans that would loop for hours) fail.
+  expect_unsupported(
+    [@docx2html.table([@docx2html.table_row([cell_with(64)])])],
+    "a table row spans more than 63 grid columns",
+  )
+  expect_unsupported(
+    [
+      @docx2html.table([
+        @docx2html.table_row([cell_with(2147483647), cell_with(2147483647)]),
+      ]),
+    ],
+    "a table row spans more than 63 grid columns",
+  )
+}
+
+///|
+test "review round 2 (batch): a batch-built document reads back with the scripted semantics" {
+  // End-to-end symmetry pin: script -> parse_batch -> build_body ->
+  // write_docx -> read_docx_package, asserting the AST (not just SDK
+  // validity) matches what the script said.
+  let script = @batch.parse_batch(
+    @json.parse(
+      (
+        #|{
+        #|  "schema": "docx.batch/1",
+        #|  "ops": [
+        #|    {"op": "paragraph", "params": {"text": "Title", "style": "Heading2"}},
+        #|    {"op": "paragraph", "params": {"align": "center", "runs": [
+        #|      {"text": "loud", "bold": true, "all_caps": true, "size": 14, "highlight": "yellow"},
+        #|      {"text": "down", "vertical": "subscript"},
+        #|      {"link": {"href": "https://example.com/x", "runs": [{"text": "styled", "italic": true}]}}
+        #|    ]}},
+        #|    {"op": "paragraph", "params": {"text": "third item", "list": {"ordered": true, "level": 3}}},
+        #|    {"op": "table", "params": {"header_rows": 1, "rows": [
+        #|      [{"text": "A"}, {"text": "B"}],
+        #|      [{"text": "wide", "col_span": 2}]
+        #|    ]}}
+        #|  ]
+        #|}
+      ),
+    ),
+  )
+  let bytes = @docx2html.write_docx(script.build_body(Map([])))
+  let result = @docx2html.read_docx_package(bytes)
+  debug_inspect(result.messages.length(), content="0")
+  guard result.document is Document(children~, ..)
+  guard children
+    is [
+      Paragraph(properties=title_props, ..),
+      Paragraph(children=styled_children, properties=styled_props),
+      Paragraph(properties=list_props, ..),
+      Table(children=table_rows, ..),
+    ]
+  debug_inspect(title_props.style_id, content="Some(\"Heading2\")")
+  // Style names are enriched from the styles part on read (the one
+  // documented write/read asymmetry this test tolerates).
+  debug_inspect(title_props.style_name, content="Some(\"heading 2\")")
+  debug_inspect(styled_props.alignment, content="Some(\"center\")")
+  guard styled_children
+    is [
+      Run(properties=loud, ..),
+      Run(properties=down, ..),
+      Hyperlink(children=link_children, href=link_href, ..),
+    ]
+  debug_inspect(loud.is_bold, content="true")
+  debug_inspect(loud.is_all_caps, content="true")
+  debug_inspect(loud.font_size, content="Some(14)")
+  debug_inspect(loud.highlight, content="Some(\"yellow\")")
+  debug_inspect(to_repr(down.vertical_alignment), content="Subscript")
+  debug_inspect(link_href, content="Some(\"https://example.com/x\")")
+  guard link_children is [Run(properties=link_run, ..)]
+  debug_inspect(link_run.is_italic, content="true")
+  debug_inspect(
+    list_props.numbering,
+    content=(
+      #|Some({ is_ordered: true, level: 3 })
+    ),
+  )
+  guard table_rows
+    is [
+      TableRow(children=header_cells, is_header=header_flag),
+      TableRow(children=data_cells, ..),
+    ]
+  debug_inspect(header_flag, content="true")
+  debug_inspect(header_cells.length(), content="2")
+  guard data_cells is [TableCell(col_span~, ..)]
+  debug_inspect(col_span, content="2")
+}

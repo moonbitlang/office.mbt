@@ -28,6 +28,64 @@ pub const SCHEMA_BATCH : String = "docx.batch/1"
 const MAX_OPS : Int = 10000
 
 ///|
+/// Bounds mirroring the writer's fail-closed guards, enforced here too so
+/// violations are reported with the exact `ops[i]` address instead of a
+/// whole-document writer error: Word's font-size cap (write_document.mbt),
+/// Word's 63-column table limit (write_tables.mbt), and the ops cap as the
+/// row-span ceiling (a span cannot usefully exceed the biggest table).
+const MAX_FONT_SIZE_POINTS : Int = 1638
+
+///|
+const MAX_GRID_COLUMNS : Int = 63
+
+///|
+const MAX_ROW_SPAN : Int = 10000
+
+///|
+/// Paragraph styles the writer can serialize (write_document.mbt's
+/// is_writable_style_id).
+fn is_writable_style(style : String) -> Bool {
+  style
+  is ("Normal"
+  | "Heading1"
+  | "Heading2"
+  | "Heading3"
+  | "Heading4"
+  | "Heading5"
+  | "Heading6")
+}
+
+///|
+/// The writer's alignment whitelist (write_document.mbt).
+fn is_writable_alignment(align : String) -> Bool {
+  align
+  is ("left" | "center" | "right" | "both" | "start" | "end" | "distribute")
+}
+
+///|
+/// The closed ST_HighlightColor enum the writer accepts.
+fn is_highlight_color(value : String) -> Bool {
+  value
+  is ("black"
+  | "blue"
+  | "cyan"
+  | "darkBlue"
+  | "darkCyan"
+  | "darkGray"
+  | "darkGreen"
+  | "darkMagenta"
+  | "darkRed"
+  | "darkYellow"
+  | "green"
+  | "lightGray"
+  | "magenta"
+  | "none"
+  | "red"
+  | "white"
+  | "yellow")
+}
+
+///|
 priv enum InlineSpec {
   RunSpec(@document.RunProperties, String)
   LinkSpec(
@@ -36,7 +94,12 @@ priv enum InlineSpec {
     target_frame~ : String?,
     runs~ : Array[InlineSpec]
   )
-  ImageSpec(path~ : String, content_type~ : String, alt~ : String?)
+  ImageSpec(
+    path~ : String,
+    content_type~ : String,
+    alt~ : String?,
+    at~ : String
+  )
 }
 
 ///|
@@ -78,6 +141,61 @@ pub fn BatchScript::image_paths(self : BatchScript) -> Array[String] {
 /// Number of ops in the script.
 pub fn BatchScript::op_count(self : BatchScript) -> Int {
   self.ops.length()
+}
+
+///|
+/// The script address (`ops[i]...image`) that first references `path`,
+/// so callers can attribute file-loading failures to the exact op.
+pub fn BatchScript::image_reference(
+  self : BatchScript,
+  path : String,
+) -> String? {
+  fn scan_inlines(inlines : Array[InlineSpec]) -> String? {
+    for inline in inlines {
+      match inline {
+        ImageSpec(path=candidate, at~, ..) if candidate == path =>
+          return Some(at)
+        LinkSpec(runs~, ..) =>
+          if scan_inlines(runs) is Some(found) {
+            return Some(found)
+          }
+        _ => ()
+      }
+    }
+    None
+  }
+  fn scan_paragraphs(paragraphs : Array[ParagraphSpec]) -> String? {
+    for paragraph in paragraphs {
+      if scan_inlines(paragraph.inlines) is Some(found) {
+        return Some(found)
+      }
+    }
+    None
+  }
+  for op in self.ops {
+    let found = match op {
+      ParagraphOp(spec) => scan_inlines(spec.inlines)
+      TableOp(rows~, ..) => {
+        let mut in_table : String? = None
+        for cells in rows {
+          for cell in cells {
+            if scan_paragraphs(cell.paragraphs) is Some(found) {
+              in_table = Some(found)
+              break
+            }
+          }
+          if in_table is Some(_) {
+            break
+          }
+        }
+        in_table
+      }
+    }
+    if found is Some(_) {
+      return found
+    }
+  }
+  None
 }
 
 ///|
@@ -123,7 +241,9 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
     match op_name {
       "paragraph" =>
         ops.push(
-          ParagraphOp(parse_paragraph(params, at, image_paths, seen_paths)),
+          ParagraphOp(
+            parse_paragraph(params, at + ".params", image_paths, seen_paths),
+          ),
         )
       "table" => ops.push(parse_table(params, at, image_paths, seen_paths))
       other =>
@@ -157,48 +277,89 @@ fn parse_paragraph(
   image_paths : Array[String],
   seen_paths : Set[String],
 ) -> ParagraphSpec raise BatchError {
-  check_keys(params, ["text", "runs", "style", "align", "list"], at + ".params")
-  let style = optional_string(params, "style", at)
-  let align = optional_string(params, "align", at)
+  // `at` is the address of the paragraph object itself ("ops[3].params",
+  // "ops[3].params.rows[0][1].paragraphs[2]") so every message below
+  // points at the exact JSON node.
+  check_keys(params, ["text", "runs", "style", "align", "list"], at)
+  let style = match optional_string(params, "style", at) {
+    Some(style) => {
+      if !is_writable_style(style) {
+        raise BatchError(
+          "\{at}.style '\{style}' is unknown (known styles: Normal, Heading1..Heading6)",
+        )
+      }
+      Some(style)
+    }
+    None => None
+  }
+  let align = match optional_string(params, "align", at) {
+    Some(align) => {
+      if !is_writable_alignment(align) {
+        raise BatchError(
+          "\{at}.align '\{align}' is unknown (known: left, center, right, both, start, end, distribute)",
+        )
+      }
+      Some(align)
+    }
+    None => None
+  }
   let list = match params.get("list") {
     Some(Object(list_json)) => {
-      check_keys(list_json, ["ordered", "level"], at + ".params.list")
+      check_keys(list_json, ["ordered", "level"], at + ".list")
       let ordered = match list_json.get("ordered") {
         Some(True) => true
         Some(False) => false
-        _ => raise BatchError("\{at}.params.list.ordered must be a boolean")
+        Some(_) => raise BatchError("\{at}.list.ordered must be a boolean")
+        None =>
+          raise BatchError(
+            "\{at}.list needs \"ordered\" (true = numbered, false = bulleted)",
+          )
       }
-      let level = match list_json.get("level") {
-        Some(Number(level, ..)) => level.to_int()
-        None => 1
-        _ => raise BatchError("\{at}.params.list.level must be a number")
-      }
+      let level = int_value(
+        list_json,
+        "level",
+        at + ".list",
+        min=1,
+        max=9,
+        default=1,
+      )
       Some(@document.numbering(ordered, level))
     }
-    Some(_) => raise BatchError("\{at}.params.list must be an object")
+    Some(_) => raise BatchError("\{at}.list must be an object")
     None => None
   }
   let inlines : Array[InlineSpec] = []
   match (params.get("text"), params.get("runs")) {
     (Some(_), Some(_)) =>
-      raise BatchError("\{at}.params: text and runs are mutually exclusive")
-    (Some(String(text)), None) =>
+      raise BatchError("\{at}: text and runs are mutually exclusive")
+    (Some(String(text)), None) => {
+      check_text(text, at + ".text")
       inlines.push(RunSpec(@document.run_properties(), text))
-    (Some(_), None) => raise BatchError("\{at}.params.text must be a string")
-    (None, Some(Array(runs))) =>
+    }
+    (Some(_), None) => raise BatchError("\{at}.text must be a string")
+    (None, Some(Array(runs))) => {
+      if runs.length() == 0 {
+        raise BatchError(
+          "\{at}.runs must not be empty (use \"text\": \"\" for a blank paragraph)",
+        )
+      }
       for run_index, run_json in runs {
         inlines.push(
           parse_inline(
             run_json,
-            "\{at}.params.runs[\{run_index}]",
+            "\{at}.runs[\{run_index}]",
             image_paths,
             seen_paths,
             allow_links=true,
           ),
         )
       }
-    (None, Some(_)) => raise BatchError("\{at}.params.runs must be an array")
-    (None, None) => ()
+    }
+    (None, Some(_)) => raise BatchError("\{at}.runs must be an array")
+    (None, None) =>
+      raise BatchError(
+        "\{at} needs text or runs (use \"text\": \"\" for a blank paragraph)",
+      )
   }
   { style, align, list, inlines }
 }
@@ -227,15 +388,40 @@ fn parse_inline(
       ["href", "anchor", "target_frame", "text", "runs"],
       at + ".link",
     )
-    let href = optional_string(link, "href", at + ".link")
-    let anchor = optional_string(link, "anchor", at + ".link")
-    let target_frame = optional_string(link, "target_frame", at + ".link")
+    let href = checked_attribute(
+      optional_string(link, "href", at + ".link"),
+      at + ".link.href",
+    )
+    let anchor = checked_attribute(
+      optional_string(link, "anchor", at + ".link"),
+      at + ".link.anchor",
+    )
+    let target_frame = checked_attribute(
+      optional_string(link, "target_frame", at + ".link"),
+      at + ".link.target_frame",
+    )
+    // The writer requires exactly one of href/anchor (it folds both into
+    // the reader's href-fragment representation); enforce here so the
+    // error carries the link's address.
+    match (href, anchor) {
+      (Some(_), Some(_)) =>
+        raise BatchError(
+          "\{at}.link: href and anchor are mutually exclusive (put a fragment in the href instead)",
+        )
+      (None, None) => raise BatchError("\{at}.link needs an href or an anchor")
+      _ => ()
+    }
     let runs : Array[InlineSpec] = []
     match (link.get("text"), link.get("runs")) {
-      (Some(String(text)), None) =>
+      (Some(String(text)), None) => {
+        check_text(text, at + ".link.text")
         runs.push(RunSpec(@document.run_properties(), text))
+      }
       (Some(_), None) => raise BatchError("\{at}.link.text must be a string")
-      (None, Some(Array(link_runs))) =>
+      (None, Some(Array(link_runs))) => {
+        if link_runs.length() == 0 {
+          raise BatchError("\{at}.link.runs must not be empty")
+        }
         for run_index, run_json in link_runs {
           runs.push(
             parse_inline(
@@ -247,6 +433,7 @@ fn parse_inline(
             ),
           )
         }
+      }
       (None, Some(_)) => raise BatchError("\{at}.link.runs must be an array")
       (Some(_), Some(_)) =>
         raise BatchError("\{at}.link: text and runs are mutually exclusive")
@@ -268,12 +455,25 @@ fn parse_inline(
       Some(content_type) => content_type
       None => content_type_for_path(path, at)
     }
-    let alt = optional_string(image, "alt", at + ".image")
+    if !(content_type is ("image/png" | "image/jpeg" | "image/gif")) {
+      raise BatchError(
+        "\{at}.image.content_type '\{content_type}' is unsupported (image/png, image/jpeg, image/gif)",
+      )
+    }
+    let alt = checked_attribute(
+      optional_string(image, "alt", at + ".image"),
+      at + ".image.alt",
+    )
+    match alt {
+      Some(text) if text.trim(chars=" \t") == "" =>
+        raise BatchError("\{at}.image.alt must not be blank")
+      _ => ()
+    }
     if !seen_paths.contains(path) {
       seen_paths.add(path)
       image_paths.push(path)
     }
-    return ImageSpec(path~, content_type~, alt~)
+    return ImageSpec(path~, content_type~, alt~, at=at + ".image")
   }
   check_keys(
     spec,
@@ -286,6 +486,7 @@ fn parse_inline(
   guard spec.get("text") is Some(String(text)) else {
     raise BatchError("\{at}.text must be a string")
   }
+  check_text(text, at + ".text")
   let vertical = match optional_string(spec, "vertical", at) {
     Some("superscript") => @document.Superscript
     Some("subscript") => Subscript
@@ -295,10 +496,23 @@ fn parse_inline(
       )
     None => Baseline
   }
-  let size = match spec.get("size") {
-    Some(Number(size, ..)) => Some(size.to_int())
+  let size = if spec.get("size") is Some(_) {
+    Some(
+      int_value(spec, "size", at, min=1, max=MAX_FONT_SIZE_POINTS, default=0),
+    )
+  } else {
+    None
+  }
+  let highlight = match optional_string(spec, "highlight", at) {
+    Some(highlight) => {
+      if !is_highlight_color(highlight) {
+        raise BatchError(
+          "\{at}.highlight '\{highlight}' is not an ST_HighlightColor name (yellow, green, cyan, red, ..., none)",
+        )
+      }
+      Some(highlight)
+    }
     None => None
-    _ => raise BatchError("\{at}.size must be a number")
   }
   RunSpec(
     @document.run_properties(
@@ -309,9 +523,9 @@ fn parse_inline(
       is_all_caps=boolean_flag(spec, "all_caps", at),
       is_small_caps=boolean_flag(spec, "small_caps", at),
       vertical_alignment=vertical,
-      font=optional_string(spec, "font", at),
+      font=checked_attribute(optional_string(spec, "font", at), at + ".font"),
       font_size=size,
-      highlight=optional_string(spec, "highlight", at),
+      highlight~,
     ),
     text,
   )
@@ -340,18 +554,29 @@ fn parse_table(
   seen_paths : Set[String],
 ) -> OpSpec raise BatchError {
   check_keys(params, ["rows", "header_rows"], at + ".params")
-  let header_rows = match params.get("header_rows") {
-    Some(Number(count, ..)) => count.to_int()
-    None => 0
-    _ => raise BatchError("\{at}.params.header_rows must be a number")
-  }
   guard params.get("rows") is Some(Array(rows_json)) else {
     raise BatchError("\{at}.params.rows must be an array of arrays")
   }
+  if rows_json.length() == 0 {
+    raise BatchError("\{at}.params.rows must not be empty")
+  }
+  let header_rows = int_value(
+    params,
+    "header_rows",
+    at + ".params",
+    min=0,
+    max=rows_json.length(),
+    default=0,
+  )
   let rows : Array[Array[CellSpec]] = []
   for row_index, row_json in rows_json {
     guard row_json is Array(cells_json) else {
       raise BatchError("\{at}.params.rows[\{row_index}] must be an array")
+    }
+    if cells_json.length() == 0 {
+      raise BatchError(
+        "\{at}.params.rows[\{row_index}] must have at least one cell",
+      )
     }
     let cells : Array[CellSpec] = []
     for cell_index, cell_json in cells_json {
@@ -364,20 +589,41 @@ fn parse_table(
         ["text", "paragraphs", "col_span", "row_span"],
         cell_where,
       )
-      let col_span = span_value(cell, "col_span", cell_where)
-      let row_span = span_value(cell, "row_span", cell_where)
+      let col_span = int_value(
+        cell,
+        "col_span",
+        cell_where,
+        min=1,
+        max=MAX_GRID_COLUMNS,
+        default=1,
+      )
+      let row_span = int_value(
+        cell,
+        "row_span",
+        cell_where,
+        min=1,
+        max=MAX_ROW_SPAN,
+        default=1,
+      )
       let paragraphs : Array[ParagraphSpec] = []
       match (cell.get("text"), cell.get("paragraphs")) {
-        (Some(String(text)), None) =>
+        (Some(String(text)), None) => {
+          check_text(text, cell_where + ".text")
           paragraphs.push({
             style: None,
             align: None,
             list: None,
             inlines: [RunSpec(@document.run_properties(), text)],
           })
+        }
         (Some(_), None) =>
           raise BatchError("\{cell_where}.text must be a string")
-        (None, Some(Array(paragraphs_json))) =>
+        (None, Some(Array(paragraphs_json))) => {
+          if paragraphs_json.length() == 0 {
+            raise BatchError(
+              "\{cell_where}.paragraphs must not be empty (use \"text\": \"\" for a blank cell)",
+            )
+          }
           for paragraph_index, paragraph_json in paragraphs_json {
             guard paragraph_json is Object(paragraph) else {
               raise BatchError(
@@ -393,32 +639,23 @@ fn parse_table(
               ),
             )
           }
+        }
         (None, Some(_)) =>
           raise BatchError("\{cell_where}.paragraphs must be an array")
         (Some(_), Some(_)) =>
           raise BatchError(
             "\{cell_where}: text and paragraphs are mutually exclusive",
           )
-        (None, None) => ()
+        (None, None) =>
+          raise BatchError(
+            "\{cell_where} needs text or paragraphs (use \"text\": \"\" for a blank cell)",
+          )
       }
       cells.push({ paragraphs, col_span, row_span })
     }
     rows.push(cells)
   }
   TableOp(rows~, header_rows~)
-}
-
-///|
-fn span_value(
-  cell : Map[String, Json],
-  key : String,
-  at : String,
-) -> Int raise BatchError {
-  match cell.get(key) {
-    Some(Number(value, ..)) => value.to_int()
-    None => 1
-    _ => raise BatchError("\{at}.\{key} must be a number")
-  }
 }
 
 ///|
@@ -431,6 +668,164 @@ fn optional_string(
     Some(String(value)) => Some(value)
     None => None
     _ => raise BatchError("\{at}.\{key} must be a string")
+  }
+}
+
+///|
+/// An exact integer in [min, max]. Fractional, non-finite, and
+/// out-of-range numbers fail — `2.9` must never silently become `2`.
+fn int_value(
+  object : Map[String, Json],
+  key : String,
+  at : String,
+  min~ : Int,
+  max~ : Int,
+  default~ : Int,
+) -> Int raise BatchError {
+  match object.get(key) {
+    Some(Number(value, ..)) => {
+      let as_int = value.to_int()
+      if value != value || as_int.to_double() != value {
+        raise BatchError("\{at}.\{key} must be an integer (got \{value})")
+      }
+      if as_int < min || as_int > max {
+        raise BatchError("\{at}.\{key} must be between \{min} and \{max}")
+      }
+      as_int
+    }
+    None => default
+    _ => raise BatchError("\{at}.\{key} must be a number")
+  }
+}
+
+///|
+/// Run/paragraph text: rejects raw line breaks and the other C0 controls
+/// (tab excepted) that the writer fails closed on, so the error carries
+/// the script address instead of a whole-document writer message.
+fn check_text(text : String, at : String) -> Unit raise BatchError {
+  for unit in text {
+    let code = unit.to_int()
+    if code < 0x20 && unit != '\t' {
+      raise BatchError(
+        "\{at} contains an unserializable control character (code \{code}); text cannot hold raw line breaks",
+      )
+    }
+  }
+}
+
+///|
+/// Attribute-destined strings (href, anchor, target_frame, font, alt):
+/// must be non-empty and free of ALL C0 controls (XML attribute-value
+/// normalization mutates even tab/CR/LF).
+fn checked_attribute(value : String?, at : String) -> String? raise BatchError {
+  match value {
+    Some(text) => {
+      if text == "" {
+        raise BatchError("\{at} must not be empty")
+      }
+      for unit in text {
+        if unit.to_int() < 0x20 {
+          raise BatchError(
+            "\{at} contains a control character that cannot survive XML attribute normalization",
+          )
+        }
+      }
+      Some(text)
+    }
+    None => None
+  }
+}
+
+///|
+priv struct ScanFrame {
+  is_object : Bool
+  keys : Set[String]
+  mut expecting_key : Bool
+}
+
+///|
+/// Rejects duplicate keys anywhere in the script text. `@json.parse` is
+/// last-wins per ECMA-404, which would let `{"op": "table", "op":
+/// "paragraph"}` silently drop half an op — a strict consumed schema must
+/// refuse instead. This is a minimal JSON lexer over the raw text: one
+/// frame per `{`/`[`, and inside an object frame a string is a KEY exactly
+/// when it is the first token of a member (after `{` or `,`, before `:`).
+/// Keys are compared as written — escape-equivalent spellings are the JSON
+/// parser's domain. Malformed JSON is left for `@json.parse` to diagnose.
+pub fn check_duplicate_keys(text : String) -> Unit raise BatchError {
+  let frames : Array[ScanFrame] = []
+  let mut index = 0
+  let length = text.length()
+  while index < length {
+    let unit = text.get_char(index).unwrap_or(' ')
+    match unit {
+      '{' => {
+        frames.push({ is_object: true, keys: Set([]), expecting_key: true })
+        index += 1
+      }
+      '[' => {
+        frames.push({ is_object: false, keys: Set([]), expecting_key: false })
+        index += 1
+      }
+      '}' | ']' => {
+        let _ = frames.pop()
+        index += 1
+      }
+      ',' => {
+        match frames.last() {
+          Some(frame) if frame.is_object => frame.expecting_key = true
+          _ => ()
+        }
+        index += 1
+      }
+      ':' => {
+        match frames.last() {
+          Some(frame) if frame.is_object => frame.expecting_key = false
+          _ => ()
+        }
+        index += 1
+      }
+      '"' => {
+        let builder = StringBuilder::new()
+        let mut cursor = index + 1
+        let mut closed = false
+        while cursor < length {
+          let c = text.get_char(cursor).unwrap_or(' ')
+          if c == '\\' {
+            builder.write_char(c)
+            if cursor + 1 < length {
+              builder.write_char(text.get_char(cursor + 1).unwrap_or(' '))
+            }
+            cursor += 2
+            continue
+          }
+          if c == '"' {
+            closed = true
+            break
+          }
+          builder.write_char(c)
+          cursor += 1
+        }
+        if !closed {
+          // Unterminated string: @json.parse reports it.
+          return
+        }
+        match frames.last() {
+          Some(frame) if frame.is_object && frame.expecting_key => {
+            let key = builder.to_string()
+            if frame.keys.contains(key) {
+              raise BatchError(
+                "the script repeats the key \"\{key}\" within one object (strict scripts must not rely on last-wins parsing)",
+              )
+            }
+            frame.keys.add(key)
+          }
+          _ => ()
+        }
+        index = cursor + 1
+      }
+      _ => index += 1
+    }
   }
 }
 
@@ -524,11 +919,14 @@ fn build_inline(
       }
       @document.hyperlink(children, href~, anchor~, target_frame~)
     }
-    ImageSpec(path~, content_type~, alt~) =>
+    ImageSpec(path~, content_type~, alt~, at~) =>
       match images.get(path) {
         Some(data) =>
           @document.run([@document.image(content_type, data, alt_text=alt)])
-        None => raise BatchError("image bytes for '\{path}' were not provided")
+        None =>
+          raise BatchError(
+            "\{at}.path: image bytes for '\{path}' were not provided",
+          )
       }
   }
 }

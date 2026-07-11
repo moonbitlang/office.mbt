@@ -53,7 +53,7 @@ test "strict validation names the op index and key" {
   )
   expect_batch_error(
     (
-      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"link": {"runs": [{"link": {"text": "x"}}]}}]}}]}
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"link": {"href": "https://a.example", "runs": [{"link": {"href": "https://b.example", "text": "x"}}]}}]}}]}
     ),
     "ops[0].params.runs[0].link.runs[0]: links cannot nest inside links",
   )
@@ -122,10 +122,255 @@ test "missing image bytes fail closed at build time" {
   } catch {
     BatchError(message) =>
       inspect(
-        message.has_prefix("image bytes for 'gone.png' were not provided"),
+        message ==
+        "ops[0].params.runs[0].image.path: image bytes for 'gone.png' were not provided",
         content="true",
       )
   } noraise {
     _ => fail("expected build to fail")
   }
+}
+
+///|
+test "review round 2: numbers must be exact in-range integers" {
+  // Truncation like 2.9 -> 2 must never happen silently.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a", "list": {"ordered": true, "level": 2.9}}}]}
+    ),
+    "ops[0].params.list.level must be an integer",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a", "list": {"ordered": true, "level": 10}}}]}
+    ),
+    "ops[0].params.list.level must be between 1 and 9",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "size": 0}]}}]}
+    ),
+    "ops[0].params.runs[0].size must be between 1 and 1638",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "size": 1639}]}}]}
+    ),
+    "ops[0].params.runs[0].size must be between 1 and 1638",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"rows": [[{"text": "a", "col_span": 2147483647}]]}}]}
+    ),
+    "ops[0].params.rows[0][0].col_span must be between 1 and 63",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"rows": [[{"text": "a", "row_span": 0}]]}}]}
+    ),
+    "ops[0].params.rows[0][0].row_span must be between 1 and 10000",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"header_rows": -1, "rows": [[{"text": "a"}]]}}]}
+    ),
+    "ops[0].params.header_rows must be between 0 and 1",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"header_rows": 2, "rows": [[{"text": "a"}]]}}]}
+    ),
+    "ops[0].params.header_rows must be between 0 and 1",
+  )
+}
+
+///|
+test "review round 2: enums, blanks, and XOR shapes are rejected with exact addresses" {
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a", "style": "Heading7"}}]}
+    ),
+    "ops[0].params.style 'Heading7' is unknown",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a", "style": ""}}]}
+    ),
+    "ops[0].params.style '' is unknown",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a", "align": "justify"}}]}
+    ),
+    "ops[0].params.align 'justify' is unknown",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "highlight": "banana"}]}}]}
+    ),
+    "ops[0].params.runs[0].highlight 'banana' is not an ST_HighlightColor name",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"text": "a", "font": ""}]}}]}
+    ),
+    "ops[0].params.runs[0].font must not be empty",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {}}]}
+    ),
+    "ops[0].params needs text or runs",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": []}}]}
+    ),
+    "ops[0].params.runs must not be empty",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"list": {"level": 2}, "text": "a"}}]}
+    ),
+    "ops[0].params.list needs \"ordered\"",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"rows": []}}]}
+    ),
+    "ops[0].params.rows must not be empty",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"rows": [[]]}}]}
+    ),
+    "ops[0].params.rows[0] must have at least one cell",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"rows": [[{}]]}}]}
+    ),
+    "ops[0].params.rows[0][0] needs text or paragraphs",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "table", "params": {"rows": [[{"paragraphs": []}]]}}]}
+    ),
+    "ops[0].params.rows[0][0].paragraphs must not be empty",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"link": {"href": "https://a.example", "anchor": "top", "text": "x"}}]}}]}
+    ),
+    "ops[0].params.runs[0].link: href and anchor are mutually exclusive",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"link": {"text": "x"}}]}}]}
+    ),
+    "ops[0].params.runs[0].link needs an href or an anchor",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"link": {"href": "", "text": "x"}}]}}]}
+    ),
+    "ops[0].params.runs[0].link.href must not be empty",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"image": {"path": "a.png", "content_type": "image/bmp"}}]}}]}
+    ),
+    "ops[0].params.runs[0].image.content_type 'image/bmp' is unsupported",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"runs": [{"image": {"path": "a.png", "alt": "  "}}]}}]}
+    ),
+    "ops[0].params.runs[0].image.alt must not be blank",
+  )
+  // XML-illegal control characters cannot survive serialization; the JSON
+  // escapes decode to real controls before validation sees them.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a\u0001b"}}]}
+    ),
+    "ops[0].params.text contains an unserializable control character (code 1)",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "a\nb"}}]}
+    ),
+    "ops[0].params.text contains an unserializable control character (code 10)",
+  )
+}
+
+///|
+test "review round 2: duplicate keys are refused, not last-wins" {
+  fn expect_duplicate(script : String, key : String) raise {
+    try @batch.check_duplicate_keys(script) catch {
+      BatchError(message) =>
+        if !message.has_prefix("the script repeats the key \"\{key}\"") {
+          fail("unexpected message: \{message}")
+        }
+    } noraise {
+      _ => fail("expected duplicate key '\{key}' to be refused")
+    }
+  }
+
+  expect_duplicate(
+    (
+      #|{"schema": "docx.batch/1", "schema": "docx.batch/1", "ops": []}
+    ),
+    "schema",
+  )
+  expect_duplicate(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "op": "table", "params": {"text": "a"}}]}
+    ),
+    "op",
+  )
+  // The same key on DIFFERENT objects is fine, as are key-looking strings
+  // in value or array position.
+  @batch.check_duplicate_keys(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "op"}}, {"op": "paragraph", "params": {"runs": [{"text": "text"}, {"text": "text"}]}}]}
+    ),
+  )
+  // Escapes inside strings do not desync the scanner.
+  @batch.check_duplicate_keys(
+    (
+      #|{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "quote \" and slash \\"}}]}
+    ),
+  )
+}
+
+///|
+test "review round 2: the ops cap is enforced at 10000" {
+  fn script_with_ops(count : Int) -> String {
+    let builder = StringBuilder::new()
+    builder.write_string(
+      (
+        #|{"schema": "docx.batch/1", "ops": [
+      ),
+    )
+    for index in 0..<count {
+      if index > 0 {
+        builder.write_string(",")
+      }
+      builder.write_string(
+        (
+          #|{"op": "paragraph", "params": {"text": "x"}}
+        ),
+      )
+    }
+    builder.write_string("]}")
+    builder.to_string()
+  }
+
+  let at_cap = parse_str(script_with_ops(10000))
+  debug_inspect(at_cap.op_count(), content="10000")
+  expect_batch_error(
+    script_with_ops(10001),
+    "the script has 10001 ops; the cap is 10000",
+  )
 }

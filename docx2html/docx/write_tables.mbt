@@ -5,13 +5,29 @@
 // contract as F1: fail closed on anything unsupported.
 
 ///|
+/// Word's hard table-column limit. Beyond it the document is unusable in
+/// Word anyway, and an unbounded span would drive the placement loop and
+/// the w:gridCol emission through billions of iterations.
+const MAX_GRID_COLUMNS : Int = 63
+
+///|
 /// Grid width (in columns) of one row: the sum of its cells' column spans.
-fn row_grid_width(cells : Array[DocumentElement]) -> Int {
+/// Fails closed past `MAX_GRID_COLUMNS` — checked per cell BEFORE summing
+/// so a huge span cannot overflow the accumulator.
+fn row_grid_width(cells : Array[DocumentElement]) -> Int raise DocxError {
   let mut width = 0
   for cell in cells {
-    match cell {
-      TableCell(col_span~, ..) => width += col_span
-      _ => width += 1
+    let span = match cell {
+      TableCell(col_span~, ..) => col_span
+      _ => 1
+    }
+    if span > MAX_GRID_COLUMNS || width + span > MAX_GRID_COLUMNS {
+      raise Unsupported(
+        message="a table row spans more than \{MAX_GRID_COLUMNS} grid columns (Word's column limit)",
+      )
+    }
+    if span >= 1 {
+      width += span
     }
   }
   width

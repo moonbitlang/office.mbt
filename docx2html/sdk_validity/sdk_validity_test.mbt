@@ -263,12 +263,14 @@ async test "a full-surface docx.batch/1 script is Microsoft OpenXML schema-valid
         #|    {"op": "paragraph", "params": {"text": "Title", "style": "Heading1"}},
         #|    {"op": "paragraph", "params": {"align": "center", "runs": [
         #|      {"text": "flags", "bold": true, "italic": true, "underline": true,
-        #|       "strike": true, "small_caps": true, "font": "Arial", "size": 14,
+        #|       "strike": true, "all_caps": true, "font": "Arial", "size": 14,
         #|       "highlight": "yellow"},
+        #|      {"text": "small", "small_caps": true},
         #|      {"text": "sup", "vertical": "superscript"},
+        #|      {"text": "sub", "vertical": "subscript"},
         #|      {"link": {"href": "https://example.com/a?b=1&c=2", "text": "site"}},
-        #|      {"link": {"anchor": "top", "target_frame": "_blank", "text": "up"}},
-        #|      {"image": {"path": "dot.png", "alt": "a dot"}}
+        #|      {"link": {"anchor": "top", "target_frame": "_blank", "runs": [{"text": "up", "bold": true}]}},
+        #|      {"image": {"path": "dot.png", "content_type": "image/png", "alt": "a dot"}}
         #|    ]}},
         #|    {"op": "paragraph", "params": {"text": "one", "list": {"ordered": true}}},
         #|    {"op": "paragraph", "params": {"text": "deep", "list": {"ordered": false, "level": 9}}},
