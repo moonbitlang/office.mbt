@@ -145,6 +145,35 @@ pub fn DocxAnnotatedResult::comments_extended_part(
 }
 
 ///|
+/// The span of a paragraph in ANY scanned story ("/comments" included),
+/// by its story-relative ordinal path ("comment[2]/p[1]") — offsets
+/// index into that story's part bytes. L2's paraId retrofit edits the
+/// parent comment's LAST body paragraph through this.
+pub fn DocxAnnotatedResult::story_paragraph_span(
+  self : DocxAnnotatedResult,
+  story : String,
+  relative_path : String,
+) -> NodeSpan? {
+  for entry in self.index.scans {
+    let (key, scan) = entry
+    if key != story {
+      continue
+    }
+    for node in scan.nodes() {
+      if node.kind == "p" && node.path == relative_path {
+        return Some({
+          byte_start: node.byte_start,
+          byte_end: node.byte_end,
+          content_start: node.content_start,
+          close_tag_start: node.close_tag_start,
+        })
+      }
+    }
+  }
+  None
+}
+
+///|
 fn body_node_span_of_kind(
   annotated : DocxAnnotatedResult,
   relative_path : String,

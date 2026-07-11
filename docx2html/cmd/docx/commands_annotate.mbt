@@ -25,74 +25,7 @@ async fn run_annotate_add(matches : @argparse.Matches) -> Unit {
   let at_flag = required_value(matches, "at")
   let to_flag = first_value(matches, "to")
   // Branch-exclusive comment source.
-  let text_flag = first_value(matches, "text")
-  let json_flag = first_value(matches, "json")
-  let author_flag = first_value(matches, "author")
-  let initials_flag = first_value(matches, "initials")
-  let date_flag = first_value(matches, "date")
-  let spec = match (text_flag, json_flag) {
-    (Some(_), Some(_)) =>
-      raise @cli.CliError(
-        "error: --text and --json are mutually exclusive (exactly one is required)",
-      )
-    (None, None) =>
-      raise @cli.CliError("error: exactly one of --text or --json is required")
-    (Some(text), None) => {
-      let author = match author_flag {
-        Some(author) => author
-        None =>
-          raise @cli.CliError(
-            "error: --author is required with --text (the flags own the metadata on this branch)",
-          )
-      }
-      @docx2html.comment_spec(
-        author~,
-        initials?=initials_flag,
-        date?=date_flag,
-        from=0,
-        to=0,
-        [@docx2html.paragraph([@docx2html.run([@docx2html.text(text)])])],
-      ) catch {
-        err => raise @cli.CliError("error: \{docx_error_message(err)}")
-      }
-    }
-    (None, Some(envelope_path)) => {
-      // The envelope owns ALL metadata: no precedence, no merging.
-      if author_flag is Some(_) ||
-        initials_flag is Some(_) ||
-        date_flag is Some(_) {
-        raise @cli.CliError(
-          "error: --author/--initials/--date are rejected with --json (the envelope owns all metadata)",
-        )
-      }
-      let envelope_text = @afs.read_file(envelope_path).text()
-      @batch.check_script_text(envelope_text) catch {
-        BatchError(message) => raise @cli.CliError("error: \{message}")
-      }
-      let envelope_json = @json.parse(envelope_text) catch {
-        err =>
-          raise @cli.CliError(
-            "error: the envelope is not valid JSON: \{repr(err)}",
-          )
-      }
-      let envelope = @batch.parse_annotate(envelope_json) catch {
-        BatchError(message) => raise @cli.CliError("error: \{message}")
-      }
-      let body = envelope.build_body() catch {
-        BatchError(message) => raise @cli.CliError("error: \{message}")
-      }
-      @docx2html.comment_spec(
-        author=envelope.author(),
-        initials?=envelope.initials(),
-        date?=envelope.date(),
-        from=0,
-        to=0,
-        body,
-      ) catch {
-        err => raise @cli.CliError("error: \{docx_error_message(err)}")
-      }
-    }
-  }
+  let spec = comment_spec_from_flags(matches)
   let original = @afs.read_file(input).binary()
   let annotated = @docx2html.read_docx_annotated(original) catch {
     err =>
@@ -253,6 +186,303 @@ fn annotate_command() -> @argparse.Command {
           ),
         ],
       ),
+      Command(
+        "reply",
+        about="Reply to an existing comment (anchorless; threads via commentsExtended)",
+        options=[
+          OptionArg(
+            "comment",
+            long="comment",
+            about="The parent comment's id (as outline shows). Required.",
+          ),
+          OptionArg(
+            "text",
+            long="text",
+            about="Plain reply text (one paragraph); metadata comes from the flags.",
+          ),
+          OptionArg(
+            "json",
+            long="json",
+            about="Path to a docx.annotate/1 envelope FILE owning ALL metadata; the metadata flags are rejected.",
+          ),
+          OptionArg(
+            "author",
+            long="author",
+            about="Reply author (required with --text).",
+          ),
+          OptionArg(
+            "initials",
+            long="initials",
+            about="Author initials (optional, --text branch only).",
+          ),
+          OptionArg(
+            "date",
+            long="date",
+            about="xsd:dateTime timestamp (optional, --text branch only).",
+          ),
+        ],
+        positionals=[
+          PositionArg(
+            "input",
+            about="Existing .docx (never modified).",
+            num_args=ValueRange(lower=1, upper=1),
+          ),
+          PositionArg(
+            "output",
+            about="Output .docx path (must not exist).",
+            num_args=ValueRange(lower=1, upper=1),
+          ),
+        ],
+      ),
+      Command(
+        "resolve",
+        about="Mark a comment resolved (w15:done=1)",
+        options=[
+          OptionArg(
+            "comment",
+            long="comment",
+            about="The comment's id. Required.",
+          ),
+        ],
+        positionals=[
+          PositionArg(
+            "input",
+            about="Existing .docx (never modified).",
+            num_args=ValueRange(lower=1, upper=1),
+          ),
+          PositionArg(
+            "output",
+            about="Output .docx path (must not exist).",
+            num_args=ValueRange(lower=1, upper=1),
+          ),
+        ],
+      ),
+      Command(
+        "unresolve",
+        about="Mark a comment unresolved (w15:done=0)",
+        options=[
+          OptionArg(
+            "comment",
+            long="comment",
+            about="The comment's id. Required.",
+          ),
+        ],
+        positionals=[
+          PositionArg(
+            "input",
+            about="Existing .docx (never modified).",
+            num_args=ValueRange(lower=1, upper=1),
+          ),
+          PositionArg(
+            "output",
+            about="Output .docx path (must not exist).",
+            num_args=ValueRange(lower=1, upper=1),
+          ),
+        ],
+      ),
     ],
   )
+}
+
+///|
+/// The BRANCH-EXCLUSIVE comment source shared by `annotate add` and
+/// `annotate reply`: `--text` with flag-owned metadata (`--author`
+/// required), or `--json <file>` with the docx.annotate/1 envelope
+/// owning ALL metadata (the metadata flags rejected).
+async fn comment_spec_from_flags(
+  matches : @argparse.Matches,
+) -> @docx_impl.CommentSpec {
+  let text_flag = first_value(matches, "text")
+  let json_flag = first_value(matches, "json")
+  let author_flag = first_value(matches, "author")
+  let initials_flag = first_value(matches, "initials")
+  let date_flag = first_value(matches, "date")
+  match (text_flag, json_flag) {
+    (Some(_), Some(_)) =>
+      raise @cli.CliError(
+        "error: --text and --json are mutually exclusive (exactly one is required)",
+      )
+    (None, None) =>
+      raise @cli.CliError("error: exactly one of --text or --json is required")
+    (Some(text), None) => {
+      let author = match author_flag {
+        Some(author) => author
+        None =>
+          raise @cli.CliError(
+            "error: --author is required with --text (the flags own the metadata on this branch)",
+          )
+      }
+      @docx2html.comment_spec(
+        author~,
+        initials?=initials_flag,
+        date?=date_flag,
+        from=0,
+        to=0,
+        [@docx2html.paragraph([@docx2html.run([@docx2html.text(text)])])],
+      ) catch {
+        err => raise @cli.CliError("error: \{docx_error_message(err)}")
+      }
+    }
+    (None, Some(envelope_path)) => {
+      if author_flag is Some(_) ||
+        initials_flag is Some(_) ||
+        date_flag is Some(_) {
+        raise @cli.CliError(
+          "error: --author/--initials/--date are rejected with --json (the envelope owns all metadata)",
+        )
+      }
+      let envelope_text = @afs.read_file(envelope_path).text()
+      @batch.check_script_text(envelope_text) catch {
+        BatchError(message) => raise @cli.CliError("error: \{message}")
+      }
+      let envelope_json = @json.parse(envelope_text) catch {
+        err =>
+          raise @cli.CliError(
+            "error: the envelope is not valid JSON: \{repr(err)}",
+          )
+      }
+      let envelope = @batch.parse_annotate(envelope_json) catch {
+        BatchError(message) => raise @cli.CliError("error: \{message}")
+      }
+      let body = envelope.build_body() catch {
+        BatchError(message) => raise @cli.CliError("error: \{message}")
+      }
+      @docx2html.comment_spec(
+        author=envelope.author(),
+        initials?=envelope.initials(),
+        date?=envelope.date(),
+        from=0,
+        to=0,
+        body,
+      ) catch {
+        err => raise @cli.CliError("error: \{docx_error_message(err)}")
+      }
+    }
+  }
+}
+
+///|
+/// `docx annotate reply <in> <out> --comment <id> (--text ... --author
+/// ... | --json <file>)` — an anchorless reply threaded under the
+/// parent (its anchor is logically the parent's), with the paraId
+/// retrofit and commentsExtended wiring handled by the plan layer.
+async fn run_annotate_reply(matches : @argparse.Matches) -> Unit {
+  let input = required_value(matches, "input")
+  let output = required_value(matches, "output")
+  if @afs.exists(output) {
+    raise @cli.CliError(
+      "docx: refusing to write '\{output}': it already exists (annotate writes a NEW file; it never edits in place)",
+    )
+  }
+  let parent_id = required_value(matches, "comment")
+  let spec = comment_spec_from_flags(matches)
+  let original = @afs.read_file(input).binary()
+  let annotated = @docx2html.read_docx_annotated(original) catch {
+    err =>
+      raise @cli.CliError(
+        "docx: could not read '\{input}': \{docx_error_message(err)}",
+      )
+  }
+  let (plan, new_id) = @docx_impl.plan_comment_reply(
+    annotated,
+    original,
+    parent_id~,
+    spec,
+  ) catch {
+    err => raise @cli.CliError("error: \{docx_error_message(err)}")
+  }
+  let spliced = @splice.splice_docx(original, plan) catch {
+    err => raise @cli.CliError("error: \{docx_error_message(err)}")
+  }
+  let findings = @opc.validate_docx_package(spliced)
+  if findings.length() > 0 {
+    raise @cli.CliError(
+      "docx: internal error — the annotated package failed validation: \{findings[0]}",
+    )
+  }
+  let verify = @docx2html.read_docx_annotated(spliced) catch {
+    err =>
+      raise @cli.CliError(
+        "docx: internal error — the annotated package does not read back: \{docx_error_message(err)}",
+      )
+  }
+  let mut verified = false
+  for comment in verify.annotations().comments() {
+    if comment.id() == new_id &&
+      comment.defined() &&
+      comment.parent_id() is Some(threaded) &&
+      threaded == parent_id {
+      verified = true
+    }
+  }
+  if !verified {
+    raise @cli.CliError(
+      "docx: internal error — the reply did not read back threaded under comment '\{parent_id}'; nothing was written",
+    )
+  }
+  write_atomically(output, spliced)
+  println("annotated \{output} (comment \{new_id} replying to \{parent_id})")
+}
+
+///|
+/// `docx annotate resolve|unresolve <in> <out> --comment <id>` — flips
+/// the w15:done flag, creating the commentsExtended part (and the
+/// paraId key) when the document predates them.
+async fn run_annotate_resolution(
+  matches : @argparse.Matches,
+  done : Bool,
+) -> Unit {
+  let input = required_value(matches, "input")
+  let output = required_value(matches, "output")
+  if @afs.exists(output) {
+    raise @cli.CliError(
+      "docx: refusing to write '\{output}': it already exists (annotate writes a NEW file; it never edits in place)",
+    )
+  }
+  let comment_id = required_value(matches, "comment")
+  let original = @afs.read_file(input).binary()
+  let annotated = @docx2html.read_docx_annotated(original) catch {
+    err =>
+      raise @cli.CliError(
+        "docx: could not read '\{input}': \{docx_error_message(err)}",
+      )
+  }
+  let plan = @docx_impl.plan_comment_resolution(
+    annotated,
+    original,
+    comment_id~,
+    done~,
+  ) catch {
+    err => raise @cli.CliError("error: \{docx_error_message(err)}")
+  }
+  let spliced = @splice.splice_docx(original, plan) catch {
+    err => raise @cli.CliError("error: \{docx_error_message(err)}")
+  }
+  let findings = @opc.validate_docx_package(spliced)
+  if findings.length() > 0 {
+    raise @cli.CliError(
+      "docx: internal error — the package failed validation: \{findings[0]}",
+    )
+  }
+  let verify = @docx2html.read_docx_annotated(spliced) catch {
+    err =>
+      raise @cli.CliError(
+        "docx: internal error — the package does not read back: \{docx_error_message(err)}",
+      )
+  }
+  let mut verified = false
+  for comment in verify.annotations().comments() {
+    if comment.id() == comment_id &&
+      comment.done() is Some(flag) &&
+      flag == done {
+      verified = true
+    }
+  }
+  if !verified {
+    raise @cli.CliError(
+      "docx: internal error — comment '\{comment_id}' did not read back with done=\{done}; nothing was written",
+    )
+  }
+  write_atomically(output, spliced)
+  println("annotated \{output} (comment \{comment_id} done=\{done})")
 }

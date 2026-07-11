@@ -12,7 +12,7 @@ import {
 // Values
 pub fn comment_anchor_fragments(id~ : String) -> (String, String)
 
-pub fn comment_definition_fragment(CommentSpec, id~ : String) -> String raise @core.DocxError
+pub fn comment_definition_fragment(CommentSpec, id~ : String, para_ids? : Array[String]) -> String raise @core.DocxError
 
 pub fn comment_reply(author~ : String, initials? : String, date? : String, reply_to~ : Int, done? : Bool, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
 
@@ -33,6 +33,10 @@ pub fn new_blank_docx() -> Bytes
 pub fn note_spec(Array[@document.DocumentElement]) -> NoteSpec raise @core.DocxError
 
 pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
+
+pub fn plan_comment_reply(DocxAnnotatedResult, BytesView, parent_id~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
+
+pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 
@@ -112,6 +116,7 @@ pub fn DocxAnnotatedResult::endnote_bodies(Self) -> Array[(String, Array[@docume
 pub fn DocxAnnotatedResult::footnote_bodies(Self) -> Array[(String, Array[@document.DocumentElement])]
 pub fn DocxAnnotatedResult::main_story_part(Self) -> String
 pub fn DocxAnnotatedResult::result(Self) -> DocxPackageResult
+pub fn DocxAnnotatedResult::story_paragraph_span(Self, String, String) -> NodeSpan?
 pub fn DocxAnnotatedResult::story_root_span(Self, String) -> NodeSpan?
 
 pub(all) struct DocxPackageResult {

@@ -60,6 +60,9 @@ async fn run_cli() -> Unit {
     Some(("annotate", m)) =>
       match m.subcommand {
         Some(("add", mm)) => run_annotate_add(mm)
+        Some(("reply", mm)) => run_annotate_reply(mm)
+        Some(("resolve", mm)) => run_annotate_resolution(mm, true)
+        Some(("unresolve", mm)) => run_annotate_resolution(mm, false)
         _ => println(command.render_help())
       }
     _ => println(command.render_help())
