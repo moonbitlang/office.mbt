@@ -2299,6 +2299,28 @@ fn formula_value_to_cell(value : FormulaValue) -> (CellValueType, String) {
 }
 
 ///|
+/// Maps the evaluator's private typed result to the public `CellValue`,
+/// mirroring `get_cell_value_raw` for a *computed* value: `None` is an
+/// empty/blank result, `Some(v)` a typed value. A `List` (range / spilled
+/// array) collapses to its first element, exactly as `formula_value_to_cell`
+/// does for the string path, so the typed and string results stay consistent.
+fn formula_value_to_cell_value(value : FormulaValue) -> CellValue? {
+  match value {
+    Number(num) => Some(Numeric(num))
+    String(text) => Some(String(text))
+    Bool(flag) => Some(Bool(flag))
+    Error(text) => Some(Error(text))
+    Empty => None
+    List(list) =>
+      if list.length() > 0 {
+        formula_value_to_cell_value(list[0])
+      } else {
+        None
+      }
+  }
+}
+
+///|
 fn array_shape_binary(left : (Int, Int)?, right : (Int, Int)?) -> (Int, Int)? {
   match (left, right) {
     (Some((1, 1)), Some(shape)) => Some(shape)
