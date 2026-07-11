@@ -22,6 +22,9 @@ pub fn xml_needs_escape(StringView, attr~ : Bool) -> Bool
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
 } derive(@debug.Debug)
+#as_free_fn
+#deprecated
+pub fn ParseXmlError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 type WorkbookManifest
