@@ -22,3 +22,7 @@ pub const SCHEMA_BATCH : String = "xlsx.batch/1"
 ///|
 /// Schema identifier of the `query` payload (content-selector cell search).
 pub const SCHEMA_QUERY : String = "xlsx.query/1"
+
+///|
+/// Schema identifier of the `calc` payload (a cell's typed computed value).
+pub const SCHEMA_CALC : String = "xlsx.calc/1"

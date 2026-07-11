@@ -11,11 +11,15 @@ pub const MAX_RANGE_CELLS : Int64 = 100_000
 
 pub const SCHEMA_BATCH : String = "xlsx.batch/1"
 
+pub const SCHEMA_CALC : String = "xlsx.calc/1"
+
 pub const SCHEMA_CELLS : String = "xlsx.cells/1"
 
 pub const SCHEMA_OUTLINE : String = "xlsx.outline/1"
 
 pub const SCHEMA_QUERY : String = "xlsx.query/1"
+
+pub fn calc(@xlsx.Workbook, file~ : String, String, String) -> Json raise
 
 pub fn cells(@xlsx.Workbook, file~ : String, String, String) -> Json raise
 

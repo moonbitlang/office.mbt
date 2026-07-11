@@ -374,6 +374,11 @@ fn build_command() -> @argparse.Command {
             long="raw",
             about="print the unformatted computed value",
           ),
+          FlagArg(
+            "json",
+            long="json",
+            about="print the typed computed value as a JSON payload",
+          ),
         ],
       ),
       Command("sheets", about="List the sheet names in a workbook", positionals=[

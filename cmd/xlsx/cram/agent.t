@@ -160,6 +160,22 @@ A malformed selector fails with exit 1 and no partial output:
   error: selector must be 'cell' optionally followed by [predicate] groups, e.g. cell[type=formula]
   [1]
 
+`calc --json` evaluates a formula and returns its *typed* computed value —
+the gap `get --json` leaves for a formula with no cached value (B2 is `=B1*2`
+with B1=100, so it computes to the number 200):
+
+  $ xlsx.exe calc book.xlsx Data B2 --json
+  {
+    "schema": "xlsx.calc/1",
+    "file": "book.xlsx",
+    "sheet": "Data",
+    "ref": "B2",
+    "result": {
+      "type": "number",
+      "value": 200
+    }
+  }
+
 Errors are strict and leave no partial output — an oversized range (the cap
 is 100,000 cells), a missing sheet, and a missing file all fail with exit 1:
 
