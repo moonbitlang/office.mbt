@@ -2,6 +2,7 @@ import {
   "bobzhang/docx2html",
   "bobzhang/docx2html/batch",
   "bobzhang/docx2html/inspect",
+  "bobzhang/docx2html/paths",
   "bobzhang/docx2html/opc",
   "bobzhang/docx2html/internal/cli",
   "moonbitlang/async",

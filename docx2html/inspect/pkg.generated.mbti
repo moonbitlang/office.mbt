@@ -4,6 +4,7 @@ package "bobzhang/docx2html/inspect"
 import {
   "bobzhang/docx2html/core",
   "bobzhang/docx2html/document",
+  "bobzhang/docx2html/docx",
   "bobzhang/docx2html/paths",
 }
 
@@ -11,6 +12,12 @@ import {
 pub const SCHEMA_ELEMENT : String = "docx.element/1"
 
 pub const SCHEMA_OUTLINE : String = "docx.outline/1"
+
+pub fn annotated_element(@docx.DocxAnnotatedResult, file~ : String, path~ : String) -> Json raise @paths.PathError
+
+pub fn annotated_outline(@docx.DocxAnnotatedResult, file~ : String) -> Json
+
+pub fn annotated_text_lines(@docx.DocxAnnotatedResult) -> Array[String]
 
 pub fn element(@document.DocumentElement, file~ : String, path~ : String, headers? : Array[@document.HeaderFooterPart], footers? : Array[@document.HeaderFooterPart]) -> Json raise @paths.PathError
 

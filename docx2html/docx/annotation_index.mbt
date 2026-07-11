@@ -285,10 +285,39 @@ fn split_story_path(path : String) -> (String, String) {
 }
 
 ///|
-/// The package read plus its annotation index. Opaque.
+/// The package read plus its annotation index. Opaque. Carries the
+/// annotation BODIES as (id, body) pairs in reader order — exactly the
+/// shape `@paths.resolve_annotation_path` consumes (J2's read surface).
 pub struct DocxAnnotatedResult {
   priv package_result : DocxPackageResult
   priv index : AnnotationIndex
+  priv footnote_bodies : Array[(String, Array[DocumentElement])]
+  priv endnote_bodies : Array[(String, Array[DocumentElement])]
+  priv comment_bodies : Array[(String, Array[DocumentElement])]
+}
+
+///|
+/// Footnote (id, body) pairs in reader order.
+pub fn DocxAnnotatedResult::footnote_bodies(
+  self : DocxAnnotatedResult,
+) -> Array[(String, Array[DocumentElement])] {
+  self.footnote_bodies.copy()
+}
+
+///|
+/// Endnote (id, body) pairs in reader order.
+pub fn DocxAnnotatedResult::endnote_bodies(
+  self : DocxAnnotatedResult,
+) -> Array[(String, Array[DocumentElement])] {
+  self.endnote_bodies.copy()
+}
+
+///|
+/// Comment (id, body) pairs in comments.xml order.
+pub fn DocxAnnotatedResult::comment_bodies(
+  self : DocxAnnotatedResult,
+) -> Array[(String, Array[DocumentElement])] {
+  self.comment_bodies.copy()
 }
 
 ///|
@@ -357,16 +386,22 @@ pub fn read_docx_annotated(
   }
   let footnote_bodies : Array[Array[DocumentElement]] = []
   let endnote_bodies : Array[Array[DocumentElement]] = []
+  let footnote_pairs : Array[(String, Array[DocumentElement])] = []
+  let endnote_pairs : Array[(String, Array[DocumentElement])] = []
   for note in parts.notes_result.notes {
     if note.note_type == "footnote" {
       footnote_bodies.push(note.body)
+      footnote_pairs.push((note.note_id, note.body))
     } else {
       endnote_bodies.push(note.body)
+      endnote_pairs.push((note.note_id, note.body))
     }
   }
   let comment_bodies : Array[Array[DocumentElement]] = []
+  let comment_pairs : Array[(String, Array[DocumentElement])] = []
   for comment in parts.comments_result.comments {
     comment_bodies.push(comment.body)
+    comment_pairs.push((comment.comment_id, comment.body))
   }
   let verify_ctx : VerifyContext = {
     document: document_result.document,
@@ -377,7 +412,13 @@ pub fn read_docx_annotated(
     comment_bodies,
   }
   let index = build_annotation_index(zip, parts, collector, verify_ctx)
-  { package_result, index }
+  {
+    package_result,
+    index,
+    footnote_bodies: footnote_pairs,
+    endnote_bodies: endnote_pairs,
+    comment_bodies: comment_pairs,
+  }
 }
 
 ///|
