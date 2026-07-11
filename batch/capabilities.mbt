@@ -107,6 +107,25 @@ let op_specs : Array[OpSpec] = [
       opt("column_stripes", "bool"),
     ],
   },
+  {
+    op: "validate",
+    params: [
+      req("sheet", "string"),
+      req("range", "sqref"),
+      req("type", "string"),
+      opt("operator", "string"),
+      opt("formula1", "string"),
+      opt("formula2", "string"),
+      opt("values", "string_array"),
+      opt("source", "string"),
+      opt("allow_blank", "bool"),
+      opt("input_title", "string"),
+      opt("input_message", "string"),
+      opt("error_title", "string"),
+      opt("error_message", "string"),
+      opt("error_style", "string"),
+    ],
+  },
 ]
 
 ///|

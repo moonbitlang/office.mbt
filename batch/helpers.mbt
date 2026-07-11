@@ -71,3 +71,64 @@ pub fn qualify_range(sheet : String, range : String) -> String {
     "'" + sheet.replace_all(old="'", new="''") + "'!" + range
   }
 }
+
+///|
+/// Maps a `validate` op's `type` string to a `DataValidationType`. Uses the
+/// OOXML tokens (as the engine emits them), so a written validation reads
+/// back with the same names. Private: the `validate` op has no CLI twin.
+fn validation_type_of(
+  name : String,
+) -> @xlsx.DataValidationType raise BatchError {
+  match name {
+    "list" => List
+    "whole" => Whole
+    "decimal" => Decimal
+    "date" => Date
+    "time" => Time
+    "textLength" => TextLength
+    "custom" => Custom
+    _ =>
+      raise BatchError(
+        "validate: unknown type '\{name}' (expected one of: list, whole, decimal, date, time, textLength, custom)",
+      )
+  }
+}
+
+///|
+/// Maps a `validate` op's `operator` string to a `DataValidationOperator`.
+fn validation_operator_of(
+  name : String,
+) -> @xlsx.DataValidationOperator raise BatchError {
+  match name {
+    "between" => Between
+    "notBetween" => NotBetween
+    "equal" => Equal
+    "notEqual" => NotEqual
+    "greaterThan" => GreaterThan
+    "greaterThanOrEqual" => GreaterThanOrEqual
+    "lessThan" => LessThan
+    "lessThanOrEqual" => LessThanOrEqual
+    _ =>
+      raise BatchError(
+        "validate: unknown operator '\{name}' (expected one of: between, notBetween, equal, notEqual, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual)",
+      )
+  }
+}
+
+///|
+/// Maps a `validate` op's `error_style` string to a
+/// `DataValidationErrorStyle`. An empty string means the Excel default
+/// (`stop`).
+fn validation_error_style_of(
+  name : String,
+) -> @xlsx.DataValidationErrorStyle raise BatchError {
+  match name {
+    "" | "stop" => Stop
+    "warning" => Warning
+    "information" => Information
+    _ =>
+      raise BatchError(
+        "validate: unknown error_style '\{name}' (expected one of: stop, warning, information)",
+      )
+  }
+}

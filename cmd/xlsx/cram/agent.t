@@ -248,6 +248,21 @@ from the header row (blanks/duplicates are auto-named). It then shows up in
   $ xlsx.exe outline book.xlsx | grep -cE '^ +"(Item|Cost)"'
   2
 
+The `validate` op attaches a data validation to a range — here a dropdown
+list. `outline` counts it per sheet, and the package stays valid:
+
+  $ cat > validate.json <<'JSON'
+  > {"schema": "xlsx.batch/1", "ops": [
+  >   {"op": "validate", "params": {"sheet": "Data", "range": "F1:F20", "type": "list", "values": ["Low", "Medium", "High"]}}
+  > ]}
+  > JSON
+  $ xlsx.exe batch book.xlsx validate.json
+  applied 1 op(s) to book.xlsx
+  $ xlsx.exe validate book.xlsx
+  valid
+  $ xlsx.exe outline book.xlsx | grep -c '"data_validations": 1'
+  1
+
 
 `html` renders sheets to one self-contained document — the "look" half of
 the agent's render -> look -> fix loop. Structure checks (the document is
@@ -324,6 +339,6 @@ ops it doesn't know):
   {
     "schema": "xlsx.capabilities/1",
   $ xlsx.exe capabilities | grep -c '"op":'
-  10
+  11
   $ xlsx.exe capabilities | grep -o '"batch_schema": "[^"]*"'
   "batch_schema": "xlsx.batch/1"

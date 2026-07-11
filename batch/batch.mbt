@@ -89,6 +89,29 @@ priv enum OpKind {
     last_column~ : Bool,
     column_stripes~ : Bool
   )
+  // `validation_type`, `operator`, and `error_style` hold the raw script
+  // strings; they are mapped to engine enums at apply time (like `chart`'s
+  // `type`), so an unknown value fails at apply rather than parse — which is
+  // also what keeps the catalog's `full_sample` (every param present) a valid
+  // parse.
+  OpValidate(
+    sheet~ : String,
+    range~ : String,
+    validation_type~ : String,
+    operator~ : String,
+    formula1~ : String,
+    formula2~ : String,
+    values~ : Array[String],
+    source~ : String,
+    // Tri-state: Excel's friendlier default is to allow blanks, so an
+    // omitted `allow_blank` means `true`, distinct from an explicit `false`.
+    allow_blank~ : Bool?,
+    input_title~ : String,
+    input_message~ : String,
+    error_title~ : String,
+    error_message~ : String,
+    error_style~ : String
+  )
 }
 
 ///|
@@ -119,6 +142,7 @@ pub fn BatchOp::name(self : BatchOp) -> String {
     OpAddSheet(..) => "add-sheet"
     OpChart(..) => "chart"
     OpTable(..) => "table"
+    OpValidate(..) => "validate"
   }
 }
 
@@ -283,6 +307,23 @@ fn parse_op(
         first_column=reader.optional_bool("first_column"),
         last_column=reader.optional_bool("last_column"),
         column_stripes=reader.optional_bool("column_stripes"),
+      )
+    "validate" =>
+      OpValidate(
+        sheet=reader.string("sheet"),
+        range=reader.sqref("range"),
+        validation_type=reader.string("type"),
+        operator=reader.optional_string("operator"),
+        formula1=reader.optional_string("formula1"),
+        formula2=reader.optional_string("formula2"),
+        values=reader.string_array("values"),
+        source=reader.optional_string("source"),
+        allow_blank=reader.tristate_bool("allow_blank"),
+        input_title=reader.optional_string("input_title"),
+        input_message=reader.optional_string("input_message"),
+        error_title=reader.optional_string("error_title"),
+        error_message=reader.optional_string("error_message"),
+        error_style=reader.optional_string("error_style"),
       )
     _ =>
       raise op_error(
@@ -527,6 +568,63 @@ fn ParamReader::table_range(
     )
   }
   text
+}
+
+///|
+/// A single-region reference a data validation applies to (`A1` or `A1:B2`),
+/// validated for in-grid syntax but WITHOUT the 100k-cell cap — a validation
+/// commonly covers a whole column (`A2:A1048576`) and never enumerates its
+/// cells. (Space-separated multi-region sqrefs are not accepted here; add one
+/// validation op per region.)
+fn ParamReader::sqref(
+  self : ParamReader,
+  key : String,
+) -> String raise BatchError {
+  let text = self.string(key)
+  ignore(
+    @inspect.parse_range_unbounded(text) catch {
+      _ =>
+        raise op_error(
+          self.index,
+          self.op,
+          "'\{key}' is not a valid cell or range reference: '\{text}'",
+        )
+    },
+  )
+  text
+}
+
+///|
+/// An optional array-of-strings param (an empty array when omitted). Every
+/// element must be a JSON string.
+fn ParamReader::string_array(
+  self : ParamReader,
+  key : String,
+) -> Array[String] raise BatchError {
+  match self.take(key) {
+    Some(Array(items)) => {
+      let out = []
+      for item in items {
+        match item {
+          String(text) => out.push(text)
+          _ =>
+            raise op_error(
+              self.index,
+              self.op,
+              "'\{key}' must be an array of strings",
+            )
+        }
+      }
+      out
+    }
+    Some(_) =>
+      raise op_error(
+        self.index,
+        self.op,
+        "'\{key}' must be an array of strings",
+      )
+    None => []
+  }
 }
 
 ///|
@@ -799,6 +897,107 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       options.set_show_last_column(last_column)
       options.set_show_column_stripes(column_stripes)
       ignore(workbook.add_table(sheet, options))
+    }
+    OpValidate(
+      sheet~,
+      range~,
+      validation_type~,
+      operator~,
+      formula1~,
+      formula2~,
+      values~,
+      source~,
+      allow_blank~,
+      input_title~,
+      input_message~,
+      error_title~,
+      error_message~,
+      error_style~
+    ) => {
+      // Omitted allow_blank means "allow" (Excel's friendlier default).
+      let allow = match allow_blank {
+        Some(flag) => flag
+        None => true
+      }
+      let dv = @xlsx.DataValidation::new(allow)
+      dv.set_sqref(range)
+      match validation_type {
+        // A dropdown: inline `values` (quoted into the formula by the
+        // engine) win over a `source` range; one of the two is required.
+        "list" =>
+          if !values.is_empty() {
+            dv.set_drop_list(values)
+          } else if source != "" {
+            dv.set_sqref_drop_list(source)
+          } else {
+            raise BatchError(
+              "validate: type 'list' requires 'values' or 'source'",
+            )
+          }
+        // A boolean formula; Excel ignores the operator, so pass a fixed
+        // placeholder to satisfy the engine setter.
+        "custom" => {
+          if formula1 == "" {
+            raise BatchError("validate: type 'custom' requires 'formula1'")
+          }
+          dv.set_range(
+            TextValue(formula1),
+            TextValue(formula2),
+            Custom,
+            Between,
+          )
+        }
+        // A comparison against one or two bounds.
+        "whole" | "decimal" | "date" | "time" | "textLength" => {
+          if operator == "" {
+            raise BatchError(
+              "validate: type '\{validation_type}' requires 'operator'",
+            )
+          }
+          if formula1 == "" {
+            raise BatchError(
+              "validate: type '\{validation_type}' requires 'formula1'",
+            )
+          }
+          let op = validation_operator_of(operator)
+          // The two-bound operators need an upper bound; the one-bound
+          // operators must not carry a stray one.
+          let two_bound = operator == "between" || operator == "notBetween"
+          if two_bound && formula2 == "" {
+            raise BatchError(
+              "validate: operator '\{operator}' requires 'formula2'",
+            )
+          }
+          if !two_bound && formula2 != "" {
+            raise BatchError(
+              "validate: operator '\{operator}' does not take 'formula2'",
+            )
+          }
+          dv.set_range(
+            TextValue(formula1),
+            TextValue(formula2),
+            validation_type_of(validation_type),
+            op,
+          )
+        }
+        other =>
+          raise BatchError(
+            "validate: unknown type '\{other}' (expected one of: list, whole, decimal, date, time, textLength, custom)",
+          )
+      }
+      // An error alert or an input prompt is added only when the script
+      // provides text for it.
+      if error_message != "" || error_title != "" {
+        dv.set_error(
+          validation_error_style_of(error_style),
+          error_title,
+          error_message,
+        )
+      }
+      if input_message != "" || input_title != "" {
+        dv.set_input(input_title, input_message)
+      }
+      workbook.add_data_validation(sheet, dv)
     }
   }
 }
