@@ -200,6 +200,13 @@ note. Fidelity limits: theme/indexed colors and gradient fills are omitted
   the document instead of stdout; `--no-images` skips image embedding.
 - Untrusted-file safe: all workbook text is HTML-escaped and colors are
   strictly validated before entering the stylesheet.
+- `--out` is written atomically (temp + rename) and never truncates the
+  input; a symlink/hard-link at the `--out` leaf replaces that entry, not
+  its target. One residual: an adversary who swaps an *intermediate*
+  directory component of `--out` mid-write could redirect it — closing
+  that needs handle-relative `openat`/`renameat`, which the async fs
+  library does not expose. It grants no capability the adversary's
+  directory write access doesn't already give, so it is out of scope.
 
 ### Structured JSON reads (`outline`, `get --json`)
 

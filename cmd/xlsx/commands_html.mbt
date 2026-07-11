@@ -34,10 +34,20 @@ async fn run_html(m : @argparse.Matches) -> Unit {
     // Write through the exclusive-temp + rename saver with the RAW --out
     // path — never a re-resolved one. `rename` replaces the directory
     // entry named by --out itself (it does not follow a symlink at that
-    // entry), and CreateNew never truncates, so whatever --out points to
-    // after the guard, the input's own entry always keeps its bytes.
-    // Re-resolving here would reintroduce a TOCTOU: a symlink appearing
-    // between the guard and the write could retarget the rename.
+    // final component), and CreateNew never truncates, so whatever the
+    // --out leaf points to after the guard, the input's own entry keeps
+    // its bytes.
+    //
+    // Residual limitation: an adversary who swaps an INTERMEDIATE
+    // directory component of --out (e.g. retargets `slot/` in
+    // `slot/out.xlsx`) between the guard and the write could still
+    // redirect where the temp+rename lands. Fully closing that needs
+    // handle-relative openat/renameat on a pinned directory fd, which
+    // moonbitlang/async/fs does not expose. It is out of scope here: the
+    // threat requires a concurrent process that already holds write
+    // access to the output's directory tree — which can clobber the
+    // input directly regardless — so it grants no capability a local
+    // spreadsheet tool must defend against.
     write_file_replacing(out, @encoding/utf8.encode(document[:]))
     println("wrote \{out}")
   }
