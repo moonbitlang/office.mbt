@@ -54,21 +54,44 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
   }
   let comments = []
   for comment in batch_comments {
-    comments.push(
-      @docx2html.comment_spec(
-        author=comment.author(),
-        initials?=comment.initials(),
-        date?=comment.date(),
-        from=comment.from_block(),
-        to=comment.to_block(),
-        comment.body(),
-      ) catch {
-        err =>
-          raise @cli.CliError(
-            "error: \{comment.at()}: \{docx_error_message(err)}",
-          )
-      },
-    )
+    let spec = match
+      (comment.reply_to(), comment.from_block(), comment.to_block()) {
+      (Some(parent), _, _) =>
+        @docx2html.comment_reply(
+          author=comment.author(),
+          initials?=comment.initials(),
+          date?=comment.date(),
+          reply_to=parent,
+          done?=comment.done(),
+          comment.body(),
+        ) catch {
+          err =>
+            raise @cli.CliError(
+              "error: \{comment.at()}: \{docx_error_message(err)}",
+            )
+        }
+      (None, Some(from), Some(to)) =>
+        @docx2html.comment_spec(
+          author=comment.author(),
+          initials?=comment.initials(),
+          date?=comment.date(),
+          from~,
+          to~,
+          done?=comment.done(),
+          comment.body(),
+        ) catch {
+          err =>
+            raise @cli.CliError(
+              "error: \{comment.at()}: \{docx_error_message(err)}",
+            )
+        }
+      _ =>
+        // Unreachable: the parser always sets exactly one of the two.
+        raise @cli.CliError(
+          "docx: internal error — \{comment.at()} has neither anchor nor reply target",
+        )
+    }
+    comments.push(spec)
   }
   let bytes = @docx2html.write_docx_with_comments(body, comments) catch {
     err => raise @cli.CliError(locate_writer_failure(script, body, err))

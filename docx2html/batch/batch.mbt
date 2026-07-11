@@ -133,19 +133,27 @@ priv enum OpSpec {
 priv enum ParsedOpKind {
   ParagraphAt(Int)
   Table
-  Comment
+  // Carries the comment's dense id (its index among comment ops), the
+  // id replies thread to.
+  Comment(Int)
 }
 
 ///|
 /// One parsed `comment` op: metadata verbatim, anchors already mapped
 /// from op indexes to body block indexes, body as paragraph specs.
+priv enum CommentAnchor {
+  AnchorBlocks(from~ : Int, to~ : Int)
+  ReplyToComment(Int)
+}
+
+///|
 priv struct CommentOp {
   at : String
   author : String
   initials : String?
   date : String?
-  from_block : Int
-  to_block : Int
+  anchor : CommentAnchor
+  done : Bool?
   body : Array[ParagraphSpec]
 }
 
@@ -312,7 +320,7 @@ pub fn parse_batch(script : Json) -> BatchScript raise BatchError {
             "\{at}.op 'comment' needs \"schema\": \"\{SCHEMA_BATCH_V2}\" (this script declares \{SCHEMA_BATCH})",
           )
         }
-        kinds.push(Comment)
+        kinds.push(Comment(comments.length()))
         comments.push(
           parse_comment(params, index, at, kinds, image_paths, seen_paths),
         )
@@ -346,7 +354,9 @@ fn parse_comment(
   let at_params = at + ".params"
   check_keys(
     params,
-    ["on", "text", "paragraphs", "author", "initials", "date"],
+    [
+      "on", "reply_to", "text", "paragraphs", "author", "initials", "date", "done",
+    ],
     at_params,
   )
   guard params.get("author") is Some(author_json) else {
@@ -390,16 +400,66 @@ fn parse_comment(
         raise BatchError(
           "\{where_} targets a table (ops[\{idx}]); comment anchors must be paragraph ops",
         )
-      Comment =>
+      Comment(_) =>
         raise BatchError(
-          "\{where_} targets another comment (ops[\{idx}]); comment anchors must be paragraph ops",
+          "\{where_} targets another comment (ops[\{idx}]); comment anchors must be paragraph ops (to answer a comment, use reply_to)",
         )
     }
   }
+  let done : Bool? = match params.get("done") {
+    Some(True) => Some(true)
+    Some(False) => Some(false)
+    Some(_) => raise BatchError("\{at_params}.done must be a boolean")
+    None => None
+  }
+  // A comment is ANCHORED (`on`) xor a REPLY (`reply_to`): a reply's
+  // anchor is its parent's, so giving it one of its own is an error.
+  match (params.get("on"), params.get("reply_to")) {
+    (Some(_), Some(_)) =>
+      raise BatchError(
+        "\{at_params}: on and reply_to are mutually exclusive (a reply inherits its parent's anchor)",
+      )
+    (None, Some(reply_json)) => {
+      guard reply_json is Number(number, ..) else {
+        raise BatchError(
+          "\{at_params}.reply_to must be an op index (an integer)",
+        )
+      }
+      let idx = number.to_int()
+      if number != number || idx.to_double() != number {
+        raise BatchError(
+          "\{at_params}.reply_to must be an integer (got \{number})",
+        )
+      }
+      if idx < 0 || idx >= op_index {
+        raise BatchError(
+          "\{at_params}.reply_to must reference an EARLIER op (got \{idx}); replies answer comments that already exist",
+        )
+      }
+      guard kinds[idx] is Comment(parent) else {
+        raise BatchError(
+          "\{at_params}.reply_to targets ops[\{idx}], which is not a comment op (replies answer comments; use on to anchor to content)",
+        )
+      }
+      let body = parse_comment_body(params, at_params, image_paths, seen_paths)
+      return {
+        at,
+        author,
+        initials,
+        date,
+        anchor: ReplyToComment(parent),
+        done,
+        body,
+      }
+    }
+    (None, None) =>
+      raise BatchError(
+        "\{at_params} needs \"on\" (an earlier paragraph-op index, or {\"from\": i, \"to\": j}) or \"reply_to\" (an earlier comment-op index)",
+      )
+    (Some(_), None) => ()
+  }
   guard params.get("on") is Some(on_json) else {
-    raise BatchError(
-      "\{at_params} needs \"on\": an earlier paragraph-op index, or {\"from\": i, \"to\": j}",
-    )
+    raise BatchError("\{at_params} needs \"on\"")
   }
   let (from_block, to_block) = match on_json {
     Number(_, ..) => {
@@ -428,6 +488,27 @@ fn parse_comment(
         "\{at_params}.on must be an op index or {\"from\": i, \"to\": j}",
       )
   }
+  let body = parse_comment_body(params, at_params, image_paths, seen_paths)
+  {
+    at,
+    author,
+    initials,
+    date,
+    anchor: AnchorBlocks(from=from_block, to=to_block),
+    done,
+    body,
+  }
+}
+
+///|
+/// The comment body: exactly one of `text` (one plain paragraph) or
+/// `paragraphs` (non-empty, each parsed with the plain-content rule).
+fn parse_comment_body(
+  params : Map[String, Json],
+  at_params : String,
+  image_paths : Array[String],
+  seen_paths : Set[String],
+) -> Array[ParagraphSpec] raise BatchError {
   let body : Array[ParagraphSpec] = []
   match (params.get("text"), params.get("paragraphs")) {
     (Some(_), Some(_)) =>
@@ -472,7 +553,7 @@ fn parse_comment(
         "\{at_params} needs text or paragraphs (the comment body)",
       )
   }
-  { at, author, initials, date, from_block, to_block, body }
+  body
 }
 
 ///|
@@ -1369,8 +1450,8 @@ pub struct BatchComment {
   priv author : String
   priv initials : String?
   priv date : String?
-  priv from_block : Int
-  priv to_block : Int
+  priv anchor : CommentAnchor
+  priv done : Bool?
   priv body : Array[@document.DocumentElement]
 }
 
@@ -1399,15 +1480,38 @@ pub fn BatchComment::date(self : BatchComment) -> String? {
 }
 
 ///|
-/// First anchored body block (0-based block index, not op index).
-pub fn BatchComment::from_block(self : BatchComment) -> Int {
-  self.from_block
+/// First anchored body block (0-based block index, not op index), or
+/// None for a reply (replies are anchorless).
+pub fn BatchComment::from_block(self : BatchComment) -> Int? {
+  match self.anchor {
+    AnchorBlocks(from~, ..) => Some(from)
+    ReplyToComment(_) => None
+  }
 }
 
 ///|
-/// Last anchored body block (inclusive).
-pub fn BatchComment::to_block(self : BatchComment) -> Int {
-  self.to_block
+/// Last anchored body block (inclusive), or None for a reply.
+pub fn BatchComment::to_block(self : BatchComment) -> Int? {
+  match self.anchor {
+    AnchorBlocks(to~, ..) => Some(to)
+    ReplyToComment(_) => None
+  }
+}
+
+///|
+/// The dense comment index (= writer id) this reply answers, or None
+/// for an anchored comment.
+pub fn BatchComment::reply_to(self : BatchComment) -> Int? {
+  match self.anchor {
+    ReplyToComment(parent) => Some(parent)
+    AnchorBlocks(..) => None
+  }
+}
+
+///|
+/// The resolution flag, when the op set one.
+pub fn BatchComment::done(self : BatchComment) -> Bool? {
+  self.done
 }
 
 ///|
@@ -1437,8 +1541,8 @@ pub fn BatchScript::build_comments(
       author: comment.author,
       initials: comment.initials,
       date: comment.date,
-      from_block: comment.from_block,
-      to_block: comment.to_block,
+      anchor: comment.anchor,
+      done: comment.done,
       body,
     })
   }
