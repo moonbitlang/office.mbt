@@ -538,12 +538,15 @@ applies verbatim. The one addition is the `comment` op — declaring
     {"op": "paragraph", "params": {"text": "Revenue grew 12%."}},
     {"op": "paragraph", "params": {"text": "Costs fell 3%."}},
     {"op": "comment", "params": {"on": {"from": 2, "to": 3}, "author": "Auditor",
-     "paragraphs": [{"text": "Verify both figures,"}, {"text": "then resolve."}]}}
+     "paragraphs": [{"text": "Verify both figures,"}, {"text": "then resolve."}]}},
+    {"op": "comment", "params": {"reply_to": 4, "author": "Reviewer", "done": true,
+     "text": "Both verified; resolving."}}
   ]
 }
 ```
 
-- **`on`** (required): what the comment anchors to, by OP index — a
+- **`on`** (required unless `reply_to` is given): what the comment
+  anchors to, by OP index — a
   single integer or an inclusive, ordered `{"from": i, "to": j}` range.
   Every endpoint must be an EARLIER `paragraph` op: tables cannot carry
   the intra-paragraph anchor markers, comments produce no anchorable
@@ -570,6 +573,16 @@ applies verbatim. The one addition is the `comment` op — declaring
   run at the close of the ending paragraph), so everything the writer
   anchors reads back exactly through the annotation index — the
   round-trip the SDK gate pins.
-- **K2 fields are not accepted early**: `reply_to`/`done` (threading and
-  resolution) are unknown keys in `/2` today and fail strict validation;
-  they arrive with the threading op surface.
+- **`reply_to`** (XOR with `on`): the OP index of an EARLIER `comment`
+  op this one answers. A reply is ANCHORLESS — its parent's anchor is
+  logically its own, so it emits no range or reference markers; the
+  linkage lives in `word/commentsExtended.xml` (`w15:paraIdParent`,
+  keyed by each comment's LAST body paragraph `w14:paraId`). Chains
+  are allowed (a reply may answer a reply). Anchoring `on` a comment
+  op is an error that points at `reply_to`.
+- **`done`** (optional, boolean, any comment op): the resolution flag
+  (`w15:done`). Absent means no resolution record for that comment —
+  but note the PART granularity: if ANY comment in the script threads
+  or resolves, every comment gets a commentsExtended entry (absent
+  `done` then reads back as `done: false`); if none do, the output has
+  no commentsExtended part at all and `done` is absent on read-back.
