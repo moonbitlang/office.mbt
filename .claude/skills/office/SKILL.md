@@ -72,6 +72,10 @@ row is copy-pasteable):
 | See a sheet as a table | `moon run --target wasm cmd/xlsx -- view f.xlsx` |
 | Dump a sheet as CSV | `moon run --target wasm cmd/xlsx -- rows f.xlsx` |
 | List sheets | `moon run --target wasm cmd/xlsx -- sheets f.xlsx` |
+| Apply many edits in one pass | `moon run --target wasm cmd/xlsx -- batch f.xlsx script.json` |
+| See an .xlsx's structure as JSON | `moon run --target wasm cmd/xlsx -- outline f.xlsx` |
+| Read a cell/range as JSON | `moon run --target wasm cmd/xlsx -- get f.xlsx Sheet1 A1:B4 --json` |
+| **Render sheets to HTML** (to look at) | `moon run --target wasm cmd/xlsx -- html f.xlsx --out f.html` |
 | Check an .xlsx is well-formed | `moon run --target wasm cmd/xlsx -- validate f.xlsx` |
 | See a .docx's structure as JSON | `moon run --target wasm docx2html/cmd/docx -- outline in.docx` |
 | Extract a .docx's text (with paths) | `moon run --target wasm docx2html/cmd/docx -- text in.docx` |
@@ -94,6 +98,14 @@ unknown keys, duplicate keys, and non-integer numbers are errors, and `docx
 batch` only creates NEW files). `recipes/author-docx.md` walks the whole
 author→verify loop.
 
+For spreadsheets the same three verbs close an **inspect → edit → render**
+loop: `outline` / `get … --json` show you what a workbook contains (and what
+your edit produced) as parseable JSON; `batch` applies a whole set of changes
+atomically; `html` renders a sheet to a self-contained document you can open
+or screenshot to *see* the result — fonts, fills, merges, widths, images,
+chart placeholders. Don't guess the state of a file you are editing; read it
+back and look at it. `recipes/render-review-fix.md` walks the loop end to end.
+
 ## Going deeper
 
 The table above is the fast path. When you need exact flags, output shapes, or
@@ -109,6 +121,8 @@ edge-case behavior, read the matching file (don't guess):
 For end-to-end workflows, follow a recipe:
 
 - `recipes/data-to-spreadsheet.md` — build a spreadsheet from data in the conversation.
+- `recipes/batch-edits.md` — make many spreadsheet edits in one atomic `batch` pass.
+- `recipes/render-review-fix.md` — build a spreadsheet, render it to HTML, look, and correct it.
 - `recipes/author-docx.md` — author a Word document from a JSON op script and verify it.
 - `recipes/doc-to-markdown.md` — convert a Word document to clean Markdown/HTML.
 - `recipes/inspect-untrusted.md` — safely dump and validate a file you don't trust.
