@@ -95,18 +95,29 @@ fn parse_predicate(raw : String) -> Predicate raise QueryError {
   } else if body.has_prefix("value") {
     parse_value_predicate(body[5:].to_owned())
   } else if body.has_prefix("formula~=") {
-    FormulaContains(body[9:].to_owned())
+    FormulaContains(require_nonempty("formula~=", body[9:].to_owned()))
   } else if body == "formula" {
     HasFormula
   } else if body.has_prefix("text~=") {
-    TextContains(body[6:].to_owned())
+    TextContains(require_nonempty("text~=", body[6:].to_owned()))
   } else if body.has_prefix("text=") {
-    TextEquals(body[5:].to_owned())
+    TextEquals(require_nonempty("text=", body[5:].to_owned()))
   } else {
     raise QueryError(
       "unknown predicate '\{body}' (expected type=, value<op>, formula, formula~=, text=, or text~=)",
     )
   }
+}
+
+///|
+/// A predicate's text argument must be non-empty: an empty `text=`/`text~=`/
+/// `formula~=` would match every (or no) cell by accident. (It also can't
+/// contain `]`, which closes the predicate — see the docs.)
+fn require_nonempty(label : String, value : String) -> String raise QueryError {
+  if value == "" {
+    raise QueryError("\{label} needs a non-empty value")
+  }
+  value
 }
 
 ///|
@@ -134,6 +145,13 @@ fn parse_value_predicate(rest : String) -> Predicate raise QueryError {
   let number = @string.parse_double(number_text.trim().to_owned()) catch {
     _ =>
       raise QueryError("value predicate expects a number, got '\{number_text}'")
+  }
+  // `parse_double` accepts `NaN`/`Infinity`; those are not useful bounds (a
+  // `!=NaN` would match every numeric cell), so require a finite number.
+  if number != number || number.is_inf() {
+    raise QueryError(
+      "value predicate expects a finite number, got '\{number_text}'",
+    )
   }
   ValueCmp(op, number)
 }
@@ -182,14 +200,17 @@ fn predicate_matches(
         Some(formula) => formula.contains(needle)
         None => false
       }
+    // Exclude the synthetic `String("")` blank (a bare styled cell / uncached
+    // formula), consistent with `type=string` — a text predicate must match
+    // real stored text, not a cell `cell_json` would report as blank.
     TextEquals(want) =>
       match workbook.get_cell_value_raw(sheet, cell) {
-        Some(String(text)) => text == want
+        Some(String(text)) => text != "" && text == want
         _ => false
       }
     TextContains(needle) =>
       match workbook.get_cell_value_raw(sheet, cell) {
-        Some(String(text)) => text.contains(needle)
+        Some(String(text)) => text != "" && text.contains(needle)
         _ => false
       }
   }
@@ -213,11 +234,12 @@ fn cell_matches(
 }
 
 ///|
-/// The rectangle `query` scans: the caller's `--range` when given, else the
-/// sheet's live used extent. Returns `None` for an empty sheet (no scan).
+/// The rectangle `query` scans: the caller's `--range` when given, else
+/// `worksheet`'s live used extent. Returns `None` for an empty sheet (no
+/// scan). `worksheet` is resolved by the caller so the missing-sheet error is
+/// the same on both paths.
 fn query_scan_range(
-  workbook : @xlsx.Workbook,
-  sheet : String,
+  worksheet : @xlsx.Worksheet,
   range : String,
 ) -> CellRange? raise {
   if range != "" {
@@ -225,10 +247,6 @@ fn query_scan_range(
   }
   // Live extent (authoritative, like `outline`'s used_range), bounded by the
   // same cap so a sparse sheet with far-flung data can't force a huge scan.
-  let worksheet = match workbook.sheet(sheet) {
-    Some(worksheet) => worksheet
-    None => raise QueryError("sheet '\{sheet}' not found")
-  }
   let max_col = worksheet.max_col()
   let max_row = worksheet.max_row()
   if max_col < 1 || max_row < 1 {
@@ -253,8 +271,8 @@ fn query_scan_range(
 /// `selector`, scanned over `range` (a `--range` argument) or, when `range`
 /// is empty, the sheet's used extent. Each match uses the same per-cell shape
 /// as `xlsx.cells/1`, with the shared deduplicated `styles` map. Raises
-/// `QueryError` for a bad selector or oversized scan, `RangeError` for a
-/// malformed `--range`, and `@xlsx.XlsxError` for a missing sheet.
+/// `QueryError` for a bad selector, an unknown sheet, or an oversized scan,
+/// and `RangeError` for a malformed `--range`.
 pub fn query(
   workbook : @xlsx.Workbook,
   file~ : String,
@@ -263,10 +281,16 @@ pub fn query(
   selector : String,
 ) -> Json raise {
   let preds = parse_selector(selector)
+  // Resolve the sheet once, up front, so a missing sheet reports the same
+  // clear error whether or not a `--range` was given.
+  let worksheet = match workbook.sheet(sheet) {
+    Some(worksheet) => worksheet
+    None => raise QueryError("sheet '\{sheet}' not found")
+  }
   let matches = []
   let style_order : Array[Int] = []
   let style_seen : Map[Int, Unit] = Map([])
-  let scanned = match query_scan_range(workbook, sheet, range) {
+  let scanned = match query_scan_range(worksheet, range) {
     Some(scan) => {
       for row in scan.row_lo..<=scan.row_hi {
         for col in scan.col_lo..<=scan.col_hi {

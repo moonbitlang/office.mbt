@@ -163,6 +163,12 @@ scanning it itself. Scans the sheet's used range by default, or the
     match).
   - `formula` — has a formula; `formula~=TEXT` — the formula contains `TEXT`.
   - `text=TEXT` — the string cell equals `TEXT`; `text~=TEXT` — contains it.
+    A blank cell (an empty stored string) never matches a `text`/`string`
+    predicate.
+- A predicate argument (the `TEXT` after `=`/`~=`, the `N` after an operator)
+  is trimmed of surrounding whitespace and cannot contain `]` (which closes
+  the predicate). `text=`/`text~=`/`formula~=` require a non-empty value, and a
+  `value` bound must be a finite number (`NaN`/`Infinity` are rejected).
 - `query` is read-only. A malformed selector, an oversized scan, or a missing
   sheet fails with a non-zero exit and a one-line `error:` message; nothing is
   written.

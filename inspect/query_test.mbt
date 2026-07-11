@@ -180,6 +180,13 @@ test "query rejects malformed selectors with a typed error" {
     ("cell[value>x]", "value predicate expects a number"),
     ("cell[value100]", "a value predicate needs an operator"),
     ("cell[type=formula", "missing a closing ']'"),
+    // A non-finite bound is not a useful comparison.
+    ("cell[value>NaN]", "value predicate expects a finite number"),
+    ("cell[value<=Infinity]", "value predicate expects a finite number"),
+    // An empty text/needle would match everything or nothing by accident.
+    ("cell[text=]", "text= needs a non-empty value"),
+    ("cell[text~=]", "text~= needs a non-empty value"),
+    ("cell[formula~=]", "formula~= needs a non-empty value"),
   ]
   for case in cases {
     let (selector, want) = case
@@ -193,4 +200,35 @@ test "query rejects malformed selectors with a typed error" {
       err => fail("expected a QueryError for '\{selector}', got \{err}")
     }
   }
+}
+
+///|
+test "query reports a missing sheet identically with or without --range" {
+  let workbook = query_book()
+  for range in ["", "A1:B2"] {
+    try {
+      ignore(@inspect.query(workbook, "Missing", "cell", file="t.xlsx", range~))
+      fail("expected the missing sheet to be rejected")
+    } catch {
+      @inspect.QueryError(message) =>
+        assert_eq(message, "sheet 'Missing' not found")
+      err => fail("expected a QueryError, got \{err}")
+    }
+  }
+}
+
+///|
+test "text predicates skip a styled blank cell, like type=string" {
+  let workbook = query_book()
+  // A bare styled cell stores a synthetic empty string; it is populated (has
+  // a style) but carries no real text.
+  let style_id = workbook.new_style(@xlsx.Style::number_format("0.00"))
+  workbook.set_cell_style("Data", "Z1", style_id)
+  // The bare selector still sees it (it has a style), so it is a real cell...
+  let (bare, bare_refs) = run_query(workbook, "Data", "cell")
+  inspect(bare, content="7")
+  assert_true(bare_refs.contains("Z1"))
+  // ...but text and type=string predicates require real stored text.
+  inspect(run_query(workbook, "Data", "cell[type=string]").0, content="1")
+  inspect(run_query(workbook, "Data", "cell[text~=0]").0, content="0")
 }
