@@ -109,7 +109,8 @@ fn check_comment_content(element : DocumentElement) -> Unit raise DocxError {
       raise Unsupported(
         message="comment bodies are plain content: images cannot be serialized into word/comments.xml",
       )
-    Paragraph(children~, ..)
+    Document(children~, ..)
+    | Paragraph(children~, ..)
     | Run(children~, ..)
     | Table(children~, ..)
     | TableRow(children~, ..)
@@ -327,9 +328,9 @@ fn comment_reference_run(id : Int) -> XmlElement {
 /// Lexical validation of `w:date` against the COMPLETE xsd:dateTime
 /// (XSD 1.0) lexical space: optional leading `-`, a 4-or-more-digit
 /// year (no leading zero once longer than four digits; `0000` does not
-/// exist in XSD 1.0), a real calendar day (the Gregorian leap rule
-/// applied to the year digits — astronomical numbering for negative
-/// years), `24:00:00` allowed as end-of-day when minutes, seconds, and
+/// exist in XSD 1.0), a real calendar day (XSD 1.0 has no year zero,
+/// so lexical `-N` is astronomical year `1-N` — `-0001` IS a leap
+/// year), `24:00:00` allowed as end-of-day when minutes, seconds, and
 /// every fractional digit are zero, optional fractional seconds,
 /// optional `Z` or `±hh:mm` zone within ±14:00. The accepted value is
 /// emitted VERBATIM (the roadmap's lexical-timestamp rule: this writer
@@ -365,7 +366,8 @@ fn check_comment_date(date : String) -> Unit raise DocxError {
     )
   }
   let mut cursor = 0
-  if expect(cursor, '-') {
+  let negative_year = expect(cursor, '-')
+  if negative_year {
     cursor += 1
   }
   // The year can be arbitrarily long, so its value never lands in an
@@ -380,6 +382,11 @@ fn check_comment_date(date : String) -> Unit raise DocxError {
       year_is_zero = false
     }
     cursor += 1
+  }
+  if negative_year {
+    // XSD 1.0 has no year zero: lexical -N is astronomical year 1-N,
+    // so the leap residue shifts by one across the era boundary.
+    year_mod_400 = ((1 - year_mod_400) % 400 + 400) % 400
   }
   let year_digits = cursor - year_start
   if year_digits < 4 {

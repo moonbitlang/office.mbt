@@ -1264,6 +1264,23 @@ test "K1 review round 1: plain-content holes and aliasing fail closed" {
     },
     "comment bodies are plain content: hyperlinks",
   )
+  // The recursion must see through EVERY child-bearing variant — a
+  // hyperlink smuggled under a nested Document wrapper is still caught.
+  expect_comment_failure(
+    () => {
+      @docx2html.comment_spec(author="A", from=0, to=0, [
+        @docx2html.paragraph([
+          @docx2html.document([
+            @docx2html.hyperlink(
+              [@docx2html.run([@docx2html.text("smuggled")])],
+              anchor=Some("x"),
+            ),
+          ]),
+        ]),
+      ])
+    },
+    "comment bodies are plain content: hyperlinks",
+  )
   // The body array stays caller-mutable after construction: emptying it
   // (or swapping a table in) through the alias must fail at WRITE time,
   // not silently emit an empty or non-paragraph comment.
