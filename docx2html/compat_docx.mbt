@@ -169,6 +169,38 @@ pub fn write_docx(body : Array[DocumentElement]) -> Bytes raise DocxError {
 }
 
 ///|
+/// Validates and builds one comment for `write_docx_with_comments`:
+/// author/initials/date metadata, the inclusive 0-based range of body
+/// block indexes it anchors (`from..to`, both endpoints top-level
+/// paragraphs), and its paragraph-only plain-content body. See
+/// `@docx.comment_spec` for the fail-closed rules (non-empty author,
+/// lexical xsd:dateTime date, ordered range, non-empty body).
+pub fn comment_spec(
+  author~ : String,
+  initials? : String,
+  date? : String,
+  from~ : Int,
+  to~ : Int,
+  body : Array[DocumentElement],
+) -> @docx_impl.CommentSpec raise DocxError {
+  bridge_core_error(() => {
+    @docx_impl.comment_spec(author~, initials?, date?, from~, to~, body)
+  })
+}
+
+///|
+/// `write_docx` plus comments: anchors are emitted into the anchored
+/// paragraphs in the canonical shape and the definitions land in
+/// word/comments.xml as a main-part relationship, with dense ids (a
+/// spec's array index is its w:id). See `@docx.write_docx_with_comments`.
+pub fn write_docx_with_comments(
+  body : Array[DocumentElement],
+  comments : Array[@docx_impl.CommentSpec],
+) -> Bytes raise DocxError {
+  bridge_core_error(() => @docx_impl.write_docx_with_comments(body, comments))
+}
+
+///|
 /// Reads DOCX bytes into the package-level representation: the body
 /// document (identical to `read_docx_with_messages`) plus sections and
 /// header/footer stories. See `@docx.read_docx_package`.

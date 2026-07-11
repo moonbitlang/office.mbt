@@ -44,42 +44,9 @@ fn WriteContext::allocate_relationship(
 /// them; list paragraphs reference the fixed bullet/decimal definitions in
 /// the numbering part.
 pub fn write_docx(body : Array[DocumentElement]) -> Bytes raise DocxError {
-  let paragraphs : Array[XmlNode] = []
-  let ctx : WriteContext = {
-    used_styles: Set([]),
-    uses_lists: false,
-    next_relationship: 3,
-    document_relationships: [],
-    media: [],
-  }
-  for element in body {
-    paragraphs.push(XmlElement(write_block(element, ctx)))
-  }
-  paragraphs.push(XmlElement(blank_section_properties()))
-  let namespaces : Map[String, String] = { "w": WORDPROCESSINGML_NAMESPACE }
-  // r: is needed for hyperlink/image relationship references; the drawing
-  // namespaces only when pictures were written.
-  if ctx.document_relationships.length() > 0 {
-    namespaces["r"] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-  }
-  if ctx.media.length() > 0 {
-    namespaces["wp"] = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-    namespaces["a"] = "http://schemas.openxmlformats.org/drawingml/2006/main"
-    namespaces["pic"] = "http://schemas.openxmlformats.org/drawingml/2006/picture"
-  }
-  let document = @xml.write_xml_string(
-    @xml.xml_element("w:document", children=[
-      XmlElement(@xml.xml_element("w:body", children=paragraphs)),
-    ]),
-    namespaces~,
-  )
-  let builder = @opc.PackageBuilder::new()
-  build_docx_package(builder, document, styles_xml_for(ctx.used_styles), ctx) catch {
-    err =>
-      raise Unsupported(
-        message="could not assemble the document package: \{err}",
-      )
-  }
+  // The whole pipeline lives in write_comments.mbt; an empty comment set
+  // is byte-identical to the historical no-comment writer.
+  write_docx_with_comments(body, [])
 }
 
 ///|
@@ -91,6 +58,7 @@ fn build_docx_package(
   document_xml : String,
   styles_xml : String,
   ctx : WriteContext,
+  comments_xml~ : String?,
 ) -> Bytes raise @opc.PackageBuildError {
   builder.add_default(
     "rels", "application/vnd.openxmlformats-package.relationships+xml",
@@ -123,6 +91,17 @@ fn build_docx_package(
       source="word/document.xml",
     )
     builder.add_part("word/numbering.xml", @utf8.encode(numbering_xml()))
+  }
+  match comments_xml {
+    Some(xml) => {
+      builder.add_override(
+        "/word/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+      )
+      // The main-part relationship to comments.xml was allocated in
+      // ctx.document_relationships and is added with the rest below.
+      builder.add_part("word/comments.xml", @utf8.encode(xml))
+    }
+    None => ()
   }
   let media_extensions : Set[String] = Set([])
   for entry in ctx.media {
@@ -169,6 +148,8 @@ fn write_paragraph(
   children : Array[DocumentElement],
   properties : ParagraphProperties,
   ctx : WriteContext,
+  leading? : Array[XmlNode] = [],
+  trailing? : Array[XmlNode] = [],
 ) -> XmlElement raise DocxError {
   let nodes : Array[XmlNode] = []
   let ppr_children : Array[XmlNode] = []
@@ -260,8 +241,16 @@ fn write_paragraph(
   if ppr_children.length() > 0 {
     nodes.push(XmlElement(@xml.xml_element("w:pPr", children=ppr_children)))
   }
+  // Comment anchor markers: range starts go right after pPr (the locked
+  // canonical shape), range ends and reference runs after the content.
+  for node in leading {
+    nodes.push(node)
+  }
   for child in children {
     nodes.push(XmlElement(write_inline(child, ctx)))
+  }
+  for node in trailing {
+    nodes.push(node)
   }
   @xml.xml_element("w:p", children=nodes)
 }

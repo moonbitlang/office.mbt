@@ -26,6 +26,8 @@ pub fn comment(String, Array[@document.DocumentElement], author_name? : String, 
 
 pub fn comment_reference(String) -> @document.DocumentElement
 
+pub fn comment_spec(author~ : String, initials? : String, date? : String, from~ : Int, to~ : Int, Array[@document.DocumentElement]) -> @docx.CommentSpec raise DocxError
+
 pub fn convert(BytesView, output_format? : @converter.OutputFormat, style_map? : Array[String], include_default_style_map? : Bool, include_embedded_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @core.ConversionResult raise DocxError
 
 pub fn convert_document(@document.DocumentElement, output_format? : @converter.OutputFormat, style_map? : Array[String], include_default_style_map? : Bool, ignore_empty_paragraphs? : Bool, id_prefix? : String, pretty_print? : Bool, convert_image? : (@document.Image) -> @converter.ImageConversion, transform_document? : (@document.DocumentElement) -> @document.DocumentElement) -> @core.ConversionResult
@@ -157,6 +159,8 @@ pub fn transform_runs((@document.DocumentElement) -> @document.DocumentElement) 
 pub fn warning(String) -> @core.Message
 
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise DocxError
+
+pub fn write_docx_with_comments(Array[@document.DocumentElement], Array[@docx.CommentSpec]) -> Bytes raise DocxError
 
 pub fn write_html(Array[@html.HtmlNode], pretty_print? : Bool) -> String
 
