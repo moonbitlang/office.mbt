@@ -517,7 +517,13 @@ names, and compression method — documented in the module header.
   "date"?, "paragraphs": [<plain-content paragraph specs, the same
   grammar as docx.batch/2 comment bodies>]}}` — validated with the full
   batch discipline (raw-text scanner: duplicate keys and integer lexemes
-  rejected; unknown keys/enums addressed errors). **Metadata ownership is
+  rejected; unknown keys/enums addressed errors). **Locked narrowing
+  (L1 review round 1)**: annotate bodies additionally REJECT `style`
+  and `list` — batch bodies write into documents whose styles and
+  numbering parts WE emit, but annotate writes into arbitrary existing
+  documents whose parts we never rewrite, so those references could
+  dangle (batch's fixed numbering ids exist only in our own writer's
+  numbering part). Destination-aware validation may relax this later. **Metadata ownership is
   branch-exclusive**: with `--text`, the CLI flags own metadata
   (`--author` required, `--initials`/`--date` optional); with `--json`,
   the envelope owns ALL metadata and the `--author`/`--initials`/`--date`

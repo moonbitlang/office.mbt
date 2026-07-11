@@ -611,7 +611,7 @@ keys in the envelope:
 
 ```mooncram
 $ docx.exe annotate add existing.docx never2.docx --at '/body/p[9]' --text n --author A; ls never2.docx 2>/dev/null || echo "not written"
-error: --at '/body/p[9]' does not name a body paragraph in 'existing.docx'
+error: '/body/p[9]' does not name a body paragraph
 not written
 ```
 
