@@ -418,16 +418,13 @@ fn read_comment_definitions(
   }
   for comment_element in root.elements_by_tag_name("w:comment") {
     let id = comment_element.attributes.get("w:id").unwrap_or("")
+    // Comments legally contain tables and block SDTs; CT_CommentEx keys
+    // the ACTUAL last paragraph, so walk descendants in document order.
     let mut body_paragraphs = 0
     let mut last_para_id : String? = None
-    for child in comment_element.children {
-      match child {
-        XmlElement(element) if element.name == "w:p" => {
-          body_paragraphs += 1
-          last_para_id = element.attributes.get("w14:paraId")
-        }
-        _ => ()
-      }
+    for element in comment_element.descendants_by_tag_name("w:p") {
+      body_paragraphs += 1
+      last_para_id = element.attributes.get("w14:paraId")
     }
     definitions.push({
       id,
@@ -476,8 +473,9 @@ fn read_comments_extended(
           )
           continue
         }
+        // ST_OnOff: 1/true/on are true; 0/false/off (and absence) false.
         let done = record.attributes.get("w15:done")
-          is (Some("1") | Some("true"))
+          is (Some("1") | Some("true") | Some("on"))
         records[para_id] = {
           done,
           parent_para_id: record.attributes.get("w15:paraIdParent"),
@@ -536,10 +534,20 @@ fn build_comments(
   }
   // last paraId -> comment id, for reply-parent resolution.
   let id_by_last_para : Map[String, String] = Map([])
+  let ambiguous_para_ids : Set[String] = Set([])
   for definition in definitions {
     match definition.last_para_id {
       Some(para_id) =>
-        if !id_by_last_para.contains(para_id) {
+        if id_by_last_para.contains(para_id) {
+          // Two comments claiming one last paraId: parent resolution
+          // through it would be a guess — refuse, with a diagnostic.
+          if !ambiguous_para_ids.contains(para_id) {
+            ambiguous_para_ids.add(para_id)
+            warnings.push(
+              "annotation index: paraId \{para_id} is the last paragraph of multiple comments; replies through it cannot be resolved",
+            )
+          }
+        } else {
           id_by_last_para[para_id] = definition.id
         }
       None => ()
@@ -696,7 +704,12 @@ fn build_comments(
                   Some(record.done),
                   match record.parent_para_id {
                     Some(parent_para) =>
-                      match id_by_last_para.get(parent_para) {
+                      match
+                        (if ambiguous_para_ids.contains(parent_para) {
+                          None
+                        } else {
+                          id_by_last_para.get(parent_para)
+                        }) {
                         Some(parent) => Some(parent)
                         None => {
                           warnings.push(
