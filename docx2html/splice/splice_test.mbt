@@ -276,3 +276,31 @@ test "L0 review round 2: 'encoding' inside a quoted value cannot fool the gate" 
   let plain_out = @mbtzip.read(@splice.splice_docx(plain_bytes, plan_plain))
   inspect(plain_out.get("p.xml") is Some(_), content="true")
 }
+
+///|
+test "L0 review round 3: the declaration walker enforces the XML grammar" {
+  fn reject(source : String, name : String) -> Unit raise {
+    let archive = @mbtzip.Archive::new()
+    archive.add(name, @utf8.encode(source))
+    let bytes = @mbtzip.write(archive)
+    let plan = @splice.SplicePlan::new()
+    plan.edit_part(name, @splice.span_edit(start=0, end=0, b""))
+    expect_splice_failure(
+      () => @splice.splice_docx(bytes, plan),
+      "'\{name}' has a malformed XML declaration",
+    )
+  }
+  // No whitespace after <?xml.
+  reject("<?xmlversion=\"1.0\"?><r></r>", "a.xml")
+  // No whitespace BETWEEN pseudo-attributes (would hide a devious
+  // first-encoding under last-wins).
+  reject("<?xml version=\"1.0\"encoding=\"UTF-8\"?><r></r>", "b.xml")
+  // An empty declaration has no VersionInfo.
+  reject("<?xml?>", "c.xml")
+  reject("<?xml ?>", "d.xml")
+  // Duplicate encoding pseudo-attributes are malformed, not last-wins.
+  reject(
+    "<?xml version=\"1.0\" encoding=\"ISO-8859-1\" encoding=\"UTF-8\"?><r></r>",
+    "e.xml",
+  )
+}
