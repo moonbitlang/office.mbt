@@ -14,14 +14,16 @@ the source of truth and this document has a bug.
   `<domain>.<kind>/<major>` (e.g. `xlsx.outline/1`). Identifiers are declared
   once per package: xlsx identifiers (including the consumed
   `xlsx.batch/1`) in `inspect/schema.mbt`, docx read-side identifiers in
-  `docx2html/inspect/schema.mbt`, and the consumed `docx.batch/1`
-  identifier in `docx2html/batch` (`SCHEMA_BATCH`), next to its parser.
+  `docx2html/inspect/schema.mbt`, and the consumed `docx.batch/1` /
+  `docx.batch/2` identifiers in `docx2html/batch` (`SCHEMA_BATCH`,
+  `SCHEMA_BATCH_V2`), next to their parser.
 - **Produced payloads** (everything the CLIs print — outline, element,
   `get --json`) evolve additively-only: new optional keys may appear under
   an existing identifier; keys are never renamed, removed, or retyped. A
   breaking change mints a new identifier with a bumped major. Consumers
   must ignore keys they do not recognize.
-- **Consumed scripts** (`xlsx.batch/1`, `docx.batch/1`) are the opposite:
+- **Consumed scripts** (`xlsx.batch/1`, `docx.batch/1`, `docx.batch/2`)
+  are the opposite:
   validation is STRICT. Unknown keys, unknown enum values, and wrong value
   types are rejected with an error naming the op — a typo must fail
   loudly, not silently no-op or drop content.
@@ -518,3 +520,56 @@ capped at 10,000 ops; an empty `ops` array yields a blank document.
   under a still-open `row_span` is not written at all — as in the example,
   each spanned row lists FEWER cells, and rows must tile the same total
   width, at most 63 columns (ragged or wider tables fail).
+## `docx.batch/2` — authoring with comments (`docx batch <output> <script.json>`)
+
+`docx.batch/2` WIDENS `/1`: every `/1` script parses unchanged under
+either declaration, and everything above (strict validation, integer
+lexemes, character rules, fresh-document-only, atomicity, the op cap)
+applies verbatim. The one addition is the `comment` op — declaring
+`/2` is required to use it and changes nothing else.
+
+```json
+{
+  "schema": "docx.batch/2",
+  "ops": [
+    {"op": "paragraph", "params": {"text": "Findings", "style": "Heading1"}},
+    {"op": "comment", "params": {"on": 0, "author": "Reviewer", "initials": "R",
+     "date": "2026-07-11T09:30:00Z", "text": "Sharpen this title."}},
+    {"op": "paragraph", "params": {"text": "Revenue grew 12%."}},
+    {"op": "paragraph", "params": {"text": "Costs fell 3%."}},
+    {"op": "comment", "params": {"on": {"from": 2, "to": 3}, "author": "Auditor",
+     "paragraphs": [{"text": "Verify both figures,"}, {"text": "then resolve."}]}}
+  ]
+}
+```
+
+- **`on`** (required): what the comment anchors to, by OP index — a
+  single integer or an inclusive, ordered `{"from": i, "to": j}` range.
+  Every endpoint must be an EARLIER `paragraph` op: tables cannot carry
+  the intra-paragraph anchor markers, comments produce no anchorable
+  content of their own, and self/forward references name content that
+  does not exist yet — all rejected with the exact `ops[i]` address. A
+  range may pass OVER intervening tables (the endpoints bracket them).
+- **Body** (required): exactly one of `text` (one plain paragraph) or
+  `paragraphs[]` (non-empty; each entry is a `paragraph.params` object).
+  Bodies are PLAIN CONTENT: hyperlinks and images are rejected (the
+  comments part gets no relationships); run formatting, `style`,
+  `align`, and `list` all work.
+- **`author`** (required, non-empty), **`initials`** (optional,
+  non-empty): attribute-safe strings (no C0 controls).
+- **`date`** (optional): a lexical xsd:dateTime —
+  `YYYY-MM-DDThh:mm:ss`, optional fractional seconds, optional `Z` or
+  `±hh:mm` zone (4-digit year, real calendar day, hours 00–23, zone
+  within ±14:00). The value is emitted VERBATIM, never normalized;
+  invalid dates fail with the op's address.
+- **Ids are dense, in op order**: the first comment op is `w:id` 0, the
+  second 1, … — the same ids `docx outline` reports and
+  `/comments/comment[@id=N]` addresses after the write. Anchors are
+  emitted in the canonical shape (range start after `pPr` in the
+  opening paragraph; range end followed by that comment's reference
+  run at the close of the ending paragraph), so everything the writer
+  anchors reads back exactly through the annotation index — the
+  round-trip the SDK gate pins.
+- **K2 fields are not accepted early**: `reply_to`/`done` (threading and
+  resolution) are unknown keys in `/2` today and fail strict validation;
+  they arrive with the threading op surface.

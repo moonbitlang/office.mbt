@@ -326,7 +326,7 @@ output fail closed:
 
 ```mooncram
 $ printf '{"schema": "docx.batch/1", "ops": [{"op": "chart", "params": {}}]}' > bad.json; docx.exe batch out2.docx bad.json
-error: ops[0].op 'chart' is unknown (known ops: paragraph, table)
+error: ops[0].op 'chart' is unknown (known ops: paragraph, table, comment)
 [1]
 ```
 
@@ -339,6 +339,79 @@ error: ops[0] repeats the key "op" (strict scripts must not rely on last-wins pa
 ```mooncram
 $ docx.exe batch report.docx report.json
 docx: refusing to write 'report.docx': it already exists (batch creates NEW documents only; it cannot preserve parts of an existing file)
+[1]
+```
+
+## Batch With Comments (`docx.batch/2`)
+
+`docx.batch/2` widens `/1` with `comment` ops: `on` anchors the comment
+to an EARLIER paragraph op (or an inclusive `{"from", "to"}` range of
+them), bodies are plain content, ids are dense in op order, and the
+emitted anchors land in the canonical shape the read surface indexes.
+
+```mooncram
+$ cat > commented.json <<'SCRIPT'
+> {
+>   "schema": "docx.batch/2",
+>   "ops": [
+>     {"op": "paragraph", "params": {"text": "Findings", "style": "Heading1"}},
+>     {"op": "comment", "params": {"on": 0, "author": "Reviewer", "initials": "R",
+>      "date": "2026-07-11T09:30:00Z", "text": "Sharpen this title."}},
+>     {"op": "paragraph", "params": {"text": "Revenue grew 12% in Q2."}},
+>     {"op": "paragraph", "params": {"text": "Costs fell 3%."}},
+>     {"op": "comment", "params": {"on": {"from": 2, "to": 3}, "author": "Auditor",
+>      "paragraphs": [{"text": "Verify both figures,"}, {"text": "then resolve."}]}}
+>   ]
+> }
+> SCRIPT
+```
+
+```mooncram
+$ docx.exe batch findings.docx commented.json
+created findings.docx (5 op(s), 2 comment(s))
+```
+
+```mooncram
+$ docx.exe validate findings.docx
+valid
+```
+
+What batch writes, the annotation surface reads back — inventory,
+anchors with boundaries, and reverse links:
+
+```mooncram
+$ docx.exe outline findings.docx | jq -c '.comments'
+[{"id":"0","author":"Reviewer","anchored_to":"/body/p[1]"},{"id":"1","author":"Auditor","anchored_to":"/body/p[2]"}]
+```
+
+```mooncram
+$ docx.exe get findings.docx '/comments/comment[@id=1]' --json | jq -c '{author, anchors}'
+{"author":"Auditor","anchors":[{"story":"/body","start":"/body/p[2]","start_boundary":"inside_start","end":"/body/p[3]","end_boundary":"inside_end","references":["/body/p[3]/r[2]"]}]}
+```
+
+```mooncram
+$ docx.exe get findings.docx '/body/p[2]' --json | jq -c '.comment_ids'
+["1"]
+```
+
+Comment ops need the `/2` declaration; anchors must be earlier
+paragraph ops; dates are validated lexically and attributed to the op:
+
+```mooncram
+$ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}}]}' > v1c.json; docx.exe batch outv1.docx v1c.json
+error: ops[1].op 'comment' needs "schema": "docx.batch/2" (this script declares docx.batch/1)
+[1]
+```
+
+```mooncram
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "table", "params": {"rows": [[{"text": "c"}]]}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}}]}' > tblc.json; docx.exe batch outtbl.docx tblc.json
+error: ops[1].params.on targets a table (ops[0]); comment anchors must be paragraph ops
+[1]
+```
+
+```mooncram
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "text": "n", "author": "A", "date": "2026-02-30T00:00:00Z"}}]}' > baddate.json; docx.exe batch outdate.docx baddate.json
+error: ops[1]: the comment date '2026-02-30T00:00:00Z' has day 30, which 2026-2 does not reach (expected an xsd:dateTime like 2026-07-11T09:30:00Z)
 [1]
 ```
 

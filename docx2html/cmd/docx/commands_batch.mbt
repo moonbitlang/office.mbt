@@ -1,6 +1,7 @@
 ///|
 /// `docx batch <output> <script.json> [--dry-run]` — authors a NEW document
-/// from a `docx.batch/1` op script (see docs/agent-json-schemas.md).
+/// from a `docx.batch/1` or `/2` op script (see docs/agent-json-schemas.md;
+/// `/2` adds `comment` ops).
 /// Fresh-document-only, fail-closed: the output path must not exist (the
 /// batch writer creates documents; it cannot preserve the parts of an
 /// existing file the reader does not model). The built package is checked
@@ -45,7 +46,31 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
   let body = script.build_body(images) catch {
     BatchError(message) => raise @cli.CliError("error: \{message}")
   }
-  let bytes = @docx2html.write_docx(body) catch {
+  // Comment specs re-validate in the writer's constructor (notably the
+  // lexical xsd:dateTime check); BatchComment::at() attributes any
+  // failure to the exact script op.
+  let batch_comments = script.build_comments() catch {
+    BatchError(message) => raise @cli.CliError("error: \{message}")
+  }
+  let comments = []
+  for comment in batch_comments {
+    comments.push(
+      @docx2html.comment_spec(
+        author=comment.author(),
+        initials?=comment.initials(),
+        date?=comment.date(),
+        from=comment.from_block(),
+        to=comment.to_block(),
+        comment.body(),
+      ) catch {
+        err =>
+          raise @cli.CliError(
+            "error: \{comment.at()}: \{docx_error_message(err)}",
+          )
+      },
+    )
+  }
+  let bytes = @docx2html.write_docx_with_comments(body, comments) catch {
     err => raise @cli.CliError(locate_writer_failure(body, err))
   }
   // Belt: the writer's output is dual-tier gated in tests, but re-check the
@@ -56,12 +81,17 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
       "docx: internal error — the built package failed validation: \{findings[0]}",
     )
   }
+  let ops_summary = if script.comment_count() > 0 {
+    "\{script.op_count()} op(s), \{script.comment_count()} comment(s)"
+  } else {
+    "\{script.op_count()} op(s)"
+  }
   if matches.flags.get_or_default("dry-run", false) {
-    println("ok (dry run): \{script.op_count()} op(s), nothing written")
+    println("ok (dry run): \{ops_summary}, nothing written")
     return
   }
   write_atomically(output, bytes)
-  println("created \{output} (\{script.op_count()} op(s))")
+  println("created \{output} (\{ops_summary})")
 }
 
 ///|
@@ -71,17 +101,22 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
 /// body element, so re-running the writer over each element alone
 /// attributes the failure — cheap, error-path-only, and it cannot diverge
 /// from the writer's real rules because it IS the writer.
-fn locate_writer_failure(
-  body : Array[@docx2html.DocumentElement],
-  err : Error,
-) -> String {
-  let message = match err {
+fn docx_error_message(err : Error) -> String {
+  match err {
     @docx2html.Unsupported(message~)
     | @docx2html.InvalidZip(message~)
     | @docx2html.InvalidXml(message~)
     | @docx2html.MissingPart(message~) => message
     other => repr(other)
   }
+}
+
+///|
+fn locate_writer_failure(
+  body : Array[@docx2html.DocumentElement],
+  err : Error,
+) -> String {
+  let message = docx_error_message(err)
   for index, element in body {
     let failed = try {
       let _ = @docx2html.write_docx([element])
@@ -149,7 +184,7 @@ async fn write_atomically(output : String, bytes : Bytes) -> Unit {
 fn batch_command() -> @argparse.Command {
   Command(
     "batch",
-    about="Author a NEW document from a docx.batch/1 op script",
+    about="Author a NEW document from a docx.batch/1 or /2 op script",
     flags=[
       FlagArg(
         "dry-run",
@@ -165,7 +200,7 @@ fn batch_command() -> @argparse.Command {
       ),
       PositionArg(
         "script",
-        about="Path to the docx.batch/1 JSON script; image paths inside the script resolve relative to the current directory.",
+        about="Path to the docx.batch/1 or /2 JSON script; image paths inside the script resolve relative to the current directory.",
         num_args=ValueRange(lower=1, upper=1),
       ),
     ],

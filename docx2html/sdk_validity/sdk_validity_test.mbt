@@ -562,3 +562,125 @@ async test "the committed commented.docx cram fixture matches its generator" {
     )
   }
 }
+
+///|
+/// Phase-2 K1: a full-surface docx.batch/2 script — a point comment on a
+/// styled paragraph plus a range comment passing OVER a table, with
+/// styled/formatted/listed body paragraphs — must be Microsoft-schema-
+/// valid, and the annotation index must read back exactly what the
+/// writer anchored (the author->read loop closed by our own reader).
+async test "a docx.batch/2 script with comments is schema-valid and round-trips" {
+  let dir = fresh_scratch_dir()
+  let script = @batch.parse_batch(
+    @json.parse(
+      (
+        #|{
+        #|  "schema": "docx.batch/2",
+        #|  "ops": [
+        #|    {"op": "paragraph", "params": {"text": "Title", "style": "Heading1"}},
+        #|    {"op": "comment", "params": {"on": 0, "author": "Reviewer", "initials": "R",
+        #|     "date": "2026-07-11T09:30:00Z", "text": "Point note on the title"}},
+        #|    {"op": "paragraph", "params": {"text": "Body paragraph"}},
+        #|    {"op": "table", "params": {"rows": [[{"text": "cell"}]]}},
+        #|    {"op": "paragraph", "params": {"text": "After the table"}},
+        #|    {"op": "comment", "params": {"on": {"from": 2, "to": 4}, "author": "Second",
+        #|     "paragraphs": [
+        #|       {"text": "Range over the table", "style": "Heading2"},
+        #|       {"runs": [{"text": "formatted", "bold": true, "highlight": "yellow"},
+        #|                 {"text": " tail", "italic": true}]},
+        #|       {"text": "a listed point", "list": {"ordered": true}}
+        #|     ]}}
+        #|  ]
+        #|}
+      ),
+    ),
+  )
+  let body = script.build_body(Map([]))
+  let comments = []
+  for comment in script.build_comments() {
+    comments.push(
+      @docx2html.comment_spec(
+        author=comment.author(),
+        initials?=comment.initials(),
+        date?=comment.date(),
+        from=comment.from_block(),
+        to=comment.to_block(),
+        comment.body(),
+      ),
+    )
+  }
+  let bytes = @docx2html.write_docx_with_comments(body, comments)
+  validate_docx_via_sdk(dir, "batch2_commented", bytes)
+  let annotated = @docx2html.read_docx_annotated(bytes[:])
+  let index = annotated.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.comments().length(), content="2")
+  let point = index.comments()[0]
+  debug_inspect(
+    point.id(),
+    content=(
+      #|"0"
+    ),
+  )
+  debug_inspect(
+    point.author(),
+    content=(
+      #|Some("Reviewer")
+    ),
+  )
+  debug_inspect(
+    point.date(),
+    content=(
+      #|Some("2026-07-11T09:30:00Z")
+    ),
+  )
+  debug_inspect(point.anchors().length(), content="1")
+  debug_inspect(
+    point.anchors()[0].start(),
+    content=(
+      #|Some("/body/p[1]")
+    ),
+  )
+  debug_inspect(
+    point.anchors()[0].end(),
+    content=(
+      #|Some("/body/p[1]")
+    ),
+  )
+  // Blocks: op0 -> p[1], op2 -> p[2], op3 -> tbl[1], op4 -> p[3]. The
+  // range comment anchors p[2]..p[3], passing over the table, and its
+  // reference run lands at the end of the closing paragraph.
+  let range = index.comments()[1]
+  debug_inspect(
+    range.anchors()[0].start(),
+    content=(
+      #|Some("/body/p[2]")
+    ),
+  )
+  debug_inspect(
+    range.anchors()[0].end(),
+    content=(
+      #|Some("/body/p[3]")
+    ),
+  )
+  debug_inspect(
+    range.anchors()[0].references(),
+    content=(
+      #|["/body/p[3]/r[2]"]
+    ),
+  )
+  debug_inspect(range.body_paragraphs(), content="3")
+  // The table BETWEEN the endpoints is covered by the range.
+  debug_inspect(
+    index.covering_comment_ids("/body/tbl[1]/tr[1]/tc[1]/p[1]"),
+    content=(
+      #|["1"]
+    ),
+  )
+  debug_inspect(
+    index.covering_comment_ids("/body/p[1]"),
+    content=(
+      #|["0"]
+    ),
+  )
+}
