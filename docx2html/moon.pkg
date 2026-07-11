@@ -16,6 +16,7 @@ import {
 import {
   "bobzhang/docx2html/batch",
   "bobzhang/docx2html/inspect",
+  "bobzhang/docx2html/splice",
   "moonbitlang/core/json",
   "bobzhang/docx2html/opc",
   "bobzhang/mbtexcel/zip" @mbtzip,
