@@ -86,5 +86,7 @@ well-formed OOXML package (no "we found a problem" repair dialog).
 - `html` never modifies its input; `--out` refuses the input path and writes
   atomically. See `reference/xlsx.md` for the full flag set and fidelity
   limits (theme/indexed colors and gradients are omitted, not guessed).
-- The JSON schemas are versioned and additive-only; the normative spec is
-  `docs/agent-json-schemas.md`.
+- The JSON schemas are versioned. The payloads the tool *produces*
+  (`outline`, `get --json`) evolve additive-only; the scripts it *consumes*
+  (`batch`) are validated strictly (unknown keys are errors). The normative
+  spec is `docs/agent-json-schemas.md`.

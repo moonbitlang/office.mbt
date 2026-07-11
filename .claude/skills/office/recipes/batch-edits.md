@@ -14,10 +14,12 @@ Run with `moon run --target wasm cmd/xlsx -- batch <file> <script.json>`.
 {
   "schema": "xlsx.batch/1",
   "ops": [
-    {"op": "<name>", "params": { … }}
+    {"op": "set", "params": {"sheet": "Data", "cell": "A1", "value": "Region"}}
   ]
 }
 ```
+
+Each op is `{"op": "<name>", "params": {…}}`. The op vocabulary and params:
 
 `op` names mirror the subcommands; `params` are the snake_case arguments:
 
@@ -48,10 +50,13 @@ Run with `moon run --target wasm cmd/xlsx -- batch <file> <script.json>`.
   leaves the file untouched:
 
   ```
-  error: op 3 (style): unknown param 'colour'; book.xlsx not modified
+  error: op 3 (style): unknown param 'colour'
   ```
 
-  Fix that op and re-run — you never end up with a half-applied file.
+  (A validation error like this is caught before anything is written. An op
+  that fails while *applying* instead reports `error: op <i> (<name>): …;
+  <file> not modified`.) Either way you never end up with a half-applied
+  file — fix that op and re-run.
 
 - **Let JSON types do the typing.** `"value": 42` stores a real numeric cell
   (formulas over it compute, number formats render); `"value": "007"` stays
