@@ -598,13 +598,14 @@ async test "a docx.batch/2 script with comments is schema-valid and round-trips"
   let body = script.build_body(Map([]))
   let comments = []
   for comment in script.build_comments() {
+    guard (comment.from_block(), comment.to_block()) is (Some(from), Some(to))
     comments.push(
       @docx2html.comment_spec(
         author=comment.author(),
         initials?=comment.initials(),
         date?=comment.date(),
-        from=comment.from_block(),
-        to=comment.to_block(),
+        from~,
+        to~,
         comment.body(),
       ),
     )

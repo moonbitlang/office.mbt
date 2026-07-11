@@ -550,8 +550,10 @@ test "K1: docx.batch/2 comment ops parse, map op indexes to block indexes" {
   inspect(point.author(), content="Reviewer")
   debug_inspect(point.initials(), content="Some(\"R\")")
   debug_inspect(point.date(), content="Some(\"2026-07-11T09:30:00Z\")")
-  inspect(point.from_block(), content="0")
-  inspect(point.to_block(), content="0")
+  debug_inspect(point.from_block(), content="Some(0)")
+  debug_inspect(point.to_block(), content="Some(0)")
+  debug_inspect(point.reply_to(), content="None")
+  debug_inspect(point.done(), content="None")
   inspect(point.body().length(), content="1")
   let range = comments[1]
   inspect(range.at(), content="ops[5]")
@@ -559,8 +561,8 @@ test "K1: docx.batch/2 comment ops parse, map op indexes to block indexes" {
   debug_inspect(range.initials(), content="None")
   debug_inspect(range.date(), content="None")
   // op 2 -> block 1; op 4 -> block 3: the range passes OVER the table.
-  inspect(range.from_block(), content="1")
-  inspect(range.to_block(), content="3")
+  debug_inspect(range.from_block(), content="Some(1)")
+  debug_inspect(range.to_block(), content="Some(3)")
   inspect(range.body().length(), content="2")
   // The reverse mapping (block -> script op) that writer-failure
   // attribution uses: comment ops produce no blocks.
@@ -640,16 +642,6 @@ test "K1: comment ops fail closed with exact op addresses" {
       #|]}
     ),
     "ops[1].params.date must be a string",
-  )
-  // K2's fields are NOT silently accepted early.
-  expect_batch_error(
-    (
-      #|{"schema": "docx.batch/2", "ops": [
-      #|  {"op": "paragraph", "params": {"text": "x"}},
-      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A", "done": true}}
-      #|]}
-    ),
-    "ops[1].params has an unknown key 'done'",
   )
   // WHERE: earlier paragraph ops only.
   expect_batch_error(
@@ -809,4 +801,109 @@ test "K1: /1 and /2 accept the same content ops" {
     inspect(script.comment_count(), content="0")
     inspect(script.build_body(Map([])).length(), content="2")
   }
+}
+
+///|
+test "K2: reply_to and done parse into the thread surface" {
+  let script = parse_str(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "Claim"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "Check this",
+      #|   "author": "Ada", "done": false}},
+      #|  {"op": "comment", "params": {"reply_to": 1, "text": "Resolved",
+      #|   "author": "Bob", "done": true}},
+      #|  {"op": "comment", "params": {"reply_to": 2, "text": "Agreed",
+      #|   "author": "Cid"}}
+      #|]}
+    ),
+  )
+  inspect(script.comment_count(), content="3")
+  let comments = script.build_comments()
+  let parent = comments[0]
+  debug_inspect(parent.reply_to(), content="None")
+  debug_inspect(parent.done(), content="Some(false)")
+  // reply_to is reported as the DENSE COMMENT INDEX (= writer id), not
+  // the op index: op 2 answers op 1, which is comment 0.
+  let reply = comments[1]
+  debug_inspect(reply.reply_to(), content="Some(0)")
+  debug_inspect(reply.done(), content="Some(true)")
+  debug_inspect(reply.from_block(), content="None")
+  debug_inspect(reply.to_block(), content="None")
+  // Chains: op 3 answers op 2, which is comment 1.
+  let chained = comments[2]
+  debug_inspect(chained.reply_to(), content="Some(1)")
+  debug_inspect(chained.done(), content="None")
+}
+
+///|
+test "K2: reply ops fail closed with exact op addresses" {
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "reply_to": 0, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params: on and reply_to are mutually exclusive (a reply inherits its parent's anchor)",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params needs \"on\" (an earlier paragraph-op index, or {\"from\": i, \"to\": j}) or \"reply_to\" (an earlier comment-op index)",
+  )
+  // A reply must answer an EARLIER COMMENT op.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"reply_to": 0, "text": "n", "author": "A"}}
+      #|]}
+    ),
+    "ops[1].params.reply_to targets ops[0], which is not a comment op (replies answer comments; use on to anchor to content)",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}},
+      #|  {"op": "comment", "params": {"reply_to": 2, "text": "n", "author": "B"}}
+      #|]}
+    ),
+    "ops[2].params.reply_to must reference an EARLIER op (got 2); replies answer comments that already exist",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}},
+      #|  {"op": "comment", "params": {"reply_to": 1.5, "text": "n", "author": "B"}}
+      #|]}
+    ),
+    "ops[2].params.reply_to must be an integer (got 1.5)",
+  )
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A", "done": "yes"}}
+      #|]}
+    ),
+    "ops[1].params.done must be a boolean",
+  )
+  // Anchoring a comment ONTO another comment still points at reply_to.
+  expect_batch_error(
+    (
+      #|{"schema": "docx.batch/2", "ops": [
+      #|  {"op": "paragraph", "params": {"text": "x"}},
+      #|  {"op": "comment", "params": {"on": 0, "text": "n", "author": "A"}},
+      #|  {"op": "comment", "params": {"on": 1, "text": "n", "author": "B"}}
+      #|]}
+    ),
+    "ops[2].params.on targets another comment (ops[1]); comment anchors must be paragraph ops (to answer a comment, use reply_to)",
+  )
 }

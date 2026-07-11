@@ -36,9 +36,11 @@ pub fn BatchComment::at(Self) -> String
 pub fn BatchComment::author(Self) -> String
 pub fn BatchComment::body(Self) -> Array[@document.DocumentElement]
 pub fn BatchComment::date(Self) -> String?
-pub fn BatchComment::from_block(Self) -> Int
+pub fn BatchComment::done(Self) -> Bool?
+pub fn BatchComment::from_block(Self) -> Int?
 pub fn BatchComment::initials(Self) -> String?
-pub fn BatchComment::to_block(Self) -> Int
+pub fn BatchComment::reply_to(Self) -> Int?
+pub fn BatchComment::to_block(Self) -> Int?
 
 pub struct BatchScript {
   // private fields
