@@ -1,12 +1,30 @@
-// Agent-oriented structured reads: `outline` (workbook map) and the
-// `--json` mode of `get` (range read). Both print versioned JSON payloads
-// built by the `inspect` library package; see docs/agent-json-schemas.md.
+// Agent-oriented structured reads: `outline` (workbook map), the `--json`
+// mode of `get` (range read), and `query` (content-selector search). All
+// print versioned JSON payloads built by the `inspect` library package;
+// see docs/agent-json-schemas.md.
 
 ///|
 async fn run_outline(m : @argparse.Matches) -> Unit {
   let file = arg(m, "file")
   let workbook = @lib.open_file(file)
   println(@inspect.outline(workbook, file~).stringify(indent=2))
+}
+
+///|
+/// `query`: prints the `xlsx.query/1` payload — the cells matching a content
+/// selector, scanned over `--range` or the used range.
+async fn run_query(m : @argparse.Matches) -> Unit {
+  let file = arg(m, "file")
+  let workbook = @lib.open_file(file)
+  println(
+    @inspect.query(
+      workbook,
+      arg(m, "sheet"),
+      arg(m, "selector"),
+      file~,
+      range=arg(m, "range"),
+    ).stringify(indent=2),
+  )
 }
 
 ///|

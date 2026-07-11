@@ -18,3 +18,7 @@ pub const SCHEMA_CELLS : String = "xlsx.cells/1"
 ///|
 /// Schema identifier accepted by the `batch` op-script format.
 pub const SCHEMA_BATCH : String = "xlsx.batch/1"
+
+///|
+/// Schema identifier of the `query` payload (content-selector cell search).
+pub const SCHEMA_QUERY : String = "xlsx.query/1"

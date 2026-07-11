@@ -84,6 +84,7 @@ async fn run_cli() -> Unit {
     Some(("batch", m)) => run_batch(m)
     Some(("get", m)) => run_get(m)
     Some(("outline", m)) => run_outline(m)
+    Some(("query", m)) => run_query(m)
     Some(("capabilities", m)) => run_capabilities(m)
     Some(("html", m)) => run_html(m)
     Some(("calc", m)) => run_calc(m)
@@ -301,6 +302,25 @@ fn build_command() -> @argparse.Command {
       Command("outline", about="Print a workbook structure map as JSON", positionals=[
         PositionArg("file"),
       ]),
+      Command(
+        "query",
+        about="Find cells matching a content selector, as JSON",
+        positionals=[
+          PositionArg("file"),
+          PositionArg("sheet"),
+          PositionArg(
+            "selector",
+            about="e.g. cell[type=formula], cell[value>100], cell[formula~=SUM]",
+          ),
+        ],
+        options=[
+          OptionArg(
+            "range",
+            long="range",
+            about="limit the scan to this range (default: the used range)",
+          ),
+        ],
+      ),
       Command(
         "html",
         about="Render sheets as a self-contained HTML document",
