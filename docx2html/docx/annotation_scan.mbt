@@ -14,7 +14,11 @@
 // spelled); only UTF-8 parts are scanned (UTF-16 parts raise).
 
 ///|
-const WML_URI : String = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+/// Transitional and Strict WML namespace URIs — the reader supports both.
+fn is_wml_uri(uri : String) -> Bool {
+  uri == "http://schemas.openxmlformats.org/wordprocessingml/2006/main" ||
+  uri == "http://purl.oclc.org/ooxml/wordprocessingml/main"
+}
 
 ///|
 /// A marker the scanner can locate.
@@ -179,7 +183,7 @@ priv struct ScanFrame {
 
 ///|
 fn projection_kind(uri : String, local_name : String) -> String? {
-  if uri != WML_URI {
+  if !is_wml_uri(uri) {
     return None
   }
   match local_name {
@@ -190,7 +194,7 @@ fn projection_kind(uri : String, local_name : String) -> String? {
 
 ///|
 fn marker_kind(uri : String, local_name : String) -> ScanMarkerKind? {
-  if uri != WML_URI {
+  if !is_wml_uri(uri) {
     return None
   }
   match local_name {
@@ -594,12 +598,14 @@ fn attribute_value(
         if attr_local == local_name {
           match namespaces.get(prefix) {
             Some(stack) if stack.length() > 0 &&
-              stack[stack.length() - 1] == WML_URI => return Some(value)
+              is_wml_uri(stack[stack.length() - 1]) => return Some(value)
             _ => ()
           }
         }
       }
-      None => if name == local_name { return Some(value) }
+      // Unprefixed attributes are in NO namespace (default xmlns does not
+      // apply to attributes) — they never match a w: attribute.
+      None => ()
     }
   }
   None
