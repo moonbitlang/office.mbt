@@ -36,7 +36,7 @@ test "css_color admits only strict hex" {
   for
     bad in [
       "", "FFF", "4472C", "4472C44", "</style><", "expression(", "红红红红红红",
-      "4472CG", "”4472C4", "GG112233", "</style>4",
+      "4472CG", "”4472C4", "GG112233", "</style>4", "+1112233", "-1112233",
     ] {
     if @xlsx2html.css_color(bad) is Some(_) {
       fail("expected '\{bad}' to be rejected")

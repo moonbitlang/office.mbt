@@ -31,21 +31,16 @@ async fn run_html(m : @argparse.Matches) -> Unit {
       resolve_existing(out) == resolve_existing(file) {
       raise CliError("error: --out must not be the input workbook")
     }
-    write_html_output(out, @encoding/utf8.encode(document[:]))
+    // Always write through the exclusive-temp + rename saver: CreateNew
+    // never truncates, and the rename replaces the directory entry named
+    // by --out (not a symlink/hard-link target), so even an alias that
+    // appears after the guard cannot cost the input its bytes. The guard
+    // above is a clean-error nicety, not the safety mechanism.
+    write_file_replacing(
+      resolve_existing(out),
+      @encoding/utf8.encode(document[:]),
+    )
     println("wrote \{out}")
-  }
-}
-
-///|
-/// Writes the document via an exclusive temp + rename (reusing the batch
-/// saver) when the target exists, or plainly when it does not — a failed
-/// write can never truncate an existing file this way.
-async fn write_html_output(path : String, bytes : Bytes) -> Unit {
-  let exists = (try? @async/fs.kind(path, follow_symlink=false)) is Ok(_)
-  if exists {
-    write_file_replacing(resolve_existing(path), bytes)
-  } else {
-    write_file(path, bytes)
   }
 }
 

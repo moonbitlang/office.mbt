@@ -1448,6 +1448,11 @@ pub fn Workbook::get_cell_value_styled(
   match sheet.cell_index_of(row, col) {
     Some(index) => {
       let cell = sheet.cells[index]
+      // Honor raw like get_cell_value: raw mode returns the stored value
+      // unformatted regardless of the style.
+      if resolved_options.raw_cell_value {
+        return Some(cell.value)
+      }
       Some(
         format_cell_value(
           cell.value_type,

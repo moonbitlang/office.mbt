@@ -269,3 +269,14 @@ refused:
   $ xlsx.exe html book.xlsx --out ./book.xlsx
   error: --out must not be the input workbook
   [1]
+
+A hard link the guard cannot detect is still safe: the rename replaces
+the --out entry, and the workbook keeps its bytes.
+
+  $ ln book.xlsx alias.xlsx
+  $ xlsx.exe validate book.xlsx
+  valid
+  $ xlsx.exe html book.xlsx --out alias.xlsx
+  wrote alias.xlsx
+  $ xlsx.exe validate book.xlsx
+  valid
