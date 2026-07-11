@@ -213,3 +213,6 @@ jobs:
           moon run --target wasm docx2html/cmd/docx -- batch ci-batch.docx ci-batch.json 2>docx-wasm.err || { echo "docx batch failed; stderr:"; cat docx-wasm.err; exit 1; }
           b=$(moon run --target wasm docx2html/cmd/docx -- validate ci-batch.docx 2>docx-wasm.err) || { echo "batch validate failed; stderr:"; cat docx-wasm.err; exit 1; }
           echo "batch validate -> $b"; test "$b" = "valid"
+          # The checked-in authoring acceptance scenario (see
+          # docx2html/tests/acceptance/README.md) — same wasm build.
+          bash docx2html/tests/acceptance/run.sh
