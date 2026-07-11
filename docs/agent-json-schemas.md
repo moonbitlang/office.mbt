@@ -406,6 +406,42 @@ only when true; `null` is never emitted):
 - `hyperlink`: `text`, `href`, `anchor`, `target_frame`
 - `image`: `content_type`, `bytes` (image part byte length), `alt_text`
 
+## Annotations in the read surface (Phase 2: `/comments`, `/footnotes`, `/endnotes`)
+
+Additive extensions to the existing identifiers (consumers ignoring
+unknown keys are unaffected):
+
+- **Path grammar**: the annotation roots are live. Their first segment is
+  `comment[...]` / `note[...]`, selected by ORDINAL (`comment[2]`,
+  snapshot-relative like all ordinals) or by DOCUMENT ID
+  (`comment[@id=3]` — ids are document-lifetime stable, the preferred
+  agent handle). The id token matches the literal id string and may not
+  be empty or contain `]`/`=`; an id shared by multiple containers is
+  AMBIGUOUS (the error names the ordinal alternatives). Deeper segments
+  are the ordinary body grammar (`/comments/comment[@id=0]/p[1]`).
+  Emitted paths use the id form when the id is unique, else the ordinal.
+- **`docx.outline/1`** gains a top-level `comments` inventory (always
+  present, possibly `[]`): `{id, author?, done?, reply_to?,
+  anchored_to?}` per comment, in comments.xml order — metadata only, no
+  bodies.
+- **`docx.element/1`** gains kinds `comment`, `footnote`, `endnote` for
+  the annotation containers: `id`, `author?`, `initials?`, `date?`
+  (lexical, never converted), `done?` and `reply_to?` (w15 threading,
+  keyed by the comment's LAST body paragraph per CT_CommentEx),
+  `anchors` (array of `{story, start?, start_boundary?, end?,
+  end_boundary?, references}` — boundaries are `before`/`inside_start`/
+  `inside_end`/`after`), `anchored_to?` (the first anchor's
+  start-else-first-reference path), and `children` (the body, ordinarily
+  addressable). Notes carry `references` (every referencing body
+  position; multi-reference notes preserved). BODY elements covered by a
+  comment's anchors gain `comment_ids` (intersection semantics; point
+  anchors cover their reference's paragraph).
+- **`docx text`** emits the annotation stories after headers/footers in
+  story-rank order (`/footnotes`, `/endnotes`, `/comments`).
+- Positions never lie: every anchor path is verified against the parsed
+  document or degraded to its nearest resolvable ancestor with a
+  diagnostic in `messages`.
+
 ## `docx.batch/1` — authoring script (`docx batch <output> <script.json>`)
 
 The consumed (input) schema: **strict** validation — an unknown schema, op,
