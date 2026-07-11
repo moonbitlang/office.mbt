@@ -206,7 +206,7 @@ fn render_worksheet(
           row~,
           col~,
         )
-        let (text, pending) = cell_text(workbook, name, cell, calc)
+        let (text, pending) = cell_text(workbook, name, cell, style_id, calc)
         let mut classes = ""
         if style_id != 0 {
           classes = "s\{style_id}"
@@ -252,6 +252,7 @@ fn cell_text(
   workbook : @xlsx.Workbook,
   name : String,
   cell : String,
+  effective_style : Int,
   calc : Bool,
 ) -> (String, Bool) raise {
   let cached = match workbook.get_cell_value_raw(name, cell) {
@@ -259,7 +260,12 @@ fn cell_text(
     other => other
   }
   if cached is Some(_) {
-    return (workbook.get_cell_value(name, cell).unwrap_or(""), false)
+    // Format with the EFFECTIVE style so a row/column-inherited number
+    // format renders (the effective id equals the cell's own when set).
+    return (
+      workbook.get_cell_value_styled(name, cell, effective_style).unwrap_or(""),
+      false,
+    )
   }
   match workbook.get_cell_formula(name, cell) {
     Some(formula) => {

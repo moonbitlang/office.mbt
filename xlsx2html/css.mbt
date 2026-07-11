@@ -123,6 +123,11 @@ pub fn style_css(style : @xlsx.Style) -> String {
   match style.border {
     Some(borders) =>
       for border in borders {
+        // An omitted OOXML border style means no border: a color-only
+        // entry (style absent or zero) draws nothing.
+        if border.style.unwrap_or(0) == 0 {
+          continue
+        }
         let side = match border.typ {
           "left" => "border-left"
           "right" => "border-right"

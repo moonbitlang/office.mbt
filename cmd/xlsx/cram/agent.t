@@ -266,3 +266,6 @@ refused:
   $ xlsx.exe html book.xlsx --out book.xlsx
   error: --out must not be the input workbook
   [1]
+  $ xlsx.exe html book.xlsx --out ./book.xlsx
+  error: --out must not be the input workbook
+  [1]

@@ -1421,6 +1421,47 @@ pub fn Workbook::get_conditional_style(
 }
 
 ///|
+/// Formats a stored cell's value using an ARBITRARY style id instead of
+/// the cell's own — the display semantic for row/column-inherited styles
+/// (the cell attribute wins when set; `GetCellValue` parity keeps using
+/// the cell's own style). Returns `None` for an absent cell.
+pub fn Workbook::get_cell_value_styled(
+  self : Workbook,
+  sheet_name : StringView,
+  reference : StringView,
+  style_id : Int,
+  options? : Options,
+) -> String? raise XlsxError {
+  check_sheet_name(sheet_name)
+  let resolved_options = match options {
+    Some(value) => value
+    None => self.options
+  }
+  let sheet = match self.sheet(sheet_name) {
+    Some(value) => value
+    None => raise SheetNotFound(name=sheet_name.to_owned())
+  }
+  if style_id < 0 || style_id >= self.styles.length() {
+    raise InvalidStyleId(index=style_id)
+  }
+  let (row, col) = cell_ref_to_rc(reference)
+  match sheet.cell_index_of(row, col) {
+    Some(index) => {
+      let cell = sheet.cells[index]
+      Some(
+        format_cell_value(
+          cell.value_type,
+          cell.value,
+          Some(self.styles[style_id]),
+          resolved_options,
+        ),
+      )
+    }
+    None => None
+  }
+}
+
+///|
 fn format_cell_value_for_workbook(
   styles : ArrayView[Style],
   cell : Cell,

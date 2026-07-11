@@ -1406,6 +1406,7 @@ pub fn Style::new() -> Self
 pub fn Style::number_format(String) -> Self
 pub fn Style::protection(Protection) -> Self
 pub fn Style::with_alignment(Self, Alignment) -> Self
+pub fn Style::with_border(Self, Array[Border]) -> Self
 pub fn Style::with_fill(Self, Fill) -> Self
 pub fn Style::with_font(Self, Font) -> Self
 
@@ -1549,6 +1550,7 @@ pub fn Workbook::get_cell_value(Self, StringView, StringView, raw? : Bool, optio
 pub fn Workbook::get_cell_value_raw(Self, StringView, StringView) -> CellValue? raise XlsxError
 pub fn Workbook::get_cell_value_raw_rc(Self, StringView, Int, Int) -> CellValue? raise XlsxError
 pub fn Workbook::get_cell_value_rc(Self, StringView, Int, Int, raw? : Bool, options? : Options) -> String? raise XlsxError
+pub fn Workbook::get_cell_value_styled(Self, StringView, StringView, Int, options? : Options) -> String? raise XlsxError
 pub fn Workbook::get_col(Self, StringView, Int) -> Array[String] raise XlsxError
 pub fn Workbook::get_col_outline_level(Self, StringView, Int) -> Int raise XlsxError
 pub fn Workbook::get_col_style(Self, StringView, Int) -> Int? raise XlsxError

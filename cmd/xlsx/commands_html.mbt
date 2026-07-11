@@ -22,21 +22,71 @@ async fn run_html(m : @argparse.Matches) -> Unit {
     println(document)
   } else {
     // `html` is a read-only command: writing the document over the input
-    // workbook (directly or via a symlink alias) would destroy it.
-    if out == file || resolve_existing(out) == resolve_existing(file) {
+    // workbook — directly, via `./` spellings, or via a symlink — would
+    // destroy it. The write itself goes through the rename-based saver,
+    // so even an alias the checks cannot see (a hard link) replaces only
+    // the directory entry named by --out; the input's own entry keeps
+    // the original bytes.
+    if lexical_normalize(out) == lexical_normalize(file) ||
+      resolve_existing(out) == resolve_existing(file) {
       raise CliError("error: --out must not be the input workbook")
     }
-    write_file(out, @encoding/utf8.encode(document[:]))
+    write_html_output(out, @encoding/utf8.encode(document[:]))
     println("wrote \{out}")
   }
 }
 
 ///|
+/// Writes the document via an exclusive temp + rename (reusing the batch
+/// saver) when the target exists, or plainly when it does not — a failed
+/// write can never truncate an existing file this way.
+async fn write_html_output(path : String, bytes : Bytes) -> Unit {
+  let exists = (try? @async/fs.kind(path, follow_symlink=false)) is Ok(_)
+  if exists {
+    write_file_replacing(resolve_existing(path), bytes)
+  } else {
+    write_file(path, bytes)
+  }
+}
+
+///|
 /// A path's resolved identity when it exists (native realpath); a path
-/// that does not exist (or a wasm path) is its own identity.
+/// that does not exist (or a wasm path) is its own lexically-normalized
+/// identity.
 async fn resolve_existing(path : String) -> String noraise {
   resolve_save_target(path) catch {
-    _ => path
+    _ => lexical_normalize(path)
+  }
+}
+
+///|
+/// Collapses `.` segments and resolves `..` against preceding segments
+/// (purely textual — no filesystem access), so `./book.xlsx` and
+/// `book.xlsx` compare equal even where realpath is unavailable.
+fn lexical_normalize(path : String) -> String {
+  let absolute = path.has_prefix("/")
+  let out : Array[String] = []
+  for segment in path.split("/") {
+    let segment = segment.to_string()
+    if segment == "" || segment == "." {
+      continue
+    }
+    if segment == ".." {
+      if out.length() > 0 && out[out.length() - 1] != ".." {
+        ignore(out.pop())
+        continue
+      }
+      if absolute {
+        continue
+      }
+    }
+    out.push(segment)
+  }
+  let joined = out.join("/")
+  if absolute {
+    "/" + joined
+  } else {
+    joined
   }
 }
 

@@ -45,14 +45,31 @@ test "css_color admits only strict hex" {
 }
 
 ///|
-test "pixel conversions" {
+test "pixel conversions follow the Open XML width formula" {
   inspect(
     @xlsx2html.col_width_px(16.0),
     content=(
       #|112
     ),
   )
-  inspect(@xlsx2html.row_height_px(15.0), content="20")
+  inspect(
+    @xlsx2html.col_width_px(0.0),
+    content=(
+      #|0
+    ),
+  )
+  inspect(
+    @xlsx2html.col_width_px(8.43),
+    content=(
+      #|59
+    ),
+  )
+  inspect(
+    @xlsx2html.row_height_px(15.0),
+    content=(
+      #|20
+    ),
+  )
 }
 
 ///|

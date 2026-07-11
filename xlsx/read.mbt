@@ -349,7 +349,11 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
     "lightDown", "lightUp", "lightGrid", "lightTrellis", "gray125", "gray0625",
   ]
   fn parse_rgb_color(rgb : StringView) -> (String, Int?) {
-    if rgb.length() == 8 {
+    // Strip an 8-char value's alpha only when the alpha really is hex —
+    // a malformed value must stay malformed (GG112233 is not #112233).
+    let alpha_is_hex = rgb.length() == 8 &&
+      (try? @string.parse_int(rgb[0:2], base=16)) is Ok(_)
+    if alpha_is_hex {
       let alpha = parse_hex_byte(rgb, 0)
       let opacity = (alpha * 100 + 127) / 255
       let t = 100 - opacity

@@ -124,6 +124,36 @@ test "a lone far cell renders bounded, with a truncation marker" {
   // The window keeps the document small even though the sheet extent is
   // the full grid.
   assert_true(document.length() < 8000)
+  // With DEFAULT bounds the ceiling still applies: the marker names the
+  // 1000x256 defaults and the document stays bounded.
+  let defaults = @xlsx2html.render_workbook(workbook, title="sparse.xlsx")
+  assert_true(
+    defaults.contains("showing 1000 of 1048576 rows and 256 of 16384 columns"),
+  )
+  assert_true(defaults.length() < 4_000_000)
+}
+
+///|
+test "row-inherited number formats render on the value" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let priced = workbook.new_style(@xlsx.Style::number_format("0.00"))
+  workbook.set_row_style("Data", 1, priced)
+  workbook.set_cell_int("Data", "A1", 1)
+  let document = @xlsx2html.render_workbook(workbook, title="fmt.xlsx")
+  assert_true(document.contains("<td class=\"s\{priced}\">1.00</td>"))
+}
+
+///|
+test "color-only borders (style zero) draw nothing" {
+  let bordered = @xlsx.Style::new().with_border([
+    @xlsx.Border::with_values("left", color="FF0000"),
+  ])
+  inspect(@xlsx2html.style_css(bordered), content="")
+  let ruled = @xlsx.Style::new().with_border([
+    @xlsx.Border::with_values("left", color="FF0000", style=1),
+  ])
+  inspect(@xlsx2html.style_css(ruled), content="border-left:1px solid #FF0000;")
 }
 
 ///|
