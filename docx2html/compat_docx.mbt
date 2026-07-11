@@ -181,10 +181,28 @@ pub fn comment_spec(
   date? : String,
   from~ : Int,
   to~ : Int,
+  done? : Bool,
   body : Array[DocumentElement],
 ) -> @docx_impl.CommentSpec raise DocxError {
   bridge_core_error(() => {
-    @docx_impl.comment_spec(author~, initials?, date?, from~, to~, body)
+    @docx_impl.comment_spec(author~, initials?, date?, from~, to~, done?, body)
+  })
+}
+
+///|
+/// Builds an anchorless REPLY to an earlier comment spec (by its index
+/// in the array passed to `write_docx_with_comments`); the thread
+/// linkage lands in word/commentsExtended.xml. See `@docx.comment_reply`.
+pub fn comment_reply(
+  author~ : String,
+  initials? : String,
+  date? : String,
+  reply_to~ : Int,
+  done? : Bool,
+  body : Array[DocumentElement],
+) -> @docx_impl.CommentSpec raise DocxError {
+  bridge_core_error(() => {
+    @docx_impl.comment_reply(author~, initials?, date?, reply_to~, done?, body)
   })
 }
 

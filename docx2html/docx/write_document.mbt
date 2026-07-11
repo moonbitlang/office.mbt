@@ -59,6 +59,7 @@ fn build_docx_package(
   styles_xml : String,
   ctx : WriteContext,
   comments_xml~ : String?,
+  comments_extended_xml~ : String?,
 ) -> Bytes raise @opc.PackageBuildError {
   builder.add_default(
     "rels", "application/vnd.openxmlformats-package.relationships+xml",
@@ -100,6 +101,16 @@ fn build_docx_package(
       // The main-part relationship to comments.xml was allocated in
       // ctx.document_relationships and is added with the rest below.
       builder.add_part("word/comments.xml", @utf8.encode(xml))
+    }
+    None => ()
+  }
+  match comments_extended_xml {
+    Some(xml) => {
+      builder.add_override(
+        "/word/commentsExtended.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml",
+      )
+      // Its main-part relationship is likewise in ctx.document_relationships.
+      builder.add_part("word/commentsExtended.xml", @utf8.encode(xml))
     }
     None => ()
   }

@@ -1,25 +1,42 @@
-// K1 of the annotation writers: comments on freshly written documents.
-// `write_docx_with_comments` is `write_docx` plus a set of comment specs
-// anchored to top-level body paragraphs by block index. Anchors are
-// emitted in the CANONICAL intra-paragraph shape the roadmap locked
-// (pPr?, commentRangeStart, content, commentRangeEnd, reference run —
-// each end immediately followed by its own reference run so read-back
-// pairing is unambiguous), and comment definitions land in
-// word/comments.xml wired as a relationship of the MAIN document part.
-// Comment ids are dense: a spec's array index IS its w:id.
+// K1+K2 of the annotation writers: comments on freshly written
+// documents. `write_docx_with_comments` is `write_docx` plus a set of
+// comment specs — ANCHORED ones (a range of top-level body paragraphs
+// by block index) and REPLIES (anchorless per the locked policy: a
+// reply emits its definition and its commentsExtended linkage, and NO
+// range or reference markers of its own). Anchors are emitted in the
+// CANONICAL intra-paragraph shape the roadmap locked (pPr?,
+// commentRangeStart, content, commentRangeEnd, reference run — each end
+// immediately followed by its own reference run so read-back pairing is
+// unambiguous), and comment definitions land in word/comments.xml wired
+// as a relationship of the MAIN document part. Comment ids are dense: a
+// spec's array index IS its w:id. When any spec threads (`reply_to`) or
+// resolves (`done`), every comment body paragraph is stamped with a
+// w14:paraId and word/commentsExtended.xml records one w15:commentEx
+// per comment, keyed by the LAST body paragraph's paraId (the
+// spec-backed choice; see the roadmap's locked decision) with
+// w15:paraIdParent linking replies; without threading or resolution the
+// output is byte-identical to the K1 writer.
+
+///|
+priv enum CommentTarget {
+  Anchored(from~ : Int, to~ : Int)
+  ReplyTo(Int)
+}
 
 ///|
 /// One comment to attach to the written body: WHO (author, optional
 /// initials and xsd:dateTime date), WHERE (an inclusive range of
-/// top-level body block indexes, both endpoints paragraphs), and WHAT
-/// (paragraph-only body content). Construct with `comment_spec`, which
-/// fail-closes on everything a spec can get wrong in isolation.
+/// top-level body block indexes with both endpoints paragraphs — or,
+/// for a reply, the earlier comment it answers), optionally a `done`
+/// resolution flag, and WHAT (paragraph-only body content). Construct
+/// with `comment_spec` (anchored) or `comment_reply` (anchorless),
+/// which fail-close on everything a spec can get wrong in isolation.
 pub struct CommentSpec {
   priv author : String
   priv initials : String?
   priv date : String?
-  priv from_block : Int
-  priv to_block : Int
+  priv target : CommentTarget
+  priv done : Bool?
   priv body : Array[DocumentElement]
 }
 
@@ -41,8 +58,58 @@ pub fn comment_spec(
   date? : String,
   from~ : Int,
   to~ : Int,
+  done? : Bool,
   body : Array[DocumentElement],
 ) -> CommentSpec raise DocxError {
+  check_comment_who(author~, initials~, date~)
+  if from < 0 {
+    raise Unsupported(
+      message="a comment anchor cannot start at block \{from}; block indexes are 0-based",
+    )
+  }
+  if to < from {
+    raise Unsupported(
+      message="a comment anchor cannot end at block \{to}, before its start at block \{from}",
+    )
+  }
+  check_comment_body(body)
+  { author, initials, date, target: Anchored(from~, to~), done, body }
+}
+
+///|
+/// Validates and builds an anchorless REPLY: `reply_to` is the 0-based
+/// index of an EARLIER spec in the array passed to
+/// `write_docx_with_comments` (checked against the array there; chains
+/// are allowed — a reply may answer another reply). Per the locked
+/// policy a reply emits NO range or reference markers: its parent's
+/// anchor is logically its own, and the thread linkage lives in
+/// word/commentsExtended.xml (`w15:paraIdParent`). Everything else —
+/// author/initials/date rules, the plain-content paragraph-only body —
+/// matches `comment_spec`.
+pub fn comment_reply(
+  author~ : String,
+  initials? : String,
+  date? : String,
+  reply_to~ : Int,
+  done? : Bool,
+  body : Array[DocumentElement],
+) -> CommentSpec raise DocxError {
+  check_comment_who(author~, initials~, date~)
+  if reply_to < 0 {
+    raise Unsupported(
+      message="a reply cannot answer comment \{reply_to}; comment indexes are 0-based",
+    )
+  }
+  check_comment_body(body)
+  { author, initials, date, target: ReplyTo(reply_to), done, body }
+}
+
+///|
+fn check_comment_who(
+  author~ : String,
+  initials~ : String?,
+  date~ : String?,
+) -> Unit raise DocxError {
   if author == "" {
     raise Unsupported(message="a comment needs a non-empty author")
   }
@@ -59,18 +126,6 @@ pub fn comment_spec(
     Some(date) => check_comment_date(date)
     None => ()
   }
-  if from < 0 {
-    raise Unsupported(
-      message="a comment anchor cannot start at block \{from}; block indexes are 0-based",
-    )
-  }
-  if to < from {
-    raise Unsupported(
-      message="a comment anchor cannot end at block \{to}, before its start at block \{from}",
-    )
-  }
-  check_comment_body(body)
-  { author, initials, date, from_block: from, to_block: to, body }
 }
 
 ///|
@@ -130,26 +185,41 @@ fn check_comment_content(element : DocumentElement) -> Unit raise DocxError {
 /// id's reference run appended to the `to` paragraph — and its
 /// definition is written to word/comments.xml. Both anchor endpoints
 /// must be top-level paragraphs (tables cannot carry the canonical
-/// intra-paragraph shape). Comment BODIES reuse the body writers, with
-/// a fail-closed guard: content that allocates relationships or media
-/// (hyperlinks, images) raises instead of emitting references that
-/// would dangle in the comments part.
+/// intra-paragraph shape). REPLIES (`comment_reply`) must answer an
+/// EARLIER spec in this array and emit no markers at all. Comment
+/// BODIES reuse the body writers, with a fail-closed guard: content
+/// that allocates relationships or media (hyperlinks, images) raises
+/// instead of emitting references that would dangle in the comments
+/// part. Threading or resolution anywhere adds w14:paraId stamps and
+/// word/commentsExtended.xml; otherwise output is byte-identical to
+/// the threading-free writer.
 pub fn write_docx_with_comments(
   body : Array[DocumentElement],
   comments : Array[CommentSpec],
 ) -> Bytes raise DocxError {
   for index, comment in comments {
-    if comment.from_block >= body.length() || comment.to_block >= body.length() {
-      raise Unsupported(
-        message="comments[\{index}] anchors blocks \{comment.from_block}..\{comment.to_block}, but the body has \{body.length()} block(s)",
-      )
-    }
-    for endpoint in [comment.from_block, comment.to_block] {
-      guard body[endpoint] is Paragraph(..) else {
-        raise Unsupported(
-          message="comments[\{index}] anchors block \{endpoint}, which is not a paragraph (comment anchors must be top-level paragraphs)",
-        )
+    match comment.target {
+      Anchored(from~, to~) => {
+        if from >= body.length() || to >= body.length() {
+          raise Unsupported(
+            message="comments[\{index}] anchors blocks \{from}..\{to}, but the body has \{body.length()} block(s)",
+          )
+        }
+        for endpoint in [from, to] {
+          guard body[endpoint] is Paragraph(..) else {
+            raise Unsupported(
+              message="comments[\{index}] anchors block \{endpoint}, which is not a paragraph (comment anchors must be top-level paragraphs)",
+            )
+          }
+        }
       }
+      ReplyTo(parent) =>
+        // Strictly earlier: chains are acyclic by construction.
+        if parent >= index {
+          raise Unsupported(
+            message="comments[\{index}] replies to comment \{parent}, which is not an EARLIER comment (replies answer comments that already exist)",
+          )
+        }
     }
     // Re-validate the body: it is an aliased mutable array, so the
     // constructor's guarantees may no longer hold by write time.
@@ -165,13 +235,17 @@ pub fn write_docx_with_comments(
   let starts_at : Map[Int, Array[Int]] = Map([])
   let ends_at : Map[Int, Array[Int]] = Map([])
   for id, comment in comments {
-    match starts_at.get(comment.from_block) {
-      Some(ids) => ids.push(id)
-      None => starts_at[comment.from_block] = [id]
+    guard comment.target is Anchored(from~, to~) else {
+      // Replies are anchorless: no markers anywhere in document.xml.
+      continue
     }
-    match ends_at.get(comment.to_block) {
+    match starts_at.get(from) {
       Some(ids) => ids.push(id)
-      None => ends_at[comment.to_block] = [id]
+      None => starts_at[from] = [id]
+    }
+    match ends_at.get(to) {
+      Some(ids) => ids.push(id)
+      None => ends_at[to] = [id]
     }
   }
   let blocks : Array[XmlNode] = []
@@ -226,12 +300,36 @@ pub fn write_docx_with_comments(
   // would dangle when referenced from comments.xml.
   let relationships_before = ctx.document_relationships.length()
   let media_before = ctx.media.length()
+  // Threading (a reply) or resolution (`done`) anywhere brings in the
+  // w14/w15 machinery; without either, output stays byte-identical to
+  // the threading-free writer.
+  let mut needs_extended = false
+  for comment in comments {
+    if comment.done is Some(_) || comment.target is ReplyTo(_) {
+      needs_extended = true
+    }
+  }
+  // paraIds are stamped ONLY on comment body paragraphs (the locked
+  // rule), allocated densely from a nonzero counter — ST_LongHexNumber
+  // in Word's accepted window (below 0x80000000), collision-free by
+  // construction. The commentEx KEY is the LAST body paragraph's id.
+  let mut next_para_id = 1
+  let last_para_ids : Array[String] = []
   let comment_elements : Array[XmlNode] = []
   for id, comment in comments {
     let children : Array[XmlNode] = []
+    let mut last_para_id = ""
     for paragraph in comment.body {
-      children.push(XmlElement(write_block(paragraph, ctx)))
+      let element = write_block(paragraph, ctx)
+      if needs_extended && element.name == "w:p" {
+        let para_id = format_para_id(next_para_id)
+        next_para_id += 1
+        element.attributes["w14:paraId"] = para_id
+        last_para_id = para_id
+      }
+      children.push(XmlElement(element))
     }
+    last_para_ids.push(last_para_id)
     let attributes : Map[String, String] = {
       "w:id": id.to_string(),
       "w:author": comment.author,
@@ -273,10 +371,61 @@ pub fn write_docx_with_comments(
       "comments.xml",
       external=false,
     )
+    let comments_namespaces : Map[String, String] = {
+      "w": WORDPROCESSINGML_NAMESPACE,
+    }
+    let root_attributes : Map[String, String] = Map([])
+    if needs_extended {
+      // w14:paraId is a Word-2010 extension: declare it plus markup
+      // compatibility, and tell strict consumers it is ignorable.
+      comments_namespaces["w14"] = W14_NAMESPACE
+      comments_namespaces["mc"] = MC_NAMESPACE
+      root_attributes["mc:Ignorable"] = "w14"
+    }
     Some(
       @xml.write_xml_string(
-        @xml.xml_element("w:comments", children=comment_elements),
-        namespaces={ "w": WORDPROCESSINGML_NAMESPACE },
+        @xml.xml_element(
+          "w:comments",
+          attributes=root_attributes,
+          children=comment_elements,
+        ),
+        namespaces=comments_namespaces,
+      ),
+    )
+  } else {
+    None
+  }
+  let comments_extended_xml : String? = if needs_extended {
+    let _ = ctx.allocate_relationship(
+      "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
+      "commentsExtended.xml",
+      external=false,
+    )
+    let entries : Array[XmlNode] = []
+    for id, comment in comments {
+      let attributes : Map[String, String] = {
+        "w15:paraId": last_para_ids[id],
+        "w15:done": if comment.done is Some(true) {
+          "1"
+        } else {
+          "0"
+        },
+      }
+      match comment.target {
+        ReplyTo(parent) =>
+          attributes["w15:paraIdParent"] = last_para_ids[parent]
+        Anchored(..) => ()
+      }
+      entries.push(XmlElement(@xml.xml_element("w15:commentEx", attributes~)))
+    }
+    Some(
+      @xml.write_xml_string(
+        @xml.xml_element(
+          "w15:commentsEx",
+          attributes={ "mc:Ignorable": "w15" },
+          children=entries,
+        ),
+        namespaces={ "w15": W15_NAMESPACE, "mc": MC_NAMESPACE },
       ),
     )
   } else {
@@ -295,12 +444,38 @@ pub fn write_docx_with_comments(
     styles_xml_for(ctx.used_styles),
     ctx,
     comments_xml~,
+    comments_extended_xml~,
   ) catch {
     err =>
       raise Unsupported(
         message="could not assemble the document package: \{err}",
       )
   }
+}
+
+///|
+const W14_NAMESPACE : String = "http://schemas.microsoft.com/office/word/2010/wordml"
+
+///|
+const W15_NAMESPACE : String = "http://schemas.microsoft.com/office/word/2012/wordml"
+
+///|
+const MC_NAMESPACE : String = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+///|
+/// Eight uppercase hex digits (ST_LongHexNumber). Callers keep the
+/// counter positive and far below Word's 0x80000000 ceiling.
+fn format_para_id(value : Int) -> String {
+  let digits = "0123456789ABCDEF"
+  let builder = StringBuilder::new()
+  for shift in [28, 24, 20, 16, 12, 8, 4, 0] {
+    let nibble = (value >> shift) & 0xF
+    match digits.get_char(nibble) {
+      Some(ch) => builder.write_char(ch)
+      None => ()
+    }
+  }
+  builder.to_string()
 }
 
 ///|
