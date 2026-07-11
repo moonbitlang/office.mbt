@@ -16,7 +16,7 @@
     {"op": "paragraph", "params": {"text": "Bob to book the Q3 offsite venue", "list": {"ordered": true, "level": 1}}},
     {"op": "table", "params": {"header_rows": 1, "rows": [
       [{"text": "Topic"}, {"text": "Owner"}, {"text": "Status"}],
-      [{"text": "Budget review (owner and status merged)", "col_span": 2}, {"text": "Done"}],
+      [{"text": "Budget review (spans the Topic and Owner columns)", "col_span": 2}, {"text": "Done"}],
       [{"text": "Office move"}, {"text": "Carol"}, {"text": "Open"}]
     ]}}
   ]
