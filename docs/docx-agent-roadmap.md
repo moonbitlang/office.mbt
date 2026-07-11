@@ -457,8 +457,9 @@ splice well-formed fragments, keep original bytes elsewhere.
 ### L0 verdict (2026-07-11): **GO**
 
 The spike shipped as `docx2html/splice` (SpanEdit/SplicePlan/splice_docx)
-plus scanner insertion offsets (`ParagraphSpan`:
-content_start past a leading pPr / close_tag_start / self_closing) and
+plus scanner insertion offsets (`NodeSpan` via `body_paragraph_span` /
+`body_run_span`: content_start past a leading pPr/rPr, close_tag_start,
+self_closing) and
 the proof — a comment spliced into an existing document passes the
 Microsoft SDK, reads back through the index anchored at the right
 paths with zero warnings, and holds the fidelity oracle (mutated parts

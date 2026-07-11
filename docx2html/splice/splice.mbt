@@ -313,62 +313,72 @@ fn declared_encoding(bytes : Bytes) -> EncodingDeclaration {
     bytes[at + 4] == b'l') {
     return NoDeclaration
   }
-  // Scan the declaration (up to '?>') for encoding="..." | '...'.
-  let mut cursor = at + 5
+  // Walk the declaration as PSEUDO-ATTRIBUTES (name = "value" | 'value'),
+  // never scanning inside quoted values — "encoding" appearing inside a
+  // VALUE is just text (review round 2). Any structural deviation is a
+  // malformed declaration and fails closed.
   let limit = bytes.length()
-  while cursor + 1 < limit &&
-        !(bytes[cursor] == b'?' && bytes[cursor + 1] == b'>') {
-    if bytes[cursor] == b'e' && matches_at(bytes, cursor, "encoding") {
-      let mut value_at = cursor + 8
-      while value_at < limit && is_decl_space(bytes[value_at]) {
-        value_at += 1
-      }
-      if value_at < limit && bytes[value_at] == b'=' {
-        value_at += 1
-        while value_at < limit && is_decl_space(bytes[value_at]) {
-          value_at += 1
-        }
-        if value_at < limit &&
-          (bytes[value_at] == b'"' || bytes[value_at] == b'\'') {
-          let quote = bytes[value_at]
-          let start = value_at + 1
-          let mut end = start
-          while end < limit && bytes[end] != quote {
-            end += 1
-          }
-          if end < limit {
-            let builder = StringBuilder::new()
-            for offset in start..<end {
-              builder.write_char(
-                bytes[offset].to_int().to_char().unwrap_or('?'),
-              )
-            }
-            return Declared(builder.to_string())
-          }
-        }
-        // "encoding" seen but its value is unquoted or unterminated.
-        return MalformedDeclaration
-      }
-      // "encoding" not followed by '=': also malformed as a
-      // pseudo-attribute (XML declarations have a fixed grammar).
+  let mut cursor = at + 5
+  let mut found : EncodingDeclaration = NoDeclaration
+  for ;; {
+    while cursor < limit && is_decl_space(bytes[cursor]) {
+      cursor += 1
+    }
+    if cursor + 1 < limit && bytes[cursor] == b'?' && bytes[cursor + 1] == b'>' {
+      return found
+    }
+    // Pseudo-attribute name: ASCII letters only (version/encoding/
+    // standalone).
+    let name_start = cursor
+    while cursor < limit && is_decl_name_byte(bytes[cursor]) {
+      cursor += 1
+    }
+    if cursor == name_start {
+      return MalformedDeclaration
+    }
+    let name_builder = StringBuilder::new()
+    for offset in name_start..<cursor {
+      name_builder.write_char(bytes[offset].to_int().to_char().unwrap_or('?'))
+    }
+    let name = name_builder.to_string()
+    while cursor < limit && is_decl_space(bytes[cursor]) {
+      cursor += 1
+    }
+    if cursor >= limit || bytes[cursor] != b'=' {
       return MalformedDeclaration
     }
     cursor += 1
+    while cursor < limit && is_decl_space(bytes[cursor]) {
+      cursor += 1
+    }
+    if cursor >= limit || !(bytes[cursor] == b'"' || bytes[cursor] == b'\'') {
+      return MalformedDeclaration
+    }
+    let quote = bytes[cursor]
+    cursor += 1
+    let value_start = cursor
+    while cursor < limit && bytes[cursor] != quote {
+      cursor += 1
+    }
+    if cursor >= limit {
+      return MalformedDeclaration
+    }
+    if name == "encoding" {
+      let value_builder = StringBuilder::new()
+      for offset in value_start..<cursor {
+        value_builder.write_char(
+          bytes[offset].to_int().to_char().unwrap_or('?'),
+        )
+      }
+      found = Declared(value_builder.to_string())
+    }
+    cursor += 1
   }
-  NoDeclaration
 }
 
 ///|
-fn matches_at(bytes : Bytes, at : Int, needle : String) -> Bool {
-  if at + needle.length() > bytes.length() {
-    return false
-  }
-  for offset, unit in needle.code_units() {
-    if bytes[at + offset].to_int() != unit.to_int() {
-      return false
-    }
-  }
-  true
+fn is_decl_name_byte(byte : Byte) -> Bool {
+  (byte >= b'a' && byte <= b'z') || (byte >= b'A' && byte <= b'Z')
 }
 
 ///|

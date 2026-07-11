@@ -226,3 +226,53 @@ test "L0 review round 1: malformed XML declarations fail closed" {
     "'u.xml' has a malformed XML declaration",
   )
 }
+
+///|
+test "L0 review round 2: 'encoding' inside a quoted value cannot fool the gate" {
+  // The declaration's VERSION value contains encoding='UTF-8'; the real
+  // encoding is ISO-8859-1 and must still be rejected (the sniffer
+  // walks pseudo-attributes, never the inside of values).
+  let devious = @mbtzip.Archive::new()
+  devious.add(
+    "d.xml",
+    @utf8.encode(
+      "<?xml version=\"encoding='UTF-8'\" encoding=\"ISO-8859-1\"?><r></r>",
+    ),
+  )
+  let devious_bytes = @mbtzip.write(devious)
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part("d.xml", @splice.span_edit(start=0, end=0, b""))
+  expect_splice_failure(
+    () => @splice.splice_docx(devious_bytes, plan),
+    "'d.xml' declares encoding 'ISO-8859-1'",
+  )
+  // The canonical declaration (with standalone) still passes untouched.
+  let canonical = @mbtzip.Archive::new()
+  let canonical_source = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><r></r>"
+  canonical.add("c.xml", @utf8.encode(canonical_source))
+  let canonical_bytes = @mbtzip.write(canonical)
+  let plan_ok = @splice.SplicePlan::new()
+  guard canonical_source.find("</r>") is Some(at)
+  plan_ok.edit_part(
+    "c.xml",
+    @splice.span_edit(start=at, end=at, @utf8.encode("<fine/>")),
+  )
+  let out = @mbtzip.read(@splice.splice_docx(canonical_bytes, plan_ok))
+  guard out.get("c.xml") is Some(c_bytes)
+  inspect(
+    @utf8.decode(c_bytes, ignore_bom=true).find("<fine/>") is Some(_),
+    content="true",
+  )
+  // A declaration with no encoding at all also passes.
+  let plain = @mbtzip.Archive::new()
+  plain.add("p.xml", @utf8.encode("<?xml version=\"1.0\"?><r></r>"))
+  let plain_bytes = @mbtzip.write(plain)
+  let plan_plain = @splice.SplicePlan::new()
+  guard "<?xml version=\"1.0\"?><r></r>".find("</r>") is Some(plain_at)
+  plan_plain.edit_part(
+    "p.xml",
+    @splice.span_edit(start=plain_at, end=plain_at, @utf8.encode("<ok/>")),
+  )
+  let plain_out = @mbtzip.read(@splice.splice_docx(plain_bytes, plan_plain))
+  inspect(plain_out.get("p.xml") is Some(_), content="true")
+}
