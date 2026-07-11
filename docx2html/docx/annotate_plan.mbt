@@ -357,6 +357,12 @@ fn find_ascii_bytes(bytes : Bytes, needle : String) -> Int? {
       at = skip_past(at + 9, "]]>")
       continue
     }
+    // Processing instructions (and the XML declaration) may legally
+    // hold the needle's text too.
+    if starts_with(at, "<?") {
+      at = skip_past(at + 2, "?>")
+      continue
+    }
     if starts_with(at, needle) {
       return Some(at)
     }
