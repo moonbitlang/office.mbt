@@ -537,6 +537,96 @@ error: ops[2]: could not read the image's dimensions from its image/png header
 [1]
 ```
 
+## Annotate: Add Comments To EXISTING Documents (Phase 2 L1)
+
+`docx annotate add` mutates by BYTE-PRESERVING surgery: markers splice
+into the original bytes at scanner offsets, the definition into the
+comments part (created and wired only when absent), and everything
+else stays byte-for-byte. Metadata is branch-exclusive: `--text` owns
+it via flags, `--json` (a `docx.annotate/1` envelope FILE) owns all of
+it.
+
+```mooncram
+$ cat > report2.json <<'SCRIPT'
+> {
+>   "schema": "docx.batch/2",
+>   "ops": [
+>     {"op": "paragraph", "params": {"text": "Q3 Findings", "style": "Heading1"}},
+>     {"op": "paragraph", "params": {"text": "Revenue is up nine percent."}},
+>     {"op": "paragraph", "params": {"text": "Costs are flat."}}
+>   ]
+> }
+> SCRIPT
+```
+
+```mooncram
+$ docx.exe batch existing.docx report2.json
+created existing.docx (3 op(s))
+```
+
+```mooncram
+$ docx.exe annotate add existing.docx reviewed.docx --at '/body/p[2]' --text 'Cite the source for nine percent.' --author 'Auditor' --initials AU --date 2026-07-11T21:00:00Z
+annotated reviewed.docx (comment 0 on /body/p[2])
+```
+
+```mooncram
+$ docx.exe validate reviewed.docx
+valid
+```
+
+```mooncram
+$ docx.exe outline reviewed.docx | jq -c '.comments'
+[{"id":"0","author":"Auditor","anchored_to":"/body/p[2]"}]
+```
+
+Annotating an ALREADY-annotated file splices into the existing
+comments part with dense id allocation; ranges use `--to`:
+
+```mooncram
+$ docx.exe annotate add reviewed.docx reviewed2.docx --at '/body/p[1]' --to '/body/p[3]' --text 'Range covers the whole report.' --author 'Second'
+annotated reviewed2.docx (comment 1 on /body/p[1])
+```
+
+```mooncram
+$ docx.exe get reviewed2.docx '/comments/comment[@id=1]' --json | jq -c '{author, anchors}'
+{"author":"Second","anchors":[{"story":"/body","start":"/body/p[1]","start_boundary":"inside_start","end":"/body/p[3]","end_boundary":"inside_end","references":["/body/p[3]/r[2]"]}]}
+```
+
+The `--json` branch owns ALL metadata (flags rejected), with the
+batch-discipline envelope:
+
+```mooncram
+$ printf '{"schema": "docx.annotate/1", "comment": {"author": "Envelope", "paragraphs": [{"text": "First paragraph,"}, {"runs": [{"text": "bold second.", "bold": true}]}]}}' > note.json; docx.exe annotate add reviewed2.docx reviewed3.docx --at '/body/p[3]' --json note.json
+annotated reviewed3.docx (comment 2 on /body/p[3])
+```
+
+```mooncram
+$ docx.exe annotate add reviewed2.docx never.docx --at '/body/p[3]' --json note.json --author Nope; ls never.docx 2>/dev/null || echo "not written"
+error: --author/--initials/--date are rejected with --json (the envelope owns all metadata)
+not written
+```
+
+Failures always leave ZERO output — bad anchors, bad dates, duplicate
+keys in the envelope:
+
+```mooncram
+$ docx.exe annotate add existing.docx never2.docx --at '/body/p[9]' --text n --author A; ls never2.docx 2>/dev/null || echo "not written"
+error: --at '/body/p[9]' does not name a body paragraph in 'existing.docx'
+not written
+```
+
+```mooncram
+$ docx.exe annotate add existing.docx never3.docx --at '/body/p[1]' --text n --author A --date 2026-02-30T00:00:00Z; ls never3.docx 2>/dev/null || echo "not written"
+error: the comment date '2026-02-30T00:00:00Z' has day 30, which that year's month 2 does not reach (expected an xsd:dateTime like 2026-07-11T09:30:00Z)
+not written
+```
+
+```mooncram
+$ printf '{"schema": "docx.annotate/1", "comment": {"author": "A", "author": "B", "paragraphs": [{"text": "x"}]}}' > dupkey.json; docx.exe annotate add existing.docx never4.docx --at '/body/p[1]' --json dupkey.json
+error: comment repeats the key "author" (strict scripts must not rely on last-wins parsing)
+[1]
+```
+
 ## Comments And Notes (`/comments`, `/footnotes` — Phase 2)
 
 The commented fixture (a comment thread with a resolved reply, plus a

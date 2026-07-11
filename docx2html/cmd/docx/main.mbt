@@ -57,6 +57,11 @@ async fn run_cli() -> Unit {
     Some(("text", m)) => run_text(m)
     Some(("get", m)) => run_get(m)
     Some(("validate", m)) => run_validate(m)
+    Some(("annotate", m)) =>
+      match m.subcommand {
+        Some(("add", mm)) => run_annotate_add(mm)
+        _ => println(command.render_help())
+      }
     _ => println(command.render_help())
   }
 }
@@ -76,6 +81,7 @@ fn build_command() -> @argparse.Command {
       text_command(),
       get_command(),
       validate_command(),
+      annotate_command(),
     ],
   )
 }
