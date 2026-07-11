@@ -294,6 +294,9 @@ pub struct DocxAnnotatedResult {
   priv footnote_bodies : Array[(String, Array[DocumentElement])]
   priv endnote_bodies : Array[(String, Array[DocumentElement])]
   priv comment_bodies : Array[(String, Array[DocumentElement])]
+  // The zip entry the body-story spans index into (L0), resolved via
+  // the officeDocument relationship.
+  priv main_part : String
 }
 
 ///|
@@ -426,6 +429,7 @@ pub fn read_docx_annotated(
   {
     package_result,
     index,
+    main_part: main_story_path(zip),
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,
