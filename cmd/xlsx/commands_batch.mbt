@@ -19,7 +19,7 @@ async fn run_batch(m : @argparse.Matches) -> Unit {
     err => raise CliError("error: \{script_path}: \{err}")
   }
   let ops = @batch.parse_script(document) catch {
-    @batch.BatchError(message) => raise CliError("error: " + message)
+    BatchError(message) => raise CliError("error: " + message)
   }
   // Resolve a symlinked workbook to its target up front: the same resolved
   // path is opened and saved, so a link retargeted mid-run cannot make the

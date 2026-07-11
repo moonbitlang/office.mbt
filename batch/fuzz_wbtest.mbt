@@ -96,7 +96,7 @@ fn random_op(rng : @random.Rand) -> Json {
   if rng.int(limit=3) == 0 {
     return valid_op(rng)
   }
-  let params : Map[String, Json] = {}
+  let params : Map[String, Json] = Map([])
   let param_count = rng.int(limit=6)
   for _i in 0..<param_count {
     params[param_keys[rng.int(limit=param_keys.length())]] = random_value(rng)
@@ -121,7 +121,7 @@ fn random_document(rng : @random.Rand) -> Json {
   for _i in 0..<rng.int(limit=5) {
     ops.push(random_op(rng))
   }
-  let root : Map[String, Json] = {}
+  let root : Map[String, Json] = Map([])
   match rng.int(limit=8) {
     0 => root["schema"] = Json::string("xlsx.batch/2")
     1 => root["schema"] = Json::number(1.0)
@@ -152,7 +152,12 @@ test "fuzz: generated documents parse or fail typed, never panic" {
     // `parse_script` raises only `BatchError` — the compiler enforces the
     // typed-error half of the oracle; the run enforces no-panic. Every
     // round reaches the parser (the document is already valid JSON).
-    match (try? parse_script(random_document(rng))) {
+    match
+      (try parse_script(random_document(rng)) catch {
+        e => Err(e)
+      } noraise {
+        v => Ok(v)
+      }) {
       Ok(_) => parsed += 1
       Err(BatchError(_)) => rejected += 1
     }

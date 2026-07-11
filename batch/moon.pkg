@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/core/string",
   "bobzhang/mbtexcel/inspect",
   "bobzhang/mbtexcel/xlsx",
   "moonbitlang/core/debug",

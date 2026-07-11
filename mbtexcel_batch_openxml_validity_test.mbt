@@ -5,7 +5,7 @@
 /// same oracle the other root validity tests use.
 #cfg(target="native")
 async test "mbtexcel batch-built workbook is OpenXML-valid" {
-  let workbook = new_workbook()
+  let workbook = @mbtexcel.new_workbook()
   ignore(workbook.add_sheet("Data"))
   let script =
     #|{
@@ -33,12 +33,12 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
   for op in ops {
     @batch.apply_op(workbook, op)
   }
-  let bytes = write(workbook)
+  let bytes = @mbtexcel.write(workbook)
 
   // Structural sanity before the heavyweight oracle.
-  let problems = @xlsx.validate_ooxml_package(bytes[:])
+  let problems = @xlsx.validate_ooxml_package(bytes)
   if problems.length() != 0 {
-    fail("structural validation failed: \{problems}")
+    fail("structural validation failed: \{to_repr(problems)}")
   }
   let stamp = @env.now()
     .to_string()
@@ -52,7 +52,7 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
   @async/fs.write_file(
     path,
     bytes,
-    create_mode=@async/fs.CreateOrTruncate,
+    create_mode=CreateOrTruncate,
     permission=0o644,
   ) catch {
     err => fail("write xlsx failed: \{err}")

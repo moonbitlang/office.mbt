@@ -142,7 +142,7 @@ pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
     )
   }
   let ops = []
-  let style_cells : Ref[Int64] = Ref::new(0)
+  let style_cells : Ref[Int64] = Ref(0)
   for index, item in items {
     ops.push(parse_op(index, item, style_cells))
   }
@@ -174,7 +174,7 @@ fn parse_op(
     Some(_) => raise op_error(index, name, "\"params\" must be an object")
     None => raise op_error(index, name, "missing \"params\" object")
   }
-  let reader = ParamReader::{ index, op: name, params, used: {} }
+  let reader = ParamReader::{ index, op: name, params, used: Map([]) }
   let op = match name {
     "set" =>
       OpSet(
@@ -417,8 +417,7 @@ fn ParamReader::range(
 ) -> (String, Int64) raise BatchError {
   let text = self.string(key)
   let range = @inspect.parse_range(text) catch {
-    @inspect.RangeTooLarge(_) as err =>
-      raise op_error(self.index, self.op, "\{err}")
+    RangeTooLarge(_) as err => raise op_error(self.index, self.op, "\{err}")
     _ =>
       raise op_error(
         self.index,
