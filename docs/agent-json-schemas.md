@@ -12,15 +12,19 @@ the source of truth and this document has a bug.
 
 - Every payload's first key is `"schema"`, holding an identifier of the form
   `<domain>.<kind>/<major>` (e.g. `xlsx.outline/1`). Identifiers are declared
-  once per module: xlsx identifiers in `inspect/schema.mbt`, docx identifiers
-  in `docx2html/inspect/schema.mbt`.
-- **Evolution is additive-only**: new optional keys may appear under an
-  existing identifier; keys are never renamed, removed, or retyped. A
-  breaking change mints a new identifier with a bumped major. Consumers of
-  **emitted** payloads (`outline`, `get --json`) must ignore keys they do
-  not recognize. Schemas the tool **consumes** (`xlsx.batch/1`) are the
-  opposite: validated strictly, unknown keys are errors — a typo must fail
-  loudly, not silently no-op.
+  once per package: xlsx identifiers (including the consumed
+  `xlsx.batch/1`) in `inspect/schema.mbt`, docx read-side identifiers in
+  `docx2html/inspect/schema.mbt`, and the consumed `docx.batch/1`
+  identifier in `docx2html/batch` (`SCHEMA_BATCH`), next to its parser.
+- **Produced payloads** (everything the CLIs print — outline, element,
+  `get --json`) evolve additively-only: new optional keys may appear under
+  an existing identifier; keys are never renamed, removed, or retyped. A
+  breaking change mints a new identifier with a bumped major. Consumers
+  must ignore keys they do not recognize.
+- **Consumed scripts** (`xlsx.batch/1`, `docx.batch/1`) are the opposite:
+  validation is STRICT. Unknown keys, unknown enum values, and wrong value
+  types are rejected with an error naming the op — a typo must fail
+  loudly, not silently no-op or drop content.
 - **`null` is never emitted.** An absent key means "unset / not present".
   Top-level inventory lists (`sheets`, `merges`, `tables`, `charts`,
   `images`, `pivot_tables`, `defined_names`, `cells`) are always present
@@ -268,12 +272,17 @@ only when true; `null` is never emitted):
 ## `docx.batch/1` — authoring script (`docx batch <output> <script.json>`)
 
 The consumed (input) schema: **strict** validation — an unknown schema, op,
-or key, or a wrong value type, fails naming the 0-based op index and the
-offending key; nothing is repaired. **Fresh-document-only**: the output path
-must not exist (the reader is lossy, so mutating existing files would
-silently drop unmodeled parts — batch refuses rather than corrupts). The
-build is all-or-nothing with an atomic write; `--dry-run` parses, builds,
-and validates without writing. Scripts are capped at 10,000 ops.
+key, or enum value, a duplicate key within one object, or a wrong value
+type fails naming the 0-based op index and the offending key; nothing is
+repaired. Numbers must be exact integers (`2.9` is an error, never
+truncated). Strings destined for the document reject XML-illegal control
+characters (text additionally rejects raw `\n`/`\r` — paragraphs are the
+line-break unit). **Fresh-document-only**: the output path must not exist
+(the reader is lossy, so mutating existing files would silently drop
+unmodeled parts — batch refuses rather than corrupts). The build is
+all-or-nothing with an atomic write (unique temp + no-replace rename);
+`--dry-run` parses, builds, and validates without writing. Scripts are
+capped at 10,000 ops; an empty `ops` array yields a blank document.
 
 ```json
 {
@@ -287,24 +296,42 @@ and validates without writing. Scripts are capped at 10,000 ops.
     ]}},
     {"op": "paragraph", "params": {"text": "item", "list": {"ordered": true, "level": 2}}},
     {"op": "table", "params": {"header_rows": 1, "rows": [
-      [{"text": "H"}, {"text": "V", "col_span": 1}],
-      [{"paragraphs": [{"text": "cell paragraphs"}], "row_span": 1}, {"text": "x"}]
+      [{"text": "A"}, {"text": "B"}, {"paragraphs": [{"text": "C"}]}],
+      [{"text": "spans A+B", "col_span": 2}, {"text": "c"}],
+      [{"text": "tall", "row_span": 2}, {"text": "b"}, {"text": "c"}],
+      [{"text": "b"}, {"text": "c"}]
     ]}}
   ]
 }
 ```
 
-- `paragraph.params`: `text` (one plain run) XOR `runs[]`; `style`
-  (`Normal`, `Heading1`..`Heading6`); `align`; `list` (`{ordered,
-  level?=1}`, levels 1–9).
+- `paragraph.params`: exactly one of `text` (one plain run; `""` makes a
+  blank paragraph) or `runs[]` (non-empty); `style` (`Normal`,
+  `Heading1`..`Heading6`); `align` (`left`, `center`, `right`, `both`,
+  `start`, `end`, `distribute`); `list` (`{ordered, level?=1}`, levels
+  1–9). `ordered` is required: `true` numbers the items, `false` bullets
+  them.
 - run spec: `text` plus `bold/italic/underline/strike/all_caps/small_caps`
-  (booleans), `vertical` (`superscript`/`subscript`), `font`, `size`
-  (points), `highlight` — the exact writer surface, so anything the writer
-  fails closed on (e.g. blank alt text) fails the batch too.
-- `link`: `href` XOR `anchor`, optional `target_frame`, `text` XOR `runs[]`
-  (links cannot nest).
-- `image`: `path` (read relative to the CLI's working directory; PNG, JPEG,
-  GIF), `content_type` (inferred from the extension when omitted), `alt`.
-- `table.params`: `rows[][]` of cells (`text` XOR `paragraphs[]`,
-  `col_span`/`row_span` ≥ 1); `header_rows` marks the first N rows. Grid
-  geometry is validated by the table writer (ragged tables fail).
+  (booleans), `vertical` (`superscript`/`subscript`), `font` (non-empty),
+  `size` (points, 1–1638 — Word's cap), `highlight` (an ST_HighlightColor
+  name: `yellow`, `green`, `cyan`, `magenta`, `blue`, `red`, `darkBlue`,
+  `darkCyan`, `darkGreen`, `darkMagenta`, `darkRed`, `darkYellow`,
+  `darkGray`, `lightGray`, `black`, `white`, `none`) — the exact writer
+  surface, so anything the writer fails closed on fails the batch too,
+  with the op's address. Two read-back keys are named differently:
+  `docx.element/1` reports `strike` as `strikethrough` and `vertical` as
+  `vertical_alignment`.
+- `link`: exactly one of `href` or `anchor` (non-empty), optional
+  `target_frame` (non-empty), and exactly one of `text` or `runs[]`
+  (non-empty; links cannot nest).
+- `image`: `path` (read relative to the CLI's working directory),
+  `content_type` (`image/png`, `image/jpeg`, `image/gif`; inferred from
+  the extension when omitted), `alt` (non-blank when present).
+- `table.params`: `rows[][]` (non-empty, each row non-empty) of cells
+  (exactly one of `text` or non-empty `paragraphs[]`; `col_span` 1–63 —
+  Word's column limit; `row_span` ≥ 1, default 1 for both);
+  `header_rows` (0 to the row count, default 0) marks the first N rows. A
+  cell with `col_span` N occupies N grid columns of its row, and a cell
+  under a still-open `row_span` is not written at all — as in the example,
+  each spanned row lists FEWER cells, and rows must tile the same total
+  width, at most 63 columns (ragged or wider tables fail).

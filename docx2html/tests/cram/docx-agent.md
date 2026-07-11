@@ -310,11 +310,26 @@ $ docx.exe text report.docx
 [/body/tbl[1]/tr[2]/tc[2]/p[1]] EMEA
 ```
 
-Strict validation names the op index; an existing output fails closed:
+`--dry-run` validates the whole pipeline without touching disk:
+
+```mooncram
+$ docx.exe batch dry.docx report.json --dry-run; ls dry.docx 2>/dev/null || echo "not written"
+ok (dry run): 4 op(s), nothing written
+not written
+```
+
+Strict validation names the op index; duplicate keys and an existing
+output fail closed:
 
 ```mooncram
 $ printf '{"schema": "docx.batch/1", "ops": [{"op": "chart", "params": {}}]}' > bad.json; docx.exe batch out2.docx bad.json
 error: ops[0].op 'chart' is unknown (known ops: paragraph, table)
+[1]
+```
+
+```mooncram
+$ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "op": "table", "params": {"text": "x"}}]}' > dup.json; docx.exe batch out3.docx dup.json
+error: the script repeats the key "op" within one object (strict scripts must not rely on last-wins parsing)
 [1]
 ```
 

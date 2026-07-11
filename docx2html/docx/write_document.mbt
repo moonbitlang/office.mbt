@@ -283,6 +283,49 @@ fn write_inline(
 }
 
 ///|
+/// Word caps font size at 1638pt (ST_HpsMeasure half-points max 3276).
+const MAX_FONT_SIZE_POINTS : Int = 1638
+
+///|
+/// The closed ST_HighlightColor enum (WML §17.18.40).
+fn is_highlight_color(value : String) -> Bool {
+  value
+  is ("black"
+  | "blue"
+  | "cyan"
+  | "darkBlue"
+  | "darkCyan"
+  | "darkGray"
+  | "darkGreen"
+  | "darkMagenta"
+  | "darkRed"
+  | "darkYellow"
+  | "green"
+  | "lightGray"
+  | "magenta"
+  | "none"
+  | "red"
+  | "white"
+  | "yellow")
+}
+
+///|
+/// Fail-closed guard for user text that lands in an XML attribute: C0
+/// controls are either XML-1.0-illegal (the escaper passes them through)
+/// or mutated by attribute-value normalization (tab/CR/LF become spaces),
+/// so none can round-trip.
+fn check_attribute_value(what : String, value : String) -> Unit raise DocxError {
+  for unit in value {
+    let code = unit.to_int()
+    if code < 0x20 {
+      raise Unsupported(
+        message="\{what} contains a control character (code \{code}) that cannot survive XML attribute normalization",
+      )
+    }
+  }
+}
+
+///|
 fn write_run(
   children : Array[DocumentElement],
   properties : RunProperties,
@@ -299,7 +342,8 @@ fn write_run(
     )
   }
   match properties.font {
-    Some(font) =>
+    Some(font) => {
+      check_attribute_value("a run font name", font)
       rpr.push(
         XmlElement(
           @xml.xml_element("w:rFonts", attributes={
@@ -308,6 +352,7 @@ fn write_run(
           }),
         ),
       )
+    }
     None => ()
   }
   if properties.is_bold {
@@ -327,6 +372,13 @@ fn write_run(
   }
   match properties.font_size {
     Some(points) => {
+      // ST_HpsMeasure is a positive half-point measure and Word caps font
+      // size at 1638pt; outside that the doubled value is invalid OOXML.
+      if points < 1 || points > MAX_FONT_SIZE_POINTS {
+        raise Unsupported(
+          message="font size \{points}pt is outside the supported range 1..\{MAX_FONT_SIZE_POINTS}",
+        )
+      }
       // The reader halves w:sz (half-points → points); the writer doubles
       // back, so read(write(x)) preserves the value exactly.
       let half_points = (points * 2).to_string()
@@ -344,12 +396,20 @@ fn write_run(
     None => ()
   }
   match properties.highlight {
-    Some(highlight) =>
+    Some(highlight) => {
+      // w:highlight/@w:val is the closed ST_HighlightColor enum; anything
+      // else passes the structural belt but is schema-invalid.
+      if !is_highlight_color(highlight) {
+        raise Unsupported(
+          message="unsupported highlight color '\{highlight}' (ST_HighlightColor names like yellow, green, cyan, none)",
+        )
+      }
       rpr.push(
         XmlElement(
           @xml.xml_element("w:highlight", attributes={ "w:val": highlight }),
         ),
       )
+    }
     None => ()
   }
   if properties.is_underline {
@@ -385,6 +445,17 @@ fn write_run(
           raise Unsupported(
             message="the run writer cannot serialize raw line-break characters in text; use line_break()",
           )
+        }
+        // The XML escaper passes other C0 controls through and XML 1.0
+        // forbids them, so the SDK would reject the package. Tab is the
+        // one control legal in w:t.
+        for unit in text {
+          let code = unit.to_int()
+          if code < 0x20 && unit != '\t' {
+            raise Unsupported(
+              message="text contains an XML-illegal control character (code \{code})",
+            )
+          }
         }
         let attributes : Map[String, String] = Map([])
         if text.has_prefix(" ") ||

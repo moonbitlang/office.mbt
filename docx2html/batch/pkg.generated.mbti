@@ -8,6 +8,8 @@ import {
 // Values
 pub const SCHEMA_BATCH : String = "docx.batch/1"
 
+pub fn check_duplicate_keys(String) -> Unit raise BatchError
+
 pub fn parse_batch(Json) -> BatchScript raise BatchError
 
 // Errors
@@ -22,6 +24,7 @@ pub struct BatchScript {
 }
 pub fn BatchScript::build_body(Self, Map[String, Bytes]) -> Array[@document.DocumentElement] raise BatchError
 pub fn BatchScript::image_paths(Self) -> Array[String]
+pub fn BatchScript::image_reference(Self, String) -> String?
 pub fn BatchScript::op_count(Self) -> Int
 
 // Type aliases

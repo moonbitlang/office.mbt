@@ -28,6 +28,12 @@ fn write_hyperlink(
         message="a hyperlink with both href and anchor cannot round-trip (the reader folds the anchor into the href fragment); put the fragment in the href",
       )
     (Some(href), None) => {
+      if href == "" {
+        raise Unsupported(
+          message="a hyperlink href must not be empty (the reader treats blank attributes as absent)",
+        )
+      }
+      check_attribute_value("a hyperlink href", href)
       let rel_id = ctx.allocate_relationship(
         "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
         href,
@@ -41,6 +47,7 @@ fn write_hyperlink(
           message="a hyperlink anchor must not be empty (the reader treats blank attributes as absent)",
         )
       }
+      check_attribute_value("a hyperlink anchor", anchor)
       attributes["w:anchor"] = anchor
     }
     (None, None) =>
@@ -53,6 +60,7 @@ fn write_hyperlink(
           message="a hyperlink target frame must not be empty (the reader treats blank attributes as absent)",
         )
       }
+      check_attribute_value("a hyperlink target frame", frame)
       attributes["w:tgtFrame"] = frame
     }
     None => ()
@@ -108,6 +116,7 @@ fn write_image(image : Image, ctx : WriteContext) -> XmlElement raise DocxError 
           message="image alt text must not be blank (the reader treats blank descr as absent)",
         )
       }
+      check_attribute_value("image alt text", alt)
       doc_pr_attributes["descr"] = alt
       c_nv_pr_attributes["descr"] = alt
     }
