@@ -20,33 +20,7 @@ pub fn plan_comment_addition(
   to_relative~ : String,
   spec : CommentSpec,
 ) -> (@splice.SplicePlan, String) raise DocxError {
-  // Sidecars this tooling cannot keep consistent (detected by
-  // relationship type AND content type) refuse mutation outright.
-  let sidecars = annotated.annotation_sidecars()
-  if sidecars.length() > 0 {
-    raise Unsupported(
-      message="the document carries annotation sidecar parts this tool cannot keep consistent (\{sidecars.join(", ")}); refusing to annotate",
-    )
-  }
-  // Unrepairable annotation state: diagnostic classes plus the
-  // STRUCTURAL check a wording drift cannot evade — a definition or
-  // marker with an EMPTY id.
-  for warning in annotated.annotations().warnings() {
-    if warning.find("ambiguous") is Some(_) ||
-      warning.find("duplicate") is Some(_) ||
-      warning.find("has no w:id") is Some(_) {
-      raise Unsupported(
-        message="the document's annotation state is not repairable (\{warning}); refusing to annotate",
-      )
-    }
-  }
-  for comment in annotated.annotations().comments() {
-    if comment.id() == "" {
-      raise Unsupported(
-        message="the document holds a comment with an EMPTY id; refusing to annotate",
-      )
-    }
-  }
+  check_mutation_gates(annotated)
   // Anchor spans.
   guard annotated.body_paragraph_span(at_relative) is Some(at_span) else {
     raise Unsupported(
@@ -266,6 +240,37 @@ pub fn plan_comment_addition(
     }
   }
   (plan, new_id)
+}
+
+///|
+/// The shared mutation gates: sidecars (relationship AND content type)
+/// and unrepairable annotation state (diagnostic classes plus the
+/// structural empty-id check a wording drift cannot evade).
+fn check_mutation_gates(
+  annotated : DocxAnnotatedResult,
+) -> Unit raise DocxError {
+  let sidecars = annotated.annotation_sidecars()
+  if sidecars.length() > 0 {
+    raise Unsupported(
+      message="the document carries annotation sidecar parts this tool cannot keep consistent (\{sidecars.join(", ")}); refusing to annotate",
+    )
+  }
+  for warning in annotated.annotations().warnings() {
+    if warning.find("ambiguous") is Some(_) ||
+      warning.find("duplicate") is Some(_) ||
+      warning.find("has no w:id") is Some(_) {
+      raise Unsupported(
+        message="the document's annotation state is not repairable (\{warning}); refusing to annotate",
+      )
+    }
+  }
+  for comment in annotated.annotations().comments() {
+    if comment.id() == "" {
+      raise Unsupported(
+        message="the document holds a comment with an EMPTY id; refusing to annotate",
+      )
+    }
+  }
 }
 
 ///|

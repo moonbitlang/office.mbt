@@ -39,9 +39,15 @@ pub fn comment_anchor_fragments(id~ : String) -> (String, String) {
 pub fn comment_definition_fragment(
   spec : CommentSpec,
   id~ : String,
+  para_ids? : Array[String] = [],
 ) -> String raise DocxError {
   check_attribute_value("the comment id", id)
   check_comment_body(spec.body)
+  if para_ids.length() > 0 && para_ids.length() != spec.body.length() {
+    raise Unsupported(
+      message="paraId stamping needs exactly one id per body paragraph",
+    )
+  }
   let ctx : WriteContext = {
     used_styles: Set([]),
     uses_lists: false,
@@ -52,8 +58,12 @@ pub fn comment_definition_fragment(
     endnote_count: 0,
   }
   let children : Array[XmlNode] = []
-  for paragraph in spec.body {
-    children.push(XmlElement(write_block(paragraph, ctx)))
+  for index, paragraph in spec.body {
+    let element = write_block(paragraph, ctx)
+    if para_ids.length() > 0 {
+      element.attributes["w14:paraId"] = para_ids[index]
+    }
+    children.push(XmlElement(element))
   }
   if ctx.document_relationships.length() > 0 || ctx.media.length() > 0 {
     raise Unsupported(
@@ -63,7 +73,7 @@ pub fn comment_definition_fragment(
   // Styles and list numbering resolve against the DESTINATION
   // document's parts, which annotate never rewrites — fail closed
   // rather than referencing styles the document may not define.
-  if ctx.used_styles.size() > 0 || ctx.uses_lists {
+  if ctx.used_styles.length() > 0 || ctx.uses_lists {
     raise Unsupported(
       message="annotate comment bodies cannot use paragraph styles or lists (they would reference style and numbering definitions the existing document may not have)",
     )
@@ -77,9 +87,13 @@ pub fn comment_definition_fragment(
     Some(date) => attributes["w:date"] = date
     None => ()
   }
+  let namespaces : Map[String, String] = { "w": WORDPROCESSINGML_NAMESPACE }
+  if para_ids.length() > 0 {
+    namespaces["w14"] = W14_NAMESPACE
+  }
   @xml.write_xml_fragment(
     @xml.xml_element("w:comment", attributes~, children~),
-    namespaces={ "w": WORDPROCESSINGML_NAMESPACE },
+    namespaces~,
   )
 }
 

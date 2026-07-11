@@ -488,13 +488,15 @@ pub fn read_docx_annotated(
   match types_text {
     Some(text) => {
       let declared_types : Set[String] = Set([])
-      let parsed_root = try? @xml.read_xml_string(text)
+      let parsed_root : XmlElement? = Some(@xml.read_xml_string(text)) catch {
+        _ => None
+      }
       match parsed_root {
-        Ok(root) => collect_content_types(root, declared_types)
+        Some(root) => collect_content_types(root, declared_types)
         // An unparseable [Content_Types].xml makes sidecar detection
         // impossible — surface a sentinel so mutating commands fail
         // closed instead of silently proceeding blind.
-        Err(_) =>
+        None =>
           sidecar_types.push(
             "[Content_Types].xml is not well-formed; sidecar detection impossible",
           )
