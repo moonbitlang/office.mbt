@@ -549,9 +549,16 @@ async test "the committed commented.docx cram fixture matches its generator" {
   if @afs.exists(fixture_path) {
     let committed = @afs.read_file(fixture_path).binary()
     debug_inspect(committed == bytes, content="true")
-  } else {
-    // Bootstrap: first generation writes the fixture for committing.
+  } else if @env.get_env_var("REGENERATE_FIXTURES") is Some(_) {
+    // Explicit regeneration only (REGENERATE_FIXTURES=1 moon test ...).
     @afs.write_file(fixture_path, bytes, create_mode=CreateNew)
-    println("BOOTSTRAP: wrote \{fixture_path}; commit it")
+    println("regenerated \{fixture_path}; commit it")
+  } else {
+    // A missing committed fixture is a FAILURE, never a silent
+    // bootstrap: CI runs this test before cram, and quietly recreating
+    // the file would mask its deletion (J2 review round 1).
+    fail(
+      "tests/cram/fixtures/commented.docx is missing; regenerate with REGENERATE_FIXTURES=1 and commit",
+    )
   }
 }

@@ -412,6 +412,12 @@ pub fn read_docx_annotated(
     comment_bodies,
   }
   let index = build_annotation_index(zip, parts, collector, verify_ctx)
+  // The index's diagnostics are part of the document's message stream —
+  // orphans, dangling markers, degradations, and unrepresentable ids
+  // must reach `outline`'s messages (J2 review round 1).
+  for warning in index.warnings() {
+    package_result.messages.push(Warning(warning))
+  }
   {
     package_result,
     index,
@@ -638,6 +644,36 @@ fn build_annotation_index(
     definitions, extended, scans, warnings, ctx, degraded,
   )
   let (footnotes, endnotes) = build_notes(parts, scans, warnings, ctx, degraded)
+  // Plan-locked ordinal-fallback diagnostic: ids that cannot take the
+  // [@id=...] form (empty, or containing ']'/'='/'/') are emitted as
+  // ordinal paths, and the agent is told why. Duplicate ids already
+  // warn at definition parse.
+  let warned_ids : Set[String] = Set([])
+  fn warn_unrepresentable(kind : String, id : String) -> Unit {
+    if (
+        id == "" ||
+        id.find("]") is Some(_) ||
+        id.find("=") is Some(_) ||
+        id.find("/") is Some(_)
+      ) &&
+      !warned_ids.contains("\{kind}:\{id}") {
+      warned_ids.add("\{kind}:\{id}")
+      warnings.push(
+        "annotation index: \{kind} id '\{id}' cannot be addressed as [@id=...]; ordinal paths are emitted for it",
+      )
+    }
+  }
+  for comment in comments {
+    if comment.defined() {
+      warn_unrepresentable("comment", comment.id())
+    }
+  }
+  for note in footnotes {
+    warn_unrepresentable("footnote", note.id())
+  }
+  for note in endnotes {
+    warn_unrepresentable("endnote", note.id())
+  }
   { comments, footnotes, endnotes, warnings, spans, scans }
 }
 

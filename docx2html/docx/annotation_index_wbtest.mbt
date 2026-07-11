@@ -469,3 +469,36 @@ test "index review round 3: drawings are opaque — run positions verified, imag
     ),
   )
 }
+
+///|
+test "J2 review round 1: cross-story coverage keys and unrepresentable ids warn" {
+  // A range anchored INSIDE a comment body covers that body paragraph
+  // (cross-story coverage), and an id spelled with '/' cannot take the
+  // [@id=...] form — the ordinal-fallback diagnostic is emitted.
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p><w:r><w:commentReference w:id="a/b"/></w:r></w:p></w:body>
+    #|</w:document>
+  let comments =
+    #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:comment w:id="a/b" w:author="Odd"><w:p><w:r><w:t>slash id</w:t></w:r></w:p></w:comment>
+    #|</w:comments>
+  let bytes = fixture_docx(document, comments_xml=Some(comments))
+  let annotated = read_docx_annotated(bytes)
+  let index = annotated.annotations()
+  let mut saw_fallback = false
+  for warning in index.warnings() {
+    if warning ==
+      "annotation index: comment id 'a/b' cannot be addressed as [@id=...]; ordinal paths are emitted for it" {
+      saw_fallback = true
+    }
+  }
+  debug_inspect(saw_fallback, content="true")
+  // The point anchor still covers the body paragraph.
+  debug_inspect(
+    index.covering_comment_ids("/body/p[1]"),
+    content=(
+      #|["a/b"]
+    ),
+  )
+}

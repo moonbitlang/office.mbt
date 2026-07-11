@@ -273,12 +273,11 @@ document — not literal source-XML paths, and not stable anchors:
   any edit. Because the reader flattens some OOXML nodes (content controls,
   revisions), kinds are the parsed document's semantic kinds with OOXML-like
   spellings.
-- Roots: `/body` (the main story) and `/header[n]` / `/footer[n]` (1-based
+- Roots: `/body` (the main story), `/header[n]` / `/footer[n]` (1-based
   index into the outline's part space; a too-large index is an ordinary
-  not-found naming the part count). Reserved roots for the upcoming
-  notes/comments surface — `/footnotes/note[id]`, `/endnotes/note[id]`,
-  `/comments/comment[id]` — fail with a dedicated "reserved but not yet
-  addressable" error rather than `not found`.
+  not-found naming the part count), and the annotation stories
+  `/footnotes`, `/endnotes`, `/comments` (live since Phase 2 — see the
+  Annotations section for their container selectors).
 - Future batch mutations will resolve each path against the document state
   produced by the preceding ops in the same script.
 
@@ -328,12 +327,14 @@ unknown keys are unaffected):
   are the ordinary body grammar (`/comments/comment[@id=0]/p[1]`).
   Emitted paths use the id form when the id is unique, else the ordinal.
 - **`docx.outline/1`** gains a top-level `comments` inventory (always
-  present, possibly `[]`): `{id, author?, done?, reply_to?,
+  present, possibly `[]`): `{id, author?, done?, parent_id?,
   anchored_to?}` per comment, in comments.xml order — metadata only, no
-  bodies.
+  bodies. Ids that appear only in markers (no definition) are listed
+  after the definitions with whatever metadata exists; they are not
+  path-addressable.
 - **`docx.element/1`** gains kinds `comment`, `footnote`, `endnote` for
   the annotation containers: `id`, `author?`, `initials?`, `date?`
-  (lexical, never converted), `done?` and `reply_to?` (w15 threading,
+  (lexical, never converted), `done?` and `parent_id?` (w15 threading,
   keyed by the comment's LAST body paragraph per CT_CommentEx),
   `anchors` (array of `{story, start?, start_boundary?, end?,
   end_boundary?, references}` — boundaries are `before`/`inside_start`/
@@ -347,7 +348,10 @@ unknown keys are unaffected):
   story-rank order (`/footnotes`, `/endnotes`, `/comments`).
 - Positions never lie: every anchor path is verified against the parsed
   document or degraded to its nearest resolvable ancestor with a
-  diagnostic in `messages`.
+  diagnostic in `messages`. All index diagnostics (orphan definitions,
+  dangling markers/references, duplicate ids, degradations, and ids that
+  cannot take the `[@id=...]` form and therefore emit ordinal paths)
+  surface as `messages` warnings.
 
 ## `docx.batch/1` — authoring script (`docx batch <output> <script.json>`)
 
