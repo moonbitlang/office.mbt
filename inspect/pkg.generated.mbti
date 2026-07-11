@@ -15,6 +15,8 @@ pub const SCHEMA_CALC : String = "xlsx.calc/1"
 
 pub const SCHEMA_CELLS : String = "xlsx.cells/1"
 
+pub const SCHEMA_LINT : String = "xlsx.lint/1"
+
 pub const SCHEMA_OUTLINE : String = "xlsx.outline/1"
 
 pub const SCHEMA_QUERY : String = "xlsx.query/1"
@@ -28,6 +30,8 @@ pub fn chart_kinds(String) -> Array[String]
 pub fn chart_series(String) -> Array[ChartSeriesMeta]
 
 pub fn effective_style_id(@xlsx.Workbook, String, String, row~ : Int, col~ : Int) -> Int raise @xlsx.XlsxError
+
+pub fn lint(@xlsx.Workbook, file~ : String, sheet? : String) -> Json raise
 
 pub fn outline(@xlsx.Workbook, file~ : String) -> Json raise @xlsx.XlsxError
 

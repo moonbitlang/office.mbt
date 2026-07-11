@@ -85,6 +85,7 @@ async fn run_cli() -> Unit {
     Some(("get", m)) => run_get(m)
     Some(("outline", m)) => run_outline(m)
     Some(("query", m)) => run_query(m)
+    Some(("lint", m)) => run_lint(m)
     Some(("capabilities", m)) => run_capabilities(m)
     Some(("html", m)) => run_html(m)
     Some(("calc", m)) => run_calc(m)
@@ -318,6 +319,18 @@ fn build_command() -> @argparse.Command {
             "range",
             long="range",
             about="limit the scan to this range (default: the used range)",
+          ),
+        ],
+      ),
+      Command(
+        "lint",
+        about="Report formula cells that evaluate to an error, as JSON",
+        positionals=[PositionArg("file")],
+        options=[
+          OptionArg(
+            "sheet",
+            long="sheet",
+            about="lint only this sheet (default: all sheets)",
           ),
         ],
       ),

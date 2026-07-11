@@ -202,6 +202,33 @@ reports the formula text but no value until it is recalculated). Without
 - The value is recomputed on demand and reflects the engine's evaluation; it
   is not read from any stored cache.
 
+## `xlsx.lint/1` — formula problems (`xlsx lint <file> [--sheet <name>]`)
+
+Recomputes every formula cell and reports problems — currently the formulas
+that **evaluate to an error** (`#DIV/0!`, `#REF!`, `#NAME?`, …). This is the
+author→verify half of the agent loop, and it finds errors `get`/`query`
+cannot: a formula with no cached value has no stored error until it is
+evaluated. Scans all sheets, or only `--sheet`.
+
+```json
+{
+  "schema": "xlsx.lint/1",
+  "file": "book.xlsx",
+  "finding_count": 1,
+  "findings": [
+    { "kind": "formula_error", "sheet": "Data", "ref": "C3",
+      "code": "#DIV/0!", "formula": "1/0" }
+  ]
+}
+```
+
+- Each finding carries a `kind` discriminator (`formula_error` today; the set
+  grows additively — e.g. a future cached-vs-recomputed disagreement), the
+  `sheet`/`ref` location, the error `code`, and the `formula` text.
+- `findings` is ordered by sheet (tab order) then stored cell order;
+  `finding_count` is `findings.length()`. An unknown `--sheet` fails with a
+  non-zero exit. `lint` is read-only.
+
 ## `xlsx.batch/1` — mutation script (`xlsx batch <file> <script.json>`)
 
 Envelope:

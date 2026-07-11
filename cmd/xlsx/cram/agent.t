@@ -176,6 +176,22 @@ with B1=100, so it computes to the number 200):
     }
   }
 
+`lint` recomputes every formula and reports the ones that evaluate to an
+error — the author -> verify half of the loop, and errors that `get`/`query`
+cannot see for a formula with no cached value (the healthy `=A1*2` is not
+reported):
+
+  $ xlsx.exe create lints.xlsx --sheet S >/dev/null
+  $ xlsx.exe set lints.xlsx S A1 100 >/dev/null
+  $ xlsx.exe formula lints.xlsx S A2 "=A1/0" >/dev/null
+  $ xlsx.exe formula lints.xlsx S A3 "=A1*2" >/dev/null
+  $ xlsx.exe lint lints.xlsx | grep -o '"finding_count": 1'
+  "finding_count": 1
+  $ xlsx.exe lint lints.xlsx | grep -o '"ref": "A2"'
+  "ref": "A2"
+  $ xlsx.exe lint lints.xlsx | grep -o '"code": "#DIV/0!"'
+  "code": "#DIV/0!"
+
 Errors are strict and leave no partial output — an oversized range (the cap
 is 100,000 cells), a missing sheet, and a missing file all fail with exit 1:
 

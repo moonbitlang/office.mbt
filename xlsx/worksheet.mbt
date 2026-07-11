@@ -359,6 +359,21 @@ pub fn Worksheet::get_cell_rich_text(
 }
 
 ///|
+/// The A1 references of every cell on this sheet that carries a formula, in
+/// stored order. A small primitive for tools that need to visit the formula
+/// cells (e.g. a formula lint) without scanning the whole grid — the set of
+/// formula cells is usually far smaller than the used range.
+pub fn Worksheet::formula_refs(self : Worksheet) -> Array[String] {
+  let refs = []
+  for cell in self.cells {
+    if cell.formula is Some(_) {
+      refs.push(cell.reference)
+    }
+  }
+  refs
+}
+
+///|
 pub fn Worksheet::set_cell_formula(
   self : Worksheet,
   reference : String,
