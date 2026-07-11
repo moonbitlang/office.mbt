@@ -394,6 +394,56 @@ $ docx.exe get findings.docx '/body/p[2]' --json | jq -c '.comment_ids'
 ["1"]
 ```
 
+Threads: `reply_to` answers an earlier comment op (its anchor is the
+parent's — replies carry none of their own) and `done` records
+resolution; both land in `word/commentsExtended.xml` and come back
+through the read surface:
+
+```mooncram
+$ cat > thread.json <<'SCRIPT'
+> {
+>   "schema": "docx.batch/2",
+>   "ops": [
+>     {"op": "paragraph", "params": {"text": "Disputed figure."}},
+>     {"op": "comment", "params": {"on": 0, "author": "Ada", "text": "Source?"}},
+>     {"op": "comment", "params": {"reply_to": 1, "author": "Bob", "done": true,
+>      "text": "Cited in the appendix; resolving."}}
+>   ]
+> }
+> SCRIPT
+```
+
+```mooncram
+$ docx.exe batch thread.docx thread.json
+created thread.docx (3 op(s), 2 comment(s))
+```
+
+```mooncram
+$ docx.exe outline thread.docx | jq -c '.comments'
+[{"id":"0","author":"Ada","done":false,"anchored_to":"/body/p[1]"},{"id":"1","author":"Bob","done":true,"parent_id":"0"}]
+```
+
+Replies are anchorless by design — no anchors, no reverse links:
+
+```mooncram
+$ docx.exe get thread.docx '/comments/comment[@id=1]' --json | jq -c '{author, done, parent_id, anchors}'
+{"author":"Bob","done":true,"parent_id":"0","anchors":[]}
+```
+
+A reply cannot also anchor, and must answer a comment op:
+
+```mooncram
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"on": 0, "reply_to": 0, "text": "n", "author": "A"}}]}' > both.json; docx.exe batch outboth.docx both.json
+error: ops[1].params: on and reply_to are mutually exclusive (a reply inherits its parent's anchor)
+[1]
+```
+
+```mooncram
+$ printf '{"schema": "docx.batch/2", "ops": [{"op": "paragraph", "params": {"text": "x"}}, {"op": "comment", "params": {"reply_to": 0, "text": "n", "author": "A"}}]}' > replyp.json; docx.exe batch outreplyp.docx replyp.json
+error: ops[1].params.reply_to targets ops[0], which is not a comment op (replies answer comments; use on to anchor to content)
+[1]
+```
+
 Comment ops need the `/2` declaration; anchors must be earlier
 paragraph ops; dates are validated lexically and attributed to the op:
 
