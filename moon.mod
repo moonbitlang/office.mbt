@@ -19,4 +19,4 @@ keywords = [ "excel", "xlsx", "spreadsheet", "ooxml", "office" ]
 
 description = "A MoonBit port of the Go excelize library for reading and writing XLSX (Excel) spreadsheets."
 
-warnings = "+result_error_return+prefer_readonly_array+unnecessary_view_op+unnecessary_annotation+test_unqualified_package"
+warnings = "+result_error_return+prefer_readonly_array+unnecessary_view_op+unnecessary_annotation+test_unqualified_package+implicit_impl_as_method"
