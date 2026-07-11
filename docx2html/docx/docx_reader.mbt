@@ -903,8 +903,12 @@ fn read_note_part(
   let notes : Array[Note] = []
   for note_element in root.elements_by_tag_name("w:" + note_type) {
     let note_kind = note_element.attributes.get("w:type")
+    // separator/continuationSeparator/continuationNotice are Word's
+    // plumbing notes (rule glyphs and "continued" notices), not user
+    // content — surfacing them would invent phantom notes.
     if note_kind != Some("separator") &&
-      note_kind != Some("continuationSeparator") {
+      note_kind != Some("continuationSeparator") &&
+      note_kind != Some("continuationNotice") {
       notes.push({
         note_type,
         note_id: attribute_or_js_undefined(note_element.attributes.get("w:id")),
