@@ -8,6 +8,8 @@ import {
 // Values
 pub const SCHEMA_BATCH : String = "docx.batch/1"
 
+pub const SCHEMA_BATCH_V2 : String = "docx.batch/2"
+
 pub fn check_script_text(String) -> Unit raise BatchError
 
 pub fn parse_batch(Json) -> BatchScript raise BatchError
@@ -27,10 +29,23 @@ pub fn BatchError::to_string(Self) -> String
 pub impl Show for BatchError
 
 // Types and methods
+pub struct BatchComment {
+  // private fields
+}
+pub fn BatchComment::at(Self) -> String
+pub fn BatchComment::author(Self) -> String
+pub fn BatchComment::body(Self) -> Array[@document.DocumentElement]
+pub fn BatchComment::date(Self) -> String?
+pub fn BatchComment::from_block(Self) -> Int
+pub fn BatchComment::initials(Self) -> String?
+pub fn BatchComment::to_block(Self) -> Int
+
 pub struct BatchScript {
   // private fields
 }
 pub fn BatchScript::build_body(Self, Map[String, Bytes]) -> Array[@document.DocumentElement] raise BatchError
+pub fn BatchScript::build_comments(Self) -> Array[BatchComment] raise BatchError
+pub fn BatchScript::comment_count(Self) -> Int
 pub fn BatchScript::image_paths(Self) -> Array[String]
 pub fn BatchScript::image_reference(Self, String) -> String?
 pub fn BatchScript::op_count(Self) -> Int
