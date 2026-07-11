@@ -115,11 +115,9 @@ test "scanner: alternate namespace prefixes and non-WML lookalikes" {
 
 ///|
 test "scanner: comments story counts each comment body separately" {
-  // comments.xml shape: w:comment elements each holding paragraphs. The
-  // scanner has no special casing — each w:comment is a non-projection
-  // frame, so its paragraphs restart at p[1] per comment? NO: counters
-  // live on the PARENT FRAME (w:comment), so each comment's paragraphs
-  // count independently — pinned here because the index relies on it.
+  // w:comment is a projection CONTAINER (kind "comment") in the comments
+  // story, so paragraph paths carry the container identity and each
+  // comment's paragraphs count independently — review round 1 finding 3.
   let scan = scan_text(
     (
       #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -138,7 +136,7 @@ test "scanner: comments story counts each comment body separately" {
   debug_inspect(
     paragraph_paths,
     content=(
-      #|["p[1]", "p[1]", "p[2]"]
+      #|["comment[1]/p[1]", "comment[1]/p[2]", "comment[2]/p[1]"]
     ),
   )
 }
@@ -172,4 +170,112 @@ test "scanner: unterminated tag and UTF-16 parts fail closed" {
   } noraise {
     _ => fail("expected the scan to fail")
   }
+}
+
+///|
+test "scanner review round 1: flattening parity — sdt, ins, del, vMerge" {
+  // The reader flattens sdt/sdtContent/smartTag/ins and drops w:del and
+  // vMerge continuation cells; scanner ordinals must mirror that.
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body>
+      #|<w:p><w:r><w:t>a</w:t></w:r></w:p>
+      #|<w:sdt><w:sdtPr/><w:sdtContent><w:p><w:ins><w:r><w:t>inserted</w:t></w:r></w:ins><w:del><w:r><w:t>gone</w:t></w:r></w:del></w:p></w:sdtContent></w:sdt>
+      #|<w:tbl>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>tall</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>b</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t/></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>b2</w:t></w:r></w:p></w:tc></w:tr>
+      #|</w:tbl>
+      #|</w:body>
+      #|</w:document>
+    ),
+  )
+  let paths : Array[String] = []
+  for node in scan.nodes() {
+    paths.push(node.path())
+  }
+  paths.sort()
+  // The sdt-wrapped paragraph is p[2] (NOT a nested p[1]); the inserted
+  // run is p[2]/r[1]; the deleted run has no path at all. Row 2's
+  // continuation cell is stripped, so its sibling is tc[1] in the AST —
+  // and the continuation cell's paragraph/run get no paths.
+  debug_inspect(
+    paths,
+    content=(
+      #|[
+      #|  "p[1]",
+      #|  "p[2]",
+      #|  "tbl[1]",
+      #|  "p[1]/r[1]",
+      #|  "p[2]/r[1]",
+      #|  "tbl[1]/tr[1]",
+      #|  "tbl[1]/tr[2]",
+      #|  "tbl[1]/tr[2]/p[1]",
+      #|  "tbl[1]/tr[1]/tc[1]",
+      #|  "tbl[1]/tr[1]/tc[2]",
+      #|  "tbl[1]/tr[2]/tc[1]",
+      #|  "tbl[1]/tr[2]/p[1]/r[1]",
+      #|  "tbl[1]/tr[1]/tc[1]/p[1]",
+      #|  "tbl[1]/tr[1]/tc[2]/p[1]",
+      #|  "tbl[1]/tr[2]/tc[1]/p[1]",
+      #|  "tbl[1]/tr[1]/tc[1]/p[1]/r[1]",
+      #|  "tbl[1]/tr[1]/tc[2]/p[1]/r[1]",
+      #|  "tbl[1]/tr[2]/tc[1]/p[1]/r[1]",
+      #|]
+    ),
+  )
+}
+
+///|
+test "scanner review round 1: entity-decoded ids, Strict WML, CDATA immunity" {
+  // &#49; IS id "1"; the Strict namespace URI is recognized; marker
+  // lookalikes inside CDATA are never counted.
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://purl.oclc.org/ooxml/wordprocessingml/main">
+      #|<w:body>
+      #|<w:p><w:commentRangeStart w:id="&#49;"/><w:r><w:t><![CDATA[<w:commentRangeEnd w:id="1"/>]]></w:t></w:r><w:commentRangeEnd w:id="&#x31;"/><w:r><w:commentReference w:id="1"/></w:r></w:p>
+      #|</w:body>
+      #|</w:document>
+    ),
+  )
+  let marks : Array[String] = []
+  for marker in scan.markers() {
+    marks.push("\{marker.kind()} id=\{marker.id()}")
+  }
+  debug_inspect(
+    marks,
+    content=(
+      #|[
+      #|  "commentRangeStart id=1",
+      #|  "commentRangeEnd id=1",
+      #|  "commentReference id=1",
+      #|]
+    ),
+  )
+}
+
+///|
+test "scanner review round 1: plumbing notes are suppressed, user notes counted" {
+  let scan = scan_text(
+    (
+      #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:t/></w:r></w:p></w:footnote>
+      #|<w:footnote w:type="continuationSeparator" w:id="0"><w:p/></w:footnote>
+      #|<w:footnote w:type="continuationNotice" w:id="1"><w:p/></w:footnote>
+      #|<w:footnote w:id="2"><w:p><w:r><w:t>real</w:t></w:r></w:p></w:footnote>
+      #|</w:footnotes>
+    ),
+  )
+  let paths : Array[String] = []
+  for node in scan.nodes() {
+    paths.push(node.path())
+  }
+  paths.sort()
+  debug_inspect(
+    paths,
+    content=(
+      #|["note[1]", "note[1]/p[1]", "note[1]/p[1]/r[1]"]
+    ),
+  )
 }

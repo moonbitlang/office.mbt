@@ -168,17 +168,27 @@ pub fn StoryScan::warnings(self : StoryScan) -> Array[String] {
 ///|
 /// One open element during the walk.
 priv struct ScanFrame {
-  // Resolved local_name name (for the node's kind on close).
+  // Resolved local name (for the node's kind on close) + WML-ness.
   local_name : String
+  is_wml : Bool
   // Namespace prefixes THIS element declared (to pop on close).
   declared : Array[String]
   // Projection bookkeeping: Some(path) when this element is a projection
   // node; child ordinal counters per kind; last closed projection child.
-  projection_path : String?
+  mut projection_path : String?
   counters : Map[String, Int]
   mut last_closed_child : String?
   open_seq : Int
   byte_start : Int
+  // TRANSPARENT containers (sdt/sdtContent/smartTag/ins) are flattened by
+  // the reader: their children count in the nearest non-transparent
+  // ancestor's counters, so projection ordinals mirror the parsed AST.
+  transparent : Bool
+  // SUPPRESSED subtrees (w:del content, plumbing notes) do not exist in
+  // the parsed AST: nothing inside gets a projection path.
+  suppressed : Bool
+  // Where this frame's own ordinal was bumped, for vMerge retraction.
+  mut counter_owner : Map[String, Int]?
 }
 
 ///|
@@ -188,8 +198,24 @@ fn projection_kind(uri : String, local_name : String) -> String? {
   }
   match local_name {
     "p" | "r" | "tbl" | "tr" | "tc" | "hyperlink" => Some(local_name)
+    // Container identity inside the notes/comments stories (these
+    // elements never occur in body/header/footer stories).
+    "footnote" | "endnote" => Some("note")
+    "comment" => Some("comment")
     _ => None
   }
+}
+
+///|
+/// Containers the reader flattens into their parent flow.
+fn is_transparent_container(uri : String, local_name : String) -> Bool {
+  is_wml_uri(uri) && local_name is ("sdt" | "sdtContent" | "smartTag" | "ins")
+}
+
+///|
+/// Subtrees the reader removes entirely.
+fn is_suppressed_container(uri : String, local_name : String) -> Bool {
+  is_wml_uri(uri) && local_name == "del"
 }
 
 ///|
@@ -372,29 +398,59 @@ pub fn scan_story(part : Bytes) -> StoryScan raise DocxError {
       None => ()
     }
     seq += 1
-    let projection = match projection_kind(uri, local_name) {
-      Some(kind) => {
-        // Real stories root at w:document/w:hdr/w:ftr (never a projection
-        // kind), so a parent frame always exists for projection nodes;
-        // root_counters only backs a degenerate projection-at-root part.
-        let ordinal = bump_counter(
-          match frames.last() {
-            Some(parent) => parent.counters
-            None => root_counters
-          },
-          kind,
-        )
-        let parent_path = match current_projection() {
-          Some(frame) => frame.projection_path
-          None => None
+    let transparent = is_transparent_container(uri, local_name)
+    // A subtree is suppressed if the reader drops it: w:del content,
+    // plumbing notes (separator/continuationSeparator/continuationNotice
+    // never surface as user notes), or anything inside an already
+    // suppressed ancestor.
+    let inherited_suppression = match frames.last() {
+      Some(parent) => parent.suppressed
+      None => false
+    }
+    let plumbing_note = is_wml_uri(uri) &&
+      local_name is ("footnote" | "endnote") &&
+      attribute_value(attributes, "type", namespaces)
+      is (Some("separator")
+      | Some("continuationSeparator")
+      | Some("continuationNotice"))
+    let suppressed = inherited_suppression ||
+      is_suppressed_container(uri, local_name) ||
+      plumbing_note
+    let mut counter_owner : Map[String, Int]? = None
+    let projection = if suppressed {
+      None
+    } else {
+      match projection_kind(uri, local_name) {
+        Some(kind) => {
+          // Ordinals live on the nearest NON-transparent frame, mirroring
+          // the reader's flattening; root_counters backs the degenerate
+          // projection-at-root case.
+          let counters = nearest_counters(frames, root_counters)
+          let ordinal = bump_counter(counters, kind)
+          counter_owner = Some(counters)
+          let parent_path = match current_projection() {
+            Some(frame) => frame.projection_path
+            None => None
+          }
+          let path = match parent_path {
+            Some(base) => "\{base}/\{kind}[\{ordinal}]"
+            None => "\{kind}[\{ordinal}]"
+          }
+          Some(path)
         }
-        let path = match parent_path {
-          Some(base) => "\{base}/\{kind}[\{ordinal}]"
-          None => "\{kind}[\{ordinal}]"
-        }
-        Some(path)
+        None => None
       }
-      None => None
+    }
+    // A vMerge continuation cell does not exist in the parsed AST (the
+    // reader strips it; the writer re-synthesizes on save): retract the
+    // enclosing tc's ordinal. tcPr is the cell's first child, so the
+    // retraction always precedes any content inside the cell.
+    if is_wml_uri(uri) && local_name == "vMerge" {
+      let restart = attribute_value(attributes, "val", namespaces)
+        is Some("restart")
+      if !restart {
+        retract_enclosing_cell(frames, warnings)
+      }
     }
     if self_closing {
       // Open+close in place; only projection nodes matter for spans.
@@ -425,12 +481,16 @@ pub fn scan_story(part : Bytes) -> StoryScan raise DocxError {
     } else {
       frames.push({
         local_name,
+        is_wml: is_wml_uri(uri),
         declared,
         projection_path: projection,
         counters: Map([]),
         last_closed_child: None,
         open_seq: seq,
         byte_start: index,
+        transparent,
+        suppressed,
+        counter_owner,
       })
     }
     index = tag_end
@@ -442,6 +502,51 @@ pub fn scan_story(part : Bytes) -> StoryScan raise DocxError {
 }
 
 ///|
+/// The counters of the nearest non-transparent open frame (the reader
+/// flattens transparent containers into their parent flow).
+fn nearest_counters(
+  frames : Array[ScanFrame],
+  root_counters : Map[String, Int],
+) -> Map[String, Int] {
+  for at = frames.length() - 1; at >= 0; at = at - 1 {
+    if !frames[at].transparent {
+      return frames[at].counters
+    }
+  }
+  root_counters
+}
+
+///|
+/// Un-counts the innermost open WML `tc` (a vMerge continuation cell the
+/// reader strips). tcPr precedes cell content, so no child consumed the
+/// retracted path.
+fn retract_enclosing_cell(
+  frames : Array[ScanFrame],
+  warnings : Array[String],
+) -> Unit {
+  for at = frames.length() - 1; at >= 0; at = at - 1 {
+    let frame = frames[at]
+    if frame.is_wml && frame.local_name == "tc" {
+      match (frame.projection_path, frame.counter_owner) {
+        (Some(_), Some(counters)) => {
+          let current = counters.get_or_default("tc", 0)
+          if current > 0 {
+            counters["tc"] = current - 1
+          }
+          frame.projection_path = None
+          frame.counter_owner = None
+        }
+        _ => ()
+      }
+      return
+    }
+  }
+  warnings.push(
+    "annotation scanner: a vMerge continuation outside any table cell",
+  )
+}
+
+///|
 fn bump_counter(counters : Map[String, Int], kind : String) -> Int {
   let next = counters.get_or_default(kind, 0) + 1
   counters[kind] = next
@@ -450,9 +555,12 @@ fn bump_counter(counters : Map[String, Int], kind : String) -> Int {
 
 ///|
 fn record_closed_child(frames : Array[ScanFrame], path : String) -> Unit {
-  match frames.last() {
-    Some(parent) => parent.last_closed_child = Some(path)
-    None => ()
+  // Boundary bookkeeping follows the FLATTENED structure too.
+  for at = frames.length() - 1; at >= 0; at = at - 1 {
+    if !frames[at].transparent {
+      frames[at].last_closed_child = Some(path)
+      return
+    }
   }
 }
 
@@ -550,13 +658,15 @@ fn scan_tag(
         message="the annotation scanner found an unterminated attribute value",
       )
     }
-    let value = @utf8.decode(part[value_start:at]) catch {
+    let raw_value = @utf8.decode(part[value_start:at]) catch {
       _ =>
         raise Unsupported(
           message="the annotation scanner found a non-UTF-8 attribute value",
         )
     }
-    attributes.push((attr_name, value))
+    // Attribute values must be entity-decoded: w:id="&#49;" IS id "1"
+    // (and namespace URIs may legally carry &amp;).
+    attributes.push((attr_name, decode_entities(raw_value)))
     at += 1
   }
   raise Unsupported(message="the annotation scanner found an unterminated tag")
@@ -609,4 +719,119 @@ fn attribute_value(
     }
   }
   None
+}
+
+///|
+/// Decodes the five XML predefined entities and numeric character
+/// references. Malformed references are kept verbatim — @json-style
+/// tolerance; the XML parser is the strict gate.
+fn decode_entities(value : String) -> String {
+  if value.find("&") is None {
+    return value
+  }
+  let units = value.code_units()
+  let builder = StringBuilder::new()
+  let length = units.length()
+  let mut at = 0
+  while at < length {
+    let unit = units[at].to_int()
+    if unit != '&'.to_int() {
+      match unit.to_char() {
+        Some(ch) => builder.write_char(ch)
+        None =>
+          // Keep lone surrogates as-is via a paired write when possible.
+          match
+            (if at + 1 < length {
+              (unit, units[at + 1].to_int())
+            } else {
+              (unit, 0)
+            }) {
+            (high, low) if high >= 0xD800 &&
+              high <= 0xDBFF &&
+              low >= 0xDC00 &&
+              low <= 0xDFFF => {
+              match
+                (0x10000 + ((high - 0xD800) << 10) + (low - 0xDC00)).to_char() {
+                Some(ch) => builder.write_char(ch)
+                None => ()
+              }
+              at += 1
+            }
+            _ => ()
+          }
+      }
+      at += 1
+      continue
+    }
+    // Find the terminating ';' within a sane distance.
+    let mut semi = -1
+    let mut probe = at + 1
+    while probe < length && probe <= at + 12 {
+      if units[probe].to_int() == ';'.to_int() {
+        semi = probe
+        break
+      }
+      probe += 1
+    }
+    if semi < 0 {
+      builder.write_char('&')
+      at += 1
+      continue
+    }
+    let name_builder = StringBuilder::new()
+    for i in (at + 1)..<semi {
+      match units[i].to_int().to_char() {
+        Some(ch) => name_builder.write_char(ch)
+        None => ()
+      }
+    }
+    let entity = name_builder.to_string()
+    let decoded : Char? = match entity {
+      "amp" => Some('&')
+      "lt" => Some('<')
+      "gt" => Some('>')
+      "quot" => Some('"')
+      "apos" => Some('\'')
+      _ =>
+        if entity.has_prefix("#x") || entity.has_prefix("#X") {
+          parse_char_reference(entity[2:].to_owned(), 16)
+        } else if entity.has_prefix("#") {
+          parse_char_reference(entity[1:].to_owned(), 10)
+        } else {
+          None
+        }
+    }
+    match decoded {
+      Some(ch) => {
+        builder.write_char(ch)
+        at = semi + 1
+      }
+      None => {
+        builder.write_char('&')
+        at += 1
+      }
+    }
+  }
+  builder.to_string()
+}
+
+///|
+fn parse_char_reference(digits : String, base : Int) -> Char? {
+  if digits.length() == 0 || digits.length() > 7 {
+    return None
+  }
+  let mut value = 0
+  for ch in digits {
+    let digit = if ch is ('0'..='9') {
+      ch.to_int() - '0'.to_int()
+    } else if base == 16 && ch is ('a'..='f') {
+      ch.to_int() - 'a'.to_int() + 10
+    } else if base == 16 && ch is ('A'..='F') {
+      ch.to_int() - 'A'.to_int() + 10
+    } else {
+      return None
+    }
+    value = value * base + digit
+  }
+  value.to_char()
 }
