@@ -825,13 +825,23 @@ fn read_comment_definitions(
   warnings : Array[String],
 ) -> Array[CommentDefinition] {
   let definitions : Array[CommentDefinition] = []
-  let path = find_part_path(
+  // Transitional first, then Strict (purl.oclc.org) — L2 round 2.
+  let mut path = find_part_path(
     zip,
     parts.relationships,
     relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
     base_path=parts.base_path,
     fallback_path="word/comments.xml",
   )
+  if !zip.exists(path) {
+    path = find_part_path(
+      zip,
+      parts.relationships,
+      relationship_type="http://purl.oclc.org/ooxml/officeDocument/relationships/comments",
+      base_path=parts.base_path,
+      fallback_path="word/comments.xml",
+    )
+  }
   if !zip.exists(path) {
     return definitions
   }
@@ -890,7 +900,8 @@ fn read_comments_extended(
   }
   for record in root.elements_by_tag_name("w15:commentEx") {
     match record.attributes.get("w15:paraId") {
-      Some(para_id) => {
+      Some(raw_para_id) => {
+        let para_id = canonical_para_id(raw_para_id)
         if records.contains(para_id) {
           // First wins, deterministically (plan-locked policy).
           warnings.push(
@@ -903,7 +914,10 @@ fn read_comments_extended(
           is (Some("1") | Some("true") | Some("on"))
         records[para_id] = {
           done,
-          parent_para_id: record.attributes.get("w15:paraIdParent"),
+          parent_para_id: match record.attributes.get("w15:paraIdParent") {
+            Some(parent) => Some(canonical_para_id(parent))
+            None => None
+          },
         }
       }
       None =>
@@ -964,7 +978,8 @@ fn build_comments(
   let ambiguous_para_ids : Set[String] = Set([])
   for definition in definitions {
     match definition.last_para_id {
-      Some(para_id) =>
+      Some(raw_para_id) => {
+        let para_id = canonical_para_id(raw_para_id)
         if id_by_last_para.contains(para_id) {
           // Two comments claiming one last paraId: parent resolution
           // through it would be a guess — refuse, with a diagnostic.
@@ -977,6 +992,7 @@ fn build_comments(
         } else {
           id_by_last_para[para_id] = definition.id
         }
+      }
       None => ()
     }
   }
@@ -1207,7 +1223,7 @@ fn comment_entry(
     Some(def) =>
       match def.last_para_id {
         Some(para_id) =>
-          match extended.get(para_id) {
+          match extended.get(canonical_para_id(para_id)) {
             Some(record) =>
               (
                 Some(record.done),

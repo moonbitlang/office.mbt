@@ -530,7 +530,8 @@ fn find_part_path(
   fallback_path~ : String,
 ) -> String {
   for target in relationships.find_targets_by_type(relationship_type) {
-    let path = resolve_part_target(base_path, target)
+    // OPC-normalized ('../' forms resolve; review: L2 round 2).
+    let path = @opc.resolve_target(base_path, target)
     if zip.exists(path) {
       return path
     }

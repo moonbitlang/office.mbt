@@ -1878,6 +1878,7 @@ async test "L2 round 1: entry-level splicing preserves foreign thread content" {
     "\" mc:Ignorable=\"w15 vx\">" +
     "<w15:commentEx w15:paraId=\"7AAA0001\" w15:done=\"on\" vx:durableId=\"abc\"/>" +
     "<vx:threadMetadata value=\"keep-me\"/>" +
+    "<![CDATA[ decoy <w15:commentEx w15:paraId=\"7EEE0009\"/> ]]>" +
     "<w15:commentEx w15:paraId=\"7BBB0002\" w15:done=\"0\"/>" +
     "</w15:commentsEx>"
   let vendor_comments = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
@@ -1914,6 +1915,13 @@ async test "L2 round 1: entry-level splicing preserves foreign thread content" {
   inspect(extended_text.find("w15:done=\"on\"") is Some(_), content="true")
   inspect(
     extended_text.find("mc:Ignorable=\"w15 vx\"") is Some(_),
+    content="true",
+  )
+  inspect(
+    extended_text.find(
+      "<![CDATA[ decoy <w15:commentEx w15:paraId=\"7EEE0009\"/> ]]>",
+    )
+    is Some(_),
     content="true",
   )
   inspect(
@@ -1971,6 +1979,13 @@ async test "L2 round 1: entry-level splicing preserves foreign thread content" {
     case_text.view(start_offset=first_ex + 9).to_owned().find("<w15:commentEx")
     is Some(_),
     content="false",
+  )
+  // ...and the READ-BACK resolves across the case difference too
+  // (round 2: the index canonicalizes paraId identity).
+  let verify_case = @docx2html.read_docx_annotated(resolved_c)
+  debug_inspect(
+    verify_case.annotations().comments()[0].done(),
+    content="Some(true)",
   )
   // 3. A duplicate paraId across parts refuses resolution EVEN when
   // the key already exists (the gate is unconditional now).
@@ -2114,6 +2129,75 @@ async test "L2 round 1: OPC targets and root retrofit adversaries" {
     is Some(_),
     content="false",
   )
+  let verify = @docx2html.read_docx_annotated(resolved)
+  debug_inspect(verify.annotations().comments()[0].done(), content="Some(true)")
+}
+
+///|
+/// L2 round 2: a STRICT-typed, '../'-targeted comments part must be
+/// fully usable — definitions indexed, resolution working end to end
+/// (the index readers now normalize targets and accept Strict types).
+async test "L2 round 2: Strict dot-dot comments parts resolve end to end" {
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let w14 = "http://schemas.microsoft.com/office/word/2010/wordml"
+  let mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+  let archive = @mbtzip.Archive::new()
+  archive.add(
+    "[Content_Types].xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><Override PartName=\"/annotations/comments.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml\"/></Types>",
+    ),
+  )
+  archive.add(
+    "_rels/.rels",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
+    ),
+  )
+  archive.add(
+    "word/_rels/document.xml.rels",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rIdC\" Type=\"http://purl.oclc.org/ooxml/officeDocument/relationships/comments\" Target=\"../annotations/comments.xml\"/></Relationships>",
+    ),
+  )
+  archive.add(
+    "word/document.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:document xmlns:w=\"" +
+      wml +
+      "\"><w:body><w:p><w:commentRangeStart w:id=\"0\"/><w:r><w:t>strict</w:t></w:r><w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r></w:p><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/></w:sectPr></w:body></w:document>",
+    ),
+  )
+  archive.add(
+    "annotations/comments.xml",
+    @utf8.encode(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><w:comments xmlns:w=\"" +
+      wml +
+      "\" xmlns:w14=\"" +
+      w14 +
+      "\" xmlns:mc=\"" +
+      mc +
+      "\" mc:Ignorable=\"w14\"><w:comment w:id=\"0\" w:author=\"Ada\"><w:p w14:paraId=\"7DDD0004\"><w:r><w:t>strictly noted</w:t></w:r></w:p></w:comment></w:comments>",
+    ),
+  )
+  let package = @mbtzip.write(archive)
+  let annotated = @docx2html.read_docx_annotated(package)
+  // The definition is INDEXED (the reader resolves the Strict '../'
+  // relationship) and the mutation layer sees the same part.
+  inspect(annotated.annotations().comments()[0].defined(), content="true")
+  debug_inspect(
+    annotated.comments_part(),
+    content=(
+      #|Some("annotations/comments.xml")
+    ),
+  )
+  let plan = @docx_impl.plan_comment_resolution(
+    annotated,
+    package,
+    comment_id="0",
+    done=true,
+  )
+  let resolved = @splice.splice_docx(package, plan)
   let verify = @docx2html.read_docx_annotated(resolved)
   debug_inspect(verify.annotations().comments()[0].done(), content="Some(true)")
 }
