@@ -483,6 +483,27 @@ fn describe_paragraph_siblings(
     Some(slash) => relative_path.view(end_offset=slash + 1).to_owned()
     None => ""
   }
+  // A MISSING ancestor must be named as such — "holds 0 paragraphs"
+  // for a container that does not exist would be dishonest (probe M
+  // review round 1). Walk the prefix segments, verifying each.
+  if prefix != "" {
+    let mut checked = ""
+    for segment in prefix.split("/") {
+      let piece = segment.to_owned()
+      if piece == "" {
+        continue
+      }
+      let candidate = if checked == "" { piece } else { "\{checked}/\{piece}" }
+      let kind = match piece.find("[") {
+        Some(bracket) => piece.view(end_offset=bracket).to_owned()
+        None => piece
+      }
+      if body_node_span_of_kind(annotated, candidate, kind) is None {
+        return "'/body/\{candidate}' does not exist"
+      }
+      checked = candidate
+    }
+  }
   let mut count = 0
   let mut probe = 1
   while annotated.body_paragraph_span("\{prefix}p[\{probe}]") is Some(_) {
