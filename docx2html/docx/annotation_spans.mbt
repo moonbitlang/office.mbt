@@ -135,6 +135,16 @@ pub fn DocxAnnotatedResult::comments_part(
 }
 
 ///|
+/// The zip entry holding the commentsExtended part (resolved by
+/// RELATIONSHIP TYPE), or None when the package has none — L2 then
+/// creates it.
+pub fn DocxAnnotatedResult::comments_extended_part(
+  self : DocxAnnotatedResult,
+) -> String? {
+  self.comments_extended_part_name
+}
+
+///|
 fn body_node_span_of_kind(
   annotated : DocxAnnotatedResult,
   relative_path : String,

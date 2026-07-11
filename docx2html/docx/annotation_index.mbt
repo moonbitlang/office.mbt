@@ -101,6 +101,16 @@ pub struct CommentInfo {
   priv parent_id : String?
   priv body_paragraphs : Int
   priv anchors : Array[AnnotationAnchor]
+  // The definition's LAST body paragraph w14:paraId (the commentEx
+  // key), None when unstamped — L2's retrofit trigger.
+  priv last_para_id : String?
+}
+
+///|
+/// The definition's LAST body paragraph w14:paraId (the commentsExtended
+/// key), or None when the paragraph is unstamped.
+pub fn CommentInfo::last_para_id(self : CommentInfo) -> String? {
+  self.last_para_id
 }
 
 ///|
@@ -303,6 +313,9 @@ pub struct DocxAnnotatedResult {
   // Relationship types of known annotation sidecars present on the
   // main part that mutating commands cannot keep consistent.
   priv sidecar_types : Array[String]
+  // The commentsExtended part when wired (by relationship type), for
+  // L2's reply/resolve path.
+  priv comments_extended_part_name : String?
 }
 
 ///|
@@ -445,6 +458,16 @@ pub fn read_docx_annotated(
       comments_part_resolved = Some(path)
     }
   }
+  let mut comments_extended_resolved : String? = None
+  for
+    target in parts.relationships.find_targets_by_type(
+      "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
+    ) {
+    let path = resolve_part_target(parts.base_path, target)
+    if zip.exists(path) && comments_extended_resolved is None {
+      comments_extended_resolved = Some(path)
+    }
+  }
   let sidecar_types : Array[String] = []
   for
     sidecar_type in (
@@ -497,6 +520,7 @@ pub fn read_docx_annotated(
     main_part: main_story_path(zip),
     comments_part_name: comments_part_resolved,
     sidecar_types,
+    comments_extended_part_name: comments_extended_resolved,
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,
@@ -1228,6 +1252,10 @@ fn comment_entry(
       None => 0
     },
     anchors,
+    last_para_id: match definition {
+      Some(def) => def.last_para_id
+      None => None
+    },
   }
 }
 
