@@ -156,6 +156,7 @@ Envelope:
 | `filter` | `sheet`, `range` (strings) |
 | `add-sheet` | `name` (string) |
 | `chart` | `sheet`, `anchor`, `categories`, `values` (strings, required); `type?` (default `col`), `name?`, `title?` (strings) |
+| `table` | `sheet`, `range` (strings; `range` is an `A1:B2` colon range); `name?`, `style?` (strings); `header_row?`, `row_stripes?`, `first_column?`, `last_column?`, `column_stripes?` (bool) |
 - `set.value` accepts string, number, bool, or null. JSON types are honored:
   a number becomes a numeric cell, a string a text cell (no
   reclassification), a bool a boolean cell, and null clears the cell.
@@ -174,9 +175,22 @@ Envelope:
   the strict in-grid grammar: `cell` params must be a single cell (no
   range spelling); `merge`/`filter` `range` params must be an `A1:B2`
   colon range; `style.range` accepts a cell or range (each range capped
-  at 100,000 cells); `column` is a letters-only column or ascending
+  at 100,000 cells); `table.range` must be an `A1:B2` colon range but is
+  not cell-capped; `column` is a letters-only column or ascending
   column range; chart `categories`/`values` are a range with an optional
   non-empty `Sheet!` qualification.
+- `table` takes its column names from the header row of `range` (set those
+  cells first, in an earlier op); the engine auto-names any blank or
+  duplicate header `Column<n>`. `range` must be an `A1:B2` colon range and,
+  unlike `style.range`, is not subject to the 100,000-cell cap (a table
+  reads only the header row, never the whole range). A single-row range is
+  expanded downward by one row to make room for a data row, so a single-row
+  range on the last grid row is rejected at parse time. An omitted `name`
+  lets the engine assign `Table<n>`; an omitted `style` keeps the default
+  (`TableStyleMedium9`). `header_row` and `row_stripes` are tri-state —
+  omitting them keeps the engine defaults (both `true`), distinct from
+  passing `false`. Adding a table whose range intersects an existing one, or
+  reusing a table name, fails at apply time.
 - Zero ops is a valid no-op and writes nothing. Scripts are capped at
   10,000 ops, style ranges at 1,000,000 expanded cells per script in
   aggregate, and numeric literals at 40 characters (pathologically long
@@ -212,9 +226,11 @@ targeting an unknown build should first query what that build supports:
 ```
 
 `ops[].params[].type` names the validator applied at parse time — `cell`
-(single in-grid cell), `range` / `colon_range`, `column`, `series_range`
-(optional `Sheet!` prefix), `value` (string/number/bool/null), `string`,
-`number`, `bool`. New ops appear in `ops` on newer builds; the catalog is
+(single in-grid cell), `range` / `colon_range` (each capped at 100,000
+cells, since the op enumerates them), `table_range` (an `A1:B2` colon range
+that is *not* cell-capped — a table reads only the header row), `column`,
+`series_range` (optional `Sheet!` prefix), `value` (string/number/bool/null),
+`string`, `number`, `bool`. New ops appear in `ops` on newer builds; the catalog is
 the single source of truth an agent should read rather than hard-coding the
 op list. (Parsed ops are opaque in the library API too, so growing the op
 set is a source-compatible change.)

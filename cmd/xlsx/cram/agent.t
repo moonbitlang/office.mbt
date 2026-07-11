@@ -226,6 +226,28 @@ wrong schema string is rejected up front:
   error: unsupported schema 'xlsx.batch/9' (expected xlsx.batch/1)
   [1]
 
+The `table` op defines an Excel table over a range, taking its column names
+from the header row (blanks/duplicates are auto-named). It then shows up in
+`outline` with its range and columns, and the package stays valid:
+
+  $ cat > table.json <<'JSON'
+  > {"schema": "xlsx.batch/1", "ops": [
+  >   {"op": "set", "params": {"sheet": "Notes", "cell": "A1", "value": "Item"}},
+  >   {"op": "set", "params": {"sheet": "Notes", "cell": "B1", "value": "Cost"}},
+  >   {"op": "table", "params": {"sheet": "Notes", "range": "A1:B3", "name": "Costs", "style": "TableStyleMedium2"}}
+  > ]}
+  > JSON
+  $ xlsx.exe batch book.xlsx table.json
+  applied 3 op(s) to book.xlsx
+  $ xlsx.exe validate book.xlsx
+  valid
+  $ xlsx.exe outline book.xlsx | grep -o '"name": "Costs"'
+  "name": "Costs"
+  $ xlsx.exe outline book.xlsx | grep -o '"range": "A1:B3"'
+  "range": "A1:B3"
+  $ xlsx.exe outline book.xlsx | grep -cE '^ +"(Item|Cost)"'
+  2
+
 
 `html` renders sheets to one self-contained document — the "look" half of
 the agent's render -> look -> fix loop. Structure checks (the document is
@@ -302,6 +324,6 @@ ops it doesn't know):
   {
     "schema": "xlsx.capabilities/1",
   $ xlsx.exe capabilities | grep -c '"op":'
-  9
+  10
   $ xlsx.exe capabilities | grep -o '"batch_schema": "[^"]*"'
   "batch_schema": "xlsx.batch/1"

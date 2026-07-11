@@ -27,6 +27,8 @@ pub fn outline(@xlsx.Workbook, file~ : String) -> Json raise @xlsx.XlsxError
 
 pub fn parse_range(String) -> CellRange raise RangeError
 
+pub fn parse_range_unbounded(String) -> CellRange raise RangeError
+
 pub fn style_to_json(@xlsx.Style) -> Json
 
 // Errors

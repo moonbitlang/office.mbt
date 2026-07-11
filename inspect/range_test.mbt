@@ -63,6 +63,33 @@ test "parse_range allows exactly the cap and rejects one past it" {
 }
 
 ///|
+test "parse_range_unbounded accepts large ranges but keeps the grid grammar" {
+  // The same range parse_range rejects (100,001 cells) is fine unbounded —
+  // callers that never enumerate cells (defining a table) only need bounds.
+  inspect(
+    @inspect.parse_range_unbounded("A1:K9091").cell_count(),
+    content=(
+      #|100001
+    ),
+  )
+  // Corner order is still irrelevant and bounds normalize.
+  debug_inspect(
+    @inspect.parse_range_unbounded("B3:A1"),
+    content=(
+      #|{ col_lo: 1, row_lo: 1, col_hi: 2, row_hi: 3 }
+    ),
+  )
+  // In-grid strictness is unchanged: out-of-grid and malformed refs raise.
+  for bad in ["A1:XFE9", "A1048577", "A", "1", "A1:", "A$1$"] {
+    try ignore(@inspect.parse_range_unbounded(bad)) catch {
+      _ => ()
+    } noraise {
+      _ => fail("parse_range_unbounded should reject '\{bad}'")
+    }
+  }
+}
+
+///|
 test "parse_range accepts anchors, lowercase, and leading zeros" {
   debug_inspect(
     @inspect.parse_range("$A$01"),
