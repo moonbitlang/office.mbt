@@ -322,6 +322,13 @@ fn check_attribute_value(what : String, value : String) -> Unit raise DocxError 
         message="\{what} contains a control character (code \{code}) that cannot survive XML attribute normalization",
       )
     }
+    // Iteration combines surrogate pairs, so a surrogate here is unpaired;
+    // those and U+FFFE/U+FFFF are outside XML 1.0's character set.
+    if (code >= 0xD800 && code <= 0xDFFF) || code == 0xFFFE || code == 0xFFFF {
+      raise Unsupported(
+        message="\{what} contains a character XML cannot represent (code \{code}: unpaired surrogate or U+FFFE/U+FFFF)",
+      )
+    }
   }
 }
 
@@ -399,9 +406,14 @@ fn write_run(
     Some(highlight) => {
       // w:highlight/@w:val is the closed ST_HighlightColor enum; anything
       // else passes the structural belt but is schema-invalid.
+      if highlight == "none" {
+        raise Unsupported(
+          message="omit the highlight property instead of 'none' (the reader normalizes 'none' to absent, so it cannot round-trip)",
+        )
+      }
       if !is_highlight_color(highlight) {
         raise Unsupported(
-          message="unsupported highlight color '\{highlight}' (ST_HighlightColor names like yellow, green, cyan, none)",
+          message="unsupported highlight color '\{highlight}' (ST_HighlightColor names like yellow, green, cyan)",
         )
       }
       rpr.push(
@@ -454,6 +466,13 @@ fn write_run(
           if code < 0x20 && unit != '\t' {
             raise Unsupported(
               message="text contains an XML-illegal control character (code \{code})",
+            )
+          }
+          if (code >= 0xD800 && code <= 0xDFFF) ||
+            code == 0xFFFE ||
+            code == 0xFFFF {
+            raise Unsupported(
+              message="text contains a character XML cannot represent (code \{code}: unpaired surrogate or U+FFFE/U+FFFF)",
             )
           }
         }

@@ -17,7 +17,7 @@ async fn run_batch(matches : @argparse.Matches) -> Unit {
     )
   }
   let script_text = @afs.read_file(script_path).text()
-  @batch.check_duplicate_keys(script_text) catch {
+  @batch.check_script_text(script_text) catch {
     BatchError(message) => raise @cli.CliError("error: \{message}")
   }
   let script_json = @json.parse(script_text) catch {
@@ -100,22 +100,28 @@ fn locate_writer_failure(
 /// Atomic publication: a unique same-directory temp (CreateNew never
 /// truncates an existing file or follows a symlink into other data) and a
 /// no-replace rename (a destination created after the up-front existence
-/// check fails the rename instead of being overwritten). The temp is
-/// removed on any failure after creation.
+/// check fails the rename instead of being overwritten). Only the
+/// EXCLUSIVE-CREATE step retries under another suffix — once a temp is
+/// ours, any later failure (write, close, rename) cleans it up and
+/// aborts; retrying those would leak partial files under 99 names.
 async fn write_atomically(output : String, bytes : Bytes) -> Unit {
   for attempt in 0..<100 {
     let temp = "\{output}.tmp-\{attempt}"
-    let created = try {
-      @afs.write_file(temp, bytes, create_mode=CreateNew)
-      true
-    } catch {
-      _ => false
+    let file = @afs.open(temp, mode=WriteOnly, create_mode=CreateNew) catch {
+      // The name exists (leftover or concurrent temp) or cannot be
+      // created — leave it alone and try the next suffix.
+      _ => continue
     }
-    if !created {
-      // Likely EEXIST from a leftover or concurrent temp — leave that
-      // file alone and try the next suffix.
-      continue
+    file.write(bytes) catch {
+      err => {
+        file.close()
+        @afs.remove(temp) catch {
+          _ => ()
+        }
+        raise @cli.CliError("docx: could not write '\{temp}': \{err}")
+      }
     }
+    file.close()
     @afs.rename(temp, output, replace=false) catch {
       err => {
         @afs.remove(temp) catch {

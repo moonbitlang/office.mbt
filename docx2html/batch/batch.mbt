@@ -30,16 +30,13 @@ const MAX_OPS : Int = 10000
 ///|
 /// Bounds mirroring the writer's fail-closed guards, enforced here too so
 /// violations are reported with the exact `ops[i]` address instead of a
-/// whole-document writer error: Word's font-size cap (write_document.mbt),
-/// Word's 63-column table limit (write_tables.mbt), and the ops cap as the
-/// row-span ceiling (a span cannot usefully exceed the biggest table).
+/// whole-document writer error: Word's font-size cap (write_document.mbt)
+/// and Word's 63-column table limit (write_tables.mbt). Row spans are
+/// bounded by the table's remaining rows, exactly like the writer.
 const MAX_FONT_SIZE_POINTS : Int = 1638
 
 ///|
 const MAX_GRID_COLUMNS : Int = 63
-
-///|
-const MAX_ROW_SPAN : Int = 10000
 
 ///|
 /// Paragraph styles the writer can serialize (write_document.mbt's
@@ -79,7 +76,6 @@ fn is_highlight_color(value : String) -> Bool {
   | "green"
   | "lightGray"
   | "magenta"
-  | "none"
   | "red"
   | "white"
   | "yellow")
@@ -505,9 +501,14 @@ fn parse_inline(
   }
   let highlight = match optional_string(spec, "highlight", at) {
     Some(highlight) => {
+      if highlight == "none" {
+        raise BatchError(
+          "\{at}.highlight: omit the key instead of 'none' (the reader normalizes 'none' to absent, so it cannot round-trip)",
+        )
+      }
       if !is_highlight_color(highlight) {
         raise BatchError(
-          "\{at}.highlight '\{highlight}' is not an ST_HighlightColor name (yellow, green, cyan, red, ..., none)",
+          "\{at}.highlight '\{highlight}' is not an ST_HighlightColor name (yellow, green, cyan, red, ...)",
         )
       }
       Some(highlight)
@@ -597,12 +598,14 @@ fn parse_table(
         max=MAX_GRID_COLUMNS,
         default=1,
       )
+      // The writer requires a span to fit the remaining rows; mirroring
+      // that bound here keeps the ops[i] address on the error.
       let row_span = int_value(
         cell,
         "row_span",
         cell_where,
         min=1,
-        max=MAX_ROW_SPAN,
+        max=rows_json.length() - row_index,
         default=1,
       )
       let paragraphs : Array[ParagraphSpec] = []
@@ -710,6 +713,13 @@ fn check_text(text : String, at : String) -> Unit raise BatchError {
         "\{at} contains an unserializable control character (code \{code}); text cannot hold raw line breaks",
       )
     }
+    // Iteration combines surrogate pairs, so a surrogate here is unpaired;
+    // those and U+FFFE/U+FFFF are outside XML 1.0's character set.
+    if (code >= 0xD800 && code <= 0xDFFF) || code == 0xFFFE || code == 0xFFFF {
+      raise BatchError(
+        "\{at} contains a character XML cannot represent (code \{code}: unpaired surrogate or U+FFFE/U+FFFF)",
+      )
+    }
   }
 }
 
@@ -724,9 +734,17 @@ fn checked_attribute(value : String?, at : String) -> String? raise BatchError {
         raise BatchError("\{at} must not be empty")
       }
       for unit in text {
-        if unit.to_int() < 0x20 {
+        let code = unit.to_int()
+        if code < 0x20 {
           raise BatchError(
             "\{at} contains a control character that cannot survive XML attribute normalization",
+          )
+        }
+        if (code >= 0xD800 && code <= 0xDFFF) ||
+          code == 0xFFFE ||
+          code == 0xFFFF {
+          raise BatchError(
+            "\{at} contains a character XML cannot represent (code \{code}: unpaired surrogate or U+FFFE/U+FFFF)",
           )
         }
       }
@@ -741,90 +759,282 @@ priv struct ScanFrame {
   is_object : Bool
   keys : Set[String]
   mut expecting_key : Bool
+  // Last decoded key of this object (addresses child containers/values).
+  mut pending_key : String
+  // Element index for array frames (addresses child containers).
+  mut index : Int
+  // How this frame is addressed from its parent: a key, "[i]", or "" (root).
+  entry : String
 }
 
 ///|
-/// Rejects duplicate keys anywhere in the script text. `@json.parse` is
-/// last-wins per ECMA-404, which would let `{"op": "table", "op":
-/// "paragraph"}` silently drop half an op — a strict consumed schema must
-/// refuse instead. This is a minimal JSON lexer over the raw text: one
-/// frame per `{`/`[`, and inside an object frame a string is a KEY exactly
-/// when it is the first token of a member (after `{` or `,`, before `:`).
-/// Keys are compared as written — escape-equivalent spellings are the JSON
-/// parser's domain. Malformed JSON is left for `@json.parse` to diagnose.
-pub fn check_duplicate_keys(text : String) -> Unit raise BatchError {
+/// Renders the innermost frame's JSON path plus an optional leaf key —
+/// "ops[3].params", "ops[3].params.rows[0][1].col_span".
+fn render_scan_path(frames : Array[ScanFrame], leaf : String?) -> String {
+  let builder = StringBuilder::new()
+  for frame in frames {
+    if frame.entry == "" {
+      continue
+    }
+    if !frame.entry.has_prefix("[") && !builder.is_empty() {
+      builder.write_string(".")
+    }
+    builder.write_string(frame.entry)
+  }
+  match leaf {
+    Some(key) => {
+      if !builder.is_empty() {
+        builder.write_string(".")
+      }
+      builder.write_string(key)
+    }
+    None => ()
+  }
+  if builder.is_empty() {
+    "the script"
+  } else {
+    builder.to_string()
+  }
+}
+
+///|
+/// Lexes the JSON string starting AFTER its opening quote, returning the
+/// DECODED value and the index just past the closing quote (None when
+/// unterminated — @json.parse's error to report). Escapes are decoded so
+/// escape-equivalent key spellings compare equal; escaped surrogate pairs
+/// recombine to one astral char exactly like raw pairs; unpaired
+/// surrogates fold to U+FFFD under BOTH spellings so equivalence is
+/// preserved for duplicate detection.
+fn lex_json_string(units : ArrayView[UInt16], start : Int) -> (String, Int?) {
+  let builder = StringBuilder::new()
+  let length = units.length()
+  let mut cursor = start
+  fn hex4(at : Int) -> Int? {
+    if at + 4 > length {
+      return None
+    }
+    let mut value = 0
+    for offset in 0..<4 {
+      let c = units[at + offset].to_int()
+      let digit = if c >= '0'.to_int() && c <= '9'.to_int() {
+        c - '0'.to_int()
+      } else if c >= 'a'.to_int() && c <= 'f'.to_int() {
+        c - 'a'.to_int() + 10
+      } else if c >= 'A'.to_int() && c <= 'F'.to_int() {
+        c - 'A'.to_int() + 10
+      } else {
+        return None
+      }
+      value = value * 16 + digit
+    }
+    Some(value)
+  }
+  fn write_code(code : Int) -> Unit {
+    match code.to_char() {
+      Some(ch) => builder.write_char(ch)
+      None => builder.write_char('\u{FFFD}')
+    }
+  }
+  while cursor < length {
+    let unit = units[cursor].to_int()
+    if unit == '"'.to_int() {
+      return (builder.to_string(), Some(cursor + 1))
+    }
+    if unit == '\\'.to_int() {
+      if cursor + 1 >= length {
+        return ("", None)
+      }
+      let escape = units[cursor + 1].to_int()
+      if escape == 'u'.to_int() {
+        match hex4(cursor + 2) {
+          Some(code) => {
+            if code >= 0xD800 &&
+              code <= 0xDBFF &&
+              cursor + 7 < length &&
+              units[cursor + 6].to_int() == '\\'.to_int() &&
+              units[cursor + 7].to_int() == 'u'.to_int() {
+              match hex4(cursor + 8) {
+                Some(low) if low >= 0xDC00 && low <= 0xDFFF => {
+                  write_code(0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00))
+                  cursor += 12
+                  continue
+                }
+                _ => ()
+              }
+            }
+            write_code(code)
+            cursor += 6
+          }
+          None => {
+            // Malformed \u escape: @json.parse reports it; keep scanning.
+            builder.write_char('u')
+            cursor += 2
+          }
+        }
+      } else {
+        let decoded = if escape == 'n'.to_int() {
+          '\n'
+        } else if escape == 't'.to_int() {
+          '\t'
+        } else if escape == 'r'.to_int() {
+          '\r'
+        } else if escape == 'b'.to_int() {
+          '\u{08}'
+        } else if escape == 'f'.to_int() {
+          '\u{0C}'
+        } else if escape == '"'.to_int() {
+          '"'
+        } else if escape == '\\'.to_int() {
+          '\\'
+        } else if escape == '/'.to_int() {
+          '/'
+        } else {
+          // Invalid escape: @json.parse reports it; keep scanning.
+          '?'
+        }
+        builder.write_char(decoded)
+        cursor += 2
+      }
+      continue
+    }
+    // Raw text: recombine surrogate pairs (astral chars are two UTF-16
+    // units); fold unpaired surrogates.
+    if unit >= 0xD800 && unit <= 0xDBFF && cursor + 1 < length {
+      let low = units[cursor + 1].to_int()
+      if low >= 0xDC00 && low <= 0xDFFF {
+        write_code(0x10000 + ((unit - 0xD800) << 10) + (low - 0xDC00))
+        cursor += 2
+        continue
+      }
+    }
+    write_code(unit)
+    cursor += 1
+  }
+  ("", None)
+}
+
+///|
+/// Strict lexical validation of the raw script text, run BEFORE
+/// `@json.parse` (the CLI always does; programmatic `parse_batch(Json)`
+/// callers holding original text should too). Two rules the parsed `Json`
+/// tree cannot express:
+///
+/// - **Duplicate keys** are refused, addressed with the object's path.
+///   `@json.parse` is last-wins per ECMA-404, which would let
+///   `{"op": "table", "op": "paragraph"}` silently drop half an op. Keys
+///   compare DECODED, so `"op"` duplicates `"op"`.
+/// - **Numbers must be plain decimal integers.** Every numeric field in
+///   docx.batch/1 is an integer, and a `Json` Double cannot distinguish
+///   `1` from `0.999999999999999999999999` — fractions and exponents are
+///   rejected at the lexeme, before precision is lost.
+///
+/// Structure is tracked per `{`/`[` frame; malformed JSON is left for
+/// `@json.parse` to diagnose.
+pub fn check_script_text(text : String) -> Unit raise BatchError {
+  let units = text.code_units()
+  let length = units.length()
   let frames : Array[ScanFrame] = []
   let mut index = 0
-  let length = text.length()
+  fn frame_entry() -> String {
+    match frames.last() {
+      Some(parent) =>
+        if parent.is_object {
+          parent.pending_key
+        } else {
+          "[\{parent.index}]"
+        }
+      None => ""
+    }
+  }
   while index < length {
-    let unit = text.get_char(index).unwrap_or(' ')
-    match unit {
-      '{' => {
-        frames.push({ is_object: true, keys: Set([]), expecting_key: true })
-        index += 1
+    let unit = units[index].to_int()
+    if unit == '{'.to_int() || unit == '['.to_int() {
+      frames.push({
+        is_object: unit == '{'.to_int(),
+        keys: Set([]),
+        expecting_key: unit == '{'.to_int(),
+        pending_key: "",
+        index: 0,
+        entry: frame_entry(),
+      })
+      index += 1
+    } else if unit == '}'.to_int() || unit == ']'.to_int() {
+      let _ = frames.pop()
+      index += 1
+    } else if unit == ','.to_int() {
+      match frames.last() {
+        Some(frame) =>
+          if frame.is_object {
+            frame.expecting_key = true
+          } else {
+            frame.index += 1
+          }
+        None => ()
       }
-      '[' => {
-        frames.push({ is_object: false, keys: Set([]), expecting_key: false })
-        index += 1
+      index += 1
+    } else if unit == ':'.to_int() {
+      match frames.last() {
+        Some(frame) if frame.is_object => frame.expecting_key = false
+        _ => ()
       }
-      '}' | ']' => {
-        let _ = frames.pop()
-        index += 1
-      }
-      ',' => {
-        match frames.last() {
-          Some(frame) if frame.is_object => frame.expecting_key = true
-          _ => ()
-        }
-        index += 1
-      }
-      ':' => {
-        match frames.last() {
-          Some(frame) if frame.is_object => frame.expecting_key = false
-          _ => ()
-        }
-        index += 1
-      }
-      '"' => {
-        let builder = StringBuilder::new()
-        let mut cursor = index + 1
-        let mut closed = false
-        while cursor < length {
-          let c = text.get_char(cursor).unwrap_or(' ')
-          if c == '\\' {
-            builder.write_char(c)
-            if cursor + 1 < length {
-              builder.write_char(text.get_char(cursor + 1).unwrap_or(' '))
+      index += 1
+    } else if unit == '"'.to_int() {
+      let (value, next) = lex_json_string(units, index + 1)
+      match next {
+        Some(next_index) => {
+          match frames.last() {
+            Some(frame) if frame.is_object && frame.expecting_key => {
+              if frame.keys.contains(value) {
+                raise BatchError(
+                  "\{render_scan_path(frames, None)} repeats the key \"\{value}\" (strict scripts must not rely on last-wins parsing)",
+                )
+              }
+              frame.keys.add(value)
+              frame.pending_key = value
             }
-            cursor += 2
-            continue
+            _ => ()
           }
-          if c == '"' {
-            closed = true
-            break
-          }
-          builder.write_char(c)
+          index = next_index
+        }
+        None => return
+      }
+    } else if unit == '-'.to_int() ||
+      (unit >= '0'.to_int() && unit <= '9'.to_int()) {
+      let start = index
+      let mut cursor = index
+      let mut plain_integer = true
+      while cursor < length {
+        let c = units[cursor].to_int()
+        if c == '.'.to_int() || c == 'e'.to_int() || c == 'E'.to_int() {
+          plain_integer = false
           cursor += 1
+        } else if c == '-'.to_int() ||
+          c == '+'.to_int() ||
+          (c >= '0'.to_int() && c <= '9'.to_int()) {
+          cursor += 1
+        } else {
+          break
         }
-        if !closed {
-          // Unterminated string: @json.parse reports it.
-          return
-        }
-        match frames.last() {
-          Some(frame) if frame.is_object && frame.expecting_key => {
-            let key = builder.to_string()
-            if frame.keys.contains(key) {
-              raise BatchError(
-                "the script repeats the key \"\{key}\" within one object (strict scripts must not rely on last-wins parsing)",
-              )
-            }
-            frame.keys.add(key)
-          }
-          _ => ()
-        }
-        index = cursor + 1
       }
-      _ => index += 1
+      if !plain_integer {
+        let lexeme_builder = StringBuilder::new()
+        for at in start..<cursor {
+          match units[at].to_int().to_char() {
+            Some(ch) => lexeme_builder.write_char(ch)
+            None => ()
+          }
+        }
+        let leaf = match frames.last() {
+          Some(frame) if frame.is_object => Some(frame.pending_key)
+          _ => None
+        }
+        raise BatchError(
+          "\{render_scan_path(frames, leaf)} must be a plain decimal integer — docx.batch/1 has no fractional fields (got '\{lexeme_builder.to_string()}')",
+        )
+      }
+      index = cursor
+    } else {
+      index += 1
     }
   }
 }

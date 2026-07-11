@@ -8,7 +8,7 @@ import {
 // Values
 pub const SCHEMA_BATCH : String = "docx.batch/1"
 
-pub fn check_duplicate_keys(String) -> Unit raise BatchError
+pub fn check_script_text(String) -> Unit raise BatchError
 
 pub fn parse_batch(Json) -> BatchScript raise BatchError
 

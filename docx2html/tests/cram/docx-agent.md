@@ -329,7 +329,7 @@ error: ops[0].op 'chart' is unknown (known ops: paragraph, table)
 
 ```mooncram
 $ printf '{"schema": "docx.batch/1", "ops": [{"op": "paragraph", "op": "table", "params": {"text": "x"}}]}' > dup.json; docx.exe batch out3.docx dup.json
-error: the script repeats the key "op" within one object (strict scripts must not rely on last-wins parsing)
+error: ops[0] repeats the key "op" (strict scripts must not rely on last-wins parsing)
 [1]
 ```
 

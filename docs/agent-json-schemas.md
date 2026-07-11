@@ -274,10 +274,12 @@ only when true; `null` is never emitted):
 The consumed (input) schema: **strict** validation — an unknown schema, op,
 key, or enum value, a duplicate key within one object, or a wrong value
 type fails naming the 0-based op index and the offending key; nothing is
-repaired. Numbers must be exact integers (`2.9` is an error, never
-truncated). Strings destined for the document reject XML-illegal control
-characters (text additionally rejects raw `\n`/`\r` — paragraphs are the
-line-break unit). **Fresh-document-only**: the output path must not exist
+repaired. Numbers must be plain decimal integers — no fraction or
+exponent (`2.9` and `1e2` are errors, never coerced; every numeric field
+in this schema is an integer). Strings destined for the document reject
+characters XML cannot carry: C0 controls (text additionally rejects raw
+`\n`/`\r` — paragraphs are the line-break unit), unpaired surrogates,
+and U+FFFE/U+FFFF. **Fresh-document-only**: the output path must not exist
 (the reader is lossy, so mutating existing files would silently drop
 unmodeled parts — batch refuses rather than corrupts). The build is
 all-or-nothing with an atomic write (unique temp + no-replace rename);
@@ -316,8 +318,9 @@ capped at 10,000 ops; an empty `ops` array yields a blank document.
   `size` (points, 1–1638 — Word's cap), `highlight` (an ST_HighlightColor
   name: `yellow`, `green`, `cyan`, `magenta`, `blue`, `red`, `darkBlue`,
   `darkCyan`, `darkGreen`, `darkMagenta`, `darkRed`, `darkYellow`,
-  `darkGray`, `lightGray`, `black`, `white`, `none`) — the exact writer
-  surface, so anything the writer fails closed on fails the batch too,
+  `darkGray`, `lightGray`, `black`, `white`; omit the key for no
+  highlight — `"none"` is rejected because the reader normalizes it to
+  absent, so it cannot round-trip) — the exact writer surface, so anything the writer fails closed on fails the batch too,
   with the op's address. Two read-back keys are named differently:
   `docx.element/1` reports `strike` as `strikethrough` and `vertical` as
   `vertical_alignment`.
@@ -329,7 +332,8 @@ capped at 10,000 ops; an empty `ops` array yields a blank document.
   the extension when omitted), `alt` (non-blank when present).
 - `table.params`: `rows[][]` (non-empty, each row non-empty) of cells
   (exactly one of `text` or non-empty `paragraphs[]`; `col_span` 1–63 —
-  Word's column limit; `row_span` ≥ 1, default 1 for both);
+  Word's column limit; `row_span` from 1 up to the table's remaining rows
+  at that cell; default 1 for both);
   `header_rows` (0 to the row count, default 0) marks the first N rows. A
   cell with `col_span` N occupies N grid columns of its row, and a cell
   under a still-open `row_span` is not written at all — as in the example,
