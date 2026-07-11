@@ -110,32 +110,52 @@ out="$(must docx annotate resolve "$work/replied.docx" "$work/resolved.docx" --c
 resolved="$(must docx get "$work/resolved.docx" '/comments/comment[@id=0]' --json)"
 echo "$resolved" | grep -q '"done": true' || fail "resolved done flag"
 
-# Byte preservation, PROVEN per generation (not just claimed):
-# - annotate add: document.xml minus the three spliced marker
-#   fragments is byte-identical to the original; styles.xml untouched.
-# - reply: document.xml and styles.xml are byte-identical to the
-#   PREVIOUS generation (replies are anchorless).
-# - resolve: document.xml AND comments.xml byte-identical to the
-#   previous generation (only the commentsExtended entry flips).
-# And mutation never edited any input in place.
+# Byte preservation, PROVEN per generation over EVERY zip entry:
+# assert_preserved demands (a) no entry disappears, (b) every NEW entry
+# is on the expected list, (c) every entry NOT on the expected list is
+# byte-identical to the previous generation. On top of that, add's
+# document.xml (which IS expected to change) minus the three spliced
+# marker fragments must equal the original — the change is exactly the
+# markers. And mutation never edited any input in place.
 cmp -s "$work/minutes.docx" "$work/minutes.before" || fail "original mutated by annotate"
-part() { unzip -p "$1" "$2"; }
+# unzip pattern-matches member names ([Content_Types].xml would be a
+# character class) — escape the glob metacharacters to extract literally.
+part() { unzip -p "$1" "$(printf '%s' "$2" | sed 's/[][*?]/\\&/g')"; }
+expected_change() {
+  needle="$1"
+  shift
+  for e in "$@"; do [ "$e" = "$needle" ] && return 0; done
+  return 1
+}
+assert_preserved() {
+  prev="$1"
+  next="$2"
+  shift 2
+  unzip -Z1 "$prev" | LC_ALL=C sort > "$work/prev.entries"
+  unzip -Z1 "$next" | LC_ALL=C sort > "$work/next.entries"
+  dropped="$(comm -23 "$work/prev.entries" "$work/next.entries")"
+  [ -z "$dropped" ] || fail "$(basename "$next") dropped entries: $dropped"
+  while IFS= read -r entry; do
+    expected_change "$entry" "$@" || fail "$(basename "$next") grew unexpected entry '$entry'"
+  done < <(comm -13 "$work/prev.entries" "$work/next.entries")
+  while IFS= read -r entry; do
+    expected_change "$entry" "$@" && continue
+    part "$prev" "$entry" > "$work/prev.part"
+    part "$next" "$entry" > "$work/next.part"
+    cmp -s "$work/prev.part" "$work/next.part" \
+      || fail "$(basename "$next") mutated unrelated entry '$entry'"
+  done < <(comm -12 "$work/prev.entries" "$work/next.entries")
+}
+assert_preserved "$work/minutes.docx" "$work/reviewed.docx" \
+  word/document.xml word/comments.xml word/_rels/document.xml.rels '[Content_Types].xml'
+assert_preserved "$work/reviewed.docx" "$work/replied.docx" \
+  word/comments.xml word/commentsExtended.xml word/_rels/document.xml.rels '[Content_Types].xml'
+assert_preserved "$work/replied.docx" "$work/resolved.docx" word/commentsExtended.xml
 part "$work/reviewed.docx" word/document.xml \
   | sed -E 's|<w:commentRangeStart[^>]*/>||; s|<w:commentRangeEnd[^>]*/>||; s|<w:r xmlns:w=[^>]*><w:commentReference[^>]*/></w:r>||' \
   > "$work/reviewed.body.stripped"
 part "$work/minutes.docx" word/document.xml > "$work/minutes.body"
 cmp -s "$work/reviewed.body.stripped" "$work/minutes.body" || fail "add mutated bytes beyond the marker fragments"
-part "$work/reviewed.docx" word/styles.xml > "$work/reviewed.styles"
-part "$work/minutes.docx" word/styles.xml > "$work/minutes.styles"
-cmp -s "$work/reviewed.styles" "$work/minutes.styles" || fail "add mutated styles.xml"
-part "$work/replied.docx" word/document.xml > "$work/replied.body"
-part "$work/reviewed.docx" word/document.xml > "$work/reviewed.body"
-cmp -s "$work/replied.body" "$work/reviewed.body" || fail "reply touched the main story"
-part "$work/resolved.docx" word/document.xml > "$work/resolved.body"
-cmp -s "$work/resolved.body" "$work/replied.body" || fail "resolve touched the main story"
-part "$work/resolved.docx" word/comments.xml > "$work/resolved.comments"
-part "$work/replied.docx" word/comments.xml > "$work/replied.comments"
-cmp -s "$work/resolved.comments" "$work/replied.comments" || fail "resolve touched comments.xml"
 [ "$(must docx text "$work/resolved.docx" | grep -c '^\[/body/')" -eq 15 ] || fail "body text count after review loop"
 
 echo "ACCEPTANCE PASS: authored, validated, every structural claim round-tripped, both error probes exact, review loop (comment/reply/resolve) byte-preserving"
