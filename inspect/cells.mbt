@@ -48,7 +48,7 @@ pub fn cells(
 /// The style that formats this coordinate, mirroring the write-side
 /// precedence (excelize's `prepareCellStyle`): the cell's own non-zero
 /// style, else the row style, else the column style, else 0.
-fn effective_style_id(
+pub fn effective_style_id(
   workbook : @xlsx.Workbook,
   sheet : String,
   cell : String,

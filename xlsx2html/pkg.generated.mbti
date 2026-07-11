@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/mbtexcel/xlsx2html"
+
+import {
+  "bobzhang/mbtexcel/xlsx",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn col_width_px(Double) -> Int
+
+pub fn css_color(String) -> String?
+
+pub fn escape_html(String) -> String
+
+pub fn escape_html_attribute(String) -> String
+
+pub fn render_workbook(@xlsx.Workbook, title~ : String, sheet? : String, max_rows? : Int, max_cols? : Int, include_images? : Bool, calc? : Bool) -> String raise
+
+pub fn row_height_px(Double) -> Int
+
+pub fn style_css(@xlsx.Style) -> String
+
+// Errors
+pub suberror RenderError {
+  SheetNotFound(name~ : String)
+} derive(@debug.Debug)
+pub impl Show for RenderError
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

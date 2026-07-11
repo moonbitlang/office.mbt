@@ -225,3 +225,37 @@ wrong schema string is rejected up front:
   $ xlsx.exe batch book.xlsx wrong.json
   error: unsupported schema 'xlsx.batch/9' (expected xlsx.batch/1)
   [1]
+
+
+`html` renders sheets to one self-contained document — the "look" half of
+the agent's render -> look -> fix loop. Structure checks (the document is
+large, so grep, not full literals):
+
+  $ xlsx.exe html book.xlsx --out book.html
+  wrote book.html
+  $ head -2 book.html
+  <!DOCTYPE html>
+  <html>
+  $ grep -c '<section data-sheet=' book.html
+  2
+  $ grep -c 'class="s[0-9]' book.html | head -1
+  1
+  $ xlsx.exe html book.xlsx --sheet Data | grep -c 'data-sheet="Data"'
+  1
+
+A formula with no cached result is visibly pending by default and
+evaluates under --calc:
+
+  $ xlsx.exe html book.xlsx --sheet Data | grep -o 'class="formula-pending">=D2\*2</td>'
+  class="formula-pending">=D2*2</td>
+  $ xlsx.exe html book.xlsx --sheet Data --calc | grep -o '<td>15</td>'
+  <td>15</td>
+
+Errors are the CLI's usual one-liners:
+
+  $ xlsx.exe html book.xlsx --sheet Missing
+  error: sheet 'Missing' not found
+  [1]
+  $ xlsx.exe html book.xlsx --max-rows zero
+  error: invalid --max-rows 'zero' (expected a number)
+  [1]

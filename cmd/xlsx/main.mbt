@@ -17,6 +17,7 @@
 ///   xlsx get <file> <sheet> <cell> [--json]    print a cell value (or a
 ///                                              cell/range as JSON)
 ///   xlsx outline <file>                        print a workbook map as JSON
+///   xlsx html <file> [--sheet --out ...]       render sheets as HTML
 ///   xlsx calc <file> <sheet> <cell> [--raw]    evaluate a cell's formula
 ///   xlsx sheets <file>                         list sheet names
 ///   xlsx rows <file> [--sheet NAME]            print a sheet as CSV
@@ -83,6 +84,7 @@ async fn run_cli() -> Unit {
     Some(("batch", m)) => run_batch(m)
     Some(("get", m)) => run_get(m)
     Some(("outline", m)) => run_outline(m)
+    Some(("html", m)) => run_html(m)
     Some(("calc", m)) => run_calc(m)
     Some(("sheets", m)) => run_sheets(m)
     Some(("rows", m)) => run_rows(m)
@@ -294,6 +296,45 @@ fn build_command() -> @argparse.Command {
       Command("outline", about="Print a workbook structure map as JSON", positionals=[
         PositionArg("file"),
       ]),
+      Command(
+        "html",
+        about="Render sheets as a self-contained HTML document",
+        positionals=[PositionArg("file")],
+        options=[
+          OptionArg(
+            "sheet",
+            long="sheet",
+            about="render only this sheet (default: all sheets)",
+          ),
+          OptionArg(
+            "out",
+            long="out",
+            about="write the document here instead of stdout",
+          ),
+          OptionArg(
+            "max-rows",
+            long="max-rows",
+            about="rows to render per sheet (default 1000)",
+          ),
+          OptionArg(
+            "max-cols",
+            long="max-cols",
+            about="columns to render per sheet (default 256)",
+          ),
+        ],
+        flags=[
+          FlagArg(
+            "no-images",
+            long="no-images",
+            about="skip embedding images as data: URIs",
+          ),
+          FlagArg(
+            "calc",
+            long="calc",
+            about="evaluate formulas that have no cached result",
+          ),
+        ],
+      ),
       Command(
         "calc",
         about="Evaluate a cell's formula and print the computed value",
