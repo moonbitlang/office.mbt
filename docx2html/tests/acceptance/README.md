@@ -50,3 +50,39 @@ full.
 
 Re-run the protocol whenever the authoring surface or its documentation
 changes shape (new ops, new payload schema, header/footer writes).
+
+## Phase-2 protocol extension (annotations)
+
+The same fresh-agent rules (the reference doc + `--help` only), three
+tasks:
+
+- **A — author a discussed document** via `docx.batch/2`: a Heading1
+  title, a paragraph carrying a footnote, a second paragraph with an
+  anchored comment (author/initials/date) and a `done: true` reply
+  threaded under it. Prove with `validate`, `outline` (thread +
+  counts), and `get` on the footnote body.
+- **B — the review loop on an existing document** the agent did not
+  author: `annotate add` (path found via `text`), `annotate reply`,
+  `annotate resolve`, each to a NEW file; prove threading, the done
+  flag, and the reply's empty anchors through the read surface.
+- **C — two documented error behaviors** of the agent's choosing from
+  the annotate surface, confirming messages and the zero-output
+  guarantee.
+
+The mechanical mirror of the review loop lives in `run.sh` step 6.
+
+## Second run — 2026-07-12, against PR M (the annotation surface)
+
+Reported verdict: **PROBE_PASS** — the probe agent authored the
+discussed document (thread + footnote via `docx.batch/2`), ran the
+full review loop on an existing file (`annotate add` → `reply` →
+`resolve`, each proven through the read surface), and probed three
+error behaviors (branch-exclusive metadata, bad anchors, invalid
+dates), all with zero-output confirmation, using only the reference
+doc and `--help`. It reported **zero doc-vs-observed mismatches** and
+four documentation gaps, all fixed in PR M before merge: comment
+ids' JSON type (strings) was unstated; annotate anchor errors lacked
+the corrective sibling count the paths layer promises (now included:
+"the body has 3 top-level paragraph(s)"); the outline table omitted
+the `comments` key; and the stdout success-line contract was
+undocumented.

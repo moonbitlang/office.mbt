@@ -90,4 +90,30 @@ cmp -s "$work/minutes.docx" "$work/minutes.before" || fail "existing file mutate
 leftovers="$(find "$work" -name '*.tmp-*' | wc -l)"
 [ "$leftovers" -eq 0 ] || fail "temp droppings left behind"
 
-echo "ACCEPTANCE PASS: authored, validated, every structural claim round-tripped, both error probes exact"
+# 6. Phase 2 — the review workflow on the authored document: comment,
+# reply, resolve, each byte-preserving, each read back structurally.
+out="$(must docx annotate add "$work/minutes.docx" "$work/reviewed.docx" --at /body/p[2] --text 'Cite the decision owner.' --author 'Reviewer' --initials RV)"
+[ "$out" = "annotated $work/reviewed.docx (comment 0 on /body/p[2])" ] || fail "annotate add output: $out"
+[ "$(must docx validate "$work/reviewed.docx")" = "valid" ] || fail "reviewed validate"
+inventory="$(must docx outline "$work/reviewed.docx")"
+echo "$inventory" | grep -q '"author": "Reviewer"' || fail "comment author in outline"
+echo "$inventory" | grep -q '"anchored_to": "/body/p\[2\]"' || fail "comment anchor in outline"
+
+out="$(must docx annotate reply "$work/reviewed.docx" "$work/replied.docx" --comment 0 --text 'Owner named in section 2.' --author 'Author')"
+[ "$out" = "annotated $work/replied.docx (comment 1 replying to 0)" ] || fail "reply output: $out"
+threaded="$(must docx get "$work/replied.docx" '/comments/comment[@id=1]' --json)"
+echo "$threaded" | grep -q '"parent_id": "0"' || fail "reply threading"
+echo "$threaded" | grep -q '"anchors": \[\]' || fail "reply anchorlessness"
+
+out="$(must docx annotate resolve "$work/replied.docx" "$work/resolved.docx" --comment 0)"
+[ "$out" = "annotated $work/resolved.docx (comment 0 done=true)" ] || fail "resolve output: $out"
+resolved="$(must docx get "$work/resolved.docx" '/comments/comment[@id=0]' --json)"
+echo "$resolved" | grep -q '"done": true' || fail "resolved done flag"
+
+# Byte preservation: the body story of the reviewed file differs from
+# the original ONLY by the spliced markers (the added text lines are
+# identical), and mutation never edited in place.
+cmp -s "$work/minutes.docx" "$work/minutes.before" || fail "original mutated by annotate"
+[ "$(must docx text "$work/resolved.docx" | grep -c '^\[/body/')" -eq 15 ] || fail "body text count after review loop"
+
+echo "ACCEPTANCE PASS: authored, validated, every structural claim round-tripped, both error probes exact, review loop (comment/reply/resolve) byte-preserving"

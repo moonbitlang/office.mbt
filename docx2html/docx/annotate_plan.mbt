@@ -21,15 +21,16 @@ pub fn plan_comment_addition(
   spec : CommentSpec,
 ) -> (@splice.SplicePlan, String) raise DocxError {
   check_mutation_gates(annotated)
-  // Anchor spans.
+  // Anchor spans — misses report the sibling count so agents can
+  // correct the ordinal, matching the paths-layer error shape.
   guard annotated.body_paragraph_span(at_relative) is Some(at_span) else {
     raise Unsupported(
-      message="'/body/\{at_relative}' does not name a body paragraph",
+      message="'/body/\{at_relative}' does not name a body paragraph (\{describe_paragraph_siblings(annotated, at_relative)})",
     )
   }
   guard annotated.body_paragraph_span(to_relative) is Some(to_span) else {
     raise Unsupported(
-      message="'/body/\{to_relative}' does not name a body paragraph",
+      message="'/body/\{to_relative}' does not name a body paragraph (\{describe_paragraph_siblings(annotated, to_relative)})",
     )
   }
   if to_span.byte_start() < at_span.byte_start() {
@@ -468,5 +469,29 @@ fn split_part_path(part : String) -> (String, String) {
         part.view(start_offset=slash + 1).to_owned(),
       )
     None => ("", part)
+  }
+}
+
+///|
+/// "the level has N paragraphs" for a missed ordinal — the sibling
+/// count that lets an agent correct its path (probe M, gap 2).
+fn describe_paragraph_siblings(
+  annotated : DocxAnnotatedResult,
+  relative_path : String,
+) -> String {
+  let prefix = match relative_path.rev_find("/") {
+    Some(slash) => relative_path.view(end_offset=slash + 1).to_owned()
+    None => ""
+  }
+  let mut count = 0
+  let mut probe = 1
+  while annotated.body_paragraph_span("\{prefix}p[\{probe}]") is Some(_) {
+    count += 1
+    probe += 1
+  }
+  if prefix == "" {
+    "the body has \{count} top-level paragraph(s)"
+  } else {
+    "'\{prefix}' holds \{count} paragraph(s)"
   }
 }
