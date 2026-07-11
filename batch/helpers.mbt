@@ -324,7 +324,11 @@ fn cf_allowed_params(cf_type : String) -> Array[String] {
         "max_type", "max_value", "max_color",
       ]
     "data_bar" =>
-      ["bar_color", "min_type", "min_value", "max_type", "max_value"]
+      [
+        "bar_color", "min_type", "min_value", "max_type", "max_value",
+        // x14 extended-bar options (any triggers the x14 data bar).
+         "bar_solid", "bar_direction", "bar_border_color",
+      ]
     "icon_set" => ["icon_style", "reverse_icons"]
     _ => []
   }
