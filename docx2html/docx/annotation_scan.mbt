@@ -201,6 +201,10 @@ priv struct ScanFrame {
   // IS that first one (declarations from later ones are ignored).
   mut properties_seen : Bool
   first_properties : Bool
+  // Origin columns THIS row newly registered (absent before), so a
+  // late-deleted row can roll back exactly its own contributions —
+  // the reader excludes deleted rows BEFORE span calculation.
+  registered_columns : Array[Int]
 }
 
 ///|
@@ -400,7 +404,12 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
             match nearest_frame_by_kind(frames, "tr") {
               Some(row) =>
                 if row.row_deleted {
-                  retract_row(row, nodes, markers)
+                  retract_row(
+                    row,
+                    nearest_frame_by_kind(frames, "tbl"),
+                    nodes,
+                    markers,
+                  )
                 }
               None => ()
             }
@@ -418,8 +427,10 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
                 nearest_frame_by_kind(frames, "tbl"),
               ) {
               (Some(row), Some(table)) => {
-                if !frame.suppressed {
+                if !frame.suppressed &&
+                  !table.origin_columns.contains(frame.grid_column) {
                   table.origin_columns.add(frame.grid_column)
+                  row.registered_columns.push(frame.grid_column)
                 }
                 row.column_cursor = frame.grid_column + frame.grid_span
               }
@@ -611,7 +622,10 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
             nearest_frame_by_kind(frames, "tbl"),
           ) {
           (Some(row), Some(table)) => {
-            table.origin_columns.add(row.column_cursor)
+            if !table.origin_columns.contains(row.column_cursor) {
+              table.origin_columns.add(row.column_cursor)
+              row.registered_columns.push(row.column_cursor)
+            }
             row.column_cursor = row.column_cursor + 1
           }
           _ => ()
@@ -696,6 +710,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         row_deleted: false,
         properties_seen: false,
         first_properties,
+        registered_columns: [],
       })
     }
     index = tag_end
@@ -781,6 +796,7 @@ fn purge_subtree(
 /// suppresses the whole subtree, like the reader's read_table_row.
 fn retract_row(
   row : ScanFrame,
+  table : ScanFrame?,
   nodes : Array[ScannedNode],
   markers : Array[ScannedMarker],
 ) -> Unit {
@@ -794,6 +810,16 @@ fn retract_row(
       row.counter_owner = None
       row.suppressed = true
       purge_subtree(row, nodes, markers)
+      // Roll back exactly the origins this row's cells introduced —
+      // the reader never lets a deleted row participate in merging.
+      match table {
+        Some(owner) =>
+          for column in row.registered_columns {
+            owner.origin_columns.remove(column)
+          }
+        None => ()
+      }
+      row.registered_columns.clear()
     }
     _ => ()
   }
