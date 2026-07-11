@@ -219,6 +219,39 @@ pub fn write_docx_with_comments(
 }
 
 ///|
+/// Validates and builds one footnote/endnote body for
+/// `write_docx_with_annotations` (which array it goes in decides the
+/// kind). Plain-content, paragraph-only, no nested notes. See
+/// `@docx.note_spec`.
+pub fn note_spec(
+  body : Array[DocumentElement],
+) -> @docx_impl.NoteSpec raise DocxError {
+  bridge_core_error(() => @docx_impl.note_spec(body))
+}
+
+///|
+/// The full annotation writer: `write_docx` plus comments, footnotes,
+/// and endnotes. Body runs reference notes with
+/// `note_reference(kind, index)` (0-based into the matching array;
+/// exactly one reference per note). See
+/// `@docx.write_docx_with_annotations`.
+pub fn write_docx_with_annotations(
+  body : Array[DocumentElement],
+  comments? : Array[@docx_impl.CommentSpec] = [],
+  footnotes? : Array[@docx_impl.NoteSpec] = [],
+  endnotes? : Array[@docx_impl.NoteSpec] = [],
+) -> Bytes raise DocxError {
+  bridge_core_error(() => {
+    @docx_impl.write_docx_with_annotations(
+      body,
+      comments~,
+      footnotes~,
+      endnotes~,
+    )
+  })
+}
+
+///|
 /// Reads DOCX bytes into the package-level representation: the body
 /// document (identical to `read_docx_with_messages`) plus sections and
 /// header/footer stories. See `@docx.read_docx_package`.

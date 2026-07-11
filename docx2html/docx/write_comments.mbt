@@ -138,31 +138,50 @@ fn check_comment_who(
 /// would allocate no relationship (an anchor-only link is still a
 /// hyperlink), so this cannot be left to the relationship-delta guard.
 fn check_comment_body(body : Array[DocumentElement]) -> Unit raise DocxError {
+  check_annotation_body(body, what="comment")
+}
+
+///|
+/// Shared body-shape rules for every annotation kind (comments,
+/// footnotes, endnotes): non-empty, paragraph-only, plain content all
+/// the way down — and NO note references, which can neither nest in
+/// notes nor appear in comments.
+fn check_annotation_body(
+  body : Array[DocumentElement],
+  what~ : String,
+) -> Unit raise DocxError {
   if body.length() == 0 {
     raise Unsupported(
-      message="a comment needs a non-empty body (at least one paragraph)",
+      message="a \{what} needs a non-empty body (at least one paragraph)",
     )
   }
   for block in body {
     guard block is Paragraph(..) else {
       raise Unsupported(
-        message="comment bodies are paragraph-only in this writer (got \{block_kind_name(block)})",
+        message="\{what} bodies are paragraph-only in this writer (got \{block_kind_name(block)})",
       )
     }
-    check_comment_content(block)
+    check_annotation_content(block, what~)
   }
 }
 
 ///|
-fn check_comment_content(element : DocumentElement) -> Unit raise DocxError {
+fn check_annotation_content(
+  element : DocumentElement,
+  what~ : String,
+) -> Unit raise DocxError {
   match element {
     Hyperlink(..) =>
       raise Unsupported(
-        message="comment bodies are plain content: hyperlinks cannot be serialized into word/comments.xml",
+        message="\{what} bodies are plain content: hyperlinks cannot be serialized into annotation parts",
       )
     Image(_) =>
       raise Unsupported(
-        message="comment bodies are plain content: images cannot be serialized into word/comments.xml",
+        message="\{what} bodies are plain content: images cannot be serialized into annotation parts",
+      )
+    NoteReference(..) =>
+      raise Unsupported(
+        message="\{what} bodies cannot carry note references (notes nest in neither comments nor other notes)",
       )
     Document(children~, ..)
     | Paragraph(children~, ..)
@@ -171,7 +190,7 @@ fn check_comment_content(element : DocumentElement) -> Unit raise DocxError {
     | TableRow(children~, ..)
     | TableCell(children~, ..) =>
       for child in children {
-        check_comment_content(child)
+        check_annotation_content(child, what~)
       }
     _ => ()
   }
@@ -197,6 +216,42 @@ pub fn write_docx_with_comments(
   body : Array[DocumentElement],
   comments : Array[CommentSpec],
 ) -> Bytes raise DocxError {
+  write_docx_with_annotations(body, comments~)
+}
+
+///|
+/// The full annotation writer: `write_docx` plus comments (see
+/// `write_docx_with_comments`) plus footnotes and endnotes. Notes are
+/// referenced from body runs by `note_reference(kind, index)` where
+/// `index` is the 0-based position in the matching array here — each
+/// supplied note must be referenced EXACTLY ONCE (the canonical shape;
+/// unreferenced notes would be invisible orphans, duplicate references
+/// are not what Word produces). Note bodies are plain-content
+/// paragraph-only, may not carry note references themselves, and land
+/// in word/footnotes.xml / word/endnotes.xml as MAIN-part
+/// relationships, complete with the separator/continuationSeparator
+/// plumbing notes and the in-note footnoteRef/endnoteRef mark run.
+pub fn write_docx_with_annotations(
+  body : Array[DocumentElement],
+  comments? : Array[CommentSpec] = [],
+  footnotes? : Array[NoteSpec] = [],
+  endnotes? : Array[NoteSpec] = [],
+) -> Bytes raise DocxError {
+  for index, note in footnotes {
+    check_annotation_body(note.body, what="footnote") catch {
+      Unsupported(message~) =>
+        raise Unsupported(message="footnotes[\{index}]: \{message}")
+      err => raise err
+    }
+  }
+  for index, note in endnotes {
+    check_annotation_body(note.body, what="endnote") catch {
+      Unsupported(message~) =>
+        raise Unsupported(message="endnotes[\{index}]: \{message}")
+      err => raise err
+    }
+  }
+  check_note_references(body, footnotes.length(), endnotes.length())
   for index, comment in comments {
     match comment.target {
       Anchored(from~, to~) => {
@@ -255,6 +310,8 @@ pub fn write_docx_with_comments(
     next_relationship: 3,
     document_relationships: [],
     media: [],
+    footnote_count: footnotes.length(),
+    endnote_count: endnotes.length(),
   }
   for index, element in body {
     let leading : Array[XmlNode] = []
@@ -395,6 +452,26 @@ pub fn write_docx_with_comments(
   } else {
     None
   }
+  let footnotes_xml : String? = if footnotes.length() > 0 {
+    let _ = ctx.allocate_relationship(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+      "footnotes.xml",
+      external=false,
+    )
+    Some(notes_part_xml("footnote", footnotes, ctx))
+  } else {
+    None
+  }
+  let endnotes_xml : String? = if endnotes.length() > 0 {
+    let _ = ctx.allocate_relationship(
+      "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
+      "endnotes.xml",
+      external=false,
+    )
+    Some(notes_part_xml("endnote", endnotes, ctx))
+  } else {
+    None
+  }
   let comments_extended_xml : String? = if needs_extended {
     let _ = ctx.allocate_relationship(
       "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
@@ -445,6 +522,8 @@ pub fn write_docx_with_comments(
     ctx,
     comments_xml~,
     comments_extended_xml~,
+    footnotes_xml~,
+    endnotes_xml~,
   ) catch {
     err =>
       raise Unsupported(

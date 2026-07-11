@@ -98,6 +98,8 @@ pub fn note(String, String, Array[@document.DocumentElement]) -> @document.Note
 
 pub fn note_reference(String, String) -> @document.DocumentElement
 
+pub fn note_spec(Array[@document.DocumentElement]) -> @docx.NoteSpec raise DocxError
+
 pub fn numbering(Bool, Int) -> @document.Numbering
 
 pub fn open_zip(BytesView) -> @zip.ZipArchive raise DocxError
@@ -161,6 +163,8 @@ pub fn transform_runs((@document.DocumentElement) -> @document.DocumentElement) 
 pub fn warning(String) -> @core.Message
 
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise DocxError
+
+pub fn write_docx_with_annotations(Array[@document.DocumentElement], comments? : Array[@docx.CommentSpec], footnotes? : Array[@docx.NoteSpec], endnotes? : Array[@docx.NoteSpec]) -> Bytes raise DocxError
 
 pub fn write_docx_with_comments(Array[@document.DocumentElement], Array[@docx.CommentSpec]) -> Bytes raise DocxError
 

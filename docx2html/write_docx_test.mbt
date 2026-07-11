@@ -1496,3 +1496,196 @@ test "K2: resolve-without-reply triggers the extended part on its own" {
   debug_inspect(index.comments()[0].parent_id(), content="None")
   debug_inspect(index.warnings(), content="[]")
 }
+
+///|
+test "K3: written footnotes and endnotes round-trip through the index" {
+  let body = [
+    @docx2html.paragraph([
+      @docx2html.run([
+        @docx2html.text("Cited claim"),
+        @docx2html.note_reference("footnote", "0"),
+      ]),
+      @docx2html.run([
+        @docx2html.text(" and another"),
+        @docx2html.note_reference("footnote", "1"),
+      ]),
+    ]),
+    @docx2html.paragraph([
+      @docx2html.run([
+        @docx2html.text("Closing remark"),
+        @docx2html.note_reference("endnote", "0"),
+      ]),
+    ]),
+  ]
+  let bytes = @docx2html.write_docx_with_annotations(
+    body,
+    footnotes=[
+      @docx2html.note_spec(note_body("First source.")),
+      @docx2html.note_spec([
+        @docx2html.paragraph([@docx2html.run([@docx2html.text("Second,")])]),
+        @docx2html.paragraph([
+          @docx2html.run([@docx2html.text("longer source.")]),
+        ]),
+      ]),
+    ],
+    endnotes=[@docx2html.note_spec(note_body("The endnote."))],
+  )
+  debug_inspect(@opc.validate_docx_package(bytes), content="[]")
+  let annotated = @docx2html.read_docx_annotated(bytes)
+  guard @inspect.annotated_outline(annotated, file="n.docx") is Object(outline)
+  json_inspect(outline.get("messages"), content=[[]])
+  json_inspect(outline.get("counts"), content=[
+    {
+      "paragraphs": 2,
+      "tables": 0,
+      "images": 0,
+      "hyperlinks": 0,
+      "bookmarks": 0,
+      "footnotes": 2,
+      "endnotes": 1,
+      "comments": 0,
+      "headers": 0,
+      "footers": 0,
+      "sections": 1,
+    },
+  ])
+  // The index: ids are index+1, references point at the body runs.
+  let index = annotated.annotations()
+  debug_inspect(index.warnings(), content="[]")
+  debug_inspect(index.footnotes().length(), content="2")
+  debug_inspect(index.endnotes().length(), content="1")
+  debug_inspect(
+    index.footnotes()[0].id(),
+    content=(
+      #|"1"
+    ),
+  )
+  json_inspect(index.footnotes()[0].references().to_json(), content=[
+    "/body/p[1]/r[1]",
+  ])
+  json_inspect(index.footnotes()[1].references().to_json(), content=[
+    "/body/p[1]/r[2]",
+  ])
+  // Note bodies are readable stories.
+  guard @inspect.annotated_element(
+      annotated,
+      file="n.docx",
+      path="/footnotes/note[@id=2]/p[2]",
+    )
+    is Object(second_para)
+  json_inspect(second_para.get("text"), content=["longer source."])
+  // Byte level: plumbing ids -1/0, content ids from 1, the in-note mark
+  // run heading the first paragraph.
+  let archive = @mbtzip.read(bytes)
+  guard archive.get("word/footnotes.xml") is Some(part)
+  let text = @utf8.decode(part, ignore_bom=true)
+  inspect(
+    text.find("w:type=\"separator\" w:id=\"-1\"") is Some(_) ||
+    text.find("w:id=\"-1\" w:type=\"separator\"") is Some(_),
+    content="true",
+  )
+  inspect(
+    text.find("<w:footnote w:id=\"1\"><w:p><w:r><w:footnoteRef/></w:r>")
+    is Some(_),
+    content="true",
+  )
+  guard archive.get("word/endnotes.xml") is Some(endnote_part)
+  inspect(
+    @utf8.decode(endnote_part, ignore_bom=true).find(
+      "<w:endnote w:id=\"1\"><w:p><w:r><w:endnoteRef/></w:r>",
+    )
+    is Some(_),
+    content="true",
+  )
+}
+
+///|
+test "K3: note references and bodies fail closed" {
+  let plain = [
+    @docx2html.paragraph([@docx2html.run([@docx2html.text("body")])]),
+  ]
+  // Unreferenced and doubly-referenced notes.
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_annotations(plain, footnotes=[
+        @docx2html.note_spec(note_body("orphan")),
+      ])
+    },
+    "footnotes[0] is never referenced from the body",
+  )
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_annotations(
+        [
+          @docx2html.paragraph([
+            @docx2html.run([
+              @docx2html.note_reference("footnote", "0"),
+              @docx2html.note_reference("footnote", "0"),
+            ]),
+          ]),
+        ],
+        footnotes=[@docx2html.note_spec(note_body("twice"))],
+      )
+    },
+    "footnotes[0] is referenced 2 times",
+  )
+  // Dangling references (bad index, wrong kind, junk id).
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_annotations(
+        [
+          @docx2html.paragraph([
+            @docx2html.run([@docx2html.note_reference("footnote", "1")]),
+          ]),
+        ],
+        footnotes=[@docx2html.note_spec(note_body("only one"))],
+      )
+    },
+    "the footnote reference '1' does not name a supplied note",
+  )
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx_with_annotations(
+        [
+          @docx2html.paragraph([
+            @docx2html.run([@docx2html.note_reference("endnote", "0")]),
+          ]),
+        ],
+        footnotes=[@docx2html.note_spec(note_body("wrong kind"))],
+      )
+    },
+    "the endnote reference '0' does not name a supplied note",
+  )
+  // Plain write_docx (no notes supplied) refuses dangling references.
+  expect_comment_failure(
+    () => {
+      @docx2html.write_docx([
+        @docx2html.paragraph([
+          @docx2html.run([@docx2html.note_reference("footnote", "0")]),
+        ]),
+      ])
+    },
+    "the footnote reference '0' does not name a supplied note",
+  )
+  // Nested notes and notes in comments.
+  expect_comment_failure(
+    () => {
+      @docx2html.note_spec([
+        @docx2html.paragraph([
+          @docx2html.run([@docx2html.note_reference("footnote", "0")]),
+        ]),
+      ])
+    },
+    "note bodies cannot carry note references",
+  )
+  expect_comment_failure(
+    () => {
+      @docx2html.comment_spec(author="A", from=0, to=0, [
+        @docx2html.paragraph([
+          @docx2html.run([@docx2html.note_reference("endnote", "0")]),
+        ]),
+      ])
+    },
+    "comment bodies cannot carry note references",
+  )
+}
