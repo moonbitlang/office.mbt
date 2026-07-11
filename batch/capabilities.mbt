@@ -93,6 +93,20 @@ let op_specs : Array[OpSpec] = [
       opt("title", "string"),
     ],
   },
+  {
+    op: "table",
+    params: [
+      req("sheet", "string"),
+      req("range", "colon_range"),
+      opt("name", "string"),
+      opt("style", "string"),
+      opt("header_row", "bool"),
+      opt("row_stripes", "bool"),
+      opt("first_column", "bool"),
+      opt("last_column", "bool"),
+      opt("column_stripes", "bool"),
+    ],
+  },
 ]
 
 ///|

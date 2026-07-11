@@ -130,6 +130,93 @@ test "a script covering every op kind applies like its CLI twins" {
 }
 
 ///|
+fn first_table(workbook : @xlsx.Workbook) -> @xlsx.Table raise {
+  for sheet in workbook.sheets() {
+    for table in sheet.tables() {
+      return table
+    }
+  }
+  fail("no table on any sheet")
+}
+
+///|
+test "a table op derives columns from the header row and honors options" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{
+    #|  "schema": "xlsx.batch/1",
+    #|  "ops": [
+    #|    {"op": "set", "params": {"sheet": "Data", "cell": "A1", "value": "Item"}},
+    #|    {"op": "set", "params": {"sheet": "Data", "cell": "B1", "value": "Qty"}},
+    #|    {"op": "table", "params": {"sheet": "Data", "range": "A1:B4", "name": "Inventory", "style": "TableStyleMedium2", "first_column": true, "row_stripes": false}}
+    #|  ]
+    #|}
+  inspect(apply_script(workbook, script), content="3")
+  let table = first_table(workbook)
+  inspect(table.name, content="Inventory")
+  inspect(table.display_name, content="Inventory")
+  inspect(table.range_ref, content="A1:B4")
+  // Column names are read from the header row, in order.
+  debug_inspect(
+    table.columns,
+    content=(
+      #|["Item", "Qty"]
+    ),
+  )
+  inspect(table.style_name, content="TableStyleMedium2")
+  assert_true(table.show_first_column)
+  assert_false(table.show_row_stripes) // explicitly overridden off
+  assert_true(table.show_header_row) // omitted -> engine default (shown)
+}
+
+///|
+test "a table op auto-names and keeps engine defaults when options are omitted" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  // No headers, no name, no flags: columns auto-name, the engine assigns
+  // Table1, and the tri-state defaults (shown header, striped rows) hold.
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"table","params":{"sheet":"S","range":"A1:C3"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="1")
+  let table = first_table(workbook)
+  inspect(table.name, content="Table1")
+  debug_inspect(
+    table.columns,
+    content=(
+      #|["Column1", "Column2", "Column3"]
+    ),
+  )
+  assert_true(table.show_header_row) // Bool? None -> true
+  assert_true(table.show_row_stripes) // Bool? None -> true
+  assert_false(table.show_first_column) // Bool default -> false
+}
+
+///|
+test "a table op requires an A1:B2-style range, not a bare cell" {
+  try
+    ignore(
+      parse_ops(
+        (
+          #|{"schema":"xlsx.batch/1", "ops": [{"op":"table", "params": {"sheet":"S", "range":"A1"}}]}
+        ),
+      ),
+    )
+  catch {
+    @batch.BatchError(message) =>
+      inspect(
+        message,
+        content="op 0 (table): 'range' must be an A1:B2-style range: 'A1'",
+      )
+    err => fail("expected a BatchError, got \{err}")
+  } noraise {
+    _ => fail("expected the table op to be rejected")
+  }
+}
+
+///|
 test "a chart op requires valid categories and values at parse time" {
   try
     ignore(
@@ -420,7 +507,7 @@ test "strict validation names the 0-based op index" {
       (
         #|{"schema": "xlsx.batch/1", "ops": [{"op": "nop", "params": {}}]}
       ),
-      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart)",
+      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table)",
     ),
     (
       (

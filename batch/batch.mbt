@@ -76,6 +76,19 @@ priv enum OpKind {
     series_name~ : String,
     title~ : String
   )
+  OpTable(
+    sheet~ : String,
+    range~ : String,
+    name~ : String,
+    style~ : String,
+    // Tri-state: the engine defaults for a shown header row and row
+    // stripes are `true`, so "unset" must stay distinct from `false`.
+    header_row~ : Bool?,
+    row_stripes~ : Bool?,
+    first_column~ : Bool,
+    last_column~ : Bool,
+    column_stripes~ : Bool
+  )
 }
 
 ///|
@@ -105,6 +118,7 @@ pub fn BatchOp::name(self : BatchOp) -> String {
     OpFilter(..) => "filter"
     OpAddSheet(..) => "add-sheet"
     OpChart(..) => "chart"
+    OpTable(..) => "table"
   }
 }
 
@@ -258,6 +272,18 @@ fn parse_op(
         series_name=reader.optional_string("name"),
         title=reader.optional_string("title"),
       )
+    "table" =>
+      OpTable(
+        sheet=reader.string("sheet"),
+        range=reader.colon_range("range"),
+        name=reader.optional_string("name"),
+        style=reader.optional_string("style"),
+        header_row=reader.tristate_bool("header_row"),
+        row_stripes=reader.tristate_bool("row_stripes"),
+        first_column=reader.optional_bool("first_column"),
+        last_column=reader.optional_bool("last_column"),
+        column_stripes=reader.optional_bool("column_stripes"),
+      )
     _ =>
       raise op_error(
         index,
@@ -338,6 +364,24 @@ fn ParamReader::optional_bool(
     Some(_) =>
       raise op_error(self.index, self.op, "'\{key}' must be true or false")
     None => false
+  }
+}
+
+///|
+/// A bool that stays absent when the param is omitted, for engine options
+/// whose default is not `false` (a shown header row, row stripes): `None`
+/// keeps the engine default, `Some(v)` overrides it. Distinct from
+/// `optional_bool`, which collapses "omitted" into `false`.
+fn ParamReader::tristate_bool(
+  self : ParamReader,
+  key : String,
+) -> Bool? raise BatchError {
+  match self.take(key) {
+    Some(True) => Some(true)
+    Some(False) => Some(false)
+    Some(_) =>
+      raise op_error(self.index, self.op, "'\{key}' must be true or false")
+    None => None
   }
 }
 
@@ -684,6 +728,36 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
         ),
       )
       workbook.add_chart_with_options(sheet, anchor, chart)
+    }
+    OpTable(
+      sheet~,
+      range~,
+      name~,
+      style~,
+      header_row~,
+      row_stripes~,
+      first_column~,
+      last_column~,
+      column_stripes~
+    ) => {
+      // Column names come from the header row of `range` (the engine
+      // auto-names blanks/duplicates), so the script sets headers first,
+      // then this op. An empty `name` lets the engine assign `Table<n>`;
+      // an empty `style` keeps its default. `header_row`/`row_stripes`
+      // pass through as `Bool?` so an omitted flag keeps the engine default.
+      let options = @xlsx.TableOptions::new(range)
+      if name != "" {
+        options.set_name(name)
+      }
+      if style != "" {
+        options.set_style_name(style)
+      }
+      options.set_show_header_row(header_row)
+      options.set_show_row_stripes(row_stripes)
+      options.set_show_first_column(first_column)
+      options.set_show_last_column(last_column)
+      options.set_show_column_stripes(column_stripes)
+      ignore(workbook.add_table(sheet, options))
     }
   }
 }

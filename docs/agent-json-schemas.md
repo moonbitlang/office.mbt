@@ -156,6 +156,7 @@ Envelope:
 | `filter` | `sheet`, `range` (strings) |
 | `add-sheet` | `name` (string) |
 | `chart` | `sheet`, `anchor`, `categories`, `values` (strings, required); `type?` (default `col`), `name?`, `title?` (strings) |
+| `table` | `sheet`, `range` (strings; `range` is an `A1:B2` colon range); `name?`, `style?` (strings); `header_row?`, `row_stripes?`, `first_column?`, `last_column?`, `column_stripes?` (bool) |
 - `set.value` accepts string, number, bool, or null. JSON types are honored:
   a number becomes a numeric cell, a string a text cell (no
   reclassification), a bool a boolean cell, and null clears the cell.
@@ -177,6 +178,14 @@ Envelope:
   at 100,000 cells); `column` is a letters-only column or ascending
   column range; chart `categories`/`values` are a range with an optional
   non-empty `Sheet!` qualification.
+- `table` takes its column names from the header row of `range` (set those
+  cells first, in an earlier op); the engine auto-names any blank or
+  duplicate header `Column<n>`. An omitted `name` lets the engine assign
+  `Table<n>`; an omitted `style` keeps the default (`TableStyleMedium9`).
+  `header_row` and `row_stripes` are tri-state — omitting them keeps the
+  engine defaults (both `true`), distinct from passing `false`. Adding a
+  table whose range intersects an existing one, or reusing a table name,
+  fails at apply time.
 - Zero ops is a valid no-op and writes nothing. Scripts are capped at
   10,000 ops, style ranges at 1,000,000 expanded cells per script in
   aggregate, and numeric literals at 40 characters (pathologically long

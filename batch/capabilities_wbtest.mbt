@@ -20,6 +20,7 @@ fn required_samples() -> Map[String, String] {
     (
       "chart", "{\"sheet\":\"S\",\"anchor\":\"E2\",\"categories\":\"A1:A3\",\"values\":\"B1:B3\"}",
     ),
+    ("table", "{\"sheet\":\"S\",\"range\":\"A1:B2\"}"),
   ])
 }
 
@@ -146,6 +147,7 @@ test "capabilities payload is field-exact" {
       #|filter: sheet:string! range:colon_range!
       #|add-sheet: name:string!
       #|chart: sheet:string! anchor:cell! categories:series_range! values:series_range! type:string name:string title:string
+      #|table: sheet:string! range:colon_range! name:string style:string header_row:bool row_stripes:bool first_column:bool last_column:bool column_stripes:bool
     ),
   )
 }
