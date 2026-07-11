@@ -3,6 +3,8 @@
 // present before generating a script (forward-compat discovery).
 
 ///|
-async fn run_capabilities(_m : @argparse.Matches) -> Unit {
+/// Not async: unlike the other read commands it opens no file, it just
+/// prints a static catalog.
+fn run_capabilities(_m : @argparse.Matches) -> Unit {
   println(@batch.capabilities().stringify(indent=2))
 }

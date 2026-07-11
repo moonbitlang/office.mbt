@@ -182,6 +182,16 @@ fn parse_op(
     Some(_) => raise op_error(index, name, "\"params\" must be an object")
     None => raise op_error(index, name, "missing \"params\" object")
   }
+  // Gate on the catalog before dispatch: an op is parseable iff it is
+  // advertised by `capabilities`, so a dispatch arm without a catalog
+  // entry is unreachable and the two cannot drift.
+  if not(is_known_op(name)) {
+    raise op_error(
+      index,
+      name,
+      "unknown op (expected one of: \{accepted_op_names().join(", ")})",
+    )
+  }
   let reader = ParamReader::{ index, op: name, params, used: Map([]) }
   let op = match name {
     "set" =>

@@ -103,6 +103,21 @@ fn accepted_op_names() -> Array[String] {
 }
 
 ///|
+/// Whether `name` is an op this build accepts. The parser gates on this
+/// before dispatching, so an op is parseable **iff** it has a catalog
+/// entry — a `parse_op` arm added without an `op_specs` entry is
+/// unreachable, which structurally prevents the parser and the advertised
+/// `capabilities` from drifting apart.
+fn is_known_op(name : String) -> Bool {
+  for spec in op_specs {
+    if spec.op == name {
+      return true
+    }
+  }
+  false
+}
+
+///|
 /// The `xlsx.capabilities/1` JSON payload: the batch schema this build
 /// speaks, its limits, and every op + param it accepts.
 pub fn capabilities() -> Json {
