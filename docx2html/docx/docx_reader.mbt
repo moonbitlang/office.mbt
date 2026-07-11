@@ -443,7 +443,8 @@ fn office_namespace_map() -> Map[String, String] {
     "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing": "wp",
     "http://schemas.openxmlformats.org/drawingml/2006/main": "a",
     "http://schemas.openxmlformats.org/drawingml/2006/picture": "pic",
-    "http://schemas.microsoft.com/office/word/2010/wordml": "wordml",
+    "http://schemas.microsoft.com/office/word/2010/wordml": "w14",
+    "http://schemas.microsoft.com/office/word/2012/wordml": "w15",
     "urn:schemas-microsoft-com:office:office": "o",
     "urn:schemas-microsoft-com:office:word": "office-word",
     "urn:schemas-microsoft-com:vml": "v",
@@ -1764,13 +1765,13 @@ fn BodyReader::read_structured_document_tag(
 
 ///|
 fn read_structured_checkbox(element : XmlElement) -> Bool? {
-  match element.first("wordml:checkbox") {
+  match element.first("w14:checkbox") {
     Some(checkbox_element) =>
-      match checkbox_element.first("wordml:checked") {
+      match checkbox_element.first("w14:checked") {
         Some(checked_element) =>
           Some(
             read_boolean_attribute_value(
-              checked_element.attributes.get("wordml:val"),
+              checked_element.attributes.get("w14:val"),
             ),
           )
         None => Some(false)

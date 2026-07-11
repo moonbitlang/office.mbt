@@ -199,3 +199,22 @@ pub fn embed_style_map(
 fn no_external_file_reader(_path : String) -> Bytes? {
   None
 }
+
+///|
+/// Reads DOCX bytes into the package representation PLUS the annotation
+/// index (comments with threading and anchors, note references). See
+/// `@docx.read_docx_annotated`; the package half is identical to
+/// `read_docx_package`.
+pub fn read_docx_annotated(
+  docx : BytesView,
+  external_file_access? : Bool = false,
+  read_external_file? : (String) -> Bytes? = no_external_file_reader,
+) -> @docx_impl.DocxAnnotatedResult raise DocxError {
+  bridge_core_error(() => {
+    @docx_impl.read_docx_annotated(
+      docx,
+      external_file_access~,
+      read_external_file~,
+    )
+  })
+}

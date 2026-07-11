@@ -23,17 +23,68 @@ pub fn new_blank_docx() -> Bytes
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 
+pub fn read_docx_annotated(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxAnnotatedResult raise @core.DocxError
+
 pub fn read_docx_package(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxPackageResult raise @core.DocxError
 
 pub fn read_docx_with_messages(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> DocxReadResult raise @core.DocxError
 
 pub fn read_embedded_style_map(BytesView) -> String? raise @core.DocxError
 
+pub fn scan_story(Bytes) -> StoryScan raise @core.DocxError
+
 pub fn write_docx(Array[@document.DocumentElement]) -> Bytes raise @core.DocxError
 
 // Errors
 
 // Types and methods
+pub struct AnnotationAnchor {
+  story : String
+  start : String?
+  end : String?
+  references : Array[String]
+}
+pub fn AnnotationAnchor::end(Self) -> String?
+pub fn AnnotationAnchor::references(Self) -> Array[String]
+pub fn AnnotationAnchor::start(Self) -> String?
+pub fn AnnotationAnchor::story(Self) -> String
+
+pub struct AnnotationIndex {
+  // private fields
+}
+pub fn AnnotationIndex::comments(Self) -> Array[CommentInfo]
+pub fn AnnotationIndex::covering_comment_ids(Self, String) -> Array[String]
+pub fn AnnotationIndex::endnotes(Self) -> Array[NoteInfo]
+pub fn AnnotationIndex::footnotes(Self) -> Array[NoteInfo]
+pub fn AnnotationIndex::warnings(Self) -> Array[String]
+
+pub struct CommentInfo {
+  id : String
+  defined : Bool
+  author : String?
+  initials : String?
+  date : String?
+  done : Bool?
+  parent_id : String?
+  body_paragraphs : Int
+  anchors : Array[AnnotationAnchor]
+}
+pub fn CommentInfo::anchors(Self) -> Array[AnnotationAnchor]
+pub fn CommentInfo::author(Self) -> String?
+pub fn CommentInfo::body_paragraphs(Self) -> Int
+pub fn CommentInfo::date(Self) -> String?
+pub fn CommentInfo::defined(Self) -> Bool
+pub fn CommentInfo::done(Self) -> Bool?
+pub fn CommentInfo::id(Self) -> String
+pub fn CommentInfo::initials(Self) -> String?
+pub fn CommentInfo::parent_id(Self) -> String?
+
+pub struct DocxAnnotatedResult {
+  // private fields
+}
+pub fn DocxAnnotatedResult::annotations(Self) -> AnnotationIndex
+pub fn DocxAnnotatedResult::result(Self) -> DocxPackageResult
+
 pub(all) struct DocxPackageResult {
   document : @document.DocumentElement
   headers : Array[@document.HeaderFooterPart]
@@ -60,6 +111,59 @@ pub fn DocxReadResult::not_equal(Self, Self) -> Bool
 #as_free_fn
 #deprecated
 pub fn DocxReadResult::to_repr(Self) -> @debug.Repr
+
+pub struct NoteInfo {
+  id : String
+  references : Array[String]
+}
+pub fn NoteInfo::id(Self) -> String
+pub fn NoteInfo::references(Self) -> Array[String]
+
+pub enum ScanMarkerKind {
+  CommentStart
+  CommentEnd
+  CommentRef
+  FootnoteRef
+  EndnoteRef
+} derive(Eq)
+pub impl Show for ScanMarkerKind
+
+pub struct ScannedMarker {
+  kind : ScanMarkerKind
+  id : String
+  seq : Int
+  container_path : String?
+  after_child : String?
+}
+pub fn ScannedMarker::after_child(Self) -> String?
+pub fn ScannedMarker::container_path(Self) -> String?
+pub fn ScannedMarker::id(Self) -> String
+pub fn ScannedMarker::kind(Self) -> ScanMarkerKind
+pub fn ScannedMarker::seq(Self) -> Int
+
+pub struct ScannedNode {
+  path : String
+  kind : String
+  open_seq : Int
+  close_seq : Int
+  byte_start : Int
+  byte_end : Int
+}
+pub fn ScannedNode::byte_end(Self) -> Int
+pub fn ScannedNode::byte_start(Self) -> Int
+pub fn ScannedNode::close_seq(Self) -> Int
+pub fn ScannedNode::kind(Self) -> String
+pub fn ScannedNode::open_seq(Self) -> Int
+pub fn ScannedNode::path(Self) -> String
+
+pub struct StoryScan {
+  nodes : Array[ScannedNode]
+  markers : Array[ScannedMarker]
+  warnings : Array[String]
+}
+pub fn StoryScan::markers(Self) -> Array[ScannedMarker]
+pub fn StoryScan::nodes(Self) -> Array[ScannedNode]
+pub fn StoryScan::warnings(Self) -> Array[String]
 
 // Type aliases
 
