@@ -1689,3 +1689,43 @@ test "K3: note references and bodies fail closed" {
     "comment bodies cannot carry note references",
   )
 }
+
+///|
+test "L0: body paragraph spans resolve through the public query" {
+  let bytes = @docx2html.write_docx([
+    @docx2html.paragraph(
+      [@docx2html.run([@docx2html.text("Styled head")])],
+      properties=@docx2html.paragraph_properties(style_id=Some("Heading1")),
+    ),
+    @docx2html.table([
+      @docx2html.table_row([@docx2html.table_cell(note_body("cell text"))]),
+    ]),
+  ])
+  let annotated = @docx2html.read_docx_annotated(bytes)
+  inspect(annotated.main_story_part(), content="word/document.xml")
+  // The heading paragraph: content_start sits past its pPr, and the
+  // interior slice holds exactly the run.
+  guard annotated.body_paragraph_span("p[1]") is Some(span)
+  inspect(span.self_closing(), content="false")
+  guard span.content_start() is Some(content_start)
+  guard span.close_tag_start() is Some(close_start)
+  let archive = @mbtzip.read(bytes)
+  guard archive.get("word/document.xml") is Some(part)
+  let text = @utf8.decode(part, ignore_bom=true)
+  let interior = text
+    .view(start_offset=content_start, end_offset=close_start)
+    .to_owned()
+  inspect(interior, content="<w:r><w:t>Styled head</w:t></w:r>")
+  inspect(
+    text.view(start_offset=span.byte_start()).to_owned().has_prefix("<w:p>"),
+    content="true",
+  )
+  // Table-cell paragraphs resolve by their relative ordinal path.
+  inspect(
+    annotated.body_paragraph_span("tbl[1]/tr[1]/tc[1]/p[1]") is Some(_),
+    content="true",
+  )
+  // Unknown paths resolve to None, never a guess.
+  inspect(annotated.body_paragraph_span("p[9]") is Some(_), content="false")
+  inspect(annotated.body_paragraph_span("tbl[1]") is Some(_), content="false")
+}

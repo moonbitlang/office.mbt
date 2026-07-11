@@ -100,6 +100,12 @@ priv struct ScannedNode {
   close_seq : Int
   byte_start : Int
   byte_end : Int
+  // L0 insertion offsets: content_start is just past the open tag AND
+  // past a leading pPr (the earliest schema-legal point for run-level
+  // content); close_tag_start is the '<' of the close tag. Both -1 for
+  // self-closing elements (no interior to insert into).
+  content_start : Int
+  close_tag_start : Int
 }
 
 ///|
@@ -165,6 +171,9 @@ priv struct ScanFrame {
   mut last_closed_child : String?
   open_seq : Int
   byte_start : Int
+  // Earliest interior insertion offset (just past the open tag, moved
+  // past a leading pPr when one closes directly inside this element).
+  mut content_start : Int
   // TRANSPARENT containers (sdt/sdtContent/smartTag/ins) are flattened by
   // the reader: their children count in the nearest non-transparent
   // ancestor's counters, so projection ordinals mirror the parsed AST.
@@ -370,6 +379,17 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
               None => ()
             }
           }
+          // A pPr closing directly inside a paragraph moves the
+          // paragraph's earliest insertion offset past itself: CT_P is
+          // a SEQUENCE with pPr first, so run-level content (and
+          // annotation markers) must land after it.
+          if frame.is_wml && frame.local_name == "pPr" {
+            match frames.last() {
+              Some(parent) if parent.is_wml && parent.local_name == "p" =>
+                parent.content_start = close_end
+              _ => ()
+            }
+          }
           // vMerge DECISION at tcPr close (declarations final, before any
           // cell content): reader-exact — a continuation whose STARTING
           // column has a registered origin is merged away (retracted);
@@ -430,7 +450,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
               _ => ()
             }
           }
-          finish_frame(frame, seq, close_end, nodes, frames)
+          finish_frame(frame, seq, index, close_end, nodes, frames)
         }
         None => warnings.push("annotation scanner: unbalanced closing tag")
       }
@@ -634,10 +654,21 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
             close_seq: seq,
             byte_start: index,
             byte_end: tag_end,
+            content_start: -1,
+            close_tag_start: -1,
           })
           record_closed_child(frames, path)
         }
         None => ()
+      }
+      // A self-closing <w:pPr/> still pins its paragraph's content
+      // start past itself (CT_P: pPr leads the sequence).
+      if is_wml_uri(uri) && local_name == "pPr" {
+        match frames.last() {
+          Some(parent) if parent.is_wml && parent.local_name == "p" =>
+            parent.content_start = tag_end
+          _ => ()
+        }
       }
       for prefix in declared {
         match namespaces.get(prefix) {
@@ -689,6 +720,7 @@ fn scan_story(part : Bytes) -> StoryScan raise DocxError {
         last_closed_child: None,
         open_seq: seq,
         byte_start: index,
+        content_start: tag_end,
         transparent,
         suppressed,
         counter_owner,
@@ -863,6 +895,7 @@ fn record_closed_child(frames : Array[ScanFrame], path : String) -> Unit {
 fn finish_frame(
   frame : ScanFrame,
   close_seq : Int,
+  close_tag_start : Int,
   byte_end : Int,
   nodes : Array[ScannedNode],
   frames : Array[ScanFrame],
@@ -876,6 +909,8 @@ fn finish_frame(
         close_seq,
         byte_start: frame.byte_start,
         byte_end,
+        content_start: frame.content_start,
+        close_tag_start,
       })
       record_closed_child(frames, path)
     }
