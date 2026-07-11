@@ -332,3 +332,58 @@ test "scanner review round 3: vMerge fail-open, property-container markers, proj
     ),
   )
 }
+
+///|
+test "scanner review round 4: reader-exact merge origins, spans, and row deletion" {
+  let scan = scan_text(
+    (
+      #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      #|<w:body>
+      #|<w:tbl>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>orphan kept, becomes origin</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>second orphan merges away</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>span2 restart at col0</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:p><w:r><w:t>plain col0</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p><w:r><w:t>misaligned col1 continuation KEPT (origins key on start column)</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:trPr><w:del/></w:trPr><w:tc><w:p><w:r><w:t>deleted row</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc><w:tcPr><w:vMerge/><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>first vMerge wins: continuation, merges into col0 origin above</w:t></w:r></w:p></w:tc></w:tr>
+      #|<w:tr><w:tc/><w:tc><w:p><w:r><w:t>after self-closing cell</w:t></w:r></w:p></w:tc></w:tr>
+      #|</w:tbl>
+      #|</w:body>
+      #|</w:document>
+    ),
+  )
+  let cells : Array[String] = []
+  for node in scan.nodes() {
+    if node.kind is ("tc" | "tr") {
+      cells.push("\{node.kind} \{node.path()}")
+    }
+  }
+  cells.sort()
+  // Rows: r1 orphan kept (tr[1]/tc[1]); r2 second orphan MERGED (tr[2]
+  // has no tc); r3 span-2 restart kept; r4 plain col0 + misaligned col1
+  // continuation BOTH kept; r5 deleted (no tr — later rows renumber);
+  // r6 (now tr[5]) first-vMerge-wins continuation MERGED into the col0
+  // origin (the r4 plain cell); r7 (tr[6]) self-closing tc + sibling.
+  debug_inspect(
+    cells,
+    content=(
+      #|[
+      #|  "tr tbl[1]/tr[1]",
+      #|  "tr tbl[1]/tr[2]",
+      #|  "tr tbl[1]/tr[3]",
+      #|  "tr tbl[1]/tr[4]",
+      #|  "tr tbl[1]/tr[5]",
+      #|  "tr tbl[1]/tr[6]",
+      #|  "tc tbl[1]/tr[1]/tc[1]",
+      #|  "tc tbl[1]/tr[3]/tc[1]",
+      #|  "tc tbl[1]/tr[4]/tc[1]",
+      #|  "tc tbl[1]/tr[4]/tc[2]",
+      #|  "tc tbl[1]/tr[6]/tc[1]",
+      #|  "tc tbl[1]/tr[6]/tc[2]",
+      #|]
+    ),
+  )
+  // gridSpan parse parity with the reader (parse_grid_span): the span-2
+  // restart advanced the cursor so r3's would-be second cell (none) —
+  // pinned indirectly by r4's col assignments above.
+}
