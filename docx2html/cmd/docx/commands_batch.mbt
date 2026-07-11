@@ -107,10 +107,16 @@ fn locate_writer_failure(
 async fn write_atomically(output : String, bytes : Bytes) -> Unit {
   for attempt in 0..<100 {
     let temp = "\{output}.tmp-\{attempt}"
-    let file = @afs.open(temp, mode=WriteOnly, create_mode=CreateNew) catch {
-      // The name exists (leftover or concurrent temp) or cannot be
-      // created — leave it alone and try the next suffix.
-      _ => continue
+    // sync=Data matches write_file's default: the data is durable before
+    // the rename can publish it.
+    let file = @afs.open(temp, mode=WriteOnly, create_mode=CreateNew, sync=Data) catch {
+      // Only an existing name (leftover or concurrent temp) is worth the
+      // next suffix; EACCES/ENOENT/etc. would fail identically 100 times.
+      @os_error.OSError(_, ..) as os_error if os_error.is_EEXIST() => continue
+      err =>
+        raise @cli.CliError(
+          "docx: could not create a temporary file '\{temp}': \{err}",
+        )
     }
     file.write(bytes) catch {
       err => {
