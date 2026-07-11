@@ -316,15 +316,25 @@ fn declared_encoding(bytes : Bytes) -> EncodingDeclaration {
   // Walk the declaration as PSEUDO-ATTRIBUTES (name = "value" | 'value'),
   // never scanning inside quoted values — "encoding" appearing inside a
   // VALUE is just text (review round 2). Any structural deviation is a
-  // malformed declaration and fails closed.
+  // malformed declaration and fails closed. The XML grammar demands
+  // WHITESPACE after '<?xml' and between pseudo-attributes, and at
+  // least one pseudo-attribute (VersionInfo) — '<?xmlversion...',
+  // '<?xml?>', and 'value"name' runs are all malformed (round 3).
   let limit = bytes.length()
   let mut cursor = at + 5
+  if cursor >= limit || !is_decl_space(bytes[cursor]) {
+    return MalformedDeclaration
+  }
   let mut found : EncodingDeclaration = NoDeclaration
+  let mut attributes_seen = 0
   for ;; {
     while cursor < limit && is_decl_space(bytes[cursor]) {
       cursor += 1
     }
     if cursor + 1 < limit && bytes[cursor] == b'?' && bytes[cursor + 1] == b'>' {
+      if attributes_seen == 0 {
+        return MalformedDeclaration
+      }
       return found
     }
     // Pseudo-attribute name: ASCII letters only (version/encoding/
@@ -364,6 +374,11 @@ fn declared_encoding(bytes : Bytes) -> EncodingDeclaration {
       return MalformedDeclaration
     }
     if name == "encoding" {
+      // A SECOND encoding pseudo-attribute is malformed; last-wins
+      // would let a devious first one mask the operative declaration.
+      if found is Declared(_) {
+        return MalformedDeclaration
+      }
       let value_builder = StringBuilder::new()
       for offset in value_start..<cursor {
         value_builder.write_char(
@@ -373,6 +388,12 @@ fn declared_encoding(bytes : Bytes) -> EncodingDeclaration {
       found = Declared(value_builder.to_string())
     }
     cursor += 1
+    attributes_seen += 1
+    // The next thing after a value must be whitespace or the end of
+    // the declaration — 'value"name' runs are malformed.
+    if cursor < limit && !is_decl_space(bytes[cursor]) && bytes[cursor] != b'?' {
+      return MalformedDeclaration
+    }
   }
 }
 
