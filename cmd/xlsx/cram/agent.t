@@ -263,6 +263,21 @@ list. `outline` counts it per sheet, and the package stays valid:
   $ xlsx.exe outline book.xlsx | grep -c '"data_validations": 1'
   1
 
+The `cf` op adds a conditional-formatting rule — here a 3-color scale over a
+column. `outline` counts the range and the package stays valid:
+
+  $ cat > cf.json <<'JSON'
+  > {"schema": "xlsx.batch/1", "ops": [
+  >   {"op": "cf", "params": {"sheet": "Data", "range": "B2:B20", "type": "3_color_scale", "min_color": "F8696B", "mid_color": "FFEB84", "max_color": "63BE7B"}}
+  > ]}
+  > JSON
+  $ xlsx.exe batch book.xlsx cf.json
+  applied 1 op(s) to book.xlsx
+  $ xlsx.exe validate book.xlsx
+  valid
+  $ xlsx.exe outline book.xlsx | grep -c '"conditional_format_ranges": 1'
+  1
+
 
 `html` renders sheets to one self-contained document — the "look" half of
 the agent's render -> look -> fix loop. Structure checks (the document is
@@ -339,6 +354,6 @@ ops it doesn't know):
   {
     "schema": "xlsx.capabilities/1",
   $ xlsx.exe capabilities | grep -c '"op":'
-  11
+  12
   $ xlsx.exe capabilities | grep -o '"batch_schema": "[^"]*"'
   "batch_schema": "xlsx.batch/1"

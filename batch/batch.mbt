@@ -112,6 +112,34 @@ priv enum OpKind {
     error_message~ : String,
     error_style~ : String
   )
+  // A conditional-formatting rule. `cf_type` is the raw script `type`
+  // (validated at apply, like `chart`/`validate`). One op adds one rule to
+  // the range; the engine assigns priorities so repeated ops stack.
+  OpCf(
+    sheet~ : String,
+    range~ : String,
+    cf_type~ : String,
+    criteria~ : String,
+    value~ : String,
+    min_value~ : String,
+    max_value~ : String,
+    formula~ : String,
+    fill~ : String,
+    font_color~ : String,
+    bold~ : Bool,
+    italic~ : Bool,
+    min_type~ : String,
+    mid_type~ : String,
+    max_type~ : String,
+    mid_value~ : String,
+    min_color~ : String,
+    mid_color~ : String,
+    max_color~ : String,
+    bar_color~ : String,
+    icon_style~ : String,
+    reverse_icons~ : Bool,
+    stop_if_true~ : Bool
+  )
 }
 
 ///|
@@ -143,6 +171,7 @@ pub fn BatchOp::name(self : BatchOp) -> String {
     OpChart(..) => "chart"
     OpTable(..) => "table"
     OpValidate(..) => "validate"
+    OpCf(..) => "cf"
   }
 }
 
@@ -324,6 +353,32 @@ fn parse_op(
         error_title=reader.optional_string("error_title"),
         error_message=reader.optional_string("error_message"),
         error_style=reader.optional_string("error_style"),
+      )
+    "cf" =>
+      OpCf(
+        sheet=reader.string("sheet"),
+        range=reader.sqref("range"),
+        cf_type=reader.string("type"),
+        criteria=reader.optional_string("criteria"),
+        value=reader.optional_string("value"),
+        min_value=reader.optional_string("min_value"),
+        max_value=reader.optional_string("max_value"),
+        formula=reader.optional_string("formula"),
+        fill=reader.optional_string("fill"),
+        font_color=reader.optional_string("font_color"),
+        bold=reader.optional_bool("bold"),
+        italic=reader.optional_bool("italic"),
+        min_type=reader.optional_string("min_type"),
+        mid_type=reader.optional_string("mid_type"),
+        max_type=reader.optional_string("max_type"),
+        mid_value=reader.optional_string("mid_value"),
+        min_color=reader.optional_string("min_color"),
+        mid_color=reader.optional_string("mid_color"),
+        max_color=reader.optional_string("max_color"),
+        bar_color=reader.optional_string("bar_color"),
+        icon_style=reader.optional_string("icon_style"),
+        reverse_icons=reader.optional_bool("reverse_icons"),
+        stop_if_true=reader.optional_bool("stop_if_true"),
       )
     _ =>
       raise op_error(
@@ -1015,6 +1070,215 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
         dv.set_input(input_title, input_message)
       }
       workbook.add_data_validation(sheet, dv)
+    }
+    OpCf(
+      sheet~,
+      range~,
+      cf_type~,
+      criteria~,
+      value~,
+      min_value~,
+      max_value~,
+      formula~,
+      fill~,
+      font_color~,
+      bold~,
+      italic~,
+      min_type~,
+      mid_type~,
+      max_type~,
+      mid_value~,
+      min_color~,
+      mid_color~,
+      max_color~,
+      bar_color~,
+      icon_style~,
+      reverse_icons~,
+      stop_if_true~
+    ) => {
+      if !is_supported_cf_type(cf_type) {
+        raise BatchError(
+          "cf: unknown type '\{cf_type}' (expected one of: cell, formula, 2_color_scale, 3_color_scale, data_bar, icon_set)",
+        )
+      }
+      // Reject any mode-specific param the chosen type does not use.
+      let present : Array[(String, Bool)] = [
+        ("criteria", criteria != ""),
+        ("value", value != ""),
+        ("min_value", min_value != ""),
+        ("max_value", max_value != ""),
+        ("formula", formula != ""),
+        ("fill", fill != ""),
+        ("font_color", font_color != ""),
+        ("bold", bold),
+        ("italic", italic),
+        ("min_type", min_type != ""),
+        ("mid_type", mid_type != ""),
+        ("max_type", max_type != ""),
+        ("mid_value", mid_value != ""),
+        ("min_color", min_color != ""),
+        ("mid_color", mid_color != ""),
+        ("max_color", max_color != ""),
+        ("bar_color", bar_color != ""),
+        ("icon_style", icon_style != ""),
+        ("reverse_icons", reverse_icons),
+        ("stop_if_true", stop_if_true),
+      ]
+      let allowed = cf_allowed_params(cf_type)
+      for entry in present {
+        let (pname, is_set) = entry
+        if is_set && !allowed.contains(pname) {
+          raise BatchError("cf: type '\{cf_type}' does not take '\{pname}'")
+        }
+      }
+      let opt = @xlsx.ConditionalFormatOptions::new(cf_type)
+      if stop_if_true {
+        opt.set_stop_if_true(true)
+      }
+      // The rule types (cell/formula) paint a dxf highlight, which needs at
+      // least one attribute to be meaningful.
+      let style_set = fill != "" || font_color != "" || bold || italic
+      match cf_type {
+        "cell" => {
+          if criteria == "" {
+            raise BatchError("cf: type 'cell' requires 'criteria'")
+          }
+          if !style_set {
+            raise BatchError(
+              "cf: type 'cell' requires a highlight (fill, font_color, bold, or italic)",
+            )
+          }
+          opt.set_criteria(criteria)
+          let crit = criteria.to_lower()
+          let is_between = crit == "between" ||
+            crit == "not between" ||
+            crit == "notbetween"
+          if is_between {
+            if min_value == "" || max_value == "" {
+              raise BatchError(
+                "cf: a '\{criteria}' rule requires 'min_value' and 'max_value'",
+              )
+            }
+            if value != "" {
+              raise BatchError(
+                "cf: a '\{criteria}' rule takes 'min_value'/'max_value', not 'value'",
+              )
+            }
+            opt.set_min_value(min_value)
+            opt.set_max_value(max_value)
+          } else {
+            if value == "" {
+              raise BatchError("cf: type 'cell' requires 'value'")
+            }
+            if min_value != "" || max_value != "" {
+              raise BatchError(
+                "cf: only a between/notBetween rule takes 'min_value'/'max_value'",
+              )
+            }
+            opt.set_value(value)
+          }
+        }
+        "formula" => {
+          if formula == "" {
+            raise BatchError("cf: type 'formula' requires 'formula'")
+          }
+          if !style_set {
+            raise BatchError(
+              "cf: type 'formula' requires a highlight (fill, font_color, bold, or italic)",
+            )
+          }
+          // The engine reads the expression from `criteria`.
+          opt.set_criteria(formula)
+        }
+        "2_color_scale" => {
+          if min_color == "" || max_color == "" {
+            raise BatchError(
+              "cf: type '2_color_scale' requires 'min_color' and 'max_color'",
+            )
+          }
+          if min_type != "" {
+            opt.set_min_type(min_type)
+          }
+          if min_value != "" {
+            opt.set_min_value(min_value)
+          }
+          opt.set_min_color(min_color)
+          if max_type != "" {
+            opt.set_max_type(max_type)
+          }
+          if max_value != "" {
+            opt.set_max_value(max_value)
+          }
+          opt.set_max_color(max_color)
+        }
+        "3_color_scale" => {
+          if min_color == "" || mid_color == "" || max_color == "" {
+            raise BatchError(
+              "cf: type '3_color_scale' requires 'min_color', 'mid_color', and 'max_color'",
+            )
+          }
+          if min_type != "" {
+            opt.set_min_type(min_type)
+          }
+          if min_value != "" {
+            opt.set_min_value(min_value)
+          }
+          opt.set_min_color(min_color)
+          if mid_type != "" {
+            opt.set_mid_type(mid_type)
+          }
+          if mid_value != "" {
+            opt.set_mid_value(mid_value)
+          }
+          opt.set_mid_color(mid_color)
+          if max_type != "" {
+            opt.set_max_type(max_type)
+          }
+          if max_value != "" {
+            opt.set_max_value(max_value)
+          }
+          opt.set_max_color(max_color)
+        }
+        "data_bar" => {
+          if bar_color != "" {
+            opt.set_bar_color(bar_color)
+          }
+          if min_type != "" {
+            opt.set_min_type(min_type)
+          }
+          if min_value != "" {
+            opt.set_min_value(min_value)
+          }
+          if max_type != "" {
+            opt.set_max_type(max_type)
+          }
+          if max_value != "" {
+            opt.set_max_value(max_value)
+          }
+        }
+        "icon_set" => {
+          if icon_style == "" {
+            raise BatchError("cf: type 'icon_set' requires 'icon_style'")
+          }
+          opt.set_icon_style(icon_style)
+          if reverse_icons {
+            opt.set_reverse_icons(true)
+          }
+        }
+        _ => ()
+      }
+      if style_set {
+        let style = build_style(
+          bold~,
+          italic~,
+          number_format="",
+          fill~,
+          font_color~,
+          align="",
+        )
+        opt.set_format(Some(workbook.new_conditional_style(style)))
+      }
+      workbook.set_conditional_format(sheet, range, [opt])
     }
   }
 }

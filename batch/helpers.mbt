@@ -200,3 +200,45 @@ fn check_inline_list_values(values : Array[String]) -> Unit raise BatchError {
     )
   }
 }
+
+///|
+/// The conditional-formatting `type` values the `cf` op supports — a focused
+/// dashboard subset of the engine's full CF vocabulary.
+let cf_supported_types : Array[String] = [
+  "cell", "formula", "2_color_scale", "3_color_scale", "data_bar", "icon_set",
+]
+
+///|
+fn is_supported_cf_type(cf_type : String) -> Bool {
+  cf_supported_types.contains(cf_type)
+}
+
+///|
+/// The mode-specific params each `cf` type uses; any *other* non-default
+/// param the script supplies is rejected so an agent hears about it instead
+/// of it being silently dropped. (`sheet`/`range`/`type` are always allowed
+/// and are not listed here.)
+fn cf_allowed_params(cf_type : String) -> Array[String] {
+  match cf_type {
+    "cell" =>
+      [
+        "criteria", "value", "min_value", "max_value", "fill", "font_color", "bold",
+        "italic", "stop_if_true",
+      ]
+    "formula" =>
+      ["formula", "fill", "font_color", "bold", "italic", "stop_if_true"]
+    "2_color_scale" =>
+      [
+        "min_type", "min_value", "min_color", "max_type", "max_value", "max_color",
+      ]
+    "3_color_scale" =>
+      [
+        "min_type", "min_value", "min_color", "mid_type", "mid_value", "mid_color",
+        "max_type", "max_value", "max_color",
+      ]
+    "data_bar" =>
+      ["bar_color", "min_type", "min_value", "max_type", "max_value"]
+    "icon_set" => ["icon_style", "reverse_icons"]
+    _ => []
+  }
+}
