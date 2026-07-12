@@ -58,3 +58,14 @@ test "capability fingerprint and inventory ordering are deterministic" {
   let parsed = @json.parse(first)
   assert_eq(parsed.stringify(), first)
 }
+
+///|
+test "capability operation queries do not leak unrelated records" {
+  let data = @office.capabilities_data(format=Docx, operation="IDENTIFY")
+  inspect(
+    data.stringify(),
+    content=(
+      #|{"schema":"office.capabilities/1","fingerprint":"crc32:6ba619b7","records":[{"schema":"office.capability/1","fingerprint":"crc32:6ba619b7","kind":"command","name":"identify","summary":"Identify a structurally valid XLSX or DOCX package","usage":"office identify <file> [--json]","formats":["docx","xlsx"],"aliases":[],"inputs":[{"name":"file","type":"path","required":true,"description":"path to an XLSX or DOCX package"},{"name":"json","type":"boolean","required":false,"description":"emit one office.output/1 JSON document"}],"outputs":[{"name":"file","type":"path","required":true,"description":"the input path exactly as supplied"},{"name":"format","type":"enum(docx|xlsx)","required":true,"description":"the structurally verified package format"}],"output_modes":["human","json"]}],"format":"docx","operation":"identify"}
+    ),
+  )
+}

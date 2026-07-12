@@ -239,16 +239,22 @@ fn records_for_query(query : HelpQuery) -> Array[Json] {
   match query {
     Overview | All => @lib.capability_records()
     Format(format) => @lib.capability_records(format~)
-    Operation(Some(format), _) => @lib.capability_records(format~)
-    Operation(None, _) => @lib.capability_records()
+    Operation(Some(format), command) =>
+      @lib.capability_records(format~, operation=command.name)
+    Operation(None, command) =>
+      @lib.capability_records(operation=command.name)
   }
 }
 
 ///|
 fn data_for_query(query : HelpQuery) -> Json {
   match query {
-    Overview | All | Operation(None, _) => @lib.capabilities_data()
-    Format(format) | Operation(Some(format), _) => @lib.capabilities_data(format~)
+    Overview | All => @lib.capabilities_data()
+    Format(format) => @lib.capabilities_data(format~)
+    Operation(Some(format), command) =>
+      @lib.capabilities_data(format~, operation=command.name)
+    Operation(None, command) =>
+      @lib.capabilities_data(operation=command.name)
   }
 }
 
