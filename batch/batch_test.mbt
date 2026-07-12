@@ -969,6 +969,57 @@ test "a sheet op refuses to delete the last visible sheet" {
 }
 
 ///|
+test "a sheet op targets chart sheets and counts them for the visible guard" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  ignore(workbook.add_chart_sheet("Chart1", "<chart/>"))
+  // `workbook.sheet` sees only worksheets; the op resolves across the full tab
+  // order, so a chart sheet is a valid target — hide it by its canonical name
+  // spelled in a different case.
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"hide", "name":"chart1"}}]}
+      ),
+    ),
+  )
+  assert_false(workbook.get_sheet_visible("Chart1"))
+  // Re-show and rename it — chart sheets rename like worksheets.
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"show", "name":"Chart1"}}, {"op":"sheet", "params": {"action":"rename", "name":"Chart1", "to":"Dashboard"}}]}
+      ),
+    ),
+  )
+  debug_inspect(
+    workbook.get_sheet_list(),
+    content=(
+      #|["Data", "Dashboard"]
+    ),
+  )
+  // The visible-sheet guard must count the chart sheet: with the chart sheet
+  // (Dashboard) still visible, deleting the worksheet Data is allowed — the
+  // workbook keeps a visible sheet. (Counting only worksheets would reject it.)
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"delete", "name":"Data"}}]}
+      ),
+    ),
+  )
+  debug_inspect(
+    workbook.get_sheet_list(),
+    content=(
+      #|["Dashboard"]
+    ),
+  )
+}
+
+///|
 test "a chart op requires valid categories and values at parse time" {
   try
     ignore(

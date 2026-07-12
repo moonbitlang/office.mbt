@@ -266,12 +266,14 @@ Envelope:
 | `table` | `sheet`, `range` (strings; `range` is an `A1:B2` colon range); `name?`, `style?` (strings); `header_row?`, `row_stripes?`, `first_column?`, `last_column?`, `column_stripes?` (bool) |
 | `validate` | `sheet`, `range` (strings; `range` is the cell/range the rule covers), `type` (required: `list`/`whole`/`decimal`/`date`/`time`/`textLength`/`custom`); `operator?`, `formula1?`, `formula2?`, `source?` (strings); `values?` (string array); `allow_blank?` (bool); `input_title?`, `input_message?`, `error_title?`, `error_message?`, `error_style?` (strings) |
 | `cf` | `sheet`, `range` (strings; `range` is the cell/range the rule covers), `type` (required: `cell`/`formula`/`2_color_scale`/`3_color_scale`/`data_bar`/`icon_set`); `criteria?`, `value?`, `min_value?`, `max_value?`, `formula?` (strings); `fill?`, `font_color?` (strings), `bold?`, `italic?` (bool); `min_type?`, `mid_type?`, `max_type?`, `mid_value?`, `min_color?`, `mid_color?`, `max_color?`, `bar_color?` (strings); `bar_solid?` (bool), `bar_direction?`, `bar_border_color?` (strings, x14 data bar); `icon_style?` (string); `reverse_icons?`, `stop_if_true?` (bool) |
-- `sheet` manages an existing sheet: `rename` (needs `to`), `delete`, `hide`,
-  `show`, or `very-hide` (hidden and not un-hideable from Excel's UI). `to` is
-  rejected for any action but `rename`; the `action` is checked at apply time.
-  The target `name` is matched case-insensitively (like Excel sheet names) and
-  must exist. `delete` refuses to remove the **last visible** sheet (a workbook
-  must keep at least one), and renaming to a name already in use fails.
+- `sheet` manages an existing sheet — a worksheet **or a chart sheet**:
+  `rename` (needs `to`), `delete`, `hide`, `show`, or `very-hide` (hidden and
+  not un-hideable from Excel's UI). `to` is rejected for any action but
+  `rename`; the `action` is checked at apply time. The target `name` is matched
+  case-insensitively (like Excel sheet names) across every sheet in the workbook
+  and must exist. `delete` refuses to remove the **last visible** sheet — of any
+  kind — (a workbook must keep at least one), and renaming to a name already in
+  use fails.
   `rename` does **not** rewrite formula or chart references to the old sheet
   name (matching the engine), so re-point those yourself. (Adding a sheet is
   the separate `add-sheet` op.)

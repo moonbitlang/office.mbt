@@ -1387,13 +1387,26 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       workbook.set_conditional_format(sheet, range, [opt])
     }
     OpSheet(action~, name~, to~) => {
-      // Resolve the target to its CANONICAL name: the sheet lookup is
-      // case-insensitive, but several engine mutators (notably `delete_sheet`)
-      // silently no-op on a name they do not match, so gate on existence here
-      // for a clear error and pass the exact name onward.
-      let target = match workbook.sheet(name) {
-        Some(worksheet) => worksheet.name()
-        None => raise BatchError("sheet: no sheet named '\{name}'")
+      // Resolve the target to its CANONICAL name across ALL sheets — worksheets
+      // AND chart sheets — via the tab-order list (`workbook.sheet` sees only
+      // worksheets). The lookup is case-insensitive, matching the engine; but
+      // several engine mutators (notably `delete_sheet`) silently no-op on a
+      // name they do not match, so gate on existence here for a clear error and
+      // pass the exact canonical name onward.
+      let sheet_names = workbook.get_sheet_list()
+      let needle = name.to_lower()
+      let target = {
+        let mut found : String? = None
+        for existing in sheet_names {
+          if existing.to_lower() == needle {
+            found = Some(existing)
+            break
+          }
+        }
+        match found {
+          Some(canonical) => canonical
+          None => raise BatchError("sheet: no sheet named '\{name}'")
+        }
       }
       match action {
         "rename" => {
@@ -1411,11 +1424,12 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
             "delete" => {
               // `delete_sheet` guards only the total sheet count, not the
               // visible count — deleting the last VISIBLE sheet would leave
-              // an all-hidden, invalid workbook. Guard that here.
+              // an all-hidden, invalid workbook. Guard that here, counting
+              // every OTHER sheet (worksheets AND chart sheets) that is
+              // visible; `set_sheet_visible`'s own guard already covers hide.
               let mut visible_others = 0
-              for worksheet in workbook.sheets() {
-                if worksheet.name() != target &&
-                  workbook.get_sheet_visible(worksheet.name()) {
+              for existing in sheet_names {
+                if existing != target && workbook.get_sheet_visible(existing) {
                   visible_others += 1
                 }
               }
