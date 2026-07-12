@@ -146,6 +146,28 @@ test "insert rejects a count larger than the grid (no Int wrap)" {
 }
 
 ///|
+test "duplicate_row rejects an out-of-grid target row" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  workbook.set_cell("S", "A1048576", "last")
+  // duplicate_row(1048576) targets row 1048577, off the grid.
+  assert_true(raises(() => workbook.duplicate_row("S", 1048576)))
+  assert_eq(workbook.get_cell("S", "A1048576"), Some("last"))
+}
+
+///|
+test "remove rejects an out-of-grid start without wrapping" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  workbook.set_cell("S", "A1", "keep")
+  // A start beyond the grid would make `start + count - 1` wrap Int; it is
+  // rejected up front instead.
+  assert_true(raises(() => workbook.remove_rows("S", 2147483647, 2)))
+  assert_true(raises(() => workbook.remove_cols("S", 2147483647, 2)))
+  assert_eq(workbook.get_cell("S", "A1"), Some("keep"))
+}
+
+///|
 test "duplicate_row_to is atomic when a defined name would overflow" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("S"))

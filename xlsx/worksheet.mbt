@@ -3111,7 +3111,11 @@ fn Worksheet::remove_rows(
   if count <= 0 {
     raise InvalidSheetOperation(msg="row count must be positive")
   }
-  // Bound the count so `row + count - 1` cannot wrap `Int`.
+  // Bound both the start and the count so `row + count - 1` cannot wrap `Int`
+  // (a start or count beyond the grid removes nothing meaningful anyway).
+  if row > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{0}:\{row}")
+  }
   if count > cell_ref_max_rows {
     raise InvalidSheetOperation(
       msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
@@ -3462,11 +3466,16 @@ fn Worksheet::duplicate_row_to(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   self.invalidate_cell_index()
-  if row <= 0 {
+  if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
   if target_row <= 0 || row == target_row {
     raise InvalidSheetOperation(msg="duplicate row target must be different")
+  }
+  // The copy lands at `target_row`, so it must be an in-grid row (otherwise the
+  // duplicate would write an out-of-grid reference like A1048577).
+  if target_row > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{0}:\{target_row}")
   }
   let row_cells : Array[Cell] = []
   for cell in self.cells {
@@ -3652,7 +3661,10 @@ fn Worksheet::remove_cols(
   if count <= 0 {
     raise InvalidSheetOperation(msg="column count must be positive")
   }
-  // Bound the count so `col + count - 1` cannot wrap `Int`.
+  // Bound both the start and the count so `col + count - 1` cannot wrap `Int`.
+  if col > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{col}:\{0}")
+  }
   if count > cell_ref_max_cols {
     raise InvalidSheetOperation(
       msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
