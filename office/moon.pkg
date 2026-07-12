@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/debug",
   "bobzhang/mbtexcel/zip",
+  "bobzhang/docx2html/paths" @docxpaths,
   "bobzhang/docx2html/xml",
   "moonbitlang/core/encoding/utf16",
   "moonbitlang/core/encoding/utf8",
