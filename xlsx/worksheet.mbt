@@ -2967,6 +2967,13 @@ fn Worksheet::insert_rows(
   if count <= 0 {
     raise InvalidSheetOperation(msg="row count must be positive")
   }
+  // A count larger than the grid is meaningless and, more importantly, would let
+  // `existing_row + count` wrap `Int` and slip past the upper-bound checks below.
+  if count > cell_ref_max_rows {
+    raise InvalidSheetOperation(
+      msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
+    )
+  }
   // Transactional: stage every shifted collection into locals first — cell,
   // merge, hyperlink, filter, table, sparkline, image, and chart references
   // shift through `cell_ref_from`/range adjusters that raise once a coordinate
@@ -3057,7 +3064,10 @@ fn Worksheet::insert_rows(
     count,
   )
   for brk in updated_breaks {
-    if brk.id > cell_ref_max_rows {
+    // Break ids are 0-based (id = row - 1), so the last valid id is one less
+    // than the row maximum; a break shifted to `cell_ref_max_rows` sits after
+    // the final row and is out of grid.
+    if brk.id >= cell_ref_max_rows {
       raise InvalidCellRef(value="\{0}:\{brk.id}")
     }
   }
@@ -3100,6 +3110,12 @@ fn Worksheet::remove_rows(
   }
   if count <= 0 {
     raise InvalidSheetOperation(msg="row count must be positive")
+  }
+  // Bound the count so `row + count - 1` cannot wrap `Int`.
+  if count > cell_ref_max_rows {
+    raise InvalidSheetOperation(
+      msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
+    )
   }
   let end_row = row + count - 1
   let updated_cells : Array[Cell] = []
@@ -3498,6 +3514,12 @@ fn Worksheet::insert_cols(
   if count <= 0 {
     raise InvalidSheetOperation(msg="column count must be positive")
   }
+  // A count larger than the grid would let `existing_col + count` wrap `Int`.
+  if count > cell_ref_max_cols {
+    raise InvalidSheetOperation(
+      msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
+    )
+  }
   // Transactional (see insert_rows): stage everything into locals — reference
   // shifts raise once a coordinate leaves the grid, column dimensions and page
   // breaks are bound-checked explicitly — and commit only once every stage has
@@ -3585,7 +3607,9 @@ fn Worksheet::insert_cols(
     count,
   )
   for brk in updated_breaks {
-    if brk.id > cell_ref_max_cols {
+    // 0-based ids (see insert_rows): last valid col-break id is one below the
+    // column maximum.
+    if brk.id >= cell_ref_max_cols {
       raise InvalidCellRef(value="\{brk.id}:\{0}")
     }
   }
@@ -3627,6 +3651,12 @@ fn Worksheet::remove_cols(
   }
   if count <= 0 {
     raise InvalidSheetOperation(msg="column count must be positive")
+  }
+  // Bound the count so `col + count - 1` cannot wrap `Int`.
+  if count > cell_ref_max_cols {
+    raise InvalidSheetOperation(
+      msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
+    )
   }
   let end_col = col + count - 1
   let updated_cells : Array[Cell] = []

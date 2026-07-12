@@ -102,15 +102,63 @@ test "insert_rows overflow is caught for a defined name alone" {
 }
 
 ///|
-test "insert_rows overflow is caught for a page break alone" {
+test "insert_rows page-break bound is exact and leaves the break intact" {
+  // Break ids are 0-based (id = row - 1): the last valid id is 1048575, so a
+  // one-row shift of a break stored at 1048575 lands on 1048576 — out of grid.
+  let bad = @xlsx.Workbook::new()
+  ignore(bad.add_sheet("S"))
+  bad.set_cell("S", "A1", "top")
+  bad.insert_page_break("S", "A1048576") // id 1048575
+  assert_true(raises(() => bad.insert_rows("S", 1, 1)))
+  let badsheet = match bad.sheet("S") {
+    Some(s) => s
+    None => fail("S")
+  }
+  assert_eq(badsheet.row_breaks().length(), 1)
+  assert_eq(badsheet.row_breaks()[0].id, 1048575) // untouched
+  assert_eq(bad.get_cell("S", "A1"), Some("top"))
+  assert_eq(bad.get_cell("S", "A2"), None)
+  // A break one row higher shifts to the last valid id (1048575) and is allowed.
+  let ok = @xlsx.Workbook::new()
+  ignore(ok.add_sheet("S"))
+  ok.insert_page_break("S", "A1048575") // id 1048574
+  ok.insert_rows("S", 1, 1)
+  let oksheet = match ok.sheet("S") {
+    Some(s) => s
+    None => fail("S")
+  }
+  assert_eq(oksheet.row_breaks()[0].id, 1048575)
+}
+
+///|
+test "insert rejects a count larger than the grid (no Int wrap)" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("S"))
+  workbook.set_cell("S", "A1", "keep")
+  // A pinned name near the top would wrap Int if shifted by 2147483647; the count
+  // bound rejects the insert before any arithmetic can overflow.
+  workbook.set_defined_name(@xlsx.DefinedName::new("N", "S!$A$1", scope="S"))
+  assert_true(raises(() => workbook.insert_rows("S", 1, 2147483647)))
+  assert_eq(workbook.get_cell("S", "A1"), Some("keep"))
+  assert_eq(workbook.defined_names()[0].refers_to, "S!$A$1")
+  assert_true(raises(() => workbook.insert_cols("S", 1, 2147483647)))
+  assert_eq(workbook.get_cell("S", "A1"), Some("keep"))
+}
+
+///|
+test "duplicate_row_to is atomic when a defined name would overflow" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("S"))
   workbook.set_cell("S", "A1", "top")
-  // A manual break stored at row-index 1048575; inserting two rows would push it
-  // to 1048577, past the grid. The break shifts numerically, so it has its own
-  // bound check. (Only the break overflows here — the A1 cell moves to A3.)
-  workbook.insert_page_break("S", "A1048576")
-  assert_true(raises(() => workbook.insert_rows("S", 1, 2)))
+  workbook.set_defined_name(
+    @xlsx.DefinedName::new("Edge", "S!$A$1048576", scope="S"),
+  )
+  // Duplicating row 1 into row 2 shifts the pinned last-row name to $A$1048577;
+  // staging the names before the row copy keeps the whole op all-or-nothing.
+  assert_true(raises(() => workbook.duplicate_row_to("S", 1, 2)))
+  let names = workbook.defined_names()
+  assert_eq(names.length(), 1)
+  assert_eq(names[0].refers_to, "S!$A$1048576")
   assert_eq(workbook.get_cell("S", "A1"), Some("top"))
-  assert_eq(workbook.get_cell("S", "A3"), None)
+  assert_eq(workbook.get_cell("S", "A2"), None)
 }

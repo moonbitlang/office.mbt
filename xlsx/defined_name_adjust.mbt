@@ -114,7 +114,7 @@ fn parse_cell_ref(text : StringView) -> (Int, Int, Bool, Bool)? {
 
 ///|
 fn format_column_ref(col : Int, abs_col : Bool) -> String raise XlsxError {
-  if col > cell_ref_max_cols {
+  if col < 1 || col > cell_ref_max_cols {
     raise InvalidCellRef(value="\{col}")
   }
   let prefix = if abs_col { "$" } else { "" }
@@ -126,7 +126,7 @@ fn format_column_ref(col : Int, abs_col : Bool) -> String raise XlsxError {
 // Raises when a shift pushes the row past the grid, so an out-of-grid defined
 // name (e.g. `Sheet1!$A$1048577`) is rejected instead of silently serialized.
 fn format_row_ref(row : Int, abs_row : Bool) -> String raise XlsxError {
-  if row > cell_ref_max_rows {
+  if row < 1 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{row}")
   }
   let prefix = if abs_row { "$" } else { "" }
@@ -140,7 +140,7 @@ fn format_cell_ref(
   abs_row : Bool,
   abs_col : Bool,
 ) -> String raise XlsxError {
-  if row > cell_ref_max_rows || col > cell_ref_max_cols {
+  if row < 1 || row > cell_ref_max_rows || col < 1 || col > cell_ref_max_cols {
     raise InvalidCellRef(value="\{col}:\{row}")
   }
   let col_prefix = if abs_col { "$" } else { "" }

@@ -3787,6 +3787,14 @@ pub fn Workbook::insert_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
+  if count > cell_ref_max_rows {
+    // Bound the count before the defined-name shift so `ref_row + count` cannot
+    // wrap `Int` (the worksheet insert enforces the same bound for its own
+    // arithmetic).
+    raise InvalidSheetOperation(
+      msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
+    )
+  }
   // Stage (and grid-validate) the defined-name shift before touching the sheet,
   // then commit it only after the sheet insert also succeeds. Both the sheet
   // insert and the defined-name adjuster raise on an out-of-grid shift; ordering
@@ -3850,6 +3858,12 @@ pub fn Workbook::insert_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
+  if count > cell_ref_max_cols {
+    // Bound the count before the defined-name shift (see insert_rows).
+    raise InvalidSheetOperation(
+      msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
+    )
+  }
   // See insert_rows: stage the defined-name shift, mutate the sheet, then commit
   // the names last so an out-of-grid overflow on either side is all-or-nothing.
   let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
@@ -3929,10 +3943,14 @@ pub fn Workbook::duplicate_row_to(
   target_row : Int,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
-  sheet.duplicate_row_to(row, target_row)
-  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+  // Stage the defined-name shift (which raises if a name would leave the grid)
+  // before duplicating the row, then commit the names last — otherwise an
+  // overflowing name would raise after the worksheet had already been mutated.
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,
   ) -> String? raise XlsxError {
     adjust_ref_after_row_insert(ref_text, target_row, 1)
   })
+  sheet.duplicate_row_to(row, target_row)
+  self.commit_adjusted_defined_names(staged_names)
 }
