@@ -352,6 +352,42 @@ fn misdeclare_relationship_content_type(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn replace_xml_default_content_type(
+  data : BytesView,
+  replacement : String,
+) -> Bytes raise {
+  let archive = @zip.read(data)
+  let content_types = archive.get("[Content_Types].xml").unwrap()
+  let text = @utf8.decode(content_types, ignore_bom=true)
+  let updated = text.replace(
+    old="ContentType=\"application/xml\"",
+    new="ContentType=\"\{replacement}\"",
+  )
+  if updated == text {
+    fail("test could not replace the XML default content type")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
+fn replace_styles_override_content_type(
+  data : BytesView,
+  replacement : String,
+) -> Bytes raise {
+  let archive = @zip.read(data)
+  let content_types = archive.get("[Content_Types].xml").unwrap()
+  let text = @utf8.decode(content_types, ignore_bom=true)
+  let updated = text.replace(
+    old="ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"",
+    new="ContentType=\"\{replacement}\"",
+  )
+  if updated == text {
+    fail("test could not replace the styles override content type")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
 fn declare_xlsx_main_as_default(data : BytesView) -> Bytes raise {
   let archive = @zip.read(data)
   let content_types = archive.get("[Content_Types].xml").unwrap()
@@ -691,6 +727,31 @@ test "detect_format rejects invalid characters in relationship Type URIs" {
 }
 
 ///|
+test "detect_format rejects malformed relationship Type URI components" {
+  let source = @excel.write(@excel.new_file())
+  for
+    rel_type in [
+      "https://example.com/a[b]", "https://example.com:port/path", "https://user@@example.com/path",
+      "https://[2001:db8:::1]/path",
+    ] {
+    let broken = add_root_relationship(
+      source,
+      "<Relationship Id=\"rInvalidType\" Type=\"\{rel_type}\" Target=\"xl/workbook.xml\"/>",
+    )
+    try @office.detect_format("book.xlsx", broken) catch {
+      err =>
+        assert_true(
+          Show::to_string(err).contains(
+            "relationship in _rels/.rels has an invalid Type URI: \{rel_type}",
+          ),
+        )
+    } noraise {
+      _ => fail("expected a malformed relationship Type URI: \{rel_type}")
+    }
+  }
+}
+
+///|
 test "detect_format requires relationship IDs to be XML NCNames" {
   let broken = add_root_relationship(
     @excel.write(@excel.new_file()),
@@ -714,7 +775,9 @@ test "detect_format validates external relationship target URIs" {
   let source = @excel.write(@excel.new_file())
   for
     target in [
-      "\\bad", "https://example.com/{invalid}", "file:///C:\\bad{path}", "file:///C:\\bad%ZZ",
+      "\\bad", "https://example.com/{invalid}", "https://example.com/a[b]", "https://example.com:port/path",
+      "https://user@@example.com/path", "https://[2001:db8:::1]/path", "file:///C:\\bad{path}",
+      "file:///C:\\bad%ZZ",
     ] {
     let broken = add_root_relationship(
       source,
@@ -736,13 +799,23 @@ test "detect_format validates external relationship target URIs" {
 ///|
 test "detect_format accepts valid external URI references and Unicode IDs" {
   let source = @excel.write(@excel.new_file())
-  let with_external = add_root_relationship(
-    source, "<Relationship Id=\"rél\" Type=\"https://example.com/relationships/test\" Target=\"https://example.com/a%20b?q=x/y&amp;v=1#frag\" TargetMode=\"External\"/>",
-  )
-  inspect(
-    @office.detect_format("book.xlsx", with_external).name(),
-    content="xlsx",
-  )
+  for
+    case in [
+      ("rél", "https://example.com/a%20b?q=x/y&amp;v=1#frag"),
+      ("rIpv6", "https://user:pass@[2001:db8::1]:443/path"),
+      ("rUrn", "urn:example:component"),
+      ("rRelative", "../relative/path?x/y"),
+    ] {
+    let (id, target) = case
+    let with_external = add_root_relationship(
+      source,
+      "<Relationship Id=\"\{id}\" Type=\"https://example.com/relationships/test\" Target=\"\{target}\" TargetMode=\"External\"/>",
+    )
+    inspect(
+      @office.detect_format("book.xlsx", with_external).name(),
+      content="xlsx",
+    )
+  }
 }
 
 ///|
@@ -772,6 +845,43 @@ test "detect_format rejects an invalid relationship content type" {
       )
   } noraise {
     _ => fail("expected an invalid relationship content type")
+  }
+}
+
+///|
+test "detect_format rejects malformed auxiliary content types" {
+  let source = @excel.write(@excel.new_file())
+  for content_type in ["not a media type", "application", "application/"] {
+    let broken = replace_xml_default_content_type(source, content_type)
+    try @office.detect_format("book.xlsx", broken) catch {
+      err =>
+        assert_true(
+          Show::to_string(err).contains(
+            "[Content_Types].xml: Default has an invalid ContentType: \{content_type}",
+          ),
+        )
+    } noraise {
+      _ => fail("expected a malformed auxiliary content type: \{content_type}")
+    }
+  }
+}
+
+///|
+test "detect_format validates content types on auxiliary overrides" {
+  let content_type = "not a media type"
+  let broken = replace_styles_override_content_type(
+    @excel.write(@excel.new_file()),
+    content_type,
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      assert_true(
+        Show::to_string(err).contains(
+          "[Content_Types].xml: Override has an invalid ContentType: \{content_type}",
+        ),
+      )
+  } noraise {
+    _ => fail("expected a malformed auxiliary override content type")
   }
 }
 
