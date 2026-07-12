@@ -637,6 +637,40 @@ fn validate_main_identity(
 }
 
 ///|
+fn default_main_target_from_root(
+  archive : @zip.Archive,
+) -> String? raise OfficeError {
+  let root_rels = read_xml_part(archive, "_rels/.rels")
+  if root_rels.name != RELATIONSHIPS_ROOT {
+    return None
+  }
+  let targets : Array[String] = []
+  for child in root_rels.children {
+    guard child is XmlElement(element) && element.name == RELATIONSHIP_ELEMENT else {
+      continue
+    }
+    guard element.attributes.get("Type") is Some(rel_type) &&
+      is_office_document_relationship(rel_type) else {
+      continue
+    }
+    let internal = match element.attributes.get("TargetMode") {
+      None | Some("Internal") => true
+      _ => false
+    }
+    guard internal else { continue }
+    guard element.attributes.get("Target") is Some(target) else { continue }
+    guard normalize_internal_target(target) is Some(normalized) else {
+      continue
+    }
+    targets.push(normalized)
+  }
+  match targets {
+    [target] => Some(target)
+    _ => None
+  }
+}
+
+///|
 fn format_from_package(
   data : BytesView,
 ) -> (DocumentFormat, String, @zip.Archive) raise OfficeError {
@@ -656,25 +690,70 @@ fn format_from_package(
   }
   let xlsx_main_parts : Array[String] = []
   let docx_main_parts : Array[String] = []
+  let overridden_parts : Map[String, Bool] = Map([])
+  let main_defaults : Map[String, DocumentFormat] = Map([])
   for child in content_types.children {
-    guard child is XmlElement(element) && element.name == CONTENT_TYPES_OVERRIDE else {
-      continue
+    guard child is XmlElement(element) else { continue }
+    if element.name == CONTENT_TYPES_DEFAULT {
+      let format = match element.attributes.get("ContentType") {
+        Some(XLSX_MAIN_CONTENT_TYPE) => Some(Xlsx)
+        Some(DOCX_MAIN_CONTENT_TYPE) => Some(Docx)
+        _ => None
+      }
+      guard format is Some(format) else { continue }
+      guard element.attributes.get("Extension") is Some(extension) &&
+        extension != "" else {
+        raise InvalidPackage("main content type default has no Extension")
+      }
+      main_defaults[extension.to_lower()] = format
+    } else if element.name == CONTENT_TYPES_OVERRIDE {
+      let part_name = match element.attributes.get("PartName") {
+        Some(part_name) => part_name
+        None =>
+          if element.attributes.get("ContentType") ==
+            Some(XLSX_MAIN_CONTENT_TYPE) ||
+            element.attributes.get("ContentType") ==
+            Some(DOCX_MAIN_CONTENT_TYPE) {
+            raise InvalidPackage("main content type override has no PartName")
+          } else {
+            continue
+          }
+      }
+      let normalized = match normalize_declared_part_name(part_name) {
+        Some(part_name) => part_name
+        None =>
+          if element.attributes.get("ContentType") ==
+            Some(XLSX_MAIN_CONTENT_TYPE) ||
+            element.attributes.get("ContentType") ==
+            Some(DOCX_MAIN_CONTENT_TYPE) {
+            raise InvalidPackage(
+              "main content type override has an invalid PartName",
+            )
+          } else {
+            continue
+          }
+      }
+      overridden_parts[opc_part_key(normalized)] = true
+      match element.attributes.get("ContentType") {
+        Some(XLSX_MAIN_CONTENT_TYPE) => xlsx_main_parts.push(normalized)
+        Some(DOCX_MAIN_CONTENT_TYPE) => docx_main_parts.push(normalized)
+        _ => ()
+      }
     }
-    let main_parts = match element.attributes.get("ContentType") {
-      Some(XLSX_MAIN_CONTENT_TYPE) => xlsx_main_parts
-      Some(DOCX_MAIN_CONTENT_TYPE) => docx_main_parts
-      _ => continue
-    }
-    let part_name = match element.attributes.get("PartName") {
-      Some(part_name) => part_name
-      None => raise InvalidPackage("main content type override has no PartName")
-    }
-    match normalize_declared_part_name(part_name) {
-      Some(part_name) => main_parts.push(part_name)
-      None =>
-        raise InvalidPackage(
-          "main content type override has an invalid PartName",
-        )
+  }
+  if !main_defaults.is_empty() {
+    match default_main_target_from_root(archive) {
+      Some(target) if !overridden_parts.contains(opc_part_key(target)) =>
+        match part_extension(target) {
+          Some(extension) =>
+            match main_defaults.get(extension) {
+              Some(Xlsx) => xlsx_main_parts.push(target)
+              Some(Docx) => docx_main_parts.push(target)
+              None => ()
+            }
+          None => ()
+        }
+      _ => ()
     }
   }
   let (format, main_part) = match (xlsx_main_parts, docx_main_parts) {

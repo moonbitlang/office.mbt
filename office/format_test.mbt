@@ -337,9 +337,34 @@ fn misdeclare_relationship_content_type(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn declare_xlsx_main_as_default(data : BytesView) -> Bytes raise {
+  let archive = @zip.read(data)
+  let content_types = archive.get("[Content_Types].xml").unwrap()
+  let text = @utf8.decode(content_types, ignore_bom=true)
+  let without_override = text.replace(
+    old="<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>",
+    new="",
+  )
+  let updated = without_override.replace(
+    old="<Default Extension=\"xml\" ContentType=\"application/xml\"/>",
+    new="<Default Extension=\"xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>",
+  )
+  if without_override == text || updated == without_override {
+    fail("test could not declare the workbook main content type by default")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
 test "detect_format identifies generated xlsx" {
   let workbook = @excel.new_file()
   let data = @excel.write(workbook)
+  inspect(@office.detect_format("book.xlsx", data).name(), content="xlsx")
+}
+
+///|
+test "detect_format accepts a default XLSX main content type" {
+  let data = declare_xlsx_main_as_default(@excel.write(@excel.new_file()))
   inspect(@office.detect_format("book.xlsx", data).name(), content="xlsx")
 }
 
