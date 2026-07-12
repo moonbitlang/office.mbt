@@ -34,6 +34,11 @@ suberror MutationProbeError {
 }
 
 ///|
+suberror ValidatorProbeError {
+  ValidatorProbeError
+}
+
+///|
 async fn with_transaction_test_dir(run : async (String) -> Unit) -> Unit {
   @async.with_task_group() <| group => {
     let directory = @afs.tmpdir(prefix="office-transaction-")
@@ -280,6 +285,28 @@ async test "mutation callback failure leaves source and output untouched" {
 }
 
 ///|
+async test "structured mutation contract errors are not relabeled" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let code = transaction_error_code(() => {
+      @transaction.transact(@transaction.transaction_options(input), (
+        _format,
+        bytes,
+      ) => {
+        @transaction.transaction_mutation(bytes.to_owned(), warnings=[
+          @office.protocol_warning("bad warning", "message"),
+        ])
+      })
+    })
+    assert_eq(code, "office.transaction.invalid_contract")
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 async test "validator and preservation failures publish nothing" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"
@@ -321,6 +348,141 @@ async test "validator and preservation failures publish nothing" {
       )
     })
     assert_eq(preservation_code, "office.transaction.preservation_violation")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "successful and throwing validators run before publication" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let passing = @transaction.transaction_validator("docx-pass", (
+      _format,
+      _bytes,
+    ) => [])
+    let report = @transaction.transact(
+      @transaction.transaction_options(input, output_path=output, dry_run=true),
+      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      validators=[passing],
+    )
+    assert_eq(report.validations.length(), 2)
+    assert_eq(report.validations[1].name, "docx-pass")
+    let throwing = @transaction.transaction_validator("docx-throw", (
+      _format,
+      _bytes,
+    ) => raise ValidatorProbeError)
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        validators=[throwing],
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "duplicate and excessive validator sets fail before file access" {
+  let first = @transaction.transaction_validator("duplicate", (_format, _bytes) => {
+    []
+  })
+  let second = @transaction.transaction_validator("duplicate", (_format, _bytes) => {
+    []
+  })
+  let duplicate_code = transaction_error_code(() => {
+    @transaction.transact(
+      @transaction.transaction_options("absent.docx"),
+      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      validators=[first, second],
+    )
+  })
+  assert_eq(duplicate_code, "office.transaction.invalid_contract")
+  let validators = Array::makei(33, index => {
+    @transaction.transaction_validator("validator-\{index}", (_format, _bytes) => {
+      []
+    })
+  })
+  let excessive_code = transaction_error_code(() => {
+    @transaction.transact(
+      @transaction.transaction_options("absent.docx"),
+      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      validators~,
+    )
+  })
+  assert_eq(excessive_code, "office.transaction.invalid_contract")
+}
+
+///|
+async test "missing invalid and misdirected files use stable policy codes" {
+  with_transaction_test_dir(directory => {
+    let missing = "\{directory}/missing.docx"
+    let missing_code = transaction_error_code(() => {
+      @transaction.transact(@transaction.transaction_options(missing), (
+        _format,
+        bytes,
+      ) => @transaction.transaction_mutation(bytes.to_owned()))
+    })
+    assert_eq(missing_code, "office.transaction.file_read_failed")
+    let broken = "\{directory}/broken.docx"
+    write_test_file(broken, b"not a package")
+    let broken_code = transaction_error_code(() => {
+      @transaction.transact(@transaction.transaction_options(broken), (
+        _format,
+        bytes,
+      ) => @transaction.transaction_mutation(bytes.to_owned()))
+    })
+    assert_eq(broken_code, "office.transaction.invalid_input")
+    let valid = "\{directory}/valid.docx"
+    write_test_file(valid, @word.new_blank_docx())
+    let output_directory = "\{directory}/destination.docx"
+    @afs.mkdir(output_directory)
+    let directory_code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(
+          valid,
+          output_path=output_directory,
+          overwrite=true,
+        ),
+        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      )
+    })
+    assert_eq(directory_code, "office.transaction.invalid_options")
+    let missing_parent = "\{directory}/absent/output.docx"
+    let parent_code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(valid, output_path=missing_parent),
+        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      )
+    })
+    assert_eq(parent_code, "office.transaction.destination_parent_failed")
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "candidate cannot change the transaction format" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.xlsx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let xlsx = @excel.write(@excel.new_file())
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, _bytes) => @transaction.transaction_mutation(xlsx),
+      )
+    })
+    assert_eq(code, "office.transaction.format_changed")
     assert_false(@afs.exists(output))
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
