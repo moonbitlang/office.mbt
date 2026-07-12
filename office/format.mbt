@@ -212,6 +212,40 @@ fn is_package_uri_reference(target : StringView) -> Bool {
 }
 
 ///|
+fn is_ascii_hex_digit(char : Char) -> Bool {
+  (char >= '0' && char <= '9') ||
+  (char >= 'A' && char <= 'F') ||
+  (char >= 'a' && char <= 'f')
+}
+
+///|
+fn is_absolute_relationship_type(value : StringView) -> Bool {
+  guard has_uri_scheme(value) else { return false }
+  let chars = value.to_array()
+  for index, char in chars {
+    let code = char.to_int()
+    if code <= 0x20 ||
+      code >= 0x7f ||
+      char == '\\' ||
+      char == '#' ||
+      char == '"' ||
+      char == '<' ||
+      char == '>' {
+      return false
+    }
+    if char == '%' &&
+      (
+        index + 2 >= chars.length() ||
+        !is_ascii_hex_digit(chars[index + 1]) ||
+        !is_ascii_hex_digit(chars[index + 2])
+      ) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 fn normalize_internal_target(target : StringView) -> String? {
   if target == "" ||
     !is_package_uri_reference(target) ||
@@ -225,7 +259,8 @@ fn normalize_internal_target(target : StringView) -> String? {
   for item in path.split("/") {
     let segment = item.to_owned()
     match segment {
-      "" | "." => ()
+      "" => return None
+      "." => ()
       ".." =>
         if segments.length() == 0 {
           return None
@@ -562,7 +597,11 @@ fn validate_package_structure(
         _ => findings.push("relationship in \{relationship_part} has no Id")
       }
       match element.attributes.get("Type") {
-        Some(rel_type) if rel_type != "" => ()
+        Some(rel_type) if is_absolute_relationship_type(rel_type) => ()
+        Some(rel_type) if rel_type != "" =>
+          findings.push(
+            "relationship in \{relationship_part} has a non-absolute Type: \{rel_type}",
+          )
         _ => findings.push("relationship in \{relationship_part} has no Type")
       }
       let target = match element.attributes.get("Target") {
