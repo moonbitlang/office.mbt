@@ -108,9 +108,12 @@ author→verify loop.
 **Commenting on an existing document is different from authoring.** `batch`
 only makes NEW files; to add/reply/resolve comments on a document you did not
 author, use `docx annotate <add|reply|resolve|unresolve>`. These do
-**byte-preserving surgery** — they rewrite only the comment-related parts and
-leave every other byte of the file untouched, so they are safe on documents
-whose full content the lossy reader does not model. Each verb writes a NEW
+**byte-preserving surgery** — they rewrite only the comment-related parts
+(`comments.xml`, `commentsExtended.xml`, the relationships and content-types
+entries, and the marker fragments spliced into `document.xml`) and leave every
+other *unrelated* existing part — `styles.xml`, other stories, media — byte
+for byte identical, so they are safe on documents whose full content the lossy
+reader does not model. Each verb writes a NEW
 output file (never in place) and reads back before publishing. Read a document
 and its existing discussion first (`outline`, then `get '/comments/comment[@id=N]'
 --json`), because comment ids are the document's own spelled values.

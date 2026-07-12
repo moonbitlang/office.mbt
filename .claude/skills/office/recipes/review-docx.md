@@ -80,8 +80,6 @@ Reading comment 3 as JSON returns its metadata, `anchors`, and `done: true` —
 but its `children` are comment 3's own body paragraphs
 (`/comments/comment[@id=3]/p[1]`), **not** the reply. Read the reply comment
 directly (`get r3.docx '/comments/comment[@id=<reply-id>]' --json`) to see its
-`parent_id: "3"` and empty `anchors` (replies are anchorless). The
-reply is the separate comment 1: reading it shows `parent_id: "0"` and empty
-`anchors` (replies are anchorless). The repo pins this whole
-read→comment→reply→resolve loop — with per-generation byte-preservation proofs
+`parent_id: "3"` and empty `anchors` (replies are anchorless). The repo pins
+this whole read→comment→reply→resolve loop — with per-generation byte-preservation proofs
 — as an executable acceptance test in `docx2html/tests/acceptance/`.

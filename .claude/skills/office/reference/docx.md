@@ -83,10 +83,13 @@ docx annotate resolve   <in.docx> <out.docx> --comment 0
 docx annotate unresolve <in.docx> <out.docx> --comment 0
 ```
 
-- **Byte-preserving surgery.** Only the comment-related parts change; every
-  other byte of the archive is left identical (verified: adding a comment
-  leaves `styles.xml`, the body text, etc. untouched). This is what makes it
-  safe on documents the reader cannot fully round-trip.
+- **Byte-preserving surgery.** Only the comment-related parts change — the
+  first comment adds `word/comments.xml` and updates `word/_rels/document.xml.rels`,
+  `[Content_Types].xml`, and the marker fragments in `word/document.xml` (later
+  replies/resolves also touch `commentsExtended.xml`). Every OTHER pre-existing
+  part is left byte-identical (verified: `styles.xml`, other stories, and media
+  are untouched). This is what makes it safe on documents the reader cannot
+  fully round-trip.
 - **Never in place.** Each verb writes a NEW `<out.docx>`; the input is never
   modified. It refuses to overwrite an existing output path.
 - **Anchors** (`--at`, `--to`) are BODY-story paragraph paths, ordinal only
@@ -106,9 +109,12 @@ docx annotate unresolve <in.docx> <out.docx> --comment 0
   consistent, or unrepairable annotation state, are refused with an addressed
   error rather than a corrupted result.
 
-The review loop that needs no other tools: `outline` (see the discussion) →
-`annotate add`/`reply`/`resolve` → `get '/comments/comment[@id=N]' --json` (read
-the thread back). `recipes/review-docx.md` walks it end to end.
+The review loop that needs no other tools: `outline` (see the discussion,
+including reply→parent `parent_id` links) → `annotate add`/`reply`/`resolve` →
+`get '/comments/comment[@id=N]' --json` (read a single comment's metadata,
+anchors, and body). Note that reading one comment does NOT show its replies —
+use `outline` (or read the reply comment) for thread shape.
+`recipes/review-docx.md` walks it end to end.
 
 ## `docx2html` (converter) options
 
