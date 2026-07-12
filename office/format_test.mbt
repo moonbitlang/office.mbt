@@ -103,6 +103,60 @@ fn relocate_xlsx_main_part(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn add_root_level_relationships(data : BytesView) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  for entry in source.entries() {
+    result.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  result.add("custom.xml", @utf8.encode("<custom/>"))
+  result.add(
+    "_rels/custom.xml.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"https://example.com/relationships/workbook\" Target=\"xl/workbook.xml\"/></Relationships>",
+    ),
+  )
+  @zip.write(result)
+}
+
+///|
+fn reencode_identification_parts_as_utf16(data : BytesView) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  for entry in source.entries() {
+    let entry_data = if entry.name() == "[Content_Types].xml" ||
+      entry.name() == "xl/workbook.xml" ||
+      entry.name() == "word/document.xml" {
+      let text = @utf8.decode(entry.data(), ignore_bom=true).replace_all(
+        old="UTF-8",
+        new="UTF-16",
+      )
+      @utf16.encode(text, bom=true)
+    } else if entry.name().has_suffix(".rels") {
+      let text = @utf8.decode(entry.data(), ignore_bom=true).replace_all(
+        old="UTF-8",
+        new="UTF-16",
+      )
+      @utf16.encode(text, bom=true, endianness=Big)
+    } else {
+      entry.data()
+    }
+    result.add(
+      entry.name(),
+      entry_data,
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  @zip.write(result)
+}
+
+///|
 fn prefix_xlsx_package_xml(
   data : BytesView,
   dangling_sheet_target : Bool,
@@ -193,6 +247,21 @@ fn misalign_docx_main_part(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn add_malformed_docx_relationship(data : BytesView) -> Bytes raise {
+  let archive = @zip.read(data)
+  let root_relationships = archive.get("_rels/.rels").unwrap()
+  let text = @utf8.decode(root_relationships, ignore_bom=true)
+  let updated = text.replace(
+    old="</Relationships>",
+    new="<Relationship Target=\"word/document.xml\"/></Relationships>",
+  )
+  if updated == text {
+    fail("test could not add a malformed DOCX relationship")
+  }
+  replace_archive_part(data, "_rels/.rels", @utf8.encode(updated))
+}
+
+///|
 test "detect_format identifies generated xlsx" {
   let workbook = @excel.new_file()
   let data = @excel.write(workbook)
@@ -203,6 +272,25 @@ test "detect_format identifies generated xlsx" {
 test "detect_format follows a relocated XLSX workbook main part" {
   let relocated = relocate_xlsx_main_part(@excel.write(@excel.new_file()))
   inspect(@office.detect_format("book.xlsx", relocated).name(), content="xlsx")
+}
+
+///|
+test "detect_format accepts relationships for root-level source parts" {
+  let with_root_relationships = add_root_level_relationships(
+    @excel.write(@excel.new_file()),
+  )
+  inspect(
+    @office.detect_format("book.xlsx", with_root_relationships).name(),
+    content="xlsx",
+  )
+}
+
+///|
+test "detect_format decodes UTF-16 package XML in either byte order" {
+  let utf16 = reencode_identification_parts_as_utf16(
+    @excel.write(@excel.new_file()),
+  )
+  inspect(@office.detect_format("book.xlsx", utf16).name(), content="xlsx")
 }
 
 ///|
@@ -305,6 +393,12 @@ test "detect_format identifies generated docx" {
 }
 
 ///|
+test "detect_format identifies DOCX with UTF-16 package XML" {
+  let utf16 = reencode_identification_parts_as_utf16(@word.new_blank_docx())
+  inspect(@office.detect_format("report.docx", utf16).name(), content="docx")
+}
+
+///|
 test "detect_format binds the DOCX relationship to its declared main part" {
   let broken = misalign_docx_main_part(@word.new_blank_docx())
   try @office.detect_format("report.docx", broken) catch {
@@ -315,6 +409,20 @@ test "detect_format binds the DOCX relationship to its declared main part" {
       )
   } noraise {
     _ => fail("expected DOCX main-part mismatch")
+  }
+}
+
+///|
+test "detect_format rejects malformed DOCX relationship metadata" {
+  let broken = add_malformed_docx_relationship(@word.new_blank_docx())
+  try @office.detect_format("report.docx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains("relationship in _rels/.rels has no Id"),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected malformed DOCX relationship metadata")
   }
 }
 
