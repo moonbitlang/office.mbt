@@ -43,6 +43,27 @@ test "help suggestions are deterministic and useful" {
   assert_true(
     nearest_suggestion("ppt", ["all", "docx", "word", "xlsx", "excel"]) is None,
   )
+  let operation_error = unknown_first_help_token("identfy")
+  assert_eq(operation_error.code, "office.unknown_operation")
+  assert_eq(
+    operation_error.details,
+    Some(
+      Json::object({
+        "kind": Json::string("operation"),
+        "token": Json::string("identfy"),
+        "suggestions": Json::array([Json::string("identify")]),
+      }),
+    ),
+  )
+  let topic_error = unknown_first_help_token("unrelated")
+  assert_eq(topic_error.code, "office.unknown_topic")
+  guard topic_error.details is Some(topic_details) else {
+    fail("expected unknown-topic details")
+  }
+  let topic_details = topic_details.stringify()
+  assert_true(
+    topic_details.contains("help") && topic_details.contains("identify"),
+  )
 }
 
 ///|
