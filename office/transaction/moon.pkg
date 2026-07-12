@@ -1,0 +1,25 @@
+import {
+  "bobzhang/office",
+  "bobzhang/mbtexcel/zip",
+  "moonbitlang/async/fs" @afs,
+  "moonbitlang/async/os_error",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x/path",
+}
+
+import {
+  "bobzhang/mbtexcel" @excel,
+  "bobzhang/docx2html" @word,
+  "moonbitlang/async",
+  "moonbitlang/core/encoding/utf8",
+} for "test"
+
+import {
+  "bobzhang/docx2html" @word,
+  "moonbitlang/async",
+  "moonbitlang/core/encoding/utf8",
+} for "wbtest"
+
+supported_targets = "native+wasm"
