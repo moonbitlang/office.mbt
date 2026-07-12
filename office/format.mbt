@@ -65,6 +65,9 @@ const RELATIONSHIPS_ROOT : String = "{http://schemas.openxmlformats.org/package/
 const RELATIONSHIP_ELEMENT : String = "{http://schemas.openxmlformats.org/package/2006/relationships}Relationship"
 
 ///|
+const RELATIONSHIPS_CONTENT_TYPE : String = "application/vnd.openxmlformats-package.relationships+xml"
+
+///|
 const TRANSITIONAL_OFFICE_DOCUMENT_REL : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 
 ///|
@@ -217,6 +220,28 @@ fn relationships_base_dir(part : String) -> String? {
 }
 
 ///|
+fn relationship_source_part(part : String) -> String? {
+  if part == "_rels/.rels" {
+    return Some("")
+  }
+  guard relationships_base_dir(part) is Some(base) else { return None }
+  let relationship_name = if part.has_prefix("_rels/") {
+    part["_rels/".length():]
+  } else {
+    guard part.find("/_rels/") is Some(marker) else { return None }
+    part[marker + "/_rels/".length():]
+  }
+  guard relationship_name.has_suffix(".rels") &&
+    relationship_name.length() > ".rels".length() else {
+    return None
+  }
+  Some(
+    base +
+    relationship_name[:relationship_name.length() - ".rels".length()].to_owned(),
+  )
+}
+
+///|
 fn resolve_relationship_target(base : String, target : StringView) -> String? {
   if target.has_prefix("/") {
     normalize_internal_target(target)
@@ -233,9 +258,15 @@ fn validate_package_structure(
 ) -> Array[String] raise OfficeError {
   let findings : Array[String] = []
   let parts : Map[String, Int] = Map([])
+  let document_parts : Map[String, Bool] = Map([])
   for entry in archive.entries() {
     let name = entry.name()
     parts[name] = parts.get(name).unwrap_or(0) + 1
+    if name != "[Content_Types].xml" &&
+      !name.has_suffix(".rels") &&
+      !name.has_suffix("/") {
+      document_parts[name] = true
+    }
     if name == "" {
       findings.push("empty entry name")
     }
@@ -257,7 +288,7 @@ fn validate_package_structure(
       findings.push("duplicate entry name: \{name}")
     }
   }
-  if !parts.contains(main_part) {
+  if !document_parts.contains(main_part) {
     findings.push("missing required part: \{main_part}")
   }
   let main_relationships = relationships_part_for(main_part)
@@ -279,6 +310,11 @@ fn validate_package_structure(
         (Some(extension), Some(content_type)) if extension != "" &&
           content_type != "" => {
           let extension = extension.to_lower()
+          if extension == "rels" && content_type != RELATIONSHIPS_CONTENT_TYPE {
+            findings.push(
+              "relationship parts have an invalid default content type: \{content_type}",
+            )
+          }
           if defaults.contains(extension) {
             findings.push("duplicate content-type default: \{extension}")
           } else {
@@ -331,12 +367,23 @@ fn validate_package_structure(
     if name == "[Content_Types].xml" || name.has_suffix("/") {
       continue
     }
-    if overrides.contains("/" + name) {
-      continue
+    let content_type = match overrides.get("/" + name) {
+      Some(content_type) => Some(content_type)
+      None =>
+        match part_extension(name) {
+          Some(extension) => defaults.get(extension)
+          None => None
+        }
     }
-    match part_extension(name) {
-      Some(extension) if defaults.contains(extension) => ()
-      _ => findings.push("part has no declared content type: \{name}")
+    match content_type {
+      None => findings.push("part has no declared content type: \{name}")
+      Some(content_type) =>
+        if name.has_suffix(".rels") &&
+          content_type != RELATIONSHIPS_CONTENT_TYPE {
+          findings.push(
+            "relationship part has an invalid content type: \{name} -> \{content_type}",
+          )
+        }
     }
   }
 
@@ -350,6 +397,21 @@ fn validate_package_structure(
       None => {
         findings.push(
           "relationship part is not under an _rels directory: \{relationship_part}",
+        )
+        continue
+      }
+    }
+    match relationship_source_part(relationship_part) {
+      Some("") => ()
+      Some(source) =>
+        if !document_parts.contains(source) {
+          findings.push(
+            "relationship part has no source part: \{relationship_part} -> \{source}",
+          )
+        }
+      None => {
+        findings.push(
+          "relationship part does not identify a source part: \{relationship_part}",
         )
         continue
       }
@@ -403,7 +465,13 @@ fn validate_package_structure(
       if internal {
         match resolve_relationship_target(base, target) {
           Some(resolved) =>
-            if !parts.contains(resolved) {
+            if document_parts.contains(resolved) {
+              ()
+            } else if parts.contains(resolved) {
+              findings.push(
+                "relationship in \{relationship_part} points to package metadata: \{target} -> \{resolved}",
+              )
+            } else {
               findings.push(
                 "relationship in \{relationship_part} points to a missing part: \{target} -> \{resolved}",
               )
