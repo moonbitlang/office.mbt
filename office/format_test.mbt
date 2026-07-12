@@ -61,10 +61,91 @@ fn corrupt_stored_payload(data : Bytes, payload : BytesView) -> Bytes raise {
 }
 
 ///|
+fn relocate_xlsx_main_part(data : BytesView) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  for entry in source.entries() {
+    let (name, entry_data) = match entry.name() {
+      "xl/workbook.xml" => ("xl/customWorkbook.xml", entry.data())
+      "xl/_rels/workbook.xml.rels" =>
+        ("xl/_rels/customWorkbook.xml.rels", entry.data())
+      "[Content_Types].xml" => {
+        let text = @utf8.decode(entry.data(), ignore_bom=true)
+        (
+          entry.name(),
+          @utf8.encode(
+            text.replace(old="/xl/workbook.xml", new="/xl/customWorkbook.xml"),
+          ),
+        )
+      }
+      "_rels/.rels" => {
+        let text = @utf8.decode(entry.data(), ignore_bom=true)
+        (
+          entry.name(),
+          @utf8.encode(
+            text.replace(
+              old="Target=\"xl/workbook.xml\"",
+              new="Target=\"xl/customWorkbook.xml\"",
+            ),
+          ),
+        )
+      }
+      _ => (entry.name(), entry.data())
+    }
+    result.add(
+      name,
+      entry_data,
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  @zip.write(result)
+}
+
+///|
+fn misalign_docx_main_part(data : BytesView) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  for entry in source.entries() {
+    let entry_data = if entry.name() == "_rels/.rels" {
+      @utf8.encode(
+        @utf8.decode(entry.data(), ignore_bom=true).replace(
+          old="Target=\"word/document.xml\"",
+          new="Target=\"custom/main.xml\"",
+        ),
+      )
+    } else {
+      entry.data()
+    }
+    result.add(
+      entry.name(),
+      entry_data,
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+    if entry.name() == "word/document.xml" {
+      result.add(
+        "custom/main.xml",
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
+      )
+    }
+  }
+  @zip.write(result)
+}
+
+///|
 test "detect_format identifies generated xlsx" {
   let workbook = @excel.new_file()
   let data = @excel.write(workbook)
   inspect(@office.detect_format("book.xlsx", data).name(), content="xlsx")
+}
+
+///|
+test "detect_format follows a relocated XLSX workbook main part" {
+  let relocated = relocate_xlsx_main_part(@excel.write(@excel.new_file()))
+  inspect(@office.detect_format("book.xlsx", relocated).name(), content="xlsx")
 }
 
 ///|
@@ -144,6 +225,20 @@ test "detect_format rejects CRC-corrupted XLSX entries" {
 test "detect_format identifies generated docx" {
   let data = @word.new_blank_docx()
   inspect(@office.detect_format("report.docx", data).name(), content="docx")
+}
+
+///|
+test "detect_format binds the DOCX relationship to its declared main part" {
+  let broken = misalign_docx_main_part(@word.new_blank_docx())
+  try @office.detect_format("report.docx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err),
+        content="invalid Office package: DOCX officeDocument relationship targets 'custom/main.xml', but content types declare 'word/document.xml'",
+      )
+  } noraise {
+    _ => fail("expected DOCX main-part mismatch")
+  }
 }
 
 ///|
