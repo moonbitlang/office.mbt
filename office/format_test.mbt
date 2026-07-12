@@ -322,6 +322,21 @@ fn add_malformed_docx_relationship(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn add_empty_segment_to_xlsx_main_target(data : BytesView) -> Bytes raise {
+  let archive = @zip.read(data)
+  let root_relationships = archive.get("_rels/.rels").unwrap()
+  let text = @utf8.decode(root_relationships, ignore_bom=true)
+  let updated = text.replace(
+    old="Target=\"xl/workbook.xml\"",
+    new="Target=\"xl//workbook.xml\"",
+  )
+  if updated == text {
+    fail("test could not add an empty relationship target segment")
+  }
+  replace_archive_part(data, "_rels/.rels", @utf8.encode(updated))
+}
+
+///|
 fn misdeclare_relationship_content_type(data : BytesView) -> Bytes raise {
   let archive = @zip.read(data)
   let content_types = archive.get("[Content_Types].xml").unwrap()
@@ -567,6 +582,41 @@ test "detect_format rejects absolute and network-path internal targets" {
     } noraise {
       _ => fail("expected invalid internal target: \{target}")
     }
+  }
+}
+
+///|
+test "detect_format rejects empty relationship target segments" {
+  let broken = add_empty_segment_to_xlsx_main_target(
+    @excel.write(@excel.new_file()),
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err),
+        content="invalid Office package: XLSX officeDocument relationship has an invalid Target",
+      )
+  } noraise {
+    _ => fail("expected an empty relationship target segment")
+  }
+}
+
+///|
+test "detect_format requires absolute relationship Type URIs" {
+  let broken = add_root_relationship(
+    @excel.write(@excel.new_file()),
+    "<Relationship Id=\"rRelativeType\" Type=\"worksheet\" Target=\"xl/workbook.xml\"/>",
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains(
+          "relationship in _rels/.rels has a non-absolute Type: worksheet",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected a relative relationship Type")
   }
 }
 
