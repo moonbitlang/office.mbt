@@ -71,6 +71,7 @@ async test "injected write and rename failures clean temporary artifacts" {
         fail_write: true,
         fail_rename: false,
         concurrent_replacement: None,
+        concurrent_destination: None,
       })
     })
     assert_eq(write_code, "office.transaction.write_failed")
@@ -82,7 +83,12 @@ async test "injected write and rename failures clean temporary artifacts" {
         transaction_options(input, output_path=output, overwrite=true),
         mutate,
         [],
-        { fail_write: false, fail_rename: true, concurrent_replacement: None },
+        {
+          fail_write: false,
+          fail_rename: true,
+          concurrent_replacement: None,
+          concurrent_destination: None,
+        },
       )
     })
     assert_eq(rename_code, "office.transaction.commit_failed")
@@ -113,11 +119,146 @@ async test "concurrent in-place source change is never overwritten" {
           fail_write: false,
           fail_rename: false,
           concurrent_replacement: Some(concurrent),
+          concurrent_destination: None,
         },
       )
     })
     assert_eq(code, "office.transaction.source_changed")
     assert_eq(@afs.read_file(input).binary(), concurrent)
     wb_assert_no_temp(directory)
+  })
+}
+
+///|
+async test "concurrent no-replace destination wins the race" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    let concurrent = wb_rewrite_content_types(original, "concurrent-output")
+    wb_write(input, original)
+    let code = wb_error_code(() => {
+      transact_with_faults(
+        transaction_options(input, output_path=output),
+        (_format, bytes) => {
+          transaction_mutation_with_manifest(
+            wb_rewrite_content_types(bytes, "candidate-output"),
+            ["[Content_Types].xml"],
+          )
+        },
+        [],
+        {
+          fail_write: false,
+          fail_rename: false,
+          concurrent_replacement: None,
+          concurrent_destination: Some(concurrent),
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.output_exists")
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_eq(@afs.read_file(output).binary(), concurrent)
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+fn wb_archive(entries : Array[(String, Bytes)]) -> Bytes raise {
+  let archive = @zip.Archive::new()
+  for entry in entries {
+    let (name, bytes) = entry
+    archive.add(name, bytes)
+  }
+  @zip.write(archive)
+}
+
+///|
+test "preservation diff classifies every payload transition deterministically" {
+  let original = wb_archive([
+    ("removed.xml", b"old"),
+    ("changed.xml", b"before"),
+    ("unchanged.xml", b"same"),
+  ])
+  let candidate = wb_archive([
+    ("added.xml", b"new"),
+    ("changed.xml", b"after"),
+    ("unchanged.xml", b"same"),
+  ])
+  let report = preservation_report(
+    original,
+    transaction_mutation_with_manifest(candidate, [
+      "removed.xml", "changed.xml", "added.xml",
+    ]),
+  )
+  assert_false(report.whole_file_identical)
+  assert_true(report.manifest_enforced)
+  assert_eq(report.changed.length(), 1)
+  assert_eq(report.changed[0], "changed.xml")
+  assert_eq(report.added.length(), 1)
+  assert_eq(report.added[0], "added.xml")
+  assert_eq(report.removed.length(), 1)
+  assert_eq(report.removed[0], "removed.xml")
+  assert_eq(report.unchanged.length(), 1)
+  assert_eq(report.unchanged[0], "unchanged.xml")
+}
+
+///|
+test "transaction output schema is deterministic and nests A2 warnings" {
+  let report : TransactionReport = {
+    format: Docx,
+    input_path: "input.docx",
+    output_path: "output.docx",
+    mode: Output,
+    dry_run: false,
+    changed: true,
+    committed: true,
+    original_size: 10,
+    result_size: 12,
+    validations: ReadOnlyArray::from_array([
+      { name: "office-portable-opc", passed: true, finding_count: 0 },
+    ]),
+    preservation: {
+      whole_file_identical: false,
+      manifest_enforced: true,
+      changed: ReadOnlyArray::from_array(["word/document.xml"]),
+      added: ReadOnlyArray::from_array([]),
+      removed: ReadOnlyArray::from_array([]),
+      unchanged: ReadOnlyArray::from_array(["[Content_Types].xml"]),
+      zip_metadata_policy: "payload policy",
+    },
+    warnings: ReadOnlyArray::from_array([
+      @office.protocol_warning("office.transaction.example", "example warning"),
+    ]),
+  }
+  json_inspect(report.to_output(), content={
+    "schema": "office.output/1",
+    "success": true,
+    "data": {
+      "schema": "office.transaction/1",
+      "format": "docx",
+      "input": "input.docx",
+      "output": "output.docx",
+      "mode": "output",
+      "dry_run": false,
+      "changed": true,
+      "committed": true,
+      "original_size": 10,
+      "result_size": 12,
+      "validations": [
+        { "name": "office-portable-opc", "passed": true, "finding_count": 0 },
+      ],
+      "preservation": {
+        "whole_file_identical": false,
+        "manifest_enforced": true,
+        "changed": ["word/document.xml"],
+        "added": [],
+        "removed": [],
+        "unchanged_count": 1,
+        "zip_metadata_policy": "payload policy",
+      },
+    },
+    "warnings": [
+      { "code": "office.transaction.example", "message": "example warning" },
+    ],
   })
 }

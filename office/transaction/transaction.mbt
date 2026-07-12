@@ -18,11 +18,17 @@ priv struct TransactionFaults {
   fail_write : Bool
   fail_rename : Bool
   concurrent_replacement : Bytes?
+  concurrent_destination : Bytes?
 }
 
 ///|
 fn no_transaction_faults() -> TransactionFaults {
-  { fail_write: false, fail_rename: false, concurrent_replacement: None }
+  {
+    fail_write: false,
+    fail_rename: false,
+    concurrent_replacement: None,
+    concurrent_destination: None,
+  }
 }
 
 ///|
@@ -439,6 +445,26 @@ async fn publish_candidate(
         cleanup_temp(temp)
         raise error
       }
+    }
+  }
+  if policy.mode is Output {
+    match faults.concurrent_destination {
+      Some(replacement) =>
+        @afs.write_file(
+          policy.destination_target,
+          replacement,
+          create_mode=CreateNew,
+          permission=options.permission,
+        ) catch {
+          error => {
+            cleanup_temp(temp)
+            raise transaction_error(
+              "office.transaction.commit_failed",
+              "could not inject the concurrent-destination test file: \{bounded_text(error.to_string(), 240)}",
+            )
+          }
+        }
+      None => ()
     }
   }
   if faults.fail_rename {
