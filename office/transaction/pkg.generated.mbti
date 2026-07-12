@@ -1,0 +1,107 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/office/transaction"
+
+import {
+  "bobzhang/office",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn transact(TransactionOptions, (@office.DocumentFormat, BytesView) -> TransactionMutation raise, validators? : Array[TransactionValidator]) -> TransactionReport raise TransactionError
+
+pub fn transaction_mutation(Bytes, warnings? : Array[@office.ProtocolWarning]) -> TransactionMutation raise TransactionError
+
+pub fn transaction_mutation_with_manifest(Bytes, Array[String], warnings? : Array[@office.ProtocolWarning]) -> TransactionMutation raise TransactionError
+
+pub fn transaction_options(String, output_path? : String, dry_run? : Bool, overwrite? : Bool, permission? : Int) -> TransactionOptions raise TransactionError
+
+pub fn transaction_validator(String, (@office.DocumentFormat, BytesView) -> Array[ValidationFinding] raise) -> TransactionValidator raise TransactionError
+
+pub fn validation_finding(String, String) -> ValidationFinding raise TransactionError
+
+// Errors
+pub(all) suberror TransactionError {
+  TransactionError(code~ : String, message~ : String, details~ : Json?)
+}
+#deprecated
+pub fn TransactionError::output(Self, &Logger) -> Unit
+pub fn TransactionError::to_protocol_error(Self) -> @office.ProtocolError
+#deprecated
+pub fn TransactionError::to_string(Self) -> String
+pub impl Show for TransactionError
+
+// Types and methods
+pub struct PreservationReport {
+  whole_file_identical : Bool
+  manifest_enforced : Bool
+  changed : ReadOnlyArray[String]
+  added : ReadOnlyArray[String]
+  removed : ReadOnlyArray[String]
+  unchanged : ReadOnlyArray[String]
+  zip_metadata_policy : String
+}
+
+pub(all) enum TransactionMode {
+  InPlace
+  Output
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn TransactionMode::equal(Self, Self) -> Bool
+pub fn TransactionMode::name(Self) -> String
+#deprecated
+pub fn TransactionMode::not_equal(Self, Self) -> Bool
+#as_free_fn
+#deprecated
+pub fn TransactionMode::to_repr(Self) -> @debug.Repr
+
+pub struct TransactionMutation {
+  bytes : Bytes
+  declared_parts : ReadOnlyArray[String]?
+  warnings : ReadOnlyArray[@office.ProtocolWarning]
+}
+
+pub struct TransactionOptions {
+  input_path : String
+  output_path : String?
+  dry_run : Bool
+  overwrite : Bool
+  permission : Int
+}
+
+pub struct TransactionReport {
+  format : @office.DocumentFormat
+  input_path : String
+  output_path : String
+  mode : TransactionMode
+  dry_run : Bool
+  changed : Bool
+  committed : Bool
+  original_size : Int
+  result_size : Int
+  validations : ReadOnlyArray[ValidationSummary]
+  preservation : PreservationReport
+  warnings : ReadOnlyArray[@office.ProtocolWarning]
+}
+pub fn TransactionReport::to_json(Self) -> Json
+pub fn TransactionReport::to_output(Self) -> Json
+
+pub struct TransactionValidator {
+  name : String
+  validate : (@office.DocumentFormat, BytesView) -> Array[ValidationFinding] raise
+}
+
+pub struct ValidationFinding {
+  code : String
+  message : String
+}
+
+pub struct ValidationSummary {
+  name : String
+  passed : Bool
+  finding_count : Int
+}
+
+// Type aliases
+
+// Traits
+
