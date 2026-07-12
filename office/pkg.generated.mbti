@@ -6,6 +6,16 @@ import {
 }
 
 // Values
+pub const SELECTOR_MAX_DEPTH : Int = 32
+
+pub const SELECTOR_MAX_LENGTH : Int = 2048
+
+pub const SELECTOR_MAX_NAME_LENGTH : Int = 32
+
+pub const SELECTOR_MAX_SELECTIONS : Int = 32
+
+pub const SELECTOR_MAX_VALUE_LENGTH : Int = 256
+
 pub fn capabilities_data(format? : DocumentFormat, operation? : String) -> Json
 
 pub fn capability_commands() -> Array[CapabilityCommand]
@@ -24,11 +34,19 @@ pub fn output_failure(ProtocolError, warnings? : Array[ProtocolWarning]) -> Json
 
 pub fn output_success(Json, warnings? : Array[ProtocolWarning]) -> Json
 
+pub fn parse_selector(String) -> OfficeSelector raise SelectorError
+
 pub fn protocol_error(String, String, details? : Json) -> ProtocolError
 
 pub fn protocol_warning(String, String) -> ProtocolWarning
 
 pub fn resolve_format_alias(StringView) -> DocumentFormat?
+
+pub fn selector_for_xlsx_cell(String, String) -> OfficeSelector raise SelectorError
+
+pub fn selector_for_xlsx_range(String, String) -> OfficeSelector raise SelectorError
+
+pub fn selector_from_docx_projection_path(String) -> OfficeSelector raise SelectorError
 
 // Errors
 pub(all) suberror OfficeError {
@@ -48,6 +66,13 @@ pub fn OfficeError::to_repr(Self) -> @debug.Repr
 #deprecated
 pub fn OfficeError::to_string(Self) -> String
 pub impl Show for OfficeError
+
+pub(all) suberror SelectorError {
+  SelectorError(code~ : String, offset~ : Int, input~ : String, message~ : String)
+}
+pub fn SelectorError::output(Self, &Logger) -> Unit
+pub fn SelectorError::to_string(Self) -> String
+pub impl Show for SelectorError
 
 // Types and methods
 pub(all) struct CapabilityCommand {
@@ -72,7 +97,22 @@ pub(all) struct CapabilityFormat {
   name : String
   aliases : Array[String]
   description : String
+  selector : CapabilitySelector
 }
+
+pub(all) struct CapabilitySelector {
+  schema : String
+  root : String
+  status : String
+  examples : Array[String]
+  description : String
+}
+
+pub(all) struct CellAddress {
+  column : Int
+  row : Int
+}
+pub fn CellAddress::render(Self) -> String
 
 pub(all) enum DocumentFormat {
   Xlsx
@@ -92,6 +132,14 @@ pub fn DocumentFormat::to_repr(Self) -> @debug.Repr
 pub fn DocumentFormat::to_string(Self) -> String
 pub impl Show for DocumentFormat
 
+pub(all) struct OfficeSelector {
+  format : DocumentFormat
+  segments : Array[SelectorSegment]
+  coordinate : SelectorCoordinate?
+  stability : SelectorStability
+}
+pub fn OfficeSelector::render(Self) -> String
+
 pub(all) struct ProtocolError {
   code : String
   message : String
@@ -101,6 +149,28 @@ pub(all) struct ProtocolError {
 pub(all) struct ProtocolWarning {
   code : String
   message : String
+}
+
+pub(all) enum SegmentSelection {
+  Position(Int)
+  Key(String, String)
+}
+
+pub(all) enum SelectorCoordinate {
+  Cell(CellAddress)
+  Range(CellAddress, CellAddress)
+}
+
+pub(all) struct SelectorSegment {
+  name : String
+  selection : SegmentSelection?
+}
+pub fn SelectorSegment::key_value(Self, StringView) -> String?
+pub fn SelectorSegment::position(Self) -> Int?
+
+pub(all) enum SelectorStability {
+  Stable
+  SnapshotRelative
 }
 
 // Type aliases
