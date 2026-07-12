@@ -614,7 +614,16 @@ fn XmlParser::parse_children(
       self.skip_comment()
     } else if self.starts_with("<![CDATA[") {
       self.pos = self.pos + "<![CDATA[".length()
-      children.push(XmlText(self.read_until("]]>")))
+      let cdata = self.read_until("]]>")
+      children.push(
+        XmlText(
+          if self.strict {
+            normalize_xml_source_text(cdata, attribute=false)
+          } else {
+            cdata
+          },
+        ),
+      )
       self.pos = self.pos + "]]>".length()
     } else if self.starts_with("<?") {
       if self.strict {
@@ -1195,37 +1204,59 @@ fn decode_xml_entity_strict(entity : String) -> String raise DocxError {
 }
 
 ///|
-fn decode_xml_entities_strict(
+/// Applies XML 1.0 source normalization before entity replacement. Character
+/// references are still encoded at this stage, so references such as `&#xD;`
+/// retain their referenced value while literal CR and CRLF sequences become LF.
+fn normalize_xml_source_text(
   value : String,
   attribute~ : Bool,
 ) -> String raise DocxError {
   let builder = StringBuilder()
   let mut index = 0
   while index < value.length() {
-    if value[index] == '&' {
-      let length = match value[index:].find(";") {
+    let char = match value.get_char(index) {
+      Some(char) => char
+      None => raise InvalidXml(message="invalid UTF-16 in XML content")
+    }
+    if char == '\r' {
+      let next = index + char.utf16_len()
+      if next < value.length() && value[next] == '\n' {
+        index = next
+      }
+      builder.write_char(if attribute { ' ' } else { '\n' })
+    } else if attribute && (char == '\t' || char == '\n') {
+      builder.write_char(' ')
+    } else {
+      builder.write_char(char)
+    }
+    index = index + char.utf16_len()
+  }
+  builder.to_string()
+}
+
+///|
+fn decode_xml_entities_strict(
+  value : String,
+  attribute~ : Bool,
+) -> String raise DocxError {
+  let normalized = normalize_xml_source_text(value, attribute~)
+  let builder = StringBuilder()
+  let mut index = 0
+  while index < normalized.length() {
+    if normalized[index] == '&' {
+      let length = match normalized[index:].find(";") {
         Some(length) => length
         None => raise InvalidXml(message="unterminated XML entity")
       }
-      let entity = xml_substring(value, index + 1, index + length)
+      let entity = xml_substring(normalized, index + 1, index + length)
       builder.write_string(decode_xml_entity_strict(entity))
       index = index + length + 1
     } else {
-      let char = match value.get_char(index) {
+      let char = match normalized.get_char(index) {
         Some(char) => char
         None => raise InvalidXml(message="invalid UTF-16 in XML content")
       }
-      if char == '\r' {
-        let next = index + char.utf16_len()
-        if next < value.length() && value[next] == '\n' {
-          index = next
-        }
-        builder.write_char(if attribute { ' ' } else { '\n' })
-      } else if attribute && (char == '\t' || char == '\n') {
-        builder.write_char(' ')
-      } else {
-        builder.write_char(char)
-      }
+      builder.write_char(char)
       index = index + char.utf16_len()
     }
   }

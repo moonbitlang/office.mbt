@@ -61,6 +61,10 @@ test "strict XML normalizes source line endings but preserves references" {
   )
   debug_inspect(root.attributes.get("note"), content="Some(\"one two\")")
   inspect(root.text(), content="one\ntwo\rthree")
+  let cdata = @xml.read_xml_string_strict(
+    "<root><![CDATA[one\r\ntwo\rthree &amp;]]></root>",
+  )
+  inspect(cdata.text(), content="one\ntwo\nthree &amp;")
 }
 
 ///|
