@@ -9,6 +9,13 @@ test "capability registry claims only wired commands" {
 }
 
 ///|
+test "identify generated help marks its file positional as required" {
+  let help = identify_command().render_help()
+  assert_true(help.contains("<file>"))
+  assert_false(help.contains("[file]"))
+}
+
+///|
 test "bounded diagnostics do not amplify attacker-controlled tokens" {
   let long = "x".repeat(1_000)
   let bounded = bounded_text(long, 24)

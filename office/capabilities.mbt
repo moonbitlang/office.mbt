@@ -59,12 +59,12 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     {
       name: "help",
       summary: "Show the implemented Office capability registry",
-      usage: "office help [all|docx|xlsx] [operation] [element] [--json|--jsonl]",
+      usage: "office help [all|<format>|<operation>|<format> <operation>] [--json|--jsonl]",
       formats: [],
       aliases: [],
       inputs: [
         capability_field(
-          "topic", "string", false, "optional format, operation, or element help token",
+          "query", "enum(all)|format|operation|format+operation", false, "optional all, format, operation, or format-operation query",
         ),
         capability_field(
           "json", "boolean", false, "emit one office.output/1 JSON document",
@@ -203,37 +203,77 @@ fn append_fingerprint_field(
 }
 
 ///|
+fn append_fingerprint_section(
+  buffer : StringBuilder,
+  name : String,
+  length : Int,
+) -> Unit {
+  append_fingerprint_token(buffer, name)
+  append_fingerprint_token(buffer, length.to_string())
+}
+
+///|
+fn append_fingerprint_format(
+  buffer : StringBuilder,
+  format : CapabilityFormat,
+) -> Unit {
+  append_fingerprint_token(buffer, "format")
+  append_fingerprint_token(buffer, format.name)
+  append_fingerprint_section(buffer, "aliases", format.aliases.length())
+  for alternate in format.aliases {
+    append_fingerprint_token(buffer, alternate)
+  }
+  append_fingerprint_token(buffer, format.description)
+}
+
+///|
+fn append_fingerprint_command(
+  buffer : StringBuilder,
+  command : CapabilityCommand,
+) -> Unit {
+  append_fingerprint_token(buffer, "command")
+  append_fingerprint_token(buffer, command.name)
+  append_fingerprint_token(buffer, command.summary)
+  append_fingerprint_token(buffer, command.usage)
+  append_fingerprint_section(buffer, "formats", command.formats.length())
+  for format in command.formats {
+    append_fingerprint_token(buffer, format)
+  }
+  append_fingerprint_section(buffer, "aliases", command.aliases.length())
+  for alternate in command.aliases {
+    append_fingerprint_token(buffer, alternate)
+  }
+  append_fingerprint_section(buffer, "inputs", command.inputs.length())
+  for input in command.inputs {
+    append_fingerprint_field(buffer, input)
+  }
+  append_fingerprint_section(buffer, "outputs", command.outputs.length())
+  for output in command.outputs {
+    append_fingerprint_field(buffer, output)
+  }
+  append_fingerprint_section(
+    buffer,
+    "output_modes",
+    command.output_modes.length(),
+  )
+  for mode in command.output_modes {
+    append_fingerprint_token(buffer, mode)
+  }
+}
+
+///|
 fn capability_fingerprint_source() -> String {
   let buffer = StringBuilder::new()
   append_fingerprint_token(buffer, "office.capabilities/1")
-  for format in capability_formats() {
-    append_fingerprint_token(buffer, "format")
-    append_fingerprint_token(buffer, format.name)
-    for alternate in format.aliases {
-      append_fingerprint_token(buffer, alternate)
-    }
-    append_fingerprint_token(buffer, format.description)
+  let formats = capability_formats()
+  append_fingerprint_section(buffer, "formats", formats.length())
+  for format in formats {
+    append_fingerprint_format(buffer, format)
   }
-  for command in capability_commands() {
-    append_fingerprint_token(buffer, "command")
-    append_fingerprint_token(buffer, command.name)
-    append_fingerprint_token(buffer, command.summary)
-    append_fingerprint_token(buffer, command.usage)
-    for format in command.formats {
-      append_fingerprint_token(buffer, format)
-    }
-    for alternate in command.aliases {
-      append_fingerprint_token(buffer, alternate)
-    }
-    for input in command.inputs {
-      append_fingerprint_field(buffer, input)
-    }
-    for output in command.outputs {
-      append_fingerprint_field(buffer, output)
-    }
-    for mode in command.output_modes {
-      append_fingerprint_token(buffer, mode)
-    }
+  let commands = capability_commands()
+  append_fingerprint_section(buffer, "commands", commands.length())
+  for command in commands {
+    append_fingerprint_command(buffer, command)
   }
   buffer.to_string()
 }

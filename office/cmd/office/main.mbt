@@ -115,7 +115,7 @@ fn identify_command() -> @argparse.Command {
       PositionArg(
         "file",
         about="path to an .xlsx or .docx file",
-        num_args=ValueRange(lower=0, upper=1),
+        num_args=@argparse.ValueRange::single(),
       ),
     ],
     flags=[FlagArg("json", long="json", about="print office.output/1 JSON")],
