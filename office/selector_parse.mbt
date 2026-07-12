@@ -40,11 +40,44 @@ priv enum ParsedSelectorSegment {
 }
 
 ///|
+priv enum SelectorUnicodeScan {
+  Valid
+  TooLong
+  Invalid(Int)
+}
+
+///|
 priv struct SelectorParser {
   source : String
   chars : Array[Char]
   mut position : Int
   mut selection_count : Int
+}
+
+///|
+fn scan_selector_unicode(text : String, limit : Int) -> SelectorUnicodeScan {
+  let unit_length = text.length()
+  let mut unit_offset = 0
+  let mut scalar_offset = 0
+  while unit_offset < unit_length {
+    let unit = text[unit_offset]
+    if unit.is_leading_surrogate() {
+      if unit_offset + 1 >= unit_length ||
+        !text[unit_offset + 1].is_trailing_surrogate() {
+        return Invalid(scalar_offset)
+      }
+      unit_offset = unit_offset + 2
+    } else if unit.is_trailing_surrogate() {
+      return Invalid(scalar_offset)
+    } else {
+      unit_offset = unit_offset + 1
+    }
+    scalar_offset = scalar_offset + 1
+    if scalar_offset > limit {
+      return TooLong
+    }
+  }
+  Valid
 }
 
 ///|
@@ -265,12 +298,18 @@ fn SelectorParser::parse_json_string(
       "office.selector.invalid_string", start, "named selector value must be a JSON string",
     )
   }
-  if value.to_array().length() > SELECTOR_MAX_VALUE_LENGTH {
-    raise self.fail_at(
-      "office.selector.value_too_long",
-      start,
-      "named selector value exceeds \{SELECTOR_MAX_VALUE_LENGTH} characters",
-    )
+  match scan_selector_unicode(value, SELECTOR_MAX_VALUE_LENGTH) {
+    Invalid(_) =>
+      raise self.fail_at(
+        "office.selector.invalid_string", start, "named selector value contains an isolated UTF-16 surrogate",
+      )
+    TooLong =>
+      raise self.fail_at(
+        "office.selector.value_too_long",
+        start,
+        "named selector value exceeds \{SELECTOR_MAX_VALUE_LENGTH} characters",
+      )
+    Valid => ()
   }
   if value == "" {
     raise self.fail_at(
@@ -544,17 +583,22 @@ fn validate_xlsx_selector(
 /// Parses and validates one bounded, format-explicit `office.selector/1`
 /// address. The returned AST is the adapter boundary for later resolvers.
 pub fn parse_selector(source : String) -> OfficeSelector raise SelectorError {
-  let mut source_length = 0
-  for _ in source {
-    source_length = source_length + 1
-    if source_length > SELECTOR_MAX_LENGTH {
+  match scan_selector_unicode(source, SELECTOR_MAX_LENGTH) {
+    Invalid(offset) =>
+      raise SelectorError(
+        code="office.selector.invalid_unicode",
+        offset~,
+        input="<invalid UTF-16>",
+        message="selector contains an isolated UTF-16 surrogate",
+      )
+    TooLong =>
       raise SelectorError(
         code="office.selector.too_long",
         offset=SELECTOR_MAX_LENGTH,
         input=bounded_selector_text(source, selector_max_echo_length),
         message="selector exceeds \{SELECTOR_MAX_LENGTH} characters",
       )
-    }
+    Valid => ()
   }
   let parser = SelectorParser::new(source)
   parser.expect(
@@ -627,5 +671,10 @@ pub fn parse_selector(source : String) -> OfficeSelector raise SelectorError {
     Docx => validate_docx_selector(parser, segments, coordinate)
     Xlsx => validate_xlsx_selector(parser, segments, coordinate)
   }
-  { format, segments, coordinate, stability }
+  {
+    format,
+    segments: ReadOnlyArray::from_array(segments),
+    coordinate,
+    stability,
+  }
 }

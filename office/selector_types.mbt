@@ -40,7 +40,7 @@ pub enum SelectorCoordinate {
 /// from the parser or syntax adapters so their canonical-form invariants hold.
 pub struct OfficeSelector {
   format : DocumentFormat
-  segments : Array[SelectorSegment]
+  segments : ReadOnlyArray[SelectorSegment]
   coordinate : SelectorCoordinate?
   stability : SelectorStability
 }

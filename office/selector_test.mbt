@@ -161,6 +161,35 @@ test "stable key values with delimiter characters round-trip" {
 }
 
 ///|
+test "selector rejects isolated UTF-16 surrogates" {
+  for
+    input in [
+      "/docx/comments/comment[id=\"\\uD800\"]", "/docx/comments/comment[id=\"\\uDC00\"]",
+    ] {
+    assert_true(
+      selector_error_summary(input).has_prefix(
+        "office.selector.invalid_string@",
+      ),
+    )
+  }
+  let valid_pair = @office.parse_selector(
+    "/docx/comments/comment[id=\"\\uD83D\\uDE00\"]",
+  )
+  assert_eq(valid_pair.render(), "/docx/comments/comment[id=\"😀\"]")
+  ignore(@utf8.encode(valid_pair.render()))
+  let malformed = String::from_array([(0xD800).unsafe_to_char()])
+  try @office.parse_selector(malformed) catch {
+    SelectorError(code~, offset~, input~, ..) => {
+      assert_eq(code, "office.selector.invalid_unicode")
+      assert_eq(offset, 0)
+      assert_eq(input, "<invalid UTF-16>")
+    }
+  } noraise {
+    _ => fail("expected malformed UTF-16 input to fail")
+  }
+}
+
+///|
 test "bounded selector parser does not panic on deterministic fuzz input" {
   let alphabet = "/[]=_-\"\\:Aaz09财".to_array()
   let mut state : UInt = 0xC0FFEE
