@@ -295,6 +295,66 @@ fn is_valid_uri_reference(value : StringView) -> Bool {
 }
 
 ///|
+fn is_iri_ucschar(char : Char) -> Bool {
+  let code = char.to_int()
+  (code >= 0xa0 && code <= 0xd7ff) ||
+  (code >= 0xf900 && code <= 0xfdcf) ||
+  (code >= 0xfdf0 && code <= 0xffef) ||
+  (code >= 0x10000 && code <= 0x1fffd) ||
+  (code >= 0x20000 && code <= 0x2fffd) ||
+  (code >= 0x30000 && code <= 0x3fffd) ||
+  (code >= 0x40000 && code <= 0x4fffd) ||
+  (code >= 0x50000 && code <= 0x5fffd) ||
+  (code >= 0x60000 && code <= 0x6fffd) ||
+  (code >= 0x70000 && code <= 0x7fffd) ||
+  (code >= 0x80000 && code <= 0x8fffd) ||
+  (code >= 0x90000 && code <= 0x9fffd) ||
+  (code >= 0xa0000 && code <= 0xafffd) ||
+  (code >= 0xb0000 && code <= 0xbfffd) ||
+  (code >= 0xc0000 && code <= 0xcfffd) ||
+  (code >= 0xd0000 && code <= 0xdfffd) ||
+  (code >= 0xe1000 && code <= 0xefffd)
+}
+
+///|
+fn is_valid_office_windows_file_iri(value : StringView) -> Bool {
+  let owned = value.to_owned()
+  if !owned.to_lower().has_prefix("file:///") {
+    return false
+  }
+  let chars = owned["file:///".length():].to_array()
+  if chars.length() < 3 ||
+    !chars[0].is_ascii_alphabetic() ||
+    chars[1] != ':' ||
+    (chars[2] != '\\' && chars[2] != '/') {
+    return false
+  }
+  for index, char in chars {
+    if char == '%' {
+      if index + 2 >= chars.length() ||
+        !is_ascii_hex_digit(chars[index + 1]) ||
+        !is_ascii_hex_digit(chars[index + 2]) {
+        return false
+      }
+    } else if !is_uri_unreserved(char) &&
+      !is_uri_sub_delimiter(char) &&
+      !is_iri_ucschar(char) &&
+      char != ':' &&
+      char != '@' &&
+      char != '/' &&
+      char != '\\' {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn is_valid_external_relationship_target(value : StringView) -> Bool {
+  is_valid_uri_reference(value) || is_valid_office_windows_file_iri(value)
+}
+
+///|
 fn is_valid_opc_part_segment(segment : StringView) -> Bool {
   if segment == "" || segment.has_suffix(".") {
     return false
@@ -807,7 +867,7 @@ fn validate_package_structure(
               "relationship in \{relationship_part} has an invalid Target: \{target}",
             )
         }
-      } else if !is_valid_uri_reference(target) {
+      } else if !is_valid_external_relationship_target(target) {
         findings.push(
           "relationship in \{relationship_part} has an invalid external Target: \{target}",
         )

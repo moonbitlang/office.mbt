@@ -712,7 +712,10 @@ test "detect_format requires relationship IDs to be XML NCNames" {
 ///|
 test "detect_format validates external relationship target URIs" {
   let source = @excel.write(@excel.new_file())
-  for target in ["\\bad", "https://example.com/{invalid}"] {
+  for
+    target in [
+      "\\bad", "https://example.com/{invalid}", "file:///C:\\bad{path}", "file:///C:\\bad%ZZ",
+    ] {
     let broken = add_root_relationship(
       source,
       "<Relationship Id=\"rExternal\" Type=\"https://example.com/relationships/test\" Target=\"\{target}\" TargetMode=\"External\"/>",
@@ -735,6 +738,18 @@ test "detect_format accepts valid external URI references and Unicode IDs" {
   let source = @excel.write(@excel.new_file())
   let with_external = add_root_relationship(
     source, "<Relationship Id=\"rél\" Type=\"https://example.com/relationships/test\" Target=\"https://example.com/a%20b?q=x/y&amp;v=1#frag\" TargetMode=\"External\"/>",
+  )
+  inspect(
+    @office.detect_format("book.xlsx", with_external).name(),
+    content="xlsx",
+  )
+}
+
+///|
+test "detect_format accepts Office Windows file IRIs" {
+  let source = @excel.write(@excel.new_file())
+  let with_external = add_root_relationship(
+    source, "<Relationship Id=\"rFile\" Type=\"https://example.com/relationships/template\" Target=\"file:///C:\\Documents%20and%20Settings\\Kokoskova\\Laďulik\\Sablona.dot\" TargetMode=\"External\"/>",
   )
   inspect(
     @office.detect_format("book.xlsx", with_external).name(),
