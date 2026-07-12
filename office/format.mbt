@@ -50,6 +50,30 @@ const XLSX_MAIN_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedo
 const DOCX_MAIN_CONTENT_TYPE : String = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
 
 ///|
+const CONTENT_TYPES_ROOT : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Types"
+
+///|
+const CONTENT_TYPES_OVERRIDE : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Override"
+
+///|
+const RELATIONSHIPS_ROOT : String = "{http://schemas.openxmlformats.org/package/2006/relationships}Relationships"
+
+///|
+const RELATIONSHIP_ELEMENT : String = "{http://schemas.openxmlformats.org/package/2006/relationships}Relationship"
+
+///|
+const TRANSITIONAL_OFFICE_DOCUMENT_REL : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+
+///|
+const STRICT_OFFICE_DOCUMENT_REL : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"
+
+///|
+const TRANSITIONAL_WORKBOOK_ROOT : String = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}workbook"
+
+///|
+const STRICT_WORKBOOK_ROOT : String = "{http://purl.oclc.org/ooxml/spreadsheetml/main}workbook"
+
+///|
 fn format_from_extension(path : StringView) -> DocumentFormat raise OfficeError {
   let lower = path.to_owned().to_lower()
   if lower.has_suffix(".xlsx") {
@@ -62,55 +86,193 @@ fn format_from_extension(path : StringView) -> DocumentFormat raise OfficeError 
 }
 
 ///|
-fn format_from_package(data : BytesView) -> DocumentFormat raise OfficeError {
-  let archive = @zip.read(data) catch {
-    _ => raise InvalidPackage("archive is not a readable ZIP")
+fn read_xml_part(
+  archive : @zip.Archive,
+  name : String,
+) -> @xml.XmlElement raise OfficeError {
+  let bytes = match archive.get(name) {
+    Some(bytes) => bytes
+    None => raise InvalidPackage("missing required part: \{name}")
   }
-  let content_types_text = match archive.get("[Content_Types].xml") {
-    Some(bytes) =>
-      @utf8.decode(bytes) catch {
-        _ => raise InvalidPackage("[Content_Types].xml is not valid UTF-8")
-      }
-    None => raise InvalidPackage("missing required part: [Content_Types].xml")
+  let text = @utf8.decode(bytes, ignore_bom=true) catch {
+    _ => raise InvalidPackage("\{name} is not valid UTF-8")
   }
-  let content_types = @xml.read_xml_string(content_types_text) catch {
-    _ => raise InvalidPackage("[Content_Types].xml is not well-formed XML")
-  }
-  if local_name(content_types.name) != "Types" {
-    raise InvalidPackage("[Content_Types].xml root element is not Types")
-  }
-  let mut is_xlsx = false
-  let mut is_docx = false
-  for child in content_types.children {
-    guard child is XmlElement(element) && local_name(element.name) == "Override" else {
-      continue
-    }
-    match element.attributes.get("ContentType") {
-      Some(XLSX_MAIN_CONTENT_TYPE) => is_xlsx = true
-      Some(DOCX_MAIN_CONTENT_TYPE) => is_docx = true
-      _ => ()
-    }
-  }
-  match (is_xlsx, is_docx) {
-    (true, false) => Xlsx
-    (false, true) => Docx
-    (false, false) =>
-      raise InvalidPackage(
-        "content types do not declare an XLSX or DOCX main part",
-      )
-    (true, true) =>
-      raise InvalidPackage(
-        "content types declare both XLSX and DOCX main parts",
-      )
+  @xml.read_xml_string(text) catch {
+    _ => raise InvalidPackage("\{name} is not well-formed XML")
   }
 }
 
 ///|
-fn local_name(name : StringView) -> StringView {
-  match name.rev_find("}") {
-    Some(index) if index + 1 < name.length() => name[index + 1:]
-    _ => name
+fn normalize_internal_target(target : StringView) -> String? {
+  if target == "" ||
+    target.contains("\\") ||
+    target.contains("?") ||
+    target.contains("#") {
+    return None
   }
+  let path = if target.has_prefix("/") { target[1:] } else { target }
+  let segments : Array[String] = []
+  for item in path.split("/") {
+    let segment = item.to_owned()
+    match segment {
+      "" | "." => ()
+      ".." =>
+        if segments.length() == 0 {
+          return None
+        } else {
+          let _ = segments.pop()
+        }
+      _ => segments.push(segment)
+    }
+  }
+  if segments.length() == 0 {
+    None
+  } else {
+    Some(segments.join("/"))
+  }
+}
+
+///|
+fn normalize_declared_part_name(part_name : StringView) -> String? {
+  guard part_name.has_prefix("/") else { return None }
+  guard normalize_internal_target(part_name) is Some(normalized) else {
+    return None
+  }
+  if part_name[1:] == normalized {
+    Some(normalized)
+  } else {
+    None
+  }
+}
+
+///|
+fn is_office_document_relationship(rel_type : StringView) -> Bool {
+  rel_type == TRANSITIONAL_OFFICE_DOCUMENT_REL ||
+  rel_type == STRICT_OFFICE_DOCUMENT_REL
+}
+
+///|
+fn validate_xlsx_main_identity(
+  archive : @zip.Archive,
+  declared_main_part : String,
+) -> Unit raise OfficeError {
+  let root_rels = read_xml_part(archive, "_rels/.rels")
+  if root_rels.name != RELATIONSHIPS_ROOT {
+    raise InvalidPackage("_rels/.rels root element is not Relationships")
+  }
+  let main_targets : Array[String] = []
+  for child in root_rels.children {
+    guard child is XmlElement(element) && element.name == RELATIONSHIP_ELEMENT else {
+      continue
+    }
+    guard element.attributes.get("Type") is Some(rel_type) &&
+      is_office_document_relationship(rel_type) else {
+      continue
+    }
+    match element.attributes.get("TargetMode") {
+      None | Some("Internal") => ()
+      Some(_) =>
+        raise InvalidPackage("XLSX officeDocument relationship is not internal")
+    }
+    match element.attributes.get("Id") {
+      Some(id) if id != "" => ()
+      _ => raise InvalidPackage("XLSX officeDocument relationship has no Id")
+    }
+    let target = match element.attributes.get("Target") {
+      Some(target) => target
+      None =>
+        raise InvalidPackage("XLSX officeDocument relationship has no Target")
+    }
+    let normalized = match normalize_internal_target(target) {
+      Some(target) => target
+      None =>
+        raise InvalidPackage(
+          "XLSX officeDocument relationship has an invalid Target",
+        )
+    }
+    main_targets.push(normalized)
+  }
+  let main_target = match main_targets {
+    [] =>
+      raise InvalidPackage(
+        "XLSX root relationships do not declare an officeDocument relationship",
+      )
+    [target] => target
+    _ =>
+      raise InvalidPackage(
+        "XLSX root relationships declare multiple officeDocument relationships",
+      )
+  }
+  if main_target != declared_main_part {
+    raise InvalidPackage(
+      "XLSX officeDocument relationship targets '\{main_target}', but content types declare '\{declared_main_part}'",
+    )
+  }
+  let workbook = read_xml_part(archive, main_target)
+  if workbook.name != TRANSITIONAL_WORKBOOK_ROOT &&
+    workbook.name != STRICT_WORKBOOK_ROOT {
+    raise InvalidPackage("XLSX main part root element is not workbook")
+  }
+}
+
+///|
+fn format_from_package(
+  data : BytesView,
+) -> (DocumentFormat, String, @zip.Archive) raise OfficeError {
+  let archive = @zip.read(data) catch {
+    _ => raise InvalidPackage("archive is not a readable ZIP")
+  }
+  for entry in archive.entries() {
+    if entry.crc32() != @zip.crc32(entry.data()) {
+      raise InvalidPackage(
+        "entry data does not match its stored CRC-32: \{entry.name()}",
+      )
+    }
+  }
+  let content_types = read_xml_part(archive, "[Content_Types].xml")
+  if content_types.name != CONTENT_TYPES_ROOT {
+    raise InvalidPackage("[Content_Types].xml root element is not Types")
+  }
+  let xlsx_main_parts : Array[String] = []
+  let docx_main_parts : Array[String] = []
+  for child in content_types.children {
+    guard child is XmlElement(element) && element.name == CONTENT_TYPES_OVERRIDE else {
+      continue
+    }
+    let main_parts = match element.attributes.get("ContentType") {
+      Some(XLSX_MAIN_CONTENT_TYPE) => xlsx_main_parts
+      Some(DOCX_MAIN_CONTENT_TYPE) => docx_main_parts
+      _ => continue
+    }
+    let part_name = match element.attributes.get("PartName") {
+      Some(part_name) => part_name
+      None => raise InvalidPackage("main content type override has no PartName")
+    }
+    match normalize_declared_part_name(part_name) {
+      Some(part_name) => main_parts.push(part_name)
+      None =>
+        raise InvalidPackage(
+          "main content type override has an invalid PartName",
+        )
+    }
+  }
+  let (format, main_part) = match (xlsx_main_parts, docx_main_parts) {
+    ([xlsx], []) => (Xlsx, xlsx)
+    ([], [docx]) => (Docx, docx)
+    ([], []) =>
+      raise InvalidPackage(
+        "content types do not declare an XLSX or DOCX main part",
+      )
+    ([_, ..], [_, ..]) =>
+      raise InvalidPackage(
+        "content types declare both XLSX and DOCX main parts",
+      )
+    ([_, _, ..], []) =>
+      raise InvalidPackage("content types declare multiple XLSX main parts")
+    ([], [_, _, ..]) =>
+      raise InvalidPackage("content types declare multiple DOCX main parts")
+  }
+  (format, main_part, archive)
 }
 
 ///|
@@ -135,9 +297,12 @@ pub fn detect_format(
   data : BytesView,
 ) -> DocumentFormat raise OfficeError {
   let expected = format_from_extension(path)
-  let actual = format_from_package(data)
+  let (actual, main_part, archive) = format_from_package(data)
   if expected != actual {
     raise FormatMismatch(expected~, actual~)
+  }
+  if actual is Xlsx {
+    validate_xlsx_main_identity(archive, main_part)
   }
   let findings = structural_findings(actual, data)
   if findings.length() > 0 {
