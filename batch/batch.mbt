@@ -21,6 +21,28 @@ pub const MAX_BATCH_OPS : Int = 10_000
 pub const MAX_TOTAL_STYLE_CELLS : Int64 = 1_000_000
 
 ///|
+/// The sheet grid limits (Excel's maximums), for the `row`/`col` ops' band
+/// validation. A band `[at, at+count-1]` must fit within `[1, max]`.
+const MAX_SHEET_ROWS : Int = 1_048_576
+
+///|
+const MAX_SHEET_COLS : Int = 16_384
+
+///|
+/// Per-op cap on the band a single `row`/`col` hide/show/height op may touch.
+/// These actions loop a per-line setter (rows have no range API), so an
+/// agent-supplied `count` is bounded to keep one op's latency in check.
+/// insert/delete are engine-bounded (they pass `count` straight through) and
+/// are not subject to this cap.
+const MAX_ROWCOL_BAND : Int = 10_000
+
+///|
+/// Aggregate cap on lines touched by `row`/`col` hide/show/height across one
+/// script — the row/col analogue of `MAX_TOTAL_STYLE_CELLS`, bounding total
+/// setter calls even when each op stays under `MAX_ROWCOL_BAND`.
+const MAX_TOTAL_ROWCOL_CELLS : Int64 = 1_000_000
+
+///|
 /// A batch script or op that failed validation or application. The
 /// message names the 0-based op index where one is involved.
 pub suberror BatchError {
@@ -160,6 +182,20 @@ priv enum OpKind {
   // Sheet management. `action` (rename/delete/hide/show/very-hide) is the raw
   // script string, validated at apply. `to` is the new name, for `rename`.
   OpSheet(action~ : String, name~ : String, to~ : String)
+  // Row dimensions. `action` (hide/show/height) is the raw script string,
+  // validated at apply. `at` is a resolved 1-based row and `count` the band
+  // size (`[at, at+count-1]`, both already validated to fit the grid);
+  // `height` is the point height, required for `height` and rejected otherwise.
+  OpRow(
+    sheet~ : String,
+    action~ : String,
+    at~ : Int,
+    count~ : Int,
+    height~ : Double?
+  )
+  // Column dimensions. `action` (hide/show) validated at apply; `at` a resolved
+  // 1-based column and `count` the band size. Column width stays the `width` op.
+  OpCol(sheet~ : String, action~ : String, at~ : Int, count~ : Int)
 }
 
 ///|
@@ -193,12 +229,70 @@ pub fn BatchOp::name(self : BatchOp) -> String {
     OpValidate(..) => "validate"
     OpCf(..) => "cf"
     OpSheet(..) => "sheet"
+    OpRow(..) => "row"
+    OpCol(..) => "col"
   }
 }
 
 ///|
 fn op_error(index : Int, op : String, message : String) -> BatchError {
   BatchError("op \{index} (\{op}): \{message}")
+}
+
+///|
+/// The `row`/`col` actions that apply a per-line setter in a loop (rows have
+/// no range API), and so consume the per-op / script-wide line budgets.
+/// insert/delete (a later op) pass `count` straight to the engine and are not
+/// looping. `height` is a row-only action; treating it as looping for a `col`
+/// op is harmless (the apply arm rejects it anyway).
+fn is_looping_action(action : String) -> Bool {
+  action == "hide" || action == "show" || action == "height"
+}
+
+///|
+/// Validate a `row`/`col` band `[at, at+count-1]` at parse time:
+/// - it must fit within `[1, axis_max]` (checked overflow-safe: never forms
+///   `at + count`, which could exceed `Int`);
+/// - for a looping action, `count` must stay under `MAX_ROWCOL_BAND`, and the
+///   running total across the script must stay under `MAX_TOTAL_ROWCOL_CELLS`.
+/// `at`/`count` are already validated `>= 1` by the readers. The `action` is
+/// still the raw string (its validity is an apply-time concern), so an
+/// unknown action is only band-checked here — the apply arm rejects it.
+fn validate_rowcol_band(
+  reader : ParamReader,
+  action : String,
+  at : Int,
+  count : Int,
+  axis_max : Int,
+  axis : String,
+  rowcol_cells : Ref[Int64],
+) -> Unit raise BatchError {
+  // count <= axis_max - at + 1  <=>  the band's last line <= axis_max, with no
+  // `at + count` addition (both operands are already <= Int::max_value).
+  if count > axis_max - at + 1 {
+    raise op_error(
+      reader.index,
+      reader.op,
+      "\{axis} band of \{count} starting at \{at} runs past the sheet's last \{axis} (\{axis_max})",
+    )
+  }
+  if is_looping_action(action) {
+    if count > MAX_ROWCOL_BAND {
+      raise op_error(
+        reader.index,
+        reader.op,
+        "'count' of \{count} exceeds the per-op \{action} limit of \{MAX_ROWCOL_BAND} \{axis}s",
+      )
+    }
+    rowcol_cells.val = rowcol_cells.val + count.to_int64()
+    if rowcol_cells.val > MAX_TOTAL_ROWCOL_CELLS {
+      raise op_error(
+        reader.index,
+        reader.op,
+        "row/col hide/show/height touch past \{MAX_TOTAL_ROWCOL_CELLS} total lines",
+      )
+    }
+  }
 }
 
 ///|
@@ -239,8 +333,9 @@ pub fn parse_script(document : Json) -> Array[BatchOp] raise BatchError {
   }
   let ops = []
   let style_cells : Ref[Int64] = Ref(0)
+  let rowcol_cells : Ref[Int64] = Ref(0)
   for index, item in items {
-    ops.push(parse_op(index, item, style_cells))
+    ops.push(parse_op(index, item, style_cells, rowcol_cells))
   }
   ops
 }
@@ -250,6 +345,7 @@ fn parse_op(
   index : Int,
   item : Json,
   style_cells : Ref[Int64],
+  rowcol_cells : Ref[Int64],
 ) -> BatchOp raise BatchError {
   let entry = match item {
     Object(map) => map
@@ -416,6 +512,39 @@ fn parse_op(
         name=reader.string("name"),
         to=reader.optional_string("to"),
       )
+    "row" => {
+      let action = reader.string("action")
+      let at = reader.positive_int("at")
+      let count = reader.optional_positive_int("count", default=1)
+      let height = reader.optional_number("height")
+      // Band must fit the grid and, for the looping actions, stay within the
+      // per-op and script-wide budgets (see validate_rowcol_band).
+      validate_rowcol_band(
+        reader,
+        action,
+        at,
+        count,
+        MAX_SHEET_ROWS,
+        "row",
+        rowcol_cells,
+      )
+      OpRow(sheet=reader.string("sheet"), action~, at~, count~, height~)
+    }
+    "col" => {
+      let action = reader.string("action")
+      let at = reader.single_column_number("at")
+      let count = reader.optional_positive_int("count", default=1)
+      validate_rowcol_band(
+        reader,
+        action,
+        at,
+        count,
+        MAX_SHEET_COLS,
+        "column",
+        rowcol_cells,
+      )
+      OpCol(sheet=reader.string("sheet"), action~, at~, count~)
+    }
     _ =>
       raise op_error(
         index,
@@ -799,6 +928,88 @@ fn ParamReader::column_number(
     )
   }
   col
+}
+
+///|
+/// A single column reference (no range), returned as its 1-based number.
+/// Used for the `col` op's `at`, which targets one column band start.
+fn ParamReader::single_column_number(
+  self : ParamReader,
+  key : String,
+) -> Int raise BatchError {
+  let text = self.string(key)
+  if text.contains(":") {
+    raise op_error(
+      self.index,
+      self.op,
+      "'\{key}' must be a single column, not a range: '\{text}'",
+    )
+  }
+  self.column_number(key, text, text)
+}
+
+///|
+/// Validate a JSON number as a whole integer in `[1, Int::max_value]`. The
+/// row/col `at` and `count` are 1-based line positions/spans, so a fraction,
+/// zero, negative, or non-finite value is a contract error.
+fn ParamReader::positive_int_value(
+  self : ParamReader,
+  key : String,
+  json : Json,
+) -> Int raise BatchError {
+  match json {
+    Number(value, repr~) => {
+      // normalize_number recovers the exact literal and rejects non-finite.
+      let resolved = self.normalize_number(key, value, repr)
+      if resolved != resolved.floor() ||
+        resolved < 1.0 ||
+        resolved > 2147483647.0 {
+        raise op_error(
+          self.index,
+          self.op,
+          "'\{key}' must be a whole number between 1 and 2147483647",
+        )
+      }
+      resolved.to_int()
+    }
+    _ => raise op_error(self.index, self.op, "'\{key}' must be a number")
+  }
+}
+
+///|
+fn ParamReader::positive_int(
+  self : ParamReader,
+  key : String,
+) -> Int raise BatchError {
+  match self.take(key) {
+    Some(json) => self.positive_int_value(key, json)
+    None => raise op_error(self.index, self.op, "missing param '\{key}'")
+  }
+}
+
+///|
+fn ParamReader::optional_positive_int(
+  self : ParamReader,
+  key : String,
+  default~ : Int,
+) -> Int raise BatchError {
+  match self.take(key) {
+    Some(json) => self.positive_int_value(key, json)
+    None => default
+  }
+}
+
+///|
+/// An optional finite number param; `None` when the key is absent.
+fn ParamReader::optional_number(
+  self : ParamReader,
+  key : String,
+) -> Double? raise BatchError {
+  match self.take(key) {
+    Some(Number(value, repr~)) => Some(self.normalize_number(key, value, repr))
+    Some(_) => raise op_error(self.index, self.op, "'\{key}' must be a number")
+    None => None
+  }
 }
 
 ///|
@@ -1452,5 +1663,48 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
           )
       }
     }
+    OpRow(sheet~, action~, at~, count~, height~) =>
+      // Bands are pre-validated to fit the grid, so `at + i` stays <= axis max
+      // (no overflow). `set_row_*` preserves the row's other dimension state
+      // (a hidden row keeps its height; a height change keeps hidden/outline).
+      match action {
+        "hide" | "show" => {
+          match height {
+            Some(_) =>
+              raise BatchError("row: action '\{action}' does not take 'height'")
+            None => ()
+          }
+          let visible = action == "show"
+          for i in 0..<count {
+            workbook.set_row_visible(sheet, at + i, visible)
+          }
+        }
+        "height" => {
+          let h = match height {
+            Some(value) => value
+            None => raise BatchError("row: action 'height' requires 'height'")
+          }
+          for i in 0..<count {
+            workbook.set_row_height(sheet, at + i, h)
+          }
+        }
+        other =>
+          raise BatchError(
+            "row: unknown action '\{other}' (expected one of: hide, show, height)",
+          )
+      }
+    OpCol(sheet~, action~, at~, count~) =>
+      match action {
+        "hide" | "show" => {
+          let visible = action == "show"
+          for i in 0..<count {
+            workbook.set_col_visible(sheet, at + i, visible)
+          }
+        }
+        other =>
+          raise BatchError(
+            "col: unknown action '\{other}' (expected one of: hide, show)",
+          )
+      }
   }
 }

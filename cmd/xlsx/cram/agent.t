@@ -227,6 +227,21 @@ rename the default `Sheet1`, drop a scratch sheet, or hide a helper:
   $ xlsx.exe validate sheets.xlsx
   valid
 
+The `row` and `col` ops hide/show a band of rows or columns and set row
+heights — so an agent can tuck away helper rows or size a header:
+
+  $ cat > dims.json <<'JSON'
+  > {"schema": "xlsx.batch/1", "ops": [
+  >   {"op": "row", "params": {"sheet": "Report", "action": "height", "at": 1, "height": 28}},
+  >   {"op": "row", "params": {"sheet": "Report", "action": "hide", "at": 10, "count": 3}},
+  >   {"op": "col", "params": {"sheet": "Report", "action": "hide", "at": "F"}}
+  > ]}
+  > JSON
+  $ xlsx.exe batch sheets.xlsx dims.json
+  applied 3 op(s) to sheets.xlsx
+  $ xlsx.exe validate sheets.xlsx
+  valid
+
 Errors are strict and leave no partial output — an oversized range (the cap
 is 100,000 cells), a missing sheet, and a missing file all fail with exit 1:
 
@@ -452,6 +467,6 @@ ops it doesn't know):
   {
     "schema": "xlsx.capabilities/1",
   $ xlsx.exe capabilities | grep -c '"op":'
-  13
+  15
   $ xlsx.exe capabilities | grep -o '"batch_schema": "[^"]*"'
   "batch_schema": "xlsx.batch/1"
