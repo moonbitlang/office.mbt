@@ -125,3 +125,17 @@ pub fn gzip(bytes : BytesView) -> Bytes raise ZipError {
   gzip_push_u32_le(out, (bytes.length() & 0xFFFFFFFF).reinterpret_as_uint())
   Bytes::from_array(out)
 }
+
+///|
+test "gzip wb: helper read bounds guards" {
+  try read_u16_le(b"\x00", 0) catch {
+    e => inspect(e is OutOfBounds(_), content="true")
+  } noraise {
+    _ => fail("expected read_u16_le to raise")
+  }
+  try read_u32_le(b"\x00\x01", 0) catch {
+    e => inspect(e is OutOfBounds(_), content="true")
+  } noraise {
+    _ => fail("expected read_u32_le to raise")
+  }
+}
