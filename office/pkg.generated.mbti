@@ -1,0 +1,52 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/office"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn detect_format(StringView, BytesView) -> DocumentFormat raise OfficeError
+
+// Errors
+pub(all) suberror OfficeError {
+  UnsupportedFileExtension(String)
+  InvalidPackage(String)
+  FormatMismatch(expected~ : DocumentFormat, actual~ : DocumentFormat)
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn OfficeError::equal(Self, Self) -> Bool
+#deprecated
+pub fn OfficeError::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn OfficeError::output(Self, &Logger) -> Unit
+#as_free_fn
+#deprecated
+pub fn OfficeError::to_repr(Self) -> @debug.Repr
+#deprecated
+pub fn OfficeError::to_string(Self) -> String
+pub impl Show for OfficeError
+
+// Types and methods
+pub(all) enum DocumentFormat {
+  Xlsx
+  Docx
+} derive(Eq, @debug.Debug)
+#deprecated
+pub fn DocumentFormat::equal(Self, Self) -> Bool
+pub fn DocumentFormat::name(Self) -> String
+#deprecated
+pub fn DocumentFormat::not_equal(Self, Self) -> Bool
+#deprecated
+pub fn DocumentFormat::output(Self, &Logger) -> Unit
+#as_free_fn
+#deprecated
+pub fn DocumentFormat::to_repr(Self) -> @debug.Repr
+#deprecated
+pub fn DocumentFormat::to_string(Self) -> String
+pub impl Show for DocumentFormat
+
+// Type aliases
+
+// Traits
+

@@ -1,5 +1,6 @@
 members = [
   ".",
   "./docx2html",
+  "./office",
   "./pdflite",
 ]

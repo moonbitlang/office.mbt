@@ -1,0 +1,14 @@
+import {
+  "bobzhang/office" @lib,
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+supported_targets = "native+wasm"
+
+options(
+  "is-main": true,
+)
