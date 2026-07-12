@@ -6,7 +6,19 @@ import {
 }
 
 // Values
+pub fn capabilities_data(format? : DocumentFormat) -> Json
+
+pub fn capability_commands() -> Array[CapabilityCommand]
+
+pub fn capability_fingerprint() -> String
+
+pub fn capability_formats() -> Array[CapabilityFormat]
+
+pub fn capability_records(format? : DocumentFormat) -> Array[Json]
+
 pub fn detect_format(StringView, BytesView) -> DocumentFormat raise OfficeError
+
+pub fn find_capability_command(StringView) -> CapabilityCommand?
 
 pub fn output_failure(ProtocolError, warnings? : Array[ProtocolWarning]) -> Json
 
@@ -15,6 +27,8 @@ pub fn output_success(Json, warnings? : Array[ProtocolWarning]) -> Json
 pub fn protocol_error(String, String, details? : Json) -> ProtocolError
 
 pub fn protocol_warning(String, String) -> ProtocolWarning
+
+pub fn resolve_format_alias(StringView) -> DocumentFormat?
 
 // Errors
 pub(all) suberror OfficeError {
@@ -36,6 +50,30 @@ pub fn OfficeError::to_string(Self) -> String
 pub impl Show for OfficeError
 
 // Types and methods
+pub(all) struct CapabilityCommand {
+  name : String
+  summary : String
+  usage : String
+  formats : Array[String]
+  aliases : Array[String]
+  inputs : Array[CapabilityField]
+  outputs : Array[CapabilityField]
+  output_modes : Array[String]
+}
+
+pub(all) struct CapabilityField {
+  name : String
+  type_name : String
+  required : Bool
+  description : String
+}
+
+pub(all) struct CapabilityFormat {
+  name : String
+  aliases : Array[String]
+  description : String
+}
+
 pub(all) enum DocumentFormat {
   Xlsx
   Docx
