@@ -27,7 +27,8 @@ Codex review at `xhigh` effort.
 | --- | --- | --- |
 | A1: umbrella module, CLI skeleton, format detection | [#140](https://github.com/moonbitlang/office.mbt/issues/140) | Complete |
 | A2: versioned agent protocol and schema-driven help | [#142](https://github.com/moonbitlang/office.mbt/issues/142) | Complete |
-| A3: bounded cross-format selectors and canonical paths | [#143](https://github.com/moonbitlang/office.mbt/issues/143) | In progress |
+| A3: bounded cross-format selectors and canonical paths | [#143](https://github.com/moonbitlang/office.mbt/issues/143) | Complete |
+| A4: atomic validated document transactions | [#144](https://github.com/moonbitlang/office.mbt/issues/144) | In progress |
 
 ## Deferred beyond major parity
 
