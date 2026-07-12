@@ -1,0 +1,18 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/office/cmd/office"
+
+// Values
+
+// Errors
+type CliError
+#deprecated
+pub fn CliError::output(Self, &Logger) -> Unit
+#deprecated
+pub fn CliError::to_string(Self) -> String
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+
