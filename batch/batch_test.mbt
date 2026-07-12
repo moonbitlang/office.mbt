@@ -1020,6 +1020,253 @@ test "a sheet op targets chart sheets and counts them for the visible guard" {
 }
 
 ///|
+test "row and col hide/show/height toggle dimensions and preserve other state" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Grid"))
+  let ws = match workbook.sheet("Grid") {
+    Some(w) => w
+    None => fail("Grid should exist")
+  }
+  // Set a row height, then hide the row: hiding must preserve the height
+  // (set_row_visible keeps the row's other dimension state).
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1","ops":[
+        #|  {"op":"row","params":{"sheet":"Grid","action":"height","at":3,"height":40}},
+        #|  {"op":"row","params":{"sheet":"Grid","action":"hide","at":3}}
+        #|]}
+      ),
+    ),
+  )
+  assert_false(ws.row_visible(3))
+  assert_eq(ws.get_row_height(3), Some(40.0))
+  // show restores visibility; the height survives.
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"show","at":3}}]}
+      ),
+    ),
+  )
+  assert_true(ws.row_visible(3))
+  assert_eq(ws.get_row_height(3), Some(40.0))
+  // A column keeps its width across a hide.
+  workbook.set_col_width("Grid", 2, 25.0)
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"col","params":{"sheet":"Grid","action":"hide","at":"B"}}]}
+      ),
+    ),
+  )
+  assert_false(ws.col_visible(2))
+  assert_eq(ws.get_col_width(2), Some(25.0))
+}
+
+///|
+test "the row height op preserves an existing row's hidden, outline, and style" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Grid"))
+  let style_id = workbook.add_style(@xlsx.Style::new())
+  // Seed row 5 with hidden + an outline level + a row style *before* the
+  // height op, so the op exercises the other direction of preservation:
+  // set_row_height must keep hidden/outline/style intact.
+  workbook.set_row_visible("Grid", 5, false)
+  workbook.set_row_outline_level("Grid", 5, 2)
+  workbook.set_row_style("Grid", 5, style_id)
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"height","at":5,"height":30}}]}
+      ),
+    ),
+  )
+  // The height applied; the row's hidden flag, outline level, and style survive.
+  assert_eq(workbook.get_row_height("Grid", 5), Some(30.0))
+  assert_false(workbook.get_row_visible("Grid", 5))
+  assert_eq(workbook.get_row_outline_level("Grid", 5), 2)
+  assert_eq(workbook.get_row_style("Grid", 5), Some(style_id))
+}
+
+///|
+test "row and col band ops touch exactly the band" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Grid"))
+  let ws = match workbook.sheet("Grid") {
+    Some(w) => w
+    None => fail("Grid should exist")
+  }
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1","ops":[
+        #|  {"op":"row","params":{"sheet":"Grid","action":"hide","at":5,"count":3}},
+        #|  {"op":"row","params":{"sheet":"Grid","action":"height","at":10,"count":2,"height":12}},
+        #|  {"op":"col","params":{"sheet":"Grid","action":"hide","at":"B","count":3}}
+        #|]}
+      ),
+    ),
+  )
+  // Rows 5..7 hidden; the rows just outside the band untouched.
+  assert_true(ws.row_visible(4))
+  assert_false(ws.row_visible(5))
+  assert_false(ws.row_visible(7))
+  assert_true(ws.row_visible(8))
+  // Rows 10..11 got the height; row 9 has no dimension.
+  assert_eq(ws.get_row_height(10), Some(12.0))
+  assert_eq(ws.get_row_height(11), Some(12.0))
+  assert_eq(ws.get_row_height(9), None)
+  // Columns 2..4 (B..D) hidden; columns 1 and 5 untouched.
+  assert_true(ws.col_visible(1))
+  assert_false(ws.col_visible(2))
+  assert_false(ws.col_visible(4))
+  assert_true(ws.col_visible(5))
+}
+
+///|
+test "row and col op validation errors are typed and specific" {
+  let cases = [
+    // Apply-time action/param rules (bare "row:"/"col:" messages).
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"freeze","at":1}}]}
+      ),
+      "row: unknown action 'freeze' (expected one of: hide, show, height)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"col","params":{"sheet":"Grid","action":"height","at":"A"}}]}
+      ),
+      "col: unknown action 'height' (expected one of: hide, show)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"hide","at":1,"height":10}}]}
+      ),
+      "row: action 'hide' does not take 'height'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"height","at":1}}]}
+      ),
+      "row: action 'height' requires 'height'",
+    ),
+    // Parse-time reader/band errors (prefixed "op 0 (row|col):").
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"hide","at":2.5}}]}
+      ),
+      "op 0 (row): 'at' must be a whole number between 1 and 2147483647",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"hide","at":0}}]}
+      ),
+      "op 0 (row): 'at' must be a whole number between 1 and 2147483647",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"hide","at":1,"count":0}}]}
+      ),
+      "op 0 (row): 'count' must be a whole number between 1 and 2147483647",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"col","params":{"sheet":"Grid","action":"hide","at":"A:B"}}]}
+      ),
+      "op 0 (col): 'at' must be a single column, not a range: 'A:B'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"col","params":{"sheet":"Grid","action":"hide","at":"XFE"}}]}
+      ),
+      "op 0 (col): 'at' is not a valid column or column range: 'XFE'",
+    ),
+  ]
+  for case in cases {
+    let (script, want) = case
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("Grid"))
+    try {
+      ignore(apply_script(workbook, script))
+      fail("expected apply to reject: \{want}")
+    } catch {
+      @batch.BatchError(message) => assert_eq(message, want)
+      err => fail("expected a BatchError, got \{err}")
+    }
+  }
+}
+
+///|
+test "row and col band and budget limits are enforced" {
+  // A band whose last line runs past the sheet's last row is rejected.
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Grid"))
+  try {
+    ignore(
+      apply_script(
+        workbook,
+        (
+          #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"hide","at":1048576,"count":2}}]}
+        ),
+      ),
+    )
+    fail("expected the over-the-edge band to be rejected")
+  } catch {
+    @batch.BatchError(message) =>
+      assert_eq(
+        message, "op 0 (row): row band of 2 starting at 1048576 runs past the sheet's last row (1048576)",
+      )
+    err => fail("expected a BatchError, got \{err}")
+  }
+  // A single op past the per-op band cap is rejected.
+  try {
+    ignore(
+      apply_script(
+        workbook,
+        (
+          #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"hide","at":1,"count":10001}}]}
+        ),
+      ),
+    )
+    fail("expected the per-op band cap to be enforced")
+  } catch {
+    @batch.BatchError(message) =>
+      assert_eq(
+        message, "op 0 (row): 'count' of 10001 exceeds the per-op hide limit of 10000 rows",
+      )
+    err => fail("expected a BatchError, got \{err}")
+  }
+  // The script-wide aggregate: 101 max-band hide ops sum past 1,000,000 lines,
+  // so the op that crosses the budget is rejected (parse time, before apply).
+  let ops : Array[String] = []
+  for _ in 0..<101 {
+    ops.push(
+      "{\"op\":\"row\",\"params\":{\"sheet\":\"Grid\",\"action\":\"hide\",\"at\":1,\"count\":10000}}",
+    )
+  }
+  let big = "{\"schema\":\"xlsx.batch/1\",\"ops\":[" + ops.join(",") + "]}"
+  try {
+    ignore(apply_script(workbook, big))
+    fail("expected the aggregate line budget to be enforced")
+  } catch {
+    @batch.BatchError(message) =>
+      assert_true(
+        message.contains(
+          "row/col hide/show/height touch past 1000000 total lines",
+        ),
+      )
+    err => fail("expected a BatchError, got \{err}")
+  }
+}
+
+///|
 test "a chart op requires valid categories and values at parse time" {
   try
     ignore(
@@ -1310,7 +1557,7 @@ test "strict validation names the 0-based op index" {
       (
         #|{"schema": "xlsx.batch/1", "ops": [{"op": "nop", "params": {}}]}
       ),
-      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table, validate, sheet, cf)",
+      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table, validate, sheet, row, col, cf)",
     ),
     (
       (

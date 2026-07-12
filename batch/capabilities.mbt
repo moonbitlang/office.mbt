@@ -141,6 +141,25 @@ let op_specs : Array[OpSpec] = [
     ],
   },
   {
+    op: "row",
+    params: [
+      req("sheet", "string"),
+      req("action", "string"),
+      req("at", "number"),
+      opt("count", "number"),
+      opt("height", "number"),
+    ],
+  },
+  {
+    op: "col",
+    params: [
+      req("sheet", "string"),
+      req("action", "string"),
+      req("at", "column"),
+      opt("count", "number"),
+    ],
+  },
+  {
     op: "cf",
     params: [
       req("sheet", "string"),

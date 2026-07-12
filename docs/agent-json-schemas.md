@@ -262,6 +262,8 @@ Envelope:
 | `filter` | `sheet`, `range` (strings) |
 | `add-sheet` | `name` (string) |
 | `sheet` | `action` (required: `rename`/`delete`/`hide`/`show`/`very-hide`), `name` (target sheet); `to?` (new name, for `rename`) |
+| `row` | `sheet`, `action` (required: `hide`/`show`/`height`), `at` (required: 1-based row number); `count?` (band size, default 1), `height?` (points, required for `height`) |
+| `col` | `sheet`, `action` (required: `hide`/`show`), `at` (required: column letter, e.g. `"F"`); `count?` (band size, default 1) |
 | `chart` | `sheet`, `anchor`, `categories`, `values` (strings, required); `type?` (default `col`), `name?`, `title?` (strings) |
 | `table` | `sheet`, `range` (strings; `range` is an `A1:B2` colon range); `name?`, `style?` (strings); `header_row?`, `row_stripes?`, `first_column?`, `last_column?`, `column_stripes?` (bool) |
 | `validate` | `sheet`, `range` (strings; `range` is the cell/range the rule covers), `type` (required: `list`/`whole`/`decimal`/`date`/`time`/`textLength`/`custom`); `operator?`, `formula1?`, `formula2?`, `source?` (strings); `values?` (string array); `allow_blank?` (bool); `input_title?`, `input_message?`, `error_title?`, `error_message?`, `error_style?` (strings) |
@@ -277,6 +279,15 @@ Envelope:
   `rename` does **not** rewrite formula or chart references to the old sheet
   name (matching the engine), so re-point those yourself. (Adding a sheet is
   the separate `add-sheet` op.)
+- `row`/`col` operate on a band `[at, at+count-1]` (`count` defaults to 1). `row`
+  supports `hide`, `show`, and `height` (points); `col` supports `hide` and
+  `show` (column **width** is the separate `width` op). `at` is a 1-based row
+  number for `row` and a single column letter for `col`. Hiding/showing preserves
+  the line's other state (a hidden row keeps its height; a resized row keeps its
+  hidden flag). The band must fit the grid (rows ≤ 1048576, columns ≤ 16384); a
+  single `hide`/`show`/`height` op may touch at most 10,000 lines, and one script
+  at most 1,000,000 in total. `action` is checked at apply time; `height` is
+  required for `action: "height"` and rejected otherwise.
 - `style` borders: `border` sets all four sides; a per-side `border_top`/
   `border_bottom`/`border_left`/`border_right` overrides that side. A border
   style is one of `thin`/`medium`/`thick`/`dashed`/`dotted`/`double`/`hair`;

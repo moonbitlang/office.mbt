@@ -23,6 +23,10 @@ fn required_samples() -> Map[String, String] {
     ("table", "{\"sheet\":\"S\",\"range\":\"A1:B2\"}"),
     ("validate", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"list\"}"),
     ("sheet", "{\"action\":\"delete\",\"name\":\"S\"}"),
+    // `hide` needs no `height`, so this required sample stays applicable; the
+    // catalog-built full sample (all params, action="S") only has to PARSE.
+    ("row", "{\"sheet\":\"S\",\"action\":\"hide\",\"at\":2}"),
+    ("col", "{\"sheet\":\"S\",\"action\":\"hide\",\"at\":\"B\"}"),
     ("cf", "{\"sheet\":\"S\",\"range\":\"A1\",\"type\":\"cell\"}"),
   ])
 }
@@ -156,6 +160,8 @@ test "capabilities payload is field-exact" {
       #|table: sheet:string! range:table_range! name:string style:string header_row:bool row_stripes:bool first_column:bool last_column:bool column_stripes:bool
       #|validate: sheet:string! range:sqref! type:string! operator:string formula1:string formula2:string values:string_array source:string allow_blank:bool input_title:string input_message:string error_title:string error_message:string error_style:string
       #|sheet: action:string! name:string! to:string
+      #|row: sheet:string! action:string! at:number! count:number height:number
+      #|col: sheet:string! action:string! at:column! count:number
       #|cf: sheet:string! range:sqref! type:string! criteria:string value:string min_value:string max_value:string formula:string fill:string font_color:string bold:bool italic:bool min_type:string mid_type:string max_type:string mid_value:string min_color:string mid_color:string max_color:string bar_color:string bar_solid:bool bar_direction:string bar_border_color:string icon_style:string reverse_icons:bool stop_if_true:bool
     ),
   )
