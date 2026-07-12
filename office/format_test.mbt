@@ -777,7 +777,8 @@ test "detect_format validates external relationship target URIs" {
     target in [
       "\\bad", "https://example.com/{invalid}", "https://example.com/a[b]", "https://example.com:port/path",
       "https://user@@example.com/path", "https://[2001:db8:::1]/path", "file:///C:\\bad{path}",
-      "file:///C:\\bad%ZZ",
+      "file:///C:\\bad%ZZ", "file:///\\\\server", "file:///\\\\server\\", "file:///\\\\server\\bad{share}\\file.docx",
+      "file:///\\\\server\\share\\bad%ZZ",
     ] {
     let broken = add_root_relationship(
       source,
@@ -797,7 +798,7 @@ test "detect_format validates external relationship target URIs" {
 }
 
 ///|
-test "detect_format accepts valid external URI references and Unicode IDs" {
+test "detect_format accepts valid external IRI references and Unicode IDs" {
   let source = @excel.write(@excel.new_file())
   for
     case in [
@@ -805,6 +806,11 @@ test "detect_format accepts valid external URI references and Unicode IDs" {
       ("rIpv6", "https://user:pass@[2001:db8::1]:443/path"),
       ("rUrn", "urn:example:component"),
       ("rRelative", "../relative/path?x/y"),
+      (
+        "rUnicodeHttps", "https://例え.テスト/資料/文書.docx?名前=値#節",
+      ),
+      ("rUnicodeRelative", "../資料/文書.docx?名前=値"),
+      ("rFileHost", "file://server/共有/文書.docx"),
     ] {
     let (id, target) = case
     let with_external = add_root_relationship(
@@ -819,15 +825,25 @@ test "detect_format accepts valid external URI references and Unicode IDs" {
 }
 
 ///|
-test "detect_format accepts Office Windows file IRIs" {
+test "detect_format accepts Office Windows drive and UNC file IRIs" {
   let source = @excel.write(@excel.new_file())
-  let with_external = add_root_relationship(
-    source, "<Relationship Id=\"rFile\" Type=\"https://example.com/relationships/template\" Target=\"file:///C:\\Documents%20and%20Settings\\Kokoskova\\Laďulik\\Sablona.dot\" TargetMode=\"External\"/>",
-  )
-  inspect(
-    @office.detect_format("book.xlsx", with_external).name(),
-    content="xlsx",
-  )
+  for
+    case in [
+      (
+        "rDrive", "file:///C:\\Documents%20and%20Settings\\Kokoskova\\Laďulik\\Sablona.dot",
+      ),
+      ("rUnc", "file:///\\\\server\\共有\\文書.docx"),
+    ] {
+    let (id, target) = case
+    let with_external = add_root_relationship(
+      source,
+      "<Relationship Id=\"\{id}\" Type=\"https://example.com/relationships/template\" Target=\"\{target}\" TargetMode=\"External\"/>",
+    )
+    inspect(
+      @office.detect_format("book.xlsx", with_external).name(),
+      content="xlsx",
+    )
+  }
 }
 
 ///|

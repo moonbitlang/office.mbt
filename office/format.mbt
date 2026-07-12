@@ -398,6 +398,69 @@ fn is_uri_reg_name_char(char : Char) -> Bool {
 }
 
 ///|
+fn is_iri_ucschar(char : Char) -> Bool {
+  let code = char.to_int()
+  (code >= 0xa0 && code <= 0xd7ff) ||
+  (code >= 0xf900 && code <= 0xfdcf) ||
+  (code >= 0xfdf0 && code <= 0xffef) ||
+  (code >= 0x10000 && code <= 0x1fffd) ||
+  (code >= 0x20000 && code <= 0x2fffd) ||
+  (code >= 0x30000 && code <= 0x3fffd) ||
+  (code >= 0x40000 && code <= 0x4fffd) ||
+  (code >= 0x50000 && code <= 0x5fffd) ||
+  (code >= 0x60000 && code <= 0x6fffd) ||
+  (code >= 0x70000 && code <= 0x7fffd) ||
+  (code >= 0x80000 && code <= 0x8fffd) ||
+  (code >= 0x90000 && code <= 0x9fffd) ||
+  (code >= 0xa0000 && code <= 0xafffd) ||
+  (code >= 0xb0000 && code <= 0xbfffd) ||
+  (code >= 0xc0000 && code <= 0xcfffd) ||
+  (code >= 0xd0000 && code <= 0xdfffd) ||
+  (code >= 0xe1000 && code <= 0xefffd)
+}
+
+///|
+fn is_iri_private(char : Char) -> Bool {
+  let code = char.to_int()
+  (code >= 0xe000 && code <= 0xf8ff) ||
+  (code >= 0xf0000 && code <= 0xffffd) ||
+  (code >= 0x100000 && code <= 0x10fffd)
+}
+
+///|
+fn is_iri_unreserved(char : Char) -> Bool {
+  is_uri_unreserved(char) || is_iri_ucschar(char)
+}
+
+///|
+fn is_iri_pchar(char : Char) -> Bool {
+  is_iri_unreserved(char) ||
+  is_uri_sub_delimiter(char) ||
+  char == ':' ||
+  char == '@'
+}
+
+///|
+fn is_iri_query_char(char : Char) -> Bool {
+  is_iri_pchar(char) || is_iri_private(char) || char == '/' || char == '?'
+}
+
+///|
+fn is_iri_fragment_char(char : Char) -> Bool {
+  is_iri_pchar(char) || char == '/' || char == '?'
+}
+
+///|
+fn is_iri_userinfo_char(char : Char) -> Bool {
+  is_iri_unreserved(char) || is_uri_sub_delimiter(char) || char == ':'
+}
+
+///|
+fn is_iri_reg_name_char(char : Char) -> Bool {
+  is_iri_unreserved(char) || is_uri_sub_delimiter(char)
+}
+
+///|
 fn is_valid_uri_chars(
   chars : ArrayView[Char],
   start : Int,
@@ -573,6 +636,7 @@ fn is_valid_uri_authority(
   chars : ArrayView[Char],
   start : Int,
   end : Int,
+  allow_iri_chars : Bool,
 ) -> Bool {
   let mut host_start = start
   let mut userinfo_at = -1
@@ -585,7 +649,12 @@ fn is_valid_uri_authority(
     }
   }
   if userinfo_at >= 0 {
-    if !is_valid_uri_chars(chars, start, userinfo_at, is_uri_userinfo_char) {
+    let valid_userinfo = if allow_iri_chars {
+      is_valid_uri_chars(chars, start, userinfo_at, is_iri_userinfo_char)
+    } else {
+      is_valid_uri_chars(chars, start, userinfo_at, is_uri_userinfo_char)
+    }
+    if !valid_userinfo {
       return false
     }
     host_start = userinfo_at + 1
@@ -630,7 +699,12 @@ fn is_valid_uri_authority(
     }
   }
   let host_end = if port_at >= 0 { port_at } else { end }
-  if !is_valid_uri_chars(chars, host_start, host_end, is_uri_reg_name_char) {
+  let valid_reg_name = if allow_iri_chars {
+    is_valid_uri_chars(chars, host_start, host_end, is_iri_reg_name_char)
+  } else {
+    is_valid_uri_chars(chars, host_start, host_end, is_uri_reg_name_char)
+  }
+  if !valid_reg_name {
     return false
   }
   if port_at >= 0 {
@@ -662,10 +736,13 @@ fn is_valid_uri_scheme(chars : ArrayView[Char], start : Int, end : Int) -> Bool 
 }
 
 ///|
-// URI-reference = URI / relative-ref (RFC 3986 section 4.1). Delimiters are
-// validated inside their components so, for example, `[` is legal only around
-// an IP-literal authority and never as a raw path character.
-fn is_valid_uri_reference(value : StringView) -> Bool {
+// RFC 3986 URI references and RFC 3987 IRI references have the same component
+// structure. IRI mode additionally permits `ucschar` in the components named
+// by RFC 3987 and `iprivate` in the query only.
+fn is_valid_resource_identifier_reference(
+  value : StringView,
+  allow_iri_chars : Bool,
+) -> Bool {
   if value == "" {
     return false
   }
@@ -714,57 +791,106 @@ fn is_valid_uri_reference(value : StringView) -> Bool {
     while authority_end < hierarchy_end && chars[authority_end] != '/' {
       authority_end = authority_end + 1
     }
-    if !is_valid_uri_authority(chars, authority_start, authority_end) {
+    if !is_valid_uri_authority(
+        chars, authority_start, authority_end, allow_iri_chars,
+      ) {
       return false
     }
     path_start = authority_end
   }
-  if !is_valid_uri_chars(chars, path_start, hierarchy_end, fn(char) {
+  let valid_path = if allow_iri_chars {
+    is_valid_uri_chars(chars, path_start, hierarchy_end, fn(char) {
+      is_iri_pchar(char) || char == '/'
+    })
+  } else {
+    is_valid_uri_chars(chars, path_start, hierarchy_end, fn(char) {
       is_uri_pchar(char) || char == '/'
-    }) {
+    })
+  }
+  if !valid_path {
     return false
   }
-  if query_at < chars.length() &&
-    !is_valid_uri_chars(
+  let valid_query = if allow_iri_chars {
+    is_valid_uri_chars(chars, query_at + 1, fragment_at, is_iri_query_char)
+  } else {
+    is_valid_uri_chars(
       chars,
       query_at + 1,
       fragment_at,
       is_uri_query_or_fragment_char,
-    ) {
+    )
+  }
+  if query_at < chars.length() && !valid_query {
     return false
   }
-  if fragment_at < chars.length() &&
-    !is_valid_uri_chars(
+  let valid_fragment = if allow_iri_chars {
+    is_valid_uri_chars(
+      chars,
+      fragment_at + 1,
+      chars.length(),
+      is_iri_fragment_char,
+    )
+  } else {
+    is_valid_uri_chars(
       chars,
       fragment_at + 1,
       chars.length(),
       is_uri_query_or_fragment_char,
-    ) {
+    )
+  }
+  if fragment_at < chars.length() && !valid_fragment {
     return false
   }
   true
 }
 
 ///|
-fn is_iri_ucschar(char : Char) -> Bool {
-  let code = char.to_int()
-  (code >= 0xa0 && code <= 0xd7ff) ||
-  (code >= 0xf900 && code <= 0xfdcf) ||
-  (code >= 0xfdf0 && code <= 0xffef) ||
-  (code >= 0x10000 && code <= 0x1fffd) ||
-  (code >= 0x20000 && code <= 0x2fffd) ||
-  (code >= 0x30000 && code <= 0x3fffd) ||
-  (code >= 0x40000 && code <= 0x4fffd) ||
-  (code >= 0x50000 && code <= 0x5fffd) ||
-  (code >= 0x60000 && code <= 0x6fffd) ||
-  (code >= 0x70000 && code <= 0x7fffd) ||
-  (code >= 0x80000 && code <= 0x8fffd) ||
-  (code >= 0x90000 && code <= 0x9fffd) ||
-  (code >= 0xa0000 && code <= 0xafffd) ||
-  (code >= 0xb0000 && code <= 0xbfffd) ||
-  (code >= 0xc0000 && code <= 0xcfffd) ||
-  (code >= 0xd0000 && code <= 0xdfffd) ||
-  (code >= 0xe1000 && code <= 0xefffd)
+fn is_valid_uri_reference(value : StringView) -> Bool {
+  is_valid_resource_identifier_reference(value, false)
+}
+
+///|
+fn is_valid_iri_reference(value : StringView) -> Bool {
+  is_valid_resource_identifier_reference(value, true)
+}
+
+///|
+fn is_valid_office_file_path_chars(
+  chars : ArrayView[Char],
+  start : Int,
+  end : Int,
+) -> Bool {
+  is_valid_uri_chars(chars, start, end, fn(char) {
+    is_iri_pchar(char) || char == '/' || char == '\\'
+  })
+}
+
+///|
+fn is_valid_office_unc_path(chars : ArrayView[Char]) -> Bool {
+  if chars.length() < 5 || chars[0] != '\\' || chars[1] != '\\' {
+    return false
+  }
+  let mut server_end = 2
+  while server_end < chars.length() &&
+        chars[server_end] != '\\' &&
+        chars[server_end] != '/' {
+    server_end = server_end + 1
+  }
+  if server_end == 2 ||
+    server_end == chars.length() ||
+    !is_valid_uri_chars(chars, 2, server_end, is_iri_reg_name_char) {
+    return false
+  }
+  let share_start = server_end + 1
+  let mut share_end = share_start
+  while share_end < chars.length() &&
+        chars[share_end] != '\\' &&
+        chars[share_end] != '/' {
+    share_end = share_end + 1
+  }
+  share_end > share_start &&
+  is_valid_uri_chars(chars, share_start, share_end, is_iri_pchar) &&
+  is_valid_office_file_path_chars(chars, share_end, chars.length())
 }
 
 ///|
@@ -774,35 +900,18 @@ fn is_valid_office_windows_file_iri(value : StringView) -> Bool {
     return false
   }
   let chars = owned["file:///".length():].to_array()
-  if chars.length() < 3 ||
-    !chars[0].is_ascii_alphabetic() ||
-    chars[1] != ':' ||
-    (chars[2] != '\\' && chars[2] != '/') {
-    return false
+  if chars.length() >= 3 &&
+    chars[0].is_ascii_alphabetic() &&
+    chars[1] == ':' &&
+    (chars[2] == '\\' || chars[2] == '/') {
+    return is_valid_office_file_path_chars(chars, 2, chars.length())
   }
-  for index, char in chars {
-    if char == '%' {
-      if index + 2 >= chars.length() ||
-        !is_ascii_hex_digit(chars[index + 1]) ||
-        !is_ascii_hex_digit(chars[index + 2]) {
-        return false
-      }
-    } else if !is_uri_unreserved(char) &&
-      !is_uri_sub_delimiter(char) &&
-      !is_iri_ucschar(char) &&
-      char != ':' &&
-      char != '@' &&
-      char != '/' &&
-      char != '\\' {
-      return false
-    }
-  }
-  true
+  is_valid_office_unc_path(chars)
 }
 
 ///|
 fn is_valid_external_relationship_target(value : StringView) -> Bool {
-  is_valid_uri_reference(value) || is_valid_office_windows_file_iri(value)
+  is_valid_iri_reference(value) || is_valid_office_windows_file_iri(value)
 }
 
 ///|
