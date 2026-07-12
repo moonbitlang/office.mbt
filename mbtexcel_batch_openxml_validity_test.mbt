@@ -39,7 +39,8 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
     #|    {"op": "set", "params": {"sheet": "Summary", "cell": "A1", "value": "Item"}},
     #|    {"op": "set", "params": {"sheet": "Summary", "cell": "B1", "value": "Count"}},
     #|    {"op": "table", "params": {"sheet": "Summary", "range": "A1:B4", "name": "Items", "style": "TableStyleMedium2"}},
-    #|    {"op": "validate", "params": {"sheet": "Summary", "range": "D2:D20", "type": "list", "values": ["Low", "High"]}}
+    #|    {"op": "validate", "params": {"sheet": "Summary", "range": "D2:D20", "type": "list", "values": ["Low", "High"]}},
+    #|    {"op": "sheet", "params": {"action": "hide", "name": "Summary"}}
     #|  ]
     #|}
   let ops = @batch.parse_script(@json.parse(script))

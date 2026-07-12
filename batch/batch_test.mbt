@@ -815,6 +815,104 @@ test "cf op apply-time errors are typed and specific" {
 }
 
 ///|
+test "a sheet op renames, deletes, hides, very-hides, and shows sheets" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_sheet("Scratch"))
+  ignore(workbook.add_sheet("Helper"))
+  ignore(workbook.add_sheet("Deep"))
+  ignore(workbook.add_sheet("Was_Hidden"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"sheet","params":{"action":"rename","name":"Sheet1","to":"Data"}},
+    #|  {"op":"sheet","params":{"action":"delete","name":"Scratch"}},
+    #|  {"op":"sheet","params":{"action":"hide","name":"Helper"}},
+    #|  {"op":"sheet","params":{"action":"very-hide","name":"Deep"}},
+    #|  {"op":"sheet","params":{"action":"hide","name":"Was_Hidden"}},
+    #|  {"op":"sheet","params":{"action":"show","name":"Was_Hidden"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="6")
+  // Renamed and deleted, in tab order.
+  debug_inspect(
+    workbook.get_sheet_list(),
+    content=(
+      #|["Data", "Helper", "Deep", "Was_Hidden"]
+    ),
+  )
+  assert_eq(workbook.get_sheet_visible("Data"), true)
+  assert_eq(workbook.get_sheet_visible("Helper"), false)
+  assert_eq(workbook.get_sheet_visible("Deep"), false)
+  // show restored visibility after hide.
+  assert_eq(workbook.get_sheet_visible("Was_Hidden"), true)
+  // very-hide is the stronger hidden state, distinct from a plain hide.
+  match (workbook.sheet("Helper"), workbook.sheet("Deep")) {
+    (Some(helper), Some(deep)) => {
+      debug_inspect(helper.state(), content="Hidden")
+      debug_inspect(deep.state(), content="VeryHidden")
+    }
+    _ => fail("Helper and Deep should still exist")
+  }
+}
+
+///|
+test "sheet op validation errors are typed and specific" {
+  let cases = [
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"sheet","params":{"action":"flip","name":"S"}}]}
+      ),
+      "sheet: unknown action 'flip' (expected one of: rename, delete, hide, show, very-hide)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"sheet","params":{"action":"rename","name":"S"}}]}
+      ),
+      "sheet: action 'rename' requires 'to'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"sheet","params":{"action":"delete","name":"S","to":"X"}}]}
+      ),
+      "sheet: action 'delete' does not take 'to'",
+    ),
+  ]
+  for case in cases {
+    let (script, want) = case
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("S"))
+    ignore(workbook.add_sheet("Other"))
+    try {
+      ignore(apply_script(workbook, script))
+      fail("expected apply to reject: \{want}")
+    } catch {
+      @batch.BatchError(message) => assert_eq(message, want)
+      err => fail("expected a BatchError, got \{err}")
+    }
+    // The two sheets are untouched by a rejected op.
+    assert_eq(workbook.get_sheet_list().length(), 2)
+  }
+}
+
+///|
+test "a sheet op propagates the engine error for an unknown target" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Only"))
+  try {
+    ignore(
+      apply_script(
+        workbook,
+        (
+          #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"delete", "name":"Missing"}}]}
+        ),
+      ),
+    )
+    fail("expected deleting an unknown sheet to fail")
+  } catch {
+    _ => assert_eq(workbook.get_sheet_list().length(), 1)
+  }
+}
+
+///|
 test "a chart op requires valid categories and values at parse time" {
   try
     ignore(
@@ -1105,7 +1203,7 @@ test "strict validation names the 0-based op index" {
       (
         #|{"schema": "xlsx.batch/1", "ops": [{"op": "nop", "params": {}}]}
       ),
-      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table, validate, cf)",
+      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table, validate, sheet, cf)",
     ),
     (
       (

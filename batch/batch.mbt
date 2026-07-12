@@ -157,6 +157,9 @@ priv enum OpKind {
     reverse_icons~ : Bool?,
     stop_if_true~ : Bool?
   )
+  // Sheet management. `action` (rename/delete/hide/show/very-hide) is the raw
+  // script string, validated at apply. `to` is the new name, for `rename`.
+  OpSheet(action~ : String, name~ : String, to~ : String)
 }
 
 ///|
@@ -189,6 +192,7 @@ pub fn BatchOp::name(self : BatchOp) -> String {
     OpTable(..) => "table"
     OpValidate(..) => "validate"
     OpCf(..) => "cf"
+    OpSheet(..) => "sheet"
   }
 }
 
@@ -405,6 +409,12 @@ fn parse_op(
         icon_style=reader.optional_string("icon_style"),
         reverse_icons=reader.tristate_bool("reverse_icons"),
         stop_if_true=reader.tristate_bool("stop_if_true"),
+      )
+    "sheet" =>
+      OpSheet(
+        action=reader.string("action"),
+        name=reader.string("name"),
+        to=reader.optional_string("to"),
       )
     _ =>
       raise op_error(
@@ -1376,5 +1386,31 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       }
       workbook.set_conditional_format(sheet, range, [opt])
     }
+    OpSheet(action~, name~, to~) =>
+      match action {
+        "rename" => {
+          if to == "" {
+            raise BatchError("sheet: action 'rename' requires 'to'")
+          }
+          workbook.set_sheet_name(name, to)
+        }
+        // Every other action targets a single sheet and takes no `to`.
+        "delete" | "hide" | "show" | "very-hide" => {
+          if to != "" {
+            raise BatchError("sheet: action '\{action}' does not take 'to'")
+          }
+          match action {
+            "delete" => workbook.delete_sheet(name)
+            "hide" => workbook.set_sheet_visible(name, false)
+            "very-hide" =>
+              workbook.set_sheet_visible(name, false, very_hidden=true)
+            _ => workbook.set_sheet_visible(name, true) // "show"
+          }
+        }
+        other =>
+          raise BatchError(
+            "sheet: unknown action '\{other}' (expected one of: rename, delete, hide, show, very-hide)",
+          )
+      }
   }
 }

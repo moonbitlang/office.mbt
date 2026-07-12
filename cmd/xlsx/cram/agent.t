@@ -209,6 +209,24 @@ package stays valid:
   $ xlsx.exe get bordered.xlsx S A1 --json | grep -c '"border"'
   1
 
+The `sheet` op renames, deletes, hides, or shows a sheet — so an agent can
+rename the default `Sheet1`, drop a scratch sheet, or hide a helper:
+
+  $ xlsx.exe create sheets.xlsx --sheet Sheet1 >/dev/null
+  $ cat > sheetops.json <<'JSON'
+  > {"schema": "xlsx.batch/1", "ops": [
+  >   {"op": "add-sheet", "params": {"name": "Scratch"}},
+  >   {"op": "sheet", "params": {"action": "rename", "name": "Sheet1", "to": "Report"}},
+  >   {"op": "sheet", "params": {"action": "delete", "name": "Scratch"}}
+  > ]}
+  > JSON
+  $ xlsx.exe batch sheets.xlsx sheetops.json
+  applied 3 op(s) to sheets.xlsx
+  $ xlsx.exe sheets sheets.xlsx
+  Report
+  $ xlsx.exe validate sheets.xlsx
+  valid
+
 Errors are strict and leave no partial output — an oversized range (the cap
 is 100,000 cells), a missing sheet, and a missing file all fail with exit 1:
 
@@ -434,6 +452,6 @@ ops it doesn't know):
   {
     "schema": "xlsx.capabilities/1",
   $ xlsx.exe capabilities | grep -c '"op":'
-  12
+  13
   $ xlsx.exe capabilities | grep -o '"batch_schema": "[^"]*"'
   "batch_schema": "xlsx.batch/1"

@@ -133,6 +133,14 @@ let op_specs : Array[OpSpec] = [
     ],
   },
   {
+    op: "sheet",
+    params: [
+      req("action", "string"),
+      req("name", "string"),
+      opt("to", "string"),
+    ],
+  },
+  {
     op: "cf",
     params: [
       req("sheet", "string"),
