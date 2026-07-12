@@ -130,6 +130,93 @@ test "a script covering every op kind applies like its CLI twins" {
 }
 
 ///|
+test "a style op applies borders, per-side overriding the all-sides default" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"style","params":{"sheet":"Data","range":"B2:C3","border":"thin","border_bottom":"medium","border_color":"4472C4"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="1")
+  let style_id = workbook.get_cell_style("Data", "B2").unwrap_or(0)
+  assert_true(style_id != 0)
+  let style = workbook.get_style(style_id)
+  let sides : Map[String, Int] = Map([])
+  let colors : Map[String, String] = Map([])
+  match style.border {
+    Some(borders) =>
+      for border in borders {
+        sides[border.typ] = border.style.unwrap_or(0)
+        colors[border.typ] = border.color.unwrap_or("")
+      }
+    None => fail("style should carry borders")
+  }
+  // top/left/right take the all-sides thin (1); bottom is overridden to
+  // medium (2); every side is colored.
+  inspect(sides.get("top").unwrap_or(-1), content="1")
+  inspect(sides.get("left").unwrap_or(-1), content="1")
+  inspect(sides.get("right").unwrap_or(-1), content="1")
+  inspect(sides.get("bottom").unwrap_or(-1), content="2")
+  inspect(colors.get("top").unwrap_or(""), content="4472C4")
+  inspect(colors.get("bottom").unwrap_or(""), content="4472C4")
+}
+
+///|
+test "a style op can border a single side (a header underline)" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"style", "params": {"sheet":"Data", "range":"A1", "border_bottom":"double"}}]}
+      ),
+    ),
+  )
+  let style = workbook.get_style(
+    workbook.get_cell_style("Data", "A1").unwrap_or(0),
+  )
+  match style.border {
+    Some(borders) => {
+      inspect(borders.length(), content="1")
+      inspect(borders[0].typ, content="bottom")
+      inspect(borders[0].style.unwrap_or(0), content="6") // double
+    }
+    None => fail("style should carry a single-side border")
+  }
+}
+
+///|
+test "a style op rejects an unknown border style or a bad border color" {
+  let cases = [
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"style","params":{"sheet":"S","range":"A1","border":"wiggly"}}]}
+      ),
+      "style: unknown border style 'wiggly' (expected one of: thin, medium, thick, dashed, dotted, double, hair)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"style","params":{"sheet":"S","range":"A1","border":"thin","border_color":"blue"}}]}
+      ),
+      "style: 'border_color' 'blue' is not a 6-digit hex RGB color (e.g. FF0000)",
+    ),
+  ]
+  for case in cases {
+    let (script, want) = case
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("S"))
+    try {
+      ignore(apply_script(workbook, script))
+      fail("expected apply to reject: \{want}")
+    } catch {
+      @batch.BatchError(message) => assert_eq(message, want)
+      err => fail("expected a BatchError, got \{err}")
+    }
+  }
+}
+
+///|
 fn first_table(workbook : @xlsx.Workbook) -> @xlsx.Table raise {
   for sheet in workbook.sheets() {
     for table in sheet.tables() {

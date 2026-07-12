@@ -145,7 +145,7 @@ test "capabilities payload is field-exact" {
     content=(
       #|set: sheet:string! cell:cell! value:value!
       #|formula: sheet:string! cell:cell! formula:string!
-      #|style: sheet:string! range:range! bold:bool italic:bool number_format:string fill:string font_color:string align:string
+      #|style: sheet:string! range:range! bold:bool italic:bool number_format:string fill:string font_color:string align:string border:string border_top:string border_bottom:string border_left:string border_right:string border_color:string
       #|merge: sheet:string! range:colon_range!
       #|width: sheet:string! column:column! width:number!
       #|freeze: sheet:string! cell:cell!

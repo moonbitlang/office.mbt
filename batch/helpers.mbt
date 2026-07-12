@@ -253,26 +253,88 @@ fn check_cfvo_type(param : String, value : String) -> Unit raise BatchError {
 /// optional leading `#` is allowed). The engine prepends the alpha byte, so
 /// anything else — a name like `red`, a 3-digit shorthand, or an 8-digit
 /// ARGB — would land in the `rgb` attribute as invalid OOXML.
-fn check_cf_color(param : String, value : String) -> Unit raise BatchError {
+/// Whether `value` is a 6-digit hex RGB color (an optional leading `#`).
+fn is_hex6_color(value : String) -> Bool {
   let hex = if value.has_prefix("#") { value[1:].to_owned() } else { value }
-  let mut ok = hex.length() == 6
-  if ok {
-    for i in 0..<hex.length() {
-      let c = hex[i].to_int()
-      let is_num = c >= '0'.to_int() && c <= '9'.to_int()
-      let is_upper = c >= 'A'.to_int() && c <= 'F'.to_int()
-      let is_lower = c >= 'a'.to_int() && c <= 'f'.to_int()
-      if !(is_num || is_upper || is_lower) {
-        ok = false
-        break
-      }
+  if hex.length() != 6 {
+    return false
+  }
+  for i in 0..<hex.length() {
+    let c = hex[i].to_int()
+    let is_num = c >= '0'.to_int() && c <= '9'.to_int()
+    let is_upper = c >= 'A'.to_int() && c <= 'F'.to_int()
+    let is_lower = c >= 'a'.to_int() && c <= 'f'.to_int()
+    if !(is_num || is_upper || is_lower) {
+      return false
     }
   }
-  if !ok {
+  true
+}
+
+///|
+fn check_cf_color(param : String, value : String) -> Unit raise BatchError {
+  if !is_hex6_color(value) {
     raise BatchError(
       "cf: '\{param}' '\{value}' is not a 6-digit hex RGB color (e.g. FF0000)",
     )
   }
+}
+
+///|
+/// Maps a `style` op's border-style name to its OOXML style code.
+fn border_style_of(name : String) -> Int raise BatchError {
+  match name {
+    "thin" => 1
+    "medium" => 2
+    "dashed" => 3
+    "dotted" => 4
+    "thick" => 5
+    "double" => 6
+    "hair" => 7
+    _ =>
+      raise BatchError(
+        "style: unknown border style '\{name}' (expected one of: thin, medium, thick, dashed, dotted, double, hair)",
+      )
+  }
+}
+
+///|
+/// Builds the `Border` list for a `style` op: `all` applies to every side, a
+/// non-empty per-side value overrides it for that side, and `color` (a 6-hex
+/// RGB, validated) colors the lines. Empty when no border is requested.
+fn build_cell_borders(
+  all~ : String,
+  top~ : String,
+  bottom~ : String,
+  left~ : String,
+  right~ : String,
+  color~ : String,
+) -> Array[@xlsx.Border] raise BatchError {
+  if color != "" && !is_hex6_color(color) {
+    raise BatchError(
+      "style: 'border_color' '\{color}' is not a 6-digit hex RGB color (e.g. FF0000)",
+    )
+  }
+  let borders = []
+  fn add_side(side : String, style_name : String) -> Unit raise BatchError {
+    let resolved = if style_name != "" { style_name } else { all }
+    if resolved != "" {
+      let code = border_style_of(resolved)
+      borders.push(
+        if color != "" {
+          @xlsx.Border::with_values(side, color~, style=code)
+        } else {
+          @xlsx.Border::with_values(side, style=code)
+        },
+      )
+    }
+  }
+
+  add_side("top", top)
+  add_side("bottom", bottom)
+  add_side("left", left)
+  add_side("right", right)
+  borders
 }
 
 ///|

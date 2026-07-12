@@ -60,7 +60,16 @@ priv enum OpKind {
     number_format~ : String,
     fill~ : String,
     font_color~ : String,
-    align~ : String
+    align~ : String,
+    // Cell borders: `border` applies to all four sides; a per-side value
+    // overrides it for that side. `border_color` is a 6-hex RGB for the
+    // border lines.
+    border~ : String,
+    border_top~ : String,
+    border_bottom~ : String,
+    border_left~ : String,
+    border_right~ : String,
+    border_color~ : String
   )
   OpMerge(sheet~ : String, range~ : String)
   OpWidth(sheet~ : String, column~ : String, width~ : Double)
@@ -309,6 +318,12 @@ fn parse_op(
         fill=reader.optional_string("fill"),
         font_color=reader.optional_string("font_color"),
         align=reader.optional_string("align"),
+        border=reader.optional_string("border"),
+        border_top=reader.optional_string("border_top"),
+        border_bottom=reader.optional_string("border_bottom"),
+        border_left=reader.optional_string("border_left"),
+        border_right=reader.optional_string("border_right"),
+        border_color=reader.optional_string("border_color"),
       )
     }
     "merge" =>
@@ -867,9 +882,15 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       number_format~,
       fill~,
       font_color~,
-      align~
+      align~,
+      border~,
+      border_top~,
+      border_bottom~,
+      border_left~,
+      border_right~,
+      border_color~
     ) => {
-      let style = build_style(
+      let base = build_style(
         bold~,
         italic~,
         number_format~,
@@ -877,6 +898,19 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
         font_color~,
         align~,
       )
+      let borders = build_cell_borders(
+        all=border,
+        top=border_top,
+        bottom=border_bottom,
+        left=border_left,
+        right=border_right,
+        color=border_color,
+      )
+      let style = if borders.is_empty() {
+        base
+      } else {
+        base.with_border(borders)
+      }
       let style_id = workbook.new_style(style)
       for cell in @inspect.parse_range(range).cells() {
         workbook.set_cell_style(sheet, cell, style_id)

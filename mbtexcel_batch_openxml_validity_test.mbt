@@ -23,7 +23,7 @@ async test "mbtexcel batch-built workbook is OpenXML-valid" {
     #|    {"op": "set", "params": {"sheet": "Data", "cell": "B3", "value": 87.5}},
     #|    {"op": "set", "params": {"sheet": "Data", "cell": "C2", "value": true}},
     #|    {"op": "formula", "params": {"sheet": "Data", "cell": "B4", "formula": "=SUM(B2:B3)"}},
-    #|    {"op": "style", "params": {"sheet": "Data", "range": "A1:B1", "bold": true, "fill": "4472C4", "font_color": "FFFFFF", "align": "center"}},
+    #|    {"op": "style", "params": {"sheet": "Data", "range": "A1:B1", "bold": true, "fill": "4472C4", "font_color": "FFFFFF", "align": "center", "border": "thin", "border_bottom": "medium", "border_color": "1F3864"}},
     #|    {"op": "style", "params": {"sheet": "Data", "range": "B2:B4", "number_format": "#,##0.00"}},
     #|    {"op": "merge", "params": {"sheet": "Data", "range": "A6:B6"}},
     #|    {"op": "width", "params": {"sheet": "Data", "column": "A:B", "width": 14}},
