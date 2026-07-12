@@ -51,6 +51,35 @@ fn append_archive_part(
 }
 
 ///|
+fn rename_archive_part(
+  data : BytesView,
+  old_name : String,
+  new_name : String,
+) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  let mut renamed = false
+  for entry in source.entries() {
+    let name = if entry.name() == old_name {
+      renamed = true
+      new_name
+    } else {
+      entry.name()
+    }
+    result.add(
+      name,
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  if !renamed {
+    fail("test archive did not contain \{old_name}")
+  }
+  @zip.write(result)
+}
+
+///|
 fn prepend_utf8_bom(data : BytesView) -> Bytes {
   let bytes : Array[Byte] = [0xef, 0xbb, 0xbf]
   for byte in data {
@@ -321,6 +350,36 @@ test "detect_format follows a relocated XLSX workbook main part" {
 }
 
 ///|
+test "detect_format compares OPC part names case-insensitively" {
+  let mixed_case = rename_archive_part(
+    @excel.write(@excel.new_file()),
+    "xl/workbook.xml",
+    "xl/Workbook.xml",
+  )
+  inspect(@office.detect_format("book.xlsx", mixed_case).name(), content="xlsx")
+}
+
+///|
+test "detect_format rejects case-equivalent duplicate OPC parts" {
+  let data = @excel.write(@excel.new_file())
+  let archive = @zip.read(data)
+  let duplicate = append_archive_part(
+    data,
+    "xl/Workbook.xml",
+    archive.get("xl/workbook.xml").unwrap(),
+  )
+  try @office.detect_format("book.xlsx", duplicate) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains("duplicate entry name: xl/workbook.xml"),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected a case-equivalent duplicate part")
+  }
+}
+
+///|
 test "detect_format accepts relationships for root-level source parts" {
   let with_root_relationships = add_root_level_relationships(
     @excel.write(@excel.new_file()),
@@ -397,6 +456,37 @@ test "detect_format rejects relationships targeting package metadata" {
       )
   } noraise {
     _ => fail("expected a relationship to package metadata")
+  }
+}
+
+///|
+test "detect_format rejects absolute and network-path internal targets" {
+  let source = @excel.write(@excel.new_file())
+  for
+    case in [
+      ("//example.test/part.xml", "example.test/part.xml"),
+      ("https://example.test/part.xml", "https:/example.test/part.xml"),
+    ] {
+    let (target, collapsed_name) = case
+    let with_collapsed_part = append_archive_part(
+      source,
+      collapsed_name,
+      @utf8.encode("<part/>"),
+    )
+    let broken = add_root_relationship(
+      with_collapsed_part,
+      "<Relationship Id=\"rAbsolute\" Type=\"https://example.com/relationships/test\" Target=\"\{target}\"/>",
+    )
+    try @office.detect_format("book.xlsx", broken) catch {
+      err =>
+        assert_true(
+          Show::to_string(err).contains(
+            "relationship in _rels/.rels has an invalid Target: \{target}",
+          ),
+        )
+    } noraise {
+      _ => fail("expected invalid internal target: \{target}")
+    }
   }
 }
 

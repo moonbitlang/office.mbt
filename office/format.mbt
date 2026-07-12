@@ -102,7 +102,7 @@ fn read_xml_part(
   archive : @zip.Archive,
   name : String,
 ) -> @xml.XmlElement raise OfficeError {
-  let bytes = match archive.get(name) {
+  let bytes = match find_archive_part(archive, name) {
     Some(bytes) => bytes
     None => raise InvalidPackage("missing required part: \{name}")
   }
@@ -133,8 +133,61 @@ fn read_xml_part(
 }
 
 ///|
+fn opc_part_key(name : StringView) -> String {
+  name.to_owned().to_lower()
+}
+
+///|
+fn find_archive_part(archive : @zip.Archive, name : String) -> Bytes? {
+  match archive.get(name) {
+    Some(bytes) => return Some(bytes)
+    None => ()
+  }
+  let key = opc_part_key(name)
+  for entry in archive.entries() {
+    if opc_part_key(entry.name()) == key {
+      return Some(entry.data())
+    }
+  }
+  None
+}
+
+///|
+fn has_uri_scheme(target : StringView) -> Bool {
+  let mut index = 0
+  for char in target {
+    if char == ':' {
+      return index > 0
+    }
+    if char == '/' || char == '?' || char == '#' {
+      return false
+    }
+    let valid = if index == 0 {
+      char.is_ascii_alphabetic()
+    } else {
+      char.is_ascii_alphabetic() ||
+      char.is_ascii_digit() ||
+      char == '+' ||
+      char == '-' ||
+      char == '.'
+    }
+    if !valid {
+      return false
+    }
+    index = index + 1
+  }
+  false
+}
+
+///|
+fn is_package_uri_reference(target : StringView) -> Bool {
+  !target.has_prefix("//") && !has_uri_scheme(target)
+}
+
+///|
 fn normalize_internal_target(target : StringView) -> String? {
   if target == "" ||
+    !is_package_uri_reference(target) ||
     target.contains("\\") ||
     target.contains("?") ||
     target.contains("#") {
@@ -243,6 +296,7 @@ fn relationship_source_part(part : String) -> String? {
 
 ///|
 fn resolve_relationship_target(base : String, target : StringView) -> String? {
+  guard is_package_uri_reference(target) else { return None }
   if target.has_prefix("/") {
     normalize_internal_target(target)
   } else {
@@ -258,14 +312,19 @@ fn validate_package_structure(
 ) -> Array[String] raise OfficeError {
   let findings : Array[String] = []
   let parts : Map[String, Int] = Map([])
+  let part_names : Map[String, String] = Map([])
   let document_parts : Map[String, Bool] = Map([])
   for entry in archive.entries() {
     let name = entry.name()
-    parts[name] = parts.get(name).unwrap_or(0) + 1
-    if name != "[Content_Types].xml" &&
-      !name.has_suffix(".rels") &&
+    let key = opc_part_key(name)
+    parts[key] = parts.get(key).unwrap_or(0) + 1
+    if !part_names.contains(key) {
+      part_names[key] = name
+    }
+    if key != opc_part_key("[Content_Types].xml") &&
+      !key.has_suffix(".rels") &&
       !name.has_suffix("/") {
-      document_parts[name] = true
+      document_parts[key] = true
     }
     if name == "" {
       findings.push("empty entry name")
@@ -283,16 +342,17 @@ fn validate_package_structure(
       }
     }
   }
-  for name, count in parts {
+  for key, count in parts {
     if count > 1 {
-      findings.push("duplicate entry name: \{name}")
+      findings.push("duplicate entry name: \{part_names[key]}")
     }
   }
-  if !document_parts.contains(main_part) {
+  if !document_parts.contains(opc_part_key(main_part)) {
     findings.push("missing required part: \{main_part}")
   }
   let main_relationships = relationships_part_for(main_part)
-  if require_main_relationships && !parts.contains(main_relationships) {
+  if require_main_relationships &&
+    !parts.contains(opc_part_key(main_relationships)) {
     findings.push("missing required part: \{main_relationships}")
   }
 
@@ -332,25 +392,26 @@ fn validate_package_structure(
           element.attributes.get("PartName"),
           element.attributes.get("ContentType"),
         ) {
-        (Some(part_name), Some(content_type)) if content_type != "" => {
-          if overrides.contains(part_name) {
-            findings.push("duplicate content-type override: \{part_name}")
-          } else {
-            overrides[part_name] = content_type
-          }
+        (Some(part_name), Some(content_type)) if content_type != "" =>
           match normalize_declared_part_name(part_name) {
-            Some(target) =>
-              if !parts.contains(target) {
+            Some(target) => {
+              let target_key = opc_part_key(target)
+              if overrides.contains(target_key) {
+                findings.push("duplicate content-type override: \{part_name}")
+              } else {
+                overrides[target_key] = content_type
+              }
+              if !parts.contains(target_key) {
                 findings.push(
                   "content-type override names a missing part: \{part_name}",
                 )
               }
+            }
             None =>
               findings.push(
                 "content-type override has an invalid PartName: \{part_name}",
               )
           }
-        }
         _ =>
           findings.push(
             "[Content_Types].xml: Override missing PartName or ContentType",
@@ -367,7 +428,8 @@ fn validate_package_structure(
     if name == "[Content_Types].xml" || name.has_suffix("/") {
       continue
     }
-    let content_type = match overrides.get("/" + name) {
+    let key = opc_part_key(name)
+    let content_type = match overrides.get(key) {
       Some(content_type) => Some(content_type)
       None =>
         match part_extension(name) {
@@ -378,8 +440,7 @@ fn validate_package_structure(
     match content_type {
       None => findings.push("part has no declared content type: \{name}")
       Some(content_type) =>
-        if name.has_suffix(".rels") &&
-          content_type != RELATIONSHIPS_CONTENT_TYPE {
+        if key.has_suffix(".rels") && content_type != RELATIONSHIPS_CONTENT_TYPE {
           findings.push(
             "relationship part has an invalid content type: \{name} -> \{content_type}",
           )
@@ -389,10 +450,11 @@ fn validate_package_structure(
 
   for entry in archive.entries() {
     let relationship_part = entry.name()
-    if !relationship_part.has_suffix(".rels") {
+    let relationship_key = opc_part_key(relationship_part)
+    if !relationship_key.has_suffix(".rels") {
       continue
     }
-    let base = match relationships_base_dir(relationship_part) {
+    let base = match relationships_base_dir(relationship_key) {
       Some(base) => base
       None => {
         findings.push(
@@ -401,10 +463,10 @@ fn validate_package_structure(
         continue
       }
     }
-    match relationship_source_part(relationship_part) {
+    match relationship_source_part(relationship_key) {
       Some("") => ()
       Some(source) =>
-        if !document_parts.contains(source) {
+        if !document_parts.contains(opc_part_key(source)) {
           findings.push(
             "relationship part has no source part: \{relationship_part} -> \{source}",
           )
@@ -464,10 +526,11 @@ fn validate_package_structure(
       }
       if internal {
         match resolve_relationship_target(base, target) {
-          Some(resolved) =>
-            if document_parts.contains(resolved) {
+          Some(resolved) => {
+            let resolved_key = opc_part_key(resolved)
+            if document_parts.contains(resolved_key) {
               ()
-            } else if parts.contains(resolved) {
+            } else if parts.contains(resolved_key) {
               findings.push(
                 "relationship in \{relationship_part} points to package metadata: \{target} -> \{resolved}",
               )
@@ -476,6 +539,7 @@ fn validate_package_structure(
                 "relationship in \{relationship_part} points to a missing part: \{target} -> \{resolved}",
               )
             }
+          }
           None =>
             findings.push(
               "relationship in \{relationship_part} has an invalid Target: \{target}",
@@ -552,7 +616,7 @@ fn validate_main_identity(
         "\{label} root relationships declare multiple officeDocument relationships",
       )
   }
-  if main_target != declared_main_part {
+  if opc_part_key(main_target) != opc_part_key(declared_main_part) {
     raise InvalidPackage(
       "\{label} officeDocument relationship targets '\{main_target}', but content types declare '\{declared_main_part}'",
     )
