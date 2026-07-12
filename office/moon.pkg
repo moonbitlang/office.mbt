@@ -4,6 +4,7 @@ import {
   "bobzhang/docx2html/xml",
   "moonbitlang/core/encoding/utf16",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
 }
 
 import {
