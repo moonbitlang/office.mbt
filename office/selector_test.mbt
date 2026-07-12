@@ -118,7 +118,6 @@ test "invalid selector forms have deterministic structured errors" {
       #|office.selector.invalid_coordinate@31:/xlsx/sheet[name="Data"]/range[A1:B2:C3]:range selectors require two A1 coordinates separated by ':'
       #|office.selector.invalid_shape@34:/xlsx/sheet[name="Data"]/cell[A1]/range[A1:B2]:selector contains more than one coordinate leaf
       #|office.selector.empty_segment@25:/xlsx/sheet[name="Data"]//cell[A1]:selector contains an empty segment
-
     ),
   )
 }

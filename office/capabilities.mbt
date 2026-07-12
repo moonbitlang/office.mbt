@@ -8,11 +8,23 @@ pub(all) struct CapabilityField {
 }
 
 ///|
+/// The selector syntax declared for one document format. `status` describes
+/// the strongest implemented behavior and must not imply document access.
+pub(all) struct CapabilitySelector {
+  schema : String
+  root : String
+  status : String
+  examples : Array[String]
+  description : String
+}
+
+///|
 /// One document format exposed by the canonical Office command.
 pub(all) struct CapabilityFormat {
   name : String
   aliases : Array[String]
   description : String
+  selector : CapabilitySelector
 }
 
 ///|
@@ -46,8 +58,28 @@ pub fn capability_formats() -> Array[CapabilityFormat] {
       name: "docx",
       aliases: ["word"],
       description: "WordprocessingML documents",
+      selector: {
+        schema: "office.selector/1",
+        root: "/docx",
+        status: "syntax-only",
+        examples: ["/docx/body/p[1]/r[2]", "/docx/comments/comment[id=\"7\"]"],
+        description: "bounded parse/render only; package resolution is not implemented",
+      },
     },
-    { name: "xlsx", aliases: ["excel"], description: "SpreadsheetML workbooks" },
+    {
+      name: "xlsx",
+      aliases: ["excel"],
+      description: "SpreadsheetML workbooks",
+      selector: {
+        schema: "office.selector/1",
+        root: "/xlsx",
+        status: "syntax-only",
+        examples: [
+          "/xlsx/sheet[name=\"Data\"]/cell[A1]", "/xlsx/sheet[name=\"Data\"]/range[A1:C12]",
+        ],
+        description: "bounded parse/render only; workbook resolution is not implemented",
+      },
+    },
   ]
 }
 
@@ -160,6 +192,13 @@ fn capability_format_json(
     "name": Json::string(format.name),
     "aliases": json_strings(format.aliases),
     "description": Json::string(format.description),
+    "selector": Json::object({
+      "schema": Json::string(format.selector.schema),
+      "root": Json::string(format.selector.root),
+      "status": Json::string(format.selector.status),
+      "examples": json_strings(format.selector.examples),
+      "description": Json::string(format.selector.description),
+    }),
   })
 }
 
@@ -224,6 +263,19 @@ fn append_fingerprint_format(
     append_fingerprint_token(buffer, alternate)
   }
   append_fingerprint_token(buffer, format.description)
+  append_fingerprint_token(buffer, "selector")
+  append_fingerprint_token(buffer, format.selector.schema)
+  append_fingerprint_token(buffer, format.selector.root)
+  append_fingerprint_token(buffer, format.selector.status)
+  append_fingerprint_section(
+    buffer,
+    "selector_examples",
+    format.selector.examples.length(),
+  )
+  for example in format.selector.examples {
+    append_fingerprint_token(buffer, example)
+  }
+  append_fingerprint_token(buffer, format.selector.description)
 }
 
 ///|
