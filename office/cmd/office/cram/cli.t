@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/1
-    Fingerprint: crc32:6ba619b7
+    Fingerprint: crc32:1d635ab0
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -28,17 +28,17 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   Format: docx (aliases: word)
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/1","fingerprint":"crc32:6ba619b7","names":["docx","xlsx","help","identify"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/1","fingerprint":"crc32:1d635ab0","names":["docx","xlsx","help","identify"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/1","fingerprint":"crc32:6ba619b7","kind":"format","name":"docx"},{"schema":"office.capability/1","fingerprint":"crc32:6ba619b7","kind":"format","name":"xlsx"},{"schema":"office.capability/1","fingerprint":"crc32:6ba619b7","kind":"command","name":"help"},{"schema":"office.capability/1","fingerprint":"crc32:6ba619b7","kind":"command","name":"identify"}]
+  [{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"format","name":"docx"},{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"format","name":"xlsx"},{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"command","name":"help"},{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"command","name":"identify"}]
 
 Extension/content mismatches and malformed input fail non-zero.
 
   $ office.exe identify > missing-file.out 2>&1; echo $?
   1
   $ head -1 missing-file.out
-  office: required argument 'file' was not provided
+  office: 'file' requires at least 1 values but only 0 were provided
 
   $ office.exe identify --json > missing-file.json 2>&1; echo $?
   1
