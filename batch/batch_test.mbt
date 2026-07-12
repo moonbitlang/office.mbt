@@ -1068,6 +1068,32 @@ test "row and col hide/show/height toggle dimensions and preserve other state" {
 }
 
 ///|
+test "the row height op preserves an existing row's hidden, outline, and style" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Grid"))
+  let style_id = workbook.add_style(@xlsx.Style::new())
+  // Seed row 5 with hidden + an outline level + a row style *before* the
+  // height op, so the op exercises the other direction of preservation:
+  // set_row_height must keep hidden/outline/style intact.
+  workbook.set_row_visible("Grid", 5, false)
+  workbook.set_row_outline_level("Grid", 5, 2)
+  workbook.set_row_style("Grid", 5, style_id)
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"row","params":{"sheet":"Grid","action":"height","at":5,"height":30}}]}
+      ),
+    ),
+  )
+  // The height applied; the row's hidden flag, outline level, and style survive.
+  assert_eq(workbook.get_row_height("Grid", 5), Some(30.0))
+  assert_false(workbook.get_row_visible("Grid", 5))
+  assert_eq(workbook.get_row_outline_level("Grid", 5), 2)
+  assert_eq(workbook.get_row_style("Grid", 5), Some(style_id))
+}
+
+///|
 test "row and col band ops touch exactly the band" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Grid"))
