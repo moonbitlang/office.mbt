@@ -103,6 +103,63 @@ fn relocate_xlsx_main_part(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn prefix_xlsx_package_xml(
+  data : BytesView,
+  dangling_sheet_target : Bool,
+) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  for entry in source.entries() {
+    let entry_data = if entry.name() == "[Content_Types].xml" {
+      let mut text = @utf8.decode(entry.data(), ignore_bom=true)
+      text = text.replace(
+        old="<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">",
+        new="<ct:Types xmlns:ct=\"http://schemas.openxmlformats.org/package/2006/content-types\">",
+      )
+      text = text.replace(old="</Types>", new="</ct:Types>")
+      text = text.replace_all(old="<Default ", new="<ct:Default\n  ")
+      text = text.replace_all(old="<Override ", new="<ct:Override\n  ")
+      if !text.contains("<ct:Types") || !text.contains("<ct:Default\n") {
+        fail("test could not prefix generated content types")
+      }
+      @utf8.encode(text)
+    } else if entry.name().has_suffix(".rels") {
+      let mut text = @utf8.decode(entry.data(), ignore_bom=true)
+      text = text.replace(
+        old="<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+        new="<r:Relationships xmlns:r=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+      )
+      text = text.replace(old="</Relationships>", new="</r:Relationships>")
+      text = text.replace_all(old="<Relationship ", new="<r:Relationship\n  ")
+      if !text.contains("<r:Relationships") ||
+        !text.contains("<r:Relationship\n") {
+        fail("test could not prefix generated relationships")
+      }
+      if dangling_sheet_target && entry.name() == "xl/_rels/workbook.xml.rels" {
+        let updated = text.replace(
+          old="Target=\"worksheets/sheet1.xml\"",
+          new="Target=\"worksheets/missing.xml\"",
+        )
+        if updated == text {
+          fail("test could not replace the generated worksheet target")
+        }
+        text = updated
+      }
+      @utf8.encode(text)
+    } else {
+      entry.data()
+    }
+    result.add(
+      entry.name(),
+      entry_data,
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  @zip.write(result)
+}
+
+///|
 fn misalign_docx_main_part(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
   let result = @zip.Archive::new()
@@ -146,6 +203,26 @@ test "detect_format identifies generated xlsx" {
 test "detect_format follows a relocated XLSX workbook main part" {
   let relocated = relocate_xlsx_main_part(@excel.write(@excel.new_file()))
   inspect(@office.detect_format("book.xlsx", relocated).name(), content="xlsx")
+}
+
+///|
+test "detect_format accepts namespace-prefixed and line-broken package XML" {
+  let prefixed = prefix_xlsx_package_xml(@excel.write(@excel.new_file()), false)
+  inspect(@office.detect_format("book.xlsx", prefixed).name(), content="xlsx")
+}
+
+///|
+test "detect_format checks namespace-prefixed relationship targets" {
+  let broken = prefix_xlsx_package_xml(@excel.write(@excel.new_file()), true)
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err),
+        content="invalid Office package: relationship in xl/_rels/workbook.xml.rels points to a missing part: worksheets/missing.xml -> xl/worksheets/missing.xml",
+      )
+  } noraise {
+    _ => fail("expected missing namespace-prefixed relationship target")
+  }
 }
 
 ///|
