@@ -2961,18 +2961,25 @@ fn Worksheet::insert_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_cell_index()
   if row <= 0 {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
   if count <= 0 {
     raise InvalidSheetOperation(msg="row count must be positive")
   }
-  for i, cell in self.cells {
+  // Transactional: stage every shifted collection into locals first — cell,
+  // merge, hyperlink, filter, table, sparkline, image, and chart references
+  // shift through `cell_ref_from`/range adjusters that raise once a coordinate
+  // leaves the grid, and the two numerically-shifted collections (row
+  // dimensions, page breaks) are bound-checked explicitly below. Nothing on
+  // `self` is mutated until every stage succeeds, so an overflowing insert
+  // raises and leaves the worksheet unchanged instead of half-shifted.
+  let updated_cells : Array[Cell] = []
+  for cell in self.cells {
     if cell.row >= row {
       let new_row = cell.row + count
       let reference = cell_ref_from(new_row, cell.col)
-      self.cells[i] = {
+      updated_cells.push({
         reference,
         row: new_row,
         col: cell.col,
@@ -2984,15 +2991,15 @@ fn Worksheet::insert_rows(
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
         style_id: cell.style_id,
-      }
+      })
+    } else {
+      updated_cells.push(cell)
     }
   }
   let updated_merges : Array[String] = []
   for range_ref in self.merged_cells {
     updated_merges.push(adjust_range_after_row_insert(range_ref, row, count))
   }
-  self.merged_cells.clear()
-  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
   for link in self.hyperlinks {
     let reference = adjust_hyperlink_ref_after_row_insert(
@@ -3009,21 +3016,15 @@ fn Worksheet::insert_rows(
       tooltip: link.tooltip,
     })
   }
-  self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links)
-  match self.auto_filter {
+  let updated_filter = match self.auto_filter {
     Some(filter) =>
-      self.auto_filter = Some(
-        adjust_auto_filter_after_row_insert(filter, row, count),
-      )
-    None => ()
+      Some(adjust_auto_filter_after_row_insert(filter, row, count))
+    None => None
   }
   let updated_tables : Array[Table] = []
   for table in self.tables {
     updated_tables.push(adjust_table_after_row_insert(table, row, count))
   }
-  self.tables.clear()
-  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
   for group in self.sparkline_groups {
     let adjusted = adjust_sparkline_group_after_row_insert(group, row, count)
@@ -3031,30 +3032,23 @@ fn Worksheet::insert_rows(
       updated_sparklines.push(adjusted)
     }
   }
-  self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
   for image in self.images {
     let reference = adjust_cell_after_row_insert(image.reference, row, count)
     updated_images.push(image_with_reference(image, reference))
   }
-  self.images.clear()
-  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     let reference = adjust_cell_after_row_insert(chart.reference, row, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
-  self.charts.clear()
-  self.charts.append(updated_charts)
   let updated_rows : Map[Int, RowDimension] = Map([])
   for row_index, dim in self.row_dimensions {
     let new_row = if row_index >= row { row_index + count } else { row_index }
+    if new_row > cell_ref_max_rows {
+      raise InvalidCellRef(value="\{0}:\{new_row}")
+    }
     updated_rows[new_row] = dim
-  }
-  self.row_dimensions.clear()
-  for row_index, dim in updated_rows {
-    self.row_dimensions[row_index] = dim
   }
   let break_start = row - 1
   let updated_breaks = adjust_page_breaks_after_insert(
@@ -3062,6 +3056,33 @@ fn Worksheet::insert_rows(
     break_start,
     count,
   )
+  for brk in updated_breaks {
+    if brk.id > cell_ref_max_rows {
+      raise InvalidCellRef(value="\{0}:\{brk.id}")
+    }
+  }
+  // Commit: every stage above succeeded, so applying the staged state cannot
+  // fail partway.
+  self.invalidate_cell_index()
+  self.cells.clear()
+  self.cells.append(updated_cells)
+  self.merged_cells.clear()
+  self.merged_cells.append(updated_merges)
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links)
+  self.auto_filter = updated_filter
+  self.tables.clear()
+  self.tables.append(updated_tables)
+  self.sparkline_groups.clear()
+  self.sparkline_groups.append(updated_sparklines)
+  self.images.clear()
+  self.images.append(updated_images)
+  self.charts.clear()
+  self.charts.append(updated_charts)
+  self.row_dimensions.clear()
+  for row_index, dim in updated_rows {
+    self.row_dimensions[row_index] = dim
+  }
   self.row_breaks.clear()
   self.row_breaks.append(updated_breaks)
 }
@@ -3471,18 +3492,22 @@ fn Worksheet::insert_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_cell_index()
   if col <= 0 {
     raise InvalidCellRef(value="\{col}:\{0}")
   }
   if count <= 0 {
     raise InvalidSheetOperation(msg="column count must be positive")
   }
-  for i, cell in self.cells {
+  // Transactional (see insert_rows): stage everything into locals — reference
+  // shifts raise once a coordinate leaves the grid, column dimensions and page
+  // breaks are bound-checked explicitly — and commit only once every stage has
+  // succeeded, so an overflowing insert leaves the worksheet unchanged.
+  let updated_cells : Array[Cell] = []
+  for cell in self.cells {
     if cell.col >= col {
       let new_col = cell.col + count
       let reference = cell_ref_from(cell.row, new_col)
-      self.cells[i] = {
+      updated_cells.push({
         reference,
         row: cell.row,
         col: new_col,
@@ -3494,15 +3519,15 @@ fn Worksheet::insert_cols(
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
         style_id: cell.style_id,
-      }
+      })
+    } else {
+      updated_cells.push(cell)
     }
   }
   let updated_merges : Array[String] = []
   for range_ref in self.merged_cells {
     updated_merges.push(adjust_range_after_col_insert(range_ref, col, count))
   }
-  self.merged_cells.clear()
-  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
   for link in self.hyperlinks {
     let reference = adjust_hyperlink_ref_after_col_insert(
@@ -3519,21 +3544,15 @@ fn Worksheet::insert_cols(
       tooltip: link.tooltip,
     })
   }
-  self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links)
-  match self.auto_filter {
+  let updated_filter = match self.auto_filter {
     Some(filter) =>
-      self.auto_filter = Some(
-        adjust_auto_filter_after_col_insert(filter, col, count),
-      )
-    None => ()
+      Some(adjust_auto_filter_after_col_insert(filter, col, count))
+    None => None
   }
   let updated_tables : Array[Table] = []
   for table in self.tables {
     updated_tables.push(adjust_table_after_col_insert(table, col, count))
   }
-  self.tables.clear()
-  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
   for group in self.sparkline_groups {
     let adjusted = adjust_sparkline_group_after_col_insert(group, col, count)
@@ -3541,30 +3560,23 @@ fn Worksheet::insert_cols(
       updated_sparklines.push(adjusted)
     }
   }
-  self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
   for image in self.images {
     let reference = adjust_cell_after_col_insert(image.reference, col, count)
     updated_images.push(image_with_reference(image, reference))
   }
-  self.images.clear()
-  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     let reference = adjust_cell_after_col_insert(chart.reference, col, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
-  self.charts.clear()
-  self.charts.append(updated_charts)
   let updated_cols : Map[Int, ColDimension] = Map([])
   for col_index, dim in self.col_dimensions {
     let new_col = if col_index >= col { col_index + count } else { col_index }
+    if new_col > cell_ref_max_cols {
+      raise InvalidCellRef(value="\{new_col}:\{0}")
+    }
     updated_cols[new_col] = dim
-  }
-  self.col_dimensions.clear()
-  for col_index, dim in updated_cols {
-    self.col_dimensions[col_index] = dim
   }
   let break_start = col - 1
   let updated_breaks = adjust_page_breaks_after_insert(
@@ -3572,6 +3584,32 @@ fn Worksheet::insert_cols(
     break_start,
     count,
   )
+  for brk in updated_breaks {
+    if brk.id > cell_ref_max_cols {
+      raise InvalidCellRef(value="\{brk.id}:\{0}")
+    }
+  }
+  // Commit.
+  self.invalidate_cell_index()
+  self.cells.clear()
+  self.cells.append(updated_cells)
+  self.merged_cells.clear()
+  self.merged_cells.append(updated_merges)
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links)
+  self.auto_filter = updated_filter
+  self.tables.clear()
+  self.tables.append(updated_tables)
+  self.sparkline_groups.clear()
+  self.sparkline_groups.append(updated_sparklines)
+  self.images.clear()
+  self.images.append(updated_images)
+  self.charts.clear()
+  self.charts.append(updated_charts)
+  self.col_dimensions.clear()
+  for col_index, dim in updated_cols {
+    self.col_dimensions[col_index] = dim
+  }
   self.col_breaks.clear()
   self.col_breaks.append(updated_breaks)
 }

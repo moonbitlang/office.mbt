@@ -1007,13 +1007,16 @@ pub fn Workbook::ungroup_sheets(self : Workbook) -> Unit raise XlsxError {
 }
 
 ///|
-fn Workbook::adjust_defined_names_for_sheet(
+/// Computes the sheet's shifted defined names WITHOUT committing them, so a
+/// caller can validate the shift (the adjuster raises if a ref leaves the grid)
+/// before mutating anything else. `None` means there is nothing to change.
+fn Workbook::stage_adjusted_defined_names_for_sheet(
   self : Workbook,
   sheet_name : String,
   adjust_fn : (StringView) -> String? raise XlsxError,
-) -> Unit raise XlsxError {
+) -> Array[DefinedName]? raise XlsxError {
   if self.defined_names.length() == 0 {
-    return
+    return None
   }
   let updated : Array[DefinedName] = []
   for dn in self.defined_names {
@@ -1029,8 +1032,35 @@ fn Workbook::adjust_defined_names_for_sheet(
       comment: dn.comment,
     })
   }
-  self.defined_names.clear()
-  self.defined_names.append(updated)
+  Some(updated)
+}
+
+///|
+/// Installs a staged defined-name array (from
+/// `stage_adjusted_defined_names_for_sheet`). Infallible — call it only after
+/// every other fallible step of the operation has succeeded.
+fn Workbook::commit_adjusted_defined_names(
+  self : Workbook,
+  staged : Array[DefinedName]?,
+) -> Unit {
+  match staged {
+    Some(updated) => {
+      self.defined_names.clear()
+      self.defined_names.append(updated)
+    }
+    None => ()
+  }
+}
+
+///|
+fn Workbook::adjust_defined_names_for_sheet(
+  self : Workbook,
+  sheet_name : String,
+  adjust_fn : (StringView) -> String? raise XlsxError,
+) -> Unit raise XlsxError {
+  self.commit_adjusted_defined_names(
+    self.stage_adjusted_defined_names_for_sheet(sheet_name, adjust_fn),
+  )
 }
 
 ///|
@@ -3757,12 +3787,17 @@ pub fn Workbook::insert_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
-  sheet.insert_rows(row, count)
-  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+  // Stage (and grid-validate) the defined-name shift before touching the sheet,
+  // then commit it only after the sheet insert also succeeds. Both the sheet
+  // insert and the defined-name adjuster raise on an out-of-grid shift; ordering
+  // the two commits last makes the whole operation all-or-nothing.
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,
   ) -> String? raise XlsxError {
     adjust_ref_after_row_insert(ref_text, row, count)
   })
+  sheet.insert_rows(row, count)
+  self.commit_adjusted_defined_names(staged_names)
 }
 
 ///|
@@ -3815,12 +3850,15 @@ pub fn Workbook::insert_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
-  sheet.insert_cols(col, count)
-  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+  // See insert_rows: stage the defined-name shift, mutate the sheet, then commit
+  // the names last so an out-of-grid overflow on either side is all-or-nothing.
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,
   ) -> String? raise XlsxError {
     adjust_ref_after_col_insert(ref_text, col, count)
   })
+  sheet.insert_cols(col, count)
+  self.commit_adjusted_defined_names(staged_names)
 }
 
 ///|
