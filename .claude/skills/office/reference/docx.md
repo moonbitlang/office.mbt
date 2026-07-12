@@ -27,10 +27,16 @@ moon run --target wasm docx2html/cmd/docx2html -- [options] <input.docx> [output
 | `convert <in.docx> [out]` | Same conversion engine as `docx2html` (HTML/Markdown), agent-CLI flavored. |
 
 Read the existing discussion with the same read verbs: `outline` lists each
-comment (`id`, `author`, `done`, `parent_id`, `anchored_to`); `get <file>
-'/comments/comment[@id=0]' --json` returns one comment's metadata, anchors, and
-child replies; `get <file> '/body/p[2]' --json` reports the `comment_ids`
-covering a paragraph.
+comment — always `id`, plus `author`/`done`/`parent_id`/`anchored_to` when set
+(a comment has no `done` until the document has a `commentsExtended` part).
+`parent_id` is the ONLY place the reply→parent link shows. `get <file>
+'/comments/comment[@id=0]' --json` returns one comment's metadata, `anchors`,
+and `children` — where **`children` are that comment's own body paragraphs**
+(`/comments/comment[@id=0]/p[1]`), NOT its replies. A reply is a *separate*
+comment: find it in `outline` (it carries `parent_id`) or read it directly
+(`get <file> '/comments/comment[@id=1]' --json` → `parent_id`, and empty
+`anchors` because replies are anchorless). `get <file> '/body/p[2]' --json`
+reports the `comment_ids` covering a paragraph.
 
 The normative spec for every JSON payload (`docx.outline/1`, `docx.element/1`,
 `docx.batch/1`) is **`docs/agent-json-schemas.md`** — read it before writing a

@@ -86,8 +86,8 @@ row is copy-pasteable):
 | **Comment on an EXISTING .docx** (byte-preserving) | `moon run --target wasm docx2html/cmd/docx -- annotate add in.docx out.docx --at '/body/p[2]' --text 'Cite the source.' --author Reviewer --initials RV` |
 | Reply in a comment thread | `moon run --target wasm docx2html/cmd/docx -- annotate reply in.docx out.docx --comment 0 --text 'Source added.' --author Author` |
 | Resolve / unresolve a comment | `moon run --target wasm docx2html/cmd/docx -- annotate resolve in.docx out.docx --comment 0` |
-| Read a comment thread as JSON | `moon run --target wasm docx2html/cmd/docx -- get in.docx '/comments/comment[@id=0]' --json` |
-| List comments (author/anchor/thread) | `moon run --target wasm docx2html/cmd/docx -- outline in.docx` |
+| Read one comment as JSON (metadata, anchors, body) | `moon run --target wasm docx2html/cmd/docx -- get in.docx '/comments/comment[@id=0]' --json` |
+| See the thread shape (replies link via `parent_id`) | `moon run --target wasm docx2html/cmd/docx -- outline in.docx` |
 | Author a .docx WITH comments / foot-endnotes | `moon run --target wasm docx2html/cmd/docx -- batch out.docx script.json` (a `docx.batch/2` script) |
 | Convert a .docx to HTML | `moon run --target wasm docx2html/cmd/docx2html -- in.docx out.html` |
 | Convert a .docx to Markdown | `moon run --target wasm docx2html/cmd/docx2html -- --output-format=markdown in.docx out.md` |

@@ -16,15 +16,18 @@ moon run --target wasm docx2html/cmd/docx -- outline report.docx      # counts +
 moon run --target wasm docx2html/cmd/docx -- text report.docx         # every paragraph with its path
 ```
 
-`outline`'s `comments` array lists each comment's `id`, `author`, `done`, and
-`anchored_to`. `text` gives you the paragraph paths (`[/body/p[2]] …`) that
-`--at` accepts. Paths are snapshot-relative — re-read them after any change.
+`outline`'s `comments` array lists each comment. Only `id` is always present;
+`author`, `done`, `parent_id`, and `anchored_to` appear only when set (a
+comment has no `done` until the document has a `commentsExtended` part). `text`
+gives you the paragraph paths (`[/body/p[2]] …`) that `--at` accepts. Paths are
+snapshot-relative — re-read them after any change.
 
 ## 2. Comment on a paragraph
 
 ```
 moon run --target wasm docx2html/cmd/docx -- annotate add report.docx r1.docx \
   --at '/body/p[2]' --text 'Cite the source for this figure.' --author Reviewer --initials RV
+→ annotated r1.docx (comment 3 on /body/p[2])
 ```
 
 - `--at` is a body-story paragraph path (ordinal only); add `--to '/body/p[4]'`
@@ -33,28 +36,33 @@ moon run --target wasm docx2html/cmd/docx -- annotate add report.docx r1.docx \
   `--json envelope.json` (a `docx.annotate/1` envelope that owns all metadata) —
   not both.
 - The output (`r1.docx`) must not already exist.
+- **Capture the new comment's id from that success line.** `annotate add`
+  allocates the NEXT free numeric id (above the highest existing), so on a
+  document that already has comments the new id is NOT 0 — here it is `3`. Use
+  the reported id in the reply/resolve/read-back below. (On a comment-free
+  document the first id is `0`.)
 
-Prove it preserved everything else (optional but reassuring):
-
-```
-# document.xml minus the three inserted marker fragments == the original;
-# styles.xml and every other part are byte-identical.
-```
+Optionally confirm it left the rest of the file alone: adding the *first*
+comment adds/updates `word/comments.xml`, `word/_rels/document.xml.rels`, and
+`[Content_Types].xml`, and inserts the three marker fragments into
+`document.xml`; every OTHER pre-existing part (styles, other stories, media) is
+byte-identical.
 
 ## 3. Reply in the thread
 
 ```
 moon run --target wasm docx2html/cmd/docx -- annotate reply r1.docx r2.docx \
-  --comment 0 --text 'Source added in the appendix.' --author Author
+  --comment 3 --text 'Source added in the appendix.' --author Author
 ```
 
-`--comment 0` is the comment's spelled id (the read surface shows `"id": "0"`).
-The reply is anchorless and threads under its parent via `commentsExtended`.
+`--comment 3` is the spelled id from step 2 (the read surface shows it as a
+string, `"id": "3"`). The reply is anchorless and threads under its parent via
+`commentsExtended`; it is itself allocated the next free id.
 
 ## 4. Resolve (or unresolve) the thread
 
 ```
-moon run --target wasm docx2html/cmd/docx -- annotate resolve r2.docx r3.docx --comment 0
+moon run --target wasm docx2html/cmd/docx -- annotate resolve r2.docx r3.docx --comment 3
 ```
 
 `resolve`/`unresolve` flip `w15:done`.
@@ -62,10 +70,18 @@ moon run --target wasm docx2html/cmd/docx -- annotate resolve r2.docx r3.docx --
 ## 5. Read the thread back
 
 ```
-moon run --target wasm docx2html/cmd/docx -- get r3.docx '/comments/comment[@id=0]' --json
+moon run --target wasm docx2html/cmd/docx -- outline r3.docx
+moon run --target wasm docx2html/cmd/docx -- get r3.docx '/comments/comment[@id=3]' --json
 ```
 
-You should see the comment's metadata, its `anchors`, `done: true`, and the
-reply as a child with `parent_id: "0"`. The repo pins this whole
+`outline` is where the thread shape shows: your comment `3` (`done: true`) and
+its reply — a SEPARATE comment carrying `parent_id: "3"` (find its id there).
+Reading comment 3 as JSON returns its metadata, `anchors`, and `done: true` —
+but its `children` are comment 3's own body paragraphs
+(`/comments/comment[@id=3]/p[1]`), **not** the reply. Read the reply comment
+directly (`get r3.docx '/comments/comment[@id=<reply-id>]' --json`) to see its
+`parent_id: "3"` and empty `anchors` (replies are anchorless). The
+reply is the separate comment 1: reading it shows `parent_id: "0"` and empty
+`anchors` (replies are anchorless). The repo pins this whole
 read→comment→reply→resolve loop — with per-generation byte-preservation proofs
 — as an executable acceptance test in `docx2html/tests/acceptance/`.
