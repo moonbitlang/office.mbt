@@ -91,6 +91,126 @@ fn media_type_equal(left : StringView, right : StringView) -> Bool {
 }
 
 ///|
+fn is_media_type_token_char(char : Char) -> Bool {
+  char.is_ascii_alphabetic() ||
+  char.is_ascii_digit() ||
+  char == '!' ||
+  char == '#' ||
+  char == '$' ||
+  char == '%' ||
+  char == '&' ||
+  char.to_int() == 0x27 ||
+  char == '*' ||
+  char == '+' ||
+  char == '-' ||
+  char == '.' ||
+  char == '^' ||
+  char == '_' ||
+  char == '`' ||
+  char == '|' ||
+  char == '~'
+}
+
+///|
+fn is_media_type_quoted_char(char : Char) -> Bool {
+  let code = char.to_int()
+  char == '\t' ||
+  char == ' ' ||
+  code == 0x21 ||
+  (code >= 0x23 && code <= 0x5b) ||
+  (code >= 0x5d && code <= 0x7e) ||
+  (code >= 0x80 && code <= 0xff)
+}
+
+///|
+fn is_media_type_quoted_pair_char(char : Char) -> Bool {
+  let code = char.to_int()
+  char == '\t' ||
+  char == ' ' ||
+  (code >= 0x21 && code <= 0x7e) ||
+  (code >= 0x80 && code <= 0xff)
+}
+
+///|
+// RFC 7230 token and quoted-string rules, composed as the RFC 7231 media-type
+// grammar. OPC uses this syntax for every Default and Override declaration.
+fn is_valid_media_type(value : StringView) -> Bool {
+  let chars = value.to_array()
+  let mut index = 0
+  while index < chars.length() && is_media_type_token_char(chars[index]) {
+    index = index + 1
+  }
+  if index == 0 || index >= chars.length() || chars[index] != '/' {
+    return false
+  }
+  index = index + 1
+  let subtype_start = index
+  while index < chars.length() && is_media_type_token_char(chars[index]) {
+    index = index + 1
+  }
+  if index == subtype_start {
+    return false
+  }
+  while index < chars.length() {
+    while index < chars.length() &&
+          (chars[index] == ' ' || chars[index] == '\t') {
+      index = index + 1
+    }
+    if index >= chars.length() || chars[index] != ';' {
+      return false
+    }
+    index = index + 1
+    while index < chars.length() &&
+          (chars[index] == ' ' || chars[index] == '\t') {
+      index = index + 1
+    }
+    let parameter_start = index
+    while index < chars.length() && is_media_type_token_char(chars[index]) {
+      index = index + 1
+    }
+    if index == parameter_start ||
+      index >= chars.length() ||
+      chars[index] != '=' {
+      return false
+    }
+    index = index + 1
+    if index < chars.length() && chars[index] == '"' {
+      index = index + 1
+      let mut closed = false
+      while index < chars.length() {
+        if chars[index] == '"' {
+          closed = true
+          index = index + 1
+          break
+        }
+        if chars[index] == '\\' {
+          index = index + 1
+          if index >= chars.length() ||
+            !is_media_type_quoted_pair_char(chars[index]) {
+            return false
+          }
+        } else if !is_media_type_quoted_char(chars[index]) {
+          return false
+        }
+        index = index + 1
+      }
+      if !closed {
+        return false
+      }
+    } else {
+      let value_start = index
+      while index < chars.length() && is_media_type_token_char(chars[index]) {
+        index = index + 1
+      }
+      if index == value_start {
+        return false
+      }
+    }
+  }
+  true
+}
+
+///|
 fn main_format_from_content_type(content_type : StringView) -> DocumentFormat? {
   if media_type_equal(content_type, XLSX_MAIN_CONTENT_TYPE) {
     Some(Xlsx)
@@ -255,41 +375,372 @@ fn is_uri_sub_delimiter(char : Char) -> Bool {
 }
 
 ///|
-fn is_uri_general_delimiter(char : Char) -> Bool {
+fn is_uri_pchar(char : Char) -> Bool {
+  is_uri_unreserved(char) ||
+  is_uri_sub_delimiter(char) ||
   char == ':' ||
-  char == '/' ||
-  char == '?' ||
-  char == '#' ||
-  char == '[' ||
-  char == ']' ||
   char == '@'
 }
 
 ///|
+fn is_uri_query_or_fragment_char(char : Char) -> Bool {
+  is_uri_pchar(char) || char == '/' || char == '?'
+}
+
+///|
+fn is_uri_userinfo_char(char : Char) -> Bool {
+  is_uri_unreserved(char) || is_uri_sub_delimiter(char) || char == ':'
+}
+
+///|
+fn is_uri_reg_name_char(char : Char) -> Bool {
+  is_uri_unreserved(char) || is_uri_sub_delimiter(char)
+}
+
+///|
+fn is_valid_uri_chars(
+  chars : ArrayView[Char],
+  start : Int,
+  end : Int,
+  allowed : (Char) -> Bool,
+) -> Bool {
+  let mut index = start
+  while index < end {
+    if chars[index] == '%' {
+      if index + 2 >= end ||
+        !is_ascii_hex_digit(chars[index + 1]) ||
+        !is_ascii_hex_digit(chars[index + 2]) {
+        return false
+      }
+      index = index + 3
+    } else {
+      if !allowed(chars[index]) {
+        return false
+      }
+      index = index + 1
+    }
+  }
+  true
+}
+
+///|
+fn is_valid_ipv4_literal(
+  chars : ArrayView[Char],
+  start : Int,
+  end : Int,
+) -> Bool {
+  let mut index = start
+  let mut components = 0
+  while index < end {
+    if components == 4 {
+      return false
+    }
+    let component_start = index
+    let mut value = 0
+    while index < end && chars[index].is_ascii_digit() {
+      value = value * 10 + chars[index].to_int() - '0'.to_int()
+      index = index + 1
+    }
+    let digits = index - component_start
+    if digits == 0 ||
+      digits > 3 ||
+      value > 255 ||
+      (digits > 1 && chars[component_start] == '0') {
+      return false
+    }
+    components = components + 1
+    if index == end {
+      break
+    }
+    if chars[index] != '.' {
+      return false
+    }
+    index = index + 1
+  }
+  components == 4
+}
+
+///|
+// RFC 3986 IP-literal validation. A compressed `::` must replace at least one
+// 16-bit group; an IPv4 tail occupies the final two groups.
+fn is_valid_ipv6_literal(
+  chars : ArrayView[Char],
+  start : Int,
+  end : Int,
+) -> Bool {
+  if start >= end {
+    return false
+  }
+  let mut index = start
+  let mut groups = 0
+  let mut compressed = false
+  if chars[index] == ':' {
+    if index + 1 >= end || chars[index + 1] != ':' {
+      return false
+    }
+    compressed = true
+    index = index + 2
+    if index == end {
+      return true
+    }
+  }
+  while index < end {
+    let group_start = index
+    let mut has_dot = false
+    while index < end && chars[index] != ':' {
+      if chars[index] == '.' {
+        has_dot = true
+      }
+      index = index + 1
+    }
+    if has_dot {
+      if index != end || !is_valid_ipv4_literal(chars, group_start, end) {
+        return false
+      }
+      groups = groups + 2
+    } else {
+      let digits = index - group_start
+      if digits == 0 || digits > 4 {
+        return false
+      }
+      for digit_index = group_start
+          digit_index < index
+          digit_index = digit_index + 1 {
+        if !is_ascii_hex_digit(chars[digit_index]) {
+          return false
+        }
+      }
+      groups = groups + 1
+    }
+    if index == end {
+      break
+    }
+    if index + 1 < end && chars[index + 1] == ':' {
+      if compressed {
+        return false
+      }
+      compressed = true
+      index = index + 2
+      if index == end {
+        break
+      }
+    } else {
+      index = index + 1
+      if index == end {
+        return false
+      }
+    }
+  }
+  if compressed {
+    groups < 8
+  } else {
+    groups == 8
+  }
+}
+
+///|
+fn is_valid_ipv_future_literal(
+  chars : ArrayView[Char],
+  start : Int,
+  end : Int,
+) -> Bool {
+  if start >= end || (chars[start] != 'v' && chars[start] != 'V') {
+    return false
+  }
+  let mut index = start + 1
+  let version_start = index
+  while index < end && is_ascii_hex_digit(chars[index]) {
+    index = index + 1
+  }
+  if index == version_start || index >= end || chars[index] != '.' {
+    return false
+  }
+  index = index + 1
+  let address_start = index
+  while index < end &&
+        (
+          is_uri_unreserved(chars[index]) ||
+          is_uri_sub_delimiter(chars[index]) ||
+          chars[index] == ':'
+        ) {
+    index = index + 1
+  }
+  index == end && index > address_start
+}
+
+///|
+fn is_valid_uri_authority(
+  chars : ArrayView[Char],
+  start : Int,
+  end : Int,
+) -> Bool {
+  let mut host_start = start
+  let mut userinfo_at = -1
+  for index = start; index < end; index = index + 1 {
+    if chars[index] == '@' {
+      if userinfo_at >= 0 {
+        return false
+      }
+      userinfo_at = index
+    }
+  }
+  if userinfo_at >= 0 {
+    if !is_valid_uri_chars(chars, start, userinfo_at, is_uri_userinfo_char) {
+      return false
+    }
+    host_start = userinfo_at + 1
+  }
+  if host_start < end && chars[host_start] == '[' {
+    let mut close = -1
+    for index = host_start + 1; index < end; index = index + 1 {
+      if chars[index] == ']' {
+        close = index
+        break
+      }
+    }
+    if close < 0 ||
+      (
+        !is_valid_ipv6_literal(chars, host_start + 1, close) &&
+        !is_valid_ipv_future_literal(chars, host_start + 1, close)
+      ) {
+      return false
+    }
+    if close + 1 == end {
+      return true
+    }
+    if chars[close + 1] != ':' {
+      return false
+    }
+    for index = close + 2; index < end; index = index + 1 {
+      if !chars[index].is_ascii_digit() {
+        return false
+      }
+    }
+    return true
+  }
+  let mut port_at = -1
+  for index = host_start; index < end; index = index + 1 {
+    if chars[index] == ':' {
+      if port_at >= 0 {
+        return false
+      }
+      port_at = index
+    } else if chars[index] == '[' || chars[index] == ']' {
+      return false
+    }
+  }
+  let host_end = if port_at >= 0 { port_at } else { end }
+  if !is_valid_uri_chars(chars, host_start, host_end, is_uri_reg_name_char) {
+    return false
+  }
+  if port_at >= 0 {
+    for index = port_at + 1; index < end; index = index + 1 {
+      if !chars[index].is_ascii_digit() {
+        return false
+      }
+    }
+  }
+  true
+}
+
+///|
+fn is_valid_uri_scheme(chars : ArrayView[Char], start : Int, end : Int) -> Bool {
+  if start >= end || !chars[start].is_ascii_alphabetic() {
+    return false
+  }
+  for index = start + 1; index < end; index = index + 1 {
+    let char = chars[index]
+    if !char.is_ascii_alphabetic() &&
+      !char.is_ascii_digit() &&
+      char != '+' &&
+      char != '-' &&
+      char != '.' {
+      return false
+    }
+  }
+  true
+}
+
+///|
+// URI-reference = URI / relative-ref (RFC 3986 section 4.1). Delimiters are
+// validated inside their components so, for example, `[` is legal only around
+// an IP-literal authority and never as a raw path character.
 fn is_valid_uri_reference(value : StringView) -> Bool {
   if value == "" {
     return false
   }
   let chars = value.to_array()
-  let mut has_fragment = false
+  let mut query_at = chars.length()
+  let mut fragment_at = chars.length()
   for index, char in chars {
-    if char == '%' {
-      if index + 2 >= chars.length() ||
-        !is_ascii_hex_digit(chars[index + 1]) ||
-        !is_ascii_hex_digit(chars[index + 2]) {
+    if char == '#' {
+      if fragment_at < chars.length() {
         return false
       }
-    } else if !is_uri_unreserved(char) &&
-      !is_uri_sub_delimiter(char) &&
-      !is_uri_general_delimiter(char) {
+      fragment_at = index
+    } else if char == '?' &&
+      query_at == chars.length() &&
+      fragment_at == chars.length() {
+      query_at = index
+    }
+  }
+  let hierarchy_end = if query_at < fragment_at {
+    query_at
+  } else {
+    fragment_at
+  }
+  let mut scheme_at = -1
+  for index = 0; index < hierarchy_end; index = index + 1 {
+    if chars[index] == ':' {
+      scheme_at = index
+      break
+    }
+    if chars[index] == '/' {
+      break
+    }
+  }
+  let mut path_start = 0
+  if scheme_at >= 0 {
+    if !is_valid_uri_scheme(chars, 0, scheme_at) {
       return false
     }
-    if char == '#' {
-      if has_fragment {
-        return false
-      }
-      has_fragment = true
+    path_start = scheme_at + 1
+  }
+  if path_start + 1 < hierarchy_end &&
+    chars[path_start] == '/' &&
+    chars[path_start + 1] == '/' {
+    let authority_start = path_start + 2
+    let mut authority_end = authority_start
+    while authority_end < hierarchy_end && chars[authority_end] != '/' {
+      authority_end = authority_end + 1
     }
+    if !is_valid_uri_authority(chars, authority_start, authority_end) {
+      return false
+    }
+    path_start = authority_end
+  }
+  if !is_valid_uri_chars(chars, path_start, hierarchy_end, fn(char) {
+      is_uri_pchar(char) || char == '/'
+    }) {
+    return false
+  }
+  if query_at < chars.length() &&
+    !is_valid_uri_chars(
+      chars,
+      query_at + 1,
+      fragment_at,
+      is_uri_query_or_fragment_char,
+    ) {
+    return false
+  }
+  if fragment_at < chars.length() &&
+    !is_valid_uri_chars(
+      chars,
+      fragment_at + 1,
+      chars.length(),
+      is_uri_query_or_fragment_char,
+    ) {
+    return false
   }
   true
 }
@@ -652,6 +1103,12 @@ fn validate_package_structure(
         ) {
         (Some(extension), Some(content_type)) if extension != "" &&
           content_type != "" => {
+          if !is_valid_media_type(content_type) {
+            findings.push(
+              "[Content_Types].xml: Default has an invalid ContentType: \{content_type}",
+            )
+            continue
+          }
           let extension = extension.to_lower()
           if extension == "rels" &&
             !media_type_equal(content_type, RELATIONSHIPS_CONTENT_TYPE) {
@@ -680,6 +1137,12 @@ fn validate_package_structure(
           element.attributes.get("ContentType"),
         ) {
         (Some(part_name), Some(content_type)) if content_type != "" => {
+          if !is_valid_media_type(content_type) {
+            findings.push(
+              "[Content_Types].xml: Override has an invalid ContentType: \{content_type}",
+            )
+            continue
+          }
           if part_name.has_prefix("/") &&
             opc_part_key(part_name[1:]) == opc_part_key("[Content_Types].xml") {
             findings.push(
