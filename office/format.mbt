@@ -274,7 +274,7 @@ fn read_xml_part(
       _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
     }
   }
-  @xml.read_xml_string(text) catch {
+  @xml.read_xml_string_strict(text) catch {
     _ => raise InvalidPackage("\{name} is not well-formed XML")
   }
 }
