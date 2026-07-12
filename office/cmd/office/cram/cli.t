@@ -69,6 +69,11 @@ non-zero process status.
 
 Help token errors are bounded and include stable codes and suggestions.
 
+  $ office.exe help identfy --json > unknown-first-operation.json 2>&1; echo $?
+  1
+  $ jq -c '{code:.error.code,suggestions:.error.details.suggestions}' unknown-first-operation.json
+  {"code":"office.unknown_operation","suggestions":["identify"]}
+
   $ office.exe help xlxs --json > unknown-format.json 2>&1; echo $?
   1
   $ jq -c '{code:.error.code,suggestions:.error.details.suggestions}' unknown-format.json

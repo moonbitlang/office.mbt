@@ -46,7 +46,10 @@ fn edit_distance(left : String, right : String) -> Int {
 }
 
 ///|
-fn nearest_suggestion(value : String, candidates : Array[String]) -> String? {
+fn nearest_suggestion_with_distance(
+  value : String,
+  candidates : Array[String],
+) -> (String, Int)? {
   let bounded = bounded_text(value.to_lower(), 64)
   let mut nearest : String? = None
   let mut best = 1_000_000
@@ -58,10 +61,15 @@ fn nearest_suggestion(value : String, candidates : Array[String]) -> String? {
     }
   }
   if best <= 2 {
-    nearest
+    nearest.map(candidate => (candidate, best))
   } else {
     None
   }
+}
+
+///|
+fn nearest_suggestion(value : String, candidates : Array[String]) -> String? {
+  nearest_suggestion_with_distance(value, candidates).map(result => result.0)
 }
 
 ///|
@@ -96,6 +104,61 @@ fn unknown_help_token(
 }
 
 ///|
+fn format_help_tokens() -> Array[String] {
+  let tokens = ["all"]
+  for format in @lib.capability_formats() {
+    tokens.push(format.name)
+    for alternate in format.aliases {
+      tokens.push(alternate)
+    }
+  }
+  tokens
+}
+
+///|
+fn operation_help_tokens(format? : @lib.DocumentFormat) -> Array[String] {
+  let tokens : Array[String] = []
+  for command in @lib.capability_commands() {
+    let supported = match format {
+      Some(selected) => command_supports_format(command, selected)
+      None => true
+    }
+    if supported {
+      tokens.push(command.name)
+      for alternate in command.aliases {
+        tokens.push(alternate)
+      }
+    }
+  }
+  tokens
+}
+
+///|
+fn unknown_first_help_token(value : String) -> @lib.ProtocolError {
+  let formats = format_help_tokens()
+  let operations = operation_help_tokens()
+  let format_match = nearest_suggestion_with_distance(value, formats)
+  let operation_match = nearest_suggestion_with_distance(value, operations)
+  match (format_match, operation_match) {
+    (Some((_, format_distance)), Some((_, operation_distance))) =>
+      if operation_distance < format_distance {
+        unknown_help_token("operation", value, operations)
+      } else {
+        unknown_help_token("format", value, formats)
+      }
+    (Some(_), None) => unknown_help_token("format", value, formats)
+    (None, Some(_)) => unknown_help_token("operation", value, operations)
+    (None, None) => {
+      let topics = formats.copy()
+      for operation in operations {
+        topics.push(operation)
+      }
+      unknown_help_token("topic", value, topics)
+    }
+  }
+}
+
+///|
 fn command_supports_format(
   command : @lib.CapabilityCommand,
   format : @lib.DocumentFormat,
@@ -113,9 +176,7 @@ fn resolve_help_query(
   let normalized = first.to_lower()
   if normalized == "all" {
     if second is Some(value) {
-      raise CliFailure(
-        unknown_help_token("operation", value, ["help", "identify"]),
-      )
+      raise CliFailure(unknown_help_token("element", value, []))
     }
     return All
   }
@@ -126,7 +187,11 @@ fn resolve_help_query(
         Some(command) if command_supports_format(command, format) => command
         _ =>
           raise CliFailure(
-            unknown_help_token("operation", operation, ["identify"]),
+            unknown_help_token(
+              "operation",
+              operation,
+              operation_help_tokens(format~),
+            ),
           )
       }
       if third is Some(element) {
@@ -142,12 +207,7 @@ fn resolve_help_query(
           }
           Operation(None, command)
         }
-        None =>
-          raise CliFailure(
-            unknown_help_token("format", first, [
-              "all", "docx", "word", "xlsx", "excel",
-            ]),
-          )
+        None => raise CliFailure(unknown_first_help_token(first))
       }
   }
 }
