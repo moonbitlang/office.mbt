@@ -103,8 +103,26 @@ fn read_xml_part(
     Some(bytes) => bytes
     None => raise InvalidPackage("missing required part: \{name}")
   }
-  let text = @utf8.decode(bytes, ignore_bom=true) catch {
-    _ => raise InvalidPackage("\{name} is not valid UTF-8")
+  let text = if bytes.length() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe {
+    @utf16.decode(bytes, ignore_bom=true) catch {
+      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+    }
+  } else if bytes.length() >= 2 && bytes[0] == 0xfe && bytes[1] == 0xff {
+    @utf16.decode(bytes, ignore_bom=true, endianness=Big) catch {
+      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+    }
+  } else if bytes.length() >= 2 && bytes[0] == b'<' && bytes[1] == 0x00 {
+    @utf16.decode(bytes) catch {
+      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+    }
+  } else if bytes.length() >= 2 && bytes[0] == 0x00 && bytes[1] == b'<' {
+    @utf16.decode(bytes, endianness=Big) catch {
+      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+    }
+  } else {
+    @utf8.decode(bytes, ignore_bom=true) catch {
+      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+    }
   }
   @xml.read_xml_string(text) catch {
     _ => raise InvalidPackage("\{name} is not well-formed XML")
@@ -181,6 +199,14 @@ fn relationships_base_dir(part : String) -> String? {
   if part == "_rels/.rels" {
     return Some("")
   }
+  if part.has_prefix("_rels/") {
+    let relationship_name = part["_rels/".length():]
+    return if relationship_name == "" || relationship_name.contains("/") {
+      None
+    } else {
+      Some("")
+    }
+  }
   guard part.find("/_rels/") is Some(marker) else { return None }
   let relationship_name = part[marker + "/_rels/".length():]
   if relationship_name == "" || relationship_name.contains("/") {
@@ -200,9 +226,10 @@ fn resolve_relationship_target(base : String, target : StringView) -> String? {
 }
 
 ///|
-fn validate_xlsx_structure(
+fn validate_package_structure(
   archive : @zip.Archive,
   main_part : String,
+  require_main_relationships : Bool,
 ) -> Array[String] raise OfficeError {
   let findings : Array[String] = []
   let parts : Map[String, Int] = Map([])
@@ -230,10 +257,12 @@ fn validate_xlsx_structure(
       findings.push("duplicate entry name: \{name}")
     }
   }
-  for required in [main_part, relationships_part_for(main_part)] {
-    if !parts.contains(required) {
-      findings.push("missing required part: \{required}")
-    }
+  if !parts.contains(main_part) {
+    findings.push("missing required part: \{main_part}")
+  }
+  let main_relationships = relationships_part_for(main_part)
+  if require_main_relationships && !parts.contains(main_relationships) {
+    findings.push("missing required part: \{main_relationships}")
   }
 
   let defaults : Map[String, String] = Map([])
@@ -538,14 +567,10 @@ fn format_from_package(
 ///|
 fn structural_findings(
   format : DocumentFormat,
-  data : BytesView,
   archive : @zip.Archive,
   main_part : String,
 ) -> Array[String] raise OfficeError {
-  match format {
-    Xlsx => validate_xlsx_structure(archive, main_part)
-    Docx => @opc.validate_docx_package(data)
-  }
+  validate_package_structure(archive, main_part, format is Xlsx)
 }
 
 ///|
@@ -564,7 +589,7 @@ pub fn detect_format(
     raise FormatMismatch(expected~, actual~)
   }
   validate_main_identity(archive, actual, main_part)
-  let findings = structural_findings(actual, data, archive, main_part)
+  let findings = structural_findings(actual, archive, main_part)
   if findings.length() > 0 {
     let first = findings[0]
     let suffix = if findings.length() == 1 {
