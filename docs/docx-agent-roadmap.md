@@ -680,7 +680,7 @@ content is an explicit MATCH BARRIER, never silent glue.
 
 ## Locked design decisions (Phase-3-wide)
 
-- **Match text = the read projection, classified by a four-class
+- **Match text = the read projection, classified by a five-class
   inventory.** Matching operates per paragraph on exactly the text
   agents see in `docx text`/`get` (`to_raw_text`). Every inline node
   the scanner meets is classified, namespace-aware, into exactly one
