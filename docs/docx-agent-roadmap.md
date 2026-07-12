@@ -701,17 +701,32 @@ content is an explicit MATCH BARRIER, never silent glue.
      equations (`m:oMath*`), embedded/legacy objects (`w:object`,
      `w:pict`), and any unrecognized inline element. So `a<br/>b` does
      NOT match `ab` — unlike OfficeCLI's silent gluing.
-  4. **Projected-but-restricted regions** — text that projects and can
-     MATCH but cannot be MUTATED; hits inside them are reported with a
-     structured reason: field regions (instruction and cached result),
-     hyperlink interiors when the match crosses the boundary,
-     `w:ins`/`w:del`/move content, `w:sdt` content, `mc:AlternateContent`
-     (either branch — editing only the Fallback can leave the visible
-     document unchanged while read-back passes), and drawing/VML
-     textbox paragraphs (logically lifted, physically nested).
-  Candidates are found over the projected text first, then classified
-  by ancestry/boundary intervals — so the model can simultaneously
-  forbid barrier-spanning matches and REPORT restricted-region matches.
+  4. **Projecting-restricted regions** — text that projects (the
+     reader recurses into it) and can MATCH but cannot be MUTATED; hits
+     inside are reported with a structured reason: complex-field cached
+     results, hyperlink interiors when the match crosses the boundary,
+     `w:ins` content (the reader projects insertions), non-checkbox
+     `w:sdt` content, `mc:Fallback` content (the parser exposes ONLY
+     the Fallback branch, so it is what projects — but editing it alone
+     diverges from what a Choice-capable Word renders, hence
+     restricted), and drawing/VML textbox paragraphs (logically lifted,
+     physically nested).
+  5. **Suppressed regions** — content whose BYTES exist but whose text
+     the reader DISCARDS, so it projects nothing: `w:del` content, move
+     wrappers (unrecognized by the reader), `mc:Choice` branches (never
+     parsed), and the checkbox-SDT text the reader replaces with a
+     zero-width Checkbox. Suppressed regions behave as hard barriers at
+     their position (no characters, matches cannot span them) and carry
+     provenance so hit lists can say WHY.
+  Classification is by deepest governing ancestor with explicit
+  precedence: suppression > restriction > atom/seam. Candidates are
+  found over the projected text first, then classified by
+  ancestry/boundary intervals — so the model can simultaneously forbid
+  barrier-spanning matches and REPORT restricted-region matches. Every
+  class assignment above is pinned against the reader's ACTUAL
+  projection behavior (docx_reader.mbt) by N0 tests — where this table
+  and the reader disagree, the plan is wrong and the reader is the
+  contract.
 - **Fields: a story-wide stack, fail-closed on malformed state.** The
   scanner tracks `w:fldChar` begin/separate/end as a STACK in story
   order across run and paragraph boundaries (complex fields nest), with
@@ -742,8 +757,22 @@ content is an explicit MATCH BARRIER, never silent glue.
   token is a plain byte cut; splitting adjacent to an entity/char ref
   cuts at the reference's edge; CDATA-context tokens REFUSE mutation in
   v1 (escaped insertions inside CDATA are wrong, and splitting `]]>` is
-  a trap). XML line-end normalization (`\r\n`/`\r` → `\n`) is part of
-  the token map's decode contract.
+  a trap). There is NO line-end normalization: the XML reader returns
+  literal source text (`docx text`'s CR/LF-to-space flattening is
+  presentation-only, in that one view), so the canonical matching
+  projection carries literal `\r`/`\n` where the source has them and
+  the token map mirrors the reader byte-for-byte. Needles reject
+  control characters (the same rule as replacement text), so such
+  positions are matchable-around, never matchable-through — and the N0
+  matrix proves offsets stay correct ACROSS literal control characters.
+- **Logical paragraphs are physical in v1.** The reader merges a
+  physical `w:p` whose paragraph MARK is tracked-deleted into the
+  following logical paragraph, so one `/body/p[i]` projection can span
+  several physical `w:p` nodes. The token map is built per PHYSICAL
+  `w:p`; when a logical paragraph spans more than one, its matches are
+  reported as `tracked-region` restricted and every mutation over it
+  refuses — revision-aware paragraph geometry is Phase 5. Deleted
+  paragraph marks are in the N0 matrix.
 - **Verb-specific preflight, not wholesale inheritance.** Every Phase-3
   mutation refuses: OPC digital signatures present (any edit voids
   them), enforced `w:documentProtection`, and `w:trackRevisions`
@@ -810,16 +839,23 @@ existing `default`, multi-`w:t` runs, multibyte UTF-8 + surrogate
 pairs/emoji, supported AND unsupported `w:sym`,
 softHyphen/noBreakHyphen/`w:cr`/`w:ptab`, comments/PIs between runs,
 nested complex fields + `w:fldSimple` + malformed field states,
-hyperlinks, `w:ins`/`w:del`, `w:sdt`, `mc:AlternateContent`, textboxes,
-self-closing `<w:t/>`):
-(a) concatenated projection equals the `docx text` projection exactly;
-(b) classification matches the normative inventory;
-(c) SPLICE TRIALS — for every (start-kind, end-kind) token pair,
-multiple non-overlapping edits in one node, and atom-only matches with
-`w:t` synthesis — produce the exact expected full-paragraph projection,
-re-validate structurally, and are byte-identical outside the declared
-edit union;
-(d) malformed field states fail closed.
+hyperlinks, `w:ins`/`w:del` incl. tracked-deleted paragraph MARKS
+(merged logical paragraphs), checkbox and non-checkbox `w:sdt`,
+`mc:AlternateContent` with BOTH Choice and Fallback branches,
+textboxes, self-closing `<w:t/>` and atom-less runs):
+(a) concatenated projection equals the reader's canonical projection
+exactly (`docx text` modulo its documented presentation flattening);
+(b) classification matches the normative inventory, pinned against the
+reader's actual behavior;
+(c) SPLICE TRIALS — for every PERMITTED (start-kind, end-kind) token
+pair, multiple non-overlapping edits in one node, atom-only matches
+with `w:t` synthesis, and synthesis into atom-less runs — produce the
+exact expected full-paragraph projection, re-validate structurally,
+and are byte-identical outside the declared edit union;
+(d) REFUSAL TRIALS — CDATA contexts, non-scalar boundaries,
+barrier-spanning candidates, restricted and suppressed regions,
+multi-physical-`w:p` logical paragraphs, and malformed field states
+each fail closed with their exact declared error.
 GO = oracle green on the matrix; NO-GO reverts Phase 3 to design. Like
 L0: pub surface only what N1/N2 need.
 
@@ -832,8 +868,11 @@ L0: pub surface only what N1/N2 need.
   restricted regions (breaks, references, drawings, field chars, CDATA
   tokens) with an error naming what was found and where. Multi-`w:t`
   runs land the new content in the first `w:t` (later content spans
-  emptied, elements kept). Empty `--text ''` is legal (empties the
-  run). Ships its own stdout-contract + docs section.
+  emptied, elements kept). A run with NO projecting atom (empty,
+  self-closing, or seams-only) gets a namespace-correct `w:t`
+  synthesized at its content start, immediately after any `rPr` — the
+  same synthesis rule the replace surgery uses, proven in N0. Empty
+  `--text ''` is legal (empties the run). Ships its own stdout-contract + docs section.
 - Anchors reuse the annotate paths grammar (`--at` must end in `r[j]`;
   same corrective sibling-count errors). Same belts; read-back compares
   the ENTIRE affected paragraph's projection against the precomputed
@@ -896,12 +935,18 @@ L0: pub surface only what N1/N2 need.
   paragraphs — cell-emptying invariants are their own problem).
   Fail-closed inventory (the error names the blocking content and its
   path): ANY `sectPr`-bearing paragraph (section boundaries move);
-  any overlap with a field region; any paired-range marker whose mate
-  lies outside the paragraph — bookmarks, comment ranges, permission
-  ranges (`w:permStart/End`), custom-XML ranges, move ranges; any
-  note/comment reference (orphaning definitions); any tracked-change
-  marker. Comment-anchor integrity is checked GLOBALLY (deleting both
-  markers still orphans a `w:commentReference` elsewhere). This verb
+  any overlap with a field region; any ID-paired range marker whose
+  mate (same `w:id`, same family) lies outside the paragraph — the
+  families are `w:bookmarkStart/End`, `w:commentRangeStart/End`,
+  `w:permStart/permEnd`, `w:customXmlInsRangeStart/End`,
+  `w:customXmlDelRangeStart/End`, `w:moveFromRangeStart/End`,
+  `w:moveToRangeStart/End`; any note/comment reference (orphaning
+  definitions); any tracked-change marker. `w:proofErr` is explicitly
+  EXEMPT: its pairing is positional, not ID-based, and proofing marks
+  are non-semantic annotations Word regenerates — deleting a paragraph
+  containing them (balanced or not) does not corrupt content.
+  Comment-anchor integrity is checked GLOBALLY (deleting both markers
+  still orphans a `w:commentReference` elsewhere). This verb
   DOES inherit the Phase-2 annotation-integrity gates (it can affect
   anchors). Docs land in this PR.
 
