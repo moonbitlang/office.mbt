@@ -117,6 +117,14 @@ pub fn Workbook::set_sheet_row(
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
   let (row, col) = cell_ref_to_rc(cell)
+  // Preflight so the write is all-or-nothing: the anchor and the last written
+  // column must be in-grid (overflow-safe span check).
+  if row > cell_ref_max_rows || col > cell_ref_max_cols {
+    raise InvalidCellRef(value=cell.to_owned())
+  }
+  if values.length() > cell_ref_max_cols - col + 1 {
+    raise InvalidCellRef(value=cell.to_owned())
+  }
   let mut col_index = col
   for value in values {
     let reference = cell_ref_from(row, col_index)
@@ -134,6 +142,13 @@ pub fn Workbook::set_sheet_col(
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
   let (row, col) = cell_ref_to_rc(cell)
+  // Preflight (see set_sheet_row): anchor and last written row in-grid.
+  if row > cell_ref_max_rows || col > cell_ref_max_cols {
+    raise InvalidCellRef(value=cell.to_owned())
+  }
+  if values.length() > cell_ref_max_rows - row + 1 {
+    raise InvalidCellRef(value=cell.to_owned())
+  }
   let mut row_index = row
   for value in values {
     let reference = cell_ref_from(row_index, col)
@@ -169,6 +184,12 @@ fn parse_column_range(columns : StringView) -> (Int, Int) raise XlsxError {
     start
   }
   if end < start {
+    raise InvalidCellRef(value=text)
+  }
+  // Preflight the upper bound here (before any range setter iterates), so a
+  // range that runs off the grid is rejected wholesale instead of updating the
+  // in-grid columns and then raising at the first out-of-grid one.
+  if end > cell_ref_max_cols {
     raise InvalidCellRef(value=text)
   }
   (start, end)

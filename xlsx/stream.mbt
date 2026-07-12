@@ -223,12 +223,18 @@ fn StreamWriter::ensure_before_rows(
 }
 
 ///|
-fn normalize_col_range(start : Int, end : Int) -> (Int, Int) {
-  if start <= end {
+fn normalize_col_range(start : Int, end : Int) -> (Int, Int) raise XlsxError {
+  let (min_col, max_col) = if start <= end {
     (start, end)
   } else {
     (end, start)
   }
+  // Preflight the bounds here (the only entry for every stream column-range
+  // setter) so a range past the grid is rejected before any column is written.
+  if min_col < 1 || max_col > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{max_col}:\{min_col}")
+  }
+  (min_col, max_col)
 }
 
 ///|
@@ -398,6 +404,14 @@ pub fn StreamWriter::set_row_cells(
   if row <= self.last_row {
     raise StreamRowOrder(last=self.last_row, next=row)
   }
+  // Preflight the whole row so it is all-or-nothing: the anchor and the last
+  // written column (start_col + values.length() - 1) must be in-grid.
+  if row > cell_ref_max_rows || start_col > cell_ref_max_cols {
+    raise InvalidCellRef(value=start_ref)
+  }
+  if values.length() > cell_ref_max_cols - start_col + 1 {
+    raise InvalidCellRef(value=start_ref)
+  }
   let row_style = match row_opts {
     Some(opts) if opts.style_id > 0 => opts.style_id
     _ => 0
@@ -410,6 +424,14 @@ pub fn StreamWriter::set_row_cells(
     if cell.style_id < 0 || cell.style_id >= style_count {
       raise InvalidStyleId(index=cell.style_id)
     }
+  }
+  // Apply (and validate) the row options BEFORE writing any cell, so a bad
+  // height or outline level raises before mutation and the row stays
+  // all-or-nothing. Row dimensions and cells are independent, so order is
+  // observationally irrelevant on success.
+  match row_opts {
+    Some(opts) => apply_row_opts(self.sheet, row, opts)
+    None => ()
   }
   let mut col = start_col
   for cell in values {
@@ -450,10 +472,6 @@ pub fn StreamWriter::set_row_cells(
   // index (e.g. from a read on the then-empty sheet) would go stale and
   // make indexed getters miss every streamed cell.
   self.sheet.invalidate_cell_index()
-  match row_opts {
-    Some(opts) => apply_row_opts(self.sheet, row, opts)
-    None => ()
-  }
   self.last_row = row
 }
 

@@ -309,6 +309,11 @@ fn Worksheet::insert_page_break(
   cell : StringView,
 ) -> Unit raise XlsxError {
   let (row, col) = cell_ref_to_rc(cell)
+  // Reject an out-of-grid anchor so a page break is never stored with an id
+  // beyond the sheet (which would serialize an invalid `<brk id>`).
+  if row > cell_ref_max_rows || col > cell_ref_max_cols {
+    raise InvalidCellRef(value=cell.to_owned())
+  }
   let row_id = row - 1
   let col_id = col - 1
   if row_id == 0 && col_id == 0 {

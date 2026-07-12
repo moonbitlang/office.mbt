@@ -50,6 +50,13 @@ fn cell_ref_from(row : Int, col : Int) -> String raise XlsxError {
   if row <= 0 || col <= 0 {
     raise InvalidCellRef(value="\{col}:\{row}")
   }
+  // Reject out-of-grid coordinates rather than emit an invalid reference like
+  // "A1048577". Every worksheet cell/range/anchor coordinate is within the
+  // grid, so this only fires on a bug (e.g. a shift that overflows the sheet) —
+  // a backstop against writing a malformed package.
+  if row > cell_ref_max_rows || col > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{col}:\{row}")
+  }
   "\{column_number_to_name(col)}\{row}"
 }
 

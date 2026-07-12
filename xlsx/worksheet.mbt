@@ -2501,8 +2501,14 @@ pub fn Worksheet::set_row(
   row : Int,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
-  if row <= 0 {
+  // Preflight the whole write so it is all-or-nothing: writing incrementally
+  // and only discovering an out-of-grid coordinate partway (row past the grid,
+  // or more values than columns) would leave the row half-populated.
+  if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
+  }
+  if values.length() > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{values.length()}:\{row}")
   }
   for i, value in values {
     self.set_cell_rc(row, i + 1, value)
@@ -2551,8 +2557,12 @@ pub fn Worksheet::set_col(
   col : Int,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
-  if col <= 0 {
+  // Preflight (see set_row): all-or-nothing, never a half-written column.
+  if col <= 0 || col > cell_ref_max_cols {
     raise InvalidCellRef(value="\{col}:\{0}")
+  }
+  if values.length() > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{col}:\{values.length()}")
   }
   for i, value in values {
     self.set_cell_rc(i + 1, col, value)
@@ -2632,7 +2642,13 @@ fn Worksheet::set_row_dimension(
   self : Worksheet,
   row : Int,
   dim : RowDimension,
-) -> Unit {
+) -> Unit raise XlsxError {
+  // The single choke point for every row-dimension write (heights, visibility,
+  // outline levels, styles, and the stream writer): reject an out-of-grid key so
+  // no `<row r>` beyond the sheet's rows is ever stored or serialized.
+  if row < 1 || row > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{0}:\{row}")
+  }
   if row_dimension_is_default(dim) {
     self.row_dimensions.remove(row)
   } else {
@@ -2645,7 +2661,10 @@ fn Worksheet::set_col_dimension(
   self : Worksheet,
   col : Int,
   dim : ColDimension,
-) -> Unit {
+) -> Unit raise XlsxError {
+  if col < 1 || col > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{col}:\{0}")
+  }
   if col_dimension_is_default(dim) {
     self.col_dimensions.remove(col)
   } else {
@@ -2774,6 +2793,10 @@ fn Worksheet::set_row_style_range(
   }
   if end < start {
     raise InvalidSheetOperation(msg="row style range invalid")
+  }
+  // Preflight the upper bound so the range write is all-or-nothing.
+  if end > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{0}:\{end}")
   }
   let style = if style_id > 0 { Some(style_id) } else { None }
   for row in start..<=end {
@@ -2961,18 +2984,32 @@ fn Worksheet::insert_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_cell_index()
-  if row <= 0 {
+  if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
   if count <= 0 {
     raise InvalidSheetOperation(msg="row count must be positive")
   }
-  for i, cell in self.cells {
+  // A count larger than the grid is meaningless and, more importantly, would let
+  // `existing_row + count` wrap `Int` and slip past the upper-bound checks below.
+  if count > cell_ref_max_rows {
+    raise InvalidSheetOperation(
+      msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
+    )
+  }
+  // Transactional: stage every shifted collection into locals first — cell,
+  // merge, hyperlink, filter, table, sparkline, image, and chart references
+  // shift through `cell_ref_from`/range adjusters that raise once a coordinate
+  // leaves the grid, and the two numerically-shifted collections (row
+  // dimensions, page breaks) are bound-checked explicitly below. Nothing on
+  // `self` is mutated until every stage succeeds, so an overflowing insert
+  // raises and leaves the worksheet unchanged instead of half-shifted.
+  let updated_cells : Array[Cell] = []
+  for cell in self.cells {
     if cell.row >= row {
       let new_row = cell.row + count
       let reference = cell_ref_from(new_row, cell.col)
-      self.cells[i] = {
+      updated_cells.push({
         reference,
         row: new_row,
         col: cell.col,
@@ -2984,15 +3021,15 @@ fn Worksheet::insert_rows(
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
         style_id: cell.style_id,
-      }
+      })
+    } else {
+      updated_cells.push(cell)
     }
   }
   let updated_merges : Array[String] = []
   for range_ref in self.merged_cells {
     updated_merges.push(adjust_range_after_row_insert(range_ref, row, count))
   }
-  self.merged_cells.clear()
-  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
   for link in self.hyperlinks {
     let reference = adjust_hyperlink_ref_after_row_insert(
@@ -3009,21 +3046,15 @@ fn Worksheet::insert_rows(
       tooltip: link.tooltip,
     })
   }
-  self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links)
-  match self.auto_filter {
+  let updated_filter = match self.auto_filter {
     Some(filter) =>
-      self.auto_filter = Some(
-        adjust_auto_filter_after_row_insert(filter, row, count),
-      )
-    None => ()
+      Some(adjust_auto_filter_after_row_insert(filter, row, count))
+    None => None
   }
   let updated_tables : Array[Table] = []
   for table in self.tables {
     updated_tables.push(adjust_table_after_row_insert(table, row, count))
   }
-  self.tables.clear()
-  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
   for group in self.sparkline_groups {
     let adjusted = adjust_sparkline_group_after_row_insert(group, row, count)
@@ -3031,37 +3062,66 @@ fn Worksheet::insert_rows(
       updated_sparklines.push(adjusted)
     }
   }
-  self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
   for image in self.images {
     let reference = adjust_cell_after_row_insert(image.reference, row, count)
     updated_images.push(image_with_reference(image, reference))
   }
-  self.images.clear()
-  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     let reference = adjust_cell_after_row_insert(chart.reference, row, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
-  self.charts.clear()
-  self.charts.append(updated_charts)
   let updated_rows : Map[Int, RowDimension] = Map([])
   for row_index, dim in self.row_dimensions {
-    let new_row = if row_index >= row { row_index + count } else { row_index }
+    let new_row = if row_index >= row {
+      // Overflow-safe: a stored dimension key can be arbitrarily large (the
+      // dimension setters do not bound it), so validate BEFORE the addition.
+      if row_index > cell_ref_max_rows - count {
+        raise InvalidCellRef(value="\{0}:\{row_index}")
+      }
+      row_index + count
+    } else {
+      row_index
+    }
     updated_rows[new_row] = dim
   }
-  self.row_dimensions.clear()
-  for row_index, dim in updated_rows {
-    self.row_dimensions[row_index] = dim
-  }
   let break_start = row - 1
+  // Break ids are 0-based (id = row - 1), so a shifted id must stay strictly
+  // below the row maximum. Check the original ids overflow-safely, before
+  // adjust_page_breaks_after_insert performs `id + count`.
+  for brk in self.row_breaks {
+    if brk.id >= break_start && brk.id > cell_ref_max_rows - 1 - count {
+      raise InvalidCellRef(value="\{0}:\{brk.id}")
+    }
+  }
   let updated_breaks = adjust_page_breaks_after_insert(
     self.row_breaks,
     break_start,
     count,
   )
+  // Commit: every stage above succeeded, so applying the staged state cannot
+  // fail partway.
+  self.invalidate_cell_index()
+  self.cells.clear()
+  self.cells.append(updated_cells)
+  self.merged_cells.clear()
+  self.merged_cells.append(updated_merges)
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links)
+  self.auto_filter = updated_filter
+  self.tables.clear()
+  self.tables.append(updated_tables)
+  self.sparkline_groups.clear()
+  self.sparkline_groups.append(updated_sparklines)
+  self.images.clear()
+  self.images.append(updated_images)
+  self.charts.clear()
+  self.charts.append(updated_charts)
+  self.row_dimensions.clear()
+  for row_index, dim in updated_rows {
+    self.row_dimensions[row_index] = dim
+  }
   self.row_breaks.clear()
   self.row_breaks.append(updated_breaks)
 }
@@ -3079,6 +3139,16 @@ fn Worksheet::remove_rows(
   }
   if count <= 0 {
     raise InvalidSheetOperation(msg="row count must be positive")
+  }
+  // Bound both the start and the count so `row + count - 1` cannot wrap `Int`
+  // (a start or count beyond the grid removes nothing meaningful anyway).
+  if row > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{0}:\{row}")
+  }
+  if count > cell_ref_max_rows {
+    raise InvalidSheetOperation(
+      msg="row count \{count} exceeds the sheet's \{cell_ref_max_rows} rows",
+    )
   }
   let end_row = row + count - 1
   let updated_cells : Array[Cell] = []
@@ -3425,11 +3495,16 @@ fn Worksheet::duplicate_row_to(
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
   self.invalidate_cell_index()
-  if row <= 0 {
+  if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
   if target_row <= 0 || row == target_row {
     raise InvalidSheetOperation(msg="duplicate row target must be different")
+  }
+  // The copy lands at `target_row`, so it must be an in-grid row (otherwise the
+  // duplicate would write an out-of-grid reference like A1048577).
+  if target_row > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{0}:\{target_row}")
   }
   let row_cells : Array[Cell] = []
   for cell in self.cells {
@@ -3471,18 +3546,28 @@ fn Worksheet::insert_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  self.invalidate_cell_index()
-  if col <= 0 {
+  if col <= 0 || col > cell_ref_max_cols {
     raise InvalidCellRef(value="\{col}:\{0}")
   }
   if count <= 0 {
     raise InvalidSheetOperation(msg="column count must be positive")
   }
-  for i, cell in self.cells {
+  // A count larger than the grid would let `existing_col + count` wrap `Int`.
+  if count > cell_ref_max_cols {
+    raise InvalidSheetOperation(
+      msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
+    )
+  }
+  // Transactional (see insert_rows): stage everything into locals — reference
+  // shifts raise once a coordinate leaves the grid, column dimensions and page
+  // breaks are bound-checked explicitly — and commit only once every stage has
+  // succeeded, so an overflowing insert leaves the worksheet unchanged.
+  let updated_cells : Array[Cell] = []
+  for cell in self.cells {
     if cell.col >= col {
       let new_col = cell.col + count
       let reference = cell_ref_from(cell.row, new_col)
-      self.cells[i] = {
+      updated_cells.push({
         reference,
         row: cell.row,
         col: new_col,
@@ -3494,15 +3579,15 @@ fn Worksheet::insert_cols(
         formula_ref: cell.formula_ref,
         formula_shared_index: cell.formula_shared_index,
         style_id: cell.style_id,
-      }
+      })
+    } else {
+      updated_cells.push(cell)
     }
   }
   let updated_merges : Array[String] = []
   for range_ref in self.merged_cells {
     updated_merges.push(adjust_range_after_col_insert(range_ref, col, count))
   }
-  self.merged_cells.clear()
-  self.merged_cells.append(updated_merges)
   let updated_links : Array[Hyperlink] = []
   for link in self.hyperlinks {
     let reference = adjust_hyperlink_ref_after_col_insert(
@@ -3519,21 +3604,15 @@ fn Worksheet::insert_cols(
       tooltip: link.tooltip,
     })
   }
-  self.hyperlinks.clear()
-  self.hyperlinks.append(updated_links)
-  match self.auto_filter {
+  let updated_filter = match self.auto_filter {
     Some(filter) =>
-      self.auto_filter = Some(
-        adjust_auto_filter_after_col_insert(filter, col, count),
-      )
-    None => ()
+      Some(adjust_auto_filter_after_col_insert(filter, col, count))
+    None => None
   }
   let updated_tables : Array[Table] = []
   for table in self.tables {
     updated_tables.push(adjust_table_after_col_insert(table, col, count))
   }
-  self.tables.clear()
-  self.tables.append(updated_tables)
   let updated_sparklines : Array[SparklineGroup] = []
   for group in self.sparkline_groups {
     let adjusted = adjust_sparkline_group_after_col_insert(group, col, count)
@@ -3541,37 +3620,63 @@ fn Worksheet::insert_cols(
       updated_sparklines.push(adjusted)
     }
   }
-  self.sparkline_groups.clear()
-  self.sparkline_groups.append(updated_sparklines)
   let updated_images : Array[Image] = []
   for image in self.images {
     let reference = adjust_cell_after_col_insert(image.reference, col, count)
     updated_images.push(image_with_reference(image, reference))
   }
-  self.images.clear()
-  self.images.append(updated_images)
   let updated_charts : Array[Chart] = []
   for chart in self.charts {
     let reference = adjust_cell_after_col_insert(chart.reference, col, count)
     updated_charts.push(chart_with_reference(chart, reference))
   }
-  self.charts.clear()
-  self.charts.append(updated_charts)
   let updated_cols : Map[Int, ColDimension] = Map([])
   for col_index, dim in self.col_dimensions {
-    let new_col = if col_index >= col { col_index + count } else { col_index }
+    let new_col = if col_index >= col {
+      // Overflow-safe (see insert_rows): stored keys are not bounded by their
+      // setters, so validate before the addition.
+      if col_index > cell_ref_max_cols - count {
+        raise InvalidCellRef(value="\{col_index}:\{0}")
+      }
+      col_index + count
+    } else {
+      col_index
+    }
     updated_cols[new_col] = dim
   }
-  self.col_dimensions.clear()
-  for col_index, dim in updated_cols {
-    self.col_dimensions[col_index] = dim
-  }
   let break_start = col - 1
+  // 0-based ids (see insert_rows): validate overflow-safely before the shift.
+  for brk in self.col_breaks {
+    if brk.id >= break_start && brk.id > cell_ref_max_cols - 1 - count {
+      raise InvalidCellRef(value="\{brk.id}:\{0}")
+    }
+  }
   let updated_breaks = adjust_page_breaks_after_insert(
     self.col_breaks,
     break_start,
     count,
   )
+  // Commit.
+  self.invalidate_cell_index()
+  self.cells.clear()
+  self.cells.append(updated_cells)
+  self.merged_cells.clear()
+  self.merged_cells.append(updated_merges)
+  self.hyperlinks.clear()
+  self.hyperlinks.append(updated_links)
+  self.auto_filter = updated_filter
+  self.tables.clear()
+  self.tables.append(updated_tables)
+  self.sparkline_groups.clear()
+  self.sparkline_groups.append(updated_sparklines)
+  self.images.clear()
+  self.images.append(updated_images)
+  self.charts.clear()
+  self.charts.append(updated_charts)
+  self.col_dimensions.clear()
+  for col_index, dim in updated_cols {
+    self.col_dimensions[col_index] = dim
+  }
   self.col_breaks.clear()
   self.col_breaks.append(updated_breaks)
 }
@@ -3589,6 +3694,15 @@ fn Worksheet::remove_cols(
   }
   if count <= 0 {
     raise InvalidSheetOperation(msg="column count must be positive")
+  }
+  // Bound both the start and the count so `col + count - 1` cannot wrap `Int`.
+  if col > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{col}:\{0}")
+  }
+  if count > cell_ref_max_cols {
+    raise InvalidSheetOperation(
+      msg="column count \{count} exceeds the sheet's \{cell_ref_max_cols} columns",
+    )
   }
   let end_col = col + count - 1
   let updated_cells : Array[Cell] = []
@@ -3714,11 +3828,16 @@ fn Worksheet::remove_cols(
 
 ///|
 fn adjust_bounds_for_insert(
-  min : Int,
-  max : Int,
+  raw_min : Int,
+  raw_max : Int,
   start : Int,
   count : Int,
 ) -> (Int, Int) {
+  // Order-aware: a defined-name range can be stored reversed (e.g. `$A$5:$A$1`).
+  // Normalize to [min, max] before shifting so the result stays in-grid rather
+  // than producing a bogus endpoint.
+  let min = if raw_min <= raw_max { raw_min } else { raw_max }
+  let max = if raw_min <= raw_max { raw_max } else { raw_min }
   if start <= min {
     (min + count, max + count)
   } else if start <= max {
@@ -3730,11 +3849,15 @@ fn adjust_bounds_for_insert(
 
 ///|
 fn adjust_bounds_for_remove(
-  min : Int,
-  max : Int,
+  raw_min : Int,
+  raw_max : Int,
   start : Int,
   count : Int,
 ) -> (Int, Int)? {
+  // Order-aware (see adjust_bounds_for_insert): normalize a reversed range so a
+  // removal never yields a negative/out-of-order endpoint.
+  let min = if raw_min <= raw_max { raw_min } else { raw_max }
+  let max = if raw_min <= raw_max { raw_max } else { raw_min }
   let end = start + count - 1
   if end < min {
     return Some((min - count, max - count))
