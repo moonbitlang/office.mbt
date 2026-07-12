@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn capabilities_data(format? : DocumentFormat) -> Json
+pub fn capabilities_data(format? : DocumentFormat, operation? : String) -> Json
 
 pub fn capability_commands() -> Array[CapabilityCommand]
 
@@ -14,7 +14,7 @@ pub fn capability_fingerprint() -> String
 
 pub fn capability_formats() -> Array[CapabilityFormat]
 
-pub fn capability_records(format? : DocumentFormat) -> Array[Json]
+pub fn capability_records(format? : DocumentFormat, operation? : String) -> Array[Json]
 
 pub fn detect_format(StringView, BytesView) -> DocumentFormat raise OfficeError
 

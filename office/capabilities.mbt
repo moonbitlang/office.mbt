@@ -259,9 +259,29 @@ fn command_supports_format(
 /// Returns self-contained registry records in stable order. With a format
 /// filter, format-neutral commands are omitted and only commands that operate
 /// on that document format remain.
-pub fn capability_records(format? : DocumentFormat) -> Array[Json] {
+pub fn capability_records(
+  format? : DocumentFormat,
+  operation? : String,
+) -> Array[Json] {
   let fingerprint = capability_fingerprint()
   let records : Array[Json] = []
+  match operation {
+    Some(name) => {
+      let normalized = name.to_lower()
+      for command in capability_commands() {
+        let format_matches = match format {
+          Some(selected) => command_supports_format(command, selected)
+          None => true
+        }
+        if format_matches &&
+          (command.name == normalized || command.aliases.contains(normalized)) {
+          records.push(capability_command_json(command, fingerprint))
+        }
+      }
+      return records
+    }
+    None => ()
+  }
   match format {
     Some(selected) => {
       for declared in capability_formats() {
@@ -289,10 +309,13 @@ pub fn capability_records(format? : DocumentFormat) -> Array[Json] {
 
 ///|
 /// Returns the versioned capability inventory used by JSON help output.
-pub fn capabilities_data(format? : DocumentFormat) -> Json {
-  let records = match format {
-    Some(selected) => capability_records(format=selected)
-    None => capability_records()
+pub fn capabilities_data(format? : DocumentFormat, operation? : String) -> Json {
+  let records = match (format, operation) {
+    (Some(selected), Some(name)) =>
+      capability_records(format=selected, operation=name)
+    (Some(selected), None) => capability_records(format=selected)
+    (None, Some(name)) => capability_records(operation=name)
+    (None, None) => capability_records()
   }
   let fields : Map[String, Json] = {
     "schema": Json::string("office.capabilities/1"),
@@ -301,6 +324,10 @@ pub fn capabilities_data(format? : DocumentFormat) -> Json {
   }
   match format {
     Some(selected) => fields["format"] = Json::string(selected.name())
+    None => ()
+  }
+  match operation {
+    Some(name) => fields["operation"] = Json::string(name.to_lower())
     None => ()
   }
   Json::object(fields)
