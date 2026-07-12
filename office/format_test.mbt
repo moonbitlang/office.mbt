@@ -420,6 +420,21 @@ fn add_content_type_override_text(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn add_manifest_content_type_override(data : BytesView) -> Bytes raise {
+  let archive = @zip.read(data)
+  let content_types = archive.get("[Content_Types].xml").unwrap()
+  let text = @utf8.decode(content_types, ignore_bom=true)
+  let updated = text.replace(
+    old="</Types>",
+    new="<Override PartName=\"/[Content_Types].xml\" ContentType=\"application/xml\"/></Types>",
+  )
+  if updated == text {
+    fail("test could not add a manifest content-type override")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
 test "detect_format identifies generated xlsx" {
   let workbook = @excel.new_file()
   let data = @excel.write(workbook)
@@ -471,6 +486,42 @@ test "detect_format rejects case-equivalent duplicate OPC parts" {
       )
   } noraise {
     _ => fail("expected a case-equivalent duplicate part")
+  }
+}
+
+///|
+test "detect_format rejects malformed OPC entry paths" {
+  let source = @excel.write(@excel.new_file())
+  for
+    case in [
+      ("custom//data.xml", "entry name contains an empty segment"),
+      ("custom/%ZZ.xml", "entry name is not a valid OPC URI path"),
+    ] {
+    let (name, expected) = case
+    let broken = append_archive_part(source, name, @utf8.encode("<data/>"))
+    try @office.detect_format("book.xlsx", broken) catch {
+      err => assert_true(Show::to_string(err).contains(expected))
+    } noraise {
+      _ => fail("expected malformed OPC entry path: \{name}")
+    }
+  }
+}
+
+///|
+test "detect_format rejects an override for the content-types manifest" {
+  let broken = add_manifest_content_type_override(
+    @excel.write(@excel.new_file()),
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains(
+          "content-type override names the reserved manifest: /[Content_Types].xml",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected an override for the reserved manifest")
   }
 }
 
@@ -539,13 +590,13 @@ test "detect_format checks namespace-prefixed relationship targets" {
 test "detect_format rejects relationships targeting package metadata" {
   let broken = add_root_relationship(
     @excel.write(@excel.new_file()),
-    "<Relationship Id=\"rMetadata\" Type=\"https://example.com/relationships/metadata\" Target=\"[Content_Types].xml\"/>",
+    "<Relationship Id=\"rMetadata\" Type=\"https://example.com/relationships/metadata\" Target=\"_rels/.rels\"/>",
   )
   try @office.detect_format("book.xlsx", broken) catch {
     err =>
       inspect(
         Show::to_string(err).contains(
-          "relationship in _rels/.rels points to package metadata: [Content_Types].xml -> [Content_Types].xml",
+          "relationship in _rels/.rels points to package metadata: _rels/.rels -> _rels/.rels",
         ),
         content="true",
       )

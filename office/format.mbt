@@ -219,6 +219,67 @@ fn is_ascii_hex_digit(char : Char) -> Bool {
 }
 
 ///|
+fn ascii_hex_value(char : Char) -> Int {
+  if char >= '0' && char <= '9' {
+    char.to_int() - '0'.to_int()
+  } else if char >= 'A' && char <= 'F' {
+    char.to_int() - 'A'.to_int() + 10
+  } else {
+    char.to_int() - 'a'.to_int() + 10
+  }
+}
+
+///|
+fn is_uri_unreserved(char : Char) -> Bool {
+  char.is_ascii_alphabetic() ||
+  char.is_ascii_digit() ||
+  char == '-' ||
+  char == '.' ||
+  char == '_' ||
+  char == '~'
+}
+
+///|
+fn is_valid_opc_part_segment(segment : StringView) -> Bool {
+  if segment == "" || segment.has_suffix(".") {
+    return false
+  }
+  let chars = segment.to_array()
+  for index, char in chars {
+    if char == '%' {
+      if index + 2 >= chars.length() ||
+        !is_ascii_hex_digit(chars[index + 1]) ||
+        !is_ascii_hex_digit(chars[index + 2]) {
+        return false
+      }
+      let decoded = ascii_hex_value(chars[index + 1]) * 16 +
+        ascii_hex_value(chars[index + 2])
+      if decoded == 0x2f ||
+        decoded == 0x5c ||
+        is_uri_unreserved(Int::unsafe_to_char(decoded)) {
+        return false
+      }
+    } else if !is_uri_unreserved(char) &&
+      char != '!' &&
+      char.to_int() != 0x27 &&
+      char != '(' &&
+      char != ')' &&
+      char != '*' &&
+      char != '+' &&
+      char != ',' &&
+      char != ';' &&
+      char != '=' &&
+      char != ':' &&
+      char != '@' &&
+      char != '$' &&
+      char != '&' {
+      return false
+    }
+  }
+  true
+}
+
+///|
 fn is_absolute_relationship_type(value : StringView) -> Bool {
   guard has_uri_scheme(value) else { return false }
   let chars = value.to_array()
@@ -267,7 +328,12 @@ fn normalize_internal_target(target : StringView) -> String? {
         } else {
           let _ = segments.pop()
         }
-      _ => segments.push(segment)
+      _ =>
+        if is_valid_opc_part_segment(segment) {
+          segments.push(segment)
+        } else {
+          return None
+        }
     }
   }
   if segments.length() == 0 {
@@ -375,6 +441,7 @@ fn validate_package_structure(
   let findings : Array[String] = []
   let parts : Map[String, Int] = Map([])
   let part_names : Map[String, String] = Map([])
+  let package_parts : Map[String, Bool] = Map([])
   let document_parts : Map[String, Bool] = Map([])
   for entry in archive.entries() {
     let name = entry.name()
@@ -383,24 +450,38 @@ fn validate_package_structure(
     if !part_names.contains(key) {
       part_names[key] = name
     }
-    if key != opc_part_key("[Content_Types].xml") &&
-      !key.has_suffix(".rels") &&
-      !name.has_suffix("/") {
-      document_parts[key] = true
+    if key != opc_part_key("[Content_Types].xml") && !name.has_suffix("/") {
+      package_parts[key] = true
+      if !key.has_suffix(".rels") {
+        document_parts[key] = true
+      }
     }
-    if name == "" {
-      findings.push("empty entry name")
-    }
-    if name.has_prefix("/") {
-      findings.push("entry name must not start with '/': \{name}")
-    }
-    if name.contains("\\") {
-      findings.push("entry name contains a backslash: \{name}")
-    }
-    for segment in name.split("/") {
-      if segment == "." || segment == ".." {
-        findings.push("entry name contains a '\{segment}' segment: \{name}")
-        break
+    if key != opc_part_key("[Content_Types].xml") {
+      if name == "" {
+        findings.push("empty entry name")
+      }
+      if name.has_prefix("/") {
+        findings.push("entry name must not start with '/': \{name}")
+      }
+      if name.contains("\\") {
+        findings.push("entry name contains a backslash: \{name}")
+      }
+      let item_path = if name.has_suffix("/") {
+        name[:name.length() - 1]
+      } else {
+        name
+      }
+      for segment in item_path.split("/") {
+        if segment == "" {
+          findings.push("entry name contains an empty segment: \{name}")
+          break
+        } else if segment == "." || segment == ".." {
+          findings.push("entry name contains a '\{segment}' segment: \{name}")
+          break
+        } else if !is_valid_opc_part_segment(segment) {
+          findings.push("entry name is not a valid OPC URI path: \{name}")
+          break
+        }
       }
     }
   }
@@ -470,7 +551,14 @@ fn validate_package_structure(
           element.attributes.get("PartName"),
           element.attributes.get("ContentType"),
         ) {
-        (Some(part_name), Some(content_type)) if content_type != "" =>
+        (Some(part_name), Some(content_type)) if content_type != "" => {
+          if part_name.has_prefix("/") &&
+            opc_part_key(part_name[1:]) == opc_part_key("[Content_Types].xml") {
+            findings.push(
+              "content-type override names the reserved manifest: \{part_name}",
+            )
+            continue
+          }
           match normalize_declared_part_name(part_name) {
             Some(target) => {
               let target_key = opc_part_key(target)
@@ -479,7 +567,7 @@ fn validate_package_structure(
               } else {
                 overrides[target_key] = content_type
               }
-              if !parts.contains(target_key) {
+              if !package_parts.contains(target_key) {
                 findings.push(
                   "content-type override names a missing part: \{part_name}",
                 )
@@ -490,6 +578,7 @@ fn validate_package_structure(
                 "content-type override has an invalid PartName: \{part_name}",
               )
           }
+        }
         _ =>
           findings.push(
             "[Content_Types].xml: Override missing PartName or ContentType",
