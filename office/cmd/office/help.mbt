@@ -249,20 +249,30 @@ fn render_format(format : @lib.DocumentFormat) -> String {
       break
     }
   }
-  let (aliases, description) = match declaration {
-    Some(declared) => (declared.aliases, declared.description)
-    None => ([], "")
+  let (aliases, description, selector) = match declaration {
+    Some(declared) =>
+      (declared.aliases, declared.description, Some(declared.selector))
+    None => ([], "", None)
   }
   let heading = if aliases.is_empty() {
     "Format: \{format.name()}"
   } else {
     "Format: \{format.name()} (aliases: \{aliases.join(", ")})"
   }
-  let lines : Array[String] = [
-    heading,
-    "  \{description}",
-    "  Implemented commands:",
-  ]
+  let lines : Array[String] = [heading, "  \{description}"]
+  match selector {
+    Some(syntax) => {
+      lines.push(
+        "  Selector: \{syntax.schema} \{syntax.root} (\{syntax.status})",
+      )
+      lines.push("    \{syntax.description}")
+      for example in syntax.examples {
+        lines.push("    \{example}")
+      }
+    }
+    None => ()
+  }
+  lines.push("  Implemented commands:")
   for command in @lib.capability_commands() {
     if command_supports_format(command, format) {
       lines.push("    \{command.name} — \{command.summary}")

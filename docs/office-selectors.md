@@ -79,3 +79,15 @@ Failures use a structured error code, a zero-based Unicode-scalar offset, a
 bounded input echo, and a bounded message. Cross-format shapes are rejected by
 their explicit root and cannot silently fall through to the other format's
 rules.
+
+## Adapter and capability boundary
+
+`selector_from_docx_projection_path` converts the existing `/body/...`,
+`/header[n]/...`, and annotation paths emitted by the DOCX tools. The
+`selector_for_xlsx_cell` and `selector_for_xlsx_range` helpers quote worksheet
+names and validate A1 coordinates. These helpers adapt syntax only: they do not
+open a package or establish that an addressed object exists.
+
+Format records in `office help --json` expose the selector schema, root,
+examples, and a `syntax-only` status. No selector command is registered until
+resolution itself is implemented.

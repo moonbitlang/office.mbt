@@ -17,21 +17,30 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/1
-    Fingerprint: crc32:1d635ab0
+    Fingerprint: crc32:3db4baed
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
   Commands:
     help — Show the implemented Office capability registry
 
-  $ office.exe help word | sed -n '1p'
+  $ office.exe help word | sed -n '1,7p'
   Format: docx (aliases: word)
+    WordprocessingML documents
+    Selector: office.selector/1 /docx (syntax-only)
+      bounded parse/render only; package resolution is not implemented
+      /docx/body/p[1]/r[2]
+      /docx/comments/comment[id="7"]
+    Implemented commands:
+
+  $ office.exe help docx --json | jq -c '.data.records[0] | {kind,name,selector}'
+  {"kind":"format","name":"docx","selector":{"schema":"office.selector/1","root":"/docx","status":"syntax-only","examples":["/docx/body/p[1]/r[2]","/docx/comments/comment[id=\"7\"]"],"description":"bounded parse/render only; package resolution is not implemented"}}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/1","fingerprint":"crc32:1d635ab0","names":["docx","xlsx","help","identify"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/1","fingerprint":"crc32:3db4baed","names":["docx","xlsx","help","identify"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"format","name":"docx"},{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"format","name":"xlsx"},{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"command","name":"help"},{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"command","name":"identify"}]
+  [{"schema":"office.capability/1","fingerprint":"crc32:3db4baed","kind":"format","name":"docx"},{"schema":"office.capability/1","fingerprint":"crc32:3db4baed","kind":"format","name":"xlsx"},{"schema":"office.capability/1","fingerprint":"crc32:3db4baed","kind":"command","name":"help"},{"schema":"office.capability/1","fingerprint":"crc32:3db4baed","kind":"command","name":"identify"}]
 
 Extension/content mismatches and malformed input fail non-zero.
 

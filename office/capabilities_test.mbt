@@ -40,6 +40,20 @@ test "capability registry advertises only implemented commands" {
 }
 
 ///|
+test "capability formats expose selector syntax without claiming resolution" {
+  let formats = @office.capability_formats()
+  assert_eq(formats.length(), 2)
+  assert_eq(formats[0].selector.schema, "office.selector/1")
+  assert_eq(formats[0].selector.root, "/docx")
+  assert_eq(formats[1].selector.root, "/xlsx")
+  for format in formats {
+    assert_eq(format.selector.status, "syntax-only")
+    assert_true(format.selector.description.contains("not implemented"))
+    assert_true(format.selector.examples.length() >= 2)
+  }
+}
+
+///|
 test "capability registry format filters remain truthful" {
   let records = @office.capability_records(format=Docx)
     .map(record => record.stringify())
@@ -47,8 +61,8 @@ test "capability registry format filters remain truthful" {
   inspect(
     records,
     content=(
-      #|{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"format","name":"docx","aliases":["word"],"description":"WordprocessingML documents"}
-      #|{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"command","name":"identify","summary":"Identify a structurally valid XLSX or DOCX package","usage":"office identify <file> [--json]","formats":["docx","xlsx"],"aliases":[],"inputs":[{"name":"file","type":"path","required":true,"description":"path to an XLSX or DOCX package"},{"name":"json","type":"boolean","required":false,"description":"emit one office.output/1 JSON document"}],"outputs":[{"name":"file","type":"path","required":true,"description":"the input path exactly as supplied"},{"name":"format","type":"enum(docx|xlsx)","required":true,"description":"the structurally verified package format"}],"output_modes":["human","json"]}
+      #|{"schema":"office.capability/1","fingerprint":"crc32:3db4baed","kind":"format","name":"docx","aliases":["word"],"description":"WordprocessingML documents","selector":{"schema":"office.selector/1","root":"/docx","status":"syntax-only","examples":["/docx/body/p[1]/r[2]","/docx/comments/comment[id=\"7\"]"],"description":"bounded parse/render only; package resolution is not implemented"}}
+      #|{"schema":"office.capability/1","fingerprint":"crc32:3db4baed","kind":"command","name":"identify","summary":"Identify a structurally valid XLSX or DOCX package","usage":"office identify <file> [--json]","formats":["docx","xlsx"],"aliases":[],"inputs":[{"name":"file","type":"path","required":true,"description":"path to an XLSX or DOCX package"},{"name":"json","type":"boolean","required":false,"description":"emit one office.output/1 JSON document"}],"outputs":[{"name":"file","type":"path","required":true,"description":"the input path exactly as supplied"},{"name":"format","type":"enum(docx|xlsx)","required":true,"description":"the structurally verified package format"}],"output_modes":["human","json"]}
     ),
   )
 }
@@ -58,7 +72,7 @@ test "capability fingerprint and inventory ordering are deterministic" {
   inspect(
     @office.capability_fingerprint(),
     content=(
-      #|crc32:1d635ab0
+      #|crc32:3db4baed
     ),
   )
   let first = @office.capabilities_data().stringify()
@@ -74,7 +88,7 @@ test "capability operation queries do not leak unrelated records" {
   inspect(
     data.stringify(),
     content=(
-      #|{"schema":"office.capabilities/1","fingerprint":"crc32:1d635ab0","records":[{"schema":"office.capability/1","fingerprint":"crc32:1d635ab0","kind":"command","name":"identify","summary":"Identify a structurally valid XLSX or DOCX package","usage":"office identify <file> [--json]","formats":["docx","xlsx"],"aliases":[],"inputs":[{"name":"file","type":"path","required":true,"description":"path to an XLSX or DOCX package"},{"name":"json","type":"boolean","required":false,"description":"emit one office.output/1 JSON document"}],"outputs":[{"name":"file","type":"path","required":true,"description":"the input path exactly as supplied"},{"name":"format","type":"enum(docx|xlsx)","required":true,"description":"the structurally verified package format"}],"output_modes":["human","json"]}],"format":"docx","operation":"identify"}
+      #|{"schema":"office.capabilities/1","fingerprint":"crc32:3db4baed","records":[{"schema":"office.capability/1","fingerprint":"crc32:3db4baed","kind":"command","name":"identify","summary":"Identify a structurally valid XLSX or DOCX package","usage":"office identify <file> [--json]","formats":["docx","xlsx"],"aliases":[],"inputs":[{"name":"file","type":"path","required":true,"description":"path to an XLSX or DOCX package"},{"name":"json","type":"boolean","required":false,"description":"emit one office.output/1 JSON document"}],"outputs":[{"name":"file","type":"path","required":true,"description":"the input path exactly as supplied"},{"name":"format","type":"enum(docx|xlsx)","required":true,"description":"the structurally verified package format"}],"output_modes":["human","json"]}],"format":"docx","operation":"identify"}
     ),
   )
 }
