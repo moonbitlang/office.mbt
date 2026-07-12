@@ -22,8 +22,15 @@ moon run --target wasm docx2html/cmd/docx2html -- [options] <input.docx> [output
 | `get <file> <path> [--json]` | One element by path. Bare: its raw text. `--json`: the structured `docx.element/1` payload (kind, formatting, children). Path errors say what exists (`'/body' has 3 'p' children (wanted index 9)`), so they are self-correcting. |
 | `validate <file>` | Portable structural validation (archive + CRCs, content types, relationships, main part). Prints `valid` / one finding per line; **exit code is the gate**. |
 | `create <out.docx>` | A minimal blank, schema-valid document. |
-| `batch <out.docx> <script.json> [--dry-run]` | **Author a new document** from a `docx.batch/1` op script — headings, styled runs, hyperlinks, images, lists, tables with spans, in one shot. |
+| `batch <out.docx> <script.json> [--dry-run]` | **Author a new document** from a `docx.batch/1` op script — headings, styled runs, hyperlinks, images, lists, tables with spans, in one shot. `docx.batch/2` additionally supports `comment` ops and inline foot/endnotes. |
+| `annotate <add\|reply\|resolve\|unresolve> <in.docx> <out.docx> …` | **Comment on an EXISTING document** by byte-preserving surgery (see below). |
 | `convert <in.docx> [out]` | Same conversion engine as `docx2html` (HTML/Markdown), agent-CLI flavored. |
+
+Read the existing discussion with the same read verbs: `outline` lists each
+comment (`id`, `author`, `done`, `parent_id`, `anchored_to`); `get <file>
+'/comments/comment[@id=0]' --json` returns one comment's metadata, anchors, and
+child replies; `get <file> '/body/p[2]' --json` reports the `comment_ids`
+covering a paragraph.
 
 The normative spec for every JSON payload (`docx.outline/1`, `docx.element/1`,
 `docx.batch/1`) is **`docs/agent-json-schemas.md`** — read it before writing a
@@ -56,6 +63,46 @@ batch script. The executable examples live in
 
 A verify loop that needs no other tools: `batch` → `validate` → `text` (or
 `get --json`) and compare against your script's intent.
+
+## Annotating existing documents with `annotate` — the contract
+
+`batch` only creates NEW files. To comment on a document you did **not** author
+— one whose full content the lossy reader does not model — use `annotate`.
+
+```
+docx annotate add       <in.docx> <out.docx> --at '/body/p[2]' [--to '/body/p[4]'] --text '…' --author NAME [--initials RV] [--date <xsd:dateTime>]
+docx annotate add       <in.docx> <out.docx> --at '/body/p[2]' --json envelope.json    # docx.annotate/1 envelope owns ALL metadata; flags rejected
+docx annotate reply     <in.docx> <out.docx> --comment 0 --text '…' --author NAME
+docx annotate resolve   <in.docx> <out.docx> --comment 0
+docx annotate unresolve <in.docx> <out.docx> --comment 0
+```
+
+- **Byte-preserving surgery.** Only the comment-related parts change; every
+  other byte of the archive is left identical (verified: adding a comment
+  leaves `styles.xml`, the body text, etc. untouched). This is what makes it
+  safe on documents the reader cannot fully round-trip.
+- **Never in place.** Each verb writes a NEW `<out.docx>`; the input is never
+  modified. It refuses to overwrite an existing output path.
+- **Anchors** (`--at`, `--to`) are BODY-story paragraph paths, ordinal only
+  (`/body/p[2]`, or a table-cell paragraph path); `--to` names a range end in
+  the same story, not before `--at`.
+- **Metadata is branch-exclusive.** Either `--text` + the metadata flags
+  (`--author` required, `--initials`/`--date` optional), OR `--json <file>`
+  pointing to a `docx.annotate/1` envelope that owns all metadata — mixing the
+  two is an error.
+- **`--comment <id>`** takes the comment's spelled id (a JSON string in the
+  read surface: `"id": "0"` → `--comment 0`). `reply` threads under it
+  (anchorless, via `commentsExtended`); `resolve`/`unresolve` flip `w15:done`.
+- **Double belt before publishing.** The mutated package is structurally
+  validated AND read back (the new comment must reappear anchored where asked)
+  before the atomic write; on any failure nothing is written.
+- **Fail closed.** Documents carrying annotation sidecars this tool cannot keep
+  consistent, or unrepairable annotation state, are refused with an addressed
+  error rather than a corrupted result.
+
+The review loop that needs no other tools: `outline` (see the discussion) →
+`annotate add`/`reply`/`resolve` → `get '/comments/comment[@id=N]' --json` (read
+the thread back). `recipes/review-docx.md` walks it end to end.
 
 ## `docx2html` (converter) options
 
