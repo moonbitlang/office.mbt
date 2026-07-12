@@ -269,9 +269,12 @@ Envelope:
 - `sheet` manages an existing sheet: `rename` (needs `to`), `delete`, `hide`,
   `show`, or `very-hide` (hidden and not un-hideable from Excel's UI). `to` is
   rejected for any action but `rename`; the `action` is checked at apply time.
-  Deleting an unknown or the last visible sheet, or renaming to a name already
-  in use, fails with the engine's error. (Adding a sheet is the separate
-  `add-sheet` op.)
+  The target `name` is matched case-insensitively (like Excel sheet names) and
+  must exist. `delete` refuses to remove the **last visible** sheet (a workbook
+  must keep at least one), and renaming to a name already in use fails.
+  `rename` does **not** rewrite formula or chart references to the old sheet
+  name (matching the engine), so re-point those yourself. (Adding a sheet is
+  the separate `add-sheet` op.)
 - `style` borders: `border` sets all four sides; a per-side `border_top`/
   `border_bottom`/`border_left`/`border_right` overrides that side. A border
   style is one of `thin`/`medium`/`thick`/`dashed`/`dotted`/`double`/`hair`;

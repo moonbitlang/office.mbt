@@ -1386,13 +1386,21 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       }
       workbook.set_conditional_format(sheet, range, [opt])
     }
-    OpSheet(action~, name~, to~) =>
+    OpSheet(action~, name~, to~) => {
+      // Resolve the target to its CANONICAL name: the sheet lookup is
+      // case-insensitive, but several engine mutators (notably `delete_sheet`)
+      // silently no-op on a name they do not match, so gate on existence here
+      // for a clear error and pass the exact name onward.
+      let target = match workbook.sheet(name) {
+        Some(worksheet) => worksheet.name()
+        None => raise BatchError("sheet: no sheet named '\{name}'")
+      }
       match action {
         "rename" => {
           if to == "" {
             raise BatchError("sheet: action 'rename' requires 'to'")
           }
-          workbook.set_sheet_name(name, to)
+          workbook.set_sheet_name(target, to)
         }
         // Every other action targets a single sheet and takes no `to`.
         "delete" | "hide" | "show" | "very-hide" => {
@@ -1400,11 +1408,28 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
             raise BatchError("sheet: action '\{action}' does not take 'to'")
           }
           match action {
-            "delete" => workbook.delete_sheet(name)
-            "hide" => workbook.set_sheet_visible(name, false)
+            "delete" => {
+              // `delete_sheet` guards only the total sheet count, not the
+              // visible count — deleting the last VISIBLE sheet would leave
+              // an all-hidden, invalid workbook. Guard that here.
+              let mut visible_others = 0
+              for worksheet in workbook.sheets() {
+                if worksheet.name() != target &&
+                  workbook.get_sheet_visible(worksheet.name()) {
+                  visible_others += 1
+                }
+              }
+              if visible_others == 0 {
+                raise BatchError(
+                  "sheet: cannot delete '\{target}' — a workbook must keep at least one visible sheet",
+                )
+              }
+              workbook.delete_sheet(target)
+            }
+            "hide" => workbook.set_sheet_visible(target, false)
             "very-hide" =>
-              workbook.set_sheet_visible(name, false, very_hidden=true)
-            _ => workbook.set_sheet_visible(name, true) // "show"
+              workbook.set_sheet_visible(target, false, very_hidden=true)
+            _ => workbook.set_sheet_visible(target, true) // "show"
           }
         }
         other =>
@@ -1412,5 +1437,6 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
             "sheet: unknown action '\{other}' (expected one of: rename, delete, hide, show, very-hide)",
           )
       }
+    }
   }
 }

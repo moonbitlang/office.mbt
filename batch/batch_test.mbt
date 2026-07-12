@@ -894,10 +894,12 @@ test "sheet op validation errors are typed and specific" {
 }
 
 ///|
-test "a sheet op propagates the engine error for an unknown target" {
+test "a sheet op rejects an unknown target instead of silently no-op-ing" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("Only"))
-  try {
+  // `delete_sheet` silently returns on an unknown name, so the op must gate
+  // on existence itself.
+  try
     ignore(
       apply_script(
         workbook,
@@ -906,10 +908,64 @@ test "a sheet op propagates the engine error for an unknown target" {
         ),
       ),
     )
-    fail("expected deleting an unknown sheet to fail")
-  } catch {
-    _ => assert_eq(workbook.get_sheet_list().length(), 1)
+  catch {
+    @batch.BatchError(message) =>
+      assert_eq(message, "sheet: no sheet named 'Missing'")
+    err => fail("expected a BatchError, got \{err}")
+  } noraise {
+    _ => fail("expected the unknown target to be rejected")
   }
+  assert_eq(workbook.get_sheet_list().length(), 1)
+}
+
+///|
+test "a sheet op refuses to delete the last visible sheet" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Visible"))
+  ignore(workbook.add_sheet("Helper"))
+  // Hide Helper, then try to delete the only remaining visible sheet: that
+  // would leave an all-hidden, invalid workbook (delete_sheet checks only the
+  // total count).
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"hide", "name":"Helper"}}]}
+      ),
+    ),
+  )
+  try
+    ignore(
+      apply_script(
+        workbook,
+        (
+          #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"delete", "name":"Visible"}}]}
+        ),
+      ),
+    )
+  catch {
+    @batch.BatchError(message) =>
+      assert_true(message.contains("at least one visible sheet"))
+    err => fail("expected a BatchError, got \{err}")
+  } noraise {
+    _ => fail("expected the last-visible-sheet delete to be rejected")
+  }
+  // Nothing was deleted; deleting the HIDDEN sheet is fine (a visible remains).
+  assert_eq(workbook.get_sheet_list().length(), 2)
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"delete", "name":"Helper"}}]}
+      ),
+    ),
+  )
+  debug_inspect(
+    workbook.get_sheet_list(),
+    content=(
+      #|["Visible"]
+    ),
+  )
 }
 
 ///|
