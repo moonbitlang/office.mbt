@@ -240,6 +240,61 @@ fn is_uri_unreserved(char : Char) -> Bool {
 }
 
 ///|
+fn is_uri_sub_delimiter(char : Char) -> Bool {
+  char == '!' ||
+  char == '$' ||
+  char == '&' ||
+  char.to_int() == 0x27 ||
+  char == '(' ||
+  char == ')' ||
+  char == '*' ||
+  char == '+' ||
+  char == ',' ||
+  char == ';' ||
+  char == '='
+}
+
+///|
+fn is_uri_general_delimiter(char : Char) -> Bool {
+  char == ':' ||
+  char == '/' ||
+  char == '?' ||
+  char == '#' ||
+  char == '[' ||
+  char == ']' ||
+  char == '@'
+}
+
+///|
+fn is_valid_uri_reference(value : StringView) -> Bool {
+  if value == "" {
+    return false
+  }
+  let chars = value.to_array()
+  let mut has_fragment = false
+  for index, char in chars {
+    if char == '%' {
+      if index + 2 >= chars.length() ||
+        !is_ascii_hex_digit(chars[index + 1]) ||
+        !is_ascii_hex_digit(chars[index + 2]) {
+        return false
+      }
+    } else if !is_uri_unreserved(char) &&
+      !is_uri_sub_delimiter(char) &&
+      !is_uri_general_delimiter(char) {
+      return false
+    }
+    if char == '#' {
+      if has_fragment {
+        return false
+      }
+      has_fragment = true
+    }
+  }
+  true
+}
+
+///|
 fn is_valid_opc_part_segment(segment : StringView) -> Bool {
   if segment == "" || segment.has_suffix(".") {
     return false
@@ -260,19 +315,9 @@ fn is_valid_opc_part_segment(segment : StringView) -> Bool {
         return false
       }
     } else if !is_uri_unreserved(char) &&
-      char != '!' &&
-      char.to_int() != 0x27 &&
-      char != '(' &&
-      char != ')' &&
-      char != '*' &&
-      char != '+' &&
-      char != ',' &&
-      char != ';' &&
-      char != '=' &&
+      !is_uri_sub_delimiter(char) &&
       char != ':' &&
-      char != '@' &&
-      char != '$' &&
-      char != '&' {
+      char != '@' {
       return false
     }
   }
@@ -281,25 +326,48 @@ fn is_valid_opc_part_segment(segment : StringView) -> Bool {
 
 ///|
 fn is_absolute_relationship_type(value : StringView) -> Bool {
-  guard has_uri_scheme(value) else { return false }
+  has_uri_scheme(value) && is_valid_uri_reference(value) && !value.contains("#")
+}
+
+///|
+fn is_xml_ncname_start(char : Char) -> Bool {
+  let code = char.to_int()
+  char.is_ascii_alphabetic() ||
+  char == '_' ||
+  (code >= 0xc0 && code <= 0xd6) ||
+  (code >= 0xd8 && code <= 0xf6) ||
+  (code >= 0xf8 && code <= 0x2ff) ||
+  (code >= 0x370 && code <= 0x37d) ||
+  (code >= 0x37f && code <= 0x1fff) ||
+  (code >= 0x200c && code <= 0x200d) ||
+  (code >= 0x2070 && code <= 0x218f) ||
+  (code >= 0x2c00 && code <= 0x2fef) ||
+  (code >= 0x3001 && code <= 0xd7ff) ||
+  (code >= 0xf900 && code <= 0xfdcf) ||
+  (code >= 0xfdf0 && code <= 0xfffd) ||
+  (code >= 0x10000 && code <= 0xeffff)
+}
+
+///|
+fn is_xml_ncname_char(char : Char) -> Bool {
+  let code = char.to_int()
+  is_xml_ncname_start(char) ||
+  char == '-' ||
+  char == '.' ||
+  char.is_ascii_digit() ||
+  code == 0xb7 ||
+  (code >= 0x300 && code <= 0x36f) ||
+  (code >= 0x203f && code <= 0x2040)
+}
+
+///|
+fn is_xml_ncname(value : StringView) -> Bool {
   let chars = value.to_array()
-  for index, char in chars {
-    let code = char.to_int()
-    if code <= 0x20 ||
-      code >= 0x7f ||
-      char == '\\' ||
-      char == '#' ||
-      char == '"' ||
-      char == '<' ||
-      char == '>' {
-      return false
-    }
-    if char == '%' &&
-      (
-        index + 2 >= chars.length() ||
-        !is_ascii_hex_digit(chars[index + 1]) ||
-        !is_ascii_hex_digit(chars[index + 2])
-      ) {
+  if chars.length() == 0 || !is_xml_ncname_start(chars[0]) {
+    return false
+  }
+  for index = 1; index < chars.length(); index = index + 1 {
+    if !is_xml_ncname_char(chars[index]) {
       return false
     }
   }
@@ -676,7 +744,11 @@ fn validate_package_structure(
       }
       match element.attributes.get("Id") {
         Some(id) if id != "" =>
-          if ids.contains(id) {
+          if !is_xml_ncname(id) {
+            findings.push(
+              "relationship in \{relationship_part} has an invalid Id: \{id}",
+            )
+          } else if ids.contains(id) {
             findings.push(
               "duplicate relationship Id in \{relationship_part}: \{id}",
             )
@@ -687,6 +759,10 @@ fn validate_package_structure(
       }
       match element.attributes.get("Type") {
         Some(rel_type) if is_absolute_relationship_type(rel_type) => ()
+        Some(rel_type) if rel_type != "" && has_uri_scheme(rel_type) =>
+          findings.push(
+            "relationship in \{relationship_part} has an invalid Type URI: \{rel_type}",
+          )
         Some(rel_type) if rel_type != "" =>
           findings.push(
             "relationship in \{relationship_part} has a non-absolute Type: \{rel_type}",
@@ -731,6 +807,10 @@ fn validate_package_structure(
               "relationship in \{relationship_part} has an invalid Target: \{target}",
             )
         }
+      } else if !is_valid_uri_reference(target) {
+        findings.push(
+          "relationship in \{relationship_part} has an invalid external Target: \{target}",
+        )
       }
     }
   }

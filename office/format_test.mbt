@@ -672,6 +672,77 @@ test "detect_format requires absolute relationship Type URIs" {
 }
 
 ///|
+test "detect_format rejects invalid characters in relationship Type URIs" {
+  let broken = add_root_relationship(
+    @excel.write(@excel.new_file()),
+    "<Relationship Id=\"rInvalidType\" Type=\"https://example.com/{invalid}\" Target=\"xl/workbook.xml\"/>",
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains(
+          "relationship in _rels/.rels has an invalid Type URI: https://example.com/{invalid}",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected an invalid relationship Type URI")
+  }
+}
+
+///|
+test "detect_format requires relationship IDs to be XML NCNames" {
+  let broken = add_root_relationship(
+    @excel.write(@excel.new_file()),
+    "<Relationship Id=\"1 bad\" Type=\"https://example.com/relationships/test\" Target=\"xl/workbook.xml\"/>",
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains(
+          "relationship in _rels/.rels has an invalid Id: 1 bad",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected an invalid relationship Id")
+  }
+}
+
+///|
+test "detect_format validates external relationship target URIs" {
+  let source = @excel.write(@excel.new_file())
+  for target in ["\\bad", "https://example.com/{invalid}"] {
+    let broken = add_root_relationship(
+      source,
+      "<Relationship Id=\"rExternal\" Type=\"https://example.com/relationships/test\" Target=\"\{target}\" TargetMode=\"External\"/>",
+    )
+    try @office.detect_format("book.xlsx", broken) catch {
+      err =>
+        assert_true(
+          Show::to_string(err).contains(
+            "relationship in _rels/.rels has an invalid external Target: \{target}",
+          ),
+        )
+    } noraise {
+      _ => fail("expected an invalid external relationship target: \{target}")
+    }
+  }
+}
+
+///|
+test "detect_format accepts valid external URI references and Unicode IDs" {
+  let source = @excel.write(@excel.new_file())
+  let with_external = add_root_relationship(
+    source, "<Relationship Id=\"rél\" Type=\"https://example.com/relationships/test\" Target=\"https://example.com/a%20b?q=x/y&amp;v=1#frag\" TargetMode=\"External\"/>",
+  )
+  inspect(
+    @office.detect_format("book.xlsx", with_external).name(),
+    content="xlsx",
+  )
+}
+
+///|
 test "detect_format rejects an invalid relationship content type" {
   let broken = misdeclare_relationship_content_type(
     @excel.write(@excel.new_file()),
