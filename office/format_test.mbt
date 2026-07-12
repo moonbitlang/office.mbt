@@ -899,6 +899,42 @@ test "detect_format accepts a UTF-8 BOM in content types" {
 }
 
 ///|
+test "detect_format rejects duplicate attributes in every required XML layer" {
+  let source = @excel.write(@excel.new_file())
+  for
+    case in [
+      ("[Content_Types].xml", "<Types "),
+      ("_rels/.rels", "<Relationships "),
+      ("xl/workbook.xml", "<workbook "),
+    ] {
+    let (part_name, root_start) = case
+    let archive = @zip.read(source)
+    let text = @utf8.decode(archive.get(part_name).unwrap(), ignore_bom=true)
+    let malformed = text.replace(
+      old=root_start,
+      new=root_start + "duplicate=\"first\" duplicate=\"second\" ",
+    )
+    if malformed == text {
+      fail("test could not add duplicate attributes to \{part_name}")
+    }
+    let broken = replace_archive_part(
+      source,
+      part_name,
+      @utf8.encode(malformed),
+    )
+    try @office.detect_format("book.xlsx", broken) catch {
+      err =>
+        inspect(
+          Show::to_string(err),
+          content="invalid Office package: \{part_name} is not well-formed XML",
+        )
+    } noraise {
+      _ => fail("expected duplicate attributes in \{part_name} to be rejected")
+    }
+  }
+}
+
+///|
 test "detect_format requires the XLSX officeDocument relationship" {
   let data = @excel.write(@excel.new_file())
   let broken = replace_archive_part(
