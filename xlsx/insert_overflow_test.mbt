@@ -168,6 +168,64 @@ test "remove rejects an out-of-grid start without wrapping" {
 }
 
 ///|
+test "dimension setters reject out-of-grid coordinates" {
+  let wb = @xlsx.Workbook::new()
+  ignore(wb.add_sheet("S"))
+  assert_true(raises(() => wb.set_row_visible("S", 1048577, false)))
+  assert_true(raises(() => wb.set_row_height("S", 1048577, 20.0)))
+  assert_true(raises(() => wb.set_col_visible("S", 16385, false)))
+  assert_true(raises(() => wb.set_col_width("S", 16385, 20.0)))
+  // The grid edge itself is allowed.
+  wb.set_row_visible("S", 1048576, false)
+  wb.set_col_visible("S", 16384, false)
+  assert_eq(wb.get_row_visible("S", 1048576), false)
+  assert_eq(wb.get_col_visible("S", 16384), false)
+}
+
+///|
+test "insert_page_break rejects an out-of-grid anchor" {
+  let wb = @xlsx.Workbook::new()
+  ignore(wb.add_sheet("S"))
+  assert_true(raises(() => wb.insert_page_break("S", "A1048577")))
+}
+
+///|
+test "set_row and set_col reject a write past the grid without partial mutation" {
+  let wb = @xlsx.Workbook::new()
+  ignore(wb.add_sheet("S"))
+  wb.set_cell("S", "A1", "keep")
+  let sheet = match wb.sheet("S") {
+    Some(s) => s
+    None => fail("S")
+  }
+  // 16385 values would run one column past XFD; the write is refused wholesale.
+  let too_wide = Array::make(16385, "x")
+  assert_true(raises(() => sheet.set_row(1, too_wide)))
+  // A1 is untouched — nothing was written before the rejection.
+  assert_eq(wb.get_cell("S", "A1"), Some("keep"))
+  let too_tall = Array::make(1048577, "y")
+  assert_true(raises(() => sheet.set_col(2, too_tall)))
+}
+
+///|
+test "duplicate_row rejects Int::max_value row without wrapping" {
+  let wb = @xlsx.Workbook::new()
+  ignore(wb.add_sheet("S"))
+  assert_true(raises(() => wb.duplicate_row("S", 2147483647)))
+}
+
+///|
+test "remove adjusts a reversed defined-name range without corruption" {
+  let wb = @xlsx.Workbook::new()
+  ignore(wb.add_sheet("S"))
+  wb.set_defined_name(@xlsx.DefinedName::new("Rev", "S!$A$5:$A$1", scope="S"))
+  // The range normalizes to rows 1..5; removing rows 2..3 shifts it to 1..3
+  // (a valid in-grid range) instead of raising on a negative endpoint.
+  wb.remove_rows("S", 2, 2)
+  assert_eq(wb.defined_names()[0].refers_to, "S!$A$1:$A$3")
+}
+
+///|
 test "duplicate_row_to is atomic when a defined name would overflow" {
   let workbook = @xlsx.Workbook::new()
   ignore(workbook.add_sheet("S"))

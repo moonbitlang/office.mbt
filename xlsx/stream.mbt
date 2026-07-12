@@ -398,6 +398,14 @@ pub fn StreamWriter::set_row_cells(
   if row <= self.last_row {
     raise StreamRowOrder(last=self.last_row, next=row)
   }
+  // Preflight the whole row so it is all-or-nothing: the anchor and the last
+  // written column (start_col + values.length() - 1) must be in-grid.
+  if row > cell_ref_max_rows || start_col > cell_ref_max_cols {
+    raise InvalidCellRef(value=start_ref)
+  }
+  if values.length() > cell_ref_max_cols - start_col + 1 {
+    raise InvalidCellRef(value=start_ref)
+  }
   let row_style = match row_opts {
     Some(opts) if opts.style_id > 0 => opts.style_id
     _ => 0

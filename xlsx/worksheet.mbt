@@ -2501,8 +2501,14 @@ pub fn Worksheet::set_row(
   row : Int,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
-  if row <= 0 {
+  // Preflight the whole write so it is all-or-nothing: writing incrementally
+  // and only discovering an out-of-grid coordinate partway (row past the grid,
+  // or more values than columns) would leave the row half-populated.
+  if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
+  }
+  if values.length() > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{values.length()}:\{row}")
   }
   for i, value in values {
     self.set_cell_rc(row, i + 1, value)
@@ -2551,8 +2557,12 @@ pub fn Worksheet::set_col(
   col : Int,
   values : ArrayView[String],
 ) -> Unit raise XlsxError {
-  if col <= 0 {
+  // Preflight (see set_row): all-or-nothing, never a half-written column.
+  if col <= 0 || col > cell_ref_max_cols {
     raise InvalidCellRef(value="\{col}:\{0}")
+  }
+  if values.length() > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{col}:\{values.length()}")
   }
   for i, value in values {
     self.set_cell_rc(i + 1, col, value)
@@ -2632,7 +2642,13 @@ fn Worksheet::set_row_dimension(
   self : Worksheet,
   row : Int,
   dim : RowDimension,
-) -> Unit {
+) -> Unit raise XlsxError {
+  // The single choke point for every row-dimension write (heights, visibility,
+  // outline levels, styles, and the stream writer): reject an out-of-grid key so
+  // no `<row r>` beyond the sheet's rows is ever stored or serialized.
+  if row < 1 || row > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{0}:\{row}")
+  }
   if row_dimension_is_default(dim) {
     self.row_dimensions.remove(row)
   } else {
@@ -2645,7 +2661,10 @@ fn Worksheet::set_col_dimension(
   self : Worksheet,
   col : Int,
   dim : ColDimension,
-) -> Unit {
+) -> Unit raise XlsxError {
+  if col < 1 || col > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{col}:\{0}")
+  }
   if col_dimension_is_default(dim) {
     self.col_dimensions.remove(col)
   } else {
@@ -3051,26 +3070,32 @@ fn Worksheet::insert_rows(
   }
   let updated_rows : Map[Int, RowDimension] = Map([])
   for row_index, dim in self.row_dimensions {
-    let new_row = if row_index >= row { row_index + count } else { row_index }
-    if new_row > cell_ref_max_rows {
-      raise InvalidCellRef(value="\{0}:\{new_row}")
+    let new_row = if row_index >= row {
+      // Overflow-safe: a stored dimension key can be arbitrarily large (the
+      // dimension setters do not bound it), so validate BEFORE the addition.
+      if row_index > cell_ref_max_rows - count {
+        raise InvalidCellRef(value="\{0}:\{row_index}")
+      }
+      row_index + count
+    } else {
+      row_index
     }
     updated_rows[new_row] = dim
   }
   let break_start = row - 1
+  // Break ids are 0-based (id = row - 1), so a shifted id must stay strictly
+  // below the row maximum. Check the original ids overflow-safely, before
+  // adjust_page_breaks_after_insert performs `id + count`.
+  for brk in self.row_breaks {
+    if brk.id >= break_start && brk.id > cell_ref_max_rows - 1 - count {
+      raise InvalidCellRef(value="\{0}:\{brk.id}")
+    }
+  }
   let updated_breaks = adjust_page_breaks_after_insert(
     self.row_breaks,
     break_start,
     count,
   )
-  for brk in updated_breaks {
-    // Break ids are 0-based (id = row - 1), so the last valid id is one less
-    // than the row maximum; a break shifted to `cell_ref_max_rows` sits after
-    // the final row and is out of grid.
-    if brk.id >= cell_ref_max_rows {
-      raise InvalidCellRef(value="\{0}:\{brk.id}")
-    }
-  }
   // Commit: every stage above succeeded, so applying the staged state cannot
   // fail partway.
   self.invalidate_cell_index()
@@ -3603,25 +3628,30 @@ fn Worksheet::insert_cols(
   }
   let updated_cols : Map[Int, ColDimension] = Map([])
   for col_index, dim in self.col_dimensions {
-    let new_col = if col_index >= col { col_index + count } else { col_index }
-    if new_col > cell_ref_max_cols {
-      raise InvalidCellRef(value="\{new_col}:\{0}")
+    let new_col = if col_index >= col {
+      // Overflow-safe (see insert_rows): stored keys are not bounded by their
+      // setters, so validate before the addition.
+      if col_index > cell_ref_max_cols - count {
+        raise InvalidCellRef(value="\{col_index}:\{0}")
+      }
+      col_index + count
+    } else {
+      col_index
     }
     updated_cols[new_col] = dim
   }
   let break_start = col - 1
+  // 0-based ids (see insert_rows): validate overflow-safely before the shift.
+  for brk in self.col_breaks {
+    if brk.id >= break_start && brk.id > cell_ref_max_cols - 1 - count {
+      raise InvalidCellRef(value="\{brk.id}:\{0}")
+    }
+  }
   let updated_breaks = adjust_page_breaks_after_insert(
     self.col_breaks,
     break_start,
     count,
   )
-  for brk in updated_breaks {
-    // 0-based ids (see insert_rows): last valid col-break id is one below the
-    // column maximum.
-    if brk.id >= cell_ref_max_cols {
-      raise InvalidCellRef(value="\{brk.id}:\{0}")
-    }
-  }
   // Commit.
   self.invalidate_cell_index()
   self.cells.clear()
@@ -3794,11 +3824,16 @@ fn Worksheet::remove_cols(
 
 ///|
 fn adjust_bounds_for_insert(
-  min : Int,
-  max : Int,
+  raw_min : Int,
+  raw_max : Int,
   start : Int,
   count : Int,
 ) -> (Int, Int) {
+  // Order-aware: a defined-name range can be stored reversed (e.g. `$A$5:$A$1`).
+  // Normalize to [min, max] before shifting so the result stays in-grid rather
+  // than producing a bogus endpoint.
+  let min = if raw_min <= raw_max { raw_min } else { raw_max }
+  let max = if raw_min <= raw_max { raw_max } else { raw_min }
   if start <= min {
     (min + count, max + count)
   } else if start <= max {
@@ -3810,11 +3845,15 @@ fn adjust_bounds_for_insert(
 
 ///|
 fn adjust_bounds_for_remove(
-  min : Int,
-  max : Int,
+  raw_min : Int,
+  raw_max : Int,
   start : Int,
   count : Int,
 ) -> (Int, Int)? {
+  // Order-aware (see adjust_bounds_for_insert): normalize a reversed range so a
+  // removal never yields a negative/out-of-order endpoint.
+  let min = if raw_min <= raw_max { raw_min } else { raw_max }
+  let max = if raw_min <= raw_max { raw_max } else { raw_min }
   let end = start + count - 1
   if end < min {
     return Some((min - count, max - count))

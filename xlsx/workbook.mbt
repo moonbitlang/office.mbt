@@ -1053,17 +1053,6 @@ fn Workbook::commit_adjusted_defined_names(
 }
 
 ///|
-fn Workbook::adjust_defined_names_for_sheet(
-  self : Workbook,
-  sheet_name : String,
-  adjust_fn : (StringView) -> String? raise XlsxError,
-) -> Unit raise XlsxError {
-  self.commit_adjusted_defined_names(
-    self.stage_adjusted_defined_names_for_sheet(sheet_name, adjust_fn),
-  )
-}
-
-///|
 fn clone_strings(values : ArrayView[String]) -> Array[String] {
   let out : Array[String] = []
   for value in values {
@@ -3824,12 +3813,16 @@ pub fn Workbook::remove_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
-  sheet.remove_rows(row, count)
-  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+  // Stage the defined-name adjustment before mutating the sheet, then commit it
+  // last — so if adjustment raises (e.g. a pre-existing out-of-grid name) the
+  // removal is all-or-nothing, matching insert.
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,
   ) -> String? raise XlsxError {
     adjust_ref_after_row_remove(ref_text, row, count)
   })
+  sheet.remove_rows(row, count)
+  self.commit_adjusted_defined_names(staged_names)
 }
 
 ///|
@@ -3890,12 +3883,14 @@ pub fn Workbook::remove_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   let sheet = self.require_sheet(sheet_name)
-  sheet.remove_cols(col, count)
-  self.adjust_defined_names_for_sheet(sheet.name(), fn(
+  // Stage names before mutating the sheet (see remove_rows).
+  let staged_names = self.stage_adjusted_defined_names_for_sheet(sheet.name(), fn(
     ref_text : StringView,
   ) -> String? raise XlsxError {
     adjust_ref_after_col_remove(ref_text, col, count)
   })
+  sheet.remove_cols(col, count)
+  self.commit_adjusted_defined_names(staged_names)
 }
 
 ///|
@@ -3921,6 +3916,11 @@ pub fn Workbook::duplicate_row(
   sheet_name : StringView,
   row : Int,
 ) -> Unit raise XlsxError {
+  // Bound `row` before forming `row + 1`, which would otherwise wrap Int for
+  // `row == Int::max_value` (duplicate_row_to re-validates both rows too).
+  if row < 1 || row > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{0}:\{row}")
+  }
   self.duplicate_row_to(sheet_name, row, row + 1)
 }
 
