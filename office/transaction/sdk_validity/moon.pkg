@@ -1,0 +1,12 @@
+import {
+  "bobzhang/office/transaction",
+  "bobzhang/mbtexcel" @excel,
+  "bobzhang/mbtexcel/zip",
+  "bobzhang/docx2html" @word,
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+  "moonbitlang/async/process",
+  "moonbitlang/core/encoding/utf8",
+} for "test"
+
+supported_targets = "native"
