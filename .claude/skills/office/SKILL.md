@@ -83,6 +83,12 @@ row is copy-pasteable):
 | **Author a Word document** from JSON ops | `moon run --target wasm docx2html/cmd/docx -- batch out.docx script.json` |
 | Create a blank .docx | `moon run --target wasm docx2html/cmd/docx -- create out.docx` |
 | Check a .docx is well-formed | `moon run --target wasm docx2html/cmd/docx -- validate in.docx` |
+| **Comment on an EXISTING .docx** (byte-preserving) | `moon run --target wasm docx2html/cmd/docx -- annotate add in.docx out.docx --at '/body/p[2]' --text 'Cite the source.' --author Reviewer --initials RV` |
+| Reply in a comment thread | `moon run --target wasm docx2html/cmd/docx -- annotate reply in.docx out.docx --comment 0 --text 'Source added.' --author Author` |
+| Resolve / unresolve a comment | `moon run --target wasm docx2html/cmd/docx -- annotate resolve in.docx out.docx --comment 0` |
+| Read a comment thread as JSON | `moon run --target wasm docx2html/cmd/docx -- get in.docx '/comments/comment[@id=0]' --json` |
+| List comments (author/anchor/thread) | `moon run --target wasm docx2html/cmd/docx -- outline in.docx` |
+| Author a .docx WITH comments / foot-endnotes | `moon run --target wasm docx2html/cmd/docx -- batch out.docx script.json` (a `docx.batch/2` script) |
 | Convert a .docx to HTML | `moon run --target wasm docx2html/cmd/docx2html -- in.docx out.html` |
 | Convert a .docx to Markdown | `moon run --target wasm docx2html/cmd/docx2html -- --output-format=markdown in.docx out.md` |
 | Convert a .docx + extract images | `moon run --target wasm docx2html/cmd/docx2html -- --output-dir ./out in.docx` |
@@ -91,12 +97,24 @@ Omit the output path on `docx2html` to write to stdout. Note that each `style`
 call sets a cell's **complete** style (it replaces, not merges), so combine all
 the formatting for a cell into one command and avoid overlapping styled ranges.
 
-The batch script formats — `docx.batch/1` for Word documents, `xlsx.batch/1`
+The batch script formats — `docx.batch/1` (or `docx.batch/2`, which adds
+`comment` ops and inline foot/endnotes) for Word documents, `xlsx.batch/1`
 for spreadsheets — are specified normatively in `docs/agent-json-schemas.md`;
 read the matching section before writing a script (validation is strict:
 unknown keys, duplicate keys, and non-integer numbers are errors, and `docx
 batch` only creates NEW files). `recipes/author-docx.md` walks the whole
 author→verify loop.
+
+**Commenting on an existing document is different from authoring.** `batch`
+only makes NEW files; to add/reply/resolve comments on a document you did not
+author, use `docx annotate <add|reply|resolve|unresolve>`. These do
+**byte-preserving surgery** — they rewrite only the comment-related parts and
+leave every other byte of the file untouched, so they are safe on documents
+whose full content the lossy reader does not model. Each verb writes a NEW
+output file (never in place) and reads back before publishing. Read a document
+and its existing discussion first (`outline`, then `get '/comments/comment[@id=N]'
+--json`), because comment ids are the document's own spelled values.
+`recipes/review-docx.md` walks the read→comment→reply→resolve loop.
 
 For spreadsheets the same three verbs close an **inspect → edit → render**
 loop: `outline` / `get … --json` show you what a workbook contains (and what
@@ -124,6 +142,7 @@ For end-to-end workflows, follow a recipe:
 - `recipes/batch-edits.md` — make many spreadsheet edits in one atomic `batch` pass.
 - `recipes/render-review-fix.md` — build a spreadsheet, render it to HTML, look, and correct it.
 - `recipes/author-docx.md` — author a Word document from a JSON op script and verify it.
+- `recipes/review-docx.md` — comment on an existing document: read → `annotate add` → reply → resolve, byte-preserving.
 - `recipes/doc-to-markdown.md` — convert a Word document to clean Markdown/HTML.
 - `recipes/inspect-untrusted.md` — safely dump and validate a file you don't trust.
 
@@ -137,6 +156,8 @@ moon run --target wasm cmd/xlsx -- --help
 moon run --target wasm cmd/xlsx -- csv --help
 moon run --target wasm docx2html/cmd/docx -- --help
 moon run --target wasm docx2html/cmd/docx -- batch --help
+moon run --target wasm docx2html/cmd/docx -- annotate --help
+moon run --target wasm docx2html/cmd/docx -- annotate add --help
 moon run --target wasm docx2html/cmd/docx2html -- --help
 ```
 
