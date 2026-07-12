@@ -10,17 +10,22 @@ fn legacy_selector_error(path : String, message : String) -> SelectorError {
 
 ///|
 fn check_legacy_selector_length(path : String) -> Unit raise SelectorError {
-  let mut length = 0
-  for _ in path {
-    length = length + 1
-    if length > SELECTOR_MAX_LENGTH {
+  match scan_selector_unicode(path, SELECTOR_MAX_LENGTH) {
+    Invalid(offset) =>
+      raise SelectorError(
+        code="office.selector.invalid_unicode",
+        offset~,
+        input="<invalid UTF-16>",
+        message="selector contains an isolated UTF-16 surrogate",
+      )
+    TooLong =>
       raise SelectorError(
         code="office.selector.too_long",
         offset=SELECTOR_MAX_LENGTH,
         input=bounded_selector_text(path, 160),
         message="selector exceeds \{SELECTOR_MAX_LENGTH} characters",
       )
-    }
+    Valid => ()
   }
 }
 
@@ -33,17 +38,22 @@ fn check_xlsx_adapter_argument(
   label : String,
   limit : Int,
 ) -> Unit raise SelectorError {
-  let mut length = 0
-  for _ in value {
-    length = length + 1
-    if length > limit {
+  match scan_selector_unicode(value, limit) {
+    Invalid(offset) =>
+      raise SelectorError(
+        code="office.selector.invalid_unicode",
+        offset~,
+        input="<invalid UTF-16>",
+        message="\{label} contains an isolated UTF-16 surrogate",
+      )
+    TooLong =>
       raise SelectorError(
         code="office.selector.adapter_input_too_long",
         offset=limit,
         input=bounded_selector_text(value, 160),
         message="\{label} exceeds \{limit} characters",
       )
-    }
+    Valid => ()
   }
 }
 

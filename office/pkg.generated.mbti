@@ -136,7 +136,7 @@ pub impl Show for DocumentFormat
 
 pub struct OfficeSelector {
   format : DocumentFormat
-  segments : Array[SelectorSegment]
+  segments : ReadOnlyArray[SelectorSegment]
   coordinate : SelectorCoordinate?
   stability : SelectorStability
 }

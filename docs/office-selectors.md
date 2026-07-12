@@ -78,7 +78,8 @@ Parsing is total and bounded:
 Failures use a structured error code, a zero-based Unicode-scalar offset, a
 bounded input echo, and a bounded message. Cross-format shapes are rejected by
 their explicit root and cannot silently fall through to the other format's
-rules.
+rules. Input and decoded JSON values must contain well-formed UTF-16; isolated
+surrogates fail before an AST is created or UTF-8 encoding is attempted.
 
 ## Adapter and capability boundary
 
