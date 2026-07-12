@@ -86,6 +86,33 @@ const TRANSITIONAL_DOCUMENT_ROOT : String = "{http://schemas.openxmlformats.org/
 const STRICT_DOCUMENT_ROOT : String = "{http://purl.oclc.org/ooxml/wordprocessingml/main}document"
 
 ///|
+fn media_type_equal(left : StringView, right : StringView) -> Bool {
+  left.to_owned().to_lower() == right.to_owned().to_lower()
+}
+
+///|
+fn main_format_from_content_type(content_type : StringView) -> DocumentFormat? {
+  if media_type_equal(content_type, XLSX_MAIN_CONTENT_TYPE) {
+    Some(Xlsx)
+  } else if media_type_equal(content_type, DOCX_MAIN_CONTENT_TYPE) {
+    Some(Docx)
+  } else {
+    None
+  }
+}
+
+///|
+fn xml_element_has_content(element : @xml.XmlElement) -> Bool {
+  for child in element.children {
+    match child {
+      XmlElement(_) => return true
+      XmlText(text) => if !text.trim().is_empty() { return true }
+    }
+  }
+  false
+}
+
+///|
 fn format_from_extension(path : StringView) -> DocumentFormat raise OfficeError {
   let lower = path.to_owned().to_lower()
   if lower.has_suffix(".xlsx") {
@@ -360,8 +387,20 @@ fn validate_package_structure(
   let overrides : Map[String, String] = Map([])
   let content_types = read_xml_part(archive, "[Content_Types].xml")
   for child in content_types.children {
+    match child {
+      XmlText(text) =>
+        if !text.trim().is_empty() {
+          findings.push("[Content_Types].xml contains unexpected text")
+        }
+      XmlElement(_) => ()
+    }
+  }
+  for child in content_types.children {
     guard child is XmlElement(element) else { continue }
     if element.name == CONTENT_TYPES_DEFAULT {
+      if xml_element_has_content(element) {
+        findings.push("[Content_Types].xml: Default element is not empty")
+      }
       match
         (
           element.attributes.get("Extension"),
@@ -370,7 +409,8 @@ fn validate_package_structure(
         (Some(extension), Some(content_type)) if extension != "" &&
           content_type != "" => {
           let extension = extension.to_lower()
-          if extension == "rels" && content_type != RELATIONSHIPS_CONTENT_TYPE {
+          if extension == "rels" &&
+            !media_type_equal(content_type, RELATIONSHIPS_CONTENT_TYPE) {
             findings.push(
               "relationship parts have an invalid default content type: \{content_type}",
             )
@@ -387,6 +427,9 @@ fn validate_package_structure(
           )
       }
     } else if element.name == CONTENT_TYPES_OVERRIDE {
+      if xml_element_has_content(element) {
+        findings.push("[Content_Types].xml: Override element is not empty")
+      }
       match
         (
           element.attributes.get("PartName"),
@@ -440,7 +483,8 @@ fn validate_package_structure(
     match content_type {
       None => findings.push("part has no declared content type: \{name}")
       Some(content_type) =>
-        if key.has_suffix(".rels") && content_type != RELATIONSHIPS_CONTENT_TYPE {
+        if key.has_suffix(".rels") &&
+          !media_type_equal(content_type, RELATIONSHIPS_CONTENT_TYPE) {
           findings.push(
             "relationship part has an invalid content type: \{name} -> \{content_type}",
           )
@@ -483,6 +527,15 @@ fn validate_package_structure(
       findings.push("\{relationship_part} root element is not Relationships")
       continue
     }
+    for child in relationships.children {
+      match child {
+        XmlText(text) =>
+          if !text.trim().is_empty() {
+            findings.push("\{relationship_part} contains unexpected text")
+          }
+        XmlElement(_) => ()
+      }
+    }
     let ids : Map[String, Bool] = Map([])
     for child in relationships.children {
       guard child is XmlElement(element) else { continue }
@@ -491,6 +544,11 @@ fn validate_package_structure(
           "\{relationship_part} contains an unexpected element: \{element.name}",
         )
         continue
+      }
+      if xml_element_has_content(element) {
+        findings.push(
+          "relationship in \{relationship_part} is not an empty element",
+        )
       }
       match element.attributes.get("Id") {
         Some(id) if id != "" =>
@@ -696,9 +754,8 @@ fn format_from_package(
     guard child is XmlElement(element) else { continue }
     if element.name == CONTENT_TYPES_DEFAULT {
       let format = match element.attributes.get("ContentType") {
-        Some(XLSX_MAIN_CONTENT_TYPE) => Some(Xlsx)
-        Some(DOCX_MAIN_CONTENT_TYPE) => Some(Docx)
-        _ => None
+        Some(content_type) => main_format_from_content_type(content_type)
+        None => None
       }
       guard format is Some(format) else { continue }
       guard element.attributes.get("Extension") is Some(extension) &&
@@ -707,13 +764,14 @@ fn format_from_package(
       }
       main_defaults[extension.to_lower()] = format
     } else if element.name == CONTENT_TYPES_OVERRIDE {
+      let format = match element.attributes.get("ContentType") {
+        Some(content_type) => main_format_from_content_type(content_type)
+        None => None
+      }
       let part_name = match element.attributes.get("PartName") {
         Some(part_name) => part_name
         None =>
-          if element.attributes.get("ContentType") ==
-            Some(XLSX_MAIN_CONTENT_TYPE) ||
-            element.attributes.get("ContentType") ==
-            Some(DOCX_MAIN_CONTENT_TYPE) {
+          if format is Some(_) {
             raise InvalidPackage("main content type override has no PartName")
           } else {
             continue
@@ -722,10 +780,7 @@ fn format_from_package(
       let normalized = match normalize_declared_part_name(part_name) {
         Some(part_name) => part_name
         None =>
-          if element.attributes.get("ContentType") ==
-            Some(XLSX_MAIN_CONTENT_TYPE) ||
-            element.attributes.get("ContentType") ==
-            Some(DOCX_MAIN_CONTENT_TYPE) {
+          if format is Some(_) {
             raise InvalidPackage(
               "main content type override has an invalid PartName",
             )
@@ -734,10 +789,10 @@ fn format_from_package(
           }
       }
       overridden_parts[opc_part_key(normalized)] = true
-      match element.attributes.get("ContentType") {
-        Some(XLSX_MAIN_CONTENT_TYPE) => xlsx_main_parts.push(normalized)
-        Some(DOCX_MAIN_CONTENT_TYPE) => docx_main_parts.push(normalized)
-        _ => ()
+      match format {
+        Some(Xlsx) => xlsx_main_parts.push(normalized)
+        Some(Docx) => docx_main_parts.push(normalized)
+        None => ()
       }
     }
   }

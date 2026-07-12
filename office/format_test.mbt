@@ -356,6 +356,55 @@ fn declare_xlsx_main_as_default(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn vary_xlsx_content_type_case(data : BytesView) -> Bytes raise {
+  let archive = @zip.read(data)
+  let content_types = archive.get("[Content_Types].xml").unwrap()
+  let text = @utf8.decode(content_types, ignore_bom=true)
+  let main_varied = text.replace(
+    old="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+    new="Application/Vnd.OpenXmlFormats-OfficeDocument.SpreadsheetML.Sheet.Main+Xml",
+  )
+  let updated = main_varied.replace(
+    old="application/vnd.openxmlformats-package.relationships+xml",
+    new="Application/Vnd.OpenXmlFormats-Package.Relationships+Xml",
+  )
+  if main_varied == text || updated == main_varied {
+    fail("test could not vary generated content-type casing")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
+fn add_content_type_default_child(data : BytesView) -> Bytes raise {
+  let archive = @zip.read(data)
+  let content_types = archive.get("[Content_Types].xml").unwrap()
+  let text = @utf8.decode(content_types, ignore_bom=true)
+  let updated = text.replace(
+    old="<Default Extension=\"xml\" ContentType=\"application/xml\"/>",
+    new="<Default Extension=\"xml\" ContentType=\"application/xml\"><unexpected/></Default>",
+  )
+  if updated == text {
+    fail("test could not add a Default child")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
+fn add_content_type_override_text(data : BytesView) -> Bytes raise {
+  let archive = @zip.read(data)
+  let content_types = archive.get("[Content_Types].xml").unwrap()
+  let text = @utf8.decode(content_types, ignore_bom=true)
+  let updated = text.replace(
+    old="<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>",
+    new="<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\">unexpected</Override>",
+  )
+  if updated == text {
+    fail("test could not add Override text")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
+}
+
+///|
 test "detect_format identifies generated xlsx" {
   let workbook = @excel.new_file()
   let data = @excel.write(workbook)
@@ -365,6 +414,12 @@ test "detect_format identifies generated xlsx" {
 ///|
 test "detect_format accepts a default XLSX main content type" {
   let data = declare_xlsx_main_as_default(@excel.write(@excel.new_file()))
+  inspect(@office.detect_format("book.xlsx", data).name(), content="xlsx")
+}
+
+///|
+test "detect_format compares OPC media types case-insensitively" {
+  let data = vary_xlsx_content_type_case(@excel.write(@excel.new_file()))
   inspect(@office.detect_format("book.xlsx", data).name(), content="xlsx")
 }
 
@@ -643,6 +698,35 @@ test "detect_format rejects malformed DOCX relationship metadata" {
       )
   } noraise {
     _ => fail("expected malformed DOCX relationship metadata")
+  }
+}
+
+///|
+test "detect_format rejects content inside OPC metadata declarations" {
+  let source = @excel.write(@excel.new_file())
+  for
+    case in [
+      (
+        add_content_type_default_child(source),
+        "[Content_Types].xml: Default element is not empty",
+      ),
+      (
+        add_content_type_override_text(source),
+        "[Content_Types].xml: Override element is not empty",
+      ),
+      (
+        add_root_relationship(
+          source, "<Relationship Id=\"rNested\" Type=\"https://example.com/relationships/test\" Target=\"xl/workbook.xml\"><unexpected/></Relationship>",
+        ),
+        "relationship in _rels/.rels is not an empty element",
+      ),
+    ] {
+    let (broken, expected) = case
+    try @office.detect_format("book.xlsx", broken) catch {
+      err => assert_true(Show::to_string(err).contains(expected))
+    } noraise {
+      _ => fail("expected non-empty OPC metadata declaration")
+    }
   }
 }
 
