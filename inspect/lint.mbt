@@ -8,26 +8,42 @@
 ///|
 /// Builds the `xlsx.lint/1` JSON payload: `{schema, file, finding_count,
 /// findings}` where each finding is `{kind, sheet, ref, code, formula?}`.
-/// Scans every sheet's formula cells (or only `sheet` when non-empty),
-/// recomputes each, and reports those that evaluate to an error. Raises
-/// `@xlsx.XlsxError` for a named sheet that does not exist or a structural
-/// problem while evaluating.
+/// Scans every sheet's non-empty formula cells (or only `sheet` when
+/// non-empty), recomputes each, and reports those that evaluate to an error,
+/// in workbook-sheet order then stored-cell order.
+///
+/// Shared-/array-formula *slave* cells are not visited (their text lives on
+/// the master and the engine does not expand slaves), so an error that would
+/// only manifest in a slave's translated formula is not reported. A missing
+/// named sheet, or a structural problem while evaluating, raises
+/// `@xlsx.XlsxError` (aborting the whole lint) rather than being reported as a
+/// finding.
 pub fn lint(
   workbook : @xlsx.Workbook,
   file~ : String,
   sheet? : String = "",
 ) -> Json raise {
-  // Surface the canonical `SheetNotFound` for an unknown `--sheet` — a pure
-  // read probe that raises on a missing sheet and is harmless on a real one
-  // (inspect cannot construct the engine's read-only error directly).
-  if sheet != "" {
+  // Resolve `--sheet` to its CANONICAL name: the engine's sheet lookup is
+  // case-insensitive, so `--sheet data` must lint the sheet named `Data`
+  // rather than pass the existence check and then be skipped by a
+  // case-sensitive filter. An unknown name surfaces the canonical
+  // `SheetNotFound` via a pure read probe (inspect cannot construct the
+  // engine's read-only error directly).
+  let target : String? = if sheet == "" {
+    None
+  } else {
     ignore(workbook.get_cell_formula(sheet, "A1"))
+    match workbook.sheet(sheet) {
+      Some(worksheet) => Some(worksheet.name())
+      None => None
+    }
   }
   let findings = []
   for worksheet in workbook.sheets() {
     let name = worksheet.name()
-    if sheet != "" && name != sheet {
-      continue
+    match target {
+      Some(only) => if name != only { continue }
+      None => ()
     }
     for reference in worksheet.formula_refs() {
       match workbook.calc_cell_typed(name, reference) {

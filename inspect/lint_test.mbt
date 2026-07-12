@@ -61,6 +61,10 @@ test "lint honors --sheet and finds nothing when all formulas are healthy" {
   let workbook = lint_book()
   inspect(lint_findings(workbook, sheet="Data").0, content="2")
   inspect(lint_findings(workbook, sheet="Other").0, content="1")
+  // --sheet matches case-insensitively (like an Excel sheet name), so a
+  // lowercase name still lints the real sheet rather than silently 0.
+  inspect(lint_findings(workbook, sheet="data").0, content="2")
+  inspect(lint_findings(workbook, sheet="OTHER").0, content="1")
   // A workbook whose formulas all compute cleanly yields no findings.
   let clean = @xlsx.Workbook::new()
   let sheet = clean.add_sheet("S")
@@ -93,6 +97,20 @@ test "lint finding carries kind, location, code, and formula" {
       #|}
     ),
   )
+}
+
+///|
+test "lint skips an empty-formula cell (a shared-formula slave) without crashing" {
+  let workbook = @xlsx.Workbook::new()
+  let sheet = workbook.add_sheet("Data")
+  sheet.set_cell_value("A1", Numeric(5.0))
+  sheet.set_cell_formula("A2", "A1/0") // a real error
+  // An empty formula string is what a shared-formula slave carries; the
+  // evaluator would raise InvalidXml on it, so it must not be visited.
+  sheet.set_cell_formula("A3", "")
+  let (count, refs) = lint_findings(workbook)
+  inspect(count, content="1")
+  inspect(refs.join(","), content="A2")
 }
 
 ///|

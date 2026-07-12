@@ -225,9 +225,15 @@ evaluated. Scans all sheets, or only `--sheet`.
 - Each finding carries a `kind` discriminator (`formula_error` today; the set
   grows additively — e.g. a future cached-vs-recomputed disagreement), the
   `sheet`/`ref` location, the error `code`, and the `formula` text.
-- `findings` is ordered by sheet (tab order) then stored cell order;
-  `finding_count` is `findings.length()`. An unknown `--sheet` fails with a
-  non-zero exit. `lint` is read-only.
+- `findings` is ordered by sheet (workbook order) then stored cell order;
+  `finding_count` is `findings.length()`. `--sheet` matches case-insensitively
+  (like Excel sheet names); an unknown `--sheet` fails with a non-zero exit.
+- Shared-/array-formula **slave** cells are skipped (their formula text lives
+  on the master and the engine does not expand slaves), so an error that would
+  only surface in a slave's translated formula is not reported. A structural
+  problem while evaluating (rare — a corrupt package) aborts the lint with a
+  non-zero exit rather than being reported as a finding.
+- `lint` is read-only.
 
 ## `xlsx.batch/1` — mutation script (`xlsx batch <file> <script.json>`)
 

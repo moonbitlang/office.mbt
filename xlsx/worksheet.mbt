@@ -359,15 +359,20 @@ pub fn Worksheet::get_cell_rich_text(
 }
 
 ///|
-/// The A1 references of every cell on this sheet that carries a formula, in
-/// stored order. A small primitive for tools that need to visit the formula
-/// cells (e.g. a formula lint) without scanning the whole grid — the set of
-/// formula cells is usually far smaller than the used range.
+/// The A1 references of every cell on this sheet that carries a **non-empty**
+/// formula, in stored order. A small primitive for tools that need to visit
+/// the formula cells (e.g. a formula lint) without scanning the whole grid —
+/// the set of formula cells is usually far smaller than the used range.
+///
+/// A shared-formula *slave* stores an empty formula string (the master holds
+/// the text) and is not independently evaluable, so it is excluded — visiting
+/// one would only mislead a caller that evaluates the formula.
 pub fn Worksheet::formula_refs(self : Worksheet) -> Array[String] {
   let refs = []
   for cell in self.cells {
-    if cell.formula is Some(_) {
-      refs.push(cell.reference)
+    match cell.formula {
+      Some(formula) if formula != "" => refs.push(cell.reference)
+      _ => ()
     }
   }
   refs
