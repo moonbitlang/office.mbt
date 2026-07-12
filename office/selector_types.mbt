@@ -1,41 +1,44 @@
 ///|
 /// Whether an address survives ordinary positional edits.
-pub(all) enum SelectorStability {
+pub enum SelectorStability {
   Stable
   SnapshotRelative
 }
 
 ///|
 /// The optional selector attached to a named path segment.
-pub(all) enum SegmentSelection {
+pub enum SegmentSelection {
   Position(Int)
   Key(String, String)
 }
 
 ///|
-/// One named segment in a canonical Office selector.
-pub(all) struct SelectorSegment {
+/// One named segment in a canonical Office selector. Construction stays
+/// package-private so parsed selector invariants cannot be bypassed.
+pub struct SelectorSegment {
   name : String
   selection : SegmentSelection?
 }
 
 ///|
-/// One validated XLSX A1 cell coordinate. Columns and rows are 1-based.
-pub(all) struct CellAddress {
+/// One validated XLSX A1 cell coordinate. Columns and rows are 1-based;
+/// construction stays package-private so invalid coordinates cannot render.
+pub struct CellAddress {
   column : Int
   row : Int
 }
 
 ///|
 /// The XLSX-only coordinate leaf of an Office selector.
-pub(all) enum SelectorCoordinate {
+pub enum SelectorCoordinate {
   Cell(CellAddress)
   Range(CellAddress, CellAddress)
 }
 
 ///|
-/// A parsed, format-explicit `office.selector/1` address.
-pub(all) struct OfficeSelector {
+/// A parsed, format-explicit `office.selector/1` address. Instances originate
+/// from the parser or syntax adapters so their canonical-form invariants hold.
+pub struct OfficeSelector {
   format : DocumentFormat
   segments : Array[SelectorSegment]
   coordinate : SelectorCoordinate?

@@ -110,7 +110,7 @@ pub(all) struct CapabilitySelector {
   description : String
 }
 
-pub(all) struct CellAddress {
+pub struct CellAddress {
   column : Int
   row : Int
 }
@@ -134,7 +134,7 @@ pub fn DocumentFormat::to_repr(Self) -> @debug.Repr
 pub fn DocumentFormat::to_string(Self) -> String
 pub impl Show for DocumentFormat
 
-pub(all) struct OfficeSelector {
+pub struct OfficeSelector {
   format : DocumentFormat
   segments : Array[SelectorSegment]
   coordinate : SelectorCoordinate?
@@ -153,24 +153,24 @@ pub(all) struct ProtocolWarning {
   message : String
 }
 
-pub(all) enum SegmentSelection {
+pub enum SegmentSelection {
   Position(Int)
   Key(String, String)
 }
 
-pub(all) enum SelectorCoordinate {
+pub enum SelectorCoordinate {
   Cell(CellAddress)
   Range(CellAddress, CellAddress)
 }
 
-pub(all) struct SelectorSegment {
+pub struct SelectorSegment {
   name : String
   selection : SegmentSelection?
 }
 pub fn SelectorSegment::key_value(Self, StringView) -> String?
 pub fn SelectorSegment::position(Self) -> Int?
 
-pub(all) enum SelectorStability {
+pub enum SelectorStability {
   Stable
   SnapshotRelative
 }
