@@ -29,6 +29,11 @@ fn rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
 }
 
 ///|
+suberror MutationProbeError {
+  MutationProbeError
+}
+
+///|
 async fn with_transaction_test_dir(run : async (String) -> Unit) -> Unit {
   @async.with_task_group() <| group => {
     let directory = @afs.tmpdir(prefix="office-transaction-")
@@ -225,6 +230,56 @@ async test "existing output and input aliases are refused before mutation" {
 }
 
 ///|
+async test "overwrite replaces only the requested output" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    write_test_file(output, original)
+    let report = @transaction.transact(
+      @transaction.transaction_options(
+        input,
+        output_path=output,
+        overwrite=true,
+      ),
+      (_format, bytes) => {
+        @transaction.transaction_mutation_with_manifest(
+          rewrite_content_types(bytes, "overwrite"),
+          ["[Content_Types].xml"],
+        )
+      },
+    )
+    let written = @afs.read_file(output).binary()
+    assert_true(report.committed)
+    assert_true(written != original)
+    assert_eq(@office.detect_format(output, written), Docx)
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "mutation callback failure leaves source and output untouched" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, _bytes) => raise MutationProbeError,
+      )
+    })
+    assert_eq(code, "office.transaction.mutation_failed")
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_false(@afs.exists(output))
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 async test "validator and preservation failures publish nothing" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"
@@ -296,6 +351,31 @@ async test "invalid candidate format and extension fail closed" {
     assert_eq(extension_code, "office.transaction.validation_failed")
     assert_false(@afs.exists(output))
     assert_false(@afs.exists(wrong_extension))
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
+async test "native output symlink aliases cannot bypass in-place policy" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let alias_path = "\{directory}/alias.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    @afs.symlink(target=input, alias_path)
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(
+          input,
+          output_path=alias_path,
+          overwrite=true,
+        ),
+        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      )
+    })
+    assert_eq(code, "office.transaction.output_aliases_input")
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
   })
