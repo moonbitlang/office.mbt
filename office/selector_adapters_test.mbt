@@ -64,3 +64,25 @@ test "XLSX adapters quote sheet names and normalize coordinates" {
   let range = @office.selector_for_xlsx_range("O'Brien", "C12:A1")
   assert_eq(range.render(), "/xlsx/sheet[name=\"O'Brien\"]/range[A1:C12]")
 }
+
+///|
+test "XLSX adapters reject oversized raw arguments before rendering" {
+  let oversized_name = "x".repeat(@office.SELECTOR_MAX_VALUE_LENGTH + 1)
+  let oversized_reference = "A".repeat(22)
+  for
+    run in [
+      () => @office.selector_for_xlsx_cell(oversized_name, "A1"),
+      () => @office.selector_for_xlsx_range("Data", oversized_reference),
+    ] {
+    try run() catch {
+      SelectorError(code~, offset~, input~, message~) => {
+        assert_eq(code, "office.selector.adapter_input_too_long")
+        assert_true(offset <= @office.SELECTOR_MAX_VALUE_LENGTH)
+        assert_true(input.to_array().length() <= 161)
+        assert_true(message.to_array().length() < 80)
+      }
+    } noraise {
+      _ => fail("expected oversized XLSX adapter input")
+    }
+  }
+}
