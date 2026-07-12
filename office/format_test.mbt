@@ -28,6 +28,29 @@ fn replace_archive_part(
 }
 
 ///|
+fn append_archive_part(
+  data : BytesView,
+  name : String,
+  content : Bytes,
+) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  for entry in source.entries() {
+    if entry.name() == name {
+      fail("test archive already contained \{name}")
+    }
+    result.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  result.add(name, content)
+  @zip.write(result)
+}
+
+///|
 fn prepend_utf8_bom(data : BytesView) -> Bytes {
   let bytes : Array[Byte] = [0xef, 0xbb, 0xbf]
   for byte in data {
@@ -247,18 +270,41 @@ fn misalign_docx_main_part(data : BytesView) -> Bytes raise {
 }
 
 ///|
-fn add_malformed_docx_relationship(data : BytesView) -> Bytes raise {
+fn add_root_relationship(
+  data : BytesView,
+  relationship : String,
+) -> Bytes raise {
   let archive = @zip.read(data)
   let root_relationships = archive.get("_rels/.rels").unwrap()
   let text = @utf8.decode(root_relationships, ignore_bom=true)
   let updated = text.replace(
     old="</Relationships>",
-    new="<Relationship Target=\"word/document.xml\"/></Relationships>",
+    new=relationship + "</Relationships>",
   )
   if updated == text {
-    fail("test could not add a malformed DOCX relationship")
+    fail("test could not add a root relationship")
   }
   replace_archive_part(data, "_rels/.rels", @utf8.encode(updated))
+}
+
+///|
+fn add_malformed_docx_relationship(data : BytesView) -> Bytes raise {
+  add_root_relationship(data, "<Relationship Target=\"word/document.xml\"/>")
+}
+
+///|
+fn misdeclare_relationship_content_type(data : BytesView) -> Bytes raise {
+  let archive = @zip.read(data)
+  let content_types = archive.get("[Content_Types].xml").unwrap()
+  let text = @utf8.decode(content_types, ignore_bom=true)
+  let updated = text.replace(
+    old="application/vnd.openxmlformats-package.relationships+xml",
+    new="application/octet-stream",
+  )
+  if updated == text {
+    fail("test could not replace the relationship content type")
+  }
+  replace_archive_part(data, "[Content_Types].xml", @utf8.encode(updated))
 }
 
 ///|
@@ -286,6 +332,28 @@ test "detect_format accepts relationships for root-level source parts" {
 }
 
 ///|
+test "detect_format rejects orphan relationship parts" {
+  let broken = append_archive_part(
+    @excel.write(@excel.new_file()),
+    "xl/_rels/ghost.xml.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"https://example.com/relationships/workbook\" Target=\"workbook.xml\"/></Relationships>",
+    ),
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains(
+          "relationship part has no source part: xl/_rels/ghost.xml.rels -> xl/ghost.xml",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected an orphan relationship part")
+  }
+}
+
+///|
 test "detect_format decodes UTF-16 package XML in either byte order" {
   let utf16 = reencode_identification_parts_as_utf16(
     @excel.write(@excel.new_file()),
@@ -310,6 +378,43 @@ test "detect_format checks namespace-prefixed relationship targets" {
       )
   } noraise {
     _ => fail("expected missing namespace-prefixed relationship target")
+  }
+}
+
+///|
+test "detect_format rejects relationships targeting package metadata" {
+  let broken = add_root_relationship(
+    @excel.write(@excel.new_file()),
+    "<Relationship Id=\"rMetadata\" Type=\"https://example.com/relationships/metadata\" Target=\"[Content_Types].xml\"/>",
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains(
+          "relationship in _rels/.rels points to package metadata: [Content_Types].xml -> [Content_Types].xml",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected a relationship to package metadata")
+  }
+}
+
+///|
+test "detect_format rejects an invalid relationship content type" {
+  let broken = misdeclare_relationship_content_type(
+    @excel.write(@excel.new_file()),
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err).contains(
+          "relationship parts have an invalid default content type: application/octet-stream",
+        ),
+        content="true",
+      )
+  } noraise {
+    _ => fail("expected an invalid relationship content type")
   }
 }
 
