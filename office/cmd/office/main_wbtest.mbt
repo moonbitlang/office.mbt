@@ -33,7 +33,9 @@ test "help suggestions are deterministic and useful" {
   assert_eq(nearest_suggestion("xlxs", ["docx", "xlsx"]), Some("xlsx"))
   assert_eq(nearest_suggestion("wrod", ["word", "excel"]), Some("word"))
   assert_true(nearest_suggestion("unrelated", ["docx", "xlsx"]) is None)
-  assert_true(nearest_suggestion("ppt", ["all", "docx", "word", "xlsx", "excel"]) is None)
+  assert_true(
+    nearest_suggestion("ppt", ["all", "docx", "word", "xlsx", "excel"]) is None,
+  )
 }
 
 ///|
