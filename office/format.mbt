@@ -74,6 +74,12 @@ const TRANSITIONAL_WORKBOOK_ROOT : String = "{http://schemas.openxmlformats.org/
 const STRICT_WORKBOOK_ROOT : String = "{http://purl.oclc.org/ooxml/spreadsheetml/main}workbook"
 
 ///|
+const TRANSITIONAL_DOCUMENT_ROOT : String = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}document"
+
+///|
+const STRICT_DOCUMENT_ROOT : String = "{http://purl.oclc.org/ooxml/wordprocessingml/main}document"
+
+///|
 fn format_from_extension(path : StringView) -> DocumentFormat raise OfficeError {
   let lower = path.to_owned().to_lower()
   if lower.has_suffix(".xlsx") {
@@ -152,10 +158,12 @@ fn is_office_document_relationship(rel_type : StringView) -> Bool {
 }
 
 ///|
-fn validate_xlsx_main_identity(
+fn validate_main_identity(
   archive : @zip.Archive,
+  format : DocumentFormat,
   declared_main_part : String,
 ) -> Unit raise OfficeError {
+  let label = if format is Xlsx { "XLSX" } else { "DOCX" }
   let root_rels = read_xml_part(archive, "_rels/.rels")
   if root_rels.name != RELATIONSHIPS_ROOT {
     raise InvalidPackage("_rels/.rels root element is not Relationships")
@@ -172,22 +180,27 @@ fn validate_xlsx_main_identity(
     match element.attributes.get("TargetMode") {
       None | Some("Internal") => ()
       Some(_) =>
-        raise InvalidPackage("XLSX officeDocument relationship is not internal")
+        raise InvalidPackage(
+          "\{label} officeDocument relationship is not internal",
+        )
     }
     match element.attributes.get("Id") {
       Some(id) if id != "" => ()
-      _ => raise InvalidPackage("XLSX officeDocument relationship has no Id")
+      _ =>
+        raise InvalidPackage("\{label} officeDocument relationship has no Id")
     }
     let target = match element.attributes.get("Target") {
       Some(target) => target
       None =>
-        raise InvalidPackage("XLSX officeDocument relationship has no Target")
+        raise InvalidPackage(
+          "\{label} officeDocument relationship has no Target",
+        )
     }
     let normalized = match normalize_internal_target(target) {
       Some(target) => target
       None =>
         raise InvalidPackage(
-          "XLSX officeDocument relationship has an invalid Target",
+          "\{label} officeDocument relationship has an invalid Target",
         )
     }
     main_targets.push(normalized)
@@ -195,23 +208,31 @@ fn validate_xlsx_main_identity(
   let main_target = match main_targets {
     [] =>
       raise InvalidPackage(
-        "XLSX root relationships do not declare an officeDocument relationship",
+        "\{label} root relationships do not declare an officeDocument relationship",
       )
     [target] => target
     _ =>
       raise InvalidPackage(
-        "XLSX root relationships declare multiple officeDocument relationships",
+        "\{label} root relationships declare multiple officeDocument relationships",
       )
   }
   if main_target != declared_main_part {
     raise InvalidPackage(
-      "XLSX officeDocument relationship targets '\{main_target}', but content types declare '\{declared_main_part}'",
+      "\{label} officeDocument relationship targets '\{main_target}', but content types declare '\{declared_main_part}'",
     )
   }
-  let workbook = read_xml_part(archive, main_target)
-  if workbook.name != TRANSITIONAL_WORKBOOK_ROOT &&
-    workbook.name != STRICT_WORKBOOK_ROOT {
-    raise InvalidPackage("XLSX main part root element is not workbook")
+  let main = read_xml_part(archive, main_target)
+  let valid_root = match format {
+    Xlsx =>
+      main.name == TRANSITIONAL_WORKBOOK_ROOT ||
+      main.name == STRICT_WORKBOOK_ROOT
+    Docx =>
+      main.name == TRANSITIONAL_DOCUMENT_ROOT ||
+      main.name == STRICT_DOCUMENT_ROOT
+  }
+  if !valid_root {
+    let expected = if format is Xlsx { "workbook" } else { "document" }
+    raise InvalidPackage("\{label} main part root element is not \{expected}")
   }
 }
 
@@ -279,9 +300,10 @@ fn format_from_package(
 fn structural_findings(
   format : DocumentFormat,
   data : BytesView,
+  main_part : String,
 ) -> Array[String] {
   match format {
-    Xlsx => @xlsx.validate_ooxml_package(data)
+    Xlsx => @xlsx.validate_ooxml_package(data, main_part~)
     Docx => @opc.validate_docx_package(data)
   }
 }
@@ -301,10 +323,8 @@ pub fn detect_format(
   if expected != actual {
     raise FormatMismatch(expected~, actual~)
   }
-  if actual is Xlsx {
-    validate_xlsx_main_identity(archive, main_part)
-  }
-  let findings = structural_findings(actual, data)
+  validate_main_identity(archive, actual, main_part)
+  let findings = structural_findings(actual, data, main_part)
   if findings.length() > 0 {
     let first = findings[0]
     let suffix = if findings.length() == 1 {
