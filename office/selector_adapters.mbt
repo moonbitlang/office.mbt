@@ -25,6 +25,29 @@ fn check_legacy_selector_length(path : String) -> Unit raise SelectorError {
 }
 
 ///|
+let selector_max_coordinate_length = 21
+
+///|
+fn check_xlsx_adapter_argument(
+  value : String,
+  label : String,
+  limit : Int,
+) -> Unit raise SelectorError {
+  let mut length = 0
+  for _ in value {
+    length = length + 1
+    if length > limit {
+      raise SelectorError(
+        code="office.selector.adapter_input_too_long",
+        offset=limit,
+        input=bounded_selector_text(value, 160),
+        message="\{label} exceeds \{limit} characters",
+      )
+    }
+  }
+}
+
+///|
 fn append_docx_root(output : StringBuilder, root : @docxpaths.PathRoot) -> Unit {
   match root {
     Body => output.write_string("/docx/body") |> ignore
@@ -75,6 +98,14 @@ fn selector_for_xlsx_coordinate(
   leaf : String,
   reference : String,
 ) -> OfficeSelector raise SelectorError {
+  check_xlsx_adapter_argument(
+    sheet_name,
+    "worksheet name",
+    SELECTOR_MAX_VALUE_LENGTH,
+  )
+  check_xlsx_adapter_argument(
+    reference, "A1 coordinate", selector_max_coordinate_length,
+  )
   parse_selector(
     "/xlsx/sheet[name=\{Json::string(sheet_name).stringify()}]/\{leaf}[\{reference}]",
   )
