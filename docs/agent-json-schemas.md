@@ -202,6 +202,39 @@ reports the formula text but no value until it is recalculated). Without
 - The value is recomputed on demand and reflects the engine's evaluation; it
   is not read from any stored cache.
 
+## `xlsx.lint/1` — formula problems (`xlsx lint <file> [--sheet <name>]`)
+
+Recomputes every formula cell and reports problems — currently the formulas
+that **evaluate to an error** (`#DIV/0!`, `#REF!`, `#NAME?`, …). This is the
+author→verify half of the agent loop, and it finds errors `get`/`query`
+cannot: a formula with no cached value has no stored error until it is
+evaluated. Scans all sheets, or only `--sheet`.
+
+```json
+{
+  "schema": "xlsx.lint/1",
+  "file": "book.xlsx",
+  "finding_count": 1,
+  "findings": [
+    { "kind": "formula_error", "sheet": "Data", "ref": "C3",
+      "code": "#DIV/0!", "formula": "1/0" }
+  ]
+}
+```
+
+- Each finding carries a `kind` discriminator (`formula_error` today; the set
+  grows additively — e.g. a future cached-vs-recomputed disagreement), the
+  `sheet`/`ref` location, the error `code`, and the `formula` text.
+- `findings` is ordered by sheet (workbook order) then stored cell order;
+  `finding_count` is `findings.length()`. `--sheet` matches case-insensitively
+  (like Excel sheet names); an unknown `--sheet` fails with a non-zero exit.
+- Shared-/array-formula **slave** cells are skipped (their formula text lives
+  on the master and the engine does not expand slaves), so an error that would
+  only surface in a slave's translated formula is not reported. A structural
+  problem while evaluating (rare — a corrupt package) aborts the lint with a
+  non-zero exit rather than being reported as a finding.
+- `lint` is read-only.
+
 ## `xlsx.batch/1` — mutation script (`xlsx batch <file> <script.json>`)
 
 Envelope:

@@ -28,6 +28,17 @@ async fn run_query(m : @argparse.Matches) -> Unit {
 }
 
 ///|
+/// `lint`: prints the `xlsx.lint/1` payload — the formula cells that evaluate
+/// to an error, across all sheets or only `--sheet`.
+async fn run_lint(m : @argparse.Matches) -> Unit {
+  let file = arg(m, "file")
+  let workbook = @lib.open_file(file)
+  println(
+    @inspect.lint(workbook, file~, sheet=arg(m, "sheet")).stringify(indent=2),
+  )
+}
+
+///|
 /// The `--json` branch of `get`: prints the `xlsx.cells/1` payload for a
 /// cell or range instead of the plain single-cell value.
 async fn run_get_json(m : @argparse.Matches) -> Unit {

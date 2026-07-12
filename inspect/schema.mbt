@@ -26,3 +26,8 @@ pub const SCHEMA_QUERY : String = "xlsx.query/1"
 ///|
 /// Schema identifier of the `calc` payload (a cell's typed computed value).
 pub const SCHEMA_CALC : String = "xlsx.calc/1"
+
+///|
+/// Schema identifier of the `lint` payload (formula problems found by
+/// recomputing).
+pub const SCHEMA_LINT : String = "xlsx.lint/1"
