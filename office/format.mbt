@@ -56,6 +56,9 @@ const CONTENT_TYPES_ROOT : String = "{http://schemas.openxmlformats.org/package/
 const CONTENT_TYPES_OVERRIDE : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Override"
 
 ///|
+const CONTENT_TYPES_DEFAULT : String = "{http://schemas.openxmlformats.org/package/2006/content-types}Default"
+
+///|
 const RELATIONSHIPS_ROOT : String = "{http://schemas.openxmlformats.org/package/2006/relationships}Relationships"
 
 ///|
@@ -149,6 +152,242 @@ fn normalize_declared_part_name(part_name : StringView) -> String? {
   } else {
     None
   }
+}
+
+///|
+fn part_extension(name : String) -> String? {
+  match name.rev_find(".") {
+    Some(dot) =>
+      match name.rev_find("/") {
+        Some(slash) if slash > dot => None
+        _ if dot + 1 < name.length() =>
+          Some(name[dot + 1:].to_owned().to_lower())
+        _ => None
+      }
+    None => None
+  }
+}
+
+///|
+fn relationships_part_for(part : String) -> String {
+  match part.rev_find("/") {
+    Some(slash) => "\{part[:slash]}/_rels/\{part[slash + 1:]}.rels"
+    None => "_rels/\{part}.rels"
+  }
+}
+
+///|
+fn relationships_base_dir(part : String) -> String? {
+  if part == "_rels/.rels" {
+    return Some("")
+  }
+  guard part.find("/_rels/") is Some(marker) else { return None }
+  let relationship_name = part[marker + "/_rels/".length():]
+  if relationship_name == "" || relationship_name.contains("/") {
+    None
+  } else {
+    Some(part[:marker + 1].to_owned())
+  }
+}
+
+///|
+fn resolve_relationship_target(base : String, target : StringView) -> String? {
+  if target.has_prefix("/") {
+    normalize_internal_target(target)
+  } else {
+    normalize_internal_target(base + target.to_owned())
+  }
+}
+
+///|
+fn validate_xlsx_structure(
+  archive : @zip.Archive,
+  main_part : String,
+) -> Array[String] raise OfficeError {
+  let findings : Array[String] = []
+  let parts : Map[String, Int] = Map([])
+  for entry in archive.entries() {
+    let name = entry.name()
+    parts[name] = parts.get(name).unwrap_or(0) + 1
+    if name == "" {
+      findings.push("empty entry name")
+    }
+    if name.has_prefix("/") {
+      findings.push("entry name must not start with '/': \{name}")
+    }
+    if name.contains("\\") {
+      findings.push("entry name contains a backslash: \{name}")
+    }
+    for segment in name.split("/") {
+      if segment == "." || segment == ".." {
+        findings.push("entry name contains a '\{segment}' segment: \{name}")
+        break
+      }
+    }
+  }
+  for name, count in parts {
+    if count > 1 {
+      findings.push("duplicate entry name: \{name}")
+    }
+  }
+  for required in [main_part, relationships_part_for(main_part)] {
+    if !parts.contains(required) {
+      findings.push("missing required part: \{required}")
+    }
+  }
+
+  let defaults : Map[String, String] = Map([])
+  let overrides : Map[String, String] = Map([])
+  let content_types = read_xml_part(archive, "[Content_Types].xml")
+  for child in content_types.children {
+    guard child is XmlElement(element) else { continue }
+    if element.name == CONTENT_TYPES_DEFAULT {
+      match
+        (
+          element.attributes.get("Extension"),
+          element.attributes.get("ContentType"),
+        ) {
+        (Some(extension), Some(content_type)) if extension != "" &&
+          content_type != "" => {
+          let extension = extension.to_lower()
+          if defaults.contains(extension) {
+            findings.push("duplicate content-type default: \{extension}")
+          } else {
+            defaults[extension] = content_type
+          }
+        }
+        _ =>
+          findings.push(
+            "[Content_Types].xml: Default missing Extension or ContentType",
+          )
+      }
+    } else if element.name == CONTENT_TYPES_OVERRIDE {
+      match
+        (
+          element.attributes.get("PartName"),
+          element.attributes.get("ContentType"),
+        ) {
+        (Some(part_name), Some(content_type)) if content_type != "" => {
+          if overrides.contains(part_name) {
+            findings.push("duplicate content-type override: \{part_name}")
+          } else {
+            overrides[part_name] = content_type
+          }
+          match normalize_declared_part_name(part_name) {
+            Some(target) =>
+              if !parts.contains(target) {
+                findings.push(
+                  "content-type override names a missing part: \{part_name}",
+                )
+              }
+            None =>
+              findings.push(
+                "content-type override has an invalid PartName: \{part_name}",
+              )
+          }
+        }
+        _ =>
+          findings.push(
+            "[Content_Types].xml: Override missing PartName or ContentType",
+          )
+      }
+    } else {
+      findings.push(
+        "[Content_Types].xml contains an unexpected element: \{element.name}",
+      )
+    }
+  }
+  for entry in archive.entries() {
+    let name = entry.name()
+    if name == "[Content_Types].xml" || name.has_suffix("/") {
+      continue
+    }
+    if overrides.contains("/" + name) {
+      continue
+    }
+    match part_extension(name) {
+      Some(extension) if defaults.contains(extension) => ()
+      _ => findings.push("part has no declared content type: \{name}")
+    }
+  }
+
+  for entry in archive.entries() {
+    let relationship_part = entry.name()
+    if !relationship_part.has_suffix(".rels") {
+      continue
+    }
+    let base = match relationships_base_dir(relationship_part) {
+      Some(base) => base
+      None => {
+        findings.push(
+          "relationship part is not under an _rels directory: \{relationship_part}",
+        )
+        continue
+      }
+    }
+    let relationships = read_xml_part(archive, relationship_part)
+    if relationships.name != RELATIONSHIPS_ROOT {
+      findings.push("\{relationship_part} root element is not Relationships")
+      continue
+    }
+    let ids : Map[String, Bool] = Map([])
+    for child in relationships.children {
+      guard child is XmlElement(element) else { continue }
+      if element.name != RELATIONSHIP_ELEMENT {
+        findings.push(
+          "\{relationship_part} contains an unexpected element: \{element.name}",
+        )
+        continue
+      }
+      match element.attributes.get("Id") {
+        Some(id) if id != "" =>
+          if ids.contains(id) {
+            findings.push(
+              "duplicate relationship Id in \{relationship_part}: \{id}",
+            )
+          } else {
+            ids[id] = true
+          }
+        _ => findings.push("relationship in \{relationship_part} has no Id")
+      }
+      match element.attributes.get("Type") {
+        Some(rel_type) if rel_type != "" => ()
+        _ => findings.push("relationship in \{relationship_part} has no Type")
+      }
+      let target = match element.attributes.get("Target") {
+        Some(target) if target != "" => target
+        _ => {
+          findings.push("relationship in \{relationship_part} has no Target")
+          continue
+        }
+      }
+      let internal = match element.attributes.get("TargetMode") {
+        None | Some("Internal") => true
+        Some("External") => false
+        Some(mode) => {
+          findings.push(
+            "relationship in \{relationship_part} has invalid TargetMode: \{mode}",
+          )
+          false
+        }
+      }
+      if internal {
+        match resolve_relationship_target(base, target) {
+          Some(resolved) =>
+            if !parts.contains(resolved) {
+              findings.push(
+                "relationship in \{relationship_part} points to a missing part: \{target} -> \{resolved}",
+              )
+            }
+          None =>
+            findings.push(
+              "relationship in \{relationship_part} has an invalid Target: \{target}",
+            )
+        }
+      }
+    }
+  }
+  findings
 }
 
 ///|
@@ -300,10 +539,11 @@ fn format_from_package(
 fn structural_findings(
   format : DocumentFormat,
   data : BytesView,
+  archive : @zip.Archive,
   main_part : String,
-) -> Array[String] {
+) -> Array[String] raise OfficeError {
   match format {
-    Xlsx => @xlsx.validate_ooxml_package(data, main_part~)
+    Xlsx => validate_xlsx_structure(archive, main_part)
     Docx => @opc.validate_docx_package(data)
   }
 }
@@ -324,7 +564,7 @@ pub fn detect_format(
     raise FormatMismatch(expected~, actual~)
   }
   validate_main_identity(archive, actual, main_part)
-  let findings = structural_findings(actual, data, main_part)
+  let findings = structural_findings(actual, data, archive, main_part)
   if findings.length() > 0 {
     let first = findings[0]
     let suffix = if findings.length() == 1 {

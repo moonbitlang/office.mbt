@@ -13,19 +13,12 @@
 ///  - every relationship target (except external ones) resolves to a
 ///    part that exists in the package
 ///  - no duplicate part names, and part names are well-formed
-///  - the relationship-discovered workbook and its relationships part exist
+///  - the core workbook parts are present
 ///
 /// This is a fast, dependency-free complement to the Microsoft OpenXML
 /// SDK validator: it runs entirely in MoonBit, so it can be asserted on
 /// every workbook a test generates.
-///
-/// `main_part` is the normalized target of the package's root
-/// `officeDocument` relationship. Direct callers may omit it for the canonical
-/// `xl/workbook.xml` layout.
-pub fn validate_ooxml_package(
-  bytes : BytesView,
-  main_part? : String = "xl/workbook.xml",
-) -> Array[String] {
+pub fn validate_ooxml_package(bytes : BytesView) -> Array[String] {
   let problems : Array[String] = []
   let archive = @zip.read(bytes) catch {
     err => {
@@ -50,12 +43,10 @@ pub fn validate_ooxml_package(
     }
   }
 
-  // Required core parts. Callers such as `bobzhang/office` pass the
-  // relationship-discovered workbook; direct callers get the canonical path.
-  let main_rels_part = relationships_part_for(main_part)
+  // required core parts
   for
     required in [
-      "[Content_Types].xml", "_rels/.rels", main_part, main_rels_part,
+      "[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/_rels/workbook.xml.rels",
     ] {
     if !parts.contains(required) {
       problems.push("missing required part: \{required}")
@@ -107,14 +98,6 @@ pub fn validate_ooxml_package(
     }
   }
   problems
-}
-
-///|
-fn relationships_part_for(part : String) -> String {
-  match part.rev_find("/") {
-    Some(slash) => "\{part[:slash]}/_rels/\{part[slash + 1:]}.rels"
-    None => "_rels/\{part}.rels"
-  }
 }
 
 ///|
@@ -315,12 +298,4 @@ test "rels_base_dir and part_extension" {
   )
   // no extension after last slash
   debug_inspect(part_extension("xl/theme"), content="None")
-  inspect(
-    relationships_part_for("custom/workbook.xml"),
-    content="custom/_rels/workbook.xml.rels",
-  )
-  inspect(
-    relationships_part_for("workbook.xml"),
-    content="_rels/workbook.xml.rels",
-  )
 }
