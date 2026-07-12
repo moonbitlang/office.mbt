@@ -25,7 +25,8 @@ Codex review at `xhigh` effort.
 
 | Milestone | Issue | Status |
 | --- | --- | --- |
-| A1: umbrella module, CLI skeleton, format detection | [#140](https://github.com/moonbitlang/office.mbt/issues/140) | In progress |
+| A1: umbrella module, CLI skeleton, format detection | [#140](https://github.com/moonbitlang/office.mbt/issues/140) | Complete |
+| A2: versioned agent protocol and schema-driven help | [#142](https://github.com/moonbitlang/office.mbt/issues/142) | In progress |
 
 ## Deferred beyond major parity
 
