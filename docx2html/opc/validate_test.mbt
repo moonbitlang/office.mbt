@@ -55,6 +55,34 @@ test "a minimal well-formed package is valid" {
 }
 
 ///|
+test "OPC validation uses strict XML for every structural part" {
+  let duplicate_types = MINIMAL_CONTENT_TYPES_XML.replace(
+    old="<Default Extension=\"rels\"",
+    new="<Default Extension=\"bad\" Extension=\"rels\"",
+  )
+  let duplicate_rels = MINIMAL_ROOT_RELS_XML.replace(
+    old="<Relationship Id=\"rId1\"",
+    new="<Relationship Id=\"bad\" Id=\"rId1\"",
+  )
+  let duplicate_document = MINIMAL_DOCUMENT_XML.replace(
+    old="<w:document ",
+    new="<w:document duplicate=\"bad\" duplicate=\"value\" ",
+  )
+  for
+    data in [
+      minimal_docx(content_types=Some(duplicate_types)),
+      minimal_docx(root_rels=Some(duplicate_rels)),
+      minimal_docx(document=Some(duplicate_document)),
+    ] {
+    let findings = @opc.validate_docx_package(data)
+    assert_true(
+      findings.search_by(finding => finding.contains("duplicate XML attribute"))
+      is Some(_),
+    )
+  }
+}
+
+///|
 test "garbage bytes and missing required parts are findings" {
   debug_inspect(
     @opc.validate_docx_package(b"not a zip at all"),
