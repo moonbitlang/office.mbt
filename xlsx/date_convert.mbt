@@ -83,3 +83,8 @@ pub fn excel_date_to_time(
     None => raise InvalidExcelDate(value=excel_date)
   }
 }
+
+///|
+test "date convert wb: 1904 serial negative returns None" {
+  debug_inspect(excel_serial_to_parts_1904(-1.0), content="None")
+}
