@@ -11,10 +11,16 @@ impl Show for CliError with fn output(self, logger) {
 }
 
 ///|
-fn required_value(matches : @argparse.Matches, name : String) -> String {
+fn required_value(
+  matches : @argparse.Matches,
+  name : String,
+) -> String raise CliError {
   match matches.values.get(name) {
     Some([value, ..]) => value
-    _ => ""
+    _ =>
+      raise CliError(
+        "error: the following required argument was not provided: '\{name}'",
+      )
   }
 }
 
@@ -47,7 +53,11 @@ fn build_command() -> @argparse.Command {
         "identify",
         about="Identify a structurally valid XLSX or DOCX package",
         positionals=[
-          PositionArg("file", about="path to an .xlsx or .docx file"),
+          PositionArg(
+            "file",
+            about="path to an .xlsx or .docx file",
+            num_args=@argparse.ValueRange::single(),
+          ),
         ],
         flags=[FlagArg("json", long="json", about="print versioned JSON")],
       ),
