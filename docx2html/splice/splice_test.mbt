@@ -128,6 +128,21 @@ test "L0: the splice fail-closed matrix" {
     () => @splice.splice_docx(original, breaking),
     "splicing 'a.xml' produced malformed XML",
   )
+  // Lexically malformed XML must fail too; a map-backed tolerant parse would
+  // otherwise overwrite the first attribute and let this escape.
+  let duplicate_attribute = @splice.SplicePlan::new()
+  duplicate_attribute.edit_part(
+    "a.xml",
+    @splice.span_edit(
+      start=2,
+      end=2,
+      @utf8.encode(" id=\"first\" id=\"second\""),
+    ),
+  )
+  expect_splice_failure(
+    () => @splice.splice_docx(original, duplicate_attribute),
+    "splicing 'a.xml' produced malformed XML",
+  )
   // Negative spans are rejected at construction.
   expect_splice_failure(
     () => @splice.span_edit(start=-1, end=0, b""),

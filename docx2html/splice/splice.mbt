@@ -225,9 +225,9 @@ fn apply_span_edits(
   }
   builder.write_bytesview(bytes[cursor:])
   let result = builder.contents()
-  // Well-formedness belt: a spliced part must still parse as XML. This
-  // cannot vouch for schema validity or namespace WISDOM of a fragment
-  // (that is the fragment author's contract, gated by the dual
+  // Well-formedness belt: a spliced part must still parse as strict, DTD-free
+  // XML. This cannot vouch for schema validity or namespace WISDOM of a
+  // fragment (that is the fragment author's contract, gated by the dual
   // validators downstream) — it catches structural breakage at the
   // exact part.
   let text = @utf8.decode(result, ignore_bom=true) catch {
@@ -236,7 +236,7 @@ fn apply_span_edits(
         message="splicing '\{name}' produced bytes that are not valid UTF-8",
       )
   }
-  let _ = @xml.read_xml_string(text) catch {
+  let _ = @xml.read_xml_string_strict(text) catch {
     err =>
       raise Unsupported(
         message="splicing '\{name}' produced malformed XML (\{to_repr(err)}); refusing to emit",

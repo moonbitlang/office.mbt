@@ -7,13 +7,13 @@
 //      entry's data matches its stored CRC-32 (the inflate path tolerates
 //      corruption the CRC exposes — raw central-directory entries are used
 //      because the map-backed reader wrapper silently drops duplicates).
-//   2. `[Content_Types].xml` exists, parses, and covers every part via an
-//      extension default or an exact override; overrides point at parts
-//      that exist.
+//   2. `[Content_Types].xml` exists, parses as strict DTD-free XML, and covers
+//      every part via an extension default or an exact override; overrides
+//      point at parts that exist.
 //   3. `_rels/.rels` exists, parses, and names an officeDocument
 //      relationship whose target exists (the main document part is found by
 //      FOLLOWING that relationship — never a hardcoded `word/document.xml`).
-//   4. The main part parses as XML with a `document` root.
+//   4. The main part parses as strict XML with a `document` root.
 //   5. Every part's own relationships (`dir/_rels/name.rels`), when
 //      present, parse and their internal targets resolve to existing parts.
 //
@@ -360,7 +360,7 @@ fn parse_xml_part(
       return None
     }
   }
-  let root = @xml.read_xml_string(text) catch {
+  let root = @xml.read_xml_string_strict(text) catch {
     err => {
       findings.push("malformed XML in \{name}: \{repr(err)}")
       return None
