@@ -173,6 +173,15 @@ fn wb_archive(entries : Array[(String, Bytes)]) -> Bytes raise {
 }
 
 ///|
+fn[T] wb_sync_error_code(run : () -> T raise TransactionError) -> String raise {
+  try run() catch {
+    TransactionError(code~, ..) => code
+  } noraise {
+    _ => fail("expected transaction failure")
+  }
+}
+
+///|
 test "preservation diff classifies every payload transition deterministically" {
   let original = wb_archive([
     ("removed.xml", b"old"),
@@ -200,6 +209,30 @@ test "preservation diff classifies every payload transition deterministically" {
   assert_eq(report.removed[0], "removed.xml")
   assert_eq(report.unchanged.length(), 1)
   assert_eq(report.unchanged[0], "unchanged.xml")
+}
+
+///|
+test "preservation comparison fails closed on invalid or undeclared archives" {
+  let valid = wb_archive([("a.xml", b"a")])
+  assert_eq(
+    wb_sync_error_code(() => {
+      preservation_report(b"not a zip", transaction_mutation(valid))
+    }),
+    "office.transaction.internal_validation_failure",
+  )
+  let added = wb_archive([("a.xml", b"a"), ("added.xml", b"added")])
+  assert_eq(
+    wb_sync_error_code(() => {
+      preservation_report(valid, transaction_mutation_with_manifest(added, []))
+    }),
+    "office.transaction.preservation_violation",
+  )
+  assert_eq(
+    wb_sync_error_code(() => {
+      preservation_report(added, transaction_mutation_with_manifest(valid, []))
+    }),
+    "office.transaction.preservation_violation",
+  )
 }
 
 ///|
