@@ -46,7 +46,9 @@ fn build_command() -> @argparse.Command {
       Command(
         "identify",
         about="Identify a structurally valid XLSX or DOCX package",
-        positionals=[PositionArg("file", about="path to an .xlsx or .docx file")],
+        positionals=[
+          PositionArg("file", about="path to an .xlsx or .docx file"),
+        ],
         flags=[FlagArg("json", long="json", about="print versioned JSON")],
       ),
     ],
