@@ -223,12 +223,18 @@ fn StreamWriter::ensure_before_rows(
 }
 
 ///|
-fn normalize_col_range(start : Int, end : Int) -> (Int, Int) {
-  if start <= end {
+fn normalize_col_range(start : Int, end : Int) -> (Int, Int) raise XlsxError {
+  let (min_col, max_col) = if start <= end {
     (start, end)
   } else {
     (end, start)
   }
+  // Preflight the bounds here (the only entry for every stream column-range
+  // setter) so a range past the grid is rejected before any column is written.
+  if min_col < 1 || max_col > cell_ref_max_cols {
+    raise InvalidCellRef(value="\{max_col}:\{min_col}")
+  }
+  (min_col, max_col)
 }
 
 ///|
@@ -419,6 +425,14 @@ pub fn StreamWriter::set_row_cells(
       raise InvalidStyleId(index=cell.style_id)
     }
   }
+  // Apply (and validate) the row options BEFORE writing any cell, so a bad
+  // height or outline level raises before mutation and the row stays
+  // all-or-nothing. Row dimensions and cells are independent, so order is
+  // observationally irrelevant on success.
+  match row_opts {
+    Some(opts) => apply_row_opts(self.sheet, row, opts)
+    None => ()
+  }
   let mut col = start_col
   for cell in values {
     if cell.blank {
@@ -458,10 +472,6 @@ pub fn StreamWriter::set_row_cells(
   // index (e.g. from a read on the then-empty sheet) would go stale and
   // make indexed getters miss every streamed cell.
   self.sheet.invalidate_cell_index()
-  match row_opts {
-    Some(opts) => apply_row_opts(self.sheet, row, opts)
-    None => ()
-  }
   self.last_row = row
 }
 

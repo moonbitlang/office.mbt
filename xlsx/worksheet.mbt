@@ -2794,6 +2794,10 @@ fn Worksheet::set_row_style_range(
   if end < start {
     raise InvalidSheetOperation(msg="row style range invalid")
   }
+  // Preflight the upper bound so the range write is all-or-nothing.
+  if end > cell_ref_max_rows {
+    raise InvalidCellRef(value="\{0}:\{end}")
+  }
   let style = if style_id > 0 { Some(style_id) } else { None }
   for row in start..<=end {
     let dim = self.row_dimension_value(row)
@@ -2980,7 +2984,7 @@ fn Worksheet::insert_rows(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  if row <= 0 {
+  if row <= 0 || row > cell_ref_max_rows {
     raise InvalidCellRef(value="\{0}:\{row}")
   }
   if count <= 0 {
@@ -3542,7 +3546,7 @@ fn Worksheet::insert_cols(
   count : Int,
 ) -> Unit raise XlsxError {
   self.ensure_stream_idle()
-  if col <= 0 {
+  if col <= 0 || col > cell_ref_max_cols {
     raise InvalidCellRef(value="\{col}:\{0}")
   }
   if count <= 0 {

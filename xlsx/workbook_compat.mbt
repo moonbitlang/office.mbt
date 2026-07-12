@@ -186,6 +186,12 @@ fn parse_column_range(columns : StringView) -> (Int, Int) raise XlsxError {
   if end < start {
     raise InvalidCellRef(value=text)
   }
+  // Preflight the upper bound here (before any range setter iterates), so a
+  // range that runs off the grid is rejected wholesale instead of updating the
+  // in-grid columns and then raising at the first out-of-grid one.
+  if end > cell_ref_max_cols {
+    raise InvalidCellRef(value=text)
+  }
   (start, end)
 }
 

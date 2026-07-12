@@ -208,6 +208,30 @@ test "set_row and set_col reject a write past the grid without partial mutation"
 }
 
 ///|
+test "range setters reject an out-of-grid range without partial mutation" {
+  let wb = @xlsx.Workbook::new()
+  ignore(wb.add_sheet("S"))
+  // XFC:XFE runs one column past XFD; the whole range write is refused, so the
+  // in-grid columns keep their default visibility.
+  assert_true(raises(() => wb.set_col_visible_range("S", "XFC:XFE", false)))
+  assert_eq(wb.get_col_visible("S", 16383), true) // XFC untouched
+  assert_eq(wb.get_col_visible("S", 16384), true) // XFD untouched
+  // The in-grid range still works.
+  wb.set_col_visible_range("S", "XFC:XFD", false)
+  assert_eq(wb.get_col_visible("S", 16383), false)
+}
+
+///|
+test "insert_rows and insert_cols reject an out-of-grid start" {
+  let wb = @xlsx.Workbook::new()
+  ignore(wb.add_sheet("S"))
+  wb.set_cell("S", "A1", "keep")
+  assert_true(raises(() => wb.insert_rows("S", 1048577, 1)))
+  assert_true(raises(() => wb.insert_cols("S", 16385, 1)))
+  assert_eq(wb.get_cell("S", "A1"), Some("keep"))
+}
+
+///|
 test "duplicate_row rejects Int::max_value row without wrapping" {
   let wb = @xlsx.Workbook::new()
   ignore(wb.add_sheet("S"))
