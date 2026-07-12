@@ -191,6 +191,27 @@ jobs:
           echo "office identify xlsx -> $f"; test "$f" = "xlsx"
           f=$(moon run --target wasm office/cmd/office -- identify docx2html/tests/cram/fixtures/single-paragraph.docx 2>office-wasm.err) || { echo "office docx identify failed; stderr:"; cat office-wasm.err; exit 1; }
           echo "office identify docx -> $f"; test "$f" = "docx"
+          o=$(moon run --target wasm office/cmd/office -- identify ci.xlsx --json 2>office-wasm.err) || { echo "office JSON identify failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$o" | jq -e '.schema == "office.output/1"
+            and .success == true
+            and .data.schema == "office.identify/1"
+            and .data.format == "xlsx"'
+          h=$(moon run --target wasm office/cmd/office -- help all --json 2>office-wasm.err) || { echo "office JSON help failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$h" | jq -e '.schema == "office.output/1"
+            and .success == true
+            and .data.schema == "office.capabilities/1"
+            and (.data.fingerprint | test("^crc32:[0-9a-f]{8}$"))
+            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify"])'
+          moon run --target wasm office/cmd/office -- help all --jsonl 2>office-wasm.err \
+            | jq -se 'length == 4 and all(.[]; .schema == "office.capability/1")'
+          if moon run --target wasm office/cmd/office -- help xlxs --json >office-wasm-error.json 2>office-wasm.err; then
+            echo "expected unknown office help format to fail"
+            exit 1
+          fi
+          jq -e '.schema == "office.output/1"
+            and .success == false
+            and .error.code == "office.unknown_format"
+            and .error.details.suggestions == ["xlsx"]' office-wasm-error.json
           # The docx agent CLI also targets wasm end to end: build it and
           # drive its convert subcommand over a committed fixture. Keep the
           # captured stderr and print it on failure — discarding it makes a

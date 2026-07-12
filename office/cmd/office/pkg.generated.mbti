@@ -10,7 +10,12 @@ pub fn CliError::output(Self, &Logger) -> Unit
 #deprecated
 pub fn CliError::to_string(Self) -> String
 
+type CliFailure
+
 // Types and methods
+type HelpQuery
+
+type OutputMode
 
 // Type aliases
 
