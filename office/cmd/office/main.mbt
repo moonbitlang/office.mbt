@@ -34,7 +34,10 @@ fn required_value(
 }
 
 ///|
-fn identify_error(error : @lib.OfficeError, file : String) -> @lib.ProtocolError {
+fn identify_error(
+  error : @lib.OfficeError,
+  file : String,
+) -> @lib.ProtocolError {
   let bounded_file = bounded_text(file, 160)
   match error {
     UnsupportedFileExtension(_) =>
@@ -44,7 +47,8 @@ fn identify_error(error : @lib.OfficeError, file : String) -> @lib.ProtocolError
         details=Json::object({
           "file": Json::string(bounded_file),
           "expected_extensions": Json::array([
-            Json::string("docx"), Json::string("xlsx"),
+            Json::string("docx"),
+            Json::string("xlsx"),
           ]),
         }),
       )
@@ -138,7 +142,7 @@ fn is_implemented_command(name : StringView) -> Bool {
 }
 
 ///|
-async fn run_cli(args : Array[String]) -> Unit raise {
+async fn run_cli(args : Array[String]) -> Unit {
   let command = build_command()
   let matches = command.parse(argv=args, env=Map([]))
   match matches.subcommand {
@@ -151,8 +155,7 @@ async fn run_cli(args : Array[String]) -> Unit raise {
     _ =>
       raise CliFailure(
         @lib.protocol_error(
-          "office.invalid_arguments",
-          "an implemented subcommand is required; try 'office help'",
+          "office.invalid_arguments", "an implemented subcommand is required; try 'office help'",
         ),
       )
   }
@@ -172,7 +175,8 @@ async fn main {
           "--json and --jsonl are mutually exclusive",
           details=Json::object({
             "options": Json::array([
-              Json::string("--json"), Json::string("--jsonl"),
+              Json::string("--json"),
+              Json::string("--jsonl"),
             ]),
           }),
         ),
@@ -185,7 +189,8 @@ async fn main {
       let message = normalize_argument_error(error.to_string())
       raise CliError(
         render_failure(
-          @lib.protocol_error("office.invalid_arguments", message), mode,
+          @lib.protocol_error("office.invalid_arguments", message),
+          mode,
         ),
       )
     }

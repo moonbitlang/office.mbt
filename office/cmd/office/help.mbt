@@ -22,10 +22,14 @@ fn edit_distance(left : String, right : String) -> Int {
   for index = 0; index <= right_chars.length(); index = index + 1 {
     previous[index] = index
   }
-  for left_index = 0; left_index < left_chars.length(); left_index = left_index + 1 {
+  for left_index = 0
+      left_index < left_chars.length()
+      left_index = left_index + 1 {
     let current = Array::make(right_chars.length() + 1, 0)
     current[0] = left_index + 1
-    for right_index = 0; right_index < right_chars.length(); right_index = right_index + 1 {
+    for right_index = 0
+        right_index < right_chars.length()
+        right_index = right_index + 1 {
       let cost = if left_chars[left_index] == right_chars[right_index] {
         0
       } else {
@@ -53,7 +57,11 @@ fn nearest_suggestion(value : String, candidates : Array[String]) -> String? {
       nearest = Some(candidate)
     }
   }
-  if best <= 2 { nearest } else { None }
+  if best <= 2 {
+    nearest
+  } else {
+    None
+  }
 }
 
 ///|
@@ -136,11 +144,9 @@ fn resolve_help_query(
         }
         None =>
           raise CliFailure(
-            unknown_help_token(
-              "format",
-              first,
-              ["all", "docx", "word", "xlsx", "excel"],
-            ),
+            unknown_help_token("format", first, [
+              "all", "docx", "word", "xlsx", "excel",
+            ]),
           )
       }
   }
@@ -230,7 +236,9 @@ fn render_overview(verbose : Bool) -> String {
       lines.push("    output modes: \{command.output_modes.join(", ")}")
     }
   }
-  lines.push("Use 'office help <format>' or 'office help <format> <operation>'.")
+  lines.push(
+    "Use 'office help <format>' or 'office help <format> <operation>'.",
+  )
   lines.join("\n")
 }
 
@@ -241,8 +249,7 @@ fn records_for_query(query : HelpQuery) -> Array[Json] {
     Format(format) => @lib.capability_records(format~)
     Operation(Some(format), command) =>
       @lib.capability_records(format~, operation=command.name)
-    Operation(None, command) =>
-      @lib.capability_records(operation=command.name)
+    Operation(None, command) => @lib.capability_records(operation=command.name)
   }
 }
 
@@ -253,8 +260,7 @@ fn data_for_query(query : HelpQuery) -> Json {
     Format(format) => @lib.capabilities_data(format~)
     Operation(Some(format), command) =>
       @lib.capabilities_data(format~, operation=command.name)
-    Operation(None, command) =>
-      @lib.capabilities_data(operation=command.name)
+    Operation(None, command) => @lib.capabilities_data(operation=command.name)
   }
 }
 
@@ -280,8 +286,7 @@ fn run_help(matches : @argparse.Matches) -> Unit raise CliFailure {
   if json && jsonl {
     raise CliFailure(
       @lib.protocol_error(
-        "office.output_mode_conflict",
-        "--json and --jsonl are mutually exclusive",
+        "office.output_mode_conflict", "--json and --jsonl are mutually exclusive",
       ),
     )
   }
