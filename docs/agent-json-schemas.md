@@ -255,7 +255,7 @@ Envelope:
 | --- | --- |
 | `set` | `sheet` (string), `cell` (string), `value` (string \| number \| bool \| null) |
 | `formula` | `sheet`, `cell`, `formula` (strings; leading `=` optional) |
-| `style` | `sheet`, `range` (strings); `bold?`, `italic?` (bool); `number_format?`, `fill?`, `font_color?`, `align?` (strings) |
+| `style` | `sheet`, `range` (strings); `bold?`, `italic?` (bool); `number_format?`, `fill?`, `font_color?`, `align?` (strings); `border?`, `border_top?`, `border_bottom?`, `border_left?`, `border_right?`, `border_color?` (strings) |
 | `merge` | `sheet`, `range` (strings) |
 | `width` | `sheet`, `column` (strings; `A` or `A:C`), `width` (number) |
 | `freeze` | `sheet`, `cell` (strings) |
@@ -265,6 +265,11 @@ Envelope:
 | `table` | `sheet`, `range` (strings; `range` is an `A1:B2` colon range); `name?`, `style?` (strings); `header_row?`, `row_stripes?`, `first_column?`, `last_column?`, `column_stripes?` (bool) |
 | `validate` | `sheet`, `range` (strings; `range` is the cell/range the rule covers), `type` (required: `list`/`whole`/`decimal`/`date`/`time`/`textLength`/`custom`); `operator?`, `formula1?`, `formula2?`, `source?` (strings); `values?` (string array); `allow_blank?` (bool); `input_title?`, `input_message?`, `error_title?`, `error_message?`, `error_style?` (strings) |
 | `cf` | `sheet`, `range` (strings; `range` is the cell/range the rule covers), `type` (required: `cell`/`formula`/`2_color_scale`/`3_color_scale`/`data_bar`/`icon_set`); `criteria?`, `value?`, `min_value?`, `max_value?`, `formula?` (strings); `fill?`, `font_color?` (strings), `bold?`, `italic?` (bool); `min_type?`, `mid_type?`, `max_type?`, `mid_value?`, `min_color?`, `mid_color?`, `max_color?`, `bar_color?` (strings); `bar_solid?` (bool), `bar_direction?`, `bar_border_color?` (strings, x14 data bar); `icon_style?` (string); `reverse_icons?`, `stop_if_true?` (bool) |
+- `style` borders: `border` sets all four sides; a per-side `border_top`/
+  `border_bottom`/`border_left`/`border_right` overrides that side. A border
+  style is one of `thin`/`medium`/`thick`/`dashed`/`dotted`/`double`/`hair`;
+  `border_color` is a 6-digit hex RGB for the lines (default black). Unknown
+  styles and non-hex colors are rejected at apply time.
 - `set.value` accepts string, number, bool, or null. JSON types are honored:
   a number becomes a numeric cell, a string a text cell (no
   reclassification), a bool a boolean cell, and null clears the cell.

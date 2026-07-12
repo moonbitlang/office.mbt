@@ -192,6 +192,23 @@ reported):
   $ xlsx.exe lint lints.xlsx | grep -o '"code": "#DIV/0!"'
   "code": "#DIV/0!"
 
+The `style` op also draws cell borders — an all-sides `border`, per-side
+overrides, and a `border_color` — so a table or KPI box looks right, and the
+package stays valid:
+
+  $ xlsx.exe create bordered.xlsx --sheet S >/dev/null
+  $ cat > borders.json <<'JSON'
+  > {"schema": "xlsx.batch/1", "ops": [
+  >   {"op": "style", "params": {"sheet": "S", "range": "A1:C3", "border": "thin", "border_bottom": "medium", "border_color": "1F3864"}}
+  > ]}
+  > JSON
+  $ xlsx.exe batch bordered.xlsx borders.json
+  applied 1 op(s) to bordered.xlsx
+  $ xlsx.exe validate bordered.xlsx
+  valid
+  $ xlsx.exe get bordered.xlsx S A1 --json | grep -c '"border"'
+  1
+
 Errors are strict and leave no partial output — an oversized range (the cap
 is 100,000 cells), a missing sheet, and a missing file all fail with exit 1:
 
