@@ -17,7 +17,7 @@ test "detect_format rejects extension and package mismatch" {
   try @office.detect_format("report.xlsx", data) catch {
     err =>
       inspect(
-        err.to_string(),
+        Show::to_string(err),
         content="file extension says xlsx, but package content is docx",
       )
   } noraise {
@@ -30,7 +30,7 @@ test "detect_format rejects unsupported extension before reading content" {
   try @office.detect_format("report.pdf", b"not a package") catch {
     err =>
       inspect(
-        err.to_string(),
+        Show::to_string(err),
         content="unsupported file extension for 'report.pdf' (expected .xlsx or .docx)",
       )
   } noraise {
@@ -43,7 +43,7 @@ test "detect_format rejects an invalid zip" {
   try @office.detect_format("report.docx", b"not a package") catch {
     err =>
       inspect(
-        err.to_string(),
+        Show::to_string(err),
         content="invalid Office package: archive is not a readable ZIP",
       )
   } noraise {
@@ -64,7 +64,7 @@ test "detect_format does not accept a content-type marker in an XML comment" {
   try @office.detect_format("book.xlsx", data) catch {
     err =>
       inspect(
-        err.to_string(),
+        Show::to_string(err),
         content="invalid Office package: content types do not declare an XLSX or DOCX main part",
       )
   } noraise {
