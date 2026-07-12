@@ -70,7 +70,9 @@ pub impl Show for OfficeError
 pub(all) suberror SelectorError {
   SelectorError(code~ : String, offset~ : Int, input~ : String, message~ : String)
 }
+#deprecated
 pub fn SelectorError::output(Self, &Logger) -> Unit
+#deprecated
 pub fn SelectorError::to_string(Self) -> String
 pub impl Show for SelectorError
 
