@@ -9,6 +9,8 @@ import {
 // Values
 pub fn read_xml_string(String, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
+pub fn read_xml_string_strict(String, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
+
 pub fn write_xml_fragment(XmlElement, namespaces? : Map[String, String]) -> String
 
 pub fn write_xml_string(XmlElement, namespaces? : Map[String, String]) -> String
