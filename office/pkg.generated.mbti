@@ -8,6 +8,14 @@ import {
 // Values
 pub fn detect_format(StringView, BytesView) -> DocumentFormat raise OfficeError
 
+pub fn output_failure(ProtocolError, warnings? : Array[ProtocolWarning]) -> Json
+
+pub fn output_success(Json, warnings? : Array[ProtocolWarning]) -> Json
+
+pub fn protocol_error(String, String, details? : Json) -> ProtocolError
+
+pub fn protocol_warning(String, String) -> ProtocolWarning
+
 // Errors
 pub(all) suberror OfficeError {
   UnsupportedFileExtension(String)
@@ -45,6 +53,17 @@ pub fn DocumentFormat::to_repr(Self) -> @debug.Repr
 #deprecated
 pub fn DocumentFormat::to_string(Self) -> String
 pub impl Show for DocumentFormat
+
+pub(all) struct ProtocolError {
+  code : String
+  message : String
+  details : Json?
+}
+
+pub(all) struct ProtocolWarning {
+  code : String
+  message : String
+}
 
 // Type aliases
 
