@@ -815,6 +815,211 @@ test "cf op apply-time errors are typed and specific" {
 }
 
 ///|
+test "a sheet op renames, deletes, hides, very-hides, and shows sheets" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Sheet1"))
+  ignore(workbook.add_sheet("Scratch"))
+  ignore(workbook.add_sheet("Helper"))
+  ignore(workbook.add_sheet("Deep"))
+  ignore(workbook.add_sheet("Was_Hidden"))
+  let script =
+    #|{"schema":"xlsx.batch/1","ops":[
+    #|  {"op":"sheet","params":{"action":"rename","name":"Sheet1","to":"Data"}},
+    #|  {"op":"sheet","params":{"action":"delete","name":"Scratch"}},
+    #|  {"op":"sheet","params":{"action":"hide","name":"Helper"}},
+    #|  {"op":"sheet","params":{"action":"very-hide","name":"Deep"}},
+    #|  {"op":"sheet","params":{"action":"hide","name":"Was_Hidden"}},
+    #|  {"op":"sheet","params":{"action":"show","name":"Was_Hidden"}}
+    #|]}
+  inspect(apply_script(workbook, script), content="6")
+  // Renamed and deleted, in tab order.
+  debug_inspect(
+    workbook.get_sheet_list(),
+    content=(
+      #|["Data", "Helper", "Deep", "Was_Hidden"]
+    ),
+  )
+  assert_eq(workbook.get_sheet_visible("Data"), true)
+  assert_eq(workbook.get_sheet_visible("Helper"), false)
+  assert_eq(workbook.get_sheet_visible("Deep"), false)
+  // show restored visibility after hide.
+  assert_eq(workbook.get_sheet_visible("Was_Hidden"), true)
+  // very-hide is the stronger hidden state, distinct from a plain hide.
+  match (workbook.sheet("Helper"), workbook.sheet("Deep")) {
+    (Some(helper), Some(deep)) => {
+      debug_inspect(helper.state(), content="Hidden")
+      debug_inspect(deep.state(), content="VeryHidden")
+    }
+    _ => fail("Helper and Deep should still exist")
+  }
+}
+
+///|
+test "sheet op validation errors are typed and specific" {
+  let cases = [
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"sheet","params":{"action":"flip","name":"S"}}]}
+      ),
+      "sheet: unknown action 'flip' (expected one of: rename, delete, hide, show, very-hide)",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"sheet","params":{"action":"rename","name":"S"}}]}
+      ),
+      "sheet: action 'rename' requires 'to'",
+    ),
+    (
+      (
+        #|{"schema":"xlsx.batch/1","ops":[{"op":"sheet","params":{"action":"delete","name":"S","to":"X"}}]}
+      ),
+      "sheet: action 'delete' does not take 'to'",
+    ),
+  ]
+  for case in cases {
+    let (script, want) = case
+    let workbook = @xlsx.Workbook::new()
+    ignore(workbook.add_sheet("S"))
+    ignore(workbook.add_sheet("Other"))
+    try {
+      ignore(apply_script(workbook, script))
+      fail("expected apply to reject: \{want}")
+    } catch {
+      @batch.BatchError(message) => assert_eq(message, want)
+      err => fail("expected a BatchError, got \{err}")
+    }
+    // The two sheets are untouched by a rejected op.
+    assert_eq(workbook.get_sheet_list().length(), 2)
+  }
+}
+
+///|
+test "a sheet op rejects an unknown target instead of silently no-op-ing" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Only"))
+  // `delete_sheet` silently returns on an unknown name, so the op must gate
+  // on existence itself.
+  try
+    ignore(
+      apply_script(
+        workbook,
+        (
+          #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"delete", "name":"Missing"}}]}
+        ),
+      ),
+    )
+  catch {
+    @batch.BatchError(message) =>
+      assert_eq(message, "sheet: no sheet named 'Missing'")
+    err => fail("expected a BatchError, got \{err}")
+  } noraise {
+    _ => fail("expected the unknown target to be rejected")
+  }
+  assert_eq(workbook.get_sheet_list().length(), 1)
+}
+
+///|
+test "a sheet op refuses to delete the last visible sheet" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Visible"))
+  ignore(workbook.add_sheet("Helper"))
+  // Hide Helper, then try to delete the only remaining visible sheet: that
+  // would leave an all-hidden, invalid workbook (delete_sheet checks only the
+  // total count).
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"hide", "name":"Helper"}}]}
+      ),
+    ),
+  )
+  try
+    ignore(
+      apply_script(
+        workbook,
+        (
+          #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"delete", "name":"Visible"}}]}
+        ),
+      ),
+    )
+  catch {
+    @batch.BatchError(message) =>
+      assert_true(message.contains("at least one visible sheet"))
+    err => fail("expected a BatchError, got \{err}")
+  } noraise {
+    _ => fail("expected the last-visible-sheet delete to be rejected")
+  }
+  // Nothing was deleted; deleting the HIDDEN sheet is fine (a visible remains).
+  assert_eq(workbook.get_sheet_list().length(), 2)
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"delete", "name":"Helper"}}]}
+      ),
+    ),
+  )
+  debug_inspect(
+    workbook.get_sheet_list(),
+    content=(
+      #|["Visible"]
+    ),
+  )
+}
+
+///|
+test "a sheet op targets chart sheets and counts them for the visible guard" {
+  let workbook = @xlsx.Workbook::new()
+  ignore(workbook.add_sheet("Data"))
+  ignore(workbook.add_chart_sheet("Chart1", "<chart/>"))
+  // `workbook.sheet` sees only worksheets; the op resolves across the full tab
+  // order, so a chart sheet is a valid target — hide it by its canonical name
+  // spelled in a different case.
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"hide", "name":"chart1"}}]}
+      ),
+    ),
+  )
+  assert_false(workbook.get_sheet_visible("Chart1"))
+  // Re-show and rename it — chart sheets rename like worksheets.
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"show", "name":"Chart1"}}, {"op":"sheet", "params": {"action":"rename", "name":"Chart1", "to":"Dashboard"}}]}
+      ),
+    ),
+  )
+  debug_inspect(
+    workbook.get_sheet_list(),
+    content=(
+      #|["Data", "Dashboard"]
+    ),
+  )
+  // The visible-sheet guard must count the chart sheet: with the chart sheet
+  // (Dashboard) still visible, deleting the worksheet Data is allowed — the
+  // workbook keeps a visible sheet. (Counting only worksheets would reject it.)
+  ignore(
+    apply_script(
+      workbook,
+      (
+        #|{"schema":"xlsx.batch/1", "ops": [{"op":"sheet", "params": {"action":"delete", "name":"Data"}}]}
+      ),
+    ),
+  )
+  debug_inspect(
+    workbook.get_sheet_list(),
+    content=(
+      #|["Dashboard"]
+    ),
+  )
+}
+
+///|
 test "a chart op requires valid categories and values at parse time" {
   try
     ignore(
@@ -1105,7 +1310,7 @@ test "strict validation names the 0-based op index" {
       (
         #|{"schema": "xlsx.batch/1", "ops": [{"op": "nop", "params": {}}]}
       ),
-      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table, validate, cf)",
+      "op 0 (nop): unknown op (expected one of: set, formula, style, merge, width, freeze, filter, add-sheet, chart, table, validate, sheet, cf)",
     ),
     (
       (

@@ -157,6 +157,9 @@ priv enum OpKind {
     reverse_icons~ : Bool?,
     stop_if_true~ : Bool?
   )
+  // Sheet management. `action` (rename/delete/hide/show/very-hide) is the raw
+  // script string, validated at apply. `to` is the new name, for `rename`.
+  OpSheet(action~ : String, name~ : String, to~ : String)
 }
 
 ///|
@@ -189,6 +192,7 @@ pub fn BatchOp::name(self : BatchOp) -> String {
     OpTable(..) => "table"
     OpValidate(..) => "validate"
     OpCf(..) => "cf"
+    OpSheet(..) => "sheet"
   }
 }
 
@@ -405,6 +409,12 @@ fn parse_op(
         icon_style=reader.optional_string("icon_style"),
         reverse_icons=reader.tristate_bool("reverse_icons"),
         stop_if_true=reader.tristate_bool("stop_if_true"),
+      )
+    "sheet" =>
+      OpSheet(
+        action=reader.string("action"),
+        name=reader.string("name"),
+        to=reader.optional_string("to"),
       )
     _ =>
       raise op_error(
@@ -1375,6 +1385,72 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
         opt.set_format(Some(workbook.new_conditional_style(style)))
       }
       workbook.set_conditional_format(sheet, range, [opt])
+    }
+    OpSheet(action~, name~, to~) => {
+      // Resolve the target to its CANONICAL name across ALL sheets — worksheets
+      // AND chart sheets — via the tab-order list (`workbook.sheet` sees only
+      // worksheets). The lookup is case-insensitive, matching the engine; but
+      // several engine mutators (notably `delete_sheet`) silently no-op on a
+      // name they do not match, so gate on existence here for a clear error and
+      // pass the exact canonical name onward.
+      let sheet_names = workbook.get_sheet_list()
+      let needle = name.to_lower()
+      let target = {
+        let mut found : String? = None
+        for existing in sheet_names {
+          if existing.to_lower() == needle {
+            found = Some(existing)
+            break
+          }
+        }
+        match found {
+          Some(canonical) => canonical
+          None => raise BatchError("sheet: no sheet named '\{name}'")
+        }
+      }
+      match action {
+        "rename" => {
+          if to == "" {
+            raise BatchError("sheet: action 'rename' requires 'to'")
+          }
+          workbook.set_sheet_name(target, to)
+        }
+        // Every other action targets a single sheet and takes no `to`.
+        "delete" | "hide" | "show" | "very-hide" => {
+          if to != "" {
+            raise BatchError("sheet: action '\{action}' does not take 'to'")
+          }
+          match action {
+            "delete" => {
+              // `delete_sheet` guards only the total sheet count, not the
+              // visible count — deleting the last VISIBLE sheet would leave
+              // an all-hidden, invalid workbook. Guard that here, counting
+              // every OTHER sheet (worksheets AND chart sheets) that is
+              // visible; `set_sheet_visible`'s own guard already covers hide.
+              let mut visible_others = 0
+              for existing in sheet_names {
+                if existing != target && workbook.get_sheet_visible(existing) {
+                  visible_others += 1
+                }
+              }
+              if visible_others == 0 {
+                raise BatchError(
+                  "sheet: cannot delete '\{target}' — a workbook must keep at least one visible sheet",
+                )
+              }
+              workbook.delete_sheet(target)
+            }
+            "hide" => workbook.set_sheet_visible(target, false)
+            "very-hide" =>
+              workbook.set_sheet_visible(target, false, very_hidden=true)
+            _ => workbook.set_sheet_visible(target, true) // "show"
+          }
+        }
+        other =>
+          raise BatchError(
+            "sheet: unknown action '\{other}' (expected one of: rename, delete, hide, show, very-hide)",
+          )
+      }
     }
   }
 }
