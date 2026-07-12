@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   test:
-    name: check + test (mbtexcel + docx2html + pdflite, nightly)
+    name: check + test (mbtexcel + docx2html + office + pdflite, nightly)
     runs-on: ubuntu-latest
     # Native tests take ~10 minutes; everything else is small. Fail loudly if
     # something (e.g. an accidental whole-workspace exe build pulling in
@@ -22,11 +22,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # This repo is a `moon work` workspace with three members: `.`
+      # This repo is a `moon work` workspace with four members: `.`
       # (bobzhang/mbtexcel), `./docx2html` (bobzhang/docx2html), and `./pdflite`
-      # (bobzhang/pdflite) — the latter two vendored with full history. Root
+      # (bobzhang/pdflite), plus `./office` (the agent-facing facade). Root
       # `moon check`/`moon test`/`moon fmt` operate on ALL members, so most
-      # steps below cover the three modules at once. (pdflite has native C
+      # steps below cover all four modules at once. (pdflite has native C
       # stubs; the ubuntu runner's `cc` compiles them for the native target.)
       #
       # mbtexcel's parity/fixture tests read a small committed subset of the
@@ -48,7 +48,7 @@ jobs:
       # The nightly toolchain is required: mbtexcel depends on
       # moonbitlang/async >= 0.20 (wasm filesystem support) and its xlsx CLI
       # targets the wasm backend, both of which need nightly. `moon work sync`
-      # has aligned both members on async@0.20.1 + x@0.4.43.
+      # has aligned the workspace members on async@0.20.1 + x@0.4.43.
       - name: Set up MoonBit (nightly)
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
@@ -80,7 +80,7 @@ jobs:
           fi
 
       # Regenerate every member's `pkg.generated.mbti` and fail if the committed
-      # interfaces drift from the source (all three members commit their .mbti).
+      # interfaces drift from the source (all four members commit their .mbti).
       # Run `moon info` and commit the result to fix.
       - name: Interface check
         run: |
@@ -91,11 +91,11 @@ jobs:
             exit 1
           fi
 
-      # Type check both members (native).
+      # Type check all workspace members (native).
       - name: Type check
         run: moon check
 
-      # Type check both members for the wasm backend. mbtexcel's library + xlsx
+      # Type check all workspace members for the wasm backend. mbtexcel's library + xlsx
       # CLI target wasm; docx2html's library packages also build for wasm (its
       # native-only CLI is skipped for this target).
       - name: Type check (wasm)
@@ -114,7 +114,7 @@ jobs:
       # part of an hour (moonc expands the CJK cmapdata constants into code) —
       # a cost no CI run should pay. See the repo quality roadmap.
       - name: Build CLIs (native)
-        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx pdflite/cmd/main
+        run: moon build --target native cmd/xlsx docx2html/cmd/docx2html docx2html/cmd/docx office/cmd/office pdflite/cmd/main
 
       # Run the cram docs from a stub project so `moon cram test` does not
       # trigger a build of every workspace executable (which would include the
@@ -122,7 +122,7 @@ jobs:
       # runs its cram). PATH supplies xlsx.exe/docx2html.exe/docx.exe for the
       # docs that invoke them by name; pdflite's doc takes its CLI and fixture
       # via env.
-      - name: Cram tests (xlsx, docx2html, pdflite CLIs)
+      - name: Cram tests (xlsx, docx2html, office, pdflite CLIs)
         env:
           PDFLITE_CLI: ${{ github.workspace }}/_build/native/debug/build/bobzhang/pdflite/cmd/main/main.exe
           PDFLITE_LOGO_PDF: ${{ github.workspace }}/pdflite/fixtures/camlpdf/logo.pdf
@@ -130,10 +130,11 @@ jobs:
           STUB="$RUNNER_TEMP/moon-cram-stub"
           mkdir -p "$STUB"
           printf 'name = "bobzhang/cramstub"\nversion = "0.1.0"\n' > "$STUB/moon.mod"
-          export PATH="$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/mbtexcel/cmd/xlsx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx2html:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx:$PATH"
+          export PATH="$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/mbtexcel/cmd/xlsx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx2html:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/docx2html/cmd/docx:$GITHUB_WORKSPACE/_build/native/debug/build/bobzhang/office/cmd/office:$PATH"
           cd "$STUB"
           moon cram test "$GITHUB_WORKSPACE/cmd/xlsx/cram"
           moon cram test "$GITHUB_WORKSPACE/docx2html/tests/cram"
+          moon cram test "$GITHUB_WORKSPACE/office/cmd/office/cram"
           moon cram test "$GITHUB_WORKSPACE/pdflite/tests/cram"
 
       # The mbtexcel library and xlsx CLI also target wasm end to end. Build the
@@ -183,6 +184,13 @@ jobs:
           echo "calc A3 -> $c"; test "$c" = "15"
           v=$(moon run --target wasm cmd/xlsx -- validate ci.xlsx 2>/dev/null)
           echo "validate -> $v"; test "$v" = "valid"
+          # The canonical office CLI dispatches by verified package content,
+          # not extension alone. Exercise both supported formats under wasm.
+          moon build --target wasm office/cmd/office
+          f=$(moon run --target wasm office/cmd/office -- identify ci.xlsx 2>office-wasm.err) || { echo "office xlsx identify failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "office identify xlsx -> $f"; test "$f" = "xlsx"
+          f=$(moon run --target wasm office/cmd/office -- identify docx2html/tests/cram/fixtures/single-paragraph.docx 2>office-wasm.err) || { echo "office docx identify failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "office identify docx -> $f"; test "$f" = "docx"
           # The docx agent CLI also targets wasm end to end: build it and
           # drive its convert subcommand over a committed fixture. Keep the
           # captured stderr and print it on failure — discarding it makes a
