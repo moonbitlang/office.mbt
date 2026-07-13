@@ -1,3 +1,6 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+
+# `moon info` terminates generated interfaces with a blank line by design.
+*.mbti whitespace=-blank-at-eof
