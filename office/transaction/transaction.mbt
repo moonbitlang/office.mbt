@@ -515,10 +515,7 @@ fn validate_candidate(
 }
 
 ///|
-async fn create_temp(
-  policy : ResolvedPolicy,
-  permission : Int,
-) -> PublicationTemp {
+async fn create_temp(policy : ResolvedPolicy) -> PublicationTemp {
   @async.pause()
   let stamp = @env.now()
   for attempt in 0..<transaction_temp_attempts {
@@ -527,7 +524,6 @@ async fn create_temp(
       publication_temp_try_create(
         policy.destination_directory,
         leaf,
-        permission,
         policy.output_path,
       ) {
       Some(temp) => return temp
@@ -573,8 +569,12 @@ async fn publish_candidate(
   candidate : Bytes,
   faults : TransactionFaults,
 ) -> (Bool, Bool) {
-  let temp = create_temp(policy, options.permission)
+  let temp = create_temp(policy)
   try {
+    // Exclusive creation and staging chmod are cancellation-shielded so their
+    // outcome is never ambiguous. Observe a cancellation before doing more
+    // work; the surrounding catch then owns deterministic cleanup.
+    @async.pause()
     match faults.relocate_parent_to {
       Some(target) =>
         @afs.rename(
@@ -682,6 +682,7 @@ async fn publish_candidate(
       policy.destination_leaf,
       policy.replace,
       policy.output_path,
+      options.permission,
     )
     publication_temp_close(temp)
     let parent_synced = @async.protect_from_cancel(
@@ -767,6 +768,7 @@ async fn transact_with_faults(
   mutate : (@office.DocumentFormat, BytesView) -> TransactionMutation raise,
   validators : Array[TransactionValidator],
   faults : TransactionFaults,
+  post_read_release? : String,
 ) -> TransactionReport {
   let validators = validators.copy()
   validate_validator_set(validators)
@@ -778,6 +780,29 @@ async fn transact_with_faults(
     policy.source_directory,
     policy.source_leaf,
   )
+  match post_read_release {
+    Some(release) => {
+      @afs.write_file(
+        release + ".ready",
+        b"ready",
+        create_mode=CreateNew,
+        permission=0o600,
+      )
+      @async.protect_from_cancel(
+        () => {
+          while !@afs.exists(release) {
+            @async.pause()
+          }
+        },
+        resume_on_cancel=true,
+      )
+    }
+    None => ()
+  }
+  // Regular-file reads may finish in a non-cancellable worker after a task was
+  // cancelled. Make that pending cancellation observable before synchronous
+  // parsing/mutation, including dry-run and byte-identical no-op paths.
+  @async.pause()
   let (format, original_archive) = identify_input(options, original)
   let mutation = mutate(format, original) catch {
     TransactionError(..) as error => raise normalize_mutation_error(error)
