@@ -37,8 +37,10 @@ Neither command creates or removes parts.
 
 ## Relationship-driven aliases
 
-Aliases are derived from content types and OPC relationships after the
-portable package validator succeeds. Except for the OPC-mandated
+Aliases are derived only from exact Transitional or Strict Office
+relationship type URIs whose targets have the expected content type, after
+the portable package validator succeeds. Vendor relationship URIs that happen
+to share a standard suffix never create aliases. Except for the OPC-mandated
 `[Content_Types].xml` and root relationship part, implementation code must not
 assume conventional `word/` or `xl/` locations.
 
@@ -53,8 +55,15 @@ Common aliases include:
   relationship aliases.
 
 An absolute package name such as `/customXml/item1.xml` remains available for
-every part. Alias lookup is case-insensitive where the underlying Office name
-is case-insensitive, but ambiguous aliases fail closed.
+every part. Alias lookup and OPC target resolution are case-insensitive while
+the exact archive spelling is retained for reads and writes. Ambiguous aliases
+fail closed.
+
+The short `/name` form resolves automatically only when it is unambiguous.
+If a semantic alias collides with a different literal root part, use
+`alias:/name` for the relationship-derived alias or `part:/name` for the
+literal package part. These explicit forms ensure that every real part remains
+addressable without silently choosing the wrong mutation target.
 
 ## Bounded XML path grammar
 
@@ -105,9 +114,10 @@ expanded attributes, invalid characters, unknown prefixes, DTDs, and external
 entities before any package bytes are built.
 
 Edits are source-span splices. Bytes outside the declared spans of the
-mutated XML part remain identical. All other package entries retain identical
-uncompressed payloads and original order, compression method, and descriptor
-policy under the transaction ZIP policy.
+mutated XML part remain identical. Untouched ZIP local records are copied
+byte-for-byte; their compressed payloads, timestamps, extras, descriptors,
+and central metadata remain intact. Local-record order, central-directory
+order, entry comments, attributes, and the archive comment are preserved.
 
 ## Validation and publication
 
