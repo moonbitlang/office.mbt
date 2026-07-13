@@ -42,10 +42,16 @@ async test "POSIX final permission is exact despite a restrictive umask" {
         }
         let script =
           #|umask 077
-          #|# Linux all-workspace tests may launch native test artifacts through
-          #|# Moon without preserving their executable bit for a nested launch.
-          #|chmod u+x "$1"
-          #|"$1" 'permission_contract_test.mbt:0-1'
+          #|probe="$1"
+          #|# Moon may deliberately set argv[0] to the generated C source path.
+          #|# On Linux, resolve the actual running test image without a custom
+          #|# native stub; macOS runners expose the executable through argv[0].
+          #|if [ -x "/proc/$PPID/exe" ]; then
+          #|  probe="/proc/$PPID/exe"
+          #|else
+          #|  chmod u+x "$probe"
+          #|fi
+          #|"$probe" 'permission_contract_test.mbt:0-1'
           #|status=$?
           #|if [ "$status" -ne 0 ]; then exit "$status"; fi
           #|mode=$(stat -f '%Lp' "$2/output.docx" 2>/dev/null || stat -c '%a' "$2/output.docx")
