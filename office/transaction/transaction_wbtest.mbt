@@ -1263,6 +1263,80 @@ async test "source-near-envelope budget rejects during ZIP planning" {
 }
 
 ///|
+async test "post-return backstop rejects callbacks that ignore candidate budget" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    wb_write(input, original)
+    let original_cost = wb_archive_retained_cost(original)
+    let input_payload = wb_archive_payload_bytes(original)
+    let input_preflight = transaction_archive_preflight_overhead(original)
+    let candidate_budget = input_preflight +
+      input_payload -
+      original_cost +
+      1024L
+    assert_true(candidate_budget > 0L)
+    assert_true(candidate_budget < 0x7fffffffL)
+    let working_reserve = 64L * 1024L * 1024L
+    let live_limit = working_reserve + original_cost + candidate_budget
+    let callback_returned = Ref(false)
+    let failure = try {
+      ignore(
+        transact_with_identifier_and_faults(
+          transaction_options(input, output_path=output),
+          (_format, _bytes, _archive, budget) => {
+            assert_eq(
+              budget.max_candidate_package_bytes().to_int64(),
+              candidate_budget,
+            )
+            // Deliberately violate the callback contract without invoking a
+            // bounded serializer. The transaction must stop this differing
+            // package before candidate parsing, validation, or publication.
+            let candidate = Bytes::makei(
+              budget.max_candidate_package_bytes() + 1,
+              index => (index & 0xff).to_byte(),
+            )
+            callback_returned.val = true
+            transaction_mutation(candidate)
+          },
+          [],
+          None,
+          no_transaction_faults(),
+          materialization_limit=live_limit,
+          materialization_reserve=working_reserve,
+        ),
+      )
+      fail("expected post-return candidate-budget rejection")
+    } catch {
+      TransactionError(..) as error => error
+      error => fail("expected TransactionError, received \{error}")
+    }
+    assert_true(callback_returned.val)
+    match failure {
+      TransactionError(code~, details~, ..) => {
+        assert_eq(code, "office.transaction.resource_limit_exceeded")
+        guard details is Some(Object(fields)) else {
+          fail("expected structured materialization details")
+        }
+        assert_eq(fields.get("phase"), Some(Json::string("candidate package")))
+        assert_eq(
+          fields.get("kind"),
+          Some(Json::string("live_materialized_bytes")),
+        )
+        assert_eq(
+          fields.get("actual"),
+          Some(Json::number((live_limit + 1L).to_double())),
+        )
+      }
+    }
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_false(@afs.exists(output))
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
 test "transaction output schema is deterministic and nests A2 warnings" {
   let report : TransactionReport = {
     format: Docx,

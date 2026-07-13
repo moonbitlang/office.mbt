@@ -434,6 +434,12 @@ pub fn transaction_identifier(
   identify : (String, BytesView, @zip.Archive) -> @office.DocumentFormat raise,
 ) -> TransactionIdentifier raise TransactionError {
   checked_identifier(name, "transaction identifier name")
+  if name == transaction_portable_validator_name {
+    raise transaction_error(
+      "office.transaction.invalid_contract",
+      "transaction identifier name '\{transaction_portable_validator_name}' is reserved for mandatory portable OPC validation",
+    )
+  }
   { name, identify }
 }
 

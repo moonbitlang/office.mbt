@@ -1065,6 +1065,22 @@ async test "duplicate and excessive validator sets fail before file access" {
     )
   })
   assert_eq(duplicate_code, "office.transaction.invalid_contract")
+  let colliding_identifier = @transaction.transaction_identifier("duplicate", (
+    _path,
+    _bytes,
+    _archive,
+  ) => Docx)
+  let collision_code = transaction_error_code(() => {
+    @transaction.transact(
+      @transaction.transaction_options("absent.docx"),
+      (_format, bytes, _archive, _budget) => {
+        @transaction.transaction_mutation(bytes)
+      },
+      validators=[first],
+      identifier=colliding_identifier,
+    )
+  })
+  assert_eq(collision_code, "office.transaction.invalid_contract")
   let validators = Array::makei(33, index => {
     @transaction.transaction_validator("validator-\{index}", (
       _format,
