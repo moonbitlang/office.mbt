@@ -131,6 +131,21 @@ async fn write_test_file(path : String, bytes : Bytes) -> Unit {
 }
 
 ///|
+fn transaction_test_filesystem_path(path : String) -> String {
+  if @path.sep == '\\' {
+    let normalized = path.replace_all(old="/", new="\\")
+    let resolved = "\{@path.Path(normalized).resolve()}"
+    if resolved.has_prefix("\\\\?\\") {
+      resolved
+    } else {
+      "\\\\?\\" + resolved
+    }
+  } else {
+    path
+  }
+}
+
+///|
 async fn assert_no_transaction_temp(directory : String) -> Unit {
   for name in @afs.readdir(directory) {
     assert_false(name.contains(".office-tmp-"))
@@ -256,7 +271,10 @@ async test "near-limit destination basenames do not inflate temporary names" {
       (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
     )
     assert_true(report.committed)
-    assert_eq(@afs.read_file(output).binary(), original)
+    assert_eq(
+      @afs.read_file(transaction_test_filesystem_path(output)).binary(),
+      original,
+    )
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
   })

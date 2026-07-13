@@ -619,7 +619,7 @@ async fn publish_candidate(
       Some(target) =>
         @afs.rename(
           path_parent(policy.destination_target),
-          target,
+          filesystem_path(target),
           replace=false,
         ) catch {
           error if @async.is_being_cancelled() => raise error
