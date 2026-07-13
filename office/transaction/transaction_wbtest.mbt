@@ -122,7 +122,7 @@ async fn wb_expect_post_read_cancellation(
     let task = group.spawn(() => {
       transact_with_faults(
         options,
-        (_format, bytes, _archive, _budget) => transaction_mutation(bytes),
+        (_format, _bytes, _archive, _budget) => transaction_reuse_original(),
         [],
         no_transaction_faults(),
         post_read_release=release,
@@ -145,9 +145,10 @@ async fn wb_expect_post_read_cancellation(
 
 ///|
 fn wb_preservation_report(
-  original : BytesView,
+  original : Bytes,
   mutation : TransactionMutation,
 ) -> PreservationReport raise TransactionError {
+  let mutation = mutation.resolve_against_original(original)
   check_package_size(original, "input package")
   check_package_size(mutation.bytes, "candidate package")
   let original_archive = wb_read_transaction_archive_with_limits(
@@ -1337,11 +1338,10 @@ async test "post-return backstop rejects callbacks that ignore candidate budget"
 }
 
 ///|
-test "post-return budget exempts only physical original reuse" {
+test "post-return budget requires explicit original reuse" {
   let original = @word.new_blank_docx()
   let equal_copy = Bytes::from_array(original.to_array())
   assert_eq(equal_copy, original)
-  assert_false(physical_equal(equal_copy, original))
   let retained = 4096L
   let budget : TransactionBudget = {
     max_candidate_package_bytes: original.length() - 1,
@@ -1380,7 +1380,6 @@ test "post-return budget exempts only physical original reuse" {
     }
   }
   let fitting_copy = Bytes::from_array(original.to_array())
-  assert_false(physical_equal(fitting_copy, original))
   let exact_budget : TransactionBudget = {
     max_candidate_package_bytes: original.length(),
   }
@@ -1391,16 +1390,32 @@ test "post-return budget exempts only physical original reuse" {
     retained,
     retained + original.length().to_int64(),
   )
-  assert_true(physical_equal(canonicalized.bytes, original))
+  assert_eq(canonicalized.bytes, original)
   let zero_budget : TransactionBudget = { max_candidate_package_bytes: 0 }
+  assert_eq(
+    wb_sync_error_code(() => {
+      enforce_returned_candidate_budget(
+        transaction_mutation(original),
+        original,
+        zero_budget,
+        retained,
+        retained,
+      )
+    }),
+    "office.transaction.resource_limit_exceeded",
+  )
   let reused = enforce_returned_candidate_budget(
-    transaction_mutation(original),
+    transaction_reuse_original_with_manifest(["word/document.xml"]),
     original,
     zero_budget,
     retained,
     retained,
   )
-  assert_true(physical_equal(reused.bytes, original))
+  assert_eq(reused.bytes, original)
+  guard reused.declared_parts is Some(parts) else {
+    fail("expected explicit reuse to preserve its checked manifest")
+  }
+  assert_eq(parts, ["word/document.xml"])
 }
 
 ///|

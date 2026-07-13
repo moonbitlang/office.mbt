@@ -184,8 +184,8 @@ async test "in-place no-op validates without replacing source" {
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input),
-      (_format, bytes, _archive, _budget) => {
-        @transaction.transaction_mutation(bytes)
+      (_format, _bytes, _archive, _budget) => {
+        @transaction.transaction_reuse_original()
       },
     )
     assert_eq(report.format, Docx)
@@ -464,8 +464,8 @@ async test "near-limit destination basenames do not inflate temporary names" {
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input, output_path=output),
-      (_format, bytes, _archive, _budget) => {
-        @transaction.transaction_mutation(bytes)
+      (_format, _bytes, _archive, _budget) => {
+        @transaction.transaction_reuse_original()
       },
     )
     assert_true(report.committed)

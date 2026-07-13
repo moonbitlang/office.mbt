@@ -118,13 +118,16 @@ APIs require the value and pass it to `zip.write_limited`, so a source-near-
 envelope edit is rejected in the output-storage-free plan before the candidate
 buffer exists. The callback receives the original immutable `Bytes` directly;
 archive-backed raw operations report an explicit reuse-original result before
-ZIP sizing when the edited part is byte-identical, and the callback resolves it
-to that same value without a whole-package copy. Only physical reuse of that
-supplied buffer is allocation-free: a separately allocated, content-equal
-package is charged against the candidate allowance before it may be
-canonicalized back to the original. The transaction checks that distinction and
-the returned length immediately as a fail-closed contract backstop even when a
-custom callback ignores the supplied allowance.
+ZIP sizing when the edited part is byte-identical, and the callback maps it to
+`transaction_reuse_original_with_manifest`. That opaque result carries no
+caller-provided package bytes; the transaction resolves it to its own current
+input buffer without a whole-package copy. Every
+`transaction_mutation*` result is instead a serialized candidate and is charged
+against the allowance before content-equal canonicalization, even if the caller
+passes the same `Bytes` value. The transaction checks the returned state and
+length immediately as a fail-closed contract backstop when a custom callback
+ignores the supplied allowance. This contract is explicit and does not depend
+on backend- or optimization-specific object identity.
 
 ZIP expansion and serialization do not hide another package-sized allocation
 inside that reserve. DEFLATE first validates and counts output without retaining

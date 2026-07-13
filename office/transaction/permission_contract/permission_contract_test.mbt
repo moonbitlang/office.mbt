@@ -30,8 +30,8 @@ async test "POSIX final permission is exact despite a restrictive umask" {
           output_path=output,
           permission=0o666,
         ),
-        (_format, bytes, _archive, _budget) => {
-          @transaction.transaction_mutation(bytes)
+        (_format, _bytes, _archive, _budget) => {
+          @transaction.transaction_reuse_original()
         },
       )
       assert_true(report.committed)

@@ -421,6 +421,22 @@ fn print_raw_result(
 }
 
 ///|
+fn raw_transaction_mutation(
+  mutation : @raw.RawMutation,
+  original : Bytes,
+) -> @transaction.TransactionMutation raise @transaction.TransactionError {
+  let declared_parts = [mutation.part_name()]
+  if mutation.reuses_original() {
+    @transaction.transaction_reuse_original_with_manifest(declared_parts)
+  } else {
+    @transaction.transaction_mutation_with_manifest(
+      mutation.result_bytes(original),
+      declared_parts,
+    )
+  }
+}
+
+///|
 async fn run_raw_replace(matches : @argparse.Matches) -> Unit {
   let part = required_value(matches, "part")
   let xml = match xml_argument(matches) {
@@ -447,10 +463,7 @@ async fn run_raw_replace(matches : @argparse.Matches) -> Unit {
         RawError(..) as error => raise raw_mutation_failure(error)
       }
       completed.val = Some(mutation)
-      @transaction.transaction_mutation_with_manifest(
-        mutation.result_bytes(original),
-        [mutation.part_name()],
-      )
+      raw_transaction_mutation(mutation, original)
     },
     identifier=raw_transaction_identifier(),
   ) catch {
@@ -534,10 +547,7 @@ async fn run_raw_edit(matches : @argparse.Matches) -> Unit {
         RawError(..) as error => raise raw_mutation_failure(error)
       }
       completed.val = Some(mutation)
-      @transaction.transaction_mutation_with_manifest(
-        mutation.result_bytes(original),
-        [mutation.part_name()],
-      )
+      raw_transaction_mutation(mutation, original)
     },
     identifier=raw_transaction_identifier(),
   ) catch {
