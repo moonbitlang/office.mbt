@@ -39,6 +39,7 @@ pub fn Archive::add(Self, String, Bytes, compression? : Compression, data_descri
 pub fn Archive::entries(Self) -> ArrayView[Entry]
 pub fn Archive::get(Self, StringView) -> Bytes?
 pub fn Archive::new() -> Self
+pub fn Archive::replace(Self, StringView, Bytes) -> Bool
 
 pub(all) enum Compression {
   Store

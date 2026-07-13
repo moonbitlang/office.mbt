@@ -105,6 +105,174 @@ fn write_data_descriptor(
 }
 
 ///|
+fn patch_u32_le(
+  buffer : Array[Byte],
+  offset : Int,
+  value : UInt,
+) -> Unit raise ZipError {
+  if offset < 0 || offset > buffer.length() || 4 > buffer.length() - offset {
+    raise UnsupportedFeature(
+      msg="central-directory offset patch is out of bounds",
+    )
+  }
+  buffer[offset] = (value & 0xff).to_byte()
+  buffer[offset + 1] = ((value >> 8) & 0xff).to_byte()
+  buffer[offset + 2] = ((value >> 16) & 0xff).to_byte()
+  buffer[offset + 3] = ((value >> 24) & 0xff).to_byte()
+}
+
+///|
+fn patch_u64_le(
+  buffer : Array[Byte],
+  offset : Int,
+  value : UInt64,
+) -> Unit raise ZipError {
+  if offset < 0 || offset > buffer.length() || 8 > buffer.length() - offset {
+    raise UnsupportedFeature(msg="ZIP64 offset patch is out of bounds")
+  }
+  for index in 0..<8 {
+    buffer[offset + index] = ((value >> (8 * index)) & 0xff).to_byte()
+  }
+}
+
+///|
+fn generated_entry_records(
+  out : Array[Byte],
+  entry : Entry,
+  local_offset : Int,
+  force_zip64 : Bool,
+) -> (Bytes, Bool) raise ZipError {
+  let (method_id, payload) = match entry.compression() {
+    Store => (0, entry.data())
+    Deflate => (8, deflate_encode(entry.data()))
+  }
+  let name_bytes = @encoding/utf8.encode(entry.name())
+  let name_len = name_bytes.length()
+  let data_len = entry.data().length()
+  let payload_len = payload.length()
+  if name_len > 0xFFFF {
+    raise UnsupportedFeature(msg="file name too long")
+  }
+  let crc = crc32(entry.data())
+  let use_descriptor = entry.data_descriptor()
+  let max_u32 : UInt = 0xFFFFFFFF
+  let needs_zip64_sizes = force_zip64 ||
+    data_len.reinterpret_as_uint() > max_u32 ||
+    payload_len.reinterpret_as_uint() > max_u32
+  let needs_zip64_offset = force_zip64 ||
+    local_offset.reinterpret_as_uint() > max_u32
+  let needs_zip64_entry = needs_zip64_sizes || needs_zip64_offset
+  let version = if needs_zip64_entry { 45 } else { 20 }
+  let flags = if use_descriptor {
+    flag_utf8 | flag_data_descriptor
+  } else {
+    flag_utf8
+  }
+  let local_extra = build_zip64_extra(
+    uncomp=if needs_zip64_sizes { Some(data_len) } else { None },
+    comp=if needs_zip64_sizes { Some(payload_len) } else { None },
+    offset=None,
+  )
+  write_u32_le(out, local_header_sig.reinterpret_as_uint())
+  write_u16_le(out, version)
+  write_u16_le(out, flags)
+  write_u16_le(out, method_id)
+  write_u16_le(out, 0)
+  write_u16_le(out, 0)
+  if use_descriptor {
+    write_u32_le(out, 0)
+    let size_field = if needs_zip64_sizes { max_u32 } else { 0 }
+    write_u32_le(out, size_field)
+    write_u32_le(out, size_field)
+  } else {
+    write_u32_le(out, crc)
+    let comp_field = if needs_zip64_sizes {
+      max_u32
+    } else {
+      to_u32(payload_len)
+    }
+    let uncomp_field = if needs_zip64_sizes {
+      max_u32
+    } else {
+      to_u32(data_len)
+    }
+    write_u32_le(out, comp_field)
+    write_u32_le(out, uncomp_field)
+  }
+  write_u16_le(out, name_len)
+  write_u16_le(out, local_extra.length())
+  write_bytes(out, name_bytes)
+  write_bytes(out, local_extra)
+  write_bytes(out, payload)
+  if use_descriptor {
+    write_data_descriptor(out, crc, payload_len, data_len, needs_zip64_sizes)
+  }
+  let central_extra = build_zip64_extra(
+    uncomp=if needs_zip64_sizes { Some(data_len) } else { None },
+    comp=if needs_zip64_sizes { Some(payload_len) } else { None },
+    offset=if needs_zip64_offset { Some(local_offset) } else { None },
+  )
+  let central : Array[Byte] = []
+  write_u32_le(central, central_header_sig.reinterpret_as_uint())
+  write_u16_le(central, version)
+  write_u16_le(central, version)
+  write_u16_le(central, flags)
+  write_u16_le(central, method_id)
+  write_u16_le(central, 0)
+  write_u16_le(central, 0)
+  write_u32_le(central, crc)
+  let central_comp = if needs_zip64_sizes {
+    max_u32
+  } else {
+    to_u32(payload_len)
+  }
+  let central_uncomp = if needs_zip64_sizes {
+    max_u32
+  } else {
+    to_u32(data_len)
+  }
+  write_u32_le(central, central_comp)
+  write_u32_le(central, central_uncomp)
+  write_u16_le(central, name_len)
+  write_u16_le(central, central_extra.length())
+  write_u16_le(central, 0)
+  write_u16_le(central, 0)
+  write_u16_le(central, 0)
+  write_u32_le(central, 0)
+  let offset_field = if needs_zip64_offset {
+    max_u32
+  } else {
+    to_u32(local_offset)
+  }
+  write_u32_le(central, offset_field)
+  write_bytes(central, name_bytes)
+  write_bytes(central, central_extra)
+  (Bytes::from_array(central), needs_zip64_entry)
+}
+
+///|
+fn archive_local_order(archive : Archive) -> Array[Int] {
+  let order = []
+  for index in 0..<archive.entries.length() {
+    order.push(index)
+  }
+  order.sort_by(fn(left, right) {
+    match
+      (
+        archive.entries[left].source_local_offset,
+        archive.entries[right].source_local_offset,
+      ) {
+      (Some(left_offset), Some(right_offset)) =>
+        left_offset.compare(right_offset)
+      (Some(_), None) => -1
+      (None, Some(_)) => 1
+      (None, None) => left.compare(right)
+    }
+  })
+  order
+}
+
+///|
 fn write_with_options(
   archive : Archive,
   force_zip64? : Bool = false,
@@ -112,116 +280,52 @@ fn write_with_options(
   let entry_count = archive.entries().length()
   let out : Array[Byte] = Array::new(capacity=entry_count * 64)
   let central : Array[Byte] = Array::new(capacity=entry_count * 64)
-  let mut needs_zip64 = force_zip64
+  let local_offsets : Array[Int] = []
+  let generated_central : Array[Bytes?] = []
+  for _ in 0..<entry_count {
+    local_offsets.push(0)
+    generated_central.push(None)
+  }
+  let mut needs_zip64 = force_zip64 || archive.preserve_zip64
   let max_u32 : UInt = 0xFFFFFFFF
-  for entry in archive.entries() {
-    let (method_id, payload) = match entry.compression() {
-      Store => (0, entry.data())
-      Deflate => (8, deflate_encode(entry.data()))
-    }
-    let name_bytes = @encoding/utf8.encode(entry.name())
-    let name_len = name_bytes.length()
-    let data_len = entry.data().length()
-    let payload_len = payload.length()
-    if name_len > 0xFFFF {
-      raise UnsupportedFeature(msg="file name too long")
-    }
+  for index in archive_local_order(archive) {
+    let entry = archive.entries[index]
     let local_offset = out.length()
-    let crc = crc32(entry.data())
-    let use_descriptor = entry.data_descriptor()
-    let needs_zip64_sizes = force_zip64 ||
-      data_len.reinterpret_as_uint() > max_u32 ||
-      payload_len.reinterpret_as_uint() > max_u32
-    let needs_zip64_offset = force_zip64 ||
-      local_offset.reinterpret_as_uint() > max_u32
-    let needs_zip64_entry = needs_zip64_sizes || needs_zip64_offset
-    if needs_zip64_entry {
-      needs_zip64 = true
-    }
-    let version = if needs_zip64_entry { 45 } else { 20 }
-    let flags = if use_descriptor {
-      flag_utf8 | flag_data_descriptor
-    } else {
-      flag_utf8
-    }
-    let local_extra = build_zip64_extra(
-      uncomp=if needs_zip64_sizes { Some(data_len) } else { None },
-      comp=if needs_zip64_sizes { Some(payload_len) } else { None },
-      offset=None,
-    )
-    write_u32_le(out, local_header_sig.reinterpret_as_uint())
-    write_u16_le(out, version)
-    write_u16_le(out, flags)
-    write_u16_le(out, method_id)
-    write_u16_le(out, 0)
-    write_u16_le(out, 0)
-    if use_descriptor {
-      write_u32_le(out, 0)
-      let size_field = if needs_zip64_sizes { max_u32 } else { 0 }
-      write_u32_le(out, size_field)
-      write_u32_le(out, size_field)
-    } else {
-      write_u32_le(out, crc)
-      let comp_field = if needs_zip64_sizes {
-        max_u32
-      } else {
-        to_u32(payload_len)
+    local_offsets[index] = local_offset
+    match entry.preserved {
+      Some(source) => write_bytes(out, source.local_record)
+      None => {
+        let (record, entry_needs_zip64) = generated_entry_records(
+          out, entry, local_offset, force_zip64,
+        )
+        generated_central[index] = Some(record)
+        if entry_needs_zip64 {
+          needs_zip64 = true
+        }
       }
-      let uncomp_field = if needs_zip64_sizes {
-        max_u32
-      } else {
-        to_u32(data_len)
+    }
+  }
+  for index in 0..<entry_count {
+    let entry = archive.entries[index]
+    match entry.preserved {
+      Some(source) => {
+        let record = source.central_record.to_array()
+        match source.zip64_offset_position {
+          Some(position) =>
+            patch_u64_le(record, position, to_u64(local_offsets[index]))
+          None => patch_u32_le(record, 42, to_u32(local_offsets[index]))
+        }
+        write_bytes(central, Bytes::from_array(record))
       }
-      write_u32_le(out, comp_field)
-      write_u32_le(out, uncomp_field)
+      None =>
+        match generated_central[index] {
+          Some(record) => write_bytes(central, record)
+          None =>
+            raise UnsupportedFeature(
+              msg="generated central-directory record is missing",
+            )
+        }
     }
-    write_u16_le(out, name_len)
-    write_u16_le(out, local_extra.length())
-    write_bytes(out, name_bytes)
-    write_bytes(out, local_extra)
-    write_bytes(out, payload)
-    if use_descriptor {
-      write_data_descriptor(out, crc, payload_len, data_len, needs_zip64_sizes)
-    }
-    let central_extra = build_zip64_extra(
-      uncomp=if needs_zip64_sizes { Some(data_len) } else { None },
-      comp=if needs_zip64_sizes { Some(payload_len) } else { None },
-      offset=if needs_zip64_offset { Some(local_offset) } else { None },
-    )
-    write_u32_le(central, central_header_sig.reinterpret_as_uint())
-    write_u16_le(central, version)
-    write_u16_le(central, version)
-    write_u16_le(central, flags)
-    write_u16_le(central, method_id)
-    write_u16_le(central, 0)
-    write_u16_le(central, 0)
-    write_u32_le(central, crc)
-    let central_comp = if needs_zip64_sizes {
-      max_u32
-    } else {
-      to_u32(payload_len)
-    }
-    let central_uncomp = if needs_zip64_sizes {
-      max_u32
-    } else {
-      to_u32(data_len)
-    }
-    write_u32_le(central, central_comp)
-    write_u32_le(central, central_uncomp)
-    write_u16_le(central, name_len)
-    write_u16_le(central, central_extra.length())
-    write_u16_le(central, 0)
-    write_u16_le(central, 0)
-    write_u16_le(central, 0)
-    write_u32_le(central, 0)
-    let offset_field = if needs_zip64_offset {
-      max_u32
-    } else {
-      to_u32(local_offset)
-    }
-    write_u32_le(central, offset_field)
-    write_bytes(central, name_bytes)
-    write_bytes(central, central_extra)
   }
   let central_offset = out.length()
   for b in central {
@@ -267,7 +371,11 @@ fn write_with_options(
     write_u32_le(out, to_u32(central_size))
     write_u32_le(out, to_u32(central_offset))
   }
-  write_u16_le(out, 0)
+  if archive.comment.length() > 0xffff {
+    raise UnsupportedFeature(msg="archive comment too long")
+  }
+  write_u16_le(out, archive.comment.length())
+  write_bytes(out, archive.comment)
   Bytes::from_array(out)
 }
 

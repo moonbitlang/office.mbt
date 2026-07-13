@@ -263,29 +263,17 @@ fn rebuild_raw_archive(
   part : String,
   replacement : Bytes,
 ) -> Bytes raise RawError {
-  let output = @zip.Archive::new()
-  let mut replaced = false
-  for entry in pkg.archive.entries() {
-    let data = if canonical_part_key(entry.name()) == canonical_part_key(part) {
-      replaced = true
-      replacement
-    } else {
-      entry.data()
-    }
-    output.add(
-      entry.name(),
-      data,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+  let exact_name = match pkg.names.get(canonical_part_key(part)) {
+    Some(name) => name
+    None => part
   }
-  if !replaced {
+  if !pkg.archive.replace(exact_name, replacement) {
     raise raw_error(
       "office.raw.unknown_part",
       "package does not contain replacement part '/\{part}'",
     )
   }
-  let bytes = @zip.write(output) catch {
+  let bytes = @zip.write(pkg.archive) catch {
     _ =>
       raise raw_error(
         "office.raw.archive_write_failed", "could not build candidate OOXML archive",
