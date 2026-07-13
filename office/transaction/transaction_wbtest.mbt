@@ -1337,6 +1337,73 @@ async test "post-return backstop rejects callbacks that ignore candidate budget"
 }
 
 ///|
+test "post-return budget exempts only physical original reuse" {
+  let original = @word.new_blank_docx()
+  let equal_copy = Bytes::from_array(original.to_array())
+  assert_eq(equal_copy, original)
+  assert_false(physical_equal(equal_copy, original))
+  let retained = 4096L
+  let budget : TransactionBudget = {
+    max_candidate_package_bytes: original.length() - 1,
+  }
+  let live_limit = retained + budget.max_candidate_package_bytes.to_int64()
+  let failure = try {
+    ignore(
+      enforce_returned_candidate_budget(
+        transaction_mutation(equal_copy),
+        original,
+        budget,
+        retained,
+        live_limit,
+      ),
+    )
+    fail("expected content-equal copied candidate to consume budget")
+  } catch {
+    TransactionError(..) as error => error
+    error => fail("expected TransactionError, received \{error}")
+  }
+  match failure {
+    TransactionError(code~, details~, ..) => {
+      assert_eq(code, "office.transaction.resource_limit_exceeded")
+      guard details is Some(Object(fields)) else {
+        fail("expected structured materialization details")
+      }
+      assert_eq(fields.get("phase"), Some(Json::string("candidate package")))
+      assert_eq(
+        fields.get("kind"),
+        Some(Json::string("live_materialized_bytes")),
+      )
+      assert_eq(
+        fields.get("actual"),
+        Some(Json::number((live_limit + 1L).to_double())),
+      )
+    }
+  }
+  let fitting_copy = Bytes::from_array(original.to_array())
+  assert_false(physical_equal(fitting_copy, original))
+  let exact_budget : TransactionBudget = {
+    max_candidate_package_bytes: original.length(),
+  }
+  let canonicalized = enforce_returned_candidate_budget(
+    transaction_mutation(fitting_copy),
+    original,
+    exact_budget,
+    retained,
+    retained + original.length().to_int64(),
+  )
+  assert_true(physical_equal(canonicalized.bytes, original))
+  let zero_budget : TransactionBudget = { max_candidate_package_bytes: 0 }
+  let reused = enforce_returned_candidate_budget(
+    transaction_mutation(original),
+    original,
+    zero_budget,
+    retained,
+    retained,
+  )
+  assert_true(physical_equal(reused.bytes, original))
+}
+
+///|
 test "transaction output schema is deterministic and nests A2 warnings" {
   let report : TransactionReport = {
     format: Docx,

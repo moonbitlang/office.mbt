@@ -526,6 +526,28 @@ fn transaction_mutation_budget(
 }
 
 ///|
+fn enforce_returned_candidate_budget(
+  mutation : TransactionMutation,
+  original : Bytes,
+  budget : TransactionBudget,
+  retained : Int64,
+  live_limit : Int64,
+) -> TransactionMutation raise TransactionError {
+  // Only returning the exact immutable buffer supplied to the callback is a
+  // zero-allocation reuse. A separately allocated, content-equal package must
+  // still fit the candidate budget before it can be canonicalized.
+  if !physical_equal(mutation.bytes, original) &&
+    mutation.bytes.length() > budget.max_candidate_package_bytes {
+    raise live_materialization_error(
+      "candidate package",
+      live_limit,
+      retained + mutation.bytes.length().to_int64(),
+    )
+  }
+  mutation.canonicalize_equal_bytes_to_original(original)
+}
+
+///|
 fn check_package_size_with_limit(
   bytes : BytesView,
   phase : String,
@@ -1167,15 +1189,9 @@ async fn transact_with_identifier_and_faults(
         "mutation callback failed: \{bounded_text(error.to_string(), 240)}",
       )
   }
-  let mutation = mutation.reuse_original_if_identical(original)
-  if mutation.bytes != original &&
-    mutation.bytes.length() > budget.max_candidate_package_bytes {
-    raise live_materialization_error(
-      "candidate package",
-      materialization_limit,
-      mutation_retained + mutation.bytes.length().to_int64(),
-    )
-  }
+  let mutation = enforce_returned_candidate_budget(
+    mutation, original, budget, mutation_retained, materialization_limit,
+  )
   let (validations, candidate_archive) = validate_candidate(
     format,
     policy.destination_target,

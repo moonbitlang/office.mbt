@@ -119,7 +119,10 @@ envelope edit is rejected in the output-storage-free plan before the candidate
 buffer exists. The callback receives the original immutable `Bytes` directly;
 archive-backed raw operations report an explicit reuse-original result before
 ZIP sizing when the edited part is byte-identical, and the callback resolves it
-to that same value without a whole-package copy. The transaction also checks
+to that same value without a whole-package copy. Only physical reuse of that
+supplied buffer is allocation-free: a separately allocated, content-equal
+package is charged against the candidate allowance before it may be
+canonicalized back to the original. The transaction checks that distinction and
 the returned length immediately as a fail-closed contract backstop even when a
 custom callback ignores the supplied allowance.
 
