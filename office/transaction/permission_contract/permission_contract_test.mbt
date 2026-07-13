@@ -47,8 +47,15 @@ async test "POSIX final permission is exact despite a restrictive umask" {
           #|  "$test_file" --index 0
           #|status=$?
           #|if [ "$status" -ne 0 ]; then exit "$status"; fi
-          #|mode=$(stat -f '%Lp' "$1/output.docx" 2>/dev/null || stat -c '%a' "$1/output.docx")
-          #|test "$mode" = 666
+          #|if mode=$(stat -c '%a' "$1/output.docx" 2>/dev/null); then
+          #|  :
+          #|else
+          #|  mode=$(stat -f '%Lp' "$1/output.docx")
+          #|fi
+          #|if [ "$mode" != 666 ]; then
+          #|  echo "expected output mode 666, got $mode" >&2
+          #|  exit 1
+          #|fi
 
         let (code, stdout, stderr) = @process.collect_output(
           "/bin/sh",
