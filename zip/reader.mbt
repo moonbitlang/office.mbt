@@ -32,6 +32,9 @@ let zip64_eocd_sig : Int = 0x06064b50
 let zip64_locator_sig : Int = 0x07064b50
 
 ///|
+let unicode_path_extra_id : Int = 0x7075
+
+///|
 priv struct Reader {
   bytes : BytesView
   mut pos : Int
@@ -250,7 +253,9 @@ fn parse_zip64_extra(
     }
     let field = extra[pos:pos + data_size]
     pos = pos + data_size
-    if header_id == 0x0001 {
+    if header_id == unicode_path_extra_id {
+      raise UnsupportedFeature(msg="unicode path extra field not supported")
+    } else if header_id == 0x0001 {
       if found_zip64 {
         raise UnsupportedFeature(msg="duplicate zip64 extra field")
       }

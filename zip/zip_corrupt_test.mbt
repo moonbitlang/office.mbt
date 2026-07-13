@@ -84,7 +84,12 @@ fn push_zip_test_bytes(out : Array[Byte], bytes : BytesView) -> Unit {
 }
 
 ///|
-fn append_zip_test_local(out : Array[Byte], name : Bytes, data : Bytes) -> Int {
+fn append_zip_test_local(
+  out : Array[Byte],
+  name : Bytes,
+  data : Bytes,
+  extra? : Bytes = b"",
+) -> Int {
   let offset = out.length()
   let crc = @zip.crc32(data)
   push_u32_le(out, (0x04034B50 : UInt))
@@ -97,8 +102,9 @@ fn append_zip_test_local(out : Array[Byte], name : Bytes, data : Bytes) -> Int {
   push_u32_le(out, data.length().reinterpret_as_uint())
   push_u32_le(out, data.length().reinterpret_as_uint())
   push_u16_le(out, name.length())
-  push_u16_le(out, 0)
+  push_u16_le(out, extra.length())
   push_zip_test_bytes(out, name)
+  push_zip_test_bytes(out, extra)
   push_zip_test_bytes(out, data)
   offset
 }
@@ -109,6 +115,7 @@ fn append_zip_test_central(
   name : Bytes,
   data : Bytes,
   local_offset : Int,
+  extra? : Bytes = b"",
 ) -> Unit {
   let crc = @zip.crc32(data)
   push_u32_le(out, (0x02014B50 : UInt))
@@ -122,13 +129,28 @@ fn append_zip_test_central(
   push_u32_le(out, data.length().reinterpret_as_uint())
   push_u32_le(out, data.length().reinterpret_as_uint())
   push_u16_le(out, name.length())
-  push_u16_le(out, 0)
+  push_u16_le(out, extra.length())
   push_u16_le(out, 0)
   push_u16_le(out, 0)
   push_u16_le(out, 0)
   push_u32_le(out, (0 : UInt))
   push_u32_le(out, local_offset.reinterpret_as_uint())
   push_zip_test_bytes(out, name)
+  push_zip_test_bytes(out, extra)
+}
+
+///|
+fn zip_test_unicode_path_extra(
+  original_name : Bytes,
+  unicode_name : Bytes,
+) -> Bytes {
+  let out : Array[Byte] = []
+  push_u16_le(out, 0x7075)
+  push_u16_le(out, 5 + unicode_name.length())
+  out.push((1).to_byte())
+  push_u32_le(out, @zip.crc32(original_name))
+  push_zip_test_bytes(out, unicode_name)
+  Bytes::from_array(out)
 }
 
 ///|
@@ -442,6 +464,32 @@ test "zip read: every local record is referenced exactly once" {
     _ => fail("expected orphan local record to be rejected")
   } noraise {
     _ => fail("expected orphan local record to be rejected")
+  }
+}
+
+///|
+test "zip read: Unicode Path extras cannot create alternate names" {
+  let name : Bytes = b"safe.xml"
+  let data : Bytes = b"payload"
+  let extra = zip_test_unicode_path_extra(name, b"word/document.xml")
+  let local_only : Array[Byte] = []
+  let local_offset = append_zip_test_local(local_only, name, data, extra~)
+  let central_offset = local_only.length()
+  append_zip_test_central(local_only, name, data, local_offset)
+  append_zip_test_eocd(local_only, 1, central_offset)
+  let central_only : Array[Byte] = []
+  let local_offset = append_zip_test_local(central_only, name, data)
+  let central_offset = central_only.length()
+  append_zip_test_central(central_only, name, data, local_offset, extra~)
+  append_zip_test_eocd(central_only, 1, central_offset)
+  for archive in [local_only, central_only] {
+    try @zip.read(Bytes::from_array(archive)) catch {
+      UnsupportedFeature(msg~) =>
+        inspect(msg, content="unicode path extra field not supported")
+      _ => fail("expected Unicode Path extra field to be rejected")
+    } noraise {
+      _ => fail("expected Unicode Path extra field to be rejected")
+    }
   }
 }
 
