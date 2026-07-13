@@ -235,7 +235,7 @@ test "raw namespace bindings are bounded and expanded-name matching is prefix ne
   )
   let edited = @raw.raw_edit(Docx, original, request)
   inspect(
-    @raw.raw_read("prefix.docx", edited.bytes, "/document")
+    @raw.raw_read("prefix.docx", edited.result_bytes(original), "/document")
     .xml_text()
     .contains("prefix neutral"),
     content="true",

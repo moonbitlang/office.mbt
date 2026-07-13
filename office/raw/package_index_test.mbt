@@ -650,7 +650,10 @@ test "raw inventory excludes ZIP directory markers and mutations preserve them" 
       value="true",
     ),
   )
-  assert_eq(@zip.read(edited.bytes).get("word/"), Some(b""))
+  assert_eq(
+    @zip.read(edited.result_bytes(with_directory)).get("word/"),
+    Some(b""),
+  )
 }
 
 ///|
@@ -801,9 +804,13 @@ test "raw relationship targets resolve to exact archive spelling" {
     value="true",
   )
   let edited = @raw.raw_edit(Docx, data, request)
-  assert_eq(edited.part, "CUSTOM/MAIN.XML")
+  assert_eq(edited.part_name(), "CUSTOM/MAIN.XML")
   assert_true(
-    @raw.raw_read("mixed.docx", edited.bytes, "part:/CUSTOM/MAIN.XML")
+    @raw.raw_read(
+      "mixed.docx",
+      edited.result_bytes(data),
+      "part:/CUSTOM/MAIN.XML",
+    )
     .xml_text()
     .contains("mixed=\"true\""),
   )
@@ -825,9 +832,13 @@ test "raw relationship targets resolve to exact archive spelling" {
     value="true",
   )
   let xlsx_edited = @raw.raw_edit(Xlsx, xlsx, xlsx_request)
-  assert_eq(xlsx_edited.part, "DATA/FIRST.XML")
+  assert_eq(xlsx_edited.part_name(), "DATA/FIRST.XML")
   assert_true(
-    @raw.raw_read("mixed.xlsx", xlsx_edited.bytes, "part:/DATA/FIRST.XML")
+    @raw.raw_read(
+      "mixed.xlsx",
+      xlsx_edited.result_bytes(xlsx),
+      "part:/DATA/FIRST.XML",
+    )
     .xml_text()
     .contains("mixed=\"true\""),
   )
@@ -864,7 +875,7 @@ test "raw selectors derive Strict OOXML namespaces and bind xml automatically" {
   )
   let docx_edited = @raw.raw_edit(Docx, docx, docx_request)
   assert_true(
-    @raw.raw_read("strict.docx", docx_edited.bytes, "/document")
+    @raw.raw_read("strict.docx", docx_edited.result_bytes(docx), "/document")
     .xml_text()
     .contains("xml:space=\"preserve\""),
   )
@@ -883,7 +894,7 @@ test "raw selectors derive Strict OOXML namespaces and bind xml automatically" {
   )
   let xlsx_edited = @raw.raw_edit(Xlsx, xlsx, xlsx_request)
   assert_true(
-    @raw.raw_read("strict.xlsx", xlsx_edited.bytes, "/sheet[1]")
+    @raw.raw_read("strict.xlsx", xlsx_edited.result_bytes(xlsx), "/sheet[1]")
     .xml_text()
     .contains("strict=\"true\""),
   )
@@ -1157,7 +1168,7 @@ test "maximum supported part names remain readable and mutable" {
     "<extra changed=\"true\"/>",
   )
   assert_true(
-    @raw.raw_read("max-name.docx", mutation.bytes, selector)
+    @raw.raw_read("max-name.docx", mutation.result_bytes(data), selector)
     .xml_text()
     .contains("changed=\"true\""),
   )

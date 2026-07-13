@@ -410,15 +410,20 @@ fn apply_raw_span_edits(
 }
 
 ///|
-fn write_raw_candidate_archive(
-  archive : @zip.Archive,
-  max_package_bytes : Int,
-) -> Bytes raise RawError {
+fn check_raw_package_limit(max_package_bytes : Int) -> Unit raise RawError {
   if max_package_bytes < 0 {
     raise raw_error(
       "office.raw.invalid_request", "candidate package limit must be non-negative",
     )
   }
+}
+
+///|
+fn write_raw_candidate_archive(
+  archive : @zip.Archive,
+  max_package_bytes : Int,
+) -> Bytes raise RawError {
+  check_raw_package_limit(max_package_bytes)
   let enforced_limit = if max_package_bytes < raw_max_package_bytes {
     max_package_bytes
   } else {
@@ -534,9 +539,18 @@ fn raw_replace_part_package(
   validate_serialized : Bool,
   max_package_bytes : Int,
 ) -> RawMutation raise RawError {
+  check_raw_package_limit(max_package_bytes)
   validate_part_selector(part)
-  let (resolved, _) = pkg.checked_xml_part(part)
+  let (resolved, current) = pkg.checked_xml_part(part)
   let replacement = checked_document_bytes(xml)
+  if replacement == current {
+    return {
+      result: ReuseOriginal,
+      part: resolved,
+      action: "replace-part",
+      match_count: 1,
+    }
+  }
   let candidate = rebuild_raw_archive(
     pkg, resolved, replacement, max_package_bytes,
   )
@@ -545,14 +559,21 @@ fn raw_replace_part_package(
   } else {
     validate_raw_candidate_archive(format, pkg.archive)
   }
-  { bytes: candidate, part: resolved, action: "replace-part", match_count: 1 }
+  {
+    result: Serialized(candidate),
+    part: resolved,
+    action: "replace-part",
+    match_count: 1,
+  }
 }
 
 ///|
-/// Replaces one existing XML part and returns a pure, validated candidate.
+/// Replaces one existing XML part and returns a pure, validated mutation
+/// result. A byte-identical replacement explicitly reuses `data` without ZIP
+/// serialization; resolve the result with `RawMutation::result_bytes`.
 pub fn raw_replace_part(
   format : @office.DocumentFormat,
-  data : BytesView,
+  data : Bytes,
   part : String,
   xml : String,
 ) -> RawMutation raise RawError {
@@ -597,6 +618,7 @@ fn raw_edit_package(
   validate_serialized : Bool,
   max_package_bytes : Int,
 ) -> RawMutation raise RawError {
+  check_raw_package_limit(max_package_bytes)
   let (part, bytes) = pkg.checked_xml_part(request.part)
   let document = scan_raw_xml(part, bytes)
   let namespaces = edit_path_namespaces(format, request, document)
@@ -638,6 +660,14 @@ fn raw_edit_package(
     )
   }
   let replacement = apply_raw_span_edits(part, document, edits)
+  if replacement == bytes {
+    return {
+      result: ReuseOriginal,
+      part,
+      action: request.action.name(),
+      match_count: selected.length(),
+    }
+  }
   let candidate = rebuild_raw_archive(pkg, part, replacement, max_package_bytes)
   if validate_serialized {
     validate_raw_candidate(format, candidate)
@@ -645,7 +675,7 @@ fn raw_edit_package(
     validate_raw_candidate_archive(format, pkg.archive)
   }
   {
-    bytes: candidate,
+    result: Serialized(candidate),
     part,
     action: request.action.name(),
     match_count: selected.length(),
@@ -653,11 +683,12 @@ fn raw_edit_package(
 }
 
 ///|
-/// Applies one bounded element edit to an existing XML part and returns a
-/// pure, validated candidate. Publication remains the A4 transaction's job.
+/// Applies one bounded element edit to an existing XML part and returns a pure,
+/// validated mutation result. A byte-identical edit explicitly reuses `data`
+/// without ZIP serialization. Publication remains the A4 transaction's job.
 pub fn raw_edit(
   format : @office.DocumentFormat,
-  data : BytesView,
+  data : Bytes,
   request : RawEditRequest,
 ) -> RawMutation raise RawError {
   raw_edit_package(
