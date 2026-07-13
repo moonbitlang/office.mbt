@@ -14,6 +14,11 @@ let raw_max_namespace_bindings = 32
 let raw_max_namespace_uri_length = 1024
 
 ///|
+let raw_max_namespace_binding_length : Int = raw_max_name_length +
+  1 +
+  raw_max_namespace_uri_length
+
+///|
 let raw_max_fragment_bytes : Int = 1024 * 1024
 
 ///|
@@ -100,16 +105,18 @@ fn is_raw_ncname_character(character : Char) -> Bool {
 
 ///|
 fn is_raw_ncname(value : StringView) -> Bool {
-  let characters = value.to_array()
-  if characters.is_empty() || !is_raw_ncname_start(characters[0]) {
-    return false
-  }
-  for index = 1; index < characters.length(); index = index + 1 {
-    if !is_raw_ncname_character(characters[index]) {
+  let mut first = true
+  for character in value {
+    if first {
+      if !is_raw_ncname_start(character) {
+        return false
+      }
+      first = false
+    } else if !is_raw_ncname_character(character) {
       return false
     }
   }
-  true
+  !first
 }
 
 ///|
@@ -181,7 +188,7 @@ fn RawPathParser::parse_ncname(self : RawPathParser) -> String raise RawError {
     }
   }
   let value = self.source[start:self.offset].to_owned()
-  if value.length() > raw_max_name_length {
+  if !raw_text_within_scalar_limit(value, raw_max_name_length) {
     raise raw_path_error(
       self.source,
       start,
@@ -412,13 +419,16 @@ fn checked_namespace_bindings(
   let output : Array[(String, String)] = []
   for binding in values {
     let (prefix, uri) = binding
-    if !is_raw_ncname(prefix) || prefix == "xmlns" {
+    if !raw_text_within_scalar_limit(prefix, raw_max_name_length) ||
+      !is_raw_ncname(prefix) ||
+      prefix == "xmlns" {
       raise raw_error(
         "office.raw.invalid_namespace",
-        "namespace prefix '\{bounded_raw_text(prefix, 128)}' is not a valid NCName",
+        "namespace prefix '\{bounded_raw_text(prefix, 128)}' must be a valid NCName of at most \{raw_max_name_length} characters",
       )
     }
-    if uri == "" || uri.length() > raw_max_namespace_uri_length {
+    if uri == "" ||
+      !raw_text_within_scalar_limit(uri, raw_max_namespace_uri_length) {
       raise raw_error(
         "office.raw.invalid_namespace",
         "namespace URI for '\{prefix}' must contain 1 to \{raw_max_namespace_uri_length} characters",
@@ -455,6 +465,12 @@ fn checked_namespace_bindings(
 ///|
 /// Parses one CLI namespace binding in the form `PREFIX=URI`.
 pub fn raw_namespace_binding(value : String) -> (String, String) raise RawError {
+  if !raw_text_within_scalar_limit(value, raw_max_namespace_binding_length) {
+    raise raw_error(
+      "office.raw.invalid_namespace",
+      "namespace binding exceeds \{raw_max_namespace_binding_length} characters",
+    )
+  }
   match value.find("=") {
     Some(at) if at > 0 && at + 1 < value.length() => {
       let pair = (value[:at].to_owned(), value[at + 1:].to_owned())
