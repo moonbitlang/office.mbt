@@ -197,6 +197,8 @@ priv struct EntryMeta {
   crc32 : UInt
   zip64_sizes : Bool
   central_record : Bytes
+  central_zip64_uncompressed_position : Int?
+  central_zip64_compressed_position : Int?
   zip64_offset_position : Int?
 }
 
@@ -204,7 +206,12 @@ priv struct EntryMeta {
 priv struct LocalRecord {
   compressed : BytesView
   compression : Compression
+  data_start : Int
   end : Int
+  local_zip64_uncompressed_position : Int?
+  local_zip64_compressed_position : Int?
+  descriptor_signed : Bool
+  descriptor_zip64 : Bool
 }
 
 ///|
@@ -306,11 +313,13 @@ fn parse_zip64_extra(
 }
 
 ///|
-fn zip64_offset_position(
+fn zip64_value_positions(
   extra : BytesView,
   need_uncomp : Bool,
   need_comp : Bool,
-) -> Int raise ZipError {
+  need_offset : Bool,
+  descriptor_sizes : Bool,
+) -> (Int?, Int?, Int?) raise ZipError {
   let mut position = 0
   while position < extra.length() {
     if position > extra.length() || 4 > extra.length() - position {
@@ -323,16 +332,37 @@ fn zip64_offset_position(
       raise OutOfBounds(offset=data_offset)
     }
     if header_id == 0x0001 {
-      let field_offset = (if need_uncomp { 8 } else { 0 }) +
-        (if need_comp { 8 } else { 0 })
-      if field_offset > data_size || 8 > data_size - field_offset {
-        raise UnsupportedFeature(msg="zip64 local-offset field is missing")
+      let read_uncomp = need_uncomp || descriptor_sizes
+      let read_comp = need_comp || descriptor_sizes
+      let required_size = (if read_uncomp { 8 } else { 0 }) +
+        (if read_comp { 8 } else { 0 }) +
+        (if need_offset { 8 } else { 0 })
+      if data_size != required_size {
+        raise UnsupportedFeature(msg="zip64 extra field size mismatch")
       }
-      return data_offset + field_offset
+      let uncomp_position = if read_uncomp { Some(data_offset) } else { None }
+      let comp_position = if read_comp {
+        Some(data_offset + (if read_uncomp { 8 } else { 0 }))
+      } else {
+        None
+      }
+      let offset_position = if need_offset {
+        Some(
+          data_offset +
+          (if read_uncomp { 8 } else { 0 }) +
+          (if read_comp { 8 } else { 0 }),
+        )
+      } else {
+        None
+      }
+      return (uncomp_position, comp_position, offset_position)
     }
     position = data_offset + data_size
   }
-  raise UnsupportedFeature(msg="zip64 local-offset field is missing")
+  if need_uncomp || need_comp || need_offset || descriptor_sizes {
+    raise UnsupportedFeature(msg="required zip64 extra field is missing")
+  }
+  (None, None, None)
 }
 
 ///|
@@ -555,6 +585,18 @@ fn read_entry_record(
     false,
     has_descriptor,
   )
+  let (local_zip64_uncompressed_position, local_zip64_compressed_position, _) = if local_zip64 {
+    let (uncomp, comp, offset) = zip64_value_positions(
+      local_extra, need_local_uncomp, need_local_comp, false, has_descriptor,
+    )
+    (
+      uncomp.map(position => 30 + name_len + position),
+      comp.map(position => 30 + name_len + position),
+      offset,
+    )
+  } else {
+    (None, None, None)
+  }
   if has_descriptor {
     if local_crc32 != 0 && local_crc32 != meta.crc32 {
       raise UnsupportedFeature(msg="mismatched local and central CRC-32")
@@ -584,18 +626,37 @@ fn read_entry_record(
     meta.compressed_size > central_offset - reader.pos {
     raise OutOfBounds(offset=reader.pos)
   }
+  let data_start = reader.pos
   let compressed = reader.read_bytes(meta.compressed_size)
+  let descriptor_zip64 = meta.zip64_sizes || local_zip64
+  let mut descriptor_signed = false
   if has_descriptor {
     let descriptor_bytes = bytes[:central_offset]
+    descriptor_signed = data_descriptor_record_matches(
+      descriptor_bytes,
+      reader.pos,
+      meta,
+      descriptor_zip64,
+      true,
+    )
     let descriptor_size = data_descriptor_record_size(
       descriptor_bytes,
       reader.pos,
       meta,
-      meta.zip64_sizes || local_zip64,
+      descriptor_zip64,
     )
     reader.skip(descriptor_size)
   }
-  { compressed, compression, end: reader.pos }
+  {
+    compressed,
+    compression,
+    data_start,
+    end: reader.pos,
+    local_zip64_uncompressed_position,
+    local_zip64_compressed_position,
+    descriptor_signed,
+    descriptor_zip64,
+  }
 }
 
 ///|
@@ -883,15 +944,14 @@ fn read_impl(
     } else {
       u32_to_int(local_offset_raw)
     }
-    let preserved_zip64_offset_position = if need_offset {
-      Some(
-        46 +
-        name_len +
-        zip64_offset_position(extra_bytes, need_uncomp, need_comp),
-      )
-    } else {
-      None
-    }
+    let (
+      central_zip64_uncompressed_position,
+      central_zip64_compressed_position,
+      central_zip64_offset_position,
+    ) = zip64_value_positions(
+      extra_bytes, need_uncomp, need_comp, need_offset, false,
+    )
+    let central_extra_start = 46 + name_len
     ignore(compression_from_method(method_id))
     match max_entry_uncompressed_bytes {
       Some(limit) if uncomp_size > limit =>
@@ -922,7 +982,16 @@ fn read_impl(
       crc32,
       zip64_sizes: need_uncomp || need_comp,
       central_record,
-      zip64_offset_position: preserved_zip64_offset_position,
+      central_zip64_uncompressed_position: central_zip64_uncompressed_position.map(position => {
+          central_extra_start + position
+        },
+      ),
+      central_zip64_compressed_position: central_zip64_compressed_position.map(position => {
+        central_extra_start + position
+      }),
+      zip64_offset_position: central_zip64_offset_position.map(position => {
+        central_extra_start + position
+      }),
     })
   }
   if central_reader.pos != central_size {
@@ -1014,6 +1083,17 @@ fn read_impl(
         local_record: bytes[meta.local_header_offset:record.end].to_owned(),
         central_record: meta.central_record,
         zip64_offset_position: meta.zip64_offset_position,
+      }),
+      replacement_template: Some({
+        local_header: bytes[meta.local_header_offset:record.data_start].to_owned(),
+        central_record: meta.central_record,
+        local_zip64_uncompressed_position: record.local_zip64_uncompressed_position,
+        local_zip64_compressed_position: record.local_zip64_compressed_position,
+        central_zip64_uncompressed_position: meta.central_zip64_uncompressed_position,
+        central_zip64_compressed_position: meta.central_zip64_compressed_position,
+        central_zip64_offset_position: meta.zip64_offset_position,
+        descriptor_signed: record.descriptor_signed,
+        descriptor_zip64: record.descriptor_zip64,
       }),
     })
   }
