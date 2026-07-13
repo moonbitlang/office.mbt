@@ -42,9 +42,9 @@ test "transaction options reject unsafe or unbounded paths and permissions" {
 
 ///|
 test "validators, findings, and warnings are bounded contracts" {
-  let pass : (@office.DocumentFormat, BytesView) -> Array[
+  let pass : (@office.DocumentFormat, BytesView, @zip.Archive) -> Array[
     @transaction.ValidationFinding,
-  ] raise = (_format, _bytes) => []
+  ] raise = (_format, _bytes, _archive) => []
   for invalid_name in ["", "not valid", "v".repeat(97)] {
     assert_eq(
       contract_error_code(() => {

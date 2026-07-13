@@ -77,6 +77,51 @@ pub fn Archive::new() -> Archive {
 }
 
 ///|
+/// Returns an independently mutable archive snapshot whose immutable strings
+/// and byte buffers remain shared. Replacing or adding an entry on the fork
+/// cannot change `self`; this avoids reinflating an already validated archive
+/// when a caller needs a working copy.
+pub fn Archive::fork(self : Archive) -> Archive {
+  {
+    entries: self.entries.copy(),
+    comment: self.comment,
+    zip64_trailer: self.zip64_trailer,
+  }
+}
+
+///|
+/// Conservatively estimates bytes retained by this materialized archive.
+/// Payloads and preserved source records are counted exactly; decoded names
+/// and per-entry/runtime bookkeeping include an explicit reserve. The source
+/// package buffer from which the archive was read is not included.
+pub fn Archive::retained_size_estimate(self : Archive) -> Int64 {
+  let mut total = self.comment.length().to_int64()
+  match self.zip64_trailer {
+    Some(trailer) => {
+      total = total + trailer.end_record.length().to_int64()
+      total = total + trailer.locator.length().to_int64()
+      total = total + trailer.classic_end_record.length().to_int64()
+    }
+    None => ()
+  }
+  for entry in self.entries {
+    total = total + entry.data.length().to_int64()
+    total = total + entry.name.length().to_int64() * 2L
+    // Entry/array slots, references, option wrappers, and allocator metadata.
+    total = total + 512L
+    match entry.source {
+      Some(source) => {
+        total = total + source.local_record.length().to_int64()
+        total = total + source.central_record.length().to_int64()
+        total = total + 128L
+      }
+      None => ()
+    }
+  }
+  total
+}
+
+///|
 fn archive_from_source(
   comment : Bytes,
   zip64_trailer : Zip64TrailerTemplate?,

@@ -399,19 +399,19 @@ pub fn transaction_options(
 }
 
 ///|
-/// A pinned-byte package identifier used before any generic Office DOM parse.
+/// A pinned-package identifier used before any generic Office DOM parse.
 /// Custom command families can enforce their own bounded package boundary while
-/// retaining the transaction's archive limits, preservation checks, and atomic
-/// publication.
+/// reusing the transaction's already bounded archive instead of inflating the
+/// same package again. The archive is an independently mutable shallow fork.
 pub struct TransactionIdentifier {
   name : String
-  identify : (String, BytesView) -> @office.DocumentFormat raise
+  identify : (String, BytesView, @zip.Archive) -> @office.DocumentFormat raise
 }
 
 ///|
 pub fn transaction_identifier(
   name : String,
-  identify : (String, BytesView) -> @office.DocumentFormat raise,
+  identify : (String, BytesView, @zip.Archive) -> @office.DocumentFormat raise,
 ) -> TransactionIdentifier raise TransactionError {
   checked_identifier(name, "transaction identifier name")
   { name, identify }
@@ -422,8 +422,9 @@ fn TransactionIdentifier::run(
   self : TransactionIdentifier,
   path : String,
   bytes : BytesView,
+  archive : @zip.Archive,
 ) -> @office.DocumentFormat raise {
-  (self.identify)(path, bytes)
+  (self.identify)(path, bytes, archive)
 }
 
 ///|
@@ -445,16 +446,21 @@ pub fn validation_finding(
 
 ///|
 /// A named, side-effect-free validation hook run after the mandatory portable
-/// OPC gate and before any temporary file is created.
+/// OPC gate and before any temporary file is created. The archive argument is
+/// an isolated shallow fork of the already materialized candidate.
 pub struct TransactionValidator {
   name : String
-  validate : (@office.DocumentFormat, BytesView) -> Array[ValidationFinding] raise
+  validate : (@office.DocumentFormat, BytesView, @zip.Archive) -> Array[
+    ValidationFinding,
+  ] raise
 }
 
 ///|
 pub fn transaction_validator(
   name : String,
-  validate : (@office.DocumentFormat, BytesView) -> Array[ValidationFinding] raise,
+  validate : (@office.DocumentFormat, BytesView, @zip.Archive) -> Array[
+    ValidationFinding,
+  ] raise,
 ) -> TransactionValidator raise TransactionError {
   checked_identifier(name, "validator name")
   { name, validate }
@@ -465,8 +471,9 @@ fn TransactionValidator::run(
   self : TransactionValidator,
   format : @office.DocumentFormat,
   bytes : BytesView,
+  archive : @zip.Archive,
 ) -> Array[ValidationFinding] raise {
-  (self.validate)(format, bytes)
+  (self.validate)(format, bytes, archive)
 }
 
 ///|
@@ -476,6 +483,22 @@ pub struct TransactionMutation {
   bytes : Bytes
   declared_parts : ReadOnlyArray[String]?
   warnings : ReadOnlyArray[@office.ProtocolWarning]
+}
+
+///|
+fn TransactionMutation::reuse_original_if_identical(
+  self : TransactionMutation,
+  original : Bytes,
+) -> TransactionMutation {
+  if self.bytes == original {
+    {
+      bytes: original,
+      declared_parts: self.declared_parts,
+      warnings: self.warnings,
+    }
+  } else {
+    self
+  }
 }
 
 ///|

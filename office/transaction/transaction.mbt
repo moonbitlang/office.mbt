@@ -17,6 +17,25 @@ let transaction_max_entry_uncompressed_bytes : Int = 64 * 1024 * 1024
 let transaction_max_total_uncompressed_bytes : Int = 256 * 1024 * 1024
 
 ///|
+/// The complete transaction reserves one cross-phase materialization budget,
+/// not one independent allowance per ZIP parse. The fixed reserve covers raw
+/// package indexes, XML metadata, shallow archive forks, preservation maps,
+/// and serializer working buffers that are not owned by `Archive` itself.
+let transaction_max_live_materialized_bytes : Int64 = 384L * 1024L * 1024L
+
+///|
+let transaction_materialization_working_reserve : Int64 = 64L * 1024L * 1024L
+
+///|
+/// Before inflation, reserve the source buffer, copied local/central records,
+/// decoded names, and bounded entry/runtime bookkeeping. The post-read check
+/// replaces this conservative preflight with `Archive::retained_size_estimate`.
+let transaction_package_retention_multiplier : Int64 = 3L
+
+///|
+let transaction_archive_entry_reserve : Int64 = 512L
+
+///|
 priv struct ResolvedPolicy {
   source_target : String
   source_directory : PublicationDirectory
@@ -469,6 +488,24 @@ fn resource_limit_error(
 }
 
 ///|
+fn live_materialization_error(
+  phase : String,
+  limit : Int64,
+  actual : Int64,
+) -> TransactionError {
+  transaction_error(
+    "office.transaction.resource_limit_exceeded",
+    "transaction live materialization budget exceeded during " + phase,
+    details=Json::object({
+      "phase": Json::string(phase),
+      "kind": Json::string("live_materialized_bytes"),
+      "limit": Json::number(limit.to_double()),
+      "actual": Json::number(actual.to_double()),
+    }),
+  )
+}
+
+///|
 fn check_package_size_with_limit(
   bytes : BytesView,
   phase : String,
@@ -488,20 +525,49 @@ fn check_package_size(
 }
 
 ///|
-fn read_transaction_archive_with_limits(
+fn transaction_archive_preflight_overhead(bytes : BytesView) -> Int64 {
+  bytes.length().to_int64() * transaction_package_retention_multiplier +
+  transaction_max_archive_entries.to_int64() * transaction_archive_entry_reserve
+}
+
+///|
+fn read_transaction_archive(
   bytes : BytesView,
   phase : String,
   invalid_code : String,
-  max_entries : Int,
-  max_entry_uncompressed_bytes : Int,
-  max_total_uncompressed_bytes : Int,
-) -> @zip.Archive raise TransactionError {
-  @zip.read_limited(
+  retained : Int64,
+  live_limit : Int64,
+) -> (@zip.Archive, Int64) raise TransactionError {
+  let package_bytes = bytes.length().to_int64()
+  let preflight_overhead = transaction_archive_preflight_overhead(bytes)
+  let available = live_limit - retained - preflight_overhead
+  if available <= 0L {
+    raise live_materialization_error(
+      phase,
+      live_limit,
+      retained + preflight_overhead + 1L,
+    )
+  }
+  let aggregate_limit = if available <
+    transaction_max_total_uncompressed_bytes.to_int64() {
+    available.to_int()
+  } else {
+    transaction_max_total_uncompressed_bytes
+  }
+  let archive = @zip.read_limited(
     bytes,
-    max_entries~,
-    max_entry_uncompressed_bytes~,
-    max_total_uncompressed_bytes~,
+    max_entries=transaction_max_archive_entries,
+    max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
+    max_total_uncompressed_bytes=aggregate_limit,
   ) catch {
+    ResourceLimitExceeded(kind~, limit=_, actual~) if kind ==
+      "total_uncompressed_bytes" &&
+      aggregate_limit < transaction_max_total_uncompressed_bytes =>
+      raise live_materialization_error(
+        phase,
+        live_limit,
+        retained + preflight_overhead + actual.to_int64(),
+      )
     ResourceLimitExceeded(kind~, limit~, actual~) =>
       raise resource_limit_error(phase, kind, limit, actual)
     _ =>
@@ -510,18 +576,12 @@ fn read_transaction_archive_with_limits(
         "unreadable bounded ZIP package during " + phase,
       )
   }
-}
-
-///|
-fn read_transaction_archive(
-  bytes : BytesView,
-  phase : String,
-  invalid_code : String,
-) -> @zip.Archive raise TransactionError {
-  read_transaction_archive_with_limits(
-    bytes, phase, invalid_code, transaction_max_archive_entries, transaction_max_entry_uncompressed_bytes,
-    transaction_max_total_uncompressed_bytes,
-  )
+  let archive_cost = package_bytes + archive.retained_size_estimate()
+  let actual = retained + archive_cost
+  if actual > live_limit {
+    raise live_materialization_error(phase, live_limit, actual)
+  }
+  (archive, archive_cost)
 }
 
 ///|
@@ -529,14 +589,16 @@ fn identify_input(
   options : TransactionOptions,
   original : BytesView,
   identifier : TransactionIdentifier?,
-) -> (@office.DocumentFormat, @zip.Archive) raise TransactionError {
+  retained : Int64,
+  live_limit : Int64,
+) -> (@office.DocumentFormat, @zip.Archive, Int64) raise TransactionError {
   check_package_size(original, "input package")
-  let archive = read_transaction_archive(
-    original, "input package", "office.transaction.invalid_input",
+  let (archive, archive_cost) = read_transaction_archive(
+    original, "input package", "office.transaction.invalid_input", retained, live_limit,
   )
   let format = match identifier {
     Some(identifier) =>
-      identifier.run(options.input_path, original) catch {
+      identifier.run(options.input_path, original, archive.fork()) catch {
         TransactionError(..) as error =>
           raise normalize_transaction_error(
             error, "office.transaction.invalid_input", "custom transaction identifier raised an invalid error",
@@ -559,7 +621,7 @@ fn identify_input(
           )
       }
   }
-  (format, archive)
+  (format, archive, archive_cost)
 }
 
 ///|
@@ -600,19 +662,34 @@ fn validate_validator_set(
 fn validate_candidate(
   format : @office.DocumentFormat,
   validation_path : String,
+  original : BytesView,
+  original_archive : @zip.Archive,
   mutation : TransactionMutation,
   validators : Array[TransactionValidator],
   identifier : TransactionIdentifier?,
+  retained : Int64,
+  live_limit : Int64,
 ) -> (Array[ValidationSummary], @zip.Archive) raise TransactionError {
   check_package_size(mutation.bytes, "candidate package")
-  let archive = read_transaction_archive(
-    mutation.bytes,
-    "candidate package",
-    "office.transaction.validation_failed",
-  )
+  let archive = if mutation.bytes[:] == original {
+    original_archive
+  } else {
+    let (candidate, _) = read_transaction_archive(
+      mutation.bytes,
+      "candidate package",
+      "office.transaction.validation_failed",
+      retained,
+      live_limit,
+    )
+    candidate
+  }
   let (candidate_format, identifier_name) = match identifier {
     Some(identifier) => {
-      let candidate_format = identifier.run(validation_path, mutation.bytes) catch {
+      let candidate_format = identifier.run(
+        validation_path,
+        mutation.bytes,
+        archive.fork(),
+      ) catch {
         TransactionError(..) as error =>
           raise normalize_transaction_error(
             error, "office.transaction.validation_failed", "custom transaction identifier raised an invalid error",
@@ -656,7 +733,7 @@ fn validate_candidate(
     { name: identifier_name, passed: true, finding_count: 0 },
   ]
   for validator in validators {
-    let findings = validator.run(format, mutation.bytes) catch {
+    let findings = validator.run(format, mutation.bytes, archive.fork()) catch {
       error =>
         raise transaction_error(
           "office.transaction.validation_failed",
@@ -954,13 +1031,22 @@ fn append_platform_warnings(
 ///|
 async fn transact_with_identifier_and_faults(
   options : TransactionOptions,
-  mutate : (@office.DocumentFormat, BytesView) -> TransactionMutation raise,
+  mutate : (@office.DocumentFormat, BytesView, @zip.Archive) -> TransactionMutation raise,
   validators : Array[TransactionValidator],
   identifier : TransactionIdentifier?,
   faults : TransactionFaults,
   post_read_release? : String,
   cleanup_release? : String,
+  materialization_limit? : Int64 = transaction_max_live_materialized_bytes,
+  materialization_reserve? : Int64 = transaction_materialization_working_reserve,
 ) -> TransactionReport {
+  if materialization_limit <= 0L ||
+    materialization_reserve < 0L ||
+    materialization_reserve >= materialization_limit {
+    raise transaction_error(
+      "office.transaction.invalid_contract", "transaction materialization limit must exceed its nonnegative working reserve",
+    )
+  }
   let validators = validators.copy()
   validate_validator_set(validators)
   let policy = resolve_policy(options)
@@ -994,8 +1080,10 @@ async fn transact_with_identifier_and_faults(
   // cancelled. Make that pending cancellation observable before synchronous
   // parsing/mutation, including dry-run and byte-identical no-op paths.
   @async.pause()
-  let (format, original_archive) = identify_input(options, original, identifier)
-  let mutation = mutate(format, original) catch {
+  let (format, original_archive, original_archive_cost) = identify_input(
+    options, original, identifier, materialization_reserve, materialization_limit,
+  )
+  let mutation = mutate(format, original, original_archive.fork()) catch {
     TransactionError(..) as error => raise normalize_mutation_error(error)
     error =>
       raise transaction_error(
@@ -1003,12 +1091,17 @@ async fn transact_with_identifier_and_faults(
         "mutation callback failed: \{bounded_text(error.to_string(), 240)}",
       )
   }
+  let mutation = mutation.reuse_original_if_identical(original)
   let (validations, candidate_archive) = validate_candidate(
     format,
     policy.destination_target,
+    original,
+    original_archive,
     mutation,
     validators,
     identifier,
+    materialization_reserve + original_archive_cost,
+    materialization_limit,
   )
   let preservation = preservation_report_archives(
     original, mutation, original_archive, candidate_archive,
@@ -1051,7 +1144,7 @@ async fn transact_with_identifier_and_faults(
 ///|
 async fn transact_with_faults(
   options : TransactionOptions,
-  mutate : (@office.DocumentFormat, BytesView) -> TransactionMutation raise,
+  mutate : (@office.DocumentFormat, BytesView, @zip.Archive) -> TransactionMutation raise,
   validators : Array[TransactionValidator],
   faults : TransactionFaults,
   post_read_release? : String,
@@ -1070,11 +1163,12 @@ async fn transact_with_faults(
 
 ///|
 /// Runs one fail-closed Office package transaction. The mutation callback owns
-/// only in-memory transformation; mandatory validation, preservation checks,
-/// source conflict detection, and atomic publication remain in this function.
+/// an independently mutable shallow fork of the already bounded input archive;
+/// mandatory validation, preservation checks, source conflict detection, and
+/// atomic publication remain in this function.
 pub async fn transact(
   options : TransactionOptions,
-  mutate : (@office.DocumentFormat, BytesView) -> TransactionMutation raise,
+  mutate : (@office.DocumentFormat, BytesView, @zip.Archive) -> TransactionMutation raise,
   validators? : Array[TransactionValidator] = [],
   identifier? : TransactionIdentifier,
 ) -> TransactionReport {

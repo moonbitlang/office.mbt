@@ -459,6 +459,27 @@ fn validate_raw_candidate(
 }
 
 ///|
+/// Revalidates the logical candidate archive without another ZIP inflation.
+/// The transaction boundary subsequently parses the serialized bytes once,
+/// which supplies the independent writer/readback check before publication.
+fn validate_raw_candidate_archive(
+  format : @office.DocumentFormat,
+  archive : @zip.Archive,
+) -> Unit raise RawError {
+  ignore(open_raw_archive_for_format(format, archive)) catch {
+    RawError(code~, message~, details~) =>
+      raise raw_error(
+        "office.raw.validation_failed",
+        "raw mutation failed the complete bounded raw-package validation: \{message}",
+        details=match details {
+          Some(value) => value
+          None => Json::object({ "cause": Json::string(code) })
+        },
+      )
+  }
+}
+
+///|
 fn RawPackage::checked_xml_part(
   self : RawPackage,
   selector : String,
@@ -476,6 +497,26 @@ fn RawPackage::checked_xml_part(
 }
 
 ///|
+fn raw_replace_part_package(
+  format : @office.DocumentFormat,
+  pkg : RawPackage,
+  part : String,
+  xml : String,
+  validate_serialized : Bool,
+) -> RawMutation raise RawError {
+  validate_part_selector(part)
+  let (resolved, _) = pkg.checked_xml_part(part)
+  let replacement = checked_document_bytes(xml)
+  let candidate = rebuild_raw_archive(pkg, resolved, replacement)
+  if validate_serialized {
+    validate_raw_candidate(format, candidate)
+  } else {
+    validate_raw_candidate_archive(format, pkg.archive)
+  }
+  { bytes: candidate, part: resolved, action: "replace-part", match_count: 1 }
+}
+
+///|
 /// Replaces one existing XML part and returns a pure, validated candidate.
 pub fn raw_replace_part(
   format : @office.DocumentFormat,
@@ -483,24 +524,41 @@ pub fn raw_replace_part(
   part : String,
   xml : String,
 ) -> RawMutation raise RawError {
-  validate_part_selector(part)
-  let pkg = open_raw_package_for_format(format, data)
-  let (resolved, _) = pkg.checked_xml_part(part)
-  let replacement = checked_document_bytes(xml)
-  let candidate = rebuild_raw_archive(pkg, resolved, replacement)
-  validate_raw_candidate(format, candidate)
-  { bytes: candidate, part: resolved, action: "replace-part", match_count: 1 }
+  raw_replace_part_package(
+    format,
+    open_raw_package_for_format(format, data),
+    part,
+    xml,
+    true,
+  )
 }
 
 ///|
-/// Applies one bounded element edit to an existing XML part and returns a
-/// pure, validated candidate. Publication remains the A4 transaction's job.
-pub fn raw_edit(
+/// Replaces one XML part in a caller-owned archive snapshot without inflating
+/// the same package again. The caller must validate the serialized candidate
+/// before publication; `transaction.transact` always does so.
+pub fn raw_replace_part_archive(
   format : @office.DocumentFormat,
-  data : BytesView,
-  request : RawEditRequest,
+  archive : @zip.Archive,
+  part : String,
+  xml : String,
 ) -> RawMutation raise RawError {
-  let pkg = open_raw_package_for_format(format, data)
+  raw_replace_part_package(
+    format,
+    open_raw_archive_for_format(format, archive),
+    part,
+    xml,
+    false,
+  )
+}
+
+///|
+fn raw_edit_package(
+  format : @office.DocumentFormat,
+  pkg : RawPackage,
+  request : RawEditRequest,
+  validate_serialized : Bool,
+) -> RawMutation raise RawError {
   let (part, bytes) = pkg.checked_xml_part(request.part)
   let document = scan_raw_xml(part, bytes)
   let namespaces = edit_path_namespaces(format, request, document)
@@ -543,11 +601,48 @@ pub fn raw_edit(
   }
   let replacement = apply_raw_span_edits(part, document, edits)
   let candidate = rebuild_raw_archive(pkg, part, replacement)
-  validate_raw_candidate(format, candidate)
+  if validate_serialized {
+    validate_raw_candidate(format, candidate)
+  } else {
+    validate_raw_candidate_archive(format, pkg.archive)
+  }
   {
     bytes: candidate,
     part,
     action: request.action.name(),
     match_count: selected.length(),
   }
+}
+
+///|
+/// Applies one bounded element edit to an existing XML part and returns a
+/// pure, validated candidate. Publication remains the A4 transaction's job.
+pub fn raw_edit(
+  format : @office.DocumentFormat,
+  data : BytesView,
+  request : RawEditRequest,
+) -> RawMutation raise RawError {
+  raw_edit_package(
+    format,
+    open_raw_package_for_format(format, data),
+    request,
+    true,
+  )
+}
+
+///|
+/// Applies one bounded edit to a caller-owned archive snapshot without
+/// inflating the same package again. The transaction boundary supplies the
+/// serialized candidate readback before any publication.
+pub fn raw_edit_archive(
+  format : @office.DocumentFormat,
+  archive : @zip.Archive,
+  request : RawEditRequest,
+) -> RawMutation raise RawError {
+  raw_edit_package(
+    format,
+    open_raw_archive_for_format(format, archive),
+    request,
+    false,
+  )
 }

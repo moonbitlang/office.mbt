@@ -184,7 +184,9 @@ async test "in-place no-op validates without replacing source" {
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
     )
     assert_eq(report.format, Docx)
     assert_eq(report.mode, InPlace)
@@ -207,6 +209,7 @@ async test "custom identifier gates pinned input before mutation" {
     let identifier = @transaction.transaction_identifier("bounded-raw-test", (
       _path,
       _bytes,
+      _archive,
     ) => {
       raise @transaction.transaction_failure(
         "office.raw.resource_limit", "bounded raw package rejected before generic parsing",
@@ -215,7 +218,7 @@ async test "custom identifier gates pinned input before mutation" {
     let code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           mutated.val = true
           @transaction.transaction_mutation(bytes.to_owned())
         },
@@ -238,6 +241,7 @@ async test "custom identifier validates candidates through the same boundary" {
     let identifier = @transaction.transaction_identifier("bounded-raw-test", (
       _path,
       _bytes,
+      _archive,
     ) => {
       calls.val = calls.val + 1
       if calls.val == 2 {
@@ -250,13 +254,69 @@ async test "custom identifier validates candidates through the same boundary" {
     let code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
         identifier~,
       )
     })
     assert_eq(code, "office.raw.validation_failed")
     assert_eq(calls.val, 2)
     assert_false(@afs.exists(output))
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "transaction callbacks receive isolated forks of one bounded archive" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let identifier_seen = Ref(false)
+    let mutation_seen = Ref(false)
+    let validator_seen = Ref(false)
+    let identifier = @transaction.transaction_identifier("fork-identifier", (
+      path,
+      _bytes,
+      archive,
+    ) => {
+      assert_true(archive.get("[Content_Types].xml") is Some(_))
+      let format = @office.detect_archive_format(path, archive)
+      archive.add("identifier-only.bin", b"identifier")
+      identifier_seen.val = true
+      format
+    })
+    let validator = @transaction.transaction_validator("fork-validator", (
+      _format,
+      _bytes,
+      archive,
+    ) => {
+      assert_true(archive.get("identifier-only.bin") is None)
+      assert_true(archive.get("mutation-only.bin") is None)
+      archive.add("validator-only.bin", b"validator")
+      validator_seen.val = true
+      []
+    })
+    let report = @transaction.transact(
+      @transaction.transaction_options(input),
+      (_format, bytes, archive) => {
+        assert_true(archive.get("identifier-only.bin") is None)
+        archive.add("mutation-only.bin", b"mutation")
+        mutation_seen.val = true
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
+      validators=[validator],
+      identifier~,
+    )
+    assert_true(identifier_seen.val)
+    assert_true(mutation_seen.val)
+    assert_true(validator_seen.val)
+    assert_false(report.changed)
+    assert_false(report.committed)
+    assert_true(report.preservation.whole_file_identical)
+    assert_eq(report.validations.length(), 2)
+    assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
   })
 }
@@ -270,7 +330,7 @@ async test "dry-run performs mutation validation and preservation without output
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input, output_path=output, dry_run=true),
-      (_format, bytes) => {
+      (_format, bytes, _archive) => {
         @transaction.transaction_mutation_with_manifest(
           rewrite_content_types(bytes, "dry-run"),
           ["[Content_Types].xml"],
@@ -297,7 +357,7 @@ async test "separate output commits atomically and preserves input" {
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input, output_path=output),
-      (_format, bytes) => {
+      (_format, bytes, _archive) => {
         @transaction.transaction_mutation_with_manifest(
           rewrite_content_types(bytes, "output"),
           ["[Content_Types].xml"],
@@ -331,7 +391,9 @@ async test "near-limit destination basenames do not inflate temporary names" {
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input, output_path=output),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
     )
     assert_true(report.committed)
     assert_eq(
@@ -353,7 +415,9 @@ async test "byte-identical separate output still publishes a validated copy" {
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input, output_path=output),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
     )
     assert_false(report.changed)
     assert_true(report.committed)
@@ -371,7 +435,7 @@ async test "in-place changed transaction validates before atomic replacement" {
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input),
-      (_format, bytes) => {
+      (_format, bytes, _archive) => {
         @transaction.transaction_mutation_with_manifest(
           rewrite_content_types(bytes, "in-place"),
           ["[Content_Types].xml"],
@@ -399,7 +463,7 @@ async test "existing output and input aliases are refused before mutation" {
     let exists_code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           called = true
           @transaction.transaction_mutation(bytes.to_owned())
         },
@@ -414,7 +478,9 @@ async test "existing output and input aliases are refused before mutation" {
           output_path=input,
           overwrite=true,
         ),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
       )
     })
     assert_eq(alias_code, "office.transaction.output_aliases_input")
@@ -443,7 +509,7 @@ async test "lexically equivalent output paths cannot bypass in-place policy" {
             output_path=candidate_path,
             overwrite=true,
           ),
-          (_format, bytes) => {
+          (_format, bytes, _archive) => {
             @transaction.transaction_mutation(bytes.to_owned())
           },
         )
@@ -473,7 +539,9 @@ async test "POSIX source traversal preserves symlink then parent semantics" {
     @afs.symlink(target=nested, directory_alias)
     let report = @transaction.transact(
       @transaction.transaction_options(source_path, dry_run=true),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
     )
     assert_eq(report.format, Docx)
     assert_false(report.committed)
@@ -501,7 +569,9 @@ async test "POSIX output traversal preserves symlink then parent semantics" {
     @afs.symlink(target=nested, directory_alias)
     let report = @transaction.transact(
       @transaction.transaction_options(input, output_path~),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
     )
     assert_true(report.committed)
     assert_eq(@afs.read_file(intended).binary(), original)
@@ -539,7 +609,9 @@ async test "Windows current-drive-root input and output paths remain valid" {
         root_relative_input,
         output_path=root_relative_output,
       ),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
     )
     assert_true(report.committed)
     assert_eq(@afs.read_file(output).binary(), original)
@@ -564,7 +636,9 @@ async test "Wasm relative and absolute aliases resolve to one path" {
           output_path=relative,
           overwrite=true,
         ),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
       )
     })
     assert_eq(code, "office.transaction.output_aliases_input")
@@ -590,7 +664,7 @@ async test "Wasm rejects ambiguous double-root output aliases" {
           output_path=ambiguous_alias,
           overwrite=true,
         ),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           called = true
           @transaction.transaction_mutation(bytes.to_owned())
         },
@@ -617,7 +691,7 @@ async test "overwrite replaces only the requested output" {
         output_path=output,
         overwrite=true,
       ),
-      (_format, bytes) => {
+      (_format, bytes, _archive) => {
         @transaction.transaction_mutation_with_manifest(
           rewrite_content_types(bytes, "overwrite"),
           ["[Content_Types].xml"],
@@ -643,7 +717,7 @@ async test "mutation callback failure leaves source and output untouched" {
     let code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, _bytes) => raise MutationProbeError,
+        (_format, _bytes, _archive) => raise MutationProbeError,
       )
     })
     assert_eq(code, "office.transaction.mutation_failed")
@@ -663,6 +737,7 @@ async test "structured mutation contract errors are not relabeled" {
       @transaction.transact(@transaction.transaction_options(input), (
         _format,
         bytes,
+        _archive,
       ) => {
         @transaction.transaction_mutation(bytes.to_owned(), warnings=[
           @office.protocol_warning("bad warning", "message"),
@@ -685,7 +760,7 @@ async test "callback-raised public errors are normalized at the boundary" {
     let invalid = transaction_error_value(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, _bytes) => {
+        (_format, _bytes, _archive) => {
           raise @transaction.TransactionError(
             code="foreign.failure",
             message="m".repeat(4_096),
@@ -708,7 +783,7 @@ async test "callback-raised public errors are normalized at the boundary" {
     let oversized = transaction_error_value(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, _bytes) => {
+        (_format, _bytes, _archive) => {
           raise @transaction.TransactionError(
             code="office.transaction.callback_failure",
             message="m".repeat(4_096),
@@ -740,6 +815,7 @@ async test "validator and preservation failures publish nothing" {
     let validator = @transaction.transaction_validator("docx-deep", (
       _format,
       _bytes,
+      _archive,
     ) => {
       [
         @transaction.validation_finding(
@@ -750,7 +826,7 @@ async test "validator and preservation failures publish nothing" {
     let validation_code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           @transaction.transaction_mutation(
             rewrite_content_types(bytes, "invalid"),
           )
@@ -763,7 +839,7 @@ async test "validator and preservation failures publish nothing" {
     let preservation_code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           @transaction.transaction_mutation_with_manifest(
             rewrite_content_types(bytes, "undeclared"),
             [],
@@ -788,10 +864,13 @@ async test "successful and throwing validators run before publication" {
     let passing = @transaction.transaction_validator("docx-pass", (
       _format,
       _bytes,
+      _archive,
     ) => [])
     let report = @transaction.transact(
       @transaction.transaction_options(input, output_path=output, dry_run=true),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
       validators=[passing],
     )
     assert_eq(report.validations.length(), 2)
@@ -799,11 +878,14 @@ async test "successful and throwing validators run before publication" {
     let throwing = @transaction.transaction_validator("docx-throw", (
       _format,
       _bytes,
+      _archive,
     ) => raise ValidatorProbeError)
     let code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
         validators=[throwing],
       )
     })
@@ -824,6 +906,7 @@ async test "validator callbacks use an immutable invocation snapshot" {
     let rejecting = @transaction.transaction_validator("docx-snapshot", (
       _format,
       _bytes,
+      _archive,
     ) => {
       [
         @transaction.validation_finding(
@@ -835,7 +918,7 @@ async test "validator callbacks use an immutable invocation snapshot" {
     let code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           // Mutating the caller-owned array must not alter this invocation's
           // already-validated contract.
           validators.clear()
@@ -861,6 +944,7 @@ async test "validator finding arrays are bounded before serialization" {
     let excessive = @transaction.transaction_validator("docx-excessive", (
       _format,
       _bytes,
+      _archive,
     ) => {
       Array::makei(65, index => {
         @transaction.validation_finding(
@@ -872,7 +956,9 @@ async test "validator finding arrays are bounded before serialization" {
     let code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
         validators=[excessive],
       )
     })
@@ -885,29 +971,39 @@ async test "validator finding arrays are bounded before serialization" {
 
 ///|
 async test "duplicate and excessive validator sets fail before file access" {
-  let first = @transaction.transaction_validator("duplicate", (_format, _bytes) => {
-    []
-  })
-  let second = @transaction.transaction_validator("duplicate", (_format, _bytes) => {
-    []
-  })
+  let first = @transaction.transaction_validator("duplicate", (
+    _format,
+    _bytes,
+    _archive,
+  ) => [])
+  let second = @transaction.transaction_validator("duplicate", (
+    _format,
+    _bytes,
+    _archive,
+  ) => [])
   let duplicate_code = transaction_error_code(() => {
     @transaction.transact(
       @transaction.transaction_options("absent.docx"),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
       validators=[first, second],
     )
   })
   assert_eq(duplicate_code, "office.transaction.invalid_contract")
   let validators = Array::makei(33, index => {
-    @transaction.transaction_validator("validator-\{index}", (_format, _bytes) => {
-      []
-    })
+    @transaction.transaction_validator("validator-\{index}", (
+      _format,
+      _bytes,
+      _archive,
+    ) => [])
   })
   let excessive_code = transaction_error_code(() => {
     @transaction.transact(
       @transaction.transaction_options("absent.docx"),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
       validators~,
     )
   })
@@ -922,6 +1018,7 @@ async test "missing invalid and misdirected files use stable policy codes" {
       @transaction.transact(@transaction.transaction_options(missing), (
         _format,
         bytes,
+        _archive,
       ) => @transaction.transaction_mutation(bytes.to_owned()))
     })
     assert_eq(missing_code, "office.transaction.file_read_failed")
@@ -931,6 +1028,7 @@ async test "missing invalid and misdirected files use stable policy codes" {
       @transaction.transact(@transaction.transaction_options(broken), (
         _format,
         bytes,
+        _archive,
       ) => @transaction.transaction_mutation(bytes.to_owned()))
     })
     assert_eq(broken_code, "office.transaction.invalid_input")
@@ -945,7 +1043,9 @@ async test "missing invalid and misdirected files use stable policy codes" {
           output_path=output_directory,
           overwrite=true,
         ),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
       )
     })
     assert_eq(directory_code, "office.transaction.invalid_options")
@@ -953,7 +1053,9 @@ async test "missing invalid and misdirected files use stable policy codes" {
     let parent_code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(valid, output_path=missing_parent),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
       )
     })
     assert_eq(parent_code, "office.transaction.destination_parent_failed")
@@ -972,7 +1074,7 @@ async test "candidate cannot change the transaction format" {
     let code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, _bytes) => @transaction.transaction_mutation(xlsx),
+        (_format, _bytes, _archive) => @transaction.transaction_mutation(xlsx),
       )
     })
     assert_eq(code, "office.transaction.format_changed")
@@ -992,7 +1094,9 @@ async test "invalid candidate format and extension fail closed" {
     let invalid_code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=output),
-        (_format, _bytes) => @transaction.transaction_mutation(b"not a zip"),
+        (_format, _bytes, _archive) => {
+          @transaction.transaction_mutation(b"not a zip")
+        },
       )
     })
     assert_eq(invalid_code, "office.transaction.validation_failed")
@@ -1000,7 +1104,9 @@ async test "invalid candidate format and extension fail closed" {
     let extension_code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, output_path=wrong_extension),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
       )
     })
     assert_eq(extension_code, "office.transaction.validation_failed")
@@ -1095,7 +1201,9 @@ async test "transaction rejects alternate ZIP interpretations before publication
       let code = transaction_error_code(() => {
         @transaction.transact(
           @transaction.transaction_options(input, dry_run=true),
-          (_format, _bytes) => @transaction.transaction_mutation(candidate),
+          (_format, _bytes, _archive) => {
+            @transaction.transaction_mutation(candidate)
+          },
         )
       })
       assert_eq(code, "office.transaction.validation_failed")
@@ -1110,7 +1218,7 @@ async test "transaction rejects alternate ZIP interpretations before publication
     let resource_code = transaction_error_code(() => {
       @transaction.transact(
         @transaction.transaction_options(input, dry_run=true),
-        (_format, _bytes) => {
+        (_format, _bytes, _archive) => {
           @transaction.transaction_mutation(Bytes::from_array(oversized_zip32))
         },
       )
@@ -1133,7 +1241,9 @@ async test "POSIX final permissions do not make staging unverifiable" {
       let output = "\{directory}/\{suffix}.docx"
       let report = @transaction.transact(
         @transaction.transaction_options(input, output_path=output, permission~),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
       )
       assert_true(report.committed)
       assert_true(@afs.exists(output))
@@ -1163,7 +1273,9 @@ async test "native output symlink aliases cannot bypass in-place policy" {
           output_path=alias_path,
           overwrite=true,
         ),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
       )
     })
     assert_eq(code, "office.transaction.output_aliases_input")
@@ -1191,7 +1303,9 @@ async test "native output symlink validation uses the resolved target extension"
           output_path=alias_path,
           overwrite=true,
         ),
-        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => {
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
       )
     })
     assert_eq(code, "office.transaction.validation_failed")
@@ -1211,7 +1325,9 @@ async test "Wasm commits disclose portable path and durability limits" {
     write_test_file(input, original)
     let report = @transaction.transact(
       @transaction.transaction_options(input, output_path=output),
-      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      (_format, bytes, _archive) => {
+        @transaction.transaction_mutation(bytes.to_owned())
+      },
     )
     let mut disclosed = false
     for warning in report.warnings {

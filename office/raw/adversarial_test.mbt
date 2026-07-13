@@ -27,6 +27,18 @@ test "raw path parser rejects an adversarial grammar corpus deterministically" {
 }
 
 ///|
+test "archive-backed raw boundary rechecks entry limits" {
+  let archive = @zip.Archive::new()
+  for index in 0..<8193 {
+    archive.add("entry-\{index}.bin", b"")
+  }
+  assert_eq(
+    raw_error_code(() => @raw.raw_identify_archive("oversized.docx", archive)),
+    "office.raw.resource_limit",
+  )
+}
+
+///|
 test "raw public text boundaries reject malformed UTF-16 before encoding" {
   let original = @word.new_blank_docx()
   let malformed = String::from_array([(0xD800).unsafe_to_char()])

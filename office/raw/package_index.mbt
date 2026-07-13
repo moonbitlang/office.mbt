@@ -1436,11 +1436,63 @@ fn read_bounded_archive(data : BytesView) -> @zip.Archive raise RawError {
 }
 
 ///|
+fn check_bounded_raw_archive(archive : @zip.Archive) -> Unit raise RawError {
+  let entries = archive.entries()
+  if entries.length() > raw_max_archive_entries {
+    raise raw_error(
+      "office.raw.resource_limit",
+      "ZIP package exceeds the bounded entry_count limit",
+      details=Json::object({
+        "kind": Json::string("entry_count"),
+        "limit": Json::number(raw_max_archive_entries.to_double()),
+        "actual": Json::number(entries.length().to_double()),
+      }),
+    )
+  }
+  let mut total = 0L
+  for entry in entries {
+    let size = entry.data().length()
+    if size > raw_max_entry_bytes {
+      raise raw_error(
+        "office.raw.resource_limit",
+        "ZIP package exceeds the bounded entry_uncompressed_bytes limit",
+        details=Json::object({
+          "kind": Json::string("entry_uncompressed_bytes"),
+          "limit": Json::number(raw_max_entry_bytes.to_double()),
+          "actual": Json::number(size.to_double()),
+        }),
+      )
+    }
+    total = total + size.to_int64()
+    if total > raw_max_total_uncompressed_bytes.to_int64() {
+      raise raw_error(
+        "office.raw.resource_limit",
+        "ZIP package exceeds the bounded total_uncompressed_bytes limit",
+        details=Json::object({
+          "kind": Json::string("total_uncompressed_bytes"),
+          "limit": Json::number(raw_max_total_uncompressed_bytes.to_double()),
+          "actual": Json::number(total.to_double()),
+        }),
+      )
+    }
+  }
+}
+
+///|
 fn open_raw_package(
   path : StringView,
   data : BytesView,
 ) -> RawPackage raise RawError {
   let archive = read_bounded_archive(data)
+  open_raw_archive(path, archive)
+}
+
+///|
+fn open_raw_archive(
+  path : StringView,
+  archive : @zip.Archive,
+) -> RawPackage raise RawError {
+  check_bounded_raw_archive(archive)
   // Complete the collision-rejecting, namespace-exact, bounded raw resolver
   // before the generic Office detector can materialize any DOM.
   let pkg = package_from_archive(archive)
@@ -1465,6 +1517,15 @@ fn open_raw_package_for_format(
   data : BytesView,
 ) -> RawPackage raise RawError {
   let archive = read_bounded_archive(data)
+  open_raw_archive_for_format(format, archive)
+}
+
+///|
+fn open_raw_archive_for_format(
+  format : @office.DocumentFormat,
+  archive : @zip.Archive,
+) -> RawPackage raise RawError {
+  check_bounded_raw_archive(archive)
   let pkg = package_from_archive(archive)
   if pkg.format != format {
     raise raw_error(
@@ -1735,14 +1796,25 @@ pub fn raw_inventory(
 
 ///|
 /// Identifies a package through the complete bounded raw-package boundary.
-/// Transaction callers should use this as their pinned-byte identifier so the
-/// generic Office DOM parser never runs before raw resource and identity
-/// checks.
+/// This byte-backed convenience API performs its own bounded ZIP read;
+/// transaction identifiers should use `raw_identify_archive` instead.
 pub fn raw_identify(
   path : StringView,
   data : BytesView,
 ) -> @office.DocumentFormat raise RawError {
   open_raw_package(path, data).format
+}
+
+///|
+/// Identifies an already bounded, materialized archive without inflating its
+/// package bytes again. It independently rechecks raw archive limits before
+/// indexing. Transaction identifiers use this path so one input or candidate
+/// has exactly one ZIP materialization.
+pub fn raw_identify_archive(
+  path : StringView,
+  archive : @zip.Archive,
+) -> @office.DocumentFormat raise RawError {
+  open_raw_archive(path, archive).format
 }
 
 ///|
