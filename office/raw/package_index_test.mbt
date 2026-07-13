@@ -23,6 +23,73 @@ fn raw_test_archive(entries : Array[(String, Bytes)]) -> Bytes raise {
 }
 
 ///|
+fn raw_test_replace_entry(
+  data : BytesView,
+  name : String,
+  payload : Bytes,
+) -> Bytes raise {
+  let source = @zip.read(data)
+  let output = @zip.Archive::new()
+  let mut found = false
+  for entry in source.entries() {
+    if entry.name() == name {
+      output.add(
+        entry.name(),
+        payload,
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
+      )
+      found = true
+    } else {
+      output.add(
+        entry.name(),
+        entry.data(),
+        compression=entry.compression(),
+        data_descriptor=entry.data_descriptor(),
+      )
+    }
+  }
+  if !found {
+    fail("raw test fixture is missing entry '\{name}'")
+  }
+  @zip.write(output)
+}
+
+///|
+fn raw_test_transform_xml_entry(
+  data : BytesView,
+  name : String,
+  transform : (String) -> String,
+) -> Bytes raise {
+  let source = @zip.read(data)
+  let payload = match source.get(name) {
+    Some(value) => @utf8.decode(value, ignore_bom=true)
+    None => fail("raw test fixture is missing XML entry '\{name}'")
+  }
+  raw_test_replace_entry(data, name, @utf8.encode(transform(payload)))
+}
+
+///|
+fn raw_test_add_entry(
+  data : BytesView,
+  name : String,
+  payload : Bytes,
+) -> Bytes raise {
+  let source = @zip.read(data)
+  let output = @zip.Archive::new()
+  for entry in source.entries() {
+    output.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  output.add(name, payload)
+  @zip.write(output)
+}
+
+///|
 fn overwrite_raw_test_u32(
   bytes : Array[Byte],
   offset : Int,
@@ -55,13 +122,21 @@ fn forge_raw_test_central_uncompressed_sizes(
 }
 
 ///|
-fn raw_inventory_error(bytes : Bytes) -> (String, String) raise {
-  try @raw.raw_inventory("limits.docx", bytes) catch {
+fn raw_inventory_error_for(
+  path : String,
+  bytes : Bytes,
+) -> (String, String) raise {
+  try @raw.raw_inventory(path, bytes) catch {
     RawError(code~, details~, ..) =>
       (code, details.unwrap_or(Json::empty_object()).stringify())
   } noraise {
     _ => fail("expected raw inventory to fail")
   }
+}
+
+///|
+fn raw_inventory_error(bytes : Bytes) -> (String, String) raise {
+  raw_inventory_error_for("limits.docx", bytes)
 }
 
 ///|
@@ -392,6 +467,94 @@ fn strict_xlsx_fixture() -> Bytes raise {
 }
 
 ///|
+fn sheet_ordinal_gap_fixture() -> Bytes raise {
+  raw_test_archive([
+    (
+      "[Content_Types].xml",
+      @utf8.encode(
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/xl/worksheets/valid.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/></Types>",
+      ),
+    ),
+    (
+      "_rels/.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "xl/workbook.xml",
+      @utf8.encode(
+        "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Invalid\" sheetId=\"1\" r:id=\"missing\"/><sheet name=\"Valid\" sheetId=\"2\" r:id=\"valid\"/></sheets></workbook>",
+      ),
+    ),
+    (
+      "xl/_rels/workbook.xml.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"valid\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/valid.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "xl/worksheets/valid.xml",
+      @utf8.encode(
+        "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData/></worksheet>",
+      ),
+    ),
+  ])
+}
+
+///|
+fn alias_budget_xlsx_fixture() -> Bytes raise {
+  let sheets = StringBuilder::new()
+  let relationships = StringBuilder::new()
+  for index = 1; index <= 2049; index = index + 1 {
+    sheets.write_string(
+      "<sheet name=\"Sheet\{index}\" sheetId=\"\{index}\" r:id=\"r\{index}\"/>",
+    )
+    |> ignore
+    relationships.write_string(
+      "<Relationship Id=\"r\{index}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"../data/shared.xml\"/>",
+    )
+    |> ignore
+  }
+  raw_test_archive([
+    (
+      "[Content_Types].xml",
+      @utf8.encode(
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/data/shared.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/></Types>",
+      ),
+    ),
+    (
+      "_rels/.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "xl/workbook.xml",
+      @utf8.encode(
+        "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>" +
+        sheets.to_string() +
+        "</sheets></workbook>",
+      ),
+    ),
+    (
+      "xl/_rels/workbook.xml.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+        relationships.to_string() +
+        "</Relationships>",
+      ),
+    ),
+    (
+      "data/shared.xml",
+      @utf8.encode(
+        "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData/></worksheet>",
+      ),
+    ),
+  ])
+}
+
+///|
 fn colliding_literal_docx_fixture() -> Bytes raise {
   let source = @zip.read(relocated_docx_fixture())
   let output = @zip.Archive::new()
@@ -699,6 +862,283 @@ test "raw selectors derive Strict OOXML namespaces and bind xml automatically" {
     .xml_text()
     .contains("strict=\"true\""),
   )
+}
+
+///|
+test "raw resolver rejects collisions and namespace-spoofed OPC metadata before generic detection" {
+  let original = @word.new_blank_docx()
+  let collision = raw_test_add_entry(
+    original,
+    "WORD/DOCUMENT.XML",
+    @utf8.encode("<decoy/>"),
+  )
+  assert_eq(raw_inventory_error(collision).0, "office.raw.invalid_package")
+
+  let overlong_entry = raw_test_add_entry(original, "x".repeat(1025), b"")
+  assert_eq(raw_inventory_error(overlong_entry).0, "office.raw.invalid_package")
+
+  let wrong_manifest_namespace = raw_test_transform_xml_entry(
+    original,
+    "[Content_Types].xml",
+    text => {
+      text.replace_all(
+        old="http://schemas.openxmlformats.org/package/2006/content-types",
+        new="https://vendor.invalid/content-types",
+      )
+    },
+  )
+  assert_eq(
+    raw_inventory_error(wrong_manifest_namespace).0,
+    "office.raw.invalid_package",
+  )
+
+  let duplicate_default = raw_test_transform_xml_entry(
+    original,
+    "[Content_Types].xml",
+    text => {
+      text.replace(
+        old="</Types>",
+        new="<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/></Types>",
+      )
+    },
+  )
+  assert_eq(
+    raw_inventory_error(duplicate_default).0,
+    "office.raw.invalid_package",
+  )
+
+  let wrong_relationship_namespace = raw_test_transform_xml_entry(
+    original,
+    "_rels/.rels",
+    text => {
+      text.replace_all(
+        old="http://schemas.openxmlformats.org/package/2006/relationships",
+        new="https://vendor.invalid/relationships",
+      )
+    },
+  )
+  assert_eq(
+    raw_inventory_error(wrong_relationship_namespace).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let wrong_unused_relationship_namespace = raw_test_add_entry(
+    relocated_docx_fixture(),
+    "_rels/[Content_Types].xml.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"https://vendor.invalid/relationships\"/>",
+    ),
+  )
+  assert_eq(
+    raw_inventory_error(wrong_unused_relationship_namespace).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let duplicate_relationship_id = raw_test_transform_xml_entry(
+    original,
+    "_rels/.rels",
+    text => {
+      text.replace(
+        old="</Relationships>",
+        new="<Relationship Id=\"rId1\" Type=\"urn:duplicate\" Target=\"https://example.invalid\" TargetMode=\"External\"/></Relationships>",
+      )
+    },
+  )
+  assert_eq(
+    raw_inventory_error(duplicate_relationship_id).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let invalid_target_mode = raw_test_transform_xml_entry(
+    original,
+    "_rels/.rels",
+    text => {
+      text.replace(
+        old="</Relationships>",
+        new="<Relationship Id=\"invalid-mode\" Type=\"urn:test\" Target=\"https://example.invalid\" TargetMode=\"Remote\"/></Relationships>",
+      )
+    },
+  )
+  assert_eq(
+    raw_inventory_error(invalid_target_mode).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let oversized_main = raw_test_replace_entry(
+    original,
+    "word/document.xml",
+    Bytes::make(8 * 1024 * 1024 + 1, b'x'),
+  )
+  let (oversized_code, oversized_details) = raw_inventory_error(oversized_main)
+  assert_eq(oversized_code, "office.raw.resource_limit")
+  assert_true(oversized_details.contains("metadata_xml_bytes"))
+}
+
+///|
+test "XLSX numeric aliases preserve workbook declaration ordinals" {
+  let data = sheet_ordinal_gap_fixture()
+  let inventory = @raw.raw_inventory("ordinal-gap.xlsx", data)
+  assert_eq(inventory_alias_target(inventory, "/sheet[1]"), None)
+  assert_eq(
+    inventory_alias_target(inventory, "/sheet[2]"),
+    Some("xl/worksheets/valid.xml"),
+  )
+  assert_eq(
+    @raw.raw_read("ordinal-gap.xlsx", data, "/sheet[2]").info.name,
+    "xl/worksheets/valid.xml",
+  )
+  try @raw.raw_read("ordinal-gap.xlsx", data, "/sheet[1]") catch {
+    RawError(code~, ..) => assert_eq(code, "office.raw.unknown_part")
+  } noraise {
+    _ => fail("invalid first declaration must leave an alias gap")
+  }
+}
+
+///|
+test "maximum supported part names remain readable and mutable" {
+  let name = "parts/" + "x".repeat(1014) + ".xml"
+  assert_eq(name.length(), 1024)
+  let with_entry = raw_test_add_entry(
+    @word.new_blank_docx(),
+    name,
+    @utf8.encode("<extra/>"),
+  )
+  let data = raw_test_transform_xml_entry(with_entry, "[Content_Types].xml", text => {
+    text.replace(
+      old="</Types>",
+      new="<Override PartName=\"/\{name}\" ContentType=\"application/xml\"/></Types>",
+    )
+  })
+  let selector = "part:/" + name
+  assert_eq(
+    @raw.raw_read("max-name.docx", data, selector).xml_text(),
+    "<extra/>",
+  )
+  let mutation = @raw.raw_replace_part(
+    Docx,
+    data,
+    selector,
+    "<extra changed=\"true\"/>",
+  )
+  assert_true(
+    @raw.raw_read("max-name.docx", mutation.bytes, selector)
+    .xml_text()
+    .contains("changed=\"true\""),
+  )
+}
+
+///|
+test "Strict OOXML aliases reject cross-dialect relationship families" {
+  let wrong_root = raw_test_transform_xml_entry(
+    strict_docx_fixture(),
+    "_rels/.rels",
+    text => {
+      text.replace_all(
+        old="http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument",
+        new="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+      )
+    },
+  )
+  assert_eq(
+    raw_inventory_error_for("strict.docx", wrong_root).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let wrong_id_namespace = raw_test_transform_xml_entry(
+    strict_xlsx_fixture(),
+    "xl/workbook.xml",
+    text => {
+      text.replace_all(
+        old="http://purl.oclc.org/ooxml/officeDocument/relationships",
+        new="http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+      )
+    },
+  )
+  assert_eq(
+    raw_inventory_error_for("strict.xlsx", wrong_id_namespace).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let wrong_type_family = raw_test_transform_xml_entry(
+    strict_xlsx_fixture(),
+    "xl/_rels/workbook.xml.rels",
+    text => {
+      text.replace_all(
+        old="http://purl.oclc.org/ooxml/officeDocument/relationships/worksheet",
+        new="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet",
+      )
+    },
+  )
+  let inventory = @raw.raw_inventory("strict.xlsx", wrong_type_family)
+  assert_eq(inventory_alias_target(inventory, "/Strict"), None)
+  assert_eq(inventory_alias_target(inventory, "/sheet[1]"), None)
+}
+
+///|
+test "raw alias construction enforces its per-part budget incrementally" {
+  let (code, details) = raw_inventory_error_for(
+    "aliases.xlsx",
+    alias_budget_xlsx_fixture(),
+  )
+  assert_eq(code, "office.raw.resource_limit")
+  assert_true(details.contains("semantic_aliases"))
+}
+
+///|
+test "raw metadata preflight bounds namespace expansion and scope work" {
+  let original = @word.new_blank_docx()
+  let oversized_uri = "urn:" + "x".repeat(2046)
+  let oversized_namespace = raw_test_replace_entry(
+    original,
+    "word/document.xml",
+    @utf8.encode(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:q=\"\{oversized_uri}\"><w:body><w:sectPr/></w:body></w:document>",
+    ),
+  )
+  let (uri_code, uri_details) = raw_inventory_error(oversized_namespace)
+  assert_eq(uri_code, "office.raw.resource_limit")
+  assert_true(uri_details.contains("xml_namespace_uri_bytes"))
+
+  let bounded_uri = "urn:" + "x".repeat(2044)
+  let expanded = StringBuilder::new()
+  expanded.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:q=\"\{bounded_uri}\"><w:body>",
+  )
+  |> ignore
+  for _ in 0..<2100 {
+    expanded.write_string("<q:x/>") |> ignore
+  }
+  expanded.write_string("<w:sectPr/></w:body></w:document>") |> ignore
+  let expanded_package = raw_test_replace_entry(
+    original,
+    "word/document.xml",
+    @utf8.encode(expanded.to_string()),
+  )
+  let (expanded_code, expanded_details) = raw_inventory_error(expanded_package)
+  assert_eq(expanded_code, "office.raw.resource_limit")
+  assert_true(expanded_details.contains("xml_expanded_name_bytes"))
+
+  let scoped = StringBuilder::new()
+  scoped.write_string(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"",
+  )
+  |> ignore
+  for index in 0..<200 {
+    scoped.write_string(" xmlns:p\{index}=\"urn:p\{index}\"") |> ignore
+  }
+  scoped.write_string("><w:body>") |> ignore
+  for _ in 0..<2500 {
+    scoped.write_string("<w:p/>") |> ignore
+  }
+  scoped.write_string("<w:sectPr/></w:body></w:document>") |> ignore
+  let scoped_package = raw_test_replace_entry(
+    original,
+    "word/document.xml",
+    @utf8.encode(scoped.to_string()),
+  )
+  let (scope_code, scope_details) = raw_inventory_error(scoped_package)
+  assert_eq(scope_code, "office.raw.resource_limit")
+  assert_true(scope_details.contains("xml_namespace_scope_work"))
 }
 
 ///|

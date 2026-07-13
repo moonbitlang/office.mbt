@@ -53,7 +53,23 @@ fn checked_fragment_bytes(xml : String) -> Bytes raise RawError {
       )
     }
   }
-  bytes
+  let root_has_default_namespace = root.declarations.any(declaration => {
+    declaration.prefix == ""
+  })
+  if root_has_default_namespace {
+    return bytes
+  }
+  // A standalone fragment with no default declaration gives every unprefixed
+  // element the empty namespace. Make that semantic explicit before splicing
+  // so the destination element's inherited default namespace cannot silently
+  // change the fragment's expanded names.
+  let output = Buffer()
+  output.write_bytesview(bytes[:root.tag_insert_offset])
+  output.write_bytes(b" xmlns=\"\"")
+  output.write_bytesview(bytes[root.tag_insert_offset:])
+  let normalized = output.contents()
+  ignore(scan_raw_xml("<fragment>", normalized))
+  normalized
 }
 
 ///|
@@ -418,12 +434,15 @@ fn validate_raw_candidate(
   format : @office.DocumentFormat,
   bytes : Bytes,
 ) -> Unit raise RawError {
-  let archive = read_bounded_archive(bytes)
-  let _ = @office.detect_archive_format(raw_path_for_format(format), archive) catch {
-    error =>
+  ignore(open_raw_package_for_format(format, bytes)) catch {
+    RawError(code~, message~, details~) =>
       raise raw_error(
         "office.raw.validation_failed",
-        "raw mutation failed portable Office validation: \{error}",
+        "raw mutation failed the complete bounded raw-package validation: \{message}",
+        details=match details {
+          Some(value) => value
+          None => Json::object({ "cause": Json::string(code) })
+        },
       )
   }
 }
