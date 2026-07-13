@@ -156,6 +156,9 @@ jobs:
       - name: Test Office transactions (wasm)
         run: moon test --target wasm office/transaction
 
+      - name: Test raw OOXML bounds (wasm)
+        run: moon test --target wasm office/raw
+
       # Run all members' native test suites in one pass. Covers mbtexcel
       # (including OpenXML SDK schema validation via .NET), docx2html
       # (converter/reader/fixtures/stress), and pdflite (reader/writer/

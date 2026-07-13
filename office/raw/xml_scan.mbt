@@ -8,6 +8,48 @@ let raw_max_xml_nodes = 100_000
 let raw_max_path_candidates = 4096
 
 ///|
+let raw_max_xml_attributes = 400_000
+
+///|
+let raw_max_xml_namespace_declarations = 32_768
+
+///|
+let raw_max_xml_depth = 256
+
+///|
+let raw_max_xml_name_bytes = 1024
+
+///|
+let raw_max_xml_attribute_value_bytes : Int = 1024 * 1024
+
+///|
+let raw_max_xml_attributes_per_element = 4096
+
+///|
+let raw_metadata_max_bytes : Int = 8 * 1024 * 1024
+
+///|
+let raw_metadata_max_nodes = 16_384
+
+///|
+let raw_metadata_max_attributes = 65_536
+
+///|
+let raw_metadata_max_namespace_declarations = 4096
+
+///|
+let raw_metadata_max_attribute_value_bytes = 4096
+
+///|
+priv struct RawXmlBudget {
+  max_nodes : Int
+  max_attributes : Int
+  max_namespace_declarations : Int
+  max_text_bytes : Int
+  max_attribute_value_bytes : Int
+}
+
+///|
 priv struct RawNamespaceDeclaration {
   prefix : String
   uri : String
@@ -66,6 +108,25 @@ fn raw_xml_scan_error(name : String, message : String) -> RawError {
     "office.raw.invalid_xml",
     "cannot safely scan XML part '/\{name}': \{message}",
     details=Json::object({ "part": Json::string("/" + name) }),
+  )
+}
+
+///|
+fn raw_xml_resource_limit(
+  part : String,
+  kind : String,
+  limit : Int,
+  actual : Int,
+) -> RawError {
+  raw_error(
+    "office.raw.resource_limit",
+    "XML part '/\{part}' exceeds the \{kind} limit of \{limit}",
+    details=Json::object({
+      "part": Json::string("/" + part),
+      "kind": Json::string(kind),
+      "limit": Json::number(limit.to_double()),
+      "actual": Json::number(actual.to_double()),
+    }),
   )
 }
 
@@ -217,6 +278,14 @@ fn raw_scan_open_tag(
   if offset == name_start {
     raise raw_xml_scan_error(part, "start tag has no name")
   }
+  if offset - name_start > raw_max_xml_name_bytes {
+    raise raw_xml_resource_limit(
+      part,
+      "xml_name_bytes",
+      raw_max_xml_name_bytes,
+      offset - name_start,
+    )
+  }
   let tag_name = raw_slice_text(part, bytes, name_start, offset)
   let attributes : Array[RawLexicalAttribute] = []
   for ;; {
@@ -255,6 +324,14 @@ fn raw_scan_open_tag(
     if offset == attribute_start {
       raise raw_xml_scan_error(part, "start tag contains a malformed attribute")
     }
+    if offset - attribute_start > raw_max_xml_name_bytes {
+      raise raw_xml_resource_limit(
+        part,
+        "xml_name_bytes",
+        raw_max_xml_name_bytes,
+        offset - attribute_start,
+      )
+    }
     let attribute_name = raw_slice_text(part, bytes, attribute_start, offset)
     while offset < limit && raw_byte_is_space(bytes[offset]) {
       offset = offset + 1
@@ -278,7 +355,23 @@ fn raw_scan_open_tag(
     if offset >= limit {
       raise raw_xml_scan_error(part, "attribute value is unterminated")
     }
+    if offset - value_start > raw_max_xml_attribute_value_bytes {
+      raise raw_xml_resource_limit(
+        part,
+        "xml_attribute_value_bytes",
+        raw_max_xml_attribute_value_bytes,
+        offset - value_start,
+      )
+    }
     let raw_value = raw_slice_text(part, bytes, value_start, offset)
+    if attributes.length() >= raw_max_xml_attributes_per_element {
+      raise raw_xml_resource_limit(
+        part,
+        "xml_attributes_per_element",
+        raw_max_xml_attributes_per_element,
+        attributes.length() + 1,
+      )
+    }
     attributes.push({
       name: attribute_name,
       value: raw_decode_attribute_value(raw_value, part),
@@ -287,6 +380,161 @@ fn raw_scan_open_tag(
     })
     offset = offset + 1
   }
+}
+
+///|
+fn preflight_raw_xml(
+  part : String,
+  bytes : BytesView,
+  budget : RawXmlBudget,
+) -> Unit raise RawError {
+  let mut nodes = 0
+  let mut attributes = 0
+  let mut namespace_declarations = 0
+  let mut text_bytes = 0
+  let mut depth = 0
+  let mut offset = 0
+  while offset < bytes.length() {
+    if bytes[offset] != b'<' {
+      text_bytes = text_bytes + 1
+      if text_bytes > budget.max_text_bytes {
+        raise raw_xml_resource_limit(
+          part,
+          "xml_text_bytes",
+          budget.max_text_bytes,
+          text_bytes,
+        )
+      }
+      offset = offset + 1
+      continue
+    }
+    if raw_starts_with_at(bytes, offset, b"<!--") {
+      let finish = match raw_find_sequence(bytes, offset + 4, b"-->") {
+        Some(value) => value
+        None => raise raw_xml_scan_error(part, "comment is unterminated")
+      }
+      offset = finish + 3
+      continue
+    }
+    if raw_starts_with_at(bytes, offset, b"<![CDATA[") {
+      let finish = match raw_find_sequence(bytes, offset + 9, b"]]>") {
+        Some(value) => value
+        None => raise raw_xml_scan_error(part, "CDATA section is unterminated")
+      }
+      let length = finish - offset - 9
+      if length > budget.max_text_bytes - text_bytes {
+        raise raw_xml_resource_limit(
+          part,
+          "xml_text_bytes",
+          budget.max_text_bytes,
+          budget.max_text_bytes + 1,
+        )
+      }
+      text_bytes = text_bytes + length
+      offset = finish + 3
+      continue
+    }
+    if raw_starts_with_at(bytes, offset, b"<?") {
+      let finish = match raw_find_sequence(bytes, offset + 2, b"?>") {
+        Some(value) => value
+        None =>
+          raise raw_xml_scan_error(
+            part, "processing instruction is unterminated",
+          )
+      }
+      offset = finish + 2
+      continue
+    }
+    if raw_starts_with_at(bytes, offset, b"</") {
+      let (_, finish) = raw_scan_closing_tag(part, bytes, offset)
+      depth = depth - 1
+      if depth < 0 {
+        raise raw_xml_scan_error(part, "closing tag has no open element")
+      }
+      offset = finish + 1
+      continue
+    }
+    if raw_starts_with_at(bytes, offset, b"<!") {
+      raise raw_xml_scan_error(
+        part, "DTD and declaration nodes are not supported",
+      )
+    }
+    let tag = raw_scan_open_tag(part, bytes, offset)
+    nodes = nodes + 1
+    if nodes > budget.max_nodes {
+      raise raw_xml_resource_limit(
+        part,
+        "xml_elements",
+        budget.max_nodes,
+        nodes,
+      )
+    }
+    if tag.attributes.length() > budget.max_attributes - attributes {
+      raise raw_xml_resource_limit(
+        part,
+        "xml_attributes",
+        budget.max_attributes,
+        budget.max_attributes + 1,
+      )
+    }
+    attributes = attributes + tag.attributes.length()
+    for attribute in tag.attributes {
+      let value_bytes = attribute.value_end - attribute.value_start
+      if value_bytes > budget.max_attribute_value_bytes {
+        raise raw_xml_resource_limit(
+          part,
+          "xml_attribute_value_bytes",
+          budget.max_attribute_value_bytes,
+          value_bytes,
+        )
+      }
+      if attribute.name == "xmlns" || attribute.name.has_prefix("xmlns:") {
+        namespace_declarations = namespace_declarations + 1
+        if namespace_declarations > budget.max_namespace_declarations {
+          raise raw_xml_resource_limit(
+            part,
+            "xml_namespace_declarations",
+            budget.max_namespace_declarations,
+            namespace_declarations,
+          )
+        }
+      }
+    }
+    if !tag.self_closing {
+      depth = depth + 1
+      if depth > raw_max_xml_depth {
+        raise raw_xml_resource_limit(
+          part, "xml_depth", raw_max_xml_depth, depth,
+        )
+      }
+    }
+    offset = tag.gt + 1
+  }
+  if depth != 0 || nodes == 0 {
+    raise raw_xml_scan_error(part, "element stack is incomplete")
+  }
+}
+
+///|
+fn preflight_raw_metadata_xml(
+  part : String,
+  bytes : BytesView,
+) -> Unit raise RawError {
+  if bytes.length() == 0 || bytes.length() > raw_metadata_max_bytes {
+    raise raw_xml_resource_limit(
+      part,
+      "metadata_xml_bytes",
+      raw_metadata_max_bytes,
+      bytes.length(),
+    )
+  }
+  preflight_raw_xml(part, bytes, {
+    max_nodes: raw_metadata_max_nodes,
+    max_attributes: raw_metadata_max_attributes,
+    max_namespace_declarations: raw_metadata_max_namespace_declarations,
+    max_text_bytes: raw_metadata_max_bytes,
+    max_attribute_value_bytes: raw_metadata_max_attribute_value_bytes,
+  })
 }
 
 ///|
@@ -481,6 +729,13 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
       "part '/\{part}' is UTF-16; span edits require UTF-8 XML",
     )
   }
+  preflight_raw_xml(part, bytes, {
+    max_nodes: raw_max_xml_nodes,
+    max_attributes: raw_max_xml_attributes,
+    max_namespace_declarations: raw_max_xml_namespace_declarations,
+    max_text_bytes: raw_max_edit_part_bytes,
+    max_attribute_value_bytes: raw_max_xml_attribute_value_bytes,
+  })
   let text = @utf8.decode(bytes, ignore_bom=true) catch {
     _ =>
       raise raw_error(

@@ -14,6 +14,33 @@ let raw_max_total_uncompressed_bytes : Int = 256 * 1024 * 1024
 let raw_max_alias_length = 1024
 
 ///|
+let raw_max_manifest_records = 16_384
+
+///|
+let raw_max_manifest_extension_length = 255
+
+///|
+let raw_max_manifest_part_name_length = 4096
+
+///|
+let raw_max_content_type_length = 1024
+
+///|
+let raw_max_relationship_records = 16_384
+
+///|
+let raw_max_relationship_id_length = 256
+
+///|
+let raw_max_relationship_type_length = 2048
+
+///|
+let raw_max_relationship_target_length = 4096
+
+///|
+let raw_max_inventory_serialization_bytes : Int = 16 * 1024 * 1024
+
+///|
 let transitional_office_relationship_prefix = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
 
 ///|
@@ -132,11 +159,29 @@ fn decode_xml_bytes(name : String, bytes : BytesView) -> String raise RawError {
 }
 
 ///|
+fn checked_metadata_xml_text(
+  name : String,
+  bytes : BytesView,
+) -> String raise RawError {
+  if bytes.length() == 0 || bytes.length() > raw_metadata_max_bytes {
+    raise raw_xml_resource_limit(
+      name,
+      "metadata_xml_bytes",
+      raw_metadata_max_bytes,
+      bytes.length(),
+    )
+  }
+  let text = decode_xml_bytes(name, bytes)
+  preflight_raw_metadata_xml(name, @utf8.encode(text))
+  text
+}
+
+///|
 fn parse_xml_bytes(
   name : String,
   bytes : BytesView,
 ) -> @xml.XmlElement raise RawError {
-  let text = decode_xml_bytes(name, bytes)
+  let text = checked_metadata_xml_text(name, bytes)
   @xml.read_xml_string_strict(text) catch {
     _ =>
       raise raw_error(
@@ -144,6 +189,15 @@ fn parse_xml_bytes(
         "part '/\{name}' is not well-formed strict XML",
       )
   }
+}
+
+///|
+fn raw_archive_names(archive : @zip.Archive) -> Map[String, String] {
+  let names : Map[String, String] = Map([])
+  for entry in archive.entries() {
+    names[canonical_part_key(entry.name())] = entry.name()
+  }
+  names
 }
 
 ///|
@@ -197,28 +251,76 @@ fn parse_content_types(
   let root = parse_xml_bytes(actual_name, bytes)
   let defaults : Map[String, String] = Map([])
   let overrides : Map[String, String] = Map([])
+  let mut records = 0
   for child in root.children {
     match child {
       XmlElement(element) =>
         match xml_name_local(element.name) {
           "Default" => {
+            records = records + 1
+            if records > raw_max_manifest_records {
+              raise raw_xml_resource_limit(
+                actual_name, "content_type_records", raw_max_manifest_records, records,
+              )
+            }
             let extension = element.attributes.get("Extension")
             let content_type = element.attributes.get("ContentType")
             match (extension, content_type) {
-              (Some(ext), Some(kind)) => defaults[ext.to_lower()] = kind
+              (Some(ext), Some(kind)) => {
+                if ext.length() > raw_max_manifest_extension_length {
+                  raise raw_xml_resource_limit(
+                    actual_name,
+                    "manifest_extension_length",
+                    raw_max_manifest_extension_length,
+                    ext.length(),
+                  )
+                }
+                if kind.length() > raw_max_content_type_length {
+                  raise raw_xml_resource_limit(
+                    actual_name,
+                    "content_type_length",
+                    raw_max_content_type_length,
+                    kind.length(),
+                  )
+                }
+                defaults[ext.to_lower()] = kind
+              }
               _ => ()
             }
           }
           "Override" => {
+            records = records + 1
+            if records > raw_max_manifest_records {
+              raise raw_xml_resource_limit(
+                actual_name, "content_type_records", raw_max_manifest_records, records,
+              )
+            }
             let part = element.attributes.get("PartName")
             let content_type = element.attributes.get("ContentType")
             match (part, content_type) {
-              (Some(name), Some(kind)) =>
+              (Some(name), Some(kind)) => {
+                if name.length() > raw_max_manifest_part_name_length {
+                  raise raw_xml_resource_limit(
+                    actual_name,
+                    "manifest_part_name_length",
+                    raw_max_manifest_part_name_length,
+                    name.length(),
+                  )
+                }
+                if kind.length() > raw_max_content_type_length {
+                  raise raw_xml_resource_limit(
+                    actual_name,
+                    "content_type_length",
+                    raw_max_content_type_length,
+                    kind.length(),
+                  )
+                }
                 match normalize_manifest_part(name) {
                   Some(normalized) =>
                     overrides[canonical_part_key(normalized)] = kind
                   None => ()
                 }
+              }
               _ => ()
             }
           }
@@ -254,6 +356,30 @@ fn content_type_is_xml(value : String) -> Bool {
   media_type == "application/xml" ||
   media_type == "text/xml" ||
   media_type.has_suffix("+xml")
+}
+
+///|
+fn content_type_is_supported_main(value : String) -> Bool {
+  let normalized = value.trim().to_lower()
+  normalized ==
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" ||
+  normalized ==
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
+}
+
+///|
+fn preflight_raw_detection_metadata(
+  archive : @zip.Archive,
+  names : Map[String, String],
+) -> Unit raise RawError {
+  let content_types = parse_content_types(archive, names)
+  for entry in archive.entries() {
+    let name = entry.name()
+    if canonical_part_key(name).has_suffix(".rels") ||
+      content_type_is_supported_main(content_types.for_part(name)) {
+      ignore(checked_metadata_xml_text(name, entry.data()))
+    }
+  }
 }
 
 ///|
@@ -345,14 +471,45 @@ fn parse_relationships(
   }
   let root = parse_xml_bytes(canonical, bytes)
   let output : Array[RawRelationship] = []
+  let mut records = 0
   for child in root.children {
     match child {
       XmlElement(element) if xml_name_local(element.name) == "Relationship" => {
+        records = records + 1
+        if records > raw_max_relationship_records {
+          raise raw_xml_resource_limit(
+            canonical, "relationship_records", raw_max_relationship_records, records,
+          )
+        }
         let id = element.attributes.get("Id")
         let kind = element.attributes.get("Type")
         let target = element.attributes.get("Target")
         match (id, kind, target) {
           (Some(id), Some(kind), Some(target)) => {
+            if id.length() > raw_max_relationship_id_length {
+              raise raw_xml_resource_limit(
+                canonical,
+                "relationship_id_length",
+                raw_max_relationship_id_length,
+                id.length(),
+              )
+            }
+            if kind.length() > raw_max_relationship_type_length {
+              raise raw_xml_resource_limit(
+                canonical,
+                "relationship_type_length",
+                raw_max_relationship_type_length,
+                kind.length(),
+              )
+            }
+            if target.length() > raw_max_relationship_target_length {
+              raise raw_xml_resource_limit(
+                canonical,
+                "relationship_target_length",
+                raw_max_relationship_target_length,
+                target.length(),
+              )
+            }
             let external = element.attributes.get("TargetMode")
               is Some("External")
             if external {
@@ -626,12 +783,22 @@ fn add_xlsx_aliases(pkg : RawPackage) -> Unit raise RawError {
   let sheets_element_name = "{\{workbook_namespace}}sheets"
   let sheet_element_name = "{\{workbook_namespace}}sheet"
   let mut sheet_index = 0
+  let mut sheet_records = 0
   for sheets_child in workbook.children {
     match sheets_child {
       XmlElement(sheets) if sheets.name == sheets_element_name =>
         for child in sheets.children {
           match child {
             XmlElement(sheet) if sheet.name == sheet_element_name => {
+              sheet_records = sheet_records + 1
+              if sheet_records > raw_max_archive_entries {
+                raise raw_xml_resource_limit(
+                  pkg.main_part,
+                  "worksheet_records",
+                  raw_max_archive_entries,
+                  sheet_records,
+                )
+              }
               let name = sheet.attributes.get("name")
               let relationship_id = spreadsheet_relationship_id(sheet)
               match (name, relationship_id) {
@@ -678,10 +845,7 @@ fn package_from_archive(
   format : @office.DocumentFormat,
   archive : @zip.Archive,
 ) -> RawPackage raise RawError {
-  let names : Map[String, String] = Map([])
-  for entry in archive.entries() {
-    names[canonical_part_key(entry.name())] = entry.name()
-  }
+  let names = raw_archive_names(archive)
   let content_types = parse_content_types(archive, names)
   let pkg = RawPackage::{
     format,
@@ -734,6 +898,8 @@ fn open_raw_package(
   data : BytesView,
 ) -> RawPackage raise RawError {
   let archive = read_bounded_archive(data)
+  let names = raw_archive_names(archive)
+  preflight_raw_detection_metadata(archive, names)
   let format = @office.detect_archive_format(path, archive) catch {
     error =>
       raise raw_error(
@@ -750,6 +916,8 @@ fn open_raw_package_for_format(
   data : BytesView,
 ) -> RawPackage raise RawError {
   let archive = read_bounded_archive(data)
+  let names = raw_archive_names(archive)
+  preflight_raw_detection_metadata(archive, names)
   let _ = @office.detect_archive_format(raw_path_for_format(format), archive) catch {
     error =>
       raise raw_error(
@@ -924,6 +1092,66 @@ fn RawPackage::part_info(
 }
 
 ///|
+fn raw_json_string_size_bound(value : String) -> Int {
+  let mut size = 2
+  for character in value {
+    let code = character.to_int()
+    let encoded = if character == '"' || character == '\\' || code < 0x20 {
+      6
+    } else if code <= 0x7f {
+      1
+    } else if code <= 0x7ff {
+      2
+    } else if code <= 0xffff {
+      3
+    } else {
+      4
+    }
+    if encoded > raw_max_inventory_serialization_bytes - size {
+      return raw_max_inventory_serialization_bytes + 1
+    }
+    size = size + encoded
+  }
+  size
+}
+
+///|
+fn check_inventory_serialization_budget(
+  parts : ArrayView[RawPartInfo],
+) -> Unit raise RawError {
+  let mut estimated = 128
+  for part in parts {
+    let mut record = 96 +
+      raw_json_string_size_bound(part.name) +
+      raw_json_string_size_bound(part.content_type)
+    for alias_name in part.aliases {
+      let alias_size = raw_json_string_size_bound(alias_name) + 1
+      if alias_size > raw_max_inventory_serialization_bytes - record {
+        record = raw_max_inventory_serialization_bytes + 1
+        break
+      }
+      record = record + alias_size
+    }
+    if record > raw_max_inventory_serialization_bytes - estimated {
+      raise raw_error(
+        "office.raw.resource_limit",
+        "raw inventory exceeds the \{raw_max_inventory_serialization_bytes}-byte serialization budget",
+        details=Json::object({
+          "kind": Json::string("inventory_serialization_bytes"),
+          "limit": Json::number(
+            raw_max_inventory_serialization_bytes.to_double(),
+          ),
+          "actual": Json::number(
+            (raw_max_inventory_serialization_bytes + 1).to_double(),
+          ),
+        }),
+      )
+    }
+    estimated = estimated + record
+  }
+}
+
+///|
 /// Inventories all validated package parts in canonical name order.
 pub fn raw_inventory(
   path : StringView,
@@ -935,6 +1163,7 @@ pub fn raw_inventory(
     parts.push(pkg.part_info(entry.name()))
   }
   parts.sort_by(fn(left, right) { left.name.compare(right.name) })
+  check_inventory_serialization_budget(parts)
   { format: pkg.format, parts: ReadOnlyArray::from_array(parts) }
 }
 

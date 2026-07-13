@@ -287,3 +287,45 @@ test "raw all selection is capped before edits are materialized" {
     content="office.raw.too_many_matches",
   )
 }
+
+///|
+test "raw edit rejects aggregate output amplification before splicing" {
+  let original = @word.new_blank_docx()
+  let document = StringBuilder::new()
+  document.write_string("<w:document xmlns:w=\"\{word_namespace}\"><w:body>")
+  |> ignore
+  for _ in 0..<256 {
+    document.write_string("<w:p/>") |> ignore
+  }
+  document.write_string("<w:sectPr/></w:body></w:document>") |> ignore
+  let populated = @raw.raw_replace_part(
+    Docx,
+    original,
+    "/document",
+    document.to_string(),
+  )
+  let request = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body/w:p",
+    SetAttribute,
+    attribute="amplified",
+    value="x".repeat(1024 * 1024),
+    all=true,
+  )
+  assert_eq(
+    raw_error_code(() => @raw.raw_edit(Docx, populated.bytes, request)),
+    "office.raw.resource_limit",
+  )
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_edit_request(
+        "/document",
+        "/w:document",
+        SetAttribute,
+        attribute="too-large",
+        value="x".repeat(1024 * 1024 + 1),
+      )
+    }),
+    "office.raw.resource_limit",
+  )
+}
