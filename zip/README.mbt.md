@@ -155,7 +155,7 @@ test "iterate entries" {
 | `read(bytes)` | Parse ZIP bytes into Archive |
 | `read_limited(bytes, ...)` | Parse while enforcing entry and expansion limits |
 | `write(archive)` | Serialize Archive to ZIP bytes |
-| `write_limited(archive, max_output_bytes=...)` | Serialize without allowing output to grow past the ceiling |
+| `write_limited(archive, max_output_bytes=...)` | Stream local and central records into one buffer without allowing output to grow past the ceiling |
 | `gzip(bytes)` | Compress bytes using GZIP |
 | `gunzip(bytes)` | Decompress GZIP bytes |
 
