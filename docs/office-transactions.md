@@ -110,6 +110,15 @@ remaining after the original archive. A package that is individually legal
 but would make the two live archive snapshots exceed the envelope therefore
 fails with `kind=live_materialized_bytes` before any temporary file is created.
 
+ZIP expansion and serialization do not hide another package-sized allocation
+inside that reserve. DEFLATE first validates and counts output without retaining
+bytes, then decodes into one exact fixed buffer. Serialization likewise performs
+an output-storage-free record/offset/DEFLATE sizing pass; it rejects the package
+ceiling before allocating, then emits local records, the central directory,
+trailers, and compressed payloads directly into one exact candidate buffer.
+There is no growable package array, final array-to-bytes copy, or separately
+staged central directory.
+
 The mandatory ZIP reader admits one interpretation: the EOCD comment must end
 at EOF, the declared central-directory count and byte span must be consumed
 exactly, and each local header/data descriptor must agree with its central

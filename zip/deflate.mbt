@@ -410,8 +410,7 @@ fn decode_huffman_block(
   reader : BitReader,
   lit_table : HuffmanTable,
   dist_table : HuffmanTable,
-  out : Array[Byte],
-  max_output? : Int = deflate_max_output_default,
+  out : FixedByteOutput,
 ) -> Unit raise ZipError {
   for state = true {
     if !state {
@@ -419,10 +418,7 @@ fn decode_huffman_block(
     }
     let symbol = decode_symbol(reader, lit_table)
     if symbol < 256 {
-      if out.length() >= max_output {
-        raise OutputLimitExceeded(limit=max_output)
-      }
-      out.push(symbol.to_byte())
+      out.write_byte(symbol.to_byte())
       continue true
     }
     if symbol == 256 {
@@ -441,16 +437,7 @@ fn decode_huffman_block(
     }
     let dist = dist_base[dist_symbol] +
       reader.read_bits(dist_extra[dist_symbol]).reinterpret_as_int()
-    if dist <= 0 || dist > out.length() {
-      raise UnsupportedFeature(msg="invalid back-reference distance")
-    }
-    if length > max_output - out.length() {
-      raise OutputLimitExceeded(limit=max_output)
-    }
-    for _ in 0..<length {
-      let value = out[out.length() - dist]
-      out.push(value)
-    }
+    out.copy_back_reference(dist, length)
     continue true
   }
 }
@@ -459,32 +446,17 @@ fn decode_huffman_block(
 priv struct BitWriter {
   mut bit_buf : UInt
   mut bit_count : Int
-  out : Array[Byte]
-  max_output : Int?
+  out : FixedByteOutput
 }
 
 ///|
-fn BitWriter::new_with_limit(max_output : Int?) -> BitWriter raise ZipError {
-  match max_output {
-    Some(limit) if limit < 0 =>
-      raise UnsupportedFeature(msg="deflate output limit must be non-negative")
-    _ => ()
-  }
-  { bit_buf: 0, bit_count: 0, out: [], max_output }
-}
-
-///|
-fn BitWriter::new() -> BitWriter {
-  { bit_buf: 0, bit_count: 0, out: [], max_output: None }
+fn BitWriter::new(out : FixedByteOutput) -> BitWriter {
+  { bit_buf: 0, bit_count: 0, out }
 }
 
 ///|
 fn BitWriter::push_byte(self : BitWriter, value : Byte) -> Unit raise ZipError {
-  match self.max_output {
-    Some(limit) if self.out.length() >= limit =>
-      raise OutputLimitExceeded(limit~)
-    _ => self.out.push(value)
-  }
+  self.out.write_byte(value)
 }
 
 ///|
@@ -509,11 +481,10 @@ fn BitWriter::write_bits(
 }
 
 ///|
-fn BitWriter::finish(self : BitWriter) -> Bytes raise ZipError {
+fn BitWriter::finish(self : BitWriter) -> Unit raise ZipError {
   if self.bit_count > 0 {
     self.push_byte(self.bit_buf.to_byte())
   }
-  Bytes::from_array(self.out)
 }
 
 ///|
@@ -533,11 +504,12 @@ fn fixed_literal_code(symbol : Int) -> (Int, Int) raise ZipError {
 }
 
 ///|
-fn deflate_encode_with_limit(
+fn deflate_encode_to_output(
   bytes : BytesView,
-  max_output : Int?,
-) -> Bytes raise ZipError {
-  let writer = BitWriter::new_with_limit(max_output)
+  out : FixedByteOutput,
+) -> Int raise ZipError {
+  let start = out.length()
+  let writer = BitWriter::new(out)
   writer.write_bits(1, 1)
   writer.write_bits(1, 2)
   let len = bytes.length()
@@ -586,6 +558,31 @@ fn deflate_encode_with_limit(
   let end_rev = reverse_bits(end_code.reinterpret_as_uint(), end_len).reinterpret_as_int()
   writer.write_bits(end_rev, end_len)
   writer.finish()
+  out.length() - start
+}
+
+///|
+fn deflate_encoded_size(
+  bytes : BytesView,
+  max_output? : Int,
+) -> Int raise ZipError {
+  let out = FixedByteOutput::counting(limit?=max_output)
+  ignore(deflate_encode_to_output(bytes, out))
+  out.length()
+}
+
+///|
+fn deflate_encode_with_limit(
+  bytes : BytesView,
+  max_output : Int?,
+) -> Bytes raise ZipError {
+  let exact_size = deflate_encoded_size(bytes, max_output?)
+  let out = FixedByteOutput::allocated(exact_size)
+  let written = deflate_encode_to_output(bytes, out)
+  if written != exact_size {
+    raise UnsupportedFeature(msg="DEFLATE sizing and emission disagreed")
+  }
+  out.finish()
 }
 
 ///|
@@ -594,20 +591,11 @@ fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
 }
 
 ///|
-fn deflate_encode_limited(
+fn deflate_decode_to_output(
   bytes : BytesView,
-  max_output : Int,
-) -> Bytes raise ZipError {
-  deflate_encode_with_limit(bytes, Some(max_output))
-}
-
-///|
-fn deflate_decode(
-  bytes : BytesView,
-  max_output? : Int = deflate_max_output_default,
-) -> Bytes raise ZipError {
+  out : FixedByteOutput,
+) -> Unit raise ZipError {
   let reader = BitReader::new(bytes)
-  let out : Array[Byte] = []
   for state = false {
     if state {
       break
@@ -622,21 +610,18 @@ fn deflate_decode(
         if (len.reinterpret_as_uint() ^ nlen) != 0xFFFF {
           raise UnsupportedFeature(msg="invalid stored block length")
         }
-        if len > max_output - out.length() {
-          raise OutputLimitExceeded(limit=max_output)
-        }
         for _ in 0..<len {
-          out.push(reader.read_byte())
+          out.write_byte(reader.read_byte())
         }
       }
       1 => {
         let lit = fixed_literal_table()
         let dist = fixed_distance_table()
-        decode_huffman_block(reader, lit, dist, out, max_output~)
+        decode_huffman_block(reader, lit, dist, out)
       }
       2 => {
         let (lit, dist) = read_dynamic_tables(reader)
-        decode_huffman_block(reader, lit, dist, out, max_output~)
+        decode_huffman_block(reader, lit, dist, out)
       }
       _ => raise UnsupportedFeature(msg="invalid deflate block type")
     }
@@ -645,7 +630,23 @@ fn deflate_decode(
   if reader.consumed_bytes() != bytes.length() {
     raise UnsupportedFeature(msg="trailing bytes after deflate stream")
   }
-  Bytes::from_array(out)
+}
+
+///|
+/// DEFLATE decoding first validates and counts the complete stream without
+/// retaining output bytes, then repeats the deterministic decode into one exact
+/// fixed allocation. This prevents a growable backing array and final copy from
+/// doubling the largest expanded entry at the transaction boundary.
+fn deflate_decode(
+  bytes : BytesView,
+  max_output? : Int = deflate_max_output_default,
+) -> Bytes raise ZipError {
+  let sizing = FixedByteOutput::counting(limit=max_output)
+  deflate_decode_to_output(bytes, sizing)
+  let exact_size = sizing.length()
+  let out = FixedByteOutput::allocated(exact_size)
+  deflate_decode_to_output(bytes, out)
+  out.finish()
 }
 
 ///|
@@ -729,6 +730,21 @@ fn wb_single_symbol_table(symbol : Int) -> HuffmanTable {
 }
 
 ///|
+fn wb_deflate_bit_stream(
+  emit : (BitWriter) -> Unit raise ZipError,
+) -> Bytes raise ZipError {
+  let sizing_output = FixedByteOutput::counting()
+  let sizing_writer = BitWriter::new(sizing_output)
+  emit(sizing_writer)
+  sizing_writer.finish()
+  let output = FixedByteOutput::allocated(sizing_output.length())
+  let writer = BitWriter::new(output)
+  emit(writer)
+  writer.finish()
+  output.finish()
+}
+
+///|
 test "deflate wb: direct guard error branches" {
   let reader = BitReader::new(b"")
   try reader.ensure_bits(-1) catch {
@@ -751,7 +767,7 @@ test "deflate wb: direct guard error branches" {
   } noraise {
     _ => fail("expected build_huffman to raise")
   }
-  let writer = BitWriter::new()
+  let writer = BitWriter::new(FixedByteOutput::counting())
   try writer.write_bits(1, -1) catch {
     e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
@@ -778,19 +794,20 @@ test "deflate wb: find_match distance cap branch" {
 
 ///|
 test "deflate wb: dynamic table repeat-without-previous branch" {
-  let writer = BitWriter::new()
-  // hlit=257, hdist=1, hclen=4
-  ignore(writer.write_bits(0, 5))
-  ignore(writer.write_bits(0, 5))
-  ignore(writer.write_bits(0, 4))
-  // code-length alphabet lengths for [16, 17, 18, 0]
-  ignore(writer.write_bits(1, 3))
-  ignore(writer.write_bits(0, 3))
-  ignore(writer.write_bits(0, 3))
-  ignore(writer.write_bits(0, 3))
-  // first decoded symbol from code-length table: 16
-  ignore(writer.write_bits(0, 1))
-  let reader = BitReader::new(writer.finish())
+  let stream = wb_deflate_bit_stream(writer => {
+    // hlit=257, hdist=1, hclen=4
+    writer.write_bits(0, 5)
+    writer.write_bits(0, 5)
+    writer.write_bits(0, 4)
+    // code-length alphabet lengths for [16, 17, 18, 0]
+    writer.write_bits(1, 3)
+    writer.write_bits(0, 3)
+    writer.write_bits(0, 3)
+    writer.write_bits(0, 3)
+    // first decoded symbol from code-length table: 16
+    writer.write_bits(0, 1)
+  })
+  let reader = BitReader::new(stream)
   try read_dynamic_tables(reader) catch {
     UnsupportedFeature(msg~) =>
       inspect(msg, content="repeat with no previous length")
@@ -802,11 +819,12 @@ test "deflate wb: dynamic table repeat-without-previous branch" {
 
 ///|
 test "deflate wb: dynamic table rejects reserved HLIT" {
-  let writer = BitWriter::new()
-  // HLIT encodings 30 and 31 are reserved: at most 286 literal/length codes
-  // may be declared.
-  ignore(writer.write_bits(30, 5))
-  let reader = BitReader::new(writer.finish())
+  let stream = wb_deflate_bit_stream(
+    // HLIT encodings 30 and 31 are reserved: at most 286 literal/length codes
+    // may be declared.
+    writer => writer.write_bits(30, 5),
+  )
+  let reader = BitReader::new(stream)
   try read_dynamic_tables(reader) catch {
     UnsupportedFeature(msg~) =>
       inspect(msg, content="invalid dynamic literal/length count")
@@ -818,23 +836,24 @@ test "deflate wb: dynamic table rejects reserved HLIT" {
 
 ///|
 test "deflate wb: dynamic table rejects repeat overshoot" {
-  let writer = BitWriter::new()
-  // hlit=257, hdist=1, hclen=4
-  ignore(writer.write_bits(0, 5))
-  ignore(writer.write_bits(0, 5))
-  ignore(writer.write_bits(0, 4))
-  // Code-length alphabet lengths for [16, 17, 18, 0]. Symbol 18 is the
-  // sole one-bit code, so each zero bit below selects it.
-  ignore(writer.write_bits(0, 3))
-  ignore(writer.write_bits(0, 3))
-  ignore(writer.write_bits(1, 3))
-  ignore(writer.write_bits(0, 3))
-  // Two maximum symbol-18 repeats request 276 lengths for a 258-slot table.
-  ignore(writer.write_bits(0, 1))
-  ignore(writer.write_bits(127, 7))
-  ignore(writer.write_bits(0, 1))
-  ignore(writer.write_bits(127, 7))
-  let reader = BitReader::new(writer.finish())
+  let stream = wb_deflate_bit_stream(writer => {
+    // hlit=257, hdist=1, hclen=4
+    writer.write_bits(0, 5)
+    writer.write_bits(0, 5)
+    writer.write_bits(0, 4)
+    // Code-length alphabet lengths for [16, 17, 18, 0]. Symbol 18 is the
+    // sole one-bit code, so each zero bit below selects it.
+    writer.write_bits(0, 3)
+    writer.write_bits(0, 3)
+    writer.write_bits(1, 3)
+    writer.write_bits(0, 3)
+    // Two maximum symbol-18 repeats request 276 lengths for a 258-slot table.
+    writer.write_bits(0, 1)
+    writer.write_bits(127, 7)
+    writer.write_bits(0, 1)
+    writer.write_bits(127, 7)
+  })
+  let reader = BitReader::new(stream)
   try read_dynamic_tables(reader) catch {
     UnsupportedFeature(msg~) =>
       inspect(msg, content="dynamic code-length repeat exceeds table")
@@ -853,7 +872,7 @@ test "deflate wb: decode_huffman_block validation branches" {
       zero_reader,
       wb_single_symbol_table(286),
       wb_single_symbol_table(0),
-      [],
+      FixedByteOutput::counting(),
     )
   catch {
     e => inspect(e is UnsupportedFeature(_), content="true")
@@ -865,7 +884,7 @@ test "deflate wb: decode_huffman_block validation branches" {
       BitReader::new(b"\x00"),
       wb_single_symbol_table(257),
       wb_single_symbol_table(30),
-      [],
+      FixedByteOutput::counting(),
     )
   catch {
     e => inspect(e is UnsupportedFeature(_), content="true")
@@ -877,7 +896,7 @@ test "deflate wb: decode_huffman_block validation branches" {
       BitReader::new(b"\x00"),
       wb_single_symbol_table(257),
       wb_single_symbol_table(0),
-      [],
+      FixedByteOutput::counting(),
     )
   catch {
     e => inspect(e is UnsupportedFeature(_), content="true")

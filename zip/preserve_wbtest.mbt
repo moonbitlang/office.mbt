@@ -1,4 +1,86 @@
 ///|
+fn write_bytes(buffer : Array[Byte], bytes : BytesView) -> Unit {
+  for byte in bytes {
+    buffer.push(byte)
+  }
+}
+
+///|
+fn write_u16_le(buffer : Array[Byte], value : Int) -> Unit raise ZipError {
+  if value < 0 || value > 0xffff {
+    raise UnsupportedFeature(msg="u16 overflow")
+  }
+  let raw = value.reinterpret_as_uint()
+  buffer.push((raw & 0xff).to_byte())
+  buffer.push(((raw >> 8) & 0xff).to_byte())
+}
+
+///|
+fn write_u32_le(buffer : Array[Byte], value : UInt) -> Unit {
+  buffer.push((value & 0xff).to_byte())
+  buffer.push(((value >> 8) & 0xff).to_byte())
+  buffer.push(((value >> 16) & 0xff).to_byte())
+  buffer.push(((value >> 24) & 0xff).to_byte())
+}
+
+///|
+fn write_u64_le(buffer : Array[Byte], value : UInt64) -> Unit {
+  for index in 0..<8 {
+    buffer.push(((value >> (8 * index)) & 0xff).to_byte())
+  }
+}
+
+///|
+fn write_data_descriptor(
+  buffer : Array[Byte],
+  crc : UInt,
+  compressed_size : Int,
+  uncompressed_size : Int,
+  zip64_sizes : Bool,
+) -> Unit raise ZipError {
+  write_u32_le(buffer, data_descriptor_sig.reinterpret_as_uint())
+  write_u32_le(buffer, crc)
+  if zip64_sizes {
+    write_u64_le(buffer, to_u64(compressed_size))
+    write_u64_le(buffer, to_u64(uncompressed_size))
+  } else {
+    write_u32_le(buffer, to_u32(compressed_size))
+    write_u32_le(buffer, to_u32(uncompressed_size))
+  }
+}
+
+///|
+fn patch_u32_le(
+  buffer : Array[Byte],
+  offset : Int,
+  value : UInt,
+) -> Unit raise ZipError {
+  if offset < 0 || offset > buffer.length() || 4 > buffer.length() - offset {
+    raise UnsupportedFeature(
+      msg="central-directory offset patch is out of bounds",
+    )
+  }
+  buffer[offset] = (value & 0xff).to_byte()
+  buffer[offset + 1] = ((value >> 8) & 0xff).to_byte()
+  buffer[offset + 2] = ((value >> 16) & 0xff).to_byte()
+  buffer[offset + 3] = ((value >> 24) & 0xff).to_byte()
+}
+
+///|
+fn patch_u64_le(
+  buffer : Array[Byte],
+  offset : Int,
+  value : UInt64,
+) -> Unit raise ZipError {
+  if offset < 0 || offset > buffer.length() || 8 > buffer.length() - offset {
+    raise UnsupportedFeature(msg="ZIP64 offset patch is out of bounds")
+  }
+  for index in 0..<8 {
+    buffer[offset + index] = ((value >> (8 * index)) & 0xff).to_byte()
+  }
+}
+
+///|
 fn patch_u16_le(
   buffer : Array[Byte],
   offset : Int,
@@ -165,49 +247,77 @@ fn preservation_fixture() -> Bytes raise ZipError {
 }
 
 ///|
+fn write_central_heavy_preservation_fixture(
+  output : FixedByteOutput,
+  entry_count : Int,
+  comment : Bytes,
+) -> Unit raise ZipError {
+  let local_offsets : Array[Int] = []
+  for index in 0..<entry_count {
+    let name = @encoding/utf8.encode("entry-\{index}.xml")
+    local_offsets.push(output.length())
+    write_u32_le_bounded(output, local_header_sig.reinterpret_as_uint(), None)
+    write_u16_le_bounded(output, 20, None)
+    write_u16_le_bounded(output, flag_utf8, None)
+    write_u16_le_bounded(output, 0, None)
+    write_u16_le_bounded(output, 0x1001, None)
+    write_u16_le_bounded(output, 0x2002, None)
+    write_u32_le_bounded(output, 0, None)
+    write_u32_le_bounded(output, 0, None)
+    write_u32_le_bounded(output, 0, None)
+    write_u16_le_bounded(output, name.length(), None)
+    write_u16_le_bounded(output, 0, None)
+    write_bytes_bounded(output, name, None)
+  }
+  let central_offset = output.length()
+  for index in 0..<entry_count {
+    let name = @encoding/utf8.encode("entry-\{index}.xml")
+    write_u32_le_bounded(output, central_header_sig.reinterpret_as_uint(), None)
+    write_u16_le_bounded(output, 63, None)
+    write_u16_le_bounded(output, 20, None)
+    write_u16_le_bounded(output, flag_utf8, None)
+    write_u16_le_bounded(output, 0, None)
+    write_u16_le_bounded(output, 0x1001, None)
+    write_u16_le_bounded(output, 0x2002, None)
+    write_u32_le_bounded(output, 0, None)
+    write_u32_le_bounded(output, 0, None)
+    write_u32_le_bounded(output, 0, None)
+    write_u16_le_bounded(output, name.length(), None)
+    write_u16_le_bounded(output, 0, None)
+    write_u16_le_bounded(output, comment.length(), None)
+    write_u16_le_bounded(output, 0, None)
+    write_u16_le_bounded(output, 0, None)
+    write_u32_le_bounded(output, 0, None)
+    write_u32_le_bounded(
+      output,
+      local_offsets[index].reinterpret_as_uint(),
+      None,
+    )
+    write_bytes_bounded(output, name, None)
+    write_bytes_bounded(output, comment, None)
+  }
+  let central_size = output.length() - central_offset
+  write_u32_le_bounded(output, end_of_central_sig.reinterpret_as_uint(), None)
+  write_u16_le_bounded(output, 0, None)
+  write_u16_le_bounded(output, 0, None)
+  write_u16_le_bounded(output, entry_count, None)
+  write_u16_le_bounded(output, entry_count, None)
+  write_u32_le_bounded(output, central_size.reinterpret_as_uint(), None)
+  write_u32_le_bounded(output, central_offset.reinterpret_as_uint(), None)
+  write_u16_le_bounded(output, 0, None)
+}
+
+///|
 fn central_heavy_preservation_fixture(
   entry_count : Int,
   comment_bytes : Int,
 ) -> Bytes raise ZipError {
-  let output : Array[Byte] = []
-  let local_offsets : Array[Int] = []
-  for index in 0..<entry_count {
-    let name = @encoding/utf8.encode("entry-\{index}.xml")
-    local_offsets.push(
-      preservation_local_record(
-        output, name, b"", false, false, b"", 0x1001, 0x2002,
-      ),
-    )
-  }
-  let central_offset = output.length()
   let comment = Bytes::makei(comment_bytes, _ => (0x63).to_byte())
-  for index in 0..<entry_count {
-    let name = @encoding/utf8.encode("entry-\{index}.xml")
-    preservation_central_record(
-      output,
-      name,
-      b"",
-      false,
-      false,
-      b"",
-      comment,
-      0x1001,
-      0x2002,
-      0,
-      (0 : UInt),
-      local_offsets[index],
-    )
-  }
-  let central_size = output.length() - central_offset
-  write_u32_le(output, end_of_central_sig.reinterpret_as_uint())
-  write_u16_le(output, 0)
-  write_u16_le(output, 0)
-  write_u16_le(output, entry_count)
-  write_u16_le(output, entry_count)
-  write_u32_le(output, central_size.reinterpret_as_uint())
-  write_u32_le(output, central_offset.reinterpret_as_uint())
-  write_u16_le(output, 0)
-  Bytes::from_array(output)
+  let sizing = FixedByteOutput::counting()
+  write_central_heavy_preservation_fixture(sizing, entry_count, comment)
+  let output = FixedByteOutput::allocated(sizing.length())
+  write_central_heavy_preservation_fixture(output, entry_count, comment)
+  output.finish()
 }
 
 ///|
@@ -325,6 +435,28 @@ test "zip write_limited streams preserved central-heavy records" {
     _ => fail("expected preserved central-directory output limit")
   } noraise {
     _ => fail("expected preserved central-heavy archive to exceed its limit")
+  }
+}
+
+///|
+#cfg(target="native")
+test "zip sizing rejects near-envelope preserved records before allocation" {
+  let source = central_heavy_preservation_fixture(1536, 65_500)
+  let archive = read_limited(
+    source,
+    max_entries=1536,
+    max_entry_uncompressed_bytes=0,
+    max_total_uncompressed_bytes=0,
+  )
+  assert_true(archive.replace("entry-0.xml", b"replacement"))
+  let expected_limit = 96 * 1024 * 1024
+  // The source retains about 100 MiB of central records. The counting plan has
+  // no output storage, so this rejection precedes a second package allocation.
+  try plan_archive_write(archive, false, Some(expected_limit)) catch {
+    OutputLimitExceeded(limit~) => assert_eq(limit, expected_limit)
+    _ => fail("expected preserved near-envelope planning rejection")
+  } noraise {
+    _ => fail("expected preserved near-envelope archive to exceed its limit")
   }
 }
 

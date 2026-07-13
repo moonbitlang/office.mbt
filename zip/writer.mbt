@@ -1,106 +1,62 @@
 ///|
-fn write_u16_le(buf : Array[Byte], value : Int) -> Unit raise ZipError {
-  if value < 0 || value > 0xFFFF {
-    raise UnsupportedFeature(msg="u16 overflow")
-  }
-  let v = value.reinterpret_as_uint()
-  buf.push((v & 0xFF).to_byte())
-  buf.push(((v >> 8) & 0xFF).to_byte())
-}
-
-///|
-fn write_u32_le(buf : Array[Byte], value : UInt) -> Unit {
-  let v = value
-  buf.push((v & 0xFF).to_byte())
-  buf.push(((v >> 8) & 0xFF).to_byte())
-  buf.push(((v >> 16) & 0xFF).to_byte())
-  buf.push(((v >> 24) & 0xFF).to_byte())
-}
-
-///|
-fn write_bytes(buf : Array[Byte], bytes : BytesView) -> Unit {
-  for b in bytes {
-    buf.push(b)
-  }
-}
-
-///|
-/// Checks a write before the destination array grows. All arithmetic is
+/// Checks a write against the shared sizing/allocation sink. All arithmetic is
 /// subtraction based so a hostile size cannot overflow the check itself.
 fn check_output_growth(
-  buf : Array[Byte],
+  buf : FixedByteOutput,
   additional : Int,
-  max_output : Int?,
+  _max_output : Int?,
 ) -> Unit raise ZipError {
-  if additional < 0 {
-    raise UnsupportedFeature(msg="negative ZIP output size")
-  }
-  match max_output {
-    Some(limit) => {
-      if limit < 0 {
-        raise UnsupportedFeature(msg="ZIP output limit must be non-negative")
-      }
-      if buf.length() > limit || additional > limit - buf.length() {
-        raise OutputLimitExceeded(limit~)
-      }
-    }
-    None => ()
-  }
+  buf.check_growth(additional)
 }
 
 ///|
 fn write_u16_le_bounded(
-  buf : Array[Byte],
+  buf : FixedByteOutput,
   value : Int,
   max_output : Int?,
 ) -> Unit raise ZipError {
+  if value < 0 || value > 0xffff {
+    raise UnsupportedFeature(msg="u16 overflow")
+  }
   check_output_growth(buf, 2, max_output)
-  write_u16_le(buf, value)
+  let raw = value.reinterpret_as_uint()
+  buf.write_byte((raw & 0xff).to_byte())
+  buf.write_byte(((raw >> 8) & 0xff).to_byte())
 }
 
 ///|
 fn write_u32_le_bounded(
-  buf : Array[Byte],
+  buf : FixedByteOutput,
   value : UInt,
   max_output : Int?,
 ) -> Unit raise ZipError {
   check_output_growth(buf, 4, max_output)
-  write_u32_le(buf, value)
+  buf.write_byte((value & 0xff).to_byte())
+  buf.write_byte(((value >> 8) & 0xff).to_byte())
+  buf.write_byte(((value >> 16) & 0xff).to_byte())
+  buf.write_byte(((value >> 24) & 0xff).to_byte())
 }
 
 ///|
 fn write_u64_le_bounded(
-  buf : Array[Byte],
+  buf : FixedByteOutput,
   value : UInt64,
   max_output : Int?,
 ) -> Unit raise ZipError {
   check_output_growth(buf, 8, max_output)
-  write_u64_le(buf, value)
+  for index in 0..<8 {
+    buf.write_byte(((value >> (8 * index)) & 0xff).to_byte())
+  }
 }
 
 ///|
 fn write_bytes_bounded(
-  buf : Array[Byte],
+  buf : FixedByteOutput,
   bytes : BytesView,
   max_output : Int?,
 ) -> Unit raise ZipError {
   check_output_growth(buf, bytes.length(), max_output)
-  write_bytes(buf, bytes)
-}
-
-///|
-fn bounded_initial_capacity(requested : Int, max_output : Int?) -> Int {
-  match max_output {
-    Some(limit) if limit >= 0 && requested > limit => limit
-    _ => requested
-  }
-}
-
-///|
-fn write_u64_le(buf : Array[Byte], value : UInt64) -> Unit {
-  for i in 0..<8 {
-    buf.push(((value >> (8 * i)) & 0xff).to_byte())
-  }
+  buf.write_bytes(bytes)
 }
 
 ///|
@@ -139,27 +95,27 @@ fn build_zip64_extra(
     return b""
   }
   let data_len = 8 * field_count
-  let extra : Array[Byte] = Array::new(capacity=4 + data_len)
-  write_u16_le(extra, 0x0001)
-  write_u16_le(extra, data_len)
+  let extra = FixedByteOutput::allocated(4 + data_len)
+  write_u16_le_bounded(extra, 0x0001, None)
+  write_u16_le_bounded(extra, data_len, None)
   match uncomp {
-    Some(value) => write_u64_le(extra, to_u64(value))
+    Some(value) => write_u64_le_bounded(extra, to_u64(value), None)
     None => ()
   }
   match comp {
-    Some(value) => write_u64_le(extra, to_u64(value))
+    Some(value) => write_u64_le_bounded(extra, to_u64(value), None)
     None => ()
   }
   match offset {
-    Some(value) => write_u64_le(extra, to_u64(value))
+    Some(value) => write_u64_le_bounded(extra, to_u64(value), None)
     None => ()
   }
-  Bytes::from_array(extra)
+  extra.finish()
 }
 
 ///|
 fn write_data_descriptor_bounded(
-  buf : Array[Byte],
+  buf : FixedByteOutput,
   crc : UInt,
   comp_size : Int,
   uncomp_size : Int,
@@ -182,102 +138,70 @@ fn write_data_descriptor_bounded(
 }
 
 ///|
-fn write_data_descriptor(
-  buf : Array[Byte],
-  crc : UInt,
-  comp_size : Int,
-  uncomp_size : Int,
-  zip64_sizes : Bool,
-) -> Unit raise ZipError {
-  write_data_descriptor_bounded(
-    buf,
-    crc,
-    comp_size,
-    uncomp_size,
-    zip64_sizes,
-    None,
-  )
-}
-
-///|
-fn patch_u32_le(
-  buffer : Array[Byte],
-  offset : Int,
-  value : UInt,
-) -> Unit raise ZipError {
-  if offset < 0 || offset > buffer.length() || 4 > buffer.length() - offset {
-    raise UnsupportedFeature(
-      msg="central-directory offset patch is out of bounds",
-    )
-  }
-  buffer[offset] = (value & 0xff).to_byte()
-  buffer[offset + 1] = ((value >> 8) & 0xff).to_byte()
-  buffer[offset + 2] = ((value >> 16) & 0xff).to_byte()
-  buffer[offset + 3] = ((value >> 24) & 0xff).to_byte()
-}
-
-///|
-fn patch_u64_le(
-  buffer : Array[Byte],
-  offset : Int,
-  value : UInt64,
-) -> Unit raise ZipError {
-  if offset < 0 || offset > buffer.length() || 8 > buffer.length() - offset {
-    raise UnsupportedFeature(msg="ZIP64 offset patch is out of bounds")
-  }
-  for index in 0..<8 {
-    buffer[offset + index] = ((value >> (8 * index)) & 0xff).to_byte()
-  }
-}
-
-///|
-fn patch_template_size(
-  record : Array[Byte],
-  classic_position : Int,
-  zip64_position : Int?,
-  value : Int,
-  preserve_zero_placeholder : Bool,
-) -> Unit raise ZipError {
-  let raw = read_u32_le_at_raw(Bytes::from_array(record), classic_position)
-  let max_u32 : UInt = 0xFFFFFFFF
-  match zip64_position {
-    Some(position) => patch_u64_le(record, position, to_u64(value))
-    None if raw == max_u32 =>
-      raise UnsupportedFeature(
-        msg="ZIP64 size field is missing from replacement template",
-      )
-    None => ()
-  }
-  if raw == max_u32 {
-    return
-  }
-  let zero : UInt = 0
-  if preserve_zero_placeholder && raw == zero {
-    return
-  }
-  patch_u32_le(record, classic_position, to_u32(value))
-}
-
-///|
-fn entry_payload(
-  out : Array[Byte],
+fn planned_entry_metadata(
+  out : FixedByteOutput,
   entry : Entry,
+  local_offset : Int,
   max_output : Int?,
-) -> (Int, Bytes) raise ZipError {
-  match entry.compression() {
-    Store => (0, entry.data())
+) -> WrittenEntryMetadata raise ZipError {
+  let compressed_size = match entry.compression() {
+    Store => entry.data().length()
     Deflate => {
-      let payload = match max_output {
-        Some(limit) => {
-          check_output_growth(out, 0, max_output)
-          deflate_encode_limited(entry.data(), limit - out.length()) catch {
-            OutputLimitExceeded(_) => raise OutputLimitExceeded(limit~)
+      let size = match out.remaining_limit() {
+        Some(remaining) =>
+          deflate_encoded_size(entry.data(), max_output=remaining) catch {
+            OutputLimitExceeded(_) =>
+              match max_output {
+                Some(limit) => raise OutputLimitExceeded(limit~)
+                None => raise OutputLimitExceeded(limit=remaining)
+              }
             error => raise error
           }
-        }
-        None => deflate_encode(entry.data())
+        None => deflate_encoded_size(entry.data())
       }
-      (8, payload)
+      size
+    }
+  }
+  { local_offset, compressed_size, crc32: crc32(entry.data()) }
+}
+
+///|
+fn write_entry_payload(
+  out : FixedByteOutput,
+  entry : Entry,
+  expected_size : Int,
+  max_output : Int?,
+) -> Unit raise ZipError {
+  if out.is_counting() {
+    out.count_bytes(expected_size)
+    return
+  }
+  match entry.compression() {
+    Store => {
+      if entry.data().length() != expected_size {
+        raise UnsupportedFeature(
+          msg="stored ZIP payload size changed after planning",
+        )
+      }
+      write_bytes_bounded(out, entry.data(), max_output)
+    }
+    Deflate => {
+      let actual = deflate_encode_to_output(entry.data(), out) catch {
+        OutputLimitExceeded(_) =>
+          match max_output {
+            Some(limit) => raise OutputLimitExceeded(limit~)
+            None =>
+              raise UnsupportedFeature(
+                msg="fixed ZIP output plan was undersized",
+              )
+          }
+        error => raise error
+      }
+      if actual != expected_size {
+        raise UnsupportedFeature(
+          msg="DEFLATE sizing and ZIP emission disagreed",
+        )
+      }
     }
   }
 }
@@ -317,7 +241,7 @@ fn RecordPatch::width(self : RecordPatch) -> Int {
 /// of scalar fields. This deliberately never materializes a patched record or
 /// a second central-directory/trailer buffer.
 fn write_patched_record(
-  out : Array[Byte],
+  out : FixedByteOutput,
   template : BytesView,
   patches : Array[RecordPatch],
   max_output : Int?,
@@ -369,6 +293,35 @@ fn add_central_size_patch(
 }
 
 ///|
+fn add_local_size_patch(
+  patches : Array[RecordPatch],
+  template : BytesView,
+  classic_position : Int,
+  zip64_position : Int?,
+  value : Int,
+  preserve_zero_placeholder : Bool,
+) -> Unit raise ZipError {
+  let raw = read_u32_le_at_raw(template, classic_position)
+  let max_u32 : UInt = 0xffffffff
+  match zip64_position {
+    Some(position) => patches.push(PatchU64(position, to_u64(value)))
+    None if raw == max_u32 =>
+      raise UnsupportedFeature(
+        msg="ZIP64 size field is missing from replacement template",
+      )
+    None => ()
+  }
+  if raw == max_u32 {
+    return
+  }
+  let zero : UInt = 0
+  if preserve_zero_placeholder && raw == zero {
+    return
+  }
+  patches.push(PatchU32(classic_position, to_u32(value)))
+}
+
+///|
 fn add_classic_u16_patch(
   patches : Array[RecordPatch],
   template : BytesView,
@@ -404,13 +357,16 @@ fn add_classic_u32_patch(
 
 ///|
 fn write_replacement_local_record(
-  out : Array[Byte],
+  out : FixedByteOutput,
   entry : Entry,
-  local_offset : Int,
+  metadata : WrittenEntryMetadata,
   template : SourceEntryTemplate,
   max_output : Int?,
-) -> WrittenEntryMetadata raise ZipError {
-  let (method_id, payload) = entry_payload(out, entry, max_output)
+) -> Unit raise ZipError {
+  let method_id = match entry.compression() {
+    Store => 0
+    Deflate => 8
+  }
   if template.local_header_length < 30 ||
     template.local_header_length > template.local_record.length() ||
     template.central_record.length() < 46 ||
@@ -434,31 +390,33 @@ fn write_replacement_local_record(
       msg="replacement ZIP header policy changed unexpectedly",
     )
   }
-  let crc = crc32(entry.data())
+  let crc = metadata.crc32
   let data_len = entry.data().length()
-  let payload_len = payload.length()
-  let local_record = local_header.to_array()
+  let payload_len = metadata.compressed_size
   let local_crc = read_u32_le_at_raw(local_header, 14)
   let zero : UInt = 0
+  let patches : Array[RecordPatch] = []
   if !uses_descriptor || local_crc != zero {
-    patch_u32_le(local_record, 14, crc)
+    patches.push(PatchU32(14, crc))
   }
-  patch_template_size(
-    local_record,
+  add_local_size_patch(
+    patches,
+    local_header,
     18,
     template.local_zip64_compressed_position,
     payload_len,
     uses_descriptor,
   )
-  patch_template_size(
-    local_record,
+  add_local_size_patch(
+    patches,
+    local_header,
     22,
     template.local_zip64_uncompressed_position,
     data_len,
     uses_descriptor,
   )
-  write_bytes_bounded(out, Bytes::from_array(local_record), max_output)
-  write_bytes_bounded(out, payload, max_output)
+  write_patched_record(out, local_header, patches, max_output)
+  write_entry_payload(out, entry, payload_len, max_output)
   if uses_descriptor {
     if template.descriptor_signed {
       write_u32_le_bounded(
@@ -476,33 +434,35 @@ fn write_replacement_local_record(
       write_u32_le_bounded(out, to_u32(data_len), max_output)
     }
   }
-  { local_offset, compressed_size: payload_len, crc32: crc }
 }
 
 ///|
 fn write_generated_local_record(
-  out : Array[Byte],
+  out : FixedByteOutput,
   entry : Entry,
-  local_offset : Int,
+  metadata : WrittenEntryMetadata,
   force_zip64 : Bool,
   max_output : Int?,
-) -> WrittenEntryMetadata raise ZipError {
-  let (method_id, payload) = entry_payload(out, entry, max_output)
+) -> Unit raise ZipError {
+  let method_id = match entry.compression() {
+    Store => 0
+    Deflate => 8
+  }
   let name_bytes = @encoding/utf8.encode(entry.name())
   let name_len = name_bytes.length()
   let data_len = entry.data().length()
-  let payload_len = payload.length()
+  let payload_len = metadata.compressed_size
   if name_len > 0xFFFF {
     raise UnsupportedFeature(msg="file name too long")
   }
-  let crc = crc32(entry.data())
+  let crc = metadata.crc32
   let use_descriptor = entry.data_descriptor()
   let max_u32 : UInt = 0xFFFFFFFF
   let needs_zip64_sizes = force_zip64 ||
     data_len.reinterpret_as_uint() > max_u32 ||
     payload_len.reinterpret_as_uint() > max_u32
   let needs_zip64_offset = force_zip64 ||
-    local_offset.reinterpret_as_uint() > max_u32
+    metadata.local_offset.reinterpret_as_uint() > max_u32
   let needs_zip64_entry = needs_zip64_sizes || needs_zip64_offset
   let version = if needs_zip64_entry { 45 } else { 20 }
   let flags = if use_descriptor {
@@ -545,18 +505,17 @@ fn write_generated_local_record(
   write_u16_le_bounded(out, local_extra.length(), max_output)
   write_bytes_bounded(out, name_bytes, max_output)
   write_bytes_bounded(out, local_extra, max_output)
-  write_bytes_bounded(out, payload, max_output)
+  write_entry_payload(out, entry, payload_len, max_output)
   if use_descriptor {
     write_data_descriptor_bounded(
       out, crc, payload_len, data_len, needs_zip64_sizes, max_output,
     )
   }
-  { local_offset, compressed_size: payload_len, crc32: crc }
 }
 
 ///|
 fn write_preserved_central_record(
-  out : Array[Byte],
+  out : FixedByteOutput,
   template : SourceEntryTemplate,
   local_offset : Int,
   max_output : Int?,
@@ -576,7 +535,7 @@ fn write_preserved_central_record(
 
 ///|
 fn write_replacement_central_record(
-  out : Array[Byte],
+  out : FixedByteOutput,
   entry : Entry,
   template : SourceEntryTemplate,
   metadata : WrittenEntryMetadata,
@@ -612,7 +571,7 @@ fn write_replacement_central_record(
 
 ///|
 fn write_generated_central_record(
-  out : Array[Byte],
+  out : FixedByteOutput,
   entry : Entry,
   metadata : WrittenEntryMetadata,
   force_zip64 : Bool,
@@ -712,7 +671,7 @@ fn archive_local_order(archive : Archive) -> Array[Int] {
 
 ///|
 fn write_preserved_zip64_trailer(
-  out : Array[Byte],
+  out : FixedByteOutput,
   template : Zip64TrailerTemplate,
   total_entries : Int,
   central_size : Int,
@@ -788,7 +747,7 @@ fn write_preserved_zip64_trailer(
 
 ///|
 fn write_generated_zip64_records(
-  out : Array[Byte],
+  out : FixedByteOutput,
   total_entries : Int,
   central_size : Int,
   central_offset : Int,
@@ -814,7 +773,7 @@ fn write_generated_zip64_records(
 
 ///|
 fn write_generated_classic_end_record(
-  out : Array[Byte],
+  out : FixedByteOutput,
   zip64 : Bool,
   total_entries : Int,
   central_size : Int,
@@ -849,29 +808,25 @@ fn write_generated_classic_end_record(
 }
 
 ///|
-fn write_with_options(
+priv struct ArchiveWritePlan {
+  entries : Array[WrittenEntryMetadata]
+  central_offset : Int
+  central_size : Int
+  needs_zip64_trailer : Bool
+  output_size : Int
+}
+
+///|
+fn write_archive_records(
   archive : Archive,
-  force_zip64? : Bool = false,
-  max_output? : Int,
-) -> Bytes raise ZipError {
-  match max_output {
-    Some(limit) if limit < 0 =>
-      raise UnsupportedFeature(msg="ZIP output limit must be non-negative")
-    _ => ()
-  }
+  out : FixedByteOutput,
+  written : Array[WrittenEntryMetadata],
+  force_zip64 : Bool,
+  max_output : Int?,
+) -> (Int, Int, Bool) raise ZipError {
   let entry_count = archive.entries().length()
-  let requested_initial_capacity = if entry_count > 16_384 {
-    1024 * 1024
-  } else {
-    entry_count * 64
-  }
-  let initial_capacity = bounded_initial_capacity(
-    requested_initial_capacity, max_output,
-  )
-  let out : Array[Byte] = Array::new(capacity=initial_capacity)
-  let written : Array[WrittenEntryMetadata] = []
-  for _ in 0..<entry_count {
-    written.push({ local_offset: 0, compressed_size: 0, crc32: (0 : UInt) })
+  if written.length() != entry_count {
+    raise UnsupportedFeature(msg="ZIP write plan entry count changed")
   }
   // Per-entry ZIP64 fields do not require an archive-wide ZIP64 trailer when
   // the classic EOCD's own counts, central size, and central offset all fit.
@@ -884,24 +839,48 @@ fn write_with_options(
     let local_offset = out.length()
     match (entry.source, entry.source_unchanged) {
       (Some(source), true) => {
-        write_bytes_bounded(out, source.local_record, max_output)
-        written[index] = {
-          local_offset,
-          compressed_size: 0,
-          crc32: entry.crc32(),
+        if out.is_counting() {
+          written[index] = {
+            local_offset,
+            compressed_size: 0,
+            crc32: entry.crc32(),
+          }
+        } else if written[index].local_offset != local_offset {
+          raise UnsupportedFeature(
+            msg="ZIP local offsets changed after planning",
+          )
         }
+        write_bytes_bounded(out, source.local_record, max_output)
       }
-      (source, _) =>
-        written[index] = match source {
+      (source, _) => {
+        if out.is_counting() {
+          written[index] = planned_entry_metadata(
+            out, entry, local_offset, max_output,
+          )
+        } else if written[index].local_offset != local_offset {
+          raise UnsupportedFeature(
+            msg="ZIP local offsets changed after planning",
+          )
+        }
+        match source {
           Some(template) =>
             write_replacement_local_record(
-              out, entry, local_offset, template, max_output,
+              out,
+              entry,
+              written[index],
+              template,
+              max_output,
             )
           None =>
             write_generated_local_record(
-              out, entry, local_offset, force_zip64, max_output,
+              out,
+              entry,
+              written[index],
+              force_zip64,
+              max_output,
             )
         }
+      }
     }
   }
   let central_offset = out.length()
@@ -971,7 +950,65 @@ fn write_with_options(
         max_output,
       )
   }
-  Bytes::from_array(out)
+  (central_offset, central_size, needs_zip64_trailer)
+}
+
+///|
+fn plan_archive_write(
+  archive : Archive,
+  force_zip64 : Bool,
+  max_output : Int?,
+) -> ArchiveWritePlan raise ZipError {
+  let out = FixedByteOutput::counting(limit?=max_output)
+  let entries = Array::make(archive.entries().length(), {
+    local_offset: 0,
+    compressed_size: 0,
+    crc32: (0 : UInt),
+  })
+  let (central_offset, central_size, needs_zip64_trailer) = write_archive_records(
+    archive, out, entries, force_zip64, max_output,
+  )
+  {
+    entries,
+    central_offset,
+    central_size,
+    needs_zip64_trailer,
+    output_size: out.length(),
+  }
+}
+
+///|
+fn emit_archive_write(
+  archive : Archive,
+  plan : ArchiveWritePlan,
+  force_zip64 : Bool,
+  max_output : Int?,
+) -> Bytes raise ZipError {
+  let out = FixedByteOutput::allocated(plan.output_size)
+  let (central_offset, central_size, needs_zip64_trailer) = write_archive_records(
+    archive,
+    out,
+    plan.entries,
+    force_zip64,
+    max_output,
+  )
+  if central_offset != plan.central_offset ||
+    central_size != plan.central_size ||
+    needs_zip64_trailer != plan.needs_zip64_trailer ||
+    out.length() != plan.output_size {
+    raise UnsupportedFeature(msg="ZIP sizing and emission plans disagreed")
+  }
+  out.finish()
+}
+
+///|
+fn write_with_options(
+  archive : Archive,
+  force_zip64? : Bool = false,
+  max_output? : Int,
+) -> Bytes raise ZipError {
+  let plan = plan_archive_write(archive, force_zip64, max_output)
+  emit_archive_write(archive, plan, force_zip64, max_output)
 }
 
 ///|
@@ -980,16 +1017,35 @@ pub fn write(archive : Archive) -> Bytes raise ZipError {
 }
 
 ///|
-/// Serializes an archive while enforcing a hard byte ceiling before every
-/// output-buffer growth. Local records, central records, and trailers stream
-/// into that single bounded buffer; oversized output raises
-/// `OutputLimitExceeded` without first materializing the complete package or a
-/// duplicate central directory.
+/// Serializes an archive with an output-storage-free sizing pass that enforces
+/// a hard byte ceiling before allocating output. Local and central records,
+/// trailers, and DEFLATE payloads then stream into one exact fixed buffer;
+/// oversized output raises `OutputLimitExceeded` without materializing a
+/// candidate package or duplicate central directory.
 pub fn write_limited(
   archive : Archive,
   max_output_bytes~ : Int,
 ) -> Bytes raise ZipError {
   write_with_options(archive, max_output=max_output_bytes)
+}
+
+///|
+#cfg(target="native")
+test "zip sizing rejects near-envelope generated records before allocation" {
+  let archive = Archive::new()
+  let long_suffix = "n".repeat(65_000)
+  for index in 0..<768 {
+    archive.add("generated-\{index}-\{long_suffix}", b"")
+  }
+  let expected_limit = 95 * 1024 * 1024
+  // `plan_archive_write` owns no byte storage. Crossing this near-100 MiB
+  // generated-record boundary therefore fails before any candidate allocation.
+  try plan_archive_write(archive, false, Some(expected_limit)) catch {
+    OutputLimitExceeded(limit~) => assert_eq(limit, expected_limit)
+    _ => fail("expected generated near-envelope planning rejection")
+  } noraise {
+    _ => fail("expected generated near-envelope archive to exceed its limit")
+  }
 }
 
 ///|
@@ -1086,11 +1142,11 @@ test "zip write zip64 structures" {
 
 ///|
 test "zip writer wb: helper guard and zip64 descriptor branches" {
-  let out : Array[Byte] = []
-  try write_u16_le(out, -1) catch {
+  let guard_out = FixedByteOutput::counting()
+  try write_u16_le_bounded(guard_out, -1, None) catch {
     e => inspect(e is UnsupportedFeature(_), content="true")
   } noraise {
-    _ => fail("expected write_u16_le to raise")
+    _ => fail("expected write_u16_le_bounded to raise")
   }
   try to_u32(-1) catch {
     e => inspect(e is UnsupportedFeature(_), content="true")
@@ -1106,15 +1162,16 @@ test "zip writer wb: helper guard and zip64 descriptor branches" {
   let offset_only = build_zip64_extra(uncomp=None, comp=None, offset=Some(7))
   inspect(offset_only.length(), content="12")
 
-  let descriptor : Array[Byte] = []
-  write_data_descriptor(
+  let descriptor = FixedByteOutput::allocated(24)
+  write_data_descriptor_bounded(
     descriptor,
     (0x01020304).reinterpret_as_uint(),
     5,
     6,
     true,
+    None,
   )
-  let desc_bytes = Bytes::from_array(descriptor)
+  let desc_bytes = descriptor.finish()
   inspect(desc_bytes.length(), content="24")
   inspect(
     read_u32_le_at_raw(desc_bytes, 0) ==
