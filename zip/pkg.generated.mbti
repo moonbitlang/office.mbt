@@ -14,6 +14,8 @@ pub fn gzip(BytesView) -> Bytes raise ZipError
 
 pub fn read(BytesView) -> Archive raise ZipError
 
+pub fn read_limited(BytesView, max_entries~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int) -> Archive raise ZipError
+
 pub fn write(Archive) -> Bytes raise ZipError
 
 // Errors
@@ -25,6 +27,7 @@ pub suberror ZipError {
   UnsupportedCompression(method_id~ : Int)
   InvalidUtf8(offset~ : Int)
   OutputLimitExceeded(limit~ : Int)
+  ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
 } derive(@debug.Debug)
 #as_free_fn
 #deprecated

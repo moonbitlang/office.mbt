@@ -13,4 +13,5 @@ pub suberror ZipError {
   UnsupportedCompression(method_id~ : Int)
   InvalidUtf8(offset~ : Int)
   OutputLimitExceeded(limit~ : Int)
+  ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
 } derive(Debug)
