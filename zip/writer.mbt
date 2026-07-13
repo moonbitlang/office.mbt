@@ -122,6 +122,24 @@ fn patch_u32_le(
 }
 
 ///|
+fn patch_u16_le(
+  buffer : Array[Byte],
+  offset : Int,
+  value : Int,
+) -> Unit raise ZipError {
+  if value < 0 ||
+    value > 0xffff ||
+    offset < 0 ||
+    offset > buffer.length() ||
+    2 > buffer.length() - offset {
+    raise UnsupportedFeature(msg="ZIP u16 patch is out of bounds")
+  }
+  let raw = value.reinterpret_as_uint()
+  buffer[offset] = (raw & 0xff).to_byte()
+  buffer[offset + 1] = ((raw >> 8) & 0xff).to_byte()
+}
+
+///|
 fn patch_u64_le(
   buffer : Array[Byte],
   offset : Int,
@@ -132,6 +150,37 @@ fn patch_u64_le(
   }
   for index in 0..<8 {
     buffer[offset + index] = ((value >> (8 * index)) & 0xff).to_byte()
+  }
+}
+
+///|
+fn patch_classic_u16_preserving_sentinel(
+  record : Array[Byte],
+  template : BytesView,
+  offset : Int,
+  value : Int,
+) -> Unit raise ZipError {
+  let original = read_u16_le_at(template, offset)
+  if original != 0xffff {
+    patch_u16_le(record, offset, if value > 0xffff { 0xffff } else { value })
+  }
+}
+
+///|
+fn patch_classic_u32_preserving_sentinel(
+  record : Array[Byte],
+  template : BytesView,
+  offset : Int,
+  value : Int,
+) -> Unit raise ZipError {
+  let max_u32 : UInt = 0xffffffff
+  if read_u32_le_at_raw(template, offset) != max_u32 {
+    let patched = if value < 0 || value.reinterpret_as_uint() > max_u32 {
+      max_u32
+    } else {
+      to_u32(value)
+    }
+    patch_u32_le(record, offset, patched)
   }
 }
 
@@ -168,23 +217,25 @@ fn replacement_entry_records(
   out : Array[Byte],
   entry : Entry,
   local_offset : Int,
-  template : ReplacementTemplate,
+  template : SourceEntryTemplate,
 ) -> (Bytes, Bool) raise ZipError {
   let (method_id, payload) = match entry.compression() {
     Store => (0, entry.data())
     Deflate => (8, deflate_encode(entry.data()))
   }
-  if template.local_header.length() < 30 ||
+  if template.local_header_length < 30 ||
+    template.local_header_length > template.local_record.length() ||
     template.central_record.length() < 46 ||
-    read_u32_le_at_raw(template.local_header, 0) !=
+    read_u32_le_at_raw(template.local_record, 0) !=
     local_header_sig.reinterpret_as_uint() ||
     read_u32_le_at_raw(template.central_record, 0) !=
     central_header_sig.reinterpret_as_uint() {
     raise UnsupportedFeature(msg="replacement ZIP header template is malformed")
   }
-  let local_method = read_u16_le_at(template.local_header, 8)
+  let local_header = template.local_record[:template.local_header_length]
+  let local_method = read_u16_le_at(local_header, 8)
   let central_method = read_u16_le_at(template.central_record, 10)
-  let local_flags = read_u16_le_at(template.local_header, 6)
+  let local_flags = read_u16_le_at(local_header, 6)
   let central_flags = read_u16_le_at(template.central_record, 8)
   let uses_descriptor = (local_flags & flag_data_descriptor) != 0
   if local_method != method_id ||
@@ -198,8 +249,8 @@ fn replacement_entry_records(
   let crc = crc32(entry.data())
   let data_len = entry.data().length()
   let payload_len = payload.length()
-  let local_record = template.local_header.to_array()
-  let local_crc = read_u32_le_at_raw(template.local_header, 14)
+  let local_record = local_header.to_array()
+  let local_crc = read_u32_le_at_raw(local_header, 14)
   let zero : UInt = 0
   if !uses_descriptor || local_crc != zero {
     patch_u32_le(local_record, 14, crc)
@@ -400,6 +451,126 @@ fn archive_local_order(archive : Archive) -> Array[Int] {
 }
 
 ///|
+fn write_preserved_zip64_trailer(
+  out : Array[Byte],
+  template : Zip64TrailerTemplate,
+  total_entries : Int,
+  central_size : Int,
+  central_offset : Int,
+) -> Unit raise ZipError {
+  if template.end_record.length() < 56 ||
+    template.locator.length() != 20 ||
+    template.classic_end_record.length() < 22 ||
+    read_u32_le_at_raw(template.end_record, 0) !=
+    zip64_eocd_sig.reinterpret_as_uint() ||
+    read_u32_le_at_raw(template.locator, 0) !=
+    zip64_locator_sig.reinterpret_as_uint() ||
+    read_u32_le_at_raw(template.classic_end_record, 0) !=
+    end_of_central_sig.reinterpret_as_uint() ||
+    read_u16_le_at(template.classic_end_record, 20) !=
+    template.classic_end_record.length() - 22 {
+    raise UnsupportedFeature(
+      msg="preserved ZIP64 trailer template is malformed",
+    )
+  }
+  let zip64_offset = out.length()
+  let end_record = template.end_record.to_array()
+  let count = to_u64(total_entries)
+  patch_u64_le(end_record, 24, count)
+  patch_u64_le(end_record, 32, count)
+  patch_u64_le(end_record, 40, to_u64(central_size))
+  patch_u64_le(end_record, 48, to_u64(central_offset))
+  write_bytes(out, Bytes::from_array(end_record))
+
+  let locator = template.locator.to_array()
+  patch_u64_le(locator, 8, to_u64(zip64_offset))
+  write_bytes(out, Bytes::from_array(locator))
+
+  let classic = template.classic_end_record.to_array()
+  patch_classic_u16_preserving_sentinel(
+    classic,
+    template.classic_end_record,
+    8,
+    total_entries,
+  )
+  patch_classic_u16_preserving_sentinel(
+    classic,
+    template.classic_end_record,
+    10,
+    total_entries,
+  )
+  patch_classic_u32_preserving_sentinel(
+    classic,
+    template.classic_end_record,
+    12,
+    central_size,
+  )
+  patch_classic_u32_preserving_sentinel(
+    classic,
+    template.classic_end_record,
+    16,
+    central_offset,
+  )
+  write_bytes(out, Bytes::from_array(classic))
+}
+
+///|
+fn write_generated_zip64_records(
+  out : Array[Byte],
+  total_entries : Int,
+  central_size : Int,
+  central_offset : Int,
+) -> Unit raise ZipError {
+  let zip64_offset = out.length()
+  write_u32_le(out, zip64_eocd_sig.reinterpret_as_uint())
+  write_u64_le(out, to_u64(44))
+  write_u16_le(out, 45)
+  write_u16_le(out, 45)
+  write_u32_le(out, 0)
+  write_u32_le(out, 0)
+  let entry_count = to_u64(total_entries)
+  write_u64_le(out, entry_count)
+  write_u64_le(out, entry_count)
+  write_u64_le(out, to_u64(central_size))
+  write_u64_le(out, to_u64(central_offset))
+  write_u32_le(out, zip64_locator_sig.reinterpret_as_uint())
+  write_u32_le(out, 0)
+  write_u64_le(out, to_u64(zip64_offset))
+  write_u32_le(out, 1)
+}
+
+///|
+fn write_generated_classic_end_record(
+  out : Array[Byte],
+  zip64 : Bool,
+  total_entries : Int,
+  central_size : Int,
+  central_offset : Int,
+  comment : Bytes,
+) -> Unit raise ZipError {
+  let max_u32 : UInt = 0xffffffff
+  write_u32_le(out, end_of_central_sig.reinterpret_as_uint())
+  write_u16_le(out, 0)
+  write_u16_le(out, 0)
+  if zip64 {
+    write_u16_le(out, 0xffff)
+    write_u16_le(out, 0xffff)
+    write_u32_le(out, max_u32)
+    write_u32_le(out, max_u32)
+  } else {
+    write_u16_le(out, total_entries)
+    write_u16_le(out, total_entries)
+    write_u32_le(out, to_u32(central_size))
+    write_u32_le(out, to_u32(central_offset))
+  }
+  if comment.length() > 0xffff {
+    raise UnsupportedFeature(msg="archive comment too long")
+  }
+  write_u16_le(out, comment.length())
+  write_bytes(out, comment)
+}
+
+///|
 fn write_with_options(
   archive : Archive,
   force_zip64? : Bool = false,
@@ -413,16 +584,16 @@ fn write_with_options(
     local_offsets.push(0)
     generated_central.push(None)
   }
-  let mut needs_zip64 = force_zip64 || archive.preserve_zip64
+  let mut needs_zip64 = force_zip64 || archive.zip64_trailer is Some(_)
   let max_u32 : UInt = 0xFFFFFFFF
   for index in archive_local_order(archive) {
     let entry = archive.entries[index]
     let local_offset = out.length()
     local_offsets[index] = local_offset
-    match entry.preserved {
-      Some(source) => write_bytes(out, source.local_record)
-      None => {
-        let (record, entry_needs_zip64) = match entry.replacement_template {
+    match (entry.source, entry.source_unchanged) {
+      (Some(source), true) => write_bytes(out, source.local_record)
+      (source, _) => {
+        let (record, entry_needs_zip64) = match source {
           Some(template) =>
             replacement_entry_records(out, entry, local_offset, template)
           None => generated_entry_records(out, entry, local_offset, force_zip64)
@@ -436,17 +607,17 @@ fn write_with_options(
   }
   for index in 0..<entry_count {
     let entry = archive.entries[index]
-    match entry.preserved {
-      Some(source) => {
+    match (entry.source, entry.source_unchanged) {
+      (Some(source), true) => {
         let record = source.central_record.to_array()
-        match source.zip64_offset_position {
+        match source.central_zip64_offset_position {
           Some(position) =>
             patch_u64_le(record, position, to_u64(local_offsets[index]))
           None => patch_u32_le(record, 42, to_u32(local_offsets[index]))
         }
         write_bytes(central, Bytes::from_array(record))
       }
-      None =>
+      _ =>
         match generated_central[index] {
           Some(record) => write_bytes(central, record)
           None =>
@@ -468,43 +639,34 @@ fn write_with_options(
     total_entries > 0xFFFF {
     needs_zip64 = true
   }
-  if needs_zip64 {
-    let zip64_offset = out.length()
-    write_u32_le(out, zip64_eocd_sig.reinterpret_as_uint())
-    write_u64_le(out, to_u64(44))
-    write_u16_le(out, 45)
-    write_u16_le(out, 45)
-    write_u32_le(out, 0)
-    write_u32_le(out, 0)
-    let entry_count = to_u64(total_entries)
-    write_u64_le(out, entry_count)
-    write_u64_le(out, entry_count)
-    write_u64_le(out, to_u64(central_size))
-    write_u64_le(out, to_u64(central_offset))
-    write_u32_le(out, zip64_locator_sig.reinterpret_as_uint())
-    write_u32_le(out, 0)
-    write_u64_le(out, to_u64(zip64_offset))
-    write_u32_le(out, 1)
+  match (needs_zip64, archive.zip64_trailer) {
+    (true, Some(template)) =>
+      write_preserved_zip64_trailer(
+        out, template, total_entries, central_size, central_offset,
+      )
+    (true, None) => {
+      write_generated_zip64_records(
+        out, total_entries, central_size, central_offset,
+      )
+      write_generated_classic_end_record(
+        out,
+        true,
+        total_entries,
+        central_size,
+        central_offset,
+        archive.comment,
+      )
+    }
+    (false, _) =>
+      write_generated_classic_end_record(
+        out,
+        false,
+        total_entries,
+        central_size,
+        central_offset,
+        archive.comment,
+      )
   }
-  write_u32_le(out, end_of_central_sig.reinterpret_as_uint())
-  write_u16_le(out, 0)
-  write_u16_le(out, 0)
-  if needs_zip64 {
-    write_u16_le(out, 0xFFFF)
-    write_u16_le(out, 0xFFFF)
-    write_u32_le(out, max_u32)
-    write_u32_le(out, max_u32)
-  } else {
-    write_u16_le(out, total_entries)
-    write_u16_le(out, total_entries)
-    write_u32_le(out, to_u32(central_size))
-    write_u32_le(out, to_u32(central_offset))
-  }
-  if archive.comment.length() > 0xffff {
-    raise UnsupportedFeature(msg="archive comment too long")
-  }
-  write_u16_le(out, archive.comment.length())
-  write_bytes(out, archive.comment)
   Bytes::from_array(out)
 }
 

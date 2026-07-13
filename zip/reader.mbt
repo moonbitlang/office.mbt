@@ -369,7 +369,7 @@ fn zip64_value_positions(
 fn read_zip64_eocd(
   bytes : BytesView,
   eocd_offset : Int,
-) -> (UInt64, UInt64, UInt64, Int) raise ZipError {
+) -> (UInt64, UInt64, UInt64, Int, Zip64TrailerTemplate) raise ZipError {
   let locator_offset = eocd_offset - 20
   if locator_offset < 0 {
     raise UnsupportedFeature(msg="zip64 locator missing")
@@ -413,7 +413,17 @@ fn read_zip64_eocd(
   if disk_no != 0 || disk_start != 0 || entries_on_disk != total_entries {
     raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
-  (total_entries, central_size, central_offset, zip64_offset)
+  (
+    total_entries,
+    central_size,
+    central_offset,
+    zip64_offset,
+    {
+      end_record: bytes[zip64_offset:locator_offset].to_owned(),
+      locator: bytes[locator_offset:eocd_offset].to_owned(),
+      classic_end_record: bytes[eocd_offset:].to_owned(),
+    },
+  )
 }
 
 ///|
@@ -756,8 +766,9 @@ fn read_impl(
     central_size_raw64,
     central_offset_raw64,
     central_boundary,
+    zip64_trailer,
   ) = if needs_zip64 {
-    let (zip_entries, zip_size, zip_offset, zip64_offset) = read_zip64_eocd(
+    let (zip_entries, zip_size, zip_offset, zip64_offset, zip64_trailer) = read_zip64_eocd(
       bytes, eocd_offset,
     )
     if disk_entries != 0xFFFF && disk_entries.to_uint64() != zip_entries {
@@ -791,6 +802,7 @@ fn read_impl(
         UInt64::extend_uint(central_offset_raw)
       },
       zip64_offset,
+      Some(zip64_trailer),
     )
   } else {
     if disk_entries != total_entries {
@@ -801,6 +813,7 @@ fn read_impl(
       u32_to_int(central_size_raw).to_uint64(),
       u32_to_int(central_offset_raw).to_uint64(),
       eocd_offset,
+      None,
     )
   }
   match max_entries {
@@ -1029,7 +1042,7 @@ fn read_impl(
       msg="unreferenced data before zip central directory",
     )
   }
-  let archive = archive_from_source(archive_comment, needs_zip64)
+  let archive = archive_from_source(archive_comment, zip64_trailer)
   let mut actual_total = 0
   for index in 0..<metas.length() {
     let meta = metas[index]
@@ -1079,13 +1092,9 @@ fn read_impl(
       data_descriptor: (meta.flags & flag_data_descriptor) != 0,
       crc32: meta.crc32,
       source_local_offset: Some(meta.local_header_offset),
-      preserved: Some({
+      source: Some({
         local_record: bytes[meta.local_header_offset:record.end].to_owned(),
-        central_record: meta.central_record,
-        zip64_offset_position: meta.zip64_offset_position,
-      }),
-      replacement_template: Some({
-        local_header: bytes[meta.local_header_offset:record.data_start].to_owned(),
+        local_header_length: record.data_start - meta.local_header_offset,
         central_record: meta.central_record,
         local_zip64_uncompressed_position: record.local_zip64_uncompressed_position,
         local_zip64_compressed_position: record.local_zip64_compressed_position,
@@ -1095,6 +1104,7 @@ fn read_impl(
         descriptor_signed: record.descriptor_signed,
         descriptor_zip64: record.descriptor_zip64,
       }),
+      source_unchanged: true,
     })
   }
   archive

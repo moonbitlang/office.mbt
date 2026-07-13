@@ -1,17 +1,9 @@
 ///|
 
 ///|
-priv struct PreservedEntry {
+priv struct SourceEntryTemplate {
   local_record : Bytes
-  central_record : Bytes
-  zip64_offset_position : Int?
-}
-
-///|
-/// Raw header templates retained when an entry payload is replaced. Writers
-/// patch only payload-dependent fields and keep producer metadata intact.
-priv struct ReplacementTemplate {
-  local_header : Bytes
+  local_header_length : Int
   central_record : Bytes
   local_zip64_uncompressed_position : Int?
   local_zip64_compressed_position : Int?
@@ -20,6 +12,13 @@ priv struct ReplacementTemplate {
   central_zip64_offset_position : Int?
   descriptor_signed : Bool
   descriptor_zip64 : Bool
+}
+
+///|
+priv struct Zip64TrailerTemplate {
+  end_record : Bytes
+  locator : Bytes
+  classic_end_record : Bytes
 }
 
 ///|
@@ -32,8 +31,8 @@ struct Entry {
   // archive, or computed at add time for entries created in memory.
   crc32 : UInt
   source_local_offset : Int?
-  preserved : PreservedEntry?
-  replacement_template : ReplacementTemplate?
+  source : SourceEntryTemplate?
+  source_unchanged : Bool
 }
 
 ///|
@@ -69,17 +68,20 @@ pub fn Entry::crc32(self : Entry) -> UInt {
 struct Archive {
   entries : Array[Entry]
   comment : Bytes
-  preserve_zip64 : Bool
+  zip64_trailer : Zip64TrailerTemplate?
 }
 
 ///|
 pub fn Archive::new() -> Archive {
-  { entries: [], comment: b"", preserve_zip64: false }
+  { entries: [], comment: b"", zip64_trailer: None }
 }
 
 ///|
-fn archive_from_source(comment : Bytes, preserve_zip64 : Bool) -> Archive {
-  { entries: [], comment, preserve_zip64 }
+fn archive_from_source(
+  comment : Bytes,
+  zip64_trailer : Zip64TrailerTemplate?,
+) -> Archive {
+  { entries: [], comment, zip64_trailer }
 }
 
 ///|
@@ -97,8 +99,8 @@ pub fn Archive::add(
     data_descriptor,
     crc32: crc32(data),
     source_local_offset: None,
-    preserved: None,
-    replacement_template: None,
+    source: None,
+    source_unchanged: false,
   })
 }
 
@@ -123,8 +125,8 @@ pub fn Archive::replace(
         data_descriptor: entry.data_descriptor,
         crc32: crc32(data),
         source_local_offset: entry.source_local_offset,
-        preserved: None,
-        replacement_template: entry.replacement_template,
+        source: entry.source,
+        source_unchanged: false,
       }
       return true
     }

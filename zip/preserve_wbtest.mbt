@@ -161,6 +161,8 @@ test "zip replace preserves untouched source records and archive metadata" {
   let source = preservation_fixture()
   let archive = read(source)
   assert_true(archive.replace("target.xml", b"a much longer replacement"))
+  assert_true(preserved_entry(archive, "untouched.bin").source_unchanged)
+  assert_false(preserved_entry(archive, "target.xml").source_unchanged)
   let candidate = write(archive)
   let before = read(source)
   let after = read(candidate)
@@ -169,10 +171,10 @@ test "zip replace preserves untouched source records and archive metadata" {
   assert_true(untouched.compression is Deflate)
   assert_true(untouched.data_descriptor)
   assert_eq(untouched.data, original.data)
-  guard original.preserved is Some(original_source) else {
+  guard original.source is Some(original_source) else {
     fail("expected original source records")
   }
-  guard untouched.preserved is Some(candidate_source) else {
+  guard untouched.source is Some(candidate_source) else {
     fail("expected candidate source records")
   }
   assert_eq(candidate_source.local_record, original_source.local_record)
@@ -189,10 +191,10 @@ test "zip replace preserves untouched source records and archive metadata" {
   let target = preserved_entry(after, "target.xml")
   assert_eq(target.data, b"a much longer replacement")
   let original_target = preserved_entry(before, "target.xml")
-  guard original_target.preserved is Some(original_target_source) else {
+  guard original_target.source is Some(original_target_source) else {
     fail("expected original target records")
   }
-  guard target.preserved is Some(candidate_target_source) else {
+  guard target.source is Some(candidate_target_source) else {
     fail("expected candidate target records")
   }
   // Payload-dependent CRC/size fields may change. All producer metadata around
@@ -241,15 +243,16 @@ test "zip replacement preserves descriptor style and member metadata" {
   let before = read(source)
   let archive = read(source)
   assert_true(archive.replace("untouched.bin", b"new descriptor payload"))
+  assert_false(preserved_entry(archive, "untouched.bin").source_unchanged)
   let after = read(write(archive))
   let original = preserved_entry(before, "untouched.bin")
   let replacement = preserved_entry(after, "untouched.bin")
   assert_true(replacement.compression is Deflate)
   assert_true(replacement.data_descriptor)
-  guard original.preserved is Some(original_source) else {
+  guard original.source is Some(original_source) else {
     fail("expected original descriptor records")
   }
-  guard replacement.preserved is Some(replacement_source) else {
+  guard replacement.source is Some(replacement_source) else {
     fail("expected replacement descriptor records")
   }
   assert_eq(
@@ -278,14 +281,15 @@ test "zip64 replacement preserves header layout and descriptor width" {
   let before = read(source)
   let archive = read(source)
   assert_true(archive.replace("target.xml", b"new zip64 payload"))
+  assert_false(preserved_entry(archive, "target.xml").source_unchanged)
   let candidate = write(archive)
   let after = read(candidate)
   let original = preserved_entry(before, "target.xml")
   let replacement = preserved_entry(after, "target.xml")
-  guard original.replacement_template is Some(original_template) else {
+  guard original.source is Some(original_template) else {
     fail("expected original ZIP64 replacement template")
   }
-  guard replacement.replacement_template is Some(replacement_template) else {
+  guard replacement.source is Some(replacement_template) else {
     fail("expected replacement ZIP64 template")
   }
   assert_true(original_template.descriptor_signed)
@@ -293,8 +297,16 @@ test "zip64 replacement preserves header layout and descriptor width" {
   assert_true(replacement_template.descriptor_signed)
   assert_true(replacement_template.descriptor_zip64)
   assert_eq(
-    replacement_template.local_header[:14],
-    original_template.local_header[:14],
+    replacement_template.local_record[:14],
+    original_template.local_record[:14],
+  )
+  assert_true(
+    original_template.local_header_length <
+    original_template.local_record.length(),
+  )
+  assert_eq(
+    replacement_template.local_header_length,
+    original_template.local_header_length,
   )
   assert_eq(
     replacement_template.central_record[4:16],
@@ -324,4 +336,96 @@ test "zip64 replacement preserves header layout and descriptor width" {
     replacement_template.central_zip64_offset_position,
     original_template.central_zip64_offset_position,
   )
+}
+
+///|
+fn customized_zip64_fixture() -> Bytes raise ZipError {
+  let archive = Archive::new()
+  archive.add("target.xml", b"old", compression=Deflate, data_descriptor=true)
+  let generated = write_with_options(archive, force_zip64=true)
+  guard find_end_of_central(generated) is Some(eocd_offset) else {
+    raise UnsupportedFeature(msg="expected generated ZIP64 end record")
+  }
+  let locator_offset = eocd_offset - 20
+  let zip64_offset = u64_to_int(read_u64_le_at(generated, locator_offset + 8))
+  let extensible_sector = b"\xde\xad\xbe\xef\x10\x20\x30"
+  let comment = b"custom-zip64-comment"
+  let output : Array[Byte] = []
+  write_bytes(output, generated[:zip64_offset])
+
+  let end_record = generated[zip64_offset:locator_offset].to_array()
+  patch_u64_le(end_record, 4, to_u64(44 + extensible_sector.length()))
+  // Deliberately retain producer-specific version values.
+  patch_u16_le(end_record, 12, 63)
+  patch_u16_le(end_record, 14, 46)
+  write_bytes(output, Bytes::from_array(end_record))
+  write_bytes(output, extensible_sector)
+  write_bytes(output, generated[locator_offset:eocd_offset])
+
+  let classic = generated[eocd_offset:eocd_offset + 22].to_array()
+  let central_size = u64_to_int(read_u64_le_at(generated, zip64_offset + 40))
+  // Exercise a mixed ZIP32/ZIP64 sentinel policy: one concrete and one
+  // sentinel count field, plus one concrete and one sentinel central field.
+  patch_u16_le(classic, 8, 1)
+  patch_u32_le(classic, 12, to_u32(central_size))
+  patch_u16_le(classic, 20, comment.length())
+  write_bytes(output, Bytes::from_array(classic))
+  write_bytes(output, comment)
+  Bytes::from_array(output)
+}
+
+///|
+test "zip64 trailer preserves versions extensible data and mixed sentinels" {
+  let source = customized_zip64_fixture()
+  let source_archive = read(source)
+  assert_eq(write(source_archive), source)
+  assert_eq(source_archive.comment, b"custom-zip64-comment")
+  guard source_archive.zip64_trailer is Some(source_trailer) else {
+    fail("expected source ZIP64 trailer")
+  }
+  assert_eq(read_u16_le_at(source_trailer.end_record, 12), 63)
+  assert_eq(read_u16_le_at(source_trailer.end_record, 14), 46)
+  assert_eq(source_trailer.end_record[56:], b"\xde\xad\xbe\xef\x10\x20\x30")
+  assert_eq(read_u16_le_at(source_trailer.classic_end_record, 8), 1)
+  assert_eq(read_u16_le_at(source_trailer.classic_end_record, 10), 0xffff)
+  assert_true(
+    read_u32_le_at_raw(source_trailer.classic_end_record, 12) !=
+    (0xffffffff : UInt),
+  )
+  assert_eq(
+    read_u32_le_at_raw(source_trailer.classic_end_record, 16),
+    (0xffffffff : UInt),
+  )
+
+  assert_true(
+    source_archive.replace("target.xml", b"longer replacement payload"),
+  )
+  let candidate = write(source_archive)
+  let candidate_archive = read(candidate)
+  assert_eq(
+    candidate_archive.get("target.xml"),
+    Some(b"longer replacement payload"),
+  )
+  assert_eq(candidate_archive.comment, b"custom-zip64-comment")
+  guard candidate_archive.zip64_trailer is Some(candidate_trailer) else {
+    fail("expected candidate ZIP64 trailer")
+  }
+  assert_eq(
+    candidate_trailer.end_record[12:24],
+    source_trailer.end_record[12:24],
+  )
+  assert_eq(candidate_trailer.end_record[56:], source_trailer.end_record[56:])
+  assert_eq(candidate_trailer.locator[4:8], source_trailer.locator[4:8])
+  assert_eq(candidate_trailer.locator[16:20], source_trailer.locator[16:20])
+  assert_eq(read_u16_le_at(candidate_trailer.classic_end_record, 8), 1)
+  assert_eq(read_u16_le_at(candidate_trailer.classic_end_record, 10), 0xffff)
+  assert_true(
+    read_u32_le_at_raw(candidate_trailer.classic_end_record, 12) !=
+    (0xffffffff : UInt),
+  )
+  assert_eq(
+    read_u32_le_at_raw(candidate_trailer.classic_end_record, 16),
+    (0xffffffff : UInt),
+  )
+  assert_eq(candidate_trailer.classic_end_record[22:], b"custom-zip64-comment")
 }
