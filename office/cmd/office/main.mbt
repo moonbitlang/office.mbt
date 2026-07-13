@@ -72,9 +72,10 @@ fn identify_error(
 }
 
 ///|
-async fn run_identify(matches : @argparse.Matches) -> Unit raise CliFailure {
+async fn run_identify(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let data = @afs.read_file(file).binary() catch {
+    error if @async.is_being_cancelled() => raise error
     _ =>
       raise CliFailure(
         @lib.protocol_error(
@@ -186,6 +187,7 @@ async fn main {
     run_cli(args)
   } catch {
     CliFailure(error) => raise CliError(render_failure(error, mode))
+    error if @async.is_being_cancelled() => raise error
     error => {
       let message = normalize_argument_error(error.to_string())
       raise CliError(

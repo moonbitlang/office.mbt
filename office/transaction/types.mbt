@@ -222,12 +222,13 @@ pub fn transaction_failure(
   match details {
     Some(value) => {
       let remaining = Ref(transaction_max_error_detail_nodes)
-      if !bounded_error_details(value, 0, remaining) {
-        raise transaction_error(
-          "office.transaction.invalid_contract", "mutation failure details exceed the bounded JSON contract",
-        )
+      if bounded_error_details(value, 0, remaining) {
+        TransactionError(code~, message~, details=Some(value))
+      } else {
+        // Stable subsystem codes are more important than optional diagnostic
+        // payloads. Oversized details are safely omitted at the trust boundary.
+        TransactionError(code~, message~, details=None)
       }
-      TransactionError(code~, message~, details=Some(value))
     }
     None => TransactionError(code~, message~, details=None)
   }
@@ -395,6 +396,34 @@ pub fn transaction_options(
     )
   }
   { input_path, output_path, dry_run, overwrite, permission }
+}
+
+///|
+/// A pinned-byte package identifier used before any generic Office DOM parse.
+/// Custom command families can enforce their own bounded package boundary while
+/// retaining the transaction's archive limits, preservation checks, and atomic
+/// publication.
+pub struct TransactionIdentifier {
+  name : String
+  identify : (String, BytesView) -> @office.DocumentFormat raise
+}
+
+///|
+pub fn transaction_identifier(
+  name : String,
+  identify : (String, BytesView) -> @office.DocumentFormat raise,
+) -> TransactionIdentifier raise TransactionError {
+  checked_identifier(name, "transaction identifier name")
+  { name, identify }
+}
+
+///|
+fn TransactionIdentifier::run(
+  self : TransactionIdentifier,
+  path : String,
+  bytes : BytesView,
+) -> @office.DocumentFormat raise {
+  (self.identify)(path, bytes)
 }
 
 ///|
@@ -658,7 +687,7 @@ pub fn TransactionReport::to_json(self : TransactionReport) -> Json {
     validations.push(validation_json(validation))
   }
   Json::object({
-    "schema": Json::string("office.transaction/1"),
+    "schema": Json::string(@office.SCHEMA_TRANSACTION),
     "format": Json::string(self.format.name()),
     "input": Json::string(self.input_path),
     "output": Json::string(self.output_path),

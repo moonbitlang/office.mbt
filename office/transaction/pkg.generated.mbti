@@ -7,9 +7,13 @@ import {
 }
 
 // Values
-pub async fn transact(TransactionOptions, (@office.DocumentFormat, BytesView) -> TransactionMutation raise, validators? : Array[TransactionValidator]) -> TransactionReport
+pub async fn atomic_write_new(String, BytesView, permission? : Int) -> Unit
+
+pub async fn transact(TransactionOptions, (@office.DocumentFormat, BytesView) -> TransactionMutation raise, validators? : Array[TransactionValidator], identifier? : TransactionIdentifier) -> TransactionReport
 
 pub fn transaction_failure(String, String, details? : Json) -> TransactionError raise TransactionError
+
+pub fn transaction_identifier(String, (String, BytesView) -> @office.DocumentFormat raise) -> TransactionIdentifier raise TransactionError
 
 pub fn transaction_mutation(Bytes, warnings? : Array[@office.ProtocolWarning]) -> TransactionMutation raise TransactionError
 
@@ -41,6 +45,11 @@ pub struct PreservationReport {
   removed : ReadOnlyArray[String]
   unchanged : ReadOnlyArray[String]
   zip_metadata_policy : String
+}
+
+pub struct TransactionIdentifier {
+  name : String
+  identify : (String, BytesView) -> @office.DocumentFormat raise
 }
 
 pub(all) enum TransactionMode {

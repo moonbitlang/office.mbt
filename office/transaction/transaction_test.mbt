@@ -199,6 +199,69 @@ async test "in-place no-op validates without replacing source" {
 }
 
 ///|
+async test "custom identifier gates pinned input before mutation" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    write_test_file(input, @word.new_blank_docx())
+    let mutated = Ref(false)
+    let identifier = @transaction.transaction_identifier("bounded-raw-test", (
+      _path,
+      _bytes,
+    ) => {
+      raise @transaction.transaction_failure(
+        "office.raw.resource_limit", "bounded raw package rejected before generic parsing",
+      )
+    })
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input),
+        (_format, bytes) => {
+          mutated.val = true
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
+        identifier~,
+      )
+    })
+    assert_eq(code, "office.raw.resource_limit")
+    assert_false(mutated.val)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "custom identifier validates candidates through the same boundary" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    write_test_file(input, @word.new_blank_docx())
+    let calls = Ref(0)
+    let identifier = @transaction.transaction_identifier("bounded-raw-test", (
+      _path,
+      _bytes,
+    ) => {
+      calls.val = calls.val + 1
+      if calls.val == 2 {
+        raise @transaction.transaction_failure(
+          "office.raw.validation_failed", "candidate failed the complete raw boundary",
+        )
+      }
+      Docx
+    })
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        identifier~,
+      )
+    })
+    assert_eq(code, "office.raw.validation_failed")
+    assert_eq(calls.val, 2)
+    assert_false(@afs.exists(output))
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 async test "dry-run performs mutation validation and preservation without output" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"

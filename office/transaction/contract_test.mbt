@@ -82,6 +82,13 @@ test "mutation failures preserve checked office subsystem codes" {
     details=Json::object({ "offset": Json::number(3) }),
   )
   inspect(failure.to_protocol_error().code, content="office.raw.invalid_path")
+  let oversized = @transaction.transaction_failure(
+    "office.raw.path_not_found",
+    "raw XML path matched no elements",
+    details=Json::object({ "path": Json::string("/x".repeat(1_024)) }),
+  )
+  assert_eq(oversized.to_protocol_error().code, "office.raw.path_not_found")
+  assert_eq(oversized.to_protocol_error().details, None)
   assert_eq(
     contract_error_code(() => {
       @transaction.transaction_failure("raw.invalid_path", "invalid")
