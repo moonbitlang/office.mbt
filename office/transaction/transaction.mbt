@@ -92,10 +92,11 @@ fn extend_windows_io_path(path : String) -> String {
 ///|
 fn filesystem_path(path : String) -> String {
   let normalized = normalize_path_separators(path)
+  let resolved = path_text(@path.Path(normalized).resolve())
   if @path.sep == '\\' {
-    extend_windows_io_path(path_text(@path.Path(normalized).resolve()))
+    extend_windows_io_path(resolved)
   } else {
-    normalized
+    resolved
   }
 }
 

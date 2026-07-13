@@ -173,6 +173,67 @@ async test "staging access survives restrictive creation modes" {
 }
 
 ///|
+async test "initial staging cleanup failures are never hidden" {
+  wb_with_transaction_dir(directory => {
+    let publication_directory : PublicationDirectory = { path: directory }
+    let leaf = ".office-tmp-initial-cleanup"
+    let output = "\{directory}/output.docx"
+    let code = try {
+      ignore(
+        publication_temp_try_create(
+          publication_directory,
+          leaf,
+          output,
+          fail_secure_permission=true,
+          fail_cleanup=true,
+        ),
+      )
+      fail("expected initial staging cleanup failure")
+    } catch {
+      TransactionError(code~, ..) => code
+      error => fail("expected TransactionError, received \{error}")
+    }
+    assert_eq(code, "office.transaction.cleanup_failed")
+    let retained = "\{directory}/\{leaf}"
+    assert_true(@afs.exists(retained))
+    @afs.remove(retained)
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+async test "initial staging cleanup re-observes pending cancellation" {
+  wb_with_transaction_dir(directory => {
+    let publication_directory : PublicationDirectory = { path: directory }
+    let release = "\{directory}/secure-release"
+    @async.with_task_group() <| group => {
+      let task = group.spawn(() => {
+        publication_temp_try_create(
+          publication_directory,
+          ".office-tmp-cancelled-secure",
+          "\{directory}/output.docx",
+          fail_secure_permission=true,
+          secure_release=release,
+        )
+      })
+      while !@afs.exists(release + ".ready") {
+        @async.pause()
+      }
+      task.cancel()
+      wb_write(release, b"release")
+      let propagated = try {
+        ignore(task.wait())
+        false
+      } catch {
+        error => @async.is_cancellation_error(error)
+      }
+      assert_true(propagated)
+    }
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
 #cfg(all(target="native", not(platform="windows")))
 async test "rename failure restores restrictive staging access for cleanup" {
   wb_with_transaction_dir(directory => {

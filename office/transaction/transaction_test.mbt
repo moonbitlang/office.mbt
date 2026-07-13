@@ -361,6 +361,63 @@ async test "existing output and input aliases are refused before mutation" {
 }
 
 ///|
+async test "lexically equivalent output paths cannot bypass in-place policy" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let nested = "\{directory}/nested"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    @afs.mkdir(nested)
+    for
+      candidate_path in [
+        "\{nested}/../input.docx",
+        "\{directory}//./input.docx",
+      ] {
+      let code = transaction_error_code(() => {
+        @transaction.transact(
+          @transaction.transaction_options(
+            input,
+            output_path=candidate_path,
+            overwrite=true,
+          ),
+          (_format, bytes) => {
+            @transaction.transaction_mutation(bytes.to_owned())
+          },
+        )
+      })
+      assert_eq(code, "office.transaction.output_aliases_input")
+    }
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+#cfg(target="wasm")
+async test "Wasm relative and absolute aliases resolve to one path" {
+  with_transaction_test_dir(directory => {
+    guard @env.current_dir() is Some(cwd)
+    let input = "\{directory}/input.docx"
+    let relative = "\{@path.Path(input).relative(base=Path(cwd))}"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(
+          input,
+          output_path=relative,
+          overwrite=true,
+        ),
+        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      )
+    })
+    assert_eq(code, "office.transaction.output_aliases_input")
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 async test "overwrite replaces only the requested output" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"
