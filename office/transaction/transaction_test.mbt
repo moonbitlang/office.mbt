@@ -477,6 +477,43 @@ async test "successful and throwing validators run before publication" {
 }
 
 ///|
+async test "validator callbacks use an immutable invocation snapshot" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let rejecting = @transaction.transaction_validator("docx-snapshot", (
+      _format,
+      _bytes,
+    ) => {
+      [
+        @transaction.validation_finding(
+          "docx.test.snapshot", "snapshotted validator still ran",
+        ),
+      ]
+    })
+    let validators = [rejecting]
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, bytes) => {
+          // Mutating the caller-owned array must not alter this invocation's
+          // already-validated contract.
+          validators.clear()
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
+        validators~,
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 async test "validator finding arrays are bounded before serialization" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"

@@ -2,6 +2,7 @@
 package "bobzhang/office"
 
 import {
+  "bobzhang/mbtexcel/zip",
   "moonbitlang/core/debug",
 }
 
@@ -25,6 +26,8 @@ pub fn capability_fingerprint() -> String
 pub fn capability_formats() -> Array[CapabilityFormat]
 
 pub fn capability_records(format? : DocumentFormat, operation? : String) -> Array[Json]
+
+pub fn detect_archive_format(StringView, @zip.Archive) -> DocumentFormat raise OfficeError
 
 pub fn detect_format(StringView, BytesView) -> DocumentFormat raise OfficeError
 
