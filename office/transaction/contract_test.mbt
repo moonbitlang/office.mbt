@@ -81,10 +81,7 @@ test "mutation failures preserve checked office subsystem codes" {
     "invalid bounded raw path",
     details=Json::object({ "offset": Json::number(3) }),
   )
-  inspect(
-    failure.to_protocol_error().code,
-    content="office.raw.invalid_path",
-  )
+  inspect(failure.to_protocol_error().code, content="office.raw.invalid_path")
   assert_eq(
     contract_error_code(() => {
       @transaction.transaction_failure("raw.invalid_path", "invalid")

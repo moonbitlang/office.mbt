@@ -11,8 +11,7 @@ fn checked_fragment_bytes(xml : String) -> Bytes raise RawError {
   let trimmed = xml.trim()
   if trimmed.has_prefix("<?xml") {
     raise raw_error(
-      "office.raw.invalid_fragment",
-      "inserted XML fragments cannot contain an XML declaration",
+      "office.raw.invalid_fragment", "inserted XML fragments cannot contain an XML declaration",
     )
   }
   let bytes = @utf8.encode(xml)
@@ -31,8 +30,7 @@ fn checked_fragment_bytes(xml : String) -> Bytes raise RawError {
   }
   if roots != 1 {
     raise raw_error(
-      "office.raw.invalid_fragment",
-      "XML fragment must contain exactly one self-contained element",
+      "office.raw.invalid_fragment", "XML fragment must contain exactly one self-contained element",
     )
   }
   bytes
@@ -74,8 +72,7 @@ fn parse_raw_attribute_name(
 ) -> RawExpandedName raise RawError {
   if source.length() == 0 || source.length() > raw_max_name_length * 2 + 1 {
     raise raw_error(
-      "office.raw.invalid_attribute",
-      "attribute name is empty or exceeds the bounded qualified-name limit",
+      "office.raw.invalid_attribute", "attribute name is empty or exceeds the bounded qualified-name limit",
     )
   }
   let parser = RawPathParser::{ source, offset: 0, namespaces }
@@ -87,8 +84,7 @@ fn parse_raw_attribute_name(
     name.prefix == "xmlns" ||
     (name.prefix == "" && name.local_name == "xmlns") {
     raise raw_error(
-      "office.raw.invalid_attribute",
-      "attribute must be one bounded non-xmlns qualified name",
+      "office.raw.invalid_attribute", "attribute must be one bounded non-xmlns qualified name",
     )
   }
   name
@@ -178,19 +174,17 @@ fn raw_element_edit(
       let at = if action is InsertBefore { node.start } else { node.end }
       { start: at, end: at, replacement: fragment.unwrap(), ordinal }
     }
-    Replace => {
+    Replace =>
       {
         start: node.start,
         end: node.end,
         replacement: fragment.unwrap(),
         ordinal,
       }
-    }
     Remove => {
       if node.parent < 0 {
         raise raw_error(
-          "office.raw.invalid_action",
-          "remove cannot target the document element",
+          "office.raw.invalid_action", "remove cannot target the document element",
         )
       }
       { start: node.start, end: node.end, replacement: b"", ordinal }
@@ -352,12 +346,7 @@ pub fn raw_replace_part(
   let replacement = checked_document_bytes(xml)
   let candidate = rebuild_raw_archive(pkg, resolved, replacement)
   validate_raw_candidate(format, candidate)
-  {
-    bytes: candidate,
-    part: resolved,
-    action: "replace-part",
-    match_count: 1,
-  }
+  { bytes: candidate, part: resolved, action: "replace-part", match_count: 1 }
 }
 
 ///|

@@ -180,8 +180,7 @@ fn parse_content_types(
     Some(value) => value
     None =>
       raise raw_error(
-        "office.raw.invalid_package",
-        "package is missing /[Content_Types].xml",
+        "office.raw.invalid_package", "package is missing /[Content_Types].xml",
       )
   }
   let root = parse_xml_bytes("[Content_Types].xml", bytes)
@@ -221,10 +220,7 @@ fn parse_content_types(
 }
 
 ///|
-fn ContentTypeTable::for_part(
-  self : ContentTypeTable,
-  name : String,
-) -> String {
+fn ContentTypeTable::for_part(self : ContentTypeTable, name : String) -> String {
   if canonical_part_key(name) == canonical_part_key("[Content_Types].xml") {
     return "application/vnd.openxmlformats-package.content-types+xml"
   }
@@ -291,16 +287,15 @@ fn normalize_relationship_target(base : String, target : String) -> String? {
     match segment {
       "" => return None
       "." => ()
-      ".." =>
-        if output.is_empty() {
-          return None
-        } else {
-          ignore(output.pop())
-        }
+      ".." => if output.is_empty() { return None } else { ignore(output.pop()) }
       _ => output.push(segment.to_owned())
     }
   }
-  if output.is_empty() { None } else { Some(output.join("/")) }
+  if output.is_empty() {
+    None
+  } else {
+    Some(output.join("/"))
+  }
 }
 
 ///|
@@ -332,7 +327,8 @@ fn parse_relationships(
         let target = element.attributes.get("Target")
         match (id, kind, target) {
           (Some(id), Some(kind), Some(target)) => {
-            let external = element.attributes.get("TargetMode") is Some("External")
+            let external = element.attributes.get("TargetMode")
+              is Some("External")
             if external {
               output.push({ id, kind, target, external: true })
             } else {
@@ -357,17 +353,12 @@ fn parse_relationships(
 }
 
 ///|
-fn add_alias(
-  pkg : RawPackage,
-  alias_name : String,
-  part : String,
-) -> Unit {
+fn add_alias(pkg : RawPackage, alias_name : String, part : String) -> Unit {
   if alias_name.length() == 0 || alias_name.length() > raw_max_alias_length {
     return
   }
   let key = alias_name.to_lower()
-  if !key.has_prefix("/") ||
-    !pkg.names.contains(canonical_part_key(part)) {
+  if !key.has_prefix("/") || !pkg.names.contains(canonical_part_key(part)) {
     return
   }
   match pkg.aliases.get(key) {
@@ -376,7 +367,9 @@ fn add_alias(
   }
   match pkg.part_aliases.get(canonical_part_key(part)) {
     Some(aliases) =>
-      if !aliases.contains(alias_name) { aliases.push(alias_name) }
+      if !aliases.contains(alias_name) {
+        aliases.push(alias_name)
+      }
     None => pkg.part_aliases[canonical_part_key(part)] = [alias_name]
   }
 }
@@ -386,7 +379,8 @@ fn find_main_part(pkg : RawPackage) -> String raise RawError {
   let relationships = parse_relationships(pkg, "")
   let found : Array[String] = []
   for relationship in relationships {
-    if !relationship.external && relationship_role(relationship.kind) == "officeDocument" {
+    if !relationship.external &&
+      relationship_role(relationship.kind) == "officeDocument" {
       found.push(relationship.target)
     }
   }
@@ -496,7 +490,9 @@ fn add_xlsx_aliases(pkg : RawPackage) -> Unit raise RawError {
             XmlElement(sheet) if xml_name_local(sheet.name) == "sheet" => {
               let name = sheet.attributes.get("name")
               let relationship_id = xml_attribute_by_local(
-                sheet, "id", namespaced=true,
+                sheet,
+                "id",
+                namespaced=true,
               )
               match (name, relationship_id) {
                 (Some(name), Some(id)) =>
@@ -664,8 +660,7 @@ fn RawPackage::resolve_part(
   for component in literal.split("/") {
     if component == "" || component == "." || component == ".." {
       raise raw_error(
-        "office.raw.invalid_part",
-        "literal package part names must not contain empty, '.', or '..' components",
+        "office.raw.invalid_part", "literal package part names must not contain empty, '.', or '..' components",
       )
     }
   }
@@ -725,9 +720,5 @@ pub fn raw_read(
   let pkg = open_raw_package(path, data)
   let name = pkg.resolve_part(part)
   let bytes = pkg.archive.get(name).unwrap()
-  {
-    format: pkg.format,
-    info: pkg.part_info(name),
-    bytes,
-  }
+  { format: pkg.format, info: pkg.part_info(name), bytes }
 }

@@ -1,10 +1,8 @@
 ///|
-let word_namespace =
-  "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+let word_namespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 ///|
-let sheet_namespace =
-  "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+let sheet_namespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 
 ///|
 fn[T] raw_error_code(run : () -> T raise @raw.RawError) -> String raise {
@@ -74,7 +72,10 @@ test "raw edit splices DOCX elements and preserves every other part payload" {
   let text = @raw.raw_read("result.docx", second.bytes, "/document").xml_text()
   inspect(text.contains("First"), content="true")
   inspect(text.contains("Second"), content="true")
-  inspect(text.find("First").unwrap() < text.find("Second").unwrap(), content="true")
+  inspect(
+    text.find("First").unwrap() < text.find("Second").unwrap(),
+    content="true",
+  )
 }
 
 ///|
@@ -146,9 +147,7 @@ test "raw edit supports attribute predicates replace and remove" {
     Remove,
   )
   let removed = @raw.raw_edit(Xlsx, replaced.bytes, remove)
-  let removed_text = @raw.raw_read(
-    "edited.xlsx", removed.bytes, "/Sheet1",
-  ).xml_text()
+  let removed_text = @raw.raw_read("edited.xlsx", removed.bytes, "/Sheet1").xml_text()
   inspect(removed_text.contains("<row"), content="false")
 }
 
@@ -163,7 +162,10 @@ test "raw edit expands self-closing elements" {
   )
   let edited = @raw.raw_edit(Xlsx, original, append)
   let text = @raw.raw_read("edited.xlsx", edited.bytes, "/sheet[1]").xml_text()
-  inspect(text.contains("<row xmlns=\"\{sheet_namespace}\" r=\"1\"/>"), content="true")
+  inspect(
+    text.contains("<row xmlns=\"\{sheet_namespace}\" r=\"1\"/>"),
+    content="true",
+  )
   inspect(text.contains("<sheetData/>"), content="false")
 }
 
@@ -172,11 +174,7 @@ test "raw mutation rejects unsafe grammar fragments and validation regressions" 
   let original = @word.new_blank_docx()
   inspect(
     raw_error_code(() => {
-      let request = @raw.raw_edit_request(
-        "/document",
-        "//w:p",
-        Remove,
-      )
+      let request = @raw.raw_edit_request("/document", "//w:p", Remove)
       @raw.raw_edit(Docx, original, request)
     }),
     content="office.raw.invalid_path",
@@ -206,13 +204,14 @@ test "raw mutation rejects unsafe grammar fragments and validation regressions" 
     content="office.raw.invalid_xml",
   )
   inspect(
-    raw_error_code(() =>
+    raw_error_code(() => {
       @raw.raw_replace_part(
         Docx,
         original,
         "/document",
         "<wrong xmlns=\"\{word_namespace}\"/>",
-      )),
+      )
+    }),
     content="office.raw.validation_failed",
   )
 }
