@@ -340,10 +340,28 @@ fn fixed_distance_table() -> HuffmanTable raise ZipError {
 }
 
 ///|
+fn append_repeated_code_lengths(
+  lengths : Array[Int],
+  value : Int,
+  repeat : Int,
+  total : Int,
+) -> Unit raise ZipError {
+  if repeat > total - lengths.length() {
+    raise UnsupportedFeature(msg="dynamic code-length repeat exceeds table")
+  }
+  for _ in 0..<repeat {
+    lengths.push(value)
+  }
+}
+
+///|
 fn read_dynamic_tables(
   reader : BitReader,
 ) -> (HuffmanTable, HuffmanTable) raise ZipError {
   let hlit = reader.read_bits(5).reinterpret_as_int() + 257
+  if hlit > 286 {
+    raise UnsupportedFeature(msg="invalid dynamic literal/length count")
+  }
   let hdist = reader.read_bits(5).reinterpret_as_int() + 1
   let hclen = reader.read_bits(4).reinterpret_as_int() + 4
   let order : ReadOnlyArray[Int] = [
@@ -366,19 +384,13 @@ fn read_dynamic_tables(
       }
       let repeat = reader.read_bits(2).reinterpret_as_int() + 3
       let prev = lengths[lengths.length() - 1]
-      for _ in 0..<repeat {
-        lengths.push(prev)
-      }
+      append_repeated_code_lengths(lengths, prev, repeat, total)
     } else if symbol == 17 {
       let repeat = reader.read_bits(3).reinterpret_as_int() + 3
-      for _ in 0..<repeat {
-        lengths.push(0)
-      }
+      append_repeated_code_lengths(lengths, 0, repeat, total)
     } else if symbol == 18 {
       let repeat = reader.read_bits(7).reinterpret_as_int() + 11
-      for _ in 0..<repeat {
-        lengths.push(0)
-      }
+      append_repeated_code_lengths(lengths, 0, repeat, total)
     }
   }
   let lit_lengths = lengths[:hlit]
@@ -743,6 +755,50 @@ test "deflate wb: dynamic table repeat-without-previous branch" {
     _ => fail("expected repeat-with-no-previous-length error")
   } noraise {
     _ => fail("expected repeat-with-no-previous-length error")
+  }
+}
+
+///|
+test "deflate wb: dynamic table rejects reserved HLIT" {
+  let writer = BitWriter::new()
+  // HLIT encodings 30 and 31 are reserved: at most 286 literal/length codes
+  // may be declared.
+  ignore(writer.write_bits(30, 5))
+  let reader = BitReader::new(writer.finish())
+  try read_dynamic_tables(reader) catch {
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="invalid dynamic literal/length count")
+    _ => fail("expected reserved-HLIT error")
+  } noraise {
+    _ => fail("expected reserved-HLIT error")
+  }
+}
+
+///|
+test "deflate wb: dynamic table rejects repeat overshoot" {
+  let writer = BitWriter::new()
+  // hlit=257, hdist=1, hclen=4
+  ignore(writer.write_bits(0, 5))
+  ignore(writer.write_bits(0, 5))
+  ignore(writer.write_bits(0, 4))
+  // Code-length alphabet lengths for [16, 17, 18, 0]. Symbol 18 is the
+  // sole one-bit code, so each zero bit below selects it.
+  ignore(writer.write_bits(0, 3))
+  ignore(writer.write_bits(0, 3))
+  ignore(writer.write_bits(1, 3))
+  ignore(writer.write_bits(0, 3))
+  // Two maximum symbol-18 repeats request 276 lengths for a 258-slot table.
+  ignore(writer.write_bits(0, 1))
+  ignore(writer.write_bits(127, 7))
+  ignore(writer.write_bits(0, 1))
+  ignore(writer.write_bits(127, 7))
+  let reader = BitReader::new(writer.finish())
+  try read_dynamic_tables(reader) catch {
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="dynamic code-length repeat exceeds table")
+    _ => fail("expected code-length repeat overshoot error")
+  } noraise {
+    _ => fail("expected code-length repeat overshoot error")
   }
 }
 
