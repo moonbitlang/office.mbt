@@ -1,4 +1,26 @@
 ///|
+/// Versioned schemas shared by capability declarations and result emitters.
+pub const SCHEMA_CAPABILITIES : String = "office.capabilities/2"
+
+///|
+pub const SCHEMA_CAPABILITY : String = "office.capability/2"
+
+///|
+pub const SCHEMA_RAW_INVENTORY : String = "office.raw.inventory/1"
+
+///|
+pub const SCHEMA_RAW_PART : String = "office.raw.part/1"
+
+///|
+pub const SCHEMA_RAW_CHANGE : String = "office.raw.change/1"
+
+///|
+pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
+
+///|
+pub const SCHEMA_TRANSACTION : String = "office.transaction/1"
+
+///|
 /// One declared input or output field in the Office capability registry.
 pub(all) struct CapabilityField {
   name : String
@@ -8,13 +30,24 @@ pub(all) struct CapabilityField {
 }
 
 ///|
+/// The accepted argument shape and path restriction for one action value.
+pub(all) struct CapabilityAction {
+  name : String
+  requires : Array[String]
+  forbids : Array[String]
+  restrictions : Array[String]
+}
+
+///|
 /// One conditionally invokable subcommand schema within a command family.
 pub(all) struct CapabilityVariant {
   name : String
   usage : String
+  result_schema : String
   inputs : Array[CapabilityField]
   outputs : Array[CapabilityField]
   constraints : Array[String]
+  actions : Array[CapabilityAction]
   output_modes : Array[String]
 }
 
@@ -60,6 +93,16 @@ fn capability_field(
   description : String,
 ) -> CapabilityField {
   { name, type_name, required, description }
+}
+
+///|
+fn capability_action(
+  name : String,
+  requires : Array[String],
+  forbids : Array[String],
+  restrictions? : Array[String] = [],
+) -> CapabilityAction {
+  { name, requires, forbids, restrictions }
 }
 
 ///|
@@ -165,21 +208,15 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
       ],
       outputs: [
-        capability_field(
-          "inventory", "office.raw.inventory/1", false, "canonical package-part inventory",
-        ),
-        capability_field(
-          "part", "office.raw.part/1", false, "resolved part metadata and explicitly selected content",
-        ),
-        capability_field(
-          "change", "office.raw.result/1", false, "validated mutation and transaction report",
-        ),
+      // Raw operations have no common data-object fields. Each variant
+      // declares its complete result schema and its fields below.
       ],
       output_modes: ["human", "json", "base64", "file"],
       variants: [
         {
           name: "list",
           usage: "office raw list FILE [--json]",
+          result_schema: SCHEMA_RAW_INVENTORY,
           inputs: [
             capability_field(
               "file", "path", true, "existing XLSX or DOCX package",
@@ -190,15 +227,24 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           ],
           outputs: [
             capability_field(
-              "inventory", "office.raw.inventory/1", true, "bounded canonical part inventory",
+              "format", "enum(docx|xlsx)", true, "structurally verified package format",
+            ),
+            capability_field(
+              "part_count", "integer", true, "number of inventoried package parts",
+            ),
+            capability_field(
+              "parts", "array(object{name:path,content_type:string,kind:enum(xml|binary),size:integer,aliases:array(string)})",
+              true, "bounded canonical part inventory records",
             ),
           ],
           constraints: [],
+          actions: [],
           output_modes: ["human", "json"],
         },
         {
           name: "read",
           usage: "office raw read FILE PART [--json] [--base64 | --output FILE]",
+          result_schema: SCHEMA_RAW_PART,
           inputs: [
             capability_field(
               "file", "path", true, "existing XLSX or DOCX package",
@@ -218,18 +264,33 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           ],
           outputs: [
             capability_field(
-              "part", "office.raw.part/1", true, "resolved metadata and selected content",
+              "format", "enum(docx|xlsx)", true, "structurally verified package format",
+            ),
+            capability_field(
+              "part", "object{name:path,content_type:string,kind:enum(xml|binary),size:integer,aliases:array(string)}",
+              true, "resolved package-part metadata",
+            ),
+            capability_field(
+              "encoding", "enum(xml|base64|binary)", true, "selected payload representation",
+            ),
+            capability_field(
+              "content", "string", false, "decoded XML text or base64 payload",
+            ),
+            capability_field(
+              "output", "path", false, "created payload destination",
             ),
           ],
           constraints: [
             "mutually-exclusive(base64,output)", "binary-requires(base64|output)",
             "output-create-mode(create-new)",
           ],
+          actions: [],
           output_modes: ["human", "json", "base64", "file"],
         },
         {
           name: "replace",
           usage: "office raw replace FILE PART (--xml XML | --xml-file FILE) [--out FILE] [--dry-run] [--overwrite] [--json]",
+          result_schema: SCHEMA_RAW_RESULT,
           inputs: [
             capability_field(
               "file", "path", true, "existing XLSX or DOCX package",
@@ -258,17 +319,28 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           ],
           outputs: [
             capability_field(
-              "change", "office.raw.result/1", true, "validated mutation and transaction report",
+              "change",
+              SCHEMA_RAW_CHANGE,
+              true,
+              "validated raw mutation summary",
+            ),
+            capability_field(
+              "transaction",
+              SCHEMA_TRANSACTION,
+              true,
+              "transaction validation and publication report",
             ),
           ],
           constraints: [
             "exactly-one(xml,xml-file)", "overwrite-requires(out)", "transactional-publication",
           ],
+          actions: [],
           output_modes: ["human", "json"],
         },
         {
           name: "edit",
           usage: "office raw edit FILE PART --path PATH --action ACTION [action arguments] [--namespace PREFIX=URI]... [--all] [--out FILE] [--dry-run] [--overwrite] [--json]",
+          result_schema: SCHEMA_RAW_RESULT,
           inputs: [
             capability_field(
               "file", "path", true, "existing XLSX or DOCX package",
@@ -316,7 +388,16 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           ],
           outputs: [
             capability_field(
-              "change", "office.raw.result/1", true, "validated mutation and transaction report",
+              "change",
+              SCHEMA_RAW_CHANGE,
+              true,
+              "validated raw mutation summary",
+            ),
+            capability_field(
+              "transaction",
+              SCHEMA_TRANSACTION,
+              true,
+              "transaction validation and publication report",
             ),
           ],
           constraints: [
@@ -324,6 +405,38 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
             "set-attribute-requires(attribute,value)", "remove-forbids(xml,xml-file,attribute,value)",
             "overwrite-requires(out)", "flag-looking-values-require-attached-syntax",
             "transactional-publication",
+          ],
+          actions: [
+            capability_action("append", ["exactly-one(xml,xml-file)"], [
+              "attribute", "value",
+            ]),
+            capability_action("prepend", ["exactly-one(xml,xml-file)"], [
+              "attribute", "value",
+            ]),
+            capability_action(
+              "insert-before",
+              ["exactly-one(xml,xml-file)"],
+              ["attribute", "value"],
+              restrictions=["path-must-not-select-document-element"],
+            ),
+            capability_action(
+              "insert-after",
+              ["exactly-one(xml,xml-file)"],
+              ["attribute", "value"],
+              restrictions=["path-must-not-select-document-element"],
+            ),
+            capability_action("replace", ["exactly-one(xml,xml-file)"], [
+              "attribute", "value",
+            ]),
+            capability_action(
+              "remove",
+              [],
+              ["xml", "xml-file", "attribute", "value"],
+              restrictions=["path-must-not-select-document-element"],
+            ),
+            capability_action("set-attribute", ["attribute", "value"], [
+              "xml", "xml-file",
+            ]),
           ],
           output_modes: ["human", "json"],
         },
@@ -371,13 +484,25 @@ fn capability_field_json(field : CapabilityField) -> Json {
 }
 
 ///|
+fn capability_action_json(action : CapabilityAction) -> Json {
+  Json::object({
+    "name": Json::string(action.name),
+    "requires": json_strings(action.requires),
+    "forbids": json_strings(action.forbids),
+    "restrictions": json_strings(action.restrictions),
+  })
+}
+
+///|
 fn capability_variant_json(variant : CapabilityVariant) -> Json {
   Json::object({
     "name": Json::string(variant.name),
     "usage": Json::string(variant.usage),
+    "result_schema": Json::string(variant.result_schema),
     "inputs": Json::array(variant.inputs.map(capability_field_json)),
     "outputs": Json::array(variant.outputs.map(capability_field_json)),
     "constraints": json_strings(variant.constraints),
+    "actions": Json::array(variant.actions.map(capability_action_json)),
     "output_modes": json_strings(variant.output_modes),
   })
 }
@@ -388,7 +513,7 @@ fn capability_format_json(
   fingerprint : String,
 ) -> Json {
   Json::object({
-    "schema": Json::string("office.capability/1"),
+    "schema": Json::string(SCHEMA_CAPABILITY),
     "fingerprint": Json::string(fingerprint),
     "kind": Json::string("format"),
     "name": Json::string(format.name),
@@ -410,7 +535,7 @@ fn capability_command_json(
   fingerprint : String,
 ) -> Json {
   Json::object({
-    "schema": Json::string("office.capability/1"),
+    "schema": Json::string(SCHEMA_CAPABILITY),
     "fingerprint": Json::string(fingerprint),
     "kind": Json::string("command"),
     "name": Json::string(command.name),
@@ -518,6 +643,7 @@ fn append_fingerprint_command(
   for variant in command.variants {
     append_fingerprint_token(buffer, variant.name)
     append_fingerprint_token(buffer, variant.usage)
+    append_fingerprint_token(buffer, variant.result_schema)
     append_fingerprint_section(
       buffer,
       "variant_inputs",
@@ -544,6 +670,38 @@ fn append_fingerprint_command(
     }
     append_fingerprint_section(
       buffer,
+      "variant_actions",
+      variant.actions.length(),
+    )
+    for action in variant.actions {
+      append_fingerprint_token(buffer, action.name)
+      append_fingerprint_section(
+        buffer,
+        "action_requires",
+        action.requires.length(),
+      )
+      for requirement in action.requires {
+        append_fingerprint_token(buffer, requirement)
+      }
+      append_fingerprint_section(
+        buffer,
+        "action_forbids",
+        action.forbids.length(),
+      )
+      for forbidden in action.forbids {
+        append_fingerprint_token(buffer, forbidden)
+      }
+      append_fingerprint_section(
+        buffer,
+        "action_restrictions",
+        action.restrictions.length(),
+      )
+      for restriction in action.restrictions {
+        append_fingerprint_token(buffer, restriction)
+      }
+    }
+    append_fingerprint_section(
+      buffer,
       "variant_output_modes",
       variant.output_modes.length(),
     )
@@ -556,7 +714,7 @@ fn append_fingerprint_command(
 ///|
 fn capability_fingerprint_source() -> String {
   let buffer = StringBuilder::new()
-  append_fingerprint_token(buffer, "office.capabilities/1")
+  append_fingerprint_token(buffer, SCHEMA_CAPABILITIES)
   let formats = capability_formats()
   append_fingerprint_section(buffer, "formats", formats.length())
   for format in formats {
@@ -650,7 +808,7 @@ pub fn capabilities_data(format? : DocumentFormat, operation? : String) -> Json 
     (None, None) => capability_records()
   }
   let fields : Map[String, Json] = {
-    "schema": Json::string("office.capabilities/1"),
+    "schema": Json::string(SCHEMA_CAPABILITIES),
     "fingerprint": Json::string(capability_fingerprint()),
     "records": Json::array(records),
   }

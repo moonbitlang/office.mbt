@@ -7,6 +7,20 @@ import {
 }
 
 // Values
+pub const SCHEMA_CAPABILITIES : String = "office.capabilities/2"
+
+pub const SCHEMA_CAPABILITY : String = "office.capability/2"
+
+pub const SCHEMA_RAW_CHANGE : String = "office.raw.change/1"
+
+pub const SCHEMA_RAW_INVENTORY : String = "office.raw.inventory/1"
+
+pub const SCHEMA_RAW_PART : String = "office.raw.part/1"
+
+pub const SCHEMA_RAW_RESULT : String = "office.raw.result/1"
+
+pub const SCHEMA_TRANSACTION : String = "office.transaction/1"
+
 pub const SELECTOR_MAX_DEPTH : Int = 32
 
 pub const SELECTOR_MAX_LENGTH : Int = 2048
@@ -80,6 +94,13 @@ pub fn SelectorError::to_string(Self) -> String
 pub impl Show for SelectorError
 
 // Types and methods
+pub(all) struct CapabilityAction {
+  name : String
+  requires : Array[String]
+  forbids : Array[String]
+  restrictions : Array[String]
+}
+
 pub(all) struct CapabilityCommand {
   name : String
   summary : String
@@ -117,9 +138,11 @@ pub(all) struct CapabilitySelector {
 pub(all) struct CapabilityVariant {
   name : String
   usage : String
+  result_schema : String
   inputs : Array[CapabilityField]
   outputs : Array[CapabilityField]
   constraints : Array[String]
+  actions : Array[CapabilityAction]
   output_modes : Array[String]
 }
 

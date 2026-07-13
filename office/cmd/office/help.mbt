@@ -298,7 +298,7 @@ fn render_format(format : @lib.DocumentFormat) -> String {
 fn render_overview(verbose : Bool) -> String {
   let lines : Array[String] = [
     "Office capability registry",
-    "  Schema: office.capabilities/1",
+    "  Schema: " + @lib.SCHEMA_CAPABILITIES,
     "  Fingerprint: \{@lib.capability_fingerprint()}",
     "Formats:",
   ]
