@@ -429,6 +429,23 @@ test "zip read: local record intervals cannot overlap" {
 }
 
 ///|
+test "zip read: every local record is referenced exactly once" {
+  let out : Array[Byte] = []
+  ignore(append_zip_test_local(out, b"orphan", b"hidden"))
+  let visible_offset = append_zip_test_local(out, b"visible", b"shown")
+  let central_offset = out.length()
+  append_zip_test_central(out, b"visible", b"shown", visible_offset)
+  append_zip_test_eocd(out, 1, central_offset)
+  try @zip.read(Bytes::from_array(out)) catch {
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="unreferenced data before zip central directory")
+    _ => fail("expected orphan local record to be rejected")
+  } noraise {
+    _ => fail("expected orphan local record to be rejected")
+  }
+}
+
+///|
 test "zip read: local headers are bound to their central records" {
   let archive = @zip.Archive::new()
   archive.add("a.txt", b"hello")

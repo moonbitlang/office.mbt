@@ -857,10 +857,22 @@ fn read_impl(
       left.1.compare(right.1)
     }
   })
-  for index in 1..<local_intervals.length() {
-    if local_intervals[index].0 < local_intervals[index - 1].1 {
+  let mut covered_until = 0
+  for interval in local_intervals {
+    if interval.0 < covered_until {
       raise UnsupportedFeature(msg="overlapping zip local records")
     }
+    if interval.0 != covered_until {
+      raise UnsupportedFeature(
+        msg="unreferenced data before zip central directory",
+      )
+    }
+    covered_until = interval.1
+  }
+  if covered_until != central_offset {
+    raise UnsupportedFeature(
+      msg="unreferenced data before zip central directory",
+    )
   }
   let archive = Archive::new()
   let mut actual_total = 0
