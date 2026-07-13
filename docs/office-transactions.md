@@ -139,7 +139,10 @@ cannot be called with an oversized, unbounded, or caller-modified snapshot.
 ## Validation hooks
 
 The portable archive-format gate is mandatory and recorded as
-`office-portable-opc` in `office.transaction/1`. Callers may register named,
+`office-portable-opc` in `office.transaction/1`. A custom bounded identifier is
+additive: it runs first so format-specific limits can fail before generic Office
+parsing, then portable OPC validation runs independently, both formats must
+agree, and both successful gates are recorded. Callers may also register named,
 bounded validators for deeper DOCX or XLSX checks. A hook returns structured
 findings; any finding or thrown hook error fails the transaction before a
 temporary file is created. Each hook may return at most 64 findings, with

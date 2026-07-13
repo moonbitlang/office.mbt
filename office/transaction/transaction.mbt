@@ -2,6 +2,9 @@
 let transaction_max_validators = 32
 
 ///|
+let transaction_portable_validator_name = "office-portable-opc"
+
+///|
 let transaction_temp_attempts = 32
 
 ///|
@@ -596,32 +599,54 @@ fn identify_input(
   let (archive, archive_cost) = read_transaction_archive(
     original, "input package", "office.transaction.invalid_input", retained, live_limit,
   )
-  let format = match identifier {
+  // A custom identifier is an additional bounded, format-specific gate. Run it
+  // before generic Office parsing, but never let it replace the mandatory
+  // portable OPC validation below.
+  let custom_format = match identifier {
     Some(identifier) =>
-      identifier.run(options.input_path, original, archive.fork()) catch {
-        TransactionError(..) as error =>
-          raise normalize_transaction_error(
-            error, "office.transaction.invalid_input", "custom transaction identifier raised an invalid error",
-          )
-        error =>
-          raise transaction_error(
-            "office.transaction.invalid_input",
-            "identifier '\{identifier.name}' rejected the input package: \{bounded_text(error.to_string(), 240)}",
-          )
-      }
-    None =>
-      @office.detect_archive_format(options.input_path, archive) catch {
-        error =>
-          raise transaction_error(
-            "office.transaction.invalid_input",
-            bounded_text(Show::to_string(error), 320),
-            details=Json::object({
-              "file": Json::string(bounded_text(options.input_path, 160)),
-            }),
-          )
-      }
+      Some(
+        identifier.run(options.input_path, original, archive.fork()) catch {
+          TransactionError(..) as error =>
+            raise normalize_transaction_error(
+              error, "office.transaction.invalid_input", "custom transaction identifier raised an invalid error",
+            )
+          error =>
+            raise transaction_error(
+              "office.transaction.invalid_input",
+              "identifier '\{identifier.name}' rejected the input package: \{bounded_text(error.to_string(), 240)}",
+            )
+        },
+      )
+    None => None
   }
-  (format, archive, archive_cost)
+  let portable_format = @office.detect_archive_format(
+    options.input_path,
+    archive,
+  ) catch {
+    error =>
+      raise transaction_error(
+        "office.transaction.invalid_input",
+        bounded_text(Show::to_string(error), 320),
+        details=Json::object({
+          "validator": Json::string(transaction_portable_validator_name),
+          "file": Json::string(bounded_text(options.input_path, 160)),
+        }),
+      )
+  }
+  match (identifier, custom_format) {
+    (Some(identifier), Some(custom)) if custom != portable_format =>
+      raise transaction_error(
+        "office.transaction.invalid_input",
+        "identifier '\{identifier.name}' reported \{custom.name()}, but mandatory portable validation reported \{portable_format.name()}",
+        details=Json::object({
+          "validator": Json::string(identifier.name),
+          "identifier_format": Json::string(custom.name()),
+          "portable_format": Json::string(portable_format.name()),
+        }),
+      )
+    _ => ()
+  }
+  (portable_format, archive, archive_cost)
 }
 
 ///|
@@ -648,6 +673,12 @@ fn validate_validator_set(
   }
   let names = []
   for validator in validators {
+    if validator.name == transaction_portable_validator_name {
+      raise transaction_error(
+        "office.transaction.invalid_contract",
+        "validator name '\{transaction_portable_validator_name}' is reserved for mandatory portable OPC validation",
+      )
+    }
     if names.contains(validator.name) {
       raise transaction_error(
         "office.transaction.invalid_contract",
@@ -683,7 +714,10 @@ fn validate_candidate(
     )
     candidate
   }
-  let (candidate_format, identifier_name) = match identifier {
+  let summaries : Array[ValidationSummary] = []
+  // Preserve the custom-first boundary, then independently require portable
+  // OPC validation. Both successful gates are visible in the report.
+  let custom_format = match identifier {
     Some(identifier) => {
       let candidate_format = identifier.run(
         validation_path,
@@ -701,37 +735,49 @@ fn validate_candidate(
             details=Json::object({ "validator": Json::string(identifier.name) }),
           )
       }
-      (candidate_format, identifier.name)
+      summaries.push({ name: identifier.name, passed: true, finding_count: 0 })
+      Some(candidate_format)
     }
-    None => {
-      let candidate_format = @office.detect_archive_format(
-        validation_path, archive,
-      ) catch {
-        error =>
-          raise transaction_error(
-            "office.transaction.validation_failed",
-            "portable Office validation failed: \{bounded_text(Show::to_string(error), 320)}",
-            details=Json::object({
-              "validator": Json::string("office-portable-opc"),
-            }),
-          )
-      }
-      (candidate_format, "office-portable-opc")
-    }
+    None => None
   }
-  if candidate_format != format {
+  let portable_format = @office.detect_archive_format(validation_path, archive) catch {
+    error =>
+      raise transaction_error(
+        "office.transaction.validation_failed",
+        "portable Office validation failed: \{bounded_text(Show::to_string(error), 320)}",
+        details=Json::object({
+          "validator": Json::string(transaction_portable_validator_name),
+        }),
+      )
+  }
+  summaries.push({
+    name: transaction_portable_validator_name,
+    passed: true,
+    finding_count: 0,
+  })
+  match (identifier, custom_format) {
+    (Some(identifier), Some(custom)) if custom != portable_format =>
+      raise transaction_error(
+        "office.transaction.validation_failed",
+        "identifier '\{identifier.name}' reported \{custom.name()}, but mandatory portable validation reported \{portable_format.name()}",
+        details=Json::object({
+          "validator": Json::string(identifier.name),
+          "identifier_format": Json::string(custom.name()),
+          "portable_format": Json::string(portable_format.name()),
+        }),
+      )
+    _ => ()
+  }
+  if portable_format != format {
     raise transaction_error(
       "office.transaction.format_changed",
-      "candidate format \{candidate_format.name()} does not match input format \{format.name()}",
+      "candidate format \{portable_format.name()} does not match input format \{format.name()}",
       details=Json::object({
         "input_format": Json::string(format.name()),
-        "candidate_format": Json::string(candidate_format.name()),
+        "candidate_format": Json::string(portable_format.name()),
       }),
     )
   }
-  let summaries : Array[ValidationSummary] = [
-    { name: identifier_name, passed: true, finding_count: 0 },
-  ]
   for validator in validators {
     let findings = validator.run(format, mutation.bytes, archive.fork()) catch {
       error =>
