@@ -29,12 +29,27 @@ test "capability fingerprint distinguishes collection boundaries" {
     inputs: [field],
     outputs: [],
     output_modes: ["json"],
+    variants: [],
   }
   let moved_format = { ..base, formats: [], aliases: ["shared"] }
   let moved_field = { ..base, inputs: [], outputs: [field] }
+  let with_variant = {
+    ..base,
+    variants: [
+      {
+        name: "variant",
+        usage: "office example variant",
+        inputs: [field],
+        outputs: [],
+        constraints: ["required(value)"],
+        output_modes: ["json"],
+      },
+    ],
+  }
   let encoded = fingerprint_command_for_test(base)
   assert_true(encoded != fingerprint_command_for_test(moved_format))
   assert_true(encoded != fingerprint_command_for_test(moved_field))
+  assert_true(encoded != fingerprint_command_for_test(with_variant))
 }
 
 ///|

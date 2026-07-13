@@ -29,8 +29,13 @@ office help xlsx
 office help all --json
 office help all --jsonl
 office identify report.docx --json
+office raw list report.docx --json
+office raw read report.docx /document --json
 ```
 
 `docx`/`word` and `xlsx`/`excel` are the only format names and aliases. The
 capability inventory carries a deterministic CRC-32 fingerprint so automation
-can detect contract drift. PowerPoint and MCP are intentionally absent.
+can detect contract drift. Command families publish explicit variant schemas;
+the raw record describes every `list`, `read`, `replace`, and `edit` input,
+output, constraint, and output mode. PowerPoint and MCP are intentionally
+absent.

@@ -89,6 +89,7 @@ pub(all) struct CapabilityCommand {
   inputs : Array[CapabilityField]
   outputs : Array[CapabilityField]
   output_modes : Array[String]
+  variants : Array[CapabilityVariant]
 }
 
 pub(all) struct CapabilityField {
@@ -111,6 +112,15 @@ pub(all) struct CapabilitySelector {
   status : String
   examples : Array[String]
   description : String
+}
+
+pub(all) struct CapabilityVariant {
+  name : String
+  usage : String
+  inputs : Array[CapabilityField]
+  outputs : Array[CapabilityField]
+  constraints : Array[String]
+  output_modes : Array[String]
 }
 
 pub struct CellAddress {
