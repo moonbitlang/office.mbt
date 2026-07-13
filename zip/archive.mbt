@@ -8,6 +8,21 @@ priv struct PreservedEntry {
 }
 
 ///|
+/// Raw header templates retained when an entry payload is replaced. Writers
+/// patch only payload-dependent fields and keep producer metadata intact.
+priv struct ReplacementTemplate {
+  local_header : Bytes
+  central_record : Bytes
+  local_zip64_uncompressed_position : Int?
+  local_zip64_compressed_position : Int?
+  central_zip64_uncompressed_position : Int?
+  central_zip64_compressed_position : Int?
+  central_zip64_offset_position : Int?
+  descriptor_signed : Bool
+  descriptor_zip64 : Bool
+}
+
+///|
 struct Entry {
   name : String
   data : Bytes
@@ -18,6 +33,7 @@ struct Entry {
   crc32 : UInt
   source_local_offset : Int?
   preserved : PreservedEntry?
+  replacement_template : ReplacementTemplate?
 }
 
 ///|
@@ -82,6 +98,7 @@ pub fn Archive::add(
     crc32: crc32(data),
     source_local_offset: None,
     preserved: None,
+    replacement_template: None,
   })
 }
 
@@ -96,6 +113,9 @@ pub fn Archive::replace(
   for index in 0..<self.entries.length() {
     let entry = self.entries[index]
     if entry.name[:] == name {
+      if entry.data == data {
+        return true
+      }
       self.entries[index] = {
         name: entry.name,
         data,
@@ -104,6 +124,7 @@ pub fn Archive::replace(
         crc32: crc32(data),
         source_local_offset: entry.source_local_offset,
         preserved: None,
+        replacement_template: entry.replacement_template,
       }
       return true
     }

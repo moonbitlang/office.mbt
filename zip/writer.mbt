@@ -136,6 +136,133 @@ fn patch_u64_le(
 }
 
 ///|
+fn patch_template_size(
+  record : Array[Byte],
+  classic_position : Int,
+  zip64_position : Int?,
+  value : Int,
+  preserve_zero_placeholder : Bool,
+) -> Unit raise ZipError {
+  let raw = read_u32_le_at_raw(Bytes::from_array(record), classic_position)
+  let max_u32 : UInt = 0xFFFFFFFF
+  match zip64_position {
+    Some(position) => patch_u64_le(record, position, to_u64(value))
+    None if raw == max_u32 =>
+      raise UnsupportedFeature(
+        msg="ZIP64 size field is missing from replacement template",
+      )
+    None => ()
+  }
+  if raw == max_u32 {
+    return
+  }
+  let zero : UInt = 0
+  if preserve_zero_placeholder && raw == zero {
+    return
+  }
+  patch_u32_le(record, classic_position, to_u32(value))
+}
+
+///|
+fn replacement_entry_records(
+  out : Array[Byte],
+  entry : Entry,
+  local_offset : Int,
+  template : ReplacementTemplate,
+) -> (Bytes, Bool) raise ZipError {
+  let (method_id, payload) = match entry.compression() {
+    Store => (0, entry.data())
+    Deflate => (8, deflate_encode(entry.data()))
+  }
+  if template.local_header.length() < 30 ||
+    template.central_record.length() < 46 ||
+    read_u32_le_at_raw(template.local_header, 0) !=
+    local_header_sig.reinterpret_as_uint() ||
+    read_u32_le_at_raw(template.central_record, 0) !=
+    central_header_sig.reinterpret_as_uint() {
+    raise UnsupportedFeature(msg="replacement ZIP header template is malformed")
+  }
+  let local_method = read_u16_le_at(template.local_header, 8)
+  let central_method = read_u16_le_at(template.central_record, 10)
+  let local_flags = read_u16_le_at(template.local_header, 6)
+  let central_flags = read_u16_le_at(template.central_record, 8)
+  let uses_descriptor = (local_flags & flag_data_descriptor) != 0
+  if local_method != method_id ||
+    central_method != method_id ||
+    local_flags != central_flags ||
+    uses_descriptor != entry.data_descriptor() {
+    raise UnsupportedFeature(
+      msg="replacement ZIP header policy changed unexpectedly",
+    )
+  }
+  let crc = crc32(entry.data())
+  let data_len = entry.data().length()
+  let payload_len = payload.length()
+  let local_record = template.local_header.to_array()
+  let local_crc = read_u32_le_at_raw(template.local_header, 14)
+  let zero : UInt = 0
+  if !uses_descriptor || local_crc != zero {
+    patch_u32_le(local_record, 14, crc)
+  }
+  patch_template_size(
+    local_record,
+    18,
+    template.local_zip64_compressed_position,
+    payload_len,
+    uses_descriptor,
+  )
+  patch_template_size(
+    local_record,
+    22,
+    template.local_zip64_uncompressed_position,
+    data_len,
+    uses_descriptor,
+  )
+  write_bytes(out, Bytes::from_array(local_record))
+  write_bytes(out, payload)
+  if uses_descriptor {
+    if template.descriptor_signed {
+      write_u32_le(out, data_descriptor_sig.reinterpret_as_uint())
+    }
+    write_u32_le(out, crc)
+    if template.descriptor_zip64 {
+      write_u64_le(out, to_u64(payload_len))
+      write_u64_le(out, to_u64(data_len))
+    } else {
+      write_u32_le(out, to_u32(payload_len))
+      write_u32_le(out, to_u32(data_len))
+    }
+  }
+  let central = template.central_record.to_array()
+  patch_u32_le(central, 16, crc)
+  patch_template_size(
+    central,
+    20,
+    template.central_zip64_compressed_position,
+    payload_len,
+    false,
+  )
+  patch_template_size(
+    central,
+    24,
+    template.central_zip64_uncompressed_position,
+    data_len,
+    false,
+  )
+  match template.central_zip64_offset_position {
+    Some(position) => patch_u64_le(central, position, to_u64(local_offset))
+    None => patch_u32_le(central, 42, to_u32(local_offset))
+  }
+  let needs_zip64 = template.local_zip64_uncompressed_position is Some(_) ||
+    template.local_zip64_compressed_position is Some(_) ||
+    template.central_zip64_uncompressed_position is Some(_) ||
+    template.central_zip64_compressed_position is Some(_) ||
+    template.central_zip64_offset_position is Some(_) ||
+    template.descriptor_zip64
+  (Bytes::from_array(central), needs_zip64)
+}
+
+///|
 fn generated_entry_records(
   out : Array[Byte],
   entry : Entry,
@@ -295,9 +422,11 @@ fn write_with_options(
     match entry.preserved {
       Some(source) => write_bytes(out, source.local_record)
       None => {
-        let (record, entry_needs_zip64) = generated_entry_records(
-          out, entry, local_offset, force_zip64,
-        )
+        let (record, entry_needs_zip64) = match entry.replacement_template {
+          Some(template) =>
+            replacement_entry_records(out, entry, local_offset, template)
+          None => generated_entry_records(out, entry, local_offset, force_zip64)
+        }
         generated_central[index] = Some(record)
         if entry_needs_zip64 {
           needs_zip64 = true

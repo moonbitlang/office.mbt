@@ -92,10 +92,11 @@ fn preservation_fixture() -> Bytes raise ZipError {
   let output : Array[Byte] = []
   let target_name = b"target.xml"
   let target_data = b"old"
+  let target_extra = b"\xef\xbe\x02\x00\x11\x22"
   let untouched_name = b"untouched.bin"
   let untouched_data = b"compressible-compressible-compressible"
   let target_offset = preservation_local_record(
-    output, target_name, target_data, false, false, b"", 0x1001, 0x2002,
+    output, target_name, target_data, false, false, target_extra, 0x1001, 0x2002,
   )
   let custom_extra = b"\xfe\xca\x02\x00\xab\xcd"
   let untouched_offset = preservation_local_record(
@@ -123,12 +124,12 @@ fn preservation_fixture() -> Bytes raise ZipError {
     target_data,
     false,
     false,
-    b"",
-    b"",
+    target_extra,
+    b"target-comment",
     0x1001,
     0x2002,
-    0,
-    (0 : UInt),
+    0x5678,
+    (0x76543210 : UInt),
     target_offset,
   )
   let central_size = output.length() - central_offset
@@ -187,9 +188,140 @@ test "zip replace preserves untouched source records and archive metadata" {
   assert_eq(after.comment, b"archive-comment")
   let target = preserved_entry(after, "target.xml")
   assert_eq(target.data, b"a much longer replacement")
+  let original_target = preserved_entry(before, "target.xml")
+  guard original_target.preserved is Some(original_target_source) else {
+    fail("expected original target records")
+  }
+  guard target.preserved is Some(candidate_target_source) else {
+    fail("expected candidate target records")
+  }
+  // Payload-dependent CRC/size fields may change. All producer metadata around
+  // those fields remains byte-identical on the rewritten member itself.
+  assert_eq(
+    candidate_target_source.local_record[:14],
+    original_target_source.local_record[:14],
+  )
+  let target_header_end = 30 +
+    b"target.xml".length() +
+    b"\xef\xbe\x02\x00\x11\x22".length()
+  assert_eq(
+    candidate_target_source.local_record[26:target_header_end],
+    original_target_source.local_record[26:target_header_end],
+  )
+  assert_eq(
+    candidate_target_source.central_record[4:16],
+    original_target_source.central_record[4:16],
+  )
+  assert_eq(
+    candidate_target_source.central_record[28:42],
+    original_target_source.central_record[28:42],
+  )
+  assert_eq(
+    candidate_target_source.central_record[46:],
+    original_target_source.central_record[46:],
+  )
   assert_true(
     target.source_local_offset.unwrap() < untouched.source_local_offset.unwrap(),
   )
   assert_eq(after.entries[0].name, "untouched.bin")
   assert_eq(after.entries[1].name, "target.xml")
+}
+
+///|
+test "zip identical replacement retains every source byte" {
+  let source = preservation_fixture()
+  let archive = read(source)
+  assert_true(archive.replace("target.xml", b"old"))
+  assert_eq(write(archive), source)
+}
+
+///|
+test "zip replacement preserves descriptor style and member metadata" {
+  let source = preservation_fixture()
+  let before = read(source)
+  let archive = read(source)
+  assert_true(archive.replace("untouched.bin", b"new descriptor payload"))
+  let after = read(write(archive))
+  let original = preserved_entry(before, "untouched.bin")
+  let replacement = preserved_entry(after, "untouched.bin")
+  assert_true(replacement.compression is Deflate)
+  assert_true(replacement.data_descriptor)
+  guard original.preserved is Some(original_source) else {
+    fail("expected original descriptor records")
+  }
+  guard replacement.preserved is Some(replacement_source) else {
+    fail("expected replacement descriptor records")
+  }
+  assert_eq(
+    replacement_source.local_record[:14],
+    original_source.local_record[:14],
+  )
+  assert_eq(
+    replacement_source.central_record[4:16],
+    original_source.central_record[4:16],
+  )
+  assert_eq(
+    replacement_source.central_record[28:42],
+    original_source.central_record[28:42],
+  )
+  assert_eq(
+    replacement_source.central_record[46:],
+    original_source.central_record[46:],
+  )
+}
+
+///|
+test "zip64 replacement preserves header layout and descriptor width" {
+  let generated = Archive::new()
+  generated.add("target.xml", b"old", compression=Deflate, data_descriptor=true)
+  let source = write_with_options(generated, force_zip64=true)
+  let before = read(source)
+  let archive = read(source)
+  assert_true(archive.replace("target.xml", b"new zip64 payload"))
+  let candidate = write(archive)
+  let after = read(candidate)
+  let original = preserved_entry(before, "target.xml")
+  let replacement = preserved_entry(after, "target.xml")
+  guard original.replacement_template is Some(original_template) else {
+    fail("expected original ZIP64 replacement template")
+  }
+  guard replacement.replacement_template is Some(replacement_template) else {
+    fail("expected replacement ZIP64 template")
+  }
+  assert_true(original_template.descriptor_signed)
+  assert_true(original_template.descriptor_zip64)
+  assert_true(replacement_template.descriptor_signed)
+  assert_true(replacement_template.descriptor_zip64)
+  assert_eq(
+    replacement_template.local_header[:14],
+    original_template.local_header[:14],
+  )
+  assert_eq(
+    replacement_template.central_record[4:16],
+    original_template.central_record[4:16],
+  )
+  assert_eq(
+    replacement_template.central_record[28:42],
+    original_template.central_record[28:42],
+  )
+  assert_eq(
+    replacement_template.central_record[46:60],
+    original_template.central_record[46:60],
+  )
+  assert_eq(
+    replacement_template.central_record.length(),
+    original_template.central_record.length(),
+  )
+  assert_eq(
+    replacement_template.central_zip64_uncompressed_position,
+    original_template.central_zip64_uncompressed_position,
+  )
+  assert_eq(
+    replacement_template.central_zip64_compressed_position,
+    original_template.central_zip64_compressed_position,
+  )
+  assert_eq(
+    replacement_template.central_zip64_offset_position,
+    original_template.central_zip64_offset_position,
+  )
 }
