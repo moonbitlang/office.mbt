@@ -1,6 +1,7 @@
 ///|
-/// Wasm hosts expose normalized paths but not portable directory descriptors.
-/// Reports retain the explicit weaker-semantics warning for this target.
+/// Publication I/O is intentionally built on `moonbitlang/async`. Keeping one
+/// implementation for native and Wasm preserves cancellation behavior and
+/// avoids a second, manually managed native ownership/concurrency runtime.
 priv struct PublicationDirectory {
   path : String
 }
@@ -10,6 +11,7 @@ priv struct PublicationTemp {
   path : String
   file : @afs.File
   mut expected : Bytes
+  mut written : Int
 }
 
 ///|
@@ -59,10 +61,10 @@ async fn publication_entry_kind(
         "could not inspect destination '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
       )
   }
-  if kind is Directory {
-    2
-  } else {
-    1
+  match kind {
+    Regular => 1
+    Directory => 2
+    _ => 3
   }
 }
 
@@ -72,12 +74,9 @@ fn publication_entries_same(
   left_leaf : String,
   right : PublicationDirectory,
   right_leaf : String,
-  output_path : String,
+  _output_path : String,
 ) -> Bool {
-  let left_path = join_path(left.path, left_leaf)
-  let right_path = join_path(right.path, right_leaf)
-  ignore(output_path)
-  left_path == right_path
+  join_path(left.path, left_leaf) == join_path(right.path, right_leaf)
 }
 
 ///|
@@ -88,6 +87,15 @@ async fn publication_file_read(
   phase : String,
 ) -> Bytes {
   let path = join_path(directory.path, leaf)
+  let kind = @afs.kind(path) catch {
+    error if @async.is_being_cancelled() => raise error
+    error => raise error
+  }
+  if !(kind is Regular) {
+    raise transaction_error(
+      "office.transaction.file_read_failed", "input must be a regular file",
+    )
+  }
   let file = @afs.open(
     path,
     mode=ReadOnly,
@@ -99,8 +107,7 @@ async fn publication_file_read(
   if size < 0L || size > max_bytes.to_int64() {
     raise resource_limit_error(phase, "package_bytes", max_bytes, max_bytes + 1)
   }
-  let length = size.to_int()
-  file.read_exactly_at(length, position=0L)
+  file.read_exactly_at(size.to_int(), position=0L)
 }
 
 ///|
@@ -129,27 +136,53 @@ async fn publication_temp_try_create(
         }),
       )
   }
-  Some({ path, file, expected: b"" })
+  Some({ path, file, expected: b"", written: 0 })
 }
 
 ///|
-async fn publication_temp_write(temp : PublicationTemp, bytes : Bytes) -> Unit {
+async fn publication_temp_write(
+  temp : PublicationTemp,
+  bytes : Bytes,
+  fail_after_bytes~ : Int?,
+  stall_after_bytes~ : Int?,
+) -> Unit {
+  temp.expected = bytes
+  temp.written = 0
   let mut offset = 0
   let chunk_size = 1024 * 1024
   while offset < bytes.length() {
     let remaining = bytes.length() - offset
     let requested = if remaining < chunk_size { remaining } else { chunk_size }
-    temp.file.write(bytes[offset:offset + requested]) catch {
+    @async.protect_from_cancel(() => {
+      let count = temp.file.write_once(bytes, offset~, len=requested)
+      if count <= 0 || count > requested {
+        raise transaction_error(
+          "office.transaction.write_failed", "temporary package write made invalid progress",
+        )
+      }
+      offset = offset + count
+      temp.written = offset
+    }) catch {
       error if @async.is_being_cancelled() => raise error
+      TransactionError(..) as error => raise error
       error =>
         raise transaction_error(
           "office.transaction.write_failed",
           "could not write temporary package: \{bounded_text(error.to_string(), 240)}",
         )
     }
-    offset = offset + requested
+    match fail_after_bytes {
+      Some(limit) if temp.written >= limit =>
+        raise transaction_error(
+          "office.transaction.write_failed", "injected failure after a partial asynchronous write",
+        )
+      _ => ()
+    }
+    match stall_after_bytes {
+      Some(limit) if temp.written >= limit => @async.sleep(60_000)
+      _ => ()
+    }
   }
-  temp.expected = bytes
 }
 
 ///|
@@ -174,10 +207,11 @@ async fn publication_temp_identity_matches(temp : PublicationTemp) -> Bool {
   )
   defer current.close()
   let size = current.size()
-  if size != temp.expected.length().to_int64() {
+  if size != temp.written.to_int64() {
     return false
   }
-  current.read_exactly_at(temp.expected.length(), position=0L) == temp.expected
+  current.read_exactly_at(temp.written, position=0L) ==
+  temp.expected[:temp.written].to_owned()
 }
 
 ///|
@@ -187,7 +221,8 @@ async fn publication_temp_publish(
   replace : Bool,
   output_path : String,
 ) -> Bool {
-  if !publication_temp_identity_matches(temp) {
+  if temp.written != temp.expected.length() ||
+    !publication_temp_identity_matches(temp) {
     raise transaction_error(
       "office.transaction.commit_failed", "temporary package identity changed before publication",
     )
@@ -267,8 +302,20 @@ fn publication_temp_close(temp : PublicationTemp) -> Unit {
 }
 
 ///|
-fn publication_directory_sync(_directory : PublicationDirectory) -> Bool {
-  false
+async fn publication_directory_sync(directory : PublicationDirectory) -> Bool {
+  let file = @afs.open(
+    directory.path,
+    mode=ReadOnly,
+    create_mode=OpenExisting,
+    sync=NoSync,
+  ) catch {
+    _ => return false
+  }
+  defer file.close()
+  file.sync() catch {
+    _ => return false
+  }
+  true
 }
 
 ///|

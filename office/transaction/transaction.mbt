@@ -32,6 +32,8 @@ priv struct ResolvedPolicy {
 ///|
 priv struct TransactionFaults {
   fail_write : Bool
+  fail_write_after_bytes : Int?
+  stall_write_after_bytes : Int?
   fail_rename : Bool
   stall_after_temp : Bool
   post_rename_release : String?
@@ -45,6 +47,8 @@ priv struct TransactionFaults {
 fn no_transaction_faults() -> TransactionFaults {
   {
     fail_write: false,
+    fail_write_after_bytes: None,
+    stall_write_after_bytes: None,
     fail_rename: false,
     stall_after_temp: false,
     post_rename_release: None,
@@ -598,7 +602,12 @@ async fn publish_candidate(
         "office.transaction.write_failed", "injected temporary-file write failure",
       )
     }
-    publication_temp_write(temp, candidate)
+    publication_temp_write(
+      temp,
+      candidate,
+      fail_after_bytes=faults.fail_write_after_bytes,
+      stall_after_bytes=faults.stall_write_after_bytes,
+    )
     publication_temp_sync(temp)
     if policy.mode is InPlace {
       match faults.concurrent_replacement {
@@ -707,6 +716,13 @@ fn append_platform_warnings(
   parent_synced : Bool,
   temp_clean : Bool,
 ) -> Unit {
+  if committed {
+    warnings.push(
+      @office.protocol_warning(
+        "office.transaction.path_based_commit_semantics", "publication uses moonbitlang/async path APIs; atomic rename is guaranteed, but hostile concurrent directory-entry replacement is outside the portable contract",
+      ),
+    )
+  }
   if committed && !parent_synced {
     warnings.push(
       @office.protocol_warning(
@@ -732,6 +748,11 @@ fn append_platform_warnings(
   _temp_clean : Bool,
 ) -> Unit {
   if committed {
+    warnings.push(
+      @office.protocol_warning(
+        "office.transaction.path_based_commit_semantics", "publication uses moonbitlang/async path APIs; atomic rename is guaranteed, but hostile concurrent directory-entry replacement is outside the portable contract",
+      ),
+    )
     warnings.push(
       @office.protocol_warning(
         "office.transaction.wasm_commit_semantics", "Wasm uses normalized paths and a same-directory rename, but host-independent realpath, symlink identity, and parent-directory durability are unavailable",
