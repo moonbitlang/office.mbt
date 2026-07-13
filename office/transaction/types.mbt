@@ -17,6 +17,9 @@ let transaction_max_part_length = 1024
 let transaction_max_warnings = 64
 
 ///|
+let transaction_max_validator_findings = 64
+
+///|
 priv enum TextScan {
   Valid
   TooLong

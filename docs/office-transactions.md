@@ -23,7 +23,10 @@ A transaction performs these phases in order:
 
 No callback can skip phases 4–6. A parse, mutation, validation, preservation,
 temporary-write, sync, or rename failure never publishes candidate bytes.
-Temporary artifacts are removed on every pre-rename failure.
+Temporary artifacts are removed on every pre-rename failure or cancellation;
+cancellation is propagated only after that cleanup finishes. Ordinary failures
+cross the API as structured `TransactionError` values; runtime cancellation is
+intentionally not relabeled as an Office failure.
 
 ## Destination policy
 
@@ -36,9 +39,9 @@ Temporary artifacts are removed on every pre-rename failure.
   the in-place form so source-change protection cannot be bypassed.
 - `dry_run=true` performs mutation, all validation, and preservation checks but
   writes nothing.
-- Output extension and candidate package format must agree with the original
-  transaction format. A mutation cannot turn a DOCX session into XLSX, or the
-  reverse.
+- The resolved destination extension and candidate package format must agree
+  with the original transaction format. A mutation cannot turn a DOCX session
+  into XLSX, or use a symlink name to hide a mismatched target extension.
 - New files use the explicit transaction permission (owner-only `0600` by
   default). Filesystem ownership, ACL, and extended-attribute preservation are
   outside the package transaction contract.
@@ -63,7 +66,9 @@ The portable `office.detect_format` gate is mandatory and recorded as
 `office-portable-opc` in `office.transaction/1`. Callers may register named,
 bounded validators for deeper DOCX or XLSX checks. A hook returns structured
 findings; any finding or thrown hook error fails the transaction before a
-temporary file is created.
+temporary file is created. Each hook may return at most 64 findings, with
+bounded codes and messages; exceeding that limit is an invalid contract and is
+rejected before finding details are serialized.
 
 Validators must be deterministic and side-effect free. They receive the
 identified format and a read-only view of candidate bytes. OpenXML SDK checks

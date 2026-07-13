@@ -63,10 +63,11 @@ async fn assert_no_transaction_temp(directory : String) -> Unit {
 
 ///|
 async fn transaction_error_code(
-  run : async () -> @transaction.TransactionReport raise @transaction.TransactionError,
+  run : async () -> @transaction.TransactionReport,
 ) -> String {
   try run() catch {
-    TransactionError(code~, ..) => code
+    @transaction.TransactionError(code~, ..) => code
+    error => fail("expected TransactionError, received \{error}")
   } noraise {
     _ => fail("expected transaction failure")
   }
@@ -391,6 +392,38 @@ async test "successful and throwing validators run before publication" {
 }
 
 ///|
+async test "validator finding arrays are bounded before serialization" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let excessive = @transaction.transaction_validator("docx-excessive", (
+      _format,
+      _bytes,
+    ) => {
+      Array::makei(65, index => {
+        @transaction.validation_finding(
+          "docx.test.finding",
+          "bounded finding \{index}",
+        )
+      })
+    })
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+        validators=[excessive],
+      )
+    })
+    assert_eq(code, "office.transaction.invalid_contract")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 async test "duplicate and excessive validator sets fail before file access" {
   let first = @transaction.transaction_validator("duplicate", (_format, _bytes) => {
     []
@@ -539,6 +572,35 @@ async test "native output symlink aliases cannot bypass in-place policy" {
     })
     assert_eq(code, "office.transaction.output_aliases_input")
     assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
+async test "native output symlink validation uses the resolved target extension" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let target = "\{directory}/target.xlsx"
+    let alias_path = "\{directory}/alias.docx"
+    let original = @word.new_blank_docx()
+    let target_original = @excel.write(@excel.new_file())
+    write_test_file(input, original)
+    write_test_file(target, target_original)
+    @afs.symlink(target~, alias_path)
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(
+          input,
+          output_path=alias_path,
+          overwrite=true,
+        ),
+        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_eq(@afs.read_file(target).binary(), target_original)
     assert_no_transaction_temp(directory)
   })
 }

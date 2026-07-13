@@ -36,11 +36,10 @@ async fn wb_write(path : String, bytes : Bytes) -> Unit {
 }
 
 ///|
-async fn wb_error_code(
-  run : async () -> TransactionReport raise TransactionError,
-) -> String {
+async fn wb_error_code(run : async () -> TransactionReport) -> String {
   try run() catch {
     TransactionError(code~, ..) => code
+    error => fail("expected TransactionError, received \{error}")
   } noraise {
     _ => fail("expected transaction failure")
   }
@@ -70,6 +69,7 @@ async test "injected write and rename failures clean temporary artifacts" {
       transact_with_faults(transaction_options(input), mutate, [], {
         fail_write: true,
         fail_rename: false,
+        stall_after_temp: false,
         concurrent_replacement: None,
         concurrent_destination: None,
       })
@@ -86,6 +86,7 @@ async test "injected write and rename failures clean temporary artifacts" {
         {
           fail_write: false,
           fail_rename: true,
+          stall_after_temp: false,
           concurrent_replacement: None,
           concurrent_destination: None,
         },
@@ -94,6 +95,59 @@ async test "injected write and rename failures clean temporary artifacts" {
     assert_eq(rename_code, "office.transaction.commit_failed")
     assert_eq(@afs.read_file(input).binary(), original)
     assert_eq(@afs.read_file(output).binary(), original)
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+async test "task cancellation waits for temporary-file cleanup" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let original = @word.new_blank_docx()
+    wb_write(input, original)
+    @async.with_task_group() <| group => {
+      let task = group.spawn(() => {
+        transact_with_faults(
+          transaction_options(input),
+          (_format, bytes) => {
+            transaction_mutation_with_manifest(
+              wb_rewrite_content_types(bytes, "cancelled"),
+              ["[Content_Types].xml"],
+            )
+          },
+          [],
+          {
+            fail_write: false,
+            fail_rename: false,
+            stall_after_temp: true,
+            concurrent_replacement: None,
+            concurrent_destination: None,
+          },
+        )
+      })
+      let mut observed_temp = false
+      for _ in 0..<1_000 {
+        for name in @afs.readdir(directory) {
+          if name.contains(".office-tmp-") {
+            observed_temp = true
+          }
+        }
+        if observed_temp {
+          break
+        }
+        @async.pause()
+      }
+      assert_true(observed_temp)
+      task.cancel()
+      let propagated = try {
+        ignore(task.wait())
+        false
+      } catch {
+        error => @async.is_cancellation_error(error)
+      }
+      assert_true(propagated)
+    }
+    assert_eq(@afs.read_file(input).binary(), original)
     wb_assert_no_temp(directory)
   })
 }
@@ -118,6 +172,7 @@ async test "concurrent in-place source change is never overwritten" {
         {
           fail_write: false,
           fail_rename: false,
+          stall_after_temp: false,
           concurrent_replacement: Some(concurrent),
           concurrent_destination: None,
         },
@@ -150,6 +205,7 @@ async test "concurrent no-replace destination wins the race" {
         {
           fail_write: false,
           fail_rename: false,
+          stall_after_temp: false,
           concurrent_replacement: None,
           concurrent_destination: Some(concurrent),
         },

@@ -17,6 +17,7 @@ priv struct ResolvedPolicy {
 priv struct TransactionFaults {
   fail_write : Bool
   fail_rename : Bool
+  stall_after_temp : Bool
   concurrent_replacement : Bytes?
   concurrent_destination : Bytes?
 }
@@ -26,6 +27,7 @@ fn no_transaction_faults() -> TransactionFaults {
   {
     fail_write: false,
     fail_rename: false,
+    stall_after_temp: false,
     concurrent_replacement: None,
     concurrent_destination: None,
   }
@@ -70,8 +72,9 @@ async fn canonical_existing_path(path : String) -> String {
 }
 
 ///|
-async fn resolve_source(path : String) -> String raise TransactionError {
+async fn resolve_source(path : String) -> String {
   canonical_existing_path(path) catch {
+    error if @async.is_being_cancelled() => raise error
     error =>
       raise transaction_error(
         "office.transaction.file_read_failed",
@@ -82,8 +85,9 @@ async fn resolve_source(path : String) -> String raise TransactionError {
 }
 
 ///|
-async fn path_exists_checked(path : String) -> Bool raise TransactionError {
+async fn path_exists_checked(path : String) -> Bool {
   @afs.exists(path) catch {
+    error if @async.is_being_cancelled() => raise error
     error =>
       raise transaction_error(
         "office.transaction.destination_check_failed",
@@ -94,9 +98,7 @@ async fn path_exists_checked(path : String) -> Bool raise TransactionError {
 }
 
 ///|
-async fn resolve_new_destination(
-  path : String,
-) -> String raise TransactionError {
+async fn resolve_new_destination(path : String) -> String {
   let leaf = path_leaf(path)
   if leaf.length() == 0 || leaf == "." || leaf == ".." {
     raise transaction_error(
@@ -107,6 +109,7 @@ async fn resolve_new_destination(
   }
   let parent = path_parent(path)
   let resolved_parent = canonical_existing_path(parent) catch {
+    error if @async.is_being_cancelled() => raise error
     error =>
       raise transaction_error(
         "office.transaction.destination_parent_failed",
@@ -120,9 +123,7 @@ async fn resolve_new_destination(
 }
 
 ///|
-async fn resolve_policy(
-  options : TransactionOptions,
-) -> ResolvedPolicy raise TransactionError {
+async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
   let source_target = resolve_source(options.input_path)
   match options.output_path {
     None =>
@@ -137,6 +138,7 @@ async fn resolve_policy(
       let destination_exists = path_exists_checked(output_path)
       let destination_target = if destination_exists {
         let kind = @afs.kind(output_path) catch {
+          error if @async.is_being_cancelled() => raise error
           error =>
             raise transaction_error(
               "office.transaction.destination_check_failed",
@@ -149,6 +151,7 @@ async fn resolve_policy(
           )
         }
         canonical_existing_path(output_path) catch {
+          error if @async.is_being_cancelled() => raise error
           error =>
             raise transaction_error(
               "office.transaction.destination_check_failed",
@@ -192,8 +195,9 @@ async fn resolve_policy(
 async fn read_original(
   options : TransactionOptions,
   source_target : String,
-) -> Bytes raise TransactionError {
+) -> Bytes {
   @afs.read_file(source_target).binary() catch {
+    error if @async.is_being_cancelled() => raise error
     error =>
       raise transaction_error(
         "office.transaction.file_read_failed",
@@ -295,6 +299,17 @@ fn validate_candidate(
           details=Json::object({ "validator": Json::string(validator.name) }),
         )
     }
+    if findings.length() > transaction_max_validator_findings {
+      raise transaction_error(
+        "office.transaction.invalid_contract",
+        "validator '\{validator.name}' exceeds \{transaction_max_validator_findings} findings",
+        details=Json::object({
+          "validator": Json::string(validator.name),
+          "limit": Json::number(transaction_max_validator_findings.to_double()),
+          "actual": Json::number(findings.length().to_double()),
+        }),
+      )
+    }
     if !findings.is_empty() {
       raise transaction_error(
         "office.transaction.validation_failed",
@@ -311,17 +326,18 @@ fn validate_candidate(
 }
 
 ///|
-async fn cleanup_temp(path : String) -> Unit noraise {
-  @afs.remove(path) catch {
-    _ => ()
-  }
+async fn cleanup_temp(path : String) -> Unit {
+  @async.protect_from_cancel(
+    () => @afs.remove(path) catch { _ => () },
+    resume_on_cancel=true,
+  )
 }
 
 ///|
 async fn create_temp(
   destination : String,
   permission : Int,
-) -> (String, @afs.File) raise TransactionError {
+) -> (String, @afs.File) {
   let stamp = @env.now()
   for attempt in 0..<transaction_temp_attempts {
     let candidate = "\{destination}.office-tmp-\{stamp}-\{attempt}"
@@ -333,6 +349,7 @@ async fn create_temp(
       sync=NoSync,
     ) catch {
       @os_error.OSError(_) as error if error.is_EEXIST() => continue
+      error if @async.is_being_cancelled() => raise error
       error =>
         raise transaction_error(
           "office.transaction.temp_create_failed",
@@ -354,10 +371,14 @@ async fn create_temp(
 }
 
 ///|
-async fn sync_parent_directory(destination : String) -> Bool noraise {
+async fn sync_parent_directory(destination : String) -> Bool {
   let parent = path_parent(destination)
-  let directory = @afs.open(parent, mode=ReadOnly) catch { _ => return false }
+  let directory = @afs.open(parent, mode=ReadOnly) catch {
+    error if @async.is_being_cancelled() => raise error
+    _ => return false
+  }
   let synced = try directory.sync() catch {
+    error if @async.is_being_cancelled() => raise error
     _ => false
   } noraise {
     _ => true
@@ -370,8 +391,9 @@ async fn sync_parent_directory(destination : String) -> Bool noraise {
 async fn check_source_unchanged(
   source_target : String,
   original : Bytes,
-) -> Unit raise TransactionError {
+) -> Unit {
   let current = @afs.read_file(source_target).binary() catch {
+    error if @async.is_being_cancelled() => raise error
     _ =>
       raise transaction_error(
         "office.transaction.source_changed", "input disappeared or became unreadable before the in-place commit",
@@ -391,106 +413,106 @@ async fn publish_candidate(
   original : Bytes,
   candidate : Bytes,
   faults : TransactionFaults,
-) -> Bool raise TransactionError {
+) -> Bool {
   let (temp, file) = create_temp(policy.destination_target, options.permission)
-  if faults.fail_write {
+  try {
+    if faults.stall_after_temp {
+      @async.sleep(60_000)
+    }
+    if faults.fail_write {
+      raise transaction_error(
+        "office.transaction.write_failed", "injected temporary-file write failure",
+      )
+    }
+    file.write(candidate) catch {
+      error if @async.is_being_cancelled() => raise error
+      error =>
+        raise transaction_error(
+          "office.transaction.write_failed",
+          "could not write temporary package: \{bounded_text(error.to_string(), 240)}",
+        )
+    }
+    file.sync() catch {
+      error if @async.is_being_cancelled() => raise error
+      error =>
+        raise transaction_error(
+          "office.transaction.sync_failed",
+          "could not sync temporary package: \{bounded_text(error.to_string(), 240)}",
+        )
+    }
     file.close()
-    cleanup_temp(temp)
-    raise transaction_error(
-      "office.transaction.write_failed", "injected temporary-file write failure",
-    )
-  }
-  file.write(candidate) catch {
-    error => {
-      file.close()
-      cleanup_temp(temp)
-      raise transaction_error(
-        "office.transaction.write_failed",
-        "could not write temporary package: \{bounded_text(error.to_string(), 240)}",
-      )
-    }
-  }
-  file.sync() catch {
-    error => {
-      file.close()
-      cleanup_temp(temp)
-      raise transaction_error(
-        "office.transaction.sync_failed",
-        "could not sync temporary package: \{bounded_text(error.to_string(), 240)}",
-      )
-    }
-  }
-  file.close()
-  if policy.mode is InPlace {
-    match faults.concurrent_replacement {
-      Some(replacement) =>
-        @afs.write_file(
-          policy.source_target,
-          replacement,
-          create_mode=CreateOrTruncate,
-          permission=options.permission,
-        ) catch {
-          error => {
-            cleanup_temp(temp)
-            raise transaction_error(
-              "office.transaction.commit_failed",
-              "could not inject the concurrent-source test replacement: \{bounded_text(error.to_string(), 240)}",
-            )
+    if policy.mode is InPlace {
+      match faults.concurrent_replacement {
+        Some(replacement) =>
+          @afs.write_file(
+            policy.source_target,
+            replacement,
+            create_mode=CreateOrTruncate,
+            permission=options.permission,
+          ) catch {
+            error if @async.is_being_cancelled() => raise error
+            error =>
+              raise transaction_error(
+                "office.transaction.commit_failed",
+                "could not inject the concurrent-source test replacement: \{bounded_text(error.to_string(), 240)}",
+              )
           }
-        }
-      None => ()
+        None => ()
+      }
+      check_source_unchanged(policy.source_target, original) catch {
+        error if @async.is_being_cancelled() => raise error
+        error => raise error
+      }
     }
-    check_source_unchanged(policy.source_target, original) catch {
+    if policy.mode is Output {
+      match faults.concurrent_destination {
+        Some(replacement) =>
+          @afs.write_file(
+            policy.destination_target,
+            replacement,
+            create_mode=CreateNew,
+            permission=options.permission,
+          ) catch {
+            error if @async.is_being_cancelled() => raise error
+            error =>
+              raise transaction_error(
+                "office.transaction.commit_failed",
+                "could not inject the concurrent-destination test file: \{bounded_text(error.to_string(), 240)}",
+              )
+          }
+        None => ()
+      }
+    }
+    if faults.fail_rename {
+      raise transaction_error(
+        "office.transaction.commit_failed", "injected atomic-rename failure",
+      )
+    }
+    @afs.rename(temp, policy.destination_target, replace=policy.replace) catch {
+      error if @async.is_being_cancelled() => raise error
       error => {
-        cleanup_temp(temp)
-        raise error
-      }
-    }
-  }
-  if policy.mode is Output {
-    match faults.concurrent_destination {
-      Some(replacement) =>
-        @afs.write_file(
-          policy.destination_target,
-          replacement,
-          create_mode=CreateNew,
-          permission=options.permission,
-        ) catch {
-          error => {
-            cleanup_temp(temp)
-            raise transaction_error(
-              "office.transaction.commit_failed",
-              "could not inject the concurrent-destination test file: \{bounded_text(error.to_string(), 240)}",
-            )
-          }
+        let code = if policy.mode is Output && !policy.replace {
+          "office.transaction.output_exists"
+        } else {
+          "office.transaction.commit_failed"
         }
-      None => ()
-    }
-  }
-  if faults.fail_rename {
-    cleanup_temp(temp)
-    raise transaction_error(
-      "office.transaction.commit_failed", "injected atomic-rename failure",
-    )
-  }
-  @afs.rename(temp, policy.destination_target, replace=policy.replace) catch {
-    error => {
-      cleanup_temp(temp)
-      let code = if policy.mode is Output && !policy.replace {
-        "office.transaction.output_exists"
-      } else {
-        "office.transaction.commit_failed"
+        raise transaction_error(
+          code,
+          "could not atomically publish destination: \{bounded_text(error.to_string(), 240)}",
+          details=Json::object({
+            "output": Json::string(bounded_text(policy.output_path, 160)),
+          }),
+        )
       }
-      raise transaction_error(
-        code,
-        "could not atomically publish destination: \{bounded_text(error.to_string(), 240)}",
-        details=Json::object({
-          "output": Json::string(bounded_text(policy.output_path, 160)),
-        }),
-      )
+    }
+    sync_parent_directory(policy.destination_target)
+  } catch {
+    error => {
+      file.close()
+      cleanup_temp(temp)
+      raise error
     }
   }
-  sync_parent_directory(policy.destination_target)
 }
 
 ///|
@@ -531,7 +553,7 @@ async fn transact_with_faults(
   mutate : (@office.DocumentFormat, BytesView) -> TransactionMutation raise,
   validators : Array[TransactionValidator],
   faults : TransactionFaults,
-) -> TransactionReport raise TransactionError {
+) -> TransactionReport {
   validate_validator_set(validators)
   let policy = resolve_policy(options)
   let original = read_original(options, policy.source_target)
@@ -546,7 +568,7 @@ async fn transact_with_faults(
   }
   let validations = validate_candidate(
     format,
-    policy.output_path,
+    policy.destination_target,
     mutation,
     validators,
   )
@@ -587,6 +609,6 @@ pub async fn transact(
   options : TransactionOptions,
   mutate : (@office.DocumentFormat, BytesView) -> TransactionMutation raise,
   validators? : Array[TransactionValidator] = [],
-) -> TransactionReport raise TransactionError {
+) -> TransactionReport {
   transact_with_faults(options, mutate, validators, no_transaction_faults())
 }

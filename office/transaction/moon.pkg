@@ -1,6 +1,7 @@
 import {
   "bobzhang/office",
   "bobzhang/mbtexcel/zip",
+  "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/async/os_error",
   "moonbitlang/core/debug",
