@@ -279,6 +279,26 @@ fn normalize_manifest_part(value : String) -> String? {
 }
 
 ///|
+fn raw_unexpected_xml_attribute(
+  element : @xml.XmlElement,
+  allowed : ArrayView[String],
+) -> String? {
+  for name, _ in element.attributes {
+    let mut accepted = false
+    for expected in allowed {
+      if name == expected {
+        accepted = true
+        break
+      }
+    }
+    if !accepted {
+      return Some(name)
+    }
+  }
+  None
+}
+
+///|
 fn parse_content_types(
   names : Map[String, String],
   parts : Map[String, Bytes],
@@ -304,14 +324,42 @@ fn parse_content_types(
       "office.raw.invalid_package", "/[Content_Types].xml must use the exact OPC content-types namespace",
     )
   }
+  match raw_unexpected_xml_attribute(root, []) {
+    Some(name) =>
+      raise raw_error(
+        "office.raw.invalid_package",
+        "/[Content_Types].xml root has undeclared attribute '\{bounded_raw_text(name, 120)}'",
+      )
+    None => ()
+  }
   let defaults : Map[String, String] = Map([])
   let overrides : Map[String, String] = Map([])
   let mut records = 0
   for child in root.children {
     match child {
+      XmlText(text) =>
+        if !text.trim().is_empty() {
+          raise raw_error(
+            "office.raw.invalid_package", "/[Content_Types].xml contains unexpected text",
+          )
+        }
       XmlElement(element) =>
         match element.name {
           name if name == content_types_default => {
+            match
+              raw_unexpected_xml_attribute(element, ["Extension", "ContentType"]) {
+              Some(attribute) =>
+                raise raw_error(
+                  "office.raw.invalid_package",
+                  "content-type Default has undeclared attribute '\{bounded_raw_text(attribute, 120)}'",
+                )
+              None => ()
+            }
+            if raw_xml_element_has_content(element) {
+              raise raw_error(
+                "office.raw.invalid_package", "content-type Default must be an empty element",
+              )
+            }
             records = records + 1
             if records > raw_max_manifest_records {
               raise raw_xml_resource_limit(
@@ -321,7 +369,7 @@ fn parse_content_types(
             let extension = element.attributes.get("Extension")
             let content_type = element.attributes.get("ContentType")
             match (extension, content_type) {
-              (Some(ext), Some(kind)) => {
+              (Some(ext), Some(kind)) if ext != "" && kind != "" => {
                 if ext.length() > raw_max_manifest_extension_length {
                   raise raw_xml_resource_limit(
                     actual_name,
@@ -347,10 +395,27 @@ fn parse_content_types(
                 }
                 defaults[key] = kind
               }
-              _ => ()
+              _ =>
+                raise raw_error(
+                  "office.raw.invalid_package", "content-type Default must declare non-empty Extension and ContentType attributes",
+                )
             }
           }
           name if name == content_types_override => {
+            match
+              raw_unexpected_xml_attribute(element, ["PartName", "ContentType"]) {
+              Some(attribute) =>
+                raise raw_error(
+                  "office.raw.invalid_package",
+                  "content-type Override has undeclared attribute '\{bounded_raw_text(attribute, 120)}'",
+                )
+              None => ()
+            }
+            if raw_xml_element_has_content(element) {
+              raise raw_error(
+                "office.raw.invalid_package", "content-type Override must be an empty element",
+              )
+            }
             records = records + 1
             if records > raw_max_manifest_records {
               raise raw_xml_resource_limit(
@@ -360,7 +425,7 @@ fn parse_content_types(
             let part = element.attributes.get("PartName")
             let content_type = element.attributes.get("ContentType")
             match (part, content_type) {
-              (Some(name), Some(kind)) => {
+              (Some(name), Some(kind)) if name != "" && kind != "" => {
                 // OPC PartName includes its required leading slash; the
                 // supported archive/transaction name limit does not.
                 if !raw_text_within_scalar_limit(
@@ -393,15 +458,24 @@ fn parse_content_types(
                     }
                     overrides[key] = kind
                   }
-                  None => ()
+                  None =>
+                    raise raw_error(
+                      "office.raw.invalid_package",
+                      "content-type Override has invalid PartName '\{bounded_raw_text(name, 120)}'",
+                    )
                 }
               }
-              _ => ()
+              _ =>
+                raise raw_error(
+                  "office.raw.invalid_package", "content-type Override must declare non-empty PartName and ContentType attributes",
+                )
             }
           }
-          _ => ()
+          _ =>
+            raise raw_error(
+              "office.raw.invalid_package", "/[Content_Types].xml contains an unexpected element",
+            )
         }
-      _ => ()
     }
   }
   { defaults, overrides }
@@ -652,6 +726,14 @@ fn parse_relationships(
       "relationship part '/\{canonical}' must use the exact OPC relationships namespace",
     )
   }
+  match raw_unexpected_xml_attribute(root, []) {
+    Some(name) =>
+      raise raw_error(
+        "office.raw.invalid_relationship",
+        "relationship part '/\{canonical}' root has undeclared attribute '\{bounded_raw_text(name, 120)}'",
+      )
+    None => ()
+  }
   let output : Array[RawRelationship] = []
   let ids : Set[String] = Set([])
   let mut records = 0
@@ -670,6 +752,17 @@ fn parse_relationships(
             "office.raw.invalid_relationship",
             "relationship part '/\{canonical}' contains an unexpected element",
           )
+        }
+        match
+          raw_unexpected_xml_attribute(element, [
+            "Id", "Type", "Target", "TargetMode",
+          ]) {
+          Some(name) =>
+            raise raw_error(
+              "office.raw.invalid_relationship",
+              "relationship in '/\{canonical}' has undeclared attribute '\{bounded_raw_text(name, 120)}'",
+            )
+          None => ()
         }
         if raw_xml_element_has_content(element) {
           raise raw_error(

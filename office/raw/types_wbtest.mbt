@@ -12,6 +12,9 @@ test "raw text limits count Unicode scalars without eager character arrays" {
   let exact = "😀".repeat(1024)
   assert_true(raw_text_within_scalar_limit(exact, 1024))
   assert_false(raw_text_within_scalar_limit(exact + "😀", 1024))
+  let malformed = String::from_array([(0xD800).unsafe_to_char()])
+  assert_false(raw_text_is_well_formed(malformed))
+  assert_eq(bounded_raw_text(malformed, 80), "<invalid UTF-16>")
 }
 
 ///|

@@ -27,6 +27,90 @@ test "raw path parser rejects an adversarial grammar corpus deterministically" {
 }
 
 ///|
+test "raw public text boundaries reject malformed UTF-16 before encoding" {
+  let original = @word.new_blank_docx()
+  let malformed = String::from_array([(0xD800).unsafe_to_char()])
+  assert_eq(
+    raw_error_code(() => @raw.raw_edit_request(malformed, "/w:document", Remove)),
+    "office.raw.invalid_part",
+  )
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_edit_request("/document", "/" + malformed, Remove)
+    }),
+    "office.raw.invalid_path",
+  )
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_edit_request(
+        "/document",
+        "/w:document/w:body",
+        Append,
+        xml="<w:p>" + malformed + "</w:p>",
+      )
+    }),
+    "office.raw.invalid_fragment",
+  )
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_edit_request(
+        "/document",
+        "/w:document",
+        SetAttribute,
+        attribute="test" + malformed,
+        value="value",
+      )
+    }),
+    "office.raw.invalid_attribute",
+  )
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_edit_request(
+        "/document",
+        "/w:document",
+        SetAttribute,
+        attribute="test",
+        value="value" + malformed,
+      )
+    }),
+    "office.raw.invalid_attribute",
+  )
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_replace_part(
+        Docx,
+        original,
+        "/document",
+        "<w:document xmlns:w=\"\{word_namespace}\">" +
+        malformed +
+        "</w:document>",
+      )
+    }),
+    "office.raw.invalid_xml",
+  )
+  assert_eq(
+    raw_error_code(() => @raw.raw_namespace_binding("p=" + malformed)),
+    "office.raw.invalid_namespace",
+  )
+}
+
+///|
+test "raw path limits count Unicode scalar values" {
+  let supplementary_name = "𐀀".repeat(2047)
+  ignore(@raw.raw_edit_request("/document", "/" + supplementary_name, Remove))
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_edit_request(
+        "/document",
+        "/" + supplementary_name + "𐀀",
+        Remove,
+      )
+    }),
+    "office.raw.invalid_path",
+  )
+}
+
+///|
 test "raw fragment scanner rejects declarations entities and malformed roots" {
   let original = @word.new_blank_docx()
   let cases = [

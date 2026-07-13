@@ -912,6 +912,46 @@ test "raw resolver rejects collisions and namespace-spoofed OPC metadata before 
     "office.raw.invalid_package",
   )
 
+  let manifest_root_attribute = raw_test_transform_xml_entry(
+    original,
+    "[Content_Types].xml",
+    text => text.replace(old="<Types ", new="<Types Vendor=\"x\" "),
+  )
+  assert_eq(
+    raw_inventory_error(manifest_root_attribute).0,
+    "office.raw.invalid_package",
+  )
+
+  let default_attribute = raw_test_transform_xml_entry(
+    original,
+    "[Content_Types].xml",
+    text => text.replace(old="<Default ", new="<Default Vendor=\"x\" "),
+  )
+  assert_eq(
+    raw_inventory_error(default_attribute).0,
+    "office.raw.invalid_package",
+  )
+
+  let override_attribute = raw_test_transform_xml_entry(
+    original,
+    "[Content_Types].xml",
+    text => text.replace(old="<Override ", new="<Override Vendor=\"x\" "),
+  )
+  assert_eq(
+    raw_inventory_error(override_attribute).0,
+    "office.raw.invalid_package",
+  )
+
+  let unexpected_manifest_child = raw_test_transform_xml_entry(
+    original,
+    "[Content_Types].xml",
+    text => text.replace(old="</Types>", new="<Unexpected/></Types>"),
+  )
+  assert_eq(
+    raw_inventory_error(unexpected_manifest_child).0,
+    "office.raw.invalid_package",
+  )
+
   let duplicate_default = raw_test_transform_xml_entry(
     original,
     "[Content_Types].xml",
@@ -939,6 +979,30 @@ test "raw resolver rejects collisions and namespace-spoofed OPC metadata before 
   )
   assert_eq(
     raw_inventory_error(wrong_relationship_namespace).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let relationship_root_attribute = raw_test_transform_xml_entry(
+    original,
+    "_rels/.rels",
+    text => {
+      text.replace(old="<Relationships ", new="<Relationships Vendor=\"x\" ")
+    },
+  )
+  assert_eq(
+    raw_inventory_error(relationship_root_attribute).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let relationship_attribute = raw_test_transform_xml_entry(
+    original,
+    "_rels/.rels",
+    text => {
+      text.replace(old="<Relationship ", new="<Relationship Vendor=\"x\" ")
+    },
+  )
+  assert_eq(
+    raw_inventory_error(relationship_attribute).0,
     "office.raw.invalid_relationship",
   )
 
