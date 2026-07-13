@@ -25,7 +25,7 @@ fn declared_contains(declared : ReadOnlyArray[String], part : String) -> Bool {
 ///|
 fn preservation_report_archives(
   original : BytesView,
-  mutation : TransactionMutation,
+  mutation : ResolvedTransactionMutation,
   original_archive : @zip.Archive,
   candidate_archive : @zip.Archive,
 ) -> PreservationReport raise TransactionError {

@@ -5,6 +5,22 @@ let sdk_word_namespace = "http://schemas.openxmlformats.org/wordprocessingml/200
 let sdk_sheet_namespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 
 ///|
+fn sdk_raw_transaction_mutation(
+  mutation : @raw.RawMutation,
+  original : Bytes,
+) -> @transaction.TransactionMutation raise @transaction.TransactionError {
+  let declared_parts = [mutation.part_name()]
+  if mutation.reuses_original() {
+    @transaction.transaction_reuse_original_with_manifest(declared_parts)
+  } else {
+    @transaction.transaction_mutation_with_manifest(
+      mutation.result_bytes(original),
+      declared_parts,
+    )
+  }
+}
+
+///|
 async fn sdk_write_raw(path : String, bytes : Bytes) -> Unit {
   @afs.write_file(path, bytes, create_mode=CreateNew, permission=0o600)
 }
@@ -53,10 +69,7 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
           docx_request,
           max_package_bytes=budget.max_candidate_package_bytes(),
         )
-        @transaction.transaction_mutation_with_manifest(
-          mutation.result_bytes(original),
-          [mutation.part_name()],
-        )
+        sdk_raw_transaction_mutation(mutation, original)
       },
       identifier~,
     )
@@ -90,10 +103,7 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
           xlsx_request,
           max_package_bytes=budget.max_candidate_package_bytes(),
         )
-        @transaction.transaction_mutation_with_manifest(
-          mutation.result_bytes(original),
-          [mutation.part_name()],
-        )
+        sdk_raw_transaction_mutation(mutation, original)
       },
       identifier~,
     )

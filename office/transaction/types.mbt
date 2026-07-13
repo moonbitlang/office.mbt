@@ -409,8 +409,10 @@ pub struct TransactionBudget {
 
 ///|
 /// Returns the largest serialized candidate the callback may materialize.
-/// Returning the supplied immutable original `Bytes` is the zero-allocation
-/// path for a true no-op.
+/// Returning `transaction_reuse_original*` avoids a candidate-package
+/// allocation for a true no-op. Passing any bytes to `transaction_mutation*`,
+/// including the supplied input value, declares a serialized candidate and
+/// consumes this allowance.
 pub fn TransactionBudget::max_candidate_package_bytes(
   self : TransactionBudget,
 ) -> Int {
@@ -503,28 +505,45 @@ fn TransactionValidator::run(
 }
 
 ///|
-/// Candidate package bytes, optional mutation warnings, and an optional exact
-/// allowlist of archive parts that may change, be added, or be removed.
+priv enum TransactionMutationResult {
+  ReuseOriginal
+  Serialized(Bytes)
+}
+
+///|
+/// An opaque mutation result, optional mutation warnings, and an optional exact
+/// allowlist of archive parts that may change, be added, or be removed. Build
+/// values with the `transaction_mutation*` or `transaction_reuse_original*`
+/// constructors so the transaction can distinguish allocated candidates from
+/// an explicit unchanged result without relying on backend object identity.
 pub struct TransactionMutation {
+  priv result : TransactionMutationResult
+  priv declared_parts : ReadOnlyArray[String]?
+  priv warnings : ReadOnlyArray[@office.ProtocolWarning]
+}
+
+///|
+priv struct ResolvedTransactionMutation {
   bytes : Bytes
   declared_parts : ReadOnlyArray[String]?
   warnings : ReadOnlyArray[@office.ProtocolWarning]
 }
 
 ///|
-fn TransactionMutation::canonicalize_equal_bytes_to_original(
+fn TransactionMutation::resolve_against_original(
   self : TransactionMutation,
   original : Bytes,
-) -> TransactionMutation {
-  if self.bytes == original {
-    {
-      bytes: original,
-      declared_parts: self.declared_parts,
-      warnings: self.warnings,
-    }
-  } else {
-    self
+) -> ResolvedTransactionMutation {
+  let bytes = match self.result {
+    ReuseOriginal => original
+    Serialized(candidate) =>
+      if candidate == original {
+        original
+      } else {
+        candidate
+      }
   }
+  { bytes, declared_parts: self.declared_parts, warnings: self.warnings }
 }
 
 ///|
@@ -614,24 +633,64 @@ fn checked_parts(
 }
 
 ///|
-/// Builds a candidate without a declared-part preservation allowlist.
+/// Builds a serialized candidate without a declared-part preservation
+/// allowlist. The returned bytes always consume candidate-package allowance,
+/// even when they are content-equal to the transaction input. Use
+/// `transaction_reuse_original` for an unchanged result with no candidate
+/// package bytes.
 pub fn transaction_mutation(
   bytes : Bytes,
   warnings? : Array[@office.ProtocolWarning] = [],
 ) -> TransactionMutation raise TransactionError {
-  { bytes, declared_parts: None, warnings: checked_warnings(warnings) }
+  {
+    result: Serialized(bytes),
+    declared_parts: None,
+    warnings: checked_warnings(warnings),
+  }
 }
 
 ///|
-/// Builds a candidate whose changed/added/removed ZIP entries must all appear
-/// in `declared_parts`. Passing an empty array asserts payload-level no-op.
+/// Builds a serialized candidate whose changed/added/removed ZIP entries must
+/// all appear in `declared_parts`. The returned bytes always consume candidate
+/// allowance. Passing an empty array asserts payload-level no-op after the
+/// candidate has been charged.
 pub fn transaction_mutation_with_manifest(
   bytes : Bytes,
   declared_parts : Array[String],
   warnings? : Array[@office.ProtocolWarning] = [],
 ) -> TransactionMutation raise TransactionError {
   {
-    bytes,
+    result: Serialized(bytes),
+    declared_parts: Some(checked_parts(declared_parts)),
+    warnings: checked_warnings(warnings),
+  }
+}
+
+///|
+/// Declares an unchanged result with no candidate package bytes. The transaction
+/// resolves it to the exact current input buffer that it owns, so callers cannot
+/// substitute a stale or separately allocated buffer.
+pub fn transaction_reuse_original(
+  warnings? : Array[@office.ProtocolWarning] = [],
+) -> TransactionMutation raise TransactionError {
+  {
+    result: ReuseOriginal,
+    declared_parts: None,
+    warnings: checked_warnings(warnings),
+  }
+}
+
+///|
+/// Declares an unchanged result with no candidate package bytes while retaining
+/// a checked preservation manifest for deterministic reporting and contract
+/// validation. The transaction supplies its own exact current input bytes
+/// during resolve.
+pub fn transaction_reuse_original_with_manifest(
+  declared_parts : Array[String],
+  warnings? : Array[@office.ProtocolWarning] = [],
+) -> TransactionMutation raise TransactionError {
+  {
+    result: ReuseOriginal,
     declared_parts: Some(checked_parts(declared_parts)),
     warnings: checked_warnings(warnings),
   }

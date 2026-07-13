@@ -22,6 +22,10 @@ pub fn transaction_mutation_with_manifest(Bytes, Array[String], warnings? : Arra
 
 pub fn transaction_options(String, output_path? : String, dry_run? : Bool, overwrite? : Bool, permission? : Int) -> TransactionOptions raise TransactionError
 
+pub fn transaction_reuse_original(warnings? : Array[@office.ProtocolWarning]) -> TransactionMutation raise TransactionError
+
+pub fn transaction_reuse_original_with_manifest(Array[String], warnings? : Array[@office.ProtocolWarning]) -> TransactionMutation raise TransactionError
+
 pub fn transaction_validator(String, (@office.DocumentFormat, BytesView, @zip.Archive) -> Array[ValidationFinding] raise) -> TransactionValidator raise TransactionError
 
 pub fn validation_finding(String, String) -> ValidationFinding raise TransactionError
@@ -72,9 +76,7 @@ pub fn TransactionMode::not_equal(Self, Self) -> Bool
 pub fn TransactionMode::to_repr(Self) -> @debug.Repr
 
 pub struct TransactionMutation {
-  bytes : Bytes
-  declared_parts : ReadOnlyArray[String]?
-  warnings : ReadOnlyArray[@office.ProtocolWarning]
+  // private fields
 }
 
 pub struct TransactionOptions {

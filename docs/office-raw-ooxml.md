@@ -160,7 +160,8 @@ CRC, size, descriptor, and offset fields. Filename bytes, flags, versions,
 timestamps, custom extras, comments, attributes, ZIP64 layout, local-record
 order, central-directory order, and archive comment are preserved. Replacing
 a payload with identical bytes returns an explicit reuse-original result before
-ZIP sizing, so the transaction keeps the immutable source package without
+ZIP sizing. The CLI maps that state to the transaction's opaque reuse-original
+result, so the transaction substitutes its own immutable source package without
 allocating or serializing another package-sized buffer.
 
 ## Validation and publication
