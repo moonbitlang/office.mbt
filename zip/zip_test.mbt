@@ -115,6 +115,22 @@ test "zip read_limited rejects entry count and aggregate expansion" {
 }
 
 ///|
+test "zip local-record overlap validation scales to large valid archives" {
+  let entry_count = 32_768
+  let archive = @zip.Archive::new()
+  for index in 0..<entry_count {
+    archive.add("entry-\{index}.txt", b"")
+  }
+  let parsed = @zip.read_limited(
+    @zip.write(archive),
+    max_entries=entry_count,
+    max_entry_uncompressed_bytes=0,
+    max_total_uncompressed_bytes=0,
+  )
+  assert_eq(parsed.entries().length(), entry_count)
+}
+
+///|
 test "zip read_limited rejects deflate output beyond a lying declaration" {
   let archive = @zip.Archive::new()
   let data : Array[Byte] = []

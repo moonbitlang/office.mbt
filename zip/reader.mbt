@@ -196,6 +196,13 @@ priv struct EntryMeta {
 }
 
 ///|
+priv struct LocalRecord {
+  compressed : BytesView
+  compression : Compression
+  end : Int
+}
+
+///|
 fn decode_name(bytes : BytesView, offset : Int) -> String raise ZipError {
   @encoding/utf8.decode(bytes) catch {
     _ => raise InvalidUtf8(offset~)
@@ -427,15 +434,11 @@ fn data_descriptor_record_size(
 }
 
 ///|
-fn read_entry_data(
+fn read_entry_record(
   bytes : BytesView,
   meta : EntryMeta,
   central_offset : Int,
-  max_uncompressed_bytes : Int?,
-  limit_kind : String,
-  reported_limit : Int,
-  actual_base : Int,
-) -> (Bytes, Int) raise ZipError {
+) -> LocalRecord raise ZipError {
   if meta.local_header_offset < 0 || meta.local_header_offset >= central_offset {
     raise OutOfBounds(offset=meta.local_header_offset)
   }
@@ -519,18 +522,33 @@ fn read_entry_data(
     )
     reader.skip(descriptor_size)
   }
-  let data = match compression {
+  { compressed, compression, end: reader.pos }
+}
+
+///|
+fn materialize_entry_data(
+  record : LocalRecord,
+  meta : EntryMeta,
+  max_uncompressed_bytes : Int?,
+  limit_kind : String,
+  reported_limit : Int,
+  actual_base : Int,
+) -> Bytes raise ZipError {
+  let data = match record.compression {
     Store => {
       match max_uncompressed_bytes {
-        Some(limit) if compressed.length() > limit =>
+        Some(limit) if record.compressed.length() > limit =>
           raise ResourceLimitExceeded(
             kind=limit_kind,
             limit=reported_limit,
-            actual=resource_actual_with_base(actual_base, compressed.length()),
+            actual=resource_actual_with_base(
+              actual_base,
+              record.compressed.length(),
+            ),
           )
         _ => ()
       }
-      compressed.to_owned()
+      record.compressed.to_owned()
     }
     Deflate => {
       // Allow legitimately large declared entries, but keep a hard ceiling so a
@@ -544,7 +562,7 @@ fn read_entry_data(
             deflate_max_output_default
           }
       }
-      deflate_decode(compressed, max_output~) catch {
+      deflate_decode(record.compressed, max_output~) catch {
         OutputLimitExceeded(limit~) =>
           match max_uncompressed_bytes {
             Some(_) =>
@@ -567,7 +585,7 @@ fn read_entry_data(
       msg="decoded data length does not match central size",
     )
   }
-  (data, reader.pos)
+  data
 }
 
 ///|
@@ -824,10 +842,31 @@ fn read_impl(
   if central_reader.pos != central_size {
     raise UnsupportedFeature(msg="central directory size/count mismatch")
   }
+  let records : Array[LocalRecord] = Array::new(capacity=metas.length())
+  let local_intervals : Array[(Int, Int)] = Array::new(capacity=metas.length())
+  for meta in metas {
+    let record = read_entry_record(bytes, meta, central_offset)
+    records.push(record)
+    local_intervals.push((meta.local_header_offset, record.end))
+  }
+  local_intervals.sort_by((left, right) => {
+    let by_start = left.0.compare(right.0)
+    if by_start != 0 {
+      by_start
+    } else {
+      left.1.compare(right.1)
+    }
+  })
+  for index in 1..<local_intervals.length() {
+    if local_intervals[index].0 < local_intervals[index - 1].1 {
+      raise UnsupportedFeature(msg="overlapping zip local records")
+    }
+  }
   let archive = Archive::new()
   let mut actual_total = 0
-  let local_intervals : Array[(Int, Int)] = []
-  for meta in metas {
+  for index in 0..<metas.length() {
+    let meta = metas[index]
+    let record = records[index]
     ignore(compression_from_method(meta.compression_method))
     let mut materialize_limit = max_entry_uncompressed_bytes
     let mut limit_kind = "entry_uncompressed_bytes"
@@ -851,18 +890,9 @@ fn read_impl(
       }
       None => ()
     }
-    let local_start = meta.local_header_offset
-    let (data, local_end) = read_entry_data(
-      bytes, meta, central_offset, materialize_limit, limit_kind, reported_limit,
-      actual_base,
+    let data = materialize_entry_data(
+      record, meta, materialize_limit, limit_kind, reported_limit, actual_base,
     )
-    for interval in local_intervals {
-      let (existing_start, existing_end) = interval
-      if local_start < existing_end && existing_start < local_end {
-        raise UnsupportedFeature(msg="overlapping zip local records")
-      }
-    }
-    local_intervals.push((local_start, local_end))
     match max_total_uncompressed_bytes {
       Some(limit) if data.length() > limit - actual_total =>
         raise ResourceLimitExceeded(
