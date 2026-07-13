@@ -165,7 +165,7 @@ fails before opening a transaction, and the in-place input remains byte-exact.
 
   $ office.exe raw edit input.docx /document --path '/w:document/w:body/w:p[1]' --action set-attribute --attribute w:rsidR --value DEADBEEF --out edited.docx --json | jq -c '{success,action:.data.change.action,committed:.data.transaction.committed,changed:.data.transaction.preservation.changed}'
   {"success":true,"action":"set-attribute","committed":true,"changed":["word/document.xml"]}
-  $ unzip -p edited.docx word/document.xml | rg -o 'w:rsidR="[^"]+"' | head -1
+  $ unzip -p edited.docx word/document.xml | grep -o 'w:rsidR="[^"]*"' | head -1
   w:rsidR="DEADBEEF"
   $ cmp before.docx input.docx; echo $?
   0
@@ -177,7 +177,7 @@ syntax retains the raw subsystem's stable error code through the transaction.
   $ sed 's/Walking on imported air/CLI replace/' original.xml > replacement.xml
   $ office.exe raw replace input.docx /document --xml-file replacement.xml --out replaced.docx --json | jq -c '{success,action:.data.change.action,part:.data.change.part,changed:.data.transaction.preservation.changed}'
   {"success":true,"action":"replace-part","part":"/word/document.xml","changed":["word/document.xml"]}
-  $ unzip -p replaced.docx word/document.xml | rg -o 'CLI replace'
+  $ unzip -p replaced.docx word/document.xml | grep -o 'CLI replace'
   CLI replace
 
   $ office.exe raw edit input.docx /document --path '//w:p' --action remove --dry-run --json > invalid-path.json 2>&1; echo $?
