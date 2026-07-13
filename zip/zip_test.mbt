@@ -142,6 +142,12 @@ test "zip read_limited rejects deflate output beyond a lying declaration" {
   raw[central + 25] = (0).to_byte()
   raw[central + 26] = (0).to_byte()
   raw[central + 27] = (0).to_byte()
+  // Keep the local and central declarations bound while lying about the
+  // inflated length; the streaming ceiling must still stop materialization.
+  raw[22] = (16).to_byte()
+  raw[23] = (0).to_byte()
+  raw[24] = (0).to_byte()
+  raw[25] = (0).to_byte()
   try
     @zip.read_limited(
       Bytes::from_array(raw),
