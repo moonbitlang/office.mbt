@@ -20,6 +20,18 @@ let transaction_max_warnings = 64
 let transaction_max_validator_findings = 64
 
 ///|
+let transaction_max_error_detail_depth = 8
+
+///|
+let transaction_max_error_detail_nodes = 256
+
+///|
+let transaction_max_error_detail_collection = 64
+
+///|
+let transaction_max_error_detail_text = 1024
+
+///|
 priv enum TextScan {
   Valid
   TooLong
@@ -101,12 +113,113 @@ fn transaction_error(
 }
 
 ///|
+fn is_transaction_error_code(code : String) -> Bool {
+  let code_prefix = "office.transaction."
+  if !code.has_prefix(code_prefix) ||
+    code.length() == code_prefix.length() ||
+    !(scan_text(code, transaction_max_identifier_length) is Valid) {
+    return false
+  }
+  let suffix = code[code_prefix.length():]
+  if suffix.has_prefix(".") || suffix.has_suffix(".") || suffix.contains("..") {
+    return false
+  }
+  for character in code {
+    if !is_identifier_character(character) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn bounded_error_details(
+  value : Json,
+  depth : Int,
+  remaining : Ref[Int],
+) -> Bool {
+  if depth > transaction_max_error_detail_depth || remaining.val <= 0 {
+    return false
+  }
+  remaining.val = remaining.val - 1
+  match value {
+    String(text) => scan_text(text, transaction_max_error_detail_text) is Valid
+    Number(_, repr~) =>
+      match repr {
+        Some(text) => scan_text(text, 64) is Valid
+        None => true
+      }
+    Array(values) => {
+      if values.length() > transaction_max_error_detail_collection {
+        return false
+      }
+      for item in values {
+        if !bounded_error_details(item, depth + 1, remaining) {
+          return false
+        }
+      }
+      true
+    }
+    Object(fields) => {
+      if fields.length() > transaction_max_error_detail_collection {
+        return false
+      }
+      for key, item in fields {
+        if !(scan_text(key, transaction_max_identifier_length) is Valid) ||
+          !bounded_error_details(item, depth + 1, remaining) {
+          return false
+        }
+      }
+      true
+    }
+    Null | True | False => true
+  }
+}
+
+///|
+fn normalize_transaction_error(
+  error : TransactionError,
+  invalid_code : String,
+  invalid_message : String,
+) -> TransactionError {
+  let TransactionError(code~, message~, details~) = error
+  if !is_transaction_error_code(code) {
+    return transaction_error(invalid_code, invalid_message)
+  }
+  let safe_details = match details {
+    Some(value) => {
+      let remaining = Ref(transaction_max_error_detail_nodes)
+      if bounded_error_details(value, 0, remaining) {
+        Some(value)
+      } else {
+        None
+      }
+    }
+    None => None
+  }
+  match safe_details {
+    Some(value) => transaction_error(code, message, details=value)
+    None => transaction_error(code, message)
+  }
+}
+
+///|
+fn normalize_mutation_error(error : TransactionError) -> TransactionError {
+  normalize_transaction_error(
+    error, "office.transaction.mutation_failed", "mutation callback raised an invalid TransactionError code",
+  )
+}
+
+///|
 /// Converts a transaction failure into the shared `office.output/1` error
 /// contract used by canonical CLI handlers.
 pub fn TransactionError::to_protocol_error(
   self : TransactionError,
 ) -> @office.ProtocolError {
-  match self {
+  let normalized = normalize_transaction_error(
+    self, "office.transaction.invalid_contract", "TransactionError code is outside the office.transaction namespace",
+  )
+  match normalized {
     TransactionError(code~, message~, details~) =>
       match details {
         Some(value) => @office.protocol_error(code, message, details=value)

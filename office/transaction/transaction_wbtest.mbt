@@ -70,6 +70,7 @@ async test "injected write and rename failures clean temporary artifacts" {
         fail_write: true,
         fail_rename: false,
         stall_after_temp: false,
+        post_rename_release: None,
         concurrent_replacement: None,
         concurrent_destination: None,
       })
@@ -87,6 +88,7 @@ async test "injected write and rename failures clean temporary artifacts" {
           fail_write: false,
           fail_rename: true,
           stall_after_temp: false,
+          post_rename_release: None,
           concurrent_replacement: None,
           concurrent_destination: None,
         },
@@ -120,6 +122,7 @@ async test "task cancellation waits for temporary-file cleanup" {
             fail_write: false,
             fail_rename: false,
             stall_after_temp: true,
+            post_rename_release: None,
             concurrent_replacement: None,
             concurrent_destination: None,
           },
@@ -153,6 +156,56 @@ async test "task cancellation waits for temporary-file cleanup" {
 }
 
 ///|
+async test "post-rename cancellation still returns a committed report" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let release = "\{directory}/release"
+    let original = @word.new_blank_docx()
+    let candidate = wb_rewrite_content_types(original, "committed")
+    wb_write(input, original)
+    @async.with_task_group() <| group => {
+      let task = group.spawn(() => {
+        transact_with_faults(
+          transaction_options(input, output_path=output),
+          (_format, _bytes) => {
+            transaction_mutation_with_manifest(candidate, [
+              "[Content_Types].xml",
+            ])
+          },
+          [],
+          {
+            fail_write: false,
+            fail_rename: false,
+            stall_after_temp: false,
+            post_rename_release: Some(release),
+            concurrent_replacement: None,
+            concurrent_destination: None,
+          },
+        )
+      })
+      let mut observed_commit = false
+      for _ in 0..<1_000 {
+        if @afs.exists(output) {
+          observed_commit = true
+          break
+        }
+        @async.pause()
+      }
+      assert_true(observed_commit)
+      task.cancel()
+      wb_write(release, b"release")
+      let report = task.wait()
+      assert_true(report.committed)
+      assert_true(report.changed)
+    }
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_eq(@afs.read_file(output).binary(), candidate)
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
 async test "concurrent in-place source change is never overwritten" {
   wb_with_transaction_dir(directory => {
     let input = "\{directory}/input.docx"
@@ -173,6 +226,7 @@ async test "concurrent in-place source change is never overwritten" {
           fail_write: false,
           fail_rename: false,
           stall_after_temp: false,
+          post_rename_release: None,
           concurrent_replacement: Some(concurrent),
           concurrent_destination: None,
         },
@@ -206,6 +260,7 @@ async test "concurrent no-replace destination wins the race" {
           fail_write: false,
           fail_rename: false,
           stall_after_temp: false,
+          post_rename_release: None,
           concurrent_replacement: None,
           concurrent_destination: Some(concurrent),
         },
