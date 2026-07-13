@@ -75,6 +75,25 @@ test "validators, findings, and warnings are bounded contracts" {
 }
 
 ///|
+test "mutation failures preserve checked office subsystem codes" {
+  let failure = @transaction.transaction_failure(
+    "office.raw.invalid_path",
+    "invalid bounded raw path",
+    details=Json::object({ "offset": Json::number(3) }),
+  )
+  inspect(
+    failure.to_protocol_error().code,
+    content="office.raw.invalid_path",
+  )
+  assert_eq(
+    contract_error_code(() => {
+      @transaction.transaction_failure("raw.invalid_path", "invalid")
+    }),
+    "office.transaction.invalid_contract",
+  )
+}
+
+///|
 test "preservation manifests require bounded canonical unique ZIP names" {
   for invalid in ["", "/root.xml", "a\\b.xml", "a//b.xml", "a/../b.xml"] {
     assert_eq(
@@ -143,7 +162,7 @@ test "transaction errors retain stable A2 codes with and without details" {
     "success": false,
     "error": {
       "code": "office.transaction.invalid_contract",
-      "message": "TransactionError code is outside the office.transaction namespace",
+      "message": "TransactionError code is outside the bounded office.* namespace",
     },
   })
 }
