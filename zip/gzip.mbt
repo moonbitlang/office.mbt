@@ -21,11 +21,11 @@ fn read_u32_le(bytes : BytesView, offset : Int) -> UInt raise ZipError {
 }
 
 ///|
-fn gzip_push_u32_le(out : Array[Byte], value : UInt) -> Unit {
-  out.push((value & 0xFF).to_byte())
-  out.push(((value >> 8) & 0xFF).to_byte())
-  out.push(((value >> 16) & 0xFF).to_byte())
-  out.push(((value >> 24) & 0xFF).to_byte())
+fn gzip_push_u32_le(out : FixedByteOutput, value : UInt) -> Unit raise ZipError {
+  out.write_byte((value & 0xFF).to_byte())
+  out.write_byte(((value >> 8) & 0xFF).to_byte())
+  out.write_byte(((value >> 16) & 0xFF).to_byte())
+  out.write_byte(((value >> 24) & 0xFF).to_byte())
 }
 
 ///|
@@ -104,26 +104,30 @@ pub fn gunzip(bytes : BytesView) -> Bytes raise ZipError {
 
 ///|
 pub fn gzip(bytes : BytesView) -> Bytes raise ZipError {
-  let out : Array[Byte] = []
+  let compressed_size = deflate_encoded_size(bytes)
+  if compressed_size > 0x7fffffff - 18 {
+    raise UnsupportedFeature(msg="gzip output size exceeds the Int range")
+  }
+  let out = FixedByteOutput::allocated(10 + compressed_size + 8)
   // ID1 ID2 CM FLG MTIME(4) XFL OS
-  out.push((0x1F).to_byte())
-  out.push((0x8B).to_byte())
-  out.push((0x08).to_byte())
-  out.push((0x00).to_byte())
-  out.push((0x00).to_byte())
-  out.push((0x00).to_byte())
-  out.push((0x00).to_byte())
-  out.push((0x00).to_byte())
-  out.push((0x00).to_byte())
-  out.push((0xFF).to_byte())
-  let compressed = deflate_encode(bytes)
-  for b in compressed {
-    out.push(b)
+  out.write_byte(0x1F)
+  out.write_byte(0x8B)
+  out.write_byte(0x08)
+  out.write_byte(0x00)
+  out.write_byte(0x00)
+  out.write_byte(0x00)
+  out.write_byte(0x00)
+  out.write_byte(0x00)
+  out.write_byte(0x00)
+  out.write_byte(0xFF)
+  let actual_size = deflate_encode_to_output(bytes, out)
+  if actual_size != compressed_size {
+    raise UnsupportedFeature(msg="DEFLATE sizing and gzip emission disagreed")
   }
   let crc = crc32(bytes)
   gzip_push_u32_le(out, crc)
   gzip_push_u32_le(out, (bytes.length() & 0xFFFFFFFF).reinterpret_as_uint())
-  Bytes::from_array(out)
+  out.finish()
 }
 
 ///|

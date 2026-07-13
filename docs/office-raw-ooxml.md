@@ -183,8 +183,11 @@ provenance whose exact source size and entry/expansion ceilings satisfy the raw
 limits. Adding or changing an entry invalidates that capability. The mutation
 consumes another shallow fork, revalidates the logical archive without
 reinflation, and produces serialized candidate bytes plus a one-part
-preservation manifest through a ZIP writer that checks the 128 MiB ceiling
-before every output-buffer growth. The transaction then:
+preservation manifest through a ZIP writer that first proves the exact output
+size without byte storage. It rejects the 128 MiB ceiling before allocating,
+then emits records and DEFLATE payloads directly into one fixed candidate
+buffer, without a growable backing array, final whole-package copy, or staged
+central directory. The transaction then:
 
 1. materializes the serialized candidate once under the aggregate live-memory
    budget shared with the still-live original archive;
