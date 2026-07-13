@@ -268,6 +268,76 @@ async test "custom identifier validates candidates through the same boundary" {
 }
 
 ///|
+async test "custom identifier cannot replace portable input validation" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let readable_zip = @zip.Archive::new()
+    readable_zip.add("not-office.txt", b"readable zip")
+    write_test_file(input, @zip.write(readable_zip))
+    let identifier_calls = Ref(0)
+    let mutated = Ref(false)
+    let identifier = @transaction.transaction_identifier("custom-docx", (
+      _path,
+      _bytes,
+      _archive,
+    ) => {
+      identifier_calls.val = identifier_calls.val + 1
+      Docx
+    })
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input),
+        (_format, bytes, _archive) => {
+          mutated.val = true
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
+        identifier~,
+      )
+    })
+    assert_eq(code, "office.transaction.invalid_input")
+    assert_eq(identifier_calls.val, 1)
+    assert_false(mutated.val)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "custom identifier cannot replace portable candidate validation" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let readable_zip = @zip.Archive::new()
+    readable_zip.add("not-office.txt", b"readable zip")
+    let invalid_candidate = @zip.write(readable_zip)
+    let identifier_calls = Ref(0)
+    let identifier = @transaction.transaction_identifier("custom-docx", (
+      _path,
+      _bytes,
+      _archive,
+    ) => {
+      identifier_calls.val = identifier_calls.val + 1
+      Docx
+    })
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, _bytes, _archive) => {
+          @transaction.transaction_mutation(invalid_candidate)
+        },
+        identifier~,
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_eq(identifier_calls.val, 2)
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 async test "transaction callbacks receive isolated forks of one bounded archive" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"
@@ -315,7 +385,10 @@ async test "transaction callbacks receive isolated forks of one bounded archive"
     assert_false(report.changed)
     assert_false(report.committed)
     assert_true(report.preservation.whole_file_identical)
-    assert_eq(report.validations.length(), 2)
+    assert_eq(report.validations.length(), 3)
+    assert_eq(report.validations[0].name, "fork-identifier")
+    assert_eq(report.validations[1].name, "office-portable-opc")
+    assert_eq(report.validations[2].name, "fork-validator")
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
   })

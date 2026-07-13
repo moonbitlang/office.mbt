@@ -399,10 +399,11 @@ pub fn transaction_options(
 }
 
 ///|
-/// A pinned-package identifier used before any generic Office DOM parse.
-/// Custom command families can enforce their own bounded package boundary while
-/// reusing the transaction's already bounded archive instead of inflating the
-/// same package again. The archive is an independently mutable shallow fork.
+/// An additional pinned-package identifier run before the mandatory portable
+/// OPC gate and any generic Office DOM parse. Custom command families can
+/// enforce their own bounded package boundary while reusing the transaction's
+/// already bounded archive instead of inflating the same package again. The
+/// archive is an independently mutable shallow fork.
 pub struct TransactionIdentifier {
   name : String
   identify : (String, BytesView, @zip.Archive) -> @office.DocumentFormat raise
