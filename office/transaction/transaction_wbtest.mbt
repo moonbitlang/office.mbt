@@ -62,6 +62,19 @@ async fn wb_assert_no_temp(directory : String) -> Unit {
 }
 
 ///|
+test "transaction path helpers accept host-native and portable separators" {
+  let root = if @path.sep == '\\' { "C:\\office" } else { "/office" }
+  let mixed = root + "/nested/input.docx"
+  let expected_parent = path_text(@path.Path(root).join(Path("nested")))
+  assert_eq(path_parent(mixed), expected_parent)
+  assert_eq(path_leaf(mixed), "input.docx")
+  assert_eq(
+    join_path(expected_parent, "output.docx"),
+    path_text(@path.Path(expected_parent).join(Path("output.docx"))),
+  )
+}
+
+///|
 async fn wb_expect_post_read_cancellation(
   options : TransactionOptions,
   release : String,

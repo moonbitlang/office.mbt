@@ -65,8 +65,17 @@ fn path_text(path : @path.Path) -> String {
 }
 
 ///|
+fn normalize_path_separators(path : String) -> String {
+  if @path.sep == '\\' {
+    path.replace(old="/", new="\\")
+  } else {
+    path
+  }
+}
+
+///|
 fn path_parent(path : String) -> String {
-  let parent = path_text(@path.Path(path).dirname())
+  let parent = path_text(@path.Path(normalize_path_separators(path)).dirname())
   if parent.length() == 0 {
     "."
   } else {
@@ -76,12 +85,16 @@ fn path_parent(path : String) -> String {
 
 ///|
 fn path_leaf(path : String) -> String {
-  @path.Path(path).basename().to_owned()
+  @path.Path(normalize_path_separators(path)).basename().to_owned()
 }
 
 ///|
 fn join_path(parent : String, leaf : String) -> String {
-  path_text(@path.Path(parent).join(Path(leaf)))
+  path_text(
+    @path.Path(normalize_path_separators(parent)).join(
+      Path(normalize_path_separators(leaf)),
+    ),
+  )
 }
 
 ///|
