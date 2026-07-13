@@ -36,35 +36,25 @@ async test "POSIX final permission is exact despite a restrictive umask" {
     }
     None =>
       with_permission_contract_dir(directory => {
-        let args = @env.args()
-        guard args is [executable, ..] else {
-          fail("permission probe could not locate its test executable")
-        }
         let script =
           #|umask 077
-          #|probe="$1"
-          #|# Moon may deliberately set argv[0] to the generated C source path.
-          #|# On Linux, resolve the actual running test image without a custom
-          #|# native stub; macOS runners expose the executable through argv[0].
-          #|if [ -x "/proc/$PPID/exe" ]; then
-          #|  probe="/proc/$PPID/exe"
-          #|else
-          #|  chmod u+x "$probe"
+          #|test_file=office/transaction/permission_contract/permission_contract_test.mbt
+          #|if [ ! -f "$test_file" ]; then
+          #|  test_file=transaction/permission_contract/permission_contract_test.mbt
           #|fi
-          #|"$probe" 'permission_contract_test.mbt:0-1'
+          #|moon test --quiet --frozen --target native \
+          #|  --target-dir "$1/moon-build" --no-parallelize \
+          #|  "$test_file" --index 0
           #|status=$?
           #|if [ "$status" -ne 0 ]; then exit "$status"; fi
-          #|mode=$(stat -f '%Lp' "$2/output.docx" 2>/dev/null || stat -c '%a' "$2/output.docx")
+          #|mode=$(stat -f '%Lp' "$1/output.docx" 2>/dev/null || stat -c '%a' "$1/output.docx")
           #|test "$mode" = 666
 
         let (code, stdout, stderr) = @process.collect_output(
           "/bin/sh",
-          ["-c", script, "office-permission-probe", executable, directory],
-          extra_env={
-            "OFFICE_TRANSACTION_PERMISSION_PROBE": directory,
-            "PATH": "/usr/bin:/bin",
-          },
-          inherit_env=false,
+          ["-c", script, "office-permission-probe", directory],
+          extra_env={ "OFFICE_TRANSACTION_PERMISSION_PROBE": directory },
+          inherit_env=true,
         )
         if code != 0 {
           let out = stdout.text() catch { _ => "<non-UTF-8 stdout>" }
