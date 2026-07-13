@@ -885,6 +885,16 @@ fn read_bounded_archive(data : BytesView) -> @zip.Archive raise RawError {
     max_entry_uncompressed_bytes=raw_max_entry_bytes,
     max_total_uncompressed_bytes=raw_max_total_uncompressed_bytes,
   ) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
+      raise raw_error(
+        "office.raw.resource_limit",
+        "ZIP package exceeds the bounded \{kind} limit",
+        details=Json::object({
+          "kind": Json::string(kind),
+          "limit": Json::number(limit.to_double()),
+          "actual": Json::number(actual.to_double()),
+        }),
+      )
     _ =>
       raise raw_error(
         "office.raw.invalid_package", "package is not a bounded readable ZIP archive",
