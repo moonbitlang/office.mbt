@@ -344,8 +344,45 @@ async test "native publication stays bound to a relocated parent directory" {
 }
 
 ///|
-#cfg(all(target="native", not(platform="windows")))
-async test "native cleanup failures are surfaced and remain recoverable" {
+#cfg(target="native")
+async test "in-place source recheck ignores a replacement path after relocation" {
+  wb_with_transaction_dir(directory => {
+    let source_directory = "\{directory}/source"
+    let relocated_directory = "\{directory}/relocated-source"
+    let input = "\{source_directory}/input.docx"
+    let relocated_input = "\{relocated_directory}/input.docx"
+    let original = @word.new_blank_docx()
+    let candidate = wb_rewrite_content_types(original, "pinned-source")
+    let decoy = wb_rewrite_content_types(original, "replacement-decoy")
+    @afs.mkdir(source_directory)
+    wb_write(input, original)
+    let report = transact_with_faults(
+      transaction_options(input),
+      (_format, _bytes) => {
+        transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
+      },
+      [],
+      {
+        fail_write: false,
+        fail_rename: false,
+        stall_after_temp: false,
+        post_rename_release: None,
+        concurrent_replacement: Some(decoy),
+        concurrent_destination: None,
+        relocate_parent_to: Some(relocated_directory),
+        deny_cleanup: false,
+      },
+    )
+    assert_true(report.committed)
+    assert_eq(@afs.read_file(relocated_input).binary(), candidate)
+    assert_eq(@afs.read_file(input).binary(), decoy)
+    wb_assert_no_temp(relocated_directory)
+    wb_assert_no_temp(source_directory)
+  })
+}
+
+///|
+async test "temporary substitution is never published or silently cleaned" {
   wb_with_transaction_dir(directory => {
     let input = "\{directory}/input.docx"
     let destination_directory = "\{directory}/destination"
@@ -364,7 +401,7 @@ async test "native cleanup failures are surfaced and remain recoverable" {
         },
         [],
         {
-          fail_write: true,
+          fail_write: false,
           fail_rename: false,
           stall_after_temp: false,
           post_rename_release: None,
@@ -375,7 +412,6 @@ async test "native cleanup failures are surfaced and remain recoverable" {
         },
       )
     })
-    @afs.chmod(destination_directory, 0o700)
     assert_eq(code, "office.transaction.cleanup_failed")
     for name in @afs.readdir(destination_directory) {
       if name.contains(".office-tmp-") {

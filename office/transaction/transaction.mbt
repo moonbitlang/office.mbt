@@ -19,6 +19,8 @@ let transaction_max_total_uncompressed_bytes : Int = 256 * 1024 * 1024
 ///|
 priv struct ResolvedPolicy {
   source_target : String
+  source_directory : PublicationDirectory
+  source_leaf : String
   destination_target : String
   destination_directory : PublicationDirectory
   destination_leaf : String
@@ -145,81 +147,141 @@ async fn resolve_new_destination(path : String) -> String {
 ///|
 async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
   let source_target = resolve_source(options.input_path)
-  match options.output_path {
-    None => {
-      let destination_directory = publication_directory_open(
-        path_parent(source_target),
-        options.input_path,
-      )
-      {
-        source_target,
-        destination_target: source_target,
-        destination_directory,
-        destination_leaf: path_leaf(source_target),
-        output_path: options.input_path,
-        mode: InPlace,
-        replace: true,
-      }
-    }
-    Some(output_path) => {
-      let destination_exists = path_exists_checked(output_path)
-      let destination_target = if destination_exists {
-        let kind = @afs.kind(output_path) catch {
-          error if @async.is_being_cancelled() => raise error
-          error =>
-            raise transaction_error(
-              "office.transaction.destination_check_failed",
-              "could not inspect destination '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
-            )
+  let source_leaf = path_leaf(source_target)
+  let source_directory = publication_directory_open(
+    path_parent(source_target),
+    options.input_path,
+  )
+  try {
+    match options.output_path {
+      None => {
+        let destination_directory = publication_directory_duplicate(
+          source_directory,
+          options.input_path,
+        )
+        {
+          source_target,
+          source_directory,
+          source_leaf,
+          destination_target: source_target,
+          destination_directory,
+          destination_leaf: source_leaf,
+          output_path: options.input_path,
+          mode: InPlace,
+          replace: true,
         }
-        if kind is Directory {
+      }
+      Some(output_path) => {
+        let destination_exists = path_exists_checked(output_path)
+        let destination_target = if destination_exists {
+          let kind = @afs.kind(output_path) catch {
+            error if @async.is_being_cancelled() => raise error
+            error =>
+              raise transaction_error(
+                "office.transaction.destination_check_failed",
+                "could not inspect destination '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
+              )
+          }
+          if kind is Directory {
+            raise transaction_error(
+              "office.transaction.invalid_options", "output_path must name a file, not a directory",
+            )
+          }
+          canonical_existing_path(output_path) catch {
+            error if @async.is_being_cancelled() => raise error
+            error =>
+              raise transaction_error(
+                "office.transaction.destination_check_failed",
+                "could not resolve destination '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
+              )
+          }
+        } else {
+          resolve_new_destination(output_path)
+        }
+        if destination_target == source_target {
           raise transaction_error(
-            "office.transaction.invalid_options", "output_path must name a file, not a directory",
+            "office.transaction.output_aliases_input",
+            "output_path resolves to the input; omit output_path for an in-place transaction",
+            details=Json::object({
+              "input": Json::string(bounded_text(options.input_path, 160)),
+              "output": Json::string(bounded_text(output_path, 160)),
+            }),
           )
         }
-        canonical_existing_path(output_path) catch {
-          error if @async.is_being_cancelled() => raise error
-          error =>
-            raise transaction_error(
-              "office.transaction.destination_check_failed",
-              "could not resolve destination '\{bounded_text(output_path, 160)}': \{bounded_text(error.to_string(), 240)}",
-            )
+        if destination_exists && !options.overwrite {
+          raise transaction_error(
+            "office.transaction.output_exists",
+            "destination already exists; set overwrite=true to replace it",
+            details=Json::object({
+              "output": Json::string(bounded_text(output_path, 160)),
+            }),
+          )
         }
-      } else {
-        resolve_new_destination(output_path)
-      }
-      if destination_target == source_target {
-        raise transaction_error(
-          "office.transaction.output_aliases_input",
-          "output_path resolves to the input; omit output_path for an in-place transaction",
-          details=Json::object({
-            "input": Json::string(bounded_text(options.input_path, 160)),
-            "output": Json::string(bounded_text(output_path, 160)),
-          }),
+        let destination_directory = publication_directory_open(
+          path_parent(destination_target),
+          output_path,
         )
+        try {
+          let destination_leaf = path_leaf(destination_target)
+          let pinned_kind = publication_entry_kind(
+            destination_directory, destination_leaf, output_path,
+          )
+          if pinned_kind == 2 {
+            raise transaction_error(
+              "office.transaction.invalid_options", "output_path must name a file, not a directory",
+            )
+          }
+          if pinned_kind > 1 {
+            raise transaction_error(
+              "office.transaction.invalid_options", "output_path must name a regular file",
+            )
+          }
+          if pinned_kind == 1 &&
+            publication_entries_same(
+              source_directory, source_leaf, destination_directory, destination_leaf,
+              output_path,
+            ) {
+            raise transaction_error(
+              "office.transaction.output_aliases_input",
+              "output_path resolves to the input; omit output_path for an in-place transaction",
+              details=Json::object({
+                "input": Json::string(bounded_text(options.input_path, 160)),
+                "output": Json::string(bounded_text(output_path, 160)),
+              }),
+            )
+          }
+          if pinned_kind == 1 && !options.overwrite {
+            raise transaction_error(
+              "office.transaction.output_exists",
+              "destination already exists; set overwrite=true to replace it",
+              details=Json::object({
+                "output": Json::string(bounded_text(output_path, 160)),
+              }),
+            )
+          }
+          {
+            source_target,
+            source_directory,
+            source_leaf,
+            destination_target,
+            destination_directory,
+            destination_leaf,
+            output_path,
+            mode: Output,
+            replace: options.overwrite,
+          }
+        } catch {
+          error => {
+            publication_directory_close(destination_directory)
+            raise error
+          }
+        }
       }
-      if destination_exists && !options.overwrite {
-        raise transaction_error(
-          "office.transaction.output_exists",
-          "destination already exists; set overwrite=true to replace it",
-          details=Json::object({
-            "output": Json::string(bounded_text(output_path, 160)),
-          }),
-        )
-      }
-      let destination_directory = publication_directory_open(
-        path_parent(destination_target),
-        output_path,
-      )
-      {
-        source_target,
-        destination_target,
-        destination_directory,
-        destination_leaf: path_leaf(destination_target),
-        output_path,
-        mode: Output,
-        replace: options.overwrite,
-      }
+    }
+  } catch {
+    error => {
+      publication_directory_close(source_directory)
+      raise error
     }
   }
 }
@@ -227,10 +289,14 @@ async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
 ///|
 async fn read_original(
   options : TransactionOptions,
-  source_target : String,
+  source_directory : PublicationDirectory,
+  source_leaf : String,
 ) -> Bytes {
-  @afs.read_file(source_target).binary() catch {
+  publication_file_read(
+    source_directory, source_leaf, transaction_max_package_bytes, "input package",
+  ) catch {
     error if @async.is_being_cancelled() => raise error
+    TransactionError(..) as error => raise error
     error =>
       raise transaction_error(
         "office.transaction.file_read_failed",
@@ -449,6 +515,7 @@ async fn create_temp(
   policy : ResolvedPolicy,
   permission : Int,
 ) -> PublicationTemp {
+  @async.pause()
   let stamp = @env.now()
   for attempt in 0..<transaction_temp_attempts {
     let leaf = ".office-tmp-\{stamp}-\{attempt}"
@@ -474,10 +541,13 @@ async fn create_temp(
 
 ///|
 async fn check_source_unchanged(
-  source_target : String,
+  source_directory : PublicationDirectory,
+  source_leaf : String,
   original : Bytes,
 ) -> Unit {
-  let current = @afs.read_file(source_target).binary() catch {
+  let current = publication_file_read(
+    source_directory, source_leaf, transaction_max_package_bytes, "input package recheck",
+  ) catch {
     error if @async.is_being_cancelled() => raise error
     _ =>
       raise transaction_error(
@@ -498,7 +568,7 @@ async fn publish_candidate(
   original : Bytes,
   candidate : Bytes,
   faults : TransactionFaults,
-) -> Bool {
+) -> (Bool, Bool) {
   let temp = create_temp(policy, options.permission)
   try {
     match faults.relocate_parent_to {
@@ -518,14 +588,7 @@ async fn publish_candidate(
       None => ()
     }
     if faults.deny_cleanup {
-      @afs.chmod(path_parent(policy.destination_target), 0o500) catch {
-        error if @async.is_being_cancelled() => raise error
-        error =>
-          raise transaction_error(
-            "office.transaction.commit_failed",
-            "could not inject the cleanup-permission failure: \{bounded_text(error.to_string(), 240)}",
-          )
-      }
+      publication_temp_substitute(temp)
     }
     if faults.stall_after_temp {
       @async.sleep(60_000)
@@ -539,11 +602,27 @@ async fn publish_candidate(
     publication_temp_sync(temp)
     if policy.mode is InPlace {
       match faults.concurrent_replacement {
-        Some(replacement) =>
+        Some(replacement) => {
+          match faults.relocate_parent_to {
+            Some(_) =>
+              @afs.mkdir(path_parent(policy.source_target)) catch {
+                error if @async.is_being_cancelled() => raise error
+                error =>
+                  raise transaction_error(
+                    "office.transaction.commit_failed",
+                    "could not inject the replacement source parent: \{bounded_text(error.to_string(), 240)}",
+                  )
+              }
+            None => ()
+          }
           @afs.write_file(
             policy.source_target,
             replacement,
-            create_mode=CreateOrTruncate,
+            create_mode=if faults.relocate_parent_to is Some(_) {
+              CreateNew
+            } else {
+              CreateOrTruncate
+            },
             permission=options.permission,
           ) catch {
             error if @async.is_being_cancelled() => raise error
@@ -553,9 +632,14 @@ async fn publish_candidate(
                 "could not inject the concurrent-source test replacement: \{bounded_text(error.to_string(), 240)}",
               )
           }
+        }
         None => ()
       }
-      check_source_unchanged(policy.source_target, original) catch {
+      check_source_unchanged(
+        policy.source_directory,
+        policy.source_leaf,
+        original,
+      ) catch {
         error if @async.is_being_cancelled() => raise error
         error => raise error
       }
@@ -584,14 +668,14 @@ async fn publish_candidate(
         "office.transaction.commit_failed", "injected atomic-rename failure",
       )
     }
-    publication_temp_publish(
+    let temp_clean = publication_temp_publish(
       temp,
       policy.destination_leaf,
       policy.replace,
       policy.output_path,
     )
     publication_temp_close(temp)
-    @async.protect_from_cancel(
+    let parent_synced = @async.protect_from_cancel(
       () => {
         match faults.post_rename_release {
           Some(release) =>
@@ -606,6 +690,7 @@ async fn publish_candidate(
     ) catch {
       _ => false
     }
+    (parent_synced, temp_clean)
   } catch {
     error => {
       publication_temp_cleanup(temp, policy.output_path)
@@ -620,11 +705,19 @@ fn append_platform_warnings(
   warnings : Array[@office.ProtocolWarning],
   committed : Bool,
   parent_synced : Bool,
+  temp_clean : Bool,
 ) -> Unit {
   if committed && !parent_synced {
     warnings.push(
       @office.protocol_warning(
         "office.transaction.directory_sync_unavailable", "package bytes were atomically renamed, but the parent directory could not be synced on this host",
+      ),
+    )
+  }
+  if committed && !temp_clean {
+    warnings.push(
+      @office.protocol_warning(
+        "office.transaction.committed_temp_cleanup_failed", "destination was committed, but a private staging link could not be removed",
       ),
     )
   }
@@ -636,6 +729,7 @@ fn append_platform_warnings(
   warnings : Array[@office.ProtocolWarning],
   committed : Bool,
   _parent_synced : Bool,
+  _temp_clean : Bool,
 ) -> Unit {
   if committed {
     warnings.push(
@@ -656,8 +750,13 @@ async fn transact_with_faults(
   let validators = validators.copy()
   validate_validator_set(validators)
   let policy = resolve_policy(options)
+  defer publication_directory_close(policy.source_directory)
   defer publication_directory_close(policy.destination_directory)
-  let original = read_original(options, policy.source_target)
+  let original = read_original(
+    options,
+    policy.source_directory,
+    policy.source_leaf,
+  )
   let (format, original_archive) = identify_input(options, original)
   let mutation = mutate(format, original) catch {
     TransactionError(..) as error => raise normalize_mutation_error(error)
@@ -678,16 +777,16 @@ async fn transact_with_faults(
   )
   let changed = original != mutation.bytes
   let should_commit = !options.dry_run && (policy.mode is Output || changed)
-  let parent_synced = if should_commit {
+  let (parent_synced, temp_clean) = if should_commit {
     publish_candidate(options, policy, original, mutation.bytes, faults)
   } else {
-    true
+    (true, true)
   }
   let warnings = []
   for warning in mutation.warnings {
     warnings.push(warning)
   }
-  append_platform_warnings(warnings, should_commit, parent_synced)
+  append_platform_warnings(warnings, should_commit, parent_synced, temp_clean)
   {
     format,
     input_path: options.input_path,

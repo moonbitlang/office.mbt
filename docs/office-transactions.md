@@ -9,7 +9,7 @@ bytes in memory, but they do not write destination files themselves.
 A transaction performs these phases in order:
 
 1. validate the options, resolve the source and destination policy, and pin the
-   resolved native destination directory by handle;
+   resolved native source and destination directories by handle;
 2. read and identify the input package;
 3. invoke one in-memory mutation callback with the identified format and a
    read-only view of the original bytes;
@@ -52,22 +52,28 @@ never an ambiguous cancellation that could invite an unsafe retry.
 - The resolved destination extension and candidate package format must agree
   with the original transaction format. A mutation cannot turn a DOCX session
   into XLSX, or use a symlink name to hide a mismatched target extension.
-- New files use the explicit transaction permission (owner-only `0600` by
-  default). Filesystem ownership, ACL, and extended-attribute preservation are
-  outside the package transaction contract.
+- On POSIX hosts, new files use the explicit transaction permission
+  (owner-only `0600` by default), enforced after creation so `umask` cannot
+  silently change it. Windows ignores the numeric POSIX mode and inherits the
+  destination directory's ACL; Wasm permission behavior is host-defined.
+  Filesystem ownership and extended-attribute preservation remain outside the
+  package transaction contract.
 
 On native targets, existing paths and the parent of a new destination are
 resolved and the destination directory is opened before input bytes are read.
-Temporary creation, cleanup, and publication are descriptor-relative to that
-pinned directory handle. Renaming or replacing the parent pathname after policy
-resolution therefore cannot redirect publication or strand cleanup in a
-different directory. Temporary basenames are independent of the destination
-basename, so a valid near-limit filename does not overflow the filesystem's
-component limit. Immediately before an in-place rename, the source is read
-again and compared byte-for-byte with the original snapshot. This is an
-optimistic conflict check, not a substitute for cooperation from arbitrary
-writers; a writer racing after that check remains outside the portable
-filesystem contract.
+Source reads and rechecks, temporary creation, cleanup, and publication are
+descriptor-relative to pinned directory handles. Renaming or replacing a
+parent pathname after policy resolution therefore cannot redirect native I/O
+or strand cleanup in a different directory. Native temporary basenames contain
+128 bits from the host cryptographic random generator and are independent of
+the destination basename, so they are both unguessable and safe beside a valid
+near-limit filename. Before rename and cleanup, the implementation verifies
+that the named staging entry is still the file it created and refuses to
+publish or delete a substitute. Immediately before an in-place rename, the
+source is read again through its pinned parent and compared byte-for-byte with
+the original snapshot. This is an optimistic conflict check, not a substitute
+for cooperation from arbitrary writers; a writer racing after that check
+remains outside the portable filesystem contract.
 
 Wasm uses normalized absolute paths because portable realpath/symlink
 resolution and directory-relative handles are unavailable. Rename is still
@@ -75,6 +81,19 @@ same-directory and the temporary file is fully synced, but parent-directory
 identity, durability, and symlink identity are not guaranteed by the host ABI.
 A successful Wasm commit carries a structured
 `office.transaction.wasm_commit_semantics` warning.
+
+## Resource limits
+
+Input and candidate package bytes are limited to 128 MiB before format
+validation. ZIP materialization is additionally limited to 8,192 entries,
+64 MiB per expanded entry, and 256 MiB total expanded payload. The inflater
+enforces the per-entry ceiling even when an archive lies in its declared size,
+so compressed expansion cannot bypass preflight. Exceeding any bound fails
+before publication with `office.transaction.resource_limit_exceeded`.
+
+The already-bounded archive objects are reused for format validation and the
+preservation report; a transaction does not repeatedly inflate the same input
+or candidate.
 
 ## Validation hooks
 
