@@ -176,14 +176,6 @@ test "raw emitted schemas share the capability registry constants" {
     inventory.get("schema"),
     Some(Json::string(@office.SCHEMA_RAW_INVENTORY)),
   )
-  let part = @raw.raw_read("schema.docx", original, "/document")
-  guard part.metadata_json() is Object(part_json) else {
-    fail("raw part metadata must be an object")
-  }
-  assert_eq(
-    part_json.get("schema"),
-    Some(Json::string(@office.SCHEMA_RAW_PART)),
-  )
   let mutation = @raw.raw_edit(
     Docx,
     original,

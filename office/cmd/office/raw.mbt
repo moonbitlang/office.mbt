@@ -138,6 +138,14 @@ async fn read_bounded_file(
     }
     offset = offset + count
   }
+  complete_bounded_file_read(buffer)
+}
+
+///|
+/// Keep the final read boundary cancellable even when every filesystem call
+/// completed synchronously from the host cache.
+async fn complete_bounded_file_read(buffer : FixedArray[Byte]) -> Bytes {
+  @async.pause()
   buffer.unsafe_reinterpret_as_bytes()
 }
 

@@ -242,15 +242,6 @@ pub fn RawPartData::xml_text(self : RawPartData) -> String raise RawError {
 }
 
 ///|
-pub fn RawPartData::metadata_json(self : RawPartData) -> Json {
-  Json::object({
-    "schema": Json::string(@office.SCHEMA_RAW_PART),
-    "format": Json::string(self.format.name()),
-    "part": self.info.to_json(),
-  })
-}
-
-///|
 /// The deliberately bounded raw XML edit operations.
 pub(all) enum RawAction {
   Append

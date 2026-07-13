@@ -14,3 +14,7 @@ import {
 supported_targets = "native+wasm"
 
 pkgtype(kind: "executable")
+
+import {
+  "bobzhang/docx2html" @word,
+} for "wbtest"
