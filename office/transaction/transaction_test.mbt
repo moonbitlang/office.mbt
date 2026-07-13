@@ -177,6 +177,28 @@ async fn transaction_error_value(
 }
 
 ///|
+fn assert_identifier_format_error(
+  error : @transaction.TransactionError,
+  code : String,
+  identifier : String,
+) -> Unit raise {
+  match error {
+    TransactionError(code=actual_code, details~, ..) => {
+      assert_eq(actual_code, code)
+      match details {
+        Some(Object(fields)) => {
+          assert_eq(fields.get("identifier"), Some(Json::string(identifier)))
+          assert_eq(fields.get("validator"), None)
+          assert_eq(fields.get("identifier_format"), Some(Json::string("xlsx")))
+          assert_eq(fields.get("portable_format"), Some(Json::string("docx")))
+        }
+        _ => fail("expected structured identifier details")
+      }
+    }
+  }
+}
+
+///|
 async test "in-place no-op validates without replacing source" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"
@@ -263,6 +285,60 @@ async test "custom identifier validates candidates through the same boundary" {
     assert_eq(code, "office.raw.validation_failed")
     assert_eq(calls.val, 2)
     assert_false(@afs.exists(output))
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "custom identifier format errors name the identifier boundary" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let input_identifier = @transaction.transaction_identifier(
+      "input-format-identifier",
+      (_path, _bytes, _archive) => Xlsx,
+    )
+    let input_error = transaction_error_value(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input),
+        (_format, bytes, _archive, _budget) => {
+          @transaction.transaction_mutation(bytes)
+        },
+        identifier=input_identifier,
+      )
+    })
+    assert_identifier_format_error(
+      input_error, "office.transaction.invalid_input", "input-format-identifier",
+    )
+    let calls = Ref(0)
+    let candidate_identifier = @transaction.transaction_identifier(
+      "candidate-format-identifier",
+      (_path, _bytes, _archive) => {
+        calls.val = calls.val + 1
+        if calls.val == 1 {
+          Docx
+        } else {
+          Xlsx
+        }
+      },
+    )
+    let candidate_error = transaction_error_value(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, bytes, _archive, _budget) => {
+          @transaction.transaction_mutation(bytes)
+        },
+        identifier=candidate_identifier,
+      )
+    })
+    assert_identifier_format_error(
+      candidate_error, "office.transaction.validation_failed", "candidate-format-identifier",
+    )
+    assert_eq(calls.val, 2)
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
   })
 }

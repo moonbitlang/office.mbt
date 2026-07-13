@@ -657,6 +657,9 @@ fn identify_input(
             raise transaction_error(
               "office.transaction.invalid_input",
               "identifier '\{identifier.name}' rejected the input package: \{bounded_text(error.to_string(), 240)}",
+              details=Json::object({
+                "identifier": Json::string(identifier.name),
+              }),
             )
         },
       )
@@ -682,7 +685,7 @@ fn identify_input(
         "office.transaction.invalid_input",
         "identifier '\{identifier.name}' reported \{custom.name()}, but mandatory portable validation reported \{portable_format.name()}",
         details=Json::object({
-          "validator": Json::string(identifier.name),
+          "identifier": Json::string(identifier.name),
           "identifier_format": Json::string(custom.name()),
           "portable_format": Json::string(portable_format.name()),
         }),
@@ -784,7 +787,7 @@ fn validate_candidate(
           raise transaction_error(
             "office.transaction.validation_failed",
             "identifier '\{identifier.name}' rejected the candidate package: \{bounded_text(error.to_string(), 240)}",
-            details=Json::object({ "validator": Json::string(identifier.name) }),
+            details=Json::object({ "identifier": Json::string(identifier.name) }),
           )
       }
       summaries.push({ name: identifier.name, passed: true, finding_count: 0 })
@@ -813,7 +816,7 @@ fn validate_candidate(
         "office.transaction.validation_failed",
         "identifier '\{identifier.name}' reported \{custom.name()}, but mandatory portable validation reported \{portable_format.name()}",
         details=Json::object({
-          "validator": Json::string(identifier.name),
+          "identifier": Json::string(identifier.name),
           "identifier_format": Json::string(custom.name()),
           "portable_format": Json::string(portable_format.name()),
         }),

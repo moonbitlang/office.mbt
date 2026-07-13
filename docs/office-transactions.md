@@ -168,6 +168,10 @@ temporary file is created. Each hook may return at most 64 findings, with
 bounded codes and messages; exceeding that limit is an invalid contract and is
 rejected before finding details are serialized.
 
+Framework-generated error details identify a custom format gate with the
+`identifier` field and a portable or caller-supplied validation hook with the
+`validator` field. These fields are intentionally distinct protocol contracts.
+
 Validators must be deterministic and side-effect free. They receive the
 identified format, a read-only view of candidate bytes, and an isolated shallow
 fork of the already materialized candidate archive. Validators should consume
