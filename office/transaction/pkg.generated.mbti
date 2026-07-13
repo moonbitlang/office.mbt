@@ -7,7 +7,7 @@ import {
 }
 
 // Values
-pub async fn transact(TransactionOptions, (@office.DocumentFormat, BytesView) -> TransactionMutation raise, validators? : Array[TransactionValidator]) -> TransactionReport raise TransactionError
+pub async fn transact(TransactionOptions, (@office.DocumentFormat, BytesView) -> TransactionMutation raise, validators? : Array[TransactionValidator]) -> TransactionReport
 
 pub fn transaction_mutation(Bytes, warnings? : Array[@office.ProtocolWarning]) -> TransactionMutation raise TransactionError
 
