@@ -160,3 +160,40 @@ test "zip read_limited rejects deflate output beyond a lying declaration" {
     _ => fail("expected read_limited to raise")
   }
 }
+
+///|
+test "zip read_limited rejects forged compressed sizes without panicking" {
+  let archive = @zip.Archive::new()
+  archive.add("forged.txt", b"payload", data_descriptor=true)
+  let raw = @zip.write(archive).to_array()
+  let mut central = -1
+  for i in 0..<(raw.length() - 3) {
+    if raw[i] == (0x50).to_byte() &&
+      raw[i + 1] == (0x4B).to_byte() &&
+      raw[i + 2] == (0x01).to_byte() &&
+      raw[i + 3] == (0x02).to_byte() {
+      central = i
+      break
+    }
+  }
+  if central < 0 {
+    fail("missing central directory")
+  }
+  raw[central + 20] = (0xFF).to_byte()
+  raw[central + 21] = (0xFF).to_byte()
+  raw[central + 22] = (0xFF).to_byte()
+  raw[central + 23] = (0x7F).to_byte()
+  try
+    @zip.read_limited(
+      Bytes::from_array(raw),
+      max_entries=1,
+      max_entry_uncompressed_bytes=64,
+      max_total_uncompressed_bytes=64,
+    )
+  catch {
+    OutOfBounds(..) => ()
+    _ => fail("expected bounded out-of-range error")
+  } noraise {
+    _ => fail("expected forged compressed size to raise")
+  }
+}
