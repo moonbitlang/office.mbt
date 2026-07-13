@@ -25,11 +25,3 @@ import {
 } for "wbtest"
 
 supported_targets = "native+wasm"
-
-options(
-  "native-stub": [ "pinned_io.c" ],
-  targets: {
-    "pinned_io.native.mbt": [ "native" ],
-    "pinned_io.wasm.mbt": [ "wasm" ],
-  },
-)

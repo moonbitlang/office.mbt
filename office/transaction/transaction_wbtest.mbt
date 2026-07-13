@@ -20,6 +20,15 @@ fn wb_rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
 }
 
 ///|
+fn wb_large_candidate(data : BytesView) -> Bytes raise {
+  let marker = StringBuilder::new()
+  for _ in 0..<(2 * 1024 * 1024) {
+    marker.write_char('x')
+  }
+  wb_rewrite_content_types(data, marker.to_string())
+}
+
+///|
 async fn wb_with_transaction_dir(run : async (String) -> Unit) -> Unit {
   @async.with_task_group() <| group => {
     let directory = @afs.tmpdir(prefix="office-transaction-wb-")
@@ -88,6 +97,8 @@ async test "injected write and rename failures clean temporary artifacts" {
     let write_code = wb_error_code(() => {
       transact_with_faults(transaction_options(input), mutate, [], {
         fail_write: true,
+        fail_write_after_bytes: None,
+        stall_write_after_bytes: None,
         fail_rename: false,
         stall_after_temp: false,
         post_rename_release: None,
@@ -100,6 +111,32 @@ async test "injected write and rename failures clean temporary artifacts" {
     assert_eq(write_code, "office.transaction.write_failed")
     assert_eq(@afs.read_file(input).binary(), original)
     wb_assert_no_temp(directory)
+    let partial_code = wb_error_code(() => {
+      transact_with_faults(
+        transaction_options(input),
+        (_format, bytes) => {
+          transaction_mutation_with_manifest(wb_large_candidate(bytes), [
+            "[Content_Types].xml",
+          ])
+        },
+        [],
+        {
+          fail_write: false,
+          fail_write_after_bytes: Some(1024 * 1024),
+          stall_write_after_bytes: None,
+          fail_rename: false,
+          stall_after_temp: false,
+          post_rename_release: None,
+          concurrent_replacement: None,
+          concurrent_destination: None,
+          relocate_parent_to: None,
+          deny_cleanup: false,
+        },
+      )
+    })
+    assert_eq(partial_code, "office.transaction.write_failed")
+    assert_eq(@afs.read_file(input).binary(), original)
+    wb_assert_no_temp(directory)
     wb_write(output, original)
     let rename_code = wb_error_code(() => {
       transact_with_faults(
@@ -108,6 +145,8 @@ async test "injected write and rename failures clean temporary artifacts" {
         [],
         {
           fail_write: false,
+          fail_write_after_bytes: None,
+          stall_write_after_bytes: None,
           fail_rename: true,
           stall_after_temp: false,
           post_rename_release: None,
@@ -130,22 +169,24 @@ async test "task cancellation waits for temporary-file cleanup" {
   wb_with_transaction_dir(directory => {
     let input = "\{directory}/input.docx"
     let original = @word.new_blank_docx()
+    let candidate = wb_large_candidate(original)
     wb_write(input, original)
     @async.with_task_group() <| group => {
       let task = group.spawn(() => {
         transact_with_faults(
           transaction_options(input),
-          (_format, bytes) => {
-            transaction_mutation_with_manifest(
-              wb_rewrite_content_types(bytes, "cancelled"),
-              ["[Content_Types].xml"],
-            )
+          (_format, _bytes) => {
+            transaction_mutation_with_manifest(candidate, [
+              "[Content_Types].xml",
+            ])
           },
           [],
           {
             fail_write: false,
+            fail_write_after_bytes: None,
+            stall_write_after_bytes: Some(1024 * 1024),
             fail_rename: false,
-            stall_after_temp: true,
+            stall_after_temp: false,
             post_rename_release: None,
             concurrent_replacement: None,
             concurrent_destination: None,
@@ -154,19 +195,37 @@ async test "task cancellation waits for temporary-file cleanup" {
           },
         )
       })
-      let mut observed_temp = false
+      let mut observed_partial_write = false
       for _ in 0..<1_000 {
         for name in @afs.readdir(directory) {
           if name.contains(".office-tmp-") {
-            observed_temp = true
+            let temp_path = "\{directory}/\{name}"
+            let file = @afs.open(
+              temp_path,
+              mode=ReadOnly,
+              create_mode=OpenExisting,
+              sync=NoSync,
+            ) catch {
+              _ => continue
+            }
+            let size = file.size() catch {
+              _ => {
+                file.close()
+                continue
+              }
+            }
+            file.close()
+            if size >= (1024 * 1024).to_int64() {
+              observed_partial_write = true
+            }
           }
         }
-        if observed_temp {
+        if observed_partial_write {
           break
         }
         @async.pause()
       }
-      assert_true(observed_temp)
+      assert_true(observed_partial_write)
       task.cancel()
       let propagated = try {
         ignore(task.wait())
@@ -202,6 +261,8 @@ async test "post-rename cancellation still returns a committed report" {
           [],
           {
             fail_write: false,
+            fail_write_after_bytes: None,
+            stall_write_after_bytes: None,
             fail_rename: false,
             stall_after_temp: false,
             post_rename_release: Some(release),
@@ -252,6 +313,8 @@ async test "concurrent in-place source change is never overwritten" {
         [],
         {
           fail_write: false,
+          fail_write_after_bytes: None,
+          stall_write_after_bytes: None,
           fail_rename: false,
           stall_after_temp: false,
           post_rename_release: None,
@@ -288,6 +351,8 @@ async test "concurrent no-replace destination wins the race" {
         [],
         {
           fail_write: false,
+          fail_write_after_bytes: None,
+          stall_write_after_bytes: None,
           fail_rename: false,
           stall_after_temp: false,
           post_rename_release: None,
@@ -307,45 +372,47 @@ async test "concurrent no-replace destination wins the race" {
 
 ///|
 #cfg(target="native")
-async test "native publication stays bound to a relocated parent directory" {
+async test "async publication fails closed when its parent path is relocated" {
   wb_with_transaction_dir(directory => {
     let input = "\{directory}/input.docx"
     let destination_directory = "\{directory}/destination"
     let relocated_directory = "\{directory}/relocated"
     let output = "\{destination_directory}/output.docx"
-    let relocated_output = "\{relocated_directory}/output.docx"
     let original = @word.new_blank_docx()
     let candidate = wb_rewrite_content_types(original, "pinned-parent")
     wb_write(input, original)
     @afs.mkdir(destination_directory)
-    let report = transact_with_faults(
-      transaction_options(input, output_path=output),
-      (_format, _bytes) => {
-        transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
-      },
-      [],
-      {
-        fail_write: false,
-        fail_rename: false,
-        stall_after_temp: false,
-        post_rename_release: None,
-        concurrent_replacement: None,
-        concurrent_destination: None,
-        relocate_parent_to: Some(relocated_directory),
-        deny_cleanup: false,
-      },
-    )
-    assert_true(report.committed)
+    let code = wb_error_code(() => {
+      transact_with_faults(
+        transaction_options(input, output_path=output),
+        (_format, _bytes) => {
+          transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
+        },
+        [],
+        {
+          fail_write: false,
+          fail_write_after_bytes: None,
+          stall_write_after_bytes: None,
+          fail_rename: false,
+          stall_after_temp: false,
+          post_rename_release: None,
+          concurrent_replacement: None,
+          concurrent_destination: None,
+          relocate_parent_to: Some(relocated_directory),
+          deny_cleanup: false,
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.cleanup_failed")
     assert_false(@afs.exists(destination_directory))
-    assert_eq(@afs.read_file(relocated_output).binary(), candidate)
+    assert_false(@afs.exists(output))
     assert_eq(@afs.read_file(input).binary(), original)
-    wb_assert_no_temp(relocated_directory)
   })
 }
 
 ///|
 #cfg(target="native")
-async test "in-place source recheck ignores a replacement path after relocation" {
+async test "async in-place recheck fails closed after source-parent relocation" {
   wb_with_transaction_dir(directory => {
     let source_directory = "\{directory}/source"
     let relocated_directory = "\{directory}/relocated-source"
@@ -356,27 +423,30 @@ async test "in-place source recheck ignores a replacement path after relocation"
     let decoy = wb_rewrite_content_types(original, "replacement-decoy")
     @afs.mkdir(source_directory)
     wb_write(input, original)
-    let report = transact_with_faults(
-      transaction_options(input),
-      (_format, _bytes) => {
-        transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
-      },
-      [],
-      {
-        fail_write: false,
-        fail_rename: false,
-        stall_after_temp: false,
-        post_rename_release: None,
-        concurrent_replacement: Some(decoy),
-        concurrent_destination: None,
-        relocate_parent_to: Some(relocated_directory),
-        deny_cleanup: false,
-      },
-    )
-    assert_true(report.committed)
-    assert_eq(@afs.read_file(relocated_input).binary(), candidate)
+    let code = wb_error_code(() => {
+      transact_with_faults(
+        transaction_options(input),
+        (_format, _bytes) => {
+          transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
+        },
+        [],
+        {
+          fail_write: false,
+          fail_write_after_bytes: None,
+          stall_write_after_bytes: None,
+          fail_rename: false,
+          stall_after_temp: false,
+          post_rename_release: None,
+          concurrent_replacement: Some(decoy),
+          concurrent_destination: None,
+          relocate_parent_to: Some(relocated_directory),
+          deny_cleanup: false,
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.cleanup_failed")
+    assert_eq(@afs.read_file(relocated_input).binary(), original)
     assert_eq(@afs.read_file(input).binary(), decoy)
-    wb_assert_no_temp(relocated_directory)
     wb_assert_no_temp(source_directory)
   })
 }
@@ -402,6 +472,8 @@ async test "temporary substitution is never published or silently cleaned" {
         [],
         {
           fail_write: false,
+          fail_write_after_bytes: None,
+          stall_write_after_bytes: None,
           fail_rename: false,
           stall_after_temp: false,
           post_rename_release: None,

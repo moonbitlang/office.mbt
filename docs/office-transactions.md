@@ -18,9 +18,9 @@ A transaction performs these phases in order:
 5. run every registered format-specific validation hook;
 6. compare original and candidate ZIP entry payloads and enforce an optional
    declared-part preservation manifest;
-7. for a real commit, write and sync an exclusively created, short-named
-   temporary file in the destination directory, recheck an in-place source,
-   and atomically rename the temporary file into place.
+7. for a real commit, use `moonbitlang/async` to write and sync an exclusively
+   created, short-named temporary file in the destination directory, recheck
+   an in-place source, and atomically rename the temporary file into place.
 
 No callback can skip phases 4–6. A parse, mutation, validation, preservation,
 temporary-write, sync, or rename failure never publishes candidate bytes.
@@ -52,35 +52,31 @@ never an ambiguous cancellation that could invite an unsafe retry.
 - The resolved destination extension and candidate package format must agree
   with the original transaction format. A mutation cannot turn a DOCX session
   into XLSX, or use a symlink name to hide a mismatched target extension.
-- On POSIX hosts, new files use the explicit transaction permission
-  (owner-only `0600` by default), enforced after creation so `umask` cannot
-  silently change it. Windows ignores the numeric POSIX mode and inherits the
-  destination directory's ACL; Wasm permission behavior is host-defined.
+- On POSIX hosts, new files request the explicit transaction permission
+  (owner-only `0600` by default); the process `umask` may further restrict it.
+  Windows ignores the numeric POSIX mode and inherits the destination
+  directory's ACL; Wasm permission behavior is host-defined.
   Filesystem ownership and extended-attribute preservation remain outside the
   package transaction contract.
 
-On native targets, existing paths and the parent of a new destination are
-resolved and the destination directory is opened before input bytes are read.
-Source reads and rechecks, temporary creation, cleanup, and publication are
-descriptor-relative to pinned directory handles. Renaming or replacing a
-parent pathname after policy resolution therefore cannot redirect native I/O
-or strand cleanup in a different directory. Native temporary basenames contain
-128 bits from the host cryptographic random generator and are independent of
-the destination basename, so they are both unguessable and safe beside a valid
-near-limit filename. Before rename and cleanup, the implementation verifies
-that the named staging entry is still the file it created and refuses to
-publish or delete a substitute. Immediately before an in-place rename, the
-source is read again through its pinned parent and compared byte-for-byte with
-the original snapshot. This is an optimistic conflict check, not a substitute
-for cooperation from arbitrary writers; a writer racing after that check
-remains outside the portable filesystem contract.
+All targets use `moonbitlang/async` for file reads, writes, syncing, cleanup,
+and rename. Native targets resolve existing paths before policy checks; Wasm
+uses normalized absolute paths because portable realpath and symlink identity
+are unavailable. Before rename and cleanup, the implementation compares the
+named staging entry with the bytes written through its open async file and
+refuses to publish or delete a substitute. Immediately before an in-place
+rename, the source is reopened and compared byte-for-byte with the original
+snapshot.
 
-Wasm uses normalized absolute paths because portable realpath/symlink
-resolution and directory-relative handles are unavailable. Rename is still
-same-directory and the temporary file is fully synced, but parent-directory
-identity, durability, and symlink identity are not guaranteed by the host ABI.
-A successful Wasm commit carries a structured
-`office.transaction.wasm_commit_semantics` warning.
+The final rename is atomic, but portable async filesystem APIs are path based:
+renaming an ancestor or replacing a directory entry between a check and its
+following operation is outside the supported threat model. Such a race fails
+closed when it is observed, and every successful commit carries
+`office.transaction.path_based_commit_semantics`. Wasm additionally carries
+`office.transaction.wasm_commit_semantics` because parent-directory durability
+and symlink identity are host-defined. This is an optimistic conflict contract
+for cooperative local filesystems, not a sandbox boundary against a hostile
+writer with permission to rewrite the destination directory.
 
 ## Resource limits
 
@@ -97,7 +93,7 @@ or candidate.
 
 ## Validation hooks
 
-The portable `office.detect_format` gate is mandatory and recorded as
+The portable archive-format gate is mandatory and recorded as
 `office-portable-opc` in `office.transaction/1`. Callers may register named,
 bounded validators for deeper DOCX or XLSX checks. A hook returns structured
 findings; any finding or thrown hook error fails the transaction before a
