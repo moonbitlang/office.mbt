@@ -276,6 +276,7 @@ async test "near-limit destination basenames do not inflate temporary names" {
       original,
     )
     assert_eq(@afs.read_file(input).binary(), original)
+    @afs.remove(transaction_test_filesystem_path(output))
     assert_no_transaction_temp(directory)
   })
 }
