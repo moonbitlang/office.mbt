@@ -42,13 +42,16 @@ async test "POSIX final permission is exact despite a restrictive umask" {
         }
         let script =
           #|umask 077
+          #|# Linux all-workspace tests may launch native test artifacts through
+          #|# Moon without preserving their executable bit for a nested launch.
+          #|chmod u+x "$1"
           #|"$1" 'permission_contract_test.mbt:0-1'
           #|status=$?
           #|if [ "$status" -ne 0 ]; then exit "$status"; fi
           #|mode=$(stat -f '%Lp' "$2/output.docx" 2>/dev/null || stat -c '%a' "$2/output.docx")
           #|test "$mode" = 666
 
-        let (code, _stdout, _stderr) = @process.collect_output(
+        let (code, stdout, stderr) = @process.collect_output(
           "/bin/sh",
           ["-c", script, "office-permission-probe", executable, directory],
           extra_env={
@@ -57,7 +60,13 @@ async test "POSIX final permission is exact despite a restrictive umask" {
           },
           inherit_env=false,
         )
-        assert_eq(code, 0)
+        if code != 0 {
+          let out = stdout.text() catch { _ => "<non-UTF-8 stdout>" }
+          let err = stderr.text() catch { _ => "<non-UTF-8 stderr>" }
+          fail(
+            "restrictive-umask subprocess failed (exit=\{code})\nstdout:\n\{out}\nstderr:\n\{err}",
+          )
+        }
       })
   }
 }
