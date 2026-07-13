@@ -13,12 +13,12 @@ The canonical CLI surface is nested under `office raw`:
 office raw list FILE [--json]
 office raw read FILE PART [--json] [--base64 | --output FILE]
 office raw replace FILE PART (--xml XML | --xml-file FILE)
-  [--out FILE] [--dry-run] [--overwrite]
+  [--out FILE] [--dry-run] [--overwrite] [--json]
 office raw edit FILE PART --path PATH --action ACTION
   [--xml XML | --xml-file FILE]
   [--attribute NAME --value VALUE]
   [--namespace PREFIX=URI]... [--all]
-  [--out FILE] [--dry-run] [--overwrite]
+  [--out FILE] [--dry-run] [--overwrite] [--json]
 ```
 
 `list` inventories every package part in canonical name order. Its records
@@ -26,10 +26,14 @@ carry the canonical name, content type, XML/binary kind, uncompressed byte
 size, and every semantic alias known for that part.
 
 `read` accepts either a semantic alias or an absolute package part name. XML
-is decoded strictly as UTF-8 and may be printed as text or returned in the
-versioned JSON envelope. Binary data is never written to a terminal by
-default: callers must select `--base64` or `--output`. Every mode reports the
-decoded byte size.
+is decoded strictly as UTF-8, UTF-16LE, or UTF-16BE and may be printed as text
+or returned in the versioned JSON envelope. Span edits remain UTF-8-only
+because they preserve exact source byte ranges. Binary data is never written
+to a terminal by default: callers must select `--base64` or `--output`.
+Human XML and base64 modes print only the selected payload. JSON includes the
+part's uncompressed byte size, while human file mode confirms the number of
+bytes written. File output uses same-directory staging, sync, and an atomic
+no-replace rename; failure or pre-commit cancellation removes private staging.
 
 `replace` replaces one existing XML part with a complete, strict XML
 document. `edit` changes selected elements inside one existing XML part.
@@ -38,11 +42,13 @@ Neither command creates or removes parts.
 ## Relationship-driven aliases
 
 Aliases are derived only from exact Transitional or Strict Office
-relationship type URIs whose targets have the expected content type, after
-the portable package validator succeeds. Vendor relationship URIs that happen
-to share a standard suffix never create aliases. Except for the OPC-mandated
-`[Content_Types].xml` and root relationship part, implementation code must not
-assume conventional `word/` or `xl/` locations.
+relationship type URIs whose targets have the expected content type. The
+collision-rejecting raw resolver validates exact OPC namespaces, main-part
+identity, relationship dialect, and alias budgets before the generic portable
+detector runs. Vendor relationship URIs that happen to share a standard suffix
+never create aliases. Except for the OPC-mandated `[Content_Types].xml` and
+root relationship part, implementation code must not assume conventional
+`word/` or `xl/` locations.
 
 Common aliases include:
 
@@ -53,6 +59,12 @@ Common aliases include:
 - XLSX `/workbook`, `/workbook/relationships`, `/styles`, `/shared-strings`,
   `/theme`, `/sheet[N]`, `/<SheetName>`, and the corresponding worksheet
   relationship aliases.
+
+`/sheet[N]` uses the worksheet declaration's ordinal in `workbook.xml`.
+Unresolved or wrong-role declarations leave gaps; they never compact a later
+worksheet into an earlier numeric alias. Strict workbooks accept only Strict
+`r:id` namespaces and relationship type families, and Transitional workbooks
+accept only Transitional ones.
 
 An absolute package name such as `/customXml/item1.xml` remains available for
 every part. Alias lookup and OPC target resolution are case-insensitive while
@@ -111,9 +123,22 @@ The bounded action set is:
 Element-producing actions accept exactly one XML element. The fragment must
 be self-contained: every namespace prefix it uses must be declared in the
 fragment itself, and only whitespace may surround that element. A strict
-DTD-free parser rejects malformed names, duplicate
-expanded attributes, invalid characters, unknown prefixes, DTDs, and external
-entities before any package bytes are built.
+DTD-free parser rejects malformed names, duplicate expanded attributes,
+invalid characters, unknown prefixes, DTDs, and external entities before any
+package bytes are built.
+
+A standalone fragment without an explicit default namespace is normalized
+with `xmlns=""` on its root. This preserves the fragment's no-namespace
+expanded names when it is inserted below an element that has an inherited
+OOXML default namespace; the destination context cannot silently reinterpret
+the supplied element names.
+
+The action argument matrix is strict: append, prepend, insert-before,
+insert-after, and replace require exactly one of `--xml` or `--xml-file` and
+forbid attribute arguments; remove forbids all XML and attribute arguments;
+set-attribute requires both `--attribute` and `--value` and forbids XML.
+Insert-before, insert-after, and remove cannot target the document element.
+The same matrix is published structurally by `office help raw --json`.
 
 `set-attribute` serializes tabs, line feeds, and carriage returns as numeric
 character references so the XML parser's decoded value is exactly the value
@@ -123,27 +148,38 @@ legal; only an actual XML declaration is treated as a declaration.
 Edits are source-span splices. Bytes outside the declared spans of the
 mutated XML part remain identical. Untouched ZIP local records are copied
 byte-for-byte; their compressed payloads, timestamps, extras, descriptors,
-and central metadata remain intact. Local-record order, central-directory
-order, entry comments, attributes, and the archive comment are preserved.
+and central metadata remain intact. For a rewritten member, the writer retains
+the original local and central templates and patches only payload-dependent
+CRC, size, descriptor, and offset fields. Filename bytes, flags, versions,
+timestamps, custom extras, comments, attributes, ZIP64 layout, local-record
+order, central-directory order, and archive comment are preserved. Replacing
+a payload with identical bytes leaves the whole member record unchanged.
 
 ## Validation and publication
 
 All inputs are bounded before materialization: package bytes, entry count,
-per-entry and aggregate expansion, XML part bytes, path length/depth, fragment
-and attribute bytes, selected node count, metadata records and fields, and
-inventory serialization. A lexical XML preflight enforces element, attribute,
-namespace-declaration, text, depth, and per-field budgets before the strict DOM
-parser runs. The complete post-edit size is checked with overflow-safe
-arithmetic before any repeated splice buffers are allocated.
+per-entry and aggregate expansion, 1,024-character package part names, XML
+part bytes, path length/depth, fragment and attribute bytes, selected node
+count, metadata records and fields, semantic aliases, and inventory
+serialization. A lexical XML preflight enforces element, attribute,
+namespace-declaration, in-scope namespace, namespace URI, cumulative expanded
+name, scope-work, text, depth, and per-field budgets before the strict DOM
+parser runs. Expanded names are interned and namespace scopes use push/pop
+updates instead of per-element map copies. The complete post-edit size is
+checked with overflow-safe arithmetic before repeated splice buffers are
+allocated.
 
-The mutation callback is pure and produces a candidate package plus a
-one-part preservation manifest. A4 then:
+The transaction first applies the complete bounded raw identifier to its
+pinned input bytes; generic Office DOM parsing cannot precede this boundary.
+The mutation callback is pure and produces a candidate package plus a one-part
+preservation manifest. The transaction then:
 
 1. checks the manifest against payload-level archive differences;
-2. reruns portable OPC, relationship, content-type, main-part identity, and
-   format validation;
-3. runs any configured deeper validator;
-4. publishes through the cancellation-safe same-directory transaction, or
+2. reruns the complete raw collision, namespace, relationship, alias, and
+   serialization boundary on the candidate;
+3. reruns portable OPC, main-part identity, and format validation;
+4. runs any configured deeper validator;
+5. publishes through the cancellation-safe same-directory transaction, or
    reports a dry run without creating output.
 
 Therefore malformed fragments, relationship regressions, main-part changes,
