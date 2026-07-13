@@ -29,6 +29,82 @@ fn rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
 }
 
 ///|
+fn transaction_zip_u16(bytes : Array[Byte], offset : Int) -> Int {
+  bytes[offset].to_int() | (bytes[offset + 1].to_int() << 8)
+}
+
+///|
+fn transaction_zip_u32(bytes : Array[Byte], offset : Int) -> UInt {
+  bytes[offset].to_uint() |
+  (bytes[offset + 1].to_uint() << 8) |
+  (bytes[offset + 2].to_uint() << 16) |
+  (bytes[offset + 3].to_uint() << 24)
+}
+
+///|
+fn transaction_zip_write_u16(
+  bytes : Array[Byte],
+  offset : Int,
+  value : Int,
+) -> Unit {
+  let raw = value.reinterpret_as_uint()
+  bytes[offset] = (raw & 0xFF).to_byte()
+  bytes[offset + 1] = ((raw >> 8) & 0xFF).to_byte()
+}
+
+///|
+fn transaction_zip_write_u32(
+  bytes : Array[Byte],
+  offset : Int,
+  value : UInt,
+) -> Unit {
+  bytes[offset] = (value & 0xFF).to_byte()
+  bytes[offset + 1] = ((value >> 8) & 0xFF).to_byte()
+  bytes[offset + 2] = ((value >> 16) & 0xFF).to_byte()
+  bytes[offset + 3] = ((value >> 24) & 0xFF).to_byte()
+}
+
+///|
+fn transaction_zip_push_u16(bytes : Array[Byte], value : Int) -> Unit {
+  let raw = value.reinterpret_as_uint()
+  bytes.push((raw & 0xFF).to_byte())
+  bytes.push(((raw >> 8) & 0xFF).to_byte())
+}
+
+///|
+fn transaction_zip_push_u32(bytes : Array[Byte], value : UInt) -> Unit {
+  bytes.push((value & 0xFF).to_byte())
+  bytes.push(((value >> 8) & 0xFF).to_byte())
+  bytes.push(((value >> 16) & 0xFF).to_byte())
+  bytes.push(((value >> 24) & 0xFF).to_byte())
+}
+
+///|
+fn transaction_zip_eocd(bytes : Array[Byte]) -> Int raise {
+  for offset in (bytes.length() - 22)>=..0 {
+    if transaction_zip_u32(bytes, offset) == (0x06054B50 : UInt) {
+      return offset
+    }
+  }
+  fail("transaction fixture is missing EOCD")
+}
+
+///|
+fn transaction_zip_with_descriptors(data : BytesView) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  for entry in source.entries() {
+    result.add(
+      entry.name(),
+      entry.data(),
+      compression=entry.compression(),
+      data_descriptor=true,
+    )
+  }
+  @zip.write(result)
+}
+
+///|
 suberror MutationProbeError {
   MutationProbeError
 }
@@ -668,6 +744,116 @@ async test "invalid candidate format and extension fail closed" {
     assert_eq(extension_code, "office.transaction.validation_failed")
     assert_false(@afs.exists(output))
     assert_false(@afs.exists(wrong_extension))
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "transaction rejects alternate ZIP interpretations before publication" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let raw = original.to_array()
+    let eocd = transaction_zip_eocd(raw)
+    let central_size = transaction_zip_u32(raw, eocd + 12).reinterpret_as_int()
+    let central_offset = transaction_zip_u32(raw, eocd + 16).reinterpret_as_int()
+    let local_offset = transaction_zip_u32(raw, central_offset + 42).reinterpret_as_int()
+    let invalid : Array[Bytes] = []
+
+    let decoy_eocd = raw.copy()
+    transaction_zip_write_u16(decoy_eocd, eocd + 20, 22)
+    transaction_zip_push_u32(decoy_eocd, (0x06054B50 : UInt))
+    for _ in 0..<9 {
+      transaction_zip_push_u16(decoy_eocd, 0)
+    }
+    invalid.push(Bytes::from_array(decoy_eocd))
+
+    let wrong_central_size = raw.copy()
+    transaction_zip_write_u32(
+      wrong_central_size,
+      eocd + 12,
+      (central_size - 1).reinterpret_as_uint(),
+    )
+    invalid.push(Bytes::from_array(wrong_central_size))
+
+    let wrong_central_count = raw.copy()
+    transaction_zip_write_u16(wrong_central_count, eocd + 8, 0)
+    transaction_zip_write_u16(wrong_central_count, eocd + 10, 0)
+    invalid.push(Bytes::from_array(wrong_central_count))
+
+    let wrong_local_method = raw.copy()
+    let central_method = transaction_zip_u16(raw, central_offset + 10)
+    transaction_zip_write_u16(
+      wrong_local_method,
+      local_offset + 8,
+      if central_method == 0 {
+        8
+      } else {
+        0
+      },
+    )
+    invalid.push(Bytes::from_array(wrong_local_method))
+
+    let wrong_local_name = raw.copy()
+    wrong_local_name[local_offset + 30] = (wrong_local_name[local_offset + 30].to_uint() ^
+    1).to_byte()
+    invalid.push(Bytes::from_array(wrong_local_name))
+
+    let wrong_local_size = raw.copy()
+    transaction_zip_write_u32(
+      wrong_local_size,
+      local_offset + 22,
+      transaction_zip_u32(raw, local_offset + 22) + 1,
+    )
+    invalid.push(Bytes::from_array(wrong_local_size))
+
+    let descriptor_bytes = transaction_zip_with_descriptors(original).to_array()
+    let descriptor_eocd = transaction_zip_eocd(descriptor_bytes)
+    let descriptor_central = transaction_zip_u32(
+      descriptor_bytes,
+      descriptor_eocd + 16,
+    ).reinterpret_as_int()
+    let descriptor_local = transaction_zip_u32(
+      descriptor_bytes,
+      descriptor_central + 42,
+    ).reinterpret_as_int()
+    let descriptor_offset = descriptor_local +
+      30 +
+      transaction_zip_u16(descriptor_bytes, descriptor_local + 26) +
+      transaction_zip_u16(descriptor_bytes, descriptor_local + 28) +
+      transaction_zip_u32(descriptor_bytes, descriptor_central + 20).reinterpret_as_int()
+    descriptor_bytes[descriptor_offset + 4] = (descriptor_bytes[descriptor_offset +
+    4].to_uint() ^
+    1).to_byte()
+    invalid.push(Bytes::from_array(descriptor_bytes))
+
+    for candidate in invalid {
+      let code = transaction_error_code(() => {
+        @transaction.transact(
+          @transaction.transaction_options(input, dry_run=true),
+          (_format, _bytes) => @transaction.transaction_mutation(candidate),
+        )
+      })
+      assert_eq(code, "office.transaction.validation_failed")
+    }
+
+    let oversized_zip32 = raw.copy()
+    transaction_zip_write_u32(
+      oversized_zip32,
+      central_offset + 24,
+      (0x80000000 : UInt),
+    )
+    let resource_code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, dry_run=true),
+        (_format, _bytes) => {
+          @transaction.transaction_mutation(Bytes::from_array(oversized_zip32))
+        },
+      )
+    })
+    assert_eq(resource_code, "office.transaction.resource_limit_exceeded")
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
   })

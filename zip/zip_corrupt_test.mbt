@@ -77,6 +77,15 @@ fn push_u64_le(out : Array[Byte], value : UInt64) -> Unit {
 }
 
 ///|
+fn expect_zip_rejected(bytes : Array[Byte]) -> Unit raise {
+  try @zip.read(Bytes::from_array(bytes)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("expected strict ZIP read to reject archive")
+  }
+}
+
+///|
 test "zip read: corrupted structures hit error variants" {
   let archive = @zip.Archive::new()
   archive.add("a.txt", b"hello")
@@ -193,7 +202,170 @@ test "zip read: corrupted structures hit error variants" {
 }
 
 ///|
-test "zip read: EOCD comment length hits Reader::skip OutOfBounds" {
+test "zip read: EOCD and central directory have one exact interpretation" {
+  let archive = @zip.Archive::new()
+  archive.add("a.txt", b"hello")
+  let raw = @zip.write(archive).to_array()
+  let eocd = match find_eocd_offset(raw) {
+    Some(value) => value
+    None => fail("missing EOCD")
+  }
+  let central_size = read_u32_le(raw, eocd + 12).reinterpret_as_int()
+
+  // A complete fake EOCD in the real EOCD's comment used to be selected as
+  // an empty archive. It is EOF-anchored, but its central span cannot also be
+  // exact, so the archive must be rejected instead of split-view parsed.
+  let decoy = raw.copy()
+  overwrite_u16_le(decoy, eocd + 20, 22)
+  push_u32_le(decoy, (0x06054b50 : UInt))
+  for _ in 0..<8 {
+    push_u16_le(decoy, 0)
+  }
+  push_u16_le(decoy, 0)
+  expect_zip_rejected(decoy)
+
+  let bad_size = raw.copy()
+  zip_overwrite_u32_le(
+    bad_size,
+    eocd + 12,
+    (central_size - 1).reinterpret_as_uint(),
+  )
+  expect_zip_rejected(bad_size)
+
+  let bad_count = raw.copy()
+  overwrite_u16_le(bad_count, eocd + 8, 0)
+  overwrite_u16_le(bad_count, eocd + 10, 0)
+  expect_zip_rejected(bad_count)
+}
+
+///|
+test "zip read: local headers are bound to their central records" {
+  let archive = @zip.Archive::new()
+  archive.add("a.txt", b"hello")
+  let raw = @zip.write(archive).to_array()
+  let eocd = match find_eocd_offset(raw) {
+    Some(value) => value
+    None => fail("missing EOCD")
+  }
+  let central = read_u32_le(raw, eocd + 16).reinterpret_as_int()
+  let local_offset = read_u32_le(raw, central + 42).reinterpret_as_int()
+
+  let bad_method = raw.copy()
+  overwrite_u16_le(bad_method, local_offset + 8, 8)
+  expect_zip_rejected(bad_method)
+
+  let bad_name = raw.copy()
+  bad_name[local_offset + 30] = b'b'
+  expect_zip_rejected(bad_name)
+
+  let bad_crc = raw.copy()
+  bad_crc[local_offset + 14] = (bad_crc[local_offset + 14].to_uint() ^ 1).to_byte()
+  expect_zip_rejected(bad_crc)
+
+  let bad_size = raw.copy()
+  zip_overwrite_u32_le(bad_size, local_offset + 22, (4 : UInt))
+  expect_zip_rejected(bad_size)
+
+  // Even mutually consistent local/central declarations must equal the
+  // materialized length.
+  let bad_decoded_size = raw.copy()
+  zip_overwrite_u32_le(bad_decoded_size, local_offset + 22, (4 : UInt))
+  zip_overwrite_u32_le(bad_decoded_size, central + 24, (4 : UInt))
+  expect_zip_rejected(bad_decoded_size)
+}
+
+///|
+test "zip read: data descriptors are bound to central CRC and sizes" {
+  let archive = @zip.Archive::new()
+  archive.add("a.txt", b"hello", data_descriptor=true)
+  let raw = @zip.write(archive).to_array()
+  let eocd = match find_eocd_offset(raw) {
+    Some(value) => value
+    None => fail("missing EOCD")
+  }
+  let central = read_u32_le(raw, eocd + 16).reinterpret_as_int()
+  let local_offset = read_u32_le(raw, central + 42).reinterpret_as_int()
+  let name_len = read_u16_le(raw, local_offset + 26)
+  let extra_len = read_u16_le(raw, local_offset + 28)
+  let compressed_size = read_u32_le(raw, central + 20).reinterpret_as_int()
+  let descriptor = local_offset + 30 + name_len + extra_len + compressed_size
+  let bad = raw.copy()
+  bad[descriptor + 4] = (bad[descriptor + 4].to_uint() ^ 1).to_byte()
+  expect_zip_rejected(bad)
+}
+
+///|
+test "zip read_limited caps inflation by the remaining aggregate budget" {
+  let archive = @zip.Archive::new()
+  archive.add("a", b"123456789012345678901234")
+  archive.add("b", b"1234567890123456")
+  let raw = @zip.write(archive).to_array()
+  let eocd = match find_eocd_offset(raw) {
+    Some(value) => value
+    None => fail("missing EOCD")
+  }
+  let central = read_u32_le(raw, eocd + 16).reinterpret_as_int()
+  let first_name = read_u16_le(raw, central + 28)
+  let first_extra = read_u16_le(raw, central + 30)
+  let first_comment = read_u16_le(raw, central + 32)
+  let second_central = central + 46 + first_name + first_extra + first_comment
+  let second_local = read_u32_le(raw, second_central + 42).reinterpret_as_int()
+  // The second entry claims one expanded byte in both views, keeping declared
+  // aggregate usage below 32. Its stored payload is 16 bytes, so extraction
+  // must stop at the eight bytes remaining after the first entry.
+  zip_overwrite_u32_le(raw, second_local + 22, (1 : UInt))
+  zip_overwrite_u32_le(raw, second_central + 24, (1 : UInt))
+  try
+    @zip.read_limited(
+      Bytes::from_array(raw),
+      max_entries=2,
+      max_entry_uncompressed_bytes=64,
+      max_total_uncompressed_bytes=32,
+    )
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="total_uncompressed_bytes")
+      inspect(limit, content="32")
+      inspect(actual, content="40")
+    }
+    _ => fail("expected aggregate materialization limit")
+  } noraise {
+    _ => fail("expected aggregate materialization limit")
+  }
+}
+
+///|
+test "zip read_limited reports large ZIP32 declarations as resource limits" {
+  let archive = @zip.Archive::new()
+  archive.add("a.txt", b"hello")
+  let raw = @zip.write(archive).to_array()
+  let eocd = match find_eocd_offset(raw) {
+    Some(value) => value
+    None => fail("missing EOCD")
+  }
+  let central = read_u32_le(raw, eocd + 16).reinterpret_as_int()
+  zip_overwrite_u32_le(raw, central + 24, (0x80000000 : UInt))
+  try
+    @zip.read_limited(
+      Bytes::from_array(raw),
+      max_entries=1,
+      max_entry_uncompressed_bytes=64,
+      max_total_uncompressed_bytes=64,
+    )
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="entry_uncompressed_bytes")
+      inspect(limit, content="64")
+      inspect(actual, content="2147483647")
+    }
+    _ => fail("expected ZIP32 resource limit")
+  } noraise {
+    _ => fail("expected ZIP32 resource limit")
+  }
+}
+
+///|
+test "zip read: EOCD must be anchored to the declared comment at EOF" {
   let archive = @zip.Archive::new()
   archive.add("a.txt", b"hello")
   let raw_bytes = @zip.write(archive).to_array()
@@ -204,7 +376,7 @@ test "zip read: EOCD comment length hits Reader::skip OutOfBounds" {
   let bad_comment = raw_bytes.copy()
   overwrite_u16_le(bad_comment, eocd + 20, 1)
   try @zip.read(Bytes::from_array(bad_comment)) catch {
-    e => inspect(e is OutOfBounds(_), content="true")
+    e => inspect(e is MissingEndOfCentral, content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
@@ -370,9 +542,12 @@ test "zip read: parse_zip64_extra hits OutOfBounds branch" {
 ///|
 fn make_zip_zip64_invalid_eocd_signature() -> Bytes {
   let out : Array[Byte] = []
-  // Fake zip64 EOCD at offset 0 with invalid signature.
+  // Full-size fake zip64 EOCD at offset 0 with an invalid signature.
   push_u32_le(out, (0 : UInt))
-  // Zip64 locator at offset 4 (20 bytes).
+  for _ in 0..<52 {
+    out.push((0).to_byte())
+  }
+  // Zip64 locator at offset 56 (20 bytes).
   push_u32_le(out, (0x07064b50 : UInt))
   push_u32_le(out, (0 : UInt))
   // zip64_eocd_offset = 0
@@ -380,7 +555,7 @@ fn make_zip_zip64_invalid_eocd_signature() -> Bytes {
     out.push((0).to_byte())
   }
   push_u32_le(out, (1 : UInt))
-  // Regular EOCD at offset 24.
+  // Regular EOCD at offset 76.
   push_u32_le(out, (0x06054b50 : UInt))
   push_u16_le(out, 0)
   push_u16_le(out, 0)
@@ -504,7 +679,7 @@ test "zip read: zip64 EOCD huge declared entry count fails cleanly" {
   // instead of preallocating gigabytes of entry metadata.
   let bytes = make_zip_zip64_huge_declared_entry_count()
   try @zip.read(bytes) catch {
-    e => inspect(e is InvalidSignature(..), content="true")
+    e => inspect(e is OutOfBounds(_), content="true")
   } noraise {
     _ => fail("expected read to raise")
   }
