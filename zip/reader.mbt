@@ -196,6 +196,8 @@ priv struct EntryMeta {
   uncompressed_size : Int
   crc32 : UInt
   zip64_sizes : Bool
+  central_record : Bytes
+  zip64_offset_position : Int?
 }
 
 ///|
@@ -301,6 +303,36 @@ fn parse_zip64_extra(
     }
   }
   (found_zip64, uncomp, comp, offset)
+}
+
+///|
+fn zip64_offset_position(
+  extra : BytesView,
+  need_uncomp : Bool,
+  need_comp : Bool,
+) -> Int raise ZipError {
+  let mut position = 0
+  while position < extra.length() {
+    if position > extra.length() || 4 > extra.length() - position {
+      raise UnsupportedFeature(msg="truncated zip extra field header")
+    }
+    let header_id = read_u16_le_at(extra, position)
+    let data_size = read_u16_le_at(extra, position + 2)
+    let data_offset = position + 4
+    if data_offset > extra.length() || data_size > extra.length() - data_offset {
+      raise OutOfBounds(offset=data_offset)
+    }
+    if header_id == 0x0001 {
+      let field_offset = (if need_uncomp { 8 } else { 0 }) +
+        (if need_comp { 8 } else { 0 })
+      if field_offset > data_size || 8 > data_size - field_offset {
+        raise UnsupportedFeature(msg="zip64 local-offset field is missing")
+      }
+      return data_offset + field_offset
+    }
+    position = data_offset + data_size
+  }
+  raise UnsupportedFeature(msg="zip64 local-offset field is missing")
 }
 
 ///|
@@ -649,7 +681,7 @@ fn read_impl(
   let central_size_raw = reader.read_u32_raw()
   let central_offset_raw = reader.read_u32_raw()
   let comment_len = reader.read_u16()
-  reader.skip(comment_len)
+  let archive_comment = reader.read_bytes(comment_len).to_owned()
   if disk_no != 0 || disk_start != 0 {
     raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
@@ -744,7 +776,8 @@ fn read_impl(
   let central_reader = Reader::new(central_bytes, 0)
   let mut declared_total = 0
   for _ in 0..<entry_count {
-    let header_offset = central_offset + central_reader.pos
+    let central_record_start = central_reader.pos
+    let header_offset = central_offset + central_record_start
     let cd_sig = central_reader.read_u32()
     if cd_sig != central_header_sig {
       raise InvalidSignature(
@@ -777,6 +810,7 @@ fn read_impl(
       central_offset + central_reader.pos - extra_len - name_len,
     )
     central_reader.skip(comment_len)
+    let central_record = central_bytes[central_record_start:central_reader.pos].to_owned()
     if disk != 0 {
       raise UnsupportedFeature(msg="multi-disk zip not supported")
     }
@@ -849,6 +883,15 @@ fn read_impl(
     } else {
       u32_to_int(local_offset_raw)
     }
+    let preserved_zip64_offset_position = if need_offset {
+      Some(
+        46 +
+        name_len +
+        zip64_offset_position(extra_bytes, need_uncomp, need_comp),
+      )
+    } else {
+      None
+    }
     ignore(compression_from_method(method_id))
     match max_entry_uncompressed_bytes {
       Some(limit) if uncomp_size > limit =>
@@ -878,6 +921,8 @@ fn read_impl(
       uncompressed_size: uncomp_size,
       crc32,
       zip64_sizes: need_uncomp || need_comp,
+      central_record,
+      zip64_offset_position: preserved_zip64_offset_position,
     })
   }
   if central_reader.pos != central_size {
@@ -915,7 +960,7 @@ fn read_impl(
       msg="unreferenced data before zip central directory",
     )
   }
-  let archive = Archive::new()
+  let archive = archive_from_source(archive_comment, needs_zip64)
   let mut actual_total = 0
   for index in 0..<metas.length() {
     let meta = metas[index]
@@ -961,9 +1006,15 @@ fn read_impl(
     archive.entries.push({
       name: meta.name,
       data,
-      compression: Store,
-      data_descriptor: false,
+      compression: record.compression,
+      data_descriptor: (meta.flags & flag_data_descriptor) != 0,
       crc32: meta.crc32,
+      source_local_offset: Some(meta.local_header_offset),
+      preserved: Some({
+        local_record: bytes[meta.local_header_offset:record.end].to_owned(),
+        central_record: meta.central_record,
+        zip64_offset_position: meta.zip64_offset_position,
+      }),
     })
   }
   archive

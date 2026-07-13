@@ -41,6 +41,31 @@ test "zip deflate roundtrip (data descriptor)" {
   let bytes = @zip.write(archive)
   let parsed = @zip.read(bytes)
   inspect(parsed.get("a.txt") == Some(b"hello"), content="true")
+  guard parsed.entries()[0] is entry else { fail("expected parsed entry") }
+  assert_true(entry.compression() is Deflate)
+  assert_true(entry.data_descriptor())
+  let limited = @zip.read_limited(
+    bytes,
+    max_entries=1,
+    max_entry_uncompressed_bytes=5,
+    max_total_uncompressed_bytes=5,
+  )
+  assert_true(limited.entries()[0].compression() is Deflate)
+  assert_true(limited.entries()[0].data_descriptor())
+}
+
+///|
+test "zip read-write roundtrip preserves source records exactly" {
+  let source_archive = @zip.Archive::new()
+  source_archive.add("stored.txt", b"stored")
+  source_archive.add(
+    "deflated.txt",
+    b"deflated-deflated-deflated",
+    compression=Deflate,
+    data_descriptor=true,
+  )
+  let source = @zip.write(source_archive)
+  assert_eq(@zip.write(@zip.read(source)), source)
 }
 
 ///|

@@ -63,6 +63,22 @@ fn assert_archive_metadata_preserved(
 }
 
 ///|
+fn raw_test_mixed_zip_policies(source : BytesView) -> Bytes raise {
+  let parsed = @zip.read(source)
+  let output = @zip.Archive::new()
+  for index = 0; index < parsed.entries().length(); index = index + 1 {
+    let entry = parsed.entries()[index]
+    output.add(
+      entry.name(),
+      entry.data(),
+      compression=if index % 2 == 0 { Deflate } else { Store },
+      data_descriptor=index % 3 != 0,
+    )
+  }
+  @zip.write(output)
+}
+
+///|
 fn word_paragraph(text : String) -> String {
   "<w:p xmlns:w=\"\{word_namespace}\"><w:r><w:t>\{text}</w:t></w:r></w:p>"
 }
@@ -74,7 +90,7 @@ fn raw_occurrences(text : String, needle : String) -> Int {
 
 ///|
 test "raw edit splices DOCX elements and preserves every other part payload" {
-  let original = @word.new_blank_docx()
+  let original = raw_test_mixed_zip_policies(@word.new_blank_docx())
   let add_first = @raw.raw_edit_request(
     "/document",
     "/w:document/w:body/w:sectPr",
