@@ -305,7 +305,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
               "xml-file", "path", false, "bounded UTF-8 replacement XML file",
             ),
             capability_field(
-              "out", "path", false, "separate transaction destination",
+              "out", "path", false, "separate destination with the same .docx or .xlsx extension as the input",
             ),
             capability_field(
               "dry-run", "boolean", false, "validate without publishing",
@@ -332,7 +332,8 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
             ),
           ],
           constraints: [
-            "exactly-one(xml,xml-file)", "overwrite-requires(out)", "transactional-publication",
+            "exactly-one(xml,xml-file)", "overwrite-requires(out)", "out-extension-must-match-input-format",
+            "transactional-publication",
           ],
           actions: [],
           output_modes: ["human", "json"],
@@ -374,7 +375,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
               "all", "boolean", false, "allow multiple bounded matches",
             ),
             capability_field(
-              "out", "path", false, "separate transaction destination",
+              "out", "path", false, "separate destination with the same .docx or .xlsx extension as the input",
             ),
             capability_field(
               "dry-run", "boolean", false, "validate without publishing",
@@ -404,7 +405,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
             "mutually-exclusive(xml,xml-file)", "element-actions-require(exactly-one(xml,xml-file))",
             "set-attribute-requires(attribute,value)", "remove-forbids(xml,xml-file,attribute,value)",
             "overwrite-requires(out)", "flag-looking-values-require-attached-syntax",
-            "transactional-publication",
+            "out-extension-must-match-input-format", "transactional-publication",
           ],
           actions: [
             capability_action("append", ["exactly-one(xml,xml-file)"], [
