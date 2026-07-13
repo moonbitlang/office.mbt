@@ -357,23 +357,40 @@ fn parse_raw_path(
 ///|
 fn standard_raw_namespaces(
   format : @office.DocumentFormat,
+  strict : Bool,
 ) -> Map[String, String] {
   let namespaces : Map[String, String] = {
-    "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-    "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
+    "xml": "http://www.w3.org/XML/1998/namespace",
     "mc": "http://schemas.openxmlformats.org/markup-compatibility/2006",
+  }
+  if strict {
+    namespaces["r"] = "http://purl.oclc.org/ooxml/officeDocument/relationships"
+    namespaces["a"] = "http://purl.oclc.org/ooxml/drawingml/main"
+  } else {
+    namespaces["r"] = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    namespaces["a"] = "http://schemas.openxmlformats.org/drawingml/2006/main"
   }
   match format {
     Docx => {
-      namespaces["w"] = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-      namespaces["wp"] = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-      namespaces["pic"] = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+      if strict {
+        namespaces["w"] = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+        namespaces["wp"] = "http://purl.oclc.org/ooxml/drawingml/wordprocessingDrawing"
+        namespaces["pic"] = "http://purl.oclc.org/ooxml/drawingml/picture"
+      } else {
+        namespaces["w"] = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        namespaces["wp"] = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+        namespaces["pic"] = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+      }
       namespaces["w14"] = "http://schemas.microsoft.com/office/word/2010/wordml"
       namespaces["w15"] = "http://schemas.microsoft.com/office/word/2012/wordml"
       namespaces["v"] = "urn:schemas-microsoft-com:vml"
     }
     Xlsx => {
-      namespaces["x"] = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+      namespaces["x"] = if strict {
+        "http://purl.oclc.org/ooxml/spreadsheetml/main"
+      } else {
+        "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+      }
       namespaces["x14"] = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
       namespaces["x15"] = "http://schemas.microsoft.com/office/spreadsheetml/2010/11/main"
     }
@@ -455,8 +472,12 @@ pub fn raw_namespace_binding(value : String) -> (String, String) raise RawError 
 fn edit_path_namespaces(
   format : @office.DocumentFormat,
   request : RawEditRequest,
+  document : RawXmlDocument,
 ) -> Map[String, String] {
-  let output = standard_raw_namespaces(format)
+  let output = standard_raw_namespaces(
+    format,
+    raw_document_uses_strict_ooxml(document),
+  )
   for binding in request.namespaces {
     let (prefix, uri) = binding
     output[prefix] = uri

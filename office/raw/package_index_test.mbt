@@ -284,6 +284,72 @@ fn mixed_case_xlsx_fixture() -> Bytes raise {
 }
 
 ///|
+fn strict_docx_fixture() -> Bytes raise {
+  raw_test_archive([
+    (
+      "[Content_Types].xml",
+      @utf8.encode(
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
+      ),
+    ),
+    (
+      "_rels/.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "word/document.xml",
+      @utf8.encode(
+        "<w:document xmlns:w=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:body><w:p/><w:sectPr/></w:body></w:document>",
+      ),
+    ),
+    (
+      "word/_rels/document.xml.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+      ),
+    ),
+  ])
+}
+
+///|
+fn strict_xlsx_fixture() -> Bytes raise {
+  raw_test_archive([
+    (
+      "[Content_Types].xml",
+      @utf8.encode(
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/xl/worksheets/sheet.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/></Types>",
+      ),
+    ),
+    (
+      "_rels/.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "xl/workbook.xml",
+      @utf8.encode(
+        "<workbook xmlns=\"http://purl.oclc.org/ooxml/spreadsheetml/main\" xmlns:r=\"http://purl.oclc.org/ooxml/officeDocument/relationships\"><sheets><sheet name=\"Strict\" sheetId=\"1\" r:id=\"sheet\"/></sheets></workbook>",
+      ),
+    ),
+    (
+      "xl/_rels/workbook.xml.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"sheet\" Type=\"http://purl.oclc.org/ooxml/officeDocument/relationships/worksheet\" Target=\"worksheets/sheet.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "xl/worksheets/sheet.xml",
+      @utf8.encode(
+        "<worksheet xmlns=\"http://purl.oclc.org/ooxml/spreadsheetml/main\"><sheetData/></worksheet>",
+      ),
+    ),
+  ])
+}
+
+///|
 fn colliding_literal_docx_fixture() -> Bytes raise {
   let source = @zip.read(relocated_docx_fixture())
   let output = @zip.Archive::new()
@@ -550,4 +616,45 @@ test "raw selector collisions require an explicit alias or literal mode" {
   let literal = @raw.raw_read("collision.docx", data, "part:/document")
   assert_eq(literal.info.name, "document")
   assert_eq(literal.xml_text(), "<literal/>")
+}
+
+///|
+test "raw selectors derive Strict OOXML namespaces and bind xml automatically" {
+  let docx = strict_docx_fixture()
+  assert_eq(
+    inventory_alias_target(@raw.raw_inventory("strict.docx", docx), "/document"),
+    Some("word/document.xml"),
+  )
+  let docx_request = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body",
+    SetAttribute,
+    attribute="xml:space",
+    value="preserve",
+  )
+  let docx_edited = @raw.raw_edit(Docx, docx, docx_request)
+  assert_true(
+    @raw.raw_read("strict.docx", docx_edited.bytes, "/document")
+    .xml_text()
+    .contains("xml:space=\"preserve\""),
+  )
+
+  let xlsx = strict_xlsx_fixture()
+  assert_eq(
+    inventory_alias_target(@raw.raw_inventory("strict.xlsx", xlsx), "/Strict"),
+    Some("xl/worksheets/sheet.xml"),
+  )
+  let xlsx_request = @raw.raw_edit_request(
+    "/sheet[1]",
+    "/x:worksheet/x:sheetData",
+    SetAttribute,
+    attribute="strict",
+    value="true",
+  )
+  let xlsx_edited = @raw.raw_edit(Xlsx, xlsx, xlsx_request)
+  assert_true(
+    @raw.raw_read("strict.xlsx", xlsx_edited.bytes, "/sheet[1]")
+    .xml_text()
+    .contains("strict=\"true\""),
+  )
 }
