@@ -139,6 +139,42 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
       output_modes: ["human", "json"],
     },
+    {
+      name: "raw",
+      summary: "Inventory, read, and atomically edit validated OOXML parts",
+      usage: "office raw <list|read|replace|edit> ...",
+      formats: ["docx", "xlsx"],
+      aliases: [],
+      inputs: [
+        capability_field(
+          "operation", "enum(list|read|replace|edit)", true, "bounded raw OOXML operation",
+        ),
+        capability_field(
+          "file", "path", true, "path to an existing XLSX or DOCX package",
+        ),
+        capability_field(
+          "part", "alias|absolute-part", false, "relationship-derived alias or absolute package part",
+        ),
+        capability_field(
+          "path", "office.raw.path/1", false, "bounded namespace-aware element selector",
+        ),
+        capability_field(
+          "json", "boolean", false, "emit one office.output/1 JSON document",
+        ),
+      ],
+      outputs: [
+        capability_field(
+          "inventory", "office.raw.inventory/1", false, "canonical package-part inventory",
+        ),
+        capability_field(
+          "part", "office.raw.part/1", false, "resolved part metadata and explicitly selected content",
+        ),
+        capability_field(
+          "change", "office.raw.result/1", false, "validated mutation and transaction report",
+        ),
+      ],
+      output_modes: ["human", "json", "base64", "file"],
+    },
   ]
 }
 

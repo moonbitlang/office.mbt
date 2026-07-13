@@ -256,9 +256,9 @@ jobs:
             and .success == true
             and .data.schema == "office.capabilities/1"
             and (.data.fingerprint | test("^crc32:[0-9a-f]{8}$"))
-            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify"])'
+            and ([.data.records[].name] == ["docx", "xlsx", "help", "identify", "raw"])'
           moon run --target wasm office/cmd/office -- help all --jsonl 2>office-wasm.err \
-            | jq -se 'length == 4 and all(.[]; .schema == "office.capability/1")'
+            | jq -se 'length == 5 and all(.[]; .schema == "office.capability/1")'
           if moon run --target wasm office/cmd/office -- help xlxs --json >office-wasm-error.json 2>office-wasm.err; then
             echo "expected unknown office help format to fail"
             exit 1
@@ -267,6 +267,32 @@ jobs:
             and .success == false
             and .error.code == "office.unknown_format"
             and .error.details.suggestions == ["xlsx"]' office-wasm-error.json
+          # Raw OOXML uses the same async filesystem and A4 transaction on
+          # wasm. Exercise relationship-derived aliases, dry-run preservation,
+          # atomic separate-output publication, and both Office formats.
+          r=$(moon run --target wasm office/cmd/office -- raw list ci.xlsx --json 2>office-wasm.err) || { echo "office raw list failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$r" | jq -e '.schema == "office.output/1"
+            and .success == true
+            and .data.schema == "office.raw.inventory/1"
+            and any(.data.parts[]; .aliases | index("/Data"))'
+          r=$(moon run --target wasm office/cmd/office -- raw read docx2html/tests/cram/fixtures/single-paragraph.docx /document --json 2>office-wasm.err) || { echo "office raw DOCX read failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$r" | jq -e '.success == true
+            and .data.schema == "office.raw.part/1"
+            and (.data.content | contains("Walking on imported air"))'
+          cp ci.xlsx ci-raw-before.xlsx
+          r=$(moon run --target wasm office/cmd/office -- raw edit ci.xlsx /Data --path '/x:worksheet/x:sheetData/x:row[1]' --action set-attribute --attribute ht --value 15 --dry-run --json 2>office-wasm.err) || { echo "office raw dry-run failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$r" | jq -e '.success == true
+            and .data.change.action == "set-attribute"
+            and .data.transaction.dry_run == true
+            and .data.transaction.committed == false
+            and .data.transaction.preservation.changed == ["xl/worksheets/sheet1.xml"]'
+          cmp ci.xlsx ci-raw-before.xlsx
+          r=$(moon run --target wasm office/cmd/office -- raw edit ci.xlsx /Data --path '/x:worksheet/x:sheetData/x:row[1]' --action set-attribute --attribute ht --value 15 --out ci-raw.xlsx --json 2>office-wasm.err) || { echo "office raw commit failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$r" | jq -e '.success == true
+            and .data.transaction.committed == true
+            and .data.transaction.preservation.changed == ["xl/worksheets/sheet1.xml"]'
+          r=$(moon run --target wasm office/cmd/office -- raw read ci-raw.xlsx /Data --json 2>office-wasm.err) || { echo "office raw readback failed; stderr:"; cat office-wasm.err; exit 1; }
+          echo "$r" | jq -e '.success == true and (.data.content | contains("ht=\"15\""))'
           # The docx agent CLI also targets wasm end to end: build it and
           # drive its convert subcommand over a committed fixture. Keep the
           # captured stderr and print it on failure — discarding it makes a

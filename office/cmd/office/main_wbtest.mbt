@@ -3,7 +3,7 @@ test "capability registry claims only wired commands" {
   for command in @lib.capability_commands() {
     assert_true(is_implemented_command(command.name))
   }
-  for name in ["help", "identify"] {
+  for name in ["help", "identify", "raw"] {
     assert_true(@lib.find_capability_command(name) is Some(_))
   }
 }
@@ -16,6 +16,18 @@ test "identify generated help marks its file positional as required" {
 }
 
 ///|
+test "raw generated help exposes only the bounded operation family" {
+  let help = raw_command().render_help()
+  assert_true(help.contains("list"))
+  assert_true(help.contains("read"))
+  assert_true(help.contains("replace"))
+  assert_true(help.contains("edit"))
+  assert_false(help.to_lower().contains("xpath"))
+  assert_false(help.to_lower().contains("ppt"))
+  assert_false(help.to_lower().contains("mcp"))
+}
+
+///|
 test "bounded diagnostics do not amplify attacker-controlled tokens" {
   let long = "x".repeat(1_000)
   let bounded = bounded_text(long, 24)
@@ -24,6 +36,7 @@ test "bounded diagnostics do not amplify attacker-controlled tokens" {
   let error = unknown_help_token("format", long, ["docx", "xlsx"])
   assert_true(error.message.length() < 180)
   assert_false(error.message.contains("x".repeat(100)))
+  assert_eq(raw_human_text("line\n\u{1b}[31m", 40), "line\\n\\u001b[31m")
 }
 
 ///|
