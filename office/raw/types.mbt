@@ -159,7 +159,7 @@ pub fn RawInventory::to_json(self : RawInventory) -> Json {
     parts.push(part.to_json())
   }
   Json::object({
-    "schema": Json::string("office.raw.inventory/1"),
+    "schema": Json::string(@office.SCHEMA_RAW_INVENTORY),
     "format": Json::string(self.format.name()),
     "part_count": Json::number(self.parts.length().to_double()),
     "parts": Json::array(parts),
@@ -214,7 +214,7 @@ pub fn RawPartData::xml_text(self : RawPartData) -> String raise RawError {
 ///|
 pub fn RawPartData::metadata_json(self : RawPartData) -> Json {
   Json::object({
-    "schema": Json::string("office.raw.part/1"),
+    "schema": Json::string(@office.SCHEMA_RAW_PART),
     "format": Json::string(self.format.name()),
     "part": self.info.to_json(),
   })
@@ -308,7 +308,7 @@ pub fn RawMutation::selected_count(self : RawMutation) -> Int {
 ///|
 pub fn RawMutation::to_json(self : RawMutation) -> Json {
   Json::object({
-    "schema": Json::string("office.raw.change/1"),
+    "schema": Json::string(@office.SCHEMA_RAW_CHANGE),
     "part": Json::string("/" + self.part),
     "action": Json::string(self.action),
     "match_count": Json::number(self.match_count.to_double()),

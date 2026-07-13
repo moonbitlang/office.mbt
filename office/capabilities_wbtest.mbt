@@ -39,9 +39,11 @@ test "capability fingerprint distinguishes collection boundaries" {
       {
         name: "variant",
         usage: "office example variant",
+        result_schema: "office.example/1",
         inputs: [field],
         outputs: [],
         constraints: ["required(value)"],
+        actions: [],
         output_modes: ["json"],
       },
     ],

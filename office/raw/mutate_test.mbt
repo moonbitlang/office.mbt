@@ -89,6 +89,119 @@ fn raw_occurrences(text : String, needle : String) -> Int {
 }
 
 ///|
+test "raw capability action matrix matches request validation" {
+  let part = "/document"
+  let path = "/w:document/w:body"
+  let element_actions : Array[@raw.RawAction] = [
+    Append,
+    Prepend,
+    InsertBefore,
+    InsertAfter,
+    Replace,
+  ]
+  for action in element_actions {
+    ignore(@raw.raw_edit_request(part, path, action, xml="<x/>"))
+    assert_eq(
+      raw_error_code(() => @raw.raw_edit_request(part, path, action)),
+      "office.raw.invalid_request",
+    )
+    assert_eq(
+      raw_error_code(() => {
+        @raw.raw_edit_request(
+          part,
+          path,
+          action,
+          xml="<x/>",
+          attribute="a",
+          value="b",
+        )
+      }),
+      "office.raw.invalid_request",
+    )
+  }
+  ignore(@raw.raw_edit_request(part, path, Remove))
+  assert_eq(
+    raw_error_code(() => @raw.raw_edit_request(part, path, Remove, xml="<x/>")),
+    "office.raw.invalid_request",
+  )
+  ignore(
+    @raw.raw_edit_request(part, path, SetAttribute, attribute="a", value="b"),
+  )
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_edit_request(part, path, SetAttribute, attribute="a")
+    }),
+    "office.raw.invalid_request",
+  )
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_edit_request(
+        part,
+        path,
+        SetAttribute,
+        xml="<x/>",
+        attribute="a",
+        value="b",
+      )
+    }),
+    "office.raw.invalid_request",
+  )
+  let original = @word.new_blank_docx()
+  let root_forbidden : Array[@raw.RawAction] = [
+    InsertBefore,
+    InsertAfter,
+    Remove,
+  ]
+  for action in root_forbidden {
+    let request = if action is Remove {
+      @raw.raw_edit_request(part, "/w:document", action)
+    } else {
+      @raw.raw_edit_request(part, "/w:document", action, xml="<x/>")
+    }
+    assert_eq(
+      raw_error_code(() => @raw.raw_edit(Docx, original, request)),
+      "office.raw.invalid_action",
+    )
+  }
+}
+
+///|
+test "raw emitted schemas share the capability registry constants" {
+  let original = @word.new_blank_docx()
+  guard @raw.raw_inventory("schema.docx", original).to_json()
+    is Object(inventory) else {
+    fail("raw inventory must be an object")
+  }
+  assert_eq(
+    inventory.get("schema"),
+    Some(Json::string(@office.SCHEMA_RAW_INVENTORY)),
+  )
+  let part = @raw.raw_read("schema.docx", original, "/document")
+  guard part.metadata_json() is Object(part_json) else {
+    fail("raw part metadata must be an object")
+  }
+  assert_eq(
+    part_json.get("schema"),
+    Some(Json::string(@office.SCHEMA_RAW_PART)),
+  )
+  let mutation = @raw.raw_edit(
+    Docx,
+    original,
+    @raw.raw_edit_request(
+      "/document",
+      "/w:document/w:body",
+      SetAttribute,
+      attribute="test",
+      value="true",
+    ),
+  )
+  guard mutation.to_json() is Object(change) else {
+    fail("raw change must be an object")
+  }
+  assert_eq(change.get("schema"), Some(Json::string(@office.SCHEMA_RAW_CHANGE)))
+}
+
+///|
 test "raw edit splices DOCX elements and preserves every other part payload" {
   let original = raw_test_mixed_zip_policies(@word.new_blank_docx())
   let add_first = @raw.raw_edit_request(
