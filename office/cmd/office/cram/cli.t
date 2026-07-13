@@ -145,6 +145,18 @@ manifest without changing the source; separate output commits are validated.
   $ cmp before.docx input.docx; echo $?
   0
 
+A missing option value must never consume a publish-control flag. The command
+fails before opening a transaction, and the in-place input remains byte-exact.
+
+  $ cp before.docx missing-value.docx
+  $ cp missing-value.docx missing-value-before.docx
+  $ office.exe raw edit missing-value.docx /document --path '/w:document/w:body/w:p[1]' --action set-attribute --attribute test --value --dry-run --json > missing-value.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' missing-value.json
+  {"success":false,"code":"office.invalid_arguments"}
+  $ cmp missing-value-before.docx missing-value.docx; echo $?
+  0
+
   $ office.exe raw edit input.docx /document --path '/w:document/w:body/w:p[1]' --action set-attribute --attribute w:rsidR --value DEADBEEF --out edited.docx --json | jq -c '{success,action:.data.change.action,committed:.data.transaction.committed,changed:.data.transaction.preservation.changed}'
   {"success":true,"action":"set-attribute","committed":true,"changed":["word/document.xml"]}
   $ unzip -p edited.docx word/document.xml | rg -o 'w:rsidR="[^"]+"' | head -1

@@ -63,11 +63,7 @@ fn cli_file_error(code : String, message : String, path : String) -> CliFailure 
 
 ///|
 fn raw_human_text(value : String, maximum : Int) -> String {
-  bounded_text(value, maximum)
-  .replace(old="\u{1b}", new="\\u001b")
-  .replace(old="\r", new="\\r")
-  .replace(old="\n", new="\\n")
-  .replace(old="\t", new="\\t")
+  terminal_safe_text(bounded_text(value, maximum))
 }
 
 ///|
@@ -524,9 +520,7 @@ fn raw_mutation_output_options() -> Array[@argparse.OptionArg] {
 ///|
 fn raw_command() -> @argparse.Command {
   let replace_options : Array[@argparse.OptionArg] = [
-    OptionArg("xml", long="xml", allow_hyphen_values=true, conflicts_with=[
-      "xml-file",
-    ]),
+    OptionArg("xml", long="xml", conflicts_with=["xml-file"]),
     OptionArg("xml-file", long="xml-file", conflicts_with=["xml"]),
   ]
   for option in raw_mutation_output_options() {
@@ -535,12 +529,10 @@ fn raw_command() -> @argparse.Command {
   let edit_options : Array[@argparse.OptionArg] = [
     OptionArg("path", long="path", required=true),
     OptionArg("action", long="action", required=true),
-    OptionArg("xml", long="xml", allow_hyphen_values=true, conflicts_with=[
-      "xml-file",
-    ]),
+    OptionArg("xml", long="xml", conflicts_with=["xml-file"]),
     OptionArg("xml-file", long="xml-file", conflicts_with=["xml"]),
     OptionArg("attribute", long="attribute"),
-    OptionArg("value", long="value", allow_hyphen_values=true),
+    OptionArg("value", long="value"),
     OptionArg(
       "namespace",
       long="namespace",

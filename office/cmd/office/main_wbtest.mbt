@@ -37,6 +37,13 @@ test "bounded diagnostics do not amplify attacker-controlled tokens" {
   assert_true(error.message.length() < 180)
   assert_false(error.message.contains("x".repeat(100)))
   assert_eq(raw_human_text("line\n\u{1b}[31m", 40), "line\\n\\u001b[31m")
+  assert_eq(
+    render_failure(
+      @lib.protocol_error("office.test", "bad\u{1b}[31m\u{7}line\nnext"),
+      Human,
+    ),
+    "office: bad\\u001b[31m\\u0007line\\nnext",
+  )
 }
 
 ///|
