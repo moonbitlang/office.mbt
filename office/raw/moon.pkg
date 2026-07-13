@@ -1,0 +1,17 @@
+import {
+  "bobzhang/office",
+  "bobzhang/mbtexcel/zip",
+  "bobzhang/docx2html/xml",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf16",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+}
+
+import {
+  "bobzhang/mbtexcel" @excel,
+  "bobzhang/docx2html" @word,
+  "moonbitlang/core/encoding/utf8",
+} for "test"
+
+supported_targets = "native+wasm"
