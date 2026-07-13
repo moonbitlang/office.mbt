@@ -1,0 +1,105 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/office/raw"
+
+import {
+  "bobzhang/office",
+}
+
+// Values
+pub fn raw_edit(@office.DocumentFormat, BytesView, RawEditRequest) -> RawMutation raise RawError
+
+pub fn raw_edit_request(String, String, RawAction, xml? : String, attribute? : String, value? : String, namespaces? : Array[(String, String)], all? : Bool) -> RawEditRequest raise RawError
+
+pub fn raw_inventory(StringView, BytesView) -> RawInventory raise RawError
+
+pub fn raw_namespace_binding(String) -> (String, String) raise RawError
+
+pub fn raw_read(StringView, BytesView, String) -> RawPartData raise RawError
+
+pub fn raw_replace_part(@office.DocumentFormat, BytesView, String, String) -> RawMutation raise RawError
+
+pub fn resolve_raw_action(StringView) -> RawAction?
+
+// Errors
+pub(all) suberror RawError {
+  RawError(code~ : String, message~ : String, details~ : Json?)
+}
+#deprecated
+pub fn RawError::output(Self, &Logger) -> Unit
+pub fn RawError::to_protocol_error(Self) -> @office.ProtocolError
+#deprecated
+pub fn RawError::to_string(Self) -> String
+pub impl Show for RawError
+
+// Types and methods
+pub(all) enum RawAction {
+  Append
+  Prepend
+  InsertBefore
+  InsertAfter
+  Replace
+  Remove
+  SetAttribute
+}
+pub fn RawAction::name(Self) -> String
+
+pub struct RawEditRequest {
+  part : String
+  path : String
+  action : RawAction
+  xml : String?
+  attribute : String?
+  value : String?
+  namespaces : ReadOnlyArray[(String, String)]
+  all : Bool
+}
+
+pub struct RawInventory {
+  format : @office.DocumentFormat
+  parts : ReadOnlyArray[RawPartInfo]
+}
+pub fn RawInventory::document_format(Self) -> @office.DocumentFormat
+pub fn RawInventory::part_records(Self) -> ReadOnlyArray[RawPartInfo]
+pub fn RawInventory::to_json(Self) -> Json
+
+pub struct RawMutation {
+  bytes : Bytes
+  part : String
+  action : String
+  match_count : Int
+}
+pub fn RawMutation::action_name(Self) -> String
+pub fn RawMutation::candidate_bytes(Self) -> Bytes
+pub fn RawMutation::part_name(Self) -> String
+pub fn RawMutation::selected_count(Self) -> Int
+pub fn RawMutation::to_json(Self) -> Json
+
+pub struct RawPartData {
+  format : @office.DocumentFormat
+  info : RawPartInfo
+  bytes : Bytes
+}
+pub fn RawPartData::document_format(Self) -> @office.DocumentFormat
+pub fn RawPartData::metadata_json(Self) -> Json
+pub fn RawPartData::part_info(Self) -> RawPartInfo
+pub fn RawPartData::payload_bytes(Self) -> Bytes
+pub fn RawPartData::xml_text(Self) -> String raise RawError
+
+pub struct RawPartInfo {
+  name : String
+  content_type : String
+  xml : Bool
+  size : Int
+  aliases : ReadOnlyArray[String]
+}
+pub fn RawPartInfo::byte_size(Self) -> Int
+pub fn RawPartInfo::is_xml(Self) -> Bool
+pub fn RawPartInfo::media_type(Self) -> String
+pub fn RawPartInfo::part_name(Self) -> String
+pub fn RawPartInfo::semantic_aliases(Self) -> ReadOnlyArray[String]
+pub fn RawPartInfo::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits
+

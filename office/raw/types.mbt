@@ -31,11 +31,7 @@ fn bounded_raw_text(value : String, limit : Int) -> String {
 }
 
 ///|
-fn raw_error(
-  code : String,
-  message : String,
-  details? : Json,
-) -> RawError {
+fn raw_error(code : String, message : String, details? : Json) -> RawError {
   RawError(
     code~,
     message=bounded_raw_text(message, raw_max_error_message),
@@ -66,6 +62,38 @@ pub struct RawPartInfo {
 }
 
 ///|
+/// Returns the canonical relative ZIP entry name without a leading slash.
+pub fn RawPartInfo::part_name(self : RawPartInfo) -> String {
+  self.name
+}
+
+///|
+/// Returns the content type resolved from the package manifest.
+pub fn RawPartInfo::media_type(self : RawPartInfo) -> String {
+  self.content_type
+}
+
+///|
+/// Reports whether the manifest content type denotes an XML media type.
+pub fn RawPartInfo::is_xml(self : RawPartInfo) -> Bool {
+  self.xml
+}
+
+///|
+/// Returns the uncompressed payload size in bytes.
+pub fn RawPartInfo::byte_size(self : RawPartInfo) -> Int {
+  self.size
+}
+
+///|
+/// Returns the relationship-derived aliases for this part.
+pub fn RawPartInfo::semantic_aliases(
+  self : RawPartInfo,
+) -> ReadOnlyArray[String] {
+  self.aliases
+}
+
+///|
 fn json_string_array(values : ReadOnlyArray[String]) -> Json {
   let output = []
   for value in values {
@@ -93,6 +121,22 @@ pub struct RawInventory {
 }
 
 ///|
+/// Returns the structurally identified package format.
+pub fn RawInventory::document_format(
+  self : RawInventory,
+) -> @office.DocumentFormat {
+  self.format
+}
+
+///|
+/// Returns the canonically ordered immutable part inventory.
+pub fn RawInventory::part_records(
+  self : RawInventory,
+) -> ReadOnlyArray[RawPartInfo] {
+  self.parts
+}
+
+///|
 pub fn RawInventory::to_json(self : RawInventory) -> Json {
   let parts = []
   for part in self.parts {
@@ -112,6 +156,27 @@ pub struct RawPartData {
   format : @office.DocumentFormat
   info : RawPartInfo
   bytes : Bytes
+}
+
+///|
+/// Returns the structurally identified package format.
+pub fn RawPartData::document_format(
+  self : RawPartData,
+) -> @office.DocumentFormat {
+  self.format
+}
+
+///|
+/// Returns the resolved metadata for this part.
+pub fn RawPartData::part_info(self : RawPartData) -> RawPartInfo {
+  self.info
+}
+
+///|
+/// Returns the exact uncompressed package-part payload. Callers that retain
+/// the bytes must treat them as immutable.
+pub fn RawPartData::payload_bytes(self : RawPartData) -> Bytes {
+  self.bytes
 }
 
 ///|
@@ -198,6 +263,30 @@ pub struct RawMutation {
   part : String
   action : String
   match_count : Int
+}
+
+///|
+/// Returns the validated candidate package produced by this mutation.
+pub fn RawMutation::candidate_bytes(self : RawMutation) -> Bytes {
+  self.bytes
+}
+
+///|
+/// Returns the canonical relative ZIP entry changed by this mutation.
+pub fn RawMutation::part_name(self : RawMutation) -> String {
+  self.part
+}
+
+///|
+/// Returns the stable action name recorded for this mutation.
+pub fn RawMutation::action_name(self : RawMutation) -> String {
+  self.action
+}
+
+///|
+/// Returns the number of selected elements, or one for a whole-part replace.
+pub fn RawMutation::selected_count(self : RawMutation) -> Int {
+  self.match_count
 }
 
 ///|
