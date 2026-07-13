@@ -218,7 +218,7 @@ fn replacement_entry_records(
   entry : Entry,
   local_offset : Int,
   template : SourceEntryTemplate,
-) -> (Bytes, Bool) raise ZipError {
+) -> Bytes raise ZipError {
   let (method_id, payload) = match entry.compression() {
     Store => (0, entry.data())
     Deflate => (8, deflate_encode(entry.data()))
@@ -304,13 +304,7 @@ fn replacement_entry_records(
     Some(position) => patch_u64_le(central, position, to_u64(local_offset))
     None => patch_u32_le(central, 42, to_u32(local_offset))
   }
-  let needs_zip64 = template.local_zip64_uncompressed_position is Some(_) ||
-    template.local_zip64_compressed_position is Some(_) ||
-    template.central_zip64_uncompressed_position is Some(_) ||
-    template.central_zip64_compressed_position is Some(_) ||
-    template.central_zip64_offset_position is Some(_) ||
-    template.descriptor_zip64
-  (Bytes::from_array(central), needs_zip64)
+  Bytes::from_array(central)
 }
 
 ///|
@@ -319,7 +313,7 @@ fn generated_entry_records(
   entry : Entry,
   local_offset : Int,
   force_zip64 : Bool,
-) -> (Bytes, Bool) raise ZipError {
+) -> Bytes raise ZipError {
   let (method_id, payload) = match entry.compression() {
     Store => (0, entry.data())
     Deflate => (8, deflate_encode(entry.data()))
@@ -425,7 +419,7 @@ fn generated_entry_records(
   write_u32_le(central, offset_field)
   write_bytes(central, name_bytes)
   write_bytes(central, central_extra)
-  (Bytes::from_array(central), needs_zip64_entry)
+  Bytes::from_array(central)
 }
 
 ///|
@@ -584,7 +578,11 @@ fn write_with_options(
     local_offsets.push(0)
     generated_central.push(None)
   }
-  let mut needs_zip64 = force_zip64 || archive.zip64_trailer is Some(_)
+  // Per-entry ZIP64 fields do not require an archive-wide ZIP64 trailer when
+  // the classic EOCD's own counts, central size, and central offset all fit.
+  // Preserve a source trailer when present, and generate one only for those
+  // archive-wide fields (or an explicit force request).
+  let mut needs_zip64_trailer = force_zip64 || archive.zip64_trailer is Some(_)
   let max_u32 : UInt = 0xFFFFFFFF
   for index in archive_local_order(archive) {
     let entry = archive.entries[index]
@@ -593,15 +591,12 @@ fn write_with_options(
     match (entry.source, entry.source_unchanged) {
       (Some(source), true) => write_bytes(out, source.local_record)
       (source, _) => {
-        let (record, entry_needs_zip64) = match source {
+        let record = match source {
           Some(template) =>
             replacement_entry_records(out, entry, local_offset, template)
           None => generated_entry_records(out, entry, local_offset, force_zip64)
         }
         generated_central[index] = Some(record)
-        if entry_needs_zip64 {
-          needs_zip64 = true
-        }
       }
     }
   }
@@ -637,9 +632,9 @@ fn write_with_options(
     central_offset.reinterpret_as_uint() > max_u32 ||
     central_size.reinterpret_as_uint() > max_u32 ||
     total_entries > 0xFFFF {
-    needs_zip64 = true
+    needs_zip64_trailer = true
   }
-  match (needs_zip64, archive.zip64_trailer) {
+  match (needs_zip64_trailer, archive.zip64_trailer) {
     (true, Some(template)) =>
       write_preserved_zip64_trailer(
         out, template, total_entries, central_size, central_offset,

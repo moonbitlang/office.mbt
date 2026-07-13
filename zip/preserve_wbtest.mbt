@@ -339,6 +339,85 @@ test "zip64 replacement preserves header layout and descriptor width" {
 }
 
 ///|
+fn entry_zip64_classic_eocd_fixture() -> Bytes raise ZipError {
+  let archive = Archive::new()
+  archive.add("target.xml", b"old", compression=Deflate, data_descriptor=true)
+  let generated = write_with_options(archive, force_zip64=true)
+  guard find_end_of_central(generated) is Some(eocd_offset) else {
+    raise UnsupportedFeature(msg="expected generated ZIP64 end record")
+  }
+  let locator_offset = eocd_offset - 20
+  let zip64_offset = u64_to_int(read_u64_le_at(generated, locator_offset + 8))
+  let total_entries = u64_to_int(read_u64_le_at(generated, zip64_offset + 32))
+  let central_size = u64_to_int(read_u64_le_at(generated, zip64_offset + 40))
+  let central_offset = u64_to_int(read_u64_le_at(generated, zip64_offset + 48))
+  let comment = b"entry-zip64-classic-eocd"
+  let output : Array[Byte] = []
+  write_bytes(output, generated[:zip64_offset])
+  write_u32_le(output, end_of_central_sig.reinterpret_as_uint())
+  write_u16_le(output, 0)
+  write_u16_le(output, 0)
+  write_u16_le(output, total_entries)
+  write_u16_le(output, total_entries)
+  write_u32_le(output, to_u32(central_size))
+  write_u32_le(output, to_u32(central_offset))
+  write_u16_le(output, comment.length())
+  write_bytes(output, comment)
+  Bytes::from_array(output)
+}
+
+///|
+test "entry ZIP64 replacement preserves a classic archive trailer" {
+  let source = entry_zip64_classic_eocd_fixture()
+  let before = read(source)
+  assert_true(before.zip64_trailer is None)
+  assert_eq(before.comment, b"entry-zip64-classic-eocd")
+  assert_eq(write(before), source)
+  guard preserved_entry(before, "target.xml").source is Some(original) else {
+    fail("expected source entry template")
+  }
+  assert_true(original.descriptor_zip64)
+
+  let archive = read(source)
+  assert_true(archive.replace("target.xml", b"replacement payload"))
+  let candidate = write(archive)
+  let after = read(candidate)
+  assert_true(after.zip64_trailer is None)
+  assert_eq(after.comment, b"entry-zip64-classic-eocd")
+  assert_eq(after.get("target.xml"), Some(b"replacement payload"))
+  guard preserved_entry(after, "target.xml").source is Some(replacement) else {
+    fail("expected replacement entry template")
+  }
+  assert_true(replacement.descriptor_zip64)
+  assert_eq(
+    replacement.local_zip64_uncompressed_position,
+    original.local_zip64_uncompressed_position,
+  )
+  assert_eq(
+    replacement.local_zip64_compressed_position,
+    original.local_zip64_compressed_position,
+  )
+  assert_eq(
+    replacement.central_zip64_uncompressed_position,
+    original.central_zip64_uncompressed_position,
+  )
+  assert_eq(
+    replacement.central_zip64_compressed_position,
+    original.central_zip64_compressed_position,
+  )
+  guard find_end_of_central(candidate) is Some(candidate_eocd) else {
+    fail("replacement lost the classic end record")
+  }
+  assert_eq(read_u16_le_at(candidate, candidate_eocd + 10), 1)
+  assert_true(
+    read_u32_le_at_raw(candidate, candidate_eocd + 12) != (0xffffffff : UInt),
+  )
+  assert_true(
+    read_u32_le_at_raw(candidate, candidate_eocd + 16) != (0xffffffff : UInt),
+  )
+}
+
+///|
 fn customized_zip64_fixture() -> Bytes raise ZipError {
   let archive = Archive::new()
   archive.add("target.xml", b"old", compression=Deflate, data_descriptor=true)
