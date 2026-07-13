@@ -237,7 +237,8 @@ fn parse_zip64_extra(
   need_uncomp : Bool,
   need_comp : Bool,
   need_offset : Bool,
-) -> (UInt64?, UInt64?, UInt64?) raise ZipError {
+  descriptor_sizes : Bool,
+) -> (Bool, UInt64?, UInt64?, UInt64?) raise ZipError {
   let mut pos = 0
   let mut found_zip64 = false
   let mut found_unicode_path = false
@@ -276,17 +277,22 @@ fn parse_zip64_extra(
         raise UnsupportedFeature(msg="duplicate zip64 extra field")
       }
       found_zip64 = true
-      let required_size = (if need_uncomp { 8 } else { 0 }) +
-        (if need_comp { 8 } else { 0 }) +
+      // A streamed ZIP64 local header carries both size slots even when its
+      // classic size fields are zero rather than 0xffffffff. Their values may
+      // remain zero until the authoritative data descriptor is written.
+      let read_uncomp = need_uncomp || descriptor_sizes
+      let read_comp = need_comp || descriptor_sizes
+      let required_size = (if read_uncomp { 8 } else { 0 }) +
+        (if read_comp { 8 } else { 0 }) +
         (if need_offset { 8 } else { 0 })
       if field.length() != required_size {
         raise UnsupportedFeature(msg="zip64 extra field size mismatch")
       }
       let reader = Reader::new(field, 0)
-      if need_uncomp {
+      if read_uncomp {
         uncomp = Some(reader.read_u64_raw())
       }
-      if need_comp {
+      if read_comp {
         comp = Some(reader.read_u64_raw())
       }
       if need_offset {
@@ -294,7 +300,7 @@ fn parse_zip64_extra(
       }
     }
   }
-  (uncomp, comp, offset)
+  (found_zip64, uncomp, comp, offset)
 }
 
 ///|
@@ -390,19 +396,24 @@ fn local_size_matches(
   raw : UInt,
   zip64 : UInt64?,
   expected : Int,
-  allow_zero : Bool,
+  allow_placeholder : Bool,
 ) -> Bool {
-  if allow_zero && raw == 0 {
-    return true
+  let expected64 = expected.to_uint64()
+  let zip64_matches = match zip64 {
+    Some(value) => value == expected64 || (allow_placeholder && value == 0)
+    None => true
+  }
+  if allow_placeholder && raw == 0 {
+    return zip64_matches
   }
   let max_u32 : UInt = 0xFFFFFFFF
   if raw == max_u32 {
     return match zip64 {
-      Some(value) => value == expected.to_uint64()
+      Some(_) => zip64_matches
       None => false
     }
   }
-  UInt64::extend_uint(raw) == expected.to_uint64()
+  UInt64::extend_uint(raw) == expected64 && zip64_matches
 }
 
 ///|
@@ -410,6 +421,7 @@ fn data_descriptor_record_matches(
   bytes : BytesView,
   offset : Int,
   meta : EntryMeta,
+  zip64_sizes : Bool,
   signed : Bool,
 ) -> Bool {
   try {
@@ -421,7 +433,7 @@ fn data_descriptor_record_matches(
     if reader.read_u32_raw() != meta.crc32 {
       return false
     }
-    if meta.zip64_sizes {
+    if zip64_sizes {
       reader.read_u64_raw() == meta.compressed_size.to_uint64() &&
       reader.read_u64_raw() == meta.uncompressed_size.to_uint64()
     } else {
@@ -438,10 +450,13 @@ fn data_descriptor_record_size(
   bytes : BytesView,
   offset : Int,
   meta : EntryMeta,
+  zip64_sizes : Bool,
 ) -> Int raise ZipError {
-  let signed_matches = data_descriptor_record_matches(bytes, offset, meta, true)
+  let signed_matches = data_descriptor_record_matches(
+    bytes, offset, meta, zip64_sizes, true,
+  )
   let unsigned_matches = data_descriptor_record_matches(
-    bytes, offset, meta, false,
+    bytes, offset, meta, zip64_sizes, false,
   )
   if signed_matches && unsigned_matches {
     raise UnsupportedFeature(msg="ambiguous data descriptor")
@@ -449,9 +464,7 @@ fn data_descriptor_record_size(
   if !signed_matches && !unsigned_matches {
     raise UnsupportedFeature(msg="mismatched data descriptor")
   }
-  (if signed_matches { 4 } else { 0 }) +
-  4 +
-  (if meta.zip64_sizes { 16 } else { 8 })
+  (if signed_matches { 4 } else { 0 }) + 4 + (if zip64_sizes { 16 } else { 8 })
 }
 
 ///|
@@ -501,13 +514,14 @@ fn read_entry_record(
   let max_u32 : UInt = 0xFFFFFFFF
   let need_local_uncomp = uncomp_size_raw == max_u32
   let need_local_comp = comp_size_raw == max_u32
-  let (local_zip_uncomp, local_zip_comp, _) = parse_zip64_extra(
+  let (local_zip64, local_zip_uncomp, local_zip_comp, _) = parse_zip64_extra(
     local_extra,
     local_name,
     meta.name,
     need_local_uncomp,
     need_local_comp,
     false,
+    has_descriptor,
   )
   if has_descriptor {
     if local_crc32 != 0 && local_crc32 != meta.crc32 {
@@ -545,6 +559,7 @@ fn read_entry_record(
       descriptor_bytes,
       reader.pos,
       meta,
+      meta.zip64_sizes || local_zip64,
     )
     reader.skip(descriptor_size)
   }
@@ -768,8 +783,8 @@ fn read_impl(
     let need_uncomp = uncomp_size_raw == max_u32
     let need_comp = comp_size_raw == max_u32
     let need_offset = local_offset_raw == max_u32
-    let (zip_uncomp, zip_comp, zip_offset) = parse_zip64_extra(
-      extra_bytes, name_bytes, name, need_uncomp, need_comp, need_offset,
+    let (_, zip_uncomp, zip_comp, zip_offset) = parse_zip64_extra(
+      extra_bytes, name_bytes, name, need_uncomp, need_comp, need_offset, false,
     )
     let uncomp_size = if need_uncomp {
       match zip_uncomp {
@@ -1071,6 +1086,92 @@ test "zip read data descriptor" {
 }
 
 ///|
+fn make_streamed_zip64_descriptor_archive(
+  local_size : UInt,
+  zip64_placeholder : UInt64,
+) -> Bytes {
+  let name : Bytes = b"streamed.txt"
+  let data : Bytes = b"zip64-stream"
+  let crc = crc32(data)
+  let buf : Array[Byte] = []
+  // Streamed local header: ZIP64 is selected before the final sizes are
+  // known, while the central directory can later use its 32-bit fields.
+  push_u32_le(buf, 0x04034B50)
+  push_u16_le(buf, 45)
+  push_u16_le(buf, 0x0808)
+  push_u16_le(buf, 0)
+  push_u16_le(buf, 0)
+  push_u16_le(buf, 0)
+  push_u32_le(buf, 0)
+  push_u32_le(buf, local_size)
+  push_u32_le(buf, local_size)
+  push_u16_le(buf, name.length())
+  push_u16_le(buf, 20)
+  push_bytes(buf, name)
+  push_u16_le(buf, 0x0001)
+  push_u16_le(buf, 16)
+  push_u64_le(buf, zip64_placeholder)
+  push_u64_le(buf, zip64_placeholder)
+  push_bytes(buf, data)
+  // ZIP64 data descriptor selected by the local ZIP64 extra field.
+  push_u32_le(buf, 0x08074B50)
+  push_u32_le(buf, crc)
+  push_u64_le(buf, data.length().to_uint64())
+  push_u64_le(buf, data.length().to_uint64())
+  let central_offset = buf.length()
+  push_u32_le(buf, 0x02014B50)
+  push_u16_le(buf, 45)
+  push_u16_le(buf, 45)
+  push_u16_le(buf, 0x0808)
+  push_u16_le(buf, 0)
+  push_u16_le(buf, 0)
+  push_u16_le(buf, 0)
+  push_u32_le(buf, crc)
+  push_u32_le(buf, data.length().reinterpret_as_uint())
+  push_u32_le(buf, data.length().reinterpret_as_uint())
+  push_u16_le(buf, name.length())
+  push_u16_le(buf, 0)
+  push_u16_le(buf, 0)
+  push_u16_le(buf, 0)
+  push_u16_le(buf, 0)
+  push_u32_le(buf, 0)
+  push_u32_le(buf, 0)
+  push_bytes(buf, name)
+  let central_size = buf.length() - central_offset
+  push_u32_le(buf, 0x06054B50)
+  push_u16_le(buf, 0)
+  push_u16_le(buf, 0)
+  push_u16_le(buf, 1)
+  push_u16_le(buf, 1)
+  push_u32_le(buf, central_size.reinterpret_as_uint())
+  push_u32_le(buf, central_offset.reinterpret_as_uint())
+  push_u16_le(buf, 0)
+  Bytes::from_array(buf)
+}
+
+///|
+test "zip read streamed ZIP64 descriptors with ZIP32 central sizes" {
+  for local_size in [(0xFFFFFFFF : UInt), (0 : UInt)] {
+    let archive = read(make_streamed_zip64_descriptor_archive(local_size, 0))
+    inspect(
+      archive.get("streamed.txt") == Some(b"zip64-stream"),
+      content="true",
+    )
+  }
+}
+
+///|
+test "zip read rejects mismatched streamed ZIP64 placeholders" {
+  try read(make_streamed_zip64_descriptor_archive(0xFFFFFFFF, 1)) catch {
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="mismatched local and central compressed size")
+    _ => fail("expected mismatched ZIP64 placeholder")
+  } noraise {
+    _ => fail("expected mismatched ZIP64 placeholder")
+  }
+}
+
+///|
 test "zip read zip64 extra sizes" {
   let name : Bytes = b"b.txt"
   let data : Bytes = b"zip64"
@@ -1167,7 +1268,9 @@ test "zip64 extra values cannot escape their declared field" {
      0xFE, 0xCA, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   ]
   try
-    parse_zip64_extra(followed_by_other_field, b"", "", true, false, false)
+    parse_zip64_extra(
+      followed_by_other_field, b"", "", true, false, false, false,
+    )
   catch {
     UnsupportedFeature(msg~) =>
       inspect(msg, content="zip64 extra field size mismatch")
@@ -1177,7 +1280,9 @@ test "zip64 extra values cannot escape their declared field" {
   }
   let trailing_partial_header : Bytes = [0xFE, 0xCA, 0x00, 0x00, 0x01]
   try
-    parse_zip64_extra(trailing_partial_header, b"", "", false, false, false)
+    parse_zip64_extra(
+      trailing_partial_header, b"", "", false, false, false, false,
+    )
   catch {
     UnsupportedFeature(msg~) =>
       inspect(msg, content="truncated zip extra field header")
