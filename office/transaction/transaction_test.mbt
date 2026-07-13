@@ -861,6 +861,32 @@ async test "transaction rejects alternate ZIP interpretations before publication
 
 ///|
 #cfg(all(target="native", not(platform="windows")))
+async test "POSIX final permissions do not make staging unverifiable" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    for item in [(0o000, "none"), (0o200, "write-only")] {
+      let (permission, suffix) = item
+      let output = "\{directory}/\{suffix}.docx"
+      let report = @transaction.transact(
+        @transaction.transaction_options(input, output_path=output, permission~),
+        (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+      )
+      assert_true(report.committed)
+      assert_true(@afs.exists(output))
+      // Restore test access only after publication; success up to here proves
+      // verification, chmod, and rename worked with the requested restrictive
+      // final mode.
+      @afs.chmod(output, 0o600)
+      assert_eq(@afs.read_file(output).binary(), original)
+    }
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
 async test "native output symlink aliases cannot bypass in-place policy" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"

@@ -62,6 +62,36 @@ async fn wb_assert_no_temp(directory : String) -> Unit {
 }
 
 ///|
+async fn wb_expect_post_read_cancellation(
+  options : TransactionOptions,
+  release : String,
+) -> Unit {
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => {
+      transact_with_faults(
+        options,
+        (_format, bytes) => transaction_mutation(bytes.to_owned()),
+        [],
+        no_transaction_faults(),
+        post_read_release=release,
+      )
+    })
+    while !@afs.exists(release + ".ready") {
+      @async.pause()
+    }
+    task.cancel()
+    wb_write(release, b"release")
+    let propagated = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(propagated)
+  }
+}
+
+///|
 fn wb_preservation_report(
   original : BytesView,
   mutation : TransactionMutation,
@@ -79,6 +109,111 @@ fn wb_preservation_report(
   preservation_report_archives(
     original, mutation, original_archive, candidate_archive,
   )
+}
+
+///|
+async test "pending read cancellation reaches dry-run and no-op paths" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    wb_write(input, @word.new_blank_docx())
+    wb_expect_post_read_cancellation(
+      transaction_options(input),
+      "\{directory}/release-noop",
+    )
+    wb_expect_post_read_cancellation(
+      transaction_options(input, dry_run=true),
+      "\{directory}/release-dry-run",
+    )
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
+async test "staging access survives restrictive creation modes" {
+  wb_with_transaction_dir(directory => {
+    let publication_directory : PublicationDirectory = { path: directory }
+    let temp = match
+      publication_temp_try_create(
+        publication_directory,
+        ".office-tmp-restrictive",
+        "\{directory}/output.docx",
+        initial_permission=0o000,
+      ) {
+      Some(value) => value
+      None => fail("expected unique staging file")
+    }
+    publication_temp_write(
+      temp,
+      b"payload",
+      fail_after_bytes=None,
+      stall_after_bytes=None,
+    )
+    publication_temp_sync(temp)
+    assert_true(publication_temp_identity_matches(temp))
+    publication_temp_cleanup(temp, "\{directory}/output.docx")
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
+async test "rename failure restores restrictive staging access for cleanup" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    wb_write(input, original)
+    let code = wb_error_code(() => {
+      transact_with_faults(
+        transaction_options(input, output_path=output, permission=0o000),
+        (_format, bytes) => transaction_mutation(bytes.to_owned()),
+        [],
+        {
+          fail_write: false,
+          fail_write_after_bytes: None,
+          stall_write_after_bytes: None,
+          fail_rename: false,
+          stall_after_temp: false,
+          post_rename_release: None,
+          concurrent_replacement: None,
+          concurrent_destination: Some(original),
+          relocate_parent_to: None,
+          deny_cleanup: false,
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.output_exists")
+    @afs.chmod(output, 0o600)
+    assert_eq(@afs.read_file(output).binary(), original)
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
+async test "destination inspection permission errors remain structured" {
+  wb_with_transaction_dir(directory => {
+    let locked = "\{directory}/locked"
+    @afs.mkdir(locked, permission=0o700)
+    let publication_directory : PublicationDirectory = { path: locked }
+    @afs.chmod(locked, 0o000)
+    let code = try {
+      ignore(
+        publication_entry_kind(
+          publication_directory,
+          "output.docx",
+          "\{locked}/output.docx",
+        ),
+      )
+      "no-error"
+    } catch {
+      TransactionError(code~, ..) => code
+      _ => "unstructured-error"
+    }
+    @afs.chmod(locked, 0o700)
+    assert_eq(code, "office.transaction.destination_check_failed")
+  })
 }
 
 ///|
