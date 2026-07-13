@@ -227,34 +227,46 @@ fn parse_zip64_extra(
   need_offset : Bool,
 ) -> (UInt64?, UInt64?, UInt64?) raise ZipError {
   let mut pos = 0
-  while pos + 4 <= extra.length() {
+  let mut found_zip64 = false
+  let mut uncomp : UInt64? = None
+  let mut comp : UInt64? = None
+  let mut offset : UInt64? = None
+  while pos < extra.length() {
+    if pos > extra.length() || 4 > extra.length() - pos {
+      raise UnsupportedFeature(msg="truncated zip extra field header")
+    }
     let header_id = read_u16_le_at(extra, pos)
     let data_size = read_u16_le_at(extra, pos + 2)
     pos = pos + 4
     if pos > extra.length() || data_size > extra.length() - pos {
       raise OutOfBounds(offset=pos)
     }
+    let field = extra[pos:pos + data_size]
+    pos = pos + data_size
     if header_id == 0x0001 {
-      let mut cursor = pos
-      let mut uncomp : UInt64? = None
-      let mut comp : UInt64? = None
-      let mut offset : UInt64? = None
+      if found_zip64 {
+        raise UnsupportedFeature(msg="duplicate zip64 extra field")
+      }
+      found_zip64 = true
+      let required_size = (if need_uncomp { 8 } else { 0 }) +
+        (if need_comp { 8 } else { 0 }) +
+        (if need_offset { 8 } else { 0 })
+      if field.length() != required_size {
+        raise UnsupportedFeature(msg="zip64 extra field size mismatch")
+      }
+      let reader = Reader::new(field, 0)
       if need_uncomp {
-        uncomp = Some(read_u64_le_at(extra, cursor))
-        cursor = cursor + 8
+        uncomp = Some(reader.read_u64_raw())
       }
       if need_comp {
-        comp = Some(read_u64_le_at(extra, cursor))
-        cursor = cursor + 8
+        comp = Some(reader.read_u64_raw())
       }
       if need_offset {
-        offset = Some(read_u64_le_at(extra, cursor))
+        offset = Some(reader.read_u64_raw())
       }
-      return (uncomp, comp, offset)
     }
-    pos = pos + data_size
   }
-  (None, None, None)
+  (uncomp, comp, offset)
 }
 
 ///|
@@ -394,6 +406,27 @@ fn data_descriptor_record_matches(
 }
 
 ///|
+fn data_descriptor_record_size(
+  bytes : BytesView,
+  offset : Int,
+  meta : EntryMeta,
+) -> Int raise ZipError {
+  let signed_matches = data_descriptor_record_matches(bytes, offset, meta, true)
+  let unsigned_matches = data_descriptor_record_matches(
+    bytes, offset, meta, false,
+  )
+  if signed_matches && unsigned_matches {
+    raise UnsupportedFeature(msg="ambiguous data descriptor")
+  }
+  if !signed_matches && !unsigned_matches {
+    raise UnsupportedFeature(msg="mismatched data descriptor")
+  }
+  (if signed_matches { 4 } else { 0 }) +
+  4 +
+  (if meta.zip64_sizes { 16 } else { 8 })
+}
+
+///|
 fn read_entry_data(
   bytes : BytesView,
   meta : EntryMeta,
@@ -402,7 +435,7 @@ fn read_entry_data(
   limit_kind : String,
   reported_limit : Int,
   actual_base : Int,
-) -> Bytes raise ZipError {
+) -> (Bytes, Int) raise ZipError {
   if meta.local_header_offset < 0 || meta.local_header_offset >= central_offset {
     raise OutOfBounds(offset=meta.local_header_offset)
   }
@@ -444,12 +477,9 @@ fn read_entry_data(
   let max_u32 : UInt = 0xFFFFFFFF
   let need_local_uncomp = uncomp_size_raw == max_u32
   let need_local_comp = comp_size_raw == max_u32
-  let (local_zip_uncomp, local_zip_comp, _) = if need_local_uncomp ||
-    need_local_comp {
-    parse_zip64_extra(local_extra, need_local_uncomp, need_local_comp, false)
-  } else {
-    (None, None, None)
-  }
+  let (local_zip_uncomp, local_zip_comp, _) = parse_zip64_extra(
+    local_extra, need_local_uncomp, need_local_comp, false,
+  )
   if has_descriptor {
     if local_crc32 != 0 && local_crc32 != meta.crc32 {
       raise UnsupportedFeature(msg="mismatched local and central CRC-32")
@@ -482,16 +512,12 @@ fn read_entry_data(
   let compressed = reader.read_bytes(meta.compressed_size)
   if has_descriptor {
     let descriptor_bytes = bytes[:central_offset]
-    let descriptor_matches = data_descriptor_record_matches(
-        descriptor_bytes,
-        reader.pos,
-        meta,
-        true,
-      ) ||
-      data_descriptor_record_matches(descriptor_bytes, reader.pos, meta, false)
-    if !descriptor_matches {
-      raise UnsupportedFeature(msg="mismatched data descriptor")
-    }
+    let descriptor_size = data_descriptor_record_size(
+      descriptor_bytes,
+      reader.pos,
+      meta,
+    )
+    reader.skip(descriptor_size)
   }
   let data = match compression {
     Store => {
@@ -541,7 +567,7 @@ fn read_entry_data(
       msg="decoded data length does not match central size",
     )
   }
-  data
+  (data, reader.pos)
 }
 
 ///|
@@ -565,7 +591,7 @@ fn read_impl(
   let central_offset_raw = reader.read_u32_raw()
   let comment_len = reader.read_u16()
   reader.skip(comment_len)
-  if disk_no != 0 || disk_start != 0 || disk_entries != total_entries {
+  if disk_no != 0 || disk_start != 0 {
     raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
   let max_u32 : UInt = 0xFFFFFFFF
@@ -579,8 +605,45 @@ fn read_impl(
     central_offset_raw64,
     central_boundary,
   ) = if needs_zip64 {
-    read_zip64_eocd(bytes, eocd_offset)
+    let (zip_entries, zip_size, zip_offset, zip64_offset) = read_zip64_eocd(
+      bytes, eocd_offset,
+    )
+    if disk_entries != 0xFFFF && disk_entries.to_uint64() != zip_entries {
+      raise UnsupportedFeature(msg="classic and zip64 entry count mismatch")
+    }
+    if total_entries != 0xFFFF && total_entries.to_uint64() != zip_entries {
+      raise UnsupportedFeature(msg="classic and zip64 entry count mismatch")
+    }
+    if central_size_raw != max_u32 &&
+      UInt64::extend_uint(central_size_raw) != zip_size {
+      raise UnsupportedFeature(msg="classic and zip64 central size mismatch")
+    }
+    if central_offset_raw != max_u32 &&
+      UInt64::extend_uint(central_offset_raw) != zip_offset {
+      raise UnsupportedFeature(msg="classic and zip64 central offset mismatch")
+    }
+    (
+      if total_entries == 0xFFFF {
+        zip_entries
+      } else {
+        total_entries.to_uint64()
+      },
+      if central_size_raw == max_u32 {
+        zip_size
+      } else {
+        UInt64::extend_uint(central_size_raw)
+      },
+      if central_offset_raw == max_u32 {
+        zip_offset
+      } else {
+        UInt64::extend_uint(central_offset_raw)
+      },
+      zip64_offset,
+    )
   } else {
+    if disk_entries != total_entries {
+      raise UnsupportedFeature(msg="multi-disk zip not supported")
+    }
     (
       total_entries.to_uint64(),
       u32_to_int(central_size_raw).to_uint64(),
@@ -661,13 +724,9 @@ fn read_impl(
     let need_uncomp = uncomp_size_raw == max_u32
     let need_comp = comp_size_raw == max_u32
     let need_offset = local_offset_raw == max_u32
-    let (zip_uncomp, zip_comp, zip_offset) = if need_uncomp ||
-      need_comp ||
-      need_offset {
-      parse_zip64_extra(extra_bytes, need_uncomp, need_comp, need_offset)
-    } else {
-      (None, None, None)
-    }
+    let (zip_uncomp, zip_comp, zip_offset) = parse_zip64_extra(
+      extra_bytes, need_uncomp, need_comp, need_offset,
+    )
     let uncomp_size = if need_uncomp {
       match zip_uncomp {
         Some(value) => {
@@ -767,6 +826,7 @@ fn read_impl(
   }
   let archive = Archive::new()
   let mut actual_total = 0
+  let local_intervals : Array[(Int, Int)] = []
   for meta in metas {
     ignore(compression_from_method(meta.compression_method))
     let mut materialize_limit = max_entry_uncompressed_bytes
@@ -791,10 +851,18 @@ fn read_impl(
       }
       None => ()
     }
-    let data = read_entry_data(
+    let local_start = meta.local_header_offset
+    let (data, local_end) = read_entry_data(
       bytes, meta, central_offset, materialize_limit, limit_kind, reported_limit,
       actual_base,
     )
+    for interval in local_intervals {
+      let (existing_start, existing_end) = interval
+      if local_start < existing_end && existing_start < local_end {
+        raise UnsupportedFeature(msg="overlapping zip local records")
+      }
+    }
+    local_intervals.push((local_start, local_end))
     match max_total_uncompressed_bytes {
       Some(limit) if data.length() > limit - actual_total =>
         raise ResourceLimitExceeded(
@@ -1019,6 +1087,31 @@ test "zip read zip64 extra sizes" {
     _ => fail("expected ZIP64 resource limit")
   } noraise {
     _ => fail("expected oversized ZIP64 declaration to raise")
+  }
+}
+
+///|
+test "zip64 extra values cannot escape their declared field" {
+  let followed_by_other_field : Bytes = [
+    // Empty ZIP64 field.
+    0x01, 0x00, 0x00, 0x00,
+    // Unrelated eight-byte field that must not supply the ZIP64 value.
+     0xFE, 0xCA, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  ]
+  try parse_zip64_extra(followed_by_other_field, true, false, false) catch {
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="zip64 extra field size mismatch")
+    _ => fail("expected bounded ZIP64 field failure")
+  } noraise {
+    _ => fail("expected bounded ZIP64 field failure")
+  }
+  let trailing_partial_header : Bytes = [0xFE, 0xCA, 0x00, 0x00, 0x01]
+  try parse_zip64_extra(trailing_partial_header, false, false, false) catch {
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="truncated zip extra field header")
+    _ => fail("expected truncated extra-field failure")
+  } noraise {
+    _ => fail("expected truncated extra-field failure")
   }
 }
 

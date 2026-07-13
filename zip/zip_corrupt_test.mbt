@@ -77,6 +77,78 @@ fn push_u64_le(out : Array[Byte], value : UInt64) -> Unit {
 }
 
 ///|
+fn push_zip_test_bytes(out : Array[Byte], bytes : BytesView) -> Unit {
+  for byte in bytes {
+    out.push(byte)
+  }
+}
+
+///|
+fn append_zip_test_local(out : Array[Byte], name : Bytes, data : Bytes) -> Int {
+  let offset = out.length()
+  let crc = @zip.crc32(data)
+  push_u32_le(out, (0x04034B50 : UInt))
+  push_u16_le(out, 20)
+  push_u16_le(out, 0x0800)
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u32_le(out, crc)
+  push_u32_le(out, data.length().reinterpret_as_uint())
+  push_u32_le(out, data.length().reinterpret_as_uint())
+  push_u16_le(out, name.length())
+  push_u16_le(out, 0)
+  push_zip_test_bytes(out, name)
+  push_zip_test_bytes(out, data)
+  offset
+}
+
+///|
+fn append_zip_test_central(
+  out : Array[Byte],
+  name : Bytes,
+  data : Bytes,
+  local_offset : Int,
+) -> Unit {
+  let crc = @zip.crc32(data)
+  push_u32_le(out, (0x02014B50 : UInt))
+  push_u16_le(out, 20)
+  push_u16_le(out, 20)
+  push_u16_le(out, 0x0800)
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u32_le(out, crc)
+  push_u32_le(out, data.length().reinterpret_as_uint())
+  push_u32_le(out, data.length().reinterpret_as_uint())
+  push_u16_le(out, name.length())
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u32_le(out, (0 : UInt))
+  push_u32_le(out, local_offset.reinterpret_as_uint())
+  push_zip_test_bytes(out, name)
+}
+
+///|
+fn append_zip_test_eocd(
+  out : Array[Byte],
+  entry_count : Int,
+  central_offset : Int,
+) -> Unit {
+  let central_size = out.length() - central_offset
+  push_u32_le(out, (0x06054B50 : UInt))
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u16_le(out, entry_count)
+  push_u16_le(out, entry_count)
+  push_u32_le(out, central_size.reinterpret_as_uint())
+  push_u32_le(out, central_offset.reinterpret_as_uint())
+  push_u16_le(out, 0)
+}
+
+///|
 fn expect_zip_rejected(bytes : Array[Byte]) -> Unit raise {
   try @zip.read(Bytes::from_array(bytes)) catch {
     _ => ()
@@ -236,6 +308,124 @@ test "zip read: EOCD and central directory have one exact interpretation" {
   overwrite_u16_le(bad_count, eocd + 8, 0)
   overwrite_u16_le(bad_count, eocd + 10, 0)
   expect_zip_rejected(bad_count)
+}
+
+///|
+fn wrap_classic_archive_with_zip64_eocd(
+  raw : Array[Byte],
+  classic_entries : Int,
+  classic_size : UInt,
+  classic_offset : UInt,
+) -> Bytes raise {
+  let eocd = match find_eocd_offset(raw) {
+    Some(value) => value
+    None => fail("missing EOCD")
+  }
+  let central_size = read_u32_le(raw, eocd + 12)
+  let central_offset = read_u32_le(raw, eocd + 16)
+  let out : Array[Byte] = []
+  for index in 0..<eocd {
+    out.push(raw[index])
+  }
+  let zip64_offset = out.length()
+  push_u32_le(out, (0x06064B50 : UInt))
+  push_u64_le(out, (44 : UInt64))
+  push_u16_le(out, 45)
+  push_u16_le(out, 45)
+  push_u32_le(out, (0 : UInt))
+  push_u32_le(out, (0 : UInt))
+  push_u64_le(out, (1 : UInt64))
+  push_u64_le(out, (1 : UInt64))
+  push_u64_le(out, UInt64::extend_uint(central_size))
+  push_u64_le(out, UInt64::extend_uint(central_offset))
+  push_u32_le(out, (0x07064B50 : UInt))
+  push_u32_le(out, (0 : UInt))
+  push_u64_le(out, zip64_offset.to_uint64())
+  push_u32_le(out, (1 : UInt))
+  push_u32_le(out, (0x06054B50 : UInt))
+  push_u16_le(out, 0)
+  push_u16_le(out, 0)
+  push_u16_le(out, classic_entries)
+  push_u16_le(out, classic_entries)
+  push_u32_le(out, classic_size)
+  push_u32_le(out, classic_offset)
+  push_u16_le(out, 0)
+  Bytes::from_array(out)
+}
+
+///|
+test "zip read: classic and ZIP64 EOCD fields cannot disagree" {
+  let archive = @zip.Archive::new()
+  archive.add("a.txt", b"hello")
+  let raw = @zip.write(archive).to_array()
+  let eocd = match find_eocd_offset(raw) {
+    Some(value) => value
+    None => fail("missing EOCD")
+  }
+  let central_size = read_u32_le(raw, eocd + 12)
+  let central_offset = read_u32_le(raw, eocd + 16)
+  for
+    case in [
+      (
+        wrap_classic_archive_with_zip64_eocd(
+          raw,
+          0,
+          (0xFFFFFFFF : UInt),
+          central_offset,
+        ),
+        "classic and zip64 entry count mismatch",
+      ),
+      (
+        wrap_classic_archive_with_zip64_eocd(
+          raw,
+          1,
+          central_size - 1,
+          (0xFFFFFFFF : UInt),
+        ),
+        "classic and zip64 central size mismatch",
+      ),
+      (
+        wrap_classic_archive_with_zip64_eocd(
+          raw,
+          1,
+          (0xFFFFFFFF : UInt),
+          central_offset + 1,
+        ),
+        "classic and zip64 central offset mismatch",
+      ),
+    ] {
+    let (bytes, expected) = case
+    try @zip.read(bytes) catch {
+      UnsupportedFeature(msg~) => assert_eq(msg, expected)
+      _ => fail("expected mixed EOCD view to be rejected")
+    } noraise {
+      _ => fail("expected mixed EOCD view to be rejected")
+    }
+  }
+}
+
+///|
+test "zip read: local record intervals cannot overlap" {
+  let inner_name : Bytes = b"inner"
+  let inner_data : Bytes = b"x"
+  let embedded : Array[Byte] = []
+  ignore(append_zip_test_local(embedded, inner_name, inner_data))
+  let outer_name : Bytes = b"outer"
+  let outer_data = Bytes::from_array(embedded)
+  let out : Array[Byte] = []
+  let outer_offset = append_zip_test_local(out, outer_name, outer_data)
+  let inner_offset = outer_offset + 30 + outer_name.length()
+  let central_offset = out.length()
+  append_zip_test_central(out, outer_name, outer_data, outer_offset)
+  append_zip_test_central(out, inner_name, inner_data, inner_offset)
+  append_zip_test_eocd(out, 2, central_offset)
+  try @zip.read(Bytes::from_array(out)) catch {
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="overlapping zip local records")
+    _ => fail("expected overlapping local records to be rejected")
+  } noraise {
+    _ => fail("expected overlapping local records to be rejected")
+  }
 }
 
 ///|
