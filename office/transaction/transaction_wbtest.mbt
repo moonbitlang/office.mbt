@@ -1,5 +1,9 @@
 ///|
-fn wb_rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
+fn wb_rewrite_content_types(
+  data : BytesView,
+  marker : String,
+  force_store? : Bool = false,
+) -> Bytes raise {
   let source = @zip.read(data)
   let result = @zip.Archive::new()
   for entry in source.entries() {
@@ -12,7 +16,7 @@ fn wb_rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
     result.add(
       entry.name(),
       payload,
-      compression=entry.compression(),
+      compression=if force_store { Store } else { entry.compression() },
       data_descriptor=entry.data_descriptor(),
     )
   }
@@ -25,7 +29,17 @@ fn wb_large_candidate(data : BytesView) -> Bytes raise {
   for _ in 0..<(2 * 1024 * 1024) {
     marker.write_char('x')
   }
-  wb_rewrite_content_types(data, marker.to_string())
+  let candidate = wb_rewrite_content_types(
+    data,
+    marker.to_string(),
+    force_store=true,
+  )
+  if candidate.length() <= 1024 * 1024 {
+    fail(
+      "large transaction candidate must cross the asynchronous write chunk boundary",
+    )
+  }
+  candidate
 }
 
 ///|
