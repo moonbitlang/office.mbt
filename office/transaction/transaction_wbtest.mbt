@@ -441,15 +441,10 @@ async test "atomic new output returns success after observed rename" {
           post_rename_release=release,
         )
       })
-      let mut observed_commit = false
-      for _ in 0..<1_000 {
-        if @afs.exists(output) {
-          observed_commit = true
-          break
-        }
+      while !@afs.exists(release + ".ready") {
         @async.pause()
       }
-      assert_true(observed_commit)
+      assert_true(@afs.exists(output))
       task.cancel()
       wb_write(release, b"release")
       task.wait()
@@ -764,15 +759,10 @@ async test "post-rename cancellation still returns a committed report" {
           },
         )
       })
-      let mut observed_commit = false
-      for _ in 0..<1_000 {
-        if @afs.exists(output) {
-          observed_commit = true
-          break
-        }
+      while !@afs.exists(release + ".ready") {
         @async.pause()
       }
-      assert_true(observed_commit)
+      assert_true(@afs.exists(output))
       task.cancel()
       wb_write(release, b"release")
       let report = task.wait()
