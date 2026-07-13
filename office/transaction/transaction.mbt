@@ -1040,10 +1040,17 @@ async fn publish_candidate(
     let parent_synced = @async.protect_from_cancel(
       () => {
         match faults.post_rename_release {
-          Some(release) =>
+          Some(release) => {
+            @afs.write_file(
+              release + ".ready",
+              b"ready",
+              create_mode=CreateNew,
+              permission=0o600,
+            )
             while !@afs.exists(release) {
               @async.pause()
             }
+          }
           None => ()
         }
         publication_directory_sync(policy.destination_directory)

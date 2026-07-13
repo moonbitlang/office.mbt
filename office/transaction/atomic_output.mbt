@@ -85,10 +85,17 @@ async fn atomic_write_new_with_faults(
       @async.protect_from_cancel(
         () => {
           match post_rename_release {
-            Some(release) =>
+            Some(release) => {
+              @afs.write_file(
+                release + ".ready",
+                b"ready",
+                create_mode=CreateNew,
+                permission=0o600,
+              )
               while !@afs.exists(release) {
                 @async.pause()
               }
+            }
             None => ()
           }
           publication_directory_sync(directory)
