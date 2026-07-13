@@ -74,6 +74,17 @@ fn normalize_path_separators(path : String) -> String {
 }
 
 ///|
+#cfg(all(target="native", platform="windows"))
+fn is_windows_drive_absolute(path : String) -> Bool {
+  let chars = path.to_array()
+  chars.length() >= 3 &&
+  chars[0].is_ascii_alphabetic() &&
+  chars[1] == ':' &&
+  chars[2] == '\\'
+}
+
+///|
+#cfg(all(target="native", platform="windows"))
 fn extend_windows_io_path(path : String) -> String {
   let normalized = normalize_path_separators(path)
   if @path.sep != '\\' ||
@@ -82,7 +93,7 @@ fn extend_windows_io_path(path : String) -> String {
     normalized
   } else if normalized.has_prefix("\\\\") {
     "\\\\?\\UNC\\" + normalized[2:].to_owned()
-  } else if @path.Path(normalized).is_absolute() {
+  } else if is_windows_drive_absolute(normalized) {
     "\\\\?\\" + normalized
   } else {
     normalized
@@ -90,14 +101,61 @@ fn extend_windows_io_path(path : String) -> String {
 }
 
 ///|
-fn filesystem_path(path : String) -> String {
-  let normalized = normalize_path_separators(path)
-  let resolved = path_text(@path.Path(normalized).resolve())
-  if @path.sep == '\\' {
-    extend_windows_io_path(resolved)
+#cfg(all(target="native", platform="windows"))
+fn windows_current_drive() -> String? {
+  guard @env.current_dir() is Some(current) else { return None }
+  let normalized = normalize_path_separators(current)
+  let chars = normalized.to_array()
+  if chars.length() >= 2 && chars[0].is_ascii_alphabetic() && chars[1] == ':' {
+    Some(normalized[:2].to_owned())
   } else {
-    resolved
+    None
   }
+}
+
+///|
+#cfg(all(target="native", platform="windows"))
+fn fully_qualified_windows_path(path : String) -> String raise TransactionError {
+  let normalized = normalize_path_separators(path)
+  if normalized.has_prefix("\\\\?\\") ||
+    normalized.has_prefix("\\\\.\\") ||
+    normalized.has_prefix("\\\\") ||
+    is_windows_drive_absolute(normalized) {
+    normalized
+  } else if normalized.has_prefix("\\") {
+    match windows_current_drive() {
+      Some(drive) => drive + normalized
+      None =>
+        raise transaction_error(
+          "office.transaction.invalid_options",
+          "a current-drive-root-relative path requires a drive-qualified working directory",
+          details=Json::object({ "file": Json::string(bounded_text(path, 160)) }),
+        )
+    }
+  } else {
+    path_text(@path.Path(normalized).resolve())
+  }
+}
+
+///|
+#cfg(all(target="native", platform="windows"))
+fn filesystem_path(path : String) -> String raise TransactionError {
+  extend_windows_io_path(fully_qualified_windows_path(path))
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
+fn filesystem_path(path : String) -> String {
+  // Preserve POSIX component traversal for the operating system. In
+  // particular, a directory-symlink/../file path is not equivalent to
+  // lexically removing the symlink and parent segment before file access.
+  path
+}
+
+///|
+#cfg(target="wasm")
+fn filesystem_path(path : String) -> String {
+  path_text(@path.Path(normalize_path_separators(path)).resolve())
 }
 
 ///|
@@ -152,9 +210,15 @@ fn join_path(parent : String, leaf : String) -> String {
 }
 
 ///|
-#cfg(target="native")
+#cfg(all(target="native", platform="windows"))
 async fn canonical_existing_path(path : String) -> String {
   extend_windows_io_path(@afs.realpath(filesystem_path(path)))
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
+async fn canonical_existing_path(path : String) -> String {
+  @afs.realpath(filesystem_path(path))
 }
 
 ///|

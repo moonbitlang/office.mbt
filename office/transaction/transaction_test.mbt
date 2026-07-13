@@ -393,6 +393,99 @@ async test "lexically equivalent output paths cannot bypass in-place policy" {
 }
 
 ///|
+#cfg(all(target="native", not(platform="windows")))
+async test "POSIX source traversal preserves symlink then parent semantics" {
+  with_transaction_test_dir(directory => {
+    let target = "\{directory}/target"
+    let nested = "\{target}/nested"
+    let directory_alias = "\{directory}/directory-link"
+    let intended = "\{target}/input.docx"
+    let decoy = "\{directory}/input.docx"
+    let source_path = "\{directory_alias}/../input.docx"
+    let original = @word.new_blank_docx()
+    @afs.mkdir(target)
+    @afs.mkdir(nested)
+    write_test_file(intended, original)
+    write_test_file(decoy, b"not an Office package")
+    @afs.symlink(target=nested, directory_alias)
+    let report = @transaction.transact(
+      @transaction.transaction_options(source_path, dry_run=true),
+      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+    )
+    assert_eq(report.format, Docx)
+    assert_false(report.committed)
+    assert_eq(@afs.read_file(intended).binary(), original)
+    assert_eq(@afs.read_file(decoy).binary(), b"not an Office package")
+    assert_no_transaction_temp(target)
+  })
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
+async test "POSIX output traversal preserves symlink then parent semantics" {
+  with_transaction_test_dir(directory => {
+    let target = "\{directory}/target"
+    let nested = "\{target}/nested"
+    let directory_alias = "\{directory}/directory-link"
+    let input = "\{directory}/input.docx"
+    let intended = "\{target}/output.docx"
+    let decoy = "\{directory}/output.docx"
+    let output_path = "\{directory_alias}/../output.docx"
+    let original = @word.new_blank_docx()
+    @afs.mkdir(target)
+    @afs.mkdir(nested)
+    write_test_file(input, original)
+    @afs.symlink(target=nested, directory_alias)
+    let report = @transaction.transact(
+      @transaction.transaction_options(input, output_path~),
+      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+    )
+    assert_true(report.committed)
+    assert_eq(@afs.read_file(intended).binary(), original)
+    assert_false(@afs.exists(decoy))
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(target)
+  })
+}
+
+///|
+#cfg(all(target="native", platform="windows"))
+async test "Windows current-drive-root input and output paths remain valid" {
+  with_transaction_test_dir(directory => {
+    guard @env.current_dir() is Some(current)
+    let normalized_directory = directory.replace_all(old="/", new="\\")
+    let normalized_current = current.replace_all(old="/", new="\\")
+    let directory_chars = normalized_directory.to_array()
+    let current_chars = normalized_current.to_array()
+    guard directory_chars.length() >= 3 &&
+      current_chars.length() >= 2 &&
+      normalized_directory[:2].to_owned().to_lower() ==
+      normalized_current[:2].to_owned().to_lower() &&
+      directory_chars[1] == ':' &&
+      current_chars[1] == ':' &&
+      directory_chars[2] == '\\'
+    let root_relative_directory = normalized_directory[2:].to_owned()
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let root_relative_input = "\{root_relative_directory}\\input.docx"
+    let root_relative_output = "\{root_relative_directory}\\output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let report = @transaction.transact(
+      @transaction.transaction_options(
+        root_relative_input,
+        output_path=root_relative_output,
+      ),
+      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+    )
+    assert_true(report.committed)
+    assert_eq(@afs.read_file(output).binary(), original)
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 #cfg(target="wasm")
 async test "Wasm relative and absolute aliases resolve to one path" {
   with_transaction_test_dir(directory => {
