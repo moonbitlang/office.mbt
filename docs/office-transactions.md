@@ -28,6 +28,11 @@ cancellation is propagated only after that cleanup finishes. Ordinary failures
 cross the API as structured `TransactionError` values; runtime cancellation is
 intentionally not relabeled as an Office failure.
 
+The atomic rename is the commit point. Once it succeeds, post-commit parent
+directory synchronization is cancellation-protected and the transaction
+returns a committed report. A durability failure becomes a structured warning,
+never an ambiguous cancellation that could invite an unsafe retry.
+
 ## Destination policy
 
 - Without `output_path`, the transaction is in-place. A byte-identical result
@@ -104,4 +109,7 @@ Successful reports use schema `office.transaction/1` inside the shared
 
 Failures convert to the same A2 protocol with stable
 `office.transaction.*` codes and bounded messages/details. Mutation callbacks
-may return warnings, but cannot emit output directly.
+may return warnings, but cannot emit output directly. Callback-raised public
+`TransactionError` values are normalized at the boundary: codes must remain in
+the transaction namespace, messages are bounded, and oversized detail trees
+are omitted before serialization.

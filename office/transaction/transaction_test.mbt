@@ -74,6 +74,18 @@ async fn transaction_error_code(
 }
 
 ///|
+async fn transaction_error_value(
+  run : async () -> @transaction.TransactionReport,
+) -> @transaction.TransactionError {
+  try run() catch {
+    @transaction.TransactionError(..) as error => error
+    error => fail("expected TransactionError, received \{error}")
+  } noraise {
+    _ => fail("expected transaction failure")
+  }
+}
+
+///|
 async test "in-place no-op validates without replacing source" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"
@@ -302,6 +314,61 @@ async test "structured mutation contract errors are not relabeled" {
       })
     })
     assert_eq(code, "office.transaction.invalid_contract")
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
+async test "callback-raised public errors are normalized at the boundary" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let invalid = transaction_error_value(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, _bytes) => {
+          raise @transaction.TransactionError(
+            code="foreign.failure",
+            message="m".repeat(4_096),
+            details=Some(
+              Json::object({ "payload": Json::string("x".repeat(4_096)) }),
+            ),
+          )
+        },
+      )
+    })
+    match invalid {
+      TransactionError(code~, message~, details~) => {
+        assert_eq(code, "office.transaction.mutation_failed")
+        assert_eq(
+          message, "mutation callback raised an invalid TransactionError code",
+        )
+        assert_true(details is None)
+      }
+    }
+    let oversized = transaction_error_value(() => {
+      @transaction.transact(
+        @transaction.transaction_options(input, output_path=output),
+        (_format, _bytes) => {
+          raise @transaction.TransactionError(
+            code="office.transaction.callback_failure",
+            message="m".repeat(4_096),
+            details=Some(Json::array(Array::make(65, Json::string("detail")))),
+          )
+        },
+      )
+    })
+    match oversized {
+      TransactionError(code~, message~, details~) => {
+        assert_eq(code, "office.transaction.callback_failure")
+        assert_true(message.length() <= 513)
+        assert_true(details is None)
+      }
+    }
+    assert_false(@afs.exists(output))
     assert_eq(@afs.read_file(input).binary(), original)
     assert_no_transaction_temp(directory)
   })

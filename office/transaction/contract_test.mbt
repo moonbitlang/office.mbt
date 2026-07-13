@@ -127,4 +127,17 @@ test "transaction errors retain stable A2 codes with and without details" {
       "details": { "stage": "commit" },
     },
   })
+  let malformed = @transaction.TransactionError(
+    code="foreign.failure",
+    message="m".repeat(4_096),
+    details=Some(Json::array(Array::make(65, Json::string("detail")))),
+  )
+  json_inspect(@office.output_failure(malformed.to_protocol_error()), content={
+    "schema": "office.output/1",
+    "success": false,
+    "error": {
+      "code": "office.transaction.invalid_contract",
+      "message": "TransactionError code is outside the office.transaction namespace",
+    },
+  })
 }

@@ -18,6 +18,7 @@ priv struct TransactionFaults {
   fail_write : Bool
   fail_rename : Bool
   stall_after_temp : Bool
+  post_rename_release : String?
   concurrent_replacement : Bytes?
   concurrent_destination : Bytes?
 }
@@ -28,6 +29,7 @@ fn no_transaction_faults() -> TransactionFaults {
     fail_write: false,
     fail_rename: false,
     stall_after_temp: false,
+    post_rename_release: None,
     concurrent_replacement: None,
     concurrent_destination: None,
   }
@@ -377,13 +379,13 @@ async fn sync_parent_directory(destination : String) -> Bool {
     error if @async.is_being_cancelled() => raise error
     _ => return false
   }
+  defer directory.close()
   let synced = try directory.sync() catch {
     error if @async.is_being_cancelled() => raise error
     _ => false
   } noraise {
     _ => true
   }
-  directory.close()
   synced
 }
 
@@ -490,22 +492,40 @@ async fn publish_candidate(
     }
     @afs.rename(temp, policy.destination_target, replace=policy.replace) catch {
       error if @async.is_being_cancelled() => raise error
-      error => {
-        let code = if policy.mode is Output && !policy.replace {
-          "office.transaction.output_exists"
-        } else {
-          "office.transaction.commit_failed"
-        }
+      @os_error.OSError(_) as error if policy.mode is Output &&
+        !policy.replace &&
+        error.is_EEXIST() =>
         raise transaction_error(
-          code,
+          "office.transaction.output_exists",
+          "destination appeared before the atomic publish completed",
+          details=Json::object({
+            "output": Json::string(bounded_text(policy.output_path, 160)),
+          }),
+        )
+      error =>
+        raise transaction_error(
+          "office.transaction.commit_failed",
           "could not atomically publish destination: \{bounded_text(error.to_string(), 240)}",
           details=Json::object({
             "output": Json::string(bounded_text(policy.output_path, 160)),
           }),
         )
-      }
     }
-    sync_parent_directory(policy.destination_target)
+    @async.protect_from_cancel(
+      () => {
+        match faults.post_rename_release {
+          Some(release) =>
+            while !@afs.exists(release) {
+              @async.pause()
+            }
+          None => ()
+        }
+        sync_parent_directory(policy.destination_target)
+      },
+      resume_on_cancel=true,
+    ) catch {
+      _ => false
+    }
   } catch {
     error => {
       file.close()
@@ -559,7 +579,7 @@ async fn transact_with_faults(
   let original = read_original(options, policy.source_target)
   let format = identify_input(options, original)
   let mutation = mutate(format, original) catch {
-    TransactionError(..) as error => raise error
+    TransactionError(..) as error => raise normalize_mutation_error(error)
     error =>
       raise transaction_error(
         "office.transaction.mutation_failed",
