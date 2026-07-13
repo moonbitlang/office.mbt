@@ -329,3 +329,56 @@ test "raw edit rejects aggregate output amplification before splicing" {
     "office.raw.resource_limit",
   )
 }
+
+///|
+test "raw attribute splices preserve XML whitespace values exactly" {
+  let original = @word.new_blank_docx()
+  let value = "a\tb\nc\rd"
+  let first_request = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body",
+    SetAttribute,
+    attribute="test",
+    value~,
+  )
+  let first = @raw.raw_edit(Docx, original, first_request)
+  let first_xml = @raw.raw_read("whitespace.docx", first.bytes, "/document").xml_text()
+  assert_true(first_xml.contains("test=\"a&#x9;b&#xA;c&#xD;d\""))
+  let second_request = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body[@test=\"a\\tb\\nc\\rd\"]",
+    SetAttribute,
+    attribute="matched",
+    value="true",
+  )
+  let second = @raw.raw_edit(Docx, first.bytes, second_request)
+  assert_true(
+    @raw.raw_read("whitespace.docx", second.bytes, "/document")
+    .xml_text()
+    .contains("matched=\"true\""),
+  )
+}
+
+///|
+test "raw XML scanner distinguishes declarations from xml-stylesheet PIs" {
+  let original = @word.new_blank_docx()
+  let replacement = "<?xml-stylesheet type=\"text/xsl\" href=\"style.xsl\"?><w:document xmlns:w=\"\{word_namespace}\"><w:body><w:sectPr/></w:body></w:document>"
+  let replaced = @raw.raw_replace_part(Docx, original, "/document", replacement)
+  assert_true(
+    @raw.raw_read("pi.docx", replaced.bytes, "/document")
+    .xml_text()
+    .has_prefix("<?xml-stylesheet"),
+  )
+  let append = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body",
+    Append,
+    xml="<w:p xmlns:w=\"\{word_namespace}\"><?xml-stylesheet type=\"text/xsl\"?></w:p>",
+  )
+  let edited = @raw.raw_edit(Docx, replaced.bytes, append)
+  assert_true(
+    @raw.raw_read("pi.docx", edited.bytes, "/document")
+    .xml_text()
+    .contains("<?xml-stylesheet type=\"text/xsl\"?>"),
+  )
+}

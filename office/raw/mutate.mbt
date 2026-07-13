@@ -9,7 +9,10 @@ priv struct RawSpanEdit {
 ///|
 fn checked_fragment_bytes(xml : String) -> Bytes raise RawError {
   let trimmed = xml.trim()
-  if trimmed.has_prefix("<?xml") {
+  if trimmed.has_prefix("<?xml ") ||
+    trimmed.has_prefix("<?xml\t") ||
+    trimmed.has_prefix("<?xml\r") ||
+    trimmed.has_prefix("<?xml\n") {
     raise raw_error(
       "office.raw.invalid_fragment", "inserted XML fragments cannot contain an XML declaration",
     )
@@ -23,15 +26,32 @@ fn checked_fragment_bytes(xml : String) -> Bytes raise RawError {
   }
   let document = scan_raw_xml("<fragment>", bytes)
   let mut roots = 0
-  for node in document.nodes {
+  let mut root_index = -1
+  for index, node in document.nodes {
     if node.parent == -1 {
       roots = roots + 1
+      root_index = index
     }
   }
   if roots != 1 {
     raise raw_error(
       "office.raw.invalid_fragment", "XML fragment must contain exactly one self-contained element",
     )
+  }
+  let root = document.nodes[root_index]
+  for byte in document.bytes[:root.start] {
+    if !raw_byte_is_space(byte) {
+      raise raw_error(
+        "office.raw.invalid_fragment", "XML fragment may contain only whitespace outside its single element",
+      )
+    }
+  }
+  for byte in document.bytes[root.end:] {
+    if !raw_byte_is_space(byte) {
+      raise raw_error(
+        "office.raw.invalid_fragment", "XML fragment may contain only whitespace outside its single element",
+      )
+    }
   }
   bytes
 }
@@ -59,6 +79,9 @@ fn raw_escape_attribute(value : String) -> String {
       '>' => output.write_string("&gt;") |> ignore
       '"' => output.write_string("&quot;") |> ignore
       '\'' => output.write_string("&apos;") |> ignore
+      '\t' => output.write_string("&#x9;") |> ignore
+      '\n' => output.write_string("&#xA;") |> ignore
+      '\r' => output.write_string("&#xD;") |> ignore
       _ => output.write_char(character) |> ignore
     }
   }
@@ -450,7 +473,7 @@ pub fn raw_edit(
   let pkg = open_raw_package_for_format(format, data)
   let (part, bytes) = pkg.checked_xml_part(request.part)
   let document = scan_raw_xml(part, bytes)
-  let namespaces = edit_path_namespaces(format, request)
+  let namespaces = edit_path_namespaces(format, request, document)
   let path = parse_raw_path(request.path, namespaces)
   let selected = select_raw_nodes(document, path, request.all)
   let fragment = match request.xml {

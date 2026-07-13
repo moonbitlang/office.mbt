@@ -89,11 +89,12 @@ predicates use exact decoded XML values. A path with zero matches fails. A
 path with more than one match fails unless `--all` is explicit, and even then
 the match count is capped.
 
-Built-in prefixes cover the stable OOXML namespaces used by DOCX and XLSX.
-`--namespace PREFIX=URI` adds or intentionally overrides a selector binding.
-Matching uses expanded namespace names, so a producer's choice of source
-prefix does not affect a selector. Unprefixed selector names match only the
-empty namespace.
+Built-in prefixes cover both Transitional and Strict OOXML. The namespace
+family is derived from the selected part's document element, while `xml` is
+always bound to its fixed W3C namespace. `--namespace PREFIX=URI` adds or
+intentionally overrides any other selector binding. Matching uses expanded
+namespace names, so a producer's choice of source prefix does not affect a
+selector. Unprefixed selector names match only the empty namespace.
 
 There is no descendant axis, wildcard, parent axis, function, union, regular
 expression, arbitrary XPath predicate, or executable expression.
@@ -109,9 +110,15 @@ The bounded action set is:
 
 Element-producing actions accept exactly one XML element. The fragment must
 be self-contained: every namespace prefix it uses must be declared in the
-fragment itself. A strict DTD-free parser rejects malformed names, duplicate
+fragment itself, and only whitespace may surround that element. A strict
+DTD-free parser rejects malformed names, duplicate
 expanded attributes, invalid characters, unknown prefixes, DTDs, and external
 entities before any package bytes are built.
+
+`set-attribute` serializes tabs, line feeds, and carriage returns as numeric
+character references so the XML parser's decoded value is exactly the value
+the caller supplied. Processing instructions such as `xml-stylesheet` remain
+legal; only an actual XML declaration is treated as a declaration.
 
 Edits are source-span splices. Bytes outside the declared spans of the
 mutated XML part remain identical. Untouched ZIP local records are copied

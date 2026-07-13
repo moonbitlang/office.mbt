@@ -37,6 +37,8 @@ test "raw fragment scanner rejects declarations entities and malformed roots" {
     ("<p a=\"1\" a=\"2\"/>", "office.raw.invalid_xml"),
     ("<p>&unknown;</p>", "office.raw.invalid_xml"),
     ("<?xml version=\"1.0\"?><p/>", "office.raw.invalid_fragment"),
+    ("<!--outside--><p/>", "office.raw.invalid_fragment"),
+    ("<?xml-stylesheet type=\"text/xsl\"?><p/>", "office.raw.invalid_fragment"),
     ("<p/><q/>", "office.raw.invalid_xml"),
     ("<p><q></p>", "office.raw.invalid_xml"),
   ]

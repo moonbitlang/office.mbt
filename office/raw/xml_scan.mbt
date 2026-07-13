@@ -86,6 +86,16 @@ priv struct RawXmlDocument {
 }
 
 ///|
+fn raw_document_uses_strict_ooxml(document : RawXmlDocument) -> Bool {
+  for node in document.nodes {
+    if node.parent == -1 {
+      return node.expanded.has_prefix("{http://purl.oclc.org/ooxml/")
+    }
+  }
+  false
+}
+
+///|
 priv struct RawLexicalAttribute {
   name : String
   value : String
@@ -648,6 +658,9 @@ fn raw_reject_non_utf8_declaration(
     0
   }
   if !raw_starts_with_at(bytes, offset, b"<?xml") {
+    return
+  }
+  if offset + 5 >= bytes.length() || !raw_byte_is_space(bytes[offset + 5]) {
     return
   }
   let finish = match raw_find_sequence(bytes, offset + 5, b"?>") {
