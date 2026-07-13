@@ -10,6 +10,8 @@ pub fn raw_edit(@office.DocumentFormat, BytesView, RawEditRequest) -> RawMutatio
 
 pub fn raw_edit_request(String, String, RawAction, xml? : String, attribute? : String, value? : String, namespaces? : Array[(String, String)], all? : Bool) -> RawEditRequest raise RawError
 
+pub fn raw_identify(StringView, BytesView) -> @office.DocumentFormat raise RawError
+
 pub fn raw_inventory(StringView, BytesView) -> RawInventory raise RawError
 
 pub fn raw_namespace_binding(String) -> (String, String) raise RawError

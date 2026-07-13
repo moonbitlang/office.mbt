@@ -326,6 +326,51 @@ test "raw edit expands self-closing elements" {
 }
 
 ///|
+test "raw fragment insertion preserves standalone default namespace semantics" {
+  let original = @excel.write(@excel.new_file())
+  let append = @raw.raw_edit_request(
+    "/sheet[1]",
+    "/x:worksheet/x:sheetData",
+    Append,
+    xml="<row/>",
+  )
+  let edited = @raw.raw_edit(Xlsx, original, append)
+  let text = @raw.raw_read(
+    "namespace-preserved.xlsx",
+    edited.bytes,
+    "/sheet[1]",
+  ).xml_text()
+  assert_true(text.contains("<row xmlns=\"\"/>"))
+  let namespaced_remove = @raw.raw_edit_request(
+    "/sheet[1]",
+    "/x:worksheet/x:sheetData/x:row",
+    Remove,
+  )
+  assert_eq(
+    raw_error_code(() => @raw.raw_edit(Xlsx, edited.bytes, namespaced_remove)),
+    "office.raw.path_not_found",
+  )
+}
+
+///|
+test "raw candidate validation includes relationship field budgets" {
+  let original = @word.new_blank_docx()
+  let oversized_id = "r".repeat(257)
+  let replacement = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"\{oversized_id}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink\" Target=\"https://example.invalid\" TargetMode=\"External\"/></Relationships>"
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_replace_part(
+        Docx,
+        original,
+        "/document/relationships",
+        replacement,
+      )
+    }),
+    "office.raw.validation_failed",
+  )
+}
+
+///|
 test "raw mutation rejects unsafe grammar fragments and validation regressions" {
   let original = @word.new_blank_docx()
   inspect(

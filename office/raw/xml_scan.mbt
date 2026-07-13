@@ -26,6 +26,18 @@ let raw_max_xml_attribute_value_bytes : Int = 1024 * 1024
 let raw_max_xml_attributes_per_element = 4096
 
 ///|
+let raw_max_source_namespace_uri_bytes = 2048
+
+///|
+let raw_max_in_scope_namespaces = 256
+
+///|
+let raw_max_expanded_name_bytes : Int = 16 * 1024 * 1024
+
+///|
+let raw_max_namespace_scope_work = 2_000_000
+
+///|
 let raw_metadata_max_bytes : Int = 8 * 1024 * 1024
 
 ///|
@@ -41,12 +53,20 @@ let raw_metadata_max_namespace_declarations = 4096
 let raw_metadata_max_attribute_value_bytes = 4096
 
 ///|
+let raw_metadata_max_expanded_name_bytes : Int = 4 * 1024 * 1024
+
+///|
+let raw_metadata_max_namespace_scope_work = 500_000
+
+///|
 priv struct RawXmlBudget {
   max_nodes : Int
   max_attributes : Int
   max_namespace_declarations : Int
   max_text_bytes : Int
   max_attribute_value_bytes : Int
+  max_expanded_name_bytes : Int
+  max_namespace_scope_work : Int
 }
 
 ///|
@@ -402,7 +422,13 @@ fn preflight_raw_xml(
   let mut attributes = 0
   let mut namespace_declarations = 0
   let mut text_bytes = 0
+  let mut expanded_name_bytes = 0
+  let mut namespace_scope_work = 0
   let mut depth = 0
+  let namespaces : Map[String, String] = {
+    "xml": "http://www.w3.org/XML/1998/namespace",
+  }
+  let namespace_undo_stack : Array[Array[(String, String?)]] = []
   let mut offset = 0
   while offset < bytes.length() {
     if bytes[offset] != b'<' {
@@ -461,6 +487,10 @@ fn preflight_raw_xml(
       if depth < 0 {
         raise raw_xml_scan_error(part, "closing tag has no open element")
       }
+      match namespace_undo_stack.pop() {
+        Some(undo) => raw_restore_namespaces(namespaces, undo)
+        None => raise raw_xml_scan_error(part, "namespace stack is incomplete")
+      }
       offset = finish + 1
       continue
     }
@@ -508,8 +538,65 @@ fn preflight_raw_xml(
             namespace_declarations,
           )
         }
+        if value_bytes > raw_max_source_namespace_uri_bytes {
+          raise raw_xml_resource_limit(
+            part, "xml_namespace_uri_bytes", raw_max_source_namespace_uri_bytes,
+            value_bytes,
+          )
+        }
       }
     }
+    let (_, namespace_undo) = raw_apply_namespace_declarations(
+      part, tag, namespaces,
+    )
+    let expanded = raw_expand_source_name(
+      part,
+      tag.name,
+      namespaces,
+      attribute=false,
+    )
+    let expanded_bytes = raw_expanded_name_bytes(expanded)
+    if expanded_bytes > budget.max_expanded_name_bytes - expanded_name_bytes {
+      raise raw_xml_resource_limit(
+        part,
+        "xml_expanded_name_bytes",
+        budget.max_expanded_name_bytes,
+        budget.max_expanded_name_bytes + 1,
+      )
+    }
+    expanded_name_bytes = expanded_name_bytes + expanded_bytes
+    for attribute in tag.attributes {
+      if attribute.name == "xmlns" || attribute.name.has_prefix("xmlns:") {
+        continue
+      }
+      let expanded_attribute = raw_expand_source_name(
+        part,
+        attribute.name,
+        namespaces,
+        attribute=true,
+      )
+      let expanded_attribute_bytes = raw_expanded_name_bytes(expanded_attribute)
+      if expanded_attribute_bytes >
+        budget.max_expanded_name_bytes - expanded_name_bytes {
+        raise raw_xml_resource_limit(
+          part,
+          "xml_expanded_name_bytes",
+          budget.max_expanded_name_bytes,
+          budget.max_expanded_name_bytes + 1,
+        )
+      }
+      expanded_name_bytes = expanded_name_bytes + expanded_attribute_bytes
+    }
+    if namespaces.length() >
+      budget.max_namespace_scope_work - namespace_scope_work {
+      raise raw_xml_resource_limit(
+        part,
+        "xml_namespace_scope_work",
+        budget.max_namespace_scope_work,
+        budget.max_namespace_scope_work + 1,
+      )
+    }
+    namespace_scope_work = namespace_scope_work + namespaces.length()
     if !tag.self_closing {
       depth = depth + 1
       if depth > raw_max_xml_depth {
@@ -517,6 +604,9 @@ fn preflight_raw_xml(
           part, "xml_depth", raw_max_xml_depth, depth,
         )
       }
+      namespace_undo_stack.push(namespace_undo)
+    } else {
+      raw_restore_namespaces(namespaces, namespace_undo)
     }
     offset = tag.gt + 1
   }
@@ -544,6 +634,8 @@ fn preflight_raw_metadata_xml(
     max_namespace_declarations: raw_metadata_max_namespace_declarations,
     max_text_bytes: raw_metadata_max_bytes,
     max_attribute_value_bytes: raw_metadata_max_attribute_value_bytes,
+    max_expanded_name_bytes: raw_metadata_max_expanded_name_bytes,
+    max_namespace_scope_work: raw_metadata_max_namespace_scope_work,
   })
 }
 
@@ -620,6 +712,87 @@ fn raw_expand_source_name(
           part,
           "source name '\{value}' uses an unbound namespace prefix",
         )
+    }
+  }
+}
+
+///|
+fn raw_expanded_name_bytes(value : String) -> Int {
+  @utf8.encode(value).length()
+}
+
+///|
+fn raw_intern_expanded_name(
+  interned : Map[String, String],
+  value : String,
+) -> String {
+  match interned.get(value) {
+    Some(existing) => existing
+    None => {
+      interned[value] = value
+      value
+    }
+  }
+}
+
+///|
+fn raw_apply_namespace_declarations(
+  part : String,
+  tag : RawOpenTag,
+  namespaces : Map[String, String],
+) -> (Array[RawNamespaceDeclaration], Array[(String, String?)]) raise RawError {
+  let declarations : Array[RawNamespaceDeclaration] = []
+  let undo : Array[(String, String?)] = []
+  for attribute in tag.attributes {
+    let prefix = if attribute.name == "xmlns" {
+      Some("")
+    } else if attribute.name.has_prefix("xmlns:") {
+      Some(attribute.name[6:].to_owned())
+    } else {
+      None
+    }
+    match prefix {
+      Some(prefix) => {
+        if attribute.value.length() > raw_max_source_namespace_uri_bytes {
+          raise raw_xml_resource_limit(
+            part,
+            "xml_namespace_uri_bytes",
+            raw_max_source_namespace_uri_bytes,
+            attribute.value.length(),
+          )
+        }
+        let previous = namespaces.get(prefix)
+        if previous is None &&
+          namespaces.length() >= raw_max_in_scope_namespaces {
+          raise raw_xml_resource_limit(
+            part,
+            "xml_in_scope_namespaces",
+            raw_max_in_scope_namespaces,
+            namespaces.length() + 1,
+          )
+        }
+        undo.push((prefix, previous))
+        namespaces[prefix] = attribute.value
+        declarations.push({ prefix, uri: attribute.value })
+      }
+      None => ()
+    }
+  }
+  (declarations, undo)
+}
+
+///|
+fn raw_restore_namespaces(
+  namespaces : Map[String, String],
+  undo : ArrayView[(String, String?)],
+) -> Unit {
+  let mut index = undo.length()
+  while index > 0 {
+    index = index - 1
+    let (prefix, previous) = undo[index]
+    match previous {
+      Some(uri) => namespaces[prefix] = uri
+      None => namespaces.remove(prefix)
     }
   }
 }
@@ -748,6 +921,8 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
     max_namespace_declarations: raw_max_xml_namespace_declarations,
     max_text_bytes: raw_max_edit_part_bytes,
     max_attribute_value_bytes: raw_max_xml_attribute_value_bytes,
+    max_expanded_name_bytes: raw_max_expanded_name_bytes,
+    max_namespace_scope_work: raw_max_namespace_scope_work,
   })
   let text = @utf8.decode(bytes, ignore_bom=true) catch {
     _ =>
@@ -766,9 +941,10 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
   raw_reject_non_utf8_declaration(part, bytes)
   let nodes : Array[RawXmlNode] = []
   let node_stack : Array[Int] = []
-  let namespace_stack : Array[Map[String, String]] = []
+  let namespace_undo_stack : Array[Array[(String, String?)]] = []
   let sibling_counts : Map[String, Int] = Map([])
-  let root_namespaces : Map[String, String] = {
+  let interned_expanded_names : Map[String, String] = Map([])
+  let namespaces : Map[String, String] = {
     "xml": "http://www.w3.org/XML/1998/namespace",
   }
   let mut offset = 0
@@ -811,7 +987,10 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
         None =>
           raise raw_xml_scan_error(part, "closing tag has no open element")
       }
-      ignore(namespace_stack.pop())
+      match namespace_undo_stack.pop() {
+        Some(undo) => raw_restore_namespaces(namespaces, undo)
+        None => raise raw_xml_scan_error(part, "namespace stack is incomplete")
+      }
       if nodes[node_index].raw_name != closing_name {
         raise raw_xml_scan_error(
           part, "closing tag does not match open element",
@@ -828,26 +1007,12 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
       )
     }
     let tag = raw_scan_open_tag(part, bytes, offset)
-    let inherited = match namespace_stack.last() {
-      Some(value) => value.copy()
-      None => root_namespaces.copy()
-    }
-    let declarations : Array[RawNamespaceDeclaration] = []
-    for attribute in tag.attributes {
-      if attribute.name == "xmlns" {
-        inherited[""] = attribute.value
-        declarations.push({ prefix: "", uri: attribute.value })
-      } else if attribute.name.has_prefix("xmlns:") {
-        let prefix = attribute.name[6:].to_owned()
-        inherited[prefix] = attribute.value
-        declarations.push({ prefix, uri: attribute.value })
-      }
-    }
-    let expanded = raw_expand_source_name(
-      part,
-      tag.name,
-      inherited,
-      attribute=false,
+    let (declarations, namespace_undo) = raw_apply_namespace_declarations(
+      part, tag, namespaces,
+    )
+    let expanded = raw_intern_expanded_name(
+      interned_expanded_names,
+      raw_expand_source_name(part, tag.name, namespaces, attribute=false),
     )
     let attributes : Array[RawAttributeSpan] = []
     for attribute in tag.attributes {
@@ -855,11 +1020,14 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
         continue
       }
       attributes.push({
-        expanded: raw_expand_source_name(
-          part,
-          attribute.name,
-          inherited,
-          attribute=true,
+        expanded: raw_intern_expanded_name(
+          interned_expanded_names,
+          raw_expand_source_name(
+            part,
+            attribute.name,
+            namespaces,
+            attribute=true,
+          ),
         ),
         value: attribute.value,
         value_start: attribute.value_start,
@@ -897,7 +1065,9 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
     }
     if !tag.self_closing {
       node_stack.push(nodes.length() - 1)
-      namespace_stack.push(inherited)
+      namespace_undo_stack.push(namespace_undo)
+    } else {
+      raw_restore_namespaces(namespaces, namespace_undo)
     }
     offset = tag.gt + 1
   }
