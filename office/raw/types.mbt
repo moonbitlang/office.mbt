@@ -17,15 +17,31 @@ pub impl Show for RawError with fn output(self, logger) {
 
 ///|
 fn bounded_raw_text(value : String, limit : Int) -> String {
+  if limit <= 0 {
+    return ""
+  }
   let output = StringBuilder::new()
   let mut count = 0
+  let mut boundary : Char? = None
+  let mut truncated = false
   for character in value {
-    if count == limit {
-      output.write_string("…") |> ignore
+    if count < limit - 1 {
+      output.write_char(character) |> ignore
+    } else if count == limit - 1 {
+      boundary = Some(character)
+    } else {
+      truncated = true
       break
     }
-    output.write_char(character) |> ignore
     count = count + 1
+  }
+  if truncated {
+    output.write_string("…") |> ignore
+  } else {
+    match boundary {
+      Some(character) => output.write_char(character) |> ignore
+      None => ()
+    }
   }
   output.to_string()
 }
