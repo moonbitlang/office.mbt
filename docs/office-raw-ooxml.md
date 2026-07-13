@@ -30,9 +30,10 @@ is decoded strictly as UTF-8, UTF-16LE, or UTF-16BE and may be printed as text
 or returned in the versioned JSON envelope. Span edits remain UTF-8-only
 because they preserve exact source byte ranges. Binary data is never written
 to a terminal by default: callers must select `--base64` or `--output`.
-Human XML and base64 modes print only the selected payload. JSON includes the
-part's uncompressed byte size, while human file mode confirms the number of
-bytes written. File output uses same-directory staging, sync, and an atomic
+Human XML and base64 modes print the selected payload followed by one line
+terminator. Use `--output` when exact payload bytes are required. JSON includes
+the part's uncompressed byte size, while human file mode confirms the number
+of bytes written. File output uses same-directory staging, sync, and an atomic
 no-replace rename; failure or pre-commit cancellation removes private staging.
 
 `replace` replaces one existing XML part with a complete, strict XML

@@ -95,3 +95,33 @@ test "human help contains no deferred PowerPoint or MCP surface" {
   assert_false(output.to_lower().contains("ppt"))
   assert_false(output.to_lower().contains("mcp"))
 }
+
+///|
+test "raw part schema is emitted only with its required encoding" {
+  let part = @raw.raw_read("schema.docx", @word.new_blank_docx(), "/document")
+  guard raw_part_json(part, "xml", content="<document/>") is Object(payload) else {
+    fail("raw part payload must be an object")
+  }
+  assert_eq(payload.get("schema"), Some(Json::string(@lib.SCHEMA_RAW_PART)))
+  assert_eq(payload.get("encoding"), Some(Json::string("xml")))
+}
+
+///|
+async test "bounded raw read completion observes pending cancellation" {
+  @async.with_task_group() <| group => {
+    let task = group.spawn(() => {
+      complete_bounded_file_read(FixedArray::make(0, b'\x00'))
+    })
+    // The child reaches the explicit completion checkpoint before this task
+    // resumes, so cancellation cannot race with a synchronous return.
+    @async.pause()
+    task.cancel()
+    let cancelled = try {
+      ignore(task.wait())
+      false
+    } catch {
+      error => @async.is_cancellation_error(error)
+    }
+    assert_true(cancelled)
+  }
+}

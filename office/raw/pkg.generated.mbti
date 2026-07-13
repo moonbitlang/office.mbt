@@ -82,7 +82,6 @@ pub struct RawPartData {
   bytes : Bytes
 }
 pub fn RawPartData::document_format(Self) -> @office.DocumentFormat
-pub fn RawPartData::metadata_json(Self) -> Json
 pub fn RawPartData::part_info(Self) -> RawPartInfo
 pub fn RawPartData::payload_bytes(Self) -> Bytes
 pub fn RawPartData::xml_text(Self) -> String raise RawError
