@@ -23,6 +23,48 @@ fn raw_test_archive(entries : Array[(String, Bytes)]) -> Bytes raise {
 }
 
 ///|
+fn overwrite_raw_test_u32(
+  bytes : Array[Byte],
+  offset : Int,
+  value : Int,
+) -> Unit {
+  let raw = value.reinterpret_as_uint()
+  bytes[offset] = (raw & 0xff).to_byte()
+  bytes[offset + 1] = ((raw >> 8) & 0xff).to_byte()
+  bytes[offset + 2] = ((raw >> 16) & 0xff).to_byte()
+  bytes[offset + 3] = ((raw >> 24) & 0xff).to_byte()
+}
+
+///|
+fn forge_raw_test_central_uncompressed_sizes(
+  source : Bytes,
+  declared : Int,
+) -> (Bytes, Int) {
+  let bytes = source.to_array()
+  let mut count = 0
+  for offset = 0; offset + 27 < bytes.length(); offset = offset + 1 {
+    if bytes[offset] == b'P' &&
+      bytes[offset + 1] == b'K' &&
+      bytes[offset + 2] == b'\x01' &&
+      bytes[offset + 3] == b'\x02' {
+      overwrite_raw_test_u32(bytes, offset + 24, declared)
+      count = count + 1
+    }
+  }
+  (Bytes::from_array(bytes), count)
+}
+
+///|
+fn raw_inventory_error(bytes : Bytes) -> (String, String) raise {
+  try @raw.raw_inventory("limits.docx", bytes) catch {
+    RawError(code~, details~, ..) =>
+      (code, details.unwrap_or(Json::empty_object()).stringify())
+  } noraise {
+    _ => fail("expected raw inventory to fail")
+  }
+}
+
+///|
 fn relocated_docx_fixture() -> Bytes raise {
   raw_test_archive([
     (
@@ -657,4 +699,41 @@ test "raw selectors derive Strict OOXML namespaces and bind xml automatically" {
     .xml_text()
     .contains("strict=\"true\""),
   )
+}
+
+///|
+test "raw ZIP expansion limits retain resource codes and details" {
+  let count_archive = @zip.Archive::new()
+  for index in 0..<8193 {
+    count_archive.add("entry-\{index}", b"")
+  }
+  let (count_code, count_details) = raw_inventory_error(
+    @zip.write(count_archive),
+  )
+  assert_eq(count_code, "office.raw.resource_limit")
+  assert_true(count_details.contains("entry_count"))
+
+  let entry_archive = @zip.Archive::new()
+  entry_archive.add("entry", b"")
+  let (entry_bytes, entry_records) = forge_raw_test_central_uncompressed_sizes(
+    @zip.write(entry_archive),
+    64 * 1024 * 1024 + 1,
+  )
+  assert_eq(entry_records, 1)
+  let (entry_code, entry_details) = raw_inventory_error(entry_bytes)
+  assert_eq(entry_code, "office.raw.resource_limit")
+  assert_true(entry_details.contains("entry_uncompressed_bytes"))
+
+  let aggregate_archive = @zip.Archive::new()
+  for index in 0..<5 {
+    aggregate_archive.add("aggregate-\{index}", b"")
+  }
+  let (aggregate_bytes, aggregate_records) = forge_raw_test_central_uncompressed_sizes(
+    @zip.write(aggregate_archive),
+    60 * 1024 * 1024,
+  )
+  assert_eq(aggregate_records, 5)
+  let (aggregate_code, aggregate_details) = raw_inventory_error(aggregate_bytes)
+  assert_eq(aggregate_code, "office.raw.resource_limit")
+  assert_true(aggregate_details.contains("total_uncompressed_bytes"))
 }
