@@ -1,0 +1,211 @@
+///|
+let raw_max_error_message = 512
+
+///|
+/// A stable failure from the validated raw OOXML boundary.
+pub(all) suberror RawError {
+  RawError(code~ : String, message~ : String, details~ : Json?)
+}
+
+///|
+pub impl Show for RawError with fn output(self, logger) {
+  match self {
+    RawError(code~, message~, ..) =>
+      logger.write_string("raw OOXML error \{code}: \{message}")
+  }
+}
+
+///|
+fn bounded_raw_text(value : String, limit : Int) -> String {
+  let output = StringBuilder::new()
+  let mut count = 0
+  for character in value {
+    if count == limit {
+      output.write_string("…") |> ignore
+      break
+    }
+    output.write_char(character) |> ignore
+    count = count + 1
+  }
+  output.to_string()
+}
+
+///|
+fn raw_error(
+  code : String,
+  message : String,
+  details? : Json,
+) -> RawError {
+  RawError(
+    code~,
+    message=bounded_raw_text(message, raw_max_error_message),
+    details~,
+  )
+}
+
+///|
+/// Converts a raw OOXML failure into the shared `office.output/1` error.
+pub fn RawError::to_protocol_error(self : RawError) -> @office.ProtocolError {
+  match self {
+    RawError(code~, message~, details~) =>
+      match details {
+        Some(value) => @office.protocol_error(code, message, details=value)
+        None => @office.protocol_error(code, message)
+      }
+  }
+}
+
+///|
+/// One deterministic package-part inventory record.
+pub struct RawPartInfo {
+  name : String
+  content_type : String
+  xml : Bool
+  size : Int
+  aliases : ReadOnlyArray[String]
+}
+
+///|
+fn json_string_array(values : ReadOnlyArray[String]) -> Json {
+  let output = []
+  for value in values {
+    output.push(Json::string(value))
+  }
+  Json::array(output)
+}
+
+///|
+pub fn RawPartInfo::to_json(self : RawPartInfo) -> Json {
+  Json::object({
+    "name": Json::string("/" + self.name),
+    "content_type": Json::string(self.content_type),
+    "kind": Json::string(if self.xml { "xml" } else { "binary" }),
+    "size": Json::number(self.size.to_double()),
+    "aliases": json_string_array(self.aliases),
+  })
+}
+
+///|
+/// A complete, canonically ordered package-part inventory.
+pub struct RawInventory {
+  format : @office.DocumentFormat
+  parts : ReadOnlyArray[RawPartInfo]
+}
+
+///|
+pub fn RawInventory::to_json(self : RawInventory) -> Json {
+  let parts = []
+  for part in self.parts {
+    parts.push(part.to_json())
+  }
+  Json::object({
+    "schema": Json::string("office.raw.inventory/1"),
+    "format": Json::string(self.format.name()),
+    "part_count": Json::number(self.parts.length().to_double()),
+    "parts": Json::array(parts),
+  })
+}
+
+///|
+/// One resolved package part and its original uncompressed payload.
+pub struct RawPartData {
+  format : @office.DocumentFormat
+  info : RawPartInfo
+  bytes : Bytes
+}
+
+///|
+/// Decodes an XML part as UTF-8 or UTF-16 after strict package validation.
+pub fn RawPartData::xml_text(self : RawPartData) -> String raise RawError {
+  if !self.info.xml {
+    raise raw_error(
+      "office.raw.binary_requires_explicit_mode",
+      "part '/\{self.info.name}' is binary; select base64 or file output",
+      details=Json::object({
+        "part": Json::string("/" + self.info.name),
+        "size": Json::number(self.info.size.to_double()),
+      }),
+    )
+  }
+  decode_xml_bytes(self.info.name, self.bytes)
+}
+
+///|
+pub fn RawPartData::metadata_json(self : RawPartData) -> Json {
+  Json::object({
+    "schema": Json::string("office.raw.part/1"),
+    "format": Json::string(self.format.name()),
+    "part": self.info.to_json(),
+  })
+}
+
+///|
+/// The deliberately bounded raw XML edit operations.
+pub(all) enum RawAction {
+  Append
+  Prepend
+  InsertBefore
+  InsertAfter
+  Replace
+  Remove
+  SetAttribute
+}
+
+///|
+pub fn RawAction::name(self : RawAction) -> String {
+  match self {
+    Append => "append"
+    Prepend => "prepend"
+    InsertBefore => "insert-before"
+    InsertAfter => "insert-after"
+    Replace => "replace"
+    Remove => "remove"
+    SetAttribute => "set-attribute"
+  }
+}
+
+///|
+pub fn resolve_raw_action(value : StringView) -> RawAction? {
+  match value.to_owned().to_lower() {
+    "append" => Some(Append)
+    "prepend" => Some(Prepend)
+    "insert-before" => Some(InsertBefore)
+    "insert-after" => Some(InsertAfter)
+    "replace" => Some(Replace)
+    "remove" => Some(Remove)
+    "set-attribute" => Some(SetAttribute)
+    _ => None
+  }
+}
+
+///|
+/// A checked edit request. Build with `raw_edit_request`.
+pub struct RawEditRequest {
+  part : String
+  path : String
+  action : RawAction
+  xml : String?
+  attribute : String?
+  value : String?
+  namespaces : ReadOnlyArray[(String, String)]
+  all : Bool
+}
+
+///|
+/// Pure candidate package bytes and deterministic edit metadata.
+pub struct RawMutation {
+  bytes : Bytes
+  part : String
+  action : String
+  match_count : Int
+}
+
+///|
+pub fn RawMutation::to_json(self : RawMutation) -> Json {
+  Json::object({
+    "schema": Json::string("office.raw.change/1"),
+    "part": Json::string("/" + self.part),
+    "action": Json::string(self.action),
+    "match_count": Json::number(self.match_count.to_double()),
+  })
+}
