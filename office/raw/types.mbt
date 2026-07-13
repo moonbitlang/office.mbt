@@ -2,6 +2,36 @@
 let raw_max_error_message = 512
 
 ///|
+/// Checks a text boundary in Unicode scalar values without allocating an
+/// intermediate character array. Isolated UTF-16 surrogates fail closed.
+fn raw_text_within_scalar_limit(value : String, limit : Int) -> Bool {
+  if limit < 0 {
+    return false
+  }
+  let mut offset = 0
+  let mut scalars = 0
+  while offset < value.length() {
+    let unit = value[offset]
+    if unit.is_leading_surrogate() {
+      if offset + 1 >= value.length() ||
+        !value[offset + 1].is_trailing_surrogate() {
+        return false
+      }
+      offset = offset + 2
+    } else if unit.is_trailing_surrogate() {
+      return false
+    } else {
+      offset = offset + 1
+    }
+    scalars = scalars + 1
+    if scalars > limit {
+      return false
+    }
+  }
+  true
+}
+
+///|
 /// A stable failure from the validated raw OOXML boundary.
 pub(all) suberror RawError {
   RawError(code~ : String, message~ : String, details~ : Json?)

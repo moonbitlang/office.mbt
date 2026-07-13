@@ -877,6 +877,26 @@ test "raw resolver rejects collisions and namespace-spoofed OPC metadata before 
   let overlong_entry = raw_test_add_entry(original, "x".repeat(1025), b"")
   assert_eq(raw_inventory_error(overlong_entry).0, "office.raw.invalid_package")
 
+  let extra_relationship = raw_test_add_entry(
+    original,
+    "word/_rels/unbounded.xml.rels",
+    Bytes::make(8 * 1024 * 1024 + 1, b'x'),
+  )
+  let misdeclared_relationship = raw_test_transform_xml_entry(
+    extra_relationship,
+    "[Content_Types].xml",
+    text => {
+      text.replace(
+        old="</Types>",
+        new="<Override PartName=\"/word/_rels/unbounded.xml.rels\" ContentType=\"application/xml\"/></Types>",
+      )
+    },
+  )
+  assert_eq(
+    raw_inventory_error(misdeclared_relationship).0,
+    "office.raw.invalid_relationship",
+  )
+
   let wrong_manifest_namespace = raw_test_transform_xml_entry(
     original,
     "[Content_Types].xml",
@@ -919,6 +939,33 @@ test "raw resolver rejects collisions and namespace-spoofed OPC metadata before 
   )
   assert_eq(
     raw_inventory_error(wrong_relationship_namespace).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let unexpected_relationship_child = raw_test_transform_xml_entry(
+    original,
+    "_rels/.rels",
+    text => {
+      text.replace(old="</Relationships>", new="<Unexpected/></Relationships>")
+    },
+  )
+  assert_eq(
+    raw_inventory_error(unexpected_relationship_child).0,
+    "office.raw.invalid_relationship",
+  )
+
+  let incomplete_relationship = raw_test_transform_xml_entry(
+    original,
+    "_rels/.rels",
+    text => {
+      text.replace(
+        old="</Relationships>",
+        new="<Relationship Id=\"incomplete\"/></Relationships>",
+      )
+    },
+  )
+  assert_eq(
+    raw_inventory_error(incomplete_relationship).0,
     "office.raw.invalid_relationship",
   )
 
