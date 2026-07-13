@@ -27,13 +27,33 @@ test "raw path parser rejects an adversarial grammar corpus deterministically" {
 }
 
 ///|
-test "archive-backed raw boundary rechecks entry limits" {
+test "archive-backed raw boundary requires provenance and rechecks limits" {
   let archive = @zip.Archive::new()
   for index in 0..<8193 {
     archive.add("entry-\{index}.bin", b"")
   }
   assert_eq(
     raw_error_code(() => @raw.raw_identify_archive("oversized.docx", archive)),
+    "office.raw.resource_limit",
+  )
+
+  let original = @word.new_blank_docx()
+  let unbounded = @zip.read(original)
+  assert_eq(
+    raw_error_code(() => @raw.raw_identify_archive("unbounded.docx", unbounded)),
+    "office.raw.resource_limit",
+  )
+  let bounded = @zip.read_limited(
+    original,
+    max_entries=8192,
+    max_entry_uncompressed_bytes=64 * 1024 * 1024,
+    max_total_uncompressed_bytes=256 * 1024 * 1024,
+  )
+  assert_eq(@raw.raw_identify_archive("bounded.docx", bounded.fork()), Docx)
+  let changed = bounded.fork()
+  assert_true(changed.replace("[Content_Types].xml", b"changed"))
+  assert_eq(
+    raw_error_code(() => @raw.raw_identify_archive("changed.docx", changed)),
     "office.raw.resource_limit",
   )
 }

@@ -5,6 +5,7 @@ A pure MoonBit implementation of ZIP archive reading and writing. This package p
 ## Features
 
 - Read and write ZIP archives
+- Bounded reads and fail-before-growth bounded writes
 - DEFLATE compression support
 - GZIP compression/decompression
 - CRC32 checksum calculation
@@ -143,13 +144,18 @@ test "iterate entries" {
 | `add(name, data, compression?, data_descriptor?)` | Add a file to the archive |
 | `get(name)` | Get file content by name, returns `Bytes?` |
 | `entries()` | Get view of all entries |
+| `fork()` | Create a shallow, independently mutable snapshot |
+| `bounded_source_package_size(...)` | Query non-forgeable pristine bounded-read provenance |
+| `retained_size_estimate()` | Conservatively estimate retained archive memory |
 
 ### Functions
 
 | Function | Description |
 |----------|-------------|
 | `read(bytes)` | Parse ZIP bytes into Archive |
+| `read_limited(bytes, ...)` | Parse while enforcing entry and expansion limits |
 | `write(archive)` | Serialize Archive to ZIP bytes |
+| `write_limited(archive, max_output_bytes=...)` | Serialize without allowing output to grow past the ceiling |
 | `gzip(bytes)` | Compress bytes using GZIP |
 | `gunzip(bytes)` | Decompress GZIP bytes |
 
@@ -166,6 +172,8 @@ pub suberror ZipError {
   UnsupportedFeature(msg~ : String)
   UnsupportedCompression(method_id~ : Int)
   InvalidUtf8(offset~ : Int)
+  OutputLimitExceeded(limit~ : Int)
+  ResourceLimitExceeded(kind~ : String, limit~ : Int, actual~ : Int)
 }
 ```
 

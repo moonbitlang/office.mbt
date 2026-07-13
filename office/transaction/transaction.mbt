@@ -798,8 +798,8 @@ async fn check_source_unchanged(
   source_leaf : String,
   original : Bytes,
 ) -> Unit {
-  let current = publication_file_read(
-    source_directory, source_leaf, transaction_max_package_bytes, "input package recheck",
+  let matches = publication_named_file_matches(
+    source_directory, source_leaf, original,
   ) catch {
     error if @async.is_being_cancelled() => raise error
     _ =>
@@ -807,7 +807,7 @@ async fn check_source_unchanged(
         "office.transaction.source_changed", "input disappeared or became unreadable before the in-place commit",
       )
   }
-  if current != original {
+  if !matches {
     raise transaction_error(
       "office.transaction.source_changed", "input changed after it was read; refusing to overwrite a concurrent writer",
     )

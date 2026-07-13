@@ -165,6 +165,9 @@ fn hash3(bytes : BytesView, pos : Int) -> Int {
 }
 
 ///|
+let deflate_window_size : Int = 32768
+
+///|
 fn insert_position(
   bytes : BytesView,
   pos : Int,
@@ -175,7 +178,7 @@ fn insert_position(
     return
   }
   let h = hash3(bytes, pos)
-  prev[pos] = head[h]
+  prev[pos % deflate_window_size] = head[h]
   head[h] = pos
 }
 
@@ -204,7 +207,7 @@ fn find_match(
       continue false
     }
     let dist = pos - candidate
-    if dist > 32768 {
+    if dist > deflate_window_size {
       continue false
     }
     let mut l = 0
@@ -218,7 +221,7 @@ fn find_match(
         continue false
       }
     }
-    candidate = prev[candidate]
+    candidate = prev[candidate % deflate_window_size]
     chain_count = chain_count + 1
     continue true
   }
@@ -457,11 +460,31 @@ priv struct BitWriter {
   mut bit_buf : UInt
   mut bit_count : Int
   out : Array[Byte]
+  max_output : Int?
+}
+
+///|
+fn BitWriter::new_with_limit(max_output : Int?) -> BitWriter raise ZipError {
+  match max_output {
+    Some(limit) if limit < 0 =>
+      raise UnsupportedFeature(msg="deflate output limit must be non-negative")
+    _ => ()
+  }
+  { bit_buf: 0, bit_count: 0, out: [], max_output }
 }
 
 ///|
 fn BitWriter::new() -> BitWriter {
-  { bit_buf: 0, bit_count: 0, out: [] }
+  { bit_buf: 0, bit_count: 0, out: [], max_output: None }
+}
+
+///|
+fn BitWriter::push_byte(self : BitWriter, value : Byte) -> Unit raise ZipError {
+  match self.max_output {
+    Some(limit) if self.out.length() >= limit =>
+      raise OutputLimitExceeded(limit~)
+    _ => self.out.push(value)
+  }
 }
 
 ///|
@@ -478,7 +501,7 @@ fn BitWriter::write_bits(
     self.bit_buf = self.bit_buf | (bit.reinterpret_as_uint() << self.bit_count)
     self.bit_count = self.bit_count + 1
     if self.bit_count == 8 {
-      self.out.push(self.bit_buf.to_byte())
+      self.push_byte(self.bit_buf.to_byte())
       self.bit_buf = 0
       self.bit_count = 0
     }
@@ -486,9 +509,9 @@ fn BitWriter::write_bits(
 }
 
 ///|
-fn BitWriter::finish(self : BitWriter) -> Bytes {
+fn BitWriter::finish(self : BitWriter) -> Bytes raise ZipError {
   if self.bit_count > 0 {
-    self.out.push(self.bit_buf.to_byte())
+    self.push_byte(self.bit_buf.to_byte())
   }
   Bytes::from_array(self.out)
 }
@@ -510,13 +533,19 @@ fn fixed_literal_code(symbol : Int) -> (Int, Int) raise ZipError {
 }
 
 ///|
-fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
-  let writer = BitWriter::new()
+fn deflate_encode_with_limit(
+  bytes : BytesView,
+  max_output : Int?,
+) -> Bytes raise ZipError {
+  let writer = BitWriter::new_with_limit(max_output)
   writer.write_bits(1, 1)
   writer.write_bits(1, 2)
   let len = bytes.length()
   let head : Array[Int] = Array::make(1 << 15, -1)
-  let prev : Array[Int] = Array::make(len, -1)
+  // DEFLATE distances cannot exceed 32 KiB. A ring retains exactly the
+  // predecessor links that can still be reached, rather than allocating one
+  // integer for every byte in a potentially large Office XML part.
+  let prev : Array[Int] = Array::make(deflate_window_size, -1)
   let mut i = 0
   for state = true {
     if !state {
@@ -557,6 +586,19 @@ fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
   let end_rev = reverse_bits(end_code.reinterpret_as_uint(), end_len).reinterpret_as_int()
   writer.write_bits(end_rev, end_len)
   writer.finish()
+}
+
+///|
+fn deflate_encode(bytes : BytesView) -> Bytes raise ZipError {
+  deflate_encode_with_limit(bytes, None)
+}
+
+///|
+fn deflate_encode_limited(
+  bytes : BytesView,
+  max_output : Int,
+) -> Bytes raise ZipError {
+  deflate_encode_with_limit(bytes, Some(max_output))
 }
 
 ///|

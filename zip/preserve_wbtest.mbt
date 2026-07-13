@@ -299,6 +299,16 @@ test "zip64 replacement preserves header layout and descriptor width" {
   assert_true(archive.replace("target.xml", b"new zip64 payload"))
   assert_false(preserved_entry(archive, "target.xml").source_unchanged)
   let candidate = write(archive)
+  assert_eq(
+    write_limited(archive, max_output_bytes=candidate.length()),
+    candidate,
+  )
+  try write_limited(archive, max_output_bytes=candidate.length() - 1) catch {
+    OutputLimitExceeded(limit~) => assert_eq(limit, candidate.length() - 1)
+    _ => fail("expected bounded ZIP64 output limit")
+  } noraise {
+    _ => fail("expected ZIP64 candidate to exceed its output limit")
+  }
   let after = read(candidate)
   let original = preserved_entry(before, "target.xml")
   let replacement = preserved_entry(after, "target.xml")

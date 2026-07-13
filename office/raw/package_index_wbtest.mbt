@@ -20,3 +20,92 @@ test "XLSX relationship IDs use one bounded lookup index" {
     assert_eq(relationship.target, "xl/worksheets/sheet\{ordinal}.xml")
   }
 }
+
+///|
+fn wb_raw_archive_limit_kind(run : () -> Unit raise RawError) -> String raise {
+  try run() catch {
+    RawError(code~, details~, ..) => {
+      assert_eq(code, "office.raw.resource_limit")
+      guard details is Some(Object(fields)) &&
+        fields.get("kind") is Some(String(kind)) else {
+        fail("expected structured raw archive limit details")
+      }
+      kind
+    }
+  } noraise {
+    _ => fail("expected raw archive resource limit")
+  }
+}
+
+///|
+test "archive boundary checks serialized, entry, and aggregate limits" {
+  let count = @zip.Archive::new()
+  count.add("a", b"")
+  count.add("b", b"")
+  count.add("c", b"")
+  assert_eq(
+    wb_raw_archive_limit_kind(() => {
+      check_raw_archive_materialization_limits(count, 2, 4, 8)
+    }),
+    "entry_count",
+  )
+
+  let entry = @zip.Archive::new()
+  entry.add("large", b"12345")
+  assert_eq(
+    wb_raw_archive_limit_kind(() => {
+      check_raw_archive_materialization_limits(entry, 2, 4, 8)
+    }),
+    "entry_uncompressed_bytes",
+  )
+
+  let aggregate = @zip.Archive::new()
+  aggregate.add("left", b"123")
+  aggregate.add("right", b"456")
+  assert_eq(
+    wb_raw_archive_limit_kind(() => {
+      check_raw_archive_materialization_limits(aggregate, 2, 4, 5)
+    }),
+    "total_uncompressed_bytes",
+  )
+
+  let source_archive = @zip.Archive::new()
+  source_archive.add("bounded", b"x")
+  let source = @zip.write(source_archive)
+  let bounded = @zip.read_limited(
+    source,
+    max_entries=1,
+    max_entry_uncompressed_bytes=1,
+    max_total_uncompressed_bytes=1,
+  )
+  assert_eq(
+    wb_raw_archive_limit_kind(() => {
+      check_bounded_raw_archive_limits(bounded, source.length() - 1, 1, 1, 1)
+    }),
+    "package_bytes",
+  )
+  let changed = bounded.fork()
+  assert_true(changed.replace("bounded", b"y"))
+  assert_eq(
+    wb_raw_archive_limit_kind(() => {
+      check_bounded_raw_archive_limits(changed, source.length(), 1, 1, 1)
+    }),
+    "bounded_archive_source",
+  )
+  let unbounded = @zip.read(source)
+  assert_eq(
+    wb_raw_archive_limit_kind(() => {
+      check_bounded_raw_archive_limits(unbounded, source.length(), 1, 1, 1)
+    }),
+    "bounded_archive_source",
+  )
+
+  let output = @zip.Archive::new()
+  output.add("payload", b"candidate")
+  assert_eq(
+    wb_raw_archive_limit_kind(() => {
+      ignore(write_raw_candidate_archive(output, 8))
+    }),
+    "package_bytes",
+  )
+}

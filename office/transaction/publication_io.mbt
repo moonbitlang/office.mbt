@@ -127,6 +127,73 @@ async fn publication_read_exactly(file : @afs.File, length : Int) -> Bytes {
 }
 
 ///|
+/// Compares an already-sized file with immutable expected bytes using one
+/// fixed-size async buffer. This keeps publication identity checks inside the
+/// transaction working reserve instead of materializing another whole package.
+async fn publication_file_contents_match(
+  file : @afs.File,
+  expected : Bytes,
+  expected_length : Int,
+) -> Bool {
+  if expected_length < 0 || expected_length > expected.length() {
+    return false
+  }
+  let length = expected_length
+  if file.size() != length.to_int64() || !(file.kind() is Regular) {
+    return false
+  }
+  if length == 0 {
+    return true
+  }
+  let chunk_size = if length < 1024 * 1024 { length } else { 1024 * 1024 }
+  let buffer = FixedArray::make(chunk_size, b'\x00')
+  let mut position = 0
+  while position < length {
+    let requested = if length - position < chunk_size {
+      length - position
+    } else {
+      chunk_size
+    }
+    let count = file.read_at(
+      buffer,
+      position=position.to_int64(),
+      offset=0,
+      len=requested,
+    )
+    if count <= 0 || count > requested {
+      return false
+    }
+    for index in 0..<count {
+      if buffer[index] != expected[position + index] {
+        return false
+      }
+    }
+    position = position + count
+  }
+  true
+}
+
+///|
+async fn publication_named_file_matches(
+  directory : PublicationDirectory,
+  leaf : String,
+  expected : Bytes,
+) -> Bool {
+  let path = join_path(directory.path, leaf)
+  if !(@afs.kind(path) is Regular) {
+    return false
+  }
+  let file = @afs.open(
+    path,
+    mode=ReadOnly,
+    create_mode=OpenExisting,
+    sync=NoSync,
+  )
+  defer file.close()
+  publication_file_contents_match(file, expected, expected.length())
+}
+
+///|
 async fn publication_file_read(
   directory : PublicationDirectory,
   leaf : String,
@@ -316,15 +383,7 @@ async fn publication_temp_identity_matches(temp : PublicationTemp) -> Bool {
     sync=NoSync,
   )
   defer current.close()
-  let size = current.size()
-  if size != temp.written.to_int64() {
-    return false
-  }
-  if !(current.kind() is Regular) {
-    return false
-  }
-  publication_read_exactly(current, temp.written) ==
-  temp.expected[:temp.written].to_owned()
+  publication_file_contents_match(current, temp.expected, temp.written)
 }
 
 ///|

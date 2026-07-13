@@ -410,6 +410,36 @@ fn apply_raw_span_edits(
 }
 
 ///|
+fn write_raw_candidate_archive(
+  archive : @zip.Archive,
+  max_package_bytes : Int,
+) -> Bytes raise RawError {
+  let bytes = @zip.write_limited(archive, max_output_bytes=max_package_bytes) catch {
+    OutputLimitExceeded(limit~) =>
+      raise raw_error(
+        "office.raw.resource_limit",
+        "candidate package exceeds the \{limit}-byte limit",
+        details=Json::object({
+          "kind": Json::string("package_bytes"),
+          "limit": Json::number(limit.to_double()),
+          "actual": Json::number((limit + 1).to_double()),
+        }),
+      )
+    _ =>
+      raise raw_error(
+        "office.raw.archive_write_failed", "could not build candidate OOXML archive",
+      )
+  }
+  if bytes.length() > max_package_bytes {
+    raise raw_error(
+      "office.raw.resource_limit",
+      "candidate package exceeds the \{max_package_bytes}-byte limit",
+    )
+  }
+  bytes
+}
+
+///|
 fn rebuild_raw_archive(
   pkg : RawPackage,
   part : String,
@@ -425,19 +455,7 @@ fn rebuild_raw_archive(
       "package does not contain replacement part '/\{part}'",
     )
   }
-  let bytes = @zip.write(pkg.archive) catch {
-    _ =>
-      raise raw_error(
-        "office.raw.archive_write_failed", "could not build candidate OOXML archive",
-      )
-  }
-  if bytes.length() > raw_max_package_bytes {
-    raise raw_error(
-      "office.raw.resource_limit",
-      "candidate package exceeds the \{raw_max_package_bytes}-byte limit",
-    )
-  }
-  bytes
+  write_raw_candidate_archive(pkg.archive, raw_max_package_bytes)
 }
 
 ///|
@@ -466,7 +484,7 @@ fn validate_raw_candidate_archive(
   format : @office.DocumentFormat,
   archive : @zip.Archive,
 ) -> Unit raise RawError {
-  ignore(open_raw_archive_for_format(format, archive)) catch {
+  ignore(open_raw_materialized_archive_for_format(format, archive)) catch {
     RawError(code~, message~, details~) =>
       raise raw_error(
         "office.raw.validation_failed",
