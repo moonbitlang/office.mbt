@@ -67,9 +67,35 @@ fn path_text(path : @path.Path) -> String {
 ///|
 fn normalize_path_separators(path : String) -> String {
   if @path.sep == '\\' {
-    path.replace(old="/", new="\\")
+    path.replace_all(old="/", new="\\")
   } else {
     path
+  }
+}
+
+///|
+fn extend_windows_io_path(path : String) -> String {
+  let normalized = normalize_path_separators(path)
+  if @path.sep != '\\' ||
+    normalized.has_prefix("\\\\?\\") ||
+    normalized.has_prefix("\\\\.\\") {
+    normalized
+  } else if normalized.has_prefix("\\\\") {
+    "\\\\?\\UNC\\" + normalized[2:].to_owned()
+  } else if @path.Path(normalized).is_absolute() {
+    "\\\\?\\" + normalized
+  } else {
+    normalized
+  }
+}
+
+///|
+fn filesystem_path(path : String) -> String {
+  let normalized = normalize_path_separators(path)
+  if @path.sep == '\\' {
+    extend_windows_io_path(path_text(@path.Path(normalized).resolve()))
+  } else {
+    normalized
   }
 }
 
@@ -100,14 +126,15 @@ fn join_path(parent : String, leaf : String) -> String {
 ///|
 #cfg(target="native")
 async fn canonical_existing_path(path : String) -> String {
-  @afs.realpath(path)
+  extend_windows_io_path(@afs.realpath(filesystem_path(path)))
 }
 
 ///|
 #cfg(target="wasm")
 async fn canonical_existing_path(path : String) -> String {
-  let _ = @afs.kind(path)
-  path_text(@path.Path(path).resolve())
+  let resolved = filesystem_path(path)
+  let _ = @afs.kind(resolved)
+  resolved
 }
 
 ///|
@@ -125,7 +152,7 @@ async fn resolve_source(path : String) -> String {
 
 ///|
 async fn path_exists_checked(path : String) -> Bool {
-  @afs.exists(path) catch {
+  @afs.exists(filesystem_path(path)) catch {
     error if @async.is_being_cancelled() => raise error
     error =>
       raise transaction_error(
@@ -191,7 +218,7 @@ async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
       Some(output_path) => {
         let destination_exists = path_exists_checked(output_path)
         let destination_target = if destination_exists {
-          let kind = @afs.kind(output_path) catch {
+          let kind = @afs.kind(filesystem_path(output_path)) catch {
             error if @async.is_being_cancelled() => raise error
             error =>
               raise transaction_error(

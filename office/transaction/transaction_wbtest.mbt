@@ -72,6 +72,9 @@ test "transaction path helpers accept host-native and portable separators" {
     join_path(expected_parent, "output.docx"),
     path_text(@path.Path(expected_parent).join(Path("output.docx"))),
   )
+  if @path.sep == '\\' {
+    assert_true(filesystem_path(mixed).has_prefix("\\\\?\\C:\\office\\nested"))
+  }
 }
 
 ///|
