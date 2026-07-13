@@ -168,6 +168,9 @@ async fn publication_temp_try_create(
   leaf : String,
   output_path : String,
   initial_permission? : Int = 0o600,
+  fail_secure_permission? : Bool = false,
+  fail_cleanup? : Bool = false,
+  secure_release? : String,
 ) -> PublicationTemp? {
   let path = join_path(directory.path, leaf)
   let file = @async.protect_from_cancel(
@@ -204,16 +207,34 @@ async fn publication_temp_try_create(
     final_permission_applied: false,
   }
   @async.protect_from_cancel(
-    () => publication_set_permission(path, 0o600),
+    () => {
+      match secure_release {
+        Some(release) => {
+          @afs.write_file(
+            release + ".ready",
+            b"ready",
+            create_mode=CreateNew,
+            permission=0o600,
+          )
+          while !@afs.exists(release) {
+            @async.pause()
+          }
+        }
+        None => ()
+      }
+      if fail_secure_permission {
+        raise transaction_error(
+          "office.transaction.temp_create_failed", "injected staging-permission hardening failure",
+        )
+      }
+      publication_set_permission(path, 0o600)
+    },
     resume_on_cancel=true,
   ) catch {
     error => {
-      file.close()
-      @async.protect_from_cancel(
-        () => @afs.remove(path) catch { _ => () },
-        resume_on_cancel=true,
-      )
+      publication_temp_cleanup(temp, output_path, fail_remove=fail_cleanup)
       if @async.is_being_cancelled() {
+        @async.pause()
         raise error
       }
       raise transaction_error(
@@ -399,6 +420,7 @@ async fn publication_temp_substitute(temp : PublicationTemp) -> Unit {
 async fn publication_temp_cleanup(
   temp : PublicationTemp,
   output_path : String,
+  fail_remove? : Bool = false,
 ) -> Unit {
   @async.protect_from_cancel(
     () => {
@@ -418,6 +440,15 @@ async fn publication_temp_cleanup(
         raise transaction_error(
           "office.transaction.cleanup_failed",
           "temporary package identity changed; refusing to delete a foreign path",
+          details=Json::object({
+            "output": Json::string(bounded_text(output_path, 160)),
+          }),
+        )
+      }
+      if fail_remove {
+        raise transaction_error(
+          "office.transaction.cleanup_failed",
+          "injected temporary-package removal failure",
           details=Json::object({
             "output": Json::string(bounded_text(output_path, 160)),
           }),
