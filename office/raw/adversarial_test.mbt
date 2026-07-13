@@ -137,3 +137,54 @@ test "raw scanners reject deterministic punctuation and control fuzz corpora" {
     )
   }
 }
+
+///|
+test "raw XML node budgets run before strict DOM materialization" {
+  let document = StringBuilder::new()
+  document.write_string("<w:document xmlns:w=\"\{word_namespace}\"><w:body>")
+  |> ignore
+  for _ in 0..<100_000 {
+    document.write_string("<w:p/>") |> ignore
+  }
+  document.write_string("</w:body></w:document>") |> ignore
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_replace_part(
+        Docx,
+        @word.new_blank_docx(),
+        "/document",
+        document.to_string(),
+      )
+    }),
+    "office.raw.resource_limit",
+  )
+}
+
+///|
+test "raw package metadata fields are bounded before portable validation" {
+  let archive = @zip.Archive::new()
+  let oversized_content_type = "application/" + "x".repeat(4096)
+  archive.add(
+    "[Content_Types].xml",
+    @utf8.encode(
+      "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"\{oversized_content_type}\"/></Types>",
+    ),
+  )
+  archive.add(
+    "_rels/.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
+    ),
+  )
+  archive.add(
+    "word/document.xml",
+    @utf8.encode(
+      "<w:document xmlns:w=\"\{word_namespace}\"><w:body/></w:document>",
+    ),
+  )
+  let package_data = @zip.write(archive)
+  assert_eq(
+    raw_error_code(() => @raw.raw_inventory("bounded.docx", package_data)),
+    "office.raw.resource_limit",
+  )
+}

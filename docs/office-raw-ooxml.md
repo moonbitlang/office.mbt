@@ -123,7 +123,11 @@ order, entry comments, attributes, and the archive comment are preserved.
 
 All inputs are bounded before materialization: package bytes, entry count,
 per-entry and aggregate expansion, XML part bytes, path length/depth, fragment
-bytes, and selected node count.
+and attribute bytes, selected node count, metadata records and fields, and
+inventory serialization. A lexical XML preflight enforces element, attribute,
+namespace-declaration, text, depth, and per-field budgets before the strict DOM
+parser runs. The complete post-edit size is checked with overflow-safe
+arithmetic before any repeated splice buffers are allocated.
 
 The mutation callback is pure and produces a candidate package plus a
 one-part preservation manifest. A4 then:

@@ -136,13 +136,101 @@ fn raw_self_closing_with_child(
 }
 
 ///|
+fn checked_raw_result_size(
+  part : String,
+  current : Int,
+  removed : Int,
+  inserted : Int,
+) -> Int raise RawError {
+  if removed < 0 || removed > current || inserted < 0 {
+    raise raw_error(
+      "office.raw.overlapping_edits",
+      "raw XML edit size accounting failed for '/\{part}'",
+    )
+  }
+  let retained = current - removed
+  if inserted > raw_max_edit_part_bytes - retained {
+    raise raw_error(
+      "office.raw.resource_limit",
+      "raw XML edit result for '/\{part}' exceeds the \{raw_max_edit_part_bytes}-byte limit",
+      details=Json::object({
+        "kind": Json::string("xml_result_bytes"),
+        "limit": Json::number(raw_max_edit_part_bytes.to_double()),
+        "actual": Json::number((raw_max_edit_part_bytes + 1).to_double()),
+      }),
+    )
+  }
+  retained + inserted
+}
+
+///|
+fn preflight_raw_edit_size(
+  part : String,
+  document : RawXmlDocument,
+  selected : ArrayView[Int],
+  action : RawAction,
+  fragment : Bytes?,
+  attribute_name : RawExpandedName?,
+  escaped_attribute_value : Bytes?,
+) -> Unit raise RawError {
+  let mut projected = document.bytes.length()
+  for node_index in selected {
+    let node = document.nodes[node_index]
+    let (removed, inserted) = match action {
+      Append | Prepend => {
+        let child_length = fragment.unwrap().length()
+        if node.self_closing {
+          let closing_length = @utf8.encode("</" + node.raw_name + ">").length()
+          (
+            node.end - node.start,
+            node.tag_insert_offset -
+            node.start +
+            1 +
+            child_length +
+            closing_length,
+          )
+        } else {
+          (0, child_length)
+        }
+      }
+      InsertBefore | InsertAfter => (0, fragment.unwrap().length())
+      Replace => (node.end - node.start, fragment.unwrap().length())
+      Remove => (node.end - node.start, 0)
+      SetAttribute => {
+        let name = attribute_name.unwrap()
+        let value_length = escaped_attribute_value.unwrap().length()
+        let mut existing : (Int, Int)? = None
+        for attribute in node.attributes {
+          if attribute.expanded == name.expanded {
+            existing = Some(
+              (attribute.value_end - attribute.value_start, value_length),
+            )
+            break
+          }
+        }
+        match existing {
+          Some(size) => size
+          None => {
+            let source_name = raw_attribute_source_name(
+              document, node_index, name,
+            )
+            (0, 4 + @utf8.encode(source_name).length() + value_length)
+          }
+        }
+      }
+    }
+    projected = checked_raw_result_size(part, projected, removed, inserted)
+  }
+}
+
+///|
 fn raw_element_edit(
   document : RawXmlDocument,
   node_index : Int,
   action : RawAction,
   fragment : Bytes?,
   attribute_name : RawExpandedName?,
-  attribute_value : String?,
+  escaped_attribute_value : Bytes?,
   ordinal : Int,
 ) -> RawSpanEdit raise RawError {
   let node = document.nodes[node_index]
@@ -191,7 +279,7 @@ fn raw_element_edit(
     }
     SetAttribute => {
       let name = attribute_name.unwrap()
-      let escaped = @utf8.encode(raw_escape_attribute(attribute_value.unwrap()))
+      let escaped = escaped_attribute_value.unwrap()
       for attribute in node.attributes {
         if attribute.expanded == name.expanded {
           return {
@@ -203,9 +291,11 @@ fn raw_element_edit(
         }
       }
       let source_name = raw_attribute_source_name(document, node_index, name)
-      let insertion = @utf8.encode(
-        " \{source_name}=\"\{raw_escape_attribute(attribute_value.unwrap())}\"",
-      )
+      let insertion_buffer = Buffer()
+      insertion_buffer.write_bytes(@utf8.encode(" " + source_name + "=\""))
+      insertion_buffer.write_bytes(escaped)
+      insertion_buffer.write_byte(b'"')
+      let insertion = insertion_buffer.contents()
       {
         start: node.tag_insert_offset,
         end: node.tag_insert_offset,
@@ -232,6 +322,7 @@ fn apply_raw_span_edits(
     }
   })
   let mut previous_end = 0
+  let mut result_size = document.bytes.length()
   for edit in edits {
     if edit.start < previous_end ||
       edit.start < 0 ||
@@ -242,6 +333,12 @@ fn apply_raw_span_edits(
         "raw XML edit spans overlap or exceed part '/\{part}'",
       )
     }
+    result_size = checked_raw_result_size(
+      part,
+      result_size,
+      edit.end - edit.start,
+      edit.replacement.length(),
+    )
     previous_end = edit.end
   }
   let output = Buffer()
@@ -253,6 +350,11 @@ fn apply_raw_span_edits(
   }
   output.write_bytesview(document.bytes[cursor:])
   let result = output.contents()
+  if result.length() != result_size {
+    raise raw_error(
+      "office.raw.invalid_xml", "raw XML edit result size did not match its bounded preflight",
+    )
+  }
   ignore(scan_raw_xml(part, result))
   result
 }
@@ -317,7 +419,7 @@ fn RawPackage::checked_xml_part(
       details=Json::object({ "part": Json::string("/" + part) }),
     )
   }
-  (part, self.archive.get(part).unwrap())
+  (part, self.part_bytes(part))
 }
 
 ///|
@@ -359,6 +461,19 @@ pub fn raw_edit(
     Some(value) => Some(parse_raw_attribute_name(value, namespaces))
     None => None
   }
+  let escaped_attribute_value = match request.value {
+    Some(value) => Some(@utf8.encode(raw_escape_attribute(value)))
+    None => None
+  }
+  preflight_raw_edit_size(
+    part,
+    document,
+    selected,
+    request.action,
+    fragment,
+    attribute_name,
+    escaped_attribute_value,
+  )
   let edits : Array[RawSpanEdit] = []
   for ordinal, node_index in selected {
     edits.push(
@@ -368,7 +483,7 @@ pub fn raw_edit(
         request.action,
         fragment,
         attribute_name,
-        request.value,
+        escaped_attribute_value,
         ordinal,
       ),
     )

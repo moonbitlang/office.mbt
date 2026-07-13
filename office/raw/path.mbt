@@ -20,6 +20,9 @@ let raw_max_fragment_bytes : Int = 1024 * 1024
 let raw_max_matches = 256
 
 ///|
+let raw_max_attribute_value_bytes : Int = 1024 * 1024
+
+///|
 priv struct RawExpandedName {
   prefix : String
   local_name : String
@@ -499,6 +502,23 @@ pub fn raw_edit_request(
     )
   }
   let xml = checked_optional_fragment(xml)
+  match value {
+    Some(attribute_value) => {
+      let value_bytes = @utf8.encode(attribute_value).length()
+      if value_bytes > raw_max_attribute_value_bytes {
+        raise raw_error(
+          "office.raw.resource_limit",
+          "raw attribute value exceeds the \{raw_max_attribute_value_bytes}-byte limit",
+          details=Json::object({
+            "kind": Json::string("attribute_value_bytes"),
+            "limit": Json::number(raw_max_attribute_value_bytes.to_double()),
+            "actual": Json::number(value_bytes.to_double()),
+          }),
+        )
+      }
+    }
+    None => ()
+  }
   match action {
     Append | Prepend | InsertBefore | InsertAfter | Replace =>
       if xml is None || attribute is Some(_) || value is Some(_) {
