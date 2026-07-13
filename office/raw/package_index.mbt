@@ -219,6 +219,7 @@ fn parse_xml_bytes(
 fn raw_archive_index(
   archive : @zip.Archive,
 ) -> (Map[String, String], Map[String, Bytes]) raise RawError {
+  let entry_names : Map[String, String] = Map([])
   let names : Map[String, String] = Map([])
   let parts : Map[String, Bytes] = Map([])
   for entry in archive.entries() {
@@ -234,15 +235,21 @@ fn raw_archive_index(
       )
     }
     let key = canonical_part_key(name)
-    match names.get(key) {
+    match entry_names.get(key) {
       Some(existing) =>
         raise raw_error(
           "office.raw.invalid_package",
           "package contains colliding entry names '/\{bounded_raw_text(existing, 120)}' and '/\{bounded_raw_text(name, 120)}'",
         )
       None => {
-        names[key] = name
-        parts[key] = entry.data()
+        entry_names[key] = name
+        // ZIP directory markers are physical archive records, not OPC parts.
+        // Keep them in `archive` for byte-preserving rewrites, but do not make
+        // them addressable through the raw part inventory.
+        if !name.has_suffix("/") {
+          names[key] = name
+          parts[key] = entry.data()
+        }
       }
     }
   }
@@ -1053,17 +1060,27 @@ fn relationship_matches_role(
 ///|
 fn relationship_target_by_id(
   pkg : RawPackage,
-  relationships : ArrayView[RawRelationship],
+  relationships_by_id : Map[String, RawRelationship],
   id : String,
   role : String,
 ) -> String? {
-  for relationship in relationships {
-    if relationship.id == id &&
-      relationship_matches_role(pkg, relationship, role) {
-      return Some(relationship.target)
-    }
+  match relationships_by_id.get(id) {
+    Some(relationship) if relationship_matches_role(pkg, relationship, role) =>
+      Some(relationship.target)
+    _ => None
   }
-  None
+}
+
+///|
+fn relationship_index_by_id(
+  relationships : ArrayView[RawRelationship],
+) -> Map[String, RawRelationship] {
+  let index : Map[String, RawRelationship] = Map([])
+  for relationship in relationships {
+    // `parse_relationships` rejects duplicate IDs before this index is built.
+    index[relationship.id] = relationship
+  }
+  index
 }
 
 ///|
@@ -1156,6 +1173,7 @@ fn add_xlsx_aliases(pkg : RawPackage) -> Unit raise RawError {
   let main_relationships_part = relationships_part_for(pkg.main_part)
   add_alias(pkg, "/workbook/relationships", main_relationships_part)
   let relationships = parse_relationships(pkg, pkg.main_part)
+  let relationships_by_id = relationship_index_by_id(relationships)
   add_singleton_relationship_aliases(pkg, relationships, {
     "styles": "/styles",
     "sharedStrings": "/shared-strings",
@@ -1205,7 +1223,7 @@ fn add_xlsx_aliases(pkg : RawPackage) -> Unit raise RawError {
                 (Some(name), Some(id)) =>
                   match
                     relationship_target_by_id(
-                      pkg, relationships, id, "worksheet",
+                      pkg, relationships_by_id, id, "worksheet",
                     ) {
                     Some(part) => {
                       add_alias(pkg, "/sheet[\{sheet_records}]", part)
@@ -1374,8 +1392,8 @@ fn package_from_archive(archive : @zip.Archive) -> RawPackage raise RawError {
     Xlsx => add_xlsx_aliases(pkg)
   }
   let inventory_parts : Array[RawPartInfo] = []
-  for entry in pkg.archive.entries() {
-    inventory_parts.push(pkg.part_info(entry.name()))
+  for _, name in pkg.names {
+    inventory_parts.push(pkg.part_info(name))
   }
   check_inventory_serialization_budget(inventory_parts)
   pkg
@@ -1708,8 +1726,8 @@ pub fn raw_inventory(
 ) -> RawInventory raise RawError {
   let pkg = open_raw_package(path, data)
   let parts : Array[RawPartInfo] = []
-  for entry in pkg.archive.entries() {
-    parts.push(pkg.part_info(entry.name()))
+  for _, name in pkg.names {
+    parts.push(pkg.part_info(name))
   }
   parts.sort_by(fn(left, right) { left.name.compare(right.name) })
   { format: pkg.format, parts: ReadOnlyArray::from_array(parts) }

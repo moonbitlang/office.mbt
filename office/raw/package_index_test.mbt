@@ -629,6 +629,31 @@ test "raw inventory resolves DOCX parts through semantic aliases" {
 }
 
 ///|
+test "raw inventory excludes ZIP directory markers and mutations preserve them" {
+  let original = @word.new_blank_docx()
+  let with_directory = raw_test_add_entry(original, "word/", b"")
+  let baseline = @raw.raw_inventory("baseline.docx", original)
+  let inventory = @raw.raw_inventory("directory.docx", with_directory)
+  assert_eq(inventory.parts.length(), baseline.parts.length())
+  for part in inventory.parts {
+    assert_false(part.name.has_suffix("/"))
+  }
+
+  let edited = @raw.raw_edit(
+    Docx,
+    with_directory,
+    @raw.raw_edit_request(
+      "/document",
+      "/w:document/w:body",
+      SetAttribute,
+      attribute="directory-marker-preserved",
+      value="true",
+    ),
+  )
+  assert_eq(@zip.read(edited.bytes).get("word/"), Some(b""))
+}
+
+///|
 test "raw inventory resolves XLSX worksheet names and positions" {
   let workbook = @excel.new_file()
   workbook.set_sheet_name("Sheet1", "Quarter One")
