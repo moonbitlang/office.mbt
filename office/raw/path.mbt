@@ -53,11 +53,7 @@ priv struct RawPathParser {
 }
 
 ///|
-fn raw_path_error(
-  source : String,
-  offset : Int,
-  message : String,
-) -> RawError {
+fn raw_path_error(source : String, offset : Int, message : String) -> RawError {
   raw_error(
     "office.raw.invalid_path",
     message,
@@ -115,7 +111,11 @@ fn is_raw_ncname(value : StringView) -> Bool {
 
 ///|
 fn expanded_xml_name(uri : String, local_name : String) -> String {
-  if uri == "" { local_name } else { "{\{uri}}\{local_name}" }
+  if uri == "" {
+    local_name
+  } else {
+    "{\{uri}}\{local_name}"
+  }
 }
 
 ///|
@@ -157,20 +157,23 @@ fn RawPathParser::parse_ncname(self : RawPathParser) -> String raise RawError {
     Some(character) => character
     None =>
       raise raw_path_error(
-        self.source, self.offset, "expected an XML name in raw XML path",
+        self.source,
+        self.offset,
+        "expected an XML name in raw XML path",
       )
   }
   if !is_raw_ncname_start(first) {
     raise raw_path_error(
-      self.source, self.offset, "raw XML path names must be namespace NCNames",
+      self.source,
+      self.offset,
+      "raw XML path names must be namespace NCNames",
     )
   }
   ignore(self.take())
   for ;; {
     match self.peek() {
-      Some(character) if is_raw_ncname_character(character) => {
+      Some(character) if is_raw_ncname_character(character) =>
         ignore(self.take())
-      }
       _ => break
     }
   }
@@ -213,18 +216,16 @@ fn RawPathParser::parse_qname(
 }
 
 ///|
-fn RawPathParser::parse_json_string(self : RawPathParser) -> String raise RawError {
+fn RawPathParser::parse_json_string(
+  self : RawPathParser,
+) -> String raise RawError {
   let start = self.offset
   self.expect('"')
   let mut escaped = false
   for ;; {
     match self.take() {
-      Some(_) if escaped => {
-        escaped = false
-      }
-      Some('\\') => {
-        escaped = true
-      }
+      Some(_) if escaped => escaped = false
+      Some('\\') => escaped = true
       Some('"') => break
       Some(character) if character.to_int() >= 0x20 => ()
       _ =>
@@ -236,7 +237,7 @@ fn RawPathParser::parse_json_string(self : RawPathParser) -> String raise RawErr
     }
   }
   let literal = self.source[start:self.offset].to_owned()
-  let parsed = try @json.parse(literal) catch {
+  let parsed = @json.parse(literal) catch {
     _ =>
       raise raw_path_error(
         self.source,
@@ -248,7 +249,9 @@ fn RawPathParser::parse_json_string(self : RawPathParser) -> String raise RawErr
     String(value) => value
     _ =>
       raise raw_path_error(
-        self.source, start, "attribute predicate value must be a JSON string",
+        self.source,
+        start,
+        "attribute predicate value must be a JSON string",
       )
   }
 }
@@ -288,7 +291,9 @@ fn RawPathParser::parse_predicate(
   }
   if digits == 0 || value == 0 {
     raise raw_path_error(
-      self.source, start, "positional predicates must be positive integers",
+      self.source,
+      start,
+      "positional predicates must be positive integers",
     )
   }
   self.expect(']')
@@ -312,7 +317,11 @@ fn parse_raw_path(
   for ;; {
     parser.expect('/')
     if parser.peek() is None {
-      raise raw_path_error(source, parser.offset, "raw XML path cannot end with '/'")
+      raise raw_path_error(
+        source,
+        parser.offset,
+        "raw XML path cannot end with '/'",
+      )
     }
     let name = parser.parse_qname()
     let predicate = if parser.peek() is Some('[') {
@@ -353,25 +362,17 @@ fn standard_raw_namespaces(
   }
   match format {
     Docx => {
-      namespaces["w"] =
-        "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-      namespaces["wp"] =
-        "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-      namespaces["pic"] =
-        "http://schemas.openxmlformats.org/drawingml/2006/picture"
-      namespaces["w14"] =
-        "http://schemas.microsoft.com/office/word/2010/wordml"
-      namespaces["w15"] =
-        "http://schemas.microsoft.com/office/word/2012/wordml"
+      namespaces["w"] = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+      namespaces["wp"] = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+      namespaces["pic"] = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+      namespaces["w14"] = "http://schemas.microsoft.com/office/word/2010/wordml"
+      namespaces["w15"] = "http://schemas.microsoft.com/office/word/2012/wordml"
       namespaces["v"] = "urn:schemas-microsoft-com:vml"
     }
     Xlsx => {
-      namespaces["x"] =
-        "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-      namespaces["x14"] =
-        "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
-      namespaces["x15"] =
-        "http://schemas.microsoft.com/office/spreadsheetml/2010/11/main"
+      namespaces["x"] = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+      namespaces["x14"] = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main"
+      namespaces["x15"] = "http://schemas.microsoft.com/office/spreadsheetml/2010/11/main"
     }
   }
   namespaces
@@ -422,8 +423,7 @@ fn checked_namespace_bindings(
     }
     if prefix == "xml" && uri != "http://www.w3.org/XML/1998/namespace" {
       raise raw_error(
-        "office.raw.invalid_namespace",
-        "the xml prefix has a fixed namespace URI",
+        "office.raw.invalid_namespace", "the xml prefix has a fixed namespace URI",
       )
     }
     seen[prefix] = true
@@ -434,9 +434,7 @@ fn checked_namespace_bindings(
 
 ///|
 /// Parses one CLI namespace binding in the form `PREFIX=URI`.
-pub fn raw_namespace_binding(
-  value : String,
-) -> (String, String) raise RawError {
+pub fn raw_namespace_binding(value : String) -> (String, String) raise RawError {
   match value.find("=") {
     Some(at) if at > 0 && at + 1 < value.length() => {
       let pair = (value[:at].to_owned(), value[at + 1:].to_owned())
@@ -445,8 +443,7 @@ pub fn raw_namespace_binding(
     }
     _ =>
       raise raw_error(
-        "office.raw.invalid_namespace",
-        "namespace bindings must use PREFIX=URI",
+        "office.raw.invalid_namespace", "namespace bindings must use PREFIX=URI",
       )
   }
 }
@@ -503,26 +500,23 @@ pub fn raw_edit_request(
   }
   let xml = checked_optional_fragment(xml)
   match action {
-    Append | Prepend | InsertBefore | InsertAfter | Replace => {
+    Append | Prepend | InsertBefore | InsertAfter | Replace =>
       if xml is None || attribute is Some(_) || value is Some(_) {
         raise raw_error(
           "office.raw.invalid_request",
           "\{action.name()} requires XML and does not accept attribute arguments",
         )
       }
-    }
     Remove =>
       if xml is Some(_) || attribute is Some(_) || value is Some(_) {
         raise raw_error(
-          "office.raw.invalid_request",
-          "remove does not accept XML or attribute arguments",
+          "office.raw.invalid_request", "remove does not accept XML or attribute arguments",
         )
       }
     SetAttribute =>
       if xml is Some(_) || attribute is None || value is None {
         raise raw_error(
-          "office.raw.invalid_request",
-          "set-attribute requires --attribute and --value and does not accept XML",
+          "office.raw.invalid_request", "set-attribute requires --attribute and --value and does not accept XML",
         )
       }
   }

@@ -119,7 +119,9 @@ fn raw_numeric_entity(entity : String, part : String) -> String raise RawError {
     } else if base == 16 && character >= 'a' && character <= 'f' {
       character.to_int() - 'a'.to_int() + 10
     } else {
-      raise raw_xml_scan_error(part, "encountered a malformed numeric XML entity")
+      raise raw_xml_scan_error(
+        part, "encountered a malformed numeric XML entity",
+      )
     }
     if codepoint > (0x10ffff - digit) / base {
       raise raw_xml_scan_error(part, "numeric XML entity is out of range")
@@ -128,7 +130,8 @@ fn raw_numeric_entity(entity : String, part : String) -> String raise RawError {
   }
   match Int::to_char(codepoint) {
     Some(character) if raw_xml_character(character) => character.to_string()
-    _ => raise raw_xml_scan_error(part, "numeric entity is not an XML character")
+    _ =>
+      raise raw_xml_scan_error(part, "numeric entity is not an XML character")
   }
 }
 
@@ -154,7 +157,8 @@ fn raw_decode_attribute_value(
   while offset < source.length() {
     let character = match source.get_char(offset) {
       Some(value) => value
-      None => raise raw_xml_scan_error(part, "attribute contains invalid UTF-16")
+      None =>
+        raise raw_xml_scan_error(part, "attribute contains invalid UTF-16")
     }
     if character == '\r' {
       let next = offset + character.utf16_len()
@@ -176,7 +180,8 @@ fn raw_decode_attribute_value(
     if value[offset] == '&' {
       let length = match value[offset:].find(";") {
         Some(found) => found
-        None => raise raw_xml_scan_error(part, "attribute has an unterminated entity")
+        None =>
+          raise raw_xml_scan_error(part, "attribute has an unterminated entity")
       }
       let entity = value[offset + 1:offset + length].to_owned()
       output.write_string(raw_decode_entity(entity, part)) |> ignore
@@ -184,7 +189,8 @@ fn raw_decode_attribute_value(
     } else {
       let character = match value.get_char(offset) {
         Some(found) => found
-        None => raise raw_xml_scan_error(part, "attribute contains invalid UTF-16")
+        None =>
+          raise raw_xml_scan_error(part, "attribute contains invalid UTF-16")
       }
       output.write_char(character) |> ignore
       offset = offset + character.utf16_len()
@@ -229,9 +235,7 @@ fn raw_scan_open_tag(
         self_closing: false,
       }
     }
-    if bytes[offset] == b'/' &&
-      offset + 1 < limit &&
-      bytes[offset + 1] == b'>' {
+    if bytes[offset] == b'/' && offset + 1 < limit && bytes[offset + 1] == b'>' {
       return {
         name: tag_name,
         attributes,
@@ -251,9 +255,7 @@ fn raw_scan_open_tag(
     if offset == attribute_start {
       raise raw_xml_scan_error(part, "start tag contains a malformed attribute")
     }
-    let attribute_name = raw_slice_text(
-      part, bytes, attribute_start, offset,
-    )
+    let attribute_name = raw_slice_text(part, bytes, attribute_start, offset)
     while offset < limit && raw_byte_is_space(bytes[offset]) {
       offset = offset + 1
     }
@@ -357,7 +359,8 @@ fn raw_expand_source_name(
       Some(uri) => expanded_xml_name(uri, local_name)
       None =>
         raise raw_xml_scan_error(
-          part, "source name '\{value}' uses an unbound namespace prefix",
+          part,
+          "source name '\{value}' uses an unbound namespace prefix",
         )
     }
   }
@@ -391,7 +394,11 @@ fn raw_reject_non_utf8_declaration(
   part : String,
   bytes : BytesView,
 ) -> Unit raise RawError {
-  let mut offset = if raw_starts_with_at(bytes, 0, b"\xEF\xBB\xBF") { 3 } else { 0 }
+  let mut offset = if raw_starts_with_at(bytes, 0, b"\xEF\xBB\xBF") {
+    3
+  } else {
+    0
+  }
   if !raw_starts_with_at(bytes, offset, b"<?xml") {
     return
   }
@@ -463,10 +470,12 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
     )
   }
   if bytes.length() >= 2 &&
-    ((bytes[0] == 0xff && bytes[1] == 0xfe) ||
-    (bytes[0] == 0xfe && bytes[1] == 0xff) ||
-    (bytes[0] == b'<' && bytes[1] == 0x00) ||
-    (bytes[0] == 0x00 && bytes[1] == b'<')) {
+    (
+      (bytes[0] == 0xff && bytes[1] == 0xfe) ||
+      (bytes[0] == 0xfe && bytes[1] == 0xff) ||
+      (bytes[0] == b'<' && bytes[1] == 0x00) ||
+      (bytes[0] == 0x00 && bytes[1] == b'<')
+    ) {
     raise raw_error(
       "office.raw.unsupported_xml_encoding",
       "part '/\{part}' is UTF-16; span edits require UTF-8 XML",
@@ -509,7 +518,7 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
       continue
     }
     if raw_starts_with_at(bytes, offset, b"<![CDATA[") {
-      let finish = match raw_find_sequence(bytes, offset + 9, b"]]>" ) {
+      let finish = match raw_find_sequence(bytes, offset + 9, b"]]>") {
         Some(value) => value
         None => raise raw_xml_scan_error(part, "CDATA section is unterminated")
       }
@@ -519,7 +528,10 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
     if raw_starts_with_at(bytes, offset, b"<?") {
       let finish = match raw_find_sequence(bytes, offset + 2, b"?>") {
         Some(value) => value
-        None => raise raw_xml_scan_error(part, "processing instruction is unterminated")
+        None =>
+          raise raw_xml_scan_error(
+            part, "processing instruction is unterminated",
+          )
       }
       offset = finish + 2
       continue
@@ -528,11 +540,14 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
       let (closing_name, gt) = raw_scan_closing_tag(part, bytes, offset)
       let node_index = match node_stack.pop() {
         Some(value) => value
-        None => raise raw_xml_scan_error(part, "closing tag has no open element")
+        None =>
+          raise raw_xml_scan_error(part, "closing tag has no open element")
       }
       ignore(namespace_stack.pop())
       if nodes[node_index].raw_name != closing_name {
-        raise raw_xml_scan_error(part, "closing tag does not match open element")
+        raise raw_xml_scan_error(
+          part, "closing tag does not match open element",
+        )
       }
       nodes[node_index].end_tag_start = offset
       nodes[node_index].end = gt + 1
@@ -540,7 +555,9 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
       continue
     }
     if raw_starts_with_at(bytes, offset, b"<!") {
-      raise raw_xml_scan_error(part, "DTD and declaration nodes are not supported")
+      raise raw_xml_scan_error(
+        part, "DTD and declaration nodes are not supported",
+      )
     }
     let tag = raw_scan_open_tag(part, bytes, offset)
     let inherited = match namespace_stack.last() {
@@ -559,7 +576,10 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
       }
     }
     let expanded = raw_expand_source_name(
-      part, tag.name, inherited, attribute=false,
+      part,
+      tag.name,
+      inherited,
+      attribute=false,
     )
     let attributes : Array[RawAttributeSpan] = []
     for attribute in tag.attributes {
@@ -568,7 +588,10 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
       }
       attributes.push({
         expanded: raw_expand_source_name(
-          part, attribute.name, inherited, attribute=true,
+          part,
+          attribute.name,
+          inherited,
+          attribute=true,
         ),
         value: attribute.value,
         value_start: attribute.value_start,
@@ -589,7 +612,11 @@ fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
       start_tag_end: tag.gt + 1,
       tag_insert_offset: tag.insert_at,
       self_closing: tag.self_closing,
-      end_tag_start: if tag.self_closing { tag.insert_at } else { -1 },
+      end_tag_start: if tag.self_closing {
+        tag.insert_at
+      } else {
+        -1
+      },
       end,
       attributes,
       declarations,
