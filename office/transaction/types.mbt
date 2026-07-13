@@ -340,9 +340,11 @@ pub struct TransactionOptions {
 ///|
 /// Builds checked transaction options. `output_path=None` means in-place;
 /// separate outputs are no-replace unless `overwrite=true`. `permission` is
-/// requested on POSIX and may be further restricted by `umask`, ignored in
-/// favor of inherited ACLs on Windows, and subject to the Wasm host's
-/// filesystem semantics.
+/// applied exactly with `chmod` on POSIX after owner-only staging, ignored in
+/// favor of inherited ACLs on Windows, and subject to the Wasm host's filesystem
+/// semantics. POSIX callers should retain the `0600` default unless broader
+/// access is intentional; the ambient `umask` does not restrict an explicit
+/// final mode.
 pub fn transaction_options(
   input_path : String,
   output_path? : String,

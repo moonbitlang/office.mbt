@@ -54,10 +54,14 @@ jobs:
         run: moon update
 
       - name: Check transaction package
-        run: moon check --target native office/transaction
+        run: |
+          moon check --target native office/transaction
+          moon check --target native office/transaction/permission_contract
 
       - name: Test transaction package
-        run: moon test --target native office/transaction
+        run: |
+          moon test --target native office/transaction
+          moon test --target native office/transaction/permission_contract
 
   test:
     name: check + test (mbtexcel + docx2html + office + pdflite, nightly)
