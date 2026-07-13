@@ -1114,6 +1114,7 @@ static void *office_sync_worker(void *context) {
 
 static uint64_t office_sync_start(int source) {
   office_sync_task *task = (office_sync_task *)calloc(1, sizeof(*task));
+  int create_error;
   if (task == NULL) {
     return 0;
   }
@@ -1126,8 +1127,9 @@ static uint64_t office_sync_start(int source) {
     atomic_store_explicit(&task->done, 1, memory_order_release);
     return (uint64_t)(uintptr_t)task;
   }
-  if (pthread_create(&task->thread, NULL, office_sync_worker, task) != 0) {
-    task->error = errno == 0 ? EIO : errno;
+  create_error = pthread_create(&task->thread, NULL, office_sync_worker, task);
+  if (create_error != 0) {
+    task->error = create_error;
     close(task->target);
     task->target = -1;
     atomic_store_explicit(&task->done, 1, memory_order_release);
