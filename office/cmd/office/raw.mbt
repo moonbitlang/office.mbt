@@ -51,6 +51,17 @@ fn raw_mutation_failure(
 }
 
 ///|
+fn raw_transaction_identifier() -> @transaction.TransactionIdentifier raise CliFailure {
+  @transaction.transaction_identifier("office-raw-bounded", (path, bytes) => {
+    @raw.raw_identify(path, bytes) catch {
+      RawError(..) as error => raise raw_mutation_failure(error)
+    }
+  }) catch {
+    TransactionError(..) as error => raise transaction_failure(error)
+  }
+}
+
+///|
 fn cli_file_error(code : String, message : String, path : String) -> CliFailure {
   CliFailure(
     @lib.protocol_error(
@@ -72,8 +83,9 @@ async fn read_bounded_file(
   maximum : Int,
   code : String,
   description : String,
-) -> Bytes raise CliFailure {
+) -> Bytes {
   let kind = @afs.kind(path) catch {
+    error if @async.is_being_cancelled() => raise error
     _ => raise cli_file_error(code, "could not inspect \{description}: ", path)
   }
   if !(kind is Regular) {
@@ -85,6 +97,7 @@ async fn read_bounded_file(
     create_mode=OpenExisting,
     sync=NoSync,
   ) catch {
+    error if @async.is_being_cancelled() => raise error
     _ => raise cli_file_error(code, "could not open \{description}: ", path)
   }
   defer file.close()
@@ -92,6 +105,7 @@ async fn read_bounded_file(
     raise cli_file_error(code, "\{description} is not a regular file: ", path)
   }
   let size = file.size() catch {
+    error if @async.is_being_cancelled() => raise error
     _ => raise cli_file_error(code, "could not size \{description}: ", path)
   }
   if size < 0L || size > maximum.to_int64() {
@@ -116,6 +130,7 @@ async fn read_bounded_file(
       offset~,
       len=length - offset,
     ) catch {
+      error if @async.is_being_cancelled() => raise error
       _ => raise cli_file_error(code, "could not read \{description}: ", path)
     }
     if count <= 0 || count > length - offset {
@@ -127,20 +142,19 @@ async fn read_bounded_file(
 }
 
 ///|
-async fn write_new_raw_file(
-  path : String,
-  data : BytesView,
-) -> Unit raise CliFailure {
-  @afs.write_file(path, data, create_mode=CreateNew, permission=0o600) catch {
+async fn write_new_raw_file(path : String, data : BytesView) -> Unit {
+  @transaction.atomic_write_new(path, data) catch {
+    error if @async.is_being_cancelled() => raise error
     _ =>
       raise cli_file_error(
-        "office.raw.output_write_failed", "could not create output file: ", path,
+        "office.raw.output_write_failed", "could not atomically create output file: ",
+        path,
       )
   }
 }
 
 ///|
-async fn xml_argument(matches : @argparse.Matches) -> String? raise CliFailure {
+async fn xml_argument(matches : @argparse.Matches) -> String? {
   match (optional_value(matches, "xml"), optional_value(matches, "xml-file")) {
     (Some(value), None) => Some(value)
     (None, Some(path)) => {
@@ -198,7 +212,7 @@ fn raw_inventory_human(inventory : @raw.RawInventory) -> String {
 }
 
 ///|
-async fn run_raw_list(matches : @argparse.Matches) -> Unit raise CliFailure {
+async fn run_raw_list(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let data = read_bounded_file(
     file, raw_cli_max_package_bytes, "office.file_read_failed", "input package",
@@ -224,7 +238,7 @@ fn raw_part_json(
   match (content, output) {
     (Some(value), None) =>
       Json::object({
-        "schema": Json::string("office.raw.part/1"),
+        "schema": Json::string(@lib.SCHEMA_RAW_PART),
         "format": Json::string(part.document_format().name()),
         "part": info.to_json(),
         "encoding": Json::string(encoding),
@@ -232,7 +246,7 @@ fn raw_part_json(
       })
     (None, Some(path)) =>
       Json::object({
-        "schema": Json::string("office.raw.part/1"),
+        "schema": Json::string(@lib.SCHEMA_RAW_PART),
         "format": Json::string(part.document_format().name()),
         "part": info.to_json(),
         "encoding": Json::string(encoding),
@@ -240,7 +254,7 @@ fn raw_part_json(
       })
     _ =>
       Json::object({
-        "schema": Json::string("office.raw.part/1"),
+        "schema": Json::string(@lib.SCHEMA_RAW_PART),
         "format": Json::string(part.document_format().name()),
         "part": info.to_json(),
         "encoding": Json::string(encoding),
@@ -249,7 +263,7 @@ fn raw_part_json(
 }
 
 ///|
-async fn run_raw_read(matches : @argparse.Matches) -> Unit raise CliFailure {
+async fn run_raw_read(matches : @argparse.Matches) -> Unit {
   let file = required_value(matches, "file")
   let selector = required_value(matches, "part")
   let data = read_bounded_file(
@@ -336,7 +350,7 @@ fn raw_result_json(
   report : @transaction.TransactionReport,
 ) -> Json {
   Json::object({
-    "schema": Json::string("office.raw.result/1"),
+    "schema": Json::string(@lib.SCHEMA_RAW_RESULT),
     "change": mutation.to_json(),
     "transaction": report.to_json(),
   })
@@ -376,7 +390,7 @@ fn print_raw_result(
 }
 
 ///|
-async fn run_raw_replace(matches : @argparse.Matches) -> Unit raise CliFailure {
+async fn run_raw_replace(matches : @argparse.Matches) -> Unit {
   let part = required_value(matches, "part")
   let xml = match xml_argument(matches) {
     Some(value) => value
@@ -389,18 +403,23 @@ async fn run_raw_replace(matches : @argparse.Matches) -> Unit raise CliFailure {
   }
   let options = checked_transaction_options(matches)
   let completed : Ref[@raw.RawMutation?] = Ref(None)
-  let report = @transaction.transact(options, (format, original) => {
-    let mutation = @raw.raw_replace_part(format, original, part, xml) catch {
-      RawError(..) as error => raise raw_mutation_failure(error)
-    }
-    completed.val = Some(mutation)
-    @transaction.transaction_mutation_with_manifest(
-      mutation.candidate_bytes(),
-      [mutation.part_name()],
-    )
-  }) catch {
+  let report = @transaction.transact(
+    options,
+    (format, original) => {
+      let mutation = @raw.raw_replace_part(format, original, part, xml) catch {
+        RawError(..) as error => raise raw_mutation_failure(error)
+      }
+      completed.val = Some(mutation)
+      @transaction.transaction_mutation_with_manifest(
+        mutation.candidate_bytes(),
+        [mutation.part_name()],
+      )
+    },
+    identifier=raw_transaction_identifier(),
+  ) catch {
     @transaction.TransactionError(..) as error =>
       raise transaction_failure(error)
+    error if @async.is_being_cancelled() => raise error
     error =>
       raise unexpected_cli_failure(
         "office.transaction.failed", "raw replacement transaction", error,
@@ -431,7 +450,7 @@ fn namespace_arguments(
 }
 
 ///|
-async fn run_raw_edit(matches : @argparse.Matches) -> Unit raise CliFailure {
+async fn run_raw_edit(matches : @argparse.Matches) -> Unit {
   let part = required_value(matches, "part")
   let path = required_value(matches, "path")
   let action_name = required_value(matches, "action")
@@ -466,18 +485,23 @@ async fn run_raw_edit(matches : @argparse.Matches) -> Unit raise CliFailure {
   }
   let options = checked_transaction_options(matches)
   let completed : Ref[@raw.RawMutation?] = Ref(None)
-  let report = @transaction.transact(options, (format, original) => {
-    let mutation = @raw.raw_edit(format, original, request) catch {
-      RawError(..) as error => raise raw_mutation_failure(error)
-    }
-    completed.val = Some(mutation)
-    @transaction.transaction_mutation_with_manifest(
-      mutation.candidate_bytes(),
-      [mutation.part_name()],
-    )
-  }) catch {
+  let report = @transaction.transact(
+    options,
+    (format, original) => {
+      let mutation = @raw.raw_edit(format, original, request) catch {
+        RawError(..) as error => raise raw_mutation_failure(error)
+      }
+      completed.val = Some(mutation)
+      @transaction.transaction_mutation_with_manifest(
+        mutation.candidate_bytes(),
+        [mutation.part_name()],
+      )
+    },
+    identifier=raw_transaction_identifier(),
+  ) catch {
     @transaction.TransactionError(..) as error =>
       raise transaction_failure(error)
+    error if @async.is_being_cancelled() => raise error
     error =>
       raise unexpected_cli_failure(
         "office.transaction.failed", "raw edit transaction", error,
@@ -610,7 +634,7 @@ fn raw_command() -> @argparse.Command {
 }
 
 ///|
-async fn run_raw(matches : @argparse.Matches) -> Unit raise CliFailure {
+async fn run_raw(matches : @argparse.Matches) -> Unit {
   match matches.subcommand {
     Some(("list", values)) => run_raw_list(values)
     Some(("read", values)) => run_raw_read(values)

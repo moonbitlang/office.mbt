@@ -72,6 +72,7 @@ async fn wb_error_code(run : async () -> TransactionReport) -> String {
 async fn wb_assert_no_temp(directory : String) -> Unit {
   for name in @afs.readdir(directory) {
     assert_false(name.contains(".office-tmp-"))
+    assert_false(name.contains(".office-output-tmp-"))
   }
 }
 
@@ -243,6 +244,139 @@ async test "initial staging cleanup re-observes pending cancellation" {
       }
       assert_true(propagated)
     }
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+async test "atomic new output is exact and create-new" {
+  wb_with_transaction_dir(directory => {
+    let output = "\{directory}/payload.bin"
+    let payload = b"exact raw payload"
+    atomic_write_new(output, payload)
+    assert_eq(@afs.read_file(output).binary(), payload)
+    let code = try {
+      atomic_write_new(output, b"replacement")
+      fail("expected existing output to fail")
+    } catch {
+      TransactionError(code~, ..) => code
+      error => fail("expected TransactionError, received \{error}")
+    }
+    assert_eq(code, "office.transaction.output_exists")
+    assert_eq(@afs.read_file(output).binary(), payload)
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+async test "atomic new output removes staging after write failure" {
+  wb_with_transaction_dir(directory => {
+    let output = "\{directory}/payload.bin"
+    let code = try {
+      atomic_write_new_with_faults(
+        output,
+        b"partial payload",
+        0o600,
+        fail_after_bytes=1,
+      )
+      fail("expected injected write failure")
+    } catch {
+      TransactionError(code~, ..) => code
+      error => fail("expected TransactionError, received \{error}")
+    }
+    assert_eq(code, "office.transaction.write_failed")
+    assert_false(@afs.exists(output))
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+async test "atomic new output cancellation cleans partial staging" {
+  wb_with_transaction_dir(directory => {
+    let output = "\{directory}/payload.bin"
+    let payload = Bytes::make(2 * 1024 * 1024, b'x')
+    @async.with_task_group() <| group => {
+      let task = group.spawn(() => {
+        atomic_write_new_with_faults(
+          output,
+          payload,
+          0o600,
+          stall_after_bytes=1024 * 1024,
+        )
+      })
+      let mut observed_partial_write = false
+      for _ in 0..<1_000 {
+        for name in @afs.readdir(directory) {
+          if name.contains(".office-output-tmp-") {
+            let file = @afs.open(
+              "\{directory}/\{name}",
+              mode=ReadOnly,
+              create_mode=OpenExisting,
+              sync=NoSync,
+            ) catch {
+              _ => continue
+            }
+            let size = file.size() catch {
+              _ => {
+                file.close()
+                continue
+              }
+            }
+            file.close()
+            if size >= (1024 * 1024).to_int64() {
+              observed_partial_write = true
+            }
+          }
+        }
+        if observed_partial_write {
+          break
+        }
+        @async.pause()
+      }
+      assert_true(observed_partial_write)
+      task.cancel()
+      let propagated = try {
+        ignore(task.wait())
+        false
+      } catch {
+        error => @async.is_cancellation_error(error)
+      }
+      assert_true(propagated)
+    }
+    assert_false(@afs.exists(output))
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+async test "atomic new output returns success after observed rename" {
+  wb_with_transaction_dir(directory => {
+    let output = "\{directory}/payload.bin"
+    let release = "\{directory}/post-rename-release"
+    let payload = b"committed payload"
+    @async.with_task_group() <| group => {
+      let task = group.spawn(() => {
+        atomic_write_new_with_faults(
+          output,
+          payload,
+          0o600,
+          post_rename_release=release,
+        )
+      })
+      let mut observed_commit = false
+      for _ in 0..<1_000 {
+        if @afs.exists(output) {
+          observed_commit = true
+          break
+        }
+        @async.pause()
+      }
+      assert_true(observed_commit)
+      task.cancel()
+      wb_write(release, b"release")
+      task.wait()
+    }
+    assert_eq(@afs.read_file(output).binary(), payload)
     wb_assert_no_temp(directory)
   })
 }

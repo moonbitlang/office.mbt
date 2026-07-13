@@ -528,20 +528,36 @@ fn read_transaction_archive(
 fn identify_input(
   options : TransactionOptions,
   original : BytesView,
+  identifier : TransactionIdentifier?,
 ) -> (@office.DocumentFormat, @zip.Archive) raise TransactionError {
   check_package_size(original, "input package")
   let archive = read_transaction_archive(
     original, "input package", "office.transaction.invalid_input",
   )
-  let format = @office.detect_archive_format(options.input_path, archive) catch {
-    error =>
-      raise transaction_error(
-        "office.transaction.invalid_input",
-        bounded_text(Show::to_string(error), 320),
-        details=Json::object({
-          "file": Json::string(bounded_text(options.input_path, 160)),
-        }),
-      )
+  let format = match identifier {
+    Some(identifier) =>
+      identifier.run(options.input_path, original) catch {
+        TransactionError(..) as error =>
+          raise normalize_transaction_error(
+            error, "office.transaction.invalid_input", "custom transaction identifier raised an invalid error",
+          )
+        error =>
+          raise transaction_error(
+            "office.transaction.invalid_input",
+            "identifier '\{identifier.name}' rejected the input package: \{bounded_text(error.to_string(), 240)}",
+          )
+      }
+    None =>
+      @office.detect_archive_format(options.input_path, archive) catch {
+        error =>
+          raise transaction_error(
+            "office.transaction.invalid_input",
+            bounded_text(Show::to_string(error), 320),
+            details=Json::object({
+              "file": Json::string(bounded_text(options.input_path, 160)),
+            }),
+          )
+      }
   }
   (format, archive)
 }
@@ -586,6 +602,7 @@ fn validate_candidate(
   validation_path : String,
   mutation : TransactionMutation,
   validators : Array[TransactionValidator],
+  identifier : TransactionIdentifier?,
 ) -> (Array[ValidationSummary], @zip.Archive) raise TransactionError {
   check_package_size(mutation.bytes, "candidate package")
   let archive = read_transaction_archive(
@@ -593,15 +610,37 @@ fn validate_candidate(
     "candidate package",
     "office.transaction.validation_failed",
   )
-  let candidate_format = @office.detect_archive_format(validation_path, archive) catch {
-    error =>
-      raise transaction_error(
-        "office.transaction.validation_failed",
-        "portable Office validation failed: \{bounded_text(Show::to_string(error), 320)}",
-        details=Json::object({
-          "validator": Json::string("office-portable-opc"),
-        }),
-      )
+  let (candidate_format, identifier_name) = match identifier {
+    Some(identifier) => {
+      let candidate_format = identifier.run(validation_path, mutation.bytes) catch {
+        TransactionError(..) as error =>
+          raise normalize_transaction_error(
+            error, "office.transaction.validation_failed", "custom transaction identifier raised an invalid error",
+          )
+        error =>
+          raise transaction_error(
+            "office.transaction.validation_failed",
+            "identifier '\{identifier.name}' rejected the candidate package: \{bounded_text(error.to_string(), 240)}",
+            details=Json::object({ "validator": Json::string(identifier.name) }),
+          )
+      }
+      (candidate_format, identifier.name)
+    }
+    None => {
+      let candidate_format = @office.detect_archive_format(
+        validation_path, archive,
+      ) catch {
+        error =>
+          raise transaction_error(
+            "office.transaction.validation_failed",
+            "portable Office validation failed: \{bounded_text(Show::to_string(error), 320)}",
+            details=Json::object({
+              "validator": Json::string("office-portable-opc"),
+            }),
+          )
+      }
+      (candidate_format, "office-portable-opc")
+    }
   }
   if candidate_format != format {
     raise transaction_error(
@@ -614,7 +653,7 @@ fn validate_candidate(
     )
   }
   let summaries : Array[ValidationSummary] = [
-    { name: "office-portable-opc", passed: true, finding_count: 0 },
+    { name: identifier_name, passed: true, finding_count: 0 },
   ]
   for validator in validators {
     let findings = validator.run(format, mutation.bytes) catch {
@@ -913,10 +952,11 @@ fn append_platform_warnings(
 }
 
 ///|
-async fn transact_with_faults(
+async fn transact_with_identifier_and_faults(
   options : TransactionOptions,
   mutate : (@office.DocumentFormat, BytesView) -> TransactionMutation raise,
   validators : Array[TransactionValidator],
+  identifier : TransactionIdentifier?,
   faults : TransactionFaults,
   post_read_release? : String,
   cleanup_release? : String,
@@ -954,7 +994,7 @@ async fn transact_with_faults(
   // cancelled. Make that pending cancellation observable before synchronous
   // parsing/mutation, including dry-run and byte-identical no-op paths.
   @async.pause()
-  let (format, original_archive) = identify_input(options, original)
+  let (format, original_archive) = identify_input(options, original, identifier)
   let mutation = mutate(format, original) catch {
     TransactionError(..) as error => raise normalize_mutation_error(error)
     error =>
@@ -968,6 +1008,7 @@ async fn transact_with_faults(
     policy.destination_target,
     mutation,
     validators,
+    identifier,
   )
   let preservation = preservation_report_archives(
     original, mutation, original_archive, candidate_archive,
@@ -1008,6 +1049,26 @@ async fn transact_with_faults(
 }
 
 ///|
+async fn transact_with_faults(
+  options : TransactionOptions,
+  mutate : (@office.DocumentFormat, BytesView) -> TransactionMutation raise,
+  validators : Array[TransactionValidator],
+  faults : TransactionFaults,
+  post_read_release? : String,
+  cleanup_release? : String,
+) -> TransactionReport {
+  transact_with_identifier_and_faults(
+    options,
+    mutate,
+    validators,
+    None,
+    faults,
+    post_read_release?,
+    cleanup_release?,
+  )
+}
+
+///|
 /// Runs one fail-closed Office package transaction. The mutation callback owns
 /// only in-memory transformation; mandatory validation, preservation checks,
 /// source conflict detection, and atomic publication remain in this function.
@@ -1015,6 +1076,18 @@ pub async fn transact(
   options : TransactionOptions,
   mutate : (@office.DocumentFormat, BytesView) -> TransactionMutation raise,
   validators? : Array[TransactionValidator] = [],
+  identifier? : TransactionIdentifier,
 ) -> TransactionReport {
-  transact_with_faults(options, mutate, validators, no_transaction_faults())
+  match identifier {
+    Some(identifier) =>
+      transact_with_identifier_and_faults(
+        options,
+        mutate,
+        validators,
+        Some(identifier),
+        no_transaction_faults(),
+      )
+    None =>
+      transact_with_faults(options, mutate, validators, no_transaction_faults())
+  }
 }

@@ -190,3 +190,13 @@ syntax retains the raw subsystem's stable error code through the transaction.
   1
   $ jq -c '{success,code:.error.code}' invalid-path.json
   {"success":false,"code":"office.raw.invalid_path"}
+
+Oversized optional error details are dropped at the transaction boundary
+without replacing the raw subsystem's stable error code.
+
+  $ segment=x; i=0; while [ "$i" -lt 120 ]; do segment="$segment"x; i=$((i + 1)); done
+  $ long_path=/w:document; i=0; while [ "$i" -lt 10 ]; do long_path="$long_path/w:$segment"; i=$((i + 1)); done
+  $ office.exe raw edit input.docx /document --path "$long_path" --action remove --dry-run --json > long-path.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code,has_details:(.error|has("details"))}' long-path.json
+  {"success":false,"code":"office.raw.path_not_found","has_details":false}

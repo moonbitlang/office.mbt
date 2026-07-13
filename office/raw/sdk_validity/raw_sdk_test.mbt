@@ -39,6 +39,10 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
       Prepend,
       xml="<w:p xmlns:w=\"\{sdk_word_namespace}\"><w:r><w:t>raw sdk docx</w:t></w:r></w:p>",
     )
+    let identifier = @transaction.transaction_identifier("raw-sdk-bounded", (
+      path,
+      bytes,
+    ) => @raw.raw_identify(path, bytes))
     let docx_report = @transaction.transact(
       @transaction.transaction_options(docx_input, output_path=docx_output),
       (_format, bytes) => {
@@ -48,6 +52,7 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
           [mutation.part_name()],
         )
       },
+      identifier~,
     )
     assert_true(docx_report.committed)
     assert_true(
@@ -79,6 +84,7 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
           [mutation.part_name()],
         )
       },
+      identifier~,
     )
     assert_true(xlsx_report.committed)
     assert_true(
