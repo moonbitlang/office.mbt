@@ -11,6 +11,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  transaction-platforms:
+    name: office transaction (${{ matrix.os }}, nightly)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit (nightly, Unix)
+        if: runner.os != 'Windows'
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Set up MoonBit (nightly, Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          MOONBIT_INSTALL_VERSION: nightly
+        run: |
+          Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
+          "$HOME\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: MoonBit versions
+        run: moon version --all
+
+      - name: Resolve dependencies
+        run: moon update
+
+      - name: Check transaction package
+        run: moon check --target native office/transaction
+
+      - name: Test transaction package
+        run: moon test --target native office/transaction
+
   test:
     name: check + test (mbtexcel + docx2html + office + pdflite, nightly)
     runs-on: ubuntu-latest
@@ -100,6 +140,9 @@ jobs:
       # native-only CLI is skipped for this target).
       - name: Type check (wasm)
         run: moon check --target wasm
+
+      - name: Test Office transactions (wasm)
+        run: moon test --target wasm office/transaction
 
       # Run all members' native test suites in one pass. Covers mbtexcel
       # (including OpenXML SDK schema validation via .NET), docx2html
