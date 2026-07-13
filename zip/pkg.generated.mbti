@@ -37,9 +37,11 @@ pub fn ZipError::to_repr(Self) -> @debug.Repr
 type Archive
 pub fn Archive::add(Self, String, Bytes, compression? : Compression, data_descriptor? : Bool) -> Unit
 pub fn Archive::entries(Self) -> ArrayView[Entry]
+pub fn Archive::fork(Self) -> Self
 pub fn Archive::get(Self, StringView) -> Bytes?
 pub fn Archive::new() -> Self
 pub fn Archive::replace(Self, StringView, Bytes) -> Bool
+pub fn Archive::retained_size_estimate(Self) -> Int64
 
 pub(all) enum Compression {
   Store

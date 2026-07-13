@@ -52,8 +52,12 @@ fn raw_mutation_failure(
 
 ///|
 fn raw_transaction_identifier() -> @transaction.TransactionIdentifier raise CliFailure {
-  @transaction.transaction_identifier("office-raw-bounded", (path, bytes) => {
-    @raw.raw_identify(path, bytes) catch {
+  @transaction.transaction_identifier("office-raw-bounded", (
+    path,
+    _bytes,
+    archive,
+  ) => {
+    @raw.raw_identify_archive(path, archive) catch {
       RawError(..) as error => raise raw_mutation_failure(error)
     }
   }) catch {
@@ -432,8 +436,8 @@ async fn run_raw_replace(matches : @argparse.Matches) -> Unit {
   let completed : Ref[@raw.RawMutation?] = Ref(None)
   let report = @transaction.transact(
     options,
-    (format, original) => {
-      let mutation = @raw.raw_replace_part(format, original, part, xml) catch {
+    (format, _original, archive) => {
+      let mutation = @raw.raw_replace_part_archive(format, archive, part, xml) catch {
         RawError(..) as error => raise raw_mutation_failure(error)
       }
       completed.val = Some(mutation)
@@ -514,8 +518,8 @@ async fn run_raw_edit(matches : @argparse.Matches) -> Unit {
   let completed : Ref[@raw.RawMutation?] = Ref(None)
   let report = @transaction.transact(
     options,
-    (format, original) => {
-      let mutation = @raw.raw_edit(format, original, request) catch {
+    (format, _original, archive) => {
+      let mutation = @raw.raw_edit_archive(format, archive, request) catch {
         RawError(..) as error => raise raw_mutation_failure(error)
       }
       completed.val = Some(mutation)

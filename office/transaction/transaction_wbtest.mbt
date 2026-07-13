@@ -43,6 +43,22 @@ fn wb_large_candidate(data : BytesView) -> Bytes raise {
 }
 
 ///|
+fn wb_archive_retained_cost(bytes : BytesView) -> Int64 raise {
+  let archive = @zip.read(bytes)
+  bytes.length().to_int64() + archive.retained_size_estimate()
+}
+
+///|
+fn wb_archive_payload_bytes(bytes : BytesView) -> Int64 raise {
+  let archive = @zip.read(bytes)
+  let mut total = 0L
+  for entry in archive.entries() {
+    total = total + entry.data().length().to_int64()
+  }
+  total
+}
+
+///|
 async fn wb_with_transaction_dir(run : async (String) -> Unit) -> Unit {
   @async.with_task_group() <| group => {
     let directory = @afs.tmpdir(prefix="office-transaction-wb-")
@@ -101,7 +117,7 @@ async fn wb_expect_post_read_cancellation(
     let task = group.spawn(() => {
       transact_with_faults(
         options,
-        (_format, bytes) => transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => transaction_mutation(bytes.to_owned()),
         [],
         no_transaction_faults(),
         post_read_release=release,
@@ -129,17 +145,46 @@ fn wb_preservation_report(
 ) -> PreservationReport raise TransactionError {
   check_package_size(original, "input package")
   check_package_size(mutation.bytes, "candidate package")
-  let original_archive = read_transaction_archive(
+  let original_archive = wb_read_transaction_archive_with_limits(
     original, "input package", "office.transaction.internal_validation_failure",
+    transaction_max_archive_entries, transaction_max_entry_uncompressed_bytes, transaction_max_total_uncompressed_bytes,
   )
-  let candidate_archive = read_transaction_archive(
+  let candidate_archive = wb_read_transaction_archive_with_limits(
     mutation.bytes,
     "candidate package",
     "office.transaction.internal_validation_failure",
+    transaction_max_archive_entries,
+    transaction_max_entry_uncompressed_bytes,
+    transaction_max_total_uncompressed_bytes,
   )
   preservation_report_archives(
     original, mutation, original_archive, candidate_archive,
   )
+}
+
+///|
+fn wb_read_transaction_archive_with_limits(
+  bytes : BytesView,
+  phase : String,
+  invalid_code : String,
+  max_entries : Int,
+  max_entry_uncompressed_bytes : Int,
+  max_total_uncompressed_bytes : Int,
+) -> @zip.Archive raise TransactionError {
+  @zip.read_limited(
+    bytes,
+    max_entries~,
+    max_entry_uncompressed_bytes~,
+    max_total_uncompressed_bytes~,
+  ) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
+      raise resource_limit_error(phase, kind, limit, actual)
+    _ =>
+      raise transaction_error(
+        invalid_code,
+        "unreadable bounded ZIP package during " + phase,
+      )
+  }
 }
 
 ///|
@@ -392,7 +437,7 @@ async test "rename failure restores restrictive staging access for cleanup" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input, output_path=output, permission=0o000),
-        (_format, bytes) => transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive) => transaction_mutation(bytes.to_owned()),
         [],
         {
           fail_write: false,
@@ -448,7 +493,7 @@ async test "injected write and rename failures clean temporary artifacts" {
     let output = "\{directory}/output.docx"
     let original = @word.new_blank_docx()
     wb_write(input, original)
-    let mutate = (_format, bytes) => {
+    let mutate = (_format, bytes, _archive) => {
       transaction_mutation_with_manifest(
         wb_rewrite_content_types(bytes, "fault"),
         ["[Content_Types].xml"],
@@ -474,7 +519,7 @@ async test "injected write and rename failures clean temporary artifacts" {
     let partial_code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           transaction_mutation_with_manifest(wb_large_candidate(bytes), [
             "[Content_Types].xml",
           ])
@@ -535,7 +580,7 @@ async test "task cancellation waits for temporary-file cleanup" {
       let task = group.spawn(() => {
         transact_with_faults(
           transaction_options(input),
-          (_format, _bytes) => {
+          (_format, _bytes, _archive) => {
             transaction_mutation_with_manifest(candidate, [
               "[Content_Types].xml",
             ])
@@ -612,7 +657,7 @@ async test "cancellation during ordinary-failure cleanup is re-observed" {
       let task = group.spawn(() => {
         transact_with_faults(
           transaction_options(input, output_path=output),
-          (_format, bytes) => transaction_mutation(bytes.to_owned()),
+          (_format, bytes, _archive) => transaction_mutation(bytes.to_owned()),
           [],
           {
             fail_write: true,
@@ -661,7 +706,7 @@ async test "post-rename cancellation still returns a committed report" {
       let task = group.spawn(() => {
         transact_with_faults(
           transaction_options(input, output_path=output),
-          (_format, _bytes) => {
+          (_format, _bytes, _archive) => {
             transaction_mutation_with_manifest(candidate, [
               "[Content_Types].xml",
             ])
@@ -712,7 +757,7 @@ async test "concurrent in-place source change is never overwritten" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           transaction_mutation_with_manifest(
             wb_rewrite_content_types(bytes, "candidate"),
             ["[Content_Types].xml"],
@@ -750,7 +795,7 @@ async test "concurrent no-replace destination wins the race" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input, output_path=output),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           transaction_mutation_with_manifest(
             wb_rewrite_content_types(bytes, "candidate-output"),
             ["[Content_Types].xml"],
@@ -793,7 +838,7 @@ async test "async publication fails closed when parent relocation is attempted" 
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input, output_path=output),
-        (_format, _bytes) => {
+        (_format, _bytes, _archive) => {
           transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
         },
         [],
@@ -843,7 +888,7 @@ async test "async in-place recheck fails closed on source-parent relocation" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input),
-        (_format, _bytes) => {
+        (_format, _bytes, _archive) => {
           transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
         },
         [],
@@ -888,7 +933,7 @@ async test "temporary substitution is never published or silently cleaned" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input, output_path=output),
-        (_format, bytes) => {
+        (_format, bytes, _archive) => {
           transaction_mutation_with_manifest(
             wb_rewrite_content_types(bytes, "cleanup-failure"),
             ["[Content_Types].xml"],
@@ -1011,7 +1056,7 @@ test "transaction package and archive materialization limits fail closed" {
   let expanded = wb_archive([("large.xml", b"12345678")])
   assert_eq(
     wb_sync_error_code(() => {
-      read_transaction_archive_with_limits(
+      wb_read_transaction_archive_with_limits(
         expanded, "candidate package", "office.transaction.validation_failed", 1,
         4, 4,
       )
@@ -1019,6 +1064,78 @@ test "transaction package and archive materialization limits fail closed" {
     }),
     "office.transaction.resource_limit_exceeded",
   )
+}
+
+///|
+async test "aggregate materialization budget rejects candidate without publication" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    let candidate = wb_rewrite_content_types(original, "x".repeat(256 * 1024))
+    wb_write(input, original)
+    let original_cost = wb_archive_retained_cost(original)
+    let candidate_payload = wb_archive_payload_bytes(candidate)
+    let candidate_preflight = transaction_archive_preflight_overhead(candidate)
+    // The candidate fits this injected limit by itself, but not while the
+    // original archive remains live. This distinguishes a transaction-wide
+    // budget from independent per-parse limits without a giant test fixture.
+    let live_limit = candidate_preflight +
+      candidate_payload +
+      original_cost / 2L
+    assert_true(live_limit - candidate_preflight >= candidate_payload)
+    assert_true(
+      live_limit - original_cost - candidate_preflight < candidate_payload,
+    )
+    ignore(
+      read_transaction_archive(
+        candidate, "isolated candidate", "office.transaction.validation_failed",
+        0L, live_limit,
+      ),
+    )
+    let failure = try {
+      ignore(
+        transact_with_identifier_and_faults(
+          transaction_options(input, output_path=output),
+          (_format, _bytes, _archive) => {
+            transaction_mutation_with_manifest(candidate, [
+              "[Content_Types].xml",
+            ])
+          },
+          [],
+          None,
+          no_transaction_faults(),
+          materialization_limit=live_limit,
+          materialization_reserve=0L,
+        ),
+      )
+      fail("expected aggregate materialization rejection")
+    } catch {
+      TransactionError(..) as error => error
+      error => fail("expected TransactionError, received \{error}")
+    }
+    match failure {
+      TransactionError(code~, details~, ..) => {
+        assert_eq(code, "office.transaction.resource_limit_exceeded")
+        match details {
+          Some(Object(fields)) => {
+            assert_eq(
+              fields.get("phase"),
+              Some(Json::string("candidate package")),
+            )
+            assert_eq(
+              fields.get("kind"),
+              Some(Json::string("live_materialized_bytes")),
+            )
+          }
+          _ => fail("expected structured materialization details")
+        }
+      }
+    }
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_false(@afs.exists(output))
+    wb_assert_no_temp(directory)
+  })
 }
 
 ///|

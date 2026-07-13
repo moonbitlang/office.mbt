@@ -2,6 +2,7 @@
 package "bobzhang/office/transaction"
 
 import {
+  "bobzhang/mbtexcel/zip",
   "bobzhang/office",
   "moonbitlang/core/debug",
 }
@@ -9,11 +10,11 @@ import {
 // Values
 pub async fn atomic_write_new(String, BytesView, permission? : Int) -> Unit
 
-pub async fn transact(TransactionOptions, (@office.DocumentFormat, BytesView) -> TransactionMutation raise, validators? : Array[TransactionValidator], identifier? : TransactionIdentifier) -> TransactionReport
+pub async fn transact(TransactionOptions, (@office.DocumentFormat, BytesView, @zip.Archive) -> TransactionMutation raise, validators? : Array[TransactionValidator], identifier? : TransactionIdentifier) -> TransactionReport
 
 pub fn transaction_failure(String, String, details? : Json) -> TransactionError raise TransactionError
 
-pub fn transaction_identifier(String, (String, BytesView) -> @office.DocumentFormat raise) -> TransactionIdentifier raise TransactionError
+pub fn transaction_identifier(String, (String, BytesView, @zip.Archive) -> @office.DocumentFormat raise) -> TransactionIdentifier raise TransactionError
 
 pub fn transaction_mutation(Bytes, warnings? : Array[@office.ProtocolWarning]) -> TransactionMutation raise TransactionError
 
@@ -21,7 +22,7 @@ pub fn transaction_mutation_with_manifest(Bytes, Array[String], warnings? : Arra
 
 pub fn transaction_options(String, output_path? : String, dry_run? : Bool, overwrite? : Bool, permission? : Int) -> TransactionOptions raise TransactionError
 
-pub fn transaction_validator(String, (@office.DocumentFormat, BytesView) -> Array[ValidationFinding] raise) -> TransactionValidator raise TransactionError
+pub fn transaction_validator(String, (@office.DocumentFormat, BytesView, @zip.Archive) -> Array[ValidationFinding] raise) -> TransactionValidator raise TransactionError
 
 pub fn validation_finding(String, String) -> ValidationFinding raise TransactionError
 
@@ -49,7 +50,7 @@ pub struct PreservationReport {
 
 pub struct TransactionIdentifier {
   name : String
-  identify : (String, BytesView) -> @office.DocumentFormat raise
+  identify : (String, BytesView, @zip.Archive) -> @office.DocumentFormat raise
 }
 
 pub(all) enum TransactionMode {
@@ -99,7 +100,7 @@ pub fn TransactionReport::warning_records(Self) -> ReadOnlyArray[@office.Protoco
 
 pub struct TransactionValidator {
   name : String
-  validate : (@office.DocumentFormat, BytesView) -> Array[ValidationFinding] raise
+  validate : (@office.DocumentFormat, BytesView, @zip.Archive) -> Array[ValidationFinding] raise
 }
 
 pub struct ValidationFinding {

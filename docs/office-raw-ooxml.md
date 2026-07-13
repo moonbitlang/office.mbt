@@ -175,23 +175,29 @@ updates instead of per-element map copies. The complete post-edit size is
 checked with overflow-safe arithmetic before repeated splice buffers are
 allocated.
 
-The transaction first applies the complete bounded raw identifier to its
-pinned input bytes; generic Office DOM parsing cannot precede this boundary.
-The mutation callback is pure and produces a candidate package plus a one-part
-preservation manifest. The transaction then:
+The transaction materializes each ZIP exactly once. The complete bounded raw
+identifier consumes an isolated fork of the already materialized input archive;
+generic Office DOM parsing cannot precede this boundary. The mutation consumes
+another shallow fork, revalidates the logical archive without reinflation, and
+produces serialized candidate bytes plus a one-part preservation manifest. The
+transaction then:
 
-1. checks the manifest against payload-level archive differences;
-2. reruns the complete raw collision, namespace, relationship, alias, and
-   serialization boundary on the candidate;
-3. reruns portable OPC, main-part identity, and format validation;
-4. runs any configured deeper validator;
+1. materializes the serialized candidate once under the aggregate live-memory
+   budget shared with the still-live original archive;
+2. reruns the complete raw collision, namespace, relationship, alias,
+   serialization, portable OPC, main-part identity, and format boundary on an
+   isolated candidate archive fork;
+3. runs configured deeper validators against additional shallow forks;
+4. checks the manifest against payload-level archive differences;
 5. publishes through the cancellation-safe same-directory transaction, or
    reports a dry run without creating output.
 
 Therefore malformed fragments, relationship regressions, main-part changes,
 source races, validation failures, and publication failures leave the input
 unchanged. Native and Wasm use the same `moonbitlang/async` I/O path; this
-feature adds no project C stubs.
+feature adds no project C stubs. Individually valid packages are also rejected
+before publication when the concurrently retained input and candidate
+materializations would exceed the transaction-wide envelope.
 
 ## Explicit non-goals
 

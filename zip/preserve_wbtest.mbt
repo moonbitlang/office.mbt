@@ -230,6 +230,22 @@ test "zip replace preserves untouched source records and archive metadata" {
 }
 
 ///|
+test "archive forks share immutable storage but isolate entry mutation" {
+  let source = preservation_fixture()
+  let original = read(source)
+  let original_estimate = original.retained_size_estimate()
+  let working = original.fork()
+  assert_eq(working.retained_size_estimate(), original_estimate)
+  assert_true(working.replace("target.xml", b"fork-only replacement"))
+  working.add("new.xml", b"new")
+  assert_eq(original.get("target.xml"), Some(b"old"))
+  assert_eq(original.get("new.xml"), None)
+  assert_eq(working.get("target.xml"), Some(b"fork-only replacement"))
+  assert_eq(working.get("new.xml"), Some(b"new"))
+  assert_eq(write(original), source)
+}
+
+///|
 test "zip identical replacement retains every source byte" {
   let source = preservation_fixture()
   let archive = read(source)

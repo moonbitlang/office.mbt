@@ -41,12 +41,13 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
     )
     let identifier = @transaction.transaction_identifier("raw-sdk-bounded", (
       path,
-      bytes,
-    ) => @raw.raw_identify(path, bytes))
+      _bytes,
+      archive,
+    ) => @raw.raw_identify_archive(path, archive))
     let docx_report = @transaction.transact(
       @transaction.transaction_options(docx_input, output_path=docx_output),
-      (_format, bytes) => {
-        let mutation = @raw.raw_edit(Docx, bytes, docx_request)
+      (_format, _bytes, archive) => {
+        let mutation = @raw.raw_edit_archive(Docx, archive, docx_request)
         @transaction.transaction_mutation_with_manifest(
           mutation.candidate_bytes(),
           [mutation.part_name()],
@@ -77,8 +78,8 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
     )
     let xlsx_report = @transaction.transact(
       @transaction.transaction_options(xlsx_input, output_path=xlsx_output),
-      (_format, bytes) => {
-        let mutation = @raw.raw_edit(Xlsx, bytes, xlsx_request)
+      (_format, _bytes, archive) => {
+        let mutation = @raw.raw_edit_archive(Xlsx, archive, xlsx_request)
         @transaction.transaction_mutation_with_manifest(
           mutation.candidate_bytes(),
           [mutation.part_name()],

@@ -194,6 +194,24 @@ test "raw emitted schemas share the capability registry constants" {
 }
 
 ///|
+test "archive-backed raw APIs match byte-backed mutation without reinflation" {
+  let original = @word.new_blank_docx()
+  let request = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body",
+    Append,
+    xml=word_paragraph("archive path"),
+  )
+  let from_bytes = @raw.raw_edit(Docx, original, request)
+  let archive = @zip.read(original)
+  assert_eq(@raw.raw_identify_archive("input.docx", archive.fork()), Docx)
+  let from_archive = @raw.raw_edit_archive(Docx, archive, request)
+  assert_eq(from_archive.candidate_bytes(), from_bytes.candidate_bytes())
+  assert_eq(from_archive.part_name(), from_bytes.part_name())
+  assert_eq(from_archive.selected_count(), from_bytes.selected_count())
+}
+
+///|
 test "raw edit splices DOCX elements and preserves every other part payload" {
   let original = raw_test_mixed_zip_policies(@word.new_blank_docx())
   let add_first = @raw.raw_edit_request(

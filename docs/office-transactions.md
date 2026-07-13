@@ -10,11 +10,14 @@ A transaction performs these phases in order:
 
 1. validate the options, canonicalize the native source/destination paths where
    supported, and resolve the documented path-based destination policy;
-2. read and identify the input package;
-3. invoke one in-memory mutation callback with the identified format and a
-   read-only view of the original bytes;
-4. identify and structurally validate the candidate through the portable
-   Office/OPC gate;
+2. read the input ZIP once under the transaction resource budget, then identify
+   it from an independently mutable shallow fork of that bounded archive;
+3. invoke one in-memory mutation callback with the identified format, a
+   read-only view of the original bytes, and another isolated shallow archive
+   fork whose immutable payload buffers are shared;
+4. read the serialized candidate ZIP once under the remaining transaction
+   budget, then identify and structurally validate it through the portable
+   Office/OPC gate using archive forks;
 5. run every registered format-specific validation hook;
 6. compare original and candidate ZIP entry payloads and enforce an optional
    declared-part preservation manifest;
@@ -94,6 +97,17 @@ remains, even when an archive lies in its declared size, so compressed
 expansion cannot bypass preflight. Exceeding any bound fails before publication
 with `office.transaction.resource_limit_exceeded`.
 
+Those per-package ceilings sit inside one conservative 384 MiB live
+materialization budget for the complete transaction. The transaction reserves
+64 MiB for raw indexes, XML metadata, preservation maps, archive forks, and
+serializer working state. It accounts for the original package buffer,
+inflated entry payloads, decoded names, preserved local/central ZIP records,
+entry bookkeeping, and—when bytes changed—the concurrently live candidate
+buffer and archive. Candidate inflation receives only the aggregate budget
+remaining after the original archive. A package that is individually legal
+but would make the two live archive snapshots exceed the envelope therefore
+fails with `kind=live_materialized_bytes` before any temporary file is created.
+
 The mandatory ZIP reader admits one interpretation: the EOCD comment must end
 at EOF, the declared central-directory count and byte span must be consumed
 exactly, and each local header/data descriptor must agree with its central
@@ -101,9 +115,12 @@ record's flags, method, name, CRC, and ZIP32/ZIP64 sizes. Decoded lengths must
 match their declarations. Ambiguous or split-view archives are rejected before
 format-specific Office validation.
 
-The already-bounded archive objects are reused for format validation and the
-preservation report; a transaction does not repeatedly inflate the same input
-or candidate.
+The already-bounded archive objects are reused across custom identification,
+mutation, candidate validation, and the preservation report; a transaction
+does not repeatedly inflate the same input or candidate. Each callback gets a
+shallow fork, so adding or replacing an entry cannot corrupt the transaction's
+trusted preservation snapshot while immutable strings and byte buffers remain
+shared.
 
 ## Validation hooks
 
@@ -116,8 +133,10 @@ bounded codes and messages; exceeding that limit is an invalid contract and is
 rejected before finding details are serialized.
 
 Validators must be deterministic and side-effect free. They receive the
-identified format and a read-only view of candidate bytes. OpenXML SDK checks
-remain an acceptance/CI tier rather than a portable runtime dependency.
+identified format, a read-only view of candidate bytes, and an isolated shallow
+fork of the already materialized candidate archive. Validators should consume
+that archive instead of parsing the bytes again. OpenXML SDK checks remain an
+acceptance/CI tier rather than a portable runtime dependency.
 
 ## Preservation report
 
