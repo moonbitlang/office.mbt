@@ -9,6 +9,8 @@ import {
 // Values
 pub async fn transact(TransactionOptions, (@office.DocumentFormat, BytesView) -> TransactionMutation raise, validators? : Array[TransactionValidator]) -> TransactionReport
 
+pub fn transaction_failure(String, String, details? : Json) -> TransactionError raise TransactionError
+
 pub fn transaction_mutation(Bytes, warnings? : Array[@office.ProtocolWarning]) -> TransactionMutation raise TransactionError
 
 pub fn transaction_mutation_with_manifest(Bytes, Array[String], warnings? : Array[@office.ProtocolWarning]) -> TransactionMutation raise TransactionError
@@ -84,6 +86,7 @@ pub struct TransactionReport {
 }
 pub fn TransactionReport::to_json(Self) -> Json
 pub fn TransactionReport::to_output(Self) -> Json
+pub fn TransactionReport::warning_records(Self) -> ReadOnlyArray[@office.ProtocolWarning]
 
 pub struct TransactionValidator {
   name : String

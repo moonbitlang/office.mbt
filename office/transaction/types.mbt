@@ -215,8 +215,7 @@ pub fn transaction_failure(
 ) -> TransactionError raise TransactionError {
   if !is_office_error_code(code) {
     raise transaction_error(
-      "office.transaction.invalid_contract",
-      "mutation failure code must be a bounded office.* identifier",
+      "office.transaction.invalid_contract", "mutation failure code must be a bounded office.* identifier",
     )
   }
   checked_message(message, "mutation failure message")
@@ -225,8 +224,7 @@ pub fn transaction_failure(
       let remaining = Ref(transaction_max_error_detail_nodes)
       if !bounded_error_details(value, 0, remaining) {
         raise transaction_error(
-          "office.transaction.invalid_contract",
-          "mutation failure details exceed the bounded JSON contract",
+          "office.transaction.invalid_contract", "mutation failure details exceed the bounded JSON contract",
         )
       }
       TransactionError(code~, message~, details=Some(value))
@@ -610,6 +608,15 @@ pub struct TransactionReport {
   validations : ReadOnlyArray[ValidationSummary]
   preservation : PreservationReport
   warnings : ReadOnlyArray[@office.ProtocolWarning]
+}
+
+///|
+/// Returns the bounded warnings emitted by publication. The returned view is
+/// immutable and remains in deterministic order.
+pub fn TransactionReport::warning_records(
+  self : TransactionReport,
+) -> ReadOnlyArray[@office.ProtocolWarning] {
+  self.warnings
 }
 
 ///|
