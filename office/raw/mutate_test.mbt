@@ -210,10 +210,44 @@ test "archive-backed raw APIs match byte-backed mutation without reinflation" {
     max_total_uncompressed_bytes=256 * 1024 * 1024,
   )
   assert_eq(@raw.raw_identify_archive("input.docx", archive.fork()), Docx)
-  let from_archive = @raw.raw_edit_archive(Docx, archive, request)
+  let from_archive = @raw.raw_edit_archive(
+    Docx,
+    archive,
+    request,
+    max_package_bytes=128 * 1024 * 1024,
+  )
   assert_eq(from_archive.candidate_bytes(), from_bytes.candidate_bytes())
   assert_eq(from_archive.part_name(), from_bytes.part_name())
   assert_eq(from_archive.selected_count(), from_bytes.selected_count())
+}
+
+///|
+test "archive-backed raw serialization applies caller budget before output" {
+  let original = @word.new_blank_docx()
+  let archive = @zip.read_limited(
+    original,
+    max_entries=8192,
+    max_entry_uncompressed_bytes=64 * 1024 * 1024,
+    max_total_uncompressed_bytes=256 * 1024 * 1024,
+  )
+  let request = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body",
+    Append,
+    xml=word_paragraph("budgeted archive path"),
+  )
+  try @raw.raw_edit_archive(Docx, archive, request, max_package_bytes=1) catch {
+    RawError(code~, details~, ..) => {
+      assert_eq(code, "office.raw.resource_limit")
+      guard details is Some(Object(fields)) else {
+        fail("expected structured raw package-limit details")
+      }
+      assert_eq(fields.get("kind"), Some(Json::string("package_bytes")))
+      assert_eq(fields.get("limit"), Some(Json::number(1.0)))
+    }
+  } noraise {
+    _ => fail("expected transaction-supplied package limit rejection")
+  }
 }
 
 ///|

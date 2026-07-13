@@ -399,6 +399,25 @@ pub fn transaction_options(
 }
 
 ///|
+/// The allocation ceiling available to one mutation callback after the
+/// original package, its bounded archive, and transaction working reserve have
+/// been charged to the live-memory envelope. Candidate serializers must apply
+/// this ceiling during their sizing pass, before allocating package bytes.
+pub struct TransactionBudget {
+  max_candidate_package_bytes : Int
+}
+
+///|
+/// Returns the largest serialized candidate the callback may materialize.
+/// Returning the supplied immutable original `Bytes` is the zero-allocation
+/// path for a true no-op.
+pub fn TransactionBudget::max_candidate_package_bytes(
+  self : TransactionBudget,
+) -> Int {
+  self.max_candidate_package_bytes
+}
+
+///|
 /// An additional pinned-package identifier run before the mandatory portable
 /// OPC gate and any generic Office DOM parse. Custom command families can
 /// enforce their own bounded package boundary while reusing the transaction's

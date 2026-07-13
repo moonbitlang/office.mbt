@@ -9,7 +9,7 @@ import {
 // Values
 pub fn raw_edit(@office.DocumentFormat, BytesView, RawEditRequest) -> RawMutation raise RawError
 
-pub fn raw_edit_archive(@office.DocumentFormat, @zip.Archive, RawEditRequest) -> RawMutation raise RawError
+pub fn raw_edit_archive(@office.DocumentFormat, @zip.Archive, RawEditRequest, max_package_bytes~ : Int) -> RawMutation raise RawError
 
 pub fn raw_edit_request(String, String, RawAction, xml? : String, attribute? : String, value? : String, namespaces? : Array[(String, String)], all? : Bool) -> RawEditRequest raise RawError
 
@@ -25,7 +25,7 @@ pub fn raw_read(StringView, BytesView, String) -> RawPartData raise RawError
 
 pub fn raw_replace_part(@office.DocumentFormat, BytesView, String, String) -> RawMutation raise RawError
 
-pub fn raw_replace_part_archive(@office.DocumentFormat, @zip.Archive, String, String) -> RawMutation raise RawError
+pub fn raw_replace_part_archive(@office.DocumentFormat, @zip.Archive, String, String, max_package_bytes~ : Int) -> RawMutation raise RawError
 
 pub fn resolve_raw_action(StringView) -> RawAction?
 
