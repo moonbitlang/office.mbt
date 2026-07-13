@@ -8,8 +8,8 @@ bytes in memory, but they do not write destination files themselves.
 
 A transaction performs these phases in order:
 
-1. validate the options, resolve the source and destination policy, and pin the
-   resolved native source and destination directories by handle;
+1. validate the options, canonicalize the native source/destination paths where
+   supported, and resolve the documented path-based destination policy;
 2. read and identify the input package;
 3. invoke one in-memory mutation callback with the identified format and a
    read-only view of the original bytes;
@@ -52,10 +52,13 @@ never an ambiguous cancellation that could invite an unsafe retry.
 - The resolved destination extension and candidate package format must agree
   with the original transaction format. A mutation cannot turn a DOCX session
   into XLSX, or use a symlink name to hide a mismatched target extension.
-- On POSIX hosts, new files request the explicit transaction permission
-  (owner-only `0600` by default); the process `umask` may further restrict it.
-  Windows ignores the numeric POSIX mode and inherits the destination
-  directory's ACL; Wasm permission behavior is host-defined.
+- On POSIX hosts, staging files are forced to owner-only `0600` even under a
+  restrictive process `umask`. The requested final permission (`0600` by
+  default) is applied, synced, and then atomically renamed as one
+  cancellation-shielded pre-commit boundary. A failed rename restores staging
+  access before identity-checked cleanup. Windows ignores the numeric POSIX
+  mode and inherits the destination directory's ACL; Wasm permission behavior
+  is host-defined.
   Filesystem ownership and extended-attribute preservation remain outside the
   package transaction contract.
 
@@ -83,9 +86,17 @@ writer with permission to rewrite the destination directory.
 Input and candidate package bytes are limited to 128 MiB before format
 validation. ZIP materialization is additionally limited to 8,192 entries,
 64 MiB per expanded entry, and 256 MiB total expanded payload. The inflater
-enforces the per-entry ceiling even when an archive lies in its declared size,
-so compressed expansion cannot bypass preflight. Exceeding any bound fails
-before publication with `office.transaction.resource_limit_exceeded`.
+enforces the smaller of the per-entry ceiling and the aggregate budget that
+remains, even when an archive lies in its declared size, so compressed
+expansion cannot bypass preflight. Exceeding any bound fails before publication
+with `office.transaction.resource_limit_exceeded`.
+
+The mandatory ZIP reader admits one interpretation: the EOCD comment must end
+at EOF, the declared central-directory count and byte span must be consumed
+exactly, and each local header/data descriptor must agree with its central
+record's flags, method, name, CRC, and ZIP32/ZIP64 sizes. Decoded lengths must
+match their declarations. Ambiguous or split-view archives are rejected before
+format-specific Office validation.
 
 The already-bounded archive objects are reused for format validation and the
 preservation report; a transaction does not repeatedly inflate the same input

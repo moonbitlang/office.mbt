@@ -5,6 +5,8 @@
 
 The module is intentionally young and may make breaking changes while the
 major-parity program in `../docs/office-major-parity.md` is underway.
+Registry publication follows the dependency-first process in
+`../docs/office-release.md`; workspace resolution is not a release gate.
 
 The public facade identifies a structurally valid OOXML package while checking
 that its extension agrees with its package content. Agent-facing JSON uses one
