@@ -1,14 +1,16 @@
 import {
   "bobzhang/office" @lib,
+  "bobzhang/office/raw",
+  "bobzhang/office/transaction",
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/core/argparse",
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
 }
 
 supported_targets = "native+wasm"
 
-options(
-  "is-main": true,
-)
+pkgtype(kind: "executable")
