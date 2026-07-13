@@ -245,11 +245,47 @@ fn format_from_extension(path : StringView) -> DocumentFormat raise OfficeError 
 }
 
 ///|
+fn opc_part_key(name : StringView) -> String {
+  name.to_owned().to_lower()
+}
+
+///|
+priv struct ArchivePartIndex {
+  exact : Map[String, Bytes]
+  canonical : Map[String, Bytes]
+}
+
+///|
+fn archive_part_index(archive : @zip.Archive) -> ArchivePartIndex {
+  let exact : Map[String, Bytes] = Map([])
+  let canonical : Map[String, Bytes] = Map([])
+  for entry in archive.entries() {
+    let name = entry.name()
+    if !exact.contains(name) {
+      exact[name] = entry.data()
+    }
+    let key = opc_part_key(name)
+    if !canonical.contains(key) {
+      canonical[key] = entry.data()
+    }
+  }
+  { exact, canonical }
+}
+
+///|
+fn ArchivePartIndex::find(self : ArchivePartIndex, name : String) -> Bytes? {
+  match self.exact.get(name) {
+    Some(bytes) => Some(bytes)
+    None => self.canonical.get(opc_part_key(name))
+  }
+}
+
+///|
 fn read_xml_part(
-  archive : @zip.Archive,
+  parts : ArchivePartIndex,
   name : String,
 ) -> @xml.XmlElement raise OfficeError {
-  let bytes = match find_archive_part(archive, name) {
+  let bytes = match parts.find(name) {
     Some(bytes) => bytes
     None => raise InvalidPackage("missing required part: \{name}")
   }
@@ -277,26 +313,6 @@ fn read_xml_part(
   @xml.read_xml_string_strict(text) catch {
     _ => raise InvalidPackage("\{name} is not well-formed XML")
   }
-}
-
-///|
-fn opc_part_key(name : StringView) -> String {
-  name.to_owned().to_lower()
-}
-
-///|
-fn find_archive_part(archive : @zip.Archive, name : String) -> Bytes? {
-  match archive.get(name) {
-    Some(bytes) => return Some(bytes)
-    None => ()
-  }
-  let key = opc_part_key(name)
-  for entry in archive.entries() {
-    if opc_part_key(entry.name()) == key {
-      return Some(entry.data())
-    }
-  }
-  None
 }
 
 ///|
@@ -1123,6 +1139,7 @@ fn resolve_relationship_target(base : String, target : StringView) -> String? {
 ///|
 fn validate_package_structure(
   archive : @zip.Archive,
+  part_index : ArchivePartIndex,
   main_part : String,
   require_main_relationships : Bool,
 ) -> Array[String] raise OfficeError {
@@ -1189,7 +1206,7 @@ fn validate_package_structure(
 
   let defaults : Map[String, String] = Map([])
   let overrides : Map[String, String] = Map([])
-  let content_types = read_xml_part(archive, "[Content_Types].xml")
+  let content_types = read_xml_part(part_index, "[Content_Types].xml")
   for child in content_types.children {
     match child {
       XmlText(text) =>
@@ -1346,7 +1363,7 @@ fn validate_package_structure(
         continue
       }
     }
-    let relationships = read_xml_part(archive, relationship_part)
+    let relationships = read_xml_part(part_index, relationship_part)
     if relationships.name != RELATIONSHIPS_ROOT {
       findings.push("\{relationship_part} root element is not Relationships")
       continue
@@ -1457,12 +1474,12 @@ fn is_office_document_relationship(rel_type : StringView) -> Bool {
 
 ///|
 fn validate_main_identity(
-  archive : @zip.Archive,
+  part_index : ArchivePartIndex,
   format : DocumentFormat,
   declared_main_part : String,
 ) -> Unit raise OfficeError {
   let label = if format is Xlsx { "XLSX" } else { "DOCX" }
-  let root_rels = read_xml_part(archive, "_rels/.rels")
+  let root_rels = read_xml_part(part_index, "_rels/.rels")
   if root_rels.name != RELATIONSHIPS_ROOT {
     raise InvalidPackage("_rels/.rels root element is not Relationships")
   }
@@ -1519,7 +1536,7 @@ fn validate_main_identity(
       "\{label} officeDocument relationship targets '\{main_target}', but content types declare '\{declared_main_part}'",
     )
   }
-  let main = read_xml_part(archive, main_target)
+  let main = read_xml_part(part_index, main_target)
   let valid_root = match format {
     Xlsx =>
       main.name == TRANSITIONAL_WORKBOOK_ROOT ||
@@ -1536,9 +1553,9 @@ fn validate_main_identity(
 
 ///|
 fn default_main_target_from_root(
-  archive : @zip.Archive,
+  part_index : ArchivePartIndex,
 ) -> String? raise OfficeError {
-  let root_rels = read_xml_part(archive, "_rels/.rels")
+  let root_rels = read_xml_part(part_index, "_rels/.rels")
   if root_rels.name != RELATIONSHIPS_ROOT {
     return None
   }
@@ -1571,6 +1588,7 @@ fn default_main_target_from_root(
 ///|
 fn format_from_archive(
   archive : @zip.Archive,
+  part_index : ArchivePartIndex,
 ) -> (DocumentFormat, String) raise OfficeError {
   for entry in archive.entries() {
     if entry.crc32() != @zip.crc32(entry.data()) {
@@ -1579,7 +1597,7 @@ fn format_from_archive(
       )
     }
   }
-  let content_types = read_xml_part(archive, "[Content_Types].xml")
+  let content_types = read_xml_part(part_index, "[Content_Types].xml")
   if content_types.name != CONTENT_TYPES_ROOT {
     raise InvalidPackage("[Content_Types].xml root element is not Types")
   }
@@ -1634,7 +1652,7 @@ fn format_from_archive(
     }
   }
   if !main_defaults.is_empty() {
-    match default_main_target_from_root(archive) {
+    match default_main_target_from_root(part_index) {
       Some(target) if !overridden_parts.contains(opc_part_key(target)) =>
         match part_extension(target) {
           Some(extension) =>
@@ -1671,9 +1689,10 @@ fn format_from_archive(
 fn structural_findings(
   format : DocumentFormat,
   archive : @zip.Archive,
+  part_index : ArchivePartIndex,
   main_part : String,
 ) -> Array[String] raise OfficeError {
-  validate_package_structure(archive, main_part, format is Xlsx)
+  validate_package_structure(archive, part_index, main_part, format is Xlsx)
 }
 
 ///|
@@ -1703,12 +1722,13 @@ pub fn detect_archive_format(
   archive : @zip.Archive,
 ) -> DocumentFormat raise OfficeError {
   let expected = format_from_extension(path)
-  let (actual, main_part) = format_from_archive(archive)
+  let part_index = archive_part_index(archive)
+  let (actual, main_part) = format_from_archive(archive, part_index)
   if expected != actual {
     raise FormatMismatch(expected~, actual~)
   }
-  validate_main_identity(archive, actual, main_part)
-  let findings = structural_findings(actual, archive, main_part)
+  validate_main_identity(part_index, actual, main_part)
+  let findings = structural_findings(actual, archive, part_index, main_part)
   if findings.length() > 0 {
     let first = findings[0]
     let suffix = if findings.length() == 1 {

@@ -51,6 +51,49 @@ fn append_archive_part(
 }
 
 ///|
+fn add_relationship_stress_parts(data : BytesView, count : Int) -> Bytes raise {
+  let source = @zip.read(data)
+  let result = @zip.Archive::new()
+  let mut content_types_updated = false
+  for entry in source.entries() {
+    let content = if entry.name() == "[Content_Types].xml" {
+      let text = @utf8.decode(entry.data(), ignore_bom=true)
+      let updated = text.replace(
+        old="</Types>",
+        new="<Default Extension=\"bin\" ContentType=\"application/octet-stream\"/></Types>",
+      )
+      if updated == text {
+        fail("test could not add the binary content-type default")
+      }
+      content_types_updated = true
+      @utf8.encode(updated)
+    } else {
+      entry.data()
+    }
+    result.add(
+      entry.name(),
+      content,
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  if !content_types_updated {
+    fail("test archive did not contain [Content_Types].xml")
+  }
+  let relationships = @utf8.encode(
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+  )
+  let shared_prefix = "shared-" + "x".repeat(192) + "-"
+  for index in 0..<count {
+    let source_name = "word/stress/\{shared_prefix}\{index}.bin"
+    let relationships_name = "word/stress/_rels/\{shared_prefix}\{index}.bin.rels"
+    result.add(source_name, b"")
+    result.add(relationships_name, relationships)
+  }
+  @zip.write(result)
+}
+
+///|
 fn rename_archive_part(
   data : BytesView,
   old_name : String,
@@ -1013,6 +1056,12 @@ test "detect_format rejects CRC-corrupted XLSX entries" {
 ///|
 test "detect_format identifies generated docx" {
   let data = @word.new_blank_docx()
+  inspect(@office.detect_format("report.docx", data).name(), content="docx")
+}
+
+///|
+test "detect_format indexes thousands of long relationship part names" {
+  let data = add_relationship_stress_parts(@word.new_blank_docx(), 3500)
   inspect(@office.detect_format("report.docx", data).name(), content="docx")
 }
 
