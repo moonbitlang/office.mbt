@@ -73,6 +73,14 @@ fn BitReader::read_byte(self : BitReader) -> Byte raise ZipError {
 }
 
 ///|
+fn BitReader::consumed_bytes(self : BitReader) -> Int {
+  // Huffman lookup may prefetch complete trailing bytes into `bit_buf`.
+  // Subtract those unread full bytes without multiplying positions by eight,
+  // which also keeps this safe for inputs near the Int size ceiling.
+  self.byte_pos - self.bit_count / 8
+}
+
+///|
 /// Mask of the low `count` bits. `count` must be in `0..=31`; callers only
 /// ever pass at most 16 (stored-block lengths) and `max_bits <= 15` for
 /// huffman codes.
@@ -580,6 +588,9 @@ fn deflate_decode(
     }
     continue bfinal == 1
   }
+  if reader.consumed_bytes() != bytes.length() {
+    raise UnsupportedFeature(msg="trailing bytes after deflate stream")
+  }
   Bytes::from_array(out)
 }
 
@@ -592,6 +603,18 @@ test "deflate stored block" {
       #|b"hi"
     ),
   )
+}
+
+///|
+test "deflate rejects complete bytes after the final block" {
+  let stream : Bytes = [0x01, 0x02, 0x00, 0xFD, 0xFF, 0x68, 0x69, 0x00]
+  try deflate_decode(stream) catch {
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="trailing bytes after deflate stream")
+    _ => fail("expected trailing deflate bytes to be rejected")
+  } noraise {
+    _ => fail("expected trailing deflate bytes to be rejected")
+  }
 }
 
 ///|

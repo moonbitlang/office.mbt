@@ -494,6 +494,52 @@ test "zip read: Unicode Path extras cannot create alternate names" {
 }
 
 ///|
+test "zip read: DEFLATE payload must consume its declared span" {
+  let archive = @zip.Archive::new()
+  archive.add("a.txt", b"hello", compression=Deflate)
+  let raw = @zip.write(archive).to_array()
+  let eocd = match find_eocd_offset(raw) {
+    Some(value) => value
+    None => fail("missing EOCD")
+  }
+  let central = read_u32_le(raw, eocd + 16).reinterpret_as_int()
+  let local_offset = read_u32_le(raw, central + 42).reinterpret_as_int()
+  let compressed_size = read_u32_le(raw, central + 20).reinterpret_as_int()
+  let with_trailing : Array[Byte] = []
+  for index in 0..<central {
+    with_trailing.push(raw[index])
+  }
+  with_trailing.push((0).to_byte())
+  for index in central..<raw.length() {
+    with_trailing.push(raw[index])
+  }
+  let shifted_central = central + 1
+  let shifted_eocd = eocd + 1
+  zip_overwrite_u32_le(
+    with_trailing,
+    local_offset + 18,
+    (compressed_size + 1).reinterpret_as_uint(),
+  )
+  zip_overwrite_u32_le(
+    with_trailing,
+    shifted_central + 20,
+    (compressed_size + 1).reinterpret_as_uint(),
+  )
+  zip_overwrite_u32_le(
+    with_trailing,
+    shifted_eocd + 16,
+    shifted_central.reinterpret_as_uint(),
+  )
+  try @zip.read(Bytes::from_array(with_trailing)) catch {
+    UnsupportedFeature(msg~) =>
+      inspect(msg, content="trailing bytes after deflate stream")
+    _ => fail("expected trailing DEFLATE bytes to be rejected")
+  } noraise {
+    _ => fail("expected trailing DEFLATE bytes to be rejected")
+  }
+}
+
+///|
 test "zip read: local headers are bound to their central records" {
   let archive = @zip.Archive::new()
   archive.add("a.txt", b"hello")
