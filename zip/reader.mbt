@@ -306,7 +306,20 @@ fn compression_from_method(method_id : Int) -> Compression raise ZipError {
 }
 
 ///|
-fn read_entry_data(bytes : BytesView, meta : EntryMeta) -> Bytes raise ZipError {
+fn resource_limit_actual(limit : Int) -> Int {
+  if limit < 0x7FFFFFFF {
+    limit + 1
+  } else {
+    limit
+  }
+}
+
+///|
+fn read_entry_data(
+  bytes : BytesView,
+  meta : EntryMeta,
+  max_uncompressed_bytes? : Int,
+) -> Bytes raise ZipError {
   let reader = Reader::new(bytes, meta.local_header_offset)
   let sig = reader.read_u32()
   if sig != local_header_sig {
@@ -343,22 +356,50 @@ fn read_entry_data(bytes : BytesView, meta : EntryMeta) -> Bytes raise ZipError 
   }
   let compressed = reader.read_bytes(meta.compressed_size)
   match compression {
-    Store => compressed.to_owned()
+    Store => {
+      match max_uncompressed_bytes {
+        Some(limit) if compressed.length() > limit =>
+          raise ResourceLimitExceeded(
+            kind="entry_uncompressed_bytes",
+            limit~,
+            actual=compressed.length(),
+          )
+        _ => ()
+      }
+      compressed.to_owned()
+    }
     Deflate => {
       // Allow legitimately large declared entries, but keep a hard ceiling so a
       // lying tiny archive cannot expand without bound (decompression bomb).
-      let max_output = if meta.uncompressed_size > deflate_max_output_default {
-        meta.uncompressed_size
-      } else {
-        deflate_max_output_default
+      let max_output = match max_uncompressed_bytes {
+        Some(limit) => limit
+        None =>
+          if meta.uncompressed_size > deflate_max_output_default {
+            meta.uncompressed_size
+          } else {
+            deflate_max_output_default
+          }
       }
-      deflate_decode(compressed, max_output~)
+      deflate_decode(compressed, max_output~) catch {
+        OutputLimitExceeded(..) =>
+          raise ResourceLimitExceeded(
+            kind="entry_uncompressed_bytes",
+            limit=max_output,
+            actual=resource_limit_actual(max_output),
+          )
+        error => raise error
+      }
     }
   }
 }
 
 ///|
-pub fn read(bytes : BytesView) -> Archive raise ZipError {
+fn read_impl(
+  bytes : BytesView,
+  max_entries : Int?,
+  max_entry_uncompressed_bytes : Int?,
+  max_total_uncompressed_bytes : Int?,
+) -> Archive raise ZipError {
   let eocd_offset = match find_end_of_central(bytes) {
     Some(offset) => offset
     None => raise MissingEndOfCentral
@@ -390,6 +431,15 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
       u32_to_int(central_offset_raw),
     )
   }
+  match max_entries {
+    Some(limit) if entry_count > limit =>
+      raise ResourceLimitExceeded(
+        kind="entry_count",
+        limit~,
+        actual=entry_count,
+      )
+    _ => ()
+  }
   if central_offset + central_size > bytes.length() {
     raise OutOfBounds(offset=central_offset)
   }
@@ -407,6 +457,7 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     },
   )
   let central_reader = Reader::new(bytes, central_offset)
+  let mut declared_total = 0
   for _ in 0..<entry_count {
     let header_offset = central_reader.pos
     let cd_sig = central_reader.read_u32()
@@ -473,6 +524,24 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
       u32_to_int(local_offset_raw)
     }
     ignore(compression_from_method(method_id))
+    match max_entry_uncompressed_bytes {
+      Some(limit) if uncomp_size > limit =>
+        raise ResourceLimitExceeded(
+          kind="entry_uncompressed_bytes",
+          limit~,
+          actual=uncomp_size,
+        )
+      _ => ()
+    }
+    match max_total_uncompressed_bytes {
+      Some(limit) if uncomp_size > limit - declared_total =>
+        raise ResourceLimitExceeded(
+          kind="total_uncompressed_bytes",
+          limit~,
+          actual=resource_limit_actual(limit),
+        )
+      _ => declared_total = declared_total + uncomp_size
+    }
     metas.push({
       name,
       compression_method: method_id,
@@ -483,9 +552,23 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     })
   }
   let archive = Archive::new()
+  let mut actual_total = 0
   for meta in metas {
     ignore(compression_from_method(meta.compression_method))
-    let data = read_entry_data(bytes, meta)
+    let data = read_entry_data(
+      bytes,
+      meta,
+      max_uncompressed_bytes?=max_entry_uncompressed_bytes,
+    )
+    match max_total_uncompressed_bytes {
+      Some(limit) if data.length() > limit - actual_total =>
+        raise ResourceLimitExceeded(
+          kind="total_uncompressed_bytes",
+          limit~,
+          actual=resource_limit_actual(limit),
+        )
+      _ => actual_total = actual_total + data.length()
+    }
     // Construct the entry directly so it carries the central directory's
     // STORED crc (Archive::add would recompute from the inflated data,
     // hiding any mismatch from validators).
@@ -498,6 +581,34 @@ pub fn read(bytes : BytesView) -> Archive raise ZipError {
     })
   }
   archive
+}
+
+///|
+/// Reads a ZIP archive using the library's compatibility defaults.
+pub fn read(bytes : BytesView) -> Archive raise ZipError {
+  read_impl(bytes, None, None, None)
+}
+
+///|
+/// Reads a ZIP archive while enforcing caller-provided materialization limits
+/// before and during decompression.
+pub fn read_limited(
+  bytes : BytesView,
+  max_entries~ : Int,
+  max_entry_uncompressed_bytes~ : Int,
+  max_total_uncompressed_bytes~ : Int,
+) -> Archive raise ZipError {
+  if max_entries < 0 ||
+    max_entry_uncompressed_bytes < 0 ||
+    max_total_uncompressed_bytes < 0 {
+    raise UnsupportedFeature(msg="ZIP resource limits must be non-negative")
+  }
+  read_impl(
+    bytes,
+    Some(max_entries),
+    Some(max_entry_uncompressed_bytes),
+    Some(max_total_uncompressed_bytes),
+  )
 }
 
 ///|
