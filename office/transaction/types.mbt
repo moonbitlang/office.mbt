@@ -113,8 +113,8 @@ fn transaction_error(
 }
 
 ///|
-fn is_transaction_error_code(code : String) -> Bool {
-  let code_prefix = "office.transaction."
+fn is_office_error_code(code : String) -> Bool {
+  let code_prefix = "office."
   if !code.has_prefix(code_prefix) ||
     code.length() == code_prefix.length() ||
     !(scan_text(code, transaction_max_identifier_length) is Valid) {
@@ -183,7 +183,7 @@ fn normalize_transaction_error(
   invalid_message : String,
 ) -> TransactionError {
   let TransactionError(code~, message~, details~) = error
-  if !is_transaction_error_code(code) {
+  if !is_office_error_code(code) {
     return transaction_error(invalid_code, invalid_message)
   }
   let safe_details = match details {
@@ -204,6 +204,38 @@ fn normalize_transaction_error(
 }
 
 ///|
+/// Builds a checked, subsystem-specific failure for a transaction mutation
+/// callback. Codes must remain in the `office.*` namespace; this lets command
+/// families preserve stable errors such as `office.raw.invalid_path` while the
+/// transaction still bounds messages and structured details.
+pub fn transaction_failure(
+  code : String,
+  message : String,
+  details? : Json,
+) -> TransactionError raise TransactionError {
+  if !is_office_error_code(code) {
+    raise transaction_error(
+      "office.transaction.invalid_contract",
+      "mutation failure code must be a bounded office.* identifier",
+    )
+  }
+  checked_message(message, "mutation failure message")
+  match details {
+    Some(value) => {
+      let remaining = Ref(transaction_max_error_detail_nodes)
+      if !bounded_error_details(value, 0, remaining) {
+        raise transaction_error(
+          "office.transaction.invalid_contract",
+          "mutation failure details exceed the bounded JSON contract",
+        )
+      }
+      TransactionError(code~, message~, details=Some(value))
+    }
+    None => TransactionError(code~, message~, details=None)
+  }
+}
+
+///|
 fn normalize_mutation_error(error : TransactionError) -> TransactionError {
   normalize_transaction_error(
     error, "office.transaction.mutation_failed", "mutation callback raised an invalid TransactionError code",
@@ -217,7 +249,7 @@ pub fn TransactionError::to_protocol_error(
   self : TransactionError,
 ) -> @office.ProtocolError {
   let normalized = normalize_transaction_error(
-    self, "office.transaction.invalid_contract", "TransactionError code is outside the office.transaction namespace",
+    self, "office.transaction.invalid_contract", "TransactionError code is outside the bounded office.* namespace",
   )
   match normalized {
     TransactionError(code~, message~, details~) =>
