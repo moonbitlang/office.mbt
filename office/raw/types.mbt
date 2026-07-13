@@ -32,6 +32,12 @@ fn raw_text_within_scalar_limit(value : String, limit : Int) -> Bool {
 }
 
 ///|
+/// Checks that a string contains only well-formed Unicode scalar values.
+fn raw_text_is_well_formed(value : String) -> Bool {
+  raw_text_within_scalar_limit(value, value.length())
+}
+
+///|
 /// A stable failure from the validated raw OOXML boundary.
 pub(all) suberror RawError {
   RawError(code~ : String, message~ : String, details~ : Json?)
@@ -49,6 +55,9 @@ pub impl Show for RawError with fn output(self, logger) {
 fn bounded_raw_text(value : String, limit : Int) -> String {
   if limit <= 0 {
     return ""
+  }
+  if !raw_text_is_well_formed(value) {
+    return "<invalid UTF-16>"
   }
   let output = StringBuilder::new()
   let mut count = 0

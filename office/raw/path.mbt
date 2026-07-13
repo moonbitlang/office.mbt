@@ -66,7 +66,13 @@ fn raw_path_error(source : String, offset : Int, message : String) -> RawError {
     "office.raw.invalid_path",
     message,
     details=Json::object({
-      "path": Json::string(bounded_raw_text(source, 240)),
+      "path": Json::string(
+        if raw_text_is_well_formed(source) {
+          bounded_raw_text(source, 240)
+        } else {
+          "<invalid UTF-16>"
+        },
+      ),
       "offset": Json::number(offset.to_double()),
     }),
   )
@@ -315,11 +321,12 @@ fn parse_raw_path(
   source : String,
   namespaces : Map[String, String],
 ) -> RawPath raise RawError {
-  if source.length() == 0 || source.length() > raw_max_path_length {
+  if !raw_text_within_scalar_limit(source, raw_max_path_length) ||
+    source.length() == 0 {
     raise raw_path_error(
       source,
       0,
-      "raw XML path must contain 1 to \{raw_max_path_length} UTF-16 code units",
+      "raw XML path must contain 1 to \{raw_max_path_length} Unicode scalar values",
     )
   }
   let parser = RawPathParser::{ source, offset: 0, namespaces }
@@ -505,6 +512,11 @@ fn edit_path_namespaces(
 fn checked_optional_fragment(value : String?) -> String? raise RawError {
   match value {
     Some(xml) => {
+      if !raw_text_is_well_formed(xml) {
+        raise raw_error(
+          "office.raw.invalid_fragment", "XML input contains an isolated UTF-16 surrogate",
+        )
+      }
       let bytes = @utf8.encode(xml)
       if bytes.length() == 0 || bytes.length() > raw_max_fragment_bytes {
         raise raw_error(
@@ -531,16 +543,31 @@ pub fn raw_edit_request(
   all? : Bool = false,
 ) -> RawEditRequest raise RawError {
   validate_part_selector(part)
-  if path.length() == 0 || path.length() > raw_max_path_length {
+  if !raw_text_within_scalar_limit(path, raw_max_path_length) ||
+    path.length() == 0 {
     raise raw_path_error(
       path,
       0,
-      "raw XML path must contain 1 to \{raw_max_path_length} UTF-16 code units",
+      "raw XML path must contain 1 to \{raw_max_path_length} Unicode scalar values",
     )
   }
   let xml = checked_optional_fragment(xml)
+  match attribute {
+    Some(attribute_name) =>
+      if !raw_text_is_well_formed(attribute_name) {
+        raise raw_error(
+          "office.raw.invalid_attribute", "attribute name contains an isolated UTF-16 surrogate",
+        )
+      }
+    None => ()
+  }
   match value {
     Some(attribute_value) => {
+      if !raw_text_is_well_formed(attribute_value) {
+        raise raw_error(
+          "office.raw.invalid_attribute", "attribute value contains an isolated UTF-16 surrogate",
+        )
+      }
       let value_bytes = @utf8.encode(attribute_value).length()
       if value_bytes > raw_max_attribute_value_bytes {
         raise raw_error(

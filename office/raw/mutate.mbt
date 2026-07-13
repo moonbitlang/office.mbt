@@ -8,6 +8,11 @@ priv struct RawSpanEdit {
 
 ///|
 fn checked_fragment_bytes(xml : String) -> Bytes raise RawError {
+  if !raw_text_is_well_formed(xml) {
+    raise raw_error(
+      "office.raw.invalid_fragment", "XML fragment contains an isolated UTF-16 surrogate",
+    )
+  }
   let trimmed = xml.trim()
   if trimmed.has_prefix("<?xml ") ||
     trimmed.has_prefix("<?xml\t") ||
@@ -74,6 +79,11 @@ fn checked_fragment_bytes(xml : String) -> Bytes raise RawError {
 
 ///|
 fn checked_document_bytes(xml : String) -> Bytes raise RawError {
+  if !raw_text_is_well_formed(xml) {
+    raise raw_error(
+      "office.raw.invalid_xml", "replacement XML contains an isolated UTF-16 surrogate",
+    )
+  }
   let bytes = @utf8.encode(xml)
   if bytes.length() == 0 || bytes.length() > raw_max_fragment_bytes {
     raise raw_error(
@@ -109,7 +119,8 @@ fn parse_raw_attribute_name(
   source : String,
   namespaces : Map[String, String],
 ) -> RawExpandedName raise RawError {
-  if source.length() == 0 || source.length() > raw_max_name_length * 2 + 1 {
+  if source.length() == 0 ||
+    !raw_text_within_scalar_limit(source, raw_max_name_length * 2 + 1) {
     raise raw_error(
       "office.raw.invalid_attribute", "attribute name is empty or exceeds the bounded qualified-name limit",
     )
