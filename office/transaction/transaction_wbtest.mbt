@@ -453,6 +453,54 @@ async test "task cancellation waits for temporary-file cleanup" {
 }
 
 ///|
+async test "cancellation during ordinary-failure cleanup is re-observed" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let release = "\{directory}/cleanup-release"
+    let original = @word.new_blank_docx()
+    wb_write(input, original)
+    @async.with_task_group() <| group => {
+      let task = group.spawn(() => {
+        transact_with_faults(
+          transaction_options(input, output_path=output),
+          (_format, bytes) => transaction_mutation(bytes.to_owned()),
+          [],
+          {
+            fail_write: true,
+            fail_write_after_bytes: None,
+            stall_write_after_bytes: None,
+            fail_rename: false,
+            stall_after_temp: false,
+            post_rename_release: None,
+            concurrent_replacement: None,
+            concurrent_destination: None,
+            relocate_parent_to: None,
+            deny_cleanup: false,
+          },
+          cleanup_release=release,
+        )
+      })
+      while !@afs.exists(release + ".ready") {
+        @async.pause()
+      }
+      task.cancel()
+      wb_write(release, b"release")
+      let propagated = try {
+        ignore(task.wait())
+        false
+      } catch {
+        error => @async.is_cancellation_error(error)
+      }
+      assert_true(propagated)
+    }
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_false(@afs.exists(output))
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
 async test "post-rename cancellation still returns a committed report" {
   wb_with_transaction_dir(directory => {
     let input = "\{directory}/input.docx"

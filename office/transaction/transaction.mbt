@@ -101,6 +101,33 @@ fn filesystem_path(path : String) -> String {
 }
 
 ///|
+#cfg(target="native")
+fn reject_ambiguous_platform_path(_path : String, _label : String) -> Unit {
+  ()
+}
+
+///|
+#cfg(target="wasm")
+fn reject_ambiguous_platform_path(
+  path : String,
+  label : String,
+) -> Unit raise TransactionError {
+  let resolved = path_text(
+    @path.Path(normalize_path_separators(path)).resolve(),
+  )
+  if resolved.has_prefix("//") {
+    raise transaction_error(
+      "office.transaction.invalid_options",
+      "\{label} uses an ambiguous double-slash root that portable Wasm filesystems cannot identify safely",
+      details=Json::object({
+        "field": Json::string(label),
+        "file": Json::string(bounded_text(path, 160)),
+      }),
+    )
+  }
+}
+
+///|
 fn path_parent(path : String) -> String {
   let parent = path_text(@path.Path(normalize_path_separators(path)).dirname())
   if parent.length() == 0 {
@@ -191,6 +218,11 @@ async fn resolve_new_destination(path : String) -> String {
 
 ///|
 async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
+  reject_ambiguous_platform_path(options.input_path, "input_path")
+  match options.output_path {
+    Some(path) => reject_ambiguous_platform_path(path, "output_path")
+    None => ()
+  }
   let source_target = resolve_source(options.input_path)
   let source_leaf = path_leaf(source_target)
   let source_directory = publication_directory_open(
@@ -609,6 +641,7 @@ async fn publish_candidate(
   original : Bytes,
   candidate : Bytes,
   faults : TransactionFaults,
+  cleanup_release : String?,
 ) -> (Bool, Bool) {
   let temp = create_temp(policy)
   try {
@@ -744,7 +777,19 @@ async fn publish_candidate(
     (parent_synced, temp_clean)
   } catch {
     error => {
-      publication_temp_cleanup(temp, policy.output_path)
+      match cleanup_release {
+        Some(release) =>
+          publication_temp_cleanup(
+            temp,
+            policy.output_path,
+            cleanup_release=release,
+          )
+        None => publication_temp_cleanup(temp, policy.output_path)
+      }
+      if @async.is_being_cancelled() {
+        @async.pause()
+        raise error
+      }
       raise error
     }
   }
@@ -810,6 +855,7 @@ async fn transact_with_faults(
   validators : Array[TransactionValidator],
   faults : TransactionFaults,
   post_read_release? : String,
+  cleanup_release? : String,
 ) -> TransactionReport {
   let validators = validators.copy()
   validate_validator_set(validators)
@@ -865,7 +911,14 @@ async fn transact_with_faults(
   let changed = original != mutation.bytes
   let should_commit = !options.dry_run && (policy.mode is Output || changed)
   let (parent_synced, temp_clean) = if should_commit {
-    publish_candidate(options, policy, original, mutation.bytes, faults)
+    publish_candidate(
+      options,
+      policy,
+      original,
+      mutation.bytes,
+      faults,
+      cleanup_release,
+    )
   } else {
     (true, true)
   }

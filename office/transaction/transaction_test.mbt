@@ -418,6 +418,36 @@ async test "Wasm relative and absolute aliases resolve to one path" {
 }
 
 ///|
+#cfg(target="wasm")
+async test "Wasm rejects ambiguous double-root output aliases" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    guard input.has_prefix("/")
+    let ambiguous_alias = "/" + input
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let mut called = false
+    let code = transaction_error_code(() => {
+      @transaction.transact(
+        @transaction.transaction_options(
+          input,
+          output_path=ambiguous_alias,
+          overwrite=true,
+        ),
+        (_format, bytes) => {
+          called = true
+          @transaction.transaction_mutation(bytes.to_owned())
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.invalid_options")
+    assert_false(called)
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 async test "overwrite replaces only the requested output" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.docx"

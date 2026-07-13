@@ -1,0 +1,11 @@
+import {
+  "bobzhang/office/transaction",
+  "bobzhang/docx2html" @word,
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @afs,
+  "moonbitlang/async/process",
+  "moonbitlang/core/env",
+  "moonbitlang/x/path",
+} for "test"
+
+supported_targets = "native"

@@ -421,10 +421,25 @@ async fn publication_temp_cleanup(
   temp : PublicationTemp,
   output_path : String,
   fail_remove? : Bool = false,
+  cleanup_release? : String,
 ) -> Unit {
   @async.protect_from_cancel(
     () => {
       temp.file.close()
+      match cleanup_release {
+        Some(release) => {
+          @afs.write_file(
+            release + ".ready",
+            b"ready",
+            create_mode=CreateNew,
+            permission=0o600,
+          )
+          while !@afs.exists(release) {
+            @async.pause()
+          }
+        }
+        None => ()
+      }
       if temp.final_permission_applied {
         publication_set_permission(temp.path, 0o600) catch {
           error =>

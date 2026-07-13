@@ -54,22 +54,25 @@ never an ambiguous cancellation that could invite an unsafe retry.
   into XLSX, or use a symlink name to hide a mismatched target extension.
 - On POSIX hosts, staging files are forced to owner-only `0600` even under a
   restrictive process `umask`. The requested final permission (`0600` by
-  default) is applied, synced, and then atomically renamed as one
-  cancellation-shielded pre-commit boundary. A failed rename restores staging
-  access before identity-checked cleanup. Windows ignores the numeric POSIX
-  mode and inherits the destination directory's ACL; Wasm permission behavior
-  is host-defined.
+  default) is applied exactly with `chmod`, synced, and then atomically renamed
+  as one cancellation-shielded pre-commit boundary. Because an explicit
+  `chmod` is not restricted by the ambient `umask`, callers should request a
+  broader mode only intentionally. A failed rename restores staging access
+  before identity-checked cleanup. Windows ignores the numeric POSIX mode and
+  inherits the destination directory's ACL; Wasm permission behavior is
+  host-defined.
   Filesystem ownership and extended-attribute preservation remain outside the
   package transaction contract.
 
 All targets use `moonbitlang/async` for file reads, writes, syncing, cleanup,
 and rename. Native targets resolve existing paths before policy checks; Wasm
 uses normalized absolute paths because portable realpath and symlink identity
-are unavailable. Before rename and cleanup, the implementation compares the
-named staging entry with the bytes written through its open async file and
-refuses to publish or delete a substitute. Immediately before an in-place
-rename, the source is reopened and compared byte-for-byte with the original
-snapshot.
+are unavailable. Wasm rejects resolved paths with the ambiguous POSIX `//`
+root rather than guessing whether a host treats them as aliases or a distinct
+namespace. Before rename and cleanup, the implementation compares the named
+staging entry with the bytes written through its open async file and refuses to
+publish or delete a substitute. Immediately before an in-place rename, the
+source is reopened and compared byte-for-byte with the original snapshot.
 
 The final rename is atomic, but portable async filesystem APIs are path based:
 renaming an ancestor or replacing a directory entry between a check and its
