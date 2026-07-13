@@ -117,9 +117,11 @@ apply it during sizing, not after returning bytes. Archive-backed raw mutation
 APIs require the value and pass it to `zip.write_limited`, so a source-near-
 envelope edit is rejected in the output-storage-free plan before the candidate
 buffer exists. The callback receives the original immutable `Bytes` directly;
-a true no-op can return that same value without a whole-package copy. The
-transaction also checks the returned length immediately as a fail-closed
-contract backstop.
+archive-backed raw operations report an explicit reuse-original result before
+ZIP sizing when the edited part is byte-identical, and the callback resolves it
+to that same value without a whole-package copy. The transaction also checks
+the returned length immediately as a fail-closed contract backstop even when a
+custom callback ignores the supplied allowance.
 
 ZIP expansion and serialization do not hide another package-sized allocation
 inside that reserve. DEFLATE first validates and counts output without retaining
@@ -194,9 +196,9 @@ Successful reports use schema `office.transaction/1` inside the shared
 - preservation changes and counts;
 - structured portability or durability warnings.
 
-Failures convert to the same A2 protocol with stable
-`office.transaction.*` codes and bounded messages/details. Mutation callbacks
-may return warnings, but cannot emit output directly. Callback-raised public
-`TransactionError` values are normalized at the boundary: codes must remain in
-the transaction namespace, messages are bounded, and oversized detail trees
-are omitted before serialization.
+Failures convert to the same A2 protocol with stable bounded `office.*` codes
+and messages/details. Mutation callbacks may preserve subsystem codes such as
+`office.raw.invalid_path`, but cannot emit output directly. Callback-raised
+public `TransactionError` values are normalized at the boundary: codes must
+remain in the shared Office namespace, messages are bounded, and oversized
+detail trees are omitted before serialization.

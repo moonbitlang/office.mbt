@@ -55,6 +55,16 @@ test "validators, findings, and warnings are bounded contracts" {
   }
   assert_eq(
     contract_error_code(() => {
+      @transaction.transaction_identifier("office-portable-opc", (
+        _path,
+        _bytes,
+        _archive,
+      ) => Docx)
+    }),
+    "office.transaction.invalid_contract",
+  )
+  assert_eq(
+    contract_error_code(() => {
       @transaction.validation_finding("bad code", "message")
     }),
     "office.transaction.invalid_contract",

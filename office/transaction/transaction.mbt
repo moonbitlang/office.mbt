@@ -681,6 +681,7 @@ fn findings_json(findings : Array[ValidationFinding]) -> Json {
 ///|
 fn validate_validator_set(
   validators : Array[TransactionValidator],
+  identifier : TransactionIdentifier?,
 ) -> Unit raise TransactionError {
   if validators.length() > transaction_max_validators {
     raise transaction_error(
@@ -701,6 +702,14 @@ fn validate_validator_set(
         "office.transaction.invalid_contract",
         "duplicate validator name '\{validator.name}'",
       )
+    }
+    match identifier {
+      Some(identifier) if validator.name == identifier.name =>
+        raise transaction_error(
+          "office.transaction.invalid_contract",
+          "transaction identifier and validator names must be distinct; duplicate '\{validator.name}'",
+        )
+      _ => ()
     }
     names.push(validator.name)
   }
@@ -1111,7 +1120,7 @@ async fn transact_with_identifier_and_faults(
     )
   }
   let validators = validators.copy()
-  validate_validator_set(validators)
+  validate_validator_set(validators, identifier)
   let policy = resolve_policy(options)
   defer publication_directory_close(policy.source_directory)
   defer publication_directory_close(policy.destination_directory)
