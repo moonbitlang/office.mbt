@@ -46,7 +46,7 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
     ) => @raw.raw_identify_archive(path, archive))
     let docx_report = @transaction.transact(
       @transaction.transaction_options(docx_input, output_path=docx_output),
-      (_format, _bytes, archive, budget) => {
+      (_format, original, archive, budget) => {
         let mutation = @raw.raw_edit_archive(
           Docx,
           archive,
@@ -54,7 +54,7 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
           max_package_bytes=budget.max_candidate_package_bytes(),
         )
         @transaction.transaction_mutation_with_manifest(
-          mutation.candidate_bytes(),
+          mutation.result_bytes(original),
           [mutation.part_name()],
         )
       },
@@ -83,7 +83,7 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
     )
     let xlsx_report = @transaction.transact(
       @transaction.transaction_options(xlsx_input, output_path=xlsx_output),
-      (_format, _bytes, archive, budget) => {
+      (_format, original, archive, budget) => {
         let mutation = @raw.raw_edit_archive(
           Xlsx,
           archive,
@@ -91,7 +91,7 @@ async test "raw transaction outputs pass Microsoft OpenXML validation" {
           max_package_bytes=budget.max_candidate_package_bytes(),
         )
         @transaction.transaction_mutation_with_manifest(
-          mutation.candidate_bytes(),
+          mutation.result_bytes(original),
           [mutation.part_name()],
         )
       },

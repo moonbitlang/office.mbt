@@ -216,7 +216,12 @@ test "archive-backed raw APIs match byte-backed mutation without reinflation" {
     request,
     max_package_bytes=128 * 1024 * 1024,
   )
-  assert_eq(from_archive.candidate_bytes(), from_bytes.candidate_bytes())
+  assert_false(from_bytes.reuses_original())
+  assert_false(from_archive.reuses_original())
+  assert_eq(
+    from_archive.result_bytes(original),
+    from_bytes.result_bytes(original),
+  )
   assert_eq(from_archive.part_name(), from_bytes.part_name())
   assert_eq(from_archive.selected_count(), from_bytes.selected_count())
 }
@@ -251,6 +256,41 @@ test "archive-backed raw serialization applies caller budget before output" {
 }
 
 ///|
+test "archive-backed identical replacement reuses source before ZIP planning" {
+  let original = @word.new_blank_docx()
+  let archive = @zip.read_limited(
+    original,
+    max_entries=8192,
+    max_entry_uncompressed_bytes=64 * 1024 * 1024,
+    max_total_uncompressed_bytes=256 * 1024 * 1024,
+  )
+  let document = @raw.raw_read("input.docx", original, "/document").xml_text()
+  let mutation = @raw.raw_replace_part_archive(
+    Docx,
+    archive,
+    "/document",
+    document,
+    // Any package serialization would fail this bound. Success therefore
+    // proves the no-op returns before ZIP sizing or output allocation.
+    max_package_bytes=0,
+  )
+  assert_true(mutation.reuses_original())
+  assert_eq(mutation.result_bytes(original), original)
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_replace_part_archive(
+        Docx,
+        archive,
+        "/document",
+        document,
+        max_package_bytes=-1,
+      )
+    }),
+    "office.raw.invalid_request",
+  )
+}
+
+///|
 test "raw edit splices DOCX elements and preserves every other part payload" {
   let original = raw_test_mixed_zip_policies(@word.new_blank_docx())
   let add_first = @raw.raw_edit_request(
@@ -260,21 +300,23 @@ test "raw edit splices DOCX elements and preserves every other part payload" {
     xml=word_paragraph("First"),
   )
   let first = @raw.raw_edit(Docx, original, add_first)
-  inspect(first.part, content="word/document.xml")
-  inspect(first.match_count, content="1")
+  let first_bytes = first.result_bytes(original)
+  inspect(first.part_name(), content="word/document.xml")
+  inspect(first.selected_count(), content="1")
   debug_inspect(
-    archive_payload_differences(original, first.bytes),
+    archive_payload_differences(original, first_bytes),
     content="[\"word/document.xml\"]",
   )
-  assert_archive_metadata_preserved(original, first.bytes, "word/document.xml")
+  assert_archive_metadata_preserved(original, first_bytes, "word/document.xml")
   let add_second = @raw.raw_edit_request(
     "/document",
     "/w:document/w:body/w:p[2]",
     InsertAfter,
     xml=word_paragraph("Second"),
   )
-  let second = @raw.raw_edit(Docx, first.bytes, add_second)
-  let text = @raw.raw_read("result.docx", second.bytes, "/document").xml_text()
+  let second = @raw.raw_edit(Docx, first_bytes, add_second)
+  let second_bytes = second.result_bytes(first_bytes)
+  let text = @raw.raw_read("result.docx", second_bytes, "/document").xml_text()
   inspect(text.contains("First"), content="true")
   inspect(text.contains("Second"), content="true")
   inspect(
@@ -296,9 +338,10 @@ test "raw edit requires explicit all and applies namespace-aware attributes" {
       xml=word_paragraph("One") + "",
     ),
   )
+  let first_bytes = first.result_bytes(original)
   let second = @raw.raw_edit(
     Docx,
-    first.bytes,
+    first_bytes,
     @raw.raw_edit_request(
       "/document",
       "/w:document/w:body/w:p[1]",
@@ -306,6 +349,7 @@ test "raw edit requires explicit all and applies namespace-aware attributes" {
       xml=word_paragraph("Two"),
     ),
   )
+  let second_bytes = second.result_bytes(first_bytes)
   let ambiguous = @raw.raw_edit_request(
     "/document",
     "/w:document/w:body/w:p",
@@ -314,7 +358,7 @@ test "raw edit requires explicit all and applies namespace-aware attributes" {
     value="A&B\"C",
   )
   inspect(
-    raw_error_code(() => @raw.raw_edit(Docx, second.bytes, ambiguous)),
+    raw_error_code(() => @raw.raw_edit(Docx, second_bytes, ambiguous)),
     content="office.raw.ambiguous_path",
   )
   let all = @raw.raw_edit_request(
@@ -325,9 +369,13 @@ test "raw edit requires explicit all and applies namespace-aware attributes" {
     value="A&B\"C",
     all=true,
   )
-  let edited = @raw.raw_edit(Docx, second.bytes, all)
-  inspect(edited.match_count, content="3")
-  let text = @raw.raw_read("edited.docx", edited.bytes, "/document").xml_text()
+  let edited = @raw.raw_edit(Docx, second_bytes, all)
+  inspect(edited.selected_count(), content="3")
+  let text = @raw.raw_read(
+    "edited.docx",
+    edited.result_bytes(second_bytes),
+    "/document",
+  ).xml_text()
   inspect(raw_occurrences(text, "w:rsidR=\"A&amp;B&quot;C\""), content="3")
 }
 
@@ -343,7 +391,8 @@ test "raw edit supports attribute predicates replace and remove" {
     xml="<c xmlns=\"\{sheet_namespace}\" r=\"A1\" t=\"inlineStr\"><is><t>after</t></is></c>",
   )
   let replaced = @raw.raw_edit(Xlsx, original, replace)
-  let text = @raw.raw_read("edited.xlsx", replaced.bytes, "/sheet[1]").xml_text()
+  let replaced_bytes = replaced.result_bytes(original)
+  let text = @raw.raw_read("edited.xlsx", replaced_bytes, "/sheet[1]").xml_text()
   inspect(text.contains(">after<"), content="true")
   inspect(text.contains(">before<"), content="false")
   let remove = @raw.raw_edit_request(
@@ -351,8 +400,12 @@ test "raw edit supports attribute predicates replace and remove" {
     "/x:worksheet/x:sheetData/x:row[@r=\"1\"]",
     Remove,
   )
-  let removed = @raw.raw_edit(Xlsx, replaced.bytes, remove)
-  let removed_text = @raw.raw_read("edited.xlsx", removed.bytes, "/Sheet1").xml_text()
+  let removed = @raw.raw_edit(Xlsx, replaced_bytes, remove)
+  let removed_text = @raw.raw_read(
+    "edited.xlsx",
+    removed.result_bytes(replaced_bytes),
+    "/Sheet1",
+  ).xml_text()
   inspect(removed_text.contains("<row"), content="false")
 }
 
@@ -366,7 +419,11 @@ test "raw edit expands self-closing elements" {
     xml="<row xmlns=\"\{sheet_namespace}\" r=\"1\"/>",
   )
   let edited = @raw.raw_edit(Xlsx, original, append)
-  let text = @raw.raw_read("edited.xlsx", edited.bytes, "/sheet[1]").xml_text()
+  let text = @raw.raw_read(
+    "edited.xlsx",
+    edited.result_bytes(original),
+    "/sheet[1]",
+  ).xml_text()
   inspect(
     text.contains("<row xmlns=\"\{sheet_namespace}\" r=\"1\"/>"),
     content="true",
@@ -384,10 +441,9 @@ test "raw fragment insertion preserves standalone default namespace semantics" {
     xml="<row/>",
   )
   let edited = @raw.raw_edit(Xlsx, original, append)
+  let edited_bytes = edited.result_bytes(original)
   let text = @raw.raw_read(
-    "namespace-preserved.xlsx",
-    edited.bytes,
-    "/sheet[1]",
+    "namespace-preserved.xlsx", edited_bytes, "/sheet[1]",
   ).xml_text()
   assert_true(text.contains("<row xmlns=\"\"/>"))
   let namespaced_remove = @raw.raw_edit_request(
@@ -396,7 +452,7 @@ test "raw fragment insertion preserves standalone default namespace semantics" {
     Remove,
   )
   assert_eq(
-    raw_error_code(() => @raw.raw_edit(Xlsx, edited.bytes, namespaced_remove)),
+    raw_error_code(() => @raw.raw_edit(Xlsx, edited_bytes, namespaced_remove)),
     "office.raw.path_not_found",
   )
 }
@@ -509,6 +565,7 @@ test "raw all selection is capped before edits are materialized" {
     "/document",
     document.to_string(),
   )
+  let populated_bytes = populated.result_bytes(original)
   let remove_all = @raw.raw_edit_request(
     "/document",
     "/w:document/w:body/w:p",
@@ -516,7 +573,7 @@ test "raw all selection is capped before edits are materialized" {
     all=true,
   )
   inspect(
-    raw_error_code(() => @raw.raw_edit(Docx, populated.bytes, remove_all)),
+    raw_error_code(() => @raw.raw_edit(Docx, populated_bytes, remove_all)),
     content="office.raw.too_many_matches",
   )
 }
@@ -537,6 +594,7 @@ test "raw edit rejects aggregate output amplification before splicing" {
     "/document",
     document.to_string(),
   )
+  let populated_bytes = populated.result_bytes(original)
   let request = @raw.raw_edit_request(
     "/document",
     "/w:document/w:body/w:p",
@@ -546,7 +604,7 @@ test "raw edit rejects aggregate output amplification before splicing" {
     all=true,
   )
   assert_eq(
-    raw_error_code(() => @raw.raw_edit(Docx, populated.bytes, request)),
+    raw_error_code(() => @raw.raw_edit(Docx, populated_bytes, request)),
     "office.raw.resource_limit",
   )
   assert_eq(
@@ -575,7 +633,8 @@ test "raw attribute splices preserve XML whitespace values exactly" {
     value~,
   )
   let first = @raw.raw_edit(Docx, original, first_request)
-  let first_xml = @raw.raw_read("whitespace.docx", first.bytes, "/document").xml_text()
+  let first_bytes = first.result_bytes(original)
+  let first_xml = @raw.raw_read("whitespace.docx", first_bytes, "/document").xml_text()
   assert_true(first_xml.contains("test=\"a&#x9;b&#xA;c&#xD;d\""))
   let second_request = @raw.raw_edit_request(
     "/document",
@@ -584,9 +643,13 @@ test "raw attribute splices preserve XML whitespace values exactly" {
     attribute="matched",
     value="true",
   )
-  let second = @raw.raw_edit(Docx, first.bytes, second_request)
+  let second = @raw.raw_edit(Docx, first_bytes, second_request)
   assert_true(
-    @raw.raw_read("whitespace.docx", second.bytes, "/document")
+    @raw.raw_read(
+      "whitespace.docx",
+      second.result_bytes(first_bytes),
+      "/document",
+    )
     .xml_text()
     .contains("matched=\"true\""),
   )
@@ -597,8 +660,9 @@ test "raw XML scanner distinguishes declarations from xml-stylesheet PIs" {
   let original = @word.new_blank_docx()
   let replacement = "<?xml-stylesheet type=\"text/xsl\" href=\"style.xsl\"?><w:document xmlns:w=\"\{word_namespace}\"><w:body><w:sectPr/></w:body></w:document>"
   let replaced = @raw.raw_replace_part(Docx, original, "/document", replacement)
+  let replaced_bytes = replaced.result_bytes(original)
   assert_true(
-    @raw.raw_read("pi.docx", replaced.bytes, "/document")
+    @raw.raw_read("pi.docx", replaced_bytes, "/document")
     .xml_text()
     .has_prefix("<?xml-stylesheet"),
   )
@@ -608,9 +672,9 @@ test "raw XML scanner distinguishes declarations from xml-stylesheet PIs" {
     Append,
     xml="<w:p xmlns:w=\"\{word_namespace}\"><?xml-stylesheet type=\"text/xsl\"?></w:p>",
   )
-  let edited = @raw.raw_edit(Docx, replaced.bytes, append)
+  let edited = @raw.raw_edit(Docx, replaced_bytes, append)
   assert_true(
-    @raw.raw_read("pi.docx", edited.bytes, "/document")
+    @raw.raw_read("pi.docx", edited.result_bytes(replaced_bytes), "/document")
     .xml_text()
     .contains("<?xml-stylesheet type=\"text/xsl\"?>"),
   )

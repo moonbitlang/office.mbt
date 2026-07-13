@@ -303,18 +303,40 @@ pub struct RawEditRequest {
 }
 
 ///|
-/// Pure candidate package bytes and deterministic edit metadata.
-pub struct RawMutation {
-  bytes : Bytes
-  part : String
-  action : String
-  match_count : Int
+enum RawPackageResult {
+  ReuseOriginal
+  Serialized(Bytes)
 }
 
 ///|
-/// Returns the validated candidate package produced by this mutation.
-pub fn RawMutation::candidate_bytes(self : RawMutation) -> Bytes {
-  self.bytes
+/// Deterministic edit metadata plus an explicit package result. A byte-identical
+/// mutation records `ReuseOriginal` instead of serializing another package-sized
+/// buffer; callers resolve that state against the exact source `Bytes` supplied
+/// to the raw operation or paired with its bounded archive.
+pub struct RawMutation {
+  priv result : RawPackageResult
+  priv part : String
+  priv action : String
+  priv match_count : Int
+}
+
+///|
+/// Reports that the mutation is byte-identical and must reuse its source
+/// package without serialization or allocation.
+pub fn RawMutation::reuses_original(self : RawMutation) -> Bool {
+  self.result is ReuseOriginal
+}
+
+///|
+/// Resolves the mutation to package bytes. `original` must be the exact source
+/// package supplied to the byte-backed operation, or the source paired with the
+/// bounded archive passed to an archive-backed operation. The unchanged path
+/// returns that immutable `Bytes` value directly without copying.
+pub fn RawMutation::result_bytes(self : RawMutation, original : Bytes) -> Bytes {
+  match self.result {
+    ReuseOriginal => original
+    Serialized(candidate) => candidate
+  }
 }
 
 ///|
