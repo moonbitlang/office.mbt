@@ -28,6 +28,12 @@ test "transaction options reject unsafe or unbounded paths and permissions" {
   )
   assert_eq(
     contract_error_code(() => {
+      @transaction.transaction_options("input\u{0}.docx")
+    }),
+    "office.transaction.invalid_options",
+  )
+  assert_eq(
+    contract_error_code(() => {
       @transaction.transaction_options("input.docx", permission=0o1000)
     }),
     "office.transaction.invalid_options",

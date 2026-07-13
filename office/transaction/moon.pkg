@@ -4,6 +4,7 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/async/os_error",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
@@ -24,3 +25,11 @@ import {
 } for "wbtest"
 
 supported_targets = "native+wasm"
+
+options(
+  "native-stub": [ "pinned_io.c" ],
+  targets: {
+    "pinned_io.native.mbt": [ "native" ],
+    "pinned_io.wasm.mbt": [ "wasm" ],
+  },
+)

@@ -14,7 +14,7 @@ let transaction_max_part_count = 256
 let transaction_max_part_length = 1024
 
 ///|
-let transaction_max_warnings = 64
+let transaction_max_warnings = 63
 
 ///|
 let transaction_max_validator_findings = 64
@@ -234,6 +234,13 @@ fn checked_path(path : String, label : String) -> Unit raise TransactionError {
     raise transaction_error(
       "office.transaction.invalid_options",
       "\{label} must not be empty",
+      details=Json::object({ "field": Json::string(label) }),
+    )
+  }
+  if path.contains("\u{0}") {
+    raise transaction_error(
+      "office.transaction.invalid_options",
+      "\{label} must not contain a NUL character",
       details=Json::object({ "field": Json::string(label) }),
     )
   }
