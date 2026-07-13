@@ -131,6 +131,180 @@ fn ambiguous_sheet_alias_fixture() -> Bytes raise {
 }
 
 ///|
+fn hostile_relationship_docx_fixture() -> Bytes raise {
+  raw_test_archive([
+    (
+      "[Content_Types].xml",
+      @utf8.encode(
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/custom/main.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/><Override PartName=\"/custom/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/><Override PartName=\"/vendor/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/></Types>",
+      ),
+    ),
+    (
+      "_rels/.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"vendorMain\" Type=\"https://vendor.example/relationships/officeDocument\" Target=\"vendor/decoy.xml\"/><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"custom/main.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "custom/main.xml",
+      @utf8.encode(
+        "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:sectPr/></w:body></w:document>",
+      ),
+    ),
+    (
+      "custom/_rels/main.xml.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"vendorStyles\" Type=\"https://vendor.example/relationships/styles\" Target=\"../vendor/styles.xml\"/><Relationship Id=\"styles\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "custom/styles.xml",
+      @utf8.encode(
+        "<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+      ),
+    ),
+    ("vendor/styles.xml", @utf8.encode("<vendor/>")),
+    ("vendor/decoy.xml", @utf8.encode("<decoy/>")),
+  ])
+}
+
+///|
+fn hostile_relationship_xlsx_fixture() -> Bytes raise {
+  raw_test_archive([
+    (
+      "[Content_Types].xml",
+      @utf8.encode(
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/custom/book.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/data/good.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/data/evil.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/><Override PartName=\"/data/wrong-role.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/></Types>",
+      ),
+    ),
+    (
+      "_rels/.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"custom/book.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "custom/book.xml",
+      @utf8.encode(
+        "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"https://vendor.example/relationships\"><sheets><sheet name=\"Good\" sheetId=\"1\" v:id=\"evil\" r:id=\"good\"/><sheet name=\"WrongRole\" sheetId=\"2\" r:id=\"wrongRole\"/><sheet name=\"WrongType\" sheetId=\"3\" r:id=\"wrongType\"/></sheets></workbook>",
+      ),
+    ),
+    (
+      "custom/_rels/book.xml.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"evil\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"../data/evil.xml\"/><Relationship Id=\"good\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"../data/good.xml\"/><Relationship Id=\"wrongRole\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"../data/wrong-role.xml\"/><Relationship Id=\"wrongType\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"../data/not-a-sheet.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "data/good.xml",
+      @utf8.encode(
+        "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData/></worksheet>",
+      ),
+    ),
+    (
+      "data/evil.xml",
+      @utf8.encode(
+        "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData/></worksheet>",
+      ),
+    ),
+    (
+      "data/wrong-role.xml",
+      @utf8.encode(
+        "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData/></worksheet>",
+      ),
+    ),
+    ("data/not-a-sheet.xml", @utf8.encode("<other/>")),
+  ])
+}
+
+///|
+fn mixed_case_docx_fixture() -> Bytes raise {
+  raw_test_archive([
+    (
+      "[Content_Types].xml",
+      @utf8.encode(
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/CUSTOM/MAIN.XML\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
+      ),
+    ),
+    (
+      "_rels/.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"custom/main.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "CUSTOM/MAIN.XML",
+      @utf8.encode(
+        "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:sectPr/></w:body></w:document>",
+      ),
+    ),
+    (
+      "CUSTOM/_rels/MAIN.XML.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+      ),
+    ),
+  ])
+}
+
+///|
+fn mixed_case_xlsx_fixture() -> Bytes raise {
+  raw_test_archive([
+    (
+      "[Content_Types].xml",
+      @utf8.encode(
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/CUSTOM/BOOK.XML\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/><Override PartName=\"/DATA/FIRST.XML\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/></Types>",
+      ),
+    ),
+    (
+      "_rels/.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"custom/book.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "CUSTOM/BOOK.XML",
+      @utf8.encode(
+        "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Mixed\" sheetId=\"1\" r:id=\"sheet\"/></sheets></workbook>",
+      ),
+    ),
+    (
+      "CUSTOM/_rels/BOOK.XML.rels",
+      @utf8.encode(
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"sheet\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"../data/first.xml\"/></Relationships>",
+      ),
+    ),
+    (
+      "DATA/FIRST.XML",
+      @utf8.encode(
+        "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData/></worksheet>",
+      ),
+    ),
+  ])
+}
+
+///|
+fn colliding_literal_docx_fixture() -> Bytes raise {
+  let source = @zip.read(relocated_docx_fixture())
+  let output = @zip.Archive::new()
+  for entry in source.entries() {
+    let data = if entry.name() == "[Content_Types].xml" {
+      @utf8.encode(
+        @utf8.decode(entry.data()).replace(
+          old="</Types>",
+          new="<Override PartName=\"/document\" ContentType=\"application/xml\"/></Types>",
+        ),
+      )
+    } else {
+      entry.data()
+    }
+    output.add(entry.name(), data)
+  }
+  output.add("document", @utf8.encode("<literal/>"))
+  @zip.write(output)
+}
+
+///|
 fn raw_reencode_package_xml_as_utf16(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
   let result = @zip.Archive::new()
@@ -283,4 +457,97 @@ test "case-insensitive semantic alias collisions fail closed" {
     @raw.raw_read("ambiguous.xlsx", data, "/sheet[2]").info.name,
     content="data/second.xml",
   )
+}
+
+///|
+test "raw aliases trust only standardized relationship types and content types" {
+  let docx = hostile_relationship_docx_fixture()
+  let docx_inventory = @raw.raw_inventory("hostile.docx", docx)
+  assert_eq(
+    inventory_alias_target(docx_inventory, "/document"),
+    Some("custom/main.xml"),
+  )
+  assert_eq(
+    inventory_alias_target(docx_inventory, "/styles"),
+    Some("custom/styles.xml"),
+  )
+  let xlsx = hostile_relationship_xlsx_fixture()
+  let xlsx_inventory = @raw.raw_inventory("hostile.xlsx", xlsx)
+  assert_eq(
+    inventory_alias_target(xlsx_inventory, "/Good"),
+    Some("data/good.xml"),
+  )
+  assert_eq(inventory_alias_target(xlsx_inventory, "/WrongRole"), None)
+  assert_eq(inventory_alias_target(xlsx_inventory, "/WrongType"), None)
+  assert_eq(
+    @raw.raw_read("hostile.xlsx", xlsx, "/sheet[1]").info.name,
+    "data/good.xml",
+  )
+}
+
+///|
+test "raw relationship targets resolve to exact archive spelling" {
+  let data = mixed_case_docx_fixture()
+  let inventory = @raw.raw_inventory("mixed.docx", data)
+  assert_eq(
+    inventory_alias_target(inventory, "/document"),
+    Some("CUSTOM/MAIN.XML"),
+  )
+  assert_eq(
+    @raw.raw_read("mixed.docx", data, "/document").info.name,
+    "CUSTOM/MAIN.XML",
+  )
+  let request = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body",
+    SetAttribute,
+    attribute="mixed",
+    value="true",
+  )
+  let edited = @raw.raw_edit(Docx, data, request)
+  assert_eq(edited.part, "CUSTOM/MAIN.XML")
+  assert_true(
+    @raw.raw_read("mixed.docx", edited.bytes, "part:/CUSTOM/MAIN.XML")
+    .xml_text()
+    .contains("mixed=\"true\""),
+  )
+  let xlsx = mixed_case_xlsx_fixture()
+  let xlsx_inventory = @raw.raw_inventory("mixed.xlsx", xlsx)
+  assert_eq(
+    inventory_alias_target(xlsx_inventory, "/Mixed"),
+    Some("DATA/FIRST.XML"),
+  )
+  assert_eq(
+    @raw.raw_read("mixed.xlsx", xlsx, "/sheet[1]").info.name,
+    "DATA/FIRST.XML",
+  )
+  let xlsx_request = @raw.raw_edit_request(
+    "/sheet[1]",
+    "/x:worksheet/x:sheetData",
+    SetAttribute,
+    attribute="mixed",
+    value="true",
+  )
+  let xlsx_edited = @raw.raw_edit(Xlsx, xlsx, xlsx_request)
+  assert_eq(xlsx_edited.part, "DATA/FIRST.XML")
+  assert_true(
+    @raw.raw_read("mixed.xlsx", xlsx_edited.bytes, "part:/DATA/FIRST.XML")
+    .xml_text()
+    .contains("mixed=\"true\""),
+  )
+}
+
+///|
+test "raw selector collisions require an explicit alias or literal mode" {
+  let data = colliding_literal_docx_fixture()
+  try @raw.raw_read("collision.docx", data, "/document") catch {
+    RawError(code~, ..) => assert_eq(code, "office.raw.ambiguous_part")
+  } noraise {
+    _ => fail("expected alias-literal collision to fail closed")
+  }
+  let semantic = @raw.raw_read("collision.docx", data, "alias:/document")
+  assert_eq(semantic.info.name, "custom/main.xml")
+  let literal = @raw.raw_read("collision.docx", data, "part:/document")
+  assert_eq(literal.info.name, "document")
+  assert_eq(literal.xml_text(), "<literal/>")
 }

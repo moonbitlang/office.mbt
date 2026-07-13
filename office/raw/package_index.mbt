@@ -14,6 +14,24 @@ let raw_max_total_uncompressed_bytes : Int = 256 * 1024 * 1024
 let raw_max_alias_length = 1024
 
 ///|
+let transitional_office_relationship_prefix = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+
+///|
+let strict_office_relationship_prefix = "http://purl.oclc.org/ooxml/officeDocument/relationships/"
+
+///|
+let transitional_office_relationship_namespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+///|
+let strict_office_relationship_namespace = "http://purl.oclc.org/ooxml/officeDocument/relationships"
+
+///|
+let transitional_spreadsheet_namespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+
+///|
+let strict_spreadsheet_namespace = "http://purl.oclc.org/ooxml/spreadsheetml/main"
+
+///|
 priv struct ContentTypeTable {
   defaults : Map[String, String]
   overrides : Map[String, String]
@@ -65,21 +83,6 @@ fn xml_name_uri(value : String) -> String {
   } else {
     ""
   }
-}
-
-///|
-fn xml_attribute_by_local(
-  element : @xml.XmlElement,
-  local_name : String,
-  namespaced? : Bool = false,
-) -> String? {
-  for name, value in element.attributes {
-    if xml_name_local(name) == local_name &&
-      (!namespaced || xml_name_uri(name) != "") {
-      return Some(value)
-    }
-  }
-  None
 }
 
 ///|
@@ -175,15 +178,23 @@ fn normalize_manifest_part(value : String) -> String? {
 ///|
 fn parse_content_types(
   archive : @zip.Archive,
+  names : Map[String, String],
 ) -> ContentTypeTable raise RawError {
-  let bytes = match archive.get("[Content_Types].xml") {
+  let actual_name = match names.get(canonical_part_key("[Content_Types].xml")) {
     Some(value) => value
     None =>
       raise raw_error(
         "office.raw.invalid_package", "package is missing /[Content_Types].xml",
       )
   }
-  let root = parse_xml_bytes("[Content_Types].xml", bytes)
+  let bytes = match archive.get(actual_name) {
+    Some(value) => value
+    None =>
+      raise raw_error(
+        "office.raw.invalid_package", "package index lost /[Content_Types].xml",
+      )
+  }
+  let root = parse_xml_bytes(actual_name, bytes)
   let defaults : Map[String, String] = Map([])
   let overrides : Map[String, String] = Map([])
   for child in root.children {
@@ -261,10 +272,18 @@ fn relationships_part_for(source : String) -> String {
 }
 
 ///|
-fn relationship_role(kind : String) -> String {
-  match kind.rev_find("/") {
-    Some(slash) if slash + 1 < kind.length() => kind[slash + 1:].to_owned()
-    _ => kind
+fn office_relationship_role(kind : String) -> String? {
+  let prefix = if kind.has_prefix(transitional_office_relationship_prefix) {
+    transitional_office_relationship_prefix
+  } else if kind.has_prefix(strict_office_relationship_prefix) {
+    strict_office_relationship_prefix
+  } else {
+    return None
+  }
+  if kind.length() == prefix.length() {
+    None
+  } else {
+    Some(kind[prefix.length():].to_owned())
   }
 }
 
@@ -316,7 +335,14 @@ fn parse_relationships(
     Some(value) => value
     None => return []
   }
-  let bytes = pkg.archive.get(canonical).unwrap()
+  let bytes = match pkg.archive.get(canonical) {
+    Some(value) => value
+    None =>
+      raise raw_error(
+        "office.raw.invalid_package",
+        "package index lost relationship part '/\{canonical}'",
+      )
+  }
   let root = parse_xml_bytes(canonical, bytes)
   let output : Array[RawRelationship] = []
   for child in root.children {
@@ -334,7 +360,15 @@ fn parse_relationships(
             } else {
               match normalize_relationship_target(source_base(source), target) {
                 Some(resolved) =>
-                  output.push({ id, kind, target: resolved, external: false })
+                  match pkg.names.get(canonical_part_key(resolved)) {
+                    Some(actual) =>
+                      output.push({ id, kind, target: actual, external: false })
+                    None =>
+                      raise raw_error(
+                        "office.raw.invalid_relationship",
+                        "relationship '\{id}' in '/\{canonical}' targets missing part '/\{resolved}'",
+                      )
+                  }
                 None =>
                   raise raw_error(
                     "office.raw.invalid_relationship",
@@ -358,19 +392,23 @@ fn add_alias(pkg : RawPackage, alias_name : String, part : String) -> Unit {
     return
   }
   let key = alias_name.to_lower()
-  if !key.has_prefix("/") || !pkg.names.contains(canonical_part_key(part)) {
+  if !key.has_prefix("/") {
     return
   }
-  match pkg.aliases.get(key) {
-    Some(parts) => if !parts.contains(part) { parts.push(part) }
-    None => pkg.aliases[key] = [part]
+  let actual_part = match pkg.names.get(canonical_part_key(part)) {
+    Some(value) => value
+    None => return
   }
-  match pkg.part_aliases.get(canonical_part_key(part)) {
+  match pkg.aliases.get(key) {
+    Some(parts) => if !parts.contains(actual_part) { parts.push(actual_part) }
+    None => pkg.aliases[key] = [actual_part]
+  }
+  match pkg.part_aliases.get(canonical_part_key(actual_part)) {
     Some(aliases) =>
       if !aliases.contains(alias_name) {
         aliases.push(alias_name)
       }
-    None => pkg.part_aliases[canonical_part_key(part)] = [alias_name]
+    None => pkg.part_aliases[canonical_part_key(actual_part)] = [alias_name]
   }
 }
 
@@ -380,7 +418,7 @@ fn find_main_part(pkg : RawPackage) -> String raise RawError {
   let found : Array[String] = []
   for relationship in relationships {
     if !relationship.external &&
-      relationship_role(relationship.kind) == "officeDocument" {
+      office_relationship_role(relationship.kind) == Some("officeDocument") {
       found.push(relationship.target)
     }
   }
@@ -398,16 +436,113 @@ fn find_main_part(pkg : RawPackage) -> String raise RawError {
 }
 
 ///|
+fn expected_relationship_content_type(
+  format : @office.DocumentFormat,
+  role : String,
+) -> String? {
+  match (format, role) {
+    (Docx, "styles") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+      )
+    (Docx, "settings") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml",
+      )
+    (Docx, "numbering") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
+      )
+    (Docx, "comments") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+      )
+    (Docx, "footnotes") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+      )
+    (Docx, "endnotes") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
+      )
+    (Docx, "header") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+      )
+    (Docx, "footer") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+      )
+    (Xlsx, "styles") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml",
+      )
+    (Xlsx, "sharedStrings") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml",
+      )
+    (Xlsx, "worksheet") =>
+      Some(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
+      )
+    (_, "theme") =>
+      Some("application/vnd.openxmlformats-officedocument.theme+xml")
+    _ => None
+  }
+}
+
+///|
+fn relationship_matches_role(
+  pkg : RawPackage,
+  relationship : RawRelationship,
+  role : String,
+) -> Bool {
+  if relationship.external ||
+    office_relationship_role(relationship.kind) != Some(role) {
+    return false
+  }
+  match expected_relationship_content_type(pkg.format, role) {
+    Some(expected) =>
+      pkg.content_types.for_part(relationship.target).trim().to_lower() ==
+      expected.to_lower()
+    None => true
+  }
+}
+
+///|
 fn relationship_target_by_id(
+  pkg : RawPackage,
   relationships : ArrayView[RawRelationship],
   id : String,
+  role : String,
 ) -> String? {
   for relationship in relationships {
-    if relationship.id == id && !relationship.external {
+    if relationship.id == id &&
+      relationship_matches_role(pkg, relationship, role) {
       return Some(relationship.target)
     }
   }
   None
+}
+
+///|
+fn spreadsheet_relationship_id(
+  element : @xml.XmlElement,
+) -> String? raise RawError {
+  let transitional = element.attributes.get(
+    "{\{transitional_office_relationship_namespace}}id",
+  )
+  let strict = element.attributes.get(
+    "{\{strict_office_relationship_namespace}}id",
+  )
+  match (transitional, strict) {
+    (Some(id), None) | (None, Some(id)) => Some(id)
+    (None, None) => None
+    (Some(_), Some(_)) =>
+      raise raw_error(
+        "office.raw.invalid_relationship", "worksheet declaration contains both Transitional and Strict relationship ids",
+      )
+  }
 }
 
 ///|
@@ -417,11 +552,13 @@ fn add_singleton_relationship_aliases(
   aliases : Map[String, String],
 ) -> Unit {
   for relationship in relationships {
-    if !relationship.external {
-      match aliases.get(relationship_role(relationship.kind)) {
-        Some(alias_name) => add_alias(pkg, alias_name, relationship.target)
-        None => ()
-      }
+    match office_relationship_role(relationship.kind) {
+      Some(role) if relationship_matches_role(pkg, relationship, role) =>
+        match aliases.get(role) {
+          Some(alias_name) => add_alias(pkg, alias_name, relationship.target)
+          None => ()
+        }
+      _ => ()
     }
   }
 }
@@ -444,15 +581,12 @@ fn add_docx_aliases(pkg : RawPackage) -> Unit raise RawError {
   let mut header = 0
   let mut footer = 0
   for relationship in relationships {
-    if relationship.external {
-      continue
-    }
-    match relationship_role(relationship.kind) {
-      "header" => {
+    match office_relationship_role(relationship.kind) {
+      Some("header") if relationship_matches_role(pkg, relationship, "header") => {
         header = header + 1
         add_alias(pkg, "/header[\{header}]", relationship.target)
       }
-      "footer" => {
+      Some("footer") if relationship_matches_role(pkg, relationship, "footer") => {
         footer = footer + 1
         add_alias(pkg, "/footer[\{footer}]", relationship.target)
       }
@@ -481,22 +615,31 @@ fn add_xlsx_aliases(pkg : RawPackage) -> Unit raise RawError {
       )
   }
   let workbook = parse_xml_bytes(pkg.main_part, workbook_bytes)
+  let workbook_namespace = xml_name_uri(workbook.name)
+  if workbook_namespace != transitional_spreadsheet_namespace &&
+    workbook_namespace != strict_spreadsheet_namespace {
+    raise raw_error(
+      "office.raw.invalid_package",
+      "workbook part '/\{pkg.main_part}' has an unsupported namespace",
+    )
+  }
+  let sheets_element_name = "{\{workbook_namespace}}sheets"
+  let sheet_element_name = "{\{workbook_namespace}}sheet"
   let mut sheet_index = 0
   for sheets_child in workbook.children {
     match sheets_child {
-      XmlElement(sheets) if xml_name_local(sheets.name) == "sheets" =>
+      XmlElement(sheets) if sheets.name == sheets_element_name =>
         for child in sheets.children {
           match child {
-            XmlElement(sheet) if xml_name_local(sheet.name) == "sheet" => {
+            XmlElement(sheet) if sheet.name == sheet_element_name => {
               let name = sheet.attributes.get("name")
-              let relationship_id = xml_attribute_by_local(
-                sheet,
-                "id",
-                namespaced=true,
-              )
+              let relationship_id = spreadsheet_relationship_id(sheet)
               match (name, relationship_id) {
                 (Some(name), Some(id)) =>
-                  match relationship_target_by_id(relationships, id) {
+                  match
+                    relationship_target_by_id(
+                      pkg, relationships, id, "worksheet",
+                    ) {
                     Some(part) => {
                       sheet_index = sheet_index + 1
                       add_alias(pkg, "/sheet[\{sheet_index}]", part)
@@ -539,7 +682,7 @@ fn package_from_archive(
   for entry in archive.entries() {
     names[canonical_part_key(entry.name())] = entry.name()
   }
-  let content_types = parse_content_types(archive)
+  let content_types = parse_content_types(archive, names)
   let pkg = RawPackage::{
     format,
     archive,
@@ -620,8 +763,7 @@ fn open_raw_package_for_format(
 ///|
 fn validate_part_selector(value : String) -> Unit raise RawError {
   if value.length() == 0 ||
-    value.length() > raw_max_alias_length ||
-    !value.has_prefix("/") ||
+    value.length() > raw_max_alias_length + 6 ||
     value.contains("\\") ||
     value.contains("\u{0}") {
     raise raw_error(
@@ -640,18 +782,23 @@ fn RawPackage::resolve_part(
   selector : String,
 ) -> String raise RawError {
   validate_part_selector(selector)
-  let alias_matches = self.aliases.get(selector.to_lower())
-  match alias_matches {
-    Some([part]) => return part
-    Some(parts) if parts.length() > 1 =>
-      raise raw_error(
-        "office.raw.ambiguous_part",
-        "part alias '\{selector}' resolves to multiple package parts",
-        details=Json::object({ "part": Json::string(selector) }),
-      )
-    _ => ()
+  let (mode, selected) = if selector.has_prefix("part:") {
+    ("part", selector[5:].to_owned())
+  } else if selector.has_prefix("alias:") {
+    ("alias", selector[6:].to_owned())
+  } else {
+    ("auto", selector)
   }
-  let literal = selector[1:].to_owned()
+  if !selected.has_prefix("/") || selected.length() > raw_max_alias_length {
+    raise raw_error(
+      "office.raw.invalid_part",
+      "part selectors must use /name, part:/name, or alias:/name syntax",
+      details=Json::object({
+        "part": Json::string(bounded_raw_text(selector, 160)),
+      }),
+    )
+  }
+  let literal = selected[1:].to_owned()
   if literal == "" {
     raise raw_error(
       "office.raw.unknown_part", "part selector '/' does not name a package part",
@@ -664,12 +811,75 @@ fn RawPackage::resolve_part(
       )
     }
   }
-  match self.names.get(canonical_part_key(literal)) {
-    Some(name) => name
-    None =>
+  let literal_match = self.names.get(canonical_part_key(literal))
+  let alias_matches = self.aliases.get(selected.to_lower())
+  if mode == "part" {
+    return match literal_match {
+      Some(name) => name
+      None =>
+        raise raw_error(
+          "office.raw.unknown_part",
+          "package does not contain literal part '\{bounded_raw_text(selected, 160)}'",
+          details=Json::object({
+            "part": Json::string(bounded_raw_text(selector, 160)),
+            "mode": Json::string("part"),
+          }),
+        )
+    }
+  }
+  if mode == "alias" {
+    return match alias_matches {
+      Some([part]) => part
+      Some(_) =>
+        raise raw_error(
+          "office.raw.ambiguous_part",
+          "semantic alias '\{selected}' resolves to multiple package parts",
+          details=Json::object({
+            "part": Json::string(bounded_raw_text(selector, 160)),
+            "mode": Json::string("alias"),
+          }),
+        )
+      None =>
+        raise raw_error(
+          "office.raw.unknown_part",
+          "package does not define semantic alias '\{bounded_raw_text(selected, 160)}'",
+          details=Json::object({
+            "part": Json::string(bounded_raw_text(selector, 160)),
+            "mode": Json::string("alias"),
+          }),
+        )
+    }
+  }
+  match (alias_matches, literal_match) {
+    (Some([part]), Some(literal_part)) =>
+      if canonical_part_key(part) == canonical_part_key(literal_part) {
+        literal_part
+      } else {
+        raise raw_error(
+          "office.raw.ambiguous_part",
+          "selector '\{selected}' names both a semantic alias and a different literal package part; use alias: or part:",
+          details=Json::object({
+            "part": Json::string(bounded_raw_text(selector, 160)),
+            "alias_selector": Json::string("alias:" + selected),
+            "literal_selector": Json::string("part:" + selected),
+          }),
+        )
+      }
+    (Some([part]), None) => part
+    (Some(_), _) =>
+      raise raw_error(
+        "office.raw.ambiguous_part",
+        "semantic alias '\{selected}' resolves to multiple package parts",
+        details=Json::object({
+          "part": Json::string(bounded_raw_text(selector, 160)),
+          "alias_selector": Json::string("alias:" + selected),
+        }),
+      )
+    (None, Some(name)) => name
+    (None, None) =>
       raise raw_error(
         "office.raw.unknown_part",
-        "package does not contain part '\{bounded_raw_text(selector, 160)}'",
+        "package does not contain part or alias '\{bounded_raw_text(selected, 160)}'",
         details=Json::object({
           "part": Json::string(bounded_raw_text(selector, 160)),
         }),
@@ -678,14 +888,32 @@ fn RawPackage::resolve_part(
 }
 
 ///|
-fn RawPackage::part_info(self : RawPackage, name : String) -> RawPartInfo {
+fn RawPackage::part_bytes(
+  self : RawPackage,
+  name : String,
+) -> Bytes raise RawError {
+  match self.archive.get(name) {
+    Some(bytes) => bytes
+    None =>
+      raise raw_error(
+        "office.raw.invalid_package",
+        "package index lost part '/\{bounded_raw_text(name, 160)}'",
+      )
+  }
+}
+
+///|
+fn RawPackage::part_info(
+  self : RawPackage,
+  name : String,
+) -> RawPartInfo raise RawError {
   let aliases = self.part_aliases
     .get(canonical_part_key(name))
     .unwrap_or([])
     .copy()
   aliases.sort()
   let content_type = self.content_types.for_part(name)
-  let bytes = self.archive.get(name).unwrap()
+  let bytes = self.part_bytes(name)
   {
     name,
     content_type,
@@ -719,6 +947,6 @@ pub fn raw_read(
 ) -> RawPartData raise RawError {
   let pkg = open_raw_package(path, data)
   let name = pkg.resolve_part(part)
-  let bytes = pkg.archive.get(name).unwrap()
+  let bytes = pkg.part_bytes(name)
   { format: pkg.format, info: pkg.part_info(name), bytes }
 }
