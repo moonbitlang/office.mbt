@@ -232,12 +232,15 @@ fn ensure_flags_supported(flags : Int) -> Unit raise ZipError {
 ///|
 fn parse_zip64_extra(
   extra : BytesView,
+  raw_name : BytesView,
+  decoded_name : StringView,
   need_uncomp : Bool,
   need_comp : Bool,
   need_offset : Bool,
 ) -> (UInt64?, UInt64?, UInt64?) raise ZipError {
   let mut pos = 0
   let mut found_zip64 = false
+  let mut found_unicode_path = false
   let mut uncomp : UInt64? = None
   let mut comp : UInt64? = None
   let mut offset : UInt64? = None
@@ -254,7 +257,20 @@ fn parse_zip64_extra(
     let field = extra[pos:pos + data_size]
     pos = pos + data_size
     if header_id == unicode_path_extra_id {
-      raise UnsupportedFeature(msg="unicode path extra field not supported")
+      if found_unicode_path {
+        raise UnsupportedFeature(msg="duplicate unicode path extra field")
+      }
+      found_unicode_path = true
+      if field.length() < 5 || field[0] != 1 {
+        raise UnsupportedFeature(msg="invalid unicode path extra field")
+      }
+      if read_u32_le_at_raw(field, 1) != crc32(raw_name) {
+        raise UnsupportedFeature(msg="unicode path extra field CRC mismatch")
+      }
+      let unicode_name = decode_name(field[5:], 0)
+      if unicode_name[:] != decoded_name {
+        raise UnsupportedFeature(msg="unicode path extra field name mismatch")
+      }
     } else if header_id == 0x0001 {
       if found_zip64 {
         raise UnsupportedFeature(msg="duplicate zip64 extra field")
@@ -486,7 +502,12 @@ fn read_entry_record(
   let need_local_uncomp = uncomp_size_raw == max_u32
   let need_local_comp = comp_size_raw == max_u32
   let (local_zip_uncomp, local_zip_comp, _) = parse_zip64_extra(
-    local_extra, need_local_uncomp, need_local_comp, false,
+    local_extra,
+    local_name,
+    meta.name,
+    need_local_uncomp,
+    need_local_comp,
+    false,
   )
   if has_descriptor {
     if local_crc32 != 0 && local_crc32 != meta.crc32 {
@@ -748,7 +769,7 @@ fn read_impl(
     let need_comp = comp_size_raw == max_u32
     let need_offset = local_offset_raw == max_u32
     let (zip_uncomp, zip_comp, zip_offset) = parse_zip64_extra(
-      extra_bytes, need_uncomp, need_comp, need_offset,
+      extra_bytes, name_bytes, name, need_uncomp, need_comp, need_offset,
     )
     let uncomp_size = if need_uncomp {
       match zip_uncomp {
@@ -1145,7 +1166,9 @@ test "zip64 extra values cannot escape their declared field" {
     // Unrelated eight-byte field that must not supply the ZIP64 value.
      0xFE, 0xCA, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   ]
-  try parse_zip64_extra(followed_by_other_field, true, false, false) catch {
+  try
+    parse_zip64_extra(followed_by_other_field, b"", "", true, false, false)
+  catch {
     UnsupportedFeature(msg~) =>
       inspect(msg, content="zip64 extra field size mismatch")
     _ => fail("expected bounded ZIP64 field failure")
@@ -1153,7 +1176,9 @@ test "zip64 extra values cannot escape their declared field" {
     _ => fail("expected bounded ZIP64 field failure")
   }
   let trailing_partial_header : Bytes = [0xFE, 0xCA, 0x00, 0x00, 0x01]
-  try parse_zip64_extra(trailing_partial_header, false, false, false) catch {
+  try
+    parse_zip64_extra(trailing_partial_header, b"", "", false, false, false)
+  catch {
     UnsupportedFeature(msg~) =>
       inspect(msg, content="truncated zip extra field header")
     _ => fail("expected truncated extra-field failure")

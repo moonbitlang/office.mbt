@@ -485,12 +485,31 @@ test "zip read: Unicode Path extras cannot create alternate names" {
   for archive in [local_only, central_only] {
     try @zip.read(Bytes::from_array(archive)) catch {
       UnsupportedFeature(msg~) =>
-        inspect(msg, content="unicode path extra field not supported")
+        inspect(msg, content="unicode path extra field name mismatch")
       _ => fail("expected Unicode Path extra field to be rejected")
     } noraise {
       _ => fail("expected Unicode Path extra field to be rejected")
     }
   }
+  let matching_extra = zip_test_unicode_path_extra(name, name)
+  let matching : Array[Byte] = []
+  let local_offset = append_zip_test_local(
+    matching,
+    name,
+    data,
+    extra=matching_extra,
+  )
+  let central_offset = matching.length()
+  append_zip_test_central(
+    matching,
+    name,
+    data,
+    local_offset,
+    extra=matching_extra,
+  )
+  append_zip_test_eocd(matching, 1, central_offset)
+  let parsed = @zip.read(Bytes::from_array(matching))
+  inspect(parsed.get("safe.xml") == Some(data), content="true")
 }
 
 ///|
