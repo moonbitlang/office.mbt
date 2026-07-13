@@ -25,6 +25,84 @@ fn write_bytes(buf : Array[Byte], bytes : BytesView) -> Unit {
 }
 
 ///|
+/// Checks a write before the destination array grows. `base_length` accounts
+/// for bytes already held in another output segment (the central directory is
+/// assembled separately from local records). All arithmetic is subtraction
+/// based so a hostile size cannot overflow the check itself.
+fn check_output_growth(
+  buf : Array[Byte],
+  base_length : Int,
+  additional : Int,
+  max_output : Int?,
+) -> Unit raise ZipError {
+  if base_length < 0 || additional < 0 {
+    raise UnsupportedFeature(msg="negative ZIP output size")
+  }
+  match max_output {
+    Some(limit) => {
+      if limit < 0 {
+        raise UnsupportedFeature(msg="ZIP output limit must be non-negative")
+      }
+      if base_length > limit ||
+        buf.length() > limit - base_length ||
+        additional > limit - base_length - buf.length() {
+        raise OutputLimitExceeded(limit~)
+      }
+    }
+    None => ()
+  }
+}
+
+///|
+fn write_u16_le_bounded(
+  buf : Array[Byte],
+  value : Int,
+  max_output : Int?,
+) -> Unit raise ZipError {
+  check_output_growth(buf, 0, 2, max_output)
+  write_u16_le(buf, value)
+}
+
+///|
+fn write_u32_le_bounded(
+  buf : Array[Byte],
+  value : UInt,
+  max_output : Int?,
+) -> Unit raise ZipError {
+  check_output_growth(buf, 0, 4, max_output)
+  write_u32_le(buf, value)
+}
+
+///|
+fn write_u64_le_bounded(
+  buf : Array[Byte],
+  value : UInt64,
+  max_output : Int?,
+) -> Unit raise ZipError {
+  check_output_growth(buf, 0, 8, max_output)
+  write_u64_le(buf, value)
+}
+
+///|
+fn write_bytes_bounded(
+  buf : Array[Byte],
+  bytes : BytesView,
+  max_output : Int?,
+  base_length? : Int = 0,
+) -> Unit raise ZipError {
+  check_output_growth(buf, base_length, bytes.length(), max_output)
+  write_bytes(buf, bytes)
+}
+
+///|
+fn bounded_initial_capacity(requested : Int, max_output : Int?) -> Int {
+  match max_output {
+    Some(limit) if limit >= 0 && requested > limit => limit
+    _ => requested
+  }
+}
+
+///|
 fn write_u64_le(buf : Array[Byte], value : UInt64) -> Unit {
   for i in 0..<8 {
     buf.push(((value >> (8 * i)) & 0xff).to_byte())
@@ -86,6 +164,30 @@ fn build_zip64_extra(
 }
 
 ///|
+fn write_data_descriptor_bounded(
+  buf : Array[Byte],
+  crc : UInt,
+  comp_size : Int,
+  uncomp_size : Int,
+  zip64_sizes : Bool,
+  max_output : Int?,
+) -> Unit raise ZipError {
+  write_u32_le_bounded(
+    buf,
+    data_descriptor_sig.reinterpret_as_uint(),
+    max_output,
+  )
+  write_u32_le_bounded(buf, crc, max_output)
+  if zip64_sizes {
+    write_u64_le_bounded(buf, to_u64(comp_size), max_output)
+    write_u64_le_bounded(buf, to_u64(uncomp_size), max_output)
+  } else {
+    write_u32_le_bounded(buf, to_u32(comp_size), max_output)
+    write_u32_le_bounded(buf, to_u32(uncomp_size), max_output)
+  }
+}
+
+///|
 fn write_data_descriptor(
   buf : Array[Byte],
   crc : UInt,
@@ -93,15 +195,14 @@ fn write_data_descriptor(
   uncomp_size : Int,
   zip64_sizes : Bool,
 ) -> Unit raise ZipError {
-  write_u32_le(buf, data_descriptor_sig.reinterpret_as_uint())
-  write_u32_le(buf, crc)
-  if zip64_sizes {
-    write_u64_le(buf, to_u64(comp_size))
-    write_u64_le(buf, to_u64(uncomp_size))
-  } else {
-    write_u32_le(buf, to_u32(comp_size))
-    write_u32_le(buf, to_u32(uncomp_size))
-  }
+  write_data_descriptor_bounded(
+    buf,
+    crc,
+    comp_size,
+    uncomp_size,
+    zip64_sizes,
+    None,
+  )
 }
 
 ///|
@@ -213,16 +314,38 @@ fn patch_template_size(
 }
 
 ///|
+fn entry_payload(
+  out : Array[Byte],
+  entry : Entry,
+  max_output : Int?,
+) -> (Int, Bytes) raise ZipError {
+  match entry.compression() {
+    Store => (0, entry.data())
+    Deflate => {
+      let payload = match max_output {
+        Some(limit) => {
+          check_output_growth(out, 0, 0, max_output)
+          deflate_encode_limited(entry.data(), limit - out.length()) catch {
+            OutputLimitExceeded(_) => raise OutputLimitExceeded(limit~)
+            error => raise error
+          }
+        }
+        None => deflate_encode(entry.data())
+      }
+      (8, payload)
+    }
+  }
+}
+
+///|
 fn replacement_entry_records(
   out : Array[Byte],
   entry : Entry,
   local_offset : Int,
   template : SourceEntryTemplate,
+  max_output : Int?,
 ) -> Bytes raise ZipError {
-  let (method_id, payload) = match entry.compression() {
-    Store => (0, entry.data())
-    Deflate => (8, deflate_encode(entry.data()))
-  }
+  let (method_id, payload) = entry_payload(out, entry, max_output)
   if template.local_header_length < 30 ||
     template.local_header_length > template.local_record.length() ||
     template.central_record.length() < 46 ||
@@ -269,19 +392,23 @@ fn replacement_entry_records(
     data_len,
     uses_descriptor,
   )
-  write_bytes(out, Bytes::from_array(local_record))
-  write_bytes(out, payload)
+  write_bytes_bounded(out, Bytes::from_array(local_record), max_output)
+  write_bytes_bounded(out, payload, max_output)
   if uses_descriptor {
     if template.descriptor_signed {
-      write_u32_le(out, data_descriptor_sig.reinterpret_as_uint())
+      write_u32_le_bounded(
+        out,
+        data_descriptor_sig.reinterpret_as_uint(),
+        max_output,
+      )
     }
-    write_u32_le(out, crc)
+    write_u32_le_bounded(out, crc, max_output)
     if template.descriptor_zip64 {
-      write_u64_le(out, to_u64(payload_len))
-      write_u64_le(out, to_u64(data_len))
+      write_u64_le_bounded(out, to_u64(payload_len), max_output)
+      write_u64_le_bounded(out, to_u64(data_len), max_output)
     } else {
-      write_u32_le(out, to_u32(payload_len))
-      write_u32_le(out, to_u32(data_len))
+      write_u32_le_bounded(out, to_u32(payload_len), max_output)
+      write_u32_le_bounded(out, to_u32(data_len), max_output)
     }
   }
   let central = template.central_record.to_array()
@@ -313,11 +440,9 @@ fn generated_entry_records(
   entry : Entry,
   local_offset : Int,
   force_zip64 : Bool,
+  max_output : Int?,
 ) -> Bytes raise ZipError {
-  let (method_id, payload) = match entry.compression() {
-    Store => (0, entry.data())
-    Deflate => (8, deflate_encode(entry.data()))
-  }
+  let (method_id, payload) = entry_payload(out, entry, max_output)
   let name_bytes = @encoding/utf8.encode(entry.name())
   let name_len = name_bytes.length()
   let data_len = entry.data().length()
@@ -345,19 +470,19 @@ fn generated_entry_records(
     comp=if needs_zip64_sizes { Some(payload_len) } else { None },
     offset=None,
   )
-  write_u32_le(out, local_header_sig.reinterpret_as_uint())
-  write_u16_le(out, version)
-  write_u16_le(out, flags)
-  write_u16_le(out, method_id)
-  write_u16_le(out, 0)
-  write_u16_le(out, 0)
+  write_u32_le_bounded(out, local_header_sig.reinterpret_as_uint(), max_output)
+  write_u16_le_bounded(out, version, max_output)
+  write_u16_le_bounded(out, flags, max_output)
+  write_u16_le_bounded(out, method_id, max_output)
+  write_u16_le_bounded(out, 0, max_output)
+  write_u16_le_bounded(out, 0, max_output)
   if use_descriptor {
-    write_u32_le(out, 0)
+    write_u32_le_bounded(out, 0, max_output)
     let size_field = if needs_zip64_sizes { max_u32 } else { 0 }
-    write_u32_le(out, size_field)
-    write_u32_le(out, size_field)
+    write_u32_le_bounded(out, size_field, max_output)
+    write_u32_le_bounded(out, size_field, max_output)
   } else {
-    write_u32_le(out, crc)
+    write_u32_le_bounded(out, crc, max_output)
     let comp_field = if needs_zip64_sizes {
       max_u32
     } else {
@@ -368,16 +493,18 @@ fn generated_entry_records(
     } else {
       to_u32(data_len)
     }
-    write_u32_le(out, comp_field)
-    write_u32_le(out, uncomp_field)
+    write_u32_le_bounded(out, comp_field, max_output)
+    write_u32_le_bounded(out, uncomp_field, max_output)
   }
-  write_u16_le(out, name_len)
-  write_u16_le(out, local_extra.length())
-  write_bytes(out, name_bytes)
-  write_bytes(out, local_extra)
-  write_bytes(out, payload)
+  write_u16_le_bounded(out, name_len, max_output)
+  write_u16_le_bounded(out, local_extra.length(), max_output)
+  write_bytes_bounded(out, name_bytes, max_output)
+  write_bytes_bounded(out, local_extra, max_output)
+  write_bytes_bounded(out, payload, max_output)
   if use_descriptor {
-    write_data_descriptor(out, crc, payload_len, data_len, needs_zip64_sizes)
+    write_data_descriptor_bounded(
+      out, crc, payload_len, data_len, needs_zip64_sizes, max_output,
+    )
   }
   let central_extra = build_zip64_extra(
     uncomp=if needs_zip64_sizes { Some(data_len) } else { None },
@@ -451,6 +578,7 @@ fn write_preserved_zip64_trailer(
   total_entries : Int,
   central_size : Int,
   central_offset : Int,
+  max_output : Int?,
 ) -> Unit raise ZipError {
   if template.end_record.length() < 56 ||
     template.locator.length() != 20 ||
@@ -474,11 +602,11 @@ fn write_preserved_zip64_trailer(
   patch_u64_le(end_record, 32, count)
   patch_u64_le(end_record, 40, to_u64(central_size))
   patch_u64_le(end_record, 48, to_u64(central_offset))
-  write_bytes(out, Bytes::from_array(end_record))
+  write_bytes_bounded(out, Bytes::from_array(end_record), max_output)
 
   let locator = template.locator.to_array()
   patch_u64_le(locator, 8, to_u64(zip64_offset))
-  write_bytes(out, Bytes::from_array(locator))
+  write_bytes_bounded(out, Bytes::from_array(locator), max_output)
 
   let classic = template.classic_end_record.to_array()
   patch_classic_u16_preserving_sentinel(
@@ -505,7 +633,7 @@ fn write_preserved_zip64_trailer(
     16,
     central_offset,
   )
-  write_bytes(out, Bytes::from_array(classic))
+  write_bytes_bounded(out, Bytes::from_array(classic), max_output)
 }
 
 ///|
@@ -514,23 +642,24 @@ fn write_generated_zip64_records(
   total_entries : Int,
   central_size : Int,
   central_offset : Int,
+  max_output : Int?,
 ) -> Unit raise ZipError {
   let zip64_offset = out.length()
-  write_u32_le(out, zip64_eocd_sig.reinterpret_as_uint())
-  write_u64_le(out, to_u64(44))
-  write_u16_le(out, 45)
-  write_u16_le(out, 45)
-  write_u32_le(out, 0)
-  write_u32_le(out, 0)
+  write_u32_le_bounded(out, zip64_eocd_sig.reinterpret_as_uint(), max_output)
+  write_u64_le_bounded(out, to_u64(44), max_output)
+  write_u16_le_bounded(out, 45, max_output)
+  write_u16_le_bounded(out, 45, max_output)
+  write_u32_le_bounded(out, 0, max_output)
+  write_u32_le_bounded(out, 0, max_output)
   let entry_count = to_u64(total_entries)
-  write_u64_le(out, entry_count)
-  write_u64_le(out, entry_count)
-  write_u64_le(out, to_u64(central_size))
-  write_u64_le(out, to_u64(central_offset))
-  write_u32_le(out, zip64_locator_sig.reinterpret_as_uint())
-  write_u32_le(out, 0)
-  write_u64_le(out, to_u64(zip64_offset))
-  write_u32_le(out, 1)
+  write_u64_le_bounded(out, entry_count, max_output)
+  write_u64_le_bounded(out, entry_count, max_output)
+  write_u64_le_bounded(out, to_u64(central_size), max_output)
+  write_u64_le_bounded(out, to_u64(central_offset), max_output)
+  write_u32_le_bounded(out, zip64_locator_sig.reinterpret_as_uint(), max_output)
+  write_u32_le_bounded(out, 0, max_output)
+  write_u64_le_bounded(out, to_u64(zip64_offset), max_output)
+  write_u32_le_bounded(out, 1, max_output)
 }
 
 ///|
@@ -541,37 +670,56 @@ fn write_generated_classic_end_record(
   central_size : Int,
   central_offset : Int,
   comment : Bytes,
+  max_output : Int?,
 ) -> Unit raise ZipError {
   let max_u32 : UInt = 0xffffffff
-  write_u32_le(out, end_of_central_sig.reinterpret_as_uint())
-  write_u16_le(out, 0)
-  write_u16_le(out, 0)
+  write_u32_le_bounded(
+    out,
+    end_of_central_sig.reinterpret_as_uint(),
+    max_output,
+  )
+  write_u16_le_bounded(out, 0, max_output)
+  write_u16_le_bounded(out, 0, max_output)
   if zip64 {
-    write_u16_le(out, 0xffff)
-    write_u16_le(out, 0xffff)
-    write_u32_le(out, max_u32)
-    write_u32_le(out, max_u32)
+    write_u16_le_bounded(out, 0xffff, max_output)
+    write_u16_le_bounded(out, 0xffff, max_output)
+    write_u32_le_bounded(out, max_u32, max_output)
+    write_u32_le_bounded(out, max_u32, max_output)
   } else {
-    write_u16_le(out, total_entries)
-    write_u16_le(out, total_entries)
-    write_u32_le(out, to_u32(central_size))
-    write_u32_le(out, to_u32(central_offset))
+    write_u16_le_bounded(out, total_entries, max_output)
+    write_u16_le_bounded(out, total_entries, max_output)
+    write_u32_le_bounded(out, to_u32(central_size), max_output)
+    write_u32_le_bounded(out, to_u32(central_offset), max_output)
   }
   if comment.length() > 0xffff {
     raise UnsupportedFeature(msg="archive comment too long")
   }
-  write_u16_le(out, comment.length())
-  write_bytes(out, comment)
+  write_u16_le_bounded(out, comment.length(), max_output)
+  write_bytes_bounded(out, comment, max_output)
 }
 
 ///|
 fn write_with_options(
   archive : Archive,
   force_zip64? : Bool = false,
+  max_output? : Int,
 ) -> Bytes raise ZipError {
+  match max_output {
+    Some(limit) if limit < 0 =>
+      raise UnsupportedFeature(msg="ZIP output limit must be non-negative")
+    _ => ()
+  }
   let entry_count = archive.entries().length()
-  let out : Array[Byte] = Array::new(capacity=entry_count * 64)
-  let central : Array[Byte] = Array::new(capacity=entry_count * 64)
+  let requested_initial_capacity = if entry_count > 16_384 {
+    1024 * 1024
+  } else {
+    entry_count * 64
+  }
+  let initial_capacity = bounded_initial_capacity(
+    requested_initial_capacity, max_output,
+  )
+  let out : Array[Byte] = Array::new(capacity=initial_capacity)
+  let central : Array[Byte] = Array::new(capacity=initial_capacity)
   let local_offsets : Array[Int] = []
   let generated_central : Array[Bytes?] = []
   for _ in 0..<entry_count {
@@ -589,12 +737,18 @@ fn write_with_options(
     let local_offset = out.length()
     local_offsets[index] = local_offset
     match (entry.source, entry.source_unchanged) {
-      (Some(source), true) => write_bytes(out, source.local_record)
+      (Some(source), true) =>
+        write_bytes_bounded(out, source.local_record, max_output)
       (source, _) => {
         let record = match source {
           Some(template) =>
-            replacement_entry_records(out, entry, local_offset, template)
-          None => generated_entry_records(out, entry, local_offset, force_zip64)
+            replacement_entry_records(
+              out, entry, local_offset, template, max_output,
+            )
+          None =>
+            generated_entry_records(
+              out, entry, local_offset, force_zip64, max_output,
+            )
         }
         generated_central[index] = Some(record)
       }
@@ -610,11 +764,22 @@ fn write_with_options(
             patch_u64_le(record, position, to_u64(local_offsets[index]))
           None => patch_u32_le(record, 42, to_u32(local_offsets[index]))
         }
-        write_bytes(central, Bytes::from_array(record))
+        write_bytes_bounded(
+          central,
+          Bytes::from_array(record),
+          max_output,
+          base_length=out.length(),
+        )
       }
       _ =>
         match generated_central[index] {
-          Some(record) => write_bytes(central, record)
+          Some(record) =>
+            write_bytes_bounded(
+              central,
+              record,
+              max_output,
+              base_length=out.length(),
+            )
           None =>
             raise UnsupportedFeature(
               msg="generated central-directory record is missing",
@@ -623,9 +788,7 @@ fn write_with_options(
     }
   }
   let central_offset = out.length()
-  for b in central {
-    out.push(b)
-  }
+  write_bytes_bounded(out, Bytes::from_array(central), max_output)
   let central_size = central.length()
   let total_entries = entry_count
   if force_zip64 ||
@@ -637,11 +800,11 @@ fn write_with_options(
   match (needs_zip64_trailer, archive.zip64_trailer) {
     (true, Some(template)) =>
       write_preserved_zip64_trailer(
-        out, template, total_entries, central_size, central_offset,
+        out, template, total_entries, central_size, central_offset, max_output,
       )
     (true, None) => {
       write_generated_zip64_records(
-        out, total_entries, central_size, central_offset,
+        out, total_entries, central_size, central_offset, max_output,
       )
       write_generated_classic_end_record(
         out,
@@ -650,6 +813,7 @@ fn write_with_options(
         central_size,
         central_offset,
         archive.comment,
+        max_output,
       )
     }
     (false, _) =>
@@ -660,6 +824,7 @@ fn write_with_options(
         central_size,
         central_offset,
         archive.comment,
+        max_output,
       )
   }
   Bytes::from_array(out)
@@ -668,6 +833,18 @@ fn write_with_options(
 ///|
 pub fn write(archive : Archive) -> Bytes raise ZipError {
   write_with_options(archive)
+}
+
+///|
+/// Serializes an archive while enforcing a hard byte ceiling before every
+/// output-buffer growth. Deflate streams and separately assembled central
+/// records share the same final limit; oversized output raises
+/// `OutputLimitExceeded` without first materializing the complete package.
+pub fn write_limited(
+  archive : Archive,
+  max_output_bytes~ : Int,
+) -> Bytes raise ZipError {
+  write_with_options(archive, max_output=max_output_bytes)
 }
 
 ///|

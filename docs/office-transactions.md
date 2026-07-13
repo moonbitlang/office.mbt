@@ -75,7 +75,9 @@ root rather than guessing whether a host treats them as aliases or a distinct
 namespace. Before rename and cleanup, the implementation compares the named
 staging entry with the bytes written through its open async file and refuses to
 publish or delete a substitute. Immediately before an in-place rename, the
-source is reopened and compared byte-for-byte with the original snapshot.
+source is reopened and compared byte-for-byte with the original snapshot. Both
+comparisons use a fixed 1 MiB async buffer rather than materializing another
+whole-package copy.
 
 The final rename is atomic, but portable async filesystem APIs are path based:
 renaming an ancestor or replacing a directory entry between a check and its
@@ -120,7 +122,10 @@ mutation, candidate validation, and the preservation report; a transaction
 does not repeatedly inflate the same input or candidate. Each callback gets a
 shallow fork, so adding or replacing an entry cannot corrupt the transaction's
 trusted preservation snapshot while immutable strings and byte buffers remain
-shared.
+shared. Bounded-read provenance records the exact serialized source size and
+enforced ZIP limits inside the opaque archive. Forks retain that capability,
+while a real entry mutation invalidates it; archive-backed raw APIs therefore
+cannot be called with an oversized, unbounded, or caller-modified snapshot.
 
 ## Validation hooks
 

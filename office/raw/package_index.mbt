@@ -1436,15 +1436,20 @@ fn read_bounded_archive(data : BytesView) -> @zip.Archive raise RawError {
 }
 
 ///|
-fn check_bounded_raw_archive(archive : @zip.Archive) -> Unit raise RawError {
+fn check_raw_archive_materialization_limits(
+  archive : @zip.Archive,
+  max_entries : Int,
+  max_entry_bytes : Int,
+  max_total_bytes : Int,
+) -> Unit raise RawError {
   let entries = archive.entries()
-  if entries.length() > raw_max_archive_entries {
+  if entries.length() > max_entries {
     raise raw_error(
       "office.raw.resource_limit",
       "ZIP package exceeds the bounded entry_count limit",
       details=Json::object({
         "kind": Json::string("entry_count"),
-        "limit": Json::number(raw_max_archive_entries.to_double()),
+        "limit": Json::number(max_entries.to_double()),
         "actual": Json::number(entries.length().to_double()),
       }),
     )
@@ -1452,30 +1457,88 @@ fn check_bounded_raw_archive(archive : @zip.Archive) -> Unit raise RawError {
   let mut total = 0L
   for entry in entries {
     let size = entry.data().length()
-    if size > raw_max_entry_bytes {
+    if size > max_entry_bytes {
       raise raw_error(
         "office.raw.resource_limit",
         "ZIP package exceeds the bounded entry_uncompressed_bytes limit",
         details=Json::object({
           "kind": Json::string("entry_uncompressed_bytes"),
-          "limit": Json::number(raw_max_entry_bytes.to_double()),
+          "limit": Json::number(max_entry_bytes.to_double()),
           "actual": Json::number(size.to_double()),
         }),
       )
     }
     total = total + size.to_int64()
-    if total > raw_max_total_uncompressed_bytes.to_int64() {
+    if total > max_total_bytes.to_int64() {
       raise raw_error(
         "office.raw.resource_limit",
         "ZIP package exceeds the bounded total_uncompressed_bytes limit",
         details=Json::object({
           "kind": Json::string("total_uncompressed_bytes"),
-          "limit": Json::number(raw_max_total_uncompressed_bytes.to_double()),
+          "limit": Json::number(max_total_bytes.to_double()),
           "actual": Json::number(total.to_double()),
         }),
       )
     }
   }
+}
+
+///|
+fn check_raw_archive_materialization(
+  archive : @zip.Archive,
+) -> Unit raise RawError {
+  check_raw_archive_materialization_limits(
+    archive, raw_max_archive_entries, raw_max_entry_bytes, raw_max_total_uncompressed_bytes,
+  )
+}
+
+///|
+fn check_bounded_raw_archive_limits(
+  archive : @zip.Archive,
+  max_package_bytes : Int,
+  max_entries : Int,
+  max_entry_bytes : Int,
+  max_total_bytes : Int,
+) -> Unit raise RawError {
+  check_raw_archive_materialization_limits(
+    archive, max_entries, max_entry_bytes, max_total_bytes,
+  )
+  match
+    archive.bounded_source_package_size(
+      max_entries~,
+      max_entry_uncompressed_bytes=max_entry_bytes,
+      max_total_uncompressed_bytes=max_total_bytes,
+    ) {
+    Some(size) if size <= max_package_bytes => ()
+    Some(size) =>
+      raise raw_error(
+        "office.raw.resource_limit",
+        "source package exceeds the \{max_package_bytes}-byte raw OOXML limit",
+        details=Json::object({
+          "kind": Json::string("package_bytes"),
+          "limit": Json::number(max_package_bytes.to_double()),
+          "actual": Json::number(size.to_double()),
+        }),
+      )
+    None =>
+      raise raw_error(
+        "office.raw.resource_limit",
+        "archive-backed raw APIs require a pristine archive produced by a sufficiently strict bounded ZIP read",
+        details=Json::object({
+          "kind": Json::string("bounded_archive_source"),
+          "limit": Json::number(max_package_bytes.to_double()),
+          "actual": Json::number((max_package_bytes + 1).to_double()),
+        }),
+      )
+  }
+}
+
+///|
+fn check_bounded_raw_archive(archive : @zip.Archive) -> Unit raise RawError {
+  check_bounded_raw_archive_limits(
+    archive, raw_max_package_bytes, raw_max_archive_entries, raw_max_entry_bytes,
+    raw_max_total_uncompressed_bytes,
+  )
 }
 
 ///|
@@ -1526,6 +1589,15 @@ fn open_raw_archive_for_format(
   archive : @zip.Archive,
 ) -> RawPackage raise RawError {
   check_bounded_raw_archive(archive)
+  open_raw_materialized_archive_for_format(format, archive)
+}
+
+///|
+fn open_raw_materialized_archive_for_format(
+  format : @office.DocumentFormat,
+  archive : @zip.Archive,
+) -> RawPackage raise RawError {
+  check_raw_archive_materialization(archive)
   let pkg = package_from_archive(archive)
   if pkg.format != format {
     raise raw_error(

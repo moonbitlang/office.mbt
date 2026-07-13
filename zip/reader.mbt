@@ -1042,7 +1042,20 @@ fn read_impl(
       msg="unreferenced data before zip central directory",
     )
   }
-  let archive = archive_from_source(archive_comment, zip64_trailer)
+  let bounded_source = match
+    (max_entries, max_entry_uncompressed_bytes, max_total_uncompressed_bytes) {
+    (Some(max_entries), Some(max_entry), Some(max_total)) =>
+      Some({
+        package_bytes: bytes.length(),
+        max_entries,
+        max_entry_uncompressed_bytes: max_entry,
+        max_total_uncompressed_bytes: max_total,
+      })
+    _ => None
+  }
+  let archive = archive_from_source(
+    archive_comment, zip64_trailer, bounded_source,
+  )
   let mut actual_total = 0
   for index in 0..<metas.length() {
     let meta = metas[index]

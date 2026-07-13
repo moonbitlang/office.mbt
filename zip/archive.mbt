@@ -22,6 +22,18 @@ priv struct Zip64TrailerTemplate {
 }
 
 ///|
+/// Provenance attached only by `read_limited`. Keeping it inside the opaque
+/// archive makes the bounded-read claim non-forgeable by callers. Any
+/// payload/entry mutation clears the claim; a shallow fork preserves it until
+/// that fork is changed.
+priv struct BoundedSource {
+  package_bytes : Int
+  max_entries : Int
+  max_entry_uncompressed_bytes : Int
+  max_total_uncompressed_bytes : Int
+}
+
+///|
 struct Entry {
   name : String
   data : Bytes
@@ -69,11 +81,12 @@ struct Archive {
   entries : Array[Entry]
   comment : Bytes
   zip64_trailer : Zip64TrailerTemplate?
+  mut bounded_source : BoundedSource?
 }
 
 ///|
 pub fn Archive::new() -> Archive {
-  { entries: [], comment: b"", zip64_trailer: None }
+  { entries: [], comment: b"", zip64_trailer: None, bounded_source: None }
 }
 
 ///|
@@ -86,6 +99,27 @@ pub fn Archive::fork(self : Archive) -> Archive {
     entries: self.entries.copy(),
     comment: self.comment,
     zip64_trailer: self.zip64_trailer,
+    bounded_source: self.bounded_source,
+  }
+}
+
+///|
+/// Returns the exact serialized source size only when this pristine archive
+/// came from `read_limited` with limits at least as strict as those requested.
+/// This is a capability query: archives built with `new`/`read`, or changed
+/// after a bounded read, return `None`.
+pub fn Archive::bounded_source_package_size(
+  self : Archive,
+  max_entries~ : Int,
+  max_entry_uncompressed_bytes~ : Int,
+  max_total_uncompressed_bytes~ : Int,
+) -> Int? {
+  match self.bounded_source {
+    Some(source) if source.max_entries <= max_entries &&
+      source.max_entry_uncompressed_bytes <= max_entry_uncompressed_bytes &&
+      source.max_total_uncompressed_bytes <= max_total_uncompressed_bytes =>
+      Some(source.package_bytes)
+    _ => None
   }
 }
 
@@ -103,6 +137,9 @@ pub fn Archive::retained_size_estimate(self : Archive) -> Int64 {
       total = total + trailer.classic_end_record.length().to_int64()
     }
     None => ()
+  }
+  if self.bounded_source is Some(_) {
+    total = total + 64L
   }
   for entry in self.entries {
     total = total + entry.data.length().to_int64()
@@ -125,8 +162,9 @@ pub fn Archive::retained_size_estimate(self : Archive) -> Int64 {
 fn archive_from_source(
   comment : Bytes,
   zip64_trailer : Zip64TrailerTemplate?,
+  bounded_source : BoundedSource?,
 ) -> Archive {
-  { entries: [], comment, zip64_trailer }
+  { entries: [], comment, zip64_trailer, bounded_source }
 }
 
 ///|
@@ -137,6 +175,7 @@ pub fn Archive::add(
   compression? : Compression = Store,
   data_descriptor? : Bool = false,
 ) -> Unit {
+  self.bounded_source = None
   self.entries.push({
     name,
     data,
@@ -163,6 +202,7 @@ pub fn Archive::replace(
       if entry.data == data {
         return true
       }
+      self.bounded_source = None
       self.entries[index] = {
         name: entry.name,
         data,

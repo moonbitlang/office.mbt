@@ -177,10 +177,14 @@ allocated.
 
 The transaction materializes each ZIP exactly once. The complete bounded raw
 identifier consumes an isolated fork of the already materialized input archive;
-generic Office DOM parsing cannot precede this boundary. The mutation consumes
-another shallow fork, revalidates the logical archive without reinflation, and
-produces serialized candidate bytes plus a one-part preservation manifest. The
-transaction then:
+generic Office DOM parsing cannot precede this boundary. Archive-backed public
+APIs accept only pristine forks carrying non-forgeable `zip.read_limited`
+provenance whose exact source size and entry/expansion ceilings satisfy the raw
+limits. Adding or changing an entry invalidates that capability. The mutation
+consumes another shallow fork, revalidates the logical archive without
+reinflation, and produces serialized candidate bytes plus a one-part
+preservation manifest through a ZIP writer that checks the 128 MiB ceiling
+before every output-buffer growth. The transaction then:
 
 1. materializes the serialized candidate once under the aggregate live-memory
    budget shared with the still-live original archive;

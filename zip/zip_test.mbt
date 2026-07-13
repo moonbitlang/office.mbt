@@ -140,6 +140,99 @@ test "zip read_limited rejects entry count and aggregate expansion" {
 }
 
 ///|
+test "bounded ZIP provenance survives forks and invalidates on mutation" {
+  let source_archive = @zip.Archive::new()
+  source_archive.add("a.txt", b"bounded")
+  let source = @zip.write(source_archive)
+  let bounded = @zip.read_limited(
+    source,
+    max_entries=4,
+    max_entry_uncompressed_bytes=16,
+    max_total_uncompressed_bytes=32,
+  )
+  assert_eq(
+    bounded.bounded_source_package_size(
+      max_entries=4,
+      max_entry_uncompressed_bytes=16,
+      max_total_uncompressed_bytes=32,
+    ),
+    Some(source.length()),
+  )
+  assert_eq(
+    bounded.bounded_source_package_size(
+      max_entries=3,
+      max_entry_uncompressed_bytes=16,
+      max_total_uncompressed_bytes=32,
+    ),
+    None,
+  )
+  let fork = bounded.fork()
+  assert_true(fork.replace("a.txt", b"bounded"))
+  assert_eq(
+    fork.bounded_source_package_size(
+      max_entries=4,
+      max_entry_uncompressed_bytes=16,
+      max_total_uncompressed_bytes=32,
+    ),
+    Some(source.length()),
+  )
+  assert_true(fork.replace("a.txt", b"changed"))
+  assert_eq(
+    fork.bounded_source_package_size(
+      max_entries=4,
+      max_entry_uncompressed_bytes=16,
+      max_total_uncompressed_bytes=32,
+    ),
+    None,
+  )
+  assert_eq(
+    @zip.read(source).bounded_source_package_size(
+      max_entries=4,
+      max_entry_uncompressed_bytes=16,
+      max_total_uncompressed_bytes=32,
+    ),
+    None,
+  )
+}
+
+///|
+test "zip write_limited fails before output growth crosses the ceiling" {
+  let stored = @zip.Archive::new()
+  stored.add("stored.bin", b"0123456789")
+  let exact = @zip.write(stored)
+  assert_eq(@zip.write_limited(stored, max_output_bytes=exact.length()), exact)
+  try @zip.write_limited(stored, max_output_bytes=exact.length() - 1) catch {
+    OutputLimitExceeded(limit~) => assert_eq(limit, exact.length() - 1)
+    _ => fail("expected stored output limit")
+  } noraise {
+    _ => fail("expected stored archive to exceed its output limit")
+  }
+
+  let deflated = @zip.Archive::new()
+  let data = Bytes::makei(512, index => (index % 251).to_byte())
+  deflated.add("deflated.bin", data, compression=Deflate)
+  try @zip.write_limited(deflated, max_output_bytes=64) catch {
+    OutputLimitExceeded(limit~) => assert_eq(limit, 64)
+    _ => fail("expected deflate output limit")
+  } noraise {
+    _ => fail("expected deflated archive to exceed its output limit")
+  }
+
+  let preserved = @zip.read_limited(
+    exact,
+    max_entries=1,
+    max_entry_uncompressed_bytes=10,
+    max_total_uncompressed_bytes=10,
+  )
+  try @zip.write_limited(preserved, max_output_bytes=8) catch {
+    OutputLimitExceeded(limit~) => assert_eq(limit, 8)
+    _ => fail("expected preserved-record output limit")
+  } noraise {
+    _ => fail("expected preserved record to be checked before copying")
+  }
+}
+
+///|
 test "zip local-record overlap validation scales to large valid archives" {
   let entry_count = 32_768
   let archive = @zip.Archive::new()

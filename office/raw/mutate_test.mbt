@@ -203,7 +203,12 @@ test "archive-backed raw APIs match byte-backed mutation without reinflation" {
     xml=word_paragraph("archive path"),
   )
   let from_bytes = @raw.raw_edit(Docx, original, request)
-  let archive = @zip.read(original)
+  let archive = @zip.read_limited(
+    original,
+    max_entries=8192,
+    max_entry_uncompressed_bytes=64 * 1024 * 1024,
+    max_total_uncompressed_bytes=256 * 1024 * 1024,
+  )
   assert_eq(@raw.raw_identify_archive("input.docx", archive.fork()), Docx)
   let from_archive = @raw.raw_edit_archive(Docx, archive, request)
   assert_eq(from_archive.candidate_bytes(), from_bytes.candidate_bytes())

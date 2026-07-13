@@ -205,6 +205,33 @@ async test "pending read cancellation reaches dry-run and no-op paths" {
 }
 
 ///|
+async test "publication identity comparison stays chunked across package boundaries" {
+  wb_with_transaction_dir(directory => {
+    let publication_directory : PublicationDirectory = { path: directory }
+    let output = "\{directory}/output.docx"
+    let temp = match
+      publication_temp_try_create(
+        publication_directory, ".office-tmp-chunked-identity", output,
+      ) {
+      Some(value) => value
+      None => fail("expected unique staging file")
+    }
+    let payload = Bytes::makei(1024 * 1024 + 17, index => {
+      (index % 251).to_byte()
+    })
+    publication_temp_write(
+      temp,
+      payload,
+      fail_after_bytes=None,
+      stall_after_bytes=None,
+    )
+    assert_true(publication_temp_identity_matches(temp))
+    publication_temp_cleanup(temp, output)
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
 #cfg(all(target="native", not(platform="windows")))
 async test "staging access survives restrictive creation modes" {
   wb_with_transaction_dir(directory => {
