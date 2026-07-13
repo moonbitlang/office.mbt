@@ -237,6 +237,18 @@ fn render_command(command : @lib.CapabilityCommand) -> String {
     lines.push(render_field(field))
   }
   lines.push("  Output modes: " + command.output_modes.join(", "))
+  if !command.variants.is_empty() {
+    lines.push("  Variants:")
+    for variant in command.variants {
+      lines.push("    \{variant.name}: \{variant.usage}")
+      for field in variant.inputs {
+        lines.push("  " + render_field(field))
+      }
+      if !variant.constraints.is_empty() {
+        lines.push("      constraints: " + variant.constraints.join(", "))
+      }
+    }
+  }
   lines.join("\n")
 }
 
@@ -304,6 +316,9 @@ fn render_overview(verbose : Bool) -> String {
     if verbose {
       lines.push("    \{command.usage}")
       lines.push("    output modes: \{command.output_modes.join(", ")}")
+      for variant in command.variants {
+        lines.push("    \{variant.usage}")
+      }
     }
   }
   lines.push(

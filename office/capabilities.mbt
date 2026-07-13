@@ -8,6 +8,17 @@ pub(all) struct CapabilityField {
 }
 
 ///|
+/// One conditionally invokable subcommand schema within a command family.
+pub(all) struct CapabilityVariant {
+  name : String
+  usage : String
+  inputs : Array[CapabilityField]
+  outputs : Array[CapabilityField]
+  constraints : Array[String]
+  output_modes : Array[String]
+}
+
+///|
 /// The selector syntax declared for one document format. `status` describes
 /// the strongest implemented behavior and must not imply document access.
 pub(all) struct CapabilitySelector {
@@ -38,6 +49,7 @@ pub(all) struct CapabilityCommand {
   inputs : Array[CapabilityField]
   outputs : Array[CapabilityField]
   output_modes : Array[String]
+  variants : Array[CapabilityVariant]
 }
 
 ///|
@@ -114,6 +126,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
       ],
       output_modes: ["human", "json", "jsonl"],
+      variants: [],
     },
     {
       name: "identify",
@@ -138,6 +151,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
       ],
       output_modes: ["human", "json"],
+      variants: [],
     },
     {
       name: "raw",
@@ -148,18 +162,6 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       inputs: [
         capability_field(
           "operation", "enum(list|read|replace|edit)", true, "bounded raw OOXML operation",
-        ),
-        capability_field(
-          "file", "path", true, "path to an existing XLSX or DOCX package",
-        ),
-        capability_field(
-          "part", "alias|absolute-part", false, "relationship-derived alias or absolute package part",
-        ),
-        capability_field(
-          "path", "office.raw.path/1", false, "bounded namespace-aware element selector",
-        ),
-        capability_field(
-          "json", "boolean", false, "emit one office.output/1 JSON document",
         ),
       ],
       outputs: [
@@ -174,6 +176,158 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
       ],
       output_modes: ["human", "json", "base64", "file"],
+      variants: [
+        {
+          name: "list",
+          usage: "office raw list FILE [--json]",
+          inputs: [
+            capability_field(
+              "file", "path", true, "existing XLSX or DOCX package",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit office.output/1 JSON",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "inventory", "office.raw.inventory/1", true, "bounded canonical part inventory",
+            ),
+          ],
+          constraints: [],
+          output_modes: ["human", "json"],
+        },
+        {
+          name: "read",
+          usage: "office raw read FILE PART [--json] [--base64 | --output FILE]",
+          inputs: [
+            capability_field(
+              "file", "path", true, "existing XLSX or DOCX package",
+            ),
+            capability_field(
+              "part", "part-selector", true, "/name when unambiguous, alias:/name, or part:/name",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit office.output/1 JSON",
+            ),
+            capability_field(
+              "base64", "boolean", false, "emit exact payload as base64",
+            ),
+            capability_field(
+              "output", "path", false, "create a file with the exact payload",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "part", "office.raw.part/1", true, "resolved metadata and selected content",
+            ),
+          ],
+          constraints: [
+            "mutually-exclusive(base64,output)", "binary-requires(base64|output)",
+            "output-create-mode(create-new)",
+          ],
+          output_modes: ["human", "json", "base64", "file"],
+        },
+        {
+          name: "replace",
+          usage: "office raw replace FILE PART (--xml XML | --xml-file FILE) [--out FILE] [--dry-run] [--overwrite] [--json]",
+          inputs: [
+            capability_field(
+              "file", "path", true, "existing XLSX or DOCX package",
+            ),
+            capability_field(
+              "part", "part-selector", true, "existing XML part selector",
+            ),
+            capability_field(
+              "xml", "utf8-xml", false, "complete replacement XML document",
+            ),
+            capability_field(
+              "xml-file", "path", false, "bounded UTF-8 replacement XML file",
+            ),
+            capability_field(
+              "out", "path", false, "separate transaction destination",
+            ),
+            capability_field(
+              "dry-run", "boolean", false, "validate without publishing",
+            ),
+            capability_field(
+              "overwrite", "boolean", false, "replace an existing separate destination",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit office.output/1 JSON",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "change", "office.raw.result/1", true, "validated mutation and transaction report",
+            ),
+          ],
+          constraints: [
+            "exactly-one(xml,xml-file)", "overwrite-requires(out)", "transactional-publication",
+          ],
+          output_modes: ["human", "json"],
+        },
+        {
+          name: "edit",
+          usage: "office raw edit FILE PART --path PATH --action ACTION [action arguments] [--namespace PREFIX=URI]... [--all] [--out FILE] [--dry-run] [--overwrite] [--json]",
+          inputs: [
+            capability_field(
+              "file", "path", true, "existing XLSX or DOCX package",
+            ),
+            capability_field(
+              "part", "part-selector", true, "existing XML part selector",
+            ),
+            capability_field(
+              "path", "office.raw.path/1", true, "bounded namespace-aware element selector",
+            ),
+            capability_field(
+              "action", "enum(append|prepend|insert-before|insert-after|replace|remove|set-attribute)",
+              true, "bounded edit action",
+            ),
+            capability_field(
+              "xml", "utf8-xml-element", false, "one self-contained XML element",
+            ),
+            capability_field(
+              "xml-file", "path", false, "bounded UTF-8 XML element file",
+            ),
+            capability_field(
+              "attribute", "qname", false, "set-attribute target name",
+            ),
+            capability_field(
+              "value", "string", false, "set-attribute exact decoded value",
+            ),
+            capability_field(
+              "namespace", "array(PREFIX=URI)", false, "repeatable selector namespace overrides",
+            ),
+            capability_field(
+              "all", "boolean", false, "allow multiple bounded matches",
+            ),
+            capability_field(
+              "out", "path", false, "separate transaction destination",
+            ),
+            capability_field(
+              "dry-run", "boolean", false, "validate without publishing",
+            ),
+            capability_field(
+              "overwrite", "boolean", false, "replace an existing separate destination",
+            ),
+            capability_field(
+              "json", "boolean", false, "emit office.output/1 JSON",
+            ),
+          ],
+          outputs: [
+            capability_field(
+              "change", "office.raw.result/1", true, "validated mutation and transaction report",
+            ),
+          ],
+          constraints: [
+            "mutually-exclusive(xml,xml-file)", "element-actions-require(exactly-one(xml,xml-file))",
+            "set-attribute-requires(attribute,value)", "remove-forbids(xml,xml-file,attribute,value)",
+            "overwrite-requires(out)", "flag-looking-values-require-attached-syntax",
+            "transactional-publication",
+          ],
+          output_modes: ["human", "json"],
+        },
+      ],
     },
   ]
 }
@@ -217,6 +371,18 @@ fn capability_field_json(field : CapabilityField) -> Json {
 }
 
 ///|
+fn capability_variant_json(variant : CapabilityVariant) -> Json {
+  Json::object({
+    "name": Json::string(variant.name),
+    "usage": Json::string(variant.usage),
+    "inputs": Json::array(variant.inputs.map(capability_field_json)),
+    "outputs": Json::array(variant.outputs.map(capability_field_json)),
+    "constraints": json_strings(variant.constraints),
+    "output_modes": json_strings(variant.output_modes),
+  })
+}
+
+///|
 fn capability_format_json(
   format : CapabilityFormat,
   fingerprint : String,
@@ -255,6 +421,7 @@ fn capability_command_json(
     "inputs": Json::array(command.inputs.map(capability_field_json)),
     "outputs": Json::array(command.outputs.map(capability_field_json)),
     "output_modes": json_strings(command.output_modes),
+    "variants": Json::array(command.variants.map(capability_variant_json)),
   })
 }
 
@@ -346,6 +513,43 @@ fn append_fingerprint_command(
   )
   for mode in command.output_modes {
     append_fingerprint_token(buffer, mode)
+  }
+  append_fingerprint_section(buffer, "variants", command.variants.length())
+  for variant in command.variants {
+    append_fingerprint_token(buffer, variant.name)
+    append_fingerprint_token(buffer, variant.usage)
+    append_fingerprint_section(
+      buffer,
+      "variant_inputs",
+      variant.inputs.length(),
+    )
+    for input in variant.inputs {
+      append_fingerprint_field(buffer, input)
+    }
+    append_fingerprint_section(
+      buffer,
+      "variant_outputs",
+      variant.outputs.length(),
+    )
+    for output in variant.outputs {
+      append_fingerprint_field(buffer, output)
+    }
+    append_fingerprint_section(
+      buffer,
+      "variant_constraints",
+      variant.constraints.length(),
+    )
+    for constraint in variant.constraints {
+      append_fingerprint_token(buffer, constraint)
+    }
+    append_fingerprint_section(
+      buffer,
+      "variant_output_modes",
+      variant.output_modes.length(),
+    )
+    for mode in variant.output_modes {
+      append_fingerprint_token(buffer, mode)
+    }
   }
 }
 
