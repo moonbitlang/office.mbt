@@ -5,6 +5,18 @@ let transaction_max_validators = 32
 let transaction_temp_attempts = 32
 
 ///|
+let transaction_max_package_bytes : Int = 128 * 1024 * 1024
+
+///|
+let transaction_max_archive_entries : Int = 8192
+
+///|
+let transaction_max_entry_uncompressed_bytes : Int = 64 * 1024 * 1024
+
+///|
+let transaction_max_total_uncompressed_bytes : Int = 256 * 1024 * 1024
+
+///|
 priv struct ResolvedPolicy {
   source_target : String
   destination_target : String
@@ -231,11 +243,90 @@ async fn read_original(
 }
 
 ///|
+fn resource_limit_error(
+  phase : String,
+  kind : String,
+  limit : Int,
+  actual : Int,
+) -> TransactionError {
+  transaction_error(
+    "office.transaction.resource_limit_exceeded",
+    "transaction resource limit exceeded during " + phase,
+    details=Json::object({
+      "phase": Json::string(phase),
+      "kind": Json::string(kind),
+      "limit": Json::number(limit.to_double()),
+      "actual": Json::number(actual.to_double()),
+    }),
+  )
+}
+
+///|
+fn check_package_size_with_limit(
+  bytes : BytesView,
+  phase : String,
+  limit : Int,
+) -> Unit raise TransactionError {
+  if bytes.length() > limit {
+    raise resource_limit_error(phase, "package_bytes", limit, bytes.length())
+  }
+}
+
+///|
+fn check_package_size(
+  bytes : BytesView,
+  phase : String,
+) -> Unit raise TransactionError {
+  check_package_size_with_limit(bytes, phase, transaction_max_package_bytes)
+}
+
+///|
+fn read_transaction_archive_with_limits(
+  bytes : BytesView,
+  phase : String,
+  invalid_code : String,
+  max_entries : Int,
+  max_entry_uncompressed_bytes : Int,
+  max_total_uncompressed_bytes : Int,
+) -> @zip.Archive raise TransactionError {
+  @zip.read_limited(
+    bytes,
+    max_entries~,
+    max_entry_uncompressed_bytes~,
+    max_total_uncompressed_bytes~,
+  ) catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) =>
+      raise resource_limit_error(phase, kind, limit, actual)
+    _ =>
+      raise transaction_error(
+        invalid_code,
+        "unreadable bounded ZIP package during " + phase,
+      )
+  }
+}
+
+///|
+fn read_transaction_archive(
+  bytes : BytesView,
+  phase : String,
+  invalid_code : String,
+) -> @zip.Archive raise TransactionError {
+  read_transaction_archive_with_limits(
+    bytes, phase, invalid_code, transaction_max_archive_entries, transaction_max_entry_uncompressed_bytes,
+    transaction_max_total_uncompressed_bytes,
+  )
+}
+
+///|
 fn identify_input(
   options : TransactionOptions,
   original : BytesView,
-) -> @office.DocumentFormat raise TransactionError {
-  @office.detect_format(options.input_path, original) catch {
+) -> (@office.DocumentFormat, @zip.Archive) raise TransactionError {
+  check_package_size(original, "input package")
+  let archive = read_transaction_archive(
+    original, "input package", "office.transaction.invalid_input",
+  )
+  let format = @office.detect_archive_format(options.input_path, archive) catch {
     error =>
       raise transaction_error(
         "office.transaction.invalid_input",
@@ -245,6 +336,7 @@ fn identify_input(
         }),
       )
   }
+  (format, archive)
 }
 
 ///|
@@ -287,8 +379,14 @@ fn validate_candidate(
   validation_path : String,
   mutation : TransactionMutation,
   validators : Array[TransactionValidator],
-) -> Array[ValidationSummary] raise TransactionError {
-  let candidate_format = @office.detect_format(validation_path, mutation.bytes) catch {
+) -> (Array[ValidationSummary], @zip.Archive) raise TransactionError {
+  check_package_size(mutation.bytes, "candidate package")
+  let archive = read_transaction_archive(
+    mutation.bytes,
+    "candidate package",
+    "office.transaction.validation_failed",
+  )
+  let candidate_format = @office.detect_archive_format(validation_path, archive) catch {
     error =>
       raise transaction_error(
         "office.transaction.validation_failed",
@@ -343,7 +441,7 @@ fn validate_candidate(
     }
     summaries.push({ name: validator.name, passed: true, finding_count: 0 })
   }
-  summaries
+  (summaries, archive)
 }
 
 ///|
@@ -555,11 +653,12 @@ async fn transact_with_faults(
   validators : Array[TransactionValidator],
   faults : TransactionFaults,
 ) -> TransactionReport {
+  let validators = validators.copy()
   validate_validator_set(validators)
   let policy = resolve_policy(options)
   defer publication_directory_close(policy.destination_directory)
   let original = read_original(options, policy.source_target)
-  let format = identify_input(options, original)
+  let (format, original_archive) = identify_input(options, original)
   let mutation = mutate(format, original) catch {
     TransactionError(..) as error => raise normalize_mutation_error(error)
     error =>
@@ -568,13 +667,15 @@ async fn transact_with_faults(
         "mutation callback failed: \{bounded_text(error.to_string(), 240)}",
       )
   }
-  let validations = validate_candidate(
+  let (validations, candidate_archive) = validate_candidate(
     format,
     policy.destination_target,
     mutation,
     validators,
   )
-  let preservation = preservation_report(original, mutation)
+  let preservation = preservation_report_archives(
+    original, mutation, original_archive, candidate_archive,
+  )
   let changed = original != mutation.bytes
   let should_commit = !options.dry_run && (policy.mode is Output || changed)
   let parent_synced = if should_commit {

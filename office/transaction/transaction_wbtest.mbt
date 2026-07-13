@@ -53,6 +53,26 @@ async fn wb_assert_no_temp(directory : String) -> Unit {
 }
 
 ///|
+fn wb_preservation_report(
+  original : BytesView,
+  mutation : TransactionMutation,
+) -> PreservationReport raise TransactionError {
+  check_package_size(original, "input package")
+  check_package_size(mutation.bytes, "candidate package")
+  let original_archive = read_transaction_archive(
+    original, "input package", "office.transaction.internal_validation_failure",
+  )
+  let candidate_archive = read_transaction_archive(
+    mutation.bytes,
+    "candidate package",
+    "office.transaction.internal_validation_failure",
+  )
+  preservation_report_archives(
+    original, mutation, original_archive, candidate_archive,
+  )
+}
+
+///|
 async test "injected write and rename failures clean temporary artifacts" {
   wb_with_transaction_dir(directory => {
     let input = "\{directory}/input.docx"
@@ -399,7 +419,7 @@ test "preservation diff classifies every payload transition deterministically" {
     ("changed.xml", b"after"),
     ("unchanged.xml", b"same"),
   ])
-  let report = preservation_report(
+  let report = wb_preservation_report(
     original,
     transaction_mutation_with_manifest(candidate, [
       "removed.xml", "changed.xml", "added.xml",
@@ -422,22 +442,49 @@ test "preservation comparison fails closed on invalid or undeclared archives" {
   let valid = wb_archive([("a.xml", b"a")])
   assert_eq(
     wb_sync_error_code(() => {
-      preservation_report(b"not a zip", transaction_mutation(valid))
+      wb_preservation_report(b"not a zip", transaction_mutation(valid))
     }),
     "office.transaction.internal_validation_failure",
   )
   let added = wb_archive([("a.xml", b"a"), ("added.xml", b"added")])
   assert_eq(
     wb_sync_error_code(() => {
-      preservation_report(valid, transaction_mutation_with_manifest(added, []))
+      wb_preservation_report(
+        valid,
+        transaction_mutation_with_manifest(added, []),
+      )
     }),
     "office.transaction.preservation_violation",
   )
   assert_eq(
     wb_sync_error_code(() => {
-      preservation_report(added, transaction_mutation_with_manifest(valid, []))
+      wb_preservation_report(
+        added,
+        transaction_mutation_with_manifest(valid, []),
+      )
     }),
     "office.transaction.preservation_violation",
+  )
+}
+
+///|
+test "transaction package and archive materialization limits fail closed" {
+  assert_eq(
+    wb_sync_error_code(() => {
+      check_package_size_with_limit(b"1234", "candidate package", 3)
+    }),
+    "office.transaction.resource_limit_exceeded",
+  )
+  let expanded = wb_archive([("large.xml", b"12345678")])
+  assert_eq(
+    wb_sync_error_code(() => {
+      read_transaction_archive_with_limits(
+        expanded, "candidate package", "office.transaction.validation_failed", 1,
+        4, 4,
+      )
+      |> ignore
+    }),
+    "office.transaction.resource_limit_exceeded",
   )
 }
 

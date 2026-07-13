@@ -1,14 +1,5 @@
 ///|
-fn archive_payloads(
-  bytes : BytesView,
-) -> Map[String, Bytes] raise TransactionError {
-  let archive = @zip.read(bytes) catch {
-    error =>
-      raise transaction_error(
-        "office.transaction.internal_validation_failure",
-        "validated package could not be reopened for preservation comparison: \{bounded_text("\{@debug.to_repr(error)}", 240)}",
-      )
-  }
+fn archive_payloads(archive : @zip.Archive) -> Map[String, Bytes] {
   let payloads : Map[String, Bytes] = Map([])
   for entry in archive.entries() {
     payloads[entry.name()] = entry.data()
@@ -32,12 +23,14 @@ fn declared_contains(declared : ReadOnlyArray[String], part : String) -> Bool {
 }
 
 ///|
-fn preservation_report(
+fn preservation_report_archives(
   original : BytesView,
   mutation : TransactionMutation,
+  original_archive : @zip.Archive,
+  candidate_archive : @zip.Archive,
 ) -> PreservationReport raise TransactionError {
-  let before = archive_payloads(original)
-  let after = archive_payloads(mutation.bytes)
+  let before = archive_payloads(original_archive)
+  let after = archive_payloads(candidate_archive)
   let names = []
   for name, _ in before {
     names.push(name)

@@ -1569,12 +1569,9 @@ fn default_main_target_from_root(
 }
 
 ///|
-fn format_from_package(
-  data : BytesView,
-) -> (DocumentFormat, String, @zip.Archive) raise OfficeError {
-  let archive = @zip.read(data) catch {
-    _ => raise InvalidPackage("archive is not a readable ZIP")
-  }
+fn format_from_archive(
+  archive : @zip.Archive,
+) -> (DocumentFormat, String) raise OfficeError {
   for entry in archive.entries() {
     if entry.crc32() != @zip.crc32(entry.data()) {
       raise InvalidPackage(
@@ -1667,7 +1664,7 @@ fn format_from_package(
     ([], [_, _, ..]) =>
       raise InvalidPackage("content types declare multiple DOCX main parts")
   }
-  (format, main_part, archive)
+  (format, main_part)
 }
 
 ///|
@@ -1689,8 +1686,24 @@ pub fn detect_format(
   path : StringView,
   data : BytesView,
 ) -> DocumentFormat raise OfficeError {
+  // Preserve the fail-fast extension contract before parsing package bytes.
+  ignore(format_from_extension(path))
+  let archive = @zip.read(data) catch {
+    _ => raise InvalidPackage("archive is not a readable ZIP")
+  }
+  detect_archive_format(path, archive)
+}
+
+///|
+/// Identifies a structurally valid XLSX or DOCX package from an archive that
+/// the caller has already materialized. This lets resource-constrained callers
+/// parse with their own ZIP limits without parsing the package a second time.
+pub fn detect_archive_format(
+  path : StringView,
+  archive : @zip.Archive,
+) -> DocumentFormat raise OfficeError {
   let expected = format_from_extension(path)
-  let (actual, main_part, archive) = format_from_package(data)
+  let (actual, main_part) = format_from_archive(archive)
   if expected != actual {
     raise FormatMismatch(expected~, actual~)
   }
