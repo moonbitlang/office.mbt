@@ -87,13 +87,13 @@ fn Reader::read_u64_raw(self : Reader) -> UInt64 raise ZipError {
 
 ///|
 fn Reader::read_bytes(self : Reader, len : Int) -> BytesView raise ZipError {
-  if len < 0 {
+  if len < 0 ||
+    self.pos < 0 ||
+    self.pos > self.bytes.length() ||
+    len > self.bytes.length() - self.pos {
     raise OutOfBounds(offset=self.pos)
   }
   let end = self.pos + len
-  if end > self.bytes.length() {
-    raise OutOfBounds(offset=self.pos)
-  }
   let view = self.bytes[self.pos:end]
   self.pos = end
   view
@@ -101,13 +101,13 @@ fn Reader::read_bytes(self : Reader, len : Int) -> BytesView raise ZipError {
 
 ///|
 fn Reader::skip(self : Reader, len : Int) -> Unit raise ZipError {
-  if len < 0 {
+  if len < 0 ||
+    self.pos < 0 ||
+    self.pos > self.bytes.length() ||
+    len > self.bytes.length() - self.pos {
     raise OutOfBounds(offset=self.pos)
   }
   let end = self.pos + len
-  if end > self.bytes.length() {
-    raise OutOfBounds(offset=self.pos)
-  }
   self.pos = end
 }
 
@@ -131,7 +131,7 @@ fn u64_to_int(value : UInt64) -> Int raise ZipError {
 
 ///|
 fn read_u16_le_at(bytes : BytesView, offset : Int) -> Int raise ZipError {
-  if offset < 0 || offset + 2 > bytes.length() {
+  if offset < 0 || offset > bytes.length() || 2 > bytes.length() - offset {
     raise OutOfBounds(offset~)
   }
   let b0 = bytes[offset].to_int()
@@ -141,7 +141,7 @@ fn read_u16_le_at(bytes : BytesView, offset : Int) -> Int raise ZipError {
 
 ///|
 fn read_u32_le_at_raw(bytes : BytesView, offset : Int) -> UInt raise ZipError {
-  if offset < 0 || offset + 4 > bytes.length() {
+  if offset < 0 || offset > bytes.length() || 4 > bytes.length() - offset {
     raise OutOfBounds(offset~)
   }
   let b0 = bytes[offset].to_uint()
@@ -153,7 +153,7 @@ fn read_u32_le_at_raw(bytes : BytesView, offset : Int) -> UInt raise ZipError {
 
 ///|
 fn read_u64_le_at(bytes : BytesView, offset : Int) -> UInt64 raise ZipError {
-  if offset < 0 || offset + 8 > bytes.length() {
+  if offset < 0 || offset > bytes.length() || 8 > bytes.length() - offset {
     raise OutOfBounds(offset~)
   }
   let mut result : UInt64 = 0
@@ -227,7 +227,7 @@ fn parse_zip64_extra(
     let header_id = read_u16_le_at(extra, pos)
     let data_size = read_u16_le_at(extra, pos + 2)
     pos = pos + 4
-    if pos + data_size > extra.length() {
+    if pos > extra.length() || data_size > extra.length() - pos {
       raise OutOfBounds(offset=pos)
     }
     if header_id == 0x0001 {
@@ -257,7 +257,7 @@ fn parse_zip64_extra(
 fn read_zip64_eocd(
   bytes : BytesView,
   eocd_offset : Int,
-) -> (Int, Int, Int) raise ZipError {
+) -> (UInt64, UInt64, UInt64) raise ZipError {
   let locator_offset = eocd_offset - 20
   if locator_offset < 0 {
     raise UnsupportedFeature(msg="zip64 locator missing")
@@ -289,11 +289,7 @@ fn read_zip64_eocd(
   if disk_no != 0 || disk_start != 0 || entries_on_disk != total_entries {
     raise UnsupportedFeature(msg="multi-disk zip not supported")
   }
-  (
-    u64_to_int(total_entries),
-    u64_to_int(central_size),
-    u64_to_int(central_offset),
-  )
+  (total_entries, central_size, central_offset)
 }
 
 ///|
@@ -311,6 +307,16 @@ fn resource_limit_actual(limit : Int) -> Int {
     limit + 1
   } else {
     limit
+  }
+}
+
+///|
+fn u64_resource_actual(value : UInt64) -> Int {
+  let max_int : UInt64 = 0x7FFFFFFF
+  if value > max_int {
+    0x7FFFFFFF
+  } else {
+    value.to_int()
   }
 }
 
@@ -381,12 +387,16 @@ fn read_entry_data(
           }
       }
       deflate_decode(compressed, max_output~) catch {
-        OutputLimitExceeded(..) =>
-          raise ResourceLimitExceeded(
-            kind="entry_uncompressed_bytes",
-            limit=max_output,
-            actual=resource_limit_actual(max_output),
-          )
+        OutputLimitExceeded(limit~) =>
+          match max_uncompressed_bytes {
+            Some(_) =>
+              raise ResourceLimitExceeded(
+                kind="entry_uncompressed_bytes",
+                limit=max_output,
+                actual=resource_limit_actual(max_output),
+              )
+            None => raise OutputLimitExceeded(limit~)
+          }
         error => raise error
       }
     }
@@ -422,25 +432,29 @@ fn read_impl(
     total_entries == 0xFFFF ||
     central_size_raw == max_u32 ||
     central_offset_raw == max_u32
-  let (entry_count, central_size, central_offset) = if needs_zip64 {
+  let (entry_count_raw, central_size_raw64, central_offset_raw64) = if needs_zip64 {
     read_zip64_eocd(bytes, eocd_offset)
   } else {
     (
-      total_entries,
-      u32_to_int(central_size_raw),
-      u32_to_int(central_offset_raw),
+      total_entries.to_uint64(),
+      u32_to_int(central_size_raw).to_uint64(),
+      u32_to_int(central_offset_raw).to_uint64(),
     )
   }
   match max_entries {
-    Some(limit) if entry_count > limit =>
+    Some(limit) if entry_count_raw > limit.to_uint64() =>
       raise ResourceLimitExceeded(
         kind="entry_count",
         limit~,
-        actual=entry_count,
+        actual=u64_resource_actual(entry_count_raw),
       )
     _ => ()
   }
-  if central_offset + central_size > bytes.length() {
+  let entry_count = u64_to_int(entry_count_raw)
+  let central_size = u64_to_int(central_size_raw64)
+  let central_offset = u64_to_int(central_offset_raw64)
+  if central_offset > bytes.length() ||
+    central_size > bytes.length() - central_offset {
     raise OutOfBounds(offset=central_offset)
   }
   // The declared entry count is attacker-controlled (zip64 EOCD): clamp the
@@ -501,7 +515,27 @@ fn read_impl(
     }
     let uncomp_size = if need_uncomp {
       match zip_uncomp {
-        Some(value) => u64_to_int(value)
+        Some(value) => {
+          match max_entry_uncompressed_bytes {
+            Some(limit) if value > limit.to_uint64() =>
+              raise ResourceLimitExceeded(
+                kind="entry_uncompressed_bytes",
+                limit~,
+                actual=u64_resource_actual(value),
+              )
+            _ => ()
+          }
+          match max_total_uncompressed_bytes {
+            Some(limit) if value > limit.to_uint64() =>
+              raise ResourceLimitExceeded(
+                kind="total_uncompressed_bytes",
+                limit~,
+                actual=u64_resource_actual(value),
+              )
+            _ => ()
+          }
+          u64_to_int(value)
+        }
         None => raise UnsupportedFeature(msg="zip64 size missing")
       }
     } else {
@@ -746,6 +780,7 @@ test "zip read zip64 extra sizes" {
   push_bytes(buf, name)
   push_u16_le(buf, 0x0001)
   push_u16_le(buf, 24)
+  let central_uncompressed_offset = buf.length()
   push_u64_le(buf, UInt64::extend_uint(data.length().reinterpret_as_uint()))
   push_u64_le(buf, UInt64::extend_uint(data.length().reinterpret_as_uint()))
   push_u64_le(buf, UInt64::extend_uint(0))
@@ -759,8 +794,31 @@ test "zip read zip64 extra sizes" {
   push_u32_le(buf, central_size.reinterpret_as_uint())
   push_u32_le(buf, central_offset.reinterpret_as_uint())
   push_u16_le(buf, 0)
-  let archive = read(Bytes::from_array(buf))
+  let encoded = Bytes::from_array(buf)
+  let archive = read(encoded)
   inspect(archive.get("b.txt") == Some(b"zip64"), content="true")
+  let oversized = encoded.to_array()
+  for index in 0..<8 {
+    oversized[central_uncompressed_offset + index] = (0).to_byte()
+  }
+  oversized[central_uncompressed_offset + 4] = (1).to_byte()
+  try
+    read_limited(
+      Bytes::from_array(oversized),
+      max_entries=1,
+      max_entry_uncompressed_bytes=64,
+      max_total_uncompressed_bytes=64,
+    )
+  catch {
+    ResourceLimitExceeded(kind~, limit~, actual~) => {
+      inspect(kind, content="entry_uncompressed_bytes")
+      inspect(limit, content="64")
+      inspect(actual, content="2147483647")
+    }
+    _ => fail("expected ZIP64 resource limit")
+  } noraise {
+    _ => fail("expected oversized ZIP64 declaration to raise")
+  }
 }
 
 ///|
