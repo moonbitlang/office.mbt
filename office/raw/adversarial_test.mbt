@@ -71,6 +71,18 @@ test "raw namespace bindings are bounded and expanded-name matching is prefix ne
       "office.raw.invalid_namespace",
     )
   }
+  let maximum_prefix = "p".repeat(128)
+  let maximum_uri = "u".repeat(1024)
+  assert_eq(
+    @raw.raw_namespace_binding(maximum_prefix + "=" + maximum_uri),
+    (maximum_prefix, maximum_uri),
+  )
+  for value in ["p".repeat(129) + "=u", "p=" + "u".repeat(1025)] {
+    assert_eq(
+      raw_error_code(() => @raw.raw_namespace_binding(value)),
+      "office.raw.invalid_namespace",
+    )
+  }
   let too_many = []
   for index = 0; index < 33; index = index + 1 {
     too_many.push(("p\{index}", "https://example.test/\{index}"))
@@ -86,6 +98,16 @@ test "raw namespace bindings are bounded and expanded-name matching is prefix ne
     }),
     content="office.raw.invalid_namespace",
   )
+  for binding in [("p".repeat(129), "u"), ("p", "u".repeat(1025))] {
+    inspect(
+      raw_error_code(() => {
+        @raw.raw_edit_request("/document", "/w:document", Remove, namespaces=[
+          binding,
+        ])
+      }),
+      content="office.raw.invalid_namespace",
+    )
+  }
 
   let original = @word.new_blank_docx()
   let request = @raw.raw_edit_request(
