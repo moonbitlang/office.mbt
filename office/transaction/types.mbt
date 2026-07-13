@@ -512,7 +512,7 @@ pub struct TransactionMutation {
 }
 
 ///|
-fn TransactionMutation::reuse_original_if_identical(
+fn TransactionMutation::canonicalize_equal_bytes_to_original(
   self : TransactionMutation,
   original : Bytes,
 ) -> TransactionMutation {
