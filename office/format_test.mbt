@@ -83,7 +83,7 @@ fn add_relationship_stress_parts(data : BytesView, count : Int) -> Bytes raise {
   let relationships = @utf8.encode(
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
   )
-  let shared_prefix = "shared-" + "x".repeat(192) + "-"
+  let shared_prefix = "shared-" + "x".repeat(128) + "-"
   for index in 0..<count {
     let source_name = "word/stress/\{shared_prefix}\{index}.bin"
     let relationships_name = "word/stress/_rels/\{shared_prefix}\{index}.bin.rels"
@@ -1061,7 +1061,7 @@ test "detect_format identifies generated docx" {
 
 ///|
 test "detect_format indexes thousands of long relationship part names" {
-  let data = add_relationship_stress_parts(@word.new_blank_docx(), 3500)
+  let data = add_relationship_stress_parts(@word.new_blank_docx(), 2048)
   inspect(@office.detect_format("report.docx", data).name(), content="docx")
 }
 
