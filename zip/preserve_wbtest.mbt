@@ -1,4 +1,22 @@
 ///|
+fn patch_u16_le(
+  buffer : Array[Byte],
+  offset : Int,
+  value : Int,
+) -> Unit raise ZipError {
+  if value < 0 ||
+    value > 0xffff ||
+    offset < 0 ||
+    offset > buffer.length() ||
+    2 > buffer.length() - offset {
+    raise UnsupportedFeature(msg="ZIP u16 patch is out of bounds")
+  }
+  let raw = value.reinterpret_as_uint()
+  buffer[offset] = (raw & 0xff).to_byte()
+  buffer[offset + 1] = ((raw >> 8) & 0xff).to_byte()
+}
+
+///|
 fn preservation_local_record(
   output : Array[Byte],
   name : Bytes,
@@ -147,6 +165,52 @@ fn preservation_fixture() -> Bytes raise ZipError {
 }
 
 ///|
+fn central_heavy_preservation_fixture(
+  entry_count : Int,
+  comment_bytes : Int,
+) -> Bytes raise ZipError {
+  let output : Array[Byte] = []
+  let local_offsets : Array[Int] = []
+  for index in 0..<entry_count {
+    let name = @encoding/utf8.encode("entry-\{index}.xml")
+    local_offsets.push(
+      preservation_local_record(
+        output, name, b"", false, false, b"", 0x1001, 0x2002,
+      ),
+    )
+  }
+  let central_offset = output.length()
+  let comment = Bytes::makei(comment_bytes, _ => (0x63).to_byte())
+  for index in 0..<entry_count {
+    let name = @encoding/utf8.encode("entry-\{index}.xml")
+    preservation_central_record(
+      output,
+      name,
+      b"",
+      false,
+      false,
+      b"",
+      comment,
+      0x1001,
+      0x2002,
+      0,
+      (0 : UInt),
+      local_offsets[index],
+    )
+  }
+  let central_size = output.length() - central_offset
+  write_u32_le(output, end_of_central_sig.reinterpret_as_uint())
+  write_u16_le(output, 0)
+  write_u16_le(output, 0)
+  write_u16_le(output, entry_count)
+  write_u16_le(output, entry_count)
+  write_u32_le(output, central_size.reinterpret_as_uint())
+  write_u32_le(output, central_offset.reinterpret_as_uint())
+  write_u16_le(output, 0)
+  Bytes::from_array(output)
+}
+
+///|
 fn preserved_entry(archive : Archive, name : String) -> Entry raise {
   for entry in archive.entries {
     if entry.name == name {
@@ -227,6 +291,41 @@ test "zip replace preserves untouched source records and archive metadata" {
   )
   assert_eq(after.entries[0].name, "untouched.bin")
   assert_eq(after.entries[1].name, "target.xml")
+}
+
+///|
+test "zip write_limited streams preserved central-heavy records" {
+  let source = central_heavy_preservation_fixture(256, 4096)
+  let archive = read_limited(
+    source,
+    max_entries=256,
+    max_entry_uncompressed_bytes=0,
+    max_total_uncompressed_bytes=0,
+  )
+  assert_true(archive.replace("entry-0.xml", b"replacement"))
+  let exact = write(archive)
+  let parsed = read_limited(
+    exact,
+    max_entries=256,
+    max_entry_uncompressed_bytes=16,
+    max_total_uncompressed_bytes=16,
+  )
+  assert_eq(parsed.entries().length(), 256)
+  assert_eq(parsed.get("entry-0.xml"), Some(b"replacement"))
+  guard find_end_of_central(exact) is Some(eocd_offset) else {
+    fail("missing preserved central-heavy end record")
+  }
+  let central_size = u32_to_int(read_u32_le_at_raw(exact, eocd_offset + 12))
+  let central_offset = u32_to_int(read_u32_le_at_raw(exact, eocd_offset + 16))
+  assert_true(central_size > 1024 * 1024)
+  assert_eq(write_limited(archive, max_output_bytes=exact.length()), exact)
+  let central_prefix_limit = central_offset + central_size / 2
+  try write_limited(archive, max_output_bytes=central_prefix_limit) catch {
+    OutputLimitExceeded(limit~) => assert_eq(limit, central_prefix_limit)
+    _ => fail("expected preserved central-directory output limit")
+  } noraise {
+    _ => fail("expected preserved central-heavy archive to exceed its limit")
+  }
 }
 
 ///|
