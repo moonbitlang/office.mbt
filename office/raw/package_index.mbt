@@ -107,6 +107,7 @@ priv struct RawPackage {
   format : @office.DocumentFormat
   archive : @zip.Archive
   names : Map[String, String]
+  parts : Map[String, Bytes]
   content_types : ContentTypeTable
   aliases : Map[String, Array[String]]
   part_aliases : Map[String, Array[String]]
@@ -215,16 +216,18 @@ fn parse_xml_bytes(
 }
 
 ///|
-fn raw_archive_names(
+fn raw_archive_index(
   archive : @zip.Archive,
-) -> Map[String, String] raise RawError {
+) -> (Map[String, String], Map[String, Bytes]) raise RawError {
   let names : Map[String, String] = Map([])
+  let parts : Map[String, Bytes] = Map([])
   for entry in archive.entries() {
     let name = entry.name()
-    if name.length() == 0 || name.length() > raw_max_part_name_length {
+    if name == "" ||
+      !raw_text_within_scalar_limit(name, raw_max_part_name_length) {
       raise raw_error(
         "office.raw.invalid_package",
-        "package entry names must contain 1 to \{raw_max_part_name_length} characters",
+        "package entry names must contain 1 to \{raw_max_part_name_length} Unicode scalar values",
         details=Json::object({
           "part": Json::string(bounded_raw_text(name, 160)),
         }),
@@ -237,10 +240,13 @@ fn raw_archive_names(
           "office.raw.invalid_package",
           "package contains colliding entry names '/\{bounded_raw_text(existing, 120)}' and '/\{bounded_raw_text(name, 120)}'",
         )
-      None => names[key] = name
+      None => {
+        names[key] = name
+        parts[key] = entry.data()
+      }
     }
   }
-  names
+  (names, parts)
 }
 
 ///|
@@ -274,17 +280,18 @@ fn normalize_manifest_part(value : String) -> String? {
 
 ///|
 fn parse_content_types(
-  archive : @zip.Archive,
   names : Map[String, String],
+  parts : Map[String, Bytes],
 ) -> ContentTypeTable raise RawError {
-  let actual_name = match names.get(canonical_part_key("[Content_Types].xml")) {
+  let manifest_key = canonical_part_key("[Content_Types].xml")
+  let actual_name = match names.get(manifest_key) {
     Some(value) => value
     None =>
       raise raw_error(
         "office.raw.invalid_package", "package is missing /[Content_Types].xml",
       )
   }
-  let bytes = match archive.get(actual_name) {
+  let bytes = match parts.get(manifest_key) {
     Some(value) => value
     None =>
       raise raw_error(
@@ -356,7 +363,10 @@ fn parse_content_types(
               (Some(name), Some(kind)) => {
                 // OPC PartName includes its required leading slash; the
                 // supported archive/transaction name limit does not.
-                if name.length() > raw_max_part_name_length + 1 {
+                if !raw_text_within_scalar_limit(
+                    name,
+                    raw_max_part_name_length + 1,
+                  ) {
                   raise raw_xml_resource_limit(
                     actual_name,
                     "manifest_part_name_length",
@@ -543,6 +553,81 @@ fn source_base(source : String) -> String {
 }
 
 ///|
+fn raw_xml_element_has_content(element : @xml.XmlElement) -> Bool {
+  for child in element.children {
+    match child {
+      XmlElement(_) => return true
+      XmlText(text) => if !text.trim().is_empty() { return true }
+    }
+  }
+  false
+}
+
+///|
+fn raw_is_ascii_hex_unit(unit : UInt16) -> Bool {
+  (unit >= b'0'.to_uint16() && unit <= b'9'.to_uint16()) ||
+  (unit >= b'a'.to_uint16() && unit <= b'f'.to_uint16()) ||
+  (unit >= b'A'.to_uint16() && unit <= b'F'.to_uint16())
+}
+
+///|
+fn raw_uri_text_is_sane(value : String, allow_fragment : Bool) -> Bool {
+  if value == "" {
+    return false
+  }
+  for character in value {
+    let code = character.to_int()
+    if code <= 0x20 ||
+      code == 0x7f ||
+      character == '<' ||
+      character == '>' ||
+      character == '"' ||
+      character == '{' ||
+      character == '}' ||
+      character == '|' ||
+      character == '^' ||
+      character == '`' ||
+      (!allow_fragment && character == '#') {
+      return false
+    }
+  }
+  let mut offset = 0
+  while offset < value.length() {
+    if value[offset] == '%' {
+      if offset + 2 >= value.length() ||
+        !raw_is_ascii_hex_unit(value[offset + 1]) ||
+        !raw_is_ascii_hex_unit(value[offset + 2]) {
+        return false
+      }
+      offset = offset + 3
+    } else {
+      offset = offset + 1
+    }
+  }
+  true
+}
+
+///|
+fn raw_relationship_type_is_absolute(value : String) -> Bool {
+  guard value.find(":") is Some(colon) && colon > 0 else { return false }
+  for index, character in value[:colon] {
+    let valid = if index == 0 {
+      character.is_ascii_alphabetic()
+    } else {
+      character.is_ascii_alphabetic() ||
+      character.is_ascii_digit() ||
+      character == '+' ||
+      character == '-' ||
+      character == '.'
+    }
+    if !valid {
+      return false
+    }
+  }
+  raw_uri_text_is_sane(value, false)
+}
+
+///|
 fn parse_relationships(
   pkg : RawPackage,
   source : String,
@@ -552,7 +637,7 @@ fn parse_relationships(
     Some(value) => value
     None => return []
   }
-  let bytes = match pkg.archive.get(canonical) {
+  let bytes = match pkg.parts.get(canonical_part_key(canonical)) {
     Some(value) => value
     None =>
       raise raw_error(
@@ -572,18 +657,41 @@ fn parse_relationships(
   let mut records = 0
   for child in root.children {
     match child {
-      XmlElement(element) if element.name == relationship_element => {
+      XmlText(text) =>
+        if !text.trim().is_empty() {
+          raise raw_error(
+            "office.raw.invalid_relationship",
+            "relationship part '/\{canonical}' contains unexpected text",
+          )
+        }
+      XmlElement(element) => {
+        if element.name != relationship_element {
+          raise raw_error(
+            "office.raw.invalid_relationship",
+            "relationship part '/\{canonical}' contains an unexpected element",
+          )
+        }
+        if raw_xml_element_has_content(element) {
+          raise raw_error(
+            "office.raw.invalid_relationship",
+            "relationship in '/\{canonical}' must be an empty element",
+          )
+        }
         records = records + 1
         if records > raw_max_relationship_records {
           raise raw_xml_resource_limit(
             canonical, "relationship_records", raw_max_relationship_records, records,
           )
         }
-        let id = element.attributes.get("Id")
-        let kind = element.attributes.get("Type")
-        let target = element.attributes.get("Target")
-        match (id, kind, target) {
-          (Some(id), Some(kind), Some(target)) => {
+        match
+          (
+            element.attributes.get("Id"),
+            element.attributes.get("Type"),
+            element.attributes.get("Target"),
+          ) {
+          (Some(id), Some(kind), Some(target)) if id != "" &&
+            kind != "" &&
+            target != "" => {
             if id.length() > raw_max_relationship_id_length {
               raise raw_xml_resource_limit(
                 canonical,
@@ -608,6 +716,18 @@ fn parse_relationships(
                 target.length(),
               )
             }
+            if !is_raw_ncname(id) {
+              raise raw_error(
+                "office.raw.invalid_relationship",
+                "relationship Id '\{bounded_raw_text(id, 120)}' in '/\{canonical}' is not a valid NCName",
+              )
+            }
+            if !raw_relationship_type_is_absolute(kind) {
+              raise raw_error(
+                "office.raw.invalid_relationship",
+                "relationship '\{bounded_raw_text(id, 120)}' in '/\{canonical}' has an invalid absolute Type URI",
+              )
+            }
             if ids.contains(id) {
               raise raw_error(
                 "office.raw.invalid_relationship",
@@ -625,6 +745,12 @@ fn parse_relationships(
                 )
             }
             if external {
+              if !raw_uri_text_is_sane(target, true) {
+                raise raw_error(
+                  "office.raw.invalid_relationship",
+                  "relationship '\{bounded_raw_text(id, 120)}' in '/\{canonical}' has an invalid external target",
+                )
+              }
               output.push({ id, kind, target, external: true })
             } else {
               match normalize_relationship_target(source_base(source), target) {
@@ -646,10 +772,13 @@ fn parse_relationships(
               }
             }
           }
-          _ => ()
+          _ =>
+            raise raw_error(
+              "office.raw.invalid_relationship",
+              "relationship in '/\{canonical}' must declare non-empty Id, Type, and Target attributes",
+            )
         }
       }
-      _ => ()
     }
   }
   output
@@ -1071,8 +1200,15 @@ fn validate_main_relationship_dialect(pkg : RawPackage) -> Unit raise RawError {
 fn validate_all_relationship_parts(pkg : RawPackage) -> Unit raise RawError {
   for entry in pkg.archive.entries() {
     let part = entry.name()
-    if pkg.content_types.for_part(part).trim().to_lower() ==
-      relationships_content_type {
+    let declared_type = pkg.content_types.for_part(part).trim().to_lower()
+    let relationship_name = canonical_part_key(part).has_suffix(".rels")
+    if relationship_name {
+      if declared_type != relationships_content_type {
+        raise raw_error(
+          "office.raw.invalid_relationship",
+          "relationship part '/\{bounded_raw_text(part, 160)}' must declare the exact OPC relationships content type",
+        )
+      }
       match relationship_source_for_part(part) {
         Some(source) => ignore(parse_relationships(pkg, source))
         None =>
@@ -1081,6 +1217,11 @@ fn validate_all_relationship_parts(pkg : RawPackage) -> Unit raise RawError {
             "relationship part '/\{bounded_raw_text(part, 160)}' is not stored at a valid OPC relationship-part name",
           )
       }
+    } else if declared_type == relationships_content_type {
+      raise raw_error(
+        "office.raw.invalid_relationship",
+        "part '/\{bounded_raw_text(part, 160)}' declares the OPC relationships content type but is not a canonical relationship-part name",
+      )
     }
   }
 }
@@ -1090,12 +1231,14 @@ fn raw_package_shell(
   format : @office.DocumentFormat,
   archive : @zip.Archive,
   names : Map[String, String],
+  parts : Map[String, Bytes],
   content_types : ContentTypeTable,
 ) -> RawPackage {
   {
     format,
     archive,
     names,
+    parts,
     content_types,
     aliases: Map([]),
     part_aliases: Map([]),
@@ -1110,12 +1253,12 @@ fn raw_package_shell(
 
 ///|
 fn package_from_archive(archive : @zip.Archive) -> RawPackage raise RawError {
-  let names = raw_archive_names(archive)
-  let content_types = parse_content_types(archive, names)
+  let (names, parts) = raw_archive_index(archive)
+  let content_types = parse_content_types(names, parts)
   // Root relationships are format-neutral, so use a short-lived shell to
   // resolve the exact main part before trusting a content-type declaration.
   let main_part = find_main_part(
-    raw_package_shell(Docx, archive, names, content_types),
+    raw_package_shell(Docx, archive, names, parts, content_types),
   )
   let format = match
     format_for_main_content_type(content_types.for_part(main_part)) {
@@ -1126,7 +1269,7 @@ fn package_from_archive(archive : @zip.Archive) -> RawPackage raise RawError {
         "officeDocument relationship target '/\{bounded_raw_text(main_part, 160)}' is not a supported DOCX or XLSX main part",
       )
   }
-  let pkg = raw_package_shell(format, archive, names, content_types)
+  let pkg = raw_package_shell(format, archive, names, parts, content_types)
   pkg.main_part = main_part
   pkg.relationship_prefix = relationship_prefix_for_main(pkg)
   validate_main_relationship_dialect(pkg)
@@ -1237,8 +1380,8 @@ fn open_raw_package_for_format(
 
 ///|
 fn validate_part_selector(value : String) -> Unit raise RawError {
-  if value.length() == 0 ||
-    value.length() > raw_max_alias_length + 6 ||
+  if value == "" ||
+    !raw_text_within_scalar_limit(value, raw_max_alias_length + 6) ||
     value.contains("\\") ||
     value.contains("\u{0}") {
     raise raw_error(
@@ -1269,7 +1412,8 @@ fn RawPackage::resolve_part(
   } else {
     raw_max_part_name_length + 1
   }
-  if !selected.has_prefix("/") || selected.length() > selected_limit {
+  if !selected.has_prefix("/") ||
+    !raw_text_within_scalar_limit(selected, selected_limit) {
     raise raw_error(
       "office.raw.invalid_part",
       "part selectors must use /name, part:/name, or alias:/name syntax",
@@ -1372,7 +1516,7 @@ fn RawPackage::part_bytes(
   self : RawPackage,
   name : String,
 ) -> Bytes raise RawError {
-  match self.archive.get(name) {
+  match self.parts.get(canonical_part_key(name)) {
     Some(bytes) => bytes
     None =>
       raise raw_error(

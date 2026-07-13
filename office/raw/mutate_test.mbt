@@ -368,6 +368,32 @@ test "raw candidate validation includes relationship field budgets" {
     }),
     "office.raw.validation_failed",
   )
+
+  let incomplete = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"missing-fields\"/></Relationships>"
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_replace_part(
+        Docx,
+        original,
+        "/document/relationships",
+        incomplete,
+      )
+    }),
+    "office.raw.validation_failed",
+  )
+
+  let unexpected = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Unexpected/></Relationships>"
+  assert_eq(
+    raw_error_code(() => {
+      @raw.raw_replace_part(
+        Docx,
+        original,
+        "/document/relationships",
+        unexpected,
+      )
+    }),
+    "office.raw.validation_failed",
+  )
 }
 
 ///|

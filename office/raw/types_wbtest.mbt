@@ -8,6 +8,13 @@ fn raw_test_character_count(value : String) -> Int {
 }
 
 ///|
+test "raw text limits count Unicode scalars without eager character arrays" {
+  let exact = "😀".repeat(1024)
+  assert_true(raw_text_within_scalar_limit(exact, 1024))
+  assert_false(raw_text_within_scalar_limit(exact + "😀", 1024))
+}
+
+///|
 test "bounded raw diagnostics count the truncation marker inside the limit" {
   let exact = bounded_raw_text(
     "x".repeat(raw_max_error_message),
