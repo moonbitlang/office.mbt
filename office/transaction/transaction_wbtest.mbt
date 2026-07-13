@@ -523,7 +523,7 @@ async test "concurrent no-replace destination wins the race" {
 
 ///|
 #cfg(target="native")
-async test "async publication fails closed when its parent path is relocated" {
+async test "async publication fails closed when parent relocation is attempted" {
   wb_with_transaction_dir(directory => {
     let input = "\{directory}/input.docx"
     let destination_directory = "\{directory}/destination"
@@ -554,8 +554,17 @@ async test "async publication fails closed when its parent path is relocated" {
         },
       )
     })
-    assert_eq(code, "office.transaction.cleanup_failed")
-    assert_false(@afs.exists(destination_directory))
+    if @path.sep == '\\' {
+      // Windows rejects renaming a directory while the transaction holds an
+      // open child staging handle. The fault must fail before publication and
+      // the staging file must still be cleaned from the original directory.
+      assert_eq(code, "office.transaction.commit_failed")
+      assert_true(@afs.exists(destination_directory))
+      wb_assert_no_temp(destination_directory)
+    } else {
+      assert_eq(code, "office.transaction.cleanup_failed")
+      assert_false(@afs.exists(destination_directory))
+    }
     assert_false(@afs.exists(output))
     assert_eq(@afs.read_file(input).binary(), original)
   })
@@ -563,7 +572,7 @@ async test "async publication fails closed when its parent path is relocated" {
 
 ///|
 #cfg(target="native")
-async test "async in-place recheck fails closed after source-parent relocation" {
+async test "async in-place recheck fails closed on source-parent relocation" {
   wb_with_transaction_dir(directory => {
     let source_directory = "\{directory}/source"
     let relocated_directory = "\{directory}/relocated-source"
@@ -595,9 +604,17 @@ async test "async in-place recheck fails closed after source-parent relocation" 
         },
       )
     })
-    assert_eq(code, "office.transaction.cleanup_failed")
-    assert_eq(@afs.read_file(relocated_input).binary(), original)
-    assert_eq(@afs.read_file(input).binary(), decoy)
+    if @path.sep == '\\' {
+      // As above, Windows denies the injected directory rename while the
+      // staging child is open, so no replacement source is created.
+      assert_eq(code, "office.transaction.commit_failed")
+      assert_false(@afs.exists(relocated_input))
+      assert_eq(@afs.read_file(input).binary(), original)
+    } else {
+      assert_eq(code, "office.transaction.cleanup_failed")
+      assert_eq(@afs.read_file(relocated_input).binary(), original)
+      assert_eq(@afs.read_file(input).binary(), decoy)
+    }
     wb_assert_no_temp(source_directory)
   })
 }
