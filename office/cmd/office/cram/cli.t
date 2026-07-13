@@ -17,7 +17,7 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   $ office.exe help | sed -n '1,8p'
   Office capability registry
     Schema: office.capabilities/2
-    Fingerprint: crc32:350c0a2e
+    Fingerprint: crc32:b3563de0
   Formats:
     docx (aliases: word) — WordprocessingML documents
     xlsx (aliases: excel) — SpreadsheetML workbooks
@@ -37,16 +37,16 @@ and JSONL inventories without deferred PowerPoint or MCP entries.
   {"kind":"format","name":"docx","selector":{"schema":"office.selector/1","root":"/docx","status":"syntax-only","examples":["/docx/body/p[1]/r[2]","/docx/comments/comment[id=\"7\"]"],"description":"bounded parse/render only; package resolution is not implemented"}}
 
   $ office.exe help all --json | jq -c '{schema,success,capability_schema:.data.schema,fingerprint:.data.fingerprint,names:[.data.records[].name]}'
-  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:350c0a2e","names":["docx","xlsx","help","identify","raw"]}
+  {"schema":"office.output/1","success":true,"capability_schema":"office.capabilities/2","fingerprint":"crc32:b3563de0","names":["docx","xlsx","help","identify","raw"]}
 
   $ office.exe help all --jsonl | jq -s -c 'map({schema,fingerprint,kind,name})'
-  [{"schema":"office.capability/2","fingerprint":"crc32:350c0a2e","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:350c0a2e","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:350c0a2e","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:350c0a2e","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:350c0a2e","kind":"command","name":"raw"}]
+  [{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"format","name":"docx"},{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"format","name":"xlsx"},{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"command","name":"help"},{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"command","name":"identify"},{"schema":"office.capability/2","fingerprint":"crc32:b3563de0","kind":"command","name":"raw"}]
 
 The raw command publishes explicit subcommand schemas, including every edit
 input and its conditional constraints.
 
-  $ office.exe help raw --json | jq -c '.data.records[0] | {variants:[.variants[].name],edit_inputs:[.variants[]|select(.name=="edit")|.inputs[].name],safe_value:([.variants[]|select(.name=="edit")|.constraints[]]|index("flag-looking-values-require-attached-syntax")!=null)}'
-  {"variants":["list","read","replace","edit"],"edit_inputs":["file","part","path","action","xml","xml-file","attribute","value","namespace","all","out","dry-run","overwrite","json"],"safe_value":true}
+  $ office.exe help raw --json | jq -c '.data.records[0] | {variants:[.variants[].name],edit_inputs:[.variants[]|select(.name=="edit")|.inputs[].name],safe_value:([.variants[]|select(.name=="edit")|.constraints[]]|index("flag-looking-values-require-attached-syntax")!=null),same_extension:([.variants[]|select(.name=="edit")|.constraints[]]|index("out-extension-must-match-input-format")!=null)}'
+  {"variants":["list","read","replace","edit"],"edit_inputs":["file","part","path","action","xml","xml-file","attribute","value","namespace","all","out","dry-run","overwrite","json"],"safe_value":true,"same_extension":true}
 
   $ office.exe help raw --json | jq -c '[.data.records[0].variants[] | {name,result_schema,outputs:[.outputs[].name]}]'
   [{"name":"list","result_schema":"office.raw.inventory/1","outputs":["format","part_count","parts"]},{"name":"read","result_schema":"office.raw.part/1","outputs":["format","part","encoding","content","output"]},{"name":"replace","result_schema":"office.raw.result/1","outputs":["change","transaction"]},{"name":"edit","result_schema":"office.raw.result/1","outputs":["change","transaction"]}]
@@ -179,6 +179,12 @@ fails before opening a transaction, and the in-place input remains byte-exact.
 Whole-part replacement accepts bounded UTF-8 file input. Invalid selector
 syntax retains the raw subsystem's stable error code through the transaction.
 
+  $ unzip -p input.docx word/document.xml > same.xml
+  $ office.exe raw replace input.docx /document --xml-file same.xml
+  validated no-op: whole-part replacement for /word/document.xml -> input.docx
+  $ cmp before.docx input.docx; echo $?
+  0
+
   $ office.exe raw read input.docx /document > original.xml
   $ sed 's/Walking on imported air/CLI replace/' original.xml > replacement.xml
   $ office.exe raw replace input.docx /document --xml-file replacement.xml --out replaced.docx --json | jq -c '{success,action:.data.change.action,part:.data.change.part,changed:.data.transaction.preservation.changed}'
@@ -190,6 +196,18 @@ syntax retains the raw subsystem's stable error code through the transaction.
   1
   $ jq -c '{success,code:.error.code}' invalid-path.json
   {"success":false,"code":"office.raw.invalid_path"}
+
+A separate output must retain the package format's supported extension. The
+candidate fails before publication, so neither input nor destination changes.
+
+  $ office.exe raw edit input.docx /document --path '/w:document/w:body/w:p[1]' --action set-attribute --attribute test --value true --out wrong.xlsx --json > wrong-extension.json 2>&1; echo $?
+  1
+  $ jq -c '{success,code:.error.code}' wrong-extension.json
+  {"success":false,"code":"office.raw.invalid_package"}
+  $ test ! -e wrong.xlsx; echo $?
+  0
+  $ cmp before.docx input.docx; echo $?
+  0
 
 Oversized optional error details are dropped at the transaction boundary
 without replacing the raw subsystem's stable error code.

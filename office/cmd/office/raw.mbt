@@ -365,6 +365,30 @@ fn raw_result_json(
 }
 
 ///|
+fn raw_human_transaction_status(
+  report : @transaction.TransactionReport,
+) -> String {
+  if report.dry_run {
+    "validated dry run"
+  } else if report.committed {
+    "committed"
+  } else if !report.changed {
+    "validated no-op"
+  } else {
+    "validated without publication"
+  }
+}
+
+///|
+fn raw_human_mutation_subject(mutation : @raw.RawMutation) -> String {
+  if mutation.action_name() == "replace-part" {
+    "whole-part replacement for /\{mutation.part_name()}"
+  } else {
+    "\{mutation.action_name()} matched \{mutation.selected_count()} element(s) in /\{mutation.part_name()}"
+  }
+}
+
+///|
 fn print_raw_result(
   matches : @argparse.Matches,
   mutation : @raw.RawMutation,
@@ -386,13 +410,8 @@ fn print_raw_result(
         _ => "<input>"
       },
     )
-    let status = if matches.flags.get_or_default("dry-run", false) {
-      "validated dry run"
-    } else {
-      "committed"
-    }
     println(
-      "\{status}: \{mutation.action_name()} matched \{mutation.selected_count()} element(s) in /\{mutation.part_name()} -> \{raw_human_text(destination, 160)}",
+      "\{raw_human_transaction_status(report)}: \{raw_human_mutation_subject(mutation)} -> \{raw_human_text(destination, 160)}",
     )
   }
 }

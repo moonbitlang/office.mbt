@@ -107,6 +107,32 @@ test "raw part schema is emitted only with its required encoding" {
 }
 
 ///|
+test "raw human summaries distinguish whole-part replacement from element edits" {
+  let original = @word.new_blank_docx()
+  let document = @raw.raw_read("summary.docx", original, "/document").xml_text()
+  let replacement = @raw.raw_replace_part(Docx, original, "/document", document)
+  assert_eq(
+    raw_human_mutation_subject(replacement),
+    "whole-part replacement for /word/document.xml",
+  )
+  let edit = @raw.raw_edit(
+    Docx,
+    original,
+    @raw.raw_edit_request(
+      "/document",
+      "/w:document/w:body",
+      SetAttribute,
+      attribute="test",
+      value="true",
+    ),
+  )
+  assert_eq(
+    raw_human_mutation_subject(edit),
+    "set-attribute matched 1 element(s) in /word/document.xml",
+  )
+}
+
+///|
 async test "bounded raw read completion observes pending cancellation" {
   @async.with_task_group() <| group => {
     let task = group.spawn(() => {

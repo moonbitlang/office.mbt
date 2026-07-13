@@ -40,6 +40,11 @@ no-replace rename; failure or pre-commit cancellation removes private staging.
 document. `edit` changes selected elements inside one existing XML part.
 Neither command creates or removes parts.
 
+For either mutation command, `--out` must use the same supported extension as
+the input package: `.docx` for DOCX and `.xlsx` for XLSX. A mismatched output
+extension fails candidate validation before publication, leaving the input
+unchanged and creating no destination.
+
 ## Relationship-driven aliases
 
 Aliases are derived only from exact Transitional or Strict Office
@@ -160,7 +165,7 @@ a payload with identical bytes leaves the whole member record unchanged.
 
 All inputs are bounded before materialization: package bytes, entry count,
 per-entry and aggregate expansion, 1,024-character package part names, XML
-part bytes, path length/depth, fragment and attribute bytes, selected node
+part bytes, path Unicode-scalar length/depth, fragment and attribute bytes, selected node
 count, metadata records and fields, semantic aliases, and inventory
 serialization. A lexical XML preflight enforces element, attribute,
 namespace-declaration, in-scope namespace, namespace URI, cumulative expanded
