@@ -436,8 +436,14 @@ async fn run_raw_replace(matches : @argparse.Matches) -> Unit {
   let completed : Ref[@raw.RawMutation?] = Ref(None)
   let report = @transaction.transact(
     options,
-    (format, _original, archive) => {
-      let mutation = @raw.raw_replace_part_archive(format, archive, part, xml) catch {
+    (format, _original, archive, budget) => {
+      let mutation = @raw.raw_replace_part_archive(
+        format,
+        archive,
+        part,
+        xml,
+        max_package_bytes=budget.max_candidate_package_bytes(),
+      ) catch {
         RawError(..) as error => raise raw_mutation_failure(error)
       }
       completed.val = Some(mutation)
@@ -518,8 +524,13 @@ async fn run_raw_edit(matches : @argparse.Matches) -> Unit {
   let completed : Ref[@raw.RawMutation?] = Ref(None)
   let report = @transaction.transact(
     options,
-    (format, _original, archive) => {
-      let mutation = @raw.raw_edit_archive(format, archive, request) catch {
+    (format, _original, archive, budget) => {
+      let mutation = @raw.raw_edit_archive(
+        format,
+        archive,
+        request,
+        max_package_bytes=budget.max_candidate_package_bytes(),
+      ) catch {
         RawError(..) as error => raise raw_mutation_failure(error)
       }
       completed.val = Some(mutation)

@@ -414,7 +414,17 @@ fn write_raw_candidate_archive(
   archive : @zip.Archive,
   max_package_bytes : Int,
 ) -> Bytes raise RawError {
-  let bytes = @zip.write_limited(archive, max_output_bytes=max_package_bytes) catch {
+  if max_package_bytes < 0 {
+    raise raw_error(
+      "office.raw.invalid_request", "candidate package limit must be non-negative",
+    )
+  }
+  let enforced_limit = if max_package_bytes < raw_max_package_bytes {
+    max_package_bytes
+  } else {
+    raw_max_package_bytes
+  }
+  let bytes = @zip.write_limited(archive, max_output_bytes=enforced_limit) catch {
     OutputLimitExceeded(limit~) =>
       raise raw_error(
         "office.raw.resource_limit",
@@ -430,10 +440,10 @@ fn write_raw_candidate_archive(
         "office.raw.archive_write_failed", "could not build candidate OOXML archive",
       )
   }
-  if bytes.length() > max_package_bytes {
+  if bytes.length() > enforced_limit {
     raise raw_error(
       "office.raw.resource_limit",
-      "candidate package exceeds the \{max_package_bytes}-byte limit",
+      "candidate package exceeds the \{enforced_limit}-byte limit",
     )
   }
   bytes
@@ -444,6 +454,7 @@ fn rebuild_raw_archive(
   pkg : RawPackage,
   part : String,
   replacement : Bytes,
+  max_package_bytes : Int,
 ) -> Bytes raise RawError {
   let exact_name = match pkg.names.get(canonical_part_key(part)) {
     Some(name) => name
@@ -455,7 +466,7 @@ fn rebuild_raw_archive(
       "package does not contain replacement part '/\{part}'",
     )
   }
-  write_raw_candidate_archive(pkg.archive, raw_max_package_bytes)
+  write_raw_candidate_archive(pkg.archive, max_package_bytes)
 }
 
 ///|
@@ -521,11 +532,14 @@ fn raw_replace_part_package(
   part : String,
   xml : String,
   validate_serialized : Bool,
+  max_package_bytes : Int,
 ) -> RawMutation raise RawError {
   validate_part_selector(part)
   let (resolved, _) = pkg.checked_xml_part(part)
   let replacement = checked_document_bytes(xml)
-  let candidate = rebuild_raw_archive(pkg, resolved, replacement)
+  let candidate = rebuild_raw_archive(
+    pkg, resolved, replacement, max_package_bytes,
+  )
   if validate_serialized {
     validate_raw_candidate(format, candidate)
   } else {
@@ -548,18 +562,22 @@ pub fn raw_replace_part(
     part,
     xml,
     true,
+    raw_max_package_bytes,
   )
 }
 
 ///|
 /// Replaces one XML part in a caller-owned archive snapshot without inflating
-/// the same package again. The caller must validate the serialized candidate
-/// before publication; `transaction.transact` always does so.
+/// the same package again. `max_package_bytes` must come from the active
+/// transaction budget so ZIP sizing can reject before candidate allocation.
+/// The caller must validate the serialized candidate before publication;
+/// `transaction.transact` always does so.
 pub fn raw_replace_part_archive(
   format : @office.DocumentFormat,
   archive : @zip.Archive,
   part : String,
   xml : String,
+  max_package_bytes~ : Int,
 ) -> RawMutation raise RawError {
   raw_replace_part_package(
     format,
@@ -567,6 +585,7 @@ pub fn raw_replace_part_archive(
     part,
     xml,
     false,
+    max_package_bytes,
   )
 }
 
@@ -576,6 +595,7 @@ fn raw_edit_package(
   pkg : RawPackage,
   request : RawEditRequest,
   validate_serialized : Bool,
+  max_package_bytes : Int,
 ) -> RawMutation raise RawError {
   let (part, bytes) = pkg.checked_xml_part(request.part)
   let document = scan_raw_xml(part, bytes)
@@ -618,7 +638,7 @@ fn raw_edit_package(
     )
   }
   let replacement = apply_raw_span_edits(part, document, edits)
-  let candidate = rebuild_raw_archive(pkg, part, replacement)
+  let candidate = rebuild_raw_archive(pkg, part, replacement, max_package_bytes)
   if validate_serialized {
     validate_raw_candidate(format, candidate)
   } else {
@@ -645,22 +665,27 @@ pub fn raw_edit(
     open_raw_package_for_format(format, data),
     request,
     true,
+    raw_max_package_bytes,
   )
 }
 
 ///|
 /// Applies one bounded edit to a caller-owned archive snapshot without
-/// inflating the same package again. The transaction boundary supplies the
-/// serialized candidate readback before any publication.
+/// inflating the same package again. `max_package_bytes` must come from the
+/// active transaction budget so ZIP sizing can reject before candidate
+/// allocation. The transaction boundary supplies the serialized candidate
+/// readback before any publication.
 pub fn raw_edit_archive(
   format : @office.DocumentFormat,
   archive : @zip.Archive,
   request : RawEditRequest,
+  max_package_bytes~ : Int,
 ) -> RawMutation raise RawError {
   raw_edit_package(
     format,
     open_raw_archive_for_format(format, archive),
     request,
     false,
+    max_package_bytes,
   )
 }

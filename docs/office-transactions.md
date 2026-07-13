@@ -12,9 +12,10 @@ A transaction performs these phases in order:
    supported, and resolve the documented path-based destination policy;
 2. read the input ZIP once under the transaction resource budget, then identify
    it from an independently mutable shallow fork of that bounded archive;
-3. invoke one in-memory mutation callback with the identified format, a
-   read-only view of the original bytes, and another isolated shallow archive
-   fork whose immutable payload buffers are shared;
+3. invoke one in-memory mutation callback with the identified format, the
+   immutable original `Bytes`, another isolated shallow archive fork whose
+   immutable payload buffers are shared, and an opaque `TransactionBudget`
+   carrying the candidate-package ceiling that remains before allocation;
 4. read the serialized candidate ZIP once under the remaining transaction
    budget, then identify and structurally validate it through the portable
    Office/OPC gate using archive forks;
@@ -109,6 +110,16 @@ buffer and archive. Candidate inflation receives only the aggregate budget
 remaining after the original archive. A package that is individually legal
 but would make the two live archive snapshots exceed the envelope therefore
 fails with `kind=live_materialized_bytes` before any temporary file is created.
+
+The mutation callback receives that remaining allowance as
+`TransactionBudget::max_candidate_package_bytes()`. Package serializers must
+apply it during sizing, not after returning bytes. Archive-backed raw mutation
+APIs require the value and pass it to `zip.write_limited`, so a source-near-
+envelope edit is rejected in the output-storage-free plan before the candidate
+buffer exists. The callback receives the original immutable `Bytes` directly;
+a true no-op can return that same value without a whole-package copy. The
+transaction also checks the returned length immediately as a fail-closed
+contract backstop.
 
 ZIP expansion and serialization do not hide another package-sized allocation
 inside that reserve. DEFLATE first validates and counts output without retaining

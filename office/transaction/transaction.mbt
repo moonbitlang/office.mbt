@@ -509,6 +509,23 @@ fn live_materialization_error(
 }
 
 ///|
+fn transaction_mutation_budget(
+  retained : Int64,
+  live_limit : Int64,
+) -> TransactionBudget {
+  let remaining = live_limit - retained
+  let package_limit = transaction_max_package_bytes.to_int64()
+  let max_candidate_package_bytes = if remaining <= 0L {
+    0
+  } else if remaining < package_limit {
+    remaining.to_int()
+  } else {
+    transaction_max_package_bytes
+  }
+  { max_candidate_package_bytes, }
+}
+
+///|
 fn check_package_size_with_limit(
   bytes : BytesView,
   phase : String,
@@ -1077,7 +1094,7 @@ fn append_platform_warnings(
 ///|
 async fn transact_with_identifier_and_faults(
   options : TransactionOptions,
-  mutate : (@office.DocumentFormat, BytesView, @zip.Archive) -> TransactionMutation raise,
+  mutate : (@office.DocumentFormat, Bytes, @zip.Archive, TransactionBudget) -> TransactionMutation raise,
   validators : Array[TransactionValidator],
   identifier : TransactionIdentifier?,
   faults : TransactionFaults,
@@ -1129,7 +1146,11 @@ async fn transact_with_identifier_and_faults(
   let (format, original_archive, original_archive_cost) = identify_input(
     options, original, identifier, materialization_reserve, materialization_limit,
   )
-  let mutation = mutate(format, original, original_archive.fork()) catch {
+  let mutation_retained = materialization_reserve + original_archive_cost
+  let budget = transaction_mutation_budget(
+    mutation_retained, materialization_limit,
+  )
+  let mutation = mutate(format, original, original_archive.fork(), budget) catch {
     TransactionError(..) as error => raise normalize_mutation_error(error)
     error =>
       raise transaction_error(
@@ -1138,6 +1159,14 @@ async fn transact_with_identifier_and_faults(
       )
   }
   let mutation = mutation.reuse_original_if_identical(original)
+  if mutation.bytes != original &&
+    mutation.bytes.length() > budget.max_candidate_package_bytes {
+    raise live_materialization_error(
+      "candidate package",
+      materialization_limit,
+      mutation_retained + mutation.bytes.length().to_int64(),
+    )
+  }
   let (validations, candidate_archive) = validate_candidate(
     format,
     policy.destination_target,
@@ -1146,7 +1175,7 @@ async fn transact_with_identifier_and_faults(
     mutation,
     validators,
     identifier,
-    materialization_reserve + original_archive_cost,
+    mutation_retained,
     materialization_limit,
   )
   let preservation = preservation_report_archives(
@@ -1190,7 +1219,7 @@ async fn transact_with_identifier_and_faults(
 ///|
 async fn transact_with_faults(
   options : TransactionOptions,
-  mutate : (@office.DocumentFormat, BytesView, @zip.Archive) -> TransactionMutation raise,
+  mutate : (@office.DocumentFormat, Bytes, @zip.Archive, TransactionBudget) -> TransactionMutation raise,
   validators : Array[TransactionValidator],
   faults : TransactionFaults,
   post_read_release? : String,
@@ -1209,12 +1238,14 @@ async fn transact_with_faults(
 
 ///|
 /// Runs one fail-closed Office package transaction. The mutation callback owns
-/// an independently mutable shallow fork of the already bounded input archive;
-/// mandatory validation, preservation checks, source conflict detection, and
+/// an independently mutable shallow fork of the already bounded input archive,
+/// may reuse the immutable original `Bytes` for a no-op, and must apply the
+/// supplied `TransactionBudget` before allocating candidate package bytes.
+/// Mandatory validation, preservation checks, source conflict detection, and
 /// atomic publication remain in this function.
 pub async fn transact(
   options : TransactionOptions,
-  mutate : (@office.DocumentFormat, BytesView, @zip.Archive) -> TransactionMutation raise,
+  mutate : (@office.DocumentFormat, Bytes, @zip.Archive, TransactionBudget) -> TransactionMutation raise,
   validators? : Array[TransactionValidator] = [],
   identifier? : TransactionIdentifier,
 ) -> TransactionReport {

@@ -58,7 +58,7 @@ async test "transaction-published DOCX and XLSX pass Microsoft OpenXML validatio
     sdk_write(docx_input, @word.new_blank_docx())
     let docx_report = @transaction.transact(
       @transaction.transaction_options(docx_input, output_path=docx_output),
-      (_format, bytes, _archive) => {
+      (_format, bytes, _archive, _budget) => {
         @transaction.transaction_mutation_with_manifest(
           sdk_rewrite_content_types(bytes, "transaction-docx"),
           ["[Content_Types].xml"],
@@ -72,7 +72,7 @@ async test "transaction-published DOCX and XLSX pass Microsoft OpenXML validatio
     sdk_write(xlsx_input, @excel.write(@excel.new_file()))
     let xlsx_report = @transaction.transact(
       @transaction.transaction_options(xlsx_input, output_path=xlsx_output),
-      (_format, bytes, _archive) => {
+      (_format, bytes, _archive, _budget) => {
         @transaction.transaction_mutation_with_manifest(
           sdk_rewrite_content_types(bytes, "transaction-xlsx"),
           ["[Content_Types].xml"],

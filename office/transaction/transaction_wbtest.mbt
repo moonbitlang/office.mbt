@@ -44,7 +44,12 @@ fn wb_large_candidate(data : BytesView) -> Bytes raise {
 
 ///|
 fn wb_archive_retained_cost(bytes : BytesView) -> Int64 raise {
-  let archive = @zip.read(bytes)
+  let archive = @zip.read_limited(
+    bytes,
+    max_entries=transaction_max_archive_entries,
+    max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
+    max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
+  )
   bytes.length().to_int64() + archive.retained_size_estimate()
 }
 
@@ -117,7 +122,7 @@ async fn wb_expect_post_read_cancellation(
     let task = group.spawn(() => {
       transact_with_faults(
         options,
-        (_format, bytes, _archive) => transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive, _budget) => transaction_mutation(bytes),
         [],
         no_transaction_faults(),
         post_read_release=release,
@@ -464,7 +469,7 @@ async test "rename failure restores restrictive staging access for cleanup" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input, output_path=output, permission=0o000),
-        (_format, bytes, _archive) => transaction_mutation(bytes.to_owned()),
+        (_format, bytes, _archive, _budget) => transaction_mutation(bytes),
         [],
         {
           fail_write: false,
@@ -520,7 +525,12 @@ async test "injected write and rename failures clean temporary artifacts" {
     let output = "\{directory}/output.docx"
     let original = @word.new_blank_docx()
     wb_write(input, original)
-    let mutate = (_format, bytes, _archive) => {
+    let mutate : (
+      @office.DocumentFormat,
+      Bytes,
+      @zip.Archive,
+      TransactionBudget,
+    ) -> TransactionMutation raise = (_format, bytes, _archive, _budget) => {
       transaction_mutation_with_manifest(
         wb_rewrite_content_types(bytes, "fault"),
         ["[Content_Types].xml"],
@@ -546,7 +556,7 @@ async test "injected write and rename failures clean temporary artifacts" {
     let partial_code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input),
-        (_format, bytes, _archive) => {
+        (_format, bytes, _archive, _budget) => {
           transaction_mutation_with_manifest(wb_large_candidate(bytes), [
             "[Content_Types].xml",
           ])
@@ -607,7 +617,7 @@ async test "task cancellation waits for temporary-file cleanup" {
       let task = group.spawn(() => {
         transact_with_faults(
           transaction_options(input),
-          (_format, _bytes, _archive) => {
+          (_format, _bytes, _archive, _budget) => {
             transaction_mutation_with_manifest(candidate, [
               "[Content_Types].xml",
             ])
@@ -684,7 +694,7 @@ async test "cancellation during ordinary-failure cleanup is re-observed" {
       let task = group.spawn(() => {
         transact_with_faults(
           transaction_options(input, output_path=output),
-          (_format, bytes, _archive) => transaction_mutation(bytes.to_owned()),
+          (_format, bytes, _archive, _budget) => transaction_mutation(bytes),
           [],
           {
             fail_write: true,
@@ -733,7 +743,7 @@ async test "post-rename cancellation still returns a committed report" {
       let task = group.spawn(() => {
         transact_with_faults(
           transaction_options(input, output_path=output),
-          (_format, _bytes, _archive) => {
+          (_format, _bytes, _archive, _budget) => {
             transaction_mutation_with_manifest(candidate, [
               "[Content_Types].xml",
             ])
@@ -784,7 +794,7 @@ async test "concurrent in-place source change is never overwritten" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input),
-        (_format, bytes, _archive) => {
+        (_format, bytes, _archive, _budget) => {
           transaction_mutation_with_manifest(
             wb_rewrite_content_types(bytes, "candidate"),
             ["[Content_Types].xml"],
@@ -822,7 +832,7 @@ async test "concurrent no-replace destination wins the race" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input, output_path=output),
-        (_format, bytes, _archive) => {
+        (_format, bytes, _archive, _budget) => {
           transaction_mutation_with_manifest(
             wb_rewrite_content_types(bytes, "candidate-output"),
             ["[Content_Types].xml"],
@@ -865,7 +875,7 @@ async test "async publication fails closed when parent relocation is attempted" 
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input, output_path=output),
-        (_format, _bytes, _archive) => {
+        (_format, _bytes, _archive, _budget) => {
           transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
         },
         [],
@@ -915,7 +925,7 @@ async test "async in-place recheck fails closed on source-parent relocation" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input),
-        (_format, _bytes, _archive) => {
+        (_format, _bytes, _archive, _budget) => {
           transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
         },
         [],
@@ -960,7 +970,7 @@ async test "temporary substitution is never published or silently cleaned" {
     let code = wb_error_code(() => {
       transact_with_faults(
         transaction_options(input, output_path=output),
-        (_format, bytes, _archive) => {
+        (_format, bytes, _archive, _budget) => {
           transaction_mutation_with_manifest(
             wb_rewrite_content_types(bytes, "cleanup-failure"),
             ["[Content_Types].xml"],
@@ -1124,7 +1134,7 @@ async test "aggregate materialization budget rejects candidate without publicati
       ignore(
         transact_with_identifier_and_faults(
           transaction_options(input, output_path=output),
-          (_format, _bytes, _archive) => {
+          (_format, _bytes, _archive, _budget) => {
             transaction_mutation_with_manifest(candidate, [
               "[Content_Types].xml",
             ])
@@ -1157,6 +1167,93 @@ async test "aggregate materialization budget rejects candidate without publicati
           }
           _ => fail("expected structured materialization details")
         }
+      }
+    }
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_false(@afs.exists(output))
+    wb_assert_no_temp(directory)
+  })
+}
+
+///|
+async test "source-near-envelope budget rejects during ZIP planning" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word.new_blank_docx()
+    wb_write(input, original)
+    let original_cost = wb_archive_retained_cost(original)
+    let input_payload = wb_archive_payload_bytes(original)
+    let input_preflight = transaction_archive_preflight_overhead(original)
+    // Leave only the conservative input-preflight surplus plus 1 KiB after the
+    // original archive. This places the source immediately below an injected
+    // transaction envelope without requiring a giant fixture.
+    let candidate_budget = input_preflight +
+      input_payload -
+      original_cost +
+      1024L
+    assert_true(candidate_budget > 0L)
+    assert_true(candidate_budget < 0x7fffffffL)
+    let working_reserve = 64L * 1024L * 1024L
+    let live_limit = working_reserve + original_cost + candidate_budget
+    let planner_rejected = Ref(false)
+    let failure = try {
+      ignore(
+        transact_with_identifier_and_faults(
+          transaction_options(input, output_path=output),
+          (_format, _bytes, archive, budget) => {
+            assert_eq(
+              budget.max_candidate_package_bytes().to_int64(),
+              candidate_budget,
+            )
+            // The logical growth is working state covered by the fixed reserve.
+            // `write_limited` must reject its package-sized output in the
+            // storage-free planning pass, before `FixedByteOutput::allocated`.
+            let growth_size = budget.max_candidate_package_bytes() + 1024
+            archive.add(
+              "near-envelope-growth.bin",
+              Bytes::makei(growth_size, index => (index & 0xff).to_byte()),
+            )
+            let candidate = @zip.write_limited(
+              archive,
+              max_output_bytes=budget.max_candidate_package_bytes(),
+            ) catch {
+              OutputLimitExceeded(_) => {
+                planner_rejected.val = true
+                raise live_materialization_error(
+                  "candidate package",
+                  live_limit,
+                  live_limit + 1L,
+                )
+              }
+              error => raise error
+            }
+            transaction_mutation(candidate)
+          },
+          [],
+          None,
+          no_transaction_faults(),
+          materialization_limit=live_limit,
+          materialization_reserve=working_reserve,
+        ),
+      )
+      fail("expected pre-allocation candidate-budget rejection")
+    } catch {
+      TransactionError(..) as error => error
+      error => fail("expected TransactionError, received \{error}")
+    }
+    assert_true(planner_rejected.val)
+    match failure {
+      TransactionError(code~, details~, ..) => {
+        assert_eq(code, "office.transaction.resource_limit_exceeded")
+        guard details is Some(Object(fields)) else {
+          fail("expected structured materialization details")
+        }
+        assert_eq(fields.get("phase"), Some(Json::string("candidate package")))
+        assert_eq(
+          fields.get("kind"),
+          Some(Json::string("live_materialized_bytes")),
+        )
       }
     }
     assert_eq(@afs.read_file(input).binary(), original)
