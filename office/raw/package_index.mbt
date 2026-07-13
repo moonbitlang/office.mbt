@@ -1137,6 +1137,11 @@ fn package_from_archive(archive : @zip.Archive) -> RawPackage raise RawError {
     Docx => add_docx_aliases(pkg)
     Xlsx => add_xlsx_aliases(pkg)
   }
+  let inventory_parts : Array[RawPartInfo] = []
+  for entry in pkg.archive.entries() {
+    inventory_parts.push(pkg.part_info(entry.name()))
+  }
+  check_inventory_serialization_budget(inventory_parts)
   pkg
 }
 
@@ -1470,7 +1475,6 @@ pub fn raw_inventory(
     parts.push(pkg.part_info(entry.name()))
   }
   parts.sort_by(fn(left, right) { left.name.compare(right.name) })
-  check_inventory_serialization_budget(parts)
   { format: pkg.format, parts: ReadOnlyArray::from_array(parts) }
 }
 
