@@ -8,6 +8,8 @@ let transaction_temp_attempts = 32
 priv struct ResolvedPolicy {
   source_target : String
   destination_target : String
+  destination_directory : PublicationDirectory
+  destination_leaf : String
   output_path : String
   mode : TransactionMode
   replace : Bool
@@ -21,6 +23,8 @@ priv struct TransactionFaults {
   post_rename_release : String?
   concurrent_replacement : Bytes?
   concurrent_destination : Bytes?
+  relocate_parent_to : String?
+  deny_cleanup : Bool
 }
 
 ///|
@@ -32,6 +36,8 @@ fn no_transaction_faults() -> TransactionFaults {
     post_rename_release: None,
     concurrent_replacement: None,
     concurrent_destination: None,
+    relocate_parent_to: None,
+    deny_cleanup: false,
   }
 }
 
@@ -128,14 +134,21 @@ async fn resolve_new_destination(path : String) -> String {
 async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
   let source_target = resolve_source(options.input_path)
   match options.output_path {
-    None =>
+    None => {
+      let destination_directory = publication_directory_open(
+        path_parent(source_target),
+        options.input_path,
+      )
       {
         source_target,
         destination_target: source_target,
+        destination_directory,
+        destination_leaf: path_leaf(source_target),
         output_path: options.input_path,
         mode: InPlace,
         replace: true,
       }
+    }
     Some(output_path) => {
       let destination_exists = path_exists_checked(output_path)
       let destination_target = if destination_exists {
@@ -182,9 +195,15 @@ async fn resolve_policy(options : TransactionOptions) -> ResolvedPolicy {
           }),
         )
       }
+      let destination_directory = publication_directory_open(
+        path_parent(destination_target),
+        output_path,
+      )
       {
         source_target,
         destination_target,
+        destination_directory,
+        destination_leaf: path_leaf(destination_target),
         output_path,
         mode: Output,
         replace: options.overwrite,
@@ -328,65 +347,31 @@ fn validate_candidate(
 }
 
 ///|
-async fn cleanup_temp(path : String) -> Unit {
-  @async.protect_from_cancel(
-    () => @afs.remove(path) catch { _ => () },
-    resume_on_cancel=true,
-  )
-}
-
-///|
 async fn create_temp(
-  destination : String,
+  policy : ResolvedPolicy,
   permission : Int,
-) -> (String, @afs.File) {
+) -> PublicationTemp {
   let stamp = @env.now()
   for attempt in 0..<transaction_temp_attempts {
-    let candidate = "\{destination}.office-tmp-\{stamp}-\{attempt}"
-    let file = @afs.open(
-      candidate,
-      mode=WriteOnly,
-      create_mode=CreateNew,
-      permission~,
-      sync=NoSync,
-    ) catch {
-      @os_error.OSError(_) as error if error.is_EEXIST() => continue
-      error if @async.is_being_cancelled() => raise error
-      error =>
-        raise transaction_error(
-          "office.transaction.temp_create_failed",
-          "could not create a temporary file next to the destination: \{bounded_text(error.to_string(), 240)}",
-          details=Json::object({
-            "output": Json::string(bounded_text(destination, 160)),
-          }),
-        )
+    let leaf = ".office-tmp-\{stamp}-\{attempt}"
+    match
+      publication_temp_try_create(
+        policy.destination_directory,
+        leaf,
+        permission,
+        policy.output_path,
+      ) {
+      Some(temp) => return temp
+      None => continue
     }
-    return (candidate, file)
   }
   raise transaction_error(
     "office.transaction.temp_create_failed",
     "could not allocate a unique temporary file after \{transaction_temp_attempts} attempts",
     details=Json::object({
-      "output": Json::string(bounded_text(destination, 160)),
+      "output": Json::string(bounded_text(policy.output_path, 160)),
     }),
   )
-}
-
-///|
-async fn sync_parent_directory(destination : String) -> Bool {
-  let parent = path_parent(destination)
-  let directory = @afs.open(parent, mode=ReadOnly) catch {
-    error if @async.is_being_cancelled() => raise error
-    _ => return false
-  }
-  defer directory.close()
-  let synced = try directory.sync() catch {
-    error if @async.is_being_cancelled() => raise error
-    _ => false
-  } noraise {
-    _ => true
-  }
-  synced
 }
 
 ///|
@@ -416,8 +401,34 @@ async fn publish_candidate(
   candidate : Bytes,
   faults : TransactionFaults,
 ) -> Bool {
-  let (temp, file) = create_temp(policy.destination_target, options.permission)
+  let temp = create_temp(policy, options.permission)
   try {
+    match faults.relocate_parent_to {
+      Some(target) =>
+        @afs.rename(
+          path_parent(policy.destination_target),
+          target,
+          replace=false,
+        ) catch {
+          error if @async.is_being_cancelled() => raise error
+          error =>
+            raise transaction_error(
+              "office.transaction.commit_failed",
+              "could not inject the destination-parent relocation: \{bounded_text(error.to_string(), 240)}",
+            )
+        }
+      None => ()
+    }
+    if faults.deny_cleanup {
+      @afs.chmod(path_parent(policy.destination_target), 0o500) catch {
+        error if @async.is_being_cancelled() => raise error
+        error =>
+          raise transaction_error(
+            "office.transaction.commit_failed",
+            "could not inject the cleanup-permission failure: \{bounded_text(error.to_string(), 240)}",
+          )
+      }
+    }
     if faults.stall_after_temp {
       @async.sleep(60_000)
     }
@@ -426,23 +437,8 @@ async fn publish_candidate(
         "office.transaction.write_failed", "injected temporary-file write failure",
       )
     }
-    file.write(candidate) catch {
-      error if @async.is_being_cancelled() => raise error
-      error =>
-        raise transaction_error(
-          "office.transaction.write_failed",
-          "could not write temporary package: \{bounded_text(error.to_string(), 240)}",
-        )
-    }
-    file.sync() catch {
-      error if @async.is_being_cancelled() => raise error
-      error =>
-        raise transaction_error(
-          "office.transaction.sync_failed",
-          "could not sync temporary package: \{bounded_text(error.to_string(), 240)}",
-        )
-    }
-    file.close()
+    publication_temp_write(temp, candidate)
+    publication_temp_sync(temp)
     if policy.mode is InPlace {
       match faults.concurrent_replacement {
         Some(replacement) =>
@@ -490,27 +486,13 @@ async fn publish_candidate(
         "office.transaction.commit_failed", "injected atomic-rename failure",
       )
     }
-    @afs.rename(temp, policy.destination_target, replace=policy.replace) catch {
-      error if @async.is_being_cancelled() => raise error
-      @os_error.OSError(_) as error if policy.mode is Output &&
-        !policy.replace &&
-        error.is_EEXIST() =>
-        raise transaction_error(
-          "office.transaction.output_exists",
-          "destination appeared before the atomic publish completed",
-          details=Json::object({
-            "output": Json::string(bounded_text(policy.output_path, 160)),
-          }),
-        )
-      error =>
-        raise transaction_error(
-          "office.transaction.commit_failed",
-          "could not atomically publish destination: \{bounded_text(error.to_string(), 240)}",
-          details=Json::object({
-            "output": Json::string(bounded_text(policy.output_path, 160)),
-          }),
-        )
-    }
+    publication_temp_publish(
+      temp,
+      policy.destination_leaf,
+      policy.replace,
+      policy.output_path,
+    )
+    publication_temp_close(temp)
     @async.protect_from_cancel(
       () => {
         match faults.post_rename_release {
@@ -520,7 +502,7 @@ async fn publish_candidate(
             }
           None => ()
         }
-        sync_parent_directory(policy.destination_target)
+        publication_directory_sync(policy.destination_directory)
       },
       resume_on_cancel=true,
     ) catch {
@@ -528,8 +510,7 @@ async fn publish_candidate(
     }
   } catch {
     error => {
-      file.close()
-      cleanup_temp(temp)
+      publication_temp_cleanup(temp, policy.output_path)
       raise error
     }
   }
@@ -576,6 +557,7 @@ async fn transact_with_faults(
 ) -> TransactionReport {
   validate_validator_set(validators)
   let policy = resolve_policy(options)
+  defer publication_directory_close(policy.destination_directory)
   let original = read_original(options, policy.source_target)
   let format = identify_input(options, original)
   let mutation = mutate(format, original) catch {

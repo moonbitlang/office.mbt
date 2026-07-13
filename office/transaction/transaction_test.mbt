@@ -169,6 +169,24 @@ async test "separate output commits atomically and preserves input" {
 }
 
 ///|
+async test "near-limit destination basenames do not inflate temporary names" {
+  with_transaction_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/\{"x".repeat(240)}.docx"
+    let original = @word.new_blank_docx()
+    write_test_file(input, original)
+    let report = @transaction.transact(
+      @transaction.transaction_options(input, output_path=output),
+      (_format, bytes) => @transaction.transaction_mutation(bytes.to_owned()),
+    )
+    assert_true(report.committed)
+    assert_eq(@afs.read_file(output).binary(), original)
+    assert_eq(@afs.read_file(input).binary(), original)
+    assert_no_transaction_temp(directory)
+  })
+}
+
+///|
 async test "byte-identical separate output still publishes a validated copy" {
   with_transaction_test_dir(directory => {
     let input = "\{directory}/input.xlsx"

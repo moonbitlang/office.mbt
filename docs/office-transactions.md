@@ -8,7 +8,8 @@ bytes in memory, but they do not write destination files themselves.
 
 A transaction performs these phases in order:
 
-1. validate the options and resolve the source and destination policy;
+1. validate the options, resolve the source and destination policy, and pin the
+   resolved native destination directory by handle;
 2. read and identify the input package;
 3. invoke one in-memory mutation callback with the identified format and a
    read-only view of the original bytes;
@@ -17,16 +18,20 @@ A transaction performs these phases in order:
 5. run every registered format-specific validation hook;
 6. compare original and candidate ZIP entry payloads and enforce an optional
    declared-part preservation manifest;
-7. for a real commit, write and sync an exclusively created temporary file in
-   the destination directory, recheck an in-place source, and atomically
-   rename the temporary file into place.
+7. for a real commit, write and sync an exclusively created, short-named
+   temporary file in the destination directory, recheck an in-place source,
+   and atomically rename the temporary file into place.
 
 No callback can skip phases 4–6. A parse, mutation, validation, preservation,
 temporary-write, sync, or rename failure never publishes candidate bytes.
-Temporary artifacts are removed on every pre-rename failure or cancellation;
-cancellation is propagated only after that cleanup finishes. Ordinary failures
-cross the API as structured `TransactionError` values; runtime cancellation is
-intentionally not relabeled as an Office failure.
+Temporary cleanup is cancellation-protected on every pre-rename failure. A
+cleanup error is never swallowed: it becomes
+`office.transaction.cleanup_failed` so callers can treat a possibly retained
+temporary artifact as an operational incident. Cancellation is propagated only
+after successful cleanup; a cleanup failure takes precedence because it needs
+operator attention. Ordinary failures cross the API as structured
+`TransactionError` values; runtime cancellation is intentionally not relabeled
+as an Office failure.
 
 The atomic rename is the commit point. Once it succeeds, post-commit parent
 directory synchronization is cancellation-protected and the transaction
@@ -52,17 +57,23 @@ never an ambiguous cancellation that could invite an unsafe retry.
   outside the package transaction contract.
 
 On native targets, existing paths and the parent of a new destination are
-resolved before the temporary file is created. This prevents a destination
-symlink from redirecting the rename after policy checks. Immediately before an
-in-place rename, the source is read again and compared byte-for-byte with the
-original snapshot. This is an optimistic conflict check, not a substitute for
-cooperation from arbitrary writers; a writer racing after that check remains
-outside the portable filesystem contract.
+resolved and the destination directory is opened before input bytes are read.
+Temporary creation, cleanup, and publication are descriptor-relative to that
+pinned directory handle. Renaming or replacing the parent pathname after policy
+resolution therefore cannot redirect publication or strand cleanup in a
+different directory. Temporary basenames are independent of the destination
+basename, so a valid near-limit filename does not overflow the filesystem's
+component limit. Immediately before an in-place rename, the source is read
+again and compared byte-for-byte with the original snapshot. This is an
+optimistic conflict check, not a substitute for cooperation from arbitrary
+writers; a writer racing after that check remains outside the portable
+filesystem contract.
 
 Wasm uses normalized absolute paths because portable realpath/symlink
-resolution is unavailable. Rename is still same-directory and the temporary
-file is fully synced, but parent-directory durability and symlink identity are
-not guaranteed by the host ABI. A successful Wasm commit carries a structured
+resolution and directory-relative handles are unavailable. Rename is still
+same-directory and the temporary file is fully synced, but parent-directory
+identity, durability, and symlink identity are not guaranteed by the host ABI.
+A successful Wasm commit carries a structured
 `office.transaction.wasm_commit_semantics` warning.
 
 ## Validation hooks

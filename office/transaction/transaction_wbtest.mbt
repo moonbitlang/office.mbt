@@ -73,6 +73,8 @@ async test "injected write and rename failures clean temporary artifacts" {
         post_rename_release: None,
         concurrent_replacement: None,
         concurrent_destination: None,
+        relocate_parent_to: None,
+        deny_cleanup: false,
       })
     })
     assert_eq(write_code, "office.transaction.write_failed")
@@ -91,6 +93,8 @@ async test "injected write and rename failures clean temporary artifacts" {
           post_rename_release: None,
           concurrent_replacement: None,
           concurrent_destination: None,
+          relocate_parent_to: None,
+          deny_cleanup: false,
         },
       )
     })
@@ -125,6 +129,8 @@ async test "task cancellation waits for temporary-file cleanup" {
             post_rename_release: None,
             concurrent_replacement: None,
             concurrent_destination: None,
+            relocate_parent_to: None,
+            deny_cleanup: false,
           },
         )
       })
@@ -181,6 +187,8 @@ async test "post-rename cancellation still returns a committed report" {
             post_rename_release: Some(release),
             concurrent_replacement: None,
             concurrent_destination: None,
+            relocate_parent_to: None,
+            deny_cleanup: false,
           },
         )
       })
@@ -229,6 +237,8 @@ async test "concurrent in-place source change is never overwritten" {
           post_rename_release: None,
           concurrent_replacement: Some(concurrent),
           concurrent_destination: None,
+          relocate_parent_to: None,
+          deny_cleanup: false,
         },
       )
     })
@@ -263,6 +273,8 @@ async test "concurrent no-replace destination wins the race" {
           post_rename_release: None,
           concurrent_replacement: None,
           concurrent_destination: Some(concurrent),
+          relocate_parent_to: None,
+          deny_cleanup: false,
         },
       )
     })
@@ -270,6 +282,89 @@ async test "concurrent no-replace destination wins the race" {
     assert_eq(@afs.read_file(input).binary(), original)
     assert_eq(@afs.read_file(output).binary(), concurrent)
     wb_assert_no_temp(directory)
+  })
+}
+
+///|
+#cfg(target="native")
+async test "native publication stays bound to a relocated parent directory" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let destination_directory = "\{directory}/destination"
+    let relocated_directory = "\{directory}/relocated"
+    let output = "\{destination_directory}/output.docx"
+    let relocated_output = "\{relocated_directory}/output.docx"
+    let original = @word.new_blank_docx()
+    let candidate = wb_rewrite_content_types(original, "pinned-parent")
+    wb_write(input, original)
+    @afs.mkdir(destination_directory)
+    let report = transact_with_faults(
+      transaction_options(input, output_path=output),
+      (_format, _bytes) => {
+        transaction_mutation_with_manifest(candidate, ["[Content_Types].xml"])
+      },
+      [],
+      {
+        fail_write: false,
+        fail_rename: false,
+        stall_after_temp: false,
+        post_rename_release: None,
+        concurrent_replacement: None,
+        concurrent_destination: None,
+        relocate_parent_to: Some(relocated_directory),
+        deny_cleanup: false,
+      },
+    )
+    assert_true(report.committed)
+    assert_false(@afs.exists(destination_directory))
+    assert_eq(@afs.read_file(relocated_output).binary(), candidate)
+    assert_eq(@afs.read_file(input).binary(), original)
+    wb_assert_no_temp(relocated_directory)
+  })
+}
+
+///|
+#cfg(all(target="native", not(platform="windows")))
+async test "native cleanup failures are surfaced and remain recoverable" {
+  wb_with_transaction_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let destination_directory = "\{directory}/destination"
+    let output = "\{destination_directory}/output.docx"
+    let original = @word.new_blank_docx()
+    wb_write(input, original)
+    @afs.mkdir(destination_directory)
+    let code = wb_error_code(() => {
+      transact_with_faults(
+        transaction_options(input, output_path=output),
+        (_format, bytes) => {
+          transaction_mutation_with_manifest(
+            wb_rewrite_content_types(bytes, "cleanup-failure"),
+            ["[Content_Types].xml"],
+          )
+        },
+        [],
+        {
+          fail_write: true,
+          fail_rename: false,
+          stall_after_temp: false,
+          post_rename_release: None,
+          concurrent_replacement: None,
+          concurrent_destination: None,
+          relocate_parent_to: None,
+          deny_cleanup: true,
+        },
+      )
+    })
+    @afs.chmod(destination_directory, 0o700)
+    assert_eq(code, "office.transaction.cleanup_failed")
+    for name in @afs.readdir(destination_directory) {
+      if name.contains(".office-tmp-") {
+        @afs.remove("\{destination_directory}/\{name}")
+      }
+    }
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+    wb_assert_no_temp(destination_directory)
   })
 }
 
