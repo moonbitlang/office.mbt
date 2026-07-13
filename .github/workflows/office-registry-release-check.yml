@@ -1,0 +1,31 @@
+name: office-registry-release-check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-registry-check:
+    name: resolve and test office outside moon.work
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up MoonBit (nightly)
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: MoonBit versions
+        run: moon version --all
+
+      # This script copies office/ into RUNNER_TEMP, beyond the repository's
+      # moon.work boundary. It must resolve mbtexcel@0.1.9 from Mooncakes.
+      - name: Verify isolated registry consumer
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: scripts/check_office_registry_release.sh
