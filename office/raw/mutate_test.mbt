@@ -37,6 +37,32 @@ fn archive_payload_differences(
 }
 
 ///|
+fn assert_archive_metadata_preserved(
+  before : BytesView,
+  after : BytesView,
+  changed_part : String,
+) -> Unit raise {
+  let left = @zip.read(before)
+  let right = @zip.read(after)
+  assert_eq(left.entries().length(), right.entries().length())
+  for index = 0; index < left.entries().length(); index = index + 1 {
+    let original = left.entries()[index]
+    let candidate = right.entries()[index]
+    assert_eq(original.name(), candidate.name())
+    match (original.compression(), candidate.compression()) {
+      (Store, Store) | (Deflate, Deflate) => ()
+      _ => fail("archive compression method changed for {original.name()}")
+    }
+    assert_eq(original.data_descriptor(), candidate.data_descriptor())
+    if original.name() == changed_part {
+      assert_false(original.data() == candidate.data())
+    } else {
+      assert_true(original.data() == candidate.data())
+    }
+  }
+}
+
+///|
 fn word_paragraph(text : String) -> String {
   "<w:p xmlns:w=\"\{word_namespace}\"><w:r><w:t>\{text}</w:t></w:r></w:p>"
 }
@@ -62,6 +88,7 @@ test "raw edit splices DOCX elements and preserves every other part payload" {
     archive_payload_differences(original, first.bytes),
     content="[\"word/document.xml\"]",
   )
+  assert_archive_metadata_preserved(original, first.bytes, "word/document.xml")
   let add_second = @raw.raw_edit_request(
     "/document",
     "/w:document/w:body/w:p[2]",
@@ -213,5 +240,34 @@ test "raw mutation rejects unsafe grammar fragments and validation regressions" 
       )
     }),
     content="office.raw.validation_failed",
+  )
+}
+
+///|
+test "raw all selection is capped before edits are materialized" {
+  let original = @word.new_blank_docx()
+  let document = StringBuilder::new()
+  ignore(
+    document.write_string("<w:document xmlns:w=\"\{word_namespace}\"><w:body>"),
+  )
+  for index = 1; index <= 257; index = index + 1 {
+    document.write_string(word_paragraph(index.to_string())) |> ignore
+  }
+  document.write_string("<w:sectPr/></w:body></w:document>") |> ignore
+  let populated = @raw.raw_replace_part(
+    Docx,
+    original,
+    "/document",
+    document.to_string(),
+  )
+  let remove_all = @raw.raw_edit_request(
+    "/document",
+    "/w:document/w:body/w:p",
+    Remove,
+    all=true,
+  )
+  inspect(
+    raw_error_code(() => @raw.raw_edit(Docx, populated.bytes, remove_all)),
+    content="office.raw.too_many_matches",
   )
 }
