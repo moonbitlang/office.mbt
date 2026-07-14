@@ -212,6 +212,61 @@ async test "D1 session rejects a second semantic comment operation" {
 }
 
 ///|
+async test "D1 session rejects generic and semantic plan composition in either order" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let generic_first_output = "\{directory}/generic-first.docx"
+    let semantic_first_output = "\{directory}/semantic-first.docx"
+    let original = @word_fixture.new_blank_docx()
+    write_docx_session_file(input, original)
+    let specification = @word_fixture.comment_spec(author="D1", from=0, to=0, [
+      @word_fixture.paragraph([
+        @word_fixture.run([@word_fixture.text("snapshot-bound")]),
+      ]),
+    ])
+    let generic_first = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(
+          input,
+          output_path=generic_first_output,
+        ),
+        session => {
+          session.queue_added_part("word/generic.bin", b"generic")
+          session.queue_comment_addition(
+            at_relative="p[1]",
+            to_relative="p[1]",
+            specification,
+          )
+          |> ignore
+        },
+      )
+    })
+    assert_eq(generic_first, "office.docx.stale_semantic_state")
+    assert_false(@afs.exists(generic_first_output))
+    let semantic_first = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(
+          input,
+          output_path=semantic_first_output,
+        ),
+        session => {
+          session.queue_comment_addition(
+            at_relative="p[1]",
+            to_relative="p[1]",
+            specification,
+          )
+          |> ignore
+          session.queue_added_part("word/generic.bin", b"generic")
+        },
+      )
+    })
+    assert_eq(semantic_first, "office.docx.stale_semantic_state")
+    assert_false(@afs.exists(semantic_first_output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 validator rejects generic duplicate comment identities" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"
