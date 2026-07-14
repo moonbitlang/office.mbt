@@ -256,10 +256,12 @@ pub fn PackageBuilder::build(
 /// builder-owned names (`[Content_Types].xml` and anything shaped like a
 /// relationships part: the builder emits all relationships itself).
 fn check_part_name(name : String) -> Unit raise PackageBuildError {
-  let problems : Array[String] = []
+  let problems = FindingCollector::new(4, DEFAULT_MAX_FINDING_CHARS)
   check_entry_name(name, problems)
-  if problems.length() > 0 {
-    raise PackageBuildError("invalid part name '\{name}': \{problems[0]}")
+  if problems.findings.length() > 0 {
+    raise PackageBuildError(
+      "invalid part name '\{name}': \{problems.findings[0]}",
+    )
   }
   if name.has_suffix("/") {
     raise PackageBuildError(

@@ -35,9 +35,15 @@ pub fn note_spec(Array[@document.DocumentElement]) -> NoteSpec raise @core.DocxE
 
 pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
 
+pub fn plan_comment_addition_archive(DocxAnnotatedResult, @zip.Archive, at_relative~ : String, to_relative~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
+
 pub fn plan_comment_reply(DocxAnnotatedResult, BytesView, parent_id~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
 
+pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ : String, CommentSpec) -> (@splice.SplicePlan, String) raise @core.DocxError
+
 pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
+
+pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 

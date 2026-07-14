@@ -68,6 +68,34 @@ test "archive-backed validation matches byte validation" {
 }
 
 ///|
+test "limited validation bounds findings and messages during production" {
+  let archive = @mbtzip.Archive::new()
+  for index in 0..<12 {
+    archive.add(
+      "very-long-malformed-entry-name-\{index}-\\bad.xml",
+      utf8_bytes("<x/>"),
+    )
+  }
+  let (findings, truncated) = @opc.validate_docx_archive_limited(
+    archive,
+    max_findings=3,
+    max_message_chars=24,
+  )
+  assert_eq(findings.length(), 3)
+  assert_true(truncated)
+  for finding in findings {
+    assert_true(finding.length() <= 24)
+  }
+  let (valid_findings, valid_truncated) = @opc.validate_docx_archive_limited(
+    try! @mbtzip.read(minimal_docx()),
+    max_findings=3,
+    max_message_chars=24,
+  )
+  assert_eq(valid_findings.length(), 0)
+  assert_false(valid_truncated)
+}
+
+///|
 test "OPC validation uses strict XML for every structural part" {
   let duplicate_types = MINIMAL_CONTENT_TYPES_XML.replace(
     old="<Default Extension=\"rels\"",

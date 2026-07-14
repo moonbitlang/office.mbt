@@ -31,46 +31,208 @@ const ROOT_RELS_PART : String = "_rels/.rels"
 const OFFICE_DOCUMENT_RELATIONSHIP_SUFFIX : String = "/officeDocument"
 
 ///|
-/// Validates docx package structure. Returns findings; empty = valid.
+const DEFAULT_MAX_FINDINGS : Int = 1024
+
+///|
+const DEFAULT_MAX_FINDING_CHARS : Int = 2048
+
+///|
+priv struct FindingCollector {
+  findings : Array[String]
+  max_findings : Int
+  max_message_chars : Int
+  mut truncated : Bool
+}
+
+///|
+fn FindingCollector::new(
+  max_findings : Int,
+  max_message_chars : Int,
+) -> FindingCollector {
+  {
+    findings: [],
+    max_findings: if max_findings > 0 {
+      max_findings
+    } else {
+      0
+    },
+    max_message_chars: if max_message_chars > 0 {
+      max_message_chars
+    } else {
+      0
+    },
+    truncated: false,
+  }
+}
+
+///|
+fn valid_finding_text(text : String, limit : Int) -> Bool {
+  let mut offset = 0
+  let mut scalars = 0
+  while offset < text.length() {
+    let unit = text[offset]
+    if unit.is_leading_surrogate() {
+      if offset + 1 >= text.length() ||
+        !text[offset + 1].is_trailing_surrogate() {
+        return false
+      }
+      offset = offset + 2
+    } else if unit.is_trailing_surrogate() {
+      return false
+    } else {
+      offset = offset + 1
+    }
+    scalars = scalars + 1
+    if scalars > limit {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn bounded_finding_text(text : String, limit : Int) -> String {
+  if limit <= 0 {
+    return ""
+  }
+  if valid_finding_text(text, limit) {
+    return text
+  }
+  if !valid_finding_text(text, 0x7fffffff) {
+    return bounded_finding_text("<invalid UTF-16>", limit)
+  }
+  let output = StringBuilder::new()
+  let mut count = 0
+  let content_limit = if limit > 1 { limit - 1 } else { 0 }
+  for character in text {
+    if count == content_limit {
+      output.write_string("…") |> ignore
+      break
+    }
+    output.write_char(character) |> ignore
+    count = count + 1
+  }
+  output.to_string()
+}
+
+///|
+fn FindingCollector::text(self : FindingCollector, text : String) -> String {
+  bounded_finding_text(text, self.max_message_chars)
+}
+
+///|
+fn FindingCollector::add(self : FindingCollector, message : String) -> Unit {
+  if self.findings.length() >= self.max_findings {
+    self.truncated = true
+    return
+  }
+  self.findings.push(bounded_finding_text(message, self.max_message_chars))
+}
+
+///|
+fn FindingCollector::full(self : FindingCollector) -> Bool {
+  self.findings.length() >= self.max_findings
+}
+
+///|
+fn FindingCollector::stop(self : FindingCollector) -> Unit {
+  self.truncated = true
+}
+
+///|
+fn default_findings(result : (Array[String], Bool)) -> Array[String] {
+  let (findings, truncated) = result
+  if truncated {
+    if findings.length() == DEFAULT_MAX_FINDINGS {
+      let _ = findings.pop()
+    }
+    findings.push("additional validation findings were omitted")
+  }
+  findings
+}
+
+///|
+/// Validates docx package structure. Returns bounded findings; empty = valid.
 pub fn validate_docx_package(data : BytesView) -> Array[String] {
-  let findings = []
+  default_findings(
+    validate_docx_package_limited(
+      data,
+      max_findings=DEFAULT_MAX_FINDINGS,
+      max_message_chars=DEFAULT_MAX_FINDING_CHARS,
+    ),
+  )
+}
+
+///|
+/// Validates package bytes while bounding findings as they are produced.
+/// `truncated=true` means validation stopped after filling the caller's cap.
+pub fn validate_docx_package_limited(
+  data : BytesView,
+  max_findings~ : Int,
+  max_message_chars~ : Int,
+) -> (Array[String], Bool) {
+  let findings = FindingCollector::new(max_findings, max_message_chars)
   let archive = @mbtzip.read(data) catch {
     err => {
-      findings.push("invalid ZIP archive: \{repr(err)}")
-      return findings
+      findings.add("invalid ZIP archive: \{findings.text(repr(err))}")
+      return (findings.findings, findings.truncated)
     }
   }
   validate_docx_archive_into(archive, findings)
-  findings
+  (findings.findings, findings.truncated)
 }
 
 ///|
 /// Validates an already materialized DOCX archive without reading or inflating
 /// the package again. The caller retains ownership; validation is read-only.
 pub fn validate_docx_archive(archive : @mbtzip.Archive) -> Array[String] {
-  let findings = []
+  default_findings(
+    validate_docx_archive_limited(
+      archive,
+      max_findings=DEFAULT_MAX_FINDINGS,
+      max_message_chars=DEFAULT_MAX_FINDING_CHARS,
+    ),
+  )
+}
+
+///|
+/// Archive-backed validation with a hard finding count and per-message scalar
+/// ceiling applied during production rather than after an unbounded array is
+/// built.
+pub fn validate_docx_archive_limited(
+  archive : @mbtzip.Archive,
+  max_findings~ : Int,
+  max_message_chars~ : Int,
+) -> (Array[String], Bool) {
+  let findings = FindingCollector::new(max_findings, max_message_chars)
   validate_docx_archive_into(archive, findings)
-  findings
+  (findings.findings, findings.truncated)
 }
 
 ///|
 fn validate_docx_archive_into(
   archive : @mbtzip.Archive,
-  findings : Array[String],
+  findings : FindingCollector,
 ) -> Unit {
   // Raw entry sweep: names + CRC integrity, before any part-level logic.
   let parts : Map[String, Bytes] = Map([])
   let seen : Set[String] = Set([])
   for entry in archive.entries() {
+    if findings.full() {
+      findings.stop()
+      return
+    }
     let name = entry.name()
     if seen.contains(name) {
-      findings.push("duplicate entry name: \{name}")
+      findings.add("duplicate entry name: \{findings.text(name)}")
     } else {
       seen.add(name)
     }
     check_entry_name(name, findings)
     if entry.crc32() != @mbtzip.crc32(entry.data()) {
-      findings.push("entry data does not match its stored CRC-32: \{name}")
+      findings.add(
+        "entry data does not match its stored CRC-32: \{findings.text(name)}",
+      )
     }
     if !name.has_suffix("/") {
       parts[name] = entry.data()
@@ -85,20 +247,20 @@ fn validate_docx_archive_into(
 }
 
 ///|
-fn check_entry_name(name : String, findings : Array[String]) -> Unit {
+fn check_entry_name(name : String, findings : FindingCollector) -> Unit {
   if name == "" {
-    findings.push("empty entry name")
+    findings.add("empty entry name")
     return
   }
   if name.has_prefix("/") {
-    findings.push("entry name must not start with '/': \{name}")
+    findings.add("entry name must not start with '/': \{findings.text(name)}")
   }
   if name.find("\\") is Some(_) {
-    findings.push("entry name contains a backslash: \{name}")
+    findings.add("entry name contains a backslash: \{findings.text(name)}")
   }
   for segment in name.split("/") {
     if segment == ".." {
-      findings.push("entry name contains a '..' segment: \{name}")
+      findings.add("entry name contains a '..' segment: \{findings.text(name)}")
       break
     }
   }
@@ -113,10 +275,10 @@ priv struct ContentTypes {
 ///|
 fn check_content_types(
   parts : Map[String, Bytes],
-  findings : Array[String],
+  findings : FindingCollector,
 ) -> ContentTypes? {
   guard parts.get(CONTENT_TYPES_PART) is Some(bytes) else {
-    findings.push("missing required part: \{CONTENT_TYPES_PART}")
+    findings.add("missing required part: \{CONTENT_TYPES_PART}")
     return None
   }
   guard parse_xml_part(CONTENT_TYPES_PART, bytes, findings) is Some(root) else {
@@ -125,6 +287,10 @@ fn check_content_types(
   let defaults : Map[String, String] = Map([])
   let overrides : Map[String, String] = Map([])
   for node in root.children {
+    if findings.full() {
+      findings.stop()
+      break
+    }
     guard node is XmlElement(element) else { continue }
     match local_name(element.name) {
       "Default" =>
@@ -136,7 +302,7 @@ fn check_content_types(
           (Some(extension), Some(content_type)) =>
             defaults[extension.to_lower()] = content_type
           _ =>
-            findings.push(
+            findings.add(
               "\{CONTENT_TYPES_PART}: Default missing Extension or ContentType",
             )
         }
@@ -154,18 +320,18 @@ fn check_content_types(
             if part_name.has_prefix("/") {
               let target = part_name[1:].to_owned()
               if !parts.contains(target) {
-                findings.push(
-                  "\{CONTENT_TYPES_PART}: Override names a missing part: \{part_name}",
+                findings.add(
+                  "\{CONTENT_TYPES_PART}: Override names a missing part: \{findings.text(part_name)}",
                 )
               }
             } else {
-              findings.push(
-                "\{CONTENT_TYPES_PART}: Override PartName must start with '/': \{part_name}",
+              findings.add(
+                "\{CONTENT_TYPES_PART}: Override PartName must start with '/': \{findings.text(part_name)}",
               )
             }
           }
           _ =>
-            findings.push(
+            findings.add(
               "\{CONTENT_TYPES_PART}: Override missing PartName or ContentType",
             )
         }
@@ -179,9 +345,13 @@ fn check_content_types(
 fn check_content_type_coverage(
   parts : Map[String, Bytes],
   types : ContentTypes,
-  findings : Array[String],
+  findings : FindingCollector,
 ) -> Unit {
   for name, _ in parts {
+    if findings.full() {
+      findings.stop()
+      return
+    }
     if name == CONTENT_TYPES_PART {
       continue
     }
@@ -192,7 +362,7 @@ fn check_content_type_coverage(
     if extension is Some(ext) && types.defaults.contains(ext) {
       continue
     }
-    findings.push("no content type for part: \{name}")
+    findings.add("no content type for part: \{findings.text(name)}")
   }
 }
 
@@ -218,8 +388,12 @@ fn part_extension(name : String) -> String? {
 ///|
 fn check_relationships(
   parts : Map[String, Bytes],
-  findings : Array[String],
+  findings : FindingCollector,
 ) -> Unit {
+  if findings.full() {
+    findings.stop()
+    return
+  }
   // Root rels: required, and must carry the officeDocument relationship.
   match parts.get(ROOT_RELS_PART) {
     Some(bytes) =>
@@ -238,20 +412,24 @@ fn check_relationships(
               match parts.get(part) {
                 Some(bytes) => check_main_part(part, bytes, findings)
                 None =>
-                  findings.push(
-                    "officeDocument relationship targets a missing part: \{part}",
+                  findings.add(
+                    "officeDocument relationship targets a missing part: \{findings.text(part)}",
                   )
               }
             None =>
-              findings.push("\{ROOT_RELS_PART}: no officeDocument relationship")
+              findings.add("\{ROOT_RELS_PART}: no officeDocument relationship")
           }
         }
         None => ()
       }
-    None => findings.push("missing required part: \{ROOT_RELS_PART}")
+    None => findings.add("missing required part: \{ROOT_RELS_PART}")
   }
   // Every part's own rels, when present: parse + internal targets resolve.
   for name, bytes in parts {
+    if findings.full() {
+      findings.stop()
+      return
+    }
     if name == ROOT_RELS_PART || !is_rels_part(name) {
       continue
     }
@@ -262,8 +440,8 @@ fn check_relationships(
           if !external {
             let resolved = resolve_target(base, target)
             if !parts.contains(resolved) {
-              findings.push(
-                "relationship target missing: \{name} -> \{target} (resolved \{resolved})",
+              findings.add(
+                "relationship target missing: \{findings.text(name)} -> \{findings.text(target)} (resolved \{findings.text(resolved)})",
               )
             }
           }
@@ -278,13 +456,13 @@ fn check_relationships(
 fn check_main_part(
   name : String,
   bytes : Bytes,
-  findings : Array[String],
+  findings : FindingCollector,
 ) -> Unit {
   match parse_xml_part(name, bytes, findings) {
     Some(root) =>
       if local_name(root.name) != "document" {
-        findings.push(
-          "main part \{name} root element is '\{local_name(root.name)}', expected a 'document' root",
+        findings.add(
+          "main part \{findings.text(name)} root element is '\{findings.text(local_name(root.name))}', expected a 'document' root",
         )
       }
     None => ()
@@ -369,17 +547,19 @@ fn local_name(name : String) -> String {
 fn parse_xml_part(
   name : String,
   bytes : Bytes,
-  findings : Array[String],
+  findings : FindingCollector,
 ) -> @xml.XmlElement? {
   let text = @utf8.decode(bytes, ignore_bom=true) catch {
     _ => {
-      findings.push("part is not valid UTF-8: \{name}")
+      findings.add("part is not valid UTF-8: \{findings.text(name)}")
       return None
     }
   }
   let root = @xml.read_xml_string_strict(text) catch {
     err => {
-      findings.push("malformed XML in \{name}: \{repr(err)}")
+      findings.add(
+        "malformed XML in \{findings.text(name)}: \{findings.text(repr(err))}",
+      )
       return None
     }
   }

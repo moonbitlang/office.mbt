@@ -30,8 +30,28 @@ pub fn plan_comment_reply(
   parent_id~ : String,
   spec : CommentSpec,
 ) -> (@splice.SplicePlan, String) raise DocxError {
+  plan_comment_reply_zip(annotated, open_zip(original), parent_id~, spec)
+}
+
+///|
+/// Archive-backed reply planner for bounded preservation sessions.
+pub fn plan_comment_reply_archive(
+  annotated : DocxAnnotatedResult,
+  archive : @mbtzip.Archive,
+  parent_id~ : String,
+  spec : CommentSpec,
+) -> (@splice.SplicePlan, String) raise DocxError {
+  plan_comment_reply_zip(annotated, open_zip_archive(archive), parent_id~, spec)
+}
+
+///|
+fn plan_comment_reply_zip(
+  annotated : DocxAnnotatedResult,
+  zip : ZipArchive,
+  parent_id~ : String,
+  spec : CommentSpec,
+) -> (@splice.SplicePlan, String) raise DocxError {
   check_mutation_gates(annotated)
-  let zip = open_zip(original)
   let plan = @splice.SplicePlan::new()
   let parent = find_defined_comment(annotated, parent_id)
   if parent.body_paragraphs() == 0 {
@@ -178,8 +198,33 @@ pub fn plan_comment_resolution(
   comment_id~ : String,
   done~ : Bool,
 ) -> @splice.SplicePlan raise DocxError {
+  plan_comment_resolution_zip(annotated, open_zip(original), comment_id~, done~)
+}
+
+///|
+/// Archive-backed resolution planner for bounded preservation sessions.
+pub fn plan_comment_resolution_archive(
+  annotated : DocxAnnotatedResult,
+  archive : @mbtzip.Archive,
+  comment_id~ : String,
+  done~ : Bool,
+) -> @splice.SplicePlan raise DocxError {
+  plan_comment_resolution_zip(
+    annotated,
+    open_zip_archive(archive),
+    comment_id~,
+    done~,
+  )
+}
+
+///|
+fn plan_comment_resolution_zip(
+  annotated : DocxAnnotatedResult,
+  zip : ZipArchive,
+  comment_id~ : String,
+  done~ : Bool,
+) -> @splice.SplicePlan raise DocxError {
   check_mutation_gates(annotated)
-  let zip = open_zip(original)
   let plan = @splice.SplicePlan::new()
   let comment = find_defined_comment(annotated, comment_id)
   if comment.body_paragraphs() == 0 {
