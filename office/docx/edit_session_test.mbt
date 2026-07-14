@@ -18,7 +18,7 @@ async fn write_docx_session_file(path : String, bytes : Bytes) -> Unit {
 fn mixed_case_docx_session_fixture() -> Bytes raise {
   let archive = @zip.Archive::new()
   archive.add(
-    "[Content_Types].xml",
+    "[CONTENT_TYPES].XML",
     @utf8.encode(
       "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/CUSTOM/MAIN.XML\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
     ),
@@ -36,7 +36,7 @@ fn mixed_case_docx_session_fixture() -> Bytes raise {
     ),
   )
   archive.add(
-    "CUSTOM/_rels/MAIN.XML.rels",
+    "custom/_RELS/main.xml.RELS",
     @utf8.encode(
       "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
     ),
@@ -129,6 +129,67 @@ async test "D1 resolves case-equivalent OPC targets to exact part spelling" {
     }
     assert_true(actual.find(b"<!--case-preserved-->") is Some(_))
     assert_true(result.get("custom/main.xml") is None)
+  })
+}
+
+///|
+async test "D1 semantic annotations preserve exact metadata part spelling" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/mixed-semantic.docx"
+    let added_path = "\{directory}/mixed-added.docx"
+    let resolved_path = "\{directory}/mixed-resolved.docx"
+    let original = mixed_case_docx_session_fixture()
+    write_docx_session_file(input, original)
+    let specification = @word_fixture.comment_spec(
+      author="Case",
+      from=0,
+      to=0,
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("preserve physical names")]),
+        ]),
+      ],
+    )
+    let addition = @docx.transact_docx(
+      @transaction.transaction_options(input, output_path=added_path),
+      session => {
+        inspect(
+          session.queue_comment_addition(
+            at_relative="p[1]",
+            to_relative="p[1]",
+            specification,
+          ),
+          content="0",
+        )
+      },
+    )
+    assert_true(addition.committed)
+    let resolution = @docx.transact_docx(
+      @transaction.transaction_options(added_path, output_path=resolved_path),
+      session => session.queue_comment_resolution(comment_id="0", done=true),
+    )
+    assert_true(resolution.committed)
+    let result = @zip.read(@afs.read_file(resolved_path).binary())
+    guard result.get("custom/_RELS/main.xml.RELS") is Some(rels_bytes) else {
+      fail("semantic edits lost the exact relationships-part spelling")
+    }
+    assert_true(
+      @utf8.decode(rels_bytes, ignore_bom=true).contains("commentsExtended.xml"),
+    )
+    guard result.get("[CONTENT_TYPES].XML") is Some(types_bytes) else {
+      fail("semantic edits lost the exact content-types spelling")
+    }
+    assert_true(
+      @utf8.decode(types_bytes, ignore_bom=true).contains(
+        "/CUSTOM/commentsExtended.xml",
+      ),
+    )
+    assert_true(result.get("CUSTOM/_rels/MAIN.XML.rels") is None)
+    assert_true(result.get("[Content_Types].xml") is None)
+    let verified = @word_fixture.read_docx_annotated(
+      @afs.read_file(resolved_path).binary(),
+    )
+    assert_eq(verified.annotations().comments()[0].done(), Some(true))
   })
 }
 
