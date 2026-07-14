@@ -36,7 +36,7 @@ pub fn note_spec(Array[@document.DocumentElement]) -> NoteSpec raise @core.DocxE
 
 pub fn plan_comment_addition(DocxAnnotatedResult, BytesView, at_relative~ : String, to_relative~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 
-pub fn plan_comment_addition_archive(DocxAnnotatedResult, @zip.Archive, at_relative~ : String, to_relative~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_addition_archive(DocxAnnotatedResult, @zip.Archive, at_relative~ : String, to_relative~ : String, CommentSpec, xml_budget? : @xml.XmlReadBudget, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 
 pub fn plan_comment_reply(DocxAnnotatedResult, BytesView, parent_id~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 

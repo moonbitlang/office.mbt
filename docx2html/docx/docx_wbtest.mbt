@@ -3768,3 +3768,64 @@ test "docx image reader records Mammoth-compatible warnings" {
     ),
   )
 }
+
+///|
+test "comment addition charges relationship XML to the caller budget" {
+  let original = new_blank_docx()
+  let archive = @mbtzip.read(original)
+  let annotated = read_docx_annotated_archive(archive)
+  let spec = comment_spec(author="Budget", from=0, to=0, [
+    paragraph([run([text("bounded")])]),
+  ])
+  let tiny_budget = @xml.xml_read_budget(
+    max_source_units=1,
+    max_tokens=1,
+    max_materialized_chars=1,
+    max_token_chars=1,
+  )
+  try
+    plan_comment_addition_archive(
+      annotated,
+      archive,
+      at_relative="p[1]",
+      to_relative="p[1]",
+      spec,
+      xml_budget=tiny_budget,
+    )
+  catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML source budget exceeded")
+    error =>
+      fail("expected a relationship XML budget failure, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected relationship XML parsing to consume the caller budget")
+  }
+}
+
+///|
+test "mutation relationship parsing is strict and budgeted" {
+  let budget = @xml.xml_read_budget(
+    max_source_units=1024,
+    max_tokens=128,
+    max_materialized_chars=1024,
+    max_token_chars=256,
+  )
+  let unsafe_relationships =
+    #|<!DOCTYPE Relationships><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>
+  try
+    read_mutation_relationships(
+      "word/_rels/document.xml.rels",
+      @utf8.encode(unsafe_relationships),
+      budget,
+    )
+  catch {
+    Unsupported(message~) =>
+      inspect(
+        message,
+        content="'word/_rels/document.xml.rels' is not well-formed XML; refusing",
+      )
+    error => fail("expected strict relationship rejection, got \{repr(error)}")
+  } noraise {
+    _ => fail("expected strict relationship parsing to reject a DTD")
+  }
+}
