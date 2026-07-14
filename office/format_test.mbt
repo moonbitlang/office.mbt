@@ -752,15 +752,17 @@ test "detect_format rejects absolute and network-path internal targets" {
 
 ///|
 test "relative targets require an unambiguous first-segment colon" {
-  try @office.detect_format(
-    "ambiguous.xlsx",
-    first_segment_colon_xlsx("1:workbook.xml"),
-  ) catch {
+  try
+    @office.detect_format(
+      "ambiguous.xlsx",
+      first_segment_colon_xlsx("1:workbook.xml"),
+    )
+  catch {
     err => {
       let message = Show::to_string(err)
       if !message.contains(
-        "XLSX officeDocument relationship has an invalid Target",
-      ) {
+          "XLSX officeDocument relationship has an invalid Target",
+        ) {
         fail("unexpected target diagnostic: \{message}")
       }
     }
@@ -771,8 +773,7 @@ test "relative targets require an unambiguous first-segment colon" {
     @office.detect_format(
       "explicit-relative.xlsx",
       first_segment_colon_xlsx("./1:workbook.xml"),
-    )
-    .name(),
+    ).name(),
     content="xlsx",
   )
 }
