@@ -118,11 +118,16 @@ fn write_relationships_with_embedded_style_map(
 ///|
 fn upsert_embedded_style_map_relationship(
   relationships : Array[Relationship],
-) -> Array[Relationship] {
+) -> Array[Relationship] raise DocxError {
   let updated : Array[Relationship] = []
   let mut found = false
   for relationship in relationships {
     if relationship.id == "rMammothStyleMap" {
+      if found {
+        raise InvalidXml(
+          message="duplicate embedded style-map relationship Id: rMammothStyleMap",
+        )
+      }
       updated.push(embedded_style_map_relationship())
       found = true
     } else {
@@ -223,13 +228,18 @@ fn read_content_type_xml_entries(
 fn upsert_embedded_style_map_content_type(
   entries : Array[ContentTypeXmlEntry],
   style_map_part_name : String,
-) -> Array[ContentTypeXmlEntry] {
+) -> Array[ContentTypeXmlEntry] raise DocxError {
   let updated : Array[ContentTypeXmlEntry] = []
   let mut found = false
   for entry in entries {
     match entry {
       OverrideContentType(part_name~, content_type~) =>
-        if part_name.to_lower() == "/mammoth/style-map" {
+        if is_embedded_style_map_part_name(part_name) {
+          if found {
+            raise InvalidXml(
+              message="duplicate embedded style-map content-type override after OPC path normalization",
+            )
+          }
           updated.push(embedded_style_map_content_type(style_map_part_name))
           found = true
         } else {
@@ -242,6 +252,17 @@ fn upsert_embedded_style_map_content_type(
     updated.push(embedded_style_map_content_type(style_map_part_name))
   }
   updated
+}
+
+///|
+fn is_embedded_style_map_part_name(part_name : String) -> Bool {
+  if !part_name.has_prefix("/") {
+    return false
+  }
+  match @opc.resolve_target("", part_name) {
+    Some(path) => path.to_lower() == "mammoth/style-map"
+    None => false
+  }
 }
 
 ///|
