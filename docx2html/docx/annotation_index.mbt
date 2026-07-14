@@ -20,7 +20,7 @@ const MAX_STORY_SCAN_WARNINGS : Int = 64
 ///|
 priv struct AnnotationWarningCollector {
   messages : Array[String]
-  seen : Set[String]
+  seen : StableStringSet
   max_messages : Int
   max_chars : Int
   mut truncated : Bool
@@ -31,7 +31,13 @@ fn AnnotationWarningCollector::new(
   max_messages : Int,
   max_chars : Int,
 ) -> AnnotationWarningCollector {
-  { messages: [], seen: Set([]), max_messages, max_chars, truncated: false }
+  {
+    messages: [],
+    seen: SortedSet([]),
+    max_messages,
+    max_chars,
+    truncated: false,
+  }
 }
 
 ///|
@@ -409,7 +415,7 @@ pub fn AnnotationIndex::covering_comment_ids(
   if node_low < 0 {
     return ids
   }
-  let seen : Set[String] = Set([])
+  let seen : StableStringSet = SortedSet([])
   for span in self.spans {
     if span.story == story &&
       span.low <= node_high &&
@@ -542,7 +548,7 @@ priv struct CommentStoryMarkers {
   story : String
   scan : StoryScan
   markers : Array[ScannedMarker]
-  node_spans : Map[String, (Int, Int)]
+  node_spans : StableStringMap[(Int, Int)]
 }
 
 ///|
@@ -715,7 +721,7 @@ fn read_docx_annotated_zip(
   // scans false-positive on comments and miss character-reference
   // spellings the parser normalizes.
   if zip.exists("[Content_Types].xml") {
-    let declared_types : Set[String] = Set([])
+    let declared_types : StableStringSet = SortedSet([])
     for _, content_type in parts.content_types.defaults {
       declared_types.add(content_type)
     }
@@ -822,7 +828,7 @@ fn DocxAnnotatedResult::new_comments_relationship_type(
 /// their nearest resolvable ancestor with a diagnostic — the guarantee
 /// that anchors never point at nodes the AST does not have.
 priv struct VerifyContext {
-  positions : Set[String]
+  positions : StableStringSet
 }
 
 ///|
@@ -838,12 +844,12 @@ fn build_verify_context(
   comment_bodies : Array[Array[DocumentElement]],
   path_budget : AnnotationPathBudget,
 ) -> VerifyContext raise DocxError {
-  let positions : Set[String] = Set([])
+  let positions : StableStringSet = SortedSet([])
   fn index_children(
     element : DocumentElement,
     prefix : String,
   ) -> Unit raise DocxError {
-    let ordinals : Map[String, Int] = Map([])
+    let ordinals : StableStringMap[Int] = SortedMap([])
     for child in @paths.element_children(element) {
       match @paths.segment_kind(child) {
         Some(kind) => {
@@ -894,7 +900,7 @@ fn verify_position(
   ctx : VerifyContext,
   path : String,
   warnings : AnnotationWarningCollector,
-  degraded : Set[String],
+  degraded : StableStringSet,
   path_budget : AnnotationPathBudget,
 ) -> String raise DocxError {
   // The scanner and parsed projection agree in the ordinary case. Reuse the
@@ -1029,7 +1035,7 @@ fn build_annotation_index(
   }
   let scans : Array[(String, StoryScan)] = []
   let identity_only_scans : Array[StoryScan] = []
-  let kind_by_scanned_path : Map[String, String] = Map([])
+  let kind_by_scanned_path : StableStringMap[String] = SortedMap([])
   let mut identity_source_complete = true
   for story in stories {
     let story_key = story.public_path
@@ -1152,7 +1158,7 @@ fn build_annotation_index(
   identity_source_complete = identity_source_complete &&
     definitions_complete &&
     extended_complete
-  let identity_only_comment_ids : Set[String] = Set([])
+  let identity_only_comment_ids : StableStringSet = SortedSet([])
   for scan in identity_only_scans {
     for marker in scan.markers {
       match marker.kind {
@@ -1162,7 +1168,7 @@ fn build_annotation_index(
       }
     }
   }
-  let degraded : Set[String] = Set([])
+  let degraded : StableStringSet = SortedSet([])
   let (comments, spans) = build_comments(
     definitions, extended, scans, identity_only_comment_ids, warnings, ctx, degraded,
     path_budget,
@@ -1174,7 +1180,7 @@ fn build_annotation_index(
   // [@id=...] form (empty, or containing ']'/'='/'/') are emitted as
   // ordinal paths, and the agent is told why. Duplicate ids already
   // warn at definition parse.
-  let warned_ids : Set[String] = Set([])
+  let warned_ids : StableStringSet = SortedSet([])
   fn warn_unrepresentable(kind : String, id : String) -> Unit {
     if (
         id == "" ||
@@ -1293,7 +1299,7 @@ fn read_identity_story_xml_strict(
 /// Every ContentType attribute value declared in [Content_Types].xml
 /// (Override and Default alike), parsed — character references decoded.
 fn inverted_part_paths(
-  index_by_path : Map[String, Int],
+  index_by_path : StableStringMap[Int],
 ) -> Array[(Int, String)] {
   // Collector indices are assigned densely in first-reference order. Place
   // paths directly into those slots so even attacker-sized section lists do
@@ -1367,8 +1373,8 @@ fn read_comments_extended(
   zip : ZipArchive,
   parts : DocumentParts,
   warnings : AnnotationWarningCollector,
-) -> (Map[String, CommentExRecord], Array[CommentExIdentity], Bool) raise DocxError {
-  let records : Map[String, CommentExRecord] = Map([])
+) -> (StableStringMap[CommentExRecord], Array[CommentExIdentity], Bool) raise DocxError {
+  let records : StableStringMap[CommentExRecord] = SortedMap([])
   let identities : Array[CommentExIdentity] = []
   let path = parts.comments_extended_part_path.unwrap_or(
     "word/commentsExtended.xml",
@@ -1465,19 +1471,19 @@ fn append_ordered_story_anchors(
 /// anchors otherwise; order anchors (story rank, position).
 fn build_comments(
   definitions : Array[CommentDefinition],
-  extended : Map[String, CommentExRecord],
+  extended : StableStringMap[CommentExRecord],
   scans : Array[(String, StoryScan)],
-  identity_only_comment_ids : Set[String],
+  identity_only_comment_ids : StableStringSet,
   warnings : AnnotationWarningCollector,
   ctx : VerifyContext,
-  degraded : Set[String],
+  degraded : StableStringSet,
   path_budget : AnnotationPathBudget,
 ) -> (Array[CommentInfo], Array[AnchorSpan]) raise DocxError {
   // One CommentInfo PER DEFINITION in comments.xml order (duplicate ids
   // are each exposed ordinally per the plan; id addressing over them is
   // J2's "ambiguous" error), then marker-only ids in first-marker order.
   let entries : Array[(String, CommentDefinition?)] = []
-  let known : Set[String] = Set([])
+  let known : StableStringSet = SortedSet([])
   for definition in definitions {
     if known.contains(definition.id) && !warnings.full() {
       warnings.add(
@@ -1487,12 +1493,13 @@ fn build_comments(
     known.add(definition.id)
     entries.push((definition.id, Some(definition)))
   }
-  let marker_stories_by_id : Map[String, Array[CommentStoryMarkers]] = Map([])
+  let marker_stories_by_id : StableStringMap[Array[CommentStoryMarkers]] = SortedMap([],
+  )
   for entry in scans {
     let (story, scan) = entry
-    let story_markers : Map[String, Array[ScannedMarker]] = Map([])
+    let story_markers : StableStringMap[Array[ScannedMarker]] = SortedMap([])
     let story_ids : Array[String] = []
-    let node_spans : Map[String, (Int, Int)] = Map([])
+    let node_spans : StableStringMap[(Int, Int)] = SortedMap([])
     for node in scan.nodes {
       node_spans[node.path] = (node.open_seq, node.close_seq)
     }
@@ -1533,8 +1540,8 @@ fn build_comments(
     }
   }
   // last paraId -> comment id, for reply-parent resolution.
-  let id_by_last_para : Map[String, String] = Map([])
-  let ambiguous_para_ids : Set[String] = Set([])
+  let id_by_last_para : StableStringMap[String] = SortedMap([])
+  let ambiguous_para_ids : StableStringSet = SortedSet([])
   for definition in definitions {
     match definition.last_para_id {
       Some(raw_para_id) => {
@@ -1562,7 +1569,7 @@ fn build_comments(
   // Anchors are computed ONCE per id and shared by every entry of that
   // id (duplicate definitions each report the id's real anchors — the
   // review rejected assigning them to one ordinal arbitrarily).
-  let anchors_by_id : Map[String, Array[AnnotationAnchor]] = Map([])
+  let anchors_by_id : StableStringMap[Array[AnnotationAnchor]] = SortedMap([])
   for entry in entries {
     let (id, definition) = entry
     let anchors : Array[AnnotationAnchor] = match anchors_by_id.get(id) {
@@ -1765,7 +1772,7 @@ fn build_comments(
   // least one defined NON-REPLY (anchorless replies are normal — they
   // live via their parent's thread; plan-locked). A post-pass over ALL
   // entries so duplicate ordering cannot mask it; warned once per id.
-  let orphan_warned : Set[String] = Set([])
+  let orphan_warned : StableStringSet = SortedSet([])
   for info in comments {
     if info.defined &&
       info.anchors.length() == 0 &&
@@ -1795,9 +1802,9 @@ fn comment_entry(
   id : String,
   definition : CommentDefinition?,
   anchors : Array[AnnotationAnchor],
-  extended : Map[String, CommentExRecord],
-  id_by_last_para : Map[String, String],
-  ambiguous_para_ids : Set[String],
+  extended : StableStringMap[CommentExRecord],
+  id_by_last_para : StableStringMap[String],
+  ambiguous_para_ids : StableStringSet,
   warnings : AnnotationWarningCollector,
 ) -> CommentInfo {
   let (done, parent_id) = match definition {
@@ -1872,7 +1879,7 @@ fn point_span(
   id : String,
   story : String,
   marker : ScannedMarker,
-  node_spans : Map[String, (Int, Int)],
+  node_spans : StableStringMap[(Int, Int)],
   path_budget : AnnotationPathBudget,
 ) -> AnchorSpan raise DocxError {
   match paragraph_prefix(marker.container_path(), path_budget) {
@@ -1970,13 +1977,13 @@ fn build_notes(
   scans : Array[(String, StoryScan)],
   warnings : AnnotationWarningCollector,
   ctx : VerifyContext,
-  degraded : Set[String],
+  degraded : StableStringSet,
   path_budget : AnnotationPathBudget,
 ) -> (Array[NoteInfo], Array[NoteInfo]) raise DocxError {
   let footnotes : Array[NoteInfo] = []
   let endnotes : Array[NoteInfo] = []
-  let footnote_refs : Map[String, Array[String]] = Map([])
-  let endnote_refs : Map[String, Array[String]] = Map([])
+  let footnote_refs : StableStringMap[Array[String]] = SortedMap([])
+  let endnote_refs : StableStringMap[Array[String]] = SortedMap([])
   for entry in scans {
     let (story, scan) = entry
     for marker in scan.markers() {
@@ -2003,8 +2010,8 @@ fn build_notes(
       }
     }
   }
-  let seen_footnotes : Set[String] = Set([])
-  let seen_endnotes : Set[String] = Set([])
+  let seen_footnotes : StableStringSet = SortedSet([])
+  let seen_endnotes : StableStringSet = SortedSet([])
   for note in parts.notes_result.notes {
     let refs = match note.note_type {
       "footnote" => footnote_refs.get(note.note_id).unwrap_or([])

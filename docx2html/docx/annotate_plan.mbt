@@ -240,7 +240,7 @@ fn plan_comment_addition_zip(
           let rels_root = read_mutation_relationships(
             actual_rels_part, rels_bytes, xml_budget,
           )
-          let existing_ids : Set[String] = Set([])
+          let existing_ids : StableStringSet = SortedSet([])
           collect_relationship_ids(rels_root, existing_ids)
           let mut ordinal = 1
           while existing_ids.contains("rIdAnnotate\{ordinal}") {
@@ -359,8 +359,8 @@ fn check_annotation_identity_state(
       message="the document's annotation identity sources could not be parsed and scanned completely; refusing to annotate",
     )
   }
-  let definition_spellings : Map[String, String] = Map([])
-  let last_para_ids : Set[String] = Set([])
+  let definition_spellings : StableStringMap[String] = SortedMap([])
+  let last_para_ids : StableStringSet = SortedSet([])
   for comment in index.comments {
     if !comment.defined {
       continue
@@ -437,7 +437,7 @@ fn check_annotation_identity_state(
   for scan in index.identity_only_scans {
     check_story_markers(scan)
   }
-  let comment_ex_para_ids : Set[String] = Set([])
+  let comment_ex_para_ids : StableStringSet = SortedSet([])
   for identity in index.comment_ex_identities {
     guard identity.para_id is Some(raw_para_id) else {
       raise Unsupported(
@@ -608,7 +608,10 @@ fn read_mutation_xml_root(
 }
 
 ///|
-fn collect_relationship_ids(element : XmlElement, ids : Set[String]) -> Unit {
+fn collect_relationship_ids(
+  element : XmlElement,
+  ids : StableStringSet,
+) -> Unit {
   match element.attributes.get("Id") {
     Some(id) => ids.add(id)
     None => ()

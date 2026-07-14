@@ -444,10 +444,10 @@ fn collect_para_ids(
   annotated : DocxAnnotatedResult,
   comments_part : String?,
   xml_budget : @xml.XmlReadBudget,
-) -> Set[String] raise DocxError {
-  let para_ids : Set[String] = Set([])
+) -> StableStringSet raise DocxError {
+  let para_ids : StableStringSet = SortedSet([])
   let parts : Array[String] = [annotated.main_story_part()]
-  let seen_parts : Set[String] = Set(parts)
+  let seen_parts : StableStringSet = SortedSet(parts)
   match comments_part {
     Some(part) if !seen_parts.contains(part) => {
       seen_parts.add(part)
@@ -520,7 +520,7 @@ pub fn validate_global_para_id_state_archive_limited(
 ///|
 fn collect_para_id_attributes(
   element : XmlElement,
-  para_ids : Set[String],
+  para_ids : StableStringSet,
 ) -> Unit raise DocxError {
   match element.attributes.get("w14:paraId") {
     Some(para_id) => {
@@ -561,7 +561,7 @@ fn ensure_w14_on_root(
 ) -> String raise DocxError {
   let attributes = scan_open_tag_attributes(part_bytes, root_span.byte_start())
   let all_bindings = collect_namespace_bindings(part_bytes)
-  let root_bindings : Map[String, String] = Map([])
+  let root_bindings : StableStringMap[String] = SortedMap([])
   // Pass 1: every root namespace declaration, decoded exactly as strict XML
   // sees it. Entity spellings must not create a second semantic binding.
   let mut w14_prefix : String? = None
@@ -664,8 +664,8 @@ fn ensure_w14_on_root(
 /// shadowed at the paragraph where the new attribute will be inserted.
 fn collect_namespace_bindings(
   bytes : BytesView,
-) -> Map[String, Set[String]] raise DocxError {
-  let bindings : Map[String, Set[String]] = Map([])
+) -> StableStringMap[StableStringSet] raise DocxError {
+  let bindings : StableStringMap[StableStringSet] = SortedMap([])
   let limit = bytes.length()
   let mut cursor = 0
   while cursor < limit {
@@ -705,7 +705,7 @@ fn collect_namespace_bindings(
         let uris = match bindings.get(prefix) {
           Some(existing) => existing
           None => {
-            let fresh : Set[String] = Set([])
+            let fresh : StableStringSet = SortedSet([])
             bindings[prefix] = fresh
             fresh
           }
@@ -720,7 +720,7 @@ fn collect_namespace_bindings(
 
 ///|
 fn namespace_prefix_is_stable(
-  bindings : Map[String, Set[String]],
+  bindings : StableStringMap[StableStringSet],
   prefix : String,
   expected_uri : String,
 ) -> Bool {
@@ -735,7 +735,7 @@ fn namespace_prefix_is_stable(
 
 ///|
 fn fresh_namespace_prefix(
-  bindings : Map[String, Set[String]],
+  bindings : StableStringMap[StableStringSet],
   preferred : String,
   fallback : String,
 ) -> String {
@@ -944,7 +944,7 @@ fn scan_comment_ex_part(
   }
   let root_scan = scan_open_tag_attributes(bytes, root_start)
   // Root-level namespace declarations.
-  let root_declarations : Map[String, String] = Map([])
+  let root_declarations : StableStringMap[String] = SortedMap([])
   for attribute in root_scan.entries {
     let (name, value, _, _) = attribute
     if name == "xmlns" {
@@ -960,7 +960,7 @@ fn scan_comment_ex_part(
   }
   // Walk depth-1 children.
   let locations : Array[CommentExLocation] = []
-  let seen : Set[String] = Set([])
+  let seen : StableStringSet = SortedSet([])
   let mut cursor = root_scan.tag_gt + 1
   let mut depth = 1
   let mut root_close = -1
@@ -1034,7 +1034,7 @@ fn scan_comment_ex_part(
     let tag = scan_open_tag_attributes(bytes, cursor)
     if depth == 1 {
       // Resolve this tag against root + its own declarations.
-      let own_declarations : Map[String, String] = Map([])
+      let own_declarations : StableStringMap[String] = SortedMap([])
       for attribute in tag.entries {
         let (name, value, _, _) = attribute
         if name == "xmlns" {
@@ -1324,7 +1324,7 @@ fn queue_comments_extended_edits(
       let rels_root = read_mutation_relationships(
         actual_rels_part, rels_bytes, xml_budget,
       )
-      let existing_ids : Set[String] = Set([])
+      let existing_ids : StableStringSet = SortedSet([])
       collect_relationship_ids(rels_root, existing_ids)
       let mut ordinal = 1
       while existing_ids.contains("rIdAnnotate\{ordinal}") {

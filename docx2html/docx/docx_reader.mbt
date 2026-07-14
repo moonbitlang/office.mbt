@@ -16,12 +16,12 @@ priv struct Relationships {
 /// validation. Values stay arrays so duplicate relationship IDs retain their
 /// fail-closed meaning instead of being silently overwritten.
 priv struct RelationshipIndex {
-  by_id : Map[String, Array[Relationship]]
+  by_id : StableStringMap[Array[Relationship]]
 }
 
 ///|
 fn RelationshipIndex::build(relationships : Relationships) -> RelationshipIndex {
-  let by_id : Map[String, Array[Relationship]] = Map([])
+  let by_id : StableStringMap[Array[Relationship]] = SortedMap([])
   for relationship in relationships.relationships {
     let matches = match by_id.get(relationship.id) {
       Some(existing) => existing
@@ -159,32 +159,32 @@ priv struct NumberingLevel {
 
 ///|
 priv struct AbstractNumbering {
-  levels : Map[String, NumberingLevel]
+  levels : StableStringMap[NumberingLevel]
   num_style_link : String?
 }
 
 ///|
 priv struct NumberingMap {
-  nums : Map[String, String]
-  abstract_nums : Map[String, AbstractNumbering]
-  levels_by_paragraph_style_id : Map[String, NumberingLevel]
-  numbering_style_num_ids : Map[String, String]
+  nums : StableStringMap[String]
+  abstract_nums : StableStringMap[AbstractNumbering]
+  levels_by_paragraph_style_id : StableStringMap[NumberingLevel]
+  numbering_style_num_ids : StableStringMap[String]
 }
 
 ///|
 fn NumberingMap::empty() -> NumberingMap {
   {
-    nums: Map([]),
-    abstract_nums: Map([]),
-    levels_by_paragraph_style_id: Map([]),
-    numbering_style_num_ids: Map([]),
+    nums: SortedMap([]),
+    abstract_nums: SortedMap([]),
+    levels_by_paragraph_style_id: SortedMap([]),
+    numbering_style_num_ids: SortedMap([]),
   }
 }
 
 ///|
 priv struct ContentTypes {
-  defaults : Map[String, String]
-  overrides : Map[String, String]
+  defaults : StableStringMap[String]
+  overrides : StableStringMap[String]
 }
 
 ///|
@@ -444,7 +444,7 @@ priv struct DocumentParts {
   main_document_path : String
   main_relationship_dialect : OoxmlDialect?
   root : XmlElement
-  styles : Map[String, StyleInfo]
+  styles : StableStringMap[StyleInfo]
   numbering : NumberingMap
   content_types : ContentTypes
   relationships : Relationships
@@ -800,7 +800,7 @@ fn resolve_unique_internal_part(
   reject_multiple_relationships? : Bool = false,
 ) -> String? raise DocxError {
   let targets : Array[String] = []
-  let seen : Set[String] = Set([])
+  let seen : StableStringSet = SortedSet([])
   let mut matches = 0
   for relationship in relationships.relationships {
     if relationship_types.search(relationship.relationship_type) is None {
@@ -870,7 +870,7 @@ fn resolve_reachable_annotation_story_parts(
   base_path : String,
 ) -> Array[ReachableAnnotationStoryPart] raise DocxError {
   let resolved_parts : Array[ReachableAnnotationStoryPart] = []
-  let kind_by_path : Map[String, String] = Map([])
+  let kind_by_path : StableStringMap[String] = SortedMap([])
   for relationship in relationships.relationships {
     guard annotation_story_relationship_kind(relationship.relationship_type)
       is Some(kind) else {
@@ -1027,8 +1027,8 @@ fn read_content_types(
   zip : ZipArchive,
   xml_budget? : @xml.XmlReadBudget,
 ) -> ContentTypes raise DocxError {
-  let defaults : Map[String, String] = Map([])
-  let overrides : Map[String, String] = Map([])
+  let defaults : StableStringMap[String] = SortedMap([])
+  let overrides : StableStringMap[String] = SortedMap([])
   match zip.read_bytes("[Content_Types].xml") {
     Some(_) => {
       let root = read_xml_part(zip, "[Content_Types].xml", xml_budget?)
@@ -1123,7 +1123,7 @@ fn fallback_content_type(extension : String) -> String {
 fn read_numbering_for_document(
   zip : ZipArchive,
   document_relationships : Relationships,
-  styles : Map[String, StyleInfo],
+  styles : StableStringMap[StyleInfo],
   base_path : String,
   xml_budget? : @xml.XmlReadBudget,
 ) -> NumberingMap raise DocxError {
@@ -1144,7 +1144,7 @@ fn read_numbering_for_document(
 ///|
 fn read_numbering_xml(
   root : XmlElement,
-  styles : Map[String, StyleInfo],
+  styles : StableStringMap[StyleInfo],
 ) -> NumberingMap {
   let abstract_nums = read_abstract_numberings(root)
   {
@@ -1160,8 +1160,8 @@ fn read_numbering_xml(
 ///|
 fn read_abstract_numberings(
   root : XmlElement,
-) -> Map[String, AbstractNumbering] {
-  let abstract_nums : Map[String, AbstractNumbering] = Map([])
+) -> StableStringMap[AbstractNumbering] {
+  let abstract_nums : StableStringMap[AbstractNumbering] = SortedMap([])
   for element in root.elements_by_tag_name("w:abstractNum") {
     match element.attributes.get("w:abstractNumId") {
       Some(id) => abstract_nums[id] = read_abstract_numbering(element)
@@ -1173,7 +1173,7 @@ fn read_abstract_numberings(
 
 ///|
 fn read_abstract_numbering(element : XmlElement) -> AbstractNumbering {
-  let levels : Map[String, NumberingLevel] = Map([])
+  let levels : StableStringMap[NumberingLevel] = SortedMap([])
   let mut level_without_index : NumberingLevel? = None
   for level_element in element.elements_by_tag_name("w:lvl") {
     let level = read_numbering_level(level_element)
@@ -1212,8 +1212,8 @@ fn read_numbering_level(element : XmlElement) -> NumberingLevel {
 }
 
 ///|
-fn read_numbering_instances(root : XmlElement) -> Map[String, String] {
-  let nums : Map[String, String] = Map([])
+fn read_numbering_instances(root : XmlElement) -> StableStringMap[String] {
+  let nums : StableStringMap[String] = SortedMap([])
   for element in root.elements_by_tag_name("w:num") {
     let num_id = element.attributes.get_or_default("w:numId", "")
     let abstract_num_id = element.first_or_empty("w:abstractNumId").attributes.get_or_default(
@@ -1228,9 +1228,9 @@ fn read_numbering_instances(root : XmlElement) -> Map[String, String] {
 
 ///|
 fn index_levels_by_paragraph_style_id(
-  abstract_nums : Map[String, AbstractNumbering],
-) -> Map[String, NumberingLevel] {
-  let levels : Map[String, NumberingLevel] = Map([])
+  abstract_nums : StableStringMap[AbstractNumbering],
+) -> StableStringMap[NumberingLevel] {
+  let levels : StableStringMap[NumberingLevel] = SortedMap([])
   for item in abstract_nums.to_array() {
     let (_, abstract_num) = item
     for level_item in abstract_num.levels.to_array() {
@@ -1246,9 +1246,9 @@ fn index_levels_by_paragraph_style_id(
 
 ///|
 fn index_numbering_style_num_ids(
-  styles : Map[String, StyleInfo],
-) -> Map[String, String] {
-  let style_num_ids : Map[String, String] = Map([])
+  styles : StableStringMap[StyleInfo],
+) -> StableStringMap[String] {
+  let style_num_ids : StableStringMap[String] = SortedMap([])
   for item in styles.to_array() {
     let (_, style) = item
     if style.style_type == "numbering" {
@@ -1307,7 +1307,7 @@ fn NumberingLevel::to_numbering(self : NumberingLevel) -> Numbering {
 ///|
 fn read_notes_for_document(
   zip : ZipArchive,
-  styles : Map[String, StyleInfo],
+  styles : StableStringMap[StyleInfo],
   numbering : NumberingMap,
   content_types : ContentTypes,
   footnotes_path~ : String,
@@ -1352,7 +1352,7 @@ fn read_note_part_at_path(
   zip : ZipArchive,
   note_type~ : String,
   path~ : String,
-  styles~ : Map[String, StyleInfo],
+  styles~ : StableStringMap[StyleInfo],
   numbering~ : NumberingMap,
   content_types~ : ContentTypes,
   external_files? : ExternalFileAccess = default_external_file_access(),
@@ -1401,7 +1401,7 @@ fn read_note_part_at_path(
 ///|
 fn read_comments_for_document(
   zip : ZipArchive,
-  styles : Map[String, StyleInfo],
+  styles : StableStringMap[StyleInfo],
   numbering : NumberingMap,
   content_types : ContentTypes,
   document_relationships : Relationships,
@@ -1478,8 +1478,8 @@ fn read_styles(
   zip : ZipArchive,
   path : String,
   xml_budget? : @xml.XmlReadBudget,
-) -> Map[String, StyleInfo] raise DocxError {
-  let styles : Map[String, StyleInfo] = Map([])
+) -> StableStringMap[StyleInfo] raise DocxError {
+  let styles : StableStringMap[StyleInfo] = SortedMap([])
   match zip.read_bytes(path) {
     Some(_) => {
       let root = read_xml_part(zip, path, xml_budget?)
@@ -1505,8 +1505,8 @@ fn style_lookup_key(style_type : String, style_id : String) -> String {
 }
 
 ///|
-fn Map::find_style(
-  self : Map[String, StyleInfo],
+fn StableStringMap::find_style(
+  self : StableStringMap[StyleInfo],
   style_type : String,
   style_id : String,
 ) -> StyleInfo? {
@@ -1545,7 +1545,7 @@ fn read_style_info(element : XmlElement, style_id : String) -> StyleInfo {
 ///|
 fn read_document_xml_with_messages(
   root : XmlElement,
-  styles : Map[String, StyleInfo],
+  styles : StableStringMap[StyleInfo],
   numbering : NumberingMap,
   zip : ZipArchive,
   relationships : Relationships,
@@ -1582,7 +1582,7 @@ fn read_document_xml_with_messages(
 
 ///|
 priv struct BodyReader {
-  styles : Map[String, StyleInfo]
+  styles : StableStringMap[StyleInfo]
   zip : ZipArchive
   relationships : Relationships
   content_types : ContentTypes

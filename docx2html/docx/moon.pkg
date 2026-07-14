@@ -12,6 +12,8 @@ import {
   "bobzhang/mbtexcel/zip" @mbtzip,
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/sorted_map",
+  "moonbitlang/core/sorted_set",
   "moonbitlang/core/string",
 }
 

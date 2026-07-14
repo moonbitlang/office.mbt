@@ -71,12 +71,41 @@ fn convert_document_to_html(
 ///|
 fn empty_body_reader(relationships : Relationships) -> BodyReader {
   {
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationships,
-    content_types: { defaults: Map([]), overrides: Map([]) },
+    content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
+    messages: [],
+    external_files: default_external_file_access(),
+    read_images: true,
+  }
+}
+
+///|
+fn stable_style_map(
+  styles : Map[String, StyleInfo],
+) -> StableStringMap[StyleInfo] {
+  let output : StableStringMap[StyleInfo] = SortedMap([])
+  for key, value in styles {
+    output[key] = value
+  }
+  output
+}
+
+///|
+fn body_reader_with_stable_numbering(
+  styles : StableStringMap[StyleInfo],
+  numbering : NumberingMap,
+) -> BodyReader {
+  {
+    styles,
+    zip: try! @zip.zip_archive(Map([])),
+    relationships: { relationships: [] },
+    content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
+    base_path: "word",
+    numbering,
     messages: [],
     external_files: default_external_file_access(),
     read_images: true,
@@ -88,17 +117,7 @@ fn body_reader_with_numbering(
   styles : Map[String, StyleInfo],
   numbering : NumberingMap,
 ) -> BodyReader {
-  {
-    styles,
-    zip: try! @zip.zip_archive(Map([])),
-    relationships: { relationships: [] },
-    content_types: { defaults: Map([]), overrides: Map([]) },
-    base_path: "word",
-    numbering,
-    messages: [],
-    external_files: default_external_file_access(),
-    read_images: true,
-  }
+  body_reader_with_stable_numbering(stable_style_map(styles), numbering)
 }
 
 ///|
@@ -108,7 +127,7 @@ fn numbering_from_xml(
 ) -> NumberingMap raise DocxError {
   read_numbering_xml(
     read_xml_string(xml, namespace_map=office_namespace_map()),
-    styles,
+    stable_style_map(styles),
   )
 }
 
@@ -128,7 +147,7 @@ fn zip_with_text_entries(entries : Array[(String, String)]) -> ZipArchive {
 }
 
 ///|
-fn styles_from_xml(xml : String) -> Map[String, StyleInfo] raise DocxError {
+fn styles_from_xml(xml : String) -> StableStringMap[StyleInfo] raise DocxError {
   read_styles(zip_with_text("word/styles.xml", xml), "word/styles.xml")
 }
 
@@ -206,9 +225,9 @@ fn footnotes_from_xml(xml : String) -> NotesReadResult raise DocxError {
     zip_with_text("word/footnotes.xml", xml),
     note_type="footnote",
     path="word/footnotes.xml",
-    styles=Map([]),
+    styles=SortedMap([]),
     numbering=NumberingMap::empty(),
-    content_types={ defaults: Map([]), overrides: Map([]) },
+    content_types={ defaults: SortedMap([]), overrides: SortedMap([]) },
   )
 }
 
@@ -216,9 +235,9 @@ fn footnotes_from_xml(xml : String) -> NotesReadResult raise DocxError {
 fn comments_from_xml(xml : String) -> CommentsReadResult raise DocxError {
   read_comments_for_document(
     zip_with_text("word/comments.xml", xml),
-    Map([]),
+    SortedMap([]),
     NumberingMap::empty(),
-    { defaults: Map([]), overrides: Map([]) },
+    { defaults: SortedMap([]), overrides: SortedMap([]) },
     { relationships: [] },
     "word",
   )
@@ -401,7 +420,10 @@ test "style document matchers follow Mammoth predicate semantics" {
 
 ///|
 test "docx content types include Mammoth image fallbacks" {
-  let content_types = ContentTypes::{ defaults: Map([]), overrides: Map([]) }
+  let content_types = ContentTypes::{
+    defaults: SortedMap([]),
+    overrides: SortedMap([]),
+  }
   inspect(
     content_types.find_content_type("word/media/hat.png"),
     content="image/png",
@@ -437,8 +459,8 @@ test "docx content types include Mammoth image fallbacks" {
   inspect(content_types.find_content_type("word/media/hat"), content="")
   inspect(content_types.find_content_type("word/media/hat.emf"), content="")
   let with_default = ContentTypes::{
-    defaults: { "png": "image/custom-png" },
-    overrides: { "word/media/hat.png": "image/hat" },
+    defaults: SortedMap([("png", "image/custom-png")]),
+    overrides: SortedMap([("word/media/hat.png", "image/hat")]),
   }
   inspect(
     with_default.find_content_type("word/media/other.png"),
@@ -511,7 +533,45 @@ test "docx relationships reader finds targets by id and type" {
 }
 
 ///|
-test "section relationship index handles long shared-prefix ids linearly" {
+fn docx_hash_clustered_relationship_ids(
+  count : Int,
+  bucket_mask : Int,
+) -> Array[String] {
+  let ids : Array[String] = []
+  let mut candidate = 0
+  while ids.length() < count {
+    let id = "r\{candidate}"
+    if (id.hash() & bucket_mask) == 0 {
+      ids.push(id)
+    }
+    candidate += 1
+  }
+  ids
+}
+
+///|
+test "section relationship index ignores deterministic hash clustering" {
+  let ids = docx_hash_clustered_relationship_ids(512, 0x3FF)
+  let entries : Array[Relationship] = []
+  for ordinal, id in ids {
+    assert_eq(id.hash() & 0x3FF, 0)
+    entries.push({
+      id,
+      relationship_type: TRANSITIONAL_HEADER_RELATIONSHIP,
+      target: "header\{ordinal}.xml",
+      target_mode: None,
+    })
+  }
+  let index = RelationshipIndex::build({ relationships: entries })
+  for ordinal, id in ids {
+    guard index.by_id.get(id) is Some(matches)
+    assert_eq(matches.length(), 1)
+    assert_eq(matches[0].target, "header\{ordinal}.xml")
+  }
+}
+
+///|
+test "section relationship index handles long shared-prefix ids" {
   let common = "r".repeat(1200)
   let entries : Array[Relationship] = []
   for ordinal in 0..<800 {
@@ -1522,16 +1582,15 @@ test "docx table properties include table style name" {
     #|<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:tblPr><w:tblStyle w:val="TableNormal" /></w:tblPr></w:tbl>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
-    styles: {
-      "TableNormal": {
-        style_id: "TableNormal",
-        style_type: "table",
-        name: "Normal Table",
-      },
-    },
+    styles: SortedMap([
+      (
+        "TableNormal",
+        { style_id: "TableNormal", style_type: "table", name: "Normal Table" },
+      ),
+    ]),
     zip: try! @zip.zip_archive(Map([])),
     relationships: { relationships: [] },
-    content_types: { defaults: Map([]), overrides: Map([]) },
+    content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -1593,9 +1652,12 @@ test "docx styles are keyed by type and keep first duplicate" {
     None => ()
     Some(_) => fail("expected table style not to match paragraph lookup")
   }
-  let legacy_wrong_type : Map[String, StyleInfo] = {
-    "Shared": { style_id: "Shared", style_type: "table", name: "Shared Table" },
-  }
+  let legacy_wrong_type : StableStringMap[StyleInfo] = SortedMap([
+    (
+      "Shared",
+      { style_id: "Shared", style_type: "table", name: "Shared Table" },
+    ),
+  ])
   match legacy_wrong_type.find_style("paragraph", "Shared") {
     None => ()
     Some(_) => fail("expected mismatched style type to be ignored")
@@ -1606,7 +1668,7 @@ test "docx styles are keyed by type and keep first duplicate" {
     paragraph_xml,
     namespace_map=office_namespace_map(),
   )
-  let paragraph_reader = body_reader_with_numbering(
+  let paragraph_reader = body_reader_with_stable_numbering(
     styles,
     NumberingMap::empty(),
   )
@@ -1618,7 +1680,10 @@ test "docx styles are keyed by type and keep first duplicate" {
   let run_xml =
     #|<w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:rPr><w:rStyle w:val="Shared" /></w:rPr></w:r>
   let run = read_xml_string(run_xml, namespace_map=office_namespace_map())
-  let run_reader = body_reader_with_numbering(styles, NumberingMap::empty())
+  let run_reader = body_reader_with_stable_numbering(
+    styles,
+    NumberingMap::empty(),
+  )
   match run_reader.read_element(run)[0] {
     Run(properties~, ..) =>
       debug_inspect(properties.style_name, content="Some(\"Shared Character\")")
@@ -1630,7 +1695,10 @@ test "docx styles are keyed by type and keep first duplicate" {
     no_name_xml,
     namespace_map=office_namespace_map(),
   )
-  let no_name_reader = body_reader_with_numbering(styles, NumberingMap::empty())
+  let no_name_reader = body_reader_with_stable_numbering(
+    styles,
+    NumberingMap::empty(),
+  )
   match no_name_reader.read_element(no_name)[0] {
     Paragraph(properties~, ..) =>
       debug_inspect(properties.style_name, content="None")
@@ -1808,9 +1876,12 @@ test "docx body reader records Mammoth-compatible warnings" {
 test "docx note and comment reader warnings are preserved" {
   let footnotes_xml =
     #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:id="1"><w:not-an-element /></w:footnote></w:footnotes>
-  let styles : Map[String, StyleInfo] = Map([])
+  let styles : StableStringMap[StyleInfo] = SortedMap([])
   let numbering = NumberingMap::empty()
-  let content_types = ContentTypes::{ defaults: Map([]), overrides: Map([]) }
+  let content_types = ContentTypes::{
+    defaults: SortedMap([]),
+    overrides: SortedMap([]),
+  }
   let document_relationships = Relationships::{ relationships: [] }
   let base_path = "word"
   let footnotes = read_note_part_at_path(
@@ -1906,11 +1977,11 @@ test "docx document xml reader rejects missing body" {
   try
     read_document_xml_with_messages(
       root,
-      Map([]),
+      SortedMap([]),
       NumberingMap::empty(),
       try! @zip.zip_archive(Map([])),
       { relationships: [] },
-      { defaults: Map([]), overrides: Map([]) },
+      { defaults: SortedMap([]), overrides: SortedMap([]) },
       "word",
       [],
       [],
@@ -3210,7 +3281,7 @@ test "docx transparent wrappers pass through children" {
 ///|
 fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
   {
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationships: {
       relationships: [
@@ -3228,7 +3299,10 @@ fn drawing_image_reader_with_images(read_images : Bool) -> BodyReader {
         },
       ],
     },
-    content_types: { defaults: { "png": "image/png" }, overrides: Map([]) },
+    content_types: {
+      defaults: SortedMap([("png", "image/png")]),
+      overrides: SortedMap([]),
+    },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3320,7 +3394,7 @@ test "docx linked DrawingML images use the external loader" {
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rLinkedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
@@ -3332,7 +3406,7 @@ test "docx linked DrawingML images use the external loader" {
         },
       ],
     },
-    content_types: { defaults: Map([]), overrides: Map([]) },
+    content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3358,7 +3432,7 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:link="rLinkedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
@@ -3370,7 +3444,7 @@ test "docx linked DrawingML image loader tries decoded file URI paths" {
         },
       ],
     },
-    content_types: { defaults: Map([]), overrides: Map([]) },
+    content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3396,7 +3470,7 @@ test "docx embedded DrawingML images ignore relationship target mode" {
     #|<wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><wp:docPr id="1" name="Picture" descr="It's a hat" /><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rEmbeddedImage" /></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>
   let root = read_xml_string(xml, namespace_map=office_namespace_map())
   let reader = BodyReader::{
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.png": b"abc" }),
     relationships: {
       relationships: [
@@ -3408,7 +3482,10 @@ test "docx embedded DrawingML images ignore relationship target mode" {
         },
       ],
     },
-    content_types: { defaults: { "png": "image/png" }, overrides: Map([]) },
+    content_types: {
+      defaults: SortedMap([("png", "image/png")]),
+      overrides: SortedMap([]),
+    },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3431,7 +3508,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     namespace_map=office_namespace_map(),
   )
   let linked_reader = BodyReader::{
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
@@ -3443,7 +3520,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
         },
       ],
     },
-    content_types: { defaults: Map([]), overrides: Map([]) },
+    content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3468,7 +3545,7 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
     namespace_map=office_namespace_map(),
   )
   let blank_link_reader = BodyReader::{
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/tiny.png": b"abc" }),
     relationships: {
       relationships: [
@@ -3486,7 +3563,10 @@ test "docx DrawingML image relationship ids follow Mammoth truthiness" {
         },
       ],
     },
-    content_types: { defaults: { "png": "image/png" }, overrides: Map([]) },
+    content_types: {
+      defaults: SortedMap([("png", "image/png")]),
+      overrides: SortedMap([]),
+    },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3654,7 +3734,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let missing_entry_reader = BodyReader::{
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
@@ -3666,7 +3746,10 @@ test "docx image reader records Mammoth-compatible warnings" {
         },
       ],
     },
-    content_types: { defaults: { "png": "image/png" }, overrides: Map([]) },
+    content_types: {
+      defaults: SortedMap([("png", "image/png")]),
+      overrides: SortedMap([]),
+    },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3743,7 +3826,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let external_reader = BodyReader::{
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive(Map([])),
     relationships: {
       relationships: [
@@ -3755,7 +3838,7 @@ test "docx image reader records Mammoth-compatible warnings" {
         },
       ],
     },
-    content_types: { defaults: Map([]), overrides: Map([]) },
+    content_types: { defaults: SortedMap([]), overrides: SortedMap([]) },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
@@ -3776,7 +3859,7 @@ test "docx image reader records Mammoth-compatible warnings" {
     namespace_map=office_namespace_map(),
   )
   let unsupported_reader = BodyReader::{
-    styles: Map([]),
+    styles: SortedMap([]),
     zip: try! @zip.zip_archive({ "word/media/hat.emf": b"abc" }),
     relationships: {
       relationships: [
@@ -3788,7 +3871,10 @@ test "docx image reader records Mammoth-compatible warnings" {
         },
       ],
     },
-    content_types: { defaults: { "emf": "image/x-emf" }, overrides: Map([]) },
+    content_types: {
+      defaults: SortedMap([("emf", "image/x-emf")]),
+      overrides: SortedMap([]),
+    },
     base_path: "word",
     numbering: NumberingMap::empty(),
     messages: [],
