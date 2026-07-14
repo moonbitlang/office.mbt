@@ -20,6 +20,43 @@ pub fn plan_comment_addition(
   to_relative~ : String,
   spec : CommentSpec,
 ) -> (@splice.SplicePlan, String) raise DocxError {
+  plan_comment_addition_zip(
+    annotated,
+    open_zip(original),
+    at_relative~,
+    to_relative~,
+    spec,
+  )
+}
+
+///|
+/// Archive-backed form used by preservation-safe edit sessions. It reuses the
+/// caller's already bounded, materialized package and never inflates the DOCX
+/// a second time.
+pub fn plan_comment_addition_archive(
+  annotated : DocxAnnotatedResult,
+  archive : @mbtzip.Archive,
+  at_relative~ : String,
+  to_relative~ : String,
+  spec : CommentSpec,
+) -> (@splice.SplicePlan, String) raise DocxError {
+  plan_comment_addition_zip(
+    annotated,
+    open_zip_archive(archive),
+    at_relative~,
+    to_relative~,
+    spec,
+  )
+}
+
+///|
+fn plan_comment_addition_zip(
+  annotated : DocxAnnotatedResult,
+  zip : ZipArchive,
+  at_relative~ : String,
+  to_relative~ : String,
+  spec : CommentSpec,
+) -> (@splice.SplicePlan, String) raise DocxError {
   check_mutation_gates(annotated)
   // Anchor spans — misses report the sibling count so agents can
   // correct the ordinal, matching the paths-layer error shape.
@@ -75,7 +112,6 @@ pub fn plan_comment_addition(
   // Fragments (namespace-self-contained per the L0 locked rule).
   let (start_fragment, end_fragment) = comment_anchor_fragments(id=new_id)
   let definition = comment_definition_fragment(spec, id=new_id)
-  let zip = open_zip(original)
   let main_part = annotated.main_story_part()
   guard zip.read_bytes(main_part) is Some(main_bytes) else {
     raise Unsupported(message="the package is missing its main part")
