@@ -123,6 +123,36 @@ fn rename_archive_part(
 }
 
 ///|
+fn first_segment_colon_xlsx(target : String) -> Bytes raise {
+  let archive = @zip.Archive::new()
+  archive.add(
+    "[Content_Types].xml",
+    @utf8.encode(
+      "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Override PartName=\"/1:workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/></Types>",
+    ),
+  )
+  archive.add(
+    "_rels/.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rMain\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"\{target}\"/></Relationships>",
+    ),
+  )
+  archive.add(
+    "1:workbook.xml",
+    @utf8.encode(
+      "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheets/></workbook>",
+    ),
+  )
+  archive.add(
+    "_rels/1:workbook.xml.rels",
+    @utf8.encode(
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
+    ),
+  )
+  @zip.write(archive)
+}
+
+///|
 fn prepend_utf8_bom(data : BytesView) -> Bytes {
   let bytes : Array[Byte] = [0xef, 0xbb, 0xbf]
   for byte in data {
@@ -718,6 +748,33 @@ test "detect_format rejects absolute and network-path internal targets" {
       _ => fail("expected invalid internal target: \{target}")
     }
   }
+}
+
+///|
+test "relative targets require an unambiguous first-segment colon" {
+  try @office.detect_format(
+    "ambiguous.xlsx",
+    first_segment_colon_xlsx("1:workbook.xml"),
+  ) catch {
+    err => {
+      let message = Show::to_string(err)
+      if !message.contains(
+        "XLSX officeDocument relationship has an invalid Target",
+      ) {
+        fail("unexpected target diagnostic: \{message}")
+      }
+    }
+  } noraise {
+    _ => fail("expected an ambiguous first-segment colon to fail")
+  }
+  inspect(
+    @office.detect_format(
+      "explicit-relative.xlsx",
+      first_segment_colon_xlsx("./1:workbook.xml"),
+    )
+    .name(),
+    content="xlsx",
+  )
 }
 
 ///|

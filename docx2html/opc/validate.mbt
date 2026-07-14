@@ -689,6 +689,25 @@ fn target_has_uri_scheme(target : String) -> Bool {
 }
 
 ///|
+/// RFC 3986 `path-noscheme` forbids a colon in the first relative segment.
+/// Prefixing that segment with `./` is the unambiguous spelling and remains
+/// valid (`./1:document.xml`).
+fn target_has_ambiguous_first_segment_colon(target : String) -> Bool {
+  if target.has_prefix("/") {
+    return false
+  }
+  for character in target {
+    if character == '/' {
+      return false
+    }
+    if character == ':' {
+      return true
+    }
+  }
+  false
+}
+
+///|
 /// Resolves one internal relationship target against an archive-directory
 /// base. Package-rooted targets (`/word/media/x.png`) and relative targets use
 /// the same dot-segment normalization. Empty segments, URI schemes,
@@ -700,6 +719,7 @@ pub fn resolve_target(base : String, target : String) -> String? {
     target.contains("\\") ||
     target.contains("?") ||
     target.contains("#") ||
+    target_has_ambiguous_first_segment_colon(target) ||
     target_has_uri_scheme(target) {
     return None
   }

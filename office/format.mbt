@@ -343,8 +343,26 @@ fn has_uri_scheme(target : StringView) -> Bool {
 }
 
 ///|
+fn has_ambiguous_first_segment_colon(target : StringView) -> Bool {
+  if target.has_prefix("/") {
+    return false
+  }
+  for char in target {
+    if char == '/' {
+      return false
+    }
+    if char == ':' {
+      return true
+    }
+  }
+  false
+}
+
+///|
 fn is_package_uri_reference(target : StringView) -> Bool {
-  !target.has_prefix("//") && !has_uri_scheme(target)
+  !target.has_prefix("//") &&
+  !has_uri_scheme(target) &&
+  !has_ambiguous_first_segment_colon(target)
 }
 
 ///|
