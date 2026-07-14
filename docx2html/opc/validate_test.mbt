@@ -96,6 +96,64 @@ test "limited validation bounds findings and messages during production" {
 }
 
 ///|
+test "limited validation bounds aggregate XML work before DOM construction" {
+  let archive = try! @mbtzip.read(minimal_docx())
+  let (source_findings, _) = @opc.validate_docx_archive_limited(
+    archive,
+    max_findings=4,
+    max_message_chars=256,
+    max_xml_source_units=1,
+    max_xml_tokens=1024,
+    max_xml_materialized_chars=4096,
+    max_xml_token_chars=1024,
+  )
+  assert_true(
+    source_findings.search_by(finding => {
+      finding.contains("XML source budget exceeded")
+    })
+    is Some(_),
+  )
+  let (token_findings, _) = @opc.validate_docx_archive_limited(
+    archive,
+    max_findings=4,
+    max_message_chars=256,
+    max_xml_source_units=4096,
+    max_xml_tokens=1,
+    max_xml_materialized_chars=4096,
+    max_xml_token_chars=1024,
+  )
+  assert_true(
+    token_findings.search_by(finding => {
+      finding.contains("XML token budget exceeded")
+    })
+    is Some(_),
+  )
+}
+
+///|
+test "limited validation bounds parser diagnostics before collector truncation" {
+  let entity = "attacker".repeat(512)
+  let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>&\{entity};</w:body></w:document>"
+  let archive = try! @mbtzip.read(minimal_docx(document=Some(document)))
+  let (findings, _) = @opc.validate_docx_archive_limited(
+    archive,
+    max_findings=8,
+    max_message_chars=512,
+    max_xml_source_units=32 * 1024,
+    max_xml_tokens=4096,
+    max_xml_materialized_chars=32 * 1024,
+    max_xml_token_chars=8 * 1024,
+  )
+  guard findings.search_by(finding => finding.contains("undeclared XML entity"))
+    is Some(index) else {
+    fail("expected bounded XML parser diagnostic")
+  }
+  let finding = findings[index]
+  assert_true(finding.length() < 256)
+  assert_true(finding.contains("…"))
+}
+
+///|
 test "OPC validation uses strict XML for every structural part" {
   let duplicate_types = MINIMAL_CONTENT_TYPES_XML.replace(
     old="<Default Extension=\"rels\"",

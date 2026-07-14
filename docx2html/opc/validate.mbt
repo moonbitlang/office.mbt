@@ -37,10 +37,23 @@ const DEFAULT_MAX_FINDINGS : Int = 1024
 const DEFAULT_MAX_FINDING_CHARS : Int = 2048
 
 ///|
+const DEFAULT_MAX_XML_SOURCE_UNITS : Int = 16 * 1024 * 1024
+
+///|
+const DEFAULT_MAX_XML_TOKENS : Int = 262_144
+
+///|
+const DEFAULT_MAX_XML_MATERIALIZED_CHARS : Int = 8 * 1024 * 1024
+
+///|
+const DEFAULT_MAX_XML_TOKEN_CHARS : Int = 4 * 1024 * 1024
+
+///|
 priv struct FindingCollector {
   findings : Array[String]
   max_findings : Int
   max_message_chars : Int
+  xml_budget : @xml.XmlReadBudget
   mut truncated : Bool
 }
 
@@ -48,6 +61,25 @@ priv struct FindingCollector {
 fn FindingCollector::new(
   max_findings : Int,
   max_message_chars : Int,
+) -> FindingCollector {
+  FindingCollector::new_with_xml_limits(
+    max_findings,
+    max_message_chars,
+    DEFAULT_MAX_XML_SOURCE_UNITS,
+    DEFAULT_MAX_XML_TOKENS,
+    DEFAULT_MAX_XML_MATERIALIZED_CHARS,
+    DEFAULT_MAX_XML_TOKEN_CHARS,
+  )
+}
+
+///|
+fn FindingCollector::new_with_xml_limits(
+  max_findings : Int,
+  max_message_chars : Int,
+  max_xml_source_units : Int,
+  max_xml_tokens : Int,
+  max_xml_materialized_chars : Int,
+  max_xml_token_chars : Int,
 ) -> FindingCollector {
   {
     findings: [],
@@ -61,6 +93,24 @@ fn FindingCollector::new(
     } else {
       0
     },
+    xml_budget: @xml.xml_read_budget(
+      max_source_units=if max_xml_source_units > 0 {
+        max_xml_source_units
+      } else {
+        0
+      },
+      max_tokens=if max_xml_tokens > 0 { max_xml_tokens } else { 0 },
+      max_materialized_chars=if max_xml_materialized_chars > 0 {
+        max_xml_materialized_chars
+      } else {
+        0
+      },
+      max_token_chars=if max_xml_token_chars > 0 {
+        max_xml_token_chars
+      } else {
+        0
+      },
+    ),
     truncated: false,
   }
 }
@@ -170,8 +220,15 @@ pub fn validate_docx_package_limited(
   data : BytesView,
   max_findings~ : Int,
   max_message_chars~ : Int,
+  max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
+  max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
+  max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
+  max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
 ) -> (Array[String], Bool) {
-  let findings = FindingCollector::new(max_findings, max_message_chars)
+  let findings = FindingCollector::new_with_xml_limits(
+    max_findings, max_message_chars, max_xml_source_units, max_xml_tokens, max_xml_materialized_chars,
+    max_xml_token_chars,
+  )
   let archive = @mbtzip.read(data) catch {
     err => {
       findings.add("invalid ZIP archive: \{findings.text(repr(err))}")
@@ -203,8 +260,15 @@ pub fn validate_docx_archive_limited(
   archive : @mbtzip.Archive,
   max_findings~ : Int,
   max_message_chars~ : Int,
+  max_xml_source_units? : Int = DEFAULT_MAX_XML_SOURCE_UNITS,
+  max_xml_tokens? : Int = DEFAULT_MAX_XML_TOKENS,
+  max_xml_materialized_chars? : Int = DEFAULT_MAX_XML_MATERIALIZED_CHARS,
+  max_xml_token_chars? : Int = DEFAULT_MAX_XML_TOKEN_CHARS,
 ) -> (Array[String], Bool) {
-  let findings = FindingCollector::new(max_findings, max_message_chars)
+  let findings = FindingCollector::new_with_xml_limits(
+    max_findings, max_message_chars, max_xml_source_units, max_xml_tokens, max_xml_materialized_chars,
+    max_xml_token_chars,
+  )
   validate_docx_archive_into(archive, findings)
   (findings.findings, findings.truncated)
 }
@@ -549,13 +613,11 @@ fn parse_xml_part(
   bytes : Bytes,
   findings : FindingCollector,
 ) -> @xml.XmlElement? {
-  let text = @utf8.decode(bytes, ignore_bom=true) catch {
-    _ => {
+  let root = @xml.read_xml_bytes_strict_limited(bytes, findings.xml_budget) catch {
+    InvalidXml(message="XML source is not valid UTF-8") => {
       findings.add("part is not valid UTF-8: \{findings.text(name)}")
       return None
     }
-  }
-  let root = @xml.read_xml_string_strict(text) catch {
     err => {
       findings.add(
         "malformed XML in \{findings.text(name)}: \{findings.text(repr(err))}",

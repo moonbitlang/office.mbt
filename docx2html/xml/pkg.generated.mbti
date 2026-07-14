@@ -25,7 +25,7 @@ pub fn write_xml_string(XmlElement, namespaces? : Map[String, String]) -> String
 
 pub fn xml_element(String, attributes? : Map[String, String], children? : Array[XmlNode]) -> XmlElement
 
-pub fn xml_read_budget(max_source_units~ : Int, max_tokens~ : Int, max_materialized_chars~ : Int, max_token_chars~ : Int) -> XmlReadBudget raise @core.DocxError
+pub fn xml_read_budget(max_source_units~ : Int, max_tokens~ : Int, max_materialized_chars~ : Int, max_token_chars~ : Int) -> XmlReadBudget
 
 pub fn xml_text(String) -> XmlNode
 
