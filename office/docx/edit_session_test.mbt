@@ -533,6 +533,57 @@ async test "D1 generic plans cannot introduce a second comments target" {
 }
 
 ///|
+async test "D1 generic plans cannot publish duplicate global paraIds" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.write_docx([
+      @word_fixture.paragraph([@word_fixture.run([@word_fixture.text("First")])]),
+      @word_fixture.paragraph([
+        @word_fixture.run([@word_fixture.text("Second")]),
+      ]),
+    ])
+    let archive = @zip.read(original)
+    guard archive.get("word/document.xml") is Some(document_bytes) else {
+      fail("fixture is missing its main document")
+    }
+    let document = @utf8.decode(document_bytes, ignore_bom=true)
+    let namespaced = if document.contains(
+        "xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\"",
+      ) {
+      document
+    } else {
+      document.replace(
+        old="<w:document ",
+        new="<w:document xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" ",
+      )
+    }
+    let duplicated = namespaced.replace_all(
+      old="<w:p>",
+      new="<w:p w14:paraId=\"DEADBEEF\">",
+    )
+    assert_eq(duplicated.split("w14:paraId").length(), 3)
+    write_docx_session_file(input, original)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          session.queue_span_edit(
+            "word/document.xml",
+            start=0,
+            end=document_bytes.length(),
+            @utf8.encode(duplicated),
+          )
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 session adopts annotation plans with an exact preservation manifest" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"
