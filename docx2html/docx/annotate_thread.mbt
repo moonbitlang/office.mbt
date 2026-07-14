@@ -1311,13 +1311,18 @@ fn queue_comments_extended_edits(
         "\{main_dir}/_rels/\{main_base}.rels"
       }
       let relationship_type = "http://schemas.microsoft.com/office/2011/relationships/commentsExtended"
-      guard zip.read_bytes(rels_part) is Some(rels_bytes) else {
+      guard zip.resolve_path(rels_part) is Some(actual_rels_part) else {
         raise Unsupported(
           message="the main part has no relationships part; refusing",
         )
       }
+      guard zip.read_bytes(actual_rels_part) is Some(rels_bytes) else {
+        raise Unsupported(
+          message="the package index lost '\{actual_rels_part}'; refusing",
+        )
+      }
       let rels_root = read_mutation_relationships(
-        rels_part, rels_bytes, xml_budget,
+        actual_rels_part, rels_bytes, xml_budget,
       )
       let existing_ids : Set[String] = Set([])
       collect_relationship_ids(rels_root, existing_ids)
@@ -1325,33 +1330,36 @@ fn queue_comments_extended_edits(
       while existing_ids.contains("rIdAnnotate\{ordinal}") {
         ordinal += 1
       }
-      let rels_span = scan_xml_root_span(rels_part, rels_bytes)
+      let rels_span = scan_xml_root_span(actual_rels_part, rels_bytes)
       let relationship_name = qualified_child_name(
         rels_span.name,
         "Relationship",
       )
       plan.edit_part(
-        rels_part,
+        actual_rels_part,
         xml_root_child_edit(
           rels_bytes,
           rels_span,
           "<\{relationship_name} Id=\"rIdAnnotate\{ordinal}\" Type=\"\{relationship_type}\" Target=\"commentsExtended.xml\"/>",
         ),
       )
-      guard zip.read_bytes("[Content_Types].xml") is Some(types_bytes) else {
+      guard zip.resolve_path("[Content_Types].xml") is Some(types_part) else {
         raise Unsupported(message="the package is missing [Content_Types].xml")
       }
+      guard zip.read_bytes(types_part) is Some(types_bytes) else {
+        raise Unsupported(message="the package index lost '\{types_part}'")
+      }
       read_mutation_xml_root(
-        "[Content_Types].xml",
+        types_part,
         types_bytes,
         xml_budget,
         expected_root="content-types:Types",
       )
       |> ignore
-      let types_span = scan_xml_root_span("[Content_Types].xml", types_bytes)
+      let types_span = scan_xml_root_span(types_part, types_bytes)
       let override_name = qualified_child_name(types_span.name, "Override")
       plan.edit_part(
-        "[Content_Types].xml",
+        types_part,
         xml_root_child_edit(
           types_bytes,
           types_span,

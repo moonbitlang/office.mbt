@@ -1314,7 +1314,8 @@ fn validate_package_structure(
   }
   for entry in archive.entries() {
     let name = entry.name()
-    if name == "[Content_Types].xml" || name.has_suffix("/") {
+    if opc_part_key(name) == opc_part_key("[Content_Types].xml") ||
+      name.has_suffix("/") {
       continue
     }
     let key = opc_part_key(name)

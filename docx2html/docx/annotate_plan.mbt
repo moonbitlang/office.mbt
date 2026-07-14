@@ -227,13 +227,18 @@ fn plan_comment_addition_zip(
         "\{main_dir}/_rels/\{main_base}.rels"
       }
       let relationship_type = annotated.new_comments_relationship_type()
-      match zip.read_bytes(rels_part) {
-        Some(rels_bytes) => {
+      match zip.resolve_path(rels_part) {
+        Some(actual_rels_part) => {
+          guard zip.read_bytes(actual_rels_part) is Some(rels_bytes) else {
+            raise Unsupported(
+              message="the package index lost '\{actual_rels_part}'; refusing to annotate",
+            )
+          }
           // Allocate the id by PARSING the rels part — quoting and
           // whitespace variants make substring probes unsound. Parse
           // bytes directly under the caller's cumulative mutation budget.
           let rels_root = read_mutation_relationships(
-            rels_part, rels_bytes, xml_budget,
+            actual_rels_part, rels_bytes, xml_budget,
           )
           let existing_ids : Set[String] = Set([])
           collect_relationship_ids(rels_root, existing_ids)
@@ -241,14 +246,14 @@ fn plan_comment_addition_zip(
           while existing_ids.contains("rIdAnnotate\{ordinal}") {
             ordinal += 1
           }
-          let rels_span = scan_xml_root_span(rels_part, rels_bytes)
+          let rels_span = scan_xml_root_span(actual_rels_part, rels_bytes)
           let relationship_name = qualified_child_name(
             rels_span.name,
             "Relationship",
           )
           let relationship = "<\{relationship_name} Id=\"rIdAnnotate\{ordinal}\" Type=\"\{relationship_type}\" Target=\"comments.xml\"/>"
           plan.edit_part(
-            rels_part,
+            actual_rels_part,
             xml_root_child_edit(rels_bytes, rels_span, relationship),
           )
         }
@@ -264,20 +269,23 @@ fn plan_comment_addition_zip(
             ),
           )
       }
-      guard zip.read_bytes("[Content_Types].xml") is Some(types_bytes) else {
+      guard zip.resolve_path("[Content_Types].xml") is Some(types_part) else {
         raise Unsupported(message="the package is missing [Content_Types].xml")
       }
+      guard zip.read_bytes(types_part) is Some(types_bytes) else {
+        raise Unsupported(message="the package index lost '\{types_part}'")
+      }
       read_mutation_xml_root(
-        "[Content_Types].xml",
+        types_part,
         types_bytes,
         xml_budget,
         expected_root="content-types:Types",
       )
       |> ignore
-      let types_span = scan_xml_root_span("[Content_Types].xml", types_bytes)
+      let types_span = scan_xml_root_span(types_part, types_bytes)
       let override_name = qualified_child_name(types_span.name, "Override")
       plan.edit_part(
-        "[Content_Types].xml",
+        types_part,
         xml_root_child_edit(
           types_bytes,
           types_span,
@@ -299,10 +307,13 @@ fn pin_splice_sources(
   zip : ZipArchive,
 ) -> Unit raise DocxError {
   for part in plan.unpinned_edited_parts() {
-    guard zip.read_bytes(part) is Some(source) else {
+    guard zip.resolve_path(part) is Some(actual) && actual == part else {
       raise Unsupported(
-        message="the splice plan edits '\{part}', which the source package does not contain",
+        message="the splice plan does not preserve the source spelling of '\{part}'",
       )
+    }
+    guard zip.read_bytes(actual) is Some(source) else {
+      raise Unsupported(message="the package index lost '\{actual}'")
     }
     plan.pin_part(part, source)
   }
