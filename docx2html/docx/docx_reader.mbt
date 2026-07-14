@@ -51,6 +51,46 @@ const STRICT_FOOTNOTES_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/offic
 const STRICT_ENDNOTES_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/endnotes"
 
 ///|
+priv enum OoxmlDialect {
+  TransitionalOoxml
+  StrictOoxml
+}
+
+///|
+fn wordprocessing_dialect(uri : String) -> OoxmlDialect? {
+  match uri {
+    WORDPROCESSINGML_NAMESPACE => Some(TransitionalOoxml)
+    STRICT_WORDPROCESSINGML_NAMESPACE => Some(StrictOoxml)
+    _ => None
+  }
+}
+
+///|
+fn office_relationship_dialect(relationship_type : String) -> OoxmlDialect? {
+  match relationship_type {
+    TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP => Some(TransitionalOoxml)
+    STRICT_OFFICE_DOCUMENT_RELATIONSHIP => Some(StrictOoxml)
+    _ => None
+  }
+}
+
+///|
+fn OoxmlDialect::namespace_uri(self : OoxmlDialect) -> String {
+  match self {
+    TransitionalOoxml => WORDPROCESSINGML_NAMESPACE
+    StrictOoxml => STRICT_WORDPROCESSINGML_NAMESPACE
+  }
+}
+
+///|
+fn OoxmlDialect::comments_relationship_type(self : OoxmlDialect) -> String {
+  match self {
+    TransitionalOoxml => TRANSITIONAL_COMMENTS_RELATIONSHIP
+    StrictOoxml => STRICT_COMMENTS_RELATIONSHIP
+  }
+}
+
+///|
 /// One normalized main-relationship target whose XML can carry annotation
 /// markers or paragraph identities. `kind` is one of header/footer/footnotes/
 /// endnotes. Relationship order is preserved; normalized duplicate targets are
@@ -359,6 +399,7 @@ priv struct DocumentParts {
   zip : ZipArchive
   xml_budget : @xml.XmlReadBudget?
   main_document_path : String
+  main_relationship_dialect : OoxmlDialect?
   root : XmlElement
   styles : Map[String, StyleInfo]
   numbering : NumberingMap
@@ -385,7 +426,8 @@ fn DocumentParts::build(
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
 ) -> DocumentParts raise DocxError {
-  let main_document_path = find_main_document_path(zip, xml_budget?)
+  let main_document = find_main_document(zip, xml_budget?)
+  let main_document_path = main_document.path
   let relationships = read_relationships(
     zip,
     relationships_path_for_part(main_document_path),
@@ -467,6 +509,7 @@ fn DocumentParts::build(
     zip,
     xml_budget,
     main_document_path,
+    main_relationship_dialect: main_document.relationship_dialect,
     root,
     styles,
     numbering,
@@ -572,10 +615,16 @@ fn office_namespace_map() -> Map[String, String] {
 }
 
 ///|
-fn find_main_document_path(
+priv struct MainDocumentPart {
+  path : String
+  relationship_dialect : OoxmlDialect?
+}
+
+///|
+fn find_main_document(
   zip : ZipArchive,
   xml_budget? : @xml.XmlReadBudget,
-) -> String raise DocxError {
+) -> MainDocumentPart raise DocxError {
   let relationships = read_relationships(zip, "_rels/.rels", xml_budget?)
   let path = resolve_unique_internal_part(
     zip,
@@ -589,10 +638,19 @@ fn find_main_document_path(
     reject_multiple_relationships=true,
   )
   match path {
-    Some(authoritative) => authoritative
+    Some(authoritative) => {
+      let mut relationship_dialect : OoxmlDialect? = None
+      for relationship in relationships.relationships {
+        match office_relationship_dialect(relationship.relationship_type) {
+          Some(dialect) => relationship_dialect = Some(dialect)
+          None => ()
+        }
+      }
+      { path: authoritative, relationship_dialect }
+    }
     None =>
       if zip.exists("word/document.xml") {
-        "word/document.xml"
+        { path: "word/document.xml", relationship_dialect: None }
       } else {
         raise MissingPart(
           message="Could not find main document part. Are you sure this is a valid .docx file?",

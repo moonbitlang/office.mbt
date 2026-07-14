@@ -12,9 +12,9 @@ import {
 }
 
 // Values
-pub fn comment_anchor_fragments(id~ : String) -> (String, String)
+pub fn comment_anchor_fragments(id~ : String, wordprocessing_namespace? : String) -> (String, String)
 
-pub fn comment_definition_fragment(CommentSpec, id~ : String, para_ids? : Array[String], max_output_bytes? : Int) -> String raise @core.DocxError
+pub fn comment_definition_fragment(CommentSpec, id~ : String, para_ids? : Array[String], max_output_bytes? : Int, wordprocessing_namespace? : String) -> String raise @core.DocxError
 
 pub fn comment_reply(author~ : String, initials? : String, date? : String, reply_to~ : Int, done? : Bool, Array[@document.DocumentElement]) -> CommentSpec raise @core.DocxError
 

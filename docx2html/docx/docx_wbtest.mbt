@@ -669,12 +669,24 @@ test "docx main document path follows package relationships and fallback" {
     relationship_part(office_document_type, "/word/document2.xml"),
   )
   from_relationship.entries["word/document2.xml"] = @utf8.encode(" ")
-  inspect(
-    find_main_document_path(from_relationship),
-    content="word/document2.xml",
-  )
+  let resolved = find_main_document(from_relationship)
+  inspect(resolved.path, content="word/document2.xml")
+  assert_true(resolved.relationship_dialect is Some(TransitionalOoxml))
   let fallback = zip_with_text("word/document.xml", " ")
-  inspect(find_main_document_path(fallback), content="word/document.xml")
+  let resolved_fallback = find_main_document(fallback)
+  inspect(resolved_fallback.path, content="word/document.xml")
+  assert_true(resolved_fallback.relationship_dialect is None)
+  let strict = zip_with_text(
+    "_rels/.rels",
+    relationship_part(
+      STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
+      "/strict/document.xml",
+    ),
+  )
+  strict.entries["strict/document.xml"] = @utf8.encode(" ")
+  assert_true(
+    find_main_document(strict).relationship_dialect is Some(StrictOoxml),
+  )
 }
 
 ///|

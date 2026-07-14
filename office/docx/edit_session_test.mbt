@@ -67,6 +67,79 @@ async test "D1 session no-op reuses the exact transaction source" {
 }
 
 ///|
+async test "D1 comment addition preserves true Strict OOXML dialect" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/strict-input.docx"
+    let output = "\{directory}/strict-output.docx"
+    let strict_wml = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+    let strict_office = "http://purl.oclc.org/ooxml/officeDocument/relationships/"
+    let transitional_wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    let builder = @opc.PackageBuilder::new()
+    builder.add_default(
+      "rels", "application/vnd.openxmlformats-package.relationships+xml",
+    )
+    builder.add_default("xml", "application/xml")
+    builder.add_override(
+      "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+    )
+    builder.add_relationship(
+      "rIdMain",
+      strict_office + "officeDocument",
+      "word/document.xml",
+    )
+    builder.add_part(
+      "word/document.xml",
+      @utf8.encode(
+        "<w:document xmlns:w=\"\{strict_wml}\"><w:body><w:p><w:r><w:t>Strict source</w:t></w:r></w:p><w:sectPr/></w:body></w:document>",
+      ),
+    )
+    write_docx_session_file(input, builder.build())
+    let specification = @word_fixture.comment_spec(
+      author="Strict",
+      from=0,
+      to=0,
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("Strict comment")]),
+        ]),
+      ],
+    )
+    let report = @docx.transact_docx(
+      @transaction.transaction_options(input, output_path=output),
+      session => {
+        inspect(
+          session.queue_comment_addition(
+            at_relative="p[1]",
+            to_relative="p[1]",
+            specification,
+          ),
+          content="0",
+        )
+      },
+    )
+    assert_true(report.committed)
+    let result = @zip.read(@afs.read_file(output).binary())
+    guard result.get("word/document.xml") is Some(document_bytes) else {
+      fail("Strict candidate lost its main part")
+    }
+    guard result.get("word/comments.xml") is Some(comments_bytes) else {
+      fail("Strict candidate lost its comments part")
+    }
+    guard result.get("word/_rels/document.xml.rels") is Some(rels_bytes) else {
+      fail("Strict candidate lost its main relationships")
+    }
+    let document = @utf8.decode(document_bytes, ignore_bom=true)
+    let comments = @utf8.decode(comments_bytes, ignore_bom=true)
+    let relationships = @utf8.decode(rels_bytes, ignore_bom=true)
+    assert_true(document.contains(strict_wml))
+    assert_true(comments.contains(strict_wml))
+    assert_false(document.contains(transitional_wml))
+    assert_false(comments.contains(transitional_wml))
+    assert_true(relationships.contains(strict_office + "comments"))
+  })
+}
+
+///|
 async test "D1 session isolates adopted plans from later caller mutations" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"

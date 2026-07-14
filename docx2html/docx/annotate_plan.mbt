@@ -115,11 +115,17 @@ fn plan_comment_addition_zip(
   }
   let new_id = candidate.to_string()
   // Fragments (namespace-self-contained per the L0 locked rule).
-  let (start_fragment, end_fragment) = comment_anchor_fragments(id=new_id)
+  let main_wordprocessing_namespace = annotated.main_wordprocessing_namespace()
+  let definition_namespace = annotated.comment_definition_namespace()
+  let (start_fragment, end_fragment) = comment_anchor_fragments(
+    id=new_id,
+    wordprocessing_namespace=main_wordprocessing_namespace,
+  )
   let definition = comment_definition_fragment(
     spec,
     id=new_id,
     max_output_bytes=max_fragment_bytes,
+    wordprocessing_namespace=definition_namespace,
   )
   let main_part = annotated.main_story_part()
   guard zip.read_bytes(main_part) is Some(main_bytes) else {
@@ -202,7 +208,7 @@ fn plan_comment_addition_zip(
         )
       }
       let part_text = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-        "<w:comments xmlns:w=\"\{WORDPROCESSINGML_NAMESPACE}\">" +
+        "<w:comments xmlns:w=\"\{main_wordprocessing_namespace}\">" +
         definition +
         "</w:comments>"
       plan.add_part(comments_part_name, @utf8.encode(part_text))
@@ -211,7 +217,7 @@ fn plan_comment_addition_zip(
       } else {
         "\{main_dir}/_rels/\{main_base}.rels"
       }
-      let relationship_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments"
+      let relationship_type = annotated.new_comments_relationship_type()
       match zip.read_bytes(rels_part) {
         Some(rels_bytes) => {
           // Allocate the id by PARSING the rels part — quoting and

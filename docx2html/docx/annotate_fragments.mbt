@@ -9,8 +9,11 @@
 /// at the from-paragraph's content_start) and the range end plus the
 /// reference run (spliced at the to-paragraph's close_tag_start) — the
 /// same canonical shape the K1 writer emits, in self-contained form.
-pub fn comment_anchor_fragments(id~ : String) -> (String, String) {
-  let namespaces = { "w": WORDPROCESSINGML_NAMESPACE }
+pub fn comment_anchor_fragments(
+  id~ : String,
+  wordprocessing_namespace? : String = WORDPROCESSINGML_NAMESPACE,
+) -> (String, String) {
+  let namespaces = { "w": wordprocessing_namespace }
   let start = @xml.write_xml_fragment(
     @xml.xml_element("w:commentRangeStart", attributes={ "w:id": id }),
     namespaces~,
@@ -41,6 +44,7 @@ pub fn comment_definition_fragment(
   id~ : String,
   para_ids? : Array[String] = [],
   max_output_bytes? : Int = 8 * 1024 * 1024,
+  wordprocessing_namespace? : String = WORDPROCESSINGML_NAMESPACE,
 ) -> String raise DocxError {
   check_comment_body_for_fragment(spec.body, max_output_bytes)
   check_attribute_value("the comment id", id)
@@ -88,7 +92,7 @@ pub fn comment_definition_fragment(
     Some(date) => attributes["w:date"] = date
     None => ()
   }
-  let namespaces : Map[String, String] = { "w": WORDPROCESSINGML_NAMESPACE }
+  let namespaces : Map[String, String] = { "w": wordprocessing_namespace }
   if para_ids.length() > 0 {
     namespaces["w14"] = W14_NAMESPACE
   }

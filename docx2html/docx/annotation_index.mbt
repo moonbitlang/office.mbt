@@ -426,6 +426,12 @@ pub struct DocxAnnotatedResult {
   // The commentsExtended part when wired (by relationship type), for
   // L2's reply/resolve path.
   priv comments_extended_part_name : String?
+  // Dialects come from the namespace-expanded root QNames of the exact source
+  // story parts. The reader DOM canonicalizes both dialects to `w`, so this
+  // information must be retained explicitly for preservation-safe mutation.
+  priv main_wordprocessing_dialect : OoxmlDialect?
+  priv comments_wordprocessing_dialect : OoxmlDialect?
+  priv main_relationship_dialect : OoxmlDialect?
 }
 
 ///|
@@ -608,6 +614,10 @@ fn read_docx_annotated_zip(
     comment_bodies,
   )
   let index = build_annotation_index(zip, parts, collector, verify_ctx)
+  let main_wordprocessing_dialect = annotation_story_dialect(index, "/body")
+  let comments_wordprocessing_dialect = annotation_story_dialect(
+    index, "/comments",
+  )
   // The index's diagnostics are part of the document's message stream —
   // orphans, dangling markers, degradations, and unrepresentable ids
   // must reach `outline`'s messages (J2 review round 1). Dedupe AFTER
@@ -668,9 +678,76 @@ fn read_docx_annotated_zip(
     comments_part_name: comments_part_resolved,
     sidecar_types,
     comments_extended_part_name: comments_extended_resolved,
+    main_wordprocessing_dialect,
+    comments_wordprocessing_dialect,
+    main_relationship_dialect: parts.main_relationship_dialect,
     footnote_bodies: footnote_pairs,
     endnote_bodies: endnote_pairs,
     comment_bodies: comment_pairs,
+  }
+}
+
+///|
+fn annotation_story_dialect(
+  index : AnnotationIndex,
+  public_path : String,
+) -> OoxmlDialect? {
+  for entry in index.scans {
+    let (path, scan) = entry
+    if path == public_path {
+      return match scan.root_namespace_uri() {
+        Some(uri) => wordprocessing_dialect(uri)
+        None => None
+      }
+    }
+  }
+  None
+}
+
+///|
+fn DocxAnnotatedResult::main_wordprocessing_namespace(
+  self : DocxAnnotatedResult,
+) -> String raise DocxError {
+  match self.main_wordprocessing_dialect {
+    Some(dialect) => dialect.namespace_uri()
+    None =>
+      raise Unsupported(
+        message="the main story's WordprocessingML dialect could not be determined; refusing to annotate",
+      )
+  }
+}
+
+///|
+fn DocxAnnotatedResult::comment_definition_namespace(
+  self : DocxAnnotatedResult,
+) -> String raise DocxError {
+  match self.comments_part_name {
+    Some(_) =>
+      match self.comments_wordprocessing_dialect {
+        Some(dialect) => dialect.namespace_uri()
+        None =>
+          raise Unsupported(
+            message="the comments story's WordprocessingML dialect could not be determined; refusing to annotate",
+          )
+      }
+    None => self.main_wordprocessing_namespace()
+  }
+}
+
+///|
+fn DocxAnnotatedResult::new_comments_relationship_type(
+  self : DocxAnnotatedResult,
+) -> String raise DocxError {
+  match self.main_relationship_dialect {
+    Some(dialect) => dialect.comments_relationship_type()
+    None =>
+      match self.main_wordprocessing_dialect {
+        Some(dialect) => dialect.comments_relationship_type()
+        None =>
+          raise Unsupported(
+            message="the package's OOXML relationship dialect could not be determined; refusing to annotate",
+          )
+      }
   }
 }
 
