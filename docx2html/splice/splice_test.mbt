@@ -8,6 +8,20 @@ fn tiny_package() -> Bytes raise {
 }
 
 ///|
+fn splice_hash_clustered_names(count : Int, bucket_mask : Int) -> Array[String] {
+  let names : Array[String] = []
+  let mut candidate = 0
+  while names.length() < count {
+    let name = "n\{candidate}.xml"
+    if (name.hash() & bucket_mask) == 0 {
+      names.push(name)
+    }
+    candidate += 1
+  }
+  names
+}
+
+///|
 fn reused_namespace_splice_source(uri_chars : Int, child_count : Int) -> String {
   let source = StringBuilder()
   source.write_string("<root xmlns:n=\"")
@@ -88,6 +102,17 @@ test "L0: splicing edits exactly the spans and preserves everything else" {
   let repacked = @mbtzip.read(unchanged)
   guard repacked.get("c.xml") is Some(c_bytes)
   inspect(c_bytes == @utf8.encode("<c/>"), content="true")
+}
+
+///|
+test "L0: archive validation ignores deterministic hash clustering" {
+  let archive = @mbtzip.Archive::new()
+  for name in splice_hash_clustered_names(256, 0x3FF) {
+    assert_eq(name.hash() & 0x3FF, 0)
+    archive.add(name, b"<r/>")
+  }
+  let original = @mbtzip.write(archive)
+  assert_eq(@splice.splice_docx(original, @splice.SplicePlan::new()), original)
 }
 
 ///|

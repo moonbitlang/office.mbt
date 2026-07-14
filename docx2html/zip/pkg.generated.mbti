@@ -17,6 +17,8 @@ pub fn split_zip_path(String) -> (String, String)
 
 pub fn zip_archive(Map[String, BytesView]) -> ZipArchive raise @core.DocxError
 
+pub fn zip_archive_entries(Iter[(String, BytesView)]) -> ZipArchive raise @core.DocxError
+
 // Errors
 
 // Types and methods

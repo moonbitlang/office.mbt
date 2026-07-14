@@ -51,12 +51,12 @@ pub fn span_edit(
 /// whole new parts. Build with `edit_part`/`add_part`, apply with
 /// `splice_docx`.
 pub struct SplicePlan {
-  priv part_edits : Map[String, Array[SpanEdit]]
+  priv part_edits : StableStringMap[Array[SpanEdit]]
   priv new_parts : Array[(String, Bytes)]
   // Exact immutable source payloads for offset-bearing edits. Keeping the
   // bytes makes stale detection collision-free while sharing the archive's
   // existing immutable buffers.
-  priv source_parts : Map[String, BytesView]
+  priv source_parts : StableStringMap[BytesView]
 }
 
 ///|
@@ -121,7 +121,7 @@ pub fn splice_limits(
 ///|
 /// An empty plan.
 pub fn SplicePlan::new() -> SplicePlan {
-  { part_edits: Map([]), new_parts: [], source_parts: Map([]) }
+  { part_edits: SortedMap([]), new_parts: [], source_parts: SortedMap([]) }
 }
 
 ///|
@@ -129,11 +129,11 @@ pub fn SplicePlan::new() -> SplicePlan {
 /// copied; replacement/addition `Bytes` and source `BytesView` values may be
 /// shared because MoonBit exposes both as immutable byte sequences.
 pub fn SplicePlan::copy(self : SplicePlan) -> SplicePlan {
-  let part_edits : Map[String, Array[SpanEdit]] = Map([])
+  let part_edits : StableStringMap[Array[SpanEdit]] = SortedMap([])
   for name, edits in self.part_edits {
     part_edits[name] = edits.copy()
   }
-  let source_parts : Map[String, BytesView] = Map([])
+  let source_parts : StableStringMap[BytesView] = SortedMap([])
   for name, source in self.source_parts {
     source_parts[name] = source
   }
@@ -176,7 +176,7 @@ pub fn SplicePlan::pin_part(
 ///|
 /// Returns the canonical, sorted union of edited and added package parts.
 pub fn SplicePlan::declared_parts(self : SplicePlan) -> Array[String] {
-  let names : Set[String] = Set([])
+  let names : StableStringSet = SortedSet([])
   for name, _ in self.part_edits {
     names.add(name)
   }
@@ -210,10 +210,10 @@ pub fn SplicePlan::unpinned_edited_parts(self : SplicePlan) -> Array[String] {
 /// exact spelling.
 fn splice_plan_part_spellings(
   plan : SplicePlan,
-) -> Map[String, String] raise @core.DocxError {
-  let spellings : Map[String, String] = Map([])
+) -> StableStringMap[String] raise @core.DocxError {
+  let spellings : StableStringMap[String] = SortedMap([])
   fn record(
-    spellings : Map[String, String],
+    spellings : StableStringMap[String],
     name : String,
   ) -> Unit raise @core.DocxError {
     let key = package_part_identity(name)
@@ -511,7 +511,7 @@ fn build_spliced_archive(
 ) -> @mbtzip.Archive raise @core.DocxError {
   // OPC part identity is case-insensitive. Exact duplicates and case aliases
   // are equally ambiguous, including on the true no-op fast path.
-  let seen : Map[String, String] = Map([])
+  let seen : StableStringMap[String] = SortedMap([])
   let mut source_entry_count = 0
   let mut source_uncompressed_bytes = 0L
   for entry in archive.entries() {
@@ -664,7 +664,7 @@ fn build_spliced_archive(
   let mut materialized_bytes = 0L
   let mut xml_source_units = 0L
   let mut markup_tokens = 0L
-  let edited : Map[String, Bytes] = Map([])
+  let edited : StableStringMap[Bytes] = SortedMap([])
   for name, edits in plan.part_edits {
     match archive.get(name) {
       Some(bytes) => {

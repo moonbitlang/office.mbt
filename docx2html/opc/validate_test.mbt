@@ -19,6 +19,24 @@ fn utf8_bytes(text : String) -> Bytes {
 }
 
 ///|
+fn opc_hash_clustered_names(
+  count : Int,
+  bucket_mask : Int,
+  suffix : String,
+) -> Array[String] {
+  let names : Array[String] = []
+  let mut candidate = 0
+  while names.length() < count {
+    let name = "n\{candidate}\{suffix}"
+    if (name.hash() & bucket_mask) == 0 {
+      names.push(name)
+    }
+    candidate += 1
+  }
+  names
+}
+
+///|
 /// A minimal structurally valid docx, with per-part replacement hooks.
 fn minimal_docx(
   content_types? : String? = None,
@@ -52,6 +70,46 @@ fn minimal_docx(
 ///|
 test "a minimal well-formed package is valid" {
   debug_inspect(@opc.validate_docx_package(minimal_docx()), content="[]")
+}
+
+///|
+test "OPC validation is independent of deterministic string-hash clustering" {
+  let part_names = opc_hash_clustered_names(256, 0x3FF, ".bin")
+  let relationship_ids = opc_hash_clustered_names(256, 0x3FF, "")
+  let relationships = StringBuilder()
+  relationships.write_string(
+    "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">",
+  )
+  for index, id in relationship_ids {
+    assert_eq(id.hash() & 0x3FF, 0)
+    if index == 0 {
+      relationships.write_string(
+        "<Relationship Id=\"\{id}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>",
+      )
+    } else {
+      relationships.write_string(
+        "<Relationship Id=\"\{id}\" Type=\"urn:mbt:test\" Target=\"https://example.invalid/\{index}\" TargetMode=\"External\"/>",
+      )
+    }
+  }
+  relationships.write_string("</Relationships>")
+  let extras : Array[(String, Bytes)] = []
+  for name in part_names {
+    assert_eq(name.hash() & 0x3FF, 0)
+    extras.push((name, b""))
+  }
+  let content_types =
+    #|<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="bin" ContentType="application/octet-stream"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>
+  debug_inspect(
+    @opc.validate_docx_package(
+      minimal_docx(
+        content_types=Some(content_types),
+        root_rels=Some(relationships.to_string()),
+        extra=extras,
+      ),
+    ),
+    content="[]",
+  )
 }
 
 ///|

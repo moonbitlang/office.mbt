@@ -3,6 +3,8 @@ import {
   "bobzhang/docx2html/xml",
   "bobzhang/mbtexcel/zip" @mbtzip,
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/sorted_map",
+  "moonbitlang/core/sorted_set",
 }
 
 import {

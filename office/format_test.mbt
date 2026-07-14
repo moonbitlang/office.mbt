@@ -51,6 +51,23 @@ fn append_archive_part(
 }
 
 ///|
+fn format_hash_clustered_relationship_names(
+  count : Int,
+  bucket_mask : Int,
+) -> Array[String] {
+  let names : Array[String] = []
+  let mut candidate = 0
+  while names.length() < count {
+    let name = "word/stress/_rels/n\{candidate}.bin.rels"
+    if (name.hash() & bucket_mask) == 0 {
+      names.push(name)
+    }
+    candidate += 1
+  }
+  names
+}
+
+///|
 fn add_relationship_stress_parts(data : BytesView, count : Int) -> Bytes raise {
   let source = @zip.read(data)
   let result = @zip.Archive::new()
@@ -83,10 +100,11 @@ fn add_relationship_stress_parts(data : BytesView, count : Int) -> Bytes raise {
   let relationships = @utf8.encode(
     "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>",
   )
-  let shared_prefix = "shared-" + "x".repeat(128) + "-"
-  for index in 0..<count {
-    let source_name = "word/stress/\{shared_prefix}\{index}.bin"
-    let relationships_name = "word/stress/_rels/\{shared_prefix}\{index}.bin.rels"
+  for
+    relationships_name in format_hash_clustered_relationship_names(count, 0x3FF) {
+    assert_eq(relationships_name.hash() & 0x3FF, 0)
+    let file_name = relationships_name[18:relationships_name.length() - 5]
+    let source_name = "word/stress/\{file_name}"
     result.add(source_name, b"")
     result.add(relationships_name, relationships)
   }
@@ -1278,8 +1296,8 @@ test "detect_format rejects mixed main relationship and OOXML dialects" {
 }
 
 ///|
-test "detect_format indexes thousands of long relationship part names" {
-  let data = add_relationship_stress_parts(@word.new_blank_docx(), 2048)
+test "detect_format ignores deterministic hash clustering in package names" {
+  let data = add_relationship_stress_parts(@word.new_blank_docx(), 512)
   inspect(@office.detect_format("report.docx", data).name(), content="docx")
 }
 

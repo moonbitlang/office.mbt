@@ -251,14 +251,14 @@ fn opc_part_key(name : StringView) -> String {
 
 ///|
 priv struct ArchivePartIndex {
-  exact : Map[String, BytesView]
-  canonical : Map[String, BytesView]
+  exact : StableStringMap[BytesView]
+  canonical : StableStringMap[BytesView]
 }
 
 ///|
 fn archive_part_index(archive : @zip.Archive) -> ArchivePartIndex {
-  let exact : Map[String, BytesView] = Map([])
-  let canonical : Map[String, BytesView] = Map([])
+  let exact : StableStringMap[BytesView] = SortedMap([])
+  let canonical : StableStringMap[BytesView] = SortedMap([])
   for entry in archive.entries() {
     let name = entry.name()
     if !exact.contains(name) {
@@ -1172,10 +1172,10 @@ fn validate_package_structure(
   require_main_relationships : Bool,
 ) -> Array[String] raise OfficeError {
   let findings : Array[String] = []
-  let parts : Map[String, Int] = Map([])
-  let part_names : Map[String, String] = Map([])
-  let package_parts : Map[String, Bool] = Map([])
-  let document_parts : Map[String, Bool] = Map([])
+  let parts : StableStringMap[Int] = SortedMap([])
+  let part_names : StableStringMap[String] = SortedMap([])
+  let package_parts : StableStringMap[Bool] = SortedMap([])
+  let document_parts : StableStringMap[Bool] = SortedMap([])
   for entry in archive.entries() {
     let name = entry.name()
     let key = opc_part_key(name)
@@ -1232,8 +1232,8 @@ fn validate_package_structure(
     findings.push("missing required part: \{main_relationships}")
   }
 
-  let defaults : Map[String, String] = Map([])
-  let overrides : Map[String, String] = Map([])
+  let defaults : StableStringMap[String] = SortedMap([])
+  let overrides : StableStringMap[String] = SortedMap([])
   let content_types = read_xml_part(part_index, "[Content_Types].xml")
   for child in content_types.children {
     match child {
@@ -1406,7 +1406,7 @@ fn validate_package_structure(
         XmlElement(_) => ()
       }
     }
-    let ids : Map[String, Bool] = Map([])
+    let ids : StableStringMap[Bool] = SortedMap([])
     for child in relationships.children {
       guard child is XmlElement(element) else { continue }
       if element.name != RELATIONSHIP_ELEMENT {
@@ -1638,8 +1638,8 @@ fn format_from_archive(
   }
   let xlsx_main_parts : Array[String] = []
   let docx_main_parts : Array[String] = []
-  let overridden_parts : Map[String, Bool] = Map([])
-  let main_defaults : Map[String, DocumentFormat] = Map([])
+  let overridden_parts : StableStringMap[Bool] = SortedMap([])
+  let main_defaults : StableStringMap[DocumentFormat] = SortedMap([])
   for child in content_types.children {
     guard child is XmlElement(element) else { continue }
     if element.name == CONTENT_TYPES_DEFAULT {

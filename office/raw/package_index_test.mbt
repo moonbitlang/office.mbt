@@ -23,6 +23,63 @@ fn raw_test_archive(entries : Array[(String, Bytes)]) -> Bytes raise {
 }
 
 ///|
+fn raw_hash_clustered_part_names(
+  count : Int,
+  bucket_mask : Int,
+) -> Array[String] {
+  let names : Array[String] = []
+  let mut candidate = 0
+  while names.length() < count {
+    let name = "cluster/n\{candidate}.bin"
+    if (name.hash() & bucket_mask) == 0 {
+      names.push(name)
+    }
+    candidate += 1
+  }
+  names
+}
+
+///|
+fn raw_test_add_hash_clustered_parts(
+  data : BytesView,
+  count : Int,
+) -> Bytes raise {
+  let source = @zip.read(data)
+  let output = @zip.Archive::new()
+  let mut content_types_updated = false
+  for entry in source.entries() {
+    let payload = if entry.name() == "[Content_Types].xml" {
+      let text = @utf8.decode(entry.data(), ignore_bom=true)
+      let updated = text.replace(
+        old="</Types>",
+        new="<Default Extension=\"bin\" ContentType=\"application/octet-stream\"/></Types>",
+      )
+      if updated == text {
+        fail("test could not extend [Content_Types].xml")
+      }
+      content_types_updated = true
+      @utf8.encode(updated)
+    } else {
+      entry.data().to_owned()
+    }
+    output.add(
+      entry.name(),
+      payload,
+      compression=entry.compression(),
+      data_descriptor=entry.data_descriptor(),
+    )
+  }
+  if !content_types_updated {
+    fail("test archive did not contain [Content_Types].xml")
+  }
+  for name in raw_hash_clustered_part_names(count, 0x3FF) {
+    assert_eq(name.hash() & 0x3FF, 0)
+    output.add(name, b"")
+  }
+  @zip.write(output)
+}
+
+///|
 fn raw_test_replace_entry(
   data : BytesView,
   name : String,
@@ -626,6 +683,17 @@ test "raw inventory resolves DOCX parts through semantic aliases" {
   let document = @raw.raw_read("blank.docx", data, "/document")
   inspect(document.info.xml, content="true")
   inspect(document.xml_text().contains("<w:document"), content="true")
+}
+
+///|
+test "raw inventory ignores deterministic hash clustering in package names" {
+  let data = raw_test_add_hash_clustered_parts(@word.new_blank_docx(), 512)
+  let inventory = @raw.raw_inventory("clustered.docx", data)
+  inspect(inventory.format.name(), content="docx")
+  debug_inspect(
+    inventory_alias_target(inventory, "/document"),
+    content="Some(\"word/document.xml\")",
+  )
 }
 
 ///|
