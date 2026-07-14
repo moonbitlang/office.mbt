@@ -301,6 +301,38 @@ priv struct PublicAnnotationStory {
 }
 
 ///|
+fn annotation_story_root_local_name(kind : String) -> String {
+  match kind {
+    "body" => "document"
+    "header" => "hdr"
+    "footer" => "ftr"
+    "footnotes" => "footnotes"
+    "endnotes" => "endnotes"
+    "comments" => "comments"
+    _ => kind
+  }
+}
+
+///|
+/// Relationship types establish a semantic story kind; the target's expanded
+/// root QName must agree before markers or mutation spans are trusted.
+fn validate_annotation_story_root(
+  path : String,
+  kind : String,
+  scan : StoryScan,
+) -> Unit raise DocxError {
+  let expected = annotation_story_root_local_name(kind)
+  guard scan.root() is Some(root) &&
+    scan.root_namespace_uri() is Some(uri) &&
+    is_wml_uri(uri) &&
+    root.kind == expected else {
+    raise InvalidXml(
+      message="the \{kind} annotation story part '\{path}' must have a WordprocessingML '\{expected}' root",
+    )
+  }
+}
+
+///|
 /// The annotation index. Opaque: fields stay private so the surface can
 /// evolve additively.
 pub struct AnnotationIndex {
@@ -948,6 +980,7 @@ fn build_annotation_index(
             continue
           }
         }
+        validate_annotation_story_root(path, story.kind, scan)
         for warning in scan.warnings() {
           warnings.add(warning)
         }
@@ -999,6 +1032,7 @@ fn build_annotation_index(
         continue
       }
     }
+    validate_annotation_story_root(reachable.path, reachable.kind, scan)
     for warning in scan.warnings() {
       warnings.add(warning)
     }

@@ -354,6 +354,60 @@ test "annotation story paths cannot alias body or comments under another kind" {
 }
 
 ///|
+test "typed annotation relationships require matching expanded story roots" {
+  let header_type =
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"
+  let header_content_type =
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"
+  let wrong_kind = unreferenced_story_fixture(
+    header_type,
+    "hidden.xml",
+    "word/hidden.xml",
+    header_content_type,
+    "<w:footnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+  )
+  try @docx.read_docx_annotated(wrong_kind) catch {
+    InvalidXml(message~) =>
+      inspect(
+        message,
+        content="the header annotation story part 'word/hidden.xml' must have a WordprocessingML 'hdr' root",
+      )
+    _ => fail("expected the relationship/root kind mismatch to fail")
+  } noraise {
+    _ => fail("expected the relationship/root kind mismatch to fail")
+  }
+
+  let wrong_namespace = unreferenced_story_fixture(
+    header_type,
+    "hidden.xml",
+    "word/hidden.xml",
+    header_content_type,
+    "<x:hdr xmlns:x=\"urn:not-wordprocessingml\"/>",
+  )
+  try @docx.read_docx_annotated(wrong_namespace) catch {
+    InvalidXml(message~) => assert_true(message.contains("WordprocessingML 'hdr' root"))
+    _ => fail("expected the relationship/root namespace mismatch to fail")
+  } noraise {
+    _ => fail("expected the relationship/root namespace mismatch to fail")
+  }
+
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
+  let comments_with_wrong_root = fixture_docx(
+    document,
+    comments_xml=Some(
+      "<w:footnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+  )
+  try @docx.read_docx_annotated(comments_with_wrong_root) catch {
+    InvalidXml(message~) => assert_true(message.contains("WordprocessingML 'comments' root"))
+    _ => fail("expected a comments relationship/root mismatch to fail")
+  } noraise {
+    _ => fail("expected a comments relationship/root mismatch to fail")
+  }
+}
+
+///|
 test "commentsExtended is strict-parsed under annotation identity rules" {
   let document =
     #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p/></w:body></w:document>
