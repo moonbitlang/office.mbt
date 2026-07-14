@@ -403,6 +403,39 @@ test "L0: duplicate zip entries and foreign encodings fail closed" {
     () => @splice.splice_docx(dup_bytes, @splice.SplicePlan::new()),
     "the package holds duplicate zip entries named 'a.xml'",
   )
+  // OPC identity is case-insensitive, including for a true no-op.
+  let aliased = @mbtzip.Archive::new()
+  aliased.add("a.xml", @utf8.encode("<r/>"))
+  aliased.add("A.XML", @utf8.encode("<r2/>"))
+  let aliased_bytes = @mbtzip.write(aliased)
+  expect_splice_failure(
+    () => @splice.splice_docx(aliased_bytes, @splice.SplicePlan::new()),
+    "the package holds case-equivalent zip entries 'a.xml' and 'A.XML'",
+  )
+  let case_source = @mbtzip.Archive::new()
+  case_source.add("word/document.xml", @utf8.encode("<r/>"))
+  let case_source_bytes = @mbtzip.write(case_source)
+  let wrong_case_edit = @splice.SplicePlan::new()
+  wrong_case_edit.edit_part(
+    "WORD/DOCUMENT.XML",
+    @splice.span_edit(start=0, end=0, b""),
+  )
+  expect_splice_failure(
+    () => @splice.splice_docx(case_source_bytes, wrong_case_edit),
+    "the splice plan must use exact source spelling 'word/document.xml'",
+  )
+  let existing_alias = @splice.SplicePlan::new()
+  existing_alias.add_part("WORD/DOCUMENT.XML", @utf8.encode("<x/>"))
+  expect_splice_failure(
+    () => @splice.splice_docx(case_source_bytes, existing_alias),
+    "the splice plan adds 'WORD/DOCUMENT.XML', case-equivalent to existing part 'word/document.xml'",
+  )
+  let planned_aliases = @splice.SplicePlan::new()
+  planned_aliases.add_part("new.xml", @utf8.encode("<n/>"))
+  expect_splice_failure(
+    () => planned_aliases.add_part("NEW.XML", @utf8.encode("<n2/>")),
+    "the splice plan already adds case-equivalent part 'new.xml'",
+  )
   // A UTF-16 part (BOM) cannot be spliced.
   let utf16 = @mbtzip.Archive::new()
   utf16.add("w.xml", b"\xFF\xFE<\x00r\x00/\x00>\x00")

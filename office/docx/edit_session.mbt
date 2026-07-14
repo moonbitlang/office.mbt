@@ -438,7 +438,9 @@ pub fn DocxEditSession::queue_span_edit(
   plan.pin_part(part, source) catch {
     error => raise mapped_plan_failure(error)
   }
-  plan.edit_part(part, edit)
+  plan.edit_part(part, edit) catch {
+    error => raise mapped_plan_failure(error)
+  }
   self.queue_plan(plan)
 }
 

@@ -63,6 +63,10 @@ pub fn PackageBuilder::add_part(
     let (existing, _) = entry
     if existing == name {
       raise PackageBuildError("duplicate part name: \{name}")
+    } else if builder_part_identity(existing) == builder_part_identity(name) {
+      raise PackageBuildError(
+        "duplicate part name after case normalization: \{existing} and \{name}",
+      )
     }
   }
   self.parts.push((name, data))
@@ -95,6 +99,14 @@ pub fn PackageBuilder::add_override(
   }
   check_metadata("Override PartName", part_name)
   check_metadata("Override content type", content_type)
+  let key = builder_part_identity(part_name)
+  for existing, _ in self.overrides {
+    if builder_part_identity(existing) == key && existing != part_name {
+      raise PackageBuildError(
+        "duplicate Override PartName after case normalization: \{existing} and \{part_name}",
+      )
+    }
+  }
   self.overrides[part_name] = content_type
 }
 
@@ -145,23 +157,30 @@ pub fn PackageBuilder::build(
   self : PackageBuilder,
 ) -> Bytes raise PackageBuildError {
   // Authoritative name set, revalidated from scratch.
-  let part_names : Set[String] = Set([])
+  let part_names : Map[String, String] = Map([])
   for entry in self.parts {
     let (name, _) = entry
     check_part_name(name)
-    if part_names.contains(name) {
-      raise PackageBuildError("duplicate part name: \{name}")
+    let key = builder_part_identity(name)
+    match part_names.get(key) {
+      Some(existing) if existing == name =>
+        raise PackageBuildError("duplicate part name: \{name}")
+      Some(existing) =>
+        raise PackageBuildError(
+          "duplicate part name after case normalization: \{existing} and \{name}",
+        )
+      None => part_names[key] = name
     }
-    part_names.add(name)
   }
   // Generated entries are builder-owned; a collision with an explicit part
   // would emit duplicate zip entries (Archive::add appends blindly), which
   // is exactly what validation rejects.
   let emitted_rels : Array[String] = []
+  let emitted_rels_by_key : Map[String, String] = Map([])
   for source, rels in self.relationships {
     // Every non-root source must be an added part, or its rels part would
     // be an orphan describing nothing.
-    if source != "" && !part_names.contains(source) {
+    if source != "" && !part_names.contains(builder_part_identity(source)) {
       raise PackageBuildError(
         "relationships declared for source '\{source}', which was not added as a part",
       )
@@ -179,13 +198,22 @@ pub fn PackageBuilder::build(
       seen_ids.add(relationship.id)
     }
     let name = if source == "" { ROOT_RELS_PART } else { rels_part_for(source) }
-    if part_names.contains(name) {
+    let name_key = builder_part_identity(name)
+    if part_names.contains(name_key) {
       raise PackageBuildError(
         "part name collides with the builder-emitted relationships part: \{name}",
       )
     }
+    match emitted_rels_by_key.get(name_key) {
+      Some(existing) =>
+        raise PackageBuildError(
+          "builder-emitted relationships parts are case-equivalent: \{existing} and \{name}",
+        )
+      None => emitted_rels_by_key[name_key] = name
+    }
     emitted_rels.push(name)
   }
+  let override_names : Map[String, String] = Map([])
   for part_name, content_type in self.overrides {
     check_metadata("Override PartName", part_name)
     check_metadata("Override content type", content_type)
@@ -194,8 +222,16 @@ pub fn PackageBuilder::build(
         "override PartName must start with '/': \{part_name}",
       )
     }
+    let override_key = builder_part_identity(part_name)
+    match override_names.get(override_key) {
+      Some(existing) if existing != part_name =>
+        raise PackageBuildError(
+          "duplicate Override PartName after case normalization: \{existing} and \{part_name}",
+        )
+      _ => override_names[override_key] = part_name
+    }
     let archive_name = part_name[1:].to_owned()
-    if !part_names.contains(archive_name) {
+    if !part_names.contains(builder_part_identity(archive_name)) {
       raise PackageBuildError(
         "override names a part that was not added: \{part_name}",
       )
@@ -223,7 +259,7 @@ pub fn PackageBuilder::build(
           "relationship \{relationship.id} of '\{source}' has an invalid internal target: \{relationship.target}",
         )
       }
-      if !part_names.contains(resolved) {
+      if !part_names.contains(builder_part_identity(resolved)) {
         raise PackageBuildError(
           "relationship \{relationship.id} of '\{source}' targets a part that was not added: \{relationship.target} (resolved \{resolved})",
         )
@@ -272,11 +308,19 @@ fn check_part_name(name : String) -> Unit raise PackageBuildError {
       "invalid part name '\{name}': a part cannot be a directory entry",
     )
   }
-  if name == CONTENT_TYPES_PART || name == ROOT_RELS_PART || is_rels_part(name) {
+  let key = builder_part_identity(name)
+  if key == builder_part_identity(CONTENT_TYPES_PART) ||
+    key == builder_part_identity(ROOT_RELS_PART) ||
+    is_rels_part(key) {
     raise PackageBuildError(
       "reserved part name '\{name}': the builder emits content types and relationships itself",
     )
   }
+}
+
+///|
+fn builder_part_identity(name : String) -> String {
+  name.to_lower()
 }
 
 ///|
@@ -329,8 +373,11 @@ fn PackageBuilder::check_coverage(
   if name == CONTENT_TYPES_PART {
     return
   }
-  if self.overrides.contains("/" + name) {
-    return
+  let override_key = builder_part_identity("/" + name)
+  for part_name, _ in self.overrides {
+    if builder_part_identity(part_name) == override_key {
+      return
+    }
   }
   if part_extension(name) is Some(ext) && self.defaults.contains(ext) {
     return
