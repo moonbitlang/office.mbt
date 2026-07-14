@@ -268,8 +268,9 @@ fn DocxEditSession::adopt_plan(
   self : DocxEditSession,
   plan : @splice.SplicePlan,
 ) -> Unit raise @transaction.TransactionError {
-  // Bound and validate the incoming plan before copying any of its maps or
-  // arrays into session state. This also rejects unpinned/stale sources.
+  // Bound and validate the incoming plan before copying every mutable map and
+  // array into session state. Byte payloads can remain shared because MoonBit
+  // `Bytes`/`BytesView` are immutable. This also rejects unpinned/stale sources.
   plan.check_against(self.archive, require_pins=true, limits=self.splice_limits) catch {
     error => raise mapped_plan_failure(error)
   }

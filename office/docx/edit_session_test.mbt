@@ -65,6 +65,61 @@ async test "D1 session no-op reuses the exact transaction source" {
 }
 
 ///|
+async test "D1 session isolates adopted plans from later caller mutations" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.new_blank_docx()
+    let archive = @zip.read(original)
+    guard archive.get("word/document.xml") is Some(source) else {
+      fail("fixture is missing word/document.xml")
+    }
+    guard source.find(b"</w:body>") is Some(insert_at) else {
+      fail("fixture main document has no body close tag")
+    }
+    write_docx_session_file(input, original)
+    let report = @docx.transact_docx(
+      @transaction.transaction_options(input, output_path=output),
+      session => {
+        let plan = @splice.SplicePlan::new()
+        plan.pin_part("word/document.xml", source)
+        plan.edit_part(
+          "word/document.xml",
+          @splice.span_edit(
+            start=insert_at,
+            end=insert_at,
+            b"<!--queued-before-adoption-->\n",
+          ),
+        )
+        session.queue_plan(plan)
+
+        // The callback still owns `plan`; mutating its containers after
+        // adoption must not change the session's validated snapshot.
+        plan.edit_part(
+          "word/document.xml",
+          @splice.span_edit(
+            start=insert_at,
+            end=insert_at,
+            b"<!--late-caller-edit-->\n",
+          ),
+        )
+        plan.add_part("word/late-caller-part.bin", b"late")
+        assert_eq(session.pending_parts(), ["word/document.xml"])
+      },
+    )
+    assert_true(report.committed)
+    let result = @zip.read(@afs.read_file(output).binary())
+    guard result.get("word/document.xml") is Some(document) else {
+      fail("candidate lost word/document.xml")
+    }
+    let text = @utf8.decode(document, ignore_bom=true)
+    assert_true(text.contains("queued-before-adoption"))
+    assert_false(text.contains("late-caller-edit"))
+    assert_true(result.get("word/late-caller-part.bin") is None)
+  })
+}
+
+///|
 async test "D1 session rejects sibling-dense XML before indexing" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"
