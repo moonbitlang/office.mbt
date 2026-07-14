@@ -2230,7 +2230,7 @@ async test "L2 round 1: OPC targets and root retrofit adversaries" {
 /// fully usable — definitions indexed, resolution working end to end
 /// (the index readers now normalize targets and accept Strict types).
 async test "L2 round 2: Strict dot-dot comments parts resolve end to end" {
-  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let wml = "http://purl.oclc.org/ooxml/wordprocessingml/main"
   let w14 = "http://schemas.microsoft.com/office/word/2010/wordml"
   let mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
   let archive = @mbtzip.Archive::new()
@@ -2243,7 +2243,7 @@ async test "L2 round 2: Strict dot-dot comments parts resolve end to end" {
   archive.add(
     "_rels/.rels",
     @utf8.encode(
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
     ),
   )
   archive.add(
