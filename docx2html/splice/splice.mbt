@@ -204,12 +204,58 @@ pub fn SplicePlan::unpinned_edited_parts(self : SplicePlan) -> Array[String] {
 }
 
 ///|
+/// Builds the plan's case-insensitive OPC identity index without changing it.
+/// A plan may mention one physical spelling in several roles (for example a
+/// source pin plus edits), but every mention of the same identity must use that
+/// exact spelling.
+fn splice_plan_part_spellings(
+  plan : SplicePlan,
+) -> Map[String, String] raise @core.DocxError {
+  let spellings : Map[String, String] = Map([])
+  fn record(
+    spellings : Map[String, String],
+    name : String,
+  ) -> Unit raise @core.DocxError {
+    let key = package_part_identity(name)
+    match spellings.get(key) {
+      Some(existing) if existing != name =>
+        raise Unsupported(
+          message="the splice plan refers to case-equivalent part names '\{existing}' and '\{name}'",
+        )
+      _ => spellings[key] = name
+    }
+  }
+  for name, _ in plan.source_parts {
+    record(spellings, name)
+  }
+  for name, _ in plan.part_edits {
+    record(spellings, name)
+  }
+  for entry in plan.new_parts {
+    let (name, _) = entry
+    record(spellings, name)
+  }
+  spellings
+}
+
+///|
 /// Merges another plan without consuming it. Source-pin disagreement,
 /// duplicate additions, and edit/add conflicts fail before `self` changes.
 pub fn SplicePlan::merge(
   self : SplicePlan,
   other : SplicePlan,
 ) -> Unit raise @core.DocxError {
+  let self_spellings = splice_plan_part_spellings(self)
+  let other_spellings = splice_plan_part_spellings(other)
+  for key, other_name in other_spellings {
+    match self_spellings.get(key) {
+      Some(self_name) if self_name != other_name =>
+        raise Unsupported(
+          message="cannot merge splice plans with case-equivalent part names '\{self_name}' and '\{other_name}'",
+        )
+      _ => ()
+    }
+  }
   for name, expected in other.source_parts {
     match self.source_parts.get(name) {
       Some(existing) if existing != expected =>

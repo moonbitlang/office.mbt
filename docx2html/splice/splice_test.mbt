@@ -316,6 +316,32 @@ test "D1: stale, unpinned, conflicting, and noncanonical plans fail closed" {
 }
 
 ///|
+test "D1: merge rejects cross-plan case aliases atomically" {
+  let additions = @splice.SplicePlan::new()
+  additions.add_part("new.xml", @utf8.encode("<first/>"))
+  let aliased_addition = @splice.SplicePlan::new()
+  aliased_addition.add_part("NEW.XML", @utf8.encode("<second/>"))
+  expect_splice_failure(
+    () => additions.merge(aliased_addition),
+    "cannot merge splice plans with case-equivalent part names 'new.xml' and 'NEW.XML'",
+  )
+  debug_inspect(
+    additions.declared_parts(),
+    content=(
+      #|["new.xml"]
+    ),
+  )
+  let pins = @splice.SplicePlan::new()
+  pins.pin_part("word/document.xml", @utf8.encode("<first/>"))
+  let aliased_pin = @splice.SplicePlan::new()
+  aliased_pin.pin_part("WORD/DOCUMENT.XML", @utf8.encode("<second/>"))
+  expect_splice_failure(
+    () => pins.merge(aliased_pin),
+    "cannot merge splice plans with case-equivalent part names 'word/document.xml' and 'WORD/DOCUMENT.XML'",
+  )
+}
+
+///|
 test "L0: the splice fail-closed matrix" {
   let original = tiny_package()
   // Overlapping edits.
