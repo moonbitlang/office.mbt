@@ -355,16 +355,10 @@ test "annotation story paths cannot alias body or comments under another kind" {
 
 ///|
 test "typed annotation relationships require matching expanded story roots" {
-  let header_type =
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"
-  let header_content_type =
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"
+  let header_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"
+  let header_content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"
   let wrong_kind = unreferenced_story_fixture(
-    header_type,
-    "hidden.xml",
-    "word/hidden.xml",
-    header_content_type,
-    "<w:footnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    header_type, "hidden.xml", "word/hidden.xml", header_content_type, "<w:footnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
   )
   try @docx.read_docx_annotated(wrong_kind) catch {
     InvalidXml(message~) =>
@@ -378,14 +372,11 @@ test "typed annotation relationships require matching expanded story roots" {
   }
 
   let wrong_namespace = unreferenced_story_fixture(
-    header_type,
-    "hidden.xml",
-    "word/hidden.xml",
-    header_content_type,
-    "<x:hdr xmlns:x=\"urn:not-wordprocessingml\"/>",
+    header_type, "hidden.xml", "word/hidden.xml", header_content_type, "<x:hdr xmlns:x=\"urn:not-wordprocessingml\"/>",
   )
   try @docx.read_docx_annotated(wrong_namespace) catch {
-    InvalidXml(message~) => assert_true(message.contains("WordprocessingML 'hdr' root"))
+    InvalidXml(message~) =>
+      assert_true(message.contains("WordprocessingML 'hdr' root"))
     _ => fail("expected the relationship/root namespace mismatch to fail")
   } noraise {
     _ => fail("expected the relationship/root namespace mismatch to fail")
@@ -400,7 +391,8 @@ test "typed annotation relationships require matching expanded story roots" {
     ),
   )
   try @docx.read_docx_annotated(comments_with_wrong_root) catch {
-    InvalidXml(message~) => assert_true(message.contains("WordprocessingML 'comments' root"))
+    InvalidXml(message~) =>
+      assert_true(message.contains("WordprocessingML 'comments' root"))
     _ => fail("expected a comments relationship/root mismatch to fail")
   } noraise {
     _ => fail("expected a comments relationship/root mismatch to fail")
@@ -471,13 +463,11 @@ test "a second comments parse preserves XML resource failure typing" {
   let bytes = fixture_docx(document, comments_xml=Some(comments))
   let archive = try! @mbtzip.read(bytes)
   let mut source_limit = 0
-  for part in [
-    "_rels/.rels",
-    "word/_rels/document.xml.rels",
-    "[Content_Types].xml",
-    "word/comments.xml",
-    "word/document.xml",
-  ] {
+  for
+    part in [
+      "_rels/.rels", "word/_rels/document.xml.rels", "[Content_Types].xml", "word/comments.xml",
+      "word/document.xml",
+    ] {
     guard archive.get(part) is Some(content) else {
       fail("resource fixture is missing \{part}")
     }
@@ -522,17 +512,14 @@ test "comment resolution matches decoded ids on default-namespaced entries" {
   guard result.get("word/commentsExtended.xml") is Some(bytes)
   let actual = @utf8.decode(bytes, ignore_bom=true)
   assert_true(
-    actual.contains(
-      "<commentEx w15:paraId=\"ABCD000&#x31;\" w15:done=\"1\"/>",
-    ),
+    actual.contains("<commentEx w15:paraId=\"ABCD000&#x31;\" w15:done=\"1\"/>"),
   )
   // Missing the lexical entry would append a second, prefixed record.
   assert_false(actual.contains("<w15:commentEx"))
   debug_inspect(
     @docx.read_docx_annotated(@splice.splice_docx(source, plan))
     .annotations()
-    .comments()[0]
-    .done(),
+    .comments()[0].done(),
     content="Some(true)",
   )
 }
