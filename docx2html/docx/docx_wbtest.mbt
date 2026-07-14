@@ -605,7 +605,7 @@ test "annotation story resolver normalizes, deduplicates, and fails closed" {
       },
       {
         id: "rHeader2",
-        relationship_type: STRICT_HEADER_RELATIONSHIP,
+        relationship_type: TRANSITIONAL_HEADER_RELATIONSHIP,
         target: "sub/../header.xml",
         target_mode: Some("Internal"),
       },
@@ -615,6 +615,35 @@ test "annotation story resolver normalizes, deduplicates, and fails closed" {
   assert_eq(resolved.length(), 1)
   inspect(resolved[0].kind, content="header")
   inspect(resolved[0].path, content="word/header.xml")
+  let conflicting_dialects = Relationships::{
+    relationships: [
+      {
+        id: "rHeader1",
+        relationship_type: TRANSITIONAL_HEADER_RELATIONSHIP,
+        target: "header.xml",
+        target_mode: None,
+      },
+      {
+        id: "rHeader2",
+        relationship_type: STRICT_HEADER_RELATIONSHIP,
+        target: "sub/../header.xml",
+        target_mode: Some("Internal"),
+      },
+    ],
+  }
+  try
+    resolve_reachable_annotation_story_parts(zip, conflicting_dialects, "word")
+  catch {
+    Unsupported(message~) =>
+      assert_true(
+        message.contains(
+          "conflicting Strict and Transitional header relationships",
+        ),
+      )
+    _ => fail("expected conflicting annotation story dialects to fail")
+  } noraise {
+    _ => fail("expected conflicting annotation story dialects to fail")
+  }
   let external = Relationships::{
     relationships: [
       {

@@ -306,6 +306,95 @@ async test "D1 generic plans cannot publish mixed main OOXML dialects" {
 }
 
 ///|
+async test "D1 sessions reject mixed annotation OOXML dialects" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/mixed-annotation-dialect-input.docx"
+    let semantic_output = "\{directory}/mixed-annotation-dialect-semantic.docx"
+    let generic_output = "\{directory}/mixed-annotation-dialect-generic.docx"
+    let strict_wml = "http://purl.oclc.org/ooxml/wordprocessingml/main"
+    let strict_relationships = "http://purl.oclc.org/ooxml/officeDocument/relationships/"
+    let transitional_wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    let transitional_relationships = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+    let document = @utf8.encode(
+      "<w:document xmlns:w=\"\{strict_wml}\"><w:body><w:p><w:r><w:t>Strict source</w:t></w:r></w:p><w:sectPr/></w:body></w:document>",
+    )
+    let builder = @opc.PackageBuilder::new()
+    builder.add_default(
+      "rels", "application/vnd.openxmlformats-package.relationships+xml",
+    )
+    builder.add_default("xml", "application/xml")
+    builder.add_override(
+      "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+    )
+    builder.add_override(
+      "/word/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+    )
+    builder.add_relationship(
+      "rIdMain",
+      strict_relationships + "officeDocument",
+      "word/document.xml",
+    )
+    builder.add_relationship(
+      "rIdComments",
+      transitional_relationships + "comments",
+      "comments.xml",
+      source="word/document.xml",
+    )
+    builder.add_part("word/document.xml", document)
+    builder.add_part(
+      "word/comments.xml",
+      @utf8.encode("<w:comments xmlns:w=\"\{transitional_wml}\"/>"),
+    )
+    let original = builder.build()
+    write_docx_session_file(input, original)
+    let specification = @word_fixture.comment_spec(
+      author="Mixed dialect",
+      from=0,
+      to=0,
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("must not publish")]),
+        ]),
+      ],
+    )
+    let semantic_code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=semantic_output),
+        session => {
+          session.queue_comment_addition(
+            at_relative="p[1]",
+            to_relative="p[1]",
+            specification,
+          )
+          |> ignore
+        },
+      )
+    })
+    assert_eq(semantic_code, "office.docx.invalid_plan")
+    assert_false(@afs.exists(semantic_output))
+    guard document.find(b"Strict source") is Some(text_at) else {
+      fail("mixed-dialect fixture has no editable source text")
+    }
+    let generic_code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=generic_output),
+        session => {
+          session.queue_span_edit(
+            "word/document.xml",
+            start=text_at,
+            end=text_at + b"Strict source".length(),
+            b"Strict edited",
+          )
+        },
+      )
+    })
+    assert_eq(generic_code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(generic_output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 session isolates adopted plans from later caller mutations" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"

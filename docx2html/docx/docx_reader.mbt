@@ -100,6 +100,14 @@ priv enum OoxmlDialect {
 }
 
 ///|
+fn same_ooxml_dialect(left : OoxmlDialect, right : OoxmlDialect) -> Bool {
+  match (left, right) {
+    (TransitionalOoxml, TransitionalOoxml) | (StrictOoxml, StrictOoxml) => true
+    _ => false
+  }
+}
+
+///|
 fn wordprocessing_dialect(uri : String) -> OoxmlDialect? {
   match uri {
     WORDPROCESSINGML_NAMESPACE => Some(TransitionalOoxml)
@@ -141,6 +149,7 @@ fn OoxmlDialect::comments_relationship_type(self : OoxmlDialect) -> String {
 priv struct ReachableAnnotationStoryPart {
   kind : String
   path : String
+  relationship_dialect : OoxmlDialect
 }
 
 ///|
@@ -846,16 +855,21 @@ fn resolve_unique_internal_part(
 }
 
 ///|
-fn annotation_story_relationship_kind(relationship_type : String) -> String? {
+fn annotation_story_relationship_identity(
+  relationship_type : String,
+) -> (String, OoxmlDialect)? {
   match relationship_type {
-    TRANSITIONAL_HEADER_RELATIONSHIP | STRICT_HEADER_RELATIONSHIP =>
-      Some("header")
-    TRANSITIONAL_FOOTER_RELATIONSHIP | STRICT_FOOTER_RELATIONSHIP =>
-      Some("footer")
-    TRANSITIONAL_FOOTNOTES_RELATIONSHIP | STRICT_FOOTNOTES_RELATIONSHIP =>
-      Some("footnotes")
-    TRANSITIONAL_ENDNOTES_RELATIONSHIP | STRICT_ENDNOTES_RELATIONSHIP =>
-      Some("endnotes")
+    TRANSITIONAL_COMMENTS_RELATIONSHIP => Some(("comments", TransitionalOoxml))
+    STRICT_COMMENTS_RELATIONSHIP => Some(("comments", StrictOoxml))
+    TRANSITIONAL_HEADER_RELATIONSHIP => Some(("header", TransitionalOoxml))
+    STRICT_HEADER_RELATIONSHIP => Some(("header", StrictOoxml))
+    TRANSITIONAL_FOOTER_RELATIONSHIP => Some(("footer", TransitionalOoxml))
+    STRICT_FOOTER_RELATIONSHIP => Some(("footer", StrictOoxml))
+    TRANSITIONAL_FOOTNOTES_RELATIONSHIP =>
+      Some(("footnotes", TransitionalOoxml))
+    STRICT_FOOTNOTES_RELATIONSHIP => Some(("footnotes", StrictOoxml))
+    TRANSITIONAL_ENDNOTES_RELATIONSHIP => Some(("endnotes", TransitionalOoxml))
+    STRICT_ENDNOTES_RELATIONSHIP => Some(("endnotes", StrictOoxml))
     _ => None
   }
 }
@@ -871,9 +885,10 @@ fn resolve_reachable_annotation_story_parts(
 ) -> Array[ReachableAnnotationStoryPart] raise DocxError {
   let resolved_parts : Array[ReachableAnnotationStoryPart] = []
   let kind_by_path : StableStringMap[String] = SortedMap([])
+  let dialect_by_path : StableStringMap[OoxmlDialect] = SortedMap([])
   for relationship in relationships.relationships {
-    guard annotation_story_relationship_kind(relationship.relationship_type)
-      is Some(kind) else {
+    guard annotation_story_relationship_identity(relationship.relationship_type)
+      is Some((kind, relationship_dialect)) else {
       continue
     }
     match relationship.target_mode {
@@ -897,11 +912,24 @@ fn resolve_reachable_annotation_story_parts(
         raise Unsupported(
           message="annotation story part '\{actual}' is targeted as both \{existing_kind} and \{kind}",
         )
-      Some(_) => continue
+      Some(_) => {
+        guard dialect_by_path.get(actual) is Some(existing_dialect) else {
+          raise Unsupported(
+            message="the \{kind} relationship dialect could not be determined",
+          )
+        }
+        if !same_ooxml_dialect(existing_dialect, relationship_dialect) {
+          raise Unsupported(
+            message="annotation story part '\{actual}' has conflicting Strict and Transitional \{kind} relationships",
+          )
+        }
+        continue
+      }
       None => ()
     }
     kind_by_path[actual] = kind
-    resolved_parts.push({ kind, path: actual })
+    dialect_by_path[actual] = relationship_dialect
+    resolved_parts.push({ kind, path: actual, relationship_dialect })
   }
   resolved_parts
 }
