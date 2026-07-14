@@ -335,6 +335,32 @@ test "tolerant XML decodes long unterminated entity runs in one pass" {
 }
 
 ///|
+test "tolerant XML preserves unknown entities beside decoded entities" {
+  inspect(
+    @xml.read_xml_string("<root>&amp;&unknown;&#bogus;</root>").text(),
+    content="&&unknown;&#bogus;",
+  )
+}
+
+///|
+test "tolerant XML fuses a near-limit padded entity attribute" {
+  let token_units = 8 * 1024 * 1024 - 128
+  let source = StringBuilder(size_hint=(token_units + 32) * 2)
+  source.write_string("<root note=\"&#")
+  source.write_string("0".repeat(token_units - 5))
+  source.write_string("65;\"/>")
+  let source = source.to_string()
+  let budget = @xml.xml_read_budget(
+    max_source_units=source.length(),
+    max_tokens=16,
+    max_materialized_chars=token_units + 1024,
+    max_token_chars=8 * 1024 * 1024,
+  )
+  let root = @xml.read_xml_string_limited(source, budget)
+  debug_inspect(root.attributes.get("note"), content="Some(\"A\")")
+}
+
+///|
 test "strict XML enforces qualified names and namespace bindings" {
   for
     source in [

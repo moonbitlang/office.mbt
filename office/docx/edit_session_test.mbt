@@ -45,6 +45,28 @@ fn mixed_case_docx_session_fixture() -> Bytes raise {
 }
 
 ///|
+fn padded_entity_docx_session_fixture(token_units : Int) -> Bytes raise {
+  if token_units <= 5 {
+    fail("padded entity token must include at least one leading zero")
+  }
+  let prefix =
+    #|<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" data-pad="&#
+  let suffix =
+    #|65;"><w:body><w:p/><w:sectPr/></w:body></w:document>
+  let document = StringBuilder(
+    size_hint=(prefix.length() + token_units + suffix.length()) * 2,
+  )
+  document.write_string(prefix)
+  document.write_string("0".repeat(token_units - 5))
+  document.write_string(suffix)
+  let archive = @zip.read(@word_fixture.new_blank_docx())
+  assert_true(
+    archive.replace("word/document.xml", @utf8.encode(document.to_string())),
+  )
+  @zip.write(archive)
+}
+
+///|
 async fn docx_session_error_code(
   run : async () -> @transaction.TransactionReport,
 ) -> String {
@@ -92,6 +114,53 @@ async test "D1 session no-op reuses the exact transaction source" {
     assert_eq(report.validations[0].name, "office-docx-bounded")
     assert_eq(report.validations[1].name, "office-portable-opc")
     assert_eq(report.validations[2].name, "office-docx-package")
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
+async test "D1 source indexing fuses a near-limit padded entity attribute" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/padded.docx"
+    let token_units = 8 * 1024 * 1024 - 64 * 1024
+    let original = padded_entity_docx_session_fixture(token_units)
+    write_docx_session_file(input, original)
+    let callback_called = Ref(false)
+    let report = @docx.transact_docx(
+      @transaction.transaction_options(input, dry_run=true),
+      session => {
+        callback_called.val = true
+        assert_true(session.is_noop())
+        assert_eq(session.annotated().main_story_part(), "word/document.xml")
+      },
+    )
+    assert_true(callback_called.val)
+    assert_false(report.changed)
+    assert_false(report.committed)
+    assert_true(report.preservation.whole_file_identical)
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
+async test "D1 source indexing maps scanner attribute bounds to resource limits" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/bounded-scanner.docx"
+    let padding = "0".repeat(4 * 1024)
+    let document = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:commentRangeStart w:id=\"&#\{padding}65;\"/></w:p><w:sectPr/></w:body></w:document>"
+    let archive = @zip.read(@word_fixture.new_blank_docx())
+    assert_true(archive.replace("word/document.xml", @utf8.encode(document)))
+    let original = @zip.write(archive)
+    write_docx_session_file(input, original)
+    let callback_called = Ref(false)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, dry_run=true),
+        _ => callback_called.val = true,
+      )
+    })
+    assert_eq(code, "office.docx.resource_limit")
+    assert_false(callback_called.val)
     assert_eq(@afs.read_file(input).binary(), original)
   })
 }

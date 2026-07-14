@@ -188,6 +188,13 @@ priv struct AnnotationPathBudget {
 let max_annotation_path_chars : Int = 8 * 1024 * 1024
 
 ///|
+/// The scanner only consumes namespace bindings plus WML id/type/value
+/// attributes. Those values are intrinsically small; bounding them before
+/// UTF-8 decoding keeps this source-offset pass inside the transaction working
+/// reserve even when an otherwise valid story carries a padded reference.
+let max_annotation_relevant_attribute_bytes : Int = 4 * 1024
+
+///|
 fn AnnotationPathBudget::new(
   shared_xml_budget : @xml.XmlReadBudget?,
   max_chars? : Int = max_annotation_path_chars,
@@ -1262,7 +1269,10 @@ fn scan_tag(
           part[at] != b'>' {
       at += 1
     }
-    let attr_name = utf8_slice(part, attr_start, at)
+    let attr_end = at
+    let relevant_attribute = annotation_attribute_is_relevant(
+      part, attr_start, attr_end,
+    )
     while at < length && is_xml_space(part[at]) {
       at += 1
     }
@@ -1290,18 +1300,85 @@ fn scan_tag(
         message="the annotation scanner found an unterminated attribute value",
       )
     }
-    let raw_value = @utf8.decode(part[value_start:at]) catch {
-      _ =>
-        raise Unsupported(
-          message="the annotation scanner found a non-UTF-8 attribute value",
-        )
+    if relevant_attribute {
+      if attr_end - attr_start > max_annotation_relevant_attribute_bytes ||
+        at - value_start > max_annotation_relevant_attribute_bytes {
+        raise InvalidXml(message="XML token length budget exceeded")
+      }
+      let attr_name = utf8_slice(part, attr_start, attr_end)
+      let raw_value = @utf8.decode(part[value_start:at]) catch {
+        _ =>
+          raise Unsupported(
+            message="the annotation scanner found a non-UTF-8 attribute value",
+          )
+      }
+      // Attribute values must be entity-decoded: w:id="&#49;" IS id "1"
+      // (and namespace URIs may legally carry &amp;).
+      attributes.push((attr_name, decode_entities(raw_value)))
     }
-    // Attribute values must be entity-decoded: w:id="&#49;" IS id "1"
-    // (and namespace URIs may legally carry &amp;).
-    attributes.push((attr_name, decode_entities(raw_value)))
     at += 1
   }
   raise Unsupported(message="the annotation scanner found an unterminated tag")
+}
+
+///|
+fn bytes_range_equals_ascii(
+  part : BytesView,
+  start : Int,
+  end : Int,
+  expected : String,
+) -> Bool {
+  if end - start != expected.length() {
+    return false
+  }
+  for offset in 0..<expected.length() {
+    if part[start + offset].to_int() != expected[offset].to_int() {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn bytes_range_has_ascii_prefix(
+  part : BytesView,
+  start : Int,
+  end : Int,
+  expected : String,
+) -> Bool {
+  if end - start < expected.length() {
+    return false
+  }
+  bytes_range_equals_ascii(part, start, start + expected.length(), expected)
+}
+
+///|
+fn bytes_range_has_ascii_suffix(
+  part : BytesView,
+  start : Int,
+  end : Int,
+  expected : String,
+) -> Bool {
+  if end - start < expected.length() {
+    return false
+  }
+  bytes_range_equals_ascii(part, end - expected.length(), end, expected)
+}
+
+///|
+/// Filters before materialization. Namespace declarations are needed to
+/// resolve names; all other scanner consumers request only qualified WML
+/// `id`, `type`, or `val` attributes.
+fn annotation_attribute_is_relevant(
+  part : BytesView,
+  start : Int,
+  end : Int,
+) -> Bool {
+  bytes_range_equals_ascii(part, start, end, "xmlns") ||
+  bytes_range_has_ascii_prefix(part, start, end, "xmlns:") ||
+  bytes_range_has_ascii_suffix(part, start, end, ":id") ||
+  bytes_range_has_ascii_suffix(part, start, end, ":type") ||
+  bytes_range_has_ascii_suffix(part, start, end, ":val")
 }
 
 ///|
@@ -1762,6 +1839,34 @@ test "scanner review round 1: entity-decoded ids, Strict WML, CDATA immunity" {
       #|]
     ),
   )
+}
+
+///|
+test "scanner skips oversized irrelevant attributes before decoding" {
+  let padding = "0".repeat(32 * 1024)
+  let scan = scan_text(
+    "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" data-pad=\"&#\{padding}65;\"><w:body><w:p><w:commentRangeStart w:id=\"1\"/></w:p></w:body></w:document>",
+  )
+  assert_eq(scan.markers().length(), 1)
+  assert_eq(scan.markers()[0].id(), "1")
+}
+
+///|
+test "scanner bounds relevant attributes before decoding" {
+  let padding = "0".repeat(max_annotation_relevant_attribute_bytes)
+  try
+    ignore(
+      scan_text(
+        "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:commentRangeStart w:id=\"&#\{padding}65;\"/></w:p></w:body></w:document>",
+      ),
+    )
+  catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML token length budget exceeded")
+    _ => fail("unexpected annotation scanner error")
+  } noraise {
+    _ => fail("expected the annotation attribute budget to reject the source")
+  }
 }
 
 ///|

@@ -138,11 +138,13 @@ Preservation splices receive a second opaque allowance carved out of the
 already charged 64 MiB working reserve. At most one eighth of that reserve,
 capped at 8 MiB, may be retained across caller replacements, newly added part
 payloads, and materialized edited XML. The remaining reserve covers decoded
-text and strict-parser structures. Strict token parsing performs source
-normalization and entity decoding over borrowed ranges, then allocates one
-exactly sized retained UTF-16 result; raw and separately normalized token-sized
-copies therefore cannot consume the reserve concurrently. Before allocation,
-the splice layer also
+text and parser structures. Strict normalization and both strict and tolerant
+entity decoding operate over borrowed ranges, then allocate one exactly sized
+retained UTF-16 result; raw, normalized, entity-substring, and growable
+token-sized copies therefore cannot consume the reserve concurrently. The DOCX
+annotation scanner materializes only namespace bindings and the qualified WML
+`id`, `type`, and `val` attributes it consumes, with an explicit per-value bound
+before UTF-8 decoding. Before allocation, the splice layer also
 checks the 8,192-entry, 64 MiB per-entry, 256 MiB aggregate, 256-part manifest,
 and 1,024-scalar part-name ceilings, plus overflow-safe result sizes and an XML
 markup-token cap derived from the splice allowance. Final validation of a
