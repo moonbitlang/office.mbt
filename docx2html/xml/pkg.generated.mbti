@@ -4,6 +4,7 @@ package "bobzhang/docx2html/xml"
 import {
   "bobzhang/docx2html/core",
   "moonbitlang/core/debug",
+  "moonbitlang/core/sorted_map",
 }
 
 // Values
@@ -38,7 +39,7 @@ pub fn xml_text(String) -> XmlNode
 // Types and methods
 pub(all) struct XmlElement {
   name : String
-  attributes : Map[String, String]
+  attributes : @sorted_map.SortedMap[String, String]
   children : Array[XmlNode]
 } derive(Eq, @debug.Debug)
 pub fn XmlElement::descendants_by_tag_name(Self, String) -> Array[Self]
