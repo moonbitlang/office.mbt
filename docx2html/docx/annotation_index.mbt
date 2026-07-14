@@ -1211,7 +1211,7 @@ fn read_comment_definitions(
   zip : ZipArchive,
   parts : DocumentParts,
   warnings : AnnotationWarningCollector,
-) -> (Array[CommentDefinition], Bool) {
+) -> (Array[CommentDefinition], Bool) raise DocxError {
   let definitions : Array[CommentDefinition] = []
   // The reader has already resolved a unique Transitional/Strict target.
   // A filename fallback is permitted only when no relationship was declared.
@@ -1220,6 +1220,13 @@ fn read_comment_definitions(
     return (definitions, true)
   }
   let root = read_xml_part(zip, path, xml_budget?=parts.xml_budget) catch {
+    InvalidXml(message~) => {
+      if is_mutation_xml_resource_error(message) {
+        raise InvalidXml(message~)
+      }
+      warnings.add("annotation index: could not parse the comments part")
+      return (definitions, false)
+    }
     _ => {
       warnings.add("annotation index: could not parse the comments part")
       return (definitions, false)
