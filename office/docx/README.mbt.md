@@ -4,14 +4,17 @@
 WordprocessingML packages.
 
 Use `transact_docx` with normal `bobzhang/office/transaction` options. The edit
-callback receives a `DocxEditSession` that owns the exact input bytes, an
-isolated shallow fork of the bounded ZIP archive, one annotation/span index,
-source-part fingerprints, the candidate output allowance, and an aggregate
-source-pinned `SplicePlan`.
+callback receives a `DocxEditSession` over an isolated shallow fork of the
+transaction-owned bounded ZIP archive, one annotation/span index,
+source-part fingerprints, an opaque transaction-derived splice budget, and an
+aggregate source-pinned `SplicePlan`. Source package bytes are deliberately not
+exposed by the session.
 
 The callback may adopt an existing pinned plan with `queue_plan`, queue one
 original-coordinate XML edit with `queue_span_edit`, or add a whole new part
-with `queue_added_part`. New semantic parts remain responsible for their
+with `queue_added_part`. Comment add/reply/resolve operations should use the
+archive-backed `queue_comment_*` methods; they reuse the session archive rather
+than inflating the DOCX again. New semantic parts remain responsible for their
 relationship and content-type edits; the strict candidate validator rejects an
 incomplete package before publication.
 
@@ -19,6 +22,11 @@ Plan adoption is atomic. A rejected merge leaves the session unchanged. Every
 edited part must carry the exact immutable payload from which its offsets were
 derived, and the aggregate candidate is checked for stale sources, overlaps,
 ranges, encoding, and XML well-formedness before it replaces session state.
+Before allocating edited payloads, the session also checks the 256-part
+manifest, 1,024-scalar part names, archive entry and expanded-size ceilings,
+overflow-safe result sizes, and a transaction-derived XML token ceiling. Caller
+replacement bytes, added payloads, and materialized edited parts share at most
+8 MiB of the already reserved transaction working memory.
 
 When the callback returns, `transact_docx` finalizes automatically:
 
@@ -27,7 +35,8 @@ When the callback returns, `transact_docx` finalizes automatically:
 - a real plan writes through the transaction's hard package-size ceiling and
   returns `transaction_mutation_with_manifest` with the plan's exact part set;
 - portable Office validation and `office-docx-package` validation run over the
-  candidate archive; and
+  candidate archive, producing at most 64 findings bounded to 512 scalars while
+  validation is running; and
 - A4 enforces the manifest, checks for concurrent source changes, and publishes
   atomically through `moonbitlang/async`.
 

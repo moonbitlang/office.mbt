@@ -37,9 +37,9 @@ Codex review at `xhigh` effort.
 `bobzhang/office/docx` promotes the existing byte-span DOCX machinery into the
 bounded A4 transaction boundary:
 
-- sessions accept only the pristine, bounded archive provenance supplied by a
-  transaction and build their annotation/span index without inflating the ZIP
-  again;
+- sessions have no public constructor: only `transact_docx` can combine its
+  private bounded archive with the opaque transaction budget, and annotation
+  planners reuse that archive without inflating the ZIP again;
 - every offset-bearing plan pins the exact immutable source-part bytes, so
   plans built for a stale document fail before candidate allocation;
 - plan adoption is atomic and rejects unpinned sources, conflicting pins,
@@ -47,13 +47,17 @@ bounded A4 transaction boundary:
   entries, and missing parts;
 - all span coordinates remain relative to the original source parts, and
   composable plans expose the exact sorted preservation manifest;
+- every plan receives an overflow-safe preflight for archive/manifest/name and
+  expanded-size limits, XML-token cardinality, and the combined replacement,
+  added-part, and edited-payload working-memory ceiling before materialization;
 - a true no-op explicitly reuses the transaction's exact input buffer, while a
   real edit serializes through the transaction's candidate-size ceiling;
 - untouched ZIP local records and producer metadata flow through the
   preservation-aware writer, while the A4 preservation report independently
   enforces that only declared part payloads changed; and
 - candidate packages pass both portable Office detection and the strict,
-  archive-backed DOCX package validator before atomic publication.
+  archive-backed DOCX package validator before atomic publication; validator
+  findings and messages are bounded as they are produced.
 
 D1 is an SDK foundation, not a newly advertised CLI command. No partial command
 record is added to the A2 registry: its existing raw mutation records already

@@ -129,6 +129,15 @@ length immediately as a fail-closed contract backstop when a custom callback
 ignores the supplied allowance. This contract is explicit and does not depend
 on backend- or optimization-specific object identity.
 
+Preservation splices receive a second opaque allowance carved out of the
+already charged 64 MiB working reserve. At most one eighth of that reserve,
+capped at 8 MiB, may be retained across caller replacements, newly added part
+payloads, and materialized edited XML. The remaining reserve covers decoded
+text and strict-parser structures. Before allocation, the splice layer also
+checks the 8,192-entry, 64 MiB per-entry, 256 MiB aggregate, 256-part manifest,
+and 1,024-scalar part-name ceilings, plus overflow-safe result sizes and an XML
+markup-token cap derived from the splice allowance.
+
 ZIP expansion and serialization do not hide another package-sized allocation
 inside that reserve. DEFLATE first validates and counts output without retaining
 bytes, then decodes into one exact fixed buffer. Serialization likewise performs
