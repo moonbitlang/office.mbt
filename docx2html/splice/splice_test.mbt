@@ -446,6 +446,22 @@ test "L0: duplicate zip entries and foreign encodings fail closed" {
     @utf8.decode(u_bytes, ignore_bom=true).find("<ok/>") is Some(_),
     content="true",
   )
+  // The declaration is part of the edited result's semantics, so changing a
+  // valid UTF-8 source to a foreign declaration must be rejected as well.
+  guard source.find("UTF-8") is Some(encoding_at)
+  let rewritten_declaration = @splice.SplicePlan::new()
+  rewritten_declaration.edit_part(
+    "u.xml",
+    @splice.span_edit(
+      start=encoding_at,
+      end=encoding_at + "UTF-8".length(),
+      @utf8.encode("ISO-8859-1"),
+    ),
+  )
+  expect_splice_failure(
+    () => @splice.splice_docx(utf8_bytes, rewritten_declaration),
+    "'u.xml' declares a non-UTF-8 encoding",
+  )
 }
 
 ///|
@@ -614,4 +630,27 @@ test "L0 review round 5: giant encoding labels stay bounded" {
     () => @splice.splice_docx(archive_bytes, plan),
     "'bounded.xml' declares a non-UTF-8 encoding",
   )
+}
+
+///|
+test "default splice budget accepts ordinary namespace-dense OOXML" {
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let source = StringBuilder()
+  source.write_string("<w:document xmlns:w=\"\{wml}\"><w:body>")
+  for _ in 0..<50 {
+    source.write_string("<w:p/>")
+  }
+  source.write_string("</w:body></w:document>")
+  let source_text = source.to_string()
+  let archive = @mbtzip.Archive::new()
+  archive.add("word/document.xml", @utf8.encode(source_text))
+  let plan = @splice.SplicePlan::new()
+  guard source_text.find("</w:body>") is Some(insert_at)
+  plan.edit_part(
+    "word/document.xml",
+    @splice.span_edit(start=insert_at, end=insert_at, b""),
+  )
+  let result = @mbtzip.read(@splice.splice_docx(@mbtzip.write(archive), plan))
+  guard result.get("word/document.xml") is Some(actual)
+  assert_eq(@utf8.decode(actual, ignore_bom=true), source_text)
 }

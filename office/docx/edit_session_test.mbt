@@ -195,6 +195,38 @@ async test "D1 session isolates adopted plans from later caller mutations" {
 }
 
 ///|
+async test "D1 span edits cannot introduce a foreign XML declaration" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.new_blank_docx()
+    let archive = @zip.read(original)
+    guard archive.get("word/document.xml") is Some(document) else {
+      fail("fixture is missing word/document.xml")
+    }
+    guard document.find(b"UTF-8") is Some(encoding_at) else {
+      fail("fixture main part has no UTF-8 declaration")
+    }
+    write_docx_session_file(input, original)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session =>
+          session.queue_span_edit(
+            "word/document.xml",
+            start=encoding_at,
+            end=encoding_at + b"UTF-8".length(),
+            b"ISO-8859-1",
+          ),
+      )
+    })
+    assert_eq(code, "office.docx.unsupported_encoding")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 session rejects sibling-dense XML before indexing" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"

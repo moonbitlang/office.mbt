@@ -74,6 +74,13 @@ pub struct SpliceLimits {
 }
 
 ///|
+/// Default byte-level callers do not provide transaction limits, but strict XML
+/// parsing still expands qualified OOXML names. This fixed-linear multiplier
+/// admits ordinary namespace-dense Office parts while keeping hostile namespace
+/// amplification bounded by source size.
+let lower_level_xml_materialization_scale : Int64 = 64L
+
+///|
 /// Builds the fail-closed resource contract for a preservation splice.
 pub fn splice_limits(
   max_archive_entries~ : Int,
@@ -636,7 +643,8 @@ fn build_spliced_archive(
   // constant multiple of the raw source even for ordinary OOXML, so a 1:1
   // copied-text ceiling would reject valid edits after charging that work.
   let exact_xml_source_units = xml_source_units.to_int()
-  let fallback_scaled = exact_xml_source_units.to_int64() * 8L
+  let fallback_scaled = exact_xml_source_units.to_int64() *
+    lower_level_xml_materialization_scale
   let fallback_allowance = if fallback_scaled <= 0L {
     1
   } else if fallback_scaled > 2147483647L {
@@ -932,6 +940,10 @@ fn validate_spliced_xml(
   result : Bytes,
   xml_budget : @xml.XmlReadBudget,
 ) -> Unit raise @core.DocxError {
+  // A span may rewrite the XML declaration itself. Re-run the same encoding
+  // gate used for the source so a well-formed byte sequence cannot escape with
+  // a newly declared foreign encoding and different consumer semantics.
+  check_part_encoding(name, result)
   try @xml.read_xml_bytes_strict_limited(result, xml_budget) catch {
     InvalidXml(message~) => {
       if is_splice_xml_resource_error(message) {
