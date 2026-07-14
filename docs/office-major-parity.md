@@ -58,10 +58,11 @@ bounded A4 transaction boundary:
   paragraph ids are allocated, then serialized only after an escape-aware exact
   UTF-8 sizing pass; the transaction grants a fragment at most one eighth of
   its splice allowance;
-- a session permits one semantic comment operation because ids and threading
-  resolve against its immutable source snapshot; generic pinned plans remain
-  composable, with a bounded candidate annotation gate rejecting duplicate,
-  empty, or ambiguous identities;
+- a session permits either one semantic comment operation or composable generic
+  pinned plans because identities, threading, and byte spans resolve against
+  its immutable source snapshot; mixing the modes in either order fails before
+  adoption, and a bounded candidate annotation gate rejects duplicate, empty,
+  or ambiguous identities;
 - a true no-op explicitly reuses the transaction's exact input buffer, while a
   real edit serializes through the transaction's candidate-size ceiling;
 - untouched ZIP local records and producer metadata flow through the

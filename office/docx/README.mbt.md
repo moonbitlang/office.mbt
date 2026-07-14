@@ -20,10 +20,12 @@ incomplete package before publication.
 
 Semantic comment planners resolve ids, paragraph ids, threading, and byte spans
 against the immutable source snapshot. A session therefore accepts exactly one
-high-level add, reply, resolve, or unresolve operation; a second fails with
-`office.docx.stale_semantic_state`. Generic pinned plans may still be composed,
-but the final validator rebuilds a bounded candidate annotation index and
-rejects duplicate, empty, or ambiguous comment identities before publication.
+high-level add, reply, resolve, or unresolve operation, or one or more generic
+pinned plans, but never both modes in one session. A second semantic operation
+or either semantic/generic ordering fails with
+`office.docx.stale_semantic_state`. The final validator rebuilds a bounded
+candidate annotation index and rejects duplicate, empty, or ambiguous comment
+identities before publication.
 
 Plan adoption is atomic. A rejected merge leaves the session unchanged. Every
 edited part must carry the exact immutable payload from which its offsets were

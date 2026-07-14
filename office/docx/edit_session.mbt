@@ -9,6 +9,13 @@ pub struct DocxPartFingerprint {
 }
 
 ///|
+priv enum DocxEditPlanMode {
+  Empty
+  Generic
+  Semantic
+}
+
+///|
 /// Canonical relative ZIP entry name of the fingerprinted part.
 pub fn DocxPartFingerprint::part(self : DocxPartFingerprint) -> String {
   self.part
@@ -38,7 +45,7 @@ pub struct DocxEditSession {
   priv max_comment_fragment_bytes : Int
   priv splice_limits : @splice.SpliceLimits
   priv mut plan : @splice.SplicePlan
-  priv mut semantic_comment_operation_queued : Bool
+  priv mut plan_mode : DocxEditPlanMode
 }
 
 ///|
@@ -235,7 +242,7 @@ fn open_edit_session(
     max_comment_fragment_bytes: budget.max_splice_materialized_bytes() / 8,
     splice_limits,
     plan: @splice.SplicePlan::new(),
-    semantic_comment_operation_queued: false,
+    plan_mode: Empty,
   }
 }
 
@@ -243,11 +250,37 @@ fn open_edit_session(
 fn DocxEditSession::require_fresh_semantic_comment_state(
   self : DocxEditSession,
 ) -> Unit raise @transaction.TransactionError {
-  if self.semantic_comment_operation_queued {
-    raise docx_failure(
-      "office.docx.stale_semantic_state", "only one semantic comment operation may be queued per edit session because planners resolve identities and threading against the immutable source snapshot",
-    )
+  match self.plan_mode {
+    Empty => ()
+    Generic | Semantic =>
+      raise docx_failure(
+        "office.docx.stale_semantic_state", "semantic comment operations cannot be composed with another semantic operation or with generic plans because all planners resolve identities and byte spans against the immutable source snapshot",
+      )
   }
+}
+
+///|
+fn DocxEditSession::adopt_plan(
+  self : DocxEditSession,
+  plan : @splice.SplicePlan,
+) -> Unit raise @transaction.TransactionError {
+  // Bound and validate the incoming plan before copying any of its maps or
+  // arrays into session state. This also rejects unpinned/stale sources.
+  plan.check_against(self.archive, require_pins=true, limits=self.splice_limits) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  let candidate = self.plan.copy()
+  candidate.merge(plan) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  candidate.check_against(
+    self.archive,
+    require_pins=true,
+    limits=self.splice_limits,
+  ) catch {
+    error => raise mapped_plan_failure(error)
+  }
+  self.plan = candidate
 }
 
 ///|
@@ -278,8 +311,8 @@ pub fn DocxEditSession::queue_comment_addition(
   ) catch {
     error => raise mapped_plan_failure(error)
   }
-  self.queue_plan(plan)
-  self.semantic_comment_operation_queued = true
+  self.adopt_plan(plan)
+  self.plan_mode = Semantic
   comment_id
 }
 
@@ -300,8 +333,8 @@ pub fn DocxEditSession::queue_comment_reply(
   ) catch {
     error => raise mapped_plan_failure(error)
   }
-  self.queue_plan(plan)
-  self.semantic_comment_operation_queued = true
+  self.adopt_plan(plan)
+  self.plan_mode = Semantic
   comment_id
 }
 
@@ -322,8 +355,8 @@ pub fn DocxEditSession::queue_comment_resolution(
   ) catch {
     error => raise mapped_plan_failure(error)
   }
-  self.queue_plan(plan)
-  self.semantic_comment_operation_queued = true
+  self.adopt_plan(plan)
+  self.plan_mode = Semantic
 }
 
 ///|
@@ -355,23 +388,18 @@ pub fn DocxEditSession::queue_plan(
   self : DocxEditSession,
   plan : @splice.SplicePlan,
 ) -> Unit raise @transaction.TransactionError {
-  // Bound and validate the incoming plan before copying any of its maps or
-  // arrays into session state. This also rejects unpinned/stale sources.
-  plan.check_against(self.archive, require_pins=true, limits=self.splice_limits) catch {
-    error => raise mapped_plan_failure(error)
+  if plan.is_empty() {
+    return
   }
-  let candidate = self.plan.copy()
-  candidate.merge(plan) catch {
-    error => raise mapped_plan_failure(error)
+  match self.plan_mode {
+    Semantic =>
+      raise docx_failure(
+        "office.docx.stale_semantic_state", "generic plans cannot be queued after a semantic comment operation because their byte spans may invalidate the semantic plan's immutable source snapshot",
+      )
+    Empty | Generic => ()
   }
-  candidate.check_against(
-    self.archive,
-    require_pins=true,
-    limits=self.splice_limits,
-  ) catch {
-    error => raise mapped_plan_failure(error)
-  }
-  self.plan = candidate
+  self.adopt_plan(plan)
+  self.plan_mode = Generic
 }
 
 ///|
