@@ -632,9 +632,18 @@ fn build_spliced_archive(
   // ceiling is the exact aggregate result size. Transaction-grade copied-text
   // and token ceilings come from the already charged splice allowance;
   // lower-level callers receive a conservative input-linear fallback instead
-  // of an unlimited parser. Namespace snapshots consume the same aggregate
-  // token allowance as ordinary parser nodes and strings.
+  // of an unlimited parser. Expanded namespace names can require a small
+  // constant multiple of the raw source even for ordinary OOXML, so a 1:1
+  // copied-text ceiling would reject valid edits after charging that work.
   let exact_xml_source_units = xml_source_units.to_int()
+  let fallback_scaled = exact_xml_source_units.to_int64() * 8L
+  let fallback_allowance = if fallback_scaled <= 0L {
+    1
+  } else if fallback_scaled > 2147483647L {
+    2147483647
+  } else {
+    fallback_scaled.to_int()
+  }
   let xml_budget : @xml.XmlReadBudget = match limits {
     Some(value) =>
       @xml.xml_read_budget(
@@ -646,12 +655,8 @@ fn build_spliced_archive(
     None =>
       @xml.xml_read_budget(
         max_source_units=exact_xml_source_units,
-        max_tokens=if exact_xml_source_units > 0 {
-          exact_xml_source_units
-        } else {
-          1
-        },
-        max_materialized_chars=exact_xml_source_units,
+        max_tokens=fallback_allowance,
+        max_materialized_chars=fallback_allowance,
         max_token_chars=exact_xml_source_units,
       )
   }
