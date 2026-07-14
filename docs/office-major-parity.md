@@ -57,6 +57,9 @@ bounded A4 transaction boundary:
   granting every part a fresh parser allowance; OPC maps reject duplicate
   normalized content-type keys and every relationship scope rejects missing or
   duplicate ids;
+- reply and resolution paraId collision scans reuse the session's cumulative
+  XML budget across the main relationship graph, including wired but
+  section-unreferenced header, footer, and note stories;
 - comment bodies are structurally preflighted before derived trees or reply
   paragraph ids are allocated, then serialized only after an escape-aware exact
   UTF-8 sizing pass; the transaction grants a fragment at most one eighth of

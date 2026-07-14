@@ -20,6 +20,16 @@ priv struct CommentExEntry {
 }
 
 ///|
+fn default_annotation_planner_xml_budget() -> @xml.XmlReadBudget {
+  @xml.xml_read_budget(
+    max_source_units=16 * 1024 * 1024,
+    max_tokens=262_144,
+    max_materialized_chars=8 * 1024 * 1024,
+    max_token_chars=4 * 1024 * 1024,
+  )
+}
+
+///|
 /// Builds the splice plan for `docx annotate reply`: the reply's
 /// definition (paraId-stamped) into comments.xml plus the whole-part
 /// commentsExtended update (parent retrofit included). Returns the
@@ -31,12 +41,14 @@ pub fn plan_comment_reply(
   spec : CommentSpec,
   max_fragment_bytes? : Int = 8 * 1024 * 1024,
 ) -> (@splice.SplicePlan, String) raise DocxError {
+  let xml_budget = default_annotation_planner_xml_budget()
   plan_comment_reply_zip(
     annotated,
     open_zip(original),
     parent_id~,
     spec,
     max_fragment_bytes,
+    xml_budget,
   )
 }
 
@@ -47,14 +59,20 @@ pub fn plan_comment_reply_archive(
   archive : @mbtzip.Archive,
   parent_id~ : String,
   spec : CommentSpec,
+  xml_budget? : @xml.XmlReadBudget,
   max_fragment_bytes? : Int = 8 * 1024 * 1024,
 ) -> (@splice.SplicePlan, String) raise DocxError {
+  let xml_budget = match xml_budget {
+    Some(value) => value
+    None => default_annotation_planner_xml_budget()
+  }
   plan_comment_reply_zip(
     annotated,
     open_zip_archive(archive),
     parent_id~,
     spec,
     max_fragment_bytes,
+    xml_budget,
   )
 }
 
@@ -65,6 +83,7 @@ fn plan_comment_reply_zip(
   parent_id~ : String,
   spec : CommentSpec,
   max_fragment_bytes : Int,
+  xml_budget : @xml.XmlReadBudget,
 ) -> (@splice.SplicePlan, String) raise DocxError {
   check_mutation_gates(annotated)
   let plan = @splice.SplicePlan::new()
@@ -84,7 +103,9 @@ fn plan_comment_reply_zip(
   }
   // Fresh paraIds: collision scope is every paraId in the reachable
   // parts (duplicates there are unrepairable and fail closed).
-  let used_para_ids = collect_para_ids(zip, annotated, comments_part)
+  let used_para_ids = collect_para_ids(
+    zip, annotated, comments_part, xml_budget,
+  )
   let mut next_para_seed = 1
   fn allocate_para_id() -> String {
     let mut candidate = format_para_id(next_para_seed)
@@ -215,7 +236,13 @@ pub fn plan_comment_resolution(
   comment_id~ : String,
   done~ : Bool,
 ) -> @splice.SplicePlan raise DocxError {
-  plan_comment_resolution_zip(annotated, open_zip(original), comment_id~, done~)
+  plan_comment_resolution_zip(
+    annotated,
+    open_zip(original),
+    comment_id~,
+    done~,
+    default_annotation_planner_xml_budget(),
+  )
 }
 
 ///|
@@ -225,12 +252,18 @@ pub fn plan_comment_resolution_archive(
   archive : @mbtzip.Archive,
   comment_id~ : String,
   done~ : Bool,
+  xml_budget? : @xml.XmlReadBudget,
 ) -> @splice.SplicePlan raise DocxError {
+  let xml_budget = match xml_budget {
+    Some(value) => value
+    None => default_annotation_planner_xml_budget()
+  }
   plan_comment_resolution_zip(
     annotated,
     open_zip_archive(archive),
     comment_id~,
     done~,
+    xml_budget,
   )
 }
 
@@ -240,6 +273,7 @@ fn plan_comment_resolution_zip(
   zip : ZipArchive,
   comment_id~ : String,
   done~ : Bool,
+  xml_budget : @xml.XmlReadBudget,
 ) -> @splice.SplicePlan raise DocxError {
   check_mutation_gates(annotated)
   let plan = @splice.SplicePlan::new()
@@ -259,7 +293,9 @@ fn plan_comment_resolution_zip(
   }
   // The duplicate-paraId gate runs UNCONDITIONALLY (review round 1):
   // resolving on an ambiguous key would mutate the wrong thread.
-  let used_para_ids = collect_para_ids(zip, annotated, comments_part)
+  let used_para_ids = collect_para_ids(
+    zip, annotated, comments_part, xml_budget,
+  )
   let key = match comment.last_para_id() {
     Some(existing) => existing
     None => {
@@ -386,9 +422,11 @@ fn collect_para_ids(
   zip : ZipArchive,
   annotated : DocxAnnotatedResult,
   comments_part : String,
+  xml_budget : @xml.XmlReadBudget,
 ) -> Set[String] raise DocxError {
   let para_ids : Set[String] = Set([])
   let parts : Array[String] = [annotated.main_story_part(), comments_part]
+  let seen_parts : Set[String] = Set(parts)
   // Sibling story parts named through the MAIN part's relationships.
   let (main_dir, main_base) = split_part_path(annotated.main_story_part())
   let rels_part = if main_dir == "" {
@@ -396,39 +434,38 @@ fn collect_para_ids(
   } else {
     "\{main_dir}/_rels/\{main_base}.rels"
   }
-  let rels_read : String? = zip.read_text(rels_part) catch { _ => None }
-  match rels_read {
-    Some(rels_text) => {
-      let parsed : XmlElement? = Some(@xml.read_xml_string(rels_text)) catch {
-        _ => None
+  match zip.read_bytes(rels_part) {
+    Some(rels_bytes) => {
+      let root = @xml.read_xml_bytes_strict_limited(rels_bytes, xml_budget) catch {
+        error =>
+          raise InvalidXml(
+            message="could not parse the main relationships while collecting paraIds: \{repr(error)}",
+          )
       }
-      match parsed {
-        Some(root) => collect_story_targets(root, main_dir, parts)
-        None => ()
-      }
+      collect_story_targets(root, main_dir, parts, seen_parts)
     }
-    _ => ()
+    None => ()
   }
   for part in parts {
-    let part_read : String? = zip.read_text(part) catch { _ => None }
-    match part_read {
-      Some(text) => {
-        let parsed : XmlElement? = Some(
-          read_xml_string(text, namespace_map=office_namespace_map()),
-        ) catch {
-          _ => None
-        }
-        match parsed {
-          Some(root) =>
-            collect_para_id_attributes(root, para_ids) catch {
-              Unsupported(message~) =>
-                raise Unsupported(message="\{message} (in '\{part}')")
-              err => raise err
-            }
-          None => ()
-        }
-      }
-      _ => ()
+    guard zip.read_bytes(part) is Some(bytes) else {
+      raise MissingPart(
+        message="a paraId-bearing story relationship targets missing part '\{part}'",
+      )
+    }
+    let root = @xml.read_xml_bytes_strict_limited(
+      bytes,
+      xml_budget,
+      namespace_map=office_namespace_map(),
+    ) catch {
+      error =>
+        raise InvalidXml(
+          message="could not parse paraId-bearing story part '\{part}': \{repr(error)}",
+        )
+    }
+    collect_para_id_attributes(root, para_ids) catch {
+      Unsupported(message~) =>
+        raise Unsupported(message="\{message} (in '\{part}')")
+      err => raise err
     }
   }
   para_ids
@@ -439,6 +476,7 @@ fn collect_story_targets(
   element : XmlElement,
   main_dir : String,
   parts : Array[String],
+  seen_parts : Set[String],
 ) -> Unit {
   // Transitional AND Strict relationship types (review round 1), with
   // OPC-normalized target resolution ('../' forms included).
@@ -460,7 +498,8 @@ fn collect_story_targets(
       if !(mode is Some("External")) &&
         story_types.search(relationship_type) is Some(_) {
         let resolved = @opc.resolve_target(main_dir, target)
-        if parts.search(resolved) is None {
+        if !seen_parts.contains(resolved) {
+          seen_parts.add(resolved)
           parts.push(resolved)
         }
       }
@@ -468,7 +507,8 @@ fn collect_story_targets(
   }
   for child in element.children {
     match child {
-      XmlElement(inner) => collect_story_targets(inner, main_dir, parts)
+      XmlElement(inner) =>
+        collect_story_targets(inner, main_dir, parts, seen_parts)
       _ => ()
     }
   }
@@ -481,7 +521,11 @@ fn collect_para_id_attributes(
 ) -> Unit raise DocxError {
   match element.attributes.get("w14:paraId") {
     Some(para_id) => {
-      let canonical = canonical_para_id(para_id)
+      guard canonical_para_identity(para_id) is Some(canonical) else {
+        raise Unsupported(
+          message="invalid w14:paraId; the document's paraId state is not repairable",
+        )
+      }
       if para_ids.contains(canonical) {
         raise Unsupported(
           message="duplicate w14:paraId '\{para_id}'; the document's paraId state is not repairable",

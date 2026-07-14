@@ -40,11 +40,11 @@ pub fn plan_comment_addition_archive(DocxAnnotatedResult, @zip.Archive, at_relat
 
 pub fn plan_comment_reply(DocxAnnotatedResult, BytesView, parent_id~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 
-pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ : String, CommentSpec, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
+pub fn plan_comment_reply_archive(DocxAnnotatedResult, @zip.Archive, parent_id~ : String, CommentSpec, xml_budget? : @xml.XmlReadBudget, max_fragment_bytes? : Int) -> (@splice.SplicePlan, String) raise @core.DocxError
 
 pub fn plan_comment_resolution(DocxAnnotatedResult, BytesView, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
 
-pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool) -> @splice.SplicePlan raise @core.DocxError
+pub fn plan_comment_resolution_archive(DocxAnnotatedResult, @zip.Archive, comment_id~ : String, done~ : Bool, xml_budget? : @xml.XmlReadBudget) -> @splice.SplicePlan raise @core.DocxError
 
 pub fn read_docx(BytesView, external_file_access? : Bool, read_external_file? : (String) -> Bytes?) -> @document.DocumentElement raise @core.DocxError
 
