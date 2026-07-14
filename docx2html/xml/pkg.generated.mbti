@@ -74,6 +74,8 @@ pub fn XmlReadBudget::charge_derived_chars(Self, Int) -> Unit raise @core.DocxEr
 
 pub(all) enum XmlSourceEncoding {
   Utf8
+  Utf16LittleEndianWithBom
+  Utf16BigEndianWithBom
   Utf16LittleEndian
   Utf16BigEndian
 }
