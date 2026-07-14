@@ -560,54 +560,76 @@ fn ensure_w14_on_root(
   root_span : NodeSpan,
 ) -> String raise DocxError {
   let attributes = scan_open_tag_attributes(part_bytes, root_span.byte_start())
-  // Pass 1: every namespace declaration.
+  let all_bindings = collect_namespace_bindings(part_bytes)
+  let root_bindings : Map[String, String] = Map([])
+  // Pass 1: every root namespace declaration, decoded exactly as strict XML
+  // sees it. Entity spellings must not create a second semantic binding.
   let mut w14_prefix : String? = None
   let mut mc_prefix : String? = None
   for attribute in attributes.entries {
     let (name, value, _, _) = attribute
     if name.has_prefix("xmlns:") {
       let prefix = name.view(start_offset=6).to_owned()
-      if value == W14_NAMESPACE && w14_prefix is None {
+      let uri = decode_entities(value)
+      root_bindings[prefix] = uri
+      if uri == W14_NAMESPACE &&
+        namespace_prefix_is_stable(all_bindings, prefix, W14_NAMESPACE) &&
+        w14_prefix is None {
         w14_prefix = Some(prefix)
       }
-      if value == MC_NAMESPACE && mc_prefix is None {
+      if uri == MC_NAMESPACE && mc_prefix is None {
         mc_prefix = Some(prefix)
       }
     }
   }
-  // Pass 2: mc:Ignorable through the resolved mc prefix.
+  // Pass 2: find the expanded mc:Ignorable attribute through any root prefix
+  // bound to MC, not merely the first declaration spelling.
   let mut ignorable : (String, Int)? = None
-  match mc_prefix {
-    Some(prefix) =>
-      for attribute in attributes.entries {
-        let (name, value, _, value_end) = attribute
-        if name == "\{prefix}:Ignorable" {
-          ignorable = Some((value, value_end))
-        }
+  for attribute in attributes.entries {
+    let (name, value, _, value_end) = attribute
+    let (prefix, local_name) = split_qualified(name)
+    if prefix != "" &&
+      local_name == "Ignorable" &&
+      root_bindings.get(prefix) is Some(uri) &&
+      uri == MC_NAMESPACE {
+      ignorable = Some((value, value_end))
+      if mc_prefix is None {
+        mc_prefix = Some(prefix)
       }
-    None => ()
+    }
   }
   let insert_at = attributes.tag_gt -
     (if attributes.self_closing { 1 } else { 0 })
   let chosen = match w14_prefix {
     Some(prefix) => prefix
-    None => {
-      plan.edit_part(
-        part,
-        @splice.span_edit(
-          start=insert_at,
-          end=insert_at,
-          @utf8.encode(" xmlns:w14=\"\{W14_NAMESPACE}\""),
-        ),
-      )
-      "w14"
-    }
+    None => fresh_namespace_prefix(all_bindings, "w14", "mbtw14")
+  }
+  let chosen_mc = match mc_prefix {
+    Some(prefix) => prefix
+    None => fresh_namespace_prefix(all_bindings, "mc", "mbtmc")
+  }
+  let mut declarations = ""
+  if w14_prefix is None {
+    declarations += " xmlns:\{chosen}=\"\{W14_NAMESPACE}\""
+  }
+  if mc_prefix is None {
+    declarations += " xmlns:\{chosen_mc}=\"\{MC_NAMESPACE}\""
+  }
+  if declarations != "" {
+    plan.edit_part(
+      part,
+      @splice.span_edit(
+        start=insert_at,
+        end=insert_at,
+        @utf8.encode(declarations),
+      ),
+    )
   }
   // The Ignorable token, ensured in every configuration.
-  match (mc_prefix, ignorable) {
-    (Some(_), Some((value, value_end))) => {
+  match ignorable {
+    Some((value, value_end)) => {
       let mut listed = false
-      for token in value.split(" ") {
+      for token in decode_entities(value).split(" ") {
         if token.to_owned() == chosen {
           listed = true
         }
@@ -623,28 +645,111 @@ fn ensure_w14_on_root(
         )
       }
     }
-    (Some(prefix), None) =>
+    None =>
       plan.edit_part(
         part,
         @splice.span_edit(
           start=insert_at,
           end=insert_at,
-          @utf8.encode(" \{prefix}:Ignorable=\"\{chosen}\""),
-        ),
-      )
-    (None, _) =>
-      plan.edit_part(
-        part,
-        @splice.span_edit(
-          start=insert_at,
-          end=insert_at,
-          @utf8.encode(
-            " xmlns:mc=\"\{MC_NAMESPACE}\" mc:Ignorable=\"\{chosen}\"",
-          ),
+          @utf8.encode(" \{chosen_mc}:Ignorable=\"\{chosen}\""),
         ),
       )
   }
   chosen
+}
+
+///|
+/// All lexical prefix bindings in a strict-parsed comments part. Keeping every
+/// URI observed for a prefix lets the retrofit reject root aliases that are
+/// shadowed at the paragraph where the new attribute will be inserted.
+fn collect_namespace_bindings(
+  bytes : BytesView,
+) -> Map[String, Set[String]] raise DocxError {
+  let bindings : Map[String, Set[String]] = Map([])
+  let limit = bytes.length()
+  let mut cursor = 0
+  while cursor < limit {
+    if bytes[cursor] != b'<' {
+      cursor += 1
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<!--") {
+      cursor = scan_past_ascii_terminator(bytes, cursor + 4, "-->")
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<?") {
+      cursor = scan_past_ascii_terminator(bytes, cursor + 2, "?>")
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<![CDATA[") {
+      cursor = scan_past_ascii_terminator(bytes, cursor + 9, "]]>")
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "</") {
+      while cursor < limit && bytes[cursor] != b'>' {
+        cursor += 1
+      }
+      cursor += 1
+      continue
+    }
+    if ascii_bytes_start_with(bytes, cursor, "<!") {
+      raise Unsupported(
+        message="unsupported XML markup while checking namespace scope",
+      )
+    }
+    let tag = scan_open_tag_attributes(bytes, cursor)
+    for attribute in tag.entries {
+      let (name, value, _, _) = attribute
+      if name.has_prefix("xmlns:") {
+        let prefix = name.view(start_offset=6).to_owned()
+        let uris = match bindings.get(prefix) {
+          Some(existing) => existing
+          None => {
+            let fresh : Set[String] = Set([])
+            bindings[prefix] = fresh
+            fresh
+          }
+        }
+        uris.add(decode_entities(value))
+      }
+    }
+    cursor = tag.tag_gt + 1
+  }
+  bindings
+}
+
+///|
+fn namespace_prefix_is_stable(
+  bindings : Map[String, Set[String]],
+  prefix : String,
+  expected_uri : String,
+) -> Bool {
+  guard bindings.get(prefix) is Some(uris) else { return false }
+  for uri in uris {
+    if uri != expected_uri {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn fresh_namespace_prefix(
+  bindings : Map[String, Set[String]],
+  preferred : String,
+  fallback : String,
+) -> String {
+  if !bindings.contains(preferred) {
+    return preferred
+  }
+  if !bindings.contains(fallback) {
+    return fallback
+  }
+  let mut ordinal = 1
+  while bindings.contains("\{fallback}\{ordinal}") {
+    ordinal += 1
+  }
+  "\{fallback}\{ordinal}"
 }
 
 ///|
@@ -1220,37 +1325,37 @@ fn queue_comments_extended_edits(
       while existing_ids.contains("rIdAnnotate\{ordinal}") {
         ordinal += 1
       }
-      guard find_ascii_bytes(rels_bytes, "</Relationships>") is Some(rels_at) else {
-        raise Unsupported(
-          message="could not locate the close of '\{rels_part}'; refusing",
-        )
-      }
+      let rels_span = scan_xml_root_span(rels_part, rels_bytes)
+      let relationship_name = qualified_child_name(
+        rels_span.name,
+        "Relationship",
+      )
       plan.edit_part(
         rels_part,
-        @splice.span_edit(
-          start=rels_at,
-          end=rels_at,
-          @utf8.encode(
-            "<Relationship Id=\"rIdAnnotate\{ordinal}\" Type=\"\{relationship_type}\" Target=\"commentsExtended.xml\"/>",
-          ),
+        xml_root_child_edit(
+          rels_bytes,
+          rels_span,
+          "<\{relationship_name} Id=\"rIdAnnotate\{ordinal}\" Type=\"\{relationship_type}\" Target=\"commentsExtended.xml\"/>",
         ),
       )
       guard zip.read_bytes("[Content_Types].xml") is Some(types_bytes) else {
         raise Unsupported(message="the package is missing [Content_Types].xml")
       }
-      guard find_ascii_bytes(types_bytes, "</Types>") is Some(types_at) else {
-        raise Unsupported(
-          message="could not locate the close of [Content_Types].xml; refusing",
-        )
-      }
+      read_mutation_xml_root(
+        "[Content_Types].xml",
+        types_bytes,
+        xml_budget,
+        expected_root="content-types:Types",
+      )
+      |> ignore
+      let types_span = scan_xml_root_span("[Content_Types].xml", types_bytes)
+      let override_name = qualified_child_name(types_span.name, "Override")
       plan.edit_part(
         "[Content_Types].xml",
-        @splice.span_edit(
-          start=types_at,
-          end=types_at,
-          @utf8.encode(
-            "<Override PartName=\"/\{part_name}\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml\"/>",
-          ),
+        xml_root_child_edit(
+          types_bytes,
+          types_span,
+          "<\{override_name} PartName=\"/\{part_name}\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml\"/>",
         ),
       )
     }

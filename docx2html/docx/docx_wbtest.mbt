@@ -3847,3 +3847,51 @@ test "mutation relationship parsing is strict and budgeted" {
     _ => fail("expected strict relationship parsing to reject a DTD")
   }
 }
+
+///|
+test "comment addition wires prefixed and self-closing OPC metadata" {
+  let archive = @mbtzip.read(new_blank_docx())
+  let relationships =
+    #|<pr:Relationships xmlns:pr="http://schemas.openxmlformats.org/package/2006/relationships"/>
+  if archive.get("word/_rels/document.xml.rels") is Some(_) {
+    assert_true(
+      archive.replace(
+        "word/_rels/document.xml.rels",
+        @utf8.encode(relationships),
+      ),
+    )
+  } else {
+    archive.add("word/_rels/document.xml.rels", @utf8.encode(relationships))
+  }
+  let content_types =
+    #|<ct:Types xmlns:ct="http://schemas.openxmlformats.org/package/2006/content-types"><ct:Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><ct:Default Extension="xml" ContentType="application/xml"/><ct:Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></ct:Types>
+  assert_true(
+    archive.replace("[Content_Types].xml", @utf8.encode(content_types)),
+  )
+  let original = @mbtzip.write(archive)
+  let annotated = read_docx_annotated(original)
+  let spec = comment_spec(author="Prefix", from=0, to=0, [
+    paragraph([run([text("prefixed metadata")])]),
+  ])
+  let (plan, id) = plan_comment_addition(
+    annotated,
+    original,
+    at_relative="p[1]",
+    to_relative="p[1]",
+    spec,
+  )
+  assert_eq(id, "0")
+  let result = @mbtzip.read(@splice.splice_docx(original, plan))
+  guard result.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
+  assert_true(rels_text.contains("<pr:Relationships"))
+  assert_true(rels_text.contains("<pr:Relationship "))
+  assert_true(rels_text.contains("</pr:Relationships>"))
+  guard result.get("[Content_Types].xml") is Some(types_bytes)
+  let types_text = @utf8.decode(types_bytes, ignore_bom=true)
+  assert_true(
+    types_text.contains("<ct:Override PartName=\"/word/comments.xml\""),
+  )
+  let reparsed = read_docx_annotated(@mbtzip.write(result))
+  assert_eq(reparsed.annotations().comments().length(), 1)
+}

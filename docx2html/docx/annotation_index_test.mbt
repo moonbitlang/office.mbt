@@ -583,6 +583,56 @@ test "comment resolution skips greater-than signs inside prolog PIs" {
 }
 
 ///|
+test "comment resolution chooses an unshadowed namespace and preserves prefixed OPC metadata" {
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let w14 = "http://schemas.microsoft.com/office/word/2010/wordml"
+  let document = "<w:document xmlns:w=\"\{wml}\"><w:body><w:p/></w:body></w:document>"
+  let comments = "<w:comments xmlns:w=\"\{wml}\" xmlns:w14=\"urn:vendor\" xmlns:q=\"http://schemas.microsoft.com/office/word/2010/wordm&#108;\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibilit&#121;/2006\" mc:Ignorable=\"q\"><w:comment w:id=\"0\"><w:p xmlns:q=\"urn:shadow\"><w:r><w:t>unstamped</w:t></w:r></w:p></w:comment></w:comments>"
+  let archive = @mbtzip.read(
+    fixture_docx(document, comments_xml=Some(comments)),
+  )
+  let relationships =
+    #|<pr:Relationships xmlns:pr="http://schemas.openxmlformats.org/package/2006/relationships"><pr:Relationship Id="rId100" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/></pr:Relationships>
+  assert_true(
+    archive.replace("word/_rels/document.xml.rels", @utf8.encode(relationships)),
+  )
+  let content_types =
+    #|<ct:Types xmlns:ct="http://schemas.openxmlformats.org/package/2006/content-types"><ct:Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><ct:Default Extension="xml" ContentType="application/xml"/><ct:Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><ct:Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/></ct:Types>
+  assert_true(
+    archive.replace("[Content_Types].xml", @utf8.encode(content_types)),
+  )
+  let source = @mbtzip.write(archive)
+  let annotated = @docx.read_docx_annotated(source)
+  let plan = @docx.plan_comment_resolution(
+    annotated,
+    source,
+    comment_id="0",
+    done=true,
+  )
+  let result = @mbtzip.read(@splice.splice_docx(source, plan))
+  guard result.get("word/comments.xml") is Some(comments_bytes)
+  let comments_text = @utf8.decode(comments_bytes, ignore_bom=true)
+  assert_true(comments_text.contains("xmlns:mbtw14=\"\{w14}\""))
+  assert_true(comments_text.contains("mc:Ignorable=\"q mbtw14\""))
+  assert_true(comments_text.contains("mbtw14:paraId="))
+  assert_false(comments_text.contains(" w14:paraId="))
+  guard result.get("word/_rels/document.xml.rels") is Some(rels_bytes)
+  let rels_text = @utf8.decode(rels_bytes, ignore_bom=true)
+  assert_true(rels_text.contains("<pr:Relationship "))
+  assert_true(rels_text.contains("commentsExtended.xml"))
+  guard result.get("[Content_Types].xml") is Some(types_bytes)
+  let types_text = @utf8.decode(types_bytes, ignore_bom=true)
+  assert_true(
+    types_text.contains("<ct:Override PartName=\"/word/commentsExtended.xml\""),
+  )
+  let verified = @docx.read_docx_annotated(@mbtzip.write(result))
+  debug_inspect(
+    verified.annotations().comments()[0].done(),
+    content="Some(true)",
+  )
+}
+
+///|
 test "definitions referenced only by hidden stories report no public anchors" {
   let builder = @opc.PackageBuilder::new()
   builder.add_default(
