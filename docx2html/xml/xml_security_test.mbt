@@ -127,6 +127,53 @@ test "strict XML expands valid namespaces and entities" {
 }
 
 ///|
+test "byte XML parsers reject contradictory encoding declarations" {
+  let source = @utf8.encode(
+    "<?xml version=\"1.0\" encoding=\"UTF-16\"?><root/>",
+  )
+  let strict_budget = @xml.xml_read_budget(
+    max_source_units=1024,
+    max_tokens=64,
+    max_materialized_chars=1024,
+    max_token_chars=128,
+  )
+  inspect(
+    limited_xml_error(source, strict_budget),
+    content="XML encoding declaration does not match decoded source",
+  )
+  let tolerant_budget = @xml.xml_read_budget(
+    max_source_units=1024,
+    max_tokens=64,
+    max_materialized_chars=1024,
+    max_token_chars=128,
+  )
+  try @xml.read_xml_bytes_limited(source, tolerant_budget) catch {
+    InvalidXml(message~) =>
+      inspect(
+        message,
+        content="XML encoding declaration does not match decoded source",
+      )
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected tolerant byte parsing to reject the declaration")
+  }
+  inspect(
+    @xml.read_xml_string_strict_encoded(
+      "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?><root/>",
+      Utf16LittleEndian,
+    ).name,
+    content="root",
+  )
+  inspect(
+    @xml.read_xml_string_strict_encoded(
+      "<?xml version=\"1.0\" encoding=\"utf-8\"?><root/>",
+      Utf8,
+    ).name,
+    content="root",
+  )
+}
+
+///|
 test "strict XML normalizes source line endings but preserves references" {
   let root = @xml.read_xml_string_strict(
     "<root note=\"one\r\ntwo\">one\r\ntwo&#xD;three</root>",

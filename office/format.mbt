@@ -289,28 +289,51 @@ fn read_xml_part(
     Some(bytes) => bytes
     None => raise InvalidPackage("missing required part: \{name}")
   }
-  let text = if bytes.length() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe {
-    @utf16.decode(bytes, ignore_bom=true) catch {
-      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-    }
+  let (text, source_encoding) : (String, @xml.XmlSourceEncoding) = if bytes.length() >=
+    2 &&
+    bytes[0] == 0xff &&
+    bytes[1] == 0xfe {
+    (
+      @utf16.decode(bytes, ignore_bom=true) catch {
+        _ =>
+          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+      },
+      Utf16LittleEndian,
+    )
   } else if bytes.length() >= 2 && bytes[0] == 0xfe && bytes[1] == 0xff {
-    @utf16.decode(bytes, ignore_bom=true, endianness=Big) catch {
-      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-    }
+    (
+      @utf16.decode(bytes, ignore_bom=true, endianness=Big) catch {
+        _ =>
+          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+      },
+      Utf16BigEndian,
+    )
   } else if bytes.length() >= 2 && bytes[0] == b'<' && bytes[1] == 0x00 {
-    @utf16.decode(bytes) catch {
-      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-    }
+    (
+      @utf16.decode(bytes) catch {
+        _ =>
+          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+      },
+      Utf16LittleEndian,
+    )
   } else if bytes.length() >= 2 && bytes[0] == 0x00 && bytes[1] == b'<' {
-    @utf16.decode(bytes, endianness=Big) catch {
-      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-    }
+    (
+      @utf16.decode(bytes, endianness=Big) catch {
+        _ =>
+          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+      },
+      Utf16BigEndian,
+    )
   } else {
-    @utf8.decode(bytes, ignore_bom=true) catch {
-      _ => raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
-    }
+    (
+      @utf8.decode(bytes, ignore_bom=true) catch {
+        _ =>
+          raise InvalidPackage("\{name} is not valid UTF-8 or UTF-16 XML text")
+      },
+      Utf8,
+    )
   }
-  @xml.read_xml_string_strict(text) catch {
+  @xml.read_xml_string_strict_encoded(text, source_encoding) catch {
     _ => raise InvalidPackage("\{name} is not well-formed XML")
   }
 }

@@ -681,6 +681,32 @@ test "detect_format decodes UTF-16 package XML in either byte order" {
 }
 
 ///|
+test "detect_format rejects declarations that contradict UTF-8 package XML" {
+  let source = @excel.write(@excel.new_file())
+  let archive = @zip.read(source)
+  guard archive.get("[Content_Types].xml") is Some(types_bytes) else {
+    fail("test workbook is missing its content-types manifest")
+  }
+  let types = @utf8.decode(types_bytes, ignore_bom=true)
+  let contradictory = types.replace(old="UTF-8", new="UTF-16")
+  assert_true(contradictory != types)
+  let broken = replace_archive_part(
+    source,
+    "[Content_Types].xml",
+    @utf8.encode(contradictory),
+  )
+  try @office.detect_format("book.xlsx", broken) catch {
+    err =>
+      inspect(
+        Show::to_string(err),
+        content="invalid Office package: [Content_Types].xml is not well-formed XML",
+      )
+  } noraise {
+    _ => fail("expected a contradictory XML declaration to fail")
+  }
+}
+
+///|
 test "detect_format accepts namespace-prefixed and line-broken package XML" {
   let prefixed = prefix_xlsx_package_xml(@excel.write(@excel.new_file()), false)
   inspect(@office.detect_format("book.xlsx", prefixed).name(), content="xlsx")

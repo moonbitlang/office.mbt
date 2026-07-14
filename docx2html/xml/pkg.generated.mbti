@@ -17,6 +17,8 @@ pub fn read_xml_string_limited(String, XmlReadBudget, namespace_map? : Map[Strin
 
 pub fn read_xml_string_strict(String, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
+pub fn read_xml_string_strict_encoded(String, XmlSourceEncoding, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
+
 pub fn read_xml_string_strict_limited(String, XmlReadBudget, namespace_map? : Map[String, String]) -> XmlElement raise @core.DocxError
 
 pub fn write_xml_fragment(XmlElement, namespaces? : Map[String, String]) -> String
@@ -68,6 +70,12 @@ pub struct XmlReadBudget {
   // private fields
 }
 pub fn XmlReadBudget::charge_derived_chars(Self, Int) -> Unit raise @core.DocxError
+
+pub(all) enum XmlSourceEncoding {
+  Utf8
+  Utf16LittleEndian
+  Utf16BigEndian
+}
 
 // Type aliases
 

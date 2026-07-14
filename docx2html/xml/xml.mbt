@@ -111,7 +111,7 @@ pub fn read_xml_string(
   source : String,
   namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
-  read_xml_string_with_mode(source, namespace_map, false, None, false)
+  read_xml_string_with_mode(source, namespace_map, false, None, false, None)
 }
 
 ///|
@@ -124,7 +124,35 @@ pub fn read_xml_string_strict(
   source : String,
   namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
-  read_xml_string_with_mode(source, namespace_map, true, None, false)
+  read_xml_string_with_mode(source, namespace_map, true, None, false, None)
+}
+
+///|
+/// The byte encoding used to decode an XML source string. Passing it to
+/// `read_xml_string_strict_encoded` makes an optional XML declaration part of
+/// the strict contract instead of treating it as unaudited metadata.
+pub(all) enum XmlSourceEncoding {
+  Utf8
+  Utf16LittleEndian
+  Utf16BigEndian
+}
+
+///|
+/// Strictly parses an already decoded XML string and rejects an encoding
+/// declaration that contradicts the supplied byte encoding.
+pub fn read_xml_string_strict_encoded(
+  source : String,
+  source_encoding : XmlSourceEncoding,
+  namespace_map? : Map[String, String] = Map([]),
+) -> XmlElement raise DocxError {
+  read_xml_string_with_mode(
+    source,
+    namespace_map,
+    true,
+    None,
+    false,
+    Some(source_encoding),
+  )
 }
 
 ///|
@@ -239,7 +267,14 @@ pub fn read_xml_string_limited(
   budget : XmlReadBudget,
   namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
-  read_xml_string_with_mode(source, namespace_map, false, Some(budget), false)
+  read_xml_string_with_mode(
+    source,
+    namespace_map,
+    false,
+    Some(budget),
+    false,
+    None,
+  )
 }
 
 ///|
@@ -250,7 +285,14 @@ pub fn read_xml_string_strict_limited(
   budget : XmlReadBudget,
   namespace_map? : Map[String, String] = Map([]),
 ) -> XmlElement raise DocxError {
-  read_xml_string_with_mode(source, namespace_map, true, Some(budget), false)
+  read_xml_string_with_mode(
+    source,
+    namespace_map,
+    true,
+    Some(budget),
+    false,
+    None,
+  )
 }
 
 ///|
@@ -265,7 +307,14 @@ pub fn read_xml_bytes_limited(
   let text = @utf8.decode(source, ignore_bom=true) catch {
     _ => raise InvalidXml(message="XML source is not valid UTF-8")
   }
-  read_xml_string_with_mode(text, namespace_map, false, Some(budget), true)
+  read_xml_string_with_mode(
+    text,
+    namespace_map,
+    false,
+    Some(budget),
+    true,
+    Some(Utf8),
+  )
 }
 
 ///|
@@ -279,7 +328,14 @@ pub fn read_xml_bytes_strict_limited(
   let text = @utf8.decode(source, ignore_bom=true) catch {
     _ => raise InvalidXml(message="XML source is not valid UTF-8")
   }
-  read_xml_string_with_mode(text, namespace_map, true, Some(budget), true)
+  read_xml_string_with_mode(
+    text,
+    namespace_map,
+    true,
+    Some(budget),
+    true,
+    Some(Utf8),
+  )
 }
 
 ///|
@@ -289,6 +345,7 @@ fn read_xml_string_with_mode(
   strict : Bool,
   budget : XmlReadBudget?,
   source_already_charged : Bool,
+  source_encoding : XmlSourceEncoding?,
 ) -> XmlElement raise DocxError {
   match budget {
     Some(budget) =>
@@ -306,6 +363,7 @@ fn read_xml_string_with_mode(
     depth: 0,
     strict,
     budget,
+    source_encoding,
     seen_xml_declaration: false,
     namespace_map,
     namespaces: if strict {
@@ -906,6 +964,7 @@ priv struct XmlParser {
   mut depth : Int
   strict : Bool
   budget : XmlReadBudget?
+  source_encoding : XmlSourceEncoding?
   mut seen_xml_declaration : Bool
   namespace_map : Map[String, String]
   namespaces : Map[String, String]
@@ -1383,7 +1442,13 @@ fn XmlParser::skip_misc(
       declaration_allowed = false
     }
     if self.starts_with("<?") {
-      if self.strict {
+      // Byte-backed parses know the encoding that produced `source`, so even
+      // tolerant conversion must inspect an XML declaration instead of
+      // treating a contradictory declaration as an arbitrary processing
+      // instruction. String-only tolerant parsing keeps its historical
+      // xmldom-compatible recovery behavior because no source encoding is
+      // available to verify.
+      if self.strict || self.source_encoding is Some(_) {
         self.skip_processing_instruction(
           allow_xml_declaration=declaration_allowed,
         )
@@ -1446,6 +1511,19 @@ fn is_valid_xml_encoding_name(value : StringView) -> Bool {
 }
 
 ///|
+fn XmlSourceEncoding::matches_declaration(
+  self : XmlSourceEncoding,
+  value : String,
+) -> Bool {
+  let normalized = value.to_lower()
+  match self {
+    Utf8 => normalized == "utf-8"
+    Utf16LittleEndian => normalized == "utf-16" || normalized == "utf-16le"
+    Utf16BigEndian => normalized == "utf-16" || normalized == "utf-16be"
+  }
+}
+
+///|
 fn XmlParser::parse_xml_declaration(self : XmlParser) -> Unit raise DocxError {
   let names : Map[String, Bool] = Map([])
   let mut position = 0
@@ -1492,6 +1570,14 @@ fn XmlParser::parse_xml_declaration(self : XmlParser) -> Unit raise DocxError {
           raise InvalidXml(
             message="invalid XML encoding name: " + xml_diagnostic_token(value),
           )
+        } else {
+          match self.source_encoding {
+            Some(encoding) if !encoding.matches_declaration(value) =>
+              raise InvalidXml(
+                message="XML encoding declaration does not match decoded source",
+              )
+            _ => ()
+          }
         }
       (1, "standalone") | (2, "standalone") =>
         if value != "yes" && value != "no" {
