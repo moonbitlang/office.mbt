@@ -852,7 +852,7 @@ test "relocated Strict footnotes and endnotes are parsed and publicly scanned" {
     "/notes/endnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
   )
   builder.add_relationship(
-    "rIdMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "rIdMain", "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument",
     "word/document.xml",
   )
   builder.add_relationship(
@@ -1046,6 +1046,53 @@ test "singleton annotation relationships reject duplicate ids for one target" {
       _ => fail("expected duplicate \{label} relationship failure")
     } noraise {
       _ => fail("expected duplicate \{label} relationships to fail")
+    }
+  }
+}
+
+///|
+test "annotation relationships require their role-specific content types" {
+  let cases : Array[(String, String, String, String, String)] = [
+    (
+      "comments", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+      "comments.xml", "word/comments.xml", "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+    (
+      "commentsExtended", "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
+      "commentsExtended.xml", "word/commentsExtended.xml", "<w15:commentsEx xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\"/>",
+    ),
+    (
+      "footnotes", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+      "footnotes.xml", "word/footnotes.xml", "<w:footnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+    (
+      "endnotes", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
+      "endnotes.xml", "word/endnotes.xml", "<w:endnotes xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+    (
+      "header", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+      "header1.xml", "word/header1.xml", "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+    (
+      "footer", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer",
+      "footer1.xml", "word/footer1.xml", "<w:ftr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+    ),
+  ]
+  for case in cases {
+    let (kind, relationship_type, target, part_path, story_xml) = case
+    let broken = unreferenced_story_fixture(
+      relationship_type, target, part_path, "application/xml", story_xml,
+    )
+    try @docx.read_docx_annotated(broken) catch {
+      Unsupported(message~) =>
+        assert_true(
+          message.has_prefix(
+            "the \{kind} relationship target '\{part_path}' has content type 'application/xml', expected '",
+          ),
+        )
+      _ => fail("expected wrong \{kind} content type to fail")
+    } noraise {
+      _ => fail("expected wrong \{kind} content type to be rejected")
     }
   }
 }

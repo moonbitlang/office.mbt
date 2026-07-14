@@ -969,6 +969,55 @@ async test "D1 generic plans reject every unwired conventional annotation part" 
 }
 
 ///|
+async test "D1 generic plans cannot publish a wrong annotation content type" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/wrong-comment-type-input.docx"
+    let output = "\{directory}/wrong-comment-type-output.docx"
+    let original = @word_fixture.write_docx_with_comments(
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("Claim")]),
+        ]),
+      ],
+      [
+        @word_fixture.comment_spec(author="Ada", from=0, to=0, [
+          @word_fixture.paragraph([
+            @word_fixture.run([@word_fixture.text("Definition")]),
+          ]),
+        ]),
+      ],
+    )
+    let archive = @zip.read(original)
+    guard archive.get("[Content_Types].xml") is Some(types) else {
+      fail("fixture is missing content types")
+    }
+    let expected = @utf8.encode(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+    )
+    guard types.find(expected) is Some(start) else {
+      fail("fixture has no comments content type")
+    }
+    write_docx_session_file(input, original)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          session.queue_span_edit(
+            "[Content_Types].xml",
+            start~,
+            end=start + expected.length(),
+            b"application/xml",
+          )
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 generic plans cannot publish dangling markers in unreferenced stories" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"

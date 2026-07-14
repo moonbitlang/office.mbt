@@ -1038,6 +1038,7 @@ fn build_annotation_index(
       None => ()
     }
     kind_by_scanned_path[path] = story.kind
+    parts.content_types.require_annotation_part(Some(path), story.kind)
     match zip.read_bytes(path) {
       Some(bytes) => {
         let scan = scan_story(bytes, path_budget~) catch {
@@ -1090,6 +1091,10 @@ fn build_annotation_index(
       None => ()
     }
     kind_by_scanned_path[reachable.path] = reachable.kind
+    parts.content_types.require_annotation_part(
+      Some(reachable.path),
+      reachable.kind,
+    )
     guard zip.read_bytes(reachable.path) is Some(bytes) else {
       // The resolver has already checked this; retain an explicit fail-closed
       // guard if the archive abstraction ever becomes mutable during a read.
