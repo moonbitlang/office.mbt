@@ -843,8 +843,9 @@ fn scan_comment_ex_part(
     if name == "xmlns" {
       root_declarations[""] = decode_entities(value)
     } else if name.has_prefix("xmlns:") {
-      root_declarations[name.view(start_offset=6).to_owned()] =
-        decode_entities(value)
+      root_declarations[name.view(start_offset=6).to_owned()] = decode_entities(
+        value,
+      )
     }
   }
   if root_scan.self_closing {
@@ -932,8 +933,9 @@ fn scan_comment_ex_part(
         if name == "xmlns" {
           own_declarations[""] = decode_entities(value)
         } else if name.has_prefix("xmlns:") {
-          own_declarations[name.view(start_offset=6).to_owned()] =
-            decode_entities(value)
+          own_declarations[name.view(start_offset=6).to_owned()] = decode_entities(
+            value,
+          )
         }
       }
       fn prefix_uri(prefix : String) -> String? {
