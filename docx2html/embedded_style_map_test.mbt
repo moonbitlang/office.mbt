@@ -185,7 +185,7 @@ test "re-embedding style map replaces original metadata" {
 ///|
 test "embedding style map preserves physical ZIP entry spelling" {
   let relationships_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>"
-  let content_types_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>"
+  let content_types_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/MAMMOTH/STYLE-MAP\" ContentType=\"application/old\"/></Types>"
   let written = @docx2html.embed_style_map(
     style_map_embedding_zip([
       ("WORD/_RELS/DOCUMENT.XML.RELS", relationships_xml),
@@ -207,7 +207,7 @@ test "embedding style map preserves physical ZIP entry spelling" {
   }
   inspect(
     @utf8.decode(content_types),
-    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/mammoth/style-map\" ContentType=\"text/prs.mammoth.style-map\"/></Types>",
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/MAMMOTH/STYLE-MAP\" ContentType=\"text/prs.mammoth.style-map\"/></Types>",
   )
   guard archive.get("MAMMOTH/STYLE-MAP") is Some(style_map) else {
     fail("expected original style-map entry spelling")
