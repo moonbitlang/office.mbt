@@ -56,7 +56,7 @@ pub struct SplicePlan {
   // Exact immutable source payloads for offset-bearing edits. Keeping the
   // bytes makes stale detection collision-free while sharing the archive's
   // existing immutable buffers.
-  priv source_parts : Map[String, Bytes]
+  priv source_parts : Map[String, BytesView]
 }
 
 ///|
@@ -125,7 +125,7 @@ pub fn SplicePlan::copy(self : SplicePlan) -> SplicePlan {
   for name, edits in self.part_edits {
     part_edits[name] = edits.copy()
   }
-  let source_parts : Map[String, Bytes] = Map([])
+  let source_parts : Map[String, BytesView] = Map([])
   for name, source in self.source_parts {
     source_parts[name] = source
   }
@@ -144,7 +144,7 @@ pub fn SplicePlan::is_empty(self : SplicePlan) -> Bool {
 pub fn SplicePlan::pin_part(
   self : SplicePlan,
   name : String,
-  source : Bytes,
+  source : BytesView,
 ) -> Unit raise @core.DocxError {
   check_plan_part_name(name)
   match self.source_parts.get(name) {
@@ -356,7 +356,7 @@ pub fn splice_docx_archive(
 /// the edited payload.
 priv struct PreparedPartSplice {
   name : String
-  source : Bytes
+  source : BytesView
   edits : Array[SpanEdit]
   result_length : Int
   replacement_bytes : Int64
@@ -666,7 +666,7 @@ fn xml_markup_tokens(bytes : BytesView) -> Int64 {
 /// preflight for one part without allocating its edited payload.
 fn prepare_span_edits(
   name : String,
-  bytes : Bytes,
+  bytes : BytesView,
   edits : Array[SpanEdit],
   limits : SpliceLimits?,
 ) -> PreparedPartSplice raise @core.DocxError {
@@ -851,7 +851,7 @@ fn apply_prepared_span_edits(
 /// would be meaningless in any other encoding).
 fn check_part_encoding(
   name : String,
-  bytes : Bytes,
+  bytes : BytesView,
 ) -> Unit raise @core.DocxError {
   if bytes.length() >= 2 {
     let first = bytes[0].to_int()
@@ -892,7 +892,7 @@ priv enum EncodingDeclaration {
 ///|
 /// The encoding pseudo-attribute of the XML declaration, when the part
 /// starts with one (BOM tolerated).
-fn declared_encoding(bytes : Bytes) -> EncodingDeclaration {
+fn declared_encoding(bytes : BytesView) -> EncodingDeclaration {
   let mut at = 0
   // Skip a UTF-8 BOM.
   if bytes.length() >= 3 &&

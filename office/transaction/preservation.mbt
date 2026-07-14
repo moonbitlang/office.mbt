@@ -1,6 +1,6 @@
 ///|
-fn archive_payloads(archive : @zip.Archive) -> Map[String, Bytes] {
-  let payloads : Map[String, Bytes] = Map([])
+fn archive_payloads(archive : @zip.Archive) -> Map[String, BytesView] {
+  let payloads : Map[String, BytesView] = Map([])
   for entry in archive.entries() {
     payloads[entry.name()] = entry.data()
   }

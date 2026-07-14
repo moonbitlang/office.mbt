@@ -19,7 +19,7 @@ fn build_non_utf8_workbook_bytes() -> Bytes raise {
       )
       @encoding/utf8.encode(updated_xml)
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     updated.add(
       entry.name(),

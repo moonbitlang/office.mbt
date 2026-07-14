@@ -15,7 +15,7 @@ fn is_encoding_char(value : Byte) -> Bool {
 }
 
 ///|
-fn xml_encoding(bytes : Bytes) -> String? {
+fn xml_encoding(bytes : BytesView) -> String? {
   let len = bytes.length()
   if len < 5 {
     return None
@@ -55,7 +55,7 @@ fn xml_encoding(bytes : Bytes) -> String? {
 
 ///|
 fn decode_utf8(
-  bytes : Bytes,
+  bytes : BytesView,
   transcoder : ((String, Bytes) -> String raise XlsxError)?,
 ) -> String raise XlsxError {
   // A UTF-16 byte-order mark is authoritative: a UTF-16 document's
@@ -79,7 +79,7 @@ fn decode_utf8(
       match transcoder {
         // A caller-supplied transcoder replaces the default entirely,
         // like Go's SetCharsetReader.
-        Some(value) => return value(encoding, bytes)
+        Some(value) => return value(encoding, bytes.to_owned())
         None =>
           match builtin_charset_decode(encoding, bytes) {
             Some(text) => return text
@@ -2920,7 +2920,7 @@ fn read_zip_bytes(
     err => raise UnsupportedFeature(msg=repr(err))
   }
   enforce_unzip_limits(archive, resolved_options)
-  let decode = (value : Bytes) => decode_utf8(value, transcoder)
+  let decode = (value : BytesView) => decode_utf8(value, transcoder)
   let workbook_xml_part_path = resolve_workbook_xml_part_path(archive, decode)
   let workbook_bytes = match archive.get(workbook_xml_part_path) {
     Some(value) => value
@@ -3029,14 +3029,14 @@ fn read_zip_bytes(
       for _, target in data.rel_targets {
         let path = normalize_cell_image_target(target)
         match archive.get(path) {
-          Some(bytes) => rich_value_media[path] = bytes
+          Some(bytes) => rich_value_media[path] = bytes.to_owned()
           None => ()
         }
       }
       for _, target in data.web_rel_targets {
         let path = normalize_cell_image_target(target)
         match archive.get(path) {
-          Some(bytes) => rich_value_media[path] = bytes
+          Some(bytes) => rich_value_media[path] = bytes.to_owned()
           None => ()
         }
       }
@@ -3099,7 +3099,7 @@ fn read_zip_bytes(
         Some(value) => value
         None => raise MissingPart(path~)
       }
-      workbook.vba_project = Some(vba_bytes)
+      workbook.vba_project = Some(vba_bytes.to_owned())
     }
     None => ()
   }
@@ -3248,7 +3248,7 @@ fn read_zip_bytes(
             None =>
               raise InvalidSheetBackground(msg="unsupported image extension")
           }
-          Some({ data: image_bytes, extension, content_type })
+          Some({ data: image_bytes.to_owned(), extension, content_type })
         }
         None => None
       }

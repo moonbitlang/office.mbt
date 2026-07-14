@@ -2574,7 +2574,7 @@ fn hex_value(char : UInt16) -> Int? {
 fn BodyReader::make_image(
   self : BodyReader,
   path : String,
-  data : Bytes,
+  data : BytesView,
   alt_text~ : String?,
 ) -> Image {
   let content_type = self.content_types.find_content_type(path)
@@ -2585,7 +2585,7 @@ fn BodyReader::make_image(
       " is unlikely to display in web browsers",
     )
   }
-  { content_type, alt_text, data }
+  { content_type, alt_text, data: data.to_owned() }
 }
 
 ///|

@@ -11,7 +11,7 @@ fn wb_rewrite_content_types(
       let text = @utf8.decode(entry.data(), ignore_bom=true)
       @utf8.encode(text.replace(old="</Types>", new="<!--\{marker}--></Types>"))
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     result.add(
       entry.name(),

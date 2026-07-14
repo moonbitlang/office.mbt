@@ -103,7 +103,7 @@ pub fn validate_ooxml_package(bytes : BytesView) -> Array[String] {
 ///|
 /// Decodes a package part as UTF-8, tolerating a leading BOM. Used only
 /// for the ASCII-structured package plumbing (content types, rels).
-fn decode_package_part(data : Bytes) -> String {
+fn decode_package_part(data : BytesView) -> String {
   @encoding/utf8.decode(data) catch {
     _ => ""
   }

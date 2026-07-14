@@ -341,7 +341,7 @@ fn parse_slicer_cache_definition(
 fn parse_slicer_cache_definitions(
   workbook_rels_xml : StringView,
   archive : @zip.Archive,
-  decode : (Bytes) -> String raise XlsxError,
+  decode : (BytesView) -> String raise XlsxError,
 ) -> Map[String, SlicerCacheDef] raise XlsxError {
   let defs : Map[String, SlicerCacheDef] = Map([])
   let targets = parse_relationship_targets(workbook_rels_xml, rel_slicer_cache)

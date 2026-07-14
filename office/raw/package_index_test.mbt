@@ -567,7 +567,7 @@ fn colliding_literal_docx_fixture() -> Bytes raise {
         ),
       )
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     output.add(entry.name(), data)
   }
@@ -594,7 +594,7 @@ fn raw_reencode_package_xml_as_utf16(data : BytesView) -> Bytes raise {
       )
       @utf16.encode(text, bom=true, endianness=Big)
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     result.add(
       entry.name(),

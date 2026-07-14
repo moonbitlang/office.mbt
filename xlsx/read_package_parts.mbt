@@ -9,7 +9,7 @@ fn workbook_content_type_candidates() -> Array[String] {
 ///|
 fn resolve_workbook_xml_part_path(
   archive : @zip.Archive,
-  decode : (Bytes) -> String raise XlsxError,
+  decode : (BytesView) -> String raise XlsxError,
 ) -> String raise XlsxError {
   match archive.get(content_types_part_path) {
     Some(content_types_bytes) => {
@@ -30,7 +30,7 @@ fn resolve_workbook_xml_part_path(
 }
 
 ///|
-fn decode_utf8_or_invalid_xml(bytes : Bytes) -> String raise XlsxError {
+fn decode_utf8_or_invalid_xml(bytes : BytesView) -> String raise XlsxError {
   @encoding/utf8.decode(bytes) catch {
     _ => raise InvalidXml(msg="invalid utf8")
   }

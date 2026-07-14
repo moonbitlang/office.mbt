@@ -14,7 +14,7 @@
 ///
 /// Returns `None` for an encoding this table does not cover, so the
 /// caller can fall back to its "requires charset transcoder" error.
-fn builtin_charset_decode(encoding : String, bytes : Bytes) -> String? {
+fn builtin_charset_decode(encoding : String, bytes : BytesView) -> String? {
   match normalize_charset_label(encoding) {
     "windows-1252" => Some(decode_windows_1252(bytes))
     "utf-16le" => decode_utf16(bytes, Little)
@@ -80,7 +80,7 @@ fn normalize_charset_label(encoding : String) -> String {
 /// otherwise the label's default endianness applies. Returns `None` on
 /// malformed input.
 fn decode_utf16(
-  bytes : Bytes,
+  bytes : BytesView,
   default_endian : @encoding/utf16.Endian,
 ) -> String? {
   let (endian, body) = if bytes.length() >= 2 &&
@@ -118,7 +118,7 @@ let windows_1252_high : FixedArray[Int] = [
 /// Decodes Windows-1252 (and the Latin-1 / ASCII labels that fold into
 /// it): identical to Latin-1 except for the 0x80-0x9F range, which maps
 /// to typographic punctuation and letters.
-fn decode_windows_1252(bytes : Bytes) -> String {
+fn decode_windows_1252(bytes : BytesView) -> String {
   let sb = StringBuilder::new()
   for b in bytes {
     let value = b.to_int()
@@ -142,7 +142,7 @@ fn decode_windows_1252(bytes : Bytes) -> String {
 /// if any. A UTF-16-encoded XML document's `<?xml?>` declaration is
 /// itself UTF-16 bytes, so the ASCII declaration scan cannot see its
 /// encoding; the BOM is how such a document is recognized.
-fn utf16_bom_label(bytes : Bytes) -> String? {
+fn utf16_bom_label(bytes : BytesView) -> String? {
   if bytes.length() >= 2 && bytes[0] == 0xfe && bytes[1] == 0xff {
     Some("utf-16be")
   } else if bytes.length() >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe {

@@ -1,7 +1,7 @@
 ///|
 /// In-memory ZIP archive used to read DOCX parts.
 pub(all) struct ZipArchive {
-  entries : Map[String, Bytes]
+  entries : Map[String, BytesView]
 } derive(Debug, Eq)
 
 ///|
@@ -11,7 +11,7 @@ pub(all) struct ZipArchive {
 pub fn open_zip_archive(
   archive : @mbtzip.Archive,
 ) -> ZipArchive raise DocxError {
-  let map : Map[String, Bytes] = Map([])
+  let map : Map[String, BytesView] = Map([])
   for entry in archive.entries() {
     if map.contains(entry.name()) {
       raise InvalidZip(message="duplicate ZIP entry name: \{entry.name()}")
@@ -38,7 +38,7 @@ pub fn ZipArchive::exists(self : ZipArchive, path : String) -> Bool {
 
 ///|
 /// Reads a ZIP entry as bytes.
-pub fn ZipArchive::read_bytes(self : ZipArchive, path : String) -> Bytes? {
+pub fn ZipArchive::read_bytes(self : ZipArchive, path : String) -> BytesView? {
   self.entries.get(path)
 }
 

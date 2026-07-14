@@ -19,14 +19,14 @@ pub fn split_zip_path(String) -> (String, String)
 
 // Types and methods
 pub(all) struct ZipArchive {
-  entries : Map[String, Bytes]
+  entries : Map[String, BytesView]
 } derive(Eq, @debug.Debug)
 #deprecated
 pub fn ZipArchive::equal(Self, Self) -> Bool
 pub fn ZipArchive::exists(Self, String) -> Bool
 #deprecated
 pub fn ZipArchive::not_equal(Self, Self) -> Bool
-pub fn ZipArchive::read_bytes(Self, String) -> Bytes?
+pub fn ZipArchive::read_bytes(Self, String) -> BytesView?
 pub fn ZipArchive::read_text(Self, String) -> String? raise @core.DocxError
 #as_free_fn
 #deprecated

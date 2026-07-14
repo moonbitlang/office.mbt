@@ -114,7 +114,7 @@ fn numbering_from_xml(
 
 ///|
 fn zip_with_text(path : String, text : String) -> ZipArchive {
-  let entries : Map[String, Bytes] = Map([])
+  let entries : Map[String, BytesView] = Map([])
   entries[path] = @utf8.encode(text)
   { entries, }
 }

@@ -532,7 +532,7 @@ fn collect_relationship_ids(element : XmlElement, ids : Set[String]) -> Unit {
 /// XML comments and CDATA sections are skipped ('<' is illegal inside
 /// attribute values, so those three region kinds are the only places a
 /// '<'-led needle could match without being markup).
-fn find_ascii_bytes(bytes : Bytes, needle : String) -> Int? {
+fn find_ascii_bytes(bytes : BytesView, needle : String) -> Int? {
   let needle_units = needle.code_units()
   let limit = bytes.length() - needle_units.length()
   fn starts_with(at : Int, text : String) -> Bool {
@@ -585,7 +585,7 @@ fn find_ascii_bytes(bytes : Bytes, needle : String) -> Int? {
 /// with `inner` inside, attributes and prefix preserved VERBATIM from
 /// the original bytes.
 fn self_closing_rewrite(
-  part_bytes : Bytes,
+  part_bytes : BytesView,
   span : NodeSpan,
   inner : String,
 ) -> @splice.SpanEdit raise DocxError {
@@ -620,7 +620,7 @@ fn self_closing_rewrite(
 fn queue_paragraph_edits(
   plan : @splice.SplicePlan,
   part : String,
-  part_bytes : Bytes,
+  part_bytes : BytesView,
   span : NodeSpan,
   leading : String?,
   trailing : String?,

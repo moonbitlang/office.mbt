@@ -14,7 +14,8 @@ A transaction performs these phases in order:
    it from an independently mutable shallow fork of that bounded archive;
 3. invoke one in-memory mutation callback with the identified format, the
    immutable original `Bytes`, another isolated shallow archive fork whose
-   immutable payload buffers are shared, and an opaque `TransactionBudget`
+   immutable payload buffers are exposed only as read-only `BytesView` values,
+   and an opaque `TransactionBudget`
    carrying the candidate-package ceiling that remains before allocation;
 4. read the serialized candidate ZIP once under the remaining transaction
    budget, then identify and structurally validate it through the portable
@@ -169,7 +170,9 @@ mutation, candidate validation, and the preservation report; a transaction
 does not repeatedly inflate the same input or candidate. Each callback gets a
 shallow fork, so adding or replacing an entry cannot corrupt the transaction's
 trusted preservation snapshot while immutable strings and byte buffers remain
-shared. Bounded-read provenance records the exact serialized source size and
+shared. Entry and archive payload accessors return `BytesView`; `add` and
+`replace` normalize inputs to archive-owned immutable `Bytes`. Bounded-read
+provenance records the exact serialized source size and
 enforced ZIP limits inside the opaque archive. Forks retain that capability,
 while a real entry mutation invalidates it; archive-backed raw APIs therefore
 cannot be called with an oversized, unbounded, or caller-modified snapshot.

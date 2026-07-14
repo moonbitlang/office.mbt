@@ -251,14 +251,14 @@ fn opc_part_key(name : StringView) -> String {
 
 ///|
 priv struct ArchivePartIndex {
-  exact : Map[String, Bytes]
-  canonical : Map[String, Bytes]
+  exact : Map[String, BytesView]
+  canonical : Map[String, BytesView]
 }
 
 ///|
 fn archive_part_index(archive : @zip.Archive) -> ArchivePartIndex {
-  let exact : Map[String, Bytes] = Map([])
-  let canonical : Map[String, Bytes] = Map([])
+  let exact : Map[String, BytesView] = Map([])
+  let canonical : Map[String, BytesView] = Map([])
   for entry in archive.entries() {
     let name = entry.name()
     if !exact.contains(name) {
@@ -273,7 +273,7 @@ fn archive_part_index(archive : @zip.Archive) -> ArchivePartIndex {
 }
 
 ///|
-fn ArchivePartIndex::find(self : ArchivePartIndex, name : String) -> Bytes? {
+fn ArchivePartIndex::find(self : ArchivePartIndex, name : String) -> BytesView? {
   match self.exact.get(name) {
     Some(bytes) => Some(bytes)
     None => self.canonical.get(opc_part_key(name))

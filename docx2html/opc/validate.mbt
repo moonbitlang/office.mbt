@@ -279,7 +279,7 @@ fn validate_docx_archive_into(
   findings : FindingCollector,
 ) -> Unit {
   // Raw entry sweep: names + CRC integrity, before any part-level logic.
-  let parts : Map[String, Bytes] = Map([])
+  let parts : Map[String, BytesView] = Map([])
   let seen : Set[String] = Set([])
   for entry in archive.entries() {
     if findings.full() {
@@ -338,7 +338,7 @@ priv struct ContentTypes {
 
 ///|
 fn check_content_types(
-  parts : Map[String, Bytes],
+  parts : Map[String, BytesView],
   findings : FindingCollector,
 ) -> ContentTypes? {
   guard parts.get(CONTENT_TYPES_PART) is Some(bytes) else {
@@ -434,7 +434,7 @@ fn normalize_override_part_name(part_name : String) -> String {
 
 ///|
 fn check_content_type_coverage(
-  parts : Map[String, Bytes],
+  parts : Map[String, BytesView],
   types : ContentTypes,
   findings : FindingCollector,
 ) -> Unit {
@@ -478,7 +478,7 @@ fn part_extension(name : String) -> String? {
 
 ///|
 fn check_relationships(
-  parts : Map[String, Bytes],
+  parts : Map[String, BytesView],
   findings : FindingCollector,
 ) -> Unit {
   if findings.full() {
@@ -556,7 +556,7 @@ fn check_relationships(
 ///|
 fn check_main_part(
   name : String,
-  bytes : Bytes,
+  bytes : BytesView,
   findings : FindingCollector,
 ) -> Unit {
   match parse_xml_part(name, bytes, findings) {
@@ -666,7 +666,7 @@ fn local_name(name : String) -> String {
 ///|
 fn parse_xml_part(
   name : String,
-  bytes : Bytes,
+  bytes : BytesView,
   findings : FindingCollector,
 ) -> @xml.XmlElement? {
   let root = @xml.read_xml_bytes_strict_limited(bytes, findings.xml_budget) catch {

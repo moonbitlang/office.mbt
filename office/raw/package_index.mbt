@@ -107,7 +107,7 @@ priv struct RawPackage {
   format : @office.DocumentFormat
   archive : @zip.Archive
   names : Map[String, String]
-  parts : Map[String, Bytes]
+  parts : Map[String, BytesView]
   content_types : ContentTypeTable
   aliases : Map[String, Array[String]]
   part_aliases : Map[String, Array[String]]
@@ -218,10 +218,10 @@ fn parse_xml_bytes(
 ///|
 fn raw_archive_index(
   archive : @zip.Archive,
-) -> (Map[String, String], Map[String, Bytes]) raise RawError {
+) -> (Map[String, String], Map[String, BytesView]) raise RawError {
   let entry_names : Map[String, String] = Map([])
   let names : Map[String, String] = Map([])
-  let parts : Map[String, Bytes] = Map([])
+  let parts : Map[String, BytesView] = Map([])
   for entry in archive.entries() {
     let name = entry.name()
     if name == "" ||
@@ -308,7 +308,7 @@ fn raw_unexpected_xml_attribute(
 ///|
 fn parse_content_types(
   names : Map[String, String],
-  parts : Map[String, Bytes],
+  parts : Map[String, BytesView],
 ) -> ContentTypeTable raise RawError {
   let manifest_key = canonical_part_key("[Content_Types].xml")
   let actual_name = match names.get(manifest_key) {
@@ -1342,7 +1342,7 @@ fn raw_package_shell(
   format : @office.DocumentFormat,
   archive : @zip.Archive,
   names : Map[String, String],
-  parts : Map[String, Bytes],
+  parts : Map[String, BytesView],
   content_types : ContentTypeTable,
 ) -> RawPackage {
   {
@@ -1759,7 +1759,7 @@ fn RawPackage::resolve_part(
 fn RawPackage::part_bytes(
   self : RawPackage,
   name : String,
-) -> Bytes raise RawError {
+) -> BytesView raise RawError {
   match self.parts.get(canonical_part_key(name)) {
     Some(bytes) => bytes
     None =>
@@ -1899,5 +1899,5 @@ pub fn raw_read(
   let pkg = open_raw_package(path, data)
   let name = pkg.resolve_part(part)
   let bytes = pkg.part_bytes(name)
-  { format: pkg.format, info: pkg.part_info(name), bytes }
+  { format: pkg.format, info: pkg.part_info(name), bytes: bytes.to_owned() }
 }

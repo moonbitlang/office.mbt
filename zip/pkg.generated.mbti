@@ -37,13 +37,13 @@ pub fn ZipError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 type Archive
-pub fn Archive::add(Self, String, Bytes, compression? : Compression, data_descriptor? : Bool) -> Unit
+pub fn Archive::add(Self, String, BytesView, compression? : Compression, data_descriptor? : Bool) -> Unit
 pub fn Archive::bounded_source_package_size(Self, max_entries~ : Int, max_entry_uncompressed_bytes~ : Int, max_total_uncompressed_bytes~ : Int) -> Int?
 pub fn Archive::entries(Self) -> ArrayView[Entry]
 pub fn Archive::fork(Self) -> Self
-pub fn Archive::get(Self, StringView) -> Bytes?
+pub fn Archive::get(Self, StringView) -> BytesView?
 pub fn Archive::new() -> Self
-pub fn Archive::replace(Self, StringView, Bytes) -> Bool
+pub fn Archive::replace(Self, StringView, BytesView) -> Bool
 pub fn Archive::retained_size_estimate(Self) -> Int64
 
 pub(all) enum Compression {
@@ -57,7 +57,7 @@ pub fn Compression::to_repr(Self) -> @debug.Repr
 type Entry
 pub fn Entry::compression(Self) -> Compression
 pub fn Entry::crc32(Self) -> UInt
-pub fn Entry::data(Self) -> Bytes
+pub fn Entry::data(Self) -> BytesView
 pub fn Entry::data_descriptor(Self) -> Bool
 pub fn Entry::name(Self) -> String
 

@@ -517,7 +517,7 @@ fn validate_raw_candidate_archive(
 fn RawPackage::checked_xml_part(
   self : RawPackage,
   selector : String,
-) -> (String, Bytes) raise RawError {
+) -> (String, BytesView) raise RawError {
   let part = self.resolve_part(selector)
   let info = self.part_info(part)
   if !info.xml {
@@ -543,7 +543,7 @@ fn raw_replace_part_package(
   validate_part_selector(part)
   let (resolved, current) = pkg.checked_xml_part(part)
   let replacement = checked_document_bytes(xml)
-  if replacement == current {
+  if replacement[:] == current {
     return {
       result: ReuseOriginal,
       part: resolved,
@@ -660,7 +660,7 @@ fn raw_edit_package(
     )
   }
   let replacement = apply_raw_span_edits(part, document, edits)
-  if replacement == bytes {
+  if replacement[:] == bytes {
     return {
       result: ReuseOriginal,
       part,
