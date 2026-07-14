@@ -67,6 +67,7 @@ pub fn XmlNode::to_repr(Self) -> @debug.Repr
 pub struct XmlReadBudget {
   // private fields
 }
+pub fn XmlReadBudget::charge_derived_chars(Self, Int) -> Unit raise @core.DocxError
 
 // Type aliases
 

@@ -176,6 +176,73 @@ priv struct AnnotationScanWork {
 }
 
 ///|
+/// Scanner and verification paths are retained as UTF-16 strings. One shared
+/// counter covers both copies across every story; limited transaction reads
+/// additionally charge the caller's cumulative XML materialization budget.
+priv struct AnnotationPathBudget {
+  shared_xml_budget : @xml.XmlReadBudget?
+  mut remaining_chars : Int
+}
+
+///|
+let max_annotation_path_chars : Int = 8 * 1024 * 1024
+
+///|
+fn AnnotationPathBudget::new(
+  shared_xml_budget : @xml.XmlReadBudget?,
+  max_chars? : Int = max_annotation_path_chars,
+) -> AnnotationPathBudget {
+  {
+    shared_xml_budget,
+    remaining_chars: if max_chars > 0 {
+      max_chars
+    } else {
+      0
+    },
+  }
+}
+
+///|
+fn AnnotationPathBudget::charge(
+  self : AnnotationPathBudget,
+  chars : Int,
+) -> Unit raise DocxError {
+  if chars < 0 || chars > self.remaining_chars {
+    raise InvalidXml(message="XML materialized character budget exceeded")
+  }
+  match self.shared_xml_budget {
+    Some(budget) => budget.charge_derived_chars(chars)
+    None => ()
+  }
+  self.remaining_chars -= chars
+}
+
+///|
+fn decimal_char_count(value : Int) -> Int {
+  let mut remaining = value
+  let mut digits = 1
+  while remaining >= 10 {
+    remaining /= 10
+    digits += 1
+  }
+  digits
+}
+
+///|
+fn AnnotationPathBudget::charge_descendant(
+  self : AnnotationPathBudget,
+  parent : String?,
+  kind : String,
+  ordinal : Int,
+) -> Unit raise DocxError {
+  let parent_chars = match parent {
+    Some(path) => path.length() + 1
+    None => 0
+  }
+  self.charge(parent_chars + kind.length() + 2 + decimal_char_count(ordinal))
+}
+
+///|
 /// The story's root-element span, when the part had one.
 fn StoryScan::root(self : StoryScan) -> ScannedNode? {
   self.root
@@ -364,7 +431,10 @@ fn marker_kind(uri : String, local_name : String) -> ScanMarkerKind? {
 
 ///|
 /// Scans one story part. `part` is the ORIGINAL part bytes (UTF-8).
-fn scan_story(part : BytesView) -> StoryScan raise DocxError {
+fn scan_story(
+  part : BytesView,
+  path_budget? : AnnotationPathBudget,
+) -> StoryScan raise DocxError {
   // A UTF-16 BOM means byte-level markup scanning would be wrong.
   if part.length() >= 2 &&
     (
@@ -397,6 +467,10 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
     story_position_steps: 0,
     retraction_calls: 0,
     retraction_steps: 0,
+  }
+  let path_budget = match path_budget {
+    Some(value) => value
+    None => AnnotationPathBudget::new(None)
   }
   let length = part.length()
   let mut index = 0
@@ -686,6 +760,7 @@ fn scan_story(part : BytesView) -> StoryScan raise DocxError {
             Some(frame) => frame.projection_path
             None => None
           }
+          path_budget.charge_descendant(parent_path, kind, ordinal)
           let path = match parent_path {
             Some(base) => "\{base}/\{kind}[\{ordinal}]"
             None => "\{kind}[\{ordinal}]"

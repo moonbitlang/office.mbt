@@ -204,6 +204,21 @@ fn XmlReadBudget::charge_token(
 }
 
 ///|
+/// Charges a derived string retained by a higher-level XML consumer. Parsers
+/// already charge token materialization directly; projections such as indexed
+/// structural paths must use this hook before allocating their own copies so
+/// they remain inside the same cumulative envelope.
+pub fn XmlReadBudget::charge_derived_chars(
+  self : XmlReadBudget,
+  chars : Int,
+) -> Unit raise DocxError {
+  if chars < 0 || chars > self.remaining_materialized_chars {
+    raise InvalidXml(message="XML materialized character budget exceeded")
+  }
+  self.remaining_materialized_chars -= chars
+}
+
+///|
 fn XmlReadBudget::charge_namespace_bindings(
   self : XmlReadBudget,
   operations : Int,
