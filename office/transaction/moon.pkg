@@ -8,6 +8,7 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
+  "moonbitlang/core/sorted_map",
   "moonbitlang/x/path",
 }
 

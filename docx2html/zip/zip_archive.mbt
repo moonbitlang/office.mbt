@@ -3,8 +3,8 @@
 /// case-insensitive, while `canonical_names` retains the archive's exact
 /// spelling so preservation edits always address the physical entry.
 pub struct ZipArchive {
-  priv entries : Map[String, BytesView]
-  priv canonical_names : Map[String, String]
+  priv entries : StableStringMap[BytesView]
+  priv canonical_names : StableStringMap[String]
 } derive(Debug, Eq)
 
 ///|
@@ -18,21 +18,45 @@ fn canonical_part_name(path : String) -> String {
 pub fn zip_archive(
   source : Map[String, BytesView],
 ) -> ZipArchive raise DocxError {
-  let entries : Map[String, BytesView] = Map([])
-  let canonical_names : Map[String, String] = Map([])
-  for name, bytes in source {
-    let key = canonical_part_name(name)
-    match canonical_names.get(key) {
-      Some(existing) if existing != name =>
-        raise InvalidZip(
-          message="duplicate ZIP entry names after case normalization: \{existing}, \{name}",
-        )
-      _ => ()
-    }
-    entries[name] = bytes
-    canonical_names[key] = name
+  zip_archive_entries(source.iter())
+}
+
+///|
+/// Builds an archive view from a collision-independent iterator. This is the
+/// preferred entry point for already validated or adversarial entry streams;
+/// the map overload remains a convenience for programmatic callers.
+pub fn zip_archive_entries(
+  source : Iter[(String, BytesView)],
+) -> ZipArchive raise DocxError {
+  let entries : StableStringMap[BytesView] = SortedMap([])
+  let canonical_names : StableStringMap[String] = SortedMap([])
+  for pair in source {
+    let (name, bytes) = pair
+    insert_zip_entry(entries, canonical_names, name, bytes)
   }
   { entries, canonical_names }
+}
+
+///|
+fn insert_zip_entry(
+  entries : StableStringMap[BytesView],
+  canonical_names : StableStringMap[String],
+  name : String,
+  bytes : BytesView,
+) -> Unit raise DocxError {
+  if entries.contains(name) {
+    raise InvalidZip(message="duplicate ZIP entry name: \{name}")
+  }
+  let key = canonical_part_name(name)
+  match canonical_names.get(key) {
+    Some(existing) if existing != name =>
+      raise InvalidZip(
+        message="duplicate ZIP entry names after case normalization: \{existing}, \{name}",
+      )
+    _ => ()
+  }
+  entries[name] = bytes
+  canonical_names[key] = name
 }
 
 ///|
@@ -42,14 +66,12 @@ pub fn zip_archive(
 pub fn open_zip_archive(
   archive : @mbtzip.Archive,
 ) -> ZipArchive raise DocxError {
-  let map : Map[String, BytesView] = Map([])
+  let entries : StableStringMap[BytesView] = SortedMap([])
+  let canonical_names : StableStringMap[String] = SortedMap([])
   for entry in archive.entries() {
-    if map.contains(entry.name()) {
-      raise InvalidZip(message="duplicate ZIP entry name: \{entry.name()}")
-    }
-    map[entry.name()] = entry.data()
+    insert_zip_entry(entries, canonical_names, entry.name(), entry.data())
   }
-  zip_archive(map)
+  { entries, canonical_names }
 }
 
 ///|

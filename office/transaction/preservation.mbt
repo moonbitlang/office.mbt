@@ -1,6 +1,6 @@
 ///|
-fn archive_payloads(archive : @zip.Archive) -> Map[String, BytesView] {
-  let payloads : Map[String, BytesView] = Map([])
+fn archive_payloads(archive : @zip.Archive) -> StableStringMap[BytesView] {
+  let payloads : StableStringMap[BytesView] = SortedMap([])
   for entry in archive.entries() {
     payloads[entry.name()] = entry.data()
   }

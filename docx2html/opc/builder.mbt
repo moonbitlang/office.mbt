@@ -39,15 +39,20 @@ priv struct PackageRelationship {
 /// relationships part, then the parts in insertion order.
 pub struct PackageBuilder {
   priv parts : Array[(String, Bytes)]
-  priv defaults : Map[String, String]
-  priv overrides : Map[String, String]
-  priv relationships : Map[String, Array[PackageRelationship]]
+  priv defaults : StableStringMap[String]
+  priv overrides : StableStringMap[String]
+  priv relationships : StableStringMap[Array[PackageRelationship]]
 }
 
 ///|
 /// An empty builder: no parts, no content types, no relationships.
 pub fn PackageBuilder::new() -> PackageBuilder {
-  { parts: [], defaults: Map([]), overrides: Map([]), relationships: Map([]) }
+  {
+    parts: [],
+    defaults: SortedMap([]),
+    overrides: SortedMap([]),
+    relationships: SortedMap([]),
+  }
 }
 
 ///|
@@ -157,7 +162,7 @@ pub fn PackageBuilder::build(
   self : PackageBuilder,
 ) -> Bytes raise PackageBuildError {
   // Authoritative name set, revalidated from scratch.
-  let part_names : Map[String, String] = Map([])
+  let part_names : StableStringMap[String] = SortedMap([])
   for entry in self.parts {
     let (name, _) = entry
     check_part_name(name)
@@ -176,7 +181,7 @@ pub fn PackageBuilder::build(
   // would emit duplicate zip entries (Archive::add appends blindly), which
   // is exactly what validation rejects.
   let emitted_rels : Array[String] = []
-  let emitted_rels_by_key : Map[String, String] = Map([])
+  let emitted_rels_by_key : StableStringMap[String] = SortedMap([])
   for source, rels in self.relationships {
     // Every non-root source must be an added part, or its rels part would
     // be an orphan describing nothing.
@@ -185,7 +190,7 @@ pub fn PackageBuilder::build(
         "relationships declared for source '\{source}', which was not added as a part",
       )
     }
-    let seen_ids : Set[String] = Set([])
+    let seen_ids : StableStringSet = SortedSet([])
     for relationship in rels {
       check_metadata("relationship Id", relationship.id)
       check_metadata("relationship Type", relationship.relationship_type)
@@ -213,7 +218,7 @@ pub fn PackageBuilder::build(
     }
     emitted_rels.push(name)
   }
-  let override_names : Map[String, String] = Map([])
+  let override_names : StableStringMap[String] = SortedMap([])
   for part_name, content_type in self.overrides {
     check_metadata("Override PartName", part_name)
     check_metadata("Override content type", content_type)
@@ -442,27 +447,30 @@ fn relationships_xml(rels : Array[PackageRelationship]) -> String {
 test "build revalidates duplicate relationship ids from raw state" {
   let builder : PackageBuilder = {
     parts: [("word/document.xml", b"<d/>")],
-    defaults: {
-      "rels": "application/vnd.openxmlformats-package.relationships+xml",
-      "xml": "application/xml",
-    },
-    overrides: Map([]),
-    relationships: {
-      "": [
-        {
-          id: "rId1",
-          relationship_type: "t",
-          target: "word/document.xml",
-          external: false,
-        },
-        {
-          id: "rId1",
-          relationship_type: "t",
-          target: "word/document.xml",
-          external: false,
-        },
-      ],
-    },
+    defaults: SortedMap([
+      ("rels", "application/vnd.openxmlformats-package.relationships+xml"),
+      ("xml", "application/xml"),
+    ]),
+    overrides: SortedMap([]),
+    relationships: SortedMap([
+      (
+        "",
+        [
+          {
+            id: "rId1",
+            relationship_type: "t",
+            target: "word/document.xml",
+            external: false,
+          },
+          {
+            id: "rId1",
+            relationship_type: "t",
+            target: "word/document.xml",
+            external: false,
+          },
+        ],
+      ),
+    ]),
   }
   try builder.build() catch {
     PackageBuildError(message) =>
@@ -479,9 +487,9 @@ test "build revalidates duplicate relationship ids from raw state" {
 test "build revalidates part names from raw state" {
   let builder : PackageBuilder = {
     parts: [("word/document.xml", b"<d/>"), ("word/document.xml", b"<d/>")],
-    defaults: { "xml": "application/xml" },
-    overrides: Map([]),
-    relationships: Map([]),
+    defaults: SortedMap([("xml", "application/xml")]),
+    overrides: SortedMap([]),
+    relationships: SortedMap([]),
   }
   try builder.build() catch {
     PackageBuildError(message) =>

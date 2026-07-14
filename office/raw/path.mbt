@@ -422,7 +422,7 @@ fn checked_namespace_bindings(
       "raw edit exceeds \{raw_max_namespace_bindings} namespace bindings",
     )
   }
-  let seen : Map[String, Bool] = Map([])
+  let seen : StableStringMap[Bool] = SortedMap([])
   let output : Array[(String, String)] = []
   for binding in values {
     let (prefix, uri) = binding

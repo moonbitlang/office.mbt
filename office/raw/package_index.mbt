@@ -90,8 +90,8 @@ let strict_spreadsheet_namespace = "http://purl.oclc.org/ooxml/spreadsheetml/mai
 
 ///|
 priv struct ContentTypeTable {
-  defaults : Map[String, String]
-  overrides : Map[String, String]
+  defaults : StableStringMap[String]
+  overrides : StableStringMap[String]
 }
 
 ///|
@@ -106,13 +106,13 @@ priv struct RawRelationship {
 priv struct RawPackage {
   format : @office.DocumentFormat
   archive : @zip.Archive
-  names : Map[String, String]
-  parts : Map[String, BytesView]
+  names : StableStringMap[String]
+  parts : StableStringMap[BytesView]
   content_types : ContentTypeTable
-  aliases : Map[String, Array[String]]
-  part_aliases : Map[String, Array[String]]
-  alias_membership : Map[String, Set[String]]
-  part_alias_membership : Map[String, Set[String]]
+  aliases : StableStringMap[Array[String]]
+  part_aliases : StableStringMap[Array[String]]
+  alias_membership : StableStringMap[StableStringSet]
+  part_alias_membership : StableStringMap[StableStringSet]
   mut alias_count : Int
   mut alias_text_bytes : Int
   mut main_part : String
@@ -218,10 +218,10 @@ fn parse_xml_bytes(
 ///|
 fn raw_archive_index(
   archive : @zip.Archive,
-) -> (Map[String, String], Map[String, BytesView]) raise RawError {
-  let entry_names : Map[String, String] = Map([])
-  let names : Map[String, String] = Map([])
-  let parts : Map[String, BytesView] = Map([])
+) -> (StableStringMap[String], StableStringMap[BytesView]) raise RawError {
+  let entry_names : StableStringMap[String] = SortedMap([])
+  let names : StableStringMap[String] = SortedMap([])
+  let parts : StableStringMap[BytesView] = SortedMap([])
   for entry in archive.entries() {
     let name = entry.name()
     if name == "" ||
@@ -307,8 +307,8 @@ fn raw_unexpected_xml_attribute(
 
 ///|
 fn parse_content_types(
-  names : Map[String, String],
-  parts : Map[String, BytesView],
+  names : StableStringMap[String],
+  parts : StableStringMap[BytesView],
 ) -> ContentTypeTable raise RawError {
   let manifest_key = canonical_part_key("[Content_Types].xml")
   let actual_name = match names.get(manifest_key) {
@@ -339,8 +339,8 @@ fn parse_content_types(
       )
     None => ()
   }
-  let defaults : Map[String, String] = Map([])
-  let overrides : Map[String, String] = Map([])
+  let defaults : StableStringMap[String] = SortedMap([])
+  let overrides : StableStringMap[String] = SortedMap([])
   let mut records = 0
   for child in root.children {
     match child {
@@ -724,7 +724,7 @@ fn parse_relationships(
     None => ()
   }
   let output : Array[RawRelationship] = []
-  let ids : Set[String] = Set([])
+  let ids : StableStringSet = SortedSet([])
   let mut records = 0
   for child in root.children {
     match child {
@@ -886,7 +886,7 @@ fn add_alias(
   let targets = match pkg.alias_membership.get(key) {
     Some(values) => values
     None => {
-      let values : Set[String] = Set([])
+      let values : StableStringSet = SortedSet([])
       pkg.alias_membership[key] = values
       values
     }
@@ -904,7 +904,7 @@ fn add_alias(
   let reverse = match pkg.part_alias_membership.get(part_key) {
     Some(values) => values
     None => {
-      let values : Set[String] = Set([])
+      let values : StableStringSet = SortedSet([])
       pkg.part_alias_membership[part_key] = values
       values
     }
@@ -1042,7 +1042,7 @@ fn relationship_matches_role(
 ///|
 fn relationship_target_by_id(
   pkg : RawPackage,
-  relationships_by_id : Map[String, RawRelationship],
+  relationships_by_id : StableStringMap[RawRelationship],
   id : String,
   role : String,
 ) -> String? {
@@ -1056,8 +1056,8 @@ fn relationship_target_by_id(
 ///|
 fn relationship_index_by_id(
   relationships : ArrayView[RawRelationship],
-) -> Map[String, RawRelationship] {
-  let index : Map[String, RawRelationship] = Map([])
+) -> StableStringMap[RawRelationship] {
+  let index : StableStringMap[RawRelationship] = SortedMap([])
   for relationship in relationships {
     // `parse_relationships` rejects duplicate IDs before this index is built.
     index[relationship.id] = relationship
@@ -1323,8 +1323,8 @@ fn validate_all_relationship_parts(pkg : RawPackage) -> Unit raise RawError {
 fn raw_package_shell(
   format : @office.DocumentFormat,
   archive : @zip.Archive,
-  names : Map[String, String],
-  parts : Map[String, BytesView],
+  names : StableStringMap[String],
+  parts : StableStringMap[BytesView],
   content_types : ContentTypeTable,
 ) -> RawPackage {
   {
@@ -1333,10 +1333,10 @@ fn raw_package_shell(
     names,
     parts,
     content_types,
-    aliases: Map([]),
-    part_aliases: Map([]),
-    alias_membership: Map([]),
-    part_alias_membership: Map([]),
+    aliases: SortedMap([]),
+    part_aliases: SortedMap([]),
+    alias_membership: SortedMap([]),
+    part_alias_membership: SortedMap([]),
     alias_count: 0,
     alias_text_bytes: 0,
     main_part: "",

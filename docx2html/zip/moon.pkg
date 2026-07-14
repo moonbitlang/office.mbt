@@ -3,4 +3,5 @@ import {
   "bobzhang/docx2html/core",
   "bobzhang/mbtexcel/zip" @mbtzip,
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/sorted_map",
 }

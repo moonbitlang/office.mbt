@@ -7,6 +7,8 @@ import {
   "moonbitlang/core/encoding/utf16",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
+  "moonbitlang/core/sorted_map",
+  "moonbitlang/core/sorted_set",
 }
 
 import {

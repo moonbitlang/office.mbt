@@ -425,9 +425,9 @@ fn preflight_raw_xml(
   let mut expanded_name_bytes = 0
   let mut namespace_scope_work = 0
   let mut depth = 0
-  let namespaces : Map[String, String] = {
-    "xml": "http://www.w3.org/XML/1998/namespace",
-  }
+  let namespaces : StableStringMap[String] = SortedMap([
+    ("xml", "http://www.w3.org/XML/1998/namespace"),
+  ])
   let namespace_undo_stack : Array[Array[(String, String?)]] = []
   let mut offset = 0
   while offset < bytes.length() {
@@ -694,7 +694,7 @@ fn raw_split_qname(value : String) -> (String, String) {
 fn raw_expand_source_name(
   part : String,
   value : String,
-  namespaces : Map[String, String],
+  namespaces : StableStringMap[String],
   attribute~ : Bool,
 ) -> String raise RawError {
   let (prefix, local_name) = raw_split_qname(value)
@@ -723,7 +723,7 @@ fn raw_expanded_name_bytes(value : String) -> Int {
 
 ///|
 fn raw_intern_expanded_name(
-  interned : Map[String, String],
+  interned : StableStringMap[String],
   value : String,
 ) -> String {
   match interned.get(value) {
@@ -739,7 +739,7 @@ fn raw_intern_expanded_name(
 fn raw_apply_namespace_declarations(
   part : String,
   tag : RawOpenTag,
-  namespaces : Map[String, String],
+  namespaces : StableStringMap[String],
 ) -> (Array[RawNamespaceDeclaration], Array[(String, String?)]) raise RawError {
   let declarations : Array[RawNamespaceDeclaration] = []
   let undo : Array[(String, String?)] = []
@@ -783,7 +783,7 @@ fn raw_apply_namespace_declarations(
 
 ///|
 fn raw_restore_namespaces(
-  namespaces : Map[String, String],
+  namespaces : StableStringMap[String],
   undo : ArrayView[(String, String?)],
 ) -> Unit {
   let mut index = undo.length()
@@ -945,11 +945,11 @@ fn scan_raw_xml(
   let nodes : Array[RawXmlNode] = []
   let node_stack : Array[Int] = []
   let namespace_undo_stack : Array[Array[(String, String?)]] = []
-  let sibling_counts : Map[String, Int] = Map([])
-  let interned_expanded_names : Map[String, String] = Map([])
-  let namespaces : Map[String, String] = {
-    "xml": "http://www.w3.org/XML/1998/namespace",
-  }
+  let sibling_counts : StableStringMap[Int] = SortedMap([])
+  let interned_expanded_names : StableStringMap[String] = SortedMap([])
+  let namespaces : StableStringMap[String] = SortedMap([
+    ("xml", "http://www.w3.org/XML/1998/namespace"),
+  ])
   let mut offset = 0
   while offset < bytes.length() {
     if bytes[offset] != b'<' {

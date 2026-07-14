@@ -282,9 +282,9 @@ fn validate_docx_archive_into(
   findings : FindingCollector,
 ) -> Unit {
   // Raw entry sweep: names + CRC integrity, before any part-level logic.
-  let parts : Map[String, BytesView] = Map([])
-  let canonical_names : Map[String, String] = Map([])
-  let seen : Set[String] = Set([])
+  let parts : StableStringMap[BytesView] = SortedMap([])
+  let canonical_names : StableStringMap[String] = SortedMap([])
+  let seen : StableStringSet = SortedSet([])
   for entry in archive.entries() {
     if findings.full() {
       findings.stop()
@@ -325,7 +325,7 @@ fn validate_docx_archive_into(
 
 ///|
 fn actual_part_name(
-  canonical_names : Map[String, String],
+  canonical_names : StableStringMap[String],
   requested : String,
 ) -> String? {
   canonical_names.get(requested.to_lower())
@@ -333,8 +333,8 @@ fn actual_part_name(
 
 ///|
 fn find_part(
-  parts : Map[String, BytesView],
-  canonical_names : Map[String, String],
+  parts : StableStringMap[BytesView],
+  canonical_names : StableStringMap[String],
   requested : String,
 ) -> (String, BytesView)? {
   guard actual_part_name(canonical_names, requested) is Some(actual) else {
@@ -348,7 +348,7 @@ fn find_part(
 
 ///|
 fn contains_part(
-  canonical_names : Map[String, String],
+  canonical_names : StableStringMap[String],
   requested : String,
 ) -> Bool {
   actual_part_name(canonical_names, requested) is Some(_)
@@ -384,14 +384,14 @@ fn check_entry_name(name : String, findings : FindingCollector) -> Unit {
 
 ///|
 priv struct ContentTypes {
-  defaults : Map[String, String]
-  overrides : Map[String, String]
+  defaults : StableStringMap[String]
+  overrides : StableStringMap[String]
 }
 
 ///|
 fn check_content_types(
-  parts : Map[String, BytesView],
-  canonical_names : Map[String, String],
+  parts : StableStringMap[BytesView],
+  canonical_names : StableStringMap[String],
   findings : FindingCollector,
 ) -> ContentTypes? {
   guard find_part(parts, canonical_names, CONTENT_TYPES_PART)
@@ -402,8 +402,8 @@ fn check_content_types(
   guard parse_xml_part(content_types_name, bytes, findings) is Some(root) else {
     return None
   }
-  let defaults : Map[String, String] = Map([])
-  let overrides : Map[String, String] = Map([])
+  let defaults : StableStringMap[String] = SortedMap([])
+  let overrides : StableStringMap[String] = SortedMap([])
   for node in root.children {
     if findings.full() {
       findings.stop()
@@ -499,7 +499,7 @@ fn normalize_override_part_name(part_name : String) -> String? {
 
 ///|
 fn check_content_type_coverage(
-  parts : Map[String, BytesView],
+  parts : StableStringMap[BytesView],
   types : ContentTypes,
   findings : FindingCollector,
 ) -> Unit {
@@ -543,8 +543,8 @@ fn part_extension(name : String) -> String? {
 
 ///|
 fn check_relationships(
-  parts : Map[String, BytesView],
-  canonical_names : Map[String, String],
+  parts : StableStringMap[BytesView],
+  canonical_names : StableStringMap[String],
   findings : FindingCollector,
 ) -> Unit {
   if findings.full() {
@@ -670,7 +670,7 @@ fn for_each_relationship(
   findings : FindingCollector,
   visit : (String, String, String, Bool) -> Unit,
 ) -> Unit {
-  let ids : Set[String] = Set([])
+  let ids : StableStringSet = SortedSet([])
   for node in root.children {
     if findings.full() {
       findings.stop()
