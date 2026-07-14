@@ -235,6 +235,31 @@ test "the main part is found by following the officeDocument relationship" {
 }
 
 ///|
+test "Strict main relationships are authoritative and multiple declarations fail" {
+  let strict_rels =
+    #|<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+  assert_eq(
+    @opc.validate_docx_package(minimal_docx(root_rels=Some(strict_rels))),
+    [],
+  )
+  let multiple = strict_rels.replace(
+    old="</Relationships>",
+    new=(
+      #|<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>
+    ),
+  )
+  let findings = @opc.validate_docx_package(
+    minimal_docx(root_rels=Some(multiple)),
+  )
+  assert_true(
+    findings.search_by(finding => {
+      finding == "_rels/.rels: multiple officeDocument relationships"
+    })
+    is Some(_),
+  )
+}
+
+///|
 test "a wrong main-part root and a missing officeDocument rel are findings" {
   debug_inspect(
     @opc.validate_docx_package(

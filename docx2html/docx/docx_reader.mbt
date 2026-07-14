@@ -12,6 +12,21 @@ priv struct Relationships {
 }
 
 ///|
+const TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+
+///|
+const STRICT_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"
+
+///|
+const TRANSITIONAL_COMMENTS_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments"
+
+///|
+const STRICT_COMMENTS_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/comments"
+
+///|
+const COMMENTS_EXTENDED_RELATIONSHIP : String = "http://schemas.microsoft.com/office/2011/relationships/commentsExtended"
+
+///|
 priv struct StyleInfo {
   style_id : String
   style_type : String
@@ -318,6 +333,11 @@ priv struct DocumentParts {
   base_path : String
   notes_result : NotesReadResult
   comments_result : CommentsReadResult
+  // Authoritative main-part relationship targets. `None` means no such
+  // relationship was declared; legacy filename fallbacks remain reader-only
+  // and are never exposed as wired annotation parts.
+  comments_part_path : String?
+  comments_extended_part_path : String?
   external_files : ExternalFileAccess
   read_images : Bool
 }
@@ -337,6 +357,20 @@ fn DocumentParts::build(
   )
   let content_types = read_content_types(zip, xml_budget?)
   let base_path = split_zip_path(main_document_path).0
+  let comments_part_path = resolve_unique_internal_part(
+    zip,
+    relationships,
+    [TRANSITIONAL_COMMENTS_RELATIONSHIP, STRICT_COMMENTS_RELATIONSHIP],
+    base_path,
+    "comments",
+  )
+  let comments_extended_part_path = resolve_unique_internal_part(
+    zip,
+    relationships,
+    [COMMENTS_EXTENDED_RELATIONSHIP],
+    base_path,
+    "commentsExtended",
+  )
   let styles = read_styles(
     zip,
     find_part_path(
@@ -376,6 +410,7 @@ fn DocumentParts::build(
     external_files~,
     read_images~,
     xml_budget?,
+    comments_part_path?,
   )
   let root = read_xml_part(zip, main_document_path, xml_budget?)
   {
@@ -390,6 +425,8 @@ fn DocumentParts::build(
     base_path,
     notes_result,
     comments_result,
+    comments_part_path,
+    comments_extended_part_path,
     external_files,
     read_images,
   }
@@ -488,19 +525,27 @@ fn find_main_document_path(
   xml_budget? : @xml.XmlReadBudget,
 ) -> String raise DocxError {
   let relationships = read_relationships(zip, "_rels/.rels", xml_budget?)
-  let path = find_part_path(
+  let path = resolve_unique_internal_part(
     zip,
     relationships,
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
-    base_path="",
-    fallback_path="word/document.xml",
+    [
+      TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP,
+      STRICT_OFFICE_DOCUMENT_RELATIONSHIP,
+    ],
+    "",
+    "officeDocument",
+    reject_multiple_relationships=true,
   )
-  if zip.exists(path) {
-    path
-  } else {
-    raise MissingPart(
-      message="Could not find main document part. Are you sure this is a valid .docx file?",
-    )
+  match path {
+    Some(authoritative) => authoritative
+    None =>
+      if zip.exists("word/document.xml") {
+        "word/document.xml"
+      } else {
+        raise MissingPart(
+          message="Could not find main document part. Are you sure this is a valid .docx file?",
+        )
+      }
   }
 }
 
@@ -551,6 +596,66 @@ fn Relationships::find_targets_by_type(
     }
   }
   targets
+}
+
+///|
+/// Resolves one authoritative internal relationship target. Distinct targets,
+/// external/invalid modes, empty targets, and missing declared targets fail
+/// closed. Callers may apply a legacy filename fallback only when this returns
+/// `None`, which means no matching relationship was declared at all.
+fn resolve_unique_internal_part(
+  zip : ZipArchive,
+  relationships : Relationships,
+  relationship_types : ReadOnlyArray[String],
+  base_path : String,
+  label : String,
+  reject_multiple_relationships? : Bool = false,
+) -> String? raise DocxError {
+  let targets : Array[String] = []
+  let seen : Set[String] = Set([])
+  let mut matches = 0
+  for relationship in relationships.relationships {
+    if relationship_types.search(relationship.relationship_type) is None {
+      continue
+    }
+    matches += 1
+    if reject_multiple_relationships && matches > 1 {
+      raise Unsupported(
+        message="the document declares multiple \{label} relationships",
+      )
+    }
+    match relationship.target_mode {
+      None | Some("Internal") => ()
+      _ =>
+        raise Unsupported(message="the \{label} relationship must be internal")
+    }
+    if relationship.target == "" {
+      raise Unsupported(message="the \{label} relationship has no target")
+    }
+    let resolved = @opc.resolve_target(base_path, relationship.target)
+    if resolved == "" {
+      raise Unsupported(message="the \{label} relationship target is empty")
+    }
+    if !seen.contains(resolved) {
+      seen.add(resolved)
+      targets.push(resolved)
+    }
+  }
+  match targets {
+    [] => None
+    [target] =>
+      if zip.exists(target) {
+        Some(target)
+      } else {
+        raise MissingPart(
+          message="the \{label} relationship targets a missing part",
+        )
+      }
+    _ =>
+      raise Unsupported(
+        message="the document declares multiple distinct \{label} relationship targets",
+      )
+  }
 }
 
 ///|
@@ -973,14 +1078,20 @@ fn read_comments_for_document(
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
+  comments_part_path? : String,
 ) -> CommentsReadResult raise DocxError {
-  let path = find_part_path(
-    zip,
-    document_relationships,
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-    base_path~,
-    fallback_path="word/comments.xml",
-  )
+  let authoritative = match comments_part_path {
+    Some(path) => Some(path)
+    None =>
+      resolve_unique_internal_part(
+        zip,
+        document_relationships,
+        [TRANSITIONAL_COMMENTS_RELATIONSHIP, STRICT_COMMENTS_RELATIONSHIP],
+        base_path,
+        "comments",
+      )
+  }
+  let path = authoritative.unwrap_or("word/comments.xml")
   if !zip.exists(path) {
     return { comments: [], messages: [] }
   }

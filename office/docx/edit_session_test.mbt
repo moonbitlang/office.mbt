@@ -459,6 +459,80 @@ async test "D1 validator rejects equivalent numeric comment identities" {
 }
 
 ///|
+async test "D1 generic plans cannot introduce a second comments target" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.write_docx_with_comments(
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("Claim")]),
+        ]),
+      ],
+      [
+        @word_fixture.comment_spec(author="Ada", from=0, to=0, [
+          @word_fixture.paragraph([
+            @word_fixture.run([@word_fixture.text("Original")]),
+          ]),
+        ]),
+      ],
+    )
+    let archive = @zip.read(original)
+    guard archive.get("word/_rels/document.xml.rels") is Some(rels) else {
+      fail("fixture is missing main relationships")
+    }
+    guard rels.find(b"</Relationships>") is Some(rels_insert) else {
+      fail("fixture main relationships have no closing tag")
+    }
+    guard archive.get("[Content_Types].xml") is Some(types) else {
+      fail("fixture is missing content types")
+    }
+    guard types.find(b"</Types>") is Some(types_insert) else {
+      fail("fixture content types have no closing tag")
+    }
+    write_docx_session_file(input, original)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          session.queue_span_edit(
+            "word/_rels/document.xml.rels",
+            start=rels_insert,
+            end=rels_insert,
+            @utf8.encode(
+              (
+                #|<Relationship Id="rIdSecondaryComments" Type="http://purl.oclc.org/ooxml/officeDocument/relationships/comments" Target="comments-secondary.xml"/>
+              ),
+            ),
+          )
+          session.queue_span_edit(
+            "[Content_Types].xml",
+            start=types_insert,
+            end=types_insert,
+            @utf8.encode(
+              (
+                #|<Override PartName="/word/comments-secondary.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>
+              ),
+            ),
+          )
+          session.queue_added_part(
+            "word/comments-secondary.xml",
+            @utf8.encode(
+              (
+                #|<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:comment w:id="1" w:author="Mallory"><w:p/></w:comment></w:comments>
+              ),
+            ),
+          )
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), original)
+  })
+}
+
+///|
 async test "D1 session adopts annotation plans with an exact preservation manifest" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"

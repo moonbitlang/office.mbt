@@ -28,7 +28,10 @@ const CONTENT_TYPES_PART : String = "[Content_Types].xml"
 const ROOT_RELS_PART : String = "_rels/.rels"
 
 ///|
-const OFFICE_DOCUMENT_RELATIONSHIP_SUFFIX : String = "/officeDocument"
+const TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+
+///|
+const STRICT_OFFICE_DOCUMENT_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument"
 
 ///|
 const DEFAULT_MAX_FINDINGS : Int = 1024
@@ -490,21 +493,31 @@ fn check_relationships(
     Some(bytes) =>
       match parse_xml_part(ROOT_RELS_PART, bytes, findings) {
         Some(root) => {
-          let mut main_part : String? = None
+          let main_parts : Array[String] = []
           for_each_relationship(ROOT_RELS_PART, root, findings, (
             _id,
             rel_type,
             target,
             external,
           ) => {
-            if !external &&
-              rel_type.has_suffix(OFFICE_DOCUMENT_RELATIONSHIP_SUFFIX) &&
-              main_part is None {
-              main_part = Some(resolve_target("", target))
+            if rel_type == TRANSITIONAL_OFFICE_DOCUMENT_RELATIONSHIP ||
+              rel_type == STRICT_OFFICE_DOCUMENT_RELATIONSHIP {
+              if external {
+                findings.add(
+                  "\{ROOT_RELS_PART}: officeDocument relationship is not internal",
+                )
+              } else if target == "" {
+                findings.add(
+                  "\{ROOT_RELS_PART}: officeDocument relationship has no target",
+                )
+              } else {
+                let resolved = resolve_target("", target)
+                main_parts.push(resolved)
+              }
             }
           })
-          match main_part {
-            Some(part) =>
+          match main_parts {
+            [part] =>
               match parts.get(part) {
                 Some(bytes) => check_main_part(part, bytes, findings)
                 None =>
@@ -512,8 +525,12 @@ fn check_relationships(
                     "officeDocument relationship targets a missing part: \{findings.text(part)}",
                   )
               }
-            None =>
+            [] =>
               findings.add("\{ROOT_RELS_PART}: no officeDocument relationship")
+            _ =>
+              findings.add(
+                "\{ROOT_RELS_PART}: multiple officeDocument relationships",
+              )
           }
         }
         None => ()

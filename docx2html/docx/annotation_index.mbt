@@ -608,30 +608,8 @@ fn read_docx_annotated_zip(
   // A REAL relationship match only — the reader's filename fallback
   // must not make an orphan word/comments.xml look wired (mutating it
   // without wiring would publish disconnected definitions).
-  let mut comments_part_resolved : String? = None
-  for
-    comments_rel_type in (
-      [
-        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-        "http://purl.oclc.org/ooxml/officeDocument/relationships/comments",
-      ] : ReadOnlyArray[String]) {
-    for target in parts.relationships.find_targets_by_type(comments_rel_type) {
-      let path = @opc.resolve_target(parts.base_path, target)
-      if zip.exists(path) && comments_part_resolved is None {
-        comments_part_resolved = Some(path)
-      }
-    }
-  }
-  let mut comments_extended_resolved : String? = None
-  for
-    target in parts.relationships.find_targets_by_type(
-      "http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
-    ) {
-    let path = @opc.resolve_target(parts.base_path, target)
-    if zip.exists(path) && comments_extended_resolved is None {
-      comments_extended_resolved = Some(path)
-    }
-  }
+  let comments_part_resolved = parts.comments_part_path
+  let comments_extended_resolved = parts.comments_extended_part_path
   let sidecar_types : Array[String] = []
   for
     sidecar_type in (
@@ -860,13 +838,7 @@ fn build_annotation_index(
   }
   // The comments story ranks LAST (plan-fixed order); markers are legal
   // inside comment bodies.
-  let comments_path = find_part_path(
-    zip,
-    parts.relationships,
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-    base_path=parts.base_path,
-    fallback_path="word/comments.xml",
-  )
+  let comments_path = parts.comments_part_path.unwrap_or("word/comments.xml")
   if zip.exists(comments_path) {
     stories.push(("/comments", comments_path))
   }
@@ -976,29 +948,9 @@ fn read_comment_definitions(
   warnings : AnnotationWarningCollector,
 ) -> (Array[CommentDefinition], Bool) {
   let definitions : Array[CommentDefinition] = []
-  // RELATIONSHIPS first — Transitional then Strict — and the legacy
-  // filename fallback only when neither resolves (L2 round 3: the
-  // fallback must not mask a Strict relationship behind an orphan
-  // word/comments.xml).
-  let mut path = "word/comments.xml"
-  let mut resolved_by_relationship = false
-  for
-    comments_rel_type in (
-      [
-        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
-        "http://purl.oclc.org/ooxml/officeDocument/relationships/comments",
-      ] : ReadOnlyArray[String]) {
-    if resolved_by_relationship {
-      continue
-    }
-    for target in parts.relationships.find_targets_by_type(comments_rel_type) {
-      let candidate = @opc.resolve_target(parts.base_path, target)
-      if zip.exists(candidate) && !resolved_by_relationship {
-        path = candidate
-        resolved_by_relationship = true
-      }
-    }
-  }
+  // The reader has already resolved a unique Transitional/Strict target.
+  // A filename fallback is permitted only when no relationship was declared.
+  let path = parts.comments_part_path.unwrap_or("word/comments.xml")
   if !zip.exists(path) {
     return (definitions, true)
   }
@@ -1038,12 +990,8 @@ fn read_comments_extended(
 ) -> (Map[String, CommentExRecord], Array[CommentExIdentity], Bool) {
   let records : Map[String, CommentExRecord] = Map([])
   let identities : Array[CommentExIdentity] = []
-  let path = find_part_path(
-    zip,
-    parts.relationships,
-    relationship_type="http://schemas.microsoft.com/office/2011/relationships/commentsExtended",
-    base_path=parts.base_path,
-    fallback_path="word/commentsExtended.xml",
+  let path = parts.comments_extended_part_path.unwrap_or(
+    "word/commentsExtended.xml",
   )
   if !zip.exists(path) {
     return (records, identities, true)
