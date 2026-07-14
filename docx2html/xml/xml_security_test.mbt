@@ -11,6 +11,21 @@ fn xml_security_nested_source(count : Int) -> String {
 }
 
 ///|
+fn namespace_heavy_source(binding_count : Int, child_count : Int) -> String {
+  let builder = StringBuilder()
+  builder.write_string("<root")
+  for index in 0..<binding_count {
+    builder.write_string(" xmlns:n\{index}=\"urn:n\{index}\"")
+  }
+  builder.write_string(">")
+  for _ in 0..<child_count {
+    builder.write_string("<child/>")
+  }
+  builder.write_string("</root>")
+  builder.to_string()
+}
+
+///|
 fn strict_xml_error(source : String) -> String raise {
   try @xml.read_xml_string_strict(source) catch {
     InvalidXml(message~) => message
@@ -190,7 +205,7 @@ test "limited XML parser bounds tokens, token length, and copied characters" {
 test "one limited XML budget is cumulative across package parts" {
   let budget = @xml.xml_read_budget(
     max_source_units=12,
-    max_tokens=4,
+    max_tokens=6,
     max_materialized_chars=8,
     max_token_chars=4,
   )
@@ -205,6 +220,31 @@ test "one limited XML budget is cumulative across package parts" {
   inspect(
     limited_xml_error(@utf8.encode("<c/>"), budget),
     content="XML token budget exceeded",
+  )
+}
+
+///|
+test "limited XML parser charges inherited namespace scope snapshots" {
+  let source = @utf8.encode(namespace_heavy_source(32, 16))
+  let bounded = @xml.xml_read_budget(
+    max_source_units=16 * 1024,
+    max_tokens=400,
+    max_materialized_chars=16 * 1024,
+    max_token_chars=128,
+  )
+  inspect(
+    limited_xml_error(source, bounded),
+    content="XML token budget exceeded",
+  )
+  let ample = @xml.xml_read_budget(
+    max_source_units=16 * 1024,
+    max_tokens=2_000,
+    max_materialized_chars=16 * 1024,
+    max_token_chars=128,
+  )
+  inspect(
+    @xml.read_xml_bytes_strict_limited(source, ample).name,
+    content="root",
   )
 }
 
