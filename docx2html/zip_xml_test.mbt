@@ -73,8 +73,16 @@ test "xml reads elements attributes text and namespaces" {
     content=(
       #|{
       #|  name: "w:body",
-      #|  attributes: { "w:val": "A & B" },
-      #|  children: [XmlElement({ name: "w:p", attributes: {}, children: [XmlText("Hello < XML")] })],
+      #|  attributes: <SortedMap: { "w:val": "A & B" }>,
+      #|  children: [
+      #|    XmlElement(
+      #|      {
+      #|        name: "w:p",
+      #|        attributes: <SortedMap: {}>,
+      #|        children: [XmlText("Hello < XML")],
+      #|      },
+      #|    ),
+      #|  ],
       #|}
     ),
   )
@@ -234,7 +242,9 @@ test "xml reader uses mc fallback content like Mammoth" {
   )
   debug_inspect(
     root.children,
-    content="[XmlElement({ name: \"fallback\", attributes: {}, children: [] })]",
+    content=(
+      #|[XmlElement({ name: "fallback", attributes: <SortedMap: {}>, children: [] })]
+    ),
   )
   let ignored = @docx2html.read_xml_string(
     (
