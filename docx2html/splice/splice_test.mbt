@@ -220,6 +220,19 @@ test "D1: splice XML validation charges reused namespace-derived names" {
 }
 
 ///|
+test "D1: splice XML nesting exhaustion is a resource failure" {
+  let source = "<n>".repeat(300) + "</n>".repeat(300)
+  let archive = @mbtzip.Archive::new()
+  archive.add("deep.xml", @utf8.encode(source))
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part("deep.xml", @splice.span_edit(start=0, end=0, b""))
+  expect_splice_failure(
+    () => plan.check_against(archive),
+    "splicing 'deep.xml' exceeded XML resource limits: XML nesting too deep",
+  )
+}
+
+///|
 test "D1: splice XML parser budget is shared across edited parts" {
   let archive = @mbtzip.Archive::new()
   archive.add("a.xml", b"<a/>")
@@ -411,7 +424,7 @@ test "L0: duplicate zip entries and foreign encodings fail closed" {
   plan_latin.edit_part("l.xml", @splice.span_edit(start=0, end=0, b""))
   expect_splice_failure(
     () => @splice.splice_docx(latin_bytes, plan_latin),
-    "'l.xml' declares encoding 'ISO-8859-1'",
+    "'l.xml' declares a non-UTF-8 encoding",
   )
   // Declared UTF-8 (any case) is accepted.
   let utf8_decl = @mbtzip.Archive::new()
@@ -484,7 +497,7 @@ test "L0 review round 2: 'encoding' inside a quoted value cannot fool the gate" 
   plan.edit_part("d.xml", @splice.span_edit(start=0, end=0, b""))
   expect_splice_failure(
     () => @splice.splice_docx(devious_bytes, plan),
-    "'d.xml' declares encoding 'ISO-8859-1'",
+    "'d.xml' declares a non-UTF-8 encoding",
   )
   // The canonical declaration (with standalone) still passes untouched.
   let canonical = @mbtzip.Archive::new()
@@ -582,5 +595,23 @@ test "L0 review round 4: the declaration grammar is positional" {
     @mbtzip.read(@splice.splice_docx(fine_bytes, plan_fine)).get("f.xml")
     is Some(_),
     content="true",
+  )
+}
+
+///|
+test "L0 review round 5: giant encoding labels stay bounded" {
+  // The declaration gate must scan this once without copying the
+  // attacker-controlled value or constructing it again for diagnostics.
+  let source = "<?xml version=\"1.0\" encoding=\"" +
+    "A".repeat(1_000_000) +
+    "\"?><r></r>"
+  let archive = @mbtzip.Archive::new()
+  archive.add("bounded.xml", @utf8.encode(source))
+  let archive_bytes = @mbtzip.write(archive)
+  let plan = @splice.SplicePlan::new()
+  plan.edit_part("bounded.xml", @splice.span_edit(start=0, end=0, b""))
+  expect_splice_failure(
+    () => @splice.splice_docx(archive_bytes, plan),
+    "'bounded.xml' declares a non-UTF-8 encoding",
   )
 }

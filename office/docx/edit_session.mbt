@@ -94,7 +94,8 @@ fn is_xml_resource_finding(message : String) -> Bool {
   message.contains("XML source budget exceeded") ||
   message.contains("XML token budget exceeded") ||
   message.contains("XML token length budget exceeded") ||
-  message.contains("XML materialized character budget exceeded")
+  message.contains("XML materialized character budget exceeded") ||
+  message.contains("XML nesting too deep")
 }
 
 ///|
@@ -134,6 +135,7 @@ fn mapped_plan_failure(
   } else if message.contains("UTF-16") ||
     message.contains("valid UTF-8") ||
     message.contains("declares encoding") ||
+    message.contains("non-UTF-8 encoding") ||
     message.contains("XML declaration") {
     "office.docx.unsupported_encoding"
   } else if message.contains("without pinned source bytes") {

@@ -919,7 +919,8 @@ fn is_splice_xml_resource_error(message : String) -> Bool {
   message == "XML source budget exceeded" ||
   message == "XML token budget exceeded" ||
   message == "XML token length budget exceeded" ||
-  message == "XML materialized character budget exceeded"
+  message == "XML materialized character budget exceeded" ||
+  message == "XML nesting too deep"
 }
 
 ///|
@@ -981,12 +982,11 @@ fn check_part_encoding(
   // closed — the XML belt skips declarations, so nothing downstream
   // would catch it.
   match declared_encoding(bytes) {
-    Declared(encoding) =>
-      if !is_utf8_name(encoding) {
-        raise Unsupported(
-          message="'\{name}' declares encoding '\{encoding}'; byte-span splicing supports UTF-8 parts only",
-        )
-      }
+    DeclaredUtf8 => ()
+    DeclaredOther =>
+      raise Unsupported(
+        message="'\{name}' declares a non-UTF-8 encoding; byte-span splicing supports UTF-8 parts only",
+      )
     MalformedDeclaration =>
       raise Unsupported(
         message="'\{name}' has a malformed XML declaration (unparseable encoding value); refusing to splice",
@@ -998,8 +998,57 @@ fn check_part_encoding(
 ///|
 priv enum EncodingDeclaration {
   NoDeclaration
-  Declared(String)
+  DeclaredUtf8
+  DeclaredOther
   MalformedDeclaration
+}
+
+///|
+/// Compares one bounded byte range with a fixed ASCII token without
+/// materializing attacker-controlled declaration names or values.
+fn declaration_range_equals(
+  bytes : BytesView,
+  start : Int,
+  end : Int,
+  expected : BytesView,
+) -> Bool {
+  if end - start != expected.length() {
+    return false
+  }
+  for offset in 0..<expected.length() {
+    if bytes[start + offset] != expected[offset] {
+      return false
+    }
+  }
+  true
+}
+
+///|
+/// XML encoding names are ASCII case-insensitive. Only the two UTF-8
+/// spellings accepted by the previous gate need to be recognized, so
+/// comparison stays constant-space and bounded to five bytes.
+fn declaration_value_is_utf8(bytes : BytesView, start : Int, end : Int) -> Bool {
+  let length = end - start
+  if length != 4 && length != 5 {
+    return false
+  }
+  fn folded(byte : Byte) -> Int {
+    if byte >= b'A' && byte <= b'Z' {
+      byte.to_int() + 32
+    } else {
+      byte.to_int()
+    }
+  }
+  if folded(bytes[start]) != b'u'.to_int() ||
+    folded(bytes[start + 1]) != b't'.to_int() ||
+    folded(bytes[start + 2]) != b'f'.to_int() {
+    return false
+  }
+  if length == 4 {
+    folded(bytes[start + 3]) == b'8'.to_int()
+  } else {
+    bytes[start + 3] == b'-' && folded(bytes[start + 4]) == b'8'.to_int()
+  }
 }
 
 ///|
@@ -1062,11 +1111,7 @@ fn declared_encoding(bytes : BytesView) -> EncodingDeclaration {
     if cursor == name_start {
       return MalformedDeclaration
     }
-    let name_builder = StringBuilder::new()
-    for offset in name_start..<cursor {
-      name_builder.write_char(bytes[offset].to_int().to_char().unwrap_or('?'))
-    }
-    let name = name_builder.to_string()
+    let name_end = cursor
     while cursor < limit && is_decl_space(bytes[cursor]) {
       cursor += 1
     }
@@ -1089,22 +1134,30 @@ fn declared_encoding(bytes : BytesView) -> EncodingDeclaration {
     if cursor >= limit {
       return MalformedDeclaration
     }
-    match (state, name) {
-      (0, "version") => state = 1
-      (1, "encoding") => {
-        let value_builder = StringBuilder::new()
-        for offset in value_start..<cursor {
-          value_builder.write_char(
-            bytes[offset].to_int().to_char().unwrap_or('?'),
-          )
-        }
-        found = Declared(value_builder.to_string())
-        state = 2
+    let is_version = declaration_range_equals(
+      bytes, name_start, name_end, b"version",
+    )
+    let is_encoding = declaration_range_equals(
+      bytes, name_start, name_end, b"encoding",
+    )
+    let is_standalone = declaration_range_equals(
+      bytes, name_start, name_end, b"standalone",
+    )
+    if state == 0 && is_version {
+      state = 1
+    } else if state == 1 && is_encoding {
+      found = if declaration_value_is_utf8(bytes, value_start, cursor) {
+        DeclaredUtf8
+      } else {
+        DeclaredOther
       }
-      (1, "standalone") | (2, "standalone") => state = 3
+      state = 2
+    } else if (state == 1 || state == 2) && is_standalone {
+      state = 3
+    } else {
       // Unknown names, duplicates, and out-of-order pseudo-attributes
       // are all grammar violations.
-      _ => return MalformedDeclaration
+      return MalformedDeclaration
     }
     cursor += 1
     // The next thing after a value must be whitespace or the end of
@@ -1123,22 +1176,4 @@ fn is_decl_name_byte(byte : Byte) -> Bool {
 ///|
 fn is_decl_space(byte : Byte) -> Bool {
   byte == b' ' || byte == b'\t' || byte == b'\r' || byte == b'\n'
-}
-
-///|
-fn is_utf8_name(encoding : String) -> Bool {
-  let mut lowered = ""
-  for unit in encoding {
-    let code = unit.to_int()
-    let folded = if code >= 'A'.to_int() && code <= 'Z'.to_int() {
-      code + 32
-    } else {
-      code
-    }
-    match folded.to_char() {
-      Some(ch) => lowered = lowered + ch.to_string()
-      None => return false
-    }
-  }
-  lowered == "utf-8" || lowered == "utf8"
 }
