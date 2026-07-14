@@ -40,6 +40,9 @@ bounded A4 transaction boundary:
 - sessions have no public constructor: only `transact_docx` can combine its
   private bounded archive with the opaque transaction budget, and annotation
   planners reuse that archive without inflating the ZIP again;
+- transaction identifiers, validators, and mutation callbacks receive
+  independently mutable archive forks, but entry payloads are visible only as
+  read-only views over immutable archive-owned bytes;
 - every offset-bearing plan pins the exact immutable source-part bytes, so
   plans built for a stale document fail before candidate allocation;
 - plan adoption is atomic and rejects unpinned sources, conflicting pins,

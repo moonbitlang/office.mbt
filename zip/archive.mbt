@@ -53,7 +53,7 @@ pub fn Entry::name(self : Entry) -> String {
 }
 
 ///|
-pub fn Entry::data(self : Entry) -> Bytes {
+pub fn Entry::data(self : Entry) -> BytesView {
   self.data
 }
 
@@ -90,10 +90,10 @@ pub fn Archive::new() -> Archive {
 }
 
 ///|
-/// Returns an independently mutable archive snapshot whose immutable strings
-/// and byte buffers remain shared. Replacing or adding an entry on the fork
-/// cannot change `self`; this avoids reinflating an already validated archive
-/// when a caller needs a working copy.
+/// Returns an independently mutable archive snapshot. Entry payloads remain
+/// shared behind read-only views; `add` and `replace` defensively own their
+/// inputs, so neither a fork nor its caller can mutate another archive's
+/// payload through an external `Bytes` alias.
 pub fn Archive::fork(self : Archive) -> Archive {
   {
     entries: self.entries.copy(),
@@ -171,10 +171,11 @@ fn archive_from_source(
 pub fn Archive::add(
   self : Archive,
   name : String,
-  data : Bytes,
+  data : BytesView,
   compression? : Compression = Store,
   data_descriptor? : Bool = false,
 ) -> Unit {
+  let data = data.to_owned()
   self.bounded_source = None
   self.entries.push({
     name,
@@ -194,14 +195,15 @@ pub fn Archive::add(
 pub fn Archive::replace(
   self : Archive,
   name : StringView,
-  data : Bytes,
+  data : BytesView,
 ) -> Bool {
   for index in 0..<self.entries.length() {
     let entry = self.entries[index]
     if entry.name[:] == name {
-      if entry.data == data {
+      if entry.data[:] == data {
         return true
       }
+      let data = data.to_owned()
       self.bounded_source = None
       self.entries[index] = {
         name: entry.name,
@@ -220,7 +222,9 @@ pub fn Archive::replace(
 }
 
 ///|
-pub fn Archive::get(self : Archive, name : StringView) -> Bytes? {
+/// Returns a read-only view of an entry payload. The view may share storage
+/// with archive forks, but callers cannot use it to mutate archive state.
+pub fn Archive::get(self : Archive, name : StringView) -> BytesView? {
   for entry in self.entries {
     if entry.name()[:] == name {
       return Some(entry.data())

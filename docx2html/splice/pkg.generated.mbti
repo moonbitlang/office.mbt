@@ -37,7 +37,7 @@ pub fn SplicePlan::edit_part(Self, String, SpanEdit) -> Unit
 pub fn SplicePlan::is_empty(Self) -> Bool
 pub fn SplicePlan::merge(Self, Self) -> Unit raise @core.DocxError
 pub fn SplicePlan::new() -> Self
-pub fn SplicePlan::pin_part(Self, String, Bytes) -> Unit raise @core.DocxError
+pub fn SplicePlan::pin_part(Self, String, BytesView) -> Unit raise @core.DocxError
 pub fn SplicePlan::unpinned_edited_parts(Self) -> Array[String]
 
 // Type aliases

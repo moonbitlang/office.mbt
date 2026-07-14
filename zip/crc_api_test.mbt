@@ -28,3 +28,24 @@ test "entries carry stored CRCs so validators can detect tolerated corruption" {
   assert_true(bad.crc32() != @zip.crc32(bad.data()))
   assert_eq(bad.data(), b"Hello zip world")
 }
+
+///|
+test "archives own mutation inputs and expose payloads read-only" {
+  let added_storage = [b'a', b'd', b'd']
+  let added = Bytes::from_array(added_storage)
+  let archive = @zip.Archive::new()
+  archive.add("payload.bin", added)
+  added_storage[0] = b'X'
+  assert_eq(archive.get("payload.bin"), Some(b"add"))
+
+  let replacement_storage = [b'n', b'e', b'w']
+  let replacement = Bytes::from_array(replacement_storage)
+  assert_true(archive.replace("payload.bin", replacement))
+  replacement_storage[0] = b'X'
+  assert_eq(archive.get("payload.bin"), Some(b"new"))
+
+  let fork = archive.fork()
+  assert_true(fork.replace("payload.bin", b"fork"))
+  assert_eq(archive.get("payload.bin"), Some(b"new"))
+  assert_eq(fork.get("payload.bin"), Some(b"fork"))
+}

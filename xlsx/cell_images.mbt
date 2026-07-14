@@ -106,7 +106,7 @@ fn parse_cell_images(
         }
         images.push({
           name: unescape_xml_text(name),
-          data,
+          data: data.to_owned(),
           extension,
           content_type,
           alt_text: unescape_xml_text(alt_text),

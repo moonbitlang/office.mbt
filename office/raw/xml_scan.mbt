@@ -101,7 +101,7 @@ priv struct RawXmlNode {
 
 ///|
 priv struct RawXmlDocument {
-  bytes : Bytes
+  bytes : BytesView
   nodes : Array[RawXmlNode]
 }
 
@@ -891,7 +891,10 @@ fn raw_reject_non_utf8_declaration(
 }
 
 ///|
-fn scan_raw_xml(part : String, bytes : Bytes) -> RawXmlDocument raise RawError {
+fn scan_raw_xml(
+  part : String,
+  bytes : BytesView,
+) -> RawXmlDocument raise RawError {
   if bytes.length() == 0 || bytes.length() > raw_max_edit_part_bytes {
     raise raw_error(
       "office.raw.resource_limit",

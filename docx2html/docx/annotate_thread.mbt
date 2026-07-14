@@ -553,7 +553,7 @@ fn collect_para_id_attributes(
 fn ensure_w14_on_root(
   plan : @splice.SplicePlan,
   part : String,
-  part_bytes : Bytes,
+  part_bytes : BytesView,
   root_span : NodeSpan,
 ) -> String raise DocxError {
   let attributes = scan_open_tag_attributes(part_bytes, root_span.byte_start())
@@ -651,7 +651,7 @@ fn ensure_w14_on_root(
 fn insert_open_tag_attribute(
   plan : @splice.SplicePlan,
   part : String,
-  part_bytes : Bytes,
+  part_bytes : BytesView,
   span : NodeSpan,
   attribute_text : String,
 ) -> Unit raise DocxError {
@@ -680,7 +680,7 @@ priv struct OpenTagScan {
 ///|
 /// Scans one open tag's attributes from raw UTF-8 bytes, quote-aware.
 fn scan_open_tag_attributes(
-  bytes : Bytes,
+  bytes : BytesView,
   tag_start : Int,
 ) -> OpenTagScan raise DocxError {
   let entries : Array[(String, String, Int, Int)] = []
@@ -787,7 +787,7 @@ fn canonical_para_id(value : String) -> String {
 /// canonical paraIds fail closed — mutating on ambiguous keys is the
 /// unrepairable state the contract names.
 fn scan_comment_ex_part(
-  bytes : Bytes,
+  bytes : BytesView,
 ) -> (Array[CommentExLocation], Int?, (Int, Int)) raise DocxError {
   // The root open tag: the first '<' that is not a declaration,
   // comment, or PI.
@@ -998,7 +998,7 @@ fn scan_comment_ex_part(
 }
 
 ///|
-fn tag_name_length(bytes : Bytes, name_start : Int) -> Int {
+fn tag_name_length(bytes : BytesView, name_start : Int) -> Int {
   let mut at = name_start
   while at < bytes.length() &&
         bytes[at] != b' ' &&
@@ -1249,7 +1249,7 @@ fn queue_comments_extended_edits(
 /// A self-closing element (raw byte range) rewritten to open form with
 /// `inner` inside — the range variant of self_closing_rewrite.
 fn self_closing_rewrite_range(
-  part_bytes : Bytes,
+  part_bytes : BytesView,
   start : Int,
   end : Int,
   inner : String,

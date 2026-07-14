@@ -146,7 +146,7 @@ fn parse_header_footer_images_from_vml(
     }
     let image : HeaderFooterImage = {
       position,
-      data: image_bytes,
+      data: image_bytes.to_owned(),
       extension,
       content_type,
       is_footer,

@@ -47,14 +47,14 @@ fn unzip_write_entries(
   }
   let entries : Array[ZipWriteEntry] = []
   for entry in archive.entries() {
-    entries.push({ path: entry.name(), content: entry.data() })
+    entries.push({ path: entry.name(), content: entry.data().to_owned() })
   }
   entries
 }
 
 ///|
 fn zip_archive_from_write_entries(entries : Array[ZipWriteEntry]) -> ZipArchive {
-  let map : Map[String, Bytes] = Map([])
+  let map : Map[String, BytesView] = Map([])
   for entry in entries {
     map[entry.path] = entry.content
   }

@@ -281,7 +281,7 @@ fn parse_drawing_images(
     }
     images.push({
       reference,
-      data,
+      data: data.to_owned(),
       extension,
       content_type,
       offset_x,

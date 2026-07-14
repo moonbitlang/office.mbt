@@ -30,7 +30,7 @@ struct RichValueImages {
 /// when the workbook has no rich value metadata.
 fn parse_rich_value_images(
   archive : @zip.Archive,
-  decode : (Bytes) -> String raise XlsxError,
+  decode : (BytesView) -> String raise XlsxError,
 ) -> RichValueImages? raise XlsxError {
   let metadata_bytes = archive.get("xl/metadata.xml")
   let rich_value_bytes = archive.get("xl/richData/rdrichvalue.xml")

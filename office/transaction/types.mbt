@@ -503,7 +503,8 @@ pub fn TransactionBudget::max_splice_xml_tokens(
 /// OPC gate and any generic Office DOM parse. Custom command families can
 /// enforce their own bounded package boundary while reusing the transaction's
 /// already bounded archive instead of inflating the same package again. The
-/// archive is an independently mutable shallow fork.
+/// archive is an independently mutable shallow fork whose payload accessors
+/// return read-only `BytesView` values.
 pub struct TransactionIdentifier {
   name : String
   identify : (String, BytesView, @zip.Archive) -> @office.DocumentFormat raise
@@ -554,7 +555,8 @@ pub fn validation_finding(
 ///|
 /// A named, side-effect-free validation hook run after the mandatory portable
 /// OPC gate and before any temporary file is created. The archive argument is
-/// an isolated shallow fork of the already materialized candidate.
+/// an isolated shallow fork of the already materialized candidate. Entry
+/// payloads are shared only through read-only `BytesView` values.
 pub struct TransactionValidator {
   name : String
   validate : (@office.DocumentFormat, BytesView, @zip.Archive) -> Array[

@@ -291,7 +291,7 @@ fn marker_kind(uri : String, local_name : String) -> ScanMarkerKind? {
 
 ///|
 /// Scans one story part. `part` is the ORIGINAL part bytes (UTF-8).
-fn scan_story(part : Bytes) -> StoryScan raise DocxError {
+fn scan_story(part : BytesView) -> StoryScan raise DocxError {
   // A UTF-16 BOM means byte-level markup scanning would be wrong.
   if part.length() >= 2 &&
     (
@@ -976,7 +976,7 @@ fn finish_frame(
 /// (which points at '<'). Returns (name, attributes, self_closing,
 /// index-just-past '>').
 fn scan_tag(
-  part : Bytes,
+  part : BytesView,
   start : Int,
   length : Int,
 ) -> (String, Array[(String, String)], Bool, Int) raise DocxError {
@@ -1066,7 +1066,7 @@ fn is_name_end(byte : Byte) -> Bool {
 }
 
 ///|
-fn ascii_slice(part : Bytes, start : Int, end : Int) -> String {
+fn ascii_slice(part : BytesView, start : Int, end : Int) -> String {
   let builder = StringBuilder::new()
   for at in start..<end {
     builder.write_char(part[at].to_int().to_char().unwrap_or('?'))

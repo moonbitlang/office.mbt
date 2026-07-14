@@ -13,7 +13,7 @@ fn rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
       replaced = true
       @utf8.encode(updated)
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     result.add(
       entry.name(),

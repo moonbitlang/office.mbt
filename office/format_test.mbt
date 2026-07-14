@@ -12,7 +12,7 @@ fn replace_archive_part(
       replaced = true
       replacement
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     result.add(
       entry.name(),
@@ -68,7 +68,7 @@ fn add_relationship_stress_parts(data : BytesView, count : Int) -> Bytes raise {
       content_types_updated = true
       @utf8.encode(updated)
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     result.add(
       entry.name(),
@@ -239,7 +239,7 @@ fn reencode_identification_parts_as_utf16(data : BytesView) -> Bytes raise {
       )
       @utf16.encode(text, bom=true, endianness=Big)
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     result.add(
       entry.name(),
@@ -296,7 +296,7 @@ fn prefix_xlsx_package_xml(
       }
       @utf8.encode(text)
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     result.add(
       entry.name(),
@@ -321,7 +321,7 @@ fn misalign_docx_main_part(data : BytesView) -> Bytes raise {
         ),
       )
     } else {
-      entry.data()
+      entry.data().to_owned()
     }
     result.add(
       entry.name(),
@@ -555,7 +555,7 @@ test "detect_format rejects case-equivalent duplicate OPC parts" {
   let duplicate = append_archive_part(
     data,
     "xl/Workbook.xml",
-    archive.get("xl/workbook.xml").unwrap(),
+    archive.get("xl/workbook.xml").unwrap().to_owned(),
   )
   try @office.detect_format("book.xlsx", duplicate) catch {
     err =>
