@@ -53,12 +53,26 @@ fn unzip_write_entries(
 }
 
 ///|
-fn zip_archive_from_write_entries(entries : Array[ZipWriteEntry]) -> ZipArchive {
+fn zip_archive_from_write_entries(
+  entries : Array[ZipWriteEntry],
+) -> ZipArchive raise DocxError {
   let map : Map[String, BytesView] = Map([])
+  let physical_names : Map[String, String] = Map([])
   for entry in entries {
+    let canonical_name = entry.path.to_lower()
+    match physical_names.get(canonical_name) {
+      Some(existing) if existing == entry.path =>
+        raise InvalidZip(message="duplicate ZIP entry name: \{entry.path}")
+      Some(existing) =>
+        raise InvalidZip(
+          message="duplicate ZIP entry names after case normalization: \{existing}, \{entry.path}",
+        )
+      None => ()
+    }
+    physical_names[canonical_name] = entry.path
     map[entry.path] = entry.content
   }
-  try! @zip.zip_archive(map)
+  @zip.zip_archive(map)
 }
 
 ///|
@@ -67,9 +81,10 @@ fn replace_or_append_zip_entry(
   path : String,
   content : Bytes,
 ) -> Unit {
+  let canonical_path = path.to_lower()
   for index in 0..<entries.length() {
-    if entries[index].path == path {
-      entries[index] = { path, content }
+    if entries[index].path.to_lower() == canonical_path {
+      entries[index] = { path: entries[index].path, content }
       return
     }
   }

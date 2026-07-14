@@ -183,6 +183,78 @@ test "re-embedding style map replaces original metadata" {
 }
 
 ///|
+test "embedding style map preserves physical ZIP entry spelling" {
+  let relationships_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>"
+  let content_types_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>"
+  let written = @docx2html.embed_style_map(
+    style_map_embedding_zip([
+      ("WORD/_RELS/DOCUMENT.XML.RELS", relationships_xml),
+      ("[CONTENT_TYPES].XML", content_types_xml),
+      ("MAMMOTH/STYLE-MAP", "old"),
+    ]),
+    "p => h1",
+  )
+  let archive = @mbtzip.read(written)
+  guard archive.get("WORD/_RELS/DOCUMENT.XML.RELS") is Some(relationships) else {
+    fail("expected original relationships entry spelling")
+  }
+  inspect(
+    @utf8.decode(relationships),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rMammothStyleMap\" Type=\"http://schemas.zwobble.org/mammoth/style-map\" Target=\"/mammoth/style-map\"/></Relationships>",
+  )
+  guard archive.get("[CONTENT_TYPES].XML") is Some(content_types) else {
+    fail("expected original content-types entry spelling")
+  }
+  inspect(
+    @utf8.decode(content_types),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/mammoth/style-map\" ContentType=\"text/prs.mammoth.style-map\"/></Types>",
+  )
+  guard archive.get("MAMMOTH/STYLE-MAP") is Some(style_map) else {
+    fail("expected original style-map entry spelling")
+  }
+  inspect(@utf8.decode(style_map), content="p => h1")
+  assert_true(archive.get("word/_rels/document.xml.rels") is None)
+  assert_true(archive.get("[Content_Types].xml") is None)
+  assert_true(archive.get("mammoth/style-map") is None)
+}
+
+///|
+test "embedding style map rejects duplicate ZIP identities without panicking" {
+  let relationships_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>"
+  let content_types_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>"
+  let aliased = style_map_embedding_zip([
+    ("word/_rels/document.xml.rels", relationships_xml),
+    ("[Content_Types].xml", content_types_xml),
+    ("custom.xml", "first"),
+    ("CUSTOM.XML", "second"),
+  ])
+  try @docx2html.embed_style_map(aliased, "p => h1") catch {
+    InvalidZip(message~) =>
+      assert_true(
+        message.has_prefix(
+          "duplicate ZIP entry names after case normalization:",
+        ),
+      )
+    _ => fail("expected InvalidZip")
+  } noraise {
+    _ => fail("expected case-alias failure")
+  }
+  let duplicated = style_map_embedding_zip([
+    ("word/_rels/document.xml.rels", relationships_xml),
+    ("[Content_Types].xml", content_types_xml),
+    ("custom.xml", "first"),
+    ("custom.xml", "second"),
+  ])
+  try @docx2html.embed_style_map(duplicated, "p => h1") catch {
+    InvalidZip(message~) =>
+      inspect(message, content="duplicate ZIP entry name: custom.xml")
+    _ => fail("expected InvalidZip")
+  } noraise {
+    _ => fail("expected duplicate-name failure")
+  }
+}
+
+///|
 test "embedding style map preserves existing metadata" {
   let relationships_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rExternal\" Type=\"http://example.com/relationship\" Target=\"https://example.com\" TargetMode=\"External\"/></Relationships>"
   let content_types_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n<Default Extension=\"png\" ContentType=\"image/png\"/><Ignored/><Override PartName=\"/custom.xml\" ContentType=\"application/custom+xml\"/></Types>"
