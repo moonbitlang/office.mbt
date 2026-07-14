@@ -69,12 +69,127 @@ test "L0: splicing edits exactly the spans and preserves everything else" {
       #|["a.xml", "b.bin", "c.xml", "d.xml"]
     ),
   )
-  // The empty plan is a payload-preserving repack.
-  let repacked = @mbtzip.read(
-    @splice.splice_docx(original, @splice.SplicePlan::new()),
-  )
+  // The byte API returns the exact original serialization for a true no-op.
+  let unchanged = @splice.splice_docx(original, @splice.SplicePlan::new())
+  assert_eq(unchanged, original)
+  let repacked = @mbtzip.read(unchanged)
   guard repacked.get("c.xml") is Some(c_bytes)
   inspect(c_bytes == @utf8.encode("<c/>"), content="true")
+}
+
+///|
+test "D1: source-pinned plans compose and serialize through a hard ceiling" {
+  let original = tiny_package()
+  let archive = @mbtzip.read(original)
+  guard archive.get("a.xml") is Some(a_bytes)
+  guard archive.get("c.xml") is Some(c_bytes)
+  let first = @splice.SplicePlan::new()
+  first.pin_part("a.xml", a_bytes)
+  let a_text = "<r><a/></r>"
+  guard a_text.find("</r>") is Some(a_insert)
+  first.edit_part(
+    "a.xml",
+    @splice.span_edit(start=a_insert, end=a_insert, @utf8.encode("<x/>")),
+  )
+  first.add_part("d.xml", @utf8.encode("<d/>"))
+  let second = @splice.SplicePlan::new()
+  second.pin_part("c.xml", c_bytes)
+  second.edit_part(
+    "c.xml",
+    @splice.span_edit(start=2, end=2, @utf8.encode(" marked=\"yes\"")),
+  )
+  first.merge(second)
+  assert_eq(first.is_empty(), false)
+  debug_inspect(
+    first.declared_parts(),
+    content=(
+      #|["a.xml", "c.xml", "d.xml"]
+    ),
+  )
+  debug_inspect(first.unpinned_edited_parts(), content="[]")
+  let independent = first.copy()
+  independent.add_part("copy-only.xml", @utf8.encode("<copy/>"))
+  debug_inspect(
+    first.declared_parts(),
+    content=(
+      #|["a.xml", "c.xml", "d.xml"]
+    ),
+  )
+  first.check_against(archive, require_pins=true)
+  let candidate = @splice.splice_docx_archive(
+    archive,
+    first,
+    max_output_bytes=1_000_000,
+    require_pins=true,
+  )
+  assert_eq(
+    @splice.splice_docx_archive(
+      archive,
+      first,
+      max_output_bytes=candidate.length(),
+      require_pins=true,
+    ),
+    candidate,
+  )
+  expect_splice_failure(
+    () => {
+      @splice.splice_docx_archive(
+        archive,
+        first,
+        max_output_bytes=candidate.length() - 1,
+        require_pins=true,
+      )
+    },
+    "could not repack the package",
+  )
+}
+
+///|
+test "D1: stale, unpinned, conflicting, and noncanonical plans fail closed" {
+  let archive = @mbtzip.read(tiny_package())
+  guard archive.get("a.xml") is Some(a_bytes)
+  let pinned = @splice.SplicePlan::new()
+  pinned.pin_part("a.xml", a_bytes)
+  pinned.edit_part(
+    "a.xml",
+    @splice.span_edit(start=3, end=3, @utf8.encode("<x/>")),
+  )
+  let changed = archive.fork()
+  assert_true(changed.replace("a.xml", @utf8.encode("<r><changed/></r>")))
+  expect_splice_failure(
+    () => pinned.check_against(changed, require_pins=true),
+    "the splice plan is stale: source part 'a.xml' changed",
+  )
+  let unpinned = @splice.SplicePlan::new()
+  unpinned.edit_part(
+    "a.xml",
+    @splice.span_edit(start=3, end=3, @utf8.encode("<x/>")),
+  )
+  debug_inspect(
+    unpinned.unpinned_edited_parts(),
+    content=(
+      #|["a.xml"]
+    ),
+  )
+  expect_splice_failure(
+    () => unpinned.check_against(archive, require_pins=true),
+    "the splice plan edits 'a.xml' without pinned source bytes",
+  )
+  let conflicting = @splice.SplicePlan::new()
+  conflicting.pin_part("a.xml", @utf8.encode("<different/>"))
+  expect_splice_failure(
+    () => pinned.merge(conflicting),
+    "cannot merge splice plans with different source bytes for 'a.xml'",
+  )
+  let malformed_name = @splice.SplicePlan::new()
+  malformed_name.edit_part(
+    "word/../document.xml",
+    @splice.span_edit(start=0, end=0, b""),
+  )
+  expect_splice_failure(
+    () => malformed_name.check_against(archive),
+    "splice plan part names must not contain empty, '.', or '..' components",
+  )
 }
 
 ///|

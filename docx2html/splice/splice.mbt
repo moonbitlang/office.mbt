@@ -2,13 +2,13 @@
 // (write(parse(x)) != x), so annotation surgery on EXISTING documents
 // never reserializes: it splices well-formed fragments into the original
 // part bytes at scanner-derived offsets and repacks the zip, keeping
-// every untouched byte. Guarantees (the L0 contract):
+// every untouched source record byte-for-byte. Guarantees (the L0 contract):
 //
 // - Mutated parts are byte-identical OUTSIDE the declared edit spans.
-// - Untouched entries keep UNCOMPRESSED-PAYLOAD equality plus their
-//   original entry order, names, and compression method. Raw member
-//   identity is impossible — the zip layer recompresses — and is
-//   documented as such.
+// - Untouched source entries retain their raw local/central records, order,
+//   names, compression payloads, descriptors, and archive metadata. Rewritten
+//   entries retain their source header policy while replacing only payload-
+//   dependent fields. Fresh in-memory archives have no source records to keep.
 // - Fail-closed, all-or-nothing: duplicate zip entries, missing or
 //   already-existing parts, overlapping or out-of-range spans, non-UTF-8
 //   story encodings, and edits that leave a part XML-malformed all raise
@@ -51,12 +51,144 @@ pub fn span_edit(
 pub struct SplicePlan {
   priv part_edits : Map[String, Array[SpanEdit]]
   priv new_parts : Array[(String, Bytes)]
+  // Exact immutable source payloads for offset-bearing edits. Keeping the
+  // bytes makes stale detection collision-free while sharing the archive's
+  // existing immutable buffers.
+  priv source_parts : Map[String, Bytes]
 }
 
 ///|
 /// An empty plan.
 pub fn SplicePlan::new() -> SplicePlan {
-  { part_edits: Map([]), new_parts: [] }
+  { part_edits: Map([]), new_parts: [], source_parts: Map([]) }
+}
+
+///|
+/// Returns an independently mutable plan snapshot while sharing immutable
+/// source and replacement byte buffers.
+pub fn SplicePlan::copy(self : SplicePlan) -> SplicePlan {
+  let part_edits : Map[String, Array[SpanEdit]] = Map([])
+  for name, edits in self.part_edits {
+    part_edits[name] = edits.copy()
+  }
+  let source_parts : Map[String, Bytes] = Map([])
+  for name, source in self.source_parts {
+    source_parts[name] = source
+  }
+  { part_edits, new_parts: self.new_parts.copy(), source_parts }
+}
+
+///|
+/// True when the plan changes no existing part and adds no new part.
+pub fn SplicePlan::is_empty(self : SplicePlan) -> Bool {
+  self.part_edits.is_empty() && self.new_parts.is_empty()
+}
+
+///|
+/// Pins an exact source payload for later stale-plan detection. Repeated pins
+/// are allowed only when their bytes are identical.
+pub fn SplicePlan::pin_part(
+  self : SplicePlan,
+  name : String,
+  source : Bytes,
+) -> Unit raise @core.DocxError {
+  check_plan_part_name(name)
+  match self.source_parts.get(name) {
+    Some(existing) if existing != source =>
+      raise Unsupported(
+        message="the splice plan has conflicting source bytes for '\{name}'",
+      )
+    Some(_) => ()
+    None => self.source_parts[name] = source
+  }
+}
+
+///|
+/// Returns the canonical, sorted union of edited and added package parts.
+pub fn SplicePlan::declared_parts(self : SplicePlan) -> Array[String] {
+  let names : Set[String] = Set([])
+  for name, _ in self.part_edits {
+    names.add(name)
+  }
+  for entry in self.new_parts {
+    let (name, _) = entry
+    names.add(name)
+  }
+  let result = names.to_array()
+  result.sort()
+  result
+}
+
+///|
+/// Returns edited parts that do not carry exact source bytes, sorted by name.
+/// Preservation-safe edit sessions reject such plans before adopting them.
+pub fn SplicePlan::unpinned_edited_parts(self : SplicePlan) -> Array[String] {
+  let result : Array[String] = []
+  for name, _ in self.part_edits {
+    if !self.source_parts.contains(name) {
+      result.push(name)
+    }
+  }
+  result.sort()
+  result
+}
+
+///|
+/// Merges another plan without consuming it. Source-pin disagreement,
+/// duplicate additions, and edit/add conflicts fail before `self` changes.
+pub fn SplicePlan::merge(
+  self : SplicePlan,
+  other : SplicePlan,
+) -> Unit raise @core.DocxError {
+  for name, expected in other.source_parts {
+    match self.source_parts.get(name) {
+      Some(existing) if existing != expected =>
+        raise Unsupported(
+          message="cannot merge splice plans with different source bytes for '\{name}'",
+        )
+      _ => ()
+    }
+  }
+  for entry in other.new_parts {
+    let (name, _) = entry
+    if self.part_edits.contains(name) {
+      raise Unsupported(
+        message="cannot merge a splice plan that both edits and adds '\{name}'",
+      )
+    }
+    for existing in self.new_parts {
+      let (existing_name, _) = existing
+      if existing_name == name {
+        raise Unsupported(
+          message="cannot merge splice plans that both add '\{name}'",
+        )
+      }
+    }
+  }
+  for name, _ in other.part_edits {
+    for existing in self.new_parts {
+      let (existing_name, _) = existing
+      if existing_name == name {
+        raise Unsupported(
+          message="cannot merge a splice plan that both adds and edits '\{name}'",
+        )
+      }
+    }
+  }
+  for name, expected in other.source_parts {
+    if !self.source_parts.contains(name) {
+      self.source_parts[name] = expected
+    }
+  }
+  for name, edits in other.part_edits {
+    match self.part_edits.get(name) {
+      Some(existing) => existing.append(edits)
+      None => self.part_edits[name] = edits.copy()
+    }
+  }
+  for entry in other.new_parts {
+    self.new_parts.push(entry)
+  }
 }
 
 ///|
@@ -82,6 +214,12 @@ pub fn SplicePlan::add_part(
   name : String,
   bytes : Bytes,
 ) -> Unit raise @core.DocxError {
+  check_plan_part_name(name)
+  if self.part_edits.contains(name) {
+    raise Unsupported(
+      message="the splice plan cannot both edit and add a part named '\{name}'",
+    )
+  }
   for entry in self.new_parts {
     let (existing, _) = entry
     if existing == name {
@@ -91,6 +229,18 @@ pub fn SplicePlan::add_part(
     }
   }
   self.new_parts.push((name, bytes))
+}
+
+///|
+/// Validates the complete plan against an already materialized archive without
+/// mutating the archive or serializing a candidate. With `require_pins=true`,
+/// every edited part must carry exact source bytes.
+pub fn SplicePlan::check_against(
+  self : SplicePlan,
+  archive : @mbtzip.Archive,
+  require_pins? : Bool = false,
+) -> Unit raise @core.DocxError {
+  let _ = build_spliced_archive(archive, self, require_pins)
 }
 
 ///|
@@ -107,6 +257,47 @@ pub fn splice_docx(
         message="could not read the original package: \{to_repr(err)}",
       )
   }
+  let output = build_spliced_archive(archive, plan, false)
+  // The byte API can preserve a true no-op exactly, including archive bytes
+  // the writer need not understand. Validation above still rejects ambiguous
+  // duplicate names and stale pins before this fast path.
+  if plan.is_empty() {
+    return original.to_owned()
+  }
+  @mbtzip.write(output) catch {
+    err =>
+      raise InvalidZip(message="could not repack the package: \{to_repr(err)}")
+  }
+}
+
+///|
+/// Applies a plan to an already materialized archive and serializes through a
+/// hard output ceiling. The caller's archive is never mutated; untouched
+/// source records remain available to the ZIP writer for byte preservation.
+pub fn splice_docx_archive(
+  original : @mbtzip.Archive,
+  plan : SplicePlan,
+  max_output_bytes~ : Int,
+  require_pins? : Bool = false,
+) -> Bytes raise @core.DocxError {
+  if max_output_bytes < 0 {
+    raise Unsupported(message="the splice output limit cannot be negative")
+  }
+  let output = build_spliced_archive(original, plan, require_pins)
+  @mbtzip.write_limited(output, max_output_bytes~) catch {
+    err =>
+      raise InvalidZip(message="could not repack the package: \{to_repr(err)}")
+  }
+}
+
+///|
+/// Checks and applies a plan to an isolated shallow fork. No serialization
+/// happens here, so all logical failures precede candidate allocation.
+fn build_spliced_archive(
+  archive : @mbtzip.Archive,
+  plan : SplicePlan,
+  require_pins : Bool,
+) -> @mbtzip.Archive raise @core.DocxError {
   // Duplicate entry NAMES are crafted-file territory: which one a
   // consumer sees is implementation-defined, so surgery refuses them.
   let seen : Set[String] = Set([])
@@ -119,18 +310,38 @@ pub fn splice_docx(
     seen.add(entry.name())
   }
   for name, _ in plan.part_edits {
+    check_plan_part_name(name)
     if !seen.contains(name) {
       raise Unsupported(
         message="the splice plan edits '\{name}', which the package does not contain",
       )
     }
+    if require_pins && !plan.source_parts.contains(name) {
+      raise Unsupported(
+        message="the splice plan edits '\{name}' without pinned source bytes",
+      )
+    }
   }
   for entry in plan.new_parts {
     let (name, _) = entry
+    check_plan_part_name(name)
     if seen.contains(name) {
       raise Unsupported(
         message="the splice plan adds '\{name}', which already exists in the package",
       )
+    }
+  }
+  for name, expected in plan.source_parts {
+    match archive.get(name) {
+      Some(actual) if actual != expected =>
+        raise Unsupported(
+          message="the splice plan is stale: source part '\{name}' changed after the plan was built",
+        )
+      Some(_) => ()
+      None =>
+        raise Unsupported(
+          message="the splice plan is stale: source part '\{name}' is no longer present",
+        )
     }
   }
   // Apply per-part edits up front (fail before building anything).
@@ -144,26 +355,36 @@ pub fn splice_docx(
         )
     }
   }
-  let output = @mbtzip.Archive::new()
-  for entry in archive.entries() {
-    let data = match edited.get(entry.name()) {
-      Some(bytes) => bytes
-      None => entry.data()
+  let output = archive.fork()
+  for name, bytes in edited {
+    if !output.replace(name, bytes) {
+      raise Unsupported(
+        message="the splice plan edits '\{name}', which the package does not contain",
+      )
     }
-    output.add(
-      entry.name(),
-      data,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
   }
   for entry in plan.new_parts {
     let (name, bytes) = entry
     output.add(name, bytes)
   }
-  @mbtzip.write(output) catch {
-    err =>
-      raise InvalidZip(message="could not repack the package: \{to_repr(err)}")
+  output
+}
+
+///|
+/// Plan-controlled names are stricter than arbitrary legacy ZIP names: every
+/// edit/add manifest must be a canonical relative entry path.
+fn check_plan_part_name(name : String) -> Unit raise @core.DocxError {
+  if name.length() == 0 || name.has_prefix("/") || name.contains("\\") {
+    raise Unsupported(
+      message="splice plan part names must be canonical relative ZIP entry names ('\{name}')",
+    )
+  }
+  for component in name.split("/") {
+    if component.length() == 0 || component == "." || component == ".." {
+      raise Unsupported(
+        message="splice plan part names must not contain empty, '.', or '..' components ('\{name}')",
+      )
+    }
   }
 }
 

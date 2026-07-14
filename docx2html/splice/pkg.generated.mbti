@@ -3,12 +3,15 @@ package "bobzhang/docx2html/splice"
 
 import {
   "bobzhang/docx2html/core",
+  "bobzhang/mbtexcel/zip",
 }
 
 // Values
 pub fn span_edit(start~ : Int, end~ : Int, Bytes) -> SpanEdit raise @core.DocxError
 
 pub fn splice_docx(BytesView, SplicePlan) -> Bytes raise @core.DocxError
+
+pub fn splice_docx_archive(@zip.Archive, SplicePlan, max_output_bytes~ : Int, require_pins? : Bool) -> Bytes raise @core.DocxError
 
 // Errors
 
@@ -21,8 +24,15 @@ pub struct SplicePlan {
   // private fields
 }
 pub fn SplicePlan::add_part(Self, String, Bytes) -> Unit raise @core.DocxError
+pub fn SplicePlan::check_against(Self, @zip.Archive, require_pins? : Bool) -> Unit raise @core.DocxError
+pub fn SplicePlan::copy(Self) -> Self
+pub fn SplicePlan::declared_parts(Self) -> Array[String]
 pub fn SplicePlan::edit_part(Self, String, SpanEdit) -> Unit
+pub fn SplicePlan::is_empty(Self) -> Bool
+pub fn SplicePlan::merge(Self, Self) -> Unit raise @core.DocxError
 pub fn SplicePlan::new() -> Self
+pub fn SplicePlan::pin_part(Self, String, Bytes) -> Unit raise @core.DocxError
+pub fn SplicePlan::unpinned_edited_parts(Self) -> Array[String]
 
 // Type aliases
 
