@@ -201,6 +201,44 @@ test "later sections inherit header variants they do not override" {
 }
 
 ///|
+test "section references reject unbounded and duplicate variant domains" {
+  let invalid_references = StringBuilder::new()
+  for i in 0..<4_096 {
+    invalid_references.write_string(
+      "<w:headerReference w:type=\"variant-\{i}\" r:id=\"rId1\"/>",
+    )
+  }
+  let invalid = hf_package(
+    document="<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:sectPr>" +
+      invalid_references.to_string() +
+      "</w:sectPr></w:body></w:document>",
+  )
+  try @docx2html.read_docx_package(invalid) catch {
+    InvalidXml(message~) =>
+      inspect(
+        message,
+        content="header/footer reference w:type must be 'default', 'first', or 'even'",
+      )
+    _ => fail("expected an invalid section-reference variant")
+  } noraise {
+    _ => fail("expected invalid section-reference variants to fail")
+  }
+  let duplicate = hf_package(
+    document="<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><w:body><w:sectPr><w:headerReference w:type=\"default\" r:id=\"rId1\"/><w:headerReference w:type=\"default\" r:id=\"rId2\"/></w:sectPr></w:body></w:document>",
+  )
+  try @docx2html.read_docx_package(duplicate) catch {
+    InvalidXml(message~) =>
+      inspect(
+        message,
+        content="a section must not declare the same header/footer variant more than once",
+      )
+    _ => fail("expected a duplicate section-reference variant error")
+  } noraise {
+    _ => fail("expected duplicate section-reference variants to fail")
+  }
+}
+
+///|
 test "a malformed header part warns and is skipped, not fatal" {
   let bytes = hf_package(
     document=(

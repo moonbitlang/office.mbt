@@ -69,7 +69,7 @@ priv struct SectionScan {
 fn collect_sections(
   root : XmlElement,
   collector : HeaderFooterCollector,
-) -> Array[@document.DocumentSection] {
+) -> Array[@document.DocumentSection] raise DocxError {
   let scans : Array[SectionScan] = []
   guard root.first("w:body") is Some(body) else {
     // Defensive only: the public entry point reads the body first and
@@ -195,7 +195,7 @@ fn HeaderFooterCollector::section(
   self : HeaderFooterCollector,
   sect_pr : XmlElement,
   ends_after_paragraph : Int?,
-) -> SectionScan {
+) -> SectionScan raise DocxError {
   let headers : Array[@document.SectionRef] = []
   let footers : Array[@document.SectionRef] = []
   let declared_headers : Array[String] = []
@@ -208,6 +208,21 @@ fn HeaderFooterCollector::section(
       continue
     }
     let variant = element.attributes.get("w:type").unwrap_or("default")
+    if variant != "default" && variant != "first" && variant != "even" {
+      raise InvalidXml(
+        message="header/footer reference w:type must be 'default', 'first', or 'even'",
+      )
+    }
+    let already_declared = if is_header {
+      declared_headers.search(variant) is Some(_)
+    } else {
+      declared_footers.search(variant) is Some(_)
+    }
+    if already_declared {
+      raise InvalidXml(
+        message="a section must not declare the same header/footer variant more than once",
+      )
+    }
     // Declared regardless of resolvability: an explicit override blocks
     // inheritance even when its part cannot be read.
     if is_header {
