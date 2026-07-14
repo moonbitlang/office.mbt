@@ -1159,7 +1159,7 @@ fn scan_tag(
   while at < length && !is_name_end(part[at]) {
     at += 1
   }
-  let name = ascii_slice(part, name_start, at)
+  let name = utf8_slice(part, name_start, at)
   let attributes : Array[(String, String)] = []
   let mut self_closing = false
   while at < length {
@@ -1187,7 +1187,7 @@ fn scan_tag(
           part[at] != b'>' {
       at += 1
     }
-    let attr_name = ascii_slice(part, attr_start, at)
+    let attr_name = utf8_slice(part, attr_start, at)
     while at < length && is_xml_space(part[at]) {
       at += 1
     }
@@ -1240,12 +1240,17 @@ fn is_name_end(byte : Byte) -> Bool {
 }
 
 ///|
-fn ascii_slice(part : BytesView, start : Int, end : Int) -> String {
-  let builder = StringBuilder::new()
-  for at in start..<end {
-    builder.write_char(part[at].to_int().to_char().unwrap_or('?'))
+fn utf8_slice(
+  part : BytesView,
+  start : Int,
+  end : Int,
+) -> String raise DocxError {
+  @utf8.decode(part[start:end]) catch {
+    _ =>
+      raise Unsupported(
+        message="the annotation scanner found a non-UTF-8 XML name or value",
+      )
   }
-  builder.to_string()
 }
 
 ///|

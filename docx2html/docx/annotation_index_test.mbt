@@ -651,6 +651,42 @@ test "comment resolution chooses an unshadowed namespace and preserves prefixed 
 }
 
 ///|
+test "comment mutation preserves Unicode namespace prefixes" {
+  let wml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  let w14 = "http://schemas.microsoft.com/office/word/2010/wordml"
+  let w15 = "http://schemas.microsoft.com/office/word/2012/wordml"
+  let document = "<w:document xmlns:w=\"\{wml}\"><w:body><w:p/></w:body></w:document>"
+  let comments = "<w:comments xmlns:w=\"\{wml}\" xmlns:α=\"\{w14}\"><w:comment w:id=\"0\"><w:p α:paraId=\"ABCD0001\"/></w:comment></w:comments>"
+  let extended = "<δ:commentsEx xmlns:δ=\"\{w15}\"><δ:commentEx δ:paraId=\"ABCD0001\"/></δ:commentsEx>"
+  let source = fixture_docx(
+    document,
+    comments_xml=Some(comments),
+    comments_extended_xml=Some(extended),
+  )
+  let annotated = @docx.read_docx_annotated(source) catch {
+    err => fail("Unicode-prefix source read failed: \{repr(err)}")
+  }
+  let plan = @docx.plan_comment_resolution(
+    annotated,
+    source,
+    comment_id="0",
+    done=true,
+  )
+  let spliced = @splice.splice_docx(source, plan) catch {
+    err => fail("Unicode-prefix splice failed: \{repr(err)}")
+  }
+  let result = @mbtzip.read(spliced)
+  guard result.get("word/commentsExtended.xml") is Some(bytes)
+  let actual = @utf8.decode(bytes, ignore_bom=true)
+  assert_true(actual.contains("δ:paraId=\"ABCD0001\" δ:done=\"1\""))
+  assert_false(actual.contains("Î"))
+  debug_inspect(
+    @docx.read_docx_annotated(@mbtzip.write(result)).annotations().comments()[0].done(),
+    content="Some(true)",
+  )
+}
+
+///|
 test "definitions referenced only by hidden stories report no public anchors" {
   let builder = @opc.PackageBuilder::new()
   builder.add_default(

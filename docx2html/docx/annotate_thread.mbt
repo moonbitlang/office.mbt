@@ -824,7 +824,7 @@ fn scan_open_tag_attributes(
           bytes[at] != b'>' {
       at += 1
     }
-    let name = ascii_slice(bytes, name_start, at)
+    let name = utf8_slice(bytes, name_start, at)
     while at < limit && is_space(bytes[at]) {
       at += 1
     }
@@ -847,7 +847,7 @@ fn scan_open_tag_attributes(
     if at >= limit {
       raise Unsupported(message="an unterminated attribute value; refusing")
     }
-    entries.push((name, ascii_slice(bytes, value_start, at), value_start, at))
+    entries.push((name, utf8_slice(bytes, value_start, at), value_start, at))
     at += 1
   }
 }
@@ -1051,7 +1051,7 @@ fn scan_comment_ex_part(
           None => root_declarations.get(prefix)
         }
       }
-      let tag_name = ascii_slice(
+      let tag_name = utf8_slice(
         bytes,
         cursor + 1,
         cursor + 1 + tag_name_length(bytes, cursor + 1),
