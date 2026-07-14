@@ -573,6 +573,83 @@ async test "D1 generic plans cannot introduce a second comments target" {
 }
 
 ///|
+async test "D1 generic plans cannot publish dangling markers in unreferenced stories" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let output = "\{directory}/output.docx"
+    let original = @word_fixture.write_docx_with_comments(
+      [
+        @word_fixture.paragraph([
+          @word_fixture.run([@word_fixture.text("Claim")]),
+        ]),
+      ],
+      [
+        @word_fixture.comment_spec(author="Ada", from=0, to=0, [
+          @word_fixture.paragraph([
+            @word_fixture.run([@word_fixture.text("Original")]),
+          ]),
+        ]),
+      ],
+    )
+    let archive = @zip.read(original)
+    guard archive.get("word/_rels/document.xml.rels") is Some(rels_bytes) else {
+      fail("fixture is missing main relationships")
+    }
+    let rels = @utf8.decode(rels_bytes, ignore_bom=true).replace(
+      old="</Relationships>",
+      new=(
+        #|<Relationship Id="rIdHiddenHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="hidden-header.xml"/></Relationships>
+      ),
+    )
+    assert_true(
+      archive.replace("word/_rels/document.xml.rels", @utf8.encode(rels)),
+    )
+    guard archive.get("[Content_Types].xml") is Some(types_bytes) else {
+      fail("fixture is missing content types")
+    }
+    let types = @utf8.decode(types_bytes, ignore_bom=true).replace(
+      old="</Types>",
+      new=(
+        #|<Override PartName="/word/hidden-header.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>
+      ),
+    )
+    assert_true(archive.replace("[Content_Types].xml", @utf8.encode(types)))
+    archive.add(
+      "word/hidden-header.xml",
+      @utf8.encode(
+        (
+          #|<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:commentReference w:id="1"/></w:r></w:p></w:hdr>
+        ),
+      ),
+    )
+    guard archive.get("word/document.xml") is Some(document) else {
+      fail("fixture is missing its main document")
+    }
+    guard document.find(b"Claim") is Some(text_at) else {
+      fail("fixture is missing body text")
+    }
+    let source = @zip.write(archive)
+    write_docx_session_file(input, source)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(
+        @transaction.transaction_options(input, output_path=output),
+        session => {
+          session.queue_span_edit(
+            "word/document.xml",
+            start=text_at,
+            end=text_at + 5,
+            b"Proof",
+          )
+        },
+      )
+    })
+    assert_eq(code, "office.transaction.validation_failed")
+    assert_false(@afs.exists(output))
+    assert_eq(@afs.read_file(input).binary(), source)
+  })
+}
+
+///|
 async test "D1 generic plans cannot publish duplicate global paraIds" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"
