@@ -170,12 +170,18 @@ fn write_content_types_with_embedded_style_map(
   zip : ZipArchive,
 ) -> String raise DocxError {
   let path = "[Content_Types].xml"
+  let style_map_part_name = match zip.resolve_path("mammoth/style-map") {
+    Some(physical_path) => "/" + physical_path
+    None => "/mammoth/style-map"
+  }
   let root = read_xml_string(
     read_required_zip_text(zip, path),
     namespace_map=office_namespace_map(),
   )
   let entries = read_content_type_xml_entries(root)
-  write_content_types_xml(upsert_embedded_style_map_content_type(entries))
+  write_content_types_xml(
+    upsert_embedded_style_map_content_type(entries, style_map_part_name),
+  )
 }
 
 ///|
@@ -216,30 +222,31 @@ fn read_content_type_xml_entries(
 ///|
 fn upsert_embedded_style_map_content_type(
   entries : Array[ContentTypeXmlEntry],
+  style_map_part_name : String,
 ) -> Array[ContentTypeXmlEntry] {
   let updated : Array[ContentTypeXmlEntry] = []
   let mut found = false
   for entry in entries {
     match entry {
-      OverrideContentType(part_name="/mammoth/style-map", ..) => {
-        updated.push(embedded_style_map_content_type())
-        found = true
-      }
+      OverrideContentType(part_name~, content_type~) =>
+        if part_name.to_lower() == "/mammoth/style-map" {
+          updated.push(embedded_style_map_content_type(style_map_part_name))
+          found = true
+        } else {
+          updated.push(OverrideContentType(part_name~, content_type~))
+        }
       _ => updated.push(entry)
     }
   }
   if !found {
-    updated.push(embedded_style_map_content_type())
+    updated.push(embedded_style_map_content_type(style_map_part_name))
   }
   updated
 }
 
 ///|
-fn embedded_style_map_content_type() -> ContentTypeXmlEntry {
-  OverrideContentType(
-    part_name="/mammoth/style-map",
-    content_type="text/prs.mammoth.style-map",
-  )
+fn embedded_style_map_content_type(part_name : String) -> ContentTypeXmlEntry {
+  OverrideContentType(part_name~, content_type="text/prs.mammoth.style-map")
 }
 
 ///|
