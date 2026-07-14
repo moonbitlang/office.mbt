@@ -1003,6 +1003,44 @@ fn read_comments_extended(
 }
 
 ///|
+/// Appends four already ordered anchor streams in total sequence order. Four
+/// is fixed by the v6 construction cases (dangling end, dangling start,
+/// unpaired reference, paired range), so the constant-width merge is O(n).
+fn append_ordered_story_anchors(
+  output : Array[AnnotationAnchor],
+  dangling_ends : Array[(Int, AnnotationAnchor)],
+  dangling_starts : Array[(Int, AnnotationAnchor)],
+  point_references : Array[(Int, AnnotationAnchor)],
+  paired_ranges : Array[(Int, AnnotationAnchor)],
+) -> Unit {
+  let streams : ReadOnlyArray[Array[(Int, AnnotationAnchor)]] = [
+    dangling_ends, dangling_starts, point_references, paired_ranges,
+  ]
+  let positions : FixedArray[Int] = FixedArray::make(4, 0)
+  while true {
+    let mut selected = -1
+    let mut selected_seq = 0
+    for stream_index in 0..<4 {
+      let position = positions[stream_index]
+      let stream = streams[stream_index]
+      if position < stream.length() {
+        let candidate_seq = stream[position].0
+        if selected < 0 || candidate_seq < selected_seq {
+          selected = stream_index
+          selected_seq = candidate_seq
+        }
+      }
+    }
+    if selected < 0 {
+      break
+    }
+    let position = positions[selected]
+    output.push(streams[selected][position].1)
+    positions[selected] = position + 1
+  }
+}
+
+///|
 /// The v6 anchor-construction algorithm: per id, per story, FIFO-match
 /// range markers; attach references to the first containing pair; point
 /// anchors otherwise; order anchors (story rank, position).
@@ -1125,7 +1163,10 @@ fn build_comments(
           let scan = bucket.scan
           // FIFO pairing within this story. An index-based queue avoids the
           // quadratic front-removal cost of adversarial start/end runs.
-          let story_anchors : Array[(Int, AnnotationAnchor)] = []
+          let dangling_end_anchors : Array[(Int, AnnotationAnchor)] = []
+          let dangling_start_anchors : Array[(Int, AnnotationAnchor)] = []
+          let point_reference_anchors : Array[(Int, AnnotationAnchor)] = []
+          let paired_range_anchors : Array[(Int, AnnotationAnchor)] = []
           let open_starts : Array[ScannedMarker] = []
           let references : Array[ScannedMarker] = []
           let pairs : Array[(ScannedMarker, ScannedMarker)] = []
@@ -1149,7 +1190,7 @@ fn build_comments(
                   let end_path = verify_position(
                     ctx, raw_end, warnings, degraded,
                   )
-                  story_anchors.push(
+                  dangling_end_anchors.push(
                     (
                       marker.seq(),
                       {
@@ -1178,7 +1219,7 @@ fn build_comments(
               story, dangling, scan,
             )
             let start_path = verify_position(ctx, raw_start, warnings, degraded)
-            story_anchors.push(
+            dangling_start_anchors.push(
               (
                 dangling.seq(),
                 {
@@ -1229,7 +1270,7 @@ fn build_comments(
             if pair_index >= 0 {
               pair_references[pair_index].push(reference_path)
             } else {
-              story_anchors.push(
+              point_reference_anchors.push(
                 (
                   marker.seq(),
                   {
@@ -1253,7 +1294,7 @@ fn build_comments(
             let (raw_end, end_boundary) = marker_position(story, end, scan)
             let start_path = verify_position(ctx, raw_start, warnings, degraded)
             let end_path = verify_position(ctx, raw_end, warnings, degraded)
-            story_anchors.push(
+            paired_range_anchors.push(
               (
                 start.seq(),
                 {
@@ -1273,12 +1314,12 @@ fn build_comments(
               high: end.seq(),
             })
           }
-          // Total anchor order within the story: start-else-end-else-first-
-          // reference position (v6); stories are already in rank order.
-          story_anchors.sort_by_key(pair => pair.0)
-          for pair in story_anchors {
-            anchors.push(pair.1)
-          }
+          // Each case stream is already monotonic; merge them at fixed width
+          // instead of sorting attacker-sized marker arrays.
+          append_ordered_story_anchors(
+            anchors, dangling_end_anchors, dangling_start_anchors, point_reference_anchors,
+            paired_range_anchors,
+          )
         }
       None => ()
     }
