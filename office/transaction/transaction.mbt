@@ -49,6 +49,13 @@ let transaction_package_retention_multiplier : Int64 = 3L
 let transaction_archive_entry_reserve : Int64 = 512L
 
 ///|
+/// Format identification, portable OPC validation, format-specific parsing,
+/// and preservation views can each materialize a normalized UTF-16 entry-name
+/// projection while the bounded archive remains live. Exact-name map keys share
+/// the archive strings and therefore need no additional character reserve.
+let transaction_archive_name_projection_count : Int64 = 4L
+
+///|
 priv struct ResolvedPolicy {
   source_target : String
   source_directory : PublicationDirectory
@@ -597,6 +604,40 @@ fn transaction_archive_preflight_overhead(bytes : BytesView) -> Int64 {
 }
 
 ///|
+/// Charges every normalized entry-name projection before any identifier or
+/// validator can build it. The per-name ceiling also prevents one legal ZIP
+/// header from consuming the complete transaction working reserve.
+fn transaction_archive_name_reserve(
+  archive : @zip.Archive,
+  phase : String,
+  invalid_code : String,
+) -> Int64 raise TransactionError {
+  let mut reserve = 0L
+  for entry in archive.entries() {
+    match scan_text(entry.name(), transaction_max_part_length) {
+      Valid =>
+        reserve = reserve +
+          entry.name().length().to_int64() *
+          2L *
+          transaction_archive_name_projection_count
+      TooLong =>
+        raise resource_limit_error(
+          phase,
+          "entry_name_chars",
+          transaction_max_part_length,
+          transaction_max_part_length + 1,
+        )
+      Invalid =>
+        raise transaction_error(
+          invalid_code,
+          "ZIP entry name is not valid Unicode during " + phase,
+        )
+    }
+  }
+  reserve
+}
+
+///|
 fn read_transaction_archive(
   bytes : BytesView,
   phase : String,
@@ -642,7 +683,12 @@ fn read_transaction_archive(
         "unreadable bounded ZIP package during " + phase,
       )
   }
-  let archive_cost = package_bytes + archive.retained_size_estimate()
+  let name_reserve = transaction_archive_name_reserve(
+    archive, phase, invalid_code,
+  )
+  let archive_cost = package_bytes +
+    archive.retained_size_estimate() +
+    name_reserve
   let actual = retained + archive_cost
   if actual > live_limit {
     raise live_materialization_error(phase, live_limit, actual)
