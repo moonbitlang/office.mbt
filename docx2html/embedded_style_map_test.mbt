@@ -274,6 +274,55 @@ test "embedding style map preserves existing metadata" {
 }
 
 ///|
+test "embedding style map normalizes a dot-aliased content-type override" {
+  let relationships_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>"
+  let content_types_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/mammoth/./style-map\" ContentType=\"application/old\"/></Types>"
+  let written = @docx2html.embed_style_map(
+    style_map_embedding_docx_from_parts(relationships_xml, content_types_xml),
+    "p => h1",
+  )
+  let zip = @docx2html.open_zip(written)
+  inspect(
+    zip.read_text("[Content_Types].xml").unwrap(),
+    content="<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/mammoth/style-map\" ContentType=\"text/prs.mammoth.style-map\"/></Types>",
+  )
+}
+
+///|
+test "embedding style map rejects ambiguous normalized metadata" {
+  let empty_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"/>"
+  let duplicate_overrides = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/mammoth/style-map\" ContentType=\"application/one\"/><Override PartName=\"/MAMMOTH/./STYLE-MAP\" ContentType=\"application/two\"/></Types>"
+  let override_input = style_map_embedding_docx_from_parts(
+    empty_relationships, duplicate_overrides,
+  )
+  try @docx2html.embed_style_map(override_input, "p => h1") catch {
+    InvalidXml(message~) =>
+      inspect(
+        message,
+        content="duplicate embedded style-map content-type override after OPC path normalization",
+      )
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected duplicate override failure")
+  }
+  let duplicate_relationships = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rMammothStyleMap\" Type=\"http://example.com/one\" Target=\"one\"/><Relationship Id=\"rMammothStyleMap\" Type=\"http://example.com/two\" Target=\"two\"/></Relationships>"
+  let empty_content_types = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>"
+  let relationship_input = style_map_embedding_docx_from_parts(
+    duplicate_relationships, empty_content_types,
+  )
+  try @docx2html.embed_style_map(relationship_input, "p => h1") catch {
+    InvalidXml(message~) =>
+      inspect(
+        message,
+        content="duplicate embedded style-map relationship Id: rMammothStyleMap",
+      )
+    _ => fail("expected InvalidXml")
+  } noraise {
+    _ => fail("expected duplicate relationship failure")
+  }
+}
+
+///|
 test "embedding style map reports invalid archives and missing metadata" {
   try @docx2html.embed_style_map(b"not a zip", "p => h1") catch {
     InvalidZip(message~) =>
