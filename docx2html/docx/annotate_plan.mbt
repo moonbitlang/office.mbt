@@ -373,8 +373,7 @@ fn check_annotation_identity_state(
       None => ()
     }
   }
-  for story_entry in index.scans {
-    let (_, scan) = story_entry
+  fn check_story_markers(scan : StoryScan) -> Unit raise DocxError {
     for marker in scan.markers {
       match marker.kind {
         CommentStart | CommentEnd | CommentRef => ()
@@ -403,6 +402,13 @@ fn check_annotation_identity_state(
         Some(_) => ()
       }
     }
+  }
+  for story_entry in index.scans {
+    let (_, scan) = story_entry
+    check_story_markers(scan)
+  }
+  for scan in index.identity_only_scans {
+    check_story_markers(scan)
   }
   let comment_ex_para_ids : Set[String] = Set([])
   for identity in index.comment_ex_identities {

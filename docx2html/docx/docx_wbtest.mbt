@@ -201,16 +201,13 @@ fn paragraph_numbering_from_xml(
 
 ///|
 fn footnotes_from_xml(xml : String) -> NotesReadResult raise DocxError {
-  read_note_part(
+  read_note_part_at_path(
     zip_with_text("word/footnotes.xml", xml),
     note_type="footnote",
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
-    fallback_path="word/footnotes.xml",
+    path="word/footnotes.xml",
     styles=Map([]),
     numbering=NumberingMap::empty(),
     content_types={ defaults: Map([]), overrides: Map([]) },
-    document_relationships={ relationships: [] },
-    base_path="word",
   )
 }
 
@@ -510,6 +507,73 @@ test "docx relationships reader finds targets by id and type" {
     relationships.find_by_id("rId3").unwrap().target_mode.unwrap(),
     content="External",
   )
+}
+
+///|
+test "annotation story resolver normalizes, deduplicates, and fails closed" {
+  let zip = zip_with_text(
+    "word/header.xml", "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"/>",
+  )
+  let aliases = Relationships::{
+    relationships: [
+      {
+        id: "rHeader1",
+        relationship_type: TRANSITIONAL_HEADER_RELATIONSHIP,
+        target: "header.xml",
+        target_mode: None,
+      },
+      {
+        id: "rHeader2",
+        relationship_type: STRICT_HEADER_RELATIONSHIP,
+        target: "sub/../header.xml",
+        target_mode: Some("Internal"),
+      },
+    ],
+  }
+  let resolved = resolve_reachable_annotation_story_parts(zip, aliases, "word")
+  assert_eq(resolved.length(), 1)
+  inspect(resolved[0].kind, content="header")
+  inspect(resolved[0].path, content="word/header.xml")
+  let external = Relationships::{
+    relationships: [
+      {
+        id: "rExternal",
+        relationship_type: STRICT_HEADER_RELATIONSHIP,
+        target: "https://example.invalid/header.xml",
+        target_mode: Some("External"),
+      },
+    ],
+  }
+  try resolve_reachable_annotation_story_parts(zip, external, "word") catch {
+    Unsupported(message~) =>
+      inspect(message, content="the header relationship must be internal")
+    _ => fail("expected an external annotation story to fail")
+  } noraise {
+    _ => fail("expected an external annotation story to fail")
+  }
+  let cross_kind = Relationships::{
+    relationships: [
+      {
+        id: "rHeader",
+        relationship_type: TRANSITIONAL_HEADER_RELATIONSHIP,
+        target: "header.xml",
+        target_mode: None,
+      },
+      {
+        id: "rFooter",
+        relationship_type: STRICT_FOOTER_RELATIONSHIP,
+        target: "sub/../header.xml",
+        target_mode: None,
+      },
+    ],
+  }
+  try resolve_reachable_annotation_story_parts(zip, cross_kind, "word") catch {
+    Unsupported(message~) =>
+      assert_true(message.contains("targeted as both header and footer"))
+    _ => fail("expected cross-kind story aliasing to fail")
+  } noraise {
+    _ => fail("expected cross-kind story aliasing to fail")
+  }
 }
 
 ///|
@@ -1706,16 +1770,13 @@ test "docx note and comment reader warnings are preserved" {
   let content_types = ContentTypes::{ defaults: Map([]), overrides: Map([]) }
   let document_relationships = Relationships::{ relationships: [] }
   let base_path = "word"
-  let footnotes = read_note_part(
+  let footnotes = read_note_part_at_path(
     zip_with_text("word/footnotes.xml", footnotes_xml),
     note_type="footnote",
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
-    fallback_path="word/footnotes.xml",
+    path="word/footnotes.xml",
     styles~,
     numbering~,
     content_types~,
-    document_relationships~,
-    base_path~,
   )
   inspect(footnotes.notes.length(), content="1")
   debug_inspect(
@@ -1753,12 +1814,9 @@ test "docx note and comment reader warnings are preserved" {
 }
 
 ///|
-test "docx related parts fall back when relationship target is missing" {
+test "docx declared note relationship with a missing target fails closed" {
   let footnotes_xml =
     #|<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:id="1"><w:p /></w:footnote></w:footnotes>
-  let styles : Map[String, StyleInfo] = Map([])
-  let numbering = NumberingMap::empty()
-  let content_types = ContentTypes::{ defaults: Map([]), overrides: Map([]) }
   let document_relationships = Relationships::{
     relationships: [
       {
@@ -1769,18 +1827,24 @@ test "docx related parts fall back when relationship target is missing" {
       },
     ],
   }
-  let footnotes = read_note_part(
-    zip_with_text("word/footnotes.xml", footnotes_xml),
-    note_type="footnote",
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
-    fallback_path="word/footnotes.xml",
-    styles~,
-    numbering~,
-    content_types~,
-    document_relationships~,
-    base_path="word",
-  )
-  inspect(footnotes.notes.length(), content="1")
+  try
+    resolve_unique_internal_part(
+      zip_with_text("word/footnotes.xml", footnotes_xml),
+      document_relationships,
+      [TRANSITIONAL_FOOTNOTES_RELATIONSHIP, STRICT_FOOTNOTES_RELATIONSHIP],
+      "word",
+      "footnotes",
+    )
+  catch {
+    MissingPart(message~) =>
+      inspect(
+        message,
+        content="the footnotes relationship targets a missing part",
+      )
+    _ => fail("expected a missing declared note target to fail")
+  } noraise {
+    _ => fail("expected a missing declared note target to fail")
+  }
 }
 
 ///|

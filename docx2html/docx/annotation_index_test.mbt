@@ -76,6 +76,43 @@ fn fixture_docx(
 }
 
 ///|
+fn unreferenced_story_fixture(
+  relationship_type : String,
+  target : String,
+  part_path : String,
+  content_type : String,
+  story_xml : String,
+) -> Bytes raise {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override("/" + part_path, content_type)
+  builder.add_relationship(
+    "rIdMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rIdHidden",
+    relationship_type,
+    target,
+    source="word/document.xml",
+  )
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p/></w:body></w:document>",
+    ),
+  )
+  builder.add_part(part_path, @utf8.encode(story_xml))
+  builder.build()
+}
+
+///|
 fn comment_summary(comment : @docx.CommentInfo) -> String {
   let anchors : Array[String] = []
   for anchor in comment.anchors() {
@@ -172,6 +209,162 @@ test "archive-backed annotated reads share one cumulative XML budget" {
   } noraise {
     _ => fail("expected tiny XML budget to reject the archive")
   }
+}
+
+///|
+test "unreferenced Transitional headers participate in identity validation only" {
+  let bytes = unreferenced_story_fixture(
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+    "stories/../header-hidden.xml", "word/header-hidden.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:commentReference w:id=\"41\"/></w:r></w:p></w:hdr>",
+  )
+  let annotated = @docx.read_docx_annotated(bytes)
+  // No section references this relationship, so it must not gain an invented
+  // /header[n] path or a public marker-only comment.
+  assert_eq(annotated.result().headers.length(), 0)
+  assert_eq(annotated.annotations().comments().length(), 0)
+  try @docx.validate_annotation_identity_state(annotated) catch {
+    Unsupported(message~) =>
+      assert_true(
+        message.contains("marker for comment id 41 without a definition"),
+      )
+    _ => fail("expected the hidden header marker to fail identity validation")
+  } noraise {
+    _ => fail("expected the hidden header marker to fail identity validation")
+  }
+}
+
+///|
+test "unreferenced Strict footers participate in identity validation only" {
+  let bytes = unreferenced_story_fixture(
+    "http://purl.oclc.org/ooxml/officeDocument/relationships/footer", "../stories/footer-hidden.xml",
+    "stories/footer-hidden.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+    "<w:ftr xmlns:w=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:p><w:r><w:commentReference w:id=\"42\"/></w:r></w:p></w:ftr>",
+  )
+  let annotated = @docx.read_docx_annotated(bytes)
+  assert_eq(annotated.result().footers.length(), 0)
+  assert_eq(annotated.annotations().comments().length(), 0)
+  try @docx.validate_annotation_identity_state(annotated) catch {
+    Unsupported(message~) =>
+      assert_true(
+        message.contains("marker for comment id 42 without a definition"),
+      )
+    _ => fail("expected the hidden footer marker to fail identity validation")
+  } noraise {
+    _ => fail("expected the hidden footer marker to fail identity validation")
+  }
+}
+
+///|
+test "identity-only stories consume the cumulative XML source budget" {
+  let large_header = StringBuilder()
+  large_header.write_string(
+    "<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">",
+  )
+  for _ in 0..<5_000 {
+    large_header.write_string("<w:p/>")
+  }
+  large_header.write_string("</w:hdr>")
+  let bytes = unreferenced_story_fixture(
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+    "header-hidden.xml",
+    "word/header-hidden.xml",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    large_header.to_string(),
+  )
+  let archive = try! @mbtzip.read(bytes)
+  let budget = @xml.xml_read_budget(
+    max_source_units=16 * 1024,
+    max_tokens=1_000_000,
+    max_materialized_chars=1_000_000,
+    max_token_chars=1_000_000,
+  )
+  try @docx.read_docx_annotated_archive_limited(archive, budget) catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML source budget exceeded")
+    _ => fail("expected the hidden header to consume the shared XML budget")
+  } noraise {
+    _ => fail("expected the hidden header to consume the shared XML budget")
+  }
+}
+
+///|
+test "relocated Strict footnotes and endnotes are parsed and publicly scanned" {
+  let builder = @opc.PackageBuilder::new()
+  builder.add_default(
+    "rels", "application/vnd.openxmlformats-package.relationships+xml",
+  )
+  builder.add_default("xml", "application/xml")
+  builder.add_override(
+    "/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+  )
+  builder.add_override(
+    "/word/comments.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+  )
+  builder.add_override(
+    "/notes/footnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
+  )
+  builder.add_override(
+    "/notes/endnotes.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
+  )
+  builder.add_relationship(
+    "rIdMain", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+    "word/document.xml",
+  )
+  builder.add_relationship(
+    "rIdComments",
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+    "comments.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rIdFootnotes",
+    "http://purl.oclc.org/ooxml/officeDocument/relationships/footnotes",
+    "../notes/footnotes.xml",
+    source="word/document.xml",
+  )
+  builder.add_relationship(
+    "rIdEndnotes",
+    "http://purl.oclc.org/ooxml/officeDocument/relationships/endnotes",
+    "../notes/endnotes.xml",
+    source="word/document.xml",
+  )
+  builder.add_part(
+    "word/document.xml",
+    @utf8.encode(
+      "<w:document xmlns:w=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:body><w:p/></w:body></w:document>",
+    ),
+  )
+  builder.add_part(
+    "word/comments.xml",
+    @utf8.encode(
+      "<w:comments xmlns:w=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:comment w:id=\"7\"><w:p/></w:comment><w:comment w:id=\"8\"><w:p/></w:comment></w:comments>",
+    ),
+  )
+  builder.add_part(
+    "notes/footnotes.xml",
+    @utf8.encode(
+      "<w:footnotes xmlns:w=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:footnote w:id=\"2\"><w:p><w:r><w:commentReference w:id=\"7\"/></w:r></w:p></w:footnote></w:footnotes>",
+    ),
+  )
+  builder.add_part(
+    "notes/endnotes.xml",
+    @utf8.encode(
+      "<w:endnotes xmlns:w=\"http://purl.oclc.org/ooxml/wordprocessingml/main\"><w:endnote w:id=\"3\"><w:p><w:r><w:commentReference w:id=\"8\"/></w:r></w:p></w:endnote></w:endnotes>",
+    ),
+  )
+  let annotated = @docx.read_docx_annotated(builder.build())
+  assert_eq(annotated.footnote_bodies().length(), 1)
+  assert_eq(annotated.endnote_bodies().length(), 1)
+  let comments = annotated.annotations().comments()
+  assert_eq(comments.length(), 2)
+  assert_eq(comments[0].anchors()[0].references(), [
+    "/footnotes/note[1]/p[1]/r[1]",
+  ])
+  assert_eq(comments[1].anchors()[0].references(), [
+    "/endnotes/note[1]/p[1]/r[1]",
+  ])
+  @docx.validate_annotation_identity_state(annotated)
 }
 
 ///|

@@ -27,6 +27,40 @@ const STRICT_COMMENTS_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/office
 const COMMENTS_EXTENDED_RELATIONSHIP : String = "http://schemas.microsoft.com/office/2011/relationships/commentsExtended"
 
 ///|
+const TRANSITIONAL_HEADER_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"
+
+///|
+const TRANSITIONAL_FOOTER_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer"
+
+///|
+const TRANSITIONAL_FOOTNOTES_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes"
+
+///|
+const TRANSITIONAL_ENDNOTES_RELATIONSHIP : String = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes"
+
+///|
+const STRICT_HEADER_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/header"
+
+///|
+const STRICT_FOOTER_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/footer"
+
+///|
+const STRICT_FOOTNOTES_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/footnotes"
+
+///|
+const STRICT_ENDNOTES_RELATIONSHIP : String = "http://purl.oclc.org/ooxml/officeDocument/relationships/endnotes"
+
+///|
+/// One normalized main-relationship target whose XML can carry annotation
+/// markers or paragraph identities. `kind` is one of header/footer/footnotes/
+/// endnotes. Relationship order is preserved; normalized duplicate targets are
+/// emitted once.
+priv struct ReachableAnnotationStoryPart {
+  kind : String
+  path : String
+}
+
+///|
 priv struct StyleInfo {
   style_id : String
   style_type : String
@@ -338,6 +372,8 @@ priv struct DocumentParts {
   // and are never exposed as wired annotation parts.
   comments_part_path : String?
   comments_extended_part_path : String?
+  footnotes_part_path : String?
+  endnotes_part_path : String?
   external_files : ExternalFileAccess
   read_images : Bool
 }
@@ -371,6 +407,20 @@ fn DocumentParts::build(
     base_path,
     "commentsExtended",
   )
+  let footnotes_part_path = resolve_unique_internal_part(
+    zip,
+    relationships,
+    [TRANSITIONAL_FOOTNOTES_RELATIONSHIP, STRICT_FOOTNOTES_RELATIONSHIP],
+    base_path,
+    "footnotes",
+  )
+  let endnotes_part_path = resolve_unique_internal_part(
+    zip,
+    relationships,
+    [TRANSITIONAL_ENDNOTES_RELATIONSHIP, STRICT_ENDNOTES_RELATIONSHIP],
+    base_path,
+    "endnotes",
+  )
   let styles = read_styles(
     zip,
     find_part_path(
@@ -394,8 +444,8 @@ fn DocumentParts::build(
     styles,
     numbering,
     content_types,
-    relationships,
-    base_path,
+    footnotes_path=footnotes_part_path.unwrap_or("word/footnotes.xml"),
+    endnotes_path=endnotes_part_path.unwrap_or("word/endnotes.xml"),
     external_files~,
     read_images~,
     xml_budget?,
@@ -427,6 +477,8 @@ fn DocumentParts::build(
     comments_result,
     comments_part_path,
     comments_extended_part_path,
+    footnotes_part_path,
+    endnotes_part_path,
     external_files,
     read_images,
   }
@@ -571,6 +623,28 @@ fn read_relationships(
 }
 
 ///|
+/// Strict DTD-free relationship read for security-sensitive identity walks.
+/// The caller-owned budget is cumulative across the relationship graph and all
+/// subsequently visited story parts.
+fn read_relationships_strict_limited(
+  zip : ZipArchive,
+  path : String,
+  xml_budget : @xml.XmlReadBudget,
+) -> Relationships raise DocxError {
+  match zip.read_bytes(path) {
+    Some(bytes) =>
+      read_relationships_xml(
+        @xml.read_xml_bytes_strict_limited(
+          bytes,
+          xml_budget,
+          namespace_map=office_namespace_map(),
+        ),
+      )
+    None => { relationships: [] }
+  }
+}
+
+///|
 fn read_relationships_xml(root : XmlElement) -> Relationships {
   let relationships : Array[Relationship] = []
   for rel in root.elements_by_tag_name("relationships:Relationship") {
@@ -656,6 +730,68 @@ fn resolve_unique_internal_part(
         message="the document declares multiple distinct \{label} relationship targets",
       )
   }
+}
+
+///|
+fn annotation_story_relationship_kind(relationship_type : String) -> String? {
+  match relationship_type {
+    TRANSITIONAL_HEADER_RELATIONSHIP | STRICT_HEADER_RELATIONSHIP =>
+      Some("header")
+    TRANSITIONAL_FOOTER_RELATIONSHIP | STRICT_FOOTER_RELATIONSHIP =>
+      Some("footer")
+    TRANSITIONAL_FOOTNOTES_RELATIONSHIP | STRICT_FOOTNOTES_RELATIONSHIP =>
+      Some("footnotes")
+    TRANSITIONAL_ENDNOTES_RELATIONSHIP | STRICT_ENDNOTES_RELATIONSHIP =>
+      Some("endnotes")
+    _ => None
+  }
+}
+
+///|
+/// Resolves every annotation-bearing main-part relationship authoritatively.
+/// External, empty, missing, or cross-kind aliasing targets fail closed; same-
+/// kind aliases that normalize to one OPC path are deduplicated.
+fn resolve_reachable_annotation_story_parts(
+  zip : ZipArchive,
+  relationships : Relationships,
+  base_path : String,
+) -> Array[ReachableAnnotationStoryPart] raise DocxError {
+  let resolved_parts : Array[ReachableAnnotationStoryPart] = []
+  let kind_by_path : Map[String, String] = Map([])
+  for relationship in relationships.relationships {
+    guard annotation_story_relationship_kind(relationship.relationship_type)
+      is Some(kind) else {
+      continue
+    }
+    match relationship.target_mode {
+      None | Some("Internal") => ()
+      _ =>
+        raise Unsupported(message="the \{kind} relationship must be internal")
+    }
+    if relationship.target == "" {
+      raise Unsupported(message="the \{kind} relationship has no target")
+    }
+    let path = @opc.resolve_target(base_path, relationship.target)
+    if path == "" {
+      raise Unsupported(message="the \{kind} relationship target is empty")
+    }
+    match kind_by_path.get(path) {
+      Some(existing_kind) if existing_kind != kind =>
+        raise Unsupported(
+          message="annotation story part '\{path}' is targeted as both \{existing_kind} and \{kind}",
+        )
+      Some(_) => continue
+      None => ()
+    }
+    if !zip.exists(path) {
+      raise MissingPart(
+        message="the \{kind} relationship targets missing part '\{path}'",
+      )
+    }
+    kind_by_path[path] = kind
+    resolved_parts.push({ kind, path })
+  }
+  resolved_parts
 }
 
 ///|
@@ -963,40 +1099,34 @@ fn read_notes_for_document(
   styles : Map[String, StyleInfo],
   numbering : NumberingMap,
   content_types : ContentTypes,
-  document_relationships : Relationships,
-  base_path : String,
+  footnotes_path~ : String,
+  endnotes_path~ : String,
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
 ) -> NotesReadResult raise DocxError {
   let notes : Array[Note] = []
   let messages : Array[Message] = []
-  let footnotes = read_note_part(
+  let footnotes = read_note_part_at_path(
     zip,
     note_type="footnote",
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
-    fallback_path="word/footnotes.xml",
+    path=footnotes_path,
     styles~,
     numbering~,
     content_types~,
-    document_relationships~,
-    base_path~,
     external_files~,
     read_images~,
     xml_budget?,
   )
   notes.append(footnotes.notes)
   messages.append(footnotes.messages)
-  let endnotes = read_note_part(
+  let endnotes = read_note_part_at_path(
     zip,
     note_type="endnote",
-    relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
-    fallback_path="word/endnotes.xml",
+    path=endnotes_path,
     styles~,
     numbering~,
     content_types~,
-    document_relationships~,
-    base_path~,
     external_files~,
     read_images~,
     xml_budget?,
@@ -1007,27 +1137,17 @@ fn read_notes_for_document(
 }
 
 ///|
-fn read_note_part(
+fn read_note_part_at_path(
   zip : ZipArchive,
   note_type~ : String,
-  relationship_type~ : String,
-  fallback_path~ : String,
+  path~ : String,
   styles~ : Map[String, StyleInfo],
   numbering~ : NumberingMap,
   content_types~ : ContentTypes,
-  document_relationships~ : Relationships,
-  base_path~ : String,
   external_files? : ExternalFileAccess = default_external_file_access(),
   read_images? : Bool = true,
   xml_budget? : @xml.XmlReadBudget,
 ) -> NotesReadResult raise DocxError {
-  let path = find_part_path(
-    zip,
-    document_relationships,
-    relationship_type~,
-    base_path~,
-    fallback_path~,
-  )
   if !zip.exists(path) {
     return { notes: [], messages: [] }
   }

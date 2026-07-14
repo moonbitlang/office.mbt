@@ -299,7 +299,11 @@ pub struct AnnotationIndex {
   priv endnotes : Array[NoteInfo]
   priv warnings : Array[String]
   priv spans : Array[AnchorSpan]
+  // Publicly addressable stories only (body, rendered header/footer stories,
+  // notes, comments). Relationship-reachable but unrendered stories are kept
+  // separately so mutation identity gates see them without inventing paths.
   priv scans : Array[(String, StoryScan)]
+  priv identity_only_scans : Array[StoryScan]
   // Raw records retained for structural identity validation. Security gates
   // inspect these values directly instead of inferring state from warnings.
   priv comment_ex_identities : Array[CommentExIdentity]
@@ -769,7 +773,7 @@ fn build_annotation_index(
   parts : DocumentParts,
   collector : HeaderFooterCollector,
   ctx : VerifyContext,
-) -> AnnotationIndex {
+) -> AnnotationIndex raise DocxError {
   let warnings = AnnotationWarningCollector::new(
     MAX_ANNOTATION_WARNINGS,
     MAX_ANNOTATION_WARNING_CHARS,
@@ -786,14 +790,13 @@ fn build_annotation_index(
     let (index, path) = pair
     stories.push(("/footer[\{index + 1}]", path))
   }
-  for note_kind in ["footnotes", "endnotes"] {
-    let path = find_part_path(
-      zip,
-      parts.relationships,
-      relationship_type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/\{note_kind}",
-      base_path=parts.base_path,
-      fallback_path="word/\{note_kind}.xml",
-    )
+  for
+    note_part in [
+      ("footnotes", parts.footnotes_part_path),
+      ("endnotes", parts.endnotes_part_path),
+    ] {
+    let (note_kind, authoritative_path) = note_part
+    let path = authoritative_path.unwrap_or("word/\{note_kind}.xml")
     if zip.exists(path) {
       stories.push(("/\{note_kind}", path))
     }
@@ -805,9 +808,17 @@ fn build_annotation_index(
     stories.push(("/comments", comments_path))
   }
   let scans : Array[(String, StoryScan)] = []
+  let identity_only_scans : Array[StoryScan] = []
+  let scanned_paths : Set[String] = Set([])
   let mut identity_source_complete = true
   for story in stories {
     let (story_key, path) = story
+    if scanned_paths.contains(path) {
+      raise Unsupported(
+        message="annotation story part '\{path}' has multiple public story identities",
+      )
+    }
+    scanned_paths.add(path)
     match zip.read_bytes(path) {
       Some(bytes) => {
         let scan = scan_story(bytes) catch {
@@ -831,6 +842,49 @@ fn build_annotation_index(
       }
       None => identity_source_complete = false
     }
+  }
+  // Section collection deliberately exposes only rendered header/footer
+  // stories. Identity validation must additionally scan every normalized
+  // relationship target, including unreferenced header/footer parts. These
+  // scans receive no public path and therefore never create visible anchors.
+  for
+    reachable in resolve_reachable_annotation_story_parts(
+      zip,
+      parts.relationships,
+      parts.base_path,
+    ) {
+    if scanned_paths.contains(reachable.path) {
+      continue
+    }
+    scanned_paths.add(reachable.path)
+    guard zip.read_bytes(reachable.path) is Some(bytes) else {
+      // The resolver has already checked this; retain an explicit fail-closed
+      // guard if the archive abstraction ever becomes mutable during a read.
+      raise MissingPart(
+        message="the \{reachable.kind} relationship targets missing part '\{reachable.path}'",
+      )
+    }
+    validate_identity_only_story_xml(bytes, parts.xml_budget)
+    let scan = scan_story(bytes) catch {
+      Unsupported(message~) => {
+        identity_source_complete = false
+        warnings.add(
+          "annotation index: could not scan relationship-reachable \{reachable.kind} part '\{warnings.text(reachable.path)}' (\{warnings.text(message)})",
+        )
+        continue
+      }
+      _ => {
+        identity_source_complete = false
+        warnings.add(
+          "annotation index: could not scan relationship-reachable \{reachable.kind} part '\{warnings.text(reachable.path)}'",
+        )
+        continue
+      }
+    }
+    for warning in scan.warnings() {
+      warnings.add(warning)
+    }
+    identity_only_scans.push(scan)
   }
   let (definitions, definitions_complete) = read_comment_definitions(
     zip, parts, warnings,
@@ -884,9 +938,39 @@ fn build_annotation_index(
     warnings: warnings.finish(),
     spans,
     scans,
+    identity_only_scans,
     comment_ex_identities,
     identity_source_complete,
   }
+}
+
+///|
+/// Strictly parses an identity-only story before the raw span scanner touches
+/// it. Transaction reads share their caller-owned cumulative budget; unbounded
+/// library reads receive an input-linear local budget rather than an unlimited
+/// parser path.
+fn validate_identity_only_story_xml(
+  bytes : BytesView,
+  shared_budget : @xml.XmlReadBudget?,
+) -> Unit raise DocxError {
+  let budget = match shared_budget {
+    Some(value) => value
+    None => {
+      let allowance = if bytes.length() > 0 { bytes.length() } else { 1 }
+      @xml.xml_read_budget(
+        max_source_units=bytes.length(),
+        max_tokens=allowance,
+        max_materialized_chars=allowance,
+        max_token_chars=allowance,
+      )
+    }
+  }
+  @xml.read_xml_bytes_strict_limited(
+    bytes,
+    budget,
+    namespace_map=office_namespace_map(),
+  )
+  |> ignore
 }
 
 ///|
@@ -895,11 +979,22 @@ fn build_annotation_index(
 fn inverted_part_paths(
   index_by_path : Map[String, Int],
 ) -> Array[(Int, String)] {
-  let pairs : Array[(Int, String)] = []
+  // Collector indices are assigned densely in first-reference order. Place
+  // paths directly into those slots so even attacker-sized section lists do
+  // not require an O(n log n) sort.
+  let slots : Array[String?] = Array::make(index_by_path.length(), None)
   for path, index in index_by_path {
-    pairs.push((index, path))
+    if index >= 0 && index < slots.length() {
+      slots[index] = Some(path)
+    }
   }
-  pairs.sort_by_key(pair => pair.0)
+  let pairs : Array[(Int, String)] = []
+  for index, path in slots {
+    match path {
+      Some(value) => pairs.push((index, value))
+      None => ()
+    }
+  }
   pairs
 }
 

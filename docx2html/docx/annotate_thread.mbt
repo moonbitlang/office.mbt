@@ -447,17 +447,17 @@ fn collect_para_ids(
   } else {
     "\{main_dir}/_rels/\{main_base}.rels"
   }
-  match zip.read_bytes(rels_part) {
-    Some(rels_bytes) => {
-      let root = @xml.read_xml_bytes_strict_limited(rels_bytes, xml_budget) catch {
-        error =>
-          raise InvalidXml(
-            message="could not parse the main relationships while collecting paraIds: \{repr(error)}",
-          )
-      }
-      collect_story_targets(root, main_dir, parts, seen_parts)
+  let relationships = read_relationships_strict_limited(
+    zip, rels_part, xml_budget,
+  )
+  for
+    reachable in resolve_reachable_annotation_story_parts(
+      zip, relationships, main_dir,
+    ) {
+    if !seen_parts.contains(reachable.path) {
+      seen_parts.add(reachable.path)
+      parts.push(reachable.path)
     }
-    None => ()
   }
   for part in parts {
     guard zip.read_bytes(part) is Some(bytes) else {
@@ -500,49 +500,6 @@ pub fn validate_global_para_id_state_archive_limited(
     xml_budget,
   )
   |> ignore
-}
-
-///|
-fn collect_story_targets(
-  element : XmlElement,
-  main_dir : String,
-  parts : Array[String],
-  seen_parts : Set[String],
-) -> Unit {
-  // Transitional AND Strict relationship types (review round 1), with
-  // OPC-normalized target resolution ('../' forms included).
-  let story_types = [
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer",
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
-    "http://purl.oclc.org/ooxml/officeDocument/relationships/header", "http://purl.oclc.org/ooxml/officeDocument/relationships/footer",
-    "http://purl.oclc.org/ooxml/officeDocument/relationships/footnotes", "http://purl.oclc.org/ooxml/officeDocument/relationships/endnotes",
-  ]
-  match
-    (
-      element.attributes.get("Type"),
-      element.attributes.get("Target"),
-      element.attributes.get("TargetMode"),
-    ) {
-    (Some(relationship_type), Some(target), mode) =>
-      if !(mode is Some("External")) &&
-        story_types.search(relationship_type) is Some(_) {
-        let resolved = @opc.resolve_target(main_dir, target)
-        if !seen_parts.contains(resolved) {
-          seen_parts.add(resolved)
-          parts.push(resolved)
-        }
-      }
-    _ => ()
-  }
-  for child in element.children {
-    match child {
-      XmlElement(inner) =>
-        collect_story_targets(inner, main_dir, parts, seen_parts)
-      _ => ()
-    }
-  }
 }
 
 ///|
