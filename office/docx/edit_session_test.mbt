@@ -65,6 +65,37 @@ async test "D1 session no-op reuses the exact transaction source" {
 }
 
 ///|
+async test "D1 session rejects sibling-dense XML before indexing" {
+  with_docx_session_test_dir(directory => {
+    let input = "\{directory}/input.docx"
+    let archive = @zip.read(@word_fixture.new_blank_docx())
+    let document = StringBuilder()
+    document.write_string(
+      "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>",
+    )
+    for _ in 0..<70_000 {
+      document.write_string("<w:p/>")
+    }
+    document.write_string("</w:body></w:document>")
+    assert_true(
+      archive.replace("word/document.xml", @utf8.encode(document.to_string())),
+    )
+    let source = @zip.write(archive)
+    assert_true(source.length() < 1024 * 1024)
+    write_docx_session_file(input, source)
+    let callback_called = Ref(false)
+    let code = docx_session_error_code(() => {
+      @docx.transact_docx(@transaction.transaction_options(input), _ => {
+        callback_called.val = true
+      })
+    })
+    assert_eq(code, "office.docx.resource_limit")
+    assert_false(callback_called.val)
+    assert_eq(@afs.read_file(input).binary(), source)
+  })
+}
+
+///|
 async test "D1 session adopts annotation plans with an exact preservation manifest" {
   with_docx_session_test_dir(directory => {
     let input = "\{directory}/input.docx"

@@ -6,6 +6,7 @@ import {
   "bobzhang/docx2html/docx" @word,
   "bobzhang/docx2html/opc",
   "bobzhang/docx2html/splice",
+  "bobzhang/docx2html/xml",
   "moonbitlang/core/json",
 }
 

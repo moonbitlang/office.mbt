@@ -124,6 +124,38 @@ test "archive-backed annotated reads match byte-backed reads" {
 }
 
 ///|
+test "archive-backed annotated reads share one cumulative XML budget" {
+  let document =
+    #|<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    #|<w:body><w:p><w:r><w:t>bounded archive</w:t></w:r></w:p></w:body>
+    #|</w:document>
+  let bytes = fixture_docx(document)
+  let archive = try! @mbtzip.read(bytes)
+  let budget = @xml.xml_read_budget(
+    max_source_units=64 * 1024,
+    max_tokens=4096,
+    max_materialized_chars=32 * 1024,
+    max_token_chars=8 * 1024,
+  )
+  let annotated = @docx.read_docx_annotated_archive_limited(archive, budget)
+  assert_eq(annotated.main_story_part(), "word/document.xml")
+  assert_true(annotated.body_paragraph_span("p[1]") is Some(_))
+  let tiny = @xml.xml_read_budget(
+    max_source_units=64 * 1024,
+    max_tokens=1,
+    max_materialized_chars=64 * 1024,
+    max_token_chars=64 * 1024,
+  )
+  try @docx.read_docx_annotated_archive_limited(archive, tiny) catch {
+    InvalidXml(message~) =>
+      inspect(message, content="XML token budget exceeded")
+    _ => fail("expected bounded XML read failure")
+  } noraise {
+    _ => fail("expected tiny XML budget to reject the archive")
+  }
+}
+
+///|
 test "index: ranges, points, threading, and coverage on a conformance-shaped fixture" {
   // Comment 0: a multi-paragraph range (start in p2, end in p3) with its
   // reference in p3; two body paragraphs, distinct first/last paraIds
