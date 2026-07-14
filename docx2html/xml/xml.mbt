@@ -9,7 +9,7 @@ pub(all) enum XmlNode {
 /// XML element with a name, attributes, and child nodes.
 pub(all) struct XmlElement {
   name : String
-  attributes : Map[String, String]
+  attributes : @sorted_map.SortedMap[String, String]
   children : Array[XmlNode]
 } derive(Debug, Eq)
 
@@ -20,7 +20,7 @@ pub fn xml_element(
   attributes? : Map[String, String] = Map([]),
   children? : Array[XmlNode] = [],
 ) -> XmlElement {
-  { name, attributes, children }
+  { name, attributes: SortedMap(attributes.to_array()), children }
 }
 
 ///|
@@ -365,11 +365,11 @@ fn read_xml_string_with_mode(
     budget,
     source_encoding,
     seen_xml_declaration: false,
-    namespace_map,
+    namespace_map: build_direct_namespace_lookup(namespace_map),
     namespaces: if strict {
-      Map([("xml", XML_NAMESPACE_URI)])
+      SortedMap([("xml", XML_NAMESPACE_URI)])
     } else {
-      Map([])
+      SortedMap([])
     },
   }
   parser.skip_misc(document_start=true)
@@ -387,7 +387,10 @@ pub fn write_xml_string(
   root : XmlElement,
   namespaces? : Map[String, String] = Map([]),
 ) -> String {
-  let writer = XmlWriter::{ namespaces, uri_to_prefix: invert_map(namespaces) }
+  let writer = XmlWriter::{
+    namespaces,
+    namespace_lookup: build_namespace_lookup(namespaces),
+  }
   let builder = StringBuilder()
   builder.write_string(
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>",
@@ -406,7 +409,10 @@ pub fn write_xml_fragment(
   element : XmlElement,
   namespaces? : Map[String, String] = Map([]),
 ) -> String {
-  let writer = XmlWriter::{ namespaces, uri_to_prefix: invert_map(namespaces) }
+  let writer = XmlWriter::{
+    namespaces,
+    namespace_lookup: build_namespace_lookup(namespaces),
+  }
   let builder = StringBuilder()
   writer.write_element(builder, element, is_root=true)
   builder.to_string()
@@ -429,18 +435,18 @@ pub fn write_xml_fragment_limited(
   } else {
     work_scaled.to_int()
   }
-  let (uri_to_prefix, remaining_name_work) = invert_map_limited(
+  let (namespace_lookup, remaining_name_work) = build_namespace_lookup_limited(
     namespaces, name_work_limit,
   )
   let sizer = XmlWriteSizer::{
     namespaces,
-    uri_to_prefix,
+    namespace_lookup,
     remaining_bytes: limit,
     remaining_name_work,
   }
   sizer.size_element(element, is_root=true, depth=0)
   let output_bytes = limit - sizer.remaining_bytes
-  let writer = XmlWriter::{ namespaces, uri_to_prefix }
+  let writer = XmlWriter::{ namespaces, namespace_lookup }
   let builder = StringBuilder(size_hint=output_bytes)
   writer.write_element(builder, element, is_root=true)
   builder.to_string()
@@ -449,7 +455,7 @@ pub fn write_xml_fragment_limited(
 ///|
 priv struct XmlWriter {
   namespaces : Map[String, String]
-  uri_to_prefix : Map[String, String]
+  namespace_lookup : NamespaceLookup
 }
 
 ///|
@@ -458,12 +464,12 @@ priv struct XmlWriter {
 let xml_write_max_depth : Int = 256
 
 ///|
-/// Namespace mapping may inspect a Clark name several times (delimiter scan,
-/// owned lookup key, and hashing). Keep that work a fixed multiple of the
-/// caller's output ceiling so a reused giant URI cannot turn a small permitted
-/// fragment into quadratic serialization work. The multiplier comfortably
-/// covers the standard OOXML namespace-to-tag ratio while rejecting hostile
-/// amplification.
+/// Namespace mapping may inspect a Clark name several times (delimiter scan and
+/// comparison-based lookup in both sizing and writing). Keep that work a fixed
+/// multiple of the caller's output ceiling so a reused giant URI cannot turn a
+/// small permitted fragment into excessive serialization work. The multiplier
+/// comfortably covers the standard OOXML namespace-to-tag ratio while rejecting
+/// hostile amplification.
 let xml_write_name_work_scale : Int = 64
 
 ///|
@@ -473,9 +479,23 @@ let xml_write_name_work_scale : Int = 64
 let xml_write_sort_work_scale : Int = 8
 
 ///|
+/// Binary lookup is performed once by the sizing pass and once by the writer.
+/// This multiplier also covers loop/index overhead around every comparison.
+let xml_write_lookup_work_scale : Int = 4
+
+///|
+/// A collision-independent URI-to-prefix index. Entries are sorted by URI and
+/// contain at most one prefix for each URI, preserving the historical rule that
+/// the last namespace binding wins when aliases share a URI.
+priv struct NamespaceLookup {
+  entries : Array[(String, String)]
+  max_uri_chars : Int
+}
+
+///|
 priv struct XmlWriteSizer {
   namespaces : Map[String, String]
-  uri_to_prefix : Map[String, String]
+  namespace_lookup : NamespaceLookup
   mut remaining_bytes : Int
   mut remaining_name_work : Int
 }
@@ -536,14 +556,41 @@ fn checked_xml_sort_name_work(
 }
 
 ///|
+fn checked_xml_lookup_name_work(
+  item_count : Int,
+  max_name_chars : Int,
+  remaining : Int,
+) -> Int raise DocxError {
+  if item_count <= 0 {
+    return 0
+  }
+  let mut levels = 0
+  let mut value = item_count
+  while value > 0 {
+    levels += 1
+    value /= 2
+  }
+  let mut work = xml_write_lookup_work_scale
+  if levels > remaining / work {
+    raise InvalidXml(message="XML serialization name work limit exceeded")
+  }
+  work *= levels
+  if max_name_chars >= remaining / work {
+    raise InvalidXml(message="XML serialization name work limit exceeded")
+  }
+  work *= max_name_chars + 1
+  work
+}
+
+///|
 fn XmlWriteSizer::charge_attribute_sort_work(
   self : XmlWriteSizer,
-  attributes : Map[String, String],
+  attributes : @sorted_map.SortedMap[String, String],
 ) -> Unit raise DocxError {
   let mut item_count = 0
   let mut max_name_chars = 0
   for name, _ in attributes {
-    // Charge the array materialization and one unit of map traversal before
+    // Charge the array materialization and one unit of container traversal before
     // accumulating cardinality for the later sort.
     self.charge_name_work(1)
     item_count += 1
@@ -636,12 +683,16 @@ fn XmlWriteSizer::charge_mapped_name(
   }
   let uri = name[1:close]
   let local_name = name[close + 1:]
-  // The owned key and its map hash each traverse the full URI. Charging both
-  // here proves the identical unmetered writer pass below stays within the
-  // same fixed-linear work envelope.
-  self.charge_name_work(uri.length())
-  self.charge_name_work(uri.length())
-  match self.uri_to_prefix.get(uri.to_owned()) {
+  // The comparison-based lookup has a deterministic logarithmic ceiling. The
+  // charge covers this lookup and the identical unmetered writer pass below.
+  self.charge_name_work(
+    checked_xml_lookup_name_work(
+      self.namespace_lookup.entries.length(),
+      self.namespace_lookup.max_uri_chars.max(uri.length()),
+      self.remaining_name_work,
+    ),
+  )
+  match self.namespace_lookup.lookup(uri) {
     Some("") => self.charge_raw(local_name)
     Some(prefix) => {
       self.charge_raw(prefix)
@@ -721,34 +772,99 @@ fn XmlWriteSizer::size_element(
 }
 
 ///|
-fn invert_map(map : Map[String, String]) -> Map[String, String] {
-  let inverse : Map[String, String] = Map([])
-  for item in map {
-    let (key, value) = item
-    inverse[value] = key
+fn NamespaceLookup::lookup(self : NamespaceLookup, uri : StringView) -> String? {
+  let mut low = 0
+  let mut high = self.entries.length()
+  while low < high {
+    let middle = low + (high - low) / 2
+    let (candidate, prefix) = self.entries[middle]
+    let ordering = uri.compare(candidate)
+    if ordering == 0 {
+      return Some(prefix)
+    } else if ordering < 0 {
+      high = middle
+    } else {
+      low = middle + 1
+    }
   }
-  inverse
+  None
 }
 
 ///|
-/// Builds the namespace writer's URI index without doing work ahead of the
-/// limited writer's contract. Every binding has a positive structural cost;
-/// URI hashing/equality, prefix handling, array materialization, and a
-/// conservative worst-case sort bound are charged before serialization. This
-/// covers both many aliases of a large URI and large maps of empty URIs.
-fn invert_map_limited(
+fn build_namespace_lookup(map : Map[String, String]) -> NamespaceLookup {
+  let indexed : Array[(String, String, Int)] = []
+  let mut ordinal = 0
+  let mut max_uri_chars = 0
+  for prefix, uri in map {
+    indexed.push((uri, prefix, ordinal))
+    ordinal += 1
+    max_uri_chars = max_uri_chars.max(uri.length())
+  }
+  finish_namespace_lookup(indexed, max_uri_chars)
+}
+
+///|
+/// Parser namespace maps are already URI-to-prefix mappings, unlike writer
+/// namespace declarations, which are prefix-to-URI and require inversion.
+fn build_direct_namespace_lookup(map : Map[String, String]) -> NamespaceLookup {
+  let indexed : Array[(String, String, Int)] = []
+  let mut ordinal = 0
+  let mut max_uri_chars = 0
+  for uri, prefix in map {
+    indexed.push((uri, prefix, ordinal))
+    ordinal += 1
+    max_uri_chars = max_uri_chars.max(uri.length())
+  }
+  finish_namespace_lookup(indexed, max_uri_chars)
+}
+
+///|
+fn finish_namespace_lookup(
+  indexed : Array[(String, String, Int)],
+  max_uri_chars : Int,
+) -> NamespaceLookup {
+  indexed.sort_by(fn(a, b) {
+    let (uri_a, _, ordinal_a) = a
+    let (uri_b, _, ordinal_b) = b
+    let ordering = uri_a.compare(uri_b)
+    if ordering != 0 {
+      ordering
+    } else {
+      ordinal_a.compare(ordinal_b)
+    }
+  })
+  let entries : Array[(String, String)] = []
+  let mut previous_uri : String? = None
+  for item in indexed {
+    let (uri, prefix, _) = item
+    match previous_uri {
+      Some(previous) if previous == uri =>
+        entries[entries.length() - 1] = (uri, prefix)
+      _ => entries.push((uri, prefix))
+    }
+    previous_uri = Some(uri)
+  }
+  { entries, max_uri_chars }
+}
+
+///|
+/// Builds the namespace writer's collision-independent URI index without doing
+/// work ahead of the limited writer's contract. Every binding has a positive
+/// structural cost; prefix/URI handling, array materialization, and both URI
+/// and output-prefix sorts are charged before serialization.
+fn build_namespace_lookup_limited(
   map : Map[String, String],
   name_work_limit : Int,
-) -> (Map[String, String], Int) raise DocxError {
-  let inverse : Map[String, String] = Map([])
+) -> (NamespaceLookup, Int) raise DocxError {
+  let indexed : Array[(String, String, Int)] = []
   let mut remaining = if name_work_limit > 0 { name_work_limit } else { 0 }
   let mut item_count = 0
   let mut max_prefix_chars = 0
-  for item in map {
-    let (prefix, uri) = item
+  let mut max_uri_chars = 0
+  for prefix, uri in map {
     // Every binding has positive cost, including an empty prefix and URI.
-    // Prefix materialization, inverse-map hashing/equality, and the later
-    // namespace array copy are all charged before touching the inverse map.
+    // Prefix/URI materialization and the later namespace array copies are all
+    // charged before sorting or indexing the bindings.
     if remaining < 4 {
       raise InvalidXml(message="XML serialization name work limit exceeded")
     }
@@ -767,12 +883,14 @@ fn invert_map_limited(
     remaining -= uri.length()
     item_count += 1
     max_prefix_chars = max_prefix_chars.max(prefix.length())
-    inverse[uri] = prefix
+    max_uri_chars = max_uri_chars.max(uri.length())
+    indexed.push((uri, prefix, item_count - 1))
   }
+  remaining -= checked_xml_sort_name_work(item_count, max_uri_chars, remaining)
   remaining -= checked_xml_sort_name_work(
     item_count, max_prefix_chars, remaining,
   )
-  (inverse, remaining)
+  (finish_namespace_lookup(indexed, max_uri_chars), remaining)
 }
 
 ///|
@@ -820,9 +938,9 @@ fn XmlWriter::map_element_name(self : XmlWriter, name : String) -> String {
   if name.has_prefix("{") {
     match name.find("}") {
       Some(close) => {
-        let uri = name[1:close].to_owned()
+        let uri = name[1:close]
         let local_name = name[close + 1:].to_owned()
-        match self.uri_to_prefix.get(uri) {
+        match self.namespace_lookup.lookup(uri) {
           Some(prefix) =>
             if prefix == "" {
               local_name
@@ -878,7 +996,7 @@ fn write_serialized_xml_namespace_attribute(
 ///|
 fn write_serialized_xml_attributes(
   builder : StringBuilder,
-  attributes : Map[String, String],
+  attributes : @sorted_map.SortedMap[String, String],
 ) -> Unit {
   let items = attributes.to_array()
   items.sort_by(fn(a, b) {
@@ -1057,8 +1175,8 @@ priv struct XmlParser {
   budget : XmlReadBudget?
   source_encoding : XmlSourceEncoding?
   mut seen_xml_declaration : Bool
-  namespace_map : Map[String, String]
-  namespaces : Map[String, String]
+  namespace_map : NamespaceLookup
+  namespaces : @sorted_map.SortedMap[String, String]
 }
 
 ///|
@@ -1227,7 +1345,7 @@ fn XmlParser::parse_element_inner_strict(
     )
   }
   let raw_attributes : Array[(String, String)] = []
-  let raw_attribute_names : Map[String, Bool] = Map([])
+  let raw_attribute_names : @sorted_map.SortedMap[String, Bool] = SortedMap([])
   let namespace_changes : Array[NamespaceBindingChange] = []
   while true {
     let separated = self.skip_whitespace_and_report()
@@ -1368,8 +1486,8 @@ fn XmlParser::build_element(
   raw_attributes : Array[(String, String)],
   children : Array[XmlNode],
 ) -> XmlElement raise DocxError {
-  let attributes : Map[String, String] = Map([])
-  let expanded_attributes : Map[String, Bool] = Map([])
+  let attributes : @sorted_map.SortedMap[String, String] = SortedMap([])
+  let expanded_attributes : @sorted_map.SortedMap[String, Bool] = SortedMap([])
   for item in raw_attributes {
     let (name, value) = item
     if self.strict {
@@ -1526,7 +1644,7 @@ fn XmlParser::map_uri_name(
   // before hashing so a single long declaration referenced by many short
   // names cannot hide repeated O(uri.length) work behind tiny source tokens.
   self.charge_derived_name(uri.length())
-  match self.namespace_map.get(uri) {
+  match self.namespace_map.lookup(uri) {
     Some(prefix) =>
       if prefix == "" {
         self.materialize_braced_name(uri, local_name)
@@ -1631,7 +1749,7 @@ fn XmlSourceEncoding::matches_declaration(
 
 ///|
 fn XmlParser::parse_xml_declaration(self : XmlParser) -> Unit raise DocxError {
-  let names : Map[String, Bool] = Map([])
+  let names : @sorted_map.SortedMap[String, Bool] = SortedMap([])
   let mut position = 0
   let mut has_version = false
   while true {

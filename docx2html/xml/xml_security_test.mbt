@@ -475,6 +475,66 @@ test "limited XML writer bounds inverse namespace indexing before sizing" {
 }
 
 ///|
+fn xml_security_hash_clustered_names(
+  count : Int,
+  bucket_mask : Int,
+) -> Array[String] {
+  let names : Array[String] = []
+  let mut candidate = 0
+  while names.length() < count {
+    let name = "n\{candidate}"
+    if (name.hash() & bucket_mask) == 0 {
+      names.push(name)
+    }
+    candidate += 1
+  }
+  names
+}
+
+///|
+test "strict XML attributes are independent of deterministic hash clustering" {
+  let names = xml_security_hash_clustered_names(256, 0x3FF)
+  let source = StringBuilder()
+  source.write_string("<root")
+  for index, name in names {
+    assert_eq(name.hash() & 0x3FF, 0)
+    source.write_string(" ")
+    source.write_string(name)
+    source.write_string("=\"")
+    source.write_string(index.to_string())
+    source.write_string("\"")
+  }
+  source.write_string("/>")
+  let text = source.to_string()
+  let budget = @xml.xml_read_budget(
+    max_source_units=text.length(),
+    max_tokens=4_096,
+    max_materialized_chars=64 * 1_024,
+    max_token_chars=1_024,
+  )
+  let root = @xml.read_xml_string_strict_limited(text, budget)
+  assert_eq(root.attributes.length(), names.length())
+  assert_eq(root.attributes.get(names[names.length() - 1]), Some("255"))
+}
+
+///|
+test "limited namespace indexing is independent of deterministic hash clustering" {
+  let uris = xml_security_hash_clustered_names(256, 0x3FF)
+  let namespaces : Map[String, String] = Map([])
+  for index, uri in uris {
+    assert_eq(uri.hash() & 0x3FF, 0)
+    namespaces["p\{index}"] = uri
+  }
+  let target = uris[uris.length() - 1]
+  let rendered = @xml.write_xml_fragment_limited(
+    @xml.xml_element("{\{target}}leaf"),
+    max_output_bytes=64 * 1_024,
+    namespaces~,
+  )
+  assert_true(rendered.contains("<p255:leaf"))
+}
+
+///|
 test "limited XML writer charges empty namespace bindings and prefix sorting" {
   let empty_namespaces : Map[String, String] = Map([])
   for index in 0..<1_024 {
