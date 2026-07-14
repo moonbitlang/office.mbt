@@ -390,6 +390,7 @@ priv struct PreparedPartSplice {
   edits : Array[SpanEdit]
   result_length : Int
   replacement_bytes : Int64
+  markup_tokens : Int64
 }
 
 ///|
@@ -549,6 +550,8 @@ fn build_spliced_archive(
   let prepared : Array[PreparedPartSplice] = []
   let mut result_uncompressed_bytes = source_uncompressed_bytes
   let mut materialized_bytes = 0L
+  let mut xml_source_units = 0L
+  let mut markup_tokens = 0L
   let edited : Map[String, Bytes] = Map([])
   for name, edits in plan.part_edits {
     match archive.get(name) {
@@ -567,6 +570,16 @@ fn build_spliced_archive(
           ),
           part.result_length.to_int64(),
           "materialization",
+        )
+        markup_tokens = checked_splice_size_add(
+          markup_tokens,
+          part.markup_tokens,
+          "XML token",
+        )
+        xml_source_units = checked_splice_size_add(
+          xml_source_units,
+          part.result_length.to_int64(),
+          "XML source",
         )
         prepared.push(part)
       }
@@ -602,13 +615,50 @@ fn build_spliced_archive(
           message="the splice materialization limit is \{value.max_materialized_bytes} bytes, but replacements, added parts, and edited payloads require \{materialized_bytes}",
         )
       }
+      if markup_tokens > value.max_xml_tokens.to_int64() {
+        raise Unsupported(
+          message="the splice aggregate XML token limit is \{value.max_xml_tokens}, but edited parts require \{markup_tokens}",
+        )
+      }
     }
     None => ()
+  }
+  if xml_source_units > 2147483647L {
+    raise Unsupported(
+      message="the splice aggregate XML source exceeds the maximum addressable parser budget",
+    )
+  }
+  // One mutable parser budget is shared by every edited result. Its byte
+  // ceiling is the exact aggregate result size. Transaction-grade copied-text
+  // and token ceilings come from the already charged splice allowance;
+  // lower-level callers receive a conservative input-linear fallback instead
+  // of an unlimited parser. Namespace snapshots consume the same aggregate
+  // token allowance as ordinary parser nodes and strings.
+  let exact_xml_source_units = xml_source_units.to_int()
+  let xml_budget : @xml.XmlReadBudget = match limits {
+    Some(value) =>
+      @xml.xml_read_budget(
+        max_source_units=exact_xml_source_units,
+        max_tokens=value.max_xml_tokens,
+        max_materialized_chars=value.max_materialized_bytes,
+        max_token_chars=value.max_materialized_bytes,
+      )
+    None =>
+      @xml.xml_read_budget(
+        max_source_units=exact_xml_source_units,
+        max_tokens=if exact_xml_source_units > 0 {
+          exact_xml_source_units
+        } else {
+          1
+        },
+        max_materialized_chars=exact_xml_source_units,
+        max_token_chars=exact_xml_source_units,
+      )
   }
   // Only after the whole plan passes the global preflight may edited payloads
   // and their temporary strict-XML validation trees be materialized.
   for part in prepared {
-    edited[part.name] = apply_prepared_span_edits(part)
+    edited[part.name] = apply_prepared_span_edits(part, xml_budget)
   }
   let output = archive.fork()
   for name, bytes in edited {
@@ -798,12 +848,14 @@ fn prepare_span_edits(
     edits: sorted,
     result_length: result_length.to_int(),
     replacement_bytes,
+    markup_tokens,
   }
 }
 
 ///|
 fn apply_prepared_span_edits(
   prepared : PreparedPartSplice,
+  xml_budget : @xml.XmlReadBudget,
 ) -> Bytes raise @core.DocxError {
   // Build a view-only segment table, then let Bytes::makei allocate and fill
   // exactly one immutable result buffer. This avoids Buffer growth/copy peaks
@@ -853,24 +905,50 @@ fn apply_prepared_span_edits(
       segments[segment_index.val][output_index - segment_start.val]
     }
   })
-  // Well-formedness belt: a spliced part must still parse as strict, DTD-free
-  // XML. This cannot vouch for schema validity or namespace WISDOM of a
-  // fragment (that is the fragment author's contract, gated by the dual
-  // validators downstream) — it catches structural breakage at the
-  // exact part.
-  let text = @utf8.decode(result, ignore_bom=true) catch {
-    _ =>
+  validate_spliced_xml(prepared.name, result, xml_budget)
+  result
+}
+
+///|
+fn is_splice_xml_resource_error(message : String) -> Bool {
+  message == "XML source budget exceeded" ||
+  message == "XML token budget exceeded" ||
+  message == "XML token length budget exceeded" ||
+  message == "XML materialized character budget exceeded"
+}
+
+///|
+/// Well-formedness belt for one edited part. Transaction-grade callers supply
+/// the single budget shared across the whole plan; lower-level callers receive
+/// an input-linear derived budget rather than an unlimited parser.
+fn validate_spliced_xml(
+  name : String,
+  result : Bytes,
+  xml_budget : @xml.XmlReadBudget,
+) -> Unit raise @core.DocxError {
+  try @xml.read_xml_bytes_strict_limited(result, xml_budget) catch {
+    InvalidXml(message~) => {
+      if is_splice_xml_resource_error(message) {
+        raise Unsupported(
+          message="splicing '\{name}' exceeded XML resource limits: \{message}",
+        )
+      }
+      if message == "XML source is not valid UTF-8" {
+        raise Unsupported(
+          message="splicing '\{name}' produced bytes that are not valid UTF-8",
+        )
+      }
       raise Unsupported(
-        message="splicing '\{prepared.name}' produced bytes that are not valid UTF-8",
+        message="splicing '\{name}' produced malformed XML (\{message}); refusing to emit",
       )
-  }
-  let _ = @xml.read_xml_string_strict(text) catch {
+    }
     err =>
       raise Unsupported(
-        message="splicing '\{prepared.name}' produced malformed XML (\{to_repr(err)}); refusing to emit",
+        message="splicing '\{name}' produced malformed XML (\{to_repr(err)}); refusing to emit",
       )
+  } noraise {
+    _ => ()
   }
-  result
 }
 
 ///|
