@@ -446,7 +446,7 @@ pub fn DocxEditSession::queue_added_part(
   bytes : Bytes,
 ) -> Unit raise @transaction.TransactionError {
   let plan = @splice.SplicePlan::new()
-  plan.add_part(part, bytes) catch {
+  plan.add_part_limited(part, bytes, self.splice_limits) catch {
     error => raise mapped_plan_failure(error)
   }
   self.queue_plan(plan)

@@ -270,6 +270,35 @@ pub fn SplicePlan::add_part(
   bytes : Bytes,
 ) -> Unit raise @core.DocxError {
   check_plan_part_name(name)
+  self.add_checked_part(name, bytes)
+}
+
+///|
+/// Adds a whole new part after applying the transaction-grade name and entry
+/// ceilings. The Unicode-scalar/UTF-16 check deliberately runs before path
+/// splitting or diagnostics can copy an attacker-controlled name.
+pub fn SplicePlan::add_part_limited(
+  self : SplicePlan,
+  name : String,
+  bytes : Bytes,
+  limits : SpliceLimits,
+) -> Unit raise @core.DocxError {
+  check_plan_part_name_limit(name, limits.max_part_name_chars)
+  if bytes.length() > limits.max_entry_uncompressed_bytes {
+    raise Unsupported(
+      message="the splice entry uncompressed limit is \{limits.max_entry_uncompressed_bytes} bytes",
+    )
+  }
+  check_plan_part_name(name)
+  self.add_checked_part(name, bytes)
+}
+
+///|
+fn SplicePlan::add_checked_part(
+  self : SplicePlan,
+  name : String,
+  bytes : Bytes,
+) -> Unit raise @core.DocxError {
   if self.part_edits.contains(name) {
     raise Unsupported(
       message="the splice plan cannot both edit and add a part named '\{name}'",
